@@ -131,13 +131,26 @@ func RunEchoServer(app *App, e *echo.Echo) {
 	serverAddr := app.Config.GetServerAddr()
 	app.Logger.Info().Msgf("app: Server Address: %s", serverAddr)
 
-	// Start the server
+	// Custom http.Server with timeouts tuned for local media streaming.
+	//
+	// WriteTimeout = 0: disabled intentionally. HLS/direct-stream handlers
+	// stream for hours; a finite WriteTimeout would kill active video sessions.
+	//
+	// ReadHeaderTimeout guards against Slowloris attacks without affecting
+	// long-lived streaming connections (headers are received once at start).
+	srv := &http.Server{
+		Addr:              serverAddr,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      0, // streaming: no write deadline
+		IdleTimeout:       120 * time.Second,
+	}
+
 	go func() {
 		if app.Config.Server.Tls.Enabled {
 			certFile := app.Config.Server.Tls.CertPath
 			keyFile := app.Config.Server.Tls.KeyPath
 
-			// Generate certs if they don't exist
 			if err := generateSelfSignedCert(certFile, keyFile, app.Logger); err != nil {
 				log.Fatalf("app: Could not generate TLS certificates: %v", err)
 			}
@@ -147,12 +160,12 @@ func RunEchoServer(app *App, e *echo.Echo) {
 				log.Fatalf("app: Could not start TLS server: %v", err)
 			}
 		} else {
-			if err := e.Start(serverAddr); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			if err := e.StartServer(srv); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				log.Fatalf("app: Could not start server: %v", err)
 			}
 		}
 	}()
 
 	time.Sleep(100 * time.Millisecond)
-	app.Logger.Info().Msg("app: KameHouse started at " + app.Config.GetServerURI())
+	app.Logger.Info().Msg("app: Antigravity started at " + app.Config.GetServerURI())
 }

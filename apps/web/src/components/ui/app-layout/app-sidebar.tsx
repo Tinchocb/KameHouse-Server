@@ -1,98 +1,74 @@
-/**
- * AppSidebar
- *
- * A fixed, collapsible navigation sidebar inspired by Stremio's minimal aesthetic.
- *
- * ─── Two desktop states ───────────────────────────────────────────────────────
- *  Expanded  (default, sidebarSize="md") → 240 px · icon + label visible
- *  Collapsed (sidebarSize="slim")        →  64 px · icon only + tooltip on hover
- *
- * ─── Mobile ───────────────────────────────────────────────────────────────────
- *  The sidebar is hidden below the `lg` breakpoint.
- *  AppSidebarTrigger opens the existing Drawer component for small screens.
- *
- * ─── Palette ──────────────────────────────────────────────────────────────────
- *  Background:   bg-zinc-900
- *  Divider:      border-zinc-800
- *  Icon/text:    text-zinc-400  (inactive) / text-white (active/hover)
- *  Active pill:  bg-white (2 px left border accent)
- *  Hover bg:     bg-zinc-800/60
- *  Active bg:    bg-zinc-800
- */
-
-import { cva, VariantProps } from "class-variance-authority"
-import * as React from "react"
-import { AppLayoutAnatomy } from "."
-import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
-import { Drawer, DrawerProps } from "../drawer"
 import { Link } from "@tanstack/react-router"
+import { cva, type VariantProps } from "class-variance-authority"
+import * as React from "react"
 import {
-    FaHome,
     FaBook,
-    FaCog,
-    FaCompass,
     FaChevronLeft,
     FaChevronRight,
+    FaCog,
+    FaCompass,
+    FaHome,
 } from "react-icons/fa"
+import { AppLayoutAnatomy } from "."
+import { cn, type ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Context
-// ─────────────────────────────────────────────────────────────────────────────
+type SidebarSize = VariantProps<typeof AppLayoutAnatomy.root>["sidebarSize"]
 
 export const __AppSidebarContext = React.createContext<{
     open: boolean
     setOpen: (open: boolean) => void
-    size: VariantProps<typeof AppLayoutAnatomy.root>["sidebarSize"]
-    setSize: (size: VariantProps<typeof AppLayoutAnatomy.root>["sidebarSize"]) => void
+    size: SidebarSize
+    setSize: (size: SidebarSize) => void
     isBelowBreakpoint: boolean
     collapsed: boolean
     setCollapsed: (collapsed: boolean) => void
+    isHovered: boolean
+    setIsHovered: (hovered: boolean) => void
+    isPinnedExpanded: boolean
+    setIsPinnedExpanded: (pinned: boolean) => void
 }>({
     open: false,
     setOpen: () => { },
-    setSize: () => { },
     size: "md",
+    setSize: () => { },
     isBelowBreakpoint: false,
     collapsed: false,
     setCollapsed: () => { },
+    isHovered: false,
+    setIsHovered: () => { },
+    isPinnedExpanded: false,
+    setIsPinnedExpanded: () => { },
 })
 
 export function useAppSidebarContext() {
     const ctx = React.useContext(__AppSidebarContext)
-    if (!ctx) throw new Error("useAppSidebarContext must be used within AppSidebarProvider")
+    if (!ctx) {
+        throw new Error("useAppSidebarContext must be used within AppSidebarProvider")
+    }
     return ctx
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Anatomy
-// ─────────────────────────────────────────────────────────────────────────────
 
 export const AppSidebarAnatomy = defineStyleAnatomy({
     sidebar: cva([
         "UI-AppSidebar__sidebar",
-        // Full height, vertical flex, smooth width transition, no outer scrollbar
-        "flex flex-col h-full overflow-hidden",
-        // Zinc-900 background with a single right-border divider
-        "bg-zinc-900 border-r border-zinc-800",
-        // Width transition synced with the layout's sidebar width change
-        "transition-all duration-300 ease-in-out",
+        "flex h-full flex-col overflow-hidden",
+        "bg-zinc-950/72 supports-[backdrop-filter]:bg-zinc-950/58 backdrop-blur-2xl",
+        "border border-white/10 shadow-[0_24px_80px_rgba(0,0,0,0.5)]",
+        "transition-all duration-300 ease-out motion-reduce:transition-none",
+        "sm:rounded-r-[2rem] sm:border-l-0",
     ]),
 })
 
 export const AppSidebarTriggerAnatomy = defineStyleAnatomy({
     trigger: cva([
         "UI-AppSidebarTrigger__trigger",
-        "block lg:hidden",
+        "block sm:hidden",
         "items-center justify-center rounded-md p-2",
-        "text-zinc-400 hover:text-white hover:bg-zinc-800",
-        "transition-colors duration-150",
+        "text-zinc-400 hover:bg-zinc-800 hover:text-white",
+        "transition-colors duration-150 motion-reduce:transition-none",
         "focus:outline-none focus:ring-2 focus:ring-zinc-600 focus:ring-inset",
     ]),
 })
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Navigation items definition
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface NavItem {
     to: string
@@ -101,18 +77,14 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-    { to: "/home", label: "Inicio", icon: <FaHome className="w-[18px] h-[18px] flex-shrink-0" /> },
-    { to: "/discover", label: "Descubrir", icon: <FaCompass className="w-[18px] h-[18px] flex-shrink-0" /> },
-    { to: "/library", label: "Biblioteca", icon: <FaBook className="w-[18px] h-[18px] flex-shrink-0" /> },
+    { to: "/home", label: "Inicio", icon: <FaHome className="h-[18px] w-[18px] flex-shrink-0" /> },
+    { to: "/discover", label: "Descubrir", icon: <FaCompass className="h-[18px] w-[18px] flex-shrink-0" /> },
+    { to: "/library", label: "Biblioteca", icon: <FaBook className="h-[18px] w-[18px] flex-shrink-0" /> },
 ]
 
 const BOTTOM_ITEMS: NavItem[] = [
-    { to: "/settings", label: "Ajustes", icon: <FaCog className="w-[18px] h-[18px] flex-shrink-0" /> },
+    { to: "/settings", label: "Ajustes", icon: <FaCog className="h-[18px] w-[18px] flex-shrink-0" /> },
 ]
-
-// ─────────────────────────────────────────────────────────────────────────────
-// NavLink — individual sidebar link
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface NavLinkProps {
     item: NavItem
@@ -126,32 +98,26 @@ function NavLink({ item, collapsed }: NavLinkProps) {
             title={collapsed ? item.label : undefined}
             activeProps={{
                 className: cn(
-                    "relative flex items-center gap-3 px-4 py-2.5 rounded-lg",
-                    "bg-zinc-800 text-white font-medium",
-                    // White left pill — the only active accent (no colour)
-                    "before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2",
-                    "before:h-5 before:w-0.5 before:rounded-full before:bg-white",
-                    "before:-ml-[1px]",                  // sits flush inside the rounded-lg
-                    "transition-colors duration-150",
+                    "relative flex items-center gap-3 rounded-2xl px-4 py-3",
+                    "bg-white/8 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]",
+                    "before:absolute before:left-0 before:top-1/2 before:h-6 before:w-0.5 before:-translate-y-1/2 before:rounded-full before:bg-white",
+                    "transition-colors duration-150 motion-reduce:transition-none",
                 ),
             }}
             inactiveProps={{
                 className: cn(
-                    "relative flex items-center gap-3 px-4 py-2.5 rounded-lg",
-                    "text-zinc-400 hover:text-white hover:bg-zinc-800/60",
-                    "transition-colors duration-150",
+                    "relative flex items-center gap-3 rounded-2xl px-4 py-3",
+                    "text-zinc-400 hover:bg-white/6 hover:text-white",
+                    "transition-colors duration-150 motion-reduce:transition-none",
                 ),
             }}
             className="w-full"
         >
-            {/* Icon — always visible */}
             <span className="shrink-0">{item.icon}</span>
-
-            {/* Label — hidden in collapsed state with a smooth fade */}
             <span
                 className={cn(
-                    "text-sm font-medium whitespace-nowrap overflow-hidden",
-                    "transition-all duration-300 ease-in-out",
+                    "overflow-hidden whitespace-nowrap text-sm font-medium tracking-[0.02em]",
+                    "transition-all duration-300 ease-out motion-reduce:transition-none",
                     collapsed ? "w-0 opacity-0" : "w-auto opacity-100",
                 )}
             >
@@ -161,218 +127,132 @@ function NavLink({ item, collapsed }: NavLinkProps) {
     )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// AppSidebar
-// ─────────────────────────────────────────────────────────────────────────────
-
 export type AppSidebarProps = React.ComponentPropsWithoutRef<"div"> &
-    ComponentAnatomy<typeof AppSidebarAnatomy> & {
-        mobileDrawerProps?: Partial<DrawerProps>
-    }
+    ComponentAnatomy<typeof AppSidebarAnatomy>
 
-export const AppSidebar = React.forwardRef<HTMLDivElement, AppSidebarProps>(
-    (props, ref) => {
-        const { children, className, ...rest } = props
-        const ctx = React.useContext(__AppSidebarContext)
-        const { collapsed, setCollapsed } = ctx
-
-        return (
-            <>
-                {/* ── Desktop sidebar ──────────────────────────────── */}
-                <div
-                    ref={ref}
-                    className={cn(AppSidebarAnatomy.sidebar(), className)}
-                    {...rest}
-                >
-                    {/* ── Logo zone ─────────────────────────────────── */}
-                    <div
-                        className={cn(
-                            "flex items-center h-16 shrink-0 px-4",
-                            "border-b border-zinc-800",
-                            collapsed ? "justify-center" : "justify-start gap-3",
-                        )}
-                    >
-                        <img
-                            src="/kamehouse-logo.png"
-                            alt="KameHouse"
-                            className={cn(
-                                "object-contain transition-all duration-300 shrink-0",
-                                collapsed ? "w-8 h-8" : "w-8 h-8",
-                            )}
-                        />
-                        <span
-                            className={cn(
-                                "text-white font-bold text-sm tracking-wide whitespace-nowrap overflow-hidden",
-                                "transition-all duration-300 ease-in-out",
-                                collapsed ? "w-0 opacity-0" : "w-auto opacity-100",
-                            )}
-                        >
-                            KameHouse
-                        </span>
-                    </div>
-
-                    {/* ── Primary navigation ────────────────────────── */}
-                    <nav
-                        className="flex flex-col gap-1 px-2 pt-4 flex-1 overflow-y-auto scrollbar-hide"
-                        aria-label="Navegación principal"
-                    >
-                        {NAV_ITEMS.map((item) => (
-                            <NavLink key={item.to} item={item} collapsed={collapsed} />
-                        ))}
-                    </nav>
-
-                    {/* ── Bottom slot (settings + optional children) ── */}
-                    <div className="flex flex-col gap-1 px-2 pb-4 border-t border-zinc-800 pt-3">
-                        {/* Extra content injected via children (e.g. server status badge) */}
-                        {children && (
-                            <div
-                                className={cn(
-                                    "mb-2 text-xs text-zinc-500 overflow-hidden transition-all duration-300",
-                                    collapsed ? "h-0 opacity-0" : "opacity-100",
-                                )}
-                            >
-                                {children}
-                            </div>
-                        )}
-
-                        {BOTTOM_ITEMS.map((item) => (
-                            <NavLink key={item.to} item={item} collapsed={collapsed} />
-                        ))}
-
-                        {/* ── Collapse toggle ──────────────────────── */}
-                        <button
-                            type="button"
-                            aria-label={collapsed ? "Expandir menú" : "Colapsar menú"}
-                            onClick={() => setCollapsed(!collapsed)}
-                            className={cn(
-                                "flex items-center gap-3 px-4 py-2.5 rounded-lg w-full mt-1",
-                                "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60",
-                                "transition-colors duration-150",
-                                collapsed && "justify-center",
-                            )}
-                        >
-                            {collapsed ? (
-                                <FaChevronRight className="w-3.5 h-3.5 flex-shrink-0" />
-                            ) : (
-                                <>
-                                    <FaChevronLeft className="w-3.5 h-3.5 flex-shrink-0" />
-                                    <span className="text-xs font-medium whitespace-nowrap">
-                                        Colapsar
-                                    </span>
-                                </>
-                            )}
-                        </button>
-                    </div>
-                </div>
-
-                {/* ── Mobile drawer ─────────────────────────────────── */}
-                <Drawer
-                    open={ctx.open}
-                    onOpenChange={(v) => ctx.setOpen(v)}
-                    side="left"
-                >
-                    {/* Minimal drawer version: just nav items without collapse toggle */}
-                    <div className="flex flex-col h-full bg-zinc-900">
-                        <div className="flex items-center gap-3 h-16 px-4 border-b border-zinc-800">
-                            <img src="/kamehouse-logo.png" alt="KameHouse" className="w-8 h-8 object-contain" />
-                            <span className="text-white font-bold text-sm tracking-wide">KameHouse</span>
-                        </div>
-                        <nav className="flex flex-col gap-1 px-2 pt-4 flex-1" aria-label="Navegación móvil">
-                            {[...NAV_ITEMS, ...BOTTOM_ITEMS].map((item) => (
-                                <NavLink key={item.to} item={item} collapsed={false} />
-                            ))}
-                        </nav>
-                    </div>
-                </Drawer>
-            </>
-        )
-    },
-)
-
-AppSidebar.displayName = "AppSidebar"
-
-// ─────────────────────────────────────────────────────────────────────────────
-// AppSidebarTrigger — hamburger for mobile
-// ─────────────────────────────────────────────────────────────────────────────
-
-export type AppSidebarTriggerProps = React.ComponentPropsWithoutRef<"button"> &
-    ComponentAnatomy<typeof AppSidebarTriggerAnatomy>
-
-export const AppSidebarTrigger = React.forwardRef<
-    HTMLButtonElement,
-    AppSidebarTriggerProps
->((props, ref) => {
+export const AppSidebar = React.forwardRef<HTMLDivElement, AppSidebarProps>((props, ref) => {
     const { children, className, ...rest } = props
-    const ctx = React.useContext(__AppSidebarContext)
+    const { collapsed, isPinnedExpanded, setCollapsed, setIsHovered } = React.useContext(__AppSidebarContext)
 
     return (
-        <button
+        <div
             ref={ref}
-            type="button"
-            aria-label="Abrir menú"
-            className={cn(AppSidebarTriggerAnatomy.trigger(), className)}
-            onClick={() =>
-                ctx.isBelowBreakpoint
-                    ? ctx.setOpen(!ctx.open)
-                    : ctx.setCollapsed(!ctx.collapsed)
-            }
+            className={cn(AppSidebarAnatomy.sidebar(), className)}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
             {...rest}
         >
-            <span className="sr-only">Abrir menú principal</span>
-            {(ctx.isBelowBreakpoint ? ctx.open : !ctx.collapsed) ? (
-                // X icon
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="h-5 w-5"
+            <div
+                className={cn(
+                    "flex h-20 shrink-0 items-center border-b border-white/10 px-5",
+                    collapsed ? "justify-center" : "justify-start gap-3",
+                )}
+            >
+                <img
+                    src="/kamehouse-logo.png"
+                    alt="KameHouse"
+                    className="h-8 w-8 shrink-0 object-contain"
+                />
+                <span
+                    className={cn(
+                        "overflow-hidden whitespace-nowrap text-[0.78rem] font-semibold uppercase tracking-[0.24em] text-white",
+                        "transition-all duration-300 ease-out motion-reduce:transition-none",
+                        collapsed ? "w-0 opacity-0" : "w-auto opacity-100",
+                    )}
                 >
-                    <line x1="18" x2="6" y1="6" y2="18" />
-                    <line x1="6" x2="18" y1="6" y2="18" />
-                </svg>
-            ) : (
-                // Hamburger icon
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="h-5 w-5"
+                    KameHouse
+                </span>
+            </div>
+
+            <nav
+                className="flex flex-1 flex-col gap-1.5 overflow-y-auto px-3 pt-5 scrollbar-hide"
+                aria-label="Navegacion principal"
+            >
+                {NAV_ITEMS.map((item) => (
+                    <NavLink key={item.to} item={item} collapsed={collapsed} />
+                ))}
+            </nav>
+
+            <div className="flex flex-col gap-1.5 border-t border-white/10 px-3 pb-5 pt-4">
+                {children && (
+                    <div
+                        className={cn(
+                            "mb-2 overflow-hidden text-xs text-zinc-500 transition-all duration-300 motion-reduce:transition-none",
+                            collapsed ? "h-0 opacity-0" : "opacity-100",
+                        )}
+                    >
+                        {children}
+                    </div>
+                )}
+
+                {BOTTOM_ITEMS.map((item) => (
+                    <NavLink key={item.to} item={item} collapsed={collapsed} />
+                ))}
+
+                <button
+                    type="button"
+                    aria-label={isPinnedExpanded ? "Desfijar menu" : "Fijar menu expandido"}
+                    aria-pressed={isPinnedExpanded}
+                    onClick={() => setCollapsed(isPinnedExpanded)}
+                    className={cn(
+                        "mt-1 flex w-full items-center gap-3 rounded-2xl border border-white/10 px-4 py-3",
+                        "text-zinc-400 transition-colors duration-150 motion-reduce:transition-none",
+                        "hover:bg-white/6 hover:text-white",
+                        collapsed && "justify-center",
+                    )}
                 >
-                    <line x1="4" x2="20" y1="6" y2="6" />
-                    <line x1="4" x2="20" y1="12" y2="12" />
-                    <line x1="4" x2="20" y1="18" y2="18" />
-                </svg>
-            )}
-            {children}
-        </button>
+                    {collapsed ? (
+                        <FaChevronRight className="h-3.5 w-3.5 flex-shrink-0" />
+                    ) : (
+                        <>
+                            <FaChevronLeft className="h-3.5 w-3.5 flex-shrink-0" />
+                            <span className="whitespace-nowrap text-xs font-medium uppercase tracking-[0.16em]">
+                                {isPinnedExpanded ? "Desfijar" : "Fijar"}
+                            </span>
+                        </>
+                    )}
+                </button>
+            </div>
+        </div>
     )
 })
 
-AppSidebarTrigger.displayName = "AppSidebarTrigger"
+AppSidebar.displayName = "AppSidebar"
 
-// ─────────────────────────────────────────────────────────────────────────────
-// AppSidebarProvider
-// ─────────────────────────────────────────────────────────────────────────────
+export function AppBottomNav() {
+    return (
+        <nav
+            className={cn(
+                "fixed inset-x-0 bottom-0 z-50 flex items-center justify-around sm:hidden",
+                "border-t border-zinc-900 bg-zinc-950/95 backdrop-blur-md",
+                "h-[calc(4rem+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)]",
+            )}
+        >
+            {[...NAV_ITEMS, ...BOTTOM_ITEMS].map((item) => (
+                <Link
+                    key={item.to}
+                    to={item.to}
+                    activeProps={{
+                        className: "text-white",
+                    }}
+                    inactiveProps={{
+                        className: "text-zinc-500 hover:text-zinc-300",
+                    }}
+                    className="flex h-full w-full flex-col items-center justify-center gap-1 pb-1 transition-colors duration-200"
+                >
+                    <div className="shrink-0">{item.icon}</div>
+                    <span className="text-[10px] font-medium tracking-wide">{item.label}</span>
+                </Link>
+            ))}
+        </nav>
+    )
+}
 
 export type AppSidebarProviderProps = {
     children?: React.ReactNode
     open?: boolean
     onOpenChange?: (open: boolean) => void
-    onSizeChange?: (
-        size: VariantProps<typeof AppLayoutAnatomy.root>["sidebarSize"],
-    ) => void
+    onSizeChange?: (size: SidebarSize) => void
     collapsed?: boolean
     onCollapsedChange?: (collapsed: boolean) => void
 }
@@ -381,46 +261,105 @@ export const AppSidebarProvider: React.FC<AppSidebarProviderProps> = ({
     children,
     onOpenChange,
     onSizeChange,
-    collapsed: controlledCollapsed,
     onCollapsedChange,
 }) => {
     const [open, setOpen] = React.useState(false)
-    const [collapsed, setCollapsed] = React.useState(controlledCollapsed ?? false)
-    const [size, setSize] = React.useState<
-        VariantProps<typeof AppLayoutAnatomy.root>["sidebarSize"]
-    >(undefined)
-
+    const [size, setSize] = React.useState<SidebarSize>("md")
     const [isBelowBreakpoint, setIsBelowBreakpoint] = React.useState(false)
+    const [isScrollCondensed, setIsScrollCondensed] = React.useState(false)
+    const [isHovered, setIsHovered] = React.useState(false)
+    const [isPinnedExpanded, setIsPinnedExpanded] = React.useState(false)
+
+    const collapsed = !isBelowBreakpoint && isScrollCondensed && !isHovered && !isPinnedExpanded
 
     React.useEffect(() => {
-        const handleResize = () =>
-            setIsBelowBreakpoint(window.innerWidth < 1024) // lg breakpoint
+        const handleResize = () => {
+            setIsBelowBreakpoint(window.innerWidth < 640)
+        }
+
         handleResize()
         window.addEventListener("resize", handleResize)
         return () => window.removeEventListener("resize", handleResize)
-        // Intentional: only track isBelowBreakpoint, no dep on the value itself
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
+    React.useEffect(() => {
+        if (typeof window === "undefined") {
+            return
+        }
+
+        setIsPinnedExpanded(window.sessionStorage.getItem("kh.sidebar.pinnedExpanded") === "true")
+    }, [])
+
+    React.useEffect(() => {
+        if (typeof window === "undefined") {
+            return
+        }
+
+        window.sessionStorage.setItem("kh.sidebar.pinnedExpanded", String(isPinnedExpanded))
+    }, [isPinnedExpanded])
+
+    React.useEffect(() => {
+        const nextSize: SidebarSize = isBelowBreakpoint ? "md" : (collapsed ? "slim" : "md")
+        onSizeChange?.(nextSize)
+        setSize(nextSize)
+    }, [collapsed, isBelowBreakpoint, onSizeChange])
+
+    React.useEffect(() => {
+        if (typeof window === "undefined") {
+            return
+        }
+
+        let cleanup: (() => void) | undefined
+        let rafId = 0
+
+        const attachScrollListener = () => {
+            const contentElement = window.document.querySelector(".UI-AppLayoutContent__root")
+
+            if (!(contentElement instanceof HTMLElement)) {
+                rafId = window.requestAnimationFrame(attachScrollListener)
+                return
+            }
+
+            const handleScroll = () => {
+                setIsScrollCondensed(contentElement.scrollTop > 24)
+            }
+
+            handleScroll()
+            contentElement.addEventListener("scroll", handleScroll, { passive: true })
+            cleanup = () => contentElement.removeEventListener("scroll", handleScroll)
+        }
+
+        attachScrollListener()
+
+        return () => {
+            if (rafId) {
+                window.cancelAnimationFrame(rafId)
+            }
+            cleanup?.()
+        }
     }, [])
 
     return (
         <__AppSidebarContext.Provider
             value={{
                 open,
-                setOpen: (v) => {
-                    onOpenChange?.(v)
-                    setOpen(v)
-                },
-                setSize: (v) => {
-                    onSizeChange?.(v)
-                    setSize(v)
+                setOpen: (value) => {
+                    onOpenChange?.(value)
+                    setOpen(value)
                 },
                 size,
+                setSize,
                 isBelowBreakpoint,
                 collapsed,
-                setCollapsed: (v) => {
-                    onCollapsedChange?.(v)
-                    setCollapsed(v)
+                setCollapsed: (value) => {
+                    onCollapsedChange?.(value)
+                    setIsPinnedExpanded(!value)
+                    setIsHovered(false)
                 },
+                isHovered,
+                setIsHovered,
+                isPinnedExpanded,
+                setIsPinnedExpanded,
             }}
         >
             {children}

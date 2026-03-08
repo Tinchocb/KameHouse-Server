@@ -12,7 +12,7 @@ export const AppLayoutAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-AppLayout__root appLayout",
         // zinc-950 (#09090b) — deepest layer, renders behind both sidebar and content
-        "flex w-full group/appLayout min-h-screen bg-zinc-950 text-white",
+        "flex w-full group/appLayout min-h-dvh bg-zinc-950 text-white overflow-x-hidden",
     ], {
         variants: {
             withSidebar: {
@@ -32,12 +32,12 @@ export const AppLayoutAnatomy = defineStyleAnatomy({
             sidebarSize: "md",
         },
         compoundVariants: [
-            // slim: 64px icon-rail matches the rewritten sidebar's icon-only collapsed state
-            { withSidebar: true, sidebarSize: "slim", className: "lg:pl-16" },
-            { withSidebar: true, sidebarSize: "sm", className: "lg:pl-48" },
-            { withSidebar: true, sidebarSize: "md", className: "lg:pl-[260px]" },
-            { withSidebar: true, sidebarSize: "lg", className: "lg:pl-[20rem]" },
-            { withSidebar: true, sidebarSize: "xl", className: "lg:pl-[25rem]" },
+            // sm: breakpoint — sidebar appears at ≥640px (small tablets / landscape phones)
+            { withSidebar: true, sidebarSize: "slim", className: "sm:pl-16" },
+            { withSidebar: true, sidebarSize: "sm", className: "sm:pl-48" },
+            { withSidebar: true, sidebarSize: "md", className: "sm:pl-[260px]" },
+            { withSidebar: true, sidebarSize: "lg", className: "sm:pl-[20rem]" },
+            { withSidebar: true, sidebarSize: "xl", className: "sm:pl-[25rem]" },
         ],
     }),
 })
@@ -51,9 +51,10 @@ export const AppLayoutHeaderAnatomy = defineStyleAnatomy({
 
 export const AppLayoutSidebarAnatomy = defineStyleAnatomy({
     root: cva([
-        "UI-AppLayoutSidebar__root z-50",
-        "hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:flex-col grow-0 shrink-0 basis-0 transition-all duration-300 ease-in-out",
-        "group-[.sidebar-slim]/appLayout:w-20",
+        "UI-AppLayoutSidebar__root z-50 sm:fixed sm:inset-y-0 sm:left-0",
+        // hidden on mobile (<sm), flex column from sm: upward
+        "hidden sm:flex sm:flex-col grow-0 shrink-0 basis-0 transition-all duration-300 ease-in-out",
+        "group-[.sidebar-slim]/appLayout:w-16",
         "group-[.sidebar-sm]/appLayout:w-48",
         "group-[.sidebar-md]/appLayout:w-[260px]",
         "group-[.sidebar-lg]/appLayout:w-[20rem]",
@@ -64,10 +65,11 @@ export const AppLayoutSidebarAnatomy = defineStyleAnatomy({
 export const AppLayoutContentAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-AppLayoutContent__root",
-        // Independent vertical scroll: content scrolls within its column,
-        // not the entire page. This prevents the sidebar from scrolling with content.
+        // h-dvh: respects dynamic viewport (mobile URL bar won't clip content)
+        // overflow-x-hidden: prevents horizontal bleed on small screens
         "relative flex-1 min-w-0 flex flex-col w-full",
-        "overflow-y-auto h-screen",
+        "overflow-y-auto overflow-x-hidden h-dvh",
+        "pb-16 sm:pb-0", // reserve space for BottomNav only on mobile (<sm)
     ]),
 })
 
@@ -162,6 +164,7 @@ export type AppLayoutProps = React.ComponentPropsWithRef<"div"> &
     VariantProps<typeof AppLayoutAnatomy.root>
 
 export const AppLayout = React.forwardRef<HTMLDivElement, AppLayoutProps>((props, ref) => {
+    const sidebarContext = React.useContext(__AppSidebarContext)
 
     const {
         children,
@@ -171,11 +174,13 @@ export const AppLayout = React.forwardRef<HTMLDivElement, AppLayoutProps>((props
         ...rest
     } = props
 
+    const resolvedSidebarSize = withSidebar ? (sidebarContext.size ?? sidebarSize) : sidebarSize
+
     return (
         <div
             ref={ref}
             className={cn(
-                AppLayoutAnatomy.root({ withSidebar, sidebarSize: sidebarSize }),
+                AppLayoutAnatomy.root({ withSidebar, sidebarSize: resolvedSidebarSize }),
                 __isDesktop__ && "pt-4 select-none",
                 className,
             )}

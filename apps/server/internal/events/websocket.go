@@ -1,6 +1,7 @@
 package events
 
 import (
+	"encoding/json"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/result"
 	"os"
@@ -20,6 +21,7 @@ type WSEventManagerInterface interface {
 	SubscribeToClientVideoCoreEvents(id string) *ClientEventSubscriber
 	SubscribeToClientNakamaEvents(id string) *ClientEventSubscriber
 	SubscribeToClientPlaylistEvents(id string) *ClientEventSubscriber
+	SubscribeToTorrentTelemetryEvents(id string) *ClientEventSubscriber
 	UnsubscribeFromClientEvents(id string)
 }
 
@@ -57,6 +59,7 @@ type (
 		clientVideoCoreEventSubscribers    *result.Map[string, *ClientEventSubscriber]
 		nakamaEventSubscribers             *result.Map[string, *ClientEventSubscriber]
 		playlistEventSubscribers           *result.Map[string, *ClientEventSubscriber]
+		torrentTelemetrySubscribers        *result.Map[string, *ClientEventSubscriber]
 	}
 
 	ClientEventSubscriber struct {
@@ -70,11 +73,19 @@ type (
 		Conn *websocket.Conn
 	}
 
-	WSEvent struct {
-		Type    string      `json:"type"`
-		Payload interface{} `json:"payload"`
+	WSEventEnvelope struct {
+		EventID   string `json:"event_id,omitempty"`
+		Type      string `json:"type"`
+		Payload   any    `json:"payload"`
+		Timestamp int64  `json:"timestamp"`
 	}
 )
+
+var wsEventPool = sync.Pool{
+	New: func() any {
+		return &WSEventEnvelope{}
+	},
+}
 
 // NewWSEventManager creates a new WSEventManager instance for App.
 func NewWSEventManager(logger *zerolog.Logger) *WSEventManager {
@@ -86,6 +97,7 @@ func NewWSEventManager(logger *zerolog.Logger) *WSEventManager {
 		clientVideoCoreEventSubscribers:    result.NewMap[string, *ClientEventSubscriber](),
 		nakamaEventSubscribers:             result.NewMap[string, *ClientEventSubscriber](),
 		playlistEventSubscribers:           result.NewMap[string, *ClientEventSubscriber](),
+		torrentTelemetrySubscribers:        result.NewMap[string, *ClientEventSubscriber](),
 	}
 	GlobalWSEventManager = &GlobalWSEventManagerWrapper{
 		WSEventManager: ret,
@@ -152,35 +164,33 @@ func (m *WSEventManager) RemoveConn(id string) {
 func (m *WSEventManager) SendEvent(t string, payload interface{}) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	// If there's no connection, do nothing
-	//if m.Conn == nil {
-	//	return
-	//}
+
+	if len(m.Conns) == 0 {
+		return
+	}
 
 	if t != PlaybackManagerProgressPlaybackState && payload == nil {
 		m.Logger.Trace().Str("type", t).Msg("ws: Sending message")
 	}
 
-	for _, conn := range m.Conns {
-		err := conn.Conn.WriteJSON(WSEvent{
-			Type:    t,
-			Payload: payload,
-		})
-		if err != nil {
-			// Note: NaN error coming from [progress_tracking.go]
-			//m.Logger.Err(err).Msg("ws: Failed to send message")
-		}
-		//m.Logger.Trace().Str("type", t).Msg("ws: Sent message")
+	env := wsEventPool.Get().(*WSEventEnvelope)
+	env.EventID = ""
+	env.Type = t
+	env.Payload = payload
+	env.Timestamp = time.Now().UnixMilli()
+
+	data, err := json.Marshal(env)
+
+	env.Payload = nil // Reset for GC
+	wsEventPool.Put(env)
+
+	if err != nil {
+		return
 	}
 
-	//err := m.Conn.WriteJSON(WSEvent{
-	//	Type:    t,
-	//	Payload: payload,
-	//})
-	//if err != nil {
-	//	m.Logger.Err(err).Msg("ws: Failed to send message")
-	//}
-	//m.Logger.Trace().Str("type", t).Msg("ws: Sent message")
+	for _, conn := range m.Conns {
+		_ = conn.Conn.WriteMessage(websocket.TextMessage, data)
+	}
 }
 
 // SendEventTo sends a websocket event to the specified client.
@@ -188,23 +198,38 @@ func (m *WSEventManager) SendEventTo(clientId string, t string, payload interfac
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	var targetConn *WSConn
 	for _, conn := range m.Conns {
 		if conn.ID == clientId {
-			if t != "pong" {
-				if len(noLog) == 0 || !noLog[0] {
-					truncated := spew.Sprint(payload)
-					if len(truncated) > 500 {
-						truncated = truncated[:500] + "..."
-					}
-					m.Logger.Trace().Str("to", clientId).Str("type", t).Str("payload", truncated).Msg("ws: Sending message")
-				}
-			}
-			_ = conn.Conn.WriteJSON(WSEvent{
-				Type:    t,
-				Payload: payload,
-			})
+			targetConn = conn
+			break
 		}
 	}
+
+	if targetConn == nil {
+		return
+	}
+
+	if t != "pong" {
+		if len(noLog) == 0 || !noLog[0] {
+			truncated := spew.Sprint(payload)
+			if len(truncated) > 500 {
+				truncated = truncated[:500] + "..."
+			}
+			m.Logger.Trace().Str("to", clientId).Str("type", t).Str("payload", truncated).Msg("ws: Sending message")
+		}
+	}
+
+	env := wsEventPool.Get().(*WSEventEnvelope)
+	env.EventID = ""
+	env.Type = t
+	env.Payload = payload
+	env.Timestamp = time.Now().UnixMilli()
+
+	_ = targetConn.Conn.WriteJSON(env)
+
+	env.Payload = nil // Reset for GC
+	wsEventPool.Put(env)
 }
 
 func (m *WSEventManager) SendStringTo(clientId string, s string) {
@@ -248,6 +273,9 @@ func (m *WSEventManager) OnClientEvent(event *WebsocketClientEvent) {
 		m.nakamaEventSubscribers.Range(onEvent)
 	case PlaylistEvent:
 		m.playlistEventSubscribers.Range(onEvent)
+	// We could define TorrentTelemetryEventType if clients stream telemetry upstream
+	// case TorrentTelemetryEventType:
+	// 	m.torrentTelemetrySubscribers.Range(onEvent)
 	default:
 		m.clientEventSubscribers.Range(onEvent)
 	}
@@ -293,6 +321,14 @@ func (m *WSEventManager) SubscribeToClientPlaylistEvents(id string) *ClientEvent
 	return subscriber
 }
 
+func (m *WSEventManager) SubscribeToTorrentTelemetryEvents(id string) *ClientEventSubscriber {
+	subscriber := &ClientEventSubscriber{
+		Channel: make(chan *WebsocketClientEvent, 100),
+	}
+	m.torrentTelemetrySubscribers.Set(id, subscriber)
+	return subscriber
+}
+
 func (m *WSEventManager) UnsubscribeFromClientEvents(id string) {
 	m.eventMu.Lock()
 	defer m.eventMu.Unlock()
@@ -308,6 +344,10 @@ func (m *WSEventManager) UnsubscribeFromClientEvents(id string) {
 			subscriber, ok = m.clientVideoCoreEventSubscribers.Get(id)
 			if !ok {
 				subscriber, ok = m.nakamaEventSubscribers.Get(id)
+				if !ok {
+					// Fallback to telemetry or playlist
+					subscriber, ok = m.torrentTelemetrySubscribers.Get(id)
+				}
 			}
 		}
 	}

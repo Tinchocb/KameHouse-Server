@@ -52,7 +52,15 @@ import (
 )
 
 type (
-	App struct {
+	MetadataProviders struct {
+		AnilistClientRef   *util.Ref[anilist.AnilistClient]
+		AnilistPlatformRef *util.Ref[platform.Platform]
+		OfflinePlatformRef *util.Ref[platform.Platform]
+		ProviderRef        *util.Ref[metadata_provider.Provider]
+		MalScrobbler       *mal.MalScrobblerWorker
+	}
+
+	Antigravity struct {
 		// Core
 		Config   *Config
 		Database *db.Database
@@ -66,11 +74,8 @@ type (
 		// File system monitoring
 		Watcher *scanner.Watcher
 
-		// API clients and providers
-		AnilistClientRef    *util.Ref[anilist.AnilistClient]
-		AnilistPlatformRef  *util.Ref[platform.Platform]
-		OfflinePlatformRef  *util.Ref[platform.Platform]
-		MetadataProviderRef *util.Ref[metadata_provider.Provider]
+		// Metadata Providers (Decoupled Foundation)
+		Metadata MetadataProviders
 
 		// Library
 		FillerManager  *fillermanager.FillerManager
@@ -90,8 +95,6 @@ type (
 		OnlinestreamRepository  *onlinestream.Repository
 		MediastreamRepository   *mediastream.Repository
 		TorrentstreamRepository *torrentstream.Repository
-
-		// Players (Removed desktop players)
 
 		// Manga services
 		MangaRepository *manga.Repository
@@ -157,18 +160,32 @@ type (
 
 		// Jellyfin integration
 		JellyfinClient *jellyfin.Client
-
-		// MAL Scrobbler DLQ Queue
-		MalScrobbler *mal.MalScrobblerWorker
 	}
 )
 
-func (a *App) GetJellyfinClient() *jellyfin.Client {
+type AppOption func(*Antigravity)
+
+func WithConfig(cfg *Config) AppOption            { return func(a *Antigravity) { a.Config = cfg } }
+func WithLogger(logger *zerolog.Logger) AppOption { return func(a *Antigravity) { a.Logger = logger } }
+func WithDatabase(db *db.Database) AppOption      { return func(a *Antigravity) { a.Database = db } }
+func WithWSEventManager(ws *events.WSEventManager) AppOption {
+	return func(a *Antigravity) { a.WSEventManager = ws }
+}
+func WithFlags(flags KameHouseFlags) AppOption { return func(a *Antigravity) { a.Flags = flags } }
+func WithSelfUpdater(u *updater.SelfUpdater) AppOption {
+	return func(a *Antigravity) { a.SelfUpdater = u }
+}
+func WithHookManager(hm hook.Manager) AppOption { return func(a *Antigravity) { a.HookManager = hm } }
+func WithFileCacher(fc *filecache.Cacher) AppOption {
+	return func(a *Antigravity) { a.FileCacher = fc }
+}
+
+func (a *Antigravity) GetJellyfinClient() *jellyfin.Client {
 	return a.JellyfinClient
 }
 
 // NewApp creates a new server instance
-func NewApp(configOpts *ConfigOptions, selfupdater *updater.SelfUpdater) *App {
+func NewAntigravity(configOpts *ConfigOptions, selfupdater *updater.SelfUpdater) *App {
 
 	// Initialize logger with predefined format
 	logger := util.NewLogger()
@@ -366,14 +383,17 @@ func NewApp(configOpts *ConfigOptions, selfupdater *updater.SelfUpdater) *App {
 	extensionPlaygroundRepository := extension_playground.NewPlaygroundRepository(logger, activePlatformRef, metadataProviderRef)
 
 	// Create the main app instance with initialized components
-	app := &App{
-		Config:                        cfg,
-		Flags:                         configOpts.Flags,
-		FeatureManager:                NewFeatureManager(logger, configOpts.Flags),
-		Database:                      database,
-		AnilistClientRef:              anilistCWRef,
-		AnilistPlatformRef:            activePlatformRef,
-		OfflinePlatformRef:            offlinePlatformRef,
+	app := &Antigravity{
+		Config:         cfg,
+		Flags:          configOpts.Flags,
+		FeatureManager: NewFeatureManager(logger, configOpts.Flags),
+		Database:       database,
+		Metadata: MetadataProviders{
+			AnilistClientRef:   anilistCWRef,
+			AnilistPlatformRef: activePlatformRef,
+			OfflinePlatformRef: offlinePlatformRef,
+			ProviderRef:        metadataProviderRef,
+		},
 		LocalManager:                  localManager,
 		WSEventManager:                wsEventManager,
 		AnilistCacheDir:               anilistCacheDir,
@@ -382,7 +402,6 @@ func NewApp(configOpts *ConfigOptions, selfupdater *updater.SelfUpdater) *App {
 		Updater:                       updater.New(constants.Version, logger, wsEventManager),
 		FileCacher:                    fileCacher,
 		OnlinestreamRepository:        onlinestreamRepository,
-		MetadataProviderRef:           metadataProviderRef,
 		MangaRepository:               mangaRepository,
 		ExtensionRepository:           extensionRepository,
 		ExtensionBankRef:              extensionBankRef,
@@ -422,7 +441,7 @@ func NewApp(configOpts *ConfigOptions, selfupdater *updater.SelfUpdater) *App {
 	continuityManagerRef.Set(app.ContinuityManager)
 
 	// Initialize MAL Scrobbler DLQ Queue
-	app.MalScrobbler = mal.NewMalScrobblerWorker(database, logger)
+	app.Metadata.MalScrobbler = mal.NewMalScrobblerWorker(database, logger)
 
 	// Run database migrations if version has changed
 	app.runMigrations()
@@ -468,25 +487,25 @@ func NewApp(configOpts *ConfigOptions, selfupdater *updater.SelfUpdater) *App {
 	return app
 }
 
-func (a *App) IsOffline() bool {
+func (a *Antigravity) IsOffline() bool {
 	return a.isOfflineRef.Get()
 }
 
-func (a *App) IsOfflineRef() *util.Ref[bool] {
+func (a *Antigravity) IsOfflineRef() *util.Ref[bool] {
 	return a.isOfflineRef
 }
 
-func (a *App) AddCleanupFunction(f func()) {
+func (a *Antigravity) AddCleanupFunction(f func()) {
 	a.Cleanups = append(a.Cleanups, f)
 }
-func (a *App) AddOnRefreshAnilistCollectionFunc(key string, f func()) {
+func (a *Antigravity) AddOnRefreshAnilistCollectionFunc(key string, f func()) {
 	if key == "" {
 		return
 	}
 	a.OnRefreshAnilistCollectionFuncs.Set(key, f)
 }
 
-func (a *App) Cleanup() {
+func (a *Antigravity) Cleanup() {
 	for _, f := range a.Cleanups {
 		f()
 	}

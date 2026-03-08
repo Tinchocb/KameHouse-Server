@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"context"
 	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
@@ -27,7 +28,7 @@ func TestFileHydrator_HydrateMetadata(t *testing.T) {
 	completeAnimeCache := anilist.NewCompleteAnimeCache()
 	anilistRateLimiter := limiter.NewAnilistLimiter()
 	logger := util.NewLogger()
-	database, err := db.NewDatabase(test_utils.ConfigData.Path.DataDir, test_utils.ConfigData.Database.Name, logger)
+	database, err := db.NewDatabase(context.Background(), test_utils.ConfigData.Path.DataDir, test_utils.ConfigData.Database.Name, logger)
 	require.NoError(t, err)
 	metadataProvider := metadata_provider.GetFakeProvider(t, database)
 	anilistClient := anilist.NewAnilistClient(test_utils.ConfigData.Provider.AnilistJwt, "")

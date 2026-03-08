@@ -1,10 +1,6 @@
-
 import { getServerBaseUrl } from "@/api/client/server-url"
 import { useMutation, UseMutationOptions, useQuery, UseQueryOptions } from "@tanstack/react-query"
-import axios, { AxiosError, InternalAxiosRequestConfig } from "axios"
-import { useAtomValue } from "jotai"
-import { useAtom } from "jotai/react"
-import { atom } from "jotai"
+import { useAtomValue, atom, useAtom } from "jotai"
 import { useLocation } from "@tanstack/react-router"
 import { useEffect } from "react"
 import { toast } from "sonner"
@@ -12,7 +8,17 @@ import { toast } from "sonner"
 // Stub atom – auth is not in use for the standalone UI
 const serverAuthTokenAtom = atom<string | undefined>(undefined)
 
-type SeaError = AxiosError<{ error: string }>
+export class APIError extends Error {
+    status: number;
+    data: any;
+
+    constructor(message: string, status: number, data: any) {
+        super(message);
+        this.name = "APIError";
+        this.status = status;
+        this.data = data;
+    }
+}
 
 type SeaQuery<D> = {
     endpoint: string
@@ -26,7 +32,7 @@ export function useSeaQuery() {
     const password = useAtomValue(serverAuthTokenAtom)
 
     return {
-        seaFetch: <T, D extends any = any>(endpoint: string, method: "POST" | "GET" | "PATCH" | "DELETE" | "PUT", data?: D, params?: D) => {
+        seaFetch: <T, D = void>(endpoint: string, method: "POST" | "GET" | "PATCH" | "DELETE" | "PUT", data?: D, params?: D) => {
             return buildSeaQuery<T, D>({
                 endpoint,
                 method,
@@ -38,12 +44,9 @@ export function useSeaQuery() {
     }
 }
 
-/**
- * Create axios query to the server
- * - First generic: Return type
- * - Second generic: Params/Data type
- */
-export async function buildSeaQuery<T, D extends any = any>(
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+export async function buildSeaQuery<T, D = void>(
     {
         endpoint,
         method,
@@ -52,35 +55,91 @@ export async function buildSeaQuery<T, D extends any = any>(
         password,
     }: SeaQuery<D>): Promise<T | undefined> {
 
-    axios.interceptors.request.use((request: InternalAxiosRequestConfig) => {
-        if (password) {
-            request.headers.set("X-KameHouse-Token", password)
-        }
-        return request
-    },
-    )
+    const url = new URL(getServerBaseUrl() + endpoint)
+    if (params) {
+        // Append query parameters
+        Object.keys(params as Record<string, unknown>).forEach((key) => {
+            const value = (params as Record<string, unknown>)[key];
+            if (value !== undefined) {
+                if (Array.isArray(value)) {
+                    value.forEach(v => url.searchParams.append(key, String(v)));
+                } else {
+                    url.searchParams.append(key, String(value));
+                }
+            }
+        });
+    }
 
-    const res = await axios<T>({
-        url: getServerBaseUrl() + endpoint,
-        method,
-        data,
-        params,
-    })
-    const response = _handleSeaResponse<T>(res.data)
-    return response.data
+    const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+
+    if (password) {
+        headers["Authorization"] = `Bearer ${password}`
+    }
+
+    const maxRetries = 3;
+    let attempt = 0;
+
+    while (attempt <= maxRetries) {
+        try {
+            const res = await fetch(url.toString(), {
+                method,
+                headers,
+                body: data !== undefined ? JSON.stringify(data) : undefined,
+            });
+
+            if (!res.ok) {
+                let errorData: any;
+                try {
+                    errorData = await res.json();
+                } catch {
+                    errorData = await res.text();
+                }
+
+                // If 502, 503, 504, 429 -> retry
+                if ((res.status === 429 || res.status === 502 || res.status === 503 || res.status === 504) && attempt < maxRetries) {
+                    attempt++;
+                    const delay = 1000 * Math.pow(2, attempt - 1);
+                    console.warn(`[API] Request failed with ${res.status}. Retrying in ${delay}ms... (Attempt ${attempt}/${maxRetries})`);
+                    await sleep(delay);
+                    continue;
+                }
+
+                throw new APIError(errorData?.error || `HTTP Error ${res.status}`, res.status, errorData);
+            }
+
+            // Expected response format: { data: T, error?: string } or similar
+            const json = await res.json();
+            const response = _handleSeaResponse<T>(json);
+
+            if (response.error) {
+                throw new APIError(response.error, res.status, json);
+            }
+            return response.data;
+
+        } catch (error) {
+            // Network errors or already thrown APIError
+            if (error instanceof TypeError && attempt < maxRetries) { // fetch throws TypeError on network failure
+                attempt++;
+                const delay = 1000 * Math.pow(2, attempt - 1);
+                console.warn(`[API] Network error. Retrying in ${delay}ms... (Attempt ${attempt}/${maxRetries})`);
+                await sleep(delay);
+                continue;
+            }
+            throw error;
+        }
+    }
+
+    return undefined; // Should not reach here
 }
 
-type ServerMutationProps<R, V = void, C = unknown> = UseMutationOptions<R | undefined, SeaError, V, C> & {
+type ServerMutationProps<R, V = void, C = unknown> = Omit<UseMutationOptions<R | undefined, APIError, V, C>, "mutationFn"> & {
     endpoint: string
     method: "POST" | "GET" | "PATCH" | "DELETE" | "PUT"
 }
 
-/**
- * Create mutation hook to the server
- * - First generic: Return type
- * - Second generic: Params/Data type
- * - Third generic: Context type
- */
 export function useServerMutation<R = void, V = void, C = unknown>(
     {
         endpoint,
@@ -90,15 +149,20 @@ export function useServerMutation<R = void, V = void, C = unknown>(
 
     const password = useAtomValue(serverAuthTokenAtom)
 
-    return useMutation<R | undefined, SeaError, V, C>({
-        onError: error => {
+    return useMutation<R | undefined, APIError, V, C>({
+        onError: (...args) => {
+            const [error, variables, context] = args;
             console.log("Mutation error", error)
-            const errorMsg = _handleSeaError(error.response?.data)
+            const errorMsg = _handleSeaError(error.data)
             if (errorMsg.includes("feature disabled")) {
                 toast.warning("This feature is disabled")
-                return
+            } else {
+                toast.error(errorMsg)
             }
-            toast.error(errorMsg)
+            if (options.onError) {
+                // @ts-ignore
+                options.onError(...args);
+            }
         },
         mutationFn: async (variables) => {
             return buildSeaQuery<R, V>({
@@ -112,8 +176,7 @@ export function useServerMutation<R = void, V = void, C = unknown>(
     })
 }
 
-
-type ServerQueryProps<R, V> = UseQueryOptions<R | undefined, SeaError, R | undefined> & {
+type ServerQueryProps<R, V> = Omit<UseQueryOptions<R | undefined, APIError, R | undefined>, "queryFn"> & {
     endpoint: string
     method: "POST" | "GET" | "PATCH" | "DELETE" | "PUT"
     params?: V
@@ -121,12 +184,7 @@ type ServerQueryProps<R, V> = UseQueryOptions<R | undefined, SeaError, R | undef
     muteError?: boolean
 }
 
-/**
- * Create query hook to the server
- * - First generic: Return type
- * - Second generic: Params/Data type
- */
-export function useServerQuery<R, V = any>(
+export function useServerQuery<R, V = void>(
     {
         endpoint,
         method,
@@ -134,12 +192,12 @@ export function useServerQuery<R, V = any>(
         data,
         muteError,
         ...options
-    }: ServerQueryProps<R | undefined, V>) {
+    }: ServerQueryProps<R, V>) {
 
     const pathname = useLocation().pathname
     const [password, setPassword] = useAtom(serverAuthTokenAtom)
 
-    const props = useQuery<R | undefined, SeaError>({
+    const props = useQuery<R | undefined, APIError>({
         queryFn: async () => {
             return buildSeaQuery<R, V>({
                 endpoint: endpoint,
@@ -154,13 +212,13 @@ export function useServerQuery<R, V = any>(
 
     useEffect(() => {
         if (!muteError && props.isError) {
-            if (props.error?.response?.data?.error === "UNAUTHENTICATED" && pathname !== "/public/auth") {
+            if (props.error?.data?.error === "UNAUTHENTICATED" && pathname !== "/public/auth") {
                 setPassword(undefined)
                 window.location.href = "/public/auth"
                 return
             }
             console.log("Server error", props.error)
-            const errorMsg = _handleSeaError(props.error?.response?.data)
+            const errorMsg = _handleSeaError(props.error?.data)
             if (errorMsg.includes("feature disabled")) {
                 return
             }
@@ -168,17 +226,18 @@ export function useServerQuery<R, V = any>(
                 toast.error(errorMsg)
             }
         }
-    }, [props.error, props.isError, muteError])
+    }, [props.error, props.isError, muteError, pathname, setPassword])
 
     return props
 }
 
 //----------------------------------------------------------------------------------------------------------------------
 
-function _handleSeaError(data: any): string {
+function _handleSeaError(data: unknown): string {
     if (typeof data === "string") return "Server Error: " + data
 
-    const err = data?.error as string
+    const dataObj = data as Record<string, unknown>
+    const err = dataObj?.error as string
 
     if (!err) return "Unknown error"
 
@@ -186,7 +245,7 @@ function _handleSeaError(data: any): string {
         return "AniList: Too many requests, please wait a moment and try again."
 
     try {
-        const graphqlErr = JSON.parse(err) as any
+        const graphqlErr = JSON.parse(err) as { graphqlErrors?: Array<{ message?: string }> }
         console.log("AniList error", graphqlErr)
         if (graphqlErr.graphqlErrors && graphqlErr.graphqlErrors.length > 0 && !!graphqlErr.graphqlErrors[0]?.message) {
             return "AniList error: " + graphqlErr.graphqlErrors[0]?.message
@@ -201,15 +260,15 @@ function _handleSeaError(data: any): string {
     }
 }
 
-function _handleSeaResponse<T>(res: unknown): { data: T | undefined, error: string | undefined } {
-
-    if (typeof res === "object" && !!res && "error" in res && typeof res.error === "string") {
-        return { data: undefined, error: res.error }
+function _handleSeaResponse<T>(res: unknown): { data?: T; error?: string } {
+    if (typeof res === "object" && res !== null) {
+        const obj = res as Record<string, unknown>
+        if ("error" in obj && typeof obj.error === "string") {
+            return { error: obj.error }
+        }
+        if ("data" in obj) {
+            return { data: obj.data as T }
+        }
     }
-    if (typeof res === "object" && !!res && "data" in res) {
-        return { data: res.data as T, error: undefined }
-    }
-
-    return { data: undefined, error: "No response from the server" }
-
+    return { error: "No response from the server" }
 }

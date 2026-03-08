@@ -28,11 +28,12 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/samber/lo"
-	lop "github.com/samber/lo/parallel"
+	"golang.org/x/sync/errgroup"
 )
 
 var ErrNoLocalFiles = errors.New("[matcher] no local files")
@@ -77,8 +78,19 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 
 	go anime.EpisodeCollectionFromLocalFilesCache.Clear()
 
-	scn.WSEventManager.SendEvent(events.EventScanProgress, 0)
-	scn.WSEventManager.SendEvent(events.EventScanStatus, "Retrieving local files...")
+	// ── Non-blocking telemetry ────────────────────────────────────────────────
+	// All WSEventManager calls are routed through a buffered channel so workers
+	// never block waiting for a slow WebSocket client to drain.
+	telemetry := newScanTelemetry(scn.WSEventManager, 256)
+	telCtx, cancelTelemetry := context.WithCancel(ctx)
+	go telemetry.Run(telCtx)
+	defer func() {
+		cancelTelemetry()
+		telemetry.Close()
+	}()
+
+	telemetry.Send(events.EventScanProgress, 0)
+	telemetry.Send(events.EventScanStatus, "Retrieving local files...")
 
 	completeAnimeCache := anilist.NewCompleteAnimeCache()
 
@@ -98,8 +110,8 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	scn.Config.Matching.StrictStructure = scn.StrictStructure
 
 	scn.Logger.Debug().Msg("scanner: Starting scan")
-	scn.WSEventManager.SendEvent(events.EventScanProgress, 10)
-	scn.WSEventManager.SendEvent(events.EventScanStatus, "Retrieving local files...")
+	telemetry.Send(events.EventScanProgress, 10)
+	telemetry.Send(events.EventScanStatus, "Retrieving local files...")
 
 	startTime := time.Now()
 
@@ -238,8 +250,8 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		}
 	}
 
-	scn.WSEventManager.SendEvent(events.EventScanProgress, 20)
-	scn.WSEventManager.SendEvent(events.EventScanStatus, "Verifying shelved files...")
+	telemetry.Send(events.EventScanProgress, 20)
+	telemetry.Send(events.EventScanStatus, "Verifying shelved files...")
 
 	// +---------------------+
 	// |    Shelved files    |
@@ -256,29 +268,61 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		}
 	}
 
-	scn.WSEventManager.SendEvent(events.EventScanProgress, 30)
-	scn.WSEventManager.SendEvent(events.EventScanStatus, "Scanning local files...")
-	scn.WSEventManager.SendEvent(events.EventScanProgressDetailed, map[string]interface{}{
+	telemetry.Send(events.EventScanProgress, 30)
+	telemetry.Send(events.EventScanStatus, "Scanning local files...")
+	telemetry.Send(events.EventScanProgressDetailed, map[string]interface{}{
 		"stage":     "file-retrieval",
 		"fileCount": len(paths),
 		"skipped":   len(skippedLfs),
 		"message":   fmt.Sprintf("Found %d files (%d skipped)", len(paths), len(skippedLfs)),
 	})
 
-	// Create local files from paths (skipping skipped files)
-	localFiles = lop.Map(paths, func(path string, _ int) *dto.LocalFile {
-		if _, ok := skippedLfs[util.NormalizePath(path)]; !ok {
-			// Create a new local file
-			return dto.NewLocalFileS(path, libraryPaths)
-		}
+	// ── Bounded worker pool for LocalFile creation ────────────────────────────
+	// lop.Map spawns one goroutine per path (unbounded). On libraries with
+	// 10k+ files this exhausts file descriptors and goroutine memory.
+	// errgroup.SetLimit caps concurrency to NumCPU I/O workers.
+	maxWorkers := runtime.NumCPU()
+	if maxWorkers < 4 {
+		maxWorkers = 4
+	}
 
-		return nil
-	})
+	resultsMu := sync.Mutex{}
+	localFiles = make([]*dto.LocalFile, 0, len(paths))
+	var skipped atomic.Int64
 
-	// Remove nil values
-	localFiles = lo.Filter(localFiles, func(lf *dto.LocalFile, _ int) bool {
-		return lf != nil
-	})
+	eg, egCtx := errgroup.WithContext(ctx)
+	eg.SetLimit(maxWorkers)
+
+	pathsCh := make(chan string, len(paths))
+	for _, p := range paths {
+		pathsCh <- p
+	}
+	close(pathsCh)
+
+	for p := range pathsCh {
+		path := p // capture for goroutine
+		eg.Go(func() error {
+			select {
+			case <-egCtx.Done():
+				return egCtx.Err()
+			default:
+			}
+			normPath := util.NormalizePath(path)
+			if _, ok := skippedLfs[normPath]; ok {
+				skipped.Add(1)
+				return nil
+			}
+			lf := dto.NewLocalFileS(path, libraryPaths)
+			resultsMu.Lock()
+			localFiles = append(localFiles, lf)
+			resultsMu.Unlock()
+			return nil
+		})
+	}
+
+	if err = eg.Wait(); err != nil && !errors.Is(err, context.Canceled) {
+		return nil, err
+	}
 
 	// Invoke ScanLocalFilesParsed hook
 	parsedEvent := &ScanLocalFilesParsedEvent{
@@ -356,11 +400,11 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		return localFiles, nil
 	}
 
-	scn.WSEventManager.SendEvent(events.EventScanProgress, 40)
+	telemetry.Send(events.EventScanProgress, 40)
 	if scn.Enhanced {
-		scn.WSEventManager.SendEvent(events.EventScanStatus, "Fetching additional matching data...")
+		telemetry.Send(events.EventScanStatus, "Fetching additional matching data...")
 	} else {
-		scn.WSEventManager.SendEvent(events.EventScanStatus, "Fetching media...")
+		telemetry.Send(events.EventScanStatus, "Fetching media...")
 	}
 
 	// +---------------------+
@@ -498,8 +542,8 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		return nil, err
 	}
 
-	scn.WSEventManager.SendEvent(events.EventScanProgress, 50)
-	scn.WSEventManager.SendEvent(events.EventScanStatus, "Matching local files...")
+	telemetry.Send(events.EventScanProgress, 50)
+	telemetry.Send(events.EventScanStatus, "Matching local files...")
 
 	// +---------------------+
 	// |   MediaContainer    |
@@ -530,22 +574,21 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		Database:       scn.Database,
 	}
 
-	scn.WSEventManager.SendEvent(events.EventScanProgress, 60)
+	telemetry.Send(events.EventScanProgress, 60)
 
 	err = matcher.MatchLocalFilesWithMedia()
 	if err != nil {
-		// If the matcher received no local files, return an error
 		if errors.Is(err, ErrNoLocalFiles) {
 			scn.Logger.Debug().Msg("scanner: Scan completed")
-			scn.WSEventManager.SendEvent(events.EventScanProgress, 100)
-			scn.WSEventManager.SendEvent(events.EventScanStatus, "Scan completed")
+			telemetry.Send(events.EventScanProgress, 100)
+			telemetry.Send(events.EventScanStatus, "Scan completed")
 		}
 		return nil, err
 	}
 
-	scn.WSEventManager.SendEvent(events.EventScanProgress, 70)
-	scn.WSEventManager.SendEvent(events.EventScanStatus, "Hydrating metadata...")
-	scn.WSEventManager.SendEvent(events.EventScanProgressDetailed, map[string]interface{}{
+	telemetry.Send(events.EventScanProgress, 70)
+	telemetry.Send(events.EventScanStatus, "Hydrating metadata...")
+	telemetry.Send(events.EventScanProgressDetailed, map[string]interface{}{
 		"stage":      "matching-complete",
 		"matched":    len(lo.Filter(localFiles, func(lf *dto.LocalFile, _ int) bool { return lf.MediaId != 0 })),
 		"unmatched":  len(lo.Filter(localFiles, func(lf *dto.LocalFile, _ int) bool { return lf.MediaId == 0 })),
@@ -572,7 +615,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	}
 	hydrator.HydrateMetadata()
 
-	scn.WSEventManager.SendEvent(events.EventScanProgress, 80)
+	telemetry.Send(events.EventScanProgress, 80)
 
 	// +---------------------+
 	// |  Add missing media  |

@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/util"
@@ -16,7 +17,7 @@ func TestDatabaseCleanupManager(t *testing.T) {
 	tempDir := t.TempDir()
 	logger := util.NewLogger()
 
-	database, err := NewDatabase(tempDir, "cleanup_test", logger)
+	database, err := NewDatabase(context.Background(), tempDir, "cleanup_test", logger)
 	if err != nil {
 		t.Fatalf("Failed to create test database: %v", err)
 	}

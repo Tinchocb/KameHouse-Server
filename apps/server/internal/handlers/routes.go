@@ -22,13 +22,27 @@ type Handler struct {
 }
 
 func InitRoutes(app *core.App, e *echo.Echo) {
-	// CORS middleware
+	// CORS — includes byte-range headers required by the web video player
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: []string{"*"},
-		AllowHeaders: []string{"Origin", "Content-Type", "Accept", "Cookie", "Authorization",
-			"X-KameHouse-Token", "X-KameHouse-Nakama-Token", "X-KameHouse-Nakama-Username", "X-KameHouse-Nakama-Server-Version", "X-KameHouse-Nakama-Peer-Id"},
+		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions, http.MethodHead},
+		AllowHeaders: []string{
+			"Origin", "Content-Type", "Accept", "Cookie", "Authorization",
+			// Byte-range streaming — without these the browser cannot seek in video
+			"Range", "Accept-Ranges", "Content-Range", "If-Range",
+			// App-specific auth headers
+			"X-KameHouse-Token", "X-KameHouse-Nakama-Token", "X-KameHouse-Nakama-Username",
+			"X-KameHouse-Nakama-Server-Version", "X-KameHouse-Nakama-Peer-Id",
+		},
+		// ExposeHeaders lets the browser READ these headers from streaming responses
+		ExposeHeaders: []string{
+			"Accept-Ranges", "Content-Range", "Content-Length", "Content-Disposition",
+		},
 		AllowCredentials: true,
 	}))
+
+	// Delegate to the canonical error handler defined in response.go.
+	e.HTTPErrorHandler = CustomHTTPErrorHandler
 
 	lechoLogger := lecho.From(*app.Logger)
 

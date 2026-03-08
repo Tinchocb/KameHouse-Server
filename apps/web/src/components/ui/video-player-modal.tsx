@@ -79,6 +79,11 @@ export function VideoPlayerModal({
     const [isControlsVisible, setIsControlsVisible] = useState(true)
     const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
+    // Touch / double-tap skip
+    const lastTapRef = useRef<{ time: number; x: number } | null>(null)
+    const [tapFeedback, setTapFeedback] = useState<"left" | "right" | null>(null)
+    const tapFeedbackTimerRef = useRef<NodeJS.Timeout | null>(null)
+
     // ── Track selection state ──────────────────────────────────────────────────
     // Audio tracks — seeded from the trackInfo prop; HLS streams also auto-detect
     // them from the manifest via AUDIO_TRACKS_UPDATED (see HLS effect below).
@@ -369,18 +374,28 @@ export function VideoPlayerModal({
         return () => document.removeEventListener('fullscreenchange', onFsChange)
     }, [])
 
-    // Autohide controls logic
+    // Autohide controls logic (Throttled for Performance)
+    const lastMouseMovedRef = useRef<number>(0)
     const showControlsTemporarily = useCallback(() => {
+        const now = Date.now()
+        // Throttle to max 1 update per 200ms to avoid DOM trashing on mouse move
+        if (now - lastMouseMovedRef.current < 200) return
+        lastMouseMovedRef.current = now
+
         setIsControlsVisible(true)
         if (timeoutRef.current) clearTimeout(timeoutRef.current)
 
         timeoutRef.current = setTimeout(() => {
-            if (isPlaying) setIsControlsVisible(false)
+            if (videoRef.current && !videoRef.current.paused) {
+                setIsControlsVisible(false)
+            }
         }, 3000)
-    }, [isPlaying])
+    }, [])
 
     const handleMouseLeave = () => {
-        if (isPlaying) setIsControlsVisible(false)
+        if (videoRef.current && !videoRef.current.paused) {
+            setIsControlsVisible(false)
+        }
         if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
 
@@ -388,6 +403,38 @@ export function VideoPlayerModal({
         showControlsTemporarily()
         return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current) }
     }, [isPlaying, showControlsTemporarily])
+
+    // handleTap — called on touch/click over the video area.
+    // Single tap: show/hide controls.
+    // Double-tap left third: rewind 10s, right third: forward 10s.
+    const handleTap = useCallback((clientX: number, containerWidth: number) => {
+        const now = Date.now()
+        const last = lastTapRef.current
+        const DOUBLE_TAP_MS = 300
+
+        if (last && now - last.time < DOUBLE_TAP_MS) {
+            // Double tap detected
+            lastTapRef.current = null
+            const zone = clientX / containerWidth
+            if (zone < 0.4) {
+                skipTime(-10)
+                setTapFeedback("left")
+            } else if (zone > 0.6) {
+                skipTime(10)
+                setTapFeedback("right")
+            } else {
+                // Center double tap — toggle play
+                togglePlay()
+            }
+            if (tapFeedbackTimerRef.current) clearTimeout(tapFeedbackTimerRef.current)
+            tapFeedbackTimerRef.current = setTimeout(() => setTapFeedback(null), 600)
+        } else {
+            lastTapRef.current = { time: now, x: clientX }
+            // Force reset lastMouseMovedRef to ensure tap always triggers visible state
+            lastMouseMovedRef.current = 0 
+            showControlsTemporarily()
+        }
+    }, [skipTime, togglePlay, showControlsTemporarily])
 
     const formatTime = (secs: number) => {
         if (!secs || isNaN(secs)) return "00:00"
@@ -405,11 +452,17 @@ export function VideoPlayerModal({
             onMouseMove={showControlsTemporarily}
             onMouseLeave={handleMouseLeave}
             onClick={showControlsTemporarily}
+            onTouchStart={(e) => {
+                // onTouchStart used for quick responsiveness; handleTap handles the logic
+                const touch = e.changedTouches[0]
+                const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
+                handleTap(touch.clientX - rect.left, rect.width)
+            }}
         >
             {/* Loading / Error States */}
             {status === "loading" && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-10 text-white">
-                    <Loader2 className="w-14 h-14 text-orange-500 animate-spin drop-shadow-[0_0_15px_rgba(255,122,0,0.8)]" />
+                    <Loader2 className="w-14 h-14 text-orange-500 animate-spin drop-shadow-[0_0_15px_rgba(249,115,22,0.8)]" />
                     <p className="font-bold tracking-widest uppercase text-sm opacity-80 animate-pulse">
                         {streamType === "transcode" ? "Preparando Transmisión" : "Estableciendo Conexión"}
                     </p>
@@ -421,7 +474,7 @@ export function VideoPlayerModal({
                     <AlertTriangle className="w-16 h-16 text-orange-500" />
                     <h3 className="font-black text-2xl tracking-wide">Transmisión Caída</h3>
                     <p className="text-gray-400 max-w-md">{errorMsg}</p>
-                    <button onClick={onClose} className="mt-4 px-8 py-3 rounded-md bg-orange-500 hover:bg-orange-600 font-bold transition-all shadow-[0_0_20px_rgba(255,122,0,0.4)]">
+                    <button onClick={onClose} className="mt-4 px-8 py-3 rounded-md bg-orange-500 hover:bg-orange-600 font-bold transition-all shadow-[0_0_20px_rgba(249,115,22,0.4)]">
                         Regresar
                     </button>
                 </div>
@@ -458,14 +511,6 @@ export function VideoPlayerModal({
 
             {/*
              * JASSUB subtitle canvas — sits directly above the <video> element.
-             *
-             * Positioning: absolute inset-0 so it covers the entire video area.
-             * pointer-events: none so clicks pass through to the video / controls.
-             * z-index: 1 — above <video> (z:0) but below the controls overlay (z:auto with pointer-events-none).
-             *
-             * The useJassub hook holds a ref to this canvas and passes it to the
-             * JASSUB constructor; JASSUB then resizes the canvas to match the video
-             * dimensions and composites each subtitle frame here via OffscreenCanvas.
              */}
             <canvas
                 ref={subtitleCanvasRef}
@@ -478,113 +523,129 @@ export function VideoPlayerModal({
                 )}
             />
 
-            {/* UI Overlay — Stremio Style */}
+            {/* UI Overlay — Cinematic VOD Style */}
             <div className={cn(
-                "absolute inset-0 flex flex-col justify-between pointer-events-none transition-opacity duration-300 ease-out",
+                "absolute inset-0 flex flex-col justify-between pointer-events-none transition-opacity duration-300 ease-out z-[10]",
                 isControlsVisible || !isPlaying ? "opacity-100" : "opacity-0"
             )}>
-                {/* Top Bar — Minimalist close button */}
-                <div className="absolute top-0 inset-x-0 p-6 flex justify-start pointer-events-auto bg-gradient-to-b from-black/80 to-transparent">
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onClose(); }}
-                        className="flex items-center gap-2 text-white/70 hover:text-white transition-colors group"
-                    >
-                        <FiX className="w-8 h-8 drop-shadow-md" />
-                        <span className="text-sm font-semibold opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-md">
-                            Volver
-                        </span>
-                    </button>
-                    {/* Optional centered title at the top, if desired. We put episodeLabel top-right */}
-                    <div className="ml-auto text-right drop-shadow-md">
-                        {episodeLabel && (
-                            <span className="text-white/80 text-sm font-bold tracking-widest">{episodeLabel}</span>
-                        )}
+                {/* Top Bar — Gradient Mask */}
+                <div className="absolute top-0 inset-x-0 pt-6 pb-24 px-6 md:px-10 flex flex-col md:flex-row md:items-start justify-between pointer-events-auto bg-gradient-to-b from-black/70 to-transparent">
+                    <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onClose(); }}
+                            className="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 text-white/70 hover:text-white transition-colors group bg-black/20 hover:bg-black/40 rounded-full backdrop-blur-md"
+                        >
+                            <FiX className="w-6 h-6 drop-shadow-md" />
+                        </button>
+                        
+                        <div className="flex flex-col drop-shadow-lg max-w-lg mt-2 md:mt-0">
+                            <span className="text-white font-black text-xl md:text-2xl leading-tight tracking-wide">{title || "Reproduciendo"}</span>
+                            {episodeLabel && (
+                                <span className="text-zinc-300 font-bold tracking-widest uppercase text-xs mt-1 md:mt-0.5">{episodeLabel}</span>
+                            )}
+                        </div>
                     </div>
                 </div>
 
-                {/* Center click area (to pause/play on video tap) */}
-                <div className="flex-1 pointer-events-auto cursor-pointer" onClick={(e) => { e.stopPropagation(); togglePlay(); }} />
+                {/* Center click area (to pause/play on video tap) — disabled in favour of onTouchStart on container */}
+                <div className="flex-1 pointer-events-auto cursor-pointer hidden md:block" onClick={(e) => { e.stopPropagation(); togglePlay(); }} />
 
-                {/* Bottom Bar — Stremio exact layout */}
-                <div className="absolute bottom-0 inset-x-0 flex flex-col pointer-events-auto bg-gradient-to-t from-black/95 via-black/70 to-transparent">
+                {/* Tap Feedback Overlay (mobile skip animation) */}
+                {tapFeedback && (
+                    <div className={cn(
+                        "absolute inset-y-0 flex items-center justify-center pointer-events-none z-20 transition-opacity duration-300",
+                        tapFeedback === "left" ? "left-0 w-1/3" : "right-0 w-1/3",
+                        "bg-white/5 backdrop-blur-sm mx-4 my-24 rounded-3xl"
+                    )}>
+                        <div className="flex flex-col items-center gap-2 text-white/90">
+                            {tapFeedback === "left" ? (
+                                <>
+                                    <FaBackward className="w-10 h-10 drop-shadow-xl" />
+                                    <span className="text-sm font-black tracking-widest">-10s</span>
+                                </>
+                            ) : (
+                                <>
+                                    <FaForward className="w-10 h-10 drop-shadow-xl" />
+                                    <span className="text-sm font-black tracking-widest">+10s</span>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                )}
 
-                    {/* Edge-to-Edge Progress Timeline */}
-                    <div className="relative w-full h-[6px] bg-white/20 group cursor-pointer flex items-center" onClick={(e) => { e.stopPropagation() }}>
-                        {/* Hover expansion container */}
-                        <div className="absolute inset-x-0 h-full transition-all group-hover:h-[8px]">
-                            {/* Visual Track */}
+                {/* Bottom Bar — Minimalist VOD layout */}
+                <div className="absolute bottom-0 inset-x-0 flex flex-col pointer-events-auto bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-32 pb-6 px-6 md:px-10 select-none">
+                    
+                    {/* Minimalist Expanding Progress Timeline */}
+                    <div className="relative w-full h-1 hover:h-2 md:h-1.5 md:hover:h-2.5 transition-all bg-white/20 group cursor-pointer flex items-center mb-6 rounded-full" onClick={(e) => { e.stopPropagation() }}>
+                        <div
+                            className="h-full bg-orange-500 shadow-[0_0_12px_rgba(249,115,22,0.8)] transition-all ease-linear rounded-full rounded-r-none relative"
+                            style={{ width: `${Math.max(0, Math.min(100, progressPercentage))}%` }}
+                        >
+                            {/* Hover Thumb Component */}
                             <div
-                                className="h-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.4)] transition-all ease-linear"
-                                style={{ width: `${progressPercentage}%` }}
-                            />
-                            {/* Hover Thumb */}
-                            <div
-                                className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                                style={{ left: `calc(${progressPercentage}% - 7px)` }}
+                                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 md:w-4 md:h-4 bg-orange-500 rounded-full shadow-[0_0_10px_rgba(249,115,22,1)] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
                             />
                         </div>
-                        {/* Invisible dragging input */}
+
+                        {/* Dragging input */}
                         <input
                             type="range"
                             min={0}
                             max={duration || 100}
                             value={currentTime}
                             onChange={(e) => { e.stopPropagation(); handleSeek(e); }}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer touch-none"
+                            style={{ height: "40px", top: "50%", transform: "translateY(-50%)" }}
                         />
                     </div>
 
                     {/* Bottom Controls Row */}
-                    <div className="flex items-center justify-between w-full px-6 py-4">
+                    <div className="flex items-center justify-between w-full">
 
-                        {/* Left Wing: Play/Pause, Rewind/Forward, Volume, Timestamps */}
-                        <div className="flex items-center gap-5">
-                            <button onClick={(e) => { e.stopPropagation(); togglePlay(); }} className="text-white hover:text-zinc-300 transition-colors drop-shadow-md">
-                                {isPlaying ? <FaPause className="w-5 h-5" /> : <FaPlay className="w-5 h-5" />}
+                        {/* Left Wing */}
+                        <div className="flex items-center gap-4 md:gap-8">
+                            <button onClick={(e) => { e.stopPropagation(); togglePlay(); }} className="text-white hover:text-orange-500 transition-colors drop-shadow-md min-w-[44px] min-h-[44px] flex items-center justify-center transform hover:scale-110">
+                                {isPlaying ? <FaPause className="w-6 h-6 md:w-7 md:h-7" /> : <FaPlay className="w-6 h-6 md:w-7 md:h-7 ml-1" />}
                             </button>
 
-                            <button onClick={(e) => { e.stopPropagation(); skipTime(-10); }} className="text-white/80 hover:text-white transition-colors">
-                                <FaBackward className="w-4 h-4" />
-                            </button>
-                            <button onClick={(e) => { e.stopPropagation(); skipTime(10); }} className="text-white/80 hover:text-white transition-colors">
-                                <FaForward className="w-4 h-4" />
-                            </button>
+                            <div className="hidden md:flex items-center gap-6">
+                                <button onClick={(e) => { e.stopPropagation(); skipTime(-10); }} className="text-white/80 hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
+                                    <FaBackward className="w-5 h-5" />
+                                </button>
+                                <button onClick={(e) => { e.stopPropagation(); skipTime(10); }} className="text-white/80 hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
+                                    <FaForward className="w-5 h-5" />
+                                </button>
+                            </div>
 
-                            <div className="flex items-center gap-2 group">
-                                <button onClick={(e) => { e.stopPropagation(); toggleMute(); }} className="text-white hover:text-zinc-300 transition-colors">
+                            {/* Volume Control */}
+                            <div className="hidden md:flex items-center gap-3 group ml-2">
+                                <button onClick={(e) => { e.stopPropagation(); toggleMute(); }} className="text-white hover:text-zinc-300 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
                                     {isMuted || volume === 0 ? <FaVolumeMute className="w-5 h-5" /> : <FaVolumeUp className="w-5 h-5" />}
                                 </button>
-                                <div className="w-0 group-hover:w-20 transition-all duration-300 overflow-hidden relative h-1.5 flex items-center bg-white/20 rounded-full cursor-pointer" onClick={(e) => e.stopPropagation()}>
-                                    <div className="absolute left-0 h-full bg-white" style={{ width: `${isMuted ? 0 : volume * 100}%` }} />
+                                <div className="w-0 group-hover:w-24 transition-all duration-300 overflow-hidden relative h-1.5 flex items-center bg-white/20 rounded-full cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                                    <div className="absolute left-0 h-full bg-white rounded-full" style={{ width: `${isMuted ? 0 : volume * 100}%` }} />
                                     <input
                                         type="range"
                                         min={0} max={1} step={0.05}
                                         value={isMuted ? 0 : volume}
                                         onChange={(e) => { e.stopPropagation(); handleVolume(e); }}
-                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer touch-none"
                                     />
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-1.5 text-zinc-300 text-[13px] font-medium tabular-nums select-none drop-shadow-md">
-                                <span className="text-white">{formatTime(currentTime)}</span>
-                                <span className="text-zinc-500">/</span>
-                                <span className="text-zinc-400">{formatTime(duration)}</span>
-                            </div>
                         </div>
 
-                        {/* Center: Title */}
-                        <div className="absolute left-1/2 -translate-x-1/2 hidden md:flex flex-col items-center max-w-[30%] text-center pointer-events-none drop-shadow-md">
-                            <span className="text-white font-bold truncate w-full text-base">{title || "Reproduciendo"}</span>
-                            <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">
-                                {streamType === "transcode" && "HLS TRANSCODE"}
-                                {streamType === "optimized" && "HLS OPTIMIZED"}
-                                {streamType === "direct" && "DIRECT MEDIA"}
-                            </span>
+                        {/* Time indicator (Center on mobile, Left on Desktop) */}
+                        <div className="flex-1 flex justify-center md:justify-start md:ml-6 items-center gap-1.5 text-zinc-300 text-xs md:text-sm font-bold tabular-nums tracking-widest select-none drop-shadow-md">
+                            <span className="text-white">{formatTime(currentTime)}</span>
+                            <span className="text-zinc-600">/</span>
+                            <span className="text-zinc-400">{formatTime(duration)}</span>
                         </div>
 
                         {/* Right Wing: Settings, Fullscreen */}
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 md:gap-4">
                             <PlayerSettingsMenu
                                 audioTracks={audioTracks}
                                 activeAudioIndex={activeAudioIndex}
@@ -595,8 +656,8 @@ export function VideoPlayerModal({
                                 isLoadingSubtitle={isLoadingSubtitle}
                             />
 
-                            <button onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }} className="text-white hover:text-zinc-300 transition-colors drop-shadow-md ml-2">
-                                {isFullscreen ? <FaCompress className="w-5 h-5" /> : <FaExpand className="w-5 h-5" />}
+                            <button onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }} className="text-white hover:text-zinc-300 transition-colors drop-shadow-md min-w-[44px] min-h-[44px] flex items-center justify-center ml-1 md:ml-4">
+                                {isFullscreen ? <FaCompress className="w-5 h-5 md:w-6 md:h-6" /> : <FaExpand className="w-5 h-5 md:w-6 md:h-6" />}
                             </button>
                         </div>
                     </div>

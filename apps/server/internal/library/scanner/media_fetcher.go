@@ -18,6 +18,7 @@ import (
 	"kamehouse/internal/util/limiter"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/rs/zerolog"
@@ -342,36 +343,34 @@ func FetchMediaFromLocalFiles(
 
 	var results []*dto.NormalizedMedia
 
-	// For each title, query the providers in order
+	// Per-scan metadata cache: collapses duplicate API calls for the same title
+	// (singleflight) and memoises resolved results (sync.Map) across the loop.
+	// Cleared on return so memory is released as soon as the scan completes.
+	cache := newMetadataFetchCache()
+	defer cache.Clear()
+
+	// For each unique title, delegate to the cache which handles deduplication,
+	// singleflight grouping, and 429 exponential back-off internally.
 	for _, title := range titles {
-		var matchedMedia *dto.NormalizedMedia
-
-		for _, provider := range providers {
-			var err error
-			// Use SearchMedia instead of MAL advanced search
-			searchRes, err := provider.SearchMedia(title)
-			if err != nil || len(searchRes) == 0 {
-				continue // fallback to next provider
+		matchedMedia, fetchErr := cache.FetchOnce(ctx, title, providers)
+		if fetchErr != nil {
+			if scanLogger != nil {
+				scanLogger.LogMediaFetcher(zerolog.WarnLevel).
+					Str("module", "Enhanced").
+					Str("title", title).
+					Err(fetchErr).
+					Msg("Provider fetch failed (non-retryable)")
 			}
-
-			// We found results in this provider! We take the first one.
-			topResultId := searchRes[0].ID
-
-			// Fetch full details
-			matchedMedia, err = provider.GetMediaDetails(fmt.Sprintf("%d", topResultId))
-			if err == nil && matchedMedia != nil {
-				if scanLogger != nil {
-					scanLogger.LogMediaFetcher(zerolog.DebugLevel).
-						Str("module", "Enhanced").
-						Str("title", dto.GetTitleSafe(matchedMedia)).
-						Str("provider", provider.GetName()).
-						Msg("Fetched media from provider")
-				}
-				break // Halt the provider fallback loop for this title
-			}
+			continue
 		}
 
 		if matchedMedia != nil {
+			if scanLogger != nil {
+				scanLogger.LogMediaFetcher(zerolog.DebugLevel).
+					Str("module", "Enhanced").
+					Str("title", dto.GetTitleSafe(matchedMedia)).
+					Msg("Resolved media (cache/provider)")
+			}
 			results = append(results, matchedMedia)
 		} else {
 			if scanLogger != nil {
@@ -384,6 +383,38 @@ func FetchMediaFromLocalFiles(
 	}
 
 	return results, true
+}
+
+// errRateLimited is a sentinel returned by retryWithBackoff when all attempts
+// were exhausted due to upstream rate-limiting (HTTP 429).
+var errRateLimited = errors.New("upstream rate-limited (HTTP 429)")
+
+// retryWithBackoff calls fn up to maxAttempts times.
+// If fn returns an error whose message contains "429" it treats it as a
+// rate-limit signal and waits an exponentially growing delay before retrying.
+// Other errors are returned immediately without retrying.
+func retryWithBackoff(ctx context.Context, maxAttempts int, fn func() error) error {
+	delay := time.Second
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		err := fn()
+		if err == nil {
+			return nil
+		}
+		// Only retry on rate-limit signals; propagate other errors immediately.
+		if !strings.Contains(err.Error(), "429") {
+			return err
+		}
+		if attempt == maxAttempts-1 {
+			return errRateLimited
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(delay):
+			delay *= 2 // exponential: 1s → 2s → 4s
+		}
+	}
+	return errRateLimited
 }
 
 // newMediaFetcherTMDB creates a MediaFetcher using TMDB + folder structure

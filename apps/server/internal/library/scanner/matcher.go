@@ -15,6 +15,10 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// reYear matches a 4-digit calendar year (1900–2099) bounded by word boundaries.
+// Pre-compiled at package init to avoid repeated allocation inside extractYear().
+var reYear = regexp.MustCompile(`\b((?:19|20)\d{2})\b`)
+
 // AgentMatcher acts as the autonomous "Brain" of the scanning engine.
 // Instead of binary matching, it uses Bayesian Probabilities to evaluate file paths,
 // contextual folders, and metadata to establish confidence in an identity match.
@@ -261,10 +265,10 @@ func (m *Matcher) calculateBayesianScore(pm ParsedMedia, media *dto.NormalizedMe
 	return posterior
 }
 
-// extractYear extracts a 4-digit year from a string like "Dragon Ball Z (1993)" or "- 1993.mkv"
+// extractYear extracts a 4-digit year from strings like "Dragon Ball Z (1993)" or "- 1993.mkv".
+// Uses the package-level reYear to avoid recompiling the pattern on every call.
 func extractYear(s string) int {
-	re := regexp.MustCompile(`\b((?:19|20)\d{2})\b`)
-	if loc := re.FindStringSubmatch(s); len(loc) > 1 {
+	if loc := reYear.FindStringSubmatch(s); len(loc) > 1 {
 		return parseFallbackInt(loc[1], 0)
 	}
 	return 0

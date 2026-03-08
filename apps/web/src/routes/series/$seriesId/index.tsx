@@ -18,6 +18,7 @@ import {
     Calendar,
     ArrowLeft,
     Wifi,
+    Play,
 } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 import type { Anime_Entry, Anime_Episode, Models_LibraryMedia, Mediastream_StreamType } from "@/api/generated/types"
@@ -626,7 +627,6 @@ function SeriesDetailContent({
     const [isPlayerLoading, setIsPlayerLoading] = useState(false)
 
     const triggerHybridFetch = useCallback(async (mediaId: number, epNumber: number, clientId: string) => {
-        // Simulamos resolución concurrente local o torrent
         return new Promise<{ url: string, type: Mediastream_StreamType, ext: boolean }>((resolve) => {
             setTimeout(() => {
                 resolve({
@@ -638,10 +638,7 @@ function SeriesDetailContent({
         })
     }, [])
 
-    // ── Ocultamos las peticiones locales directas al usar la plataforma Híbrida ──
-    // Se elimina el `useRequestMediastreamMediaContainer` bloqueante porque ahora usamos Promesas + `use()`
-
-    const isStreamLoading = false; // React 19 handle Loading vía Suspense
+    const isStreamLoading = false; 
 
     // ── Sources for current episode ───────────────────────────────────────
     const sources = useMemo(
@@ -683,65 +680,265 @@ function SeriesDetailContent({
         [setCurrentIdx],
     )
 
+    // Determine Sagas (group by seasons or chunks) for Tab layout
+    const sagas = useMemo(() => {
+        if (!episodes || episodes.length === 0) return []
+        const useSeasons = episodes.some(ep => (ep.episodeMetadata as any)?.seasonNumber)
+        const grouped = new Map<string, Anime_Episode[]>()
+        episodes.forEach(ep => {
+            const groupKey = useSeasons && (ep.episodeMetadata as any)?.seasonNumber
+                ? `Temporada ${(ep.episodeMetadata as any).seasonNumber}`
+                : `Episodios ${Math.floor((ep.episodeNumber - 1) / 50) * 50 + 1}-${Math.floor((ep.episodeNumber - 1) / 50) * 50 + 50}`
+            if (!grouped.has(groupKey)) grouped.set(groupKey, [])
+            grouped.get(groupKey)!.push(ep)
+        })
+        return Array.from(grouped.entries()).map(([name, eps]) => ({ name, eps }))
+    }, [episodes])
+
+    const [activeSaga, setActiveSaga] = useState(sagas[0]?.name || "")
 
     return (
-        <>
-            <div className="flex flex-col lg:flex-row min-h-screen bg-zinc-950">
-                <LeftPanel media={media} entry={entry} onBack={onBack} />
-                <RightPanel
-                    episodes={episodes}
-                    currentIndex={currentIdx}
-                    onSelectEpisode={handleSelectEpisode}
-                    sources={sources as RealStreamSource[]}
-                    onPlaySource={handlePlaySource}
-                    isStreamLoading={isStreamLoading}
+        <div className="relative min-h-screen text-white bg-background pb-32">
+            
+            {/* ── 1. Immersive Background (Fixed) ── */}
+            <div className="fixed inset-0 w-full h-full -z-10 pointer-events-none">
+                <img 
+                    src={media.bannerImage || media.posterImage} 
+                    alt="" 
+                    loading="lazy" 
+                    className="w-full h-full object-cover object-top" 
                 />
+                {/* ── 2. Heavy Gradient Mask ── */}
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/90 to-background/40" />
             </div>
 
-            {/* Related Content Slider */}
-            {((media as any).relations && (media as any).relations.length > 0) && (
-                <section className="bg-zinc-950 px-6 md:px-10 py-12 border-t border-white/5">
-                    <div className="max-w-[1800px] mx-auto">
-                        <h3 className="text-white text-xl font-black mb-6 flex items-center gap-3">
-                            <span className="w-1 h-5 rounded-full bg-orange-500" />
-                            Relacionados / Películas
-                        </h3>
-                        <Slider containerClassName="gap-4">
-                            {(media as any).relations.map((rel: any) => {
-                                const relMedia = rel.edge as Models_LibraryMedia | undefined
-                                if (!relMedia) return null
+            {/* ── Safe Area Nav ── */}
+            <header className="absolute top-0 left-0 w-full px-6 md:px-12 py-8 z-20">
+                <button
+                    onClick={onBack}
+                    className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors text-sm font-black uppercase tracking-widest drop-shadow-md group"
+                >
+                    <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+                    Volver al Catálogo
+                </button>
+            </header>
 
-                                return (
-                                    <div key={relMedia.id} className="min-w-[160px] max-w-[160px] md:min-w-[200px] md:max-w-[200px] shrink-0">
-                                        <MediaCard
-                                            artwork={relMedia.posterImage || (relMedia as any).coverImage || ""}
-                                            title={relMedia.titleEnglish || relMedia.titleRomaji || "Sin título"}
-                                            onClick={() => window.location.href = `/series/${relMedia.id}`}
-                                        />
-                                        <div className="mt-3">
-                                            <span className="text-[10px] font-black uppercase tracking-wider text-orange-500/80">
-                                                {rel.relationType}
-                                            </span>
-                                            <h4 className="text-zinc-300 font-bold text-sm truncate mt-0.5">
-                                                {relMedia.titleEnglish || relMedia.titleRomaji || "Sin título"}
-                                            </h4>
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                        </Slider>
+            {/* ── 3. Hero Section (Top Half) ── */}
+            <section className="relative z-10 w-full max-w-[1400px] mx-auto px-6 md:px-12 lg:px-20 pt-40 lg:pt-56 pb-12 flex flex-col items-start gap-4 md:gap-6">
+                
+                {/* Logo or Title */}
+                <div className="max-w-4xl drop-shadow-2xl">
+                    {(media as any).logoImage ? (
+                        <img 
+                            src={(media as any).logoImage} 
+                            alt={getTitle(media)} 
+                            className="max-h-24 md:max-h-36 object-contain" 
+                        />
+                    ) : (
+                        <h1 className="text-4xl md:text-5xl lg:text-7xl font-black text-white leading-[1.1] tracking-tight text-pretty">
+                            {getTitle(media)}
+                        </h1>
+                    )}
+                </div>
+
+                {/* Meta Row */}
+                <div className="flex flex-wrap items-center gap-2 md:gap-3 text-sm font-bold drop-shadow-md text-zinc-200 uppercase tracking-widest">
+                    {media.score > 0 && (
+                        <span className="flex items-center gap-1.5 text-orange-400">
+                            <Star className="w-4 h-4 fill-orange-400" />
+                            {(media.score / 10).toFixed(1)}
+                        </span>
+                    )}
+                    {media.score > 0 && <span className="opacity-50">·</span>}
+                    {media.year > 0 && <span className="text-orange-100">{media.year}</span>}
+                    {media.year > 0 && <span className="opacity-50">·</span>}
+                    <span className="text-orange-500">{media.format}</span>
+                    <span className="opacity-50">·</span>
+                    <span>{media.totalEpisodes} Eps</span>
+                    
+                    {entry.listData?.status && (
+                        <>
+                            <span className="opacity-50">·</span>
+                            <span className="text-emerald-400">{entry.listData.status}</span>
+                        </>
+                    )}
+                </div>
+
+                {/* Badges / Genres */}
+                {media.genres && media.genres.length > 0 && (
+                    <div className="flex flex-wrap gap-2 drop-shadow-md mt-1">
+                        {media.genres.slice(0, 6).map(g => (
+                            <span 
+                                key={g} 
+                                className="px-2.5 py-1 text-[11px] font-black uppercase tracking-widest rounded-md bg-white/10 backdrop-blur-md text-white border border-white/10"
+                            >
+                                {g}
+                            </span>
+                        ))}
                     </div>
-                </section>
-            )}
+                )}
 
+                {/* Synopsis */}
+                <p className="text-sm md:text-base text-zinc-300 max-w-3xl line-clamp-3 md:line-clamp-4 leading-relaxed font-medium drop-shadow-xl mt-2">
+                    {media.description || "Sin sinopsis disponible para este contenido."}
+                </p>
+
+                {/* Hero CTAs */}
+                <div className="flex items-center gap-4 mt-6">
+                    <button
+                        onClick={() => {
+                            if (sources && sources.length > 0) handlePlaySource(sources[0])
+                        }}
+                        className="flex items-center justify-center gap-3 bg-white hover:bg-zinc-200 active:scale-95 text-zinc-950 min-h-[56px] px-8 py-3 rounded-xl font-black text-base md:text-lg transition-all shadow-xl shadow-white/20"
+                    >
+                        <Play className="w-6 h-6 fill-current" />
+                        Repoducir {currentEpisode ? `Ep. ${currentEpisode.episodeNumber}` : ""}
+                    </button>
+                </div>
+            </section>
+
+            {/* ── 4. Content Separation (Glassmorphism Container) ── */}
+            <section className="relative z-10 w-full max-w-[1400px] mx-auto px-6 md:px-12 lg:px-20 mt-8">
+                <div className="bg-black/50 backdrop-blur-2xl border border-white/5 rounded-[2rem] p-6 text-white md:p-10 shadow-2xl flex flex-col gap-12">
+                    
+                    {/* Grid: Episodes (Left 2/3) + Sources (Right 1/3) */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
+                        
+                        {/* Episodes Column */}
+                        <div className="lg:col-span-8 flex flex-col gap-6">
+                            <div className="flex items-center gap-3">
+                                <span className="w-1.5 h-7 rounded-sm bg-orange-500 shadow-[0_0_12px_rgba(249,115,22,0.6)]" />
+                                <h2 className="text-2xl font-black uppercase tracking-widest">Episodios</h2>
+                                <span className="px-3 py-1 rounded-full bg-white/10 text-xs font-bold text-zinc-400">
+                                    {episodes.length}
+                                </span>
+                            </div>
+
+                            {/* Sagas Tabs */}
+                            <Tabs value={activeSaga} onValueChange={setActiveSaga} className="w-full">
+                                {sagas.length > 1 && (
+                                    <div className="mb-6 overflow-x-auto scrollbar-hide">
+                                        <TabsList className="w-max inline-flex p-1 bg-white/5 rounded-xl border border-white/10 h-12 justify-start items-center">
+                                            {sagas.map(saga => (
+                                                <TabsTrigger
+                                                    key={saga.name}
+                                                    value={saga.name}
+                                                    className="h-10 rounded-lg text-xs font-black uppercase tracking-widest px-6 data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all border-none"
+                                                >
+                                                    {saga.name}
+                                                </TabsTrigger>
+                                            ))}
+                                        </TabsList>
+                                    </div>
+                                )}
+
+                                {sagas.map(saga => (
+                                    <TabsContent key={saga.name} value={saga.name} className="flex flex-col gap-1.5 focus:outline-none">
+                                        {saga.eps.map((ep) => {
+                                            const originalIdx = episodes.findIndex(e => e.episodeNumber === ep.episodeNumber)
+                                            return (
+                                                <EpisodeRow
+                                                    key={`${ep.absoluteEpisodeNumber}-${ep.episodeNumber}`}
+                                                    episode={ep}
+                                                    isActive={originalIdx === currentIdx}
+                                                    onSelect={() => handleSelectEpisode(originalIdx)}
+                                                />
+                                            )
+                                        })}
+                                    </TabsContent>
+                                ))}
+                            </Tabs>
+                        </div>
+
+                        {/* Sources Column */}
+                        <div className="lg:col-span-4 flex flex-col gap-6 border-t lg:border-t-0 lg:border-l border-white/10 pt-10 lg:pt-0 lg:pl-10">
+                            <div className="flex items-center gap-3">
+                                <span className="w-1.5 h-7 rounded-sm bg-orange-500" />
+                                <h3 className="text-xl font-black uppercase tracking-widest text-zinc-100">
+                                    Fuentes
+                                </h3>
+                            </div>
+
+                            {/* Selection Hint Box */}
+                            {currentEpisode && (
+                                <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col gap-2">
+                                    <span className="text-orange-400 text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                                        Selección  Episodio {currentEpisode.episodeNumber}
+                                    </span>
+                                    <h4 className="font-bold text-sm text-zinc-200 line-clamp-2 leading-relaxed">
+                                        {currentEpisode.displayTitle || currentEpisode.episodeTitle || "Sin título"}
+                                    </h4>
+                                </div>
+                            )}
+
+                            {/* Source Cards */}
+                            <div className="flex flex-col gap-3">
+                                {isStreamLoading ? (
+                                    <div className="flex items-center justify-center p-8 bg-white/5 rounded-xl border border-white/10">
+                                        <div className="w-8 h-8 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin" />
+                                    </div>
+                                ) : (
+                                    sources.map((src) => (
+                                        <StreamSourceCard
+                                            key={src.id}
+                                            source={src}
+                                            onPlay={(s) => handlePlaySource(s as RealStreamSource)}
+                                        />
+                                    ))
+                                )}
+                            </div>
+                        </div>
+
+                    </div>
+
+                    {/* Related Media Section inside the container */}
+                    {((media as any).relations && (media as any).relations.length > 0) && (
+                        <div className="border-t border-white/10 pt-10 mt-4 flex flex-col gap-6">
+                            <h3 className="text-xl font-black uppercase tracking-widest flex items-center gap-3">
+                                <span className="w-1.5 h-7 rounded-sm bg-orange-500" />
+                                Títulos Relacionados
+                            </h3>
+                            <Slider containerClassName="gap-4 pb-4">
+                                {(media as any).relations.map((rel: any) => {
+                                    const relMedia = rel.edge as Models_LibraryMedia | undefined
+                                    if (!relMedia) return null
+
+                                    return (
+                                        <div key={relMedia.id} className="min-w-[160px] max-w-[160px] md:min-w-[200px] md:max-w-[200px] shrink-0">
+                                            <MediaCard
+                                                artwork={relMedia.posterImage || (relMedia as any).coverImage || ""}
+                                                title={getTitle(relMedia)}
+                                                onClick={() => window.location.href = `/series/${relMedia.id}`}
+                                            />
+                                            <div className="mt-3 flex flex-col gap-1">
+                                                <span className="text-[10px] font-black uppercase tracking-wider text-orange-400 drop-shadow-sm">
+                                                    {rel.relationType}
+                                                </span>
+                                                <h4 className="text-zinc-200 font-bold text-sm truncate">
+                                                    {getTitle(relMedia)}
+                                                </h4>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </Slider>
+                        </div>
+                    )}
+
+                </div>
+            </section>
+
+            {/* ── Video Player Modal ── */}
             {isPlayerOpen && (
                 isPlayerLoading ? (
                     <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-zinc-950">
-                        <div className="w-10 h-10 border-4 border-orange-500/30 border-t-orange-500 rounded-full animate-spin mb-4" />
-                        <h2 className="text-white font-bold text-lg">Cargando stream...</h2>
+                        <div className="w-12 h-12 border-4 border-orange-500/30 border-t-orange-500 rounded-full animate-spin mb-6" />
+                        <h2 className="text-white font-black uppercase tracking-widest text-lg animate-pulse">
+                            Preparando Stream
+                        </h2>
                         <button
                             onClick={handleClose}
-                            className="mt-6 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+                            className="mt-6 px-6 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-400 hover:text-white font-bold rounded-lg transition-all"
                         >
                             Cancelar
                         </button>
@@ -759,6 +956,6 @@ function SeriesDetailContent({
                     />
                 )
             )}
-        </>
+        </div>
     )
 }

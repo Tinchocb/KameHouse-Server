@@ -6,7 +6,7 @@ import { createRootRouteWithContext, Outlet, redirect } from "@tanstack/react-ro
 import { createStore } from "jotai"
 import React from "react"
 import { AppLayout, AppLayoutSidebar, AppLayoutContent } from "@/components/ui/app-layout/app-layout"
-import { AppSidebar, AppSidebarProvider } from "@/components/ui/app-layout/app-sidebar"
+import { AppSidebar, AppSidebarProvider, AppBottomNav } from "@/components/ui/app-layout/app-sidebar"
 
 export const Route = createRootRouteWithContext<{
     queryClient: QueryClient
@@ -29,6 +29,7 @@ export const Route = createRootRouteWithContext<{
                 <AppLayoutContent>
                     <Outlet />
                 </AppLayoutContent>
+                <AppBottomNav />
             </AppLayout>
         </AppSidebarProvider>
     ),

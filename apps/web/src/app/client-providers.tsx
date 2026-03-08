@@ -1,3 +1,4 @@
+import { APIError } from "@/api/client/requests"
 import { WebsocketProvider } from "@/app/websocket-provider"
 import { CustomCSSProvider } from "@/components/shared/custom-css-provider"
 import { CustomThemeProvider } from "@/components/shared/custom-theme-provider"
@@ -8,19 +9,40 @@ import { Provider as JotaiProvider } from "jotai/react"
 import { ThemeProvider } from "next-themes"
 import React, { useEffect } from "react"
 import { CookiesProvider } from "react-cookie"
+import { toast } from "sonner"
 
 interface ClientProvidersProps {
     children?: React.ReactNode
 }
 
+/** Status codes that should NEVER be retried — they indicate a definitive client error. */
+const NO_RETRY_STATUSES = new Set([400, 401, 403, 404, 422])
+
 export const queryClient = new QueryClient({
     defaultOptions: {
         queries: {
             refetchOnWindowFocus: false,
-            retry: 1, // Allow 1 retry for resilience
-            staleTime: 5 * 60 * 1000, // 5 minutes fresh
-            gcTime: 30 * 60 * 1000,   // Keep in cache for 30m (prevents flickering on rapid episode switching)
-            // Note: In React Query v5+, per-query keepPreviousData is migrated to placeholderData: keepPreviousData
+            staleTime: 5 * 60 * 1000,        // 5 min fresh
+            gcTime: 30 * 60 * 1000,           // 30 min in-cache (prevents flicker on rapid nav)
+            // Smart retry: 1 attempt for transient errors, 0 for definitive failures.
+            retry: (failureCount, error) => {
+                if (error instanceof APIError && NO_RETRY_STATUSES.has(error.status)) {
+                    return false
+                }
+                return failureCount < 1
+            },
+        },
+        mutations: {
+            // Global fallback: any unhandled mutation failure shows a toast.
+            // Individual hooks can still add their own onError and call options.onError().
+            onError: (error) => {
+                if (error instanceof APIError) {
+                    const msg = (error.data as Record<string, string>)?.error ?? error.message
+                    if (!msg.includes("feature disabled")) {
+                        toast.error(msg || "An unexpected error occurred")
+                    }
+                }
+            },
         },
     },
 })

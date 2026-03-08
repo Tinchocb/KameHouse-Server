@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router"
-import React from "react"
+import React, { useMemo } from "react"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { useGetLocalFiles } from "@/api/hooks/localfiles.hooks"
 import { MediaCard } from "@/components/ui/media-card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs/tabs"
 import { Anime_LocalFile, Models_LibraryMedia, Anime_LibraryCollectionEntry } from "@/api/generated/types"
+import { Search } from "lucide-react"
 
 export const Route = createFileRoute("/library/")({
     component: LibraryPage,
@@ -25,11 +26,20 @@ function LibraryPage() {
 
     const renderGrid = (entries: Anime_LibraryCollectionEntry[], emptyMessage: string) => {
         if (!entries || entries.length === 0) {
-            return <div className="text-zinc-600 font-medium py-10 text-center">{emptyMessage}</div>
+            return (
+                <div className="flex flex-col items-center justify-center min-h-[40vh] text-center px-4">
+                    <span className="text-5xl mb-4 opacity-50">📭</span>
+                    <h3 className="text-xl font-bold text-zinc-300">{emptyMessage}</h3>
+                </div>
+            )
         }
 
         return (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 pt-4">
+            // ── Fluid CSS Grid with Content Visibility for Performance ──
+            <div 
+                className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4 md:gap-6 pt-6 pb-12 w-full"
+                style={{ contentVisibility: "auto" }}
+            >
                 {entries.map((entry, idx) => {
                     const media = entry.media
                     if (!media) return null
@@ -41,16 +51,18 @@ function LibraryPage() {
                     }
 
                     return (
-                        <MediaCard
-                            key={media.id || idx}
-                            title={getTitle(media)}
-                            artwork={media.posterImage || media.bannerImage || "https://placehold.co/220x330/1A1A1A/FFFFFF?text=Sin+Poster"}
-                            badge={media.format || undefined}
-                            aspect="poster"
-                            progress={progress > 0 ? progress : undefined}
-                            className="w-full"
-                            onClick={() => window.location.href = `/series/${media.id}`}
-                        />
+                        <div key={media.id || idx} className="w-full">
+                            <MediaCard
+                                title={getTitle(media)}
+                                artwork={media.posterImage || media.bannerImage || "https://placehold.co/220x330/1A1A1A/FFFFFF?text=Sin+Poster"}
+                                badge={media.format || undefined}
+                                aspect="poster"
+                                progress={progress > 0 ? progress : undefined}
+                                className="w-full"
+                                onClick={() => window.location.href = `/series/${media.id}`}
+                            />
+                            {/* Title overlay moved directly under card for library grid consistency if desired, or let MediaCard handle it */}
+                        </div>
                     )
                 })}
             </div>
@@ -58,73 +70,113 @@ function LibraryPage() {
     }
 
     return (
-        <div className="flex-1 w-full flex flex-col p-8 bg-[#0B0B0F] text-white overflow-y-auto">
-            <h1 className="text-4xl font-black mb-8 tracking-tight">MI <span className="text-orange-500">BIBLIOTECA</span></h1>
+        <div className="flex-1 w-full flex flex-col bg-background text-white overflow-y-auto">
+            
+            {/* ── Sticky Cinematic Header ── */}
+            <header className="sticky top-0 z-40 flex flex-col md:flex-row md:items-center justify-between gap-6 px-6 md:px-10 py-6 bg-black/60 backdrop-blur-2xl border-b border-white/5 shadow-2xl">
+                <div className="drop-shadow-lg">
+                    <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white uppercase">
+                        Mi <span className="text-orange-500">Biblioteca</span>
+                    </h1>
+                    <p className="text-sm font-medium text-zinc-400 mt-1.5 uppercase tracking-widest drop-shadow-sm">
+                        Tu colección personal de contenido
+                    </p>
+                </div>
 
-            <Tabs defaultValue="current" className="w-full">
-                <TabsList className="flex w-full justify-start items-center gap-6 border-b border-[#1C1C28] pb-0 mb-6 bg-transparent p-0 h-auto">
-                    <TabsTrigger
-                        value="current"
-                        className="text-lg font-bold pb-3 px-0 border-b-2 border-transparent data-[state=active]:border-orange-500 data-[state=active]:text-orange-500 text-gray-400 rounded-none bg-transparent m-0 data-[state=active]:bg-transparent hover:text-white transition-colors"
-                    >
-                        Viendo actualmente
-                    </TabsTrigger>
-                    <TabsTrigger
-                        value="planned"
-                        className="text-lg font-bold pb-3 px-0 border-b-2 border-transparent data-[state=active]:border-orange-500 data-[state=active]:text-orange-500 text-gray-400 rounded-none bg-transparent m-0 data-[state=active]:bg-transparent hover:text-white transition-colors"
-                    >
-                        Planeado
-                    </TabsTrigger>
-                    <TabsTrigger
-                        value="completed"
-                        className="text-lg font-bold pb-3 px-0 border-b-2 border-transparent data-[state=active]:border-orange-500 data-[state=active]:text-orange-500 text-gray-400 rounded-none bg-transparent m-0 data-[state=active]:bg-transparent hover:text-white transition-colors"
-                    >
-                        Completados
-                    </TabsTrigger>
-                    <TabsTrigger
-                        value="local"
-                        className="text-lg font-bold pb-3 px-0 border-b-2 border-transparent data-[state=active]:border-orange-500 data-[state=active]:text-orange-500 text-gray-400 rounded-none bg-transparent m-0 data-[state=active]:bg-transparent hover:text-white transition-colors"
-                    >
-                        Archivos Locales
-                    </TabsTrigger>
-                </TabsList>
+                {/* Search & Filters */}
+                <div className="relative group w-full md:w-auto mt-2 md:mt-0">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Search className="w-4 h-4 text-zinc-500 group-focus-within:text-orange-500 transition-colors" />
+                    </div>
+                    <input 
+                        type="text" 
+                        placeholder="Buscar..." 
+                        className="w-full md:w-72 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl py-3 pl-11 pr-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all placeholder:text-zinc-500 font-bold shadow-inner" 
+                    />
+                </div>
+            </header>
 
-                <TabsContent value="current">
-                    {libLoading ? <div className="py-20 text-center animate-pulse text-orange-500 font-semibold text-lg">Cargando biblioteca...</div> : renderGrid(currentlyWatching, "No estás viendo ninguna serie ahora mismo.")}
-                </TabsContent>
+            {/* ── Main Canvas ── */}
+            <div className="px-6 md:px-10 py-8 w-full max-w-[2400px] mx-auto flex-1">
+                <Tabs defaultValue="current" className="w-full">
+                    
+                    {/* Seamless VOD Tabs */}
+                    <TabsList className="flex w-max justify-start items-center gap-2 border border-white/10 bg-white/5 rounded-2xl p-1.5 h-auto overflow-x-auto shadow-inner">
+                        <TabsTrigger
+                            value="current"
+                            className="h-10 rounded-xl text-xs md:text-sm font-black uppercase tracking-widest px-6 data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow-lg text-zinc-400 hover:text-zinc-200 transition-all border-none"
+                        >
+                            Viendo ({currentlyWatching.length})
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="planned"
+                            className="h-10 rounded-xl text-xs md:text-sm font-black uppercase tracking-widest px-6 data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow-lg text-zinc-400 hover:text-zinc-200 transition-all border-none"
+                        >
+                            Planeado ({planned.length})
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="completed"
+                            className="h-10 rounded-xl text-xs md:text-sm font-black uppercase tracking-widest px-6 data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow-lg text-zinc-400 hover:text-zinc-200 transition-all border-none"
+                        >
+                            Completados ({completed.length})
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="local"
+                            className="h-10 rounded-xl text-xs md:text-sm font-black uppercase tracking-widest px-6 data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow-lg text-zinc-400 hover:text-zinc-200 transition-all border-none"
+                        >
+                            Archivos Locales
+                        </TabsTrigger>
+                    </TabsList>
 
-                <TabsContent value="planned">
-                    {libLoading ? <div className="py-20 text-center animate-pulse text-orange-500 font-semibold text-lg">Cargando biblioteca...</div> : renderGrid(planned, "No tienes series planeadas para ver.")}
-                </TabsContent>
+                    <div className="mt-8">
+                        <TabsContent value="current" className="focus:outline-none focus-visible:ring-0">
+                            {libLoading ? (
+                                <div className="py-20 flex justify-center"><div className="w-10 h-10 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin"/></div>
+                            ) : renderGrid(currentlyWatching, "No estás viendo ninguna serie ahora mismo.")}
+                        </TabsContent>
 
-                <TabsContent value="completed">
-                    {libLoading ? <div className="py-20 text-center animate-pulse text-orange-500 font-semibold text-lg">Cargando biblioteca...</div> : renderGrid(completed, "Aún no has completado ninguna serie.")}
-                </TabsContent>
+                        <TabsContent value="planned" className="focus:outline-none focus-visible:ring-0">
+                            {libLoading ? (
+                                <div className="py-20 flex justify-center"><div className="w-10 h-10 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin"/></div>
+                            ) : renderGrid(planned, "No tienes series planeadas para ver.")}
+                        </TabsContent>
 
-                <TabsContent value="local">
-                    {locLoading ? (
-                        <div className="py-20 text-center animate-pulse text-orange-500 font-semibold text-lg uppercase tracking-widest">Escaneando archivos locales...</div>
-                    ) : (!localData || localData.length === 0) ? (
-                        <div className="text-zinc-500 font-medium py-10 text-center">No tienes archivos indexados localmente todavía.</div>
-                    ) : (
-                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 pt-4">
-                            {localData.map((file: Anime_LocalFile, idx: number) => {
-                                const parseData: any = file.parsedInfo || (file as any).Parsed || (file as any).parsedData || {}
-                                return (
-                                    <MediaCard
-                                        key={file.path || `local-${idx}`}
-                                        title={parseData.title || parseData.Title || (file as any).name || "Archivo genérico"}
-                                        artwork="https://placehold.co/220x330/1A1A1A/FFFFFF?text=Archivo+Local"
-                                        badge={parseData.resolution || parseData.Resolution || "LOCAL"}
-                                        aspect="poster"
-                                        className="w-full"
-                                    />
-                                )
-                            })}
-                        </div>
-                    )}
-                </TabsContent>
-            </Tabs>
+                        <TabsContent value="completed" className="focus:outline-none focus-visible:ring-0">
+                            {libLoading ? (
+                                <div className="py-20 flex justify-center"><div className="w-10 h-10 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin"/></div>
+                            ) : renderGrid(completed, "Aún no has completado ninguna serie.")}
+                        </TabsContent>
+
+                        <TabsContent value="local" className="focus:outline-none focus-visible:ring-0">
+                            {locLoading ? (
+                                <div className="py-20 flex justify-center"><div className="w-10 h-10 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin mt-4"/></div>
+                            ) : (!localData || localData.length === 0) ? (
+                                <div className="text-zinc-500 font-medium py-10 text-center uppercase tracking-widest">No tienes archivos indexados localmente todavía.</div>
+                            ) : (
+                                <div 
+                                    className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4 md:gap-6 pt-6 pb-12 w-full"
+                                    style={{ contentVisibility: "auto" }}
+                                >
+                                    {localData.map((file: Anime_LocalFile, idx: number) => {
+                                        const parseData: any = file.parsedInfo || (file as any).Parsed || (file as any).parsedData || {}
+                                        return (
+                                            <div key={file.path || `local-${idx}`} className="w-full">
+                                                <MediaCard
+                                                    title={parseData.title || parseData.Title || (file as any).name || "Archivo genérico"}
+                                                    artwork="https://placehold.co/220x330/1A1A1A/FFFFFF?text=Archivo+Local"
+                                                    badge={parseData.resolution || parseData.Resolution || "LOCAL"}
+                                                    aspect="poster"
+                                                    className="w-full"
+                                                />
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            )}
+                        </TabsContent>
+                    </div>
+                </Tabs>
+            </div>
         </div>
     )
 }
