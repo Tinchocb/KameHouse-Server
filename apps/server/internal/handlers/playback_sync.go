@@ -1,0 +1,97 @@
+package handlers
+
+import (
+	"fmt"
+	"kamehouse/internal/api/mal"
+	"kamehouse/internal/continuity"
+	"net/http"
+	"sync"
+
+	"github.com/labstack/echo/v4"
+)
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Types
+// ──────────────────────────────────────────────────────────────────────────────
+
+type PlaybackSyncPayload struct {
+	MediaId       int     `json:"mediaId"`
+	EpisodeNumber int     `json:"episodeNumber"`
+	Progress      float64 `json:"progress"`        // 0.0 - 1.0 percentage
+	CurrentTime   float64 `json:"currentTime"`     // seconds
+	Duration      float64 `json:"duration"`        // seconds
+	TotalEpisodes int     `json:"totalEpisodes"`   // total episodes in the series (0 if unknown)
+	MalId         int     `json:"malId,omitempty"` // optional MAL ID for cross-scrobble
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Auto-scrobble dedup guard
+// ──────────────────────────────────────────────────────────────────────────────
+
+// scrobbleGuard prevents double-scrobbling the same episode within a session.
+// Key format: "mediaId:episodeNumber"
+var (
+	scrobbledEpisodes sync.Map
+)
+
+func scrobbleKey(mediaId, episode int) string {
+	return fmt.Sprintf("%d:%d", mediaId, episode)
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Handler
+// ──────────────────────────────────────────────────────────────────────────────
+
+// HandlePlaybackSync
+//
+//	@summary receives playback telemetry from the frontend.
+//	@desc    Updates continuity watch history and, when progress >= 85%,
+//	         automatically scrobbles the episode as watched to AniList/MAL.
+//	@route /api/v1/playback/sync [POST]
+//	@returns bool
+func (h *Handler) HandlePlaybackSync(c echo.Context) error {
+	var b PlaybackSyncPayload
+	if err := c.Bind(&b); err != nil {
+		return c.JSON(http.StatusBadRequest, NewErrorResponse(err))
+	}
+
+	if b.MediaId == 0 || b.EpisodeNumber == 0 {
+		return c.JSON(http.StatusBadRequest, NewErrorResponse(fmt.Errorf("mediaId and episodeNumber are required")))
+	}
+
+	// ─── 1. Update Continuity (watch position) ─────────────────────────
+	if b.Duration > 0 {
+		_ = h.App.ContinuityManager.UpdateWatchHistoryItem(&continuity.UpdateWatchHistoryItemOptions{
+			MediaId:       b.MediaId,
+			EpisodeNumber: b.EpisodeNumber,
+			CurrentTime:   b.CurrentTime,
+			Duration:      b.Duration,
+			Kind:          "mediastream",
+		})
+	}
+
+	// ─── 2. Auto-scrobble at 85% ───────────────────────────────────────
+	if b.Progress >= 0.85 {
+		key := scrobbleKey(b.MediaId, b.EpisodeNumber)
+
+		// Only scrobble once per episode per session
+		if _, alreadyScrobbled := scrobbledEpisodes.LoadOrStore(key, true); !alreadyScrobbled {
+			h.App.Logger.Info().
+				Int("mediaId", b.MediaId).
+				Int("episode", b.EpisodeNumber).
+				Float64("progress", b.Progress).
+				Msg("playback sync: auto-scrobbling episode (>= 85%)")
+
+			// Dispatch to the MAL Dead Letter Queue Scrobbler Worker
+			if b.MalId > 0 && h.App.MalScrobbler != nil {
+				h.App.MalScrobbler.Dispatch(&mal.ScrobbleTarget{
+					MalMediaID:    b.MalId,
+					EpisodeNumber: b.EpisodeNumber,
+					Status:        "watching",
+				})
+			}
+		}
+	}
+
+	return h.RespondWithData(c, true)
+}

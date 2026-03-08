@@ -1,0 +1,74 @@
+# ==========================================
+# Configuración Principal de KameHouse
+# ==========================================
+# Este archivo define los ajustes de arranque del servidor.
+# Se utiliza sintaxis TOML.
+# La convención de nombres para las claves es camelCase.
+# 
+# Puedes usar la variable $KAMEHOUSE_DATA_DIR para referenciar el 
+# directorio de datos predeterminado de la aplicación.
+
+version = "3.5.0"
+
+# ------------------------------------------
+# 1. Servidor (Server)
+# ------------------------------------------
+# Ajustes sobre la red, autenticación y entorno de ejecución.
+[server]
+host = "127.0.0.1"        # Dirección IP de escucha (0.0.0.0 para acceso externo)
+port = 43211              # Puerto del servidor web
+offline = false           # Inicia en modo desconectado de internet
+useBinaryPath = true      # Usa la ruta del ejecutable como directorio de trabajo (útil en macOS)
+password = ""             # Contraseña para proteger el servidor web (opcional)
+# dohUrl = ""             # URL para DNS over HTTPS (opcional)
+
+[server.tls]
+enabled = false           # Activa HTTPS
+certPath = "$KAMEHOUSE_DATA_DIR/certs/cert.pem"
+keyPath = "$KAMEHOUSE_DATA_DIR/certs/key.pem"
+
+# ------------------------------------------
+# 2. Base de Datos (Database)
+# ------------------------------------------
+[database]
+name = "kamehouse"        # Nombre del archivo SQLite generado (kamehouse.db)
+
+# ------------------------------------------
+# 3. Rutas de Archivos (Paths)
+# ------------------------------------------
+# Rutas locales y directorios utilizados para caché, logs, descargas y assets.
+
+[web]
+assetDir = "$KAMEHOUSE_DATA_DIR/assets"
+
+[logs]
+dir = "$KAMEHOUSE_DATA_DIR/logs"
+
+[cache]
+dir = "$KAMEHOUSE_DATA_DIR/cache"
+transcodeDir = "$KAMEHOUSE_DATA_DIR/cache/transcode"
+
+[offline]
+dir = "$KAMEHOUSE_DATA_DIR/offline"
+assetDir = "$KAMEHOUSE_DATA_DIR/offline/assets"
+
+[manga]
+downloadDir = "$KAMEHOUSE_DATA_DIR/manga"
+localDir = "$KAMEHOUSE_DATA_DIR/manga-local"
+
+[extensions]
+dir = "$KAMEHOUSE_DATA_DIR/extensions"
+
+# ------------------------------------------
+# 4. Integraciones (Integrations)
+# ------------------------------------------
+[jellyfin]
+enabled = false           # Habilita Jellyfin como proveedor primario
+serverUrl = ""            # Ejemplo: "http://192.168.1.100:8096"
+apiKey = ""               # Token de API de Jellyfin (opcional si usas username/password)
+username = ""
+password = ""
+# libraryPaths = ["D:/Anime", "E:/Movies"] # Forzar rutas específicas escaneadas (opcional)
+
+[anilist]
+# clientID = ""           # ID cliente personalizado de AniList de ser requerido
