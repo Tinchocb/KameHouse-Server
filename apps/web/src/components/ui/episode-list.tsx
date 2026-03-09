@@ -26,6 +26,7 @@ import * as React from "react"
 import { cn } from "@/components/ui/core/styling"
 import { FaPlay } from "react-icons/fa"
 import { BsClock } from "react-icons/bs"
+import { Star, Zzz, Folder, Zap } from "lucide-react"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -54,6 +55,12 @@ export interface Episode {
     airDate?: string
     /** True when the user has fully watched this episode. */
     watched?: boolean
+    /** True if this is an epic or highly rated episode. */
+    isEpic?: boolean
+    /** True if this episode is filler content. */
+    isFiller?: boolean
+    /** True if a local media file is available. False implies cloud/stremio. */
+    hasLocalFile?: boolean
 }
 
 export interface Saga {
@@ -98,10 +105,10 @@ function EpisodeThumbnail({ url, episodeNumber, title }: EpisodeThumbnailProps) 
     return (
         <div
             className={cn(
-                "relative shrink-0 overflow-hidden rounded-lg",
-                // 16:9 with a fixed width so the list items are uniform
-                "w-[148px] h-[84px] md:w-[180px] md:h-[102px]",
-                "bg-zinc-800",
+                "relative shrink-0 overflow-hidden rounded-xl border border-white/5",
+                // Extra-wide 16:9 for a true cinematic row experience
+                "w-[160px] h-[90px] md:w-[220px] md:h-[124px] lg:w-[260px] lg:h-[146px]",
+                "bg-zinc-900",
             )}
         >
             {showFallback ? (
@@ -144,14 +151,14 @@ function EpisodeThumbnail({ url, episodeNumber, title }: EpisodeThumbnailProps) 
             >
                 <div
                     className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center",
-                        "bg-white/90 backdrop-blur-sm",
-                        "shadow-lg shadow-black/40",
+                        "w-10 h-10 rounded-full flex items-center justify-center",
+                        "bg-white/10 backdrop-blur-md border border-white/20",
+                        "shadow-[0_0_20px_rgba(0,0,0,0.5)]",
                         "scale-75 group-hover:scale-100",
-                        "transition-transform duration-200 delay-50",
+                        "transition-all duration-300 ease-out",
                     )}
                 >
-                    <FaPlay className="w-2.5 h-2.5 text-zinc-950 ml-0.5" />
+                    <FaPlay className="w-3 h-3 text-white ml-1" />
                 </div>
             </div>
         </div>
@@ -169,6 +176,8 @@ interface EpisodeCardProps {
 }
 
 function EpisodeCard({ episode, saga, onPlay }: EpisodeCardProps) {
+    const { isEpic, isFiller, hasLocalFile } = episode
+
     return (
         <li>
             <div
@@ -178,10 +187,18 @@ function EpisodeCard({ episode, saga, onPlay }: EpisodeCardProps) {
                 onClick={() => onPlay?.(episode, saga)}
                 onKeyDown={(e) => e.key === "Enter" && onPlay?.(episode, saga)}
                 className={cn(
-                    "group flex items-start gap-4 p-3 rounded-xl cursor-pointer",
-                    "hover:bg-zinc-800/70 active:bg-zinc-800",
-                    "transition-colors duration-150",
+                    "group flex items-start lg:items-center gap-4 md:gap-6 p-3 lg:p-4 rounded-2xl cursor-pointer",
+                    "transition-all duration-300 active:scale-[0.98]",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30",
+                    // Base hover: Glass background lift
+                    "hover:bg-zinc-800/40 hover:backdrop-blur-xl border border-transparent hover:border-white/5",
+                    "hover:shadow-2xl hover:-translate-y-0.5",
+                    // Epic styling
+                    isEpic && "border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 shadow-[0_0_15px_rgba(234,179,8,0.05)] hover:shadow-[0_0_30px_rgba(234,179,8,0.15)]",
+                    // Filler styling
+                    isFiller && "opacity-50 grayscale hover:grayscale-0 hover:opacity-100",
+                    // Default active background
+                    !isEpic && "active:bg-zinc-800/60"
                 )}
             >
                 {/* Thumbnail */}
@@ -194,18 +211,36 @@ function EpisodeCard({ episode, saga, onPlay }: EpisodeCardProps) {
                 {/* Text content */}
                 <div className="flex flex-col gap-1 min-w-0 flex-1 pt-0.5">
                     {/* Episode number + title */}
-                    <div className="flex items-baseline gap-2 flex-wrap">
-                        <span className="text-zinc-500 text-xs font-black tabular-nums shrink-0">
+                    <div className="flex items-baseline gap-2 flex-wrap pb-1">
+                        <span className={cn(
+                            "text-xs font-black tabular-nums shrink-0",
+                            isEpic ? "text-yellow-500" : "text-zinc-500"
+                        )}>
                             {episode.number}.
                         </span>
-                        <h3 className="text-zinc-100 text-sm font-semibold leading-snug line-clamp-1 group-hover:text-white transition-colors">
+                        <h3 className={cn(
+                            "text-sm md:text-base font-semibold leading-snug line-clamp-1 transition-colors",
+                            isEpic ? "text-yellow-100 group-hover:text-yellow-50" : "text-zinc-200 group-hover:text-white"
+                        )}>
                             {episode.title}
                         </h3>
+                        
+                        {/* Intelligence badges */}
+                        {isEpic && (
+                            <span className="inline-flex items-center text-yellow-500 shrink-0 ml-1" title="Episodio Épico">
+                                <Star className="w-3.5 h-3.5 fill-current" />
+                            </span>
+                        )}
+                        {isFiller && (
+                            <span className="inline-flex items-center text-zinc-400 shrink-0 ml-1" title="Episodio de Relleno">
+                                <Zzz className="w-3.5 h-3.5" />
+                            </span>
+                        )}
                     </div>
 
                     {/* Synopsis */}
                     {episode.synopsis && (
-                        <p className="text-zinc-500 text-xs leading-relaxed line-clamp-2 md:line-clamp-3">
+                        <p className="text-zinc-400 text-xs md:text-sm leading-relaxed line-clamp-2 mt-1">
                             {episode.synopsis}
                         </p>
                     )}
@@ -230,12 +265,39 @@ function EpisodeCard({ episode, saga, onPlay }: EpisodeCardProps) {
                         </div>
                     )}
 
-                    {/* Watched pill */}
-                    {episode.watched && (
-                        <span className="inline-flex items-center mt-1 self-start px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-white/10 text-zinc-400">
-                            Visto
-                        </span>
-                    )}
+                    {/* Tags row */}
+                    <div className="flex items-center justify-between mt-2">
+                        {/* Left: Watched pill */}
+                        <div>
+                            {episode.watched && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-white/10 text-zinc-400">
+                                    Visto
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Right: Hybrid Source Indicator */}
+                        {hasLocalFile !== undefined && (
+                            <div className={cn(
+                                "flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold tracking-wide",
+                                hasLocalFile 
+                                    ? "bg-green-500/10 text-green-400" 
+                                    : "bg-blue-500/10 text-blue-400"
+                            )}>
+                                {hasLocalFile ? (
+                                    <>
+                                        <Folder className="w-3 h-3" />
+                                        <span>LOCAL</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Zap className="w-3 h-3 fill-current" />
+                                        <span>NUBE / STREMIO</span>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </li>

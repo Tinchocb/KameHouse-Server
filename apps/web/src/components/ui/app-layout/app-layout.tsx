@@ -1,7 +1,6 @@
 import { __isDesktop__ } from "@/types/constants"
 import { cva, VariantProps } from "class-variance-authority"
 import * as React from "react"
-import { __AppSidebarContext } from "."
 import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
 
 /* -------------------------------------------------------------------------------------------------
@@ -11,35 +10,8 @@ import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
 export const AppLayoutAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-AppLayout__root appLayout",
-        // zinc-950 (#09090b) — deepest layer, renders behind both sidebar and content
-        "flex w-full group/appLayout min-h-dvh bg-zinc-950 text-white overflow-x-hidden",
-    ], {
-        variants: {
-            withSidebar: {
-                true: "flex-row with-sidebar",
-                false: "flex-col",
-            },
-            sidebarSize: {
-                slim: "sidebar-slim",
-                sm: "sidebar-sm",
-                md: "sidebar-md",
-                lg: "sidebar-lg",
-                xl: "sidebar-xl",
-            },
-        },
-        defaultVariants: {
-            withSidebar: false,
-            sidebarSize: "md",
-        },
-        compoundVariants: [
-            // sm: breakpoint — sidebar appears at ≥640px (small tablets / landscape phones)
-            { withSidebar: true, sidebarSize: "slim", className: "sm:pl-16" },
-            { withSidebar: true, sidebarSize: "sm", className: "sm:pl-48" },
-            { withSidebar: true, sidebarSize: "md", className: "sm:pl-[260px]" },
-            { withSidebar: true, sidebarSize: "lg", className: "sm:pl-[20rem]" },
-            { withSidebar: true, sidebarSize: "xl", className: "sm:pl-[25rem]" },
-        ],
-    }),
+        "flex w-full flex-col group/appLayout min-h-dvh bg-zinc-950 text-white overflow-x-hidden",
+    ]),
 })
 
 export const AppLayoutHeaderAnatomy = defineStyleAnatomy({
@@ -49,26 +21,14 @@ export const AppLayoutHeaderAnatomy = defineStyleAnatomy({
     ]),
 })
 
-export const AppLayoutSidebarAnatomy = defineStyleAnatomy({
-    root: cva([
-        "UI-AppLayoutSidebar__root z-50 sm:fixed sm:inset-y-0 sm:left-0",
-        // hidden on mobile (<sm), flex column from sm: upward
-        "hidden sm:flex sm:flex-col grow-0 shrink-0 basis-0 transition-all duration-300 ease-in-out",
-        "group-[.sidebar-slim]/appLayout:w-16",
-        "group-[.sidebar-sm]/appLayout:w-48",
-        "group-[.sidebar-md]/appLayout:w-[260px]",
-        "group-[.sidebar-lg]/appLayout:w-[20rem]",
-        "group-[.sidebar-xl]/appLayout:w-[25rem]",
-    ]),
-})
+
 
 export const AppLayoutContentAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-AppLayoutContent__root",
-        // h-dvh: respects dynamic viewport (mobile URL bar won't clip content)
-        // overflow-x-hidden: prevents horizontal bleed on small screens
         "relative flex-1 min-w-0 flex flex-col w-full",
         "overflow-y-auto overflow-x-hidden h-dvh",
+        "pt-20 md:pt-24", // Safe area for Top Nav
         "pb-16 sm:pb-0", // reserve space for BottomNav only on mobile (<sm)
     ]),
 })
@@ -164,24 +124,19 @@ export type AppLayoutProps = React.ComponentPropsWithRef<"div"> &
     VariantProps<typeof AppLayoutAnatomy.root>
 
 export const AppLayout = React.forwardRef<HTMLDivElement, AppLayoutProps>((props, ref) => {
-    const sidebarContext = React.useContext(__AppSidebarContext)
 
     const {
         children,
         className,
-        withSidebar = false,
-        sidebarSize,
         ...rest
     } = props
-
-    const resolvedSidebarSize = withSidebar ? (sidebarContext.size ?? sidebarSize) : sidebarSize
 
     return (
         <div
             ref={ref}
             className={cn(
-                AppLayoutAnatomy.root({ withSidebar, sidebarSize: resolvedSidebarSize }),
-                __isDesktop__ && "pt-4 select-none",
+                AppLayoutAnatomy.root(),
+                __isDesktop__ && "select-none",
                 className,
             )}
             {...rest}
@@ -222,33 +177,7 @@ export const AppLayoutHeader = React.forwardRef<HTMLElement, AppLayoutHeaderProp
 
 AppLayoutHeader.displayName = "AppLayoutHeader"
 
-/* -------------------------------------------------------------------------------------------------
- * AppLayoutSidebar
- * -----------------------------------------------------------------------------------------------*/
 
-export type AppLayoutSidebarProps = React.ComponentPropsWithRef<"aside">
-
-export const AppLayoutSidebar = React.forwardRef<HTMLElement, AppLayoutSidebarProps>((props, ref) => {
-
-    const {
-        children,
-        className,
-        ...rest
-    } = props
-
-    return (
-        <aside
-            ref={ref}
-            className={cn(AppLayoutSidebarAnatomy.root(), className)}
-            {...rest}
-        >
-            {children}
-        </aside>
-    )
-
-})
-
-AppLayoutSidebar.displayName = "AppLayoutSidebar"
 
 /* -------------------------------------------------------------------------------------------------
  * AppLayoutContent

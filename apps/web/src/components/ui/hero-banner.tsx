@@ -154,7 +154,9 @@ export function HeroBanner({
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.08),transparent_38%)]" />
             <div className="absolute inset-0 bg-gradient-to-r from-black via-black/65 to-black/5" />
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/10" />
-            <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black via-black/85 to-transparent" />
+            
+            {/* The Perfect Fade to Black: seamless transition to the body bg */}
+            <div className="absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t from-black via-black/80 to-transparent" />
 
             {/* ── Content ───────────────────────────────────────────────── */}
             <div className="relative z-10 mx-auto flex w-full max-w-[1680px] flex-col justify-end gap-6 px-6 pb-16 pt-36 md:px-10 lg:px-14 lg:pb-20 xl:flex-row xl:items-end xl:justify-between">
@@ -190,7 +192,7 @@ export function HeroBanner({
                             className="mb-6 max-h-28 max-w-[min(32rem,80vw)] object-contain object-left"
                         />
                     ) : (
-                        <h1 className="mb-6 max-w-4xl text-5xl font-black leading-[0.92] tracking-[-0.05em] text-white drop-shadow-2xl md:text-7xl xl:text-[5.5rem]">
+                        <h1 className="mb-6 max-w-4xl text-5xl font-black leading-[0.92] tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-white via-zinc-200 to-zinc-600 drop-shadow-2xl md:text-7xl xl:text-[5.5rem]">
                             {activeItem.title}
                         </h1>
                     )}

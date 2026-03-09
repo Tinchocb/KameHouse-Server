@@ -5,8 +5,8 @@ import { QueryClient } from "@tanstack/react-query"
 import { createRootRouteWithContext, Outlet, redirect } from "@tanstack/react-router"
 import { createStore } from "jotai"
 import React from "react"
-import { AppLayout, AppLayoutSidebar, AppLayoutContent } from "@/components/ui/app-layout/app-layout"
-import { AppSidebar, AppSidebarProvider, AppBottomNav } from "@/components/ui/app-layout/app-sidebar"
+import { AppLayout, AppLayoutContent } from "@/components/ui/app-layout/app-layout"
+import { AppTopNav, AppBottomNav } from "@/components/ui/app-layout/app-topnav"
 
 export const Route = createRootRouteWithContext<{
     queryClient: QueryClient
@@ -14,24 +14,16 @@ export const Route = createRootRouteWithContext<{
 }>()({
     component: () => (
         /*
-         * Root shell — zinc-950 body, fixed 240px sidebar (md) by default.
-         * On desktop the sidebar collapses to 64px icon-rail via the toggle
-         * button at the bottom of AppSidebar.
-         *
-         * AppLayoutContent uses overflow-y-auto + h-screen so only the main
-         * column scrolls, keeping the sidebar fixed in place at all times.
+         * Root shell — absolute black body
+         * AppLayoutContent uses h-dvh and top padding to avoid the fixed AppTopNav.
          */
-        <AppSidebarProvider>
-            <AppLayout withSidebar sidebarSize="md">
-                <AppLayoutSidebar>
-                    <AppSidebar />
-                </AppLayoutSidebar>
-                <AppLayoutContent>
-                    <Outlet />
-                </AppLayoutContent>
-                <AppBottomNav />
-            </AppLayout>
-        </AppSidebarProvider>
+        <AppLayout>
+            <AppTopNav />
+            <AppLayoutContent>
+                <Outlet />
+            </AppLayoutContent>
+            <AppBottomNav />
+        </AppLayout>
     ),
     beforeLoad: ({ location }) => {
         if (location.pathname === "/") {

@@ -16,10 +16,12 @@ import { FiX } from "react-icons/fi"
 import { cn } from "@/components/ui/core/styling"
 import type { Mediastream_StreamType } from "@/api/generated/types"
 import { useUpdateContinuityWatchHistoryItem } from "@/api/hooks/continuity.hooks"
+import { useGetSettings } from "@/api/hooks/settings.hooks"
 import { useGetAddonSubtitles } from "@/api/hooks/addon-subtitles.hooks"
 import { usePlaybackTelemetry } from "@/hooks/usePlaybackTelemetry"
 import { useJassub } from "@/hooks/useJassub"
 import { PlayerSettingsMenu } from "@/components/ui/PlayerSettingsMenu"
+import { TimelineHeatmap, type InsightNode } from "@/components/ui/timeline-heatmap"
 import type { AudioTrack, SubtitleTrack, StreamTrackInfo } from "@/components/ui/track-types"
 
 export interface VideoPlayerModalProps {
@@ -243,6 +245,25 @@ export function VideoPlayerModal({
         totalEpisodes: 0,
     })
 
+    // Settings
+    const { data: settings } = useGetSettings()
+    const isPredictiveCacheEnabled = settings?.mediaPlayer?.predictiveCache ?? false
+
+    // Insights (X-Ray Heatmap)
+    const [insights, setInsights] = useState<InsightNode[]>([])
+    useEffect(() => {
+        if (!mediaId || !episodeNumber || duration <= 0) return
+        let cancelled = false
+        fetch(`/api/v1/videocore/insights/${mediaId}-${episodeNumber}?duration=${duration}`)
+            .then((r) => r.ok ? r.json() : null)
+            .then((res) => {
+                if (cancelled || !res?.data) return
+                setInsights(res.data)
+            })
+            .catch(() => {})
+        return () => { cancelled = true }
+    }, [mediaId, episodeNumber, duration])
+
     // Continuity Tracking
     const { mutate: updateContinuity } = useUpdateContinuityWatchHistoryItem()
 
@@ -255,9 +276,10 @@ export function VideoPlayerModal({
                 currentTime: time,
                 duration: total,
                 kind: "mediastream",
+                predictive: isPredictiveCacheEnabled,
             }
         })
-    }, [mediaId, episodeNumber, updateContinuity])
+    }, [mediaId, episodeNumber, updateContinuity, isPredictiveCacheEnabled])
 
     // Close on Escape key
     useEffect(() => {
@@ -806,12 +828,13 @@ export function VideoPlayerModal({
             </div>
 
             {/* UI Overlay — Cinematic VOD Style */}
-            <div className={cn(
-                "absolute inset-0 flex flex-col justify-between pointer-events-none transition-opacity duration-300 ease-out z-[10]",
-                isControlsVisible || !isPlaying ? "opacity-100" : "opacity-0"
-            )}>
+            <div className="absolute inset-0 pointer-events-none z-[10]">
                 {/* Top Bar — Gradient Mask */}
-                <div className="absolute top-0 inset-x-0 pt-6 pb-24 px-6 md:px-10 flex flex-col md:flex-row md:items-start justify-between pointer-events-auto bg-gradient-to-b from-black/70 to-transparent">
+                <div className={cn(
+                    "absolute top-0 inset-x-0 pt-6 pb-24 px-6 md:px-10 flex flex-col md:flex-row md:items-start justify-between pointer-events-auto bg-gradient-to-b from-black/70 to-transparent",
+                    "transition-all duration-300 ease-out",
+                    isControlsVisible || !isPlaying ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-10"
+                )}>
                     <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
                         <button
                             onClick={(e) => { e.stopPropagation(); onClose(); }}
@@ -855,14 +878,22 @@ export function VideoPlayerModal({
                     </div>
                 )}
 
-                {/* Bottom Bar — Minimalist VOD layout */}
-                <div className="absolute bottom-0 inset-x-0 flex flex-col pointer-events-auto bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-32 pb-6 px-6 md:px-10 select-none">
+                {/* Bottom Bar — Floating Dark Glass Pill */}
+                <div className={cn(
+                    "absolute bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-5xl flex flex-col gap-2 pointer-events-auto select-none",
+                    "bg-black/50 backdrop-blur-2xl border border-white/10 rounded-full px-6 py-4 shadow-2xl",
+                    "transition-all duration-300 ease-out",
+                    isControlsVisible || !isPlaying ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+                )}>
                     
                     {/* Minimalist Expanding Progress Timeline */}
-                    <div className="relative w-full h-1 hover:h-2 md:h-1.5 md:hover:h-2.5 transition-all bg-white/20 group cursor-pointer flex items-center mb-6 rounded-full" onClick={(e) => { e.stopPropagation() }}>
+                    <div className="relative w-full h-1 hover:h-1.5 transition-all bg-white/20 group cursor-pointer flex items-center rounded-full" onClick={(e) => { e.stopPropagation() }}>
+                        
+                        <TimelineHeatmap duration={duration} insights={insights} />
+
                         <div
                             ref={progressBarRef}
-                            className="h-full bg-orange-500 shadow-[0_0_12px_rgba(249,115,22,0.8)] transition-all ease-linear rounded-full rounded-r-none relative"
+                            className="h-full bg-orange-500 shadow-[0_0_12px_rgba(249,115,22,0.8)] transition-all ease-linear rounded-full rounded-r-none relative z-10"
                             style={{ width: "0%" }}
                         >
                             {/* Hover Thumb Component */}
@@ -885,29 +916,27 @@ export function VideoPlayerModal({
                     </div>
 
                     {/* Bottom Controls Row */}
-                    <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center justify-between w-full mt-1">
 
                         {/* Left Wing */}
-                        <div className="flex items-center gap-4 md:gap-8">
-                            <button onClick={(e) => { e.stopPropagation(); togglePlay(); }} className="text-white hover:text-orange-500 transition-colors drop-shadow-md min-w-[44px] min-h-[44px] flex items-center justify-center transform hover:scale-110">
-                                {isPlaying ? <FaPause className="w-6 h-6 md:w-7 md:h-7" /> : <FaPlay className="w-6 h-6 md:w-7 md:h-7 ml-1" />}
+                        <div className="flex items-center gap-2 md:gap-4">
+                            <button onClick={(e) => { e.stopPropagation(); togglePlay(); }} className="text-zinc-400 hover:text-white transition-colors flex items-center justify-center transform hover:scale-110 p-2">
+                                {isPlaying ? <FaPause className="w-5 h-5" /> : <FaPlay className="w-5 h-5 pl-0.5" />}
                             </button>
 
-                            <div className="hidden md:flex items-center gap-6">
-                                <button onClick={(e) => { e.stopPropagation(); skipTime(-10); }} className="text-white/80 hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
-                                    <FaBackward className="w-5 h-5" />
-                                </button>
-                                <button onClick={(e) => { e.stopPropagation(); skipTime(10); }} className="text-white/80 hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
-                                    <FaForward className="w-5 h-5" />
-                                </button>
-                            </div>
+                            <button onClick={(e) => { e.stopPropagation(); skipTime(-10); }} className="text-zinc-400 hover:text-white transition-colors flex items-center justify-center p-2 hidden sm:block">
+                                <FaBackward className="w-4 h-4" />
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); skipTime(10); }} className="text-zinc-400 hover:text-white transition-colors flex items-center justify-center p-2 hidden sm:block">
+                                <FaForward className="w-4 h-4" />
+                            </button>
 
                             {/* Volume Control */}
-                            <div className="hidden md:flex items-center gap-3 group ml-2">
-                                <button onClick={(e) => { e.stopPropagation(); toggleMute(); }} className="text-white hover:text-zinc-300 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
-                                    {isMuted || volume === 0 ? <FaVolumeMute className="w-5 h-5" /> : <FaVolumeUp className="w-5 h-5" />}
+                            <div className="hidden md:flex items-center gap-2 group ml-2">
+                                <button onClick={(e) => { e.stopPropagation(); toggleMute(); }} className="text-zinc-400 hover:text-white transition-colors flex items-center justify-center p-2">
+                                    {isMuted || volume === 0 ? <FaVolumeMute className="w-4 h-4" /> : <FaVolumeUp className="w-4 h-4" />}
                                 </button>
-                                <div className="w-0 group-hover:w-24 transition-all duration-300 overflow-hidden relative h-1.5 flex items-center bg-white/20 rounded-full cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                                <div className="w-0 group-hover:w-20 transition-all duration-300 overflow-hidden relative h-1 flex items-center bg-white/20 rounded-full cursor-pointer" onClick={(e) => e.stopPropagation()}>
                                     <div className="absolute left-0 h-full bg-white rounded-full" style={{ width: `${isMuted ? 0 : volume * 100}%` }} />
                                     <input
                                         type="range"
@@ -919,17 +948,16 @@ export function VideoPlayerModal({
                                 </div>
                             </div>
 
-                        </div>
-
-                        {/* Time indicator (Center on mobile, Left on Desktop) */}
-                        <div className="flex-1 flex justify-center md:justify-start md:ml-6 items-center gap-1.5 text-zinc-300 text-xs md:text-sm font-bold tabular-nums tracking-widest select-none drop-shadow-md">
-                            <span ref={timeTextRef} className="text-white">00:00</span>
-                            <span className="text-zinc-600">/</span>
-                            <span className="text-zinc-400">{formatTime(duration)}</span>
+                            {/* Time indicator */}
+                            <div className="flex items-center gap-1.5 text-zinc-400 text-xs font-medium tabular-nums tracking-wide ml-2">
+                                <span ref={timeTextRef} className="text-white">00:00</span>
+                                <span className="opacity-50">/</span>
+                                <span>{formatTime(duration)}</span>
+                            </div>
                         </div>
 
                         {/* Right Wing: Settings, Fullscreen */}
-                        <div className="flex items-center gap-2 md:gap-4">
+                        <div className="flex items-center gap-1 md:gap-2">
                             <PlayerSettingsMenu
                                 audioTracks={audioTracks}
                                 activeAudioIndex={activeAudioIndex}
@@ -940,8 +968,8 @@ export function VideoPlayerModal({
                                 isLoadingSubtitle={isJassubLoading}
                             />
 
-                            <button onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }} className="text-white hover:text-zinc-300 transition-colors drop-shadow-md min-w-[44px] min-h-[44px] flex items-center justify-center ml-1 md:ml-4">
-                                {isFullscreen ? <FaCompress className="w-5 h-5 md:w-6 md:h-6" /> : <FaExpand className="w-5 h-5 md:w-6 md:h-6" />}
+                            <button onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }} className="text-zinc-400 hover:text-white transition-colors flex items-center justify-center p-2">
+                                {isFullscreen ? <FaCompress className="w-4 h-4" /> : <FaExpand className="w-4 h-4" />}
                             </button>
                         </div>
                     </div>

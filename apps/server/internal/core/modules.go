@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/continuity"
 	"kamehouse/internal/database/db"
@@ -179,6 +180,33 @@ func (a *App) initModulesOnce() {
 
 	// This is run in a goroutine
 	a.AutoDownloader.Start()
+
+	// +---------------------+
+	// |   Predictive Cache  |
+	// +---------------------+
+
+	hook.GlobalHookManager.OnPredictiveCacheEpisodeRequested().Listen(func(event *continuity.PredictiveCacheEpisodeRequestedEvent) {
+		a.Logger.Info().Int("mediaId", event.MediaId).Int("episode", event.EpisodeNumber).Msg("app: Received predictive cache request")
+		go func() {
+			// Find rules that match this media ID
+			rules, err := db.GetAutoDownloaderRules(a.Database)
+			if err != nil {
+				return
+			}
+			var ruleIDs []uint
+			for _, r := range rules {
+				// Fire a check for rules that match this Media Id
+				if r.MediaId == event.MediaId && r.Enabled {
+					ruleIDs = append(ruleIDs, r.DbID)
+				}
+			}
+			if len(ruleIDs) > 0 {
+				a.AutoDownloader.RunCheck(context.Background(), false, ruleIDs...)
+			} else {
+				a.Logger.Debug().Int("mediaId", event.MediaId).Msg("app: No active AutoDownloader rules found for predictive cache")
+			}
+		}()
+	})
 
 	// +---------------------+
 	// |    Auto Scanner     |

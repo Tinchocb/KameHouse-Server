@@ -13,7 +13,7 @@ export const PageHeaderAnatomy = defineStyleAnatomy({
     ]),
     title: cva([
         "UI-PageHeader__title",
-        "font-bold text-gray-900 dark:text-gray-200",
+        "font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-white to-zinc-500",
     ], {
         variants: {
             size: {

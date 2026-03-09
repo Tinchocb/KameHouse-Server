@@ -14,7 +14,7 @@ import { cn, defineStyleAnatomy } from "../core/styling"
 export const CarouselAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-Carousel__root",
-        "relative",
+        "relative group/carousel",
     ]),
     content: cva([
         "UI-Carousel__content",
@@ -73,8 +73,8 @@ export const CarouselAnatomy = defineStyleAnatomy({
             orientation: { horizontal: null, vertical: null },
         },
         compoundVariants: [
-            { placement: "previous", orientation: "horizontal", className: "" },
-            { placement: "next", orientation: "horizontal", className: "" },
+            { placement: "previous", orientation: "horizontal", className: "absolute left-4 top-1/2 -translate-y-1/2 bg-black/30 backdrop-blur-md border border-white/10 text-white opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 shadow-[0_4px_20px_rgba(0,0,0,0.5)]" },
+            { placement: "next", orientation: "horizontal", className: "absolute right-4 top-1/2 -translate-y-1/2 bg-black/30 backdrop-blur-md border border-white/10 text-white opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 shadow-[0_4px_20px_rgba(0,0,0,0.5)]" },
 
             { placement: "previous", orientation: "vertical", className: "-top-12 left-1/2 -translate-x-1/2 rotate-90" },
             { placement: "next", orientation: "vertical", className: "-bottom-12 left-1/2 -translate-x-1/2 rotate-90" },
@@ -254,10 +254,12 @@ export function CarouselButtons(props: CarouselButtonsProps) {
 
     return (
         <>
-            {scrollSnaps.length > 30 && <div className={cn("flex gap-2 absolute top-[-2rem] right-0", containerClass)}>
-                <CarouselPrevious />
-                <CarouselNext />
-            </div>}
+            {scrollSnaps.length > 5 && (
+                <>
+                    <CarouselPrevious />
+                    <CarouselNext />
+                </>
+            )}
         </>
     )
 }
@@ -276,7 +278,7 @@ export const CarouselContent = React.forwardRef<HTMLDivElement, CarouselContentP
     const { carouselRef, orientation, gap } = useCarousel()
 
     return (
-        <div ref={carouselRef} className={cn(CarouselAnatomy.content(), contentClass)}>
+        <div ref={carouselRef} className={cn(CarouselAnatomy.content(), "[&::-webkit-scrollbar]:hidden", contentClass)} style={{ maskImage: "linear-gradient(to right, transparent, black 1%, black 99%, transparent)" }}>
             <div
                 ref={ref}
                 className={cn(CarouselAnatomy.innerContent({ orientation, gap }), className)}

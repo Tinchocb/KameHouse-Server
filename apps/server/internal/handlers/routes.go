@@ -494,6 +494,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	// VideoCore
 	//
 	v1.GET("/videocore/insight/character/:malId", h.HandleVideoCoreInSightGetCharacterDetails)
+	v1.GET("/videocore/insights/:episodeId", h.HandleGetVideoInsights)
 
 	//
 	// Torrent stream

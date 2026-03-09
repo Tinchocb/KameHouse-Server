@@ -57,12 +57,13 @@ export function MediaCard({
             onKeyDown={(e) => e.key === "Enter" && onClick?.()}
             className={cn(
                 // Base — group for child hover triggers
-                "group relative shrink-0 cursor-pointer overflow-hidden rounded-md",
+                "group/card relative shrink-0 cursor-pointer overflow-hidden rounded-md",
                 // Stremio-style subtle border — brightens on hover
-                "border border-white/8 hover:border-white/20",
+                "border border-white/5 hover:border-white/20",
                 // Flat lift: scale only, no translate — hardware-composited
-                "transition-all duration-200 ease-out will-change-transform",
-                "hover:scale-[1.02]",
+                "transition-all duration-300 ease-out will-change-transform",
+                "hover:-translate-y-1 hover:scale-105",
+                "hover:shadow-[0_0_30px_rgba(249,115,22,0.15)] hover:z-50",
                 // Aria / focus ring
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40",
                 // Intrinsic sizing by aspect ratio
@@ -109,7 +110,7 @@ export function MediaCard({
 
             {/* ── Top-left: format badge (hidden on hover) ──────────────── */}
             {badge && (
-                <div className="absolute left-1.5 top-1.5 z-20 transition-opacity duration-200 group-hover:opacity-0">
+                <div className="absolute left-1.5 top-1.5 z-20 transition-opacity duration-300 group-hover/card:opacity-0">
                     <span className="rounded bg-black/60 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-white/60 backdrop-blur-sm border border-white/8">
                         {badge}
                     </span>

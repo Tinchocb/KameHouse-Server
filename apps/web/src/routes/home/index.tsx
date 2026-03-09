@@ -428,6 +428,7 @@ function HomePage() {
 
             {/* ── Hero banner (full-viewport) ────────────────────────────── */}
             <HeroBanner
+                className="-mt-20 md:-mt-24"
                 items={heroItems.map((item) => ({
                     ...item,
                     // Override onPlay to try SourcePicker first

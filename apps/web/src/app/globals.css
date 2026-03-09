@@ -98,8 +98,8 @@
 
         --titlebar-h: theme("height.10");
 
-        --foreground: theme('colors.gray.200');
-        --background: #070707;
+        --foreground: theme('colors.zinc.100');
+        --background: #000000;
 
         --brand: theme('colors.brand.300');
         --slate: theme('colors.slate.500');
@@ -145,7 +145,7 @@
 
     .dark,
     [data-mode="dark"] {
-        --foreground: theme('colors.gray.200');
+        --foreground: theme('colors.zinc.100');
         --background: #000000; /* Pure black background for high contrast */
 
         /* Vibrant Warm Orange (Dragon Ball inspired) */

@@ -36,3 +36,9 @@ type WatchHistoryStreamEpisodeItemRequestedEvent struct {
 	// Empty WatchHistoryItem object, will be used if the hook prevents the default behavior
 	WatchHistoryItem *WatchHistoryItem `json:"watchHistoryItem"`
 }
+
+type PredictiveCacheEpisodeRequestedEvent struct {
+	hook_resolver.Event
+	MediaId       int
+	EpisodeNumber int
+}

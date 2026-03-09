@@ -131,6 +131,7 @@ type Manager interface {
 	OnWatchHistoryItemUpdated() *Hook[hook_resolver.Resolver]
 	OnWatchHistoryLocalFileEpisodeItemRequested() *Hook[hook_resolver.Resolver]
 	OnWatchHistoryStreamEpisodeItemRequested() *Hook[hook_resolver.Resolver]
+	OnPredictiveCacheEpisodeRequested() *Hook[hook_resolver.Resolver]
 
 	// Discord RPC events
 	OnDiscordPresenceAnimeActivityRequested() *Hook[hook_resolver.Resolver]
@@ -260,6 +261,7 @@ type ManagerImpl struct {
 	onWatchHistoryItemUpdated                   *Hook[hook_resolver.Resolver]
 	onWatchHistoryLocalFileEpisodeItemRequested *Hook[hook_resolver.Resolver]
 	onWatchHistoryStreamEpisodeItemRequested    *Hook[hook_resolver.Resolver]
+	onPredictiveCacheEpisodeRequested           *Hook[hook_resolver.Resolver]
 	// Discord RPC events
 	onDiscordPresenceAnimeActivityRequested *Hook[hook_resolver.Resolver]
 	onDiscordPresenceMangaActivityRequested *Hook[hook_resolver.Resolver]
@@ -405,6 +407,7 @@ func (m *ManagerImpl) initHooks() {
 	m.onWatchHistoryItemUpdated = &Hook[hook_resolver.Resolver]{}
 	m.onWatchHistoryLocalFileEpisodeItemRequested = &Hook[hook_resolver.Resolver]{}
 	m.onWatchHistoryStreamEpisodeItemRequested = &Hook[hook_resolver.Resolver]{}
+	m.onPredictiveCacheEpisodeRequested = &Hook[hook_resolver.Resolver]{}
 	// Discord RPC events
 	m.onDiscordPresenceAnimeActivityRequested = &Hook[hook_resolver.Resolver]{}
 	m.onDiscordPresenceMangaActivityRequested = &Hook[hook_resolver.Resolver]{}
@@ -1073,6 +1076,13 @@ func (m *ManagerImpl) OnWatchHistoryStreamEpisodeItemRequested() *Hook[hook_reso
 		return &Hook[hook_resolver.Resolver]{}
 	}
 	return m.onWatchHistoryStreamEpisodeItemRequested
+}
+
+func (m *ManagerImpl) OnPredictiveCacheEpisodeRequested() *Hook[hook_resolver.Resolver] {
+	if m == nil {
+		return &Hook[hook_resolver.Resolver]{}
+	}
+	return m.onPredictiveCacheEpisodeRequested
 }
 
 // Discord RPC events

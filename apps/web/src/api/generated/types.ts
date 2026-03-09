@@ -1932,6 +1932,7 @@ export type Continuity_UpdateWatchHistoryItemOptions = {
     episodeNumber: number
     filepath?: string
     kind: Continuity_Kind
+    predictive?: boolean
 }
 
 /**

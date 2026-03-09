@@ -17,9 +17,9 @@ export const ButtonAnatomy = defineStyleAnatomy({
         variants: {
             intent: {
                 "primary": "shadow-md text-white border bg-orange-500 border-orange-400/20 active:bg-opacity-100 dark:bg-orange-500 dark:hover:bg-orange-600 dark:text-gray-950",
-                "primary-outline": "text-[--brand] border border-[--brand] bg-transparent hover:bg-orange-500 active:bg-orange-600 active:border-transparent hover:text-white dark:hover:border-orange-500 dark:active:bg-orange-600 dark:hover:text-white dark:active:border-transparent dark:active:text-white",
+                "primary-outline": "text-[--brand] border border-white/10 bg-zinc-900/50 backdrop-blur-xl hover:border-white/30 active:bg-zinc-800/80 hover:text-white transition-all duration-300",
                 "primary-subtle": "shadow-none text-[--brand] border bg-orange-500/10 border-transparent hover:bg-orange-500/20 active:bg-orange-500/30",
-                "primary-glass": "shadow-none text-[--brand] border bg-orange-50 border-orange-300/20 hover:bg-orange-100 active:bg-orange-200 dark:bg-opacity-10 dark:hover:bg-opacity-20",
+                "primary-glass": "shadow-none text-white border border-white/10 bg-black/40 backdrop-blur-md hover:bg-white/10 hover:border-white/30 transition-all duration-300",
                 "primary-link": "shadow-none text-[--brand] border border-transparent bg-transparent hover:underline active:text-orange-700 dark:active:text-orange-300",
                 "primary-basic": "shadow-none text-[--brand] border border-transparent bg-transparent hover:bg-orange-100 active:bg-orange-200 dark:hover:bg-opacity-10 dark:active:text-orange-300",
 
@@ -55,15 +55,14 @@ export const ButtonAnatomy = defineStyleAnatomy({
                 "white": "text-[#000] bg-white hover:bg-gray-200 active:bg-gray-300 border border-transparent",
                 // "white": "shadow-none text-black border bg-white/70 border-white/90 active:bg-opacity-100 dark:bg-opacity-70
                 // dark:hover:bg-opacity-90",
-                "white-outline": "text-white border border-gray-200 bg-transparent hover:bg-white hover:text-black active:bg-gray-100 active:text-[#000]",
-                "white-subtle": "shadow-none text-white bg-white bg-opacity-15 hover:bg-opacity-20 border border-transparent active:bg-opacity-25",
-                "white-glass": "shadow-none text-white bg-white bg-opacity-15 hover:bg-opacity-20 border border-[--border] active:bg-opacity-25",
-                "white-link": "shadow-none text-white border border-transparent bg-transparent hover:underline active:text-gray-200",
+                "white-outline": "text-white border border-white/10 bg-zinc-900/50 backdrop-blur-xl hover:border-white/30 active:bg-zinc-800/80 transition-all duration-300",
+                "white-subtle": "shadow-none text-white bg-white/5 hover:bg-white/10 backdrop-blur-md border border-transparent active:bg-white/20 transition-all duration-300",
+                "white-glass": "shadow-none text-white border border-white/10 bg-black/40 backdrop-blur-md hover:bg-white/10 hover:border-white/30 transition-all duration-300",
                 "white-basic": "shadow-none text-white border border-transparent bg-transparent hover:bg-white hover:bg-opacity-15 active:bg-opacity-20 active:text-white-300",
             },
             rounded: {
                 true: "rounded-full",
-                false: null,
+                false: "rounded-md", // Default to slightly rounded instead of lg if explicitly false
             },
             contentWidth: {
                 true: "w-fit",
@@ -80,6 +79,7 @@ export const ButtonAnatomy = defineStyleAnatomy({
         defaultVariants: {
             intent: "primary",
             size: "md",
+            rounded: true, // Make pill buttons the default
         },
     }),
     icon: cva([

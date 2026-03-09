@@ -135,15 +135,28 @@ function SettingsPage() {
                                 <h2 className="text-2xl font-bold mb-4">Reproductor y Calidad</h2>
                                 <p className="text-gray-400 mb-6 font-medium">Ajustes prioritarios para la resolución y subtítulos.</p>
 
-                                <div className="flex items-center justify-between p-4 bg-[#1C1C28] rounded-md border border-white/5">
-                                    <div>
-                                        <p className="font-bold text-lg">Reproductor Externo por defecto</p>
-                                        <p className="text-sm text-gray-500">Abre archivos MKV en tu VLC o reproductor del sistema.</p>
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between p-4 bg-[#1C1C28] rounded-md border border-white/5">
+                                        <div>
+                                            <p className="font-bold text-lg">Reproductor Externo por defecto</p>
+                                            <p className="text-sm text-gray-500">Abre archivos MKV en tu VLC o reproductor del sistema.</p>
+                                        </div>
+                                        <Switch
+                                            value={settings?.mediaPlayer?.defaultPlayer === "vlc"}
+                                            onValueChange={(v) => handleToggle('mediaPlayer', 'defaultPlayer', v as any ? "vlc" : "" as any)}
+                                        />
                                     </div>
-                                    <Switch
-                                        value={settings?.mediaPlayer?.defaultPlayer === "vlc"}
-                                        onValueChange={(v) => handleToggle('mediaPlayer', 'defaultPlayer', v as any ? "vlc" : "" as any)}
-                                    />
+
+                                    <div className="flex items-center justify-between p-4 bg-[#1C1C28] rounded-md border border-white/5">
+                                        <div>
+                                            <p className="font-bold text-lg text-orange-400">Caché Predictivo (Smart Offline)</p>
+                                            <p className="text-sm text-gray-500">Descarga el próximo episodio en segundo plano al alcanzar el 80% (Zero-buffering).</p>
+                                        </div>
+                                        <Switch
+                                            value={settings?.mediaPlayer?.predictiveCache ?? false}
+                                            onValueChange={(v) => handleToggle('mediaPlayer', 'predictiveCache', v)}
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </TabsContent>

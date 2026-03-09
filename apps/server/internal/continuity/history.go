@@ -58,6 +58,7 @@ type (
 		MediaId       int     `json:"mediaId"`
 		EpisodeNumber int     `json:"episodeNumber"`
 		Filepath      string  `json:"filepath,omitempty"`
+		Predictive    bool    `json:"predictive"`
 		Kind          Kind    `json:"kind"`
 	}
 
@@ -189,6 +190,11 @@ func (m *Manager) UpdateWatchHistoryItem(opts *UpdateWatchHistoryItemOptions) (e
 	// If the item was added, check if we need to remove the oldest item
 	if added {
 		_ = m.trimWatchHistoryItems()
+	}
+
+	// Predictive Cache trigger
+	if opts.Predictive && opts.Duration > 0 && (opts.CurrentTime/opts.Duration) > 0.8 {
+		go m.triggerPredictiveCache(opts.MediaId, opts.EpisodeNumber)
 	}
 
 	return nil
@@ -465,3 +471,34 @@ func (m *Manager) trimWatchHistoryItems() error {
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// triggerPredictiveCache is called when a user has watched > 80% of an episode.
+// It checks if the next episode exists locally, and if not, triggers a PredictiveCacheEpisodeRequestedEvent.
+func (m *Manager) triggerPredictiveCache(mediaId int, currentEpisode int) {
+	defer util.HandlePanicInModuleThen("continuity/triggerPredictiveCache", func() {})
+
+	nextEpisode := currentEpisode + 1
+
+	// Check if next episode is downloaded
+	lfs, _, err := db.GetLocalFiles(m.db)
+	if err != nil {
+		return
+	}
+
+	for _, lf := range lfs {
+		if lf.MediaId == mediaId && lf.GetEpisodeNumber() == nextEpisode {
+			m.logger.Debug().Int("mediaId", mediaId).Int("episode", nextEpisode).Msg("continuity: Next episode already exists locally, skipping predictive cache")
+			return
+		}
+	}
+
+	m.logger.Info().Int("mediaId", mediaId).Int("episode", nextEpisode).Msg("continuity: Triggering predictive cache download for next episode")
+
+	// Emit hook to start the download
+	// Use hook_resolver, which is typically resolved during app setup.
+	// We need to wait for handling the hook event externally (like in server/app.go or torrent_search module)
+	_ = hook.GlobalHookManager.OnPredictiveCacheEpisodeRequested().Trigger(&PredictiveCacheEpisodeRequestedEvent{
+		MediaId:       mediaId,
+		EpisodeNumber: nextEpisode,
+	})
+}

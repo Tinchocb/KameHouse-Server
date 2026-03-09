@@ -226,6 +226,9 @@ const config: Config = {
                     "40%": { transform: "translateX(0) scaleX(0.4)" },
                     "100%": { transform: "translateX(100%) scaleX(0.5)" },
                 },
+                "shimmer": {
+                    "100%": { transform: "translateX(100%)" },
+                },
             },
             animation: {
                 "accordion-down": "accordion-down 0.15s linear",
@@ -233,12 +236,14 @@ const config: Config = {
                 "slide-down": "slide-down 0.15s ease-in-out",
                 "slide-up": "slide-up 0.15s ease-in-out",
                 "indeterminate-progress": "indeterminate-progress 1s infinite ease-out",
+                "shimmer": "shimmer 2s infinite",
             },
             transformOrigin: {
                 "left-right": "0% 100%",
             },
             boxShadow: {
                 "md": "0 1px 3px 0 rgba(0, 0, 0, 0.1),0 1px 2px 0 rgba(0, 0, 0, 0.06)",
+                "glass": "0 20px 40px -15px rgba(0,0,0,0.7)",
             },
             colors: {
                 brand: {
