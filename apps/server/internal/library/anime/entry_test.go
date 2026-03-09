@@ -1,6 +1,7 @@
 package anime_test
 
 import (
+	"context"
 	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
@@ -22,7 +23,7 @@ func TestNewAnimeEntry(t *testing.T) {
 	test_utils.InitTestProvider(t, test_utils.Anilist())
 	logger := util.NewLogger()
 
-	database, err := db.NewDatabase(t.TempDir(), "test", logger)
+	database, err := db.NewDatabase(context.Background(), t.TempDir(), "test", logger)
 	assert.NoError(t, err)
 
 	metadataProvider := metadata_provider.GetFakeProvider(t, database)

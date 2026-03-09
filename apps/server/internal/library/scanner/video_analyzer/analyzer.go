@@ -27,15 +27,18 @@ type VideoInfo struct {
 }
 
 type StreamInfo struct {
-	Codec     string
-	CodecLong string
-	Profile   string
-	Width     int
-	Height    int
-	FrameRate string
-	Bitrate   int64
-	Language  string
-	Title     string
+	Codec          string
+	CodecLong      string
+	Profile        string
+	Width          int
+	Height         int
+	FrameRate      string
+	ColorSpace     string
+	ColorTransfer  string
+	ColorPrimaries string
+	Bitrate        int64
+	Language       string
+	Title          string
 }
 
 type Analyzer struct {
@@ -101,14 +104,17 @@ func (a *Analyzer) Analyze(ctx context.Context, filepath string) (*VideoInfo, er
 
 	for _, stream := range data.Streams {
 		streamInfo := &StreamInfo{
-			Codec:     stream.CodecName,
-			CodecLong: stream.CodecLongName,
-			Profile:   stream.Profile,
-			Width:     stream.Width,
-			Height:    stream.Height,
-			FrameRate: stream.RFrameRate,
-			Language:  stream.Tags.Language,
-			Title:     stream.Tags.Title,
+			Codec:          stream.CodecName,
+			CodecLong:      stream.CodecLongName,
+			Profile:        stream.Profile,
+			Width:          stream.Width,
+			Height:         stream.Height,
+			FrameRate:      stream.RFrameRate,
+			ColorSpace:     stream.ColorSpace,
+			ColorTransfer:  stream.ColorTransfer,
+			ColorPrimaries: stream.ColorPrimaries,
+			Language:       stream.Tags.Language,
+			Title:          stream.Tags.Title,
 		}
 
 		if stream.BitRate != "" {

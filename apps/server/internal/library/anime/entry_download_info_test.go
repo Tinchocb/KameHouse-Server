@@ -21,7 +21,7 @@ func TestNewEntryDownloadInfo(t *testing.T) {
 	test_utils.InitTestProvider(t, test_utils.Anilist())
 
 	logger := util.NewLogger()
-	database, err := db.NewDatabase(test_utils.ConfigData.Path.DataDir, test_utils.ConfigData.Database.Name, logger)
+	database, err := db.NewDatabase(context.Background(), test_utils.ConfigData.Path.DataDir, test_utils.ConfigData.Database.Name, logger)
 	require.NoError(t, err)
 	metadataProvider := metadata_provider.GetFakeProvider(t, database)
 
@@ -168,7 +168,7 @@ func TestNewEntryDownloadInfo2(t *testing.T) {
 	mediaId := 21
 
 	logger := util.NewLogger()
-	database, err := db.NewDatabase(test_utils.ConfigData.Path.DataDir, test_utils.ConfigData.Database.Name, logger)
+	database, err := db.NewDatabase(context.Background(), test_utils.ConfigData.Path.DataDir, test_utils.ConfigData.Database.Name, logger)
 	require.NoError(t, err)
 	metadataProvider := metadata_provider.GetFakeProvider(t, database)
 

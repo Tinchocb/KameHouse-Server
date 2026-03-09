@@ -1,31 +1,48 @@
 import { cn } from "@/components/ui/core/styling"
 import type { CardAspect } from "@/lib/home-catalog"
+import { Folder, Zap } from "lucide-react"
 import * as React from "react"
-import { FaPlay } from "react-icons/fa"
+
+// ─── Intelligence tag colours ─────────────────────────────────────────────────
+
+const TAG_STYLES: Record<string, string> = {
+    EPIC:    "text-amber-400",
+    FILLER:  "text-zinc-500",
+    SPECIAL: "text-blue-400",
+}
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface MediaCardProps {
     artwork: string
     title: string
     subtitle?: string
+    /** Top-left format badge (e.g. "TV", "MOVIE") */
     badge?: string
+    availabilityType?: "FULL_LOCAL" | "HYBRID" | "ONLY_ONLINE"
     description?: string
-    /** Enforce strict aspect ratio (e.g., poster=2/3, backdrop=16/9) */
+    /** Enforce strict aspect ratio */
     aspect?: CardAspect
     progress?: number
     progressColor?: "white" | "orange"
+    /** Intelligence ContentTag — rendered as a tiny bottom label */
+    intelligenceTag?: string
     onClick?: () => void
     className?: string
 }
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function MediaCard({
     artwork,
     title,
     subtitle,
     badge,
-    description,
+    availabilityType,
     aspect = "poster",
     progress,
-    progressColor = "white",
+    progressColor = "orange",
+    intelligenceTag,
     onClick,
     className,
 }: MediaCardProps) {
@@ -37,71 +54,111 @@ export function MediaCard({
             tabIndex={0}
             aria-label={title}
             onClick={onClick}
-            onKeyDown={(event) => event.key === "Enter" && onClick?.()}
+            onKeyDown={(e) => e.key === "Enter" && onClick?.()}
             className={cn(
-                "group relative block cursor-pointer shrink-0 rounded-xl bg-zinc-900 border border-white/5",
-                "overflow-hidden transform transition-all duration-300 ease-out",
-                // Hardware Accelerated Hover effect (scales up & puts on top context via z-10)
-                "hover:scale-105 hover:shadow-2xl hover:shadow-black/70 hover:z-10 hover:border-white/20",
-                // Base dimensions enforced internally, but we assign a strict aspect class
-                isPoster ? "aspect-[2/3] w-[150px] md:w-[190px] lg:w-[210px]" : "aspect-[16/9] w-[260px] md:w-[320px] lg:w-[360px]",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500",
+                // Base — group for child hover triggers
+                "group relative shrink-0 cursor-pointer overflow-hidden rounded-md",
+                // Stremio-style subtle border — brightens on hover
+                "border border-white/8 hover:border-white/20",
+                // Flat lift: scale only, no translate — hardware-composited
+                "transition-all duration-200 ease-out will-change-transform",
+                "hover:scale-[1.02]",
+                // Aria / focus ring
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40",
+                // Intrinsic sizing by aspect ratio
+                isPoster
+                    ? "aspect-[2/3] w-[140px] md:w-[170px] lg:w-[200px]"
+                    : "aspect-[16/9] w-[240px] md:w-[300px] lg:w-[340px]",
                 className,
             )}
         >
-            {/* Base Image Layer */}
+            {/* ── Poster / Backdrop image ────────────────────────────────── */}
             <img
                 src={artwork}
                 alt={title}
                 loading="lazy"
                 draggable={false}
-                className="absolute inset-0 h-full w-full select-none object-cover transition-transform duration-500 ease-out group-hover:scale-110"
-                onError={(event) => {
-                    ; (event.target as HTMLImageElement).src =
-                        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='300'%3E%3Crect width='200' height='300' fill='%2327272a'/%3E%3C/svg%3E"
+                className="absolute inset-0 h-full w-full select-none object-cover"
+                onError={(e) => {
+                    ;(e.target as HTMLImageElement).src =
+                        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='300'%3E%3Crect width='200' height='300' fill='%2318181b'/%3E%3C/svg%3E"
                 }}
             />
 
-            {/* Top Badge (Always visible structurally but obscured on hover) */}
-            {badge && (
-                <span className="absolute left-2.5 top-2.5 z-30 rounded bg-black/60 backdrop-blur-md px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-white shadow-sm border border-white/10 transition-opacity duration-300 group-hover:opacity-0">
-                    {badge}
-                </span>
+            {/* ── Top-right: source icon (Folder / Zap) ─────────────────── */}
+            {availabilityType && (
+                <div className="absolute right-1.5 top-1.5 z-20">
+                    <span
+                        title={
+                            availabilityType === "FULL_LOCAL"
+                                ? "Local"
+                                : availabilityType === "HYBRID"
+                                  ? "Híbrido"
+                                  : "Solo Online"
+                        }
+                        className="flex items-center justify-center rounded bg-black/60 p-1 backdrop-blur-sm border border-white/8"
+                    >
+                        {availabilityType === "ONLY_ONLINE" ? (
+                            <Zap className="h-2.5 w-2.5 text-white/70" />
+                        ) : (
+                            <Folder className="h-2.5 w-2.5 text-white/70" />
+                        )}
+                    </span>
+                </div>
             )}
 
-            {/* Dark Gradient Overlay (Appears strictly on hover) */}
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-colors duration-300 z-10" />
+            {/* ── Top-left: format badge (hidden on hover) ──────────────── */}
+            {badge && (
+                <div className="absolute left-1.5 top-1.5 z-20 transition-opacity duration-200 group-hover:opacity-0">
+                    <span className="rounded bg-black/60 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-white/60 backdrop-blur-sm border border-white/8">
+                        {badge}
+                    </span>
+                </div>
+            )}
 
-            {/* Interactive Information Layer (Opacity 0 by default) */}
-            <div className="absolute inset-0 flex flex-col justify-end p-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <p className="line-clamp-2 text-sm md:text-base font-black leading-snug text-white drop-shadow-lg mb-1">
+            {/* ── Bottom gradient + text ─────────────────────────────────── */}
+            <div
+                className={cn(
+                    "absolute inset-x-0 bottom-0 z-10",
+                    isPoster ? "h-[45%]" : "h-[55%]",
+                    "bg-gradient-to-t from-black/90 via-black/50 to-transparent",
+                )}
+            />
+
+            {/* ── Title + intelligence tag ───────────────────────────────── */}
+            <div className="absolute inset-x-0 bottom-0 z-20 px-2.5 pb-2.5 pt-6">
+                <p className="line-clamp-1 text-[0.72rem] font-medium leading-tight text-white/90 drop-shadow">
                     {title}
                 </p>
-                {subtitle && <p className="text-[11px] md:text-xs font-bold uppercase tracking-widest text-zinc-300 drop-shadow-md mb-2">{subtitle}</p>}
-                
-                {!isPoster && description && (
-                    <p className="line-clamp-2 text-[11px] leading-relaxed text-zinc-400 drop-shadow-md mt-1">
-                        {description}
-                    </p>
-                )}
-            </div>
 
-            {/* Centered Play Icon */}
-            <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 scale-75 group-hover:scale-100">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-md shadow-2xl border border-white/20 group-hover:bg-white/30 transition-colors">
-                    <FaPlay className="ml-1 h-5 w-5 text-white drop-shadow-lg" />
+                <div className="mt-0.5 flex items-center justify-between gap-1">
+                    {subtitle && (
+                        <p className="truncate text-[0.62rem] text-zinc-500">{subtitle}</p>
+                    )}
+                    {intelligenceTag && TAG_STYLES[intelligenceTag] && (
+                        <span
+                            className={cn(
+                                "shrink-0 text-[0.58rem] font-bold uppercase tracking-widest",
+                                TAG_STYLES[intelligenceTag],
+                            )}
+                        >
+                            {intelligenceTag === "EPIC"
+                                ? "ÉPICO"
+                                : intelligenceTag === "FILLER"
+                                  ? "RELLENO"
+                                  : "ESPECIAL"}
+                        </span>
+                    )}
                 </div>
             </div>
 
-            {/* Progress Bar Layer */}
+            {/* ── Progress bar ──────────────────────────────────────────── */}
             {progress !== undefined && (
-                <div className="absolute bottom-0 left-0 right-0 z-30 h-1 bg-white/10 group-hover:bg-white/20 transition-colors duration-300">
+                <div className="absolute inset-x-0 bottom-0 z-30 h-[3px] bg-white/10">
                     <div
                         className={cn(
-                            "h-full transition-all duration-300 ease-linear rounded-r-full relative",
-                            progressColor === "orange"
-                                ? "bg-orange-500 shadow-[0_0_12px_rgba(249,115,22,0.8)]"
-                                : "bg-white",
+                            "h-full",
+                            progressColor === "orange" ? "bg-orange-500" : "bg-white/60",
                         )}
                         style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
                     />

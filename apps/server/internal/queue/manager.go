@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
 	"github.com/rs/zerolog"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // JobStatus represents the lifecycle state of a job.
@@ -21,15 +21,18 @@ const (
 	JobStatusCompleted JobStatus = "completed"
 	JobStatusFailed    JobStatus = "failed"
 	JobStatusCancelled JobStatus = "cancelled"
+	// JobStatusPaused is set on running jobs when the server shuts down mid-stream.
+	JobStatusPaused JobStatus = "paused"
 )
 
-// Job represents a unit of work in the persistent job queue.
+// Job is the GORM-persisted model for a queue task.
+// It doubles as the in-memory work unit to keep the stack flat.
 type Job struct {
-	ID          string            `json:"id"`
-	Type        string            `json:"type"`
-	Status      JobStatus         `json:"status"`
-	Payload     json.RawMessage   `json:"payload,omitempty"`
-	Result      json.RawMessage   `json:"result,omitempty"`
+	ID          string            `json:"id"                  gorm:"primaryKey"`
+	Type        string            `json:"type"                gorm:"not null;index"`
+	Status      JobStatus         `json:"status"              gorm:"not null;index"`
+	Payload     json.RawMessage   `json:"payload,omitempty"   gorm:"type:text"`
+	Result      json.RawMessage   `json:"result,omitempty"    gorm:"type:text"`
 	Error       string            `json:"error,omitempty"`
 	CreatedAt   time.Time         `json:"created_at"`
 	StartedAt   *time.Time        `json:"started_at,omitempty"`
@@ -37,79 +40,93 @@ type Job struct {
 	Retries     int               `json:"retries"`
 	MaxRetries  int               `json:"max_retries"`
 	Priority    int               `json:"priority"`
-	Metadata    map[string]string `json:"metadata,omitempty"`
+	MetadataRaw string            `json:"-"                   gorm:"column:metadata;type:text"`
+	Metadata    map[string]string `json:"metadata,omitempty"  gorm:"-"`
 }
+
+// TableName overrides the default GORM table name.
+func (Job) TableName() string { return "queue_jobs" }
 
 // JobHandler is the function signature for processing a job.
 type JobHandler func(ctx context.Context, job *Job) error
 
-// Manager is a persistent, pause/resume capable job queue.
-// Jobs are persisted to a JSON file so they survive server restarts.
-type Manager struct {
-	mu       sync.Mutex
-	jobs     []*Job
-	handlers map[string]JobHandler
-	logger   *zerolog.Logger
-	filePath string
-
-	ctx       context.Context
-	cancel    context.CancelFunc
-	wg        sync.WaitGroup
-	workerCh  chan *Job
-	isRunning bool
+// cancelHandle wraps a per-job cancel so workers can be interrupted on shutdown.
+type cancelHandle struct {
+	cancel context.CancelFunc
 }
 
-// NewManager creates a new job queue manager.
-// dataDir: directory for the persistent jobs.json file.
-// workerCount: number of concurrent worker goroutines.
-func NewManager(dataDir string, workerCount int, logger *zerolog.Logger) *Manager {
+// Manager is a persistent, bounded-worker-pool job queue backed by SQLite.
+// It is decoupled from download logic — it only knows *when* to dispatch jobs, not *how*.
+type Manager struct {
+	mu sync.RWMutex
+
+	// in-memory mirror of DB rows for sub-ms reads (ID → job pointer)
+	index    map[string]*Job
+	handlers map[string]JobHandler
+	// per-job cancel functions for graceful shutdown interrupt
+	running  map[string]*cancelHandle
+
+	logger *zerolog.Logger
+	gormdb *gorm.DB
+
+	ctx      context.Context
+	cancel   context.CancelFunc
+	wg       sync.WaitGroup
+	workerCh chan *Job
+}
+
+// NewManager creates a new job queue manager backed by SQLite.
+// gormdb: an already-opened *gorm.DB (the project's db.Database.Gorm()).
+// workerCount: max concurrent active workers.
+func NewManager(gormdb *gorm.DB, workerCount int, logger *zerolog.Logger) (*Manager, error) {
 	if workerCount < 1 {
-		workerCount = 2
+		workerCount = 3
+	}
+
+	// Auto-migrate so the table exists on first run with zero manual SQL.
+	if err := gormdb.AutoMigrate(&Job{}); err != nil {
+		return nil, fmt.Errorf("queue: failed to migrate schema: %w", err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	m := &Manager{
-		jobs:     make([]*Job, 0),
+		index:    make(map[string]*Job),
 		handlers: make(map[string]JobHandler),
+		running:  make(map[string]*cancelHandle),
 		logger:   logger,
-		filePath: filepath.Join(dataDir, "jobs.json"),
+		gormdb:   gormdb,
 		ctx:      ctx,
 		cancel:   cancel,
-		workerCh: make(chan *Job, 100),
+		// Buffered at 5× workers so enqueuers never block on a momentary burst.
+		workerCh: make(chan *Job, workerCount*5),
 	}
 
-	// Load persisted jobs
-	m.loadFromDisk()
-
-	// Start workers
-	for i := 0; i < workerCount; i++ {
+	// Start the bounded worker pool.
+	for i := range workerCount {
 		m.wg.Add(1)
 		go m.worker(i)
 	}
-	m.isRunning = true
-
-	// Re-enqueue any jobs that were running when the server last shut down
-	m.recoverInterruptedJobs()
 
 	logger.Info().Int("workers", workerCount).Msg("job_queue: Manager started")
-
-	return m
+	return m, nil
 }
+
+// ── Public API ────────────────────────────────────────────────────────────────
 
 // RegisterHandler registers a handler for a specific job type.
 func (m *Manager) RegisterHandler(jobType string, handler JobHandler) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
 	m.handlers[jobType] = handler
+	m.mu.Unlock()
 	m.logger.Info().Str("type", jobType).Msg("job_queue: Handler registered")
 }
 
-// Enqueue adds a new job to the queue.
+// Enqueue persists a new job to SQLite and dispatches it to the worker pool.
 func (m *Manager) Enqueue(jobType string, payload interface{}, opts ...JobOption) (string, error) {
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal payload: %w", err)
+		return "", fmt.Errorf("queue: failed to marshal payload: %w", err)
 	}
 
 	job := &Job{
@@ -122,179 +139,230 @@ func (m *Manager) Enqueue(jobType string, payload interface{}, opts ...JobOption
 		Priority:   0,
 		Metadata:   make(map[string]string),
 	}
-
 	for _, opt := range opts {
 		opt(job)
 	}
 
-	m.mu.Lock()
-	m.jobs = append(m.jobs, job)
-	m.saveToDiskLocked()
-	m.mu.Unlock()
-
-	// Dispatch to workers
-	select {
-	case m.workerCh <- job:
-	default:
-		m.logger.Warn().Str("id", job.ID).Msg("job_queue: Worker channel full, job will be picked up later")
+	if err := m.persistJob(job); err != nil {
+		return "", fmt.Errorf("queue: failed to persist job: %w", err)
 	}
 
+	m.mu.Lock()
+	m.index[job.ID] = job
+	m.mu.Unlock()
+
+	m.dispatch(job)
 	m.logger.Info().Str("id", job.ID).Str("type", jobType).Msg("job_queue: Job enqueued")
 	return job.ID, nil
 }
 
-// GetJob returns a job by its ID.
+// GetJob returns a job by ID from the in-memory mirror (sub-ms, no DB hit).
 func (m *Manager) GetJob(id string) *Job {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	for _, j := range m.jobs {
-		if j.ID == id {
-			return j
-		}
-	}
-	return nil
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.index[id]
 }
 
-// ListJobs returns all jobs, optionally filtered by status.
+// ListJobs returns all jobs from the in-memory mirror, optionally filtered by status.
 func (m *Manager) ListJobs(status *JobStatus) []*Job {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
-	if status == nil {
-		result := make([]*Job, len(m.jobs))
-		copy(result, m.jobs)
-		return result
-	}
-
-	var filtered []*Job
-	for _, j := range m.jobs {
-		if j.Status == *status {
-			filtered = append(filtered, j)
+	out := make([]*Job, 0, len(m.index))
+	for _, j := range m.index {
+		if status == nil || j.Status == *status {
+			out = append(out, j)
 		}
 	}
-	return filtered
+	return out
 }
 
-// CancelJob attempts to cancel a pending or running job.
+// CancelJob marks a job as cancelled in both memory and DB.
 func (m *Manager) CancelJob(id string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	for _, j := range m.jobs {
-		if j.ID == id {
-			if j.Status == JobStatusCompleted || j.Status == JobStatusCancelled {
-				return fmt.Errorf("job %s already in terminal state: %s", id, j.Status)
-			}
-			j.Status = JobStatusCancelled
-			now := time.Now()
-			j.CompletedAt = &now
-			m.saveToDiskLocked()
-			m.logger.Info().Str("id", id).Msg("job_queue: Job cancelled")
-			return nil
-		}
+	job, ok := m.index[id]
+	if !ok {
+		return fmt.Errorf("queue: job %s not found", id)
 	}
-	return fmt.Errorf("job %s not found", id)
+	if job.Status == JobStatusCompleted || job.Status == JobStatusCancelled {
+		return fmt.Errorf("queue: job %s is already in terminal state %s", id, job.Status)
+	}
+
+	// Interrupt the worker if it is currently executing this job.
+	if jc, running := m.running[id]; running {
+		jc.cancel()
+	}
+
+	now := time.Now()
+	job.Status = JobStatusCancelled
+	job.CompletedAt = &now
+
+	if err := m.updateStatus(job); err != nil {
+		m.logger.Error().Str("id", id).Err(err).Msg("job_queue: Failed to persist cancel")
+	}
+	m.logger.Info().Str("id", id).Msg("job_queue: Job cancelled")
+	return nil
 }
 
-// Shutdown gracefully stops the job queue, waiting for in-progress jobs.
+// RestorePendingJobs loads un-finished jobs from SQLite on startup and re-queues them.
+// Call this after RegisterHandler to ensure handlers are in place before dispatch.
+func (m *Manager) RestorePendingJobs() {
+	var jobs []*Job
+	if err := m.gormdb.
+		Where("status IN ?", []JobStatus{JobStatusPending, JobStatusPaused, JobStatusRunning}).
+		Find(&jobs).Error; err != nil {
+		m.logger.Error().Err(err).Msg("job_queue: Failed to restore pending jobs")
+		return
+	}
+
+	m.mu.Lock()
+	for _, j := range jobs {
+		j.Status = JobStatusPending // treat paused/running as pending on restart
+		m.index[j.ID] = j
+	}
+	m.mu.Unlock()
+
+	// Persist the status reset and re-dispatch outside the lock.
+	for _, j := range jobs {
+		_ = m.updateStatus(j)
+		m.dispatch(j)
+	}
+	m.logger.Info().Int("count", len(jobs)).Msg("job_queue: Restored jobs from DB")
+}
+
+// Shutdown stops the manager, marks running jobs as Paused, and waits for workers to drain.
 func (m *Manager) Shutdown() {
 	m.logger.Info().Msg("job_queue: Shutting down...")
+
+	// Cancel the manager context — all job contexts derive from this.
 	m.cancel()
+
+	// Mark all currently-running jobs as Paused before they exit.
+	m.mu.Lock()
+	for id, j := range m.index {
+		if j.Status == JobStatusRunning {
+			j.Status = JobStatusPaused
+			_ = m.updateStatus(j)
+			m.logger.Debug().Str("id", id).Msg("job_queue: Job paused for graceful shutdown")
+		}
+	}
+	m.mu.Unlock()
+
 	close(m.workerCh)
 	m.wg.Wait()
-	m.mu.Lock()
-	m.saveToDiskLocked()
-	m.isRunning = false
-	m.mu.Unlock()
 	m.logger.Info().Msg("job_queue: Shutdown complete")
 }
 
-// Purge removes completed and cancelled jobs older than the given duration.
+// Purge removes terminal jobs older than the given duration from both memory and DB.
 func (m *Manager) Purge(olderThan time.Duration) int {
+	cutoff := time.Now().Add(-olderThan)
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	cutoff := time.Now().Add(-olderThan)
-	var kept []*Job
 	purged := 0
-
-	for _, j := range m.jobs {
-		if (j.Status == JobStatusCompleted || j.Status == JobStatusCancelled || j.Status == JobStatusFailed) &&
-			j.CompletedAt != nil && j.CompletedAt.Before(cutoff) {
+	for id, j := range m.index {
+		terminal := j.Status == JobStatusCompleted || j.Status == JobStatusCancelled || j.Status == JobStatusFailed
+		if terminal && j.CompletedAt != nil && j.CompletedAt.Before(cutoff) {
+			delete(m.index, id)
 			purged++
-			continue
 		}
-		kept = append(kept, j)
 	}
 
-	m.jobs = kept
-	m.saveToDiskLocked()
+	if purged > 0 {
+		m.gormdb.
+			Where("status IN ? AND completed_at < ?", []JobStatus{JobStatusCompleted, JobStatusCancelled, JobStatusFailed}, cutoff).
+			Delete(&Job{})
+	}
 	return purged
 }
 
-// ──────────────────────────────────────────────────────────────────────
-// Internal
-// ──────────────────────────────────────────────────────────────────────
+// ── Internal ──────────────────────────────────────────────────────────────────
 
+// dispatch sends a job to the worker channel, logging a warning if it is full.
+func (m *Manager) dispatch(job *Job) {
+	select {
+	case m.workerCh <- job:
+	default:
+		m.logger.Warn().Str("id", job.ID).Msg("job_queue: Worker channel full, job will be retried on next RestorePendingJobs cycle")
+	}
+}
+
+// worker is a bounded goroutine that processes jobs from the channel.
 func (m *Manager) worker(id int) {
 	defer m.wg.Done()
-
-	for job := range m.workerCh {
-		// Check if cancelled
-		if m.ctx.Err() != nil {
+	for {
+		select {
+		case <-m.ctx.Done():
 			return
+		case job, ok := <-m.workerCh:
+			if !ok {
+				return
+			}
+			m.processJob(job)
 		}
-
-		m.processJob(job)
 	}
 }
 
 func (m *Manager) processJob(job *Job) {
-	m.mu.Lock()
-	handler, ok := m.handlers[job.Type]
-	if !ok {
-		job.Status = JobStatusFailed
-		job.Error = fmt.Sprintf("no handler registered for job type: %s", job.Type)
-		m.saveToDiskLocked()
-		m.mu.Unlock()
+	m.mu.RLock()
+	handler, hasHandler := m.handlers[job.Type]
+	m.mu.RUnlock()
+
+	if !hasHandler {
+		m.finalizeJob(job, fmt.Errorf("no handler for job type: %s", job.Type))
 		return
 	}
 
+	m.mu.Lock()
 	if job.Status == JobStatusCancelled {
 		m.mu.Unlock()
 		return
 	}
-
-	job.Status = JobStatusRunning
 	now := time.Now()
+	job.Status = JobStatusRunning
 	job.StartedAt = &now
-	m.saveToDiskLocked()
+
+	// Create a per-job cancel so Shutdown/CancelJob can interrupt this specific handler.
+	jobCtx, jobCancel := context.WithCancel(m.ctx)
+	m.running[job.ID] = &cancelHandle{cancel: jobCancel}
 	m.mu.Unlock()
 
-	// Execute with timeout context
-	jobCtx, jobCancel := context.WithTimeout(m.ctx, 30*time.Minute)
-	defer jobCancel()
+	_ = m.updateStatus(job)
+
+	defer func() {
+		jobCancel()
+		m.mu.Lock()
+		delete(m.running, job.ID)
+		m.mu.Unlock()
+	}()
 
 	err := handler(jobCtx, job)
+	m.finalizeJob(job, err)
+}
 
+func (m *Manager) finalizeJob(job *Job, err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	completedAt := time.Now()
-	job.CompletedAt = &completedAt
+	now := time.Now()
+	job.CompletedAt = &now
 
 	if err != nil {
 		job.Retries++
 		if job.Retries < job.MaxRetries {
 			job.Status = JobStatusPending
-			job.Error = fmt.Sprintf("attempt %d failed: %v", job.Retries, err)
-			m.logger.Warn().Str("id", job.ID).Int("attempt", job.Retries).Err(err).Msg("job_queue: Job failed, will retry")
-
-			// Re-enqueue for retry
+			job.Error = fmt.Sprintf("attempt %d: %v", job.Retries, err)
+			m.logger.Warn().Str("id", job.ID).Int("attempt", job.Retries).Err(err).Msg("job_queue: Job failed, scheduling retry")
+			// Exponential backoff re-dispatch outside the lock.
+			delay := time.Duration(job.Retries) * 5 * time.Second
+			retryJob := job
 			go func() {
-				time.Sleep(time.Duration(job.Retries) * 5 * time.Second) // Exponential-ish backoff
 				select {
-				case m.workerCh <- job:
+				case <-time.After(delay):
+					m.dispatch(retryJob)
 				case <-m.ctx.Done():
 				}
 			}()
@@ -305,76 +373,42 @@ func (m *Manager) processJob(job *Job) {
 		}
 	} else {
 		job.Status = JobStatusCompleted
-		m.logger.Info().Str("id", job.ID).Str("duration", completedAt.Sub(*job.StartedAt).String()).Msg("job_queue: Job completed")
+		m.logger.Info().
+			Str("id", job.ID).
+			Str("duration", now.Sub(*job.StartedAt).String()).
+			Msg("job_queue: Job completed")
 	}
 
-	m.saveToDiskLocked()
+	_ = m.updateStatus(job)
 }
 
-func (m *Manager) recoverInterruptedJobs() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	for _, j := range m.jobs {
-		if j.Status == JobStatusRunning || j.Status == JobStatusPending {
-			j.Status = JobStatusPending
-			go func(job *Job) {
-				select {
-				case m.workerCh <- job:
-				case <-m.ctx.Done():
-				}
-			}(j)
-		}
-	}
+// persistJob inserts or updates a job row (upsert on ID conflict).
+func (m *Manager) persistJob(job *Job) error {
+	return m.gormdb.Clauses(clause.OnConflict{UpdateAll: true}).Create(job).Error
 }
 
-func (m *Manager) loadFromDisk() {
-	data, err := os.ReadFile(m.filePath)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			m.logger.Error().Err(err).Msg("job_queue: Failed to load jobs from disk")
-		}
-		return
-	}
-
-	if err := json.Unmarshal(data, &m.jobs); err != nil {
-		m.logger.Error().Err(err).Msg("job_queue: Failed to parse jobs file")
-	}
+// updateStatus saves the mutable fields of a job to SQLite.
+func (m *Manager) updateStatus(job *Job) error {
+	return m.gormdb.Model(job).Updates(map[string]interface{}{
+		"status":       job.Status,
+		"error":        job.Error,
+		"retries":      job.Retries,
+		"result":       job.Result,
+		"started_at":   job.StartedAt,
+		"completed_at": job.CompletedAt,
+	}).Error
 }
 
-func (m *Manager) saveToDiskLocked() {
-	data, err := json.MarshalIndent(m.jobs, "", "  ")
-	if err != nil {
-		m.logger.Error().Err(err).Msg("job_queue: Failed to marshal jobs")
-		return
-	}
-
-	if err := os.MkdirAll(filepath.Dir(m.filePath), 0755); err != nil {
-		m.logger.Error().Err(err).Msg("job_queue: Failed to create directory")
-		return
-	}
-
-	if err := os.WriteFile(m.filePath, data, 0644); err != nil {
-		m.logger.Error().Err(err).Msg("job_queue: Failed to save jobs to disk")
-	}
-}
-
-// ──────────────────────────────────────────────────────────────────────
-// Options
-// ──────────────────────────────────────────────────────────────────────
+// ── Options ───────────────────────────────────────────────────────────────────
 
 // JobOption is a functional option for configuring a job.
 type JobOption func(*Job)
 
 // WithMaxRetries sets the maximum retry count.
-func WithMaxRetries(n int) JobOption {
-	return func(j *Job) { j.MaxRetries = n }
-}
+func WithMaxRetries(n int) JobOption { return func(j *Job) { j.MaxRetries = n } }
 
 // WithPriority sets the job priority (higher = more important).
-func WithPriority(p int) JobOption {
-	return func(j *Job) { j.Priority = p }
-}
+func WithPriority(p int) JobOption { return func(j *Job) { j.Priority = p } }
 
 // WithMetadata adds metadata key-value pairs to the job.
 func WithMetadata(kv map[string]string) JobOption {
@@ -385,9 +419,7 @@ func WithMetadata(kv map[string]string) JobOption {
 	}
 }
 
-// ──────────────────────────────────────────────────────────────────────
-// Helpers
-// ──────────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 func generateJobID() string {
 	return fmt.Sprintf("job_%d", time.Now().UnixNano())

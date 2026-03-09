@@ -1,6 +1,7 @@
 package autodownloader
 
 import (
+	"context"
 	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
@@ -60,7 +61,7 @@ var _ hibiketorrent.AnimeProvider = (*FakeTorrentProvider)(nil)
 
 func (f *Fake) New(t *testing.T) *AutoDownloader {
 	logger := util.NewLogger()
-	database, err := db.NewDatabase("", test_utils.ConfigData.Database.Name, logger)
+	database, err := db.NewDatabase(context.Background(), "", test_utils.ConfigData.Database.Name, logger)
 	require.NoError(t, err)
 
 	f.Database = database

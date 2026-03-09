@@ -28,10 +28,39 @@ type (
 		ParsedData       *LocalFileParsedData   `json:"parsedInfo"`
 		ParsedFolderData []*LocalFileParsedData `json:"parsedFolderInfo"`
 		Metadata         *LocalFileMetadata     `json:"metadata"`
+		TechnicalInfo    *FileTechnicalInfo     `json:"technicalInfo,omitempty"`
 		Locked           bool                   `json:"locked"`
 		Ignored          bool                   `json:"ignored"` // Unused for now
 		LibraryMediaId   uint                   `json:"libraryMediaId"`
 		MediaId          int                    `json:"mediaId"`
+	}
+
+	// FileTechnicalInfo holds FFprobe technical specifications of a video file.
+	FileTechnicalInfo struct {
+		Duration        time.Duration      `json:"duration,omitempty"`
+		Size            int64              `json:"size,omitempty"`
+		Bitrate         int64              `json:"bitrate,omitempty"`
+		Format          string             `json:"format,omitempty"`
+		VideoStream     *VideoStreamInfo   `json:"videoStream,omitempty"`
+		AudioStreams    []*AudioStreamInfo `json:"audioStreams,omitempty"`
+		SubtitleStreams []*AudioStreamInfo `json:"subtitleStreams,omitempty"` // Reusing Audio structure since they share basic properties
+	}
+
+	VideoStreamInfo struct {
+		Codec          string `json:"codec,omitempty"`          // e.g. h264, hevc
+		Profile        string `json:"profile,omitempty"`        // e.g. High 10, Main
+		Width          int    `json:"width,omitempty"`          // 1920
+		Height         int    `json:"height,omitempty"`         // 1080
+		FrameRate      string `json:"frameRate,omitempty"`      // 24000/1001
+		ColorSpace     string `json:"colorSpace,omitempty"`     // e.g. bt2020nc
+		ColorTransfer  string `json:"colorTransfer,omitempty"`  // e.g. smpte2084
+		ColorPrimaries string `json:"colorPrimaries,omitempty"` // e.g. bt2020
+	}
+
+	AudioStreamInfo struct {
+		Codec    string `json:"codec,omitempty"`    // e.g. aac, flac
+		Language string `json:"language,omitempty"` // e.g. jpn, eng
+		Title    string `json:"title,omitempty"`    // e.g. Japanese 5.1
 	}
 
 	// LocalFileMetadata holds metadata related to a media episode.
@@ -157,6 +186,13 @@ func GetAnitogoParsedTitle(filename string) string {
 
 // GetSeasonNumber parses the season number or returns 1 as default.
 func (lf *LocalFile) GetSeasonNumber() int {
+	// Heuristic: If Episode is extremely high (anime absolute format), the Season is likely a Sonarr/ReleaseGroup dummy wrapper.
+	if lf.ParsedData != nil && lf.ParsedData.Episode != "" {
+		if ep, err := strconv.Atoi(lf.ParsedData.Episode); err == nil && ep >= 100 {
+			return 1 // Drop fake season
+		}
+	}
+	
 	if lf.ParsedData != nil && lf.ParsedData.Season != "" {
 		if s, err := strconv.Atoi(lf.ParsedData.Season); err == nil {
 			return s

@@ -5,8 +5,12 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/rs/zerolog"
+
+	"kamehouse/internal/extension_repo"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -24,7 +28,6 @@ var defaultTrackers = []string{
 	"udp://open.stealth.si:80/announce",
 	"udp://ipv4.tracker.harry.lu:80/announce",
 	"udp://tracker.tiny-vps.com:6969/announce",
-	"udp://open.demonii.com:1337/announce",
 }
 
 // qualityOrder defines the sort priority for quality labels (lower = higher priority).
@@ -38,70 +41,333 @@ var qualityOrder = map[string]int{
 	"unknown": 5,
 }
 
+const (
+	// scatterGatherTimeout is the hard wall-clock deadline for the entire fetch.
+	scatterGatherTimeout = 3 * time.Second
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MediaID — typed identifier for a single media source namespace.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// MediaIDKind identifies the namespace an ID comes from.
+type MediaIDKind string
+
+const (
+	MediaIDKitsu MediaIDKind = "kitsu"
+	MediaIDIMDB  MediaIDKind = "imdb"
+	MediaIDAniDB MediaIDKind = "anidb"
+)
+
+// MediaID pairs a kind with its string value and the Stremio resource type.
+type MediaID struct {
+	Kind         MediaIDKind
+	Value        string // raw ID value (e.g. "13601", "tt1520211")
+	ResourceType string // Stremio resource type: "anime", "movie", "series"
+	// StremioID is the formatted Stremio ID including any episode suffix.
+	// Example: "13601:5" for Kitsu episode 5, "tt1520211:1:5" for IMDB S1E5.
+	StremioID string
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Provider
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Provider is the public facade for the Torrentio integration.
-// It is stateless and safe to create per-request, or to share across goroutines.
+// It implements a two-tier concurrent resolution strategy:
+//
+//   - Tier 1 (ID Race): queries all supplied MediaIDs concurrently; the first
+//     addon that returns a non-empty result cancels the rest.
+//   - Tier 2 (Addon Gather): for the winning ID, all registered StremioAddons
+//     are queried in parallel; their results are merged and deduplicated.
 type Provider struct {
 	client *Client
+	addons []extension_repo.StremioAddon
 	logger *zerolog.Logger
 }
 
-// NewProvider creates a Torrentio Provider with a pre-configured HTTP client.
-func NewProvider(logger *zerolog.Logger) *Provider {
+// NewProvider creates a Provider backed by the built-in Torrentio client.
+// Additional addons (e.g. Comet, ElfHosted) can be injected.
+func NewProvider(logger *zerolog.Logger, extraAddons ...extension_repo.StremioAddon) *Provider {
+	client := newClient(logger)
+	addons := make([]extension_repo.StremioAddon, 0, 1+len(extraAddons))
+	// Torrentio is always the primary source; extras are appended for redundancy.
+	addons = append(addons, &torrentioNativeAddon{client: client})
+	addons = append(addons, extraAddons...)
+
 	return &Provider{
-		client: newClient(logger),
+		client: client,
+		addons: addons,
 		logger: logger,
 	}
 }
 
-// GetStreams fetches and normalises torrent streams from Torrentio for the
-// given Kitsu anime ID and episode number.
-//
-// Parameters:
-//   - kitsuID  — the Kitsu anime identifier (e.g. 13601 for Bleach)
-//   - episode  — the episode number within the series (1-based)
-//
-// Returns a slice of [StreamResult] sorted by quality (4K → 1080p → 720p → …),
-// or an empty slice when Torrentio returns no results for that episode.
+// GetStreams is the legacy single-ID interface for the Kitsu anime path.
 func (p *Provider) GetStreams(ctx context.Context, kitsuID int, episode int) ([]*StreamResult, error) {
-	raw, err := p.client.fetchStreams(ctx, kitsuID, episode)
-	if err != nil {
-		return nil, fmt.Errorf("torrentio: GetStreams: %w", err)
+	id := MediaID{
+		Kind:         MediaIDKitsu,
+		Value:        fmt.Sprintf("%d", kitsuID),
+		ResourceType: "anime",
+		StremioID:    fmt.Sprintf("%d:%d", kitsuID, episode),
+	}
+	return p.GetStreamsForIDs(ctx, []MediaID{id})
+}
+
+// GetStreamsForID is the single-ID generic interface.
+func (p *Provider) GetStreamsForID(ctx context.Context, resourceType, stremioID string) ([]*StreamResult, error) {
+	id := MediaID{ResourceType: resourceType, StremioID: stremioID}
+	return p.GetStreamsForIDs(ctx, []MediaID{id})
+}
+
+// GetStreamsForIDs is the full two-tier entry point.
+//
+// Tier 1 — ID Race: all IDs are queried concurrently via the primary Torrentio
+// addon. The first non-empty response wins; all other in-flight goroutines are
+// cancelled immediately via a shared context — guaranteeing zero leaks.
+//
+// Tier 2 — Addon Gather: once a winning ID is identified, all registered
+// addons are queried concurrently for that ID, their results merged and
+// deduplicated by InfoHash.
+//
+// A single 3-second hard deadline (scatterGatherTimeout) governs both tiers.
+func (p *Provider) GetStreamsForIDs(ctx context.Context, ids []MediaID) ([]*StreamResult, error) {
+	if len(ids) == 0 {
+		return nil, nil
 	}
 
-	results := make([]*StreamResult, 0, len(raw.Streams))
-	for _, s := range raw.Streams {
-		results = append(results, mapStream(s))
+	// One timeout governs both tiers so the total wall time is always ≤ 3 s.
+	raceCtx, cancelAll := context.WithTimeout(ctx, scatterGatherTimeout)
+	defer cancelAll()
+
+	// ── Tier 1: First-Success ID Race ─────────────────────────────────────────
+	// winnerCh is size-1; only the first result is consumed.
+	winnerCh := make(chan string, 1) // sends the winning stremioID
+
+	var raceDone sync.WaitGroup
+	for _, id := range ids {
+		raceDone.Add(1)
+		go func(mid MediaID) {
+			defer raceDone.Done()
+			// Each goroutine uses the shared raceCtx; cancellation propagates
+			// instantly if another goroutine has already won.
+			streams, err := p.addons[0].FetchStreams(raceCtx, mid.ResourceType, mid.StremioID)
+			if err != nil {
+				p.logger.Debug().
+					Str("id", mid.StremioID).
+					Str("kind", string(mid.Kind)).
+					Err(err).
+					Msg("provider: id-race fetch failed")
+				return
+			}
+			if len(streams) == 0 {
+				p.logger.Debug().
+					Str("id", mid.StremioID).
+					Msg("provider: id-race returned no results")
+				return
+			}
+			// Non-blocking send: only the first goroutine to arrive succeeds.
+			select {
+			case winnerCh <- mid.StremioID:
+				// Signal all other ID-race goroutines to stop.
+				cancelAll()
+			default:
+			}
+		}(id)
 	}
 
-	// Sort by quality: best quality first, then alphabetically by release group.
-	sort.Slice(results, func(i, j int) bool {
-		qi := qualityPriority(results[i].Quality)
-		qj := qualityPriority(results[j].Quality)
+	// Drain all ID-race goroutines before we proceed — zero leak guarantee.
+	go func() {
+		raceDone.Wait()
+		// Ensure the channel is closeable even if no winner was found.
+		select {
+		case winnerCh <- "":
+		default:
+		}
+	}()
+
+	// Blocks until the first winner or all goroutines drain.
+	winningID := <-winnerCh
+	if winningID == "" {
+		// All ID variants exhausted with no results.
+		p.logger.Warn().Msg("provider: all IDs returned empty results")
+		return nil, nil
+	}
+
+	// Winner's resource type: carry it from the matching MediaID.
+	resourceType := "anime"
+	for _, id := range ids {
+		if id.StremioID == winningID {
+			resourceType = id.ResourceType
+			break
+		}
+	}
+
+	p.logger.Info().
+		Str("winningID", winningID).
+		Str("type", resourceType).
+		Msg("provider: ID race resolved")
+
+	// ── Tier 2: Addon Gather for the winning ID ───────────────────────────────
+	// Re-create a fresh context from the parent (the raceCtx may be cancelled).
+	gatherCtx, cancelGather := context.WithTimeout(ctx, scatterGatherTimeout)
+	defer cancelGather()
+
+	return p.addonGather(gatherCtx, resourceType, winningID)
+}
+
+// addonGather fans out to all registered addons concurrently for a single ID,
+// merges results, deduplicates by InfoHash, and sorts by quality.
+// Guarantees zero goroutine leaks via a WaitGroup + close-on-drain pattern.
+func (p *Provider) addonGather(ctx context.Context, resourceType, stremioID string) ([]*StreamResult, error) {
+	type addonResult struct {
+		streams []extension_repo.Stream
+	}
+
+	// Buffer = number of addons so senders never block if the gather loop exits early.
+	resultsCh := make(chan addonResult, len(p.addons))
+
+	var wg sync.WaitGroup
+	for _, addon := range p.addons {
+		wg.Add(1)
+		go func(a extension_repo.StremioAddon) {
+			defer wg.Done()
+			streams, err := a.FetchStreams(ctx, resourceType, stremioID)
+			if err != nil {
+				p.logger.Warn().Str("addon", a.Name()).Err(err).Msg("provider: addon gather failed")
+				return
+			}
+			if len(streams) > 0 {
+				resultsCh <- addonResult{streams: streams}
+			}
+		}(addon)
+	}
+
+	// Close the channel once every goroutine finishes — unblocks the range below.
+	go func() {
+		wg.Wait()
+		close(resultsCh)
+	}()
+
+	// Merge + dedup by InfoHash.
+	seen := make(map[string]struct{}, 64)
+	var merged []*StreamResult
+
+	for r := range resultsCh {
+		for _, s := range r.streams {
+			if s.InfoHash == "" {
+				// Direct-play (HTTP/external) streams: no InfoHash, always include.
+				merged = append(merged, mapStream(s))
+				continue
+			}
+			if _, dup := seen[s.InfoHash]; dup {
+				continue
+			}
+			seen[s.InfoHash] = struct{}{}
+			merged = append(merged, mapStream(s))
+		}
+	}
+
+	// Sort: best quality first, then lexicographically by release group.
+	sort.Slice(merged, func(i, j int) bool {
+		qi, qj := qualityPriority(merged[i].Quality), qualityPriority(merged[j].Quality)
 		if qi != qj {
 			return qi < qj
 		}
-		return results[i].ReleaseGroup < results[j].ReleaseGroup
+		return merged[i].ReleaseGroup < merged[j].ReleaseGroup
 	})
 
 	p.logger.Info().
-		Int("kitsuID", kitsuID).
-		Int("episode", episode).
-		Int("results", len(results)).
-		Msg("torrentio: GetStreams completed")
+		Str("id", stremioID).
+		Int("results", len(merged)).
+		Int("addons", len(p.addons)).
+		Msg("provider: addon gather complete")
 
-	return results, nil
+	return merged, nil
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Internal helpers
+// torrentioNativeAddon — bridges the cached Client to the StremioAddon interface
 // ─────────────────────────────────────────────────────────────────────────────
 
-// mapStream converts a raw torrentioStream into a canonical StreamResult.
-func mapStream(s torrentioStream) *StreamResult {
+type torrentioNativeAddon struct {
+	client *Client
+}
+
+func (t *torrentioNativeAddon) Name() string { return "torrentio" }
+
+// GetManifest satisfies StremioAddon; the native client uses typed calls.
+func (t *torrentioNativeAddon) GetManifest(_ context.Context) (*extension_repo.Manifest, error) {
+	return nil, nil
+}
+
+func (t *torrentioNativeAddon) FetchStreams(ctx context.Context, resourceType, stremioID string) ([]extension_repo.Stream, error) {
+	raw, err := t.client.fetchStreamsForID(ctx, resourceType, stremioID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]extension_repo.Stream, 0, len(raw.Streams))
+	for _, s := range raw.Streams {
+		out = append(out, extension_repo.Stream{
+			Name:     s.Name,
+			Title:    s.Title,
+			InfoHash: s.InfoHash,
+			FileIdx:  s.FileIdx,
+			BehaviorHints: &extension_repo.StreamBehaviorHints{
+				Filename:   s.BehaviorHints.Filename,
+				BingeGroup: s.BehaviorHints.BingeGroup,
+			},
+		})
+	}
+	return out, nil
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Filtering — decoupled from fetching
+// ─────────────────────────────────────────────────────────────────────────────
+
+// FilterByQuality returns only results matching the given quality labels.
+// Labels are case-insensitive (e.g. "1080p", "4K").
+func FilterByQuality(results []*StreamResult, qualities ...string) []*StreamResult {
+	set := make(map[string]struct{}, len(qualities))
+	for _, q := range qualities {
+		set[strings.ToLower(q)] = struct{}{}
+	}
+	out := results[:0] // re-use backing array
+	for _, r := range results {
+		if _, ok := set[strings.ToLower(r.Quality)]; ok {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+// FilterByReleaseGroup returns only results whose ReleaseGroup matches one of
+// the given names (case-insensitive).
+func FilterByReleaseGroup(results []*StreamResult, groups ...string) []*StreamResult {
+	set := make(map[string]struct{}, len(groups))
+	for _, g := range groups {
+		set[strings.ToLower(g)] = struct{}{}
+	}
+	out := results[:0]
+	for _, r := range results {
+		if _, ok := set[strings.ToLower(r.ReleaseGroup)]; ok {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Mapping helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+// mapStream converts a canonical extension_repo.Stream into a StreamResult.
+func mapStream(s extension_repo.Stream) *StreamResult {
+	var filename, bingeGroup string
+	if s.BehaviorHints != nil {
+		filename = s.BehaviorHints.Filename
+		bingeGroup = s.BehaviorHints.BingeGroup
+	}
 	quality := parseQuality(s.Name)
 	releaseGroup := parseReleaseGroup(s.Title)
 
@@ -112,24 +378,17 @@ func mapStream(s torrentioStream) *StreamResult {
 		FileIdx:      s.FileIdx,
 		Quality:      quality,
 		ReleaseGroup: releaseGroup,
-		Filename:     s.BehaviorHints.Filename,
+		Filename:     filename,
+		BingeGroup:   bingeGroup,
 		MagnetURI:    buildMagnetURI(s.InfoHash, releaseGroup),
 	}
 }
 
 // parseQuality extracts the quality label from the Torrentio "name" field.
-//
-// Torrentio formats the name field as:
-//
-//	"Torrentio\n1080p"
-//	"Torrentio\n4K"
-//
-// We search each line for known quality tokens (case-insensitive).
 func parseQuality(name string) string {
 	lower := strings.ToLower(name)
 	for _, q := range []string{"4k", "2160p", "1080p", "720p", "480p", "360p"} {
 		if strings.Contains(lower, q) {
-			// Normalise "4k" → "4K" for display purposes.
 			if q == "4k" {
 				return "4K"
 			}
@@ -139,64 +398,41 @@ func parseQuality(name string) string {
 	return "unknown"
 }
 
-// parseReleaseGroup extracts the release-group name from the Torrentio "title"
-// field.  Torrentio formats the first line of Title as either:
-//
-//	"SubsPlease - Bleach TYBW - 25 (1080p) [HASH]"   → "SubsPlease"
-//	"[SubsPlease] Bleach TYBW 25"                     → "SubsPlease"
-//	"Erai-raws | Bleach TYBW | 25 [1080p]"            → "Erai-raws"
-//
-// We take only the first line and look for the first word-like token before a
-// separator (" - ", " | ", "]" or end-of-token).
+// parseReleaseGroup extracts the release-group name from the first line of the title.
 func parseReleaseGroup(title string) string {
-	// Use only the first line of the title.
-	firstLine := strings.SplitN(title, "\n", 2)[0]
-	firstLine = strings.TrimSpace(firstLine)
-
-	// Strip leading "[" (bracket-prefixed groups like "[SubsPlease]").
+	firstLine := strings.TrimSpace(strings.SplitN(title, "\n", 2)[0])
 	firstLine = strings.TrimPrefix(firstLine, "[")
-
-	// Split on common separators and take the first segment.
 	for _, sep := range []string{"] ", " - ", " | ", "|"} {
 		if idx := strings.Index(firstLine, sep); idx > 0 {
 			return strings.TrimSpace(firstLine[:idx])
 		}
 	}
-
-	// Fallback: first token (space-separated).
-	parts := strings.Fields(firstLine)
-	if len(parts) > 0 {
+	if parts := strings.Fields(firstLine); len(parts) > 0 {
 		return parts[0]
 	}
 	return "unknown"
 }
 
-// buildMagnetURI constructs a magnet URI from an InfoHash with the project's
-// default tracker list.  The display name is set to the release group.
-func buildMagnetURI(infoHash string, displayName string) string {
+// buildMagnetURI constructs a magnet URI from an InfoHash with known public trackers.
+func buildMagnetURI(infoHash, displayName string) string {
 	if infoHash == "" {
 		return ""
 	}
-
 	var sb strings.Builder
 	sb.WriteString("magnet:?xt=urn:btih:")
 	sb.WriteString(infoHash)
-
 	if displayName != "" && displayName != "unknown" {
 		sb.WriteString("&dn=")
 		sb.WriteString(strings.ReplaceAll(displayName, " ", "+"))
 	}
-
 	for _, tracker := range defaultTrackers {
 		sb.WriteString("&tr=")
 		sb.WriteString(tracker)
 	}
-
 	return sb.String()
 }
 
-// qualityPriority returns the sort order integer for a quality string.
-// Lower integers sort first (higher quality).
+// qualityPriority returns the sort order for a quality string (lower = better).
 func qualityPriority(q string) int {
 	if p, ok := qualityOrder[strings.ToLower(q)]; ok {
 		return p

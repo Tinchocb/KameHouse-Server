@@ -2,6 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+    /* ── Reusable glassmorphism panel ─────────────────────────────────────── */
+    .glass-panel {
+        @apply backdrop-blur-xl bg-white/[0.06] border border-white/10 rounded-2xl;
+    }
+
+    /* ── Cinema shimmer — hero text gradient accent ───────────────────────── */
+    .cinema-gradient {
+        @apply bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent;
+    }
+
+    /* ── Immersive section fade — fade content into pure black below ─────── */
+    .section-fade-bottom::after {
+        content: "";
+        @apply absolute inset-x-0 bottom-0 h-32 pointer-events-none;
+        background: linear-gradient(to bottom, transparent, #000);
+    }
+}
+
 @layer base {
     :root {
         --media-cue-backdrop: blur(0px);

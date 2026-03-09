@@ -10,23 +10,34 @@ export interface SwimlaneItem {
     image: string
     subtitle?: string
     badge?: string
+    availabilityType?: "FULL_LOCAL" | "HYBRID" | "ONLY_ONLINE"
     description?: string
     progress?: number
     aspect?: CardAspect
+    /** ContentTag from IntelligenceService — rendered as a bottom label on the card */
+    intelligenceTag?: string
     onClick: () => void
+    /** URL to use as the dynamic home backdrop when this card is hovered */
+    backdropUrl?: string
 }
 
 export interface SwimlaneProps {
     title: string
     items: SwimlaneItem[]
     defaultAspect?: CardAspect
+    /**
+     * Called with the hovered item's backdropUrl (or null on mouse leave).
+     * Used by the home page to drive the Seanime-style dynamic backdrop.
+     */
+    onHover?: (url: string | null) => void
     className?: string
 }
 
-export function Swimlane({
+const SwimlaneInner = React.memo(function SwimlaneInner({
     title,
     items,
     defaultAspect = "poster",
+    onHover,
     className,
 }: SwimlaneProps) {
     if (items.length === 0) {
@@ -36,7 +47,7 @@ export function Swimlane({
     return (
         <section className={cn("relative", className)}>
             <div className="mb-5 flex items-center gap-3 px-6 md:px-10 lg:px-14">
-                <span className="h-6 w-1 rounded-full bg-white/75" />
+                <span className="h-6 w-1 rounded-full bg-orange-500" />
                 <h2 className="text-lg font-semibold uppercase tracking-[0.18em] text-zinc-200 md:text-xl">
                     {title}
                 </h2>
@@ -55,15 +66,22 @@ export function Swimlane({
                     applyRubberBandEffect
                 >
                     {items.map((item) => (
-                        <div key={item.id} className="snap-start">
+                        <div
+                            key={item.id}
+                            className="snap-start"
+                            onMouseEnter={() => onHover?.(item.backdropUrl ?? null)}
+                            onMouseLeave={() => onHover?.(null)}
+                        >
                             <MediaCard
                                 artwork={item.image}
                                 title={item.title}
                                 subtitle={item.subtitle}
                                 badge={item.badge}
+                                availabilityType={item.availabilityType}
                                 description={item.description}
                                 progress={item.progress}
                                 aspect={item.aspect ?? defaultAspect}
+                                intelligenceTag={item.intelligenceTag}
                                 onClick={item.onClick}
                                 className="motion-reduce:transition-none"
                             />
@@ -73,4 +91,10 @@ export function Swimlane({
             </div>
         </section>
     )
-}
+})
+SwimlaneInner.displayName = "Swimlane"
+
+/** Public API — Swimlane with React.memo for backdrop-change isolation. */
+export const Swimlane = SwimlaneInner
+/** Alias provided for consumers that prefer the Carousel naming convention. */
+export const MediaCarousel = SwimlaneInner

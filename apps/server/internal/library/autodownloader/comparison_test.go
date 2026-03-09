@@ -1,6 +1,7 @@
 package autodownloader
 
 import (
+	"context"
 	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
@@ -16,7 +17,7 @@ import (
 )
 
 func TestComparison(t *testing.T) {
-	database, _ := db.NewDatabase(t.TempDir(), "test", util.NewLogger())
+	database, _ := db.NewDatabase(context.Background(), t.TempDir(), "test", util.NewLogger())
 	ad := AutoDownloader{
 		metadataProviderRef: util.NewRef(metadata_provider.GetFakeProvider(t, database)),
 		settings: &models.AutoDownloaderSettings{
@@ -141,7 +142,7 @@ func TestComparison(t *testing.T) {
 }
 
 func TestComparison2(t *testing.T) {
-	database, _ := db.NewDatabase(t.TempDir(), "test", util.NewLogger())
+	database, _ := db.NewDatabase(context.Background(), t.TempDir(), "test", util.NewLogger())
 	ad := AutoDownloader{
 		metadataProviderRef: util.NewRef(metadata_provider.GetFakeProvider(t, database)),
 		settings: &models.AutoDownloaderSettings{
@@ -238,7 +239,7 @@ func TestComparison2(t *testing.T) {
 }
 
 func TestComparison3(t *testing.T) {
-	database, _ := db.NewDatabase(t.TempDir(), "test", util.NewLogger())
+	database, _ := db.NewDatabase(context.Background(), t.TempDir(), "test", util.NewLogger())
 	ad := AutoDownloader{
 		metadataProviderRef: util.NewRef(metadata_provider.GetFakeProvider(t, database)),
 		settings: &models.AutoDownloaderSettings{

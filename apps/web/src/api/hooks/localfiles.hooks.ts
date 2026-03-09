@@ -20,6 +20,37 @@ export function useGetLocalFiles() {
     })
 }
 
+import { useInfiniteQuery } from "@tanstack/react-query"
+import { getServerBaseUrl } from "@/api/client/server-url"
+
+export type PaginatedLocalFiles = {
+    items: Anime_LocalFile[]
+    hasMore: boolean
+    nextPage: number
+}
+
+export function useGetLocalFilesInfinite() {
+    return useInfiniteQuery({
+        queryKey: [API_ENDPOINTS.LOCALFILES.GetLocalFiles.key, "infinite"],
+        queryFn: async ({ pageParam = 1 }) => {
+            const res = await fetch(`${getServerBaseUrl()}${API_ENDPOINTS.LOCALFILES.GetLocalFiles.endpoint}?page=${pageParam}&perPage=50`, {
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                }
+            })
+            if (!res.ok) throw new Error("Failed to fetch local files")
+            const json = await res.json() as any
+            return json.data as PaginatedLocalFiles
+        },
+        getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.nextPage : undefined,
+        initialPageParam: 1,
+        // Performance optimizations for 1000+ files
+        structuralSharing: true,
+        staleTime: Infinity, // WebSocket will handle all invalidations explicitly
+    })
+}
+
 export function useLocalFileBulkAction() {
     const qc = useQueryClient()
 

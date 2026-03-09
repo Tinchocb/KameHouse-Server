@@ -122,7 +122,7 @@ export default defineConfig({
                     generatedRouteTree: "./src/routeTree.gen.ts",
                     autoCodeSplitting: true,
                 }),
-                new GenerateSW({
+                process.env.NODE_ENV === 'production' && new GenerateSW({
                     clientsClaim: true,
                     skipWaiting: true,
                     maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,

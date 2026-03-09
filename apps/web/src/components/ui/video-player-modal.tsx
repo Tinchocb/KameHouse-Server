@@ -31,20 +31,63 @@ export interface VideoPlayerModalProps {
     episodeNumber?: number
     /** If true, the stream URL points to an external CDN (e.g. Debrid). Enables crossOrigin. */
     isExternalStream?: boolean
-    /**
-     * Track metadata for the active stream.
-     *
-     * Fetch this from GET /api/v1/mediastream/track-info?streamId=<id> immediately
-     * after the stream starts. Pass the response here to populate the settings menu.
-     *
-     * For HLS streams, audio tracks are ALSO detected automatically from the HLS
-     * manifest via `Hls.Events.AUDIO_TRACKS_UPDATED`, so this prop is optional
-     * for audio — but it's required for subtitle tracks since those are not in
-     * the HLS manifest (they come from the MKV container).
-     */
     trackInfo?: StreamTrackInfo
     onClose: () => void
+    // ── Marathon Mode ────────────────────────────────────────────────────────
+    /** When true, automatically skips intro and transitions to next episode. */
+    marathonMode?: boolean
+    /** Called when the player reaches outro start in marathon mode, or the user clicks "Next". */
+    onNextEpisode?: () => void
+    /** Title of the next episode shown in the Next Episode card. */
+    nextEpisodeTitle?: string
+    /**
+     * Precise intro end time in seconds from the backend intelligence service.
+     * Falls back to 90 s if undefined.
+     */
+    introEnd?: number
+    /**
+     * Precise outro start time in seconds from the backend intelligence service.
+     * Falls back to `duration - 120` if undefined.
+     */
+    outroStart?: number
 }
+
+const formatTime = (secs: number) => {
+    if (!secs || isNaN(secs)) return "00:00"
+    const m = Math.floor(secs / 60)
+    const s = Math.floor(secs % 60)
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+}
+
+// ── Jassub Overlay Component ────────────────────────────────────────────────
+// Memoized overlay that conditionally spins up the WASM worker only when mounted.
+interface JassubOverlayProps {
+    videoRef: React.RefObject<HTMLVideoElement | null>
+    subtitleUrl: string
+    onLoading: (isLoading: boolean) => void
+}
+
+const JassubOverlay = React.memo(({ videoRef, subtitleUrl, onLoading }: JassubOverlayProps) => {
+    const canvasRef = useRef<HTMLCanvasElement>(null)
+    
+    const { isLoadingSubtitle } = useJassub({
+        canvasRef,
+        videoRef,
+        initialSubtitleUrl: subtitleUrl
+    })
+
+    useEffect(() => {
+        onLoading(isLoadingSubtitle)
+    }, [isLoadingSubtitle, onLoading])
+
+    return (
+        <canvas
+            ref={canvasRef}
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full pointer-events-none z-[1]"
+        />
+    )
+})
 
 export function VideoPlayerModal({
     streamUrl,
@@ -56,20 +99,32 @@ export function VideoPlayerModal({
     isExternalStream = false,
     trackInfo,
     onClose,
+    marathonMode = false,
+    onNextEpisode,
+    nextEpisodeTitle,
+    introEnd: introEndProp,
+    outroStart: outroStartProp,
 }: VideoPlayerModalProps) {
     const videoRef = useRef<HTMLVideoElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
     const hlsRef = useRef<Hls | null>(null)
-    // Canvas layered over the <video> — JASSUB renders ASS subtitles here.
-    const subtitleCanvasRef = useRef<HTMLCanvasElement>(null)
+
+    // DOM Refs to bypass React State loop during high-frequency time updates
+    const timeTextRef = useRef<HTMLSpanElement>(null)
+    const progressBarRef = useRef<HTMLDivElement>(null)
+    const progressInputRef = useRef<HTMLInputElement>(null)
+    const currentTimeRef = useRef(0)
 
     // Status
     const [status, setStatus] = useState<"loading" | "ready" | "error">("loading")
     const [errorMsg, setErrorMsg] = useState<string>("")
 
+    // Center play/pause flash overlay
+    const [centerFlash, setCenterFlash] = useState<"play" | "pause" | null>(null)
+    const centerFlashTimerRef = useRef<NodeJS.Timeout | null>(null)
+
     // Custom Controls State
     const [isPlaying, setIsPlaying] = useState(false)
-    const [currentTime, setCurrentTime] = useState(0)
     const [duration, setDuration] = useState(0)
     const [volume, setVolume] = useState(1)
     const [isMuted, setIsMuted] = useState(false)
@@ -84,6 +139,80 @@ export function VideoPlayerModal({
     const [tapFeedback, setTapFeedback] = useState<"left" | "right" | null>(null)
     const tapFeedbackTimerRef = useRef<NodeJS.Timeout | null>(null)
 
+    // ── Marathon Mode ────────────────────────────────────────────────────────
+    // Resolved timestamps — props take priority, API fills in, defaults are fallback
+    const introEndRef = useRef<number>(introEndProp ?? 90)       // default 1:30
+    const outroStartRef = useRef<number>(outroStartProp ?? Infinity) // computed once duration is known
+
+    // Ref-based overlay visibility — toggled by checkPlaybackTriggers without causing re-renders
+    const [showSkipIntro, setShowSkipIntro] = useState(false)
+    const [showNextEpisode, setShowNextEpisode] = useState(false)
+    const [nextEpCountdown, setNextEpCountdown] = useState(0)
+
+    // Flag: did we already auto-trigger next episode during this session?
+    const autoTriggeredRef = useRef(false)
+
+    // Fetch precise timestamps from backend intelligence service
+    useEffect(() => {
+        if (!mediaId || !episodeNumber) return
+        // Props already provided — skip API call
+        if (introEndProp !== undefined || outroStartProp !== undefined) return
+
+        let cancelled = false
+        fetch(`/api/v1/library/anime/intelligence?mediaId=${mediaId}&episode=${episodeNumber}`)
+            .then((r) => r.ok ? r.json() : null)
+            .then((rawData) => {
+                const data = rawData as { intro_end?: number; outro_start?: number } | null
+                if (cancelled || !data) return
+                if (typeof data.intro_end === "number") introEndRef.current = data.intro_end
+                if (typeof data.outro_start === "number") outroStartRef.current = data.outro_start
+            })
+            .catch(() => { /* silently use defaults */ })
+        return () => { cancelled = true }
+    }, [mediaId, episodeNumber, introEndProp, outroStartProp])
+
+    // Propagate prop changes to refs
+    useEffect(() => { if (introEndProp !== undefined) introEndRef.current = introEndProp }, [introEndProp])
+    useEffect(() => { if (outroStartProp !== undefined) outroStartRef.current = outroStartProp }, [outroStartProp])
+
+    /**
+     * checkPlaybackTriggers — called inside the native `timeupdate` listener.
+     * Uses ONLY refs for reads and buckets updates to ~1/s to prevent re-renders.
+     *
+     * State is only set when it actually changes (boolean equality guard).
+     */
+    const lastBucketRef = useRef(-1)
+    const checkPlaybackTriggers = useCallback((time: number, dur: number) => {
+        if (dur === 0) return
+
+        // Compute outro start lazily once duration is known
+        if (outroStartRef.current === Infinity) {
+            outroStartRef.current = Math.max(0, dur - 120) // default: last 2 min
+        }
+
+        // Bucket to 1-second resolution to avoid running this 30× per second
+        const bucket = Math.floor(time)
+        if (bucket === lastBucketRef.current) return
+        lastBucketRef.current = bucket
+
+        const inIntro = time >= 0 && time < introEndRef.current
+        const inOutro = time >= outroStartRef.current
+        const inPreOutro = time >= dur - 180 // "Next Episode" card shows at last 3 min
+
+        setShowSkipIntro((prev) => prev !== inIntro ? inIntro : prev)
+        setShowNextEpisode((prev) => prev !== inPreOutro ? inPreOutro : prev)
+
+        if (inPreOutro) {
+            setNextEpCountdown(Math.max(0, Math.ceil(dur - time)))
+        }
+
+        // Marathon auto-trigger: jump to next episode when outro begins
+        if (marathonMode && inOutro && !autoTriggeredRef.current && onNextEpisode) {
+            autoTriggeredRef.current = true
+            onNextEpisode()
+        }
+    }, [marathonMode, onNextEpisode])
+
     // ── Track selection state ──────────────────────────────────────────────────
     // Audio tracks — seeded from the trackInfo prop; HLS streams also auto-detect
     // them from the manifest via AUDIO_TRACKS_UPDATED (see HLS effect below).
@@ -97,19 +226,12 @@ export function VideoPlayerModal({
         trackInfo?.subtitleTracks.find((t) => t.default)?.index ?? null
     )
 
-    // ── JASSUB hook ───────────────────────────────────────────────────────────
-    // Initialises the WASM worker and wires it to the canvas + video elements.
-    const {
-        loadTrack: loadSubtitleTrack,
-        clearTrack: clearSubtitleTrack,
-        isLoadingSubtitle,
-    } = useJassub({
-        canvasRef: subtitleCanvasRef,
-        videoRef,
-        // Load the default subtitle track on first render if one is flagged.
-        initialSubtitleUrl:
-            subtitleTracks.find((t) => t.index === activeSubtitleIndex)?.url ?? null,
-    })
+    // Active .ass track logic for Jassub lazy loading
+    const activeAssTrackUrl = subtitleTracks.find(
+        (t) => t.index === activeSubtitleIndex && (t.codec === "ass" || t.codec === "ssa")
+    )?.url ?? null
+
+    const [isJassubLoading, setIsJassubLoading] = useState(false)
 
     // Addon Subtitles
     const { data: addonSubtitles } = useGetAddonSubtitles("series", mediaId)
@@ -140,16 +262,52 @@ export function VideoPlayerModal({
     // Close on Escape key
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === "Escape") {
-                if (videoRef.current) {
-                    saveContinuity(videoRef.current.currentTime, videoRef.current.duration)
-                }
-                onClose()
+            // Don't intercept when user is typing in an input
+            if ((e.target as HTMLElement).tagName === "INPUT") return
+
+            switch (e.code) {
+                case "Escape":
+                    if (videoRef.current) saveContinuity(videoRef.current.currentTime, videoRef.current.duration)
+                    onClose()
+                    break
+                case "Space":
+                case "KeyK":
+                    e.preventDefault()
+                    if (videoRef.current) {
+                        if (videoRef.current.paused) videoRef.current.play()
+                        else videoRef.current.pause()
+                    }
+                    break
+                case "KeyF":
+                    if (!containerRef.current) break
+                    if (!document.fullscreenElement) containerRef.current.requestFullscreen().catch(() => {})
+                    else document.exitFullscreen()
+                    break
+                case "KeyM":
+                    if (videoRef.current) {
+                        videoRef.current.muted = !videoRef.current.muted
+                        setIsMuted(videoRef.current.muted)
+                    }
+                    break
+                case "ArrowRight":
+                    e.preventDefault()
+                    if (videoRef.current) videoRef.current.currentTime = Math.min(videoRef.current.currentTime + 10, videoRef.current.duration)
+                    break
+                case "ArrowLeft":
+                    e.preventDefault()
+                    if (videoRef.current) videoRef.current.currentTime = Math.max(videoRef.current.currentTime - 10, 0)
+                    break
+                case "KeyS":
+                    // Skip Intro shortcut — only active while Skip Intro overlay is visible
+                    if (showSkipIntro && videoRef.current) {
+                        videoRef.current.currentTime = introEndRef.current
+                    }
+                    break
             }
         }
         window.addEventListener("keydown", onKey)
         return () => window.removeEventListener("keydown", onKey)
-    }, [onClose, saveContinuity])
+    }, [onClose, saveContinuity, showSkipIntro])
 
     // Prevent body scroll
     useEffect(() => {
@@ -220,12 +378,62 @@ export function VideoPlayerModal({
             video.play().catch(() => { })
         }
 
-        const updateTime = () => setCurrentTime(video.currentTime)
+        // ── localStorage resume position — written every 5 s ─────────────
+        const lsKey = mediaId ? `player-pos-${mediaId}-${episodeNumber ?? 0}` : null
+        if (lsKey) {
+            const saved = localStorage.getItem(lsKey)
+            // Restore saved position once metadata is available
+            video.addEventListener("loadedmetadata", () => {
+                if (saved) {
+                    const savedTime = Number(saved)
+                    if (savedTime > 10 && savedTime < (video.duration - 5)) {
+                        video.currentTime = savedTime
+                    }
+                }
+            }, { once: true })
+        }
+
+        const posInterval = lsKey
+            ? setInterval(() => {
+                if (videoRef.current && !videoRef.current.paused) {
+                    localStorage.setItem(lsKey, String(videoRef.current.currentTime))
+                }
+            }, 5000)
+            : null
+
+        const updateTime = () => {
+            const time = video.currentTime
+            const dur = video.duration || 0
+            currentTimeRef.current = time
+
+            if (timeTextRef.current) {
+                timeTextRef.current.textContent = formatTime(time)
+            }
+            if (progressBarRef.current) {
+                progressBarRef.current.style.width = `${Math.max(0, Math.min(100, (time / (dur || 1)) * 100))}%`
+            }
+            if (progressInputRef.current) {
+                progressInputRef.current.value = time.toString()
+            }
+
+            // Marathon triggers — buckets to 1 s, no re-render on every RAF tick
+            checkPlaybackTriggers(time, dur)
+        }
         const updateDuration = () => setDuration(video.duration)
-        const onPlay = () => setIsPlaying(true)
+        const onPlay = () => {
+            setIsPlaying(true)
+            // Flash the center play icon
+            if (centerFlashTimerRef.current) clearTimeout(centerFlashTimerRef.current)
+            setCenterFlash("play")
+            centerFlashTimerRef.current = setTimeout(() => setCenterFlash(null), 600)
+        }
         const onPause = () => {
             setIsPlaying(false)
             if (video.duration > 0) saveContinuity(video.currentTime, video.duration)
+            // Flash the center pause icon
+            if (centerFlashTimerRef.current) clearTimeout(centerFlashTimerRef.current)
+            setCenterFlash("pause")
+            centerFlashTimerRef.current = setTimeout(() => setCenterFlash(null), 600)
         }
 
         video.addEventListener('timeupdate', updateTime)
@@ -235,6 +443,8 @@ export function VideoPlayerModal({
 
         return () => {
             saveContinuity(video.currentTime, video.duration)
+            if (lsKey) localStorage.setItem(lsKey, String(video.currentTime))
+            if (posInterval) clearInterval(posInterval)
             video.removeEventListener('timeupdate', updateTime)
             video.removeEventListener('loadedmetadata', updateDuration)
             video.removeEventListener('play', onPlay)
@@ -243,7 +453,7 @@ export function VideoPlayerModal({
             hlsRef.current = null
             video.src = ""
         }
-    }, [streamUrl, streamType, saveContinuity])
+    }, [streamUrl, streamType, saveContinuity, mediaId, episodeNumber])
 
     // ── Audio track selection handler ─────────────────────────────────────────
     const handleSelectAudio = useCallback((track: AudioTrack) => {
@@ -277,28 +487,15 @@ export function VideoPlayerModal({
     const handleSelectSubtitle = useCallback(
         (track: SubtitleTrack | null) => {
             if (track === null) {
-                // User chose "Off" — clear the JASSUB canvas.
+                // User chose "Off" 
                 setActiveSubtitleIndex(null)
-                clearSubtitleTrack()
                 return
             }
 
             setActiveSubtitleIndex(track.index)
 
-            if (track.codec === "ass" || track.codec === "ssa") {
-                // ── ASS/SSA path: use JASSUB WASM renderer ──
-                // The track URL points to the backend's subtitle extraction endpoint:
-                //   GET /api/v1/mediastream/subtitle?streamId=X&trackIndex=N
-                // JASSUB fetches the raw .ass text and calls libass to render it.
-                // The video does NOT reload — only the canvas content changes.
-                if (track.url) {
-                    void loadSubtitleTrack(track.url)
-                }
-            } else if (track.url) {
+            if (track.codec !== "ass" && track.codec !== "ssa" && track.url) {
                 // ── VTT/SRT path: use browser's native TextTrack ──
-                // For non-ASS subtitle formats served as WebVTT, disable JASSUB
-                // (it can't render those) and add a native <track> element instead.
-                clearSubtitleTrack()
                 const video = videoRef.current
                 if (!video) return
                 const existing = Array.from(video.textTracks)
@@ -311,7 +508,7 @@ export function VideoPlayerModal({
                 if (nativeTrack) nativeTrack.mode = "showing"
             }
         },
-        [loadSubtitleTrack, clearSubtitleTrack]
+        []
     )
 
     // Controls Logic
@@ -327,14 +524,12 @@ export function VideoPlayerModal({
         if (newTime < 0) newTime = 0
         if (newTime > duration) newTime = duration
         videoRef.current.currentTime = newTime
-        setCurrentTime(newTime)
     }
 
     const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!videoRef.current) return
         const time = Number(e.target.value)
         videoRef.current.currentTime = time
-        setCurrentTime(time)
     }
 
     const toggleMute = () => {
@@ -436,15 +631,6 @@ export function VideoPlayerModal({
         }
     }, [skipTime, togglePlay, showControlsTemporarily])
 
-    const formatTime = (secs: number) => {
-        if (!secs || isNaN(secs)) return "00:00"
-        const m = Math.floor(secs / 60)
-        const s = Math.floor(secs % 60)
-        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-    }
-
-    const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0
-
     return (
         <div
             ref={containerRef}
@@ -509,19 +695,115 @@ export function VideoPlayerModal({
                 ))}
             </video>
 
-            {/*
-             * JASSUB subtitle canvas — sits directly above the <video> element.
-             */}
-            <canvas
-                ref={subtitleCanvasRef}
-                aria-hidden="true"
-                className={cn(
-                    "absolute inset-0 w-full h-full",
-                    "pointer-events-none z-[1]",
-                    // Hidden while stream is loading so we don't see a blank canvas flash
-                    status !== "ready" && "opacity-0"
-                )}
-            />
+            {/* JASSUB WASM Lazy Loaded Renderer */}
+            {activeAssTrackUrl && status === "ready" && (
+                <JassubOverlay
+                    videoRef={videoRef}
+                    subtitleUrl={activeAssTrackUrl}
+                    onLoading={setIsJassubLoading}
+                />
+            )}
+
+            {/* Center Play/Pause Flash (Stremio-style) */}
+            {centerFlash && (
+                <div
+                    key={centerFlash}
+                    className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
+                >
+                    <div className="flex items-center justify-center w-20 h-20 rounded-full bg-black/45 backdrop-blur-sm animate-[ping_0.5s_ease-out_forwards]">
+                        {centerFlash === "play"
+                            ? <svg viewBox="0 0 24 24" fill="currentColor" className="w-9 h-9 text-white ml-1"><path d="M8 5v14l11-7z"/></svg>
+                            : <svg viewBox="0 0 24 24" fill="currentColor" className="w-9 h-9 text-white"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                        }
+                    </div>
+                </div>
+            )}
+
+
+            {/* ── Smart Overlay: Skip Intro ─────────────────────────────────────
+                 Appears during the intro window. 'S' key or click jumps to introEnd.
+                 bottom-20 keeps it above the control bar; z-30 above center-flash.     */}
+            <div className={cn(
+                "absolute bottom-24 left-8 md:left-10 z-30 transition-all duration-500 pointer-events-auto",
+                showSkipIntro ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
+            )}>
+                <button
+                    id="skip-intro-btn"
+                    aria-label="Saltar Introducción"
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        if (videoRef.current) videoRef.current.currentTime = introEndRef.current
+                    }}
+                    className={cn(
+                        "flex items-center gap-2 px-5 py-2.5 rounded-lg",
+                        "bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/40",
+                        "backdrop-blur-md text-white text-sm font-semibold tracking-wide",
+                        "transition-all duration-200 shadow-[0_4px_24px_rgba(0,0,0,0.4)]",
+                        "active:scale-95"
+                    )}
+                >
+                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 opacity-80">
+                        <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/>
+                    </svg>
+                    Saltar Intro
+                    <span className="text-white/40 text-xs font-normal ml-1 hidden sm:inline">[S]</span>
+                </button>
+            </div>
+
+            {/* ── Smart Overlay: Next Episode card ─────────────────────────────
+                 Appears during the last 3 minutes. Shows countdown and next ep title.
+                 Auto-triggers onNextEpisode when marathon mode is ON.               */}
+            <div className={cn(
+                "absolute bottom-24 right-6 md:right-10 z-30 transition-all duration-500 pointer-events-auto",
+                showNextEpisode ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
+            )}>
+                <div className={cn(
+                    "flex flex-col gap-3 p-4 rounded-xl w-64",
+                    "bg-zinc-900/80 border border-white/10 backdrop-blur-xl",
+                    "shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
+                )}>
+                    <div className="flex items-center justify-between">
+                        <span className="text-zinc-400 text-xs font-semibold uppercase tracking-widest">Siguiente episodio</span>
+                        {marathonMode && (
+                            <span className="text-orange-400 text-xs font-bold tabular-nums">
+                                Auto en {Math.ceil(Math.max(0, nextEpCountdown - (outroStartRef.current === Infinity ? 120 : (duration - outroStartRef.current))))}s
+                            </span>
+                        )}
+                    </div>
+
+                    {nextEpisodeTitle && (
+                        <p className="text-white text-sm font-semibold leading-snug line-clamp-2">
+                            {nextEpisodeTitle}
+                        </p>
+                    )}
+
+                    {/* Marathon mode progress bar */}
+                    {marathonMode && duration > 0 && (
+                        <div className="w-full h-0.5 rounded-full bg-white/10 overflow-hidden">
+                            <div
+                                className="h-full rounded-full bg-orange-500 transition-all duration-1000"
+                                style={{ width: `${Math.min(100, Math.max(0, ((duration - nextEpCountdown) / (duration - (outroStartRef.current === Infinity ? duration - 120 : outroStartRef.current))) * 100))}%` }}
+                            />
+                        </div>
+                    )}
+
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            autoTriggeredRef.current = true
+                            onNextEpisode?.()
+                        }}
+                        className={cn(
+                            "w-full py-2 rounded-lg text-sm font-bold tracking-wide",
+                            "bg-orange-500 hover:bg-orange-400 text-white",
+                            "transition-all duration-200 active:scale-95",
+                            "shadow-[0_0_16px_rgba(249,115,22,0.35)]"
+                        )}
+                    >
+                        Ir al siguiente →
+                    </button>
+                </div>
+            </div>
 
             {/* UI Overlay — Cinematic VOD Style */}
             <div className={cn(
@@ -579,8 +861,9 @@ export function VideoPlayerModal({
                     {/* Minimalist Expanding Progress Timeline */}
                     <div className="relative w-full h-1 hover:h-2 md:h-1.5 md:hover:h-2.5 transition-all bg-white/20 group cursor-pointer flex items-center mb-6 rounded-full" onClick={(e) => { e.stopPropagation() }}>
                         <div
+                            ref={progressBarRef}
                             className="h-full bg-orange-500 shadow-[0_0_12px_rgba(249,115,22,0.8)] transition-all ease-linear rounded-full rounded-r-none relative"
-                            style={{ width: `${Math.max(0, Math.min(100, progressPercentage))}%` }}
+                            style={{ width: "0%" }}
                         >
                             {/* Hover Thumb Component */}
                             <div
@@ -590,10 +873,11 @@ export function VideoPlayerModal({
 
                         {/* Dragging input */}
                         <input
+                            ref={progressInputRef}
                             type="range"
                             min={0}
                             max={duration || 100}
-                            value={currentTime}
+                            defaultValue={0}
                             onChange={(e) => { e.stopPropagation(); handleSeek(e); }}
                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer touch-none"
                             style={{ height: "40px", top: "50%", transform: "translateY(-50%)" }}
@@ -639,7 +923,7 @@ export function VideoPlayerModal({
 
                         {/* Time indicator (Center on mobile, Left on Desktop) */}
                         <div className="flex-1 flex justify-center md:justify-start md:ml-6 items-center gap-1.5 text-zinc-300 text-xs md:text-sm font-bold tabular-nums tracking-widest select-none drop-shadow-md">
-                            <span className="text-white">{formatTime(currentTime)}</span>
+                            <span ref={timeTextRef} className="text-white">00:00</span>
                             <span className="text-zinc-600">/</span>
                             <span className="text-zinc-400">{formatTime(duration)}</span>
                         </div>
@@ -653,7 +937,7 @@ export function VideoPlayerModal({
                                 subtitleTracks={subtitleTracks}
                                 activeSubtitleIndex={activeSubtitleIndex}
                                 onSelectSubtitle={handleSelectSubtitle}
-                                isLoadingSubtitle={isLoadingSubtitle}
+                                isLoadingSubtitle={isJassubLoading}
                             />
 
                             <button onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }} className="text-white hover:text-zinc-300 transition-colors drop-shadow-md min-w-[44px] min-h-[44px] flex items-center justify-center ml-1 md:ml-4">

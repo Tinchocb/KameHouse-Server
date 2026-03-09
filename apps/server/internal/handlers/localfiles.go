@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models/dto"
@@ -28,6 +29,41 @@ func (h *Handler) HandleGetLocalFiles(c echo.Context) error {
 	lfs, _, err := db.GetLocalFiles(h.App.Database)
 	if err != nil {
 		return h.RespondWithError(c, err)
+	}
+
+	pageStr := c.QueryParam("page")
+	perPageStr := c.QueryParam("perPage")
+
+	if pageStr != "" {
+		page, err := strconv.Atoi(pageStr)
+		if err != nil {
+			page = 1
+		}
+		perPage, err := strconv.Atoi(perPageStr)
+		if err != nil {
+			perPage = 50
+		}
+
+		start := (page - 1) * perPage
+		end := start + perPage
+		
+		if start >= len(lfs) {
+			return h.RespondWithData(c, map[string]interface{}{
+				"items":    []*dto.LocalFile{},
+				"hasMore":  false,
+				"nextPage": 0,
+			})
+		}
+		
+		if end > len(lfs) {
+			end = len(lfs)
+		}
+		
+		return h.RespondWithData(c, map[string]interface{}{
+			"items":    lfs[start:end],
+			"hasMore":  end < len(lfs),
+			"nextPage": page + 1,
+		})
 	}
 
 	return h.RespondWithData(c, lfs)

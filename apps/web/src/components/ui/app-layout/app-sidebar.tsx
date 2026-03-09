@@ -99,8 +99,8 @@ function NavLink({ item, collapsed }: NavLinkProps) {
             activeProps={{
                 className: cn(
                     "relative flex items-center gap-3 rounded-2xl px-4 py-3",
-                    "bg-white/8 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]",
-                    "before:absolute before:left-0 before:top-1/2 before:h-6 before:w-0.5 before:-translate-y-1/2 before:rounded-full before:bg-white",
+                    "bg-orange-500/12 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]",
+                    "before:absolute before:left-0 before:top-1/2 before:h-6 before:w-0.5 before:-translate-y-1/2 before:rounded-full before:bg-orange-500",
                     "transition-colors duration-150 motion-reduce:transition-none",
                 ),
             }}
@@ -233,7 +233,7 @@ export function AppBottomNav() {
                     key={item.to}
                     to={item.to}
                     activeProps={{
-                        className: "text-white",
+                        className: "text-orange-400",
                     }}
                     inactiveProps={{
                         className: "text-zinc-500 hover:text-zinc-300",

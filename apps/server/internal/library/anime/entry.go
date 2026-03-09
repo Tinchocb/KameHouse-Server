@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
@@ -321,28 +323,55 @@ func (e *Entry) hydrateEntryEpisodeData(
 	// |       Episodes      |
 	// +---------------------+
 
-	p := pool.NewWithResults[*Episode]()
+	// Group local files by Season-Episode for intelligently grouping multi-versions
+	groupedFiles := make(map[string][]*LocalFile)
 	for _, lf := range e.LocalFiles {
-		lf := lf
-		p.Go(func() *Episode {
-			seasonNum := 1
-			if lf != nil {
-				seasonNum = lf.GetSeasonNumber()
-				if lf.GetType() == LocalFileTypeSpecial {
-					seasonNum = 0
+		// Support multi-part episode vectors
+		episodes := []int{lf.GetEpisodeNumber()}
+		if lf.ParsedData != nil && len(lf.ParsedData.EpisodeRange) > 1 {
+			episodes = []int{}
+			for _, epStr := range lf.ParsedData.EpisodeRange {
+				if epNum, err := strconv.Atoi(epStr); err == nil {
+					episodes = append(episodes, epNum)
 				}
 			}
+		}
+
+		seasonNum := lf.GetSeasonNumber()
+		if lf.GetType() == LocalFileTypeSpecial {
+			seasonNum = 0
+		}
+
+		for _, epNum := range episodes {
+			key := fmt.Sprintf("%d-%d", seasonNum, epNum)
+			groupedFiles[key] = append(groupedFiles[key], lf)
+		}
+	}
+
+	p := pool.NewWithResults[*Episode]()
+	for key, lfs := range groupedFiles {
+		lfs := lfs
+		keyParts := strings.Split(key, "-")
+		seasonTarget, _ := strconv.Atoi(keyParts[0])
+		episodeTarget, _ := strconv.Atoi(keyParts[1])
+
+		p.Go(func() *Episode {
+			// Select highest quality or first file as primary
+			primaryLf := lfs[0]
 
 			var libEp *models.LibraryEpisode
 			if libraryEpisodes != nil {
-				key := fmt.Sprintf("%d-%d", seasonNum, lf.GetEpisodeNumber())
+				key := fmt.Sprintf("%d-%d", seasonTarget, episodeTarget)
 				if ep, ok := libraryEpisodes[key]; ok {
 					libEp = ep
 				}
 			}
 
-			return NewEpisode(&NewEpisodeOptions{
-				LocalFile:            lf,
+			// Override Episode Number in metadata if it was expanded from range
+			primaryLf.Metadata.Episode = episodeTarget
+
+			ep := NewEpisode(&NewEpisodeOptions{
+				LocalFile:            primaryLf,
 				MetadataWrapper:      amw,
 				OptionalAniDBEpisode: "",
 				AnimeMetadata:        animeMetadata,
@@ -352,6 +381,12 @@ func (e *Entry) hydrateEntryEpisodeData(
 				MetadataProvider:     metadataProviderRef.Get(),
 				LibraryEpisode:       libEp,
 			})
+
+			if len(lfs) > 1 {
+				ep.AdditionalFiles = lfs[1:]
+			}
+
+			return ep
 		})
 	}
 	episodes := p.Wait()

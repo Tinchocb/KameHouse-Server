@@ -59,6 +59,8 @@ type StreamResult struct {
 	ReleaseGroup string `json:"releaseGroup"`
 	// Filename is the exact filename of the target file inside the torrent
 	Filename string `json:"filename"`
+	// BingeGroup groups streams across episodes for binge-watching continuity.
+	BingeGroup string `json:"bingeGroup,omitempty"`
 	// MagnetURI is a ready-to-use magnet link constructed from InfoHash and
 	// common public trackers
 	MagnetURI string `json:"magnetUri"`

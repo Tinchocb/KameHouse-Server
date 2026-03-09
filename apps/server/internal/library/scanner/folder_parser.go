@@ -20,6 +20,8 @@ var (
 	reYearInFolder = regexp.MustCompile(`^(.+?)\s*\((\d{4})\)`)
 	// Matches "Season 01", "Season 1", "S01", "S1", "Temp 01"
 	reSeasonFolder = regexp.MustCompile(`(?i)^(?:season|s|temp|temporada)\s*(\d+)$`)
+	// Matches Specials, Extras, OVA folders which resolve to Season 0
+	reSpecialsFolder = regexp.MustCompile(`(?i)^(?:season\s*0+|s0+|specials|extras|ovas?|nc|sp)$`)
 	// Matches saga/arc subfolders like "1 - Saga El Gran Viaje", "02 - Saga Baby"
 	reSagaFolder = regexp.MustCompile(`(?i)^\d+\s*[-–]\s*(?:saga|arco?|part)\s+`)
 	// Extracts the leading number from saga folders
@@ -120,6 +122,12 @@ func ParseFolderStructure(filePath string, libraryPaths []string) *FolderInfo {
 		// Check if this is a season folder
 		if m := reSeasonFolder.FindStringSubmatch(part); m != nil {
 			info.Season, _ = strconv.Atoi(m[1])
+			continue
+		}
+
+		// Check if this is a specials/extras folder
+		if reSpecialsFolder.MatchString(part) {
+			info.Season = 0
 			continue
 		}
 

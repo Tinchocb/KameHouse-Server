@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router"
 import React, { useMemo } from "react"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
-import { useGetLocalFiles } from "@/api/hooks/localfiles.hooks"
+import { useGetLocalFilesInfinite } from "@/api/hooks/localfiles.hooks"
 import { MediaCard } from "@/components/ui/media-card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs/tabs"
 import { Anime_LocalFile, Models_LibraryMedia, Anime_LibraryCollectionEntry } from "@/api/generated/types"
@@ -17,7 +17,15 @@ function getTitle(media: Models_LibraryMedia | null | undefined): string {
 
 function LibraryPage() {
     const { data: libraryData, isLoading: libLoading } = useGetLibraryCollection()
-    const { data: localData, isLoading: locLoading } = useGetLocalFiles()
+    const { 
+        data: localInfiniteData, 
+        isLoading: locLoading, 
+        isFetchingNextPage, 
+        hasNextPage, 
+        fetchNextPage 
+    } = useGetLocalFilesInfinite()
+
+    const localData = React.useMemo(() => localInfiniteData?.pages.flatMap(p => p.items) || [], [localInfiniteData])
 
     const lists = libraryData?.lists || []
     const currentlyWatching = lists.find(l => l.status === "CURRENT")?.entries || []
@@ -153,25 +161,48 @@ function LibraryPage() {
                             ) : (!localData || localData.length === 0) ? (
                                 <div className="text-zinc-500 font-medium py-10 text-center uppercase tracking-widest">No tienes archivos indexados localmente todavía.</div>
                             ) : (
-                                <div 
-                                    className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4 md:gap-6 pt-6 pb-12 w-full"
-                                    style={{ contentVisibility: "auto" }}
-                                >
-                                    {localData.map((file: Anime_LocalFile, idx: number) => {
-                                        const parseData: any = file.parsedInfo || (file as any).Parsed || (file as any).parsedData || {}
-                                        return (
-                                            <div key={file.path || `local-${idx}`} className="w-full">
-                                                <MediaCard
-                                                    title={parseData.title || parseData.Title || (file as any).name || "Archivo genérico"}
-                                                    artwork="https://placehold.co/220x330/1A1A1A/FFFFFF?text=Archivo+Local"
-                                                    badge={parseData.resolution || parseData.Resolution || "LOCAL"}
-                                                    aspect="poster"
-                                                    className="w-full"
-                                                />
-                                            </div>
-                                        )
-                                    })}
-                                </div>
+                                <>
+                                    <div 
+                                        className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4 md:gap-6 pt-6 pb-12 w-full"
+                                        style={{ contentVisibility: "auto" }}
+                                    >
+                                        {localData.map((file: Anime_LocalFile, idx: number) => {
+                                            const parseData: any = file.parsedInfo || (file as any).Parsed || (file as any).parsedData || {}
+                                            return (
+                                                <div key={file.path || `local-${idx}`} className="w-full">
+                                                    <MediaCard
+                                                        title={parseData.title || parseData.Title || (file as any).name || "Archivo genérico"}
+                                                        artwork="https://placehold.co/220x330/1A1A1A/FFFFFF?text=Archivo+Local"
+                                                        badge={parseData.resolution || parseData.Resolution || "LOCAL"}
+                                                        aspect="poster"
+                                                        className="w-full"
+                                                    />
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                    {hasNextPage && (
+                                        <div className="flex justify-center mt-6 mb-10 w-full">
+                                            <button 
+                                                onClick={() => fetchNextPage()} 
+                                                disabled={isFetchingNextPage}
+                                                className="px-8 py-3 bg-white/5 hover:bg-white/10 active:bg-white/5 border border-white/10 rounded-full font-bold uppercase tracking-widest text-xs transition-all flex items-center gap-2 group"
+                                            >
+                                                {isFetchingNextPage ? (
+                                                    <>
+                                                        <div className="w-4 h-4 border-2 border-orange-500/30 border-t-orange-500 rounded-full animate-spin"/>
+                                                        Cargando más...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        Cargar más resultados
+                                                        <span className="group-hover:translate-y-0.5 transition-transform">↓</span>
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </TabsContent>
                     </div>

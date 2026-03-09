@@ -66,6 +66,7 @@ type (
 	LibraryCollectionEntry struct {
 		Media                  *models.LibraryMedia    `json:"media"`
 		MediaId                int                     `json:"mediaId"`
+		AvailabilityType       string                  `json:"availabilityType"`            // FULL_LOCAL, HYBRID, ONLY_ONLINE
 		EntryLibraryData       *EntryLibraryData       `json:"libraryData"`                 // Library data
 		NakamaEntryLibraryData *NakamaEntryLibraryData `json:"nakamaLibraryData,omitempty"` // Library data from Nakama
 		EntryListData          *EntryListData          `json:"listData"`                    // Local list data
@@ -268,9 +269,19 @@ func (lc *LibraryCollection) hydrateCollectionLists(
 			CurrentProgress: listData.Progress,
 		})
 
+		availabilityType := "ONLY_ONLINE"
+		if libraryData != nil && libraryData.MainFileCount > 0 {
+			if media.TotalEpisodes > 0 && libraryData.MainFileCount >= media.TotalEpisodes {
+				availabilityType = "FULL_LOCAL"
+			} else {
+				availabilityType = "HYBRID"
+			}
+		}
+
 		lce := &LibraryCollectionEntry{
 			MediaId:          id,
 			Media:            media,
+			AvailabilityType: availabilityType,
 			EntryLibraryData: libraryData,
 			EntryListData: &EntryListData{
 				Progress:    listData.Progress,
@@ -373,9 +384,11 @@ func (lc *LibraryCollection) hydrateContinueWatchingList(
 
 	// If no currently watching list is found, return an empty slice
 	if !found {
+		println("CURRENT list NOT FOUND!")
 		lc.ContinueWatchingList = make([]*Episode, 0) // Set empty slice
 		return
 	}
+	println("CURRENT list FOUND! Number of entries:", len(current.Entries))
 	// Get media ids from current list
 	mIds := make([]int, len(current.Entries))
 	for i, entry := range current.Entries {

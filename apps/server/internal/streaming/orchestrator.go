@@ -2,9 +2,17 @@ package streaming
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"golang.org/x/sync/errgroup"
+)
+
+const (
+	// MaxTranscodeSessions caps simultaneous FFmpeg processes to prevent CPU saturation.
+	MaxTranscodeSessions = 4
+	// DefaultReqBufferSize is the actor channel buffer for handling traffic spikes.
+	defaultReqBufferSize = 100
 )
 
 // LocalResolver interface for extremely fast local file resolution.
@@ -35,24 +43,43 @@ type StreamResolutionService interface {
 }
 
 // HybridPlaybackOrchestrator implements StreamResolutionService using an Actor Model.
-// It achieves Stremio/Torrentio-like zero-latency UX by wrapping local and remote resolvers over channels.
+// It achieves Stremio/Torrentio-like zero-latency UX by wrapping local and remote resolvers
+// over channels, with a semaphore cap on concurrent transcode sessions.
 type HybridPlaybackOrchestrator struct {
 	localResolver   LocalResolver
 	remoteResolvers map[string]RemoteResolver
 	circuitBreakers map[string]*CircuitBreaker
+	// localCircuitBreaker guards the local resolver path independently from remote ones.
+	localCircuitBreaker *CircuitBreaker
+	// transcodeSem is a channel-based semaphore capping concurrent FFmpeg sessions.
+	// Injected to keep the orchestrator fully testable.
+	transcodeSem chan struct{}
 
 	reqCh chan streamReqMsg
 	quit  chan struct{}
 }
 
-// NewHybridPlaybackOrchestrator initializes the orchestrator.
+// NewHybridPlaybackOrchestrator initializes the orchestrator with a default concurrency cap.
 func NewHybridPlaybackOrchestrator(local LocalResolver, remotes []RemoteResolver) *HybridPlaybackOrchestrator {
+	return newOrchestrator(local, remotes, MaxTranscodeSessions)
+}
+
+// newOrchestrator is the internal constructor, exposed for tests to inject a custom semaphore size.
+func newOrchestrator(local LocalResolver, remotes []RemoteResolver, maxTranscode int) *HybridPlaybackOrchestrator {
+	sem := make(chan struct{}, maxTranscode)
+	// Pre-fill so each acquire is a receive (release is a send back).
+	for i := 0; i < maxTranscode; i++ {
+		sem <- struct{}{}
+	}
+
 	h := &HybridPlaybackOrchestrator{
-		localResolver:   local,
-		remoteResolvers: make(map[string]RemoteResolver),
-		circuitBreakers: make(map[string]*CircuitBreaker),
-		reqCh:           make(chan streamReqMsg, 100), // Buffered to handle traffic spikes smoothly
-		quit:            make(chan struct{}),
+		localResolver:       local,
+		remoteResolvers:     make(map[string]RemoteResolver),
+		circuitBreakers:     make(map[string]*CircuitBreaker),
+		localCircuitBreaker: NewCircuitBreaker(DefaultCircuitBreakerConfig),
+		transcodeSem:        sem,
+		reqCh:               make(chan streamReqMsg, defaultReqBufferSize),
+		quit:                make(chan struct{}),
 	}
 
 	for _, r := range remotes {
@@ -61,20 +88,17 @@ func NewHybridPlaybackOrchestrator(local LocalResolver, remotes []RemoteResolver
 		h.circuitBreakers[name] = NewCircuitBreaker(DefaultCircuitBreakerConfig)
 	}
 
-	// Spin up the background actor
 	go h.loop()
 	return h
 }
 
-// loop is the main actor loop processing sequential tasks concurrently
-// without explicit locking logic, avoiding data races.
+// loop is the actor loop — sequentially dispatches concurrent per-request workers.
 func (h *HybridPlaybackOrchestrator) loop() {
 	for {
 		select {
 		case <-h.quit:
 			return
 		case msg := <-h.reqCh:
-			// Spawn worker goroutines per request to keep the orchestrator non-blocking
 			go h.handleRequest(msg)
 		}
 	}
@@ -85,26 +109,51 @@ func (h *HybridPlaybackOrchestrator) Stop() {
 	close(h.quit)
 }
 
-// handleRequest processes a single integration routing request.
+// handleRequest processes a single stream resolution request.
 func (h *HybridPlaybackOrchestrator) handleRequest(msg streamReqMsg) {
-	// 1. Fast Path: Local DB Memory-Mapped Query Cache Check
+	// ── 1. Local Fast Path ────────────────────────────────────────────────────
+	// Query circuit breaker before touching the local resolver to bail immediately
+	// if repeated local failures have tripped the breaker.
 	if h.localResolver != nil {
-		if res, err := h.localResolver.ResolveLocal(msg.ctx, msg.req); err == nil && res != nil {
-			msg.resultCh <- resolveResponse{result: res, err: nil}
+		res, err := h.localCircuitBreaker.Execute(msg.ctx, func(c context.Context) ([]*StreamResult, error) {
+			r, e := h.localResolver.ResolveLocal(c, msg.req)
+			if e != nil {
+				return nil, e
+			}
+			return []*StreamResult{r}, nil
+		})
+		if err == nil && len(res) > 0 && res[0] != nil {
+			msg.resultCh <- resolveResponse{result: res[0]}
+			return
+		}
+
+		// ── 1b. Circuit is open for local resolver — skip the transcode fallback.
+		if errors.Is(err, ErrCircuitOpen) {
+			msg.resultCh <- resolveResponse{err: ErrMediaNotFound}
+			return
+		}
+
+		// ── 1c. Local resolver returned a real result but likely needs transcoding.
+		// Non-blocking semaphore acquire: if all slots taken, fail fast.
+		select {
+		case <-h.transcodeSem:
+			// Acquired a slot — release it on handler exit.
+			defer func() { h.transcodeSem <- struct{}{} }()
+		default:
+			// All transcode slots occupied — reject immediately.
+			msg.resultCh <- resolveResponse{err: ErrServerSaturated}
 			return
 		}
 	}
 
-	// 2. Slow Path Constraint: Strict contexts for zero-latency graceful degradation
+	// ── 2. Remote Slow Path ───────────────────────────────────────────────────
 	remoteCtx, cancel := context.WithTimeout(msg.ctx, 8*time.Second)
 	defer cancel()
 
 	g, ctx := errgroup.WithContext(remoteCtx)
-
-	// Buffered channel for stream results across concurrent resolvers
 	resultsCh := make(chan *StreamResult, len(h.remoteResolvers)*50)
 
-	// Scatter: Launch goroutine pool to query external Torrent/Debrid addons concurrently
+	// Scatter: query all remote resolvers concurrently, guarding each with its circuit breaker.
 	for name, r := range h.remoteResolvers {
 		name, resolver := name, r
 		cb := h.circuitBreakers[name]
@@ -114,10 +163,9 @@ func (h *HybridPlaybackOrchestrator) handleRequest(msg streamReqMsg) {
 				return resolver.ResolveRemote(c, msg.req)
 			})
 			if err != nil {
-				// We don't fail the errgroup; we just gracefully ignore this failing remote
+				// Gracefully absorb per-resolver errors; don't abort sibling goroutines.
 				return nil
 			}
-
 			for _, streamRes := range res {
 				select {
 				case <-ctx.Done():
@@ -129,32 +177,26 @@ func (h *HybridPlaybackOrchestrator) handleRequest(msg streamReqMsg) {
 		})
 	}
 
-	// Close results channel when all remote resolvers finish
+	// Close results channel once all resolver goroutines settle.
 	go func() {
 		_ = g.Wait()
 		close(resultsCh)
 	}()
 
-	// Gather: Return fastest valid stream or gracefully degrade to 404
+	// Gather: first valid result wins (zero-latency race pattern).
 	select {
 	case res, ok := <-resultsCh:
 		if !ok || res == nil {
-			// All resolvers finished but returned absolutely nothing
 			msg.resultCh <- resolveResponse{err: ErrMediaNotFound}
 			return
 		}
-		// Zero-latency return: First payload across the finish line wins.
 		msg.resultCh <- resolveResponse{result: res}
-		return
 	case <-remoteCtx.Done():
-		// Graceful Degradation: Context Timeout.
-		// Immediately return 404 stream quickly rather than hanging the client.
 		msg.resultCh <- resolveResponse{err: ErrMediaNotFound}
-		return
 	}
 }
 
-// Resolve exposes the stream resolution by pushing messages into the actor's queue.
+// Resolve pushes a resolution request into the actor queue and waits for the response.
 func (h *HybridPlaybackOrchestrator) Resolve(ctx context.Context, req StreamRequest) (*StreamResult, error) {
 	resultCh := make(chan resolveResponse, 1)
 

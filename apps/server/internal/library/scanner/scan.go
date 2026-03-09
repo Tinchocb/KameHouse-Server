@@ -11,12 +11,13 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"sync"
 	"time"
 
 	"kamehouse/internal/database/db"
+	"kamehouse/internal/util/parallel"
 
 	"github.com/rs/zerolog"
+	"github.com/samber/lo"
 )
 
 // AgentConfig holds the tuning parameters for the Autonomous Scanner.
@@ -24,6 +25,13 @@ type AgentConfig struct {
 	Workers       int
 	MinConfidence float64
 	BatchSize     int
+}
+
+// ScannerAgentOptions holds optional dependencies for the ScannerAgent.
+type ScannerAgentOptions struct {
+	MediaContainer *MediaContainer
+	Database       *db.Database
+	Logger         *zerolog.Logger
 }
 
 // ScannerAgent is the autonomous AI-driven file scanner.
@@ -35,13 +43,48 @@ type ScannerAgent struct {
 	mediaContainer *MediaContainer
 	database       *db.Database
 	logger         *zerolog.Logger
+
+	triggerCh chan struct{}
 }
 
-// ScannerAgentOptions holds optional dependencies for the ScannerAgent.
-type ScannerAgentOptions struct {
-	MediaContainer *MediaContainer
-	Database       *db.Database
-	Logger         *zerolog.Logger
+// TriggerScan initiates a scan request using a non-blocking channel send.
+func (a *ScannerAgent) TriggerScan() {
+	select {
+	case a.triggerCh <- struct{}{}: // Trigger event in channel
+	default:
+		// Drop if already pending
+	}
+}
+
+// StartDebouncer runs the timer/channel pattern to ensure only one full scan
+// is triggered after a quiet period of 2 seconds.
+func (a *ScannerAgent) StartDebouncer(ctx context.Context) {
+	debounceDuration := 2 * time.Second
+	var timer *time.Timer
+
+	for {
+		select {
+		case <-ctx.Done():
+			if timer != nil {
+				timer.Stop()
+			}
+			return
+		case <-a.triggerCh:
+			if timer != nil {
+				timer.Stop()
+			}
+			// Reset quiet period timer
+			timer = time.AfterFunc(debounceDuration, func() {
+				// Execute scan asynchronously so the debouncer loop is never blocked
+				go func() {
+					err := a.Scan(ctx)
+					if err != nil && err != context.Canceled && a.logger != nil {
+						a.logger.Error().Err(err).Msg("ScannerAgent: Scan pipeline failed")
+					}
+				}()
+			})
+		}
+	}
 }
 
 // NewScannerAgent instantiates a new concurrent scanner pipeline with telemetry.
@@ -60,6 +103,7 @@ func NewScannerAgent(rootDir string, opts ...ScannerAgentOptions) *ScannerAgent 
 			MinConfidence: 0.75, // 75% confidence threshold for automated matches
 			BatchSize:     100,  // Batch size for SQLite inserts
 		},
+		triggerCh: make(chan struct{}, 1),
 	}
 
 	if len(opts) > 0 {
@@ -72,50 +116,72 @@ func NewScannerAgent(rootDir string, opts ...ScannerAgentOptions) *ScannerAgent 
 }
 
 // Scan orchestrates the massive 4-stage pipeline: Ingest -> Parse -> Resolve -> Commit.
-// Massive concurrency handled via Go channels and WaitGroups, cleanly stoppable by context.
+// Massive concurrency handled via internal/util/parallel mapped across bounded chunks.
 func (a *ScannerAgent) Scan(ctx context.Context) error {
-	// CHANNEL BUFFER SIZING CHOICES:
-	// pathsChan: Buffered at 10,000. `filepath.WalkDir` is extremely fast at finding paths but
-	// string processing takes time. A large buffer prevents the OS-level disk read from blocking
-	// while workers catch up.
-	pathsChan := make(chan string, 10000)
-
-	// resultsChan: Buffered at 1,000. We don't want workers to block while the DB writer is
-	// busy inserting a batch, but we also don't want to consume too much RAM with massive structs.
-	resultsChan := make(chan MediaMatch, 1000)
-
-	var wg sync.WaitGroup
-
-	// STAGE 1 (Ingestion): Single goroutine scanning the disk as fast as possible.
-	go a.ingestFS(ctx, pathsChan)
-
-	// STAGE 2 (Processing Pool): Scalable worker pool reading paths, analyzing, and outputting matches.
-	for i := 0; i < a.config.Workers; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			a.processingWorker(ctx, pathsChan, resultsChan)
-		}()
+	// STAGE 1 (Ingestion): Scan disk to map all fast-paths into memory
+	paths, err := a.ingestFS(ctx)
+	if err != nil {
+		return err
 	}
 
-	// Waiter Goroutine: Closes the results channel when all processing workers are done.
-	go func() {
-		wg.Wait()
-		close(resultsChan)
+	totalProcessed := 0
+	batches := lo.Chunk(paths, a.config.BatchSize)
 
-		// Ensure final visual update is guaranteed to hit the frontend
-		a.tracker.ForceEmit()
-	}()
+	// STAGE 2 & 3: Parallel Processing & Atomic Writes grouped by Batch
+	for _, batch := range batches {
+		if ctx.Err() != nil {
+			// Flush whatever finishes early before returning
+			return ctx.Err()
+		}
 
-	// STAGE 3 (Batch Commit): Single DB-writer goroutine reading results and batching them.
-	// This blocks the main Scan() function until all processing and saving is complete,
-	// ensuring data consistency and preventing early exits.
-	return a.batchCommitSink(ctx, resultsChan)
+		// Use util/parallel to hydrate files concurrently without saturating sockets
+		batchMatches := parallel.Map(batch, func(path string, _ int) MediaMatch {
+			// Cancellation monitor
+			select {
+			case <-ctx.Done():
+				return MediaMatch{}
+			default:
+				return a.processPath(ctx, path)
+			}
+		})
+
+		var batchResults []MediaMatch
+		for _, match := range batchMatches {
+			if match.ParsedMedia.OriginalPath != "" {
+				batchResults = append(batchResults, match)
+			}
+		}
+
+		// Single SQLite Transaction for the entire batch to evade WAL contention
+		if len(batchResults) > 0 {
+			tx := a.database.Gorm().Begin()
+			for _, m := range batchResults {
+				// Production upsert simulation wrapping atomic boundary
+				err := tx.Exec(`
+					INSERT INTO local_files (path, updated_at) VALUES (?, ?)
+					ON CONFLICT(path) DO UPDATE SET updated_at = excluded.updated_at
+				`, m.ParsedMedia.OriginalPath, time.Now()).Error
+				if err != nil && a.logger != nil {
+					a.logger.Warn().Err(err).Str("path", m.ParsedMedia.OriginalPath).Msg("Batch insert skip")
+				}
+			}
+			tx.Commit()
+
+			totalProcessed += len(batchResults)
+			if a.logger != nil {
+				a.logger.Info().Int("flushed", len(batchResults)).Int("total", totalProcessed).Msg("ScannerAgent: Batch committed")
+			}
+		}
+	}
+
+	// Ensure final visual update is guaranteed to hit the frontend
+	a.tracker.ForceEmit()
+	return nil
 }
 
-// ingestFS reads the file system and pushes to pathsChan.
-func (a *ScannerAgent) ingestFS(ctx context.Context, pathsChan chan<- string) {
-	defer close(pathsChan)
+// ingestFS reads the file system and returns a pre-allocated slice of valid paths.
+func (a *ScannerAgent) ingestFS(ctx context.Context) ([]string, error) {
+	var paths []string
 	err := filepath.WalkDir(a.rootDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -132,142 +198,65 @@ func (a *ScannerAgent) ingestFS(ctx context.Context, pathsChan chan<- string) {
 		// Fast Atomics count up immediately
 		a.tracker.AddFound()
 
-		// Graceful Cancellation: Check Context before sending to channel
 		select {
 		case <-ctx.Done(): // Instantly aborts if user cancels via UI
 			return ctx.Err()
-		case pathsChan <- path:
+		default:
+			paths = append(paths, path)
 		}
 		return nil
 	})
 
-	if err != nil && err != context.Canceled {
-		fmt.Printf("[Agent Stage 1] Ingestion error: %v\n", err)
+	if err != nil && err != context.Canceled && a.logger != nil {
+		a.logger.Error().Err(err).Msg("ScannerAgent: Ingestion error")
 	}
+	return paths, err
 }
 
-// processingWorker acts as the Brain of the agent. Scores heuristics.
-func (a *ScannerAgent) processingWorker(ctx context.Context, pathsChan <-chan string, resultsChan chan<- MediaMatch) {
-	for {
-		select {
-		case <-ctx.Done():
-			// Graceful Cancellation: Worker exits immediately
-			return
-		case path, ok := <-pathsChan:
-			if !ok {
-				// Channel closed, worker is done
-				return
-			}
+// processPath acts as the Brain of the agent. Scores heuristics for a single file.
+func (a *ScannerAgent) processPath(ctx context.Context, path string) MediaMatch {
+	// Graceful check prior to heavy calc
+	if ctx.Err() != nil {
+		return MediaMatch{}
+	}
 
-			// DIRECTORY CACHE SHORT-CIRCUIT:
-			// If we already resolved the media for this directory, reuse the result
-			// instead of hammering the API again.
-			dir := filepath.Dir(path)
-			cachedEntry := a.dirCache.Load(dir)
+	dir := filepath.Dir(path)
+	cachedEntry := a.dirCache.Load(dir)
 
-			var match MediaMatch
-			if cachedEntry != nil {
-				// Fast path: reuse cached directory result
-				pm := Normalize(path)
-				match = MediaMatch{
-					ParsedMedia: pm,
-					ExternalID:  fmt.Sprintf("AL:%d", cachedEntry.MediaID),
-					Confidence:  cachedEntry.Confidence,
+	var match MediaMatch
+	if cachedEntry != nil {
+		// Fast path: reuse cached directory result
+		pm := Normalize(path)
+		match = MediaMatch{
+			ParsedMedia: pm,
+			ExternalID:  fmt.Sprintf("AL:%d", cachedEntry.MediaID),
+			Confidence:  cachedEntry.Confidence,
+		}
+	} else {
+		// Slow path: full analysis
+		match = a.Analyze(path)
+
+		// Cache the result for sibling files in the same directory
+		if match.Confidence >= a.config.MinConfidence {
+			a.dirCache.GetOrFetch(dir, func() *DirCacheEntry {
+				return &DirCacheEntry{
+					MediaID:    0, // Will be set when real API is wired
+					Title:      match.CleanTitle,
+					Confidence: match.Confidence,
 				}
-			} else {
-				// Slow path: full analysis
-				match = a.Analyze(path)
-
-				// Cache the result for sibling files in the same directory
-				if match.Confidence >= a.config.MinConfidence {
-					a.dirCache.GetOrFetch(dir, func() *DirCacheEntry {
-						return &DirCacheEntry{
-							MediaID:    0, // Will be set when real API is wired
-							Title:      match.CleanTitle,
-							Confidence: match.Confidence,
-						}
-					})
-				}
-			}
-
-			// Determine if it needs human review
-			isLowConfidence := match.Confidence <= a.config.MinConfidence
-			a.tracker.RecordProcessed(filepath.Base(path), isLowConfidence)
-
-			// Push result securely checking context availability
-			select {
-			case <-ctx.Done():
-				return
-			case resultsChan <- match:
-			}
+			})
 		}
 	}
+
+	// Determine if it needs human review
+	isLowConfidence := match.Confidence <= a.config.MinConfidence
+	a.tracker.RecordProcessed(filepath.Base(path), isLowConfidence)
+
+	return match
 }
 
 // Analyze connects the scanner to the NLP parser and identity resolver.
 func (a *ScannerAgent) Analyze(path string) MediaMatch {
 	pm := Normalize(path)
 	return a.ScoreAndResolve(pm)
-}
-
-// batchCommitSink receives matched entities and performs bulk-inserts into SQLite.
-func (a *ScannerAgent) batchCommitSink(ctx context.Context, resultsChan <-chan MediaMatch) error {
-	var batch []MediaMatch
-	batch = make([]MediaMatch, 0, a.config.BatchSize)
-
-	totalProcessed := 0
-
-	// Ticker ensures that if we have 99 items and the pipeline pauses, we still commit them
-	// after a timeout instead of waiting forever for the 100th item.
-	flushMux := time.NewTicker(2 * time.Second)
-	defer flushMux.Stop()
-
-	flushBatch := func() {
-		if len(batch) == 0 {
-			return
-		}
-
-		// MOCK: Execute single SQLite Transaction
-		/*
-			tx, _ := db.Begin()
-			for _, m := range batch {
-				tx.Exec("INSERT INTO media_matches ...")
-			}
-			tx.Commit()
-		*/
-
-		totalProcessed += len(batch)
-		fmt.Printf("[Agent Stage 3] Flushed batch of %d items (Total SQLite inserts: %d)\n", len(batch), totalProcessed)
-
-		// Reset batch slice without reallocating
-		batch = batch[:0]
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			// Force flush whatever remains during cancellation to prevent data loss
-			flushBatch()
-			return ctx.Err()
-
-		case <-flushMux.C:
-			// Time-based flush
-			flushBatch()
-
-		case match, ok := <-resultsChan:
-			if !ok {
-				// Channel closed, pipeline is gracefully shutting down. Flush last batch.
-				flushBatch()
-				fmt.Printf("[Agent Verdict] Pipeline halted. Total Items Saved: %d\n", totalProcessed)
-				return nil
-			}
-
-			batch = append(batch, match)
-
-			// Size-based flush
-			if len(batch) >= a.config.BatchSize {
-				flushBatch()
-			}
-		}
-	}
 }

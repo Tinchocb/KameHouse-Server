@@ -1648,6 +1648,7 @@ export type Anime_LibraryCollection = {
 export type Anime_LibraryCollectionEntry = {
     media?: Models_LibraryMedia
     mediaId: number
+    availabilityType?: "FULL_LOCAL" | "HYBRID" | "ONLY_ONLINE"
     /**
      * Library data
      */

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
@@ -76,17 +77,26 @@ func (w *Watcher) StartWatching(
 ) {
 	// Start a goroutine to handle file system events
 	go func() {
+		var debounceTimer *time.Timer
+		debounceDuration := 2 * time.Second
+
+		triggerAction := func() {
+			w.Logger.Debug().Msg("watcher: Debounce timer triggered, calling onFileAction")
+			onFileAction()
+		}
+
 		for {
 			select {
 			case event, ok := <-w.Watcher.Events:
 				if !ok {
 					return
 				}
-				//if event.Op&fsnotify.Write == fsnotify.Write {
-				//}
 				if strings.Contains(event.Name, ".part") || strings.Contains(event.Name, ".tmp") || strings.Contains(event.Name, ".DS_Store") {
 					continue
 				}
+
+				shouldDebounce := false
+
 				if event.Op&fsnotify.Create == fsnotify.Create {
 					// If a new directory is created, register it and its subdirectories for watching
 					if info, statErr := os.Stat(event.Name); statErr == nil && info.IsDir() {
@@ -106,12 +116,20 @@ func (w *Watcher) StartWatching(
 					}
 					w.Logger.Debug().Msgf("watcher: File created: %s", event.Name)
 					w.WSEventManager.SendEvent(events.LibraryWatcherFileAdded, event.Name)
-					onFileAction()
+					shouldDebounce = true
 				}
+
 				if event.Op&fsnotify.Remove == fsnotify.Remove {
 					w.Logger.Debug().Msgf("watcher: File removed: %s", event.Name)
 					w.WSEventManager.SendEvent(events.LibraryWatcherFileRemoved, event.Name)
-					onFileAction()
+					shouldDebounce = true
+				}
+
+				if shouldDebounce {
+					if debounceTimer != nil {
+						debounceTimer.Stop()
+					}
+					debounceTimer = time.AfterFunc(debounceDuration, triggerAction)
 				}
 
 			case err, ok := <-w.Watcher.Errors:

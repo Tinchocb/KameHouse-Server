@@ -23,6 +23,24 @@ func EachTask[T any](collection []T, task func(item T, index int)) {
 	wg.Wait()
 }
 
+// Map iterates over elements of collection, applies the task function in parallel,
+// and returns a slice of the returned values in the same order.
+func Map[T any, R any](collection []T, task func(item T, index int) R) []R {
+	results := make([]R, len(collection))
+	var wg sync.WaitGroup
+
+	for i, item := range collection {
+		wg.Add(1)
+		go func(_item T, _i int) {
+			defer wg.Done()
+			results[_i] = task(_item, _i)
+		}(item, i)
+	}
+
+	wg.Wait()
+	return results
+}
+
 // EachTaskL is the same as EachTask, but takes a pointer to limiter.Limiter.
 func EachTaskL[T any](collection []T, rl *limiter.Limiter, task func(item T, index int)) {
 	var wg sync.WaitGroup

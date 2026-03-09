@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"context"
 	"errors"
 	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/metadata"
@@ -14,6 +15,7 @@ import (
 	"kamehouse/internal/util/comparison"
 	"kamehouse/internal/util/limiter"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -22,6 +24,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/samber/lo"
 	lop "github.com/samber/lo/parallel"
+	"golang.org/x/sync/errgroup"
 )
 
 // FileHydrator hydrates the metadata of all (matched) LocalFiles.
@@ -91,22 +94,28 @@ func (fh *FileHydrator) HydrateMetadata() {
 			Msg("Starting metadata hydration process")
 	}
 
-	const maxConcurrentGroups = 100
-	sem := make(chan struct{}, maxConcurrentGroups)
-	var wg sync.WaitGroup
+	maxWorkers := runtime.NumCPU()
+	if maxWorkers < 4 {
+		maxWorkers = 4
+	}
+
+	eg, _ := errgroup.WithContext(context.Background())
+	eg.SetLimit(maxWorkers)
+
 	for mId, files := range groups {
 		if len(files) == 0 {
 			continue
 		}
-		wg.Add(1)
-		sem <- struct{}{} // Acquire semaphore
-		go func(mId int, files []*dto.LocalFile) {
-			defer wg.Done()
-			defer func() { <-sem }() // Release semaphore
-			fh.hydrateGroupMetadata(mId, files, rateLimiter)
-		}(mId, files)
+		
+		capturedMId := mId
+		capturedFiles := files
+		
+		eg.Go(func() error {
+			fh.hydrateGroupMetadata(capturedMId, capturedFiles, rateLimiter)
+			return nil
+		})
 	}
-	wg.Wait()
+	_ = eg.Wait()
 
 	if fh.ScanLogger != nil {
 		fh.ScanLogger.LogFileHydrator(zerolog.InfoLevel).
@@ -147,413 +156,416 @@ func (fh *FileHydrator) hydrateGroupMetadata(
 	mediaTreeAnalysisMu := sync.Mutex{}
 
 	// Process each local file in the group sequentially
-	lop.ForEach(lfs, func(lf *dto.LocalFile, index int) {
+	for _, lf := range lfs {
 
-		defer util.HandlePanicInModuleThenS("scanner/hydrator/hydrateGroupMetadata", func(stackTrace string) {
-			lf.MediaId = 0
-			/*Log*/
-			if fh.ScanLogger != nil {
-				fh.ScanLogger.LogFileHydrator(zerolog.ErrorLevel).
-					Str("filename", lf.Name).
-					Msg("Panic occurred, file un-matched")
-			}
-			fh.ScanSummaryLogger.LogPanic(lf, stackTrace)
-		})
+		func() {
+			defer util.HandlePanicInModuleThenS("scanner/hydrator/hydrateGroupMetadata", func(stackTrace string) {
+				lf.MediaId = 0
+				/*Log*/
+				if fh.ScanLogger != nil {
+					fh.ScanLogger.LogFileHydrator(zerolog.ErrorLevel).
+						Str("filename", lf.Name).
+						Msg("Panic occurred, file un-matched")
+				}
+				fh.ScanSummaryLogger.LogPanic(lf, stackTrace)
+			})
 
-		episode := -1
+			episode := -1
 
-		// Invoke ScanLocalFileHydrationStarted hook
-		event := &ScanLocalFileHydrationStartedEvent{
-			LocalFile: lf,
-			Media:     media,
-		}
-		_ = hook.GlobalHookManager.OnScanLocalFileHydrationStarted().Trigger(event)
-		lf = event.LocalFile
-		media = event.Media
-
-		defer func() {
-			// Invoke ScanLocalFileHydrated hook
-			event := &ScanLocalFileHydratedEvent{
+			// Invoke ScanLocalFileHydrationStarted hook
+			event := &ScanLocalFileHydrationStartedEvent{
 				LocalFile: lf,
-				MediaId:   mId,
-				Episode:   episode,
+				Media:     media,
 			}
-			_ = hook.GlobalHookManager.OnScanLocalFileHydrated().Trigger(event)
+			_ = hook.GlobalHookManager.OnScanLocalFileHydrationStarted().Trigger(event)
 			lf = event.LocalFile
-			mId = event.MediaId
-			episode = event.Episode
-		}()
+			media = event.Media
 
-		// Handle hook override
-		if event.DefaultPrevented {
-			if fh.ScanLogger != nil {
-				fh.ScanLogger.LogFileHydrator(zerolog.DebugLevel).
-					Str("filename", lf.Name).
-					Msg("Default hydration skipped by hook")
+			defer func() {
+				// Invoke ScanLocalFileHydrated hook
+				event := &ScanLocalFileHydratedEvent{
+					LocalFile: lf,
+					MediaId:   mId,
+					Episode:   episode,
+				}
+				_ = hook.GlobalHookManager.OnScanLocalFileHydrated().Trigger(event)
+				lf = event.LocalFile
+				mId = event.MediaId
+				episode = event.Episode
+			}()
+
+			// Handle hook override
+			if event.DefaultPrevented {
+				if fh.ScanLogger != nil {
+					fh.ScanLogger.LogFileHydrator(zerolog.DebugLevel).
+						Str("filename", lf.Name).
+						Msg("Default hydration skipped by hook")
+				}
+				fh.ScanSummaryLogger.LogDebug(lf, "Default hydration skipped by hook")
+				return
 			}
-			fh.ScanSummaryLogger.LogDebug(lf, "Default hydration skipped by hook")
-			return
-		}
 
-		// Apply hydration rule to the file
-		if fh.applyHydrationRule(lf) {
-			return
-		}
-
-		lf.Metadata.Type = dto.LocalFileTypeMain
-
-		// Get episode number
-		if len(lf.ParsedData.Episode) > 0 {
-			if ep, ok := util.StringToInt(lf.ParsedData.Episode); ok {
-				episode = ep
+			// Apply hydration rule to the file
+			if fh.applyHydrationRule(lf) {
+				return
 			}
-		}
 
-		// NC metadata
-		if lf.IsProbablyNC() {
-			lf.Metadata.Episode = 0
-			lf.Metadata.AniDBEpisode = ""
-			lf.Metadata.Type = dto.LocalFileTypeNC
+			lf.Metadata.Type = dto.LocalFileTypeMain
 
-			if episode > -1 {
-				lf.Metadata.Episode = episode
-				// Parse OP/ED type from the filename and set AniDBEpisode for better tracking
-				// e.g. "OP1", "ED2", etc.
-				if ncType, ok := comparison.ExtractNCType(lf.Name); ok {
-					lf.Metadata.AniDBEpisode = ncType + strconv.Itoa(episode)
+			// Get episode number
+			if len(lf.ParsedData.Episode) > 0 {
+				if ep, ok := util.StringToInt(lf.ParsedData.Episode); ok {
+					episode = ep
 				}
 			}
 
-			/*Log */
-			if fh.ScanLogger != nil {
-				fh.logFileHydration(zerolog.DebugLevel, lf, mId, episode).
-					Msg("File has been marked as NC")
-			}
-			fh.ScanSummaryLogger.LogMetadataNC(lf)
-			return
-		}
+			// NC metadata
+			if lf.IsProbablyNC() {
+				lf.Metadata.Episode = 0
+				lf.Metadata.AniDBEpisode = ""
+				lf.Metadata.Type = dto.LocalFileTypeNC
 
-		// Special metadata
-		if lf.IsProbablySpecial() {
-			lf.Metadata.Type = dto.LocalFileTypeSpecial
-			// Sometimes a movie filename could be written as a special episode of the main series
-			// anidb rarely if ever adds relevant specials to movie entries
+				if episode > -1 {
+					lf.Metadata.Episode = episode
+					// Parse OP/ED type from the filename and set AniDBEpisode for better tracking
+					// e.g. "OP1", "ED2", etc.
+					if ncType, ok := comparison.ExtractNCType(lf.Name); ok {
+						lf.Metadata.AniDBEpisode = ncType + strconv.Itoa(episode)
+					}
+				}
+
+				/*Log */
+				if fh.ScanLogger != nil {
+					fh.logFileHydration(zerolog.DebugLevel, lf, mId, episode).
+						Msg("File has been marked as NC")
+				}
+				fh.ScanSummaryLogger.LogMetadataNC(lf)
+				return
+			}
+
+			// Special metadata
+			if lf.IsProbablySpecial() {
+				lf.Metadata.Type = dto.LocalFileTypeSpecial
+				// Sometimes a movie filename could be written as a special episode of the main series
+				// anidb rarely if ever adds relevant specials to movie entries
+				if media.Format != nil && *media.Format == dto.MediaFormatMovie {
+					lf.Metadata.Episode = 1
+					lf.Metadata.AniDBEpisode = "1"
+					lf.Metadata.Type = dto.LocalFileTypeMain
+				} else if episode > -1 {
+					// ep14 (13 original) -> ep1 s1
+					if episode > dto.GetCurrentEpisodeCount(media) {
+						lf.Metadata.Episode = episode - dto.GetCurrentEpisodeCount(media)
+						lf.Metadata.AniDBEpisode = "S" + strconv.Itoa(episode-dto.GetCurrentEpisodeCount(media))
+					} else {
+						lf.Metadata.Episode = episode
+						lf.Metadata.AniDBEpisode = "S" + strconv.Itoa(episode)
+					}
+				} else {
+					lf.Metadata.Episode = 1
+					lf.Metadata.AniDBEpisode = "S1"
+				}
+
+				/*Log */
+				if fh.ScanLogger != nil {
+					fh.logFileHydration(zerolog.DebugLevel, lf, mId, episode).
+						Msg("File has been marked as special")
+				}
+				fh.ScanSummaryLogger.LogMetadataSpecial(lf, lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
+				return
+			}
+			// Movie metadata
 			if media.Format != nil && *media.Format == dto.MediaFormatMovie {
 				lf.Metadata.Episode = 1
 				lf.Metadata.AniDBEpisode = "1"
-				lf.Metadata.Type = dto.LocalFileTypeMain
-			} else if episode > -1 {
-				// ep14 (13 original) -> ep1 s1
-				if episode > dto.GetCurrentEpisodeCount(media) {
-					lf.Metadata.Episode = episode - dto.GetCurrentEpisodeCount(media)
-					lf.Metadata.AniDBEpisode = "S" + strconv.Itoa(episode-dto.GetCurrentEpisodeCount(media))
-				} else {
-					lf.Metadata.Episode = episode
-					lf.Metadata.AniDBEpisode = "S" + strconv.Itoa(episode)
-				}
-			} else {
-				lf.Metadata.Episode = 1
-				lf.Metadata.AniDBEpisode = "S1"
-			}
-
-			/*Log */
-			if fh.ScanLogger != nil {
-				fh.logFileHydration(zerolog.DebugLevel, lf, mId, episode).
-					Msg("File has been marked as special")
-			}
-			fh.ScanSummaryLogger.LogMetadataSpecial(lf, lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
-			return
-		}
-		// Movie metadata
-		if media.Format != nil && *media.Format == dto.MediaFormatMovie {
-			lf.Metadata.Episode = 1
-			lf.Metadata.AniDBEpisode = "1"
-
-			/*Log */
-			if fh.ScanLogger != nil {
-				fh.logFileHydration(zerolog.DebugLevel, lf, mId, episode).
-					Msg("File has been marked as main")
-			}
-			fh.ScanSummaryLogger.LogMetadataMain(lf, lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
-			return
-		}
-
-		// No absolute episode count
-		// "dto.GetTotalEpisodeCount(media) == -1" is a fix for media with unknown episode count, we will just assume that the episode number is correct
-		// devnote(don't know if this is still revelant): We might want to fetch the media when the episode count is unknown in order to get the correct episode count
-		if episode > -1 && (episode <= dto.GetCurrentEpisodeCount(media) || dto.GetTotalEpisodeCount(media) == -1) {
-			// Episode 0 - Might be a special
-			// By default, we will assume that AniDB doesn't include Episode 0 as part of the main episodes (which is often the case)
-			if episode == 0 {
-				// Leave episode number as 0, assuming that the client will handle tracking correctly
-				lf.Metadata.Episode = 0
-				lf.Metadata.AniDBEpisode = "S1"
 
 				/*Log */
 				if fh.ScanLogger != nil {
 					fh.logFileHydration(zerolog.DebugLevel, lf, mId, episode).
 						Msg("File has been marked as main")
-				}
-				fh.ScanSummaryLogger.LogMetadataEpisodeZero(lf, lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
-				return
-			}
-
-			lf.Metadata.Episode = episode
-			lf.Metadata.AniDBEpisode = strconv.Itoa(episode)
-
-			/*Log */
-			if fh.ScanLogger != nil {
-				fh.logFileHydration(zerolog.DebugLevel, lf, mId, episode).
-					Msg("File has been marked as main")
-			}
-			fh.ScanSummaryLogger.LogMetadataMain(lf, lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
-			return
-		}
-
-		// Episode number is higher but media only has 1 episode
-		// - Might be a movie that was not correctly identified as such
-		// - Or, the torrent files were divided into multiple episodes from a media that is listed as a movie on AniList
-		if episode > dto.GetCurrentEpisodeCount(media) && dto.GetTotalEpisodeCount(media) == 1 {
-			lf.Metadata.Episode = 1 // Coerce episode number to 1 because it is used for tracking
-			lf.Metadata.AniDBEpisode = "1"
-
-			/*Log */
-			if fh.ScanLogger != nil {
-				fh.logFileHydration(zerolog.WarnLevel, lf, mId, episode).
-					Str("warning", "File's episode number is higher than the media's episode count, but the media only has 1 episode").
-					Msg("File has been marked as main")
-			}
-			fh.ScanSummaryLogger.LogMetadataMain(lf, lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
-			return
-		}
-
-		// No episode number, but the media only has 1 episode
-		if episode == -1 && dto.GetCurrentEpisodeCount(media) == 1 {
-			lf.Metadata.Episode = 1 // Coerce episode number to 1 because it is used for tracking
-			lf.Metadata.AniDBEpisode = "1"
-
-			/*Log */
-			if fh.ScanLogger != nil {
-				fh.logFileHydration(zerolog.WarnLevel, lf, mId, episode).
-					Str("warning", "No episode number found, but the media only has 1 episode").
-					Msg("File has been marked as main")
-			}
-			fh.ScanSummaryLogger.LogMetadataMain(lf, lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
-			return
-		}
-
-		// Still no episode number and the media has more than 1 episode and is not a movie
-		// We will mark it as a special episode
-		// devnote: Mark as NC?
-		if episode == -1 {
-			lf.Metadata.Type = dto.LocalFileTypeSpecial
-			lf.Metadata.Episode = 1
-			lf.Metadata.AniDBEpisode = "S1"
-
-			/*Log */
-			if fh.ScanLogger != nil {
-				fh.logFileHydration(zerolog.ErrorLevel, lf, mId, episode).
-					Msg("No episode number found, file has been marked as special")
-			}
-			fh.ScanSummaryLogger.LogMetadataEpisodeNormalizationFailed(lf, errors.New("no episode number found"), lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
-			return
-		}
-
-		// Absolute episode count
-		if episode > dto.GetCurrentEpisodeCount(media) && fh.ForceMediaId == 0 {
-
-			// Try part-relative normalization before expensive media tree analysis.
-			// This handles cases where filenames use numbering relative to a previous part of the same season
-			// (e.g., S04E12 for the first episode of Part 2, where Part 1 had 11 episodes).
-			if relativeEp, ok := fh.tryPartRelativeNormalization(lf, episode, mId, rateLimiter); ok {
-				lf.Metadata.Episode = relativeEp
-				lf.Metadata.AniDBEpisode = strconv.Itoa(relativeEp)
-
-				/*Log */
-				if fh.ScanLogger != nil {
-					fh.logFileHydration(zerolog.DebugLevel, lf, mId, episode).
-						Dict("partRelativeNormalization", zerolog.Dict().
-							Bool("normalized", true).
-							Int("relativeEpisode", relativeEp),
-						).
-						Msg("File normalized via part-relative detection")
 				}
 				fh.ScanSummaryLogger.LogMetadataMain(lf, lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
 				return
 			}
 
-			mediaTreeAnalysisMu.Lock()
-			defer mediaTreeAnalysisMu.Unlock()
-			if !treeFetched {
+			// No absolute episode count
+			// "dto.GetTotalEpisodeCount(media) == -1" is a fix for media with unknown episode count, we will just assume that the episode number is correct
+			// devnote(don't know if this is still revelant): We might want to fetch the media when the episode count is unknown in order to get the correct episode count
+			if episode > -1 && (episode <= dto.GetCurrentEpisodeCount(media) || dto.GetTotalEpisodeCount(media) == -1) {
+				// Episode 0 - Might be a special
+				// By default, we will assume that AniDB doesn't include Episode 0 as part of the main episodes (which is often the case)
+				if episode == 0 {
+					// Leave episode number as 0, assuming that the client will handle tracking correctly
+					lf.Metadata.Episode = 0
+					lf.Metadata.AniDBEpisode = "S1"
 
-				mediaTreeFetchStart := time.Now()
-				// Fetch media tree (requires AniList platform)
-				// The media tree will be used to normalize episode numbers
-				if fh.PlatformRef != nil && !fh.PlatformRef.IsAbsent() && fh.AnilistRateLimiter != nil && fh.CompleteAnimeCache != nil {
-					if err := anime.FetchMediaTree(media, anilist.FetchMediaTreeAll, fh.PlatformRef.Get().GetAnilistClient(), fh.AnilistRateLimiter, tree, fh.CompleteAnimeCache); err == nil {
-						// Create a new media tree analysis that will be used for episode normalization
-						mta, _ := NewMediaTreeAnalysis(&MediaTreeAnalysisOptions{
-							tree:                tree,
-							metadataProviderRef: fh.MetadataProviderRef,
-							rateLimiter:         rateLimiter,
-						})
-						// Hoist the media tree analysis, so it will be used by other files
-						// We don't care if it's nil because [normalizeEpisodeNumberAndHydrate] will handle it
-						mediaTreeAnalysis = mta
-						treeFetched = true
-
-						/*Log */
-						if mta != nil && mta.branches != nil {
-							if fh.ScanLogger != nil {
-								fh.ScanLogger.LogFileHydrator(zerolog.DebugLevel).
-									Int("mediaId", mId).
-									Int64("ms", time.Since(mediaTreeFetchStart).Milliseconds()).
-									Int("requests", len(mediaTreeAnalysis.branches)).
-									Any("branches", mediaTreeAnalysis.printBranches()).
-									Msg("Media tree fetched")
-							}
-							fh.ScanSummaryLogger.LogMetadataMediaTreeFetched(lf, time.Since(mediaTreeFetchStart).Milliseconds(), len(mediaTreeAnalysis.branches))
-						}
-					} else {
-						if fh.ScanLogger != nil {
-							fh.ScanLogger.LogFileHydrator(zerolog.ErrorLevel).
-								Int("mediaId", mId).
-								Str("error", err.Error()).
-								Int64("ms", time.Since(mediaTreeFetchStart).Milliseconds()).
-								Msg("Could not fetch media tree")
-						}
-						fh.ScanSummaryLogger.LogMetadataMediaTreeFetchFailed(lf, err, time.Since(mediaTreeFetchStart).Milliseconds())
+					/*Log */
+					if fh.ScanLogger != nil {
+						fh.logFileHydration(zerolog.DebugLevel, lf, mId, episode).
+							Msg("File has been marked as main")
 					}
-				} else {
-					// No AniList platform available (e.g. TMDB-only mode), skip media tree fetch
-					treeFetched = true
+					fh.ScanSummaryLogger.LogMetadataEpisodeZero(lf, lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
+					return
 				}
-			}
 
-			// Normalize episode number
-			if err := fh.normalizeEpisodeNumberAndHydrate(mediaTreeAnalysis, lf, episode, dto.GetCurrentEpisodeCount(media)); err != nil {
+				lf.Metadata.Episode = episode
+				lf.Metadata.AniDBEpisode = strconv.Itoa(episode)
 
-				/*Log */
-				if fh.ScanLogger != nil {
-					fh.logFileHydration(zerolog.WarnLevel, lf, mId, episode).
-						Dict("mediaTreeAnalysis", zerolog.Dict().
-							Bool("normalized", false).
-							Str("error", err.Error()).
-							Str("reason", "Episode normalization failed"),
-						).
-						Msg("File has been marked as special")
-				}
-				fh.ScanSummaryLogger.LogMetadataEpisodeNormalizationFailed(lf, err, lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
-			} else {
 				/*Log */
 				if fh.ScanLogger != nil {
 					fh.logFileHydration(zerolog.DebugLevel, lf, mId, episode).
-						Dict("mediaTreeAnalysis", zerolog.Dict().
-							Bool("normalized", true).
-							Bool("hasNewMediaId", lf.MediaId != mId).
-							Int("newMediaId", lf.MediaId),
-						).
 						Msg("File has been marked as main")
 				}
-				fh.ScanSummaryLogger.LogMetadataEpisodeNormalized(lf, mId, episode, lf.Metadata.Episode, lf.MediaId, lf.Metadata.AniDBEpisode)
-			}
-			return
-		}
-
-		// Absolute episode count with forced media ID
-		if fh.ForceMediaId != 0 && episode > dto.GetCurrentEpisodeCount(media) {
-
-			// When we encounter a file with an episode number higher than the media's episode count
-			// we have a forced media ID, we will fetch the media from AniList and get the offset
-			animeMetadata, err := fh.MetadataProviderRef.Get().GetAnimeMetadata(metadata.AnilistPlatform, fh.ForceMediaId)
-			if err != nil {
-				/*Log */
-				if fh.ScanLogger != nil {
-					fh.logFileHydration(zerolog.ErrorLevel, lf, mId, episode).
-						Str("error", err.Error()).
-						Msg("Could not fetch AniDB metadata")
-				}
-				lf.Metadata.Episode = episode
-				lf.Metadata.AniDBEpisode = strconv.Itoa(episode)
-				lf.MediaId = fh.ForceMediaId
-				fh.ScanSummaryLogger.LogMetadataEpisodeNormalizationFailed(lf, errors.New("could not fetch AniDB metadata"), lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
+				fh.ScanSummaryLogger.LogMetadataMain(lf, lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
 				return
 			}
 
-			// Get the first episode to calculate the offset
-			firstEp, ok := animeMetadata.Episodes["1"]
-			if !ok {
+			// Episode number is higher but media only has 1 episode
+			// - Might be a movie that was not correctly identified as such
+			// - Or, the torrent files were divided into multiple episodes from a media that is listed as a movie on AniList
+			if episode > dto.GetCurrentEpisodeCount(media) && dto.GetTotalEpisodeCount(media) == 1 {
+				lf.Metadata.Episode = 1 // Coerce episode number to 1 because it is used for tracking
+				lf.Metadata.AniDBEpisode = "1"
+
 				/*Log */
-				if fh.ScanLogger != nil {
-					fh.logFileHydration(zerolog.ErrorLevel, lf, mId, episode).
-						Msg("Could not find absolute episode offset")
-				}
-				lf.Metadata.Episode = episode
-				lf.Metadata.AniDBEpisode = strconv.Itoa(episode)
-				lf.MediaId = fh.ForceMediaId
-				fh.ScanSummaryLogger.LogMetadataEpisodeNormalizationFailed(lf, errors.New("could not find absolute episode offset"), lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
-				return
-			}
-
-			// ref: media_tree_analysis.go
-			usePartEpisodeNumber := firstEp.EpisodeNumber > 1 && firstEp.AbsoluteEpisodeNumber-firstEp.EpisodeNumber > 1
-			minPartAbsoluteEpisodeNumber := 0
-			maxPartAbsoluteEpisodeNumber := 0
-			if usePartEpisodeNumber {
-				minPartAbsoluteEpisodeNumber = firstEp.EpisodeNumber
-				maxPartAbsoluteEpisodeNumber = minPartAbsoluteEpisodeNumber + animeMetadata.GetMainEpisodeCount() - 1
-			}
-
-			absoluteEpisodeNumber := firstEp.AbsoluteEpisodeNumber
-
-			// Calculate the relative episode number
-			relativeEp := episode
-
-			// Let's say the media has 12 episodes and the file is "episode 13"
-			// If the [partAbsoluteEpisodeNumber] is 13, then the [relativeEp] will be 1, we can safely ignore the [absoluteEpisodeNumber]
-			// e.g. 13 - (13-1) = 1
-			if minPartAbsoluteEpisodeNumber <= episode && maxPartAbsoluteEpisodeNumber >= episode {
-				relativeEp = episode - (minPartAbsoluteEpisodeNumber - 1)
-			} else {
-				// Let's say the media has 12 episodes and the file is "episode 38"
-				// The [absoluteEpisodeNumber] will be 38 and the [relativeEp] will be 1
-				// e.g. 38 - (38-1) = 1
-				relativeEp = episode - (absoluteEpisodeNumber - 1)
-			}
-
-			if relativeEp < 1 {
 				if fh.ScanLogger != nil {
 					fh.logFileHydration(zerolog.WarnLevel, lf, mId, episode).
-						Dict("normalization", zerolog.Dict().
-							Bool("normalized", false).
-							Str("reason", "Episode normalization failed, could not find relative episode number"),
-						).
+						Str("warning", "File's episode number is higher than the media's episode count, but the media only has 1 episode").
 						Msg("File has been marked as main")
 				}
-				lf.Metadata.Episode = episode
-				lf.Metadata.AniDBEpisode = strconv.Itoa(episode)
-				lf.MediaId = fh.ForceMediaId
-				fh.ScanSummaryLogger.LogMetadataEpisodeNormalizationFailed(lf, errors.New("could not find relative episode number"), lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
+				fh.ScanSummaryLogger.LogMetadataMain(lf, lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
 				return
 			}
 
-			if fh.ScanLogger != nil {
-				fh.logFileHydration(zerolog.DebugLevel, lf, mId, relativeEp).
-					Dict("mediaTreeAnalysis", zerolog.Dict().
-						Bool("normalized", true).
-						Int("forcedMediaId", fh.ForceMediaId),
-					).
-					Msg("File has been marked as main")
+			// No episode number, but the media only has 1 episode
+			if episode == -1 && dto.GetCurrentEpisodeCount(media) == 1 {
+				lf.Metadata.Episode = 1 // Coerce episode number to 1 because it is used for tracking
+				lf.Metadata.AniDBEpisode = "1"
+
+				/*Log */
+				if fh.ScanLogger != nil {
+					fh.logFileHydration(zerolog.WarnLevel, lf, mId, episode).
+						Str("warning", "No episode number found, but the media only has 1 episode").
+						Msg("File has been marked as main")
+				}
+				fh.ScanSummaryLogger.LogMetadataMain(lf, lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
+				return
 			}
-			lf.Metadata.Episode = relativeEp
-			lf.Metadata.AniDBEpisode = strconv.Itoa(relativeEp)
-			lf.MediaId = fh.ForceMediaId
-			fh.ScanSummaryLogger.LogMetadataMain(lf, lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
-			return
 
-		}
+			// Still no episode number and the media has more than 1 episode and is not a movie
+			// We will mark it as a special episode
+			// devnote: Mark as NC?
+			if episode == -1 {
+				lf.Metadata.Type = dto.LocalFileTypeSpecial
+				lf.Metadata.Episode = 1
+				lf.Metadata.AniDBEpisode = "S1"
 
-	})
+				/*Log */
+				if fh.ScanLogger != nil {
+					fh.logFileHydration(zerolog.ErrorLevel, lf, mId, episode).
+						Msg("No episode number found, file has been marked as special")
+				}
+				fh.ScanSummaryLogger.LogMetadataEpisodeNormalizationFailed(lf, errors.New("no episode number found"), lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
+				return
+			}
+
+			// Absolute episode count
+			if episode > dto.GetCurrentEpisodeCount(media) && fh.ForceMediaId == 0 {
+
+				// Try part-relative normalization before expensive media tree analysis.
+				// This handles cases where filenames use numbering relative to a previous part of the same season
+				// (e.g., S04E12 for the first episode of Part 2, where Part 1 had 11 episodes).
+				if relativeEp, ok := fh.tryPartRelativeNormalization(lf, episode, mId, rateLimiter); ok {
+					lf.Metadata.Episode = relativeEp
+					lf.Metadata.AniDBEpisode = strconv.Itoa(relativeEp)
+
+					/*Log */
+					if fh.ScanLogger != nil {
+						fh.logFileHydration(zerolog.DebugLevel, lf, mId, episode).
+							Dict("partRelativeNormalization", zerolog.Dict().
+								Bool("normalized", true).
+								Int("relativeEpisode", relativeEp),
+							).
+							Msg("File normalized via part-relative detection")
+					}
+					fh.ScanSummaryLogger.LogMetadataMain(lf, lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
+					return
+				}
+
+				mediaTreeAnalysisMu.Lock()
+				if !treeFetched {
+
+					mediaTreeFetchStart := time.Now()
+					// Fetch media tree (requires AniList platform)
+					// The media tree will be used to normalize episode numbers
+					if fh.PlatformRef != nil && !fh.PlatformRef.IsAbsent() && fh.AnilistRateLimiter != nil && fh.CompleteAnimeCache != nil {
+						if err := anime.FetchMediaTree(media, anilist.FetchMediaTreeAll, fh.PlatformRef.Get().GetAnilistClient(), fh.AnilistRateLimiter, tree, fh.CompleteAnimeCache); err == nil {
+							// Create a new media tree analysis that will be used for episode normalization
+							mta, _ := NewMediaTreeAnalysis(&MediaTreeAnalysisOptions{
+								tree:                tree,
+								metadataProviderRef: fh.MetadataProviderRef,
+								rateLimiter:         rateLimiter,
+							})
+							// Hoist the media tree analysis, so it will be used by other files
+							// We don't care if it's nil because [normalizeEpisodeNumberAndHydrate] will handle it
+							mediaTreeAnalysis = mta
+							treeFetched = true
+
+							/*Log */
+							if mta != nil && mta.branches != nil {
+								if fh.ScanLogger != nil {
+									fh.ScanLogger.LogFileHydrator(zerolog.DebugLevel).
+										Int("mediaId", mId).
+										Int64("ms", time.Since(mediaTreeFetchStart).Milliseconds()).
+										Int("requests", len(mediaTreeAnalysis.branches)).
+										Any("branches", mediaTreeAnalysis.printBranches()).
+										Msg("Media tree fetched")
+								}
+								fh.ScanSummaryLogger.LogMetadataMediaTreeFetched(lf, time.Since(mediaTreeFetchStart).Milliseconds(), len(mediaTreeAnalysis.branches))
+							}
+						} else {
+							if fh.ScanLogger != nil {
+								fh.ScanLogger.LogFileHydrator(zerolog.ErrorLevel).
+									Int("mediaId", mId).
+									Str("error", err.Error()).
+									Int64("ms", time.Since(mediaTreeFetchStart).Milliseconds()).
+									Msg("Could not fetch media tree")
+							}
+							fh.ScanSummaryLogger.LogMetadataMediaTreeFetchFailed(lf, err, time.Since(mediaTreeFetchStart).Milliseconds())
+						}
+					} else {
+						// No AniList platform available (e.g. TMDB-only mode), skip media tree fetch
+						treeFetched = true
+					}
+				}
+				mediaTreeAnalysisMu.Unlock()
+
+				// Normalize episode number
+				if err := fh.normalizeEpisodeNumberAndHydrate(mediaTreeAnalysis, lf, episode, dto.GetCurrentEpisodeCount(media)); err != nil {
+
+					/*Log */
+					if fh.ScanLogger != nil {
+						fh.logFileHydration(zerolog.WarnLevel, lf, mId, episode).
+							Dict("mediaTreeAnalysis", zerolog.Dict().
+								Bool("normalized", false).
+								Str("error", err.Error()).
+								Str("reason", "Episode normalization failed"),
+							).
+							Msg("File has been marked as special")
+					}
+					fh.ScanSummaryLogger.LogMetadataEpisodeNormalizationFailed(lf, err, lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
+				} else {
+					/*Log */
+					if fh.ScanLogger != nil {
+						fh.logFileHydration(zerolog.DebugLevel, lf, mId, episode).
+							Dict("mediaTreeAnalysis", zerolog.Dict().
+								Bool("normalized", true).
+								Bool("hasNewMediaId", lf.MediaId != mId).
+								Int("newMediaId", lf.MediaId),
+							).
+							Msg("File has been marked as main")
+					}
+					fh.ScanSummaryLogger.LogMetadataEpisodeNormalized(lf, mId, episode, lf.Metadata.Episode, lf.MediaId, lf.Metadata.AniDBEpisode)
+				}
+				return
+			}
+
+			// Absolute episode count with forced media ID
+			if fh.ForceMediaId != 0 && episode > dto.GetCurrentEpisodeCount(media) {
+
+				// When we encounter a file with an episode number higher than the media's episode count
+				// we have a forced media ID, we will fetch the media from AniList and get the offset
+				animeMetadata, err := fh.MetadataProviderRef.Get().GetAnimeMetadata(metadata.AnilistPlatform, fh.ForceMediaId)
+				if err != nil {
+					/*Log */
+					if fh.ScanLogger != nil {
+						fh.logFileHydration(zerolog.ErrorLevel, lf, mId, episode).
+							Str("error", err.Error()).
+							Msg("Could not fetch AniDB metadata")
+					}
+					lf.Metadata.Episode = episode
+					lf.Metadata.AniDBEpisode = strconv.Itoa(episode)
+					lf.MediaId = fh.ForceMediaId
+					fh.ScanSummaryLogger.LogMetadataEpisodeNormalizationFailed(lf, errors.New("could not fetch AniDB metadata"), lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
+					return
+				}
+
+				// Get the first episode to calculate the offset
+				firstEp, ok := animeMetadata.Episodes["1"]
+				if !ok {
+					/*Log */
+					if fh.ScanLogger != nil {
+						fh.logFileHydration(zerolog.ErrorLevel, lf, mId, episode).
+							Msg("Could not find absolute episode offset")
+					}
+					lf.Metadata.Episode = episode
+					lf.Metadata.AniDBEpisode = strconv.Itoa(episode)
+					lf.MediaId = fh.ForceMediaId
+					fh.ScanSummaryLogger.LogMetadataEpisodeNormalizationFailed(lf, errors.New("could not find absolute episode offset"), lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
+					return
+				}
+
+				// ref: media_tree_analysis.go
+				usePartEpisodeNumber := firstEp.EpisodeNumber > 1 && firstEp.AbsoluteEpisodeNumber-firstEp.EpisodeNumber > 1
+				minPartAbsoluteEpisodeNumber := 0
+				maxPartAbsoluteEpisodeNumber := 0
+				if usePartEpisodeNumber {
+					minPartAbsoluteEpisodeNumber = firstEp.EpisodeNumber
+					maxPartAbsoluteEpisodeNumber = minPartAbsoluteEpisodeNumber + animeMetadata.GetMainEpisodeCount() - 1
+				}
+
+				absoluteEpisodeNumber := firstEp.AbsoluteEpisodeNumber
+
+				// Calculate the relative episode number
+				relativeEp := episode
+
+				// Let's say the media has 12 episodes and the file is "episode 13"
+				// If the [partAbsoluteEpisodeNumber] is 13, then the [relativeEp] will be 1, we can safely ignore the [absoluteEpisodeNumber]
+				// e.g. 13 - (13-1) = 1
+				if minPartAbsoluteEpisodeNumber <= episode && maxPartAbsoluteEpisodeNumber >= episode {
+					relativeEp = episode - (minPartAbsoluteEpisodeNumber - 1)
+				} else {
+					// Let's say the media has 12 episodes and the file is "episode 38"
+					// The [absoluteEpisodeNumber] will be 38 and the [relativeEp] will be 1
+					// e.g. 38 - (38-1) = 1
+					relativeEp = episode - (absoluteEpisodeNumber - 1)
+				}
+
+				if relativeEp < 1 {
+					if fh.ScanLogger != nil {
+						fh.logFileHydration(zerolog.WarnLevel, lf, mId, episode).
+							Dict("normalization", zerolog.Dict().
+								Bool("normalized", false).
+								Str("reason", "Episode normalization failed, could not find relative episode number"),
+							).
+							Msg("File has been marked as main")
+					}
+					lf.Metadata.Episode = episode
+					lf.Metadata.AniDBEpisode = strconv.Itoa(episode)
+					lf.MediaId = fh.ForceMediaId
+					fh.ScanSummaryLogger.LogMetadataEpisodeNormalizationFailed(lf, errors.New("could not find relative episode number"), lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
+					return
+				}
+
+				if fh.ScanLogger != nil {
+					fh.logFileHydration(zerolog.DebugLevel, lf, mId, relativeEp).
+						Dict("mediaTreeAnalysis", zerolog.Dict().
+							Bool("normalized", true).
+							Int("forcedMediaId", fh.ForceMediaId),
+						).
+						Msg("File has been marked as main")
+				}
+				lf.Metadata.Episode = relativeEp
+				lf.Metadata.AniDBEpisode = strconv.Itoa(relativeEp)
+				lf.MediaId = fh.ForceMediaId
+				fh.ScanSummaryLogger.LogMetadataMain(lf, lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
+				return
+
+			}
+
+		}() // Call anonymous function to mimic what lop.ForEach did for defers
+
+	} // end for loop
 
 }
 

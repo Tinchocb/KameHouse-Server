@@ -9,6 +9,7 @@ import (
 	"kamehouse/internal/extension_repo"
 	"kamehouse/internal/manga"
 	"kamehouse/internal/util"
+	"context"
 	"kamehouse/internal/util/filecache"
 	"path/filepath"
 	"testing"
@@ -33,7 +34,7 @@ func NewTestEnv(t *testing.T) *TestEnv {
 	logger := util.NewLogger()
 	dataDir := t.TempDir()
 
-	database, err := db.NewDatabase(dataDir, "test", logger)
+	database, err := db.NewDatabase(context.Background(), dataDir, "test", logger)
 	require.NoError(t, err)
 
 	cacher, err := filecache.NewCacher(filepath.Join(dataDir, "cache"))
@@ -54,7 +55,7 @@ func NewTestEnvDBOnly(t *testing.T) *TestEnv {
 	logger := util.NewLogger()
 	dataDir := t.TempDir()
 
-	database, err := db.NewDatabase(dataDir, "test", logger)
+	database, err := db.NewDatabase(context.Background(), dataDir, "test", logger)
 	require.NoError(t, err)
 
 	return &TestEnv{t: t, db: database, logger: logger, dataDir: dataDir}
