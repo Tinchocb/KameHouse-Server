@@ -9,6 +9,28 @@ import (
 	"unicode"
 )
 
+// ReExplicitProvider matches explicit provider tags like [anilist-12345], [tmdb-12345], etc.
+var ReExplicitProvider = regexp.MustCompile(`\[(?i)(?P<provider>anilist|tmdb|imdb)-(?P<id>[a-zA-Z0-9]+)\]`)
+
+// ExtractExplicitProvider parses the title, extracts ExplicitProvider and ExplicitID
+// into the NormalizedMedia struct, and returns the stripped title.
+func ExtractExplicitProvider(title string, media *dto.NormalizedMedia) string {
+	if media == nil {
+		return title
+	}
+	if m := ReExplicitProvider.FindStringSubmatch(title); m != nil {
+		providerIdx := ReExplicitProvider.SubexpIndex("provider")
+		idIdx := ReExplicitProvider.SubexpIndex("id")
+		if providerIdx > 0 && idIdx > 0 {
+			media.ExplicitProvider = strings.ToLower(m[providerIdx])
+			media.ExplicitID = m[idIdx]
+		}
+	}
+	
+	cleaned := ReExplicitProvider.ReplaceAllString(title, "")
+	return strings.TrimSpace(cleaned)
+}
+
 // Noise words that should be weighted less
 var noiseWords = map[string]struct{}{
 	"the": {}, "a": {}, "an": {}, "of": {}, "to": {}, "in": {}, "for": {},
@@ -193,6 +215,9 @@ func normalizeString(s string) string {
 	s = replaceWord(s, "special", "sp")
 	s = strings.ReplaceAll(s, "(tv)", "")
 	s = replaceWord(s, "&", "and")
+
+	// Remove explicit provider tags
+	s = ReExplicitProvider.ReplaceAllString(s, "")
 
 	// Remove common file suffixes like (Dub), [BD], (1080p), etc.
 	s = fileSuffixRegex.ReplaceAllString(s, "")

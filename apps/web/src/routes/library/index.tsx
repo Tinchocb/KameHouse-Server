@@ -20,7 +20,7 @@ function getTitle(media: Models_LibraryMedia | null | undefined): string {
 }
 
 function LibraryPage() {
-    const { data: libraryData, isLoading: libLoading } = useGetLibraryCollection()
+    const { data: libraryData, isLoading: libLoading, isError: libError, error: libErrorData, refetch: libRefetch } = useGetLibraryCollection()
     const { 
         data: localInfiniteData, 
         isLoading: locLoading, 
@@ -39,6 +39,22 @@ function LibraryPage() {
     const renderGrid = (entries: Anime_LibraryCollectionEntry[], emptyMessage: string) => {
         return <VirtualizedMediaGrid entries={entries} emptyMessage={emptyMessage} />
     }
+
+    const errorFallback = libError ? (
+        <div className="flex flex-col items-center justify-center min-h-[40vh] text-center px-4 gap-4">
+            <span className="text-5xl opacity-50">⚠️</span>
+            <h3 className="text-xl font-bold text-zinc-300">Error de conexión</h3>
+            <p className="text-sm text-zinc-500 max-w-md">
+                {libErrorData?.message || "No se pudo cargar la biblioteca. Comprueba que el servidor esté corriendo."}
+            </p>
+            <button
+                onClick={() => libRefetch()}
+                className="px-6 py-2.5 bg-primary/20 hover:bg-primary/30 active:bg-primary/10 border border-primary/30 rounded-full font-bold uppercase tracking-widest text-xs text-primary transition-all"
+            >
+                Reintentar
+            </button>
+        </div>
+    ) : null
 
     const libraryActions = useMemo(() => (
         <div className="relative group w-full md:w-auto mt-2 md:mt-0">
@@ -98,19 +114,19 @@ function LibraryPage() {
                         <TabsContent value="current" className="focus:outline-none focus-visible:ring-0">
                             {libLoading ? (
                                 <MediaGridSkeleton />
-                            ) : renderGrid(currentlyWatching, "No estás viendo ninguna serie ahora mismo.")}
+                            ) : libError ? errorFallback : renderGrid(currentlyWatching, "No estás viendo ninguna serie ahora mismo.")}
                         </TabsContent>
 
                         <TabsContent value="planned" className="focus:outline-none focus-visible:ring-0">
                             {libLoading ? (
                                 <MediaGridSkeleton />
-                            ) : renderGrid(planned, "No tienes series planeadas para ver.")}
+                            ) : libError ? errorFallback : renderGrid(planned, "No tienes series planeadas para ver.")}
                         </TabsContent>
 
                         <TabsContent value="completed" className="focus:outline-none focus-visible:ring-0">
                             {libLoading ? (
                                 <MediaGridSkeleton />
-                            ) : renderGrid(completed, "Aún no has completado ninguna serie.")}
+                            ) : libError ? errorFallback : renderGrid(completed, "Aún no has completado ninguna serie.")}
                         </TabsContent>
 
                         <TabsContent value="local" className="focus:outline-none focus-visible:ring-0">

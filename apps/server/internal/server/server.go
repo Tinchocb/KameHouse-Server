@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"kamehouse/internal/core"
@@ -101,7 +102,9 @@ appLoop:
 
 			select {
 			case <-selfupdater.Started():
-				app.Cleanup()
+				cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 15*time.Second)
+				app.Cleanup(cleanupCtx)
+				cleanupCancel()
 				updateMode = true
 				break
 			}

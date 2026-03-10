@@ -115,6 +115,15 @@ func (db *Database) Shutdown() {
 	}
 }
 
+// Close releases the underlying database connection pool.
+func (db *Database) Close() error {
+	sqlDB, err := db.gormdb.DB()
+	if err != nil {
+		return err
+	}
+	return sqlDB.Close()
+}
+
 // migrateTables strictly ensures that schema migration executes within standard timeout.
 func migrateTables(ctx context.Context, db *gorm.DB) error {
 	return db.WithContext(ctx).AutoMigrate(

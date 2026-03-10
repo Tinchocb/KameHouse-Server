@@ -129,10 +129,15 @@ func (h *Handler) getAnimeEntry(c echo.Context, lfs []*dto.LocalFile, mId int) (
 //	@param id - int - true - "AniList anime media ID"
 //	@returns anime.Entry
 func (h *Handler) HandleGetAnimeEntry(c echo.Context) error {
-
-	mId, err := strconv.Atoi(c.Param("id"))
+	idParam := c.Param("id")
+	mId, err := strconv.Atoi(idParam)
 	if err != nil {
-		return h.RespondWithError(c, err)
+		// If it's not a number, try search by external ID (slug/custom)
+		media, err := db.GetLibraryMediaByExternalID(h.App.Database, idParam)
+		if err != nil {
+			return h.RespondWithError(c, err)
+		}
+		mId = int(media.ID)
 	}
 
 	// Get all the local files

@@ -87,9 +87,15 @@ func run(ctx context.Context) error {
 	case <-ctx.Done():
 		app.Logger.Info().Msg("initiating graceful shutdown")
 
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
 
-		return e.Shutdown(shutdownCtx)
+		// 1. Stop accepting new HTTP requests
+		if err := e.Shutdown(shutdownCtx); err != nil {
+			app.Logger.Error().Err(err).Msg("echo shutdown error")
+		}
+		// 2. Flush pending writes & close DB within deadline
+		app.Cleanup(shutdownCtx)
+		return nil
 	}
 }

@@ -14,7 +14,6 @@ import (
 	"kamehouse/internal/library/anime"
 	librarymetadata "kamehouse/internal/library/metadata"
 	"kamehouse/internal/platforms/platform"
-	"kamehouse/internal/util"
 	"kamehouse/internal/util/limiter"
 	"path/filepath"
 	"strings"
@@ -458,8 +457,10 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 	uniqueSeries := make(map[string]*FolderInfo)
 	for _, info := range seriesMap {
 		key := info.SeriesName
-		if info.Year > 0 {
-			key = fmt.Sprintf("%s (%d)", info.SeriesName, info.Year)
+		if info.ExplicitProvider != "" {
+			key = fmt.Sprintf("%s [%s-%s]", key, info.ExplicitProvider, info.ExplicitID)
+		} else if info.Year > 0 {
+			key = fmt.Sprintf("%s (%d)", key, info.Year)
 		}
 		if _, exists := uniqueSeries[key]; !exists {
 			uniqueSeries[key] = info
@@ -475,24 +476,69 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 	// Search TMDB for each unique series
 	seenIds := make(map[int]bool)
 
+	// Build provider map for strategy routing
+	providerMap := make(map[string]librarymetadata.Provider)
+	for _, p := range opts.MetadataProviders {
+		providerMap[strings.ToLower(p.GetProviderID())] = p
+	}
+
 	for _, info := range uniqueSeries {
 		query := info.SeriesName
 
-		results, err := opts.TMDBProvider.SearchMedia(query)
-		if err != nil {
-			// Fallback: for movies with compound titles like "Dragon Ball Z - La batalla",
-			// try searching with just the series prefix (before " - ")
-			if info.IsMovie {
-				if idx := strings.Index(query, " - "); idx > 0 {
-					prefix := strings.TrimSpace(query[:idx])
-					opts.Logger.Debug().Str("originalQuery", query).Str("fallbackQuery", prefix).Msg("media fetcher: Retrying movie search with prefix")
-					results, err = opts.TMDBProvider.SearchMedia(prefix)
+		var results []*dto.NormalizedMedia
+		var err error
+
+		// 1. Explicit Routing
+		if info.ExplicitProvider != "" {
+			providerToUse, exists := providerMap[info.ExplicitProvider]
+			// Fallback to TMDB for IMDB ids if IMDB has no separate provider
+			if !exists && info.ExplicitProvider == "imdb" {
+				providerToUse, exists = providerMap["tmdb"]
+			}
+
+			if exists {
+				idStr := info.ExplicitID
+				if info.ExplicitProvider == "imdb" && !strings.HasPrefix(idStr, "tt") {
+					idStr = "tt" + idStr
+				}
+				var media *dto.NormalizedMedia
+				media, err = providerToUse.GetMediaDetails(idStr)
+				if err == nil && media != nil {
+					media.ExplicitProvider = info.ExplicitProvider
+					media.ExplicitID = info.ExplicitID
+					results = []*dto.NormalizedMedia{media}
+				}
+			} else {
+				err = fmt.Errorf("explicit provider not found: %s", info.ExplicitProvider)
+			}
+		}
+
+		// 2. Default Behavior (TMDB First)
+		if len(results) == 0 && err == nil {
+			results, err = opts.TMDBProvider.SearchMedia(query)
+			
+			if err != nil || len(results) == 0 {
+				// Fallback: for movies with compound titles like "Dragon Ball Z - La batalla",
+				// try searching with just the series prefix (before " - ")
+				if info.IsMovie {
+					if idx := strings.Index(query, " - "); idx > 0 {
+						prefix := strings.TrimSpace(query[:idx])
+						opts.Logger.Debug().Str("originalQuery", query).Str("fallbackQuery", prefix).Msg("media fetcher: Retrying movie search with prefix")
+						results, err = opts.TMDBProvider.SearchMedia(prefix)
+					}
+				}
+
+				// 3. Fallback Mechanism (AniList)
+				if len(results) == 0 {
+					opts.Logger.Debug().Str("query", query).Msg("media fetcher: TMDB returned zero results, falling back to AniList provider")
+					if alProvider, exists := providerMap["anilist"]; exists {
+						results, err = alProvider.SearchMedia(query)
+					}
 				}
 			}
-			if err != nil {
-				opts.Logger.Warn().Str("query", query).Err(err).Msg("media fetcher: TMDB search failed")
-				continue
-			}
+		} else if err != nil {
+			opts.Logger.Warn().Str("query", query).Str("explicitProvider", info.ExplicitProvider).Str("explicitId", info.ExplicitID).Err(err).Msg("media fetcher: Explicit provider search failed")
+			continue
 		}
 
 		for _, media := range results {

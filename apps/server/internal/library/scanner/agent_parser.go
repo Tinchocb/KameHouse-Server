@@ -56,6 +56,14 @@ func Normalize(path string) ParsedMedia {
 		workingStr = strings.Replace(workingStr, loc[0], "", 1)
 	}
 
+	// 1b. Strip fan-edit tokens (e.g. "by Seldion", "Saga Saiyajin") into ReleaseGroup
+	if stripped := StripFanEditTokens(workingStr); stripped != workingStr {
+		if pm.ReleaseGroup == "" {
+			pm.ReleaseGroup = "fan-edit"
+		}
+		workingStr = stripped
+	}
+
 	// 2. Resolution stripping
 	if loc := reResolution.FindStringSubmatch(workingStr); len(loc) > 1 {
 		pm.Resolution = loc[1]

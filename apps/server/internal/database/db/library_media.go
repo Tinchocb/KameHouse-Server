@@ -96,3 +96,15 @@ func TrimLocalFileEntries(d *Database) {
 		}
 	}
 }
+// GetLibraryMediaByExternalID retrieves a LibraryMedia by its external ID (e.g. slug or custom mapping).
+func GetLibraryMediaByExternalID(d *Database, externalId string) (*models.LibraryMedia, error) {
+	var media models.LibraryMedia
+	err := d.Gorm().
+		Joins("JOIN provider_mappings ON provider_mappings.library_media_id = library_media.id").
+		Where("provider_mappings.external_id = ?", externalId).
+		First(&media).Error
+	if err != nil {
+		return nil, err
+	}
+	return &media, nil
+}

@@ -93,6 +93,20 @@ func (m *Matcher) BayesianResolve(lf *dto.LocalFile) {
 	// 1. Initial Parse
 	pm := Normalize(lf.Path)
 
+	// SHORT-CIRCUIT: Check hardcoded custom overrides before Bayesian scoring.
+	// Fan-edits like "Dragon Ball Kai Ultimate by Seldion" resolve instantly.
+	if overrideID, found := LookupCustomOverride(pm.CleanTitle); found {
+		lf.MediaId = overrideID
+		lf.Metadata.Episode = pm.Episode
+		if pm.IsSpecial {
+			lf.Metadata.Type = dto.LocalFileTypeSpecial
+		} else {
+			lf.Metadata.Type = dto.LocalFileTypeMain
+		}
+		m.Logger.Info().Msgf("AgentMatcher: Custom override matched '%s' -> %d [short-circuit]", lf.Name, overrideID)
+		return
+	}
+
 	bestConfidence := 0.0
 	var bestMatch *dto.NormalizedMedia
 

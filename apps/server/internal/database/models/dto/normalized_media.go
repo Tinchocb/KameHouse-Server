@@ -5,11 +5,13 @@ import (
 )
 
 type NormalizedMedia struct {
-	ID          int
-	IdMal       *int
-	TmdbId      *int
-	TvdbId      *int
-	Title       *NormalizedMediaTitle
+	ID                 int
+	IdMal              *int
+	TmdbId             *int
+	TvdbId           *int
+	ExplicitProvider string
+	ExplicitID       string
+	Title              *NormalizedMediaTitle
 	Synonyms    []*string
 	Format      *MediaFormat
 	Status      *MediaStatus

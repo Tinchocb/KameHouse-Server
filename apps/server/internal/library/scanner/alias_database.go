@@ -1,6 +1,61 @@
 package scanner
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
+
+// customIDOverrides maps normalized fan-edit/custom release titles directly to AniList IDs.
+// Matched titles short-circuit the Bayesian engine and skip external API calls entirely.
+var customIDOverrides = map[string]int{
+	// Dragon Ball Kai fan-edits
+	"dragon ball kai ultimate":       6033,
+	"dragon ball kai seldion":        6033,
+	"dragon ball kai ultimate seldion": 6033,
+	"dragon ball z kai":              6033,
+	"dragon ball kai saga saiyajin":  6033,
+	"dragon ball kai saga saiyan":    6033,
+	"dragon ball kai saga bu":        6033,
+	"dragon ball kai saga buu":       6033,
+	"dragon ball kai saga cell":      6033,
+	"dragon ball kai saga freezer":   6033,
+	"dragon ball kai saga frieza":    6033,
+	"dragon ball kai saga namek":     6033,
+	// Dragon Ball GT
+	"dragon ball gt": 534,
+}
+
+// reFanEditTokens strips fan-edit markers (release groups, saga labels) from titles
+// so the core title remains clean for Dice/Bayesian matching.
+// Pre-compiled at init to avoid per-file allocation.
+var reFanEditTokens = regexp.MustCompile(`(?i)\b(?:ultimate\s+by\s+\w+|by\s+seldion|saga\s+(?:saiyajin|saiyan|bu+|cell|freez?e?r?|frieza|namek))\b`)
+
+// LookupCustomOverride checks if a cleaned title matches a hardcoded AniList ID override.
+// Returns the AniList media ID and true if found; 0 and false otherwise.
+func LookupCustomOverride(cleanTitle string) (int, bool) {
+	normalized := normalizeForAliasLookup(cleanTitle)
+	// Strip fan-edit tokens for a second-pass lookup
+	stripped := normalizeForAliasLookup(StripFanEditTokens(normalized))
+
+	if id, ok := customIDOverrides[normalized]; ok {
+		return id, true
+	}
+	if id, ok := customIDOverrides[stripped]; ok {
+		return id, true
+	}
+	return 0, false
+}
+
+// StripFanEditTokens removes fan-edit markers from a title string,
+// returning a clean version suitable for upstream AniList matching.
+func StripFanEditTokens(title string) string {
+	cleaned := reFanEditTokens.ReplaceAllString(title, " ")
+	// Collapse any resulting double spaces
+	for strings.Contains(cleaned, "  ") {
+		cleaned = strings.ReplaceAll(cleaned, "  ", " ")
+	}
+	return strings.TrimSpace(cleaned)
+}
 
 // animeAliases maps canonical anime titles to their commonly used alternative names.
 // These aliases help the matcher find the correct media when file names use non-standard

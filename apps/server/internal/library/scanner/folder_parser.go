@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"kamehouse/internal/database/models/dto"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -9,10 +10,12 @@ import (
 
 // FolderInfo contains metadata extracted from the folder structure (Jellyfin/Kodi style).
 type FolderInfo struct {
-	SeriesName string // e.g. "Dragon Ball Z"
-	Year       int    // e.g. 1989 (0 if not found)
-	Season     int    // e.g. 2 (0 if not in a Season folder)
-	IsMovie    bool   // true if detected as a movie
+	SeriesName         string // e.g. "Dragon Ball Z"
+	Year               int    // e.g. 1989 (0 if not found)
+	Season             int    // e.g. 2 (0 if not in a Season folder)
+	IsMovie            bool   // true if detected as a movie
+	ExplicitProvider   string // e.g. "anilist", "tmdb", "imdb"
+	ExplicitID         string // e.g. "12345", "tt12345"
 }
 
 var (
@@ -81,6 +84,23 @@ func ParseFolderStructure(filePath string, libraryPaths []string) *FolderInfo {
 
 	if len(relParts) == 0 {
 		return info
+	}
+
+	// Extract explicit provider ID if present anywhere in the path
+	var tempMedia dto.NormalizedMedia
+	ExtractExplicitProvider(filename, &tempMedia)
+	if tempMedia.ExplicitProvider != "" {
+		info.ExplicitProvider = tempMedia.ExplicitProvider
+		info.ExplicitID = tempMedia.ExplicitID
+	} else {
+		for _, part := range relParts {
+			ExtractExplicitProvider(part, &tempMedia)
+			if tempMedia.ExplicitProvider != "" {
+				info.ExplicitProvider = tempMedia.ExplicitProvider
+				info.ExplicitID = tempMedia.ExplicitID
+				break
+			}
+		}
 	}
 
 	// Detect movie based on folder name
@@ -188,6 +208,8 @@ func cleanMovieTitle(title string) string {
 	title = strings.TrimSpace(title)
 	// Remove trailing dash or hyphen with optional whitespace
 	title = strings.TrimRight(title, " -–")
+	// Remove explicit provider tags
+	title = ReExplicitProvider.ReplaceAllString(title, "")
 	// Remove leading bracket tags (e.g., [Fansub])
 	title = reLeadingBracketTag.ReplaceAllString(title, "")
 	// Remove common codec/quality tags in brackets

@@ -97,7 +97,8 @@ type LibrarySettings struct {
 	AutoSyncToLocalAccount      bool `gorm:"column:auto_sync_to_local_account" json:"autoSyncToLocalAccount"`
 	AutoSaveCurrentMediaOffline bool `gorm:"column:auto_save_current_media_offline" json:"autoSaveCurrentMediaOffline"`
 	// v3+
-	UseFallbackMetadataProvider bool `gorm:"column:use_fallback_metadata_provider" json:"useFallbackMetadataProvider"`
+	UseFallbackMetadataProvider bool   `gorm:"column:use_fallback_metadata_provider" json:"useFallbackMetadataProvider"`
+	PrimaryMetadataProvider     string `gorm:"column:primary_metadata_provider;default:'TMDB'" json:"primaryMetadataProvider"`
 	// v3.5+
 	TmdbApiKey               string `gorm:"column:tmdb_api_key" json:"tmdbApiKey"`
 	TmdbLanguage             string `gorm:"column:tmdb_language" json:"tmdbLanguage"` // BCP 47 language tag, e.g. "es-ES"

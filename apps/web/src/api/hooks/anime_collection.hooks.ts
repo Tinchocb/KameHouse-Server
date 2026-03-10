@@ -1,10 +1,26 @@
 import { useServerMutation, useServerQuery } from "@/api/client/requests"
 import { AddUnknownMedia_Variables } from "@/api/generated/endpoint.types"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
-import { AL_AnimeCollection, Anime_LibraryCollection, Anime_ScheduleItem } from "@/api/generated/types"
+import { AL_AnimeCollection, Anime_LibraryCollection, Anime_ScheduleItem, Anime_LibraryCollectionEntry } from "@/api/generated/types"
 import { useRefreshAnimeCollection } from "@/api/hooks/anilist.hooks"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+
+import { useMemo } from "react"
+
+export interface ExtendedMediaEntry extends Anime_LibraryCollectionEntry {
+    customReleaseGroup?: string
+    customVersion?: string
+    isCustomOverride?: boolean
+}
+
+export interface ExtendedLibraryCollection extends Omit<Anime_LibraryCollection, "lists"> {
+    lists?: Array<{
+        type: string
+        status: string
+        entries?: Array<ExtendedMediaEntry>
+    }>
+}
 
 export function useGetLibraryCollection({ enabled }: { enabled?: boolean } = { enabled: true }) {
     return useServerQuery<Anime_LibraryCollection>({
@@ -12,7 +28,23 @@ export function useGetLibraryCollection({ enabled }: { enabled?: boolean } = { e
         method: API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.methods[0],
         queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key],
         enabled: enabled,
-    })
+        refetchOnWindowFocus: false,
+        staleTime: 1000 * 60 * 5,
+        // @ts-ignore - Bypassing strictly-typed wrapper to inject efficient memoized selector
+        select: (data: Anime_LibraryCollection): ExtendedLibraryCollection => ({
+            ...data,
+            lists: data.lists?.map(list => ({
+                ...list,
+                entries: list.entries?.map(entry => {
+                    return {
+                        ...entry,
+                        customReleaseGroup: entry.mediaId === 6033 ? "Seldion Fan-Edit" : undefined,
+                        isCustomOverride: entry.mediaId === 6033 || entry.mediaId === 534
+                    }
+                }).sort((a, b) => (a.media?.titleRomaji || "").localeCompare(b.media?.titleRomaji || ""))
+            }))
+        })
+    }) as any as ReturnType<typeof useServerQuery<Anime_LibraryCollection>> & { data: ExtendedLibraryCollection | undefined }
 }
 
 export function useAddUnknownMedia() {
@@ -40,5 +72,7 @@ export function useGetAnimeCollectionSchedule({ enabled }: { enabled?: boolean }
         method: API_ENDPOINTS.ANIME_COLLECTION.GetAnimeCollectionSchedule.methods[0],
         queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetAnimeCollectionSchedule.key],
         enabled: enabled,
+        refetchOnWindowFocus: false,
+        staleTime: 30_000,
     })
 }

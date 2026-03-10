@@ -403,6 +403,9 @@ func (h *Handler) HandleAnilistListAnime(c echo.Context) error {
 	}
 
 	// ── Step C: AniList API (network call) ───────────────────────────────
+	if h.App.Metadata.AnilistClientRef.Get() == nil {
+		return h.RespondWithError(c, errors.New("AniList client not initialized"))
+	}
 	ret, err := anilist.ListAnimeM(
 		shared_platform.NewCacheLayer(h.App.Metadata.AnilistClientRef),
 		p.Page,
@@ -443,11 +446,13 @@ func (h *Handler) HandleAnilistListAnime(c echo.Context) error {
 				}
 
 				// Filter anime list
-				var filteredMedia []*anilist.BaseAnime
 				if ret.Page != nil && ret.Page.Media != nil {
+					var filteredMedia []*anilist.BaseAnime
 					for _, media := range ret.Page.Media {
-						if _, ok := loadedMediaIds[media.ID]; ok {
-							filteredMedia = append(filteredMedia, media)
+						if media != nil {
+							if _, ok := loadedMediaIds[media.ID]; ok {
+								filteredMedia = append(filteredMedia, media)
+							}
 						}
 					}
 					ret.Page.Media = filteredMedia
@@ -515,6 +520,9 @@ func (h *Handler) HandleAnilistListRecentAiringAnime(c echo.Context) error {
 		return h.RespondWithData(c, cached)
 	}
 
+	if h.App.Metadata.AnilistClientRef.Get() == nil {
+		return h.RespondWithError(c, errors.New("AniList client not initialized"))
+	}
 	ret, err := anilist.ListRecentAiringAnimeM(
 		shared_platform.NewCacheLayer(h.App.Metadata.AnilistClientRef),
 		p.Page,
@@ -539,10 +547,10 @@ func (h *Handler) HandleAnilistListRecentAiringAnime(c echo.Context) error {
 					loadedMediaIds[lf.MediaId] = struct{}{}
 				}
 
-				var filteredSchedules []*anilist.ListRecentAnime_Page_AiringSchedules
 				if ret.Page != nil && ret.Page.AiringSchedules != nil {
+					var filteredSchedules []*anilist.ListRecentAnime_Page_AiringSchedules
 					for _, schedule := range ret.Page.AiringSchedules {
-						if schedule.Media != nil {
+						if schedule != nil && schedule.Media != nil {
 							if _, ok := loadedMediaIds[schedule.Media.ID]; ok {
 								filteredSchedules = append(filteredSchedules, schedule)
 							}

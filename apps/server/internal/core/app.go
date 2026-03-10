@@ -508,8 +508,29 @@ func (a *Antigravity) AddOnRefreshAnilistCollectionFunc(key string, f func()) {
 	a.OnRefreshAnilistCollectionFuncs.Set(key, f)
 }
 
-func (a *Antigravity) Cleanup() {
-	for _, f := range a.Cleanups {
-		f()
+func (a *Antigravity) Cleanup(ctx context.Context) {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+
+		a.Logger.Info().Msg("app: Running cleanup functions...")
+		for _, f := range a.Cleanups {
+			f()
+		}
+
+		a.Logger.Info().Msg("app: Flushing buffered writer...")
+		a.Database.Shutdown()
+
+		a.Logger.Info().Msg("app: Closing database connection...")
+		if err := a.Database.Close(); err != nil {
+			a.Logger.Error().Err(err).Msg("app: Failed to close database connection")
+		}
+	}()
+
+	select {
+	case <-done:
+		a.Logger.Info().Msg("app: Graceful shutdown completed cleanly")
+	case <-ctx.Done():
+		a.Logger.Warn().Msg("app: Shutdown timed out — forcing exit")
 	}
 }
