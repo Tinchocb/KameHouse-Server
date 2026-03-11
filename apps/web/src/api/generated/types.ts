@@ -2,6 +2,13 @@
 
 export type Nullish<T> = T | null | undefined
 
+/**
+ * Strict Enums synchronized from media_enums.go
+ */
+export type Models_MediaFormat = "TV" | "TV_SHORT" | "MOVIE" | "SPECIAL" | "OVA" | "ONA" | "MUSIC" | "MANGA" | "NOVEL" | "ONE_SHOT"
+export type Models_MediaStatus = "FINISHED" | "RELEASING" | "NOT_YET_RELEASED" | "CANCELLED" | "HIATUS"
+export type Models_MediaSeason = "WINTER" | "SPRING" | "SUMMER" | "FALL"
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Anilist
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1381,13 +1388,13 @@ export type Anime_AutoDownloaderRule = {
     episodeType: Anime_AutoDownloaderRuleEpisodeType
     comparisonTitle: string
     titleComparisonType: Anime_AutoDownloaderRuleTitleComparisonType
-    additionalTerms?: Array<string>
-    excludeTerms?: Array<string>
+    additionalTerms: Array<string>
+    excludeTerms: Array<string>
     minSeeders: number
     minSize: string
     maxSize: string
     customEpisodeNumberAbsoluteOffset?: number
-    providers?: Array<string>
+    providers: Array<string>
 }
 
 /**
@@ -1421,31 +1428,31 @@ export type Anime_AutoSelectProfile = {
     /**
      * Ordered list of preferred providers (max 3)
      */
-    providers?: Array<string>
+    providers: Array<string>
     /**
      * Preferred groups (e.g., ["SubsPlease", "Erai-raws"])
      */
-    releaseGroups?: Array<string>
+    releaseGroups: Array<string>
     /**
      * Preferred resolutions (e.g., ["1080p", "720p"])
      */
-    resolutions?: Array<string>
+    resolutions: Array<string>
     /**
      * Can exclude terms like "CamRip"
      */
-    excludeTerms?: Array<string>
+    excludeTerms: Array<string>
     /**
      * Ordered list, e.g. ["jp", "en"]
      */
-    preferredLanguages?: Array<string>
+    preferredLanguages: Array<string>
     /**
      * Ordered list, e.g. ["HEVC, x265, H.265", "AVC, x264"]
      */
-    preferredCodecs?: Array<string>
+    preferredCodecs: Array<string>
     /**
      * Ordered list, e.g. ["BDRip, BD RIP", "AT-X"]
      */
-    preferredSources?: Array<string>
+    preferredSources: Array<string>
     multipleAudioPreference: Anime_AutoSelectPreference
     multipleSubsPreference: Anime_AutoSelectPreference
     batchPreference: Anime_AutoSelectPreference
@@ -1696,9 +1703,9 @@ export type Anime_LibraryCollectionStats = {
 export type Anime_LocalFile = {
     path: string
     name: string
-    parsedInfo?: Anime_LocalFileParsedData
-    parsedFolderInfo?: Array<Anime_LocalFileParsedData>
-    metadata?: Anime_LocalFileMetadata
+    parsedInfo: Anime_LocalFileParsedData | null
+    parsedFolderInfo: Array<Anime_LocalFileParsedData> | null
+    metadata: Anime_LocalFileMetadata | null
     locked: boolean
     /**
      * Unused for now
@@ -3831,8 +3838,8 @@ export type Models_LibraryMedia = {
     /**
      * e.g., "TV", "TV_SHORT", "MOVIE", "OVA", "SPECIAL"
      */
-    format: string
-    status: string
+    format: Models_MediaFormat
+    status: Models_MediaStatus
     titleOriginal: string
     titleRomaji: string
     titleEnglish: string
@@ -4788,8 +4795,8 @@ export type Report_WebSocketLog = {
  */
 export type Summary_ScanSummary = {
     id: string
-    groups?: Array<Summary_ScanSummaryGroup>
-    unmatchedFiles?: Array<Summary_ScanSummaryFile>
+    groups: Array<Summary_ScanSummaryGroup> | null
+    unmatchedFiles: Array<Summary_ScanSummaryFile> | null
 }
 
 /**
@@ -4799,8 +4806,8 @@ export type Summary_ScanSummary = {
  */
 export type Summary_ScanSummaryFile = {
     id: string
-    localFile?: Anime_LocalFile
-    logs?: Array<Summary_ScanSummaryLog>
+    localFile: Anime_LocalFile
+    logs: Array<Summary_ScanSummaryLog>
 }
 
 /**
@@ -4810,7 +4817,7 @@ export type Summary_ScanSummaryFile = {
  */
 export type Summary_ScanSummaryGroup = {
     id: string
-    files?: Array<Summary_ScanSummaryFile>
+    files: Array<Summary_ScanSummaryFile> | null
     mediaId: number
     mediaTitle: string
     mediaImage: string
@@ -4826,8 +4833,8 @@ export type Summary_ScanSummaryGroup = {
  * - Package: summary
  */
 export type Summary_ScanSummaryItem = {
-    createdAt?: string
-    scanSummary?: Summary_ScanSummary
+    createdAt: string
+    scanSummary: Summary_ScanSummary
 }
 
 /**

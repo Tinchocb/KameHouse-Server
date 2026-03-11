@@ -2306,5 +2306,26 @@ export const API_ENDPOINTS = {
             endpoint: "/api/v1/videocore/insight/character/{malId}",
         },
     },
+    HOME: {
+        GetHomeCurated: {
+            key: "HOME-get-home-curated",
+            methods: ["GET"],
+            endpoint: "/api/v1/home/curated",
+        },
+    },
+    RESOLVER: {
+        ResolveStreams: {
+            key: "RESOLVER-resolve-streams",
+            methods: ["GET"],
+            endpoint: "/api/v1/resolver/streams",
+        },
+    },
+    TORRENTIO: {
+        GetTorrentioStreams: {
+            key: "TORRENTIO-get-torrentio-streams",
+            methods: ["GET"],
+            endpoint: "/api/v1/torrentio/streams",
+        },
+    },
 } satisfies ApiEndpoints
 

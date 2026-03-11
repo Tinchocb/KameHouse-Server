@@ -2,11 +2,14 @@
 
 import { getServerBaseUrl } from "@/api/client/server-url"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
-import { queryClient } from "@/app/client-providers"
+import { WebSocketMessage, WSEvents } from "@/lib/server/ws-events"
+import { useQueryClient } from "@tanstack/react-query"
 import React, { useEffect, useMemo } from "react"
 import useWebSocket from "react-use-websocket"
 
 export function WebsocketProvider({ children }: { children: React.ReactNode }) {
+    const queryClient = useQueryClient()
+
     // Dynamically resolve WebSocket URL from the base URL
     const wsUrl = useMemo(() => {
         const base = getServerBaseUrl()
@@ -19,25 +22,35 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
         shouldReconnect: () => true,
         reconnectAttempts: 10,
         reconnectInterval: 3000,
-        share: true, // Allow multiple hooks to share this connection if needed later
+        share: true, // Allow multiple hooks to share this connection
     })
 
     useEffect(() => {
-        if (!lastJsonMessage || typeof lastJsonMessage !== 'object') return
+        if (!lastJsonMessage || typeof lastJsonMessage !== "object") return
 
-        const msg = lastJsonMessage as { type?: string }
-        const eventType = msg.type
+        const msg = lastJsonMessage as WebSocketMessage
 
-        if (
-            eventType === "auto-scan-completed" ||
-            eventType === "library-watcher-file-added" ||
-            eventType === "library-watcher-file-removed"
-        ) {
-            queryClient.invalidateQueries({
-                queryKey: [API_ENDPOINTS.LOCALFILES.GetLocalFiles.key]
-            })
+        switch (msg.type) {
+            case WSEvents.AUTO_SCAN_COMPLETED:
+            case WSEvents.LIBRARY_WATCHER_FILE_ADDED:
+            case WSEvents.LIBRARY_WATCHER_FILE_REMOVED:
+                queryClient.invalidateQueries({
+                    queryKey: [API_ENDPOINTS.LOCALFILES.GetLocalFiles.key]
+                })
+                break
+                
+            case WSEvents.SCAN_PROGRESS:
+            case WSEvents.SCAN_PROGRESS_DETAILED:
+            case WSEvents.SCAN_STATUS:
+                // Intentionally ignored for react-query. 
+                // These high-frequency ephemeral updates are to be handled by Zustand directly (to be implemented)
+                break
+                
+            // Declarative mapping to allow easy addition of future WS event listeners
+            default:
+                break
         }
-    }, [lastJsonMessage])
+    }, [lastJsonMessage, queryClient])
 
     return <>{children}</>
 }

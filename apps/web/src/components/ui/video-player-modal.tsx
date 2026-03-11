@@ -23,6 +23,7 @@ import { useJassub } from "@/hooks/useJassub"
 import { PlayerSettingsMenu } from "@/components/ui/PlayerSettingsMenu"
 import { TimelineHeatmap, type InsightNode } from "@/components/ui/timeline-heatmap"
 import type { AudioTrack, SubtitleTrack, StreamTrackInfo } from "@/components/ui/track-types"
+import { useAppStore } from "@/lib/store"
 
 export interface VideoPlayerModalProps {
     streamUrl: string
@@ -129,9 +130,12 @@ export function VideoPlayerModal({
     // Custom Controls State
     const [isPlaying, setIsPlaying] = useState(false)
     const [duration, setDuration] = useState(0)
-    const [volume, setVolume] = useState(1)
+    const volume = useAppStore(state => state.playerVolume)
+    const setVolume = useAppStore(state => state.setPlayerVolume)
     const [isMuted, setIsMuted] = useState(false)
-    const [isFullscreen, setIsFullscreen] = useState(false)
+    const isFullscreen = useAppStore(state => state.isFullscreen)
+    const setIsFullscreen = useAppStore(state => state.setFullscreen)
+    const currentQuality = useAppStore(state => state.currentQuality)
 
     // Visibility
     const [isControlsVisible, setIsControlsVisible] = useState(true)

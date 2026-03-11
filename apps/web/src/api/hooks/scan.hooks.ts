@@ -1,10 +1,15 @@
-import { useServerMutation } from "@/api/client/requests"
+import { useServerMutation, useServerQuery } from "@/api/client/requests"
 import { ScanLocalFiles_Variables } from "@/api/generated/endpoint.types"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { useRefreshLibraryExplorerFileTree } from "@/api/generated/library_explorer.hooks"
-import { Anime_LocalFile } from "@/api/generated/types"
+import { Anime_LocalFile, Summary_ScanSummary } from "@/api/generated/types"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+
+export const scanQueryKeys = {
+    all: ['scan'] as const,
+    summaries: () => [...scanQueryKeys.all, 'summaries'] as const,
+}
 
 export function useScanLocalFiles(onSuccess?: () => void) {
     const queryClient = useQueryClient()
@@ -25,5 +30,14 @@ export function useScanLocalFiles(onSuccess?: () => void) {
         },
     })
 }
+
+export function useGetScanSummaries() {
+    return useServerQuery<Array<Summary_ScanSummary>>({
+        endpoint: API_ENDPOINTS.SCAN_SUMMARY.GetScanSummaries.endpoint,
+        method: API_ENDPOINTS.SCAN_SUMMARY.GetScanSummaries.methods[0],
+        queryKey: scanQueryKeys.summaries(),
+    })
+}
+
 
 

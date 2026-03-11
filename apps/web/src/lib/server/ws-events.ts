@@ -53,18 +53,14 @@ export const enum WSEvents {
     NAKAMA_HOST_CONNECTED = "nakama-host-connected",
     NAKAMA_HOST_DISCONNECTED = "nakama-host-disconnected",
     NAKAMA_ERROR = "nakama-error",
+    NAKAMA_ANIME_LIBRARY_RECEIVED = "nakama-anime-library-received",
+    NAKAMA_CUSTOM_MESSAGE = "nakama-custom-message",
     NAKAMA_STATUS_REQUESTED = "nakama-status-requested",
     NAKAMA_STATUS = "nakama-status",
     NAKAMA_ROOM_CREATED = "nakama-room-created",
     NAKAMA_ROOM_CLOSED = "nakama-room-closed",
     NAKAMA_ROOM_RECONNECTED = "nakama-room-reconnected",
     NAKAMA_WATCH_PARTY_STATE = "nakama-watch-party-state",
-    NAKAMA_WATCH_PARTY_CREATED = "nakama-watch-party-created",
-    NAKAMA_WATCH_PARTY_JOINED = "nakama-watch-party-joined",
-    NAKAMA_WATCH_PARTY_LEFT = "nakama-watch-party-left",
-    NAKAMA_WATCH_PARTY_STOPPED = "nakama-watch-party-stopped",
-    NAKAMA_WATCH_PARTY_PLAYBACK_INFO = "nakama-watch-party-playback-info",
-    NAKAMA_WATCH_PARTY_PLAYBACK_STATUS = "nakama-watch-party-playback-status",
     NAKAMA_WATCH_PARTY_ENABLE_RELAY_MODE = "nakama-watch-party-enable-relay-mode",
     NAKAMA_WATCH_PARTY_RELAY_MODE_TOGGLE_SHARE_LIBRARY_WITH_ORIGIN = "nakama-watch-party-relay-mode-toggle-share-library-with-origin",
     NAKAMA_WATCH_PARTY_CHAT_MESSAGE = "nakama-watch-party-chat-message",
@@ -78,3 +74,25 @@ export const enum WSEvents {
 export const enum WebviewEvents {
     ANIME_ENTRY_PAGE_VIEWED = "anime-entry-page-viewed",
 }
+
+export interface ScanProgressDetailedPayload {
+    stage: string
+    fileCount?: number
+    skipped?: number
+    matched?: number
+    unmatched?: number
+    totalFiles?: number
+    message: string
+}
+
+export type WebSocketMessage =
+    | { type: WSEvents.SCAN_PROGRESS; payload: number }
+    | { type: WSEvents.SCAN_PROGRESS_DETAILED; payload: ScanProgressDetailedPayload }
+    | { type: WSEvents.SCAN_STATUS; payload: string }
+    | { type: WSEvents.ANILIST_DATA_LOADED; payload: null }
+    | { type: WSEvents.LIBRARY_WATCHER_FILE_ADDED; payload: string }
+    | { type: WSEvents.LIBRARY_WATCHER_FILE_REMOVED; payload: string }
+    | { type: WSEvents.AUTO_SCAN_STARTED; payload: null }
+    | { type: WSEvents.AUTO_SCAN_COMPLETED; payload: null }
+    | { type: Omit<string, WSEvents>; payload: unknown } // Catch-all for unmapped events
+

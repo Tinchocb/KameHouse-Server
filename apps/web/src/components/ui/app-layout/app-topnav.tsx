@@ -1,3 +1,6 @@
+"use client"
+
+import { useAppStore } from "@/lib/store"
 import { Link } from "@tanstack/react-router"
 import * as React from "react"
 import { FaBook, FaCog, FaHome, FaSearch, FaUserCircle, FaFilm, FaTv } from "react-icons/fa"
@@ -27,6 +30,16 @@ export interface AppTopNavProps extends React.ComponentPropsWithoutRef<"header">
 
 export const AppTopNav = React.forwardRef<HTMLElement, AppTopNavProps>((props, ref) => {
     const { className, breadcrumbs, actionButtons, ...rest } = props
+    
+    // UI Zustand Selectors
+    const setSidebarOpen = useAppStore(state => state.setSidebarOpen)
+    const activeTheme = useAppStore(state => state.activeTheme)
+    const setActiveTheme = useAppStore(state => state.setActiveTheme)
+
+    // Example handler for Theme toggle
+    const handleThemeToggle = () => {
+        setActiveTheme(activeTheme === "dark" ? "light" : "dark")
+    }
 
     return (
         <header
@@ -82,13 +95,22 @@ export const AppTopNav = React.forwardRef<HTMLElement, AppTopNavProps>((props, r
                 <div className="flex items-center justify-end gap-5 flex-1">
                     {actionButtons ? actionButtons : (
                         <>
-                            <button className="text-zinc-400 hover:text-white transition-colors p-2 rounded-full hover:bg-white/5">
+                            <button 
+                                onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))} // Trigger CommandPalette
+                                className="text-zinc-400 hover:text-white transition-colors p-2 rounded-full hover:bg-white/5"
+                            >
                                 <FaSearch className="w-5 h-5" />
                             </button>
-                            <button className="text-zinc-400 hover:text-white transition-colors p-2 rounded-full hover:bg-white/5">
+                            <button 
+                                onClick={handleThemeToggle}
+                                className="text-zinc-400 hover:text-white transition-colors p-2 rounded-full hover:bg-white/5"
+                            >
                                 <FaCog className="w-5 h-5" />
                             </button>
-                            <button className="text-zinc-300 hover:text-white transition-colors">
+                            <button 
+                                onClick={() => setSidebarOpen(true)}
+                                className="text-zinc-300 hover:text-white transition-colors p-2 rounded-full hover:bg-white/5"
+                            >
                                 <FaUserCircle className="w-8 h-8" />
                             </button>
                         </>

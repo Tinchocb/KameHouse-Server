@@ -1046,7 +1046,7 @@ export type LocalFileBulkAction_Variables = {
  */
 export type UpdateLocalFileData_Variables = {
     path: string
-    metadata?: Anime_LocalFileMetadata
+    metadata?: Anime_LocalFileMetadata | null
     locked: boolean
     ignored: boolean
     mediaId: number

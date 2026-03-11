@@ -1,4 +1,4 @@
-import { ClientProviders, queryClient, store } from "@/app/client-providers"
+import { ClientProviders, queryClient } from "@/app/client-providers"
 import "./app/globals.css"
 import { createRouter, RouterProvider } from "@tanstack/react-router"
 import React from "react"
@@ -12,7 +12,6 @@ const router = createRouter({
     defaultPreload: false, // anilist rate limits
     context: {
         queryClient,
-        store,
     },
     scrollRestoration: true,
     defaultPreloadStaleTime: 0,

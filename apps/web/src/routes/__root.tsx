@@ -3,7 +3,6 @@ import { LoadingOverlayWithLogo } from "@/components/shared/loading-overlay-with
 import { NotFound } from "@/components/shared/not-found"
 import { QueryClient } from "@tanstack/react-query"
 import { createRootRouteWithContext, Outlet, redirect } from "@tanstack/react-router"
-import { createStore } from "jotai"
 import React from "react"
 import { AppLayout, AppLayoutContent } from "@/components/ui/app-layout/app-layout"
 import { AppTopNav, AppBottomNav } from "@/components/ui/app-layout/app-topnav"
@@ -15,7 +14,6 @@ import { WebsocketProvider } from "@/app/websocket-provider"
 
 export const Route = createRootRouteWithContext<{
     queryClient: QueryClient
-    store: ReturnType<typeof createStore>
 }>()({
     component: () => {
         const routerState = useRouterState()

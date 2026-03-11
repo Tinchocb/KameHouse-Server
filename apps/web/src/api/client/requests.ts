@@ -1,22 +1,17 @@
 import { getServerBaseUrl } from "@/api/client/server-url"
 import { useMutation, UseMutationOptions, useQuery, UseQueryOptions } from "@tanstack/react-query"
-import { useAtomValue, atom, useAtom } from "jotai"
 import { useLocation } from "@tanstack/react-router"
 import { useEffect } from "react"
 import { toast } from "sonner"
 
-// Stub atom – auth is not in use for the standalone UI
-const serverAuthTokenAtom = atom<string | undefined>(undefined)
-
-export class APIError extends Error {
-    status: number;
-    data: any;
-
-    constructor(message: string, status: number, data: any) {
+export class ApiError extends Error {
+    constructor(
+        public readonly message: string,
+        public readonly status: number,
+        public readonly data?: any
+    ) {
         super(message);
-        this.name = "APIError";
-        this.status = status;
-        this.data = data;
+        this.name = "ApiError";
     }
 }
 
@@ -29,7 +24,8 @@ type SeaQuery<D> = {
 }
 
 export function useSeaQuery() {
-    const password = useAtomValue(serverAuthTokenAtom)
+    // Stub – auth is not in use for the standalone UI
+    const password = undefined
 
     return {
         seaFetch: <T, D = void>(endpoint: string, method: "POST" | "GET" | "PATCH" | "DELETE" | "PUT", data?: D, params?: D) => {
@@ -107,20 +103,24 @@ export async function buildSeaQuery<T, D = void>(
                     continue;
                 }
 
-                throw new APIError(errorData?.error || `HTTP Error ${res.status}`, res.status, errorData);
+                const errorMessage = typeof errorData === "object" && errorData?.error ? errorData.error : `HTTP Error ${res.status}`;
+                throw new ApiError(errorMessage, res.status, errorData);
             }
 
-            // Expected response format: { data: T, error?: string } or similar
-            const json = await res.json();
-            const response = _handleSeaResponse<T>(json);
-
-            if (response.error) {
-                throw new APIError(response.error, res.status, json);
+            // Expected response format: { data: T, error?: string } from Go backend
+            const json = await res.json() as { data?: T; error?: string };
+            
+            if (json.error) {
+                throw new ApiError(json.error, res.status, json);
             }
-            return response.data;
+            if (!("data" in json)) {
+                throw new ApiError("Malformed response payload: missing 'data'", res.status, json);
+            }
+            
+            return json.data as T;
 
         } catch (error) {
-            // Network errors or already thrown APIError
+            // Network errors or already thrown ApiError
             if (error instanceof TypeError && attempt < maxRetries) { // fetch throws TypeError on network failure
                 attempt++;
                 const delay = 1000 * Math.pow(2, attempt - 1);
@@ -135,9 +135,10 @@ export async function buildSeaQuery<T, D = void>(
     return undefined; // Should not reach here
 }
 
-type ServerMutationProps<R, V = void, C = unknown> = Omit<UseMutationOptions<R | undefined, APIError, V, C>, "mutationFn"> & {
+type ServerMutationProps<R, V = void, C = unknown> = Omit<UseMutationOptions<R | undefined, ApiError, V, C>, "mutationFn"> & {
     endpoint: string
     method: "POST" | "GET" | "PATCH" | "DELETE" | "PUT"
+    throwOnError?: boolean
 }
 
 export function useServerMutation<R = void, V = void, C = unknown>(
@@ -147,9 +148,9 @@ export function useServerMutation<R = void, V = void, C = unknown>(
         ...options
     }: ServerMutationProps<R, V, C>) {
 
-    const password = useAtomValue(serverAuthTokenAtom)
+    const password = undefined
 
-    return useMutation<R | undefined, APIError, V, C>({
+    return useMutation<R | undefined, ApiError, V, C>({
         onError: (...args) => {
             const [error, variables, context] = args;
             console.log("Mutation error", error)
@@ -176,12 +177,13 @@ export function useServerMutation<R = void, V = void, C = unknown>(
     })
 }
 
-type ServerQueryProps<R, V> = Omit<UseQueryOptions<R | undefined, APIError, R | undefined>, "queryFn"> & {
+type ServerQueryProps<R, V> = Omit<UseQueryOptions<R | undefined, ApiError, R | undefined>, "queryFn"> & {
     endpoint: string
     method: "POST" | "GET" | "PATCH" | "DELETE" | "PUT"
     params?: V
     data?: V
     muteError?: boolean
+    throwOnError?: boolean
 }
 
 export function useServerQuery<R, V = void>(
@@ -195,9 +197,9 @@ export function useServerQuery<R, V = void>(
     }: ServerQueryProps<R, V>) {
 
     const pathname = useLocation().pathname
-    const [password, setPassword] = useAtom(serverAuthTokenAtom)
+    const password = undefined
 
-    const props = useQuery<R | undefined, APIError>({
+    const props = useQuery<R | undefined, ApiError>({
         queryFn: async () => {
             return buildSeaQuery<R, V>({
                 endpoint: endpoint,
@@ -213,7 +215,6 @@ export function useServerQuery<R, V = void>(
     useEffect(() => {
         if (!muteError && props.isError) {
             if (props.error?.data?.error === "UNAUTHENTICATED" && pathname !== "/public/auth") {
-                setPassword(undefined)
                 window.location.href = "/public/auth"
                 return
             }
@@ -226,7 +227,7 @@ export function useServerQuery<R, V = void>(
                 toast.error(errorMsg)
             }
         }
-    }, [props.error, props.isError, muteError, pathname, setPassword])
+    }, [props.error, props.isError, muteError, pathname])
 
     return props
 }
@@ -260,15 +261,4 @@ function _handleSeaError(data: unknown): string {
     }
 }
 
-function _handleSeaResponse<T>(res: unknown): { data?: T; error?: string } {
-    if (typeof res === "object" && res !== null) {
-        const obj = res as Record<string, unknown>
-        if ("error" in obj && typeof obj.error === "string") {
-            return { error: obj.error }
-        }
-        if ("data" in obj) {
-            return { data: obj.data as T }
-        }
-    }
-    return { error: "No response from the server" }
-}
+
