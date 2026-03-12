@@ -10,12 +10,12 @@ import (
 
 // FolderInfo contains metadata extracted from the folder structure (Jellyfin/Kodi style).
 type FolderInfo struct {
-	SeriesName         string // e.g. "Dragon Ball Z"
-	Year               int    // e.g. 1989 (0 if not found)
-	Season             int    // e.g. 2 (0 if not in a Season folder)
-	IsMovie            bool   // true if detected as a movie
-	ExplicitProvider   string // e.g. "anilist", "tmdb", "imdb"
-	ExplicitID         string // e.g. "12345", "tt12345"
+	SeriesName       string // e.g. "Dragon Ball Z"
+	Year             int    // e.g. 1989 (0 if not found)
+	Season           int    // e.g. 2 (0 if not in a Season folder)
+	IsMovie          bool   // true if detected as a movie
+	ExplicitProvider string // e.g. "anilist", "tmdb", "imdb"
+	ExplicitID       string // e.g. "12345", "tt12345"
 }
 
 var (

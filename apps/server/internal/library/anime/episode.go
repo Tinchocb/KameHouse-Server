@@ -21,11 +21,11 @@ type (
 		ProgressNumber        int                  `json:"progressNumber"` // Usually the same as EpisodeNumber, unless there is a discrepancy between AniList and AniDB
 		LocalFile             *LocalFile           `json:"localFile"`
 		AdditionalFiles       []*LocalFile         `json:"additionalFiles,omitempty"` // Multiple versions of the same episode
-		IsDownloaded          bool                 `json:"isDownloaded"`            // Is in the local files
-		EpisodeMetadata       *EpisodeMetadata     `json:"episodeMetadata"`         // (image, airDate, length, summary, overview)
-		FileMetadata          *LocalFileMetadata   `json:"fileMetadata"`            // (episode, aniDBEpisode, type...)
-		IsInvalid             bool                 `json:"isInvalid"`               // No AniDB data
-		MetadataIssue         string               `json:"metadataIssue,omitempty"` // Alerts the user that there is a discrepancy between AniList and AniDB
+		IsDownloaded          bool                 `json:"isDownloaded"`              // Is in the local files
+		EpisodeMetadata       *EpisodeMetadata     `json:"episodeMetadata"`           // (image, airDate, length, summary, overview)
+		FileMetadata          *LocalFileMetadata   `json:"fileMetadata"`              // (episode, aniDBEpisode, type...)
+		IsInvalid             bool                 `json:"isInvalid"`                 // No AniDB data
+		MetadataIssue         string               `json:"metadataIssue,omitempty"`   // Alerts the user that there is a discrepancy between AniList and AniDB
 		BaseAnime             *models.LibraryMedia `json:"baseAnime,omitempty"`
 		// IsNakamaEpisode indicates that this episode is from the Nakama host's anime library.
 		IsNakamaEpisode bool `json:"_isNakamaEpisode"`

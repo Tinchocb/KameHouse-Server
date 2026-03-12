@@ -46,7 +46,7 @@ func (h *Handler) HandleGetLocalFiles(c echo.Context) error {
 
 		start := (page - 1) * perPage
 		end := start + perPage
-		
+
 		if start >= len(lfs) {
 			return h.RespondWithData(c, map[string]interface{}{
 				"items":    []*dto.LocalFile{},
@@ -54,11 +54,11 @@ func (h *Handler) HandleGetLocalFiles(c echo.Context) error {
 				"nextPage": 0,
 			})
 		}
-		
+
 		if end > len(lfs) {
 			end = len(lfs)
 		}
-		
+
 		return h.RespondWithData(c, map[string]interface{}{
 			"items":    lfs[start:end],
 			"hasMore":  end < len(lfs),

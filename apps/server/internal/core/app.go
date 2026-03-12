@@ -28,6 +28,7 @@ import (
 	"kamehouse/internal/manga"
 	"kamehouse/internal/mediastream"
 	"kamehouse/internal/nakama"
+	"kamehouse/internal/nativeplayer"
 	"kamehouse/internal/onlinestream"
 	"kamehouse/internal/platforms/anilist_platform"
 	"kamehouse/internal/platforms/offline_platform"
@@ -41,13 +42,17 @@ import (
 	"kamehouse/internal/updater"
 	"kamehouse/internal/user"
 	"kamehouse/internal/util"
+	"kamehouse/internal/videocore"
+	"kamehouse/internal/util/cache"
 	"kamehouse/internal/util/filecache"
 	"kamehouse/internal/util/result"
+	"kamehouse/internal/ws"
 	"log"
 	"os"
 	"path/filepath"
 	"runtime"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog"
 )
@@ -85,6 +90,7 @@ type (
 
 		// Real-time communication
 		WSEventManager *events.WSEventManager
+		WSHub          *ws.Hub
 
 		// Extensions
 		ExtensionRepository           *extension_repo.Repository
@@ -96,6 +102,10 @@ type (
 		OnlinestreamRepository  *onlinestream.Repository
 		MediastreamRepository   *mediastream.Repository
 		TorrentstreamRepository *torrentstream.Repository
+
+		// Phase 2: Base Providers
+		NativePlayer *nativeplayer.NativePlayer
+		VideoCore    *videocore.VideoCore
 
 		// Manga services
 		MangaRepository *manga.Repository
@@ -109,12 +119,14 @@ type (
 		Updater          *updater.Updater
 		SelfUpdater      *updater.SelfUpdater
 		ReportRepository *report.Repository
+		ThumbnailCache   *cache.ThumbnailCache
 
 		// Integrations
 		DiscordPresence *discordrpc_presence.Presence
 
 		// Continuity and sync
 		ContinuityManager *continuity.Manager
+		TelemetryManager  *continuity.TelemetryManager
 
 		// Lifecycle management
 		Cleanups                        []func()
@@ -367,10 +379,45 @@ func NewAntigravity(configOpts *ConfigOptions, selfupdater *updater.SelfUpdater)
 	isOfflineRef := util.NewRef(cfg.Server.Offline)
 	offlinePlatformRef := util.NewRef[platform.Platform](offlinePlatform)
 
-	// Initialize online streaming repository
+	// +---------------------+
+	// | Phase 2: Base       |
+	// +---------------------+
+
+	continuityManager := continuity.NewManager(&continuity.NewManagerOptions{
+		FileCacher: fileCacher,
+		Logger:     logger,
+		Database:   database,
+	})
+
+	telemetryManager := continuity.NewTelemetryManager(continuityManager, logger, 5*time.Second)
+
+	discordPresence := discordrpc_presence.New(nil, logger)
+
+	var provisionalApp *Antigravity
+
+	videoCore := videocore.New(videocore.NewVideoCoreOptions{
+		WsEventManager:             wsEventManager,
+		Logger:                     logger,
+		MetadataProviderRef:        metadataProviderRef,
+		ContinuityManager:          continuityManager,
+		DiscordPresence:            discordPresence,
+		PlatformRef:                activePlatformRef,
+		RefreshAnimeCollectionFunc: func() {
+			if provisionalApp != nil {
+				_, _ = provisionalApp.RefreshAnimeCollection()
+			}
+		},
+		IsOfflineRef:               isOfflineRef,
+	})
+
+	nativePlayer := nativeplayer.New(nativeplayer.NewNativePlayerOptions{
+		WsEventManager: wsEventManager,
+		Logger:         logger,
+		VideoCore:      videoCore,
+	})
 
 	// Create a provisional ref for Continuity Manager that will be hydrated in initModulesOnce
-	continuityManagerRef := util.NewRef[any](nil)
+	continuityManagerRef := util.NewRef[any](continuityManager)
 
 	onlinestreamRepository := onlinestream.NewRepository(&onlinestream.NewRepositoryOptions{
 		Logger:              logger,
@@ -384,6 +431,12 @@ func NewAntigravity(configOpts *ConfigOptions, selfupdater *updater.SelfUpdater)
 
 	// Initialize extension playground for testing extensions
 	extensionPlaygroundRepository := extension_playground.NewPlaygroundRepository(logger, activePlatformRef, metadataProviderRef)
+
+	// Initialize Thumbnail Cache (LRU bounded to 1000 items to prevent OOM)
+	thumbnailCache, err := cache.NewThumbnailCache(1000)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("app: Failed to initialize thumbnail cache")
+	}
 
 	// Create the main app instance with initialized components
 	app := &Antigravity{
@@ -399,6 +452,7 @@ func NewAntigravity(configOpts *ConfigOptions, selfupdater *updater.SelfUpdater)
 		},
 		LocalManager:                  localManager,
 		WSEventManager:                wsEventManager,
+		WSHub:                         ws.NewHub(),
 		AnilistCacheDir:               anilistCacheDir,
 		Logger:                        logger,
 		Version:                       constants.Version,
@@ -410,6 +464,12 @@ func NewAntigravity(configOpts *ConfigOptions, selfupdater *updater.SelfUpdater)
 		ExtensionBankRef:              extensionBankRef,
 		ExtensionPlaygroundRepository: extensionPlaygroundRepository,
 		ReportRepository:              report.NewRepository(logger),
+		ThumbnailCache:                thumbnailCache,
+		NativePlayer:                  nativePlayer,
+		VideoCore:                     videoCore,
+		ContinuityManager:             continuityManager,
+		TelemetryManager:              telemetryManager,
+		DiscordPresence:               discordPresence,
 		TorrentRepository:             nil, // Initialized in App.initModulesOnce
 		FillerManager:                 nil, // Initialized in App.initModulesOnce
 		MangaDownloader:               nil, // Initialized in App.initModulesOnce
@@ -417,13 +477,11 @@ func NewAntigravity(configOpts *ConfigOptions, selfupdater *updater.SelfUpdater)
 		AutoScanner:                   nil, // Initialized in App.initModulesOnce
 		MediastreamRepository:         nil, // Initialized in App.initModulesOnce
 		TorrentstreamRepository:       nil, // Initialized in App.initModulesOnce
-		ContinuityManager:             nil, // Initialized in App.initModulesOnce
 		DebridClientRepository:        nil, // Initialized in App.initModulesOnce
 		DirectStreamManager:           nil, // Initialized in App.initModulesOnce
 		NakamaManager:                 nil, // Initialized in App.initModulesOnce
 		LibraryExplorer:               nil, // Initialized in App.initModulesOnce
 		TorrentClientRepository:       nil, // Initialized in App.InitOrRefreshModules
-		DiscordPresence:               nil, // Initialized in App.InitOrRefreshModules
 		previousVersion:               previousVersion,
 		FeatureFlags:                  NewFeatureFlags(cfg, logger),
 		IsDesktopSidecar:              configOpts.Flags.IsDesktopSidecar,
@@ -440,8 +498,7 @@ func NewAntigravity(configOpts *ConfigOptions, selfupdater *updater.SelfUpdater)
 		ServerPasswordHash:              serverPasswordHash,
 	}
 
-	// Set the Manager into the ref for OnlineStreamRepository
-	continuityManagerRef.Set(app.ContinuityManager)
+	provisionalApp = app
 
 	// Initialize MAL Scrobbler DLQ Queue
 	app.Metadata.MalScrobbler = mal.NewMalScrobblerWorker(database, logger)

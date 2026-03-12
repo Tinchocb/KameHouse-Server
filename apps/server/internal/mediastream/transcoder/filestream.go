@@ -2,6 +2,7 @@ package transcoder
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"kamehouse/internal/mediastream/videofile"
 	"kamehouse/internal/util/result"
@@ -178,15 +179,12 @@ func (fs *FileStream) getVideoStream(quality Quality) *VideoStream {
 //}
 
 // GetVideoSegment gets a segment of a video stream of a specific quality.
-func (fs *FileStream) GetVideoSegment(quality Quality, segment int32) (string, error) {
+func (fs *FileStream) GetVideoSegment(ctx context.Context, quality Quality, segment int32) (string, error) {
 	streamLogger.Debug().Msgf("filestream: Retrieving video segment %d (%s)", segment, quality)
 	// Debug
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	timeoutCtx, cancel := context.WithTimeout(ctx, time.Second*30)
 	defer cancel()
-	debugStreamRequest(fmt.Sprintf("video %s, segment %d", quality, segment), ctx)
-
-	//stream := fs.getVideoStream(quality)
-	//return stream.GetSegment(segment)
+	debugStreamRequest(fmt.Sprintf("video %s, segment %d", quality, segment), timeoutCtx)
 
 	// Channel to signal completion
 	done := make(chan struct{})
@@ -198,15 +196,18 @@ func (fs *FileStream) GetVideoSegment(quality Quality, segment int32) (string, e
 	go func() {
 		defer close(done)
 		stream := fs.getVideoStream(quality)
-		ret, err = stream.GetSegment(segment)
+		ret, err = stream.GetSegment(ctx, segment)
 	}()
 
 	// Wait for either the operation to complete or the timeout to occur
 	select {
 	case <-done:
 		return ret, err
-	case <-ctx.Done():
-		return "", fmt.Errorf("filestream: timeout while retrieving video segment %d (%s)", segment, quality)
+	case <-timeoutCtx.Done():
+		if errors.Is(timeoutCtx.Err(), context.DeadlineExceeded) {
+			return "", fmt.Errorf("filestream: timeout while retrieving video segment %d (%s)", segment, quality)
+		}
+		return "", timeoutCtx.Err()
 	}
 }
 
@@ -217,15 +218,15 @@ func (fs *FileStream) GetAudioIndex(audio int32) (string, error) {
 }
 
 // GetAudioSegment gets a segment of an audio stream of a specific index.
-func (fs *FileStream) GetAudioSegment(audio int32, segment int32) (string, error) {
+func (fs *FileStream) GetAudioSegment(ctx context.Context, audio int32, segment int32) (string, error) {
 	streamLogger.Debug().Msgf("filestream: Retrieving audio %d segment %d", audio, segment)
 	// Debug
-	ctx, cancel := context.WithCancel(context.Background())
+	debugCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	debugStreamRequest(fmt.Sprintf("audio %d, segment %d", audio, segment), ctx)
+	debugStreamRequest(fmt.Sprintf("audio %d, segment %d", audio, segment), debugCtx)
 
 	stream := fs.getAudioStream(audio)
-	return stream.GetSegment(segment)
+	return stream.GetSegment(ctx, segment)
 }
 
 // getAudioStream gets an audio stream of a specific index.

@@ -2,6 +2,8 @@ package continuity
 
 import (
 	"context"
+	"kamehouse/internal/database/db"
+	"kamehouse/internal/database/models"
 	"sync"
 	"time"
 
@@ -102,22 +104,22 @@ func (tm *TelemetryManager) FlushToDatabase() {
 	tm.memoryBatch = make(map[int]TelemetryEvent)
 	tm.batchMutex.Unlock()
 
+	var records []models.WatchHistory
 	for _, event := range clonedBatch {
-		opts := &UpdateWatchHistoryItemOptions{
-			MediaId:       event.MediaId,
+		records = append(records, models.WatchHistory{
+			MediaID:       event.MediaId,
 			EpisodeNumber: event.EpisodeNumber,
 			CurrentTime:   event.CurrentTime,
 			Duration:      event.Duration,
-			Kind:          event.Kind,
-			Filepath:      event.Filepath,
-		}
+		})
+	}
 
-		err := tm.manager.UpdateWatchHistoryItem(opts)
-		if err != nil {
-			tm.logger.Error().Err(err).Int("MediaID", event.MediaId).Msg("telemetry: Async DB Flush failed")
-		} else {
-			tm.logger.Trace().Int("MediaID", event.MediaId).Msg("telemetry: Flushed bulk tick to disk successfully")
-		}
+	repo := db.NewWatchHistoryRepository(tm.manager.db.Gorm())
+	err := repo.UpsertBatch(records)
+	if err != nil {
+		tm.logger.Error().Err(err).Int("batchSize", len(records)).Msg("telemetry: Async DB Flush failed")
+	} else {
+		tm.logger.Trace().Int("batchSize", len(records)).Msg("telemetry: Flushed bulk tick to disk successfully")
 	}
 }
 

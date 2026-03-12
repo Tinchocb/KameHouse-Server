@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
-	"strings"
 	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
@@ -14,6 +12,8 @@ import (
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
 	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/samber/lo"
 	"github.com/sourcegraph/conc/pool"

@@ -52,10 +52,10 @@ const (
 
 // Errors
 var (
-	ErrMediaNotFound    = errors.New("streaming: media not found for this provider")
-	ErrStreamNotReady   = errors.New("streaming: stream is not ready yet")
-	ErrUnsupported      = errors.New("streaming: provider does not support this media")
-	ErrServerSaturated  = errors.New("streaming: maximum concurrent transcode sessions reached")
+	ErrMediaNotFound   = errors.New("streaming: media not found for this provider")
+	ErrStreamNotReady  = errors.New("streaming: stream is not ready yet")
+	ErrUnsupported     = errors.New("streaming: provider does not support this media")
+	ErrServerSaturated = errors.New("streaming: maximum concurrent transcode sessions reached")
 )
 
 // Resolver manages multiple StreamProviders and resolves streams by priority.

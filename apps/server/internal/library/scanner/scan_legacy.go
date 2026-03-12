@@ -9,7 +9,6 @@ import (
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/api/tmdb"
 	"kamehouse/internal/database/db"
-
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/events"
@@ -33,7 +32,6 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/samber/lo"
-	"golang.org/x/sync/errgroup"
 )
 
 var ErrNoLocalFiles = errors.New("[matcher] no local files")
@@ -278,50 +276,54 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	})
 
 	// ── Bounded worker pool for LocalFile creation ────────────────────────────
-	// lop.Map spawns one goroutine per path (unbounded). On libraries with
-	// 10k+ files this exhausts file descriptors and goroutine memory.
-	// errgroup.SetLimit caps concurrency to NumCPU I/O workers.
-	maxWorkers := runtime.NumCPU()
+	maxWorkers := runtime.NumCPU() * 2
 	if maxWorkers < 4 {
 		maxWorkers = 4
 	}
 
-	resultsMu := sync.Mutex{}
-	localFiles = make([]*dto.LocalFile, 0, len(paths))
+	jobs := make(chan string, len(paths))
+	results := make(chan *dto.LocalFile, len(paths))
 	var skipped atomic.Int64
 
-	eg, egCtx := errgroup.WithContext(ctx)
-	eg.SetLimit(maxWorkers)
+	var workerWg sync.WaitGroup
+	for i := 0; i < maxWorkers; i++ {
+		workerWg.Add(1)
+		go func() {
+			defer workerWg.Done()
+			for path := range jobs {
+				select {
+				case <-ctx.Done():
+					results <- nil
+					continue
+				default:
+				}
+				normPath := util.NormalizePath(path)
+				if _, ok := skippedLfs[normPath]; ok {
+					skipped.Add(1)
+					results <- nil
+					continue
+				}
+				lf := dto.NewLocalFileS(path, libraryPaths)
+				results <- lf
+			}
+		}()
+	}
 
-	pathsCh := make(chan string, len(paths))
 	for _, p := range paths {
-		pathsCh <- p
+		jobs <- p
 	}
-	close(pathsCh)
+	close(jobs)
 
-	for p := range pathsCh {
-		path := p // capture for goroutine
-		eg.Go(func() error {
-			select {
-			case <-egCtx.Done():
-				return egCtx.Err()
-			default:
-			}
-			normPath := util.NormalizePath(path)
-			if _, ok := skippedLfs[normPath]; ok {
-				skipped.Add(1)
-				return nil
-			}
-			lf := dto.NewLocalFileS(path, libraryPaths)
-			resultsMu.Lock()
+	go func() {
+		workerWg.Wait()
+		close(results)
+	}()
+
+	localFiles = make([]*dto.LocalFile, 0, len(paths))
+	for lf := range results {
+		if lf != nil {
 			localFiles = append(localFiles, lf)
-			resultsMu.Unlock()
-			return nil
-		})
-	}
-
-	if err = eg.Wait(); err != nil && !errors.Is(err, context.Canceled) {
-		return nil, err
+		}
 	}
 
 	// Invoke ScanLocalFilesParsed hook
@@ -680,6 +682,9 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 			// Map from TMDB media ID → LibraryMedia DB ID
 			libraryMediaIdMap := make(map[int]uint)
 
+			var mediaBatch []*models.LibraryMedia
+
+			// Build the slice of items to insert
 			for id := range allMatchedIds {
 				if id == 0 {
 					continue
@@ -736,16 +741,25 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 					}
 				}
 
-				if saved, err := db.InsertLibraryMedia(scn.Database, newMedia); err == nil && saved != nil {
-					libraryMediaIdMap[id] = saved.ID
-					scn.Logger.Debug().
-						Int("mediaId", id).
-						Uint("libraryMediaId", saved.ID).
-						Str("title", saved.GetPreferredTitle()).
-						Str("format", newMedia.Format).
-						Msg("scanner: Created/updated LibraryMedia for TMDB entry")
-				} else if err != nil {
-					scn.Logger.Warn().Err(err).Int("mediaId", id).Msg("scanner: Failed to create LibraryMedia")
+				mediaBatch = append(mediaBatch, newMedia)
+			}
+
+			// Atomic Bulk Upsert to evade WAL contention and N+1 inserts
+			if len(mediaBatch) > 0 {
+				err = db.UpsertLibraryMediaBatch(scn.Database, mediaBatch, 100)
+				if err != nil {
+					scn.Logger.Warn().Err(err).Msg("scanner: Failed to bulk upsert LibraryMedia batch")
+				}
+			}
+
+			// In Bulk Upserts, we don't naturally get the generated sequence IDs back cleanly for associations
+			// depending on the engine. We need to fetch the newly created items to retrieve their generated Primary Keys
+			// to map to the `libraryMediaIdMap` map so local files know which LibraryMedia they belong to.
+			var insertedMedia []*models.LibraryMedia
+			if scn.Database != nil {
+				scn.Database.Gorm().Where("tmdb_id IN ?", lo.Map(mediaBatch, func(m *models.LibraryMedia, _ int) int { return m.TmdbId })).Find(&insertedMedia)
+				for _, m := range insertedMedia {
+					libraryMediaIdMap[-m.TmdbId] = m.ID
 				}
 			}
 

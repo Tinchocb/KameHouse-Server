@@ -37,7 +37,7 @@ func (m *BaseAnime) FetchMediaTree(rel FetchMediaTreeRelation, anilistClient Ani
 
 	defer util.HandlePanicInModuleWithError("anilist/BaseAnime.FetchMediaTree", &err)
 
-	rl.Wait()
+	_ = rl.Wait(context.Background())
 	res, err := anilistClient.CompleteAnimeByID(context.Background(), &m.ID)
 	if err != nil {
 		return err
@@ -118,7 +118,7 @@ func processEdge(edge *CompleteAnime_Relations_Edges, rel FetchMediaTreeRelation
 	cacheV, ok := cache.Get(edge.GetNode().ID)
 	edgeCompleteAnime := cacheV
 	if !ok {
-		rl.Wait()
+		_ = rl.Wait(context.Background())
 		// Fetch the next node
 		res, err := anilistClient.CompleteAnimeByID(context.Background(), &edge.GetNode().ID)
 		if err == nil {

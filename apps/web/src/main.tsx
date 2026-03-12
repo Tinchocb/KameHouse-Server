@@ -30,16 +30,6 @@ if (import.meta.env.DEV) {
     document.head.appendChild(script)
 }
 
-if ("serviceWorker" in navigator && import.meta.env.PROD) {
-    window.addEventListener("load", () => {
-        navigator.serviceWorker.register("/service-worker.js").then((registration) => {
-            console.log("SW registered: ", registration)
-        }).catch((registrationError) => {
-            console.log("SW registration failed: ", registrationError)
-        })
-    })
-}
-
 ReactDOM.createRoot(document.getElementById("root")!).render(
     <ClientProviders>
         <RouterProvider router={router} />

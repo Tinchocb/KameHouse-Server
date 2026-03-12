@@ -11,10 +11,12 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"kamehouse/internal/database/db"
-	"kamehouse/internal/util/parallel"
+	"kamehouse/internal/library/parser"
+	"kamehouse/internal/metadata"
 
 	"github.com/rs/zerolog"
 	"github.com/samber/lo"
@@ -42,6 +44,7 @@ type ScannerAgent struct {
 	dirCache       *DirCache // Directory-level cache to prevent redundant API calls
 	mediaContainer *MediaContainer
 	database       *db.Database
+	fetcher        *metadata.Fetcher
 	logger         *zerolog.Logger
 
 	triggerCh chan struct{}
@@ -124,32 +127,57 @@ func (a *ScannerAgent) Scan(ctx context.Context) error {
 		return err
 	}
 
-	totalProcessed := 0
-	batches := lo.Chunk(paths, a.config.BatchSize)
+	// STAGE 2 & 3: Parallel Processing & Atomic Writes
+	jobs := make(chan string, len(paths))
+	results := make(chan MediaMatch, len(paths))
+	var wg sync.WaitGroup
 
-	// STAGE 2 & 3: Parallel Processing & Atomic Writes grouped by Batch
-	for _, batch := range batches {
-		if ctx.Err() != nil {
-			// Flush whatever finishes early before returning
-			return ctx.Err()
+	maxWorkers := runtime.NumCPU() * 2
+	if maxWorkers < 4 {
+		maxWorkers = 4
+	}
+
+	// Spawn fixed Fan-Out worker pool bounds
+	for i := 0; i < maxWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for path := range jobs {
+				select {
+				case <-ctx.Done():
+					results <- MediaMatch{} // Push empty on cancellation
+				default:
+					results <- a.processPath(ctx, path)
+				}
+			}
+		}()
+	}
+
+	// Fan-Out path supplier
+	for _, p := range paths {
+		jobs <- p
+	}
+	close(jobs)
+
+	// Single synchronisation anchor for Fan-In
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	var allResults []MediaMatch
+	for match := range results {
+		if match.OriginalPath != "" {
+			allResults = append(allResults, match)
 		}
+	}
 
-		// Use util/parallel to hydrate files concurrently without saturating sockets
-		batchMatches := parallel.Map(batch, func(path string, _ int) MediaMatch {
-			// Cancellation monitor
-			select {
-			case <-ctx.Done():
-				return MediaMatch{}
-			default:
-				return a.processPath(ctx, path)
-			}
-		})
+	totalProcessed := 0
+	batches := lo.Chunk(allResults, a.config.BatchSize)
 
-		var batchResults []MediaMatch
-		for _, match := range batchMatches {
-			if match.ParsedMedia.OriginalPath != "" {
-				batchResults = append(batchResults, match)
-			}
+	for _, batchResults := range batches {
+		if ctx.Err() != nil {
+			return ctx.Err()
 		}
 
 		// Single SQLite Transaction for the entire batch to evade WAL contention
@@ -160,9 +188,9 @@ func (a *ScannerAgent) Scan(ctx context.Context) error {
 				err := tx.Exec(`
 					INSERT INTO local_files (path, updated_at) VALUES (?, ?)
 					ON CONFLICT(path) DO UPDATE SET updated_at = excluded.updated_at
-				`, m.ParsedMedia.OriginalPath, time.Now()).Error
+				`, m.OriginalPath, time.Now()).Error
 				if err != nil && a.logger != nil {
-					a.logger.Warn().Err(err).Str("path", m.ParsedMedia.OriginalPath).Msg("Batch insert skip")
+					a.logger.Warn().Err(err).Str("path", m.OriginalPath).Msg("Batch insert skip")
 				}
 			}
 			tx.Commit()
@@ -227,14 +255,35 @@ func (a *ScannerAgent) processPath(ctx context.Context, path string) MediaMatch 
 	if cachedEntry != nil {
 		// Fast path: reuse cached directory result
 		pm := Normalize(path)
+		
+		// Run regex parser for Episode/Resolution extraction
+		parsed := parser.Parse(path)
+		
 		match = MediaMatch{
 			ParsedMedia: pm,
+			CleanTitle:  parsed.Title,
 			ExternalID:  fmt.Sprintf("AL:%d", cachedEntry.MediaID),
 			Confidence:  cachedEntry.Confidence,
 		}
 	} else {
 		// Slow path: full analysis
 		match = a.Analyze(path)
+		
+		// Run regex parser
+		parsed := parser.Parse(path)
+		
+		// Use fetcher to get proper TMDB/AniList metadata and cache it
+		if parsed.Title != "" {
+			meta, _ := a.fetcher.Search(parsed.Title)
+			if meta.Title != "" {
+				// We attach the resolved title overriding the raw filename scrape
+				match.CleanTitle = meta.Title 
+			match.Synopsis = meta.Synopsis
+			match.PosterURL = meta.PosterURL
+			} else {
+				match.CleanTitle = parsed.Title
+			}
+		}
 
 		// Cache the result for sibling files in the same directory
 		if match.Confidence >= a.config.MinConfidence {
@@ -258,5 +307,5 @@ func (a *ScannerAgent) processPath(ctx context.Context, path string) MediaMatch 
 // Analyze connects the scanner to the NLP parser and identity resolver.
 func (a *ScannerAgent) Analyze(path string) MediaMatch {
 	pm := Normalize(path)
-	return a.ScoreAndResolve(pm)
+	return a.ScoreAndResolve(pm, path)
 }

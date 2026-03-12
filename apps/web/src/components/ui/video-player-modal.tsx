@@ -244,7 +244,7 @@ export function VideoPlayerModal({
     const { data: addonSubtitles } = useGetAddonSubtitles("series", mediaId)
 
     // Playback Telemetry
-    const telemetry = usePlaybackTelemetry(mediaId ? String(mediaId) : "")
+    usePlaybackTelemetry(videoRef, mediaId, episodeNumber)
 
     // Settings
     const { data: settings } = useGetSettings()
@@ -453,11 +453,9 @@ export function VideoPlayerModal({
             if (!completionSentRef.current && dur > 0 && time / dur >= 0.9) {
                 completionSentRef.current = true
                 saveContinuity(dur, dur)
-                telemetry.reportProgress(dur, true)
             }
 
             // Playback telemetry
-            telemetry.reportProgress(time, false)
         }
         const updateDuration = () => setDuration(video.duration)
         const onPlay = () => {
@@ -471,7 +469,6 @@ export function VideoPlayerModal({
             setIsPlaying(false)
             if (video.duration > 0) {
                 saveContinuity(video.currentTime, video.duration)
-                telemetry.reportProgress(video.currentTime, true)
             }
             // Flash the center pause icon
             if (centerFlashTimerRef.current) clearTimeout(centerFlashTimerRef.current)
@@ -486,7 +483,6 @@ export function VideoPlayerModal({
 
         return () => {
             saveContinuity(video.currentTime, video.duration)
-            telemetry.reportProgress(video.currentTime, true)
             if (lsKey) localStorage.setItem(lsKey, String(video.currentTime))
             if (posInterval) clearInterval(posInterval)
             video.removeEventListener('timeupdate', updateTime)
@@ -725,11 +721,11 @@ export function VideoPlayerModal({
                 // Playback telemetry
                 onEnded={() => {
                     const video = videoRef.current
-                    if (video) telemetry.reportProgress(video.currentTime, true)
+                    if (video) {} 
                 }}
                 onSeeked={() => {
                     const video = videoRef.current
-                    if (video) telemetry.reportProgress(video.currentTime, true)
+                    if (video) {} 
                 }}
             >
                 {/* Addon subtitle tracks (external WebVTT sources from addon system) */}

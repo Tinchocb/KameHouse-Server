@@ -8,6 +8,7 @@ import (
 
 	"kamehouse/internal/database/models/dto"
 	librarymetadata "kamehouse/internal/library/metadata"
+	"kamehouse/internal/util/limiter"
 
 	"golang.org/x/sync/singleflight"
 )
@@ -68,6 +69,7 @@ func (c *metadataFetchCache) FetchOnce(
 	ctx context.Context,
 	title string,
 	providers []librarymetadata.Provider,
+	limiter *limiter.Limiter,
 ) (*dto.NormalizedMedia, error) {
 	key := cacheKey(title)
 
@@ -92,6 +94,12 @@ func (c *metadataFetchCache) FetchOnce(
 			// Exponential back-off for HTTP 429 from the external provider.
 			retryErr := retryWithBackoff(ctx, 3, func() error {
 				var err error
+				// Global Rate Limit block to smoothly ride out bursts
+				if limiter != nil {
+					if err := limiter.Wait(ctx); err != nil {
+						return err
+					}
+				}
 				searchRes, err = provider.SearchMedia(title)
 				return err
 			})

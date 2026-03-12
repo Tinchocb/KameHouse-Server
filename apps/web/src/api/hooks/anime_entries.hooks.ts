@@ -13,6 +13,14 @@ import { AL_BaseAnime, Anime_Entry, Anime_LocalFile, Anime_MissingEpisodes, Anim
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
+export const fetchAnimeEntry = async (id: string | number) => {
+    const { buildSeaQuery } = await import("@/api/client/requests")
+    return buildSeaQuery<Anime_Entry>({
+        endpoint: API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.endpoint.replace("{id}", String(id)),
+        method: API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.methods[0],
+    })
+}
+
 export function useGetAnimeEntry(id: Nullish<string | number>) {
     return useServerQuery<Anime_Entry>({
         endpoint: API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.endpoint.replace("{id}", String(id)),

@@ -1,5 +1,6 @@
 import { ApiError } from "@/api/client/requests"
 import { WebsocketProvider } from "@/app/websocket-provider"
+import { PwaRegistry } from "@/components/pwa-registry"
 import { CustomCSSProvider } from "@/components/shared/custom-css-provider"
 import { CustomThemeProvider } from "@/components/shared/custom-theme-provider"
 import { Toaster } from "@/components/ui/toaster"
@@ -47,22 +48,6 @@ export const queryClient = new QueryClient({
 
 export const ClientProviders: React.FC<ClientProvidersProps> = ({ children }) => {
 
-    // Register the Workbox/OPFS Service Worker for Aggressive Video Caching
-    useEffect(() => {
-        if ('serviceWorker' in navigator && import.meta.env.PROD) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js').then(
-                    (registration) => {
-                        console.log('Antigravity OPFS ServiceWorker registered: ', registration.scope);
-                    },
-                    (err) => {
-                        console.error('Antigravity OPFS ServiceWorker registration failed: ', err);
-                    }
-                );
-            });
-        }
-    }, []);
-
     return (
         <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme={"dark"}>
             <CookiesProvider>
@@ -71,6 +56,7 @@ export const ClientProviders: React.FC<ClientProvidersProps> = ({ children }) =>
                         {children}
                         <CustomThemeProvider />
                         <Toaster />
+                        <PwaRegistry />
                     </WebsocketProvider>
                     <CustomCSSProvider />
                     {/*{import.meta.env.MODE === "development" && <React.Suspense fallback={null}>*/}

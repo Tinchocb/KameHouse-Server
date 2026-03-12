@@ -42,7 +42,7 @@ func TestTelemetryManager_Stress(t *testing.T) {
 	for i := 0; i < workers; i++ {
 		go func(workerID int) {
 			defer wg.Done()
-			
+
 			// Each worker pushes 10 fast progress updates (simulating a few seconds of watching)
 			for j := 0; j < 10; j++ {
 				manager.TelemetryManager.Queue(TelemetryEvent{
@@ -69,7 +69,7 @@ func TestTelemetryManager_Stress(t *testing.T) {
 	// Verify that the entry exists in the DB/Cache
 	items, err := filecache.GetAll[WatchHistoryItem](cacher, *manager.watchHistoryFileCacheBucket)
 	require.NoError(t, err)
-	
+
 	// Because of deduplication across 500 concurrent goroutines updating mediaId 1,
 	// only the absolute last processed tick should survive. We expect 1 item.
 	require.Len(t, items, 1)

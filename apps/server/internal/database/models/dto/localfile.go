@@ -192,7 +192,7 @@ func (lf *LocalFile) GetSeasonNumber() int {
 			return 1 // Drop fake season
 		}
 	}
-	
+
 	if lf.ParsedData != nil && lf.ParsedData.Season != "" {
 		if s, err := strconv.Atoi(lf.ParsedData.Season); err == nil {
 			return s

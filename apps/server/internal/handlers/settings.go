@@ -43,19 +43,19 @@ func (h *Handler) HandleGetSettings(c echo.Context) error {
 func (h *Handler) HandleGettingStarted(c echo.Context) error {
 
 	type body struct {
-		Library               models.LibrarySettings      `json:"library"`
-		MediaPlayer           models.MediaPlayerSettings  `json:"mediaPlayer"`
-		Torrent               models.TorrentSettings      `json:"torrent"`
-		Anilist               models.AnilistSettings      `json:"anilist"`
-		Discord               models.DiscordSettings      `json:"discord"`
-		Manga                 models.MangaSettings        `json:"manga"`
-		Notifications         models.NotificationSettings `json:"notifications"`
-		Nakama                models.NakamaSettings       `json:"nakama"`
-		Jellyfin              models.JellyfinSettings     `json:"jellyfin"`
-		EnableTranscode       bool                        `json:"enableTranscode"`
-		EnableTorrentStreaming bool                       `json:"enableTorrentStreaming"`
-		DebridProvider        string                      `json:"debridProvider"`
-		DebridApiKey          string                      `json:"debridApiKey"`
+		Library                models.LibrarySettings      `json:"library"`
+		MediaPlayer            models.MediaPlayerSettings  `json:"mediaPlayer"`
+		Torrent                models.TorrentSettings      `json:"torrent"`
+		Anilist                models.AnilistSettings      `json:"anilist"`
+		Discord                models.DiscordSettings      `json:"discord"`
+		Manga                  models.MangaSettings        `json:"manga"`
+		Notifications          models.NotificationSettings `json:"notifications"`
+		Nakama                 models.NakamaSettings       `json:"nakama"`
+		Jellyfin               models.JellyfinSettings     `json:"jellyfin"`
+		EnableTranscode        bool                        `json:"enableTranscode"`
+		EnableTorrentStreaming bool                        `json:"enableTorrentStreaming"`
+		DebridProvider         string                      `json:"debridProvider"`
+		DebridApiKey           string                      `json:"debridApiKey"`
 	}
 
 	var b body
@@ -70,13 +70,13 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 	b.Library.IncludeOnlineStreamingInLibrary = b.Library.EnableOnlinestream
 
 	settings, err := h.App.Database.UpsertSettings(&models.Settings{
-		BaseModel: models.BaseModel{ID: 1, UpdatedAt: time.Now()},
-		Library:   &b.Library,
-		MediaPlayer: &b.MediaPlayer,
-		Torrent:     &b.Torrent,
-		Anilist:     &b.Anilist,
-		Discord:     &b.Discord,
-		Manga:       &b.Manga,
+		BaseModel:     models.BaseModel{ID: 1, UpdatedAt: time.Now()},
+		Library:       &b.Library,
+		MediaPlayer:   &b.MediaPlayer,
+		Torrent:       &b.Torrent,
+		Anilist:       &b.Anilist,
+		Discord:       &b.Discord,
+		Manga:         &b.Manga,
 		Notifications: &b.Notifications,
 		Nakama:        &b.Nakama,
 		Jellyfin:      &b.Jellyfin,
@@ -270,8 +270,6 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 
 	return h.RespondWithData(c, h.NewStatus(c))
 }
-
-
 
 // HandleSaveAutoDownloaderSettings
 //

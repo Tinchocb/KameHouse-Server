@@ -22,6 +22,14 @@ export interface ExtendedLibraryCollection extends Omit<Anime_LibraryCollection,
     }>
 }
 
+export const fetchLibraryCollection = async () => {
+    const { buildSeaQuery } = await import("@/api/client/requests")
+    return buildSeaQuery<Anime_LibraryCollection>({
+        endpoint: API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.endpoint,
+        method: API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.methods[0],
+    })
+}
+
 export function useGetLibraryCollection({ enabled }: { enabled?: boolean } = { enabled: true }) {
     return useServerQuery<Anime_LibraryCollection>({
         endpoint: API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.endpoint,

@@ -19,6 +19,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -30,7 +31,6 @@ import (
 	"kamehouse/internal/library/scanner/video_analyzer"
 
 	"github.com/rs/zerolog"
-	lop "github.com/samber/lo/parallel"
 )
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -58,20 +58,26 @@ type ScanResult struct {
 	Errors       int
 }
 
+// EventBroadcaster defines a generic interface for pushing real-time events to clients without coupling to the ws package.
+type EventBroadcaster interface {
+	Broadcast(eventType string, payload any)
+}
+
 // MediaScannerOptions bundles all external dependencies (all optional).
 type MediaScannerOptions struct {
-	LibraryDirs []string      // root paths to walk
-	Database    *db.Database  // persistence layer
+	LibraryDirs []string     // root paths to walk
+	Database    *db.Database // persistence layer
 	Logger      *zerolog.Logger
 	Agent       *ScannerAgent // for Bayesian identity resolution
 	Workers     int           // CRC32 goroutine pool size (default 4)
+	EventHub    EventBroadcaster
 }
 
 // MediaScanner is named intentionally to avoid collision with the production
 // Scanner struct declared in scan_legacy.go.
 type MediaScanner struct {
 	opts         MediaScannerOptions
-	fingerprints sync.Map   // path → uint32 CRC32; FastScan delta filter
+	fingerprints sync.Map // path → uint32 CRC32; FastScan delta filter
 	running      atomic.Bool
 }
 
@@ -112,48 +118,73 @@ func (s *MediaScanner) RunScan(ctx context.Context, mode ScanMode) (ScanResult, 
 
 	// Stage 2: Parallel parse (habari tokeniser + NFO reading)
 	dirPaths := s.opts.LibraryDirs
-	localFiles := lop.Map(paths, func(path string, _ int) *dto.LocalFile {
-		if ctx.Err() != nil {
-			return nil
-		}
-		
-		var lf *dto.LocalFile
-		for _, d := range dirPaths {
-			if strings.HasPrefix(path, d) {
-				lf = dto.NewLocalFile(path, d)
-				break
-			}
-		}
-		if lf == nil {
-			lf = dto.NewLocalFile(path, filepath.Dir(path))
-		}
+	maxWorkers := runtime.NumCPU() * 2
+	if maxWorkers < 4 {
+		maxWorkers = 4
+	}
 
-		// NFO Parsing Logic (Jellyfin/Kodi compatible)
-		nfoPath := findNfoForFile(path, dirPaths)
-		if nfoPath != "" {
-			if nfo, err := ParseNfoFile(nfoPath); err == nil && nfo != nil {
-				if nfo.ID > 0 {
-					lf.MediaId = nfo.ID
-				} else if nfo.TmdbId > 0 {
-					lf.MediaId = -nfo.TmdbId
+	jobs := make(chan string, len(paths))
+	results := make(chan *dto.LocalFile, len(paths))
+
+	var wg sync.WaitGroup
+	for i := 0; i < maxWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for path := range jobs {
+				if ctx.Err() != nil {
+					results <- nil
+					continue
 				}
-				
-				// Explicit Season/Episode overriding logic
-				if nfo.Season > 0 || nfo.Episode > 0 {
-					if lf.ParsedData == nil {
-						lf.ParsedData = &dto.LocalFileParsedData{}
+
+				var lf *dto.LocalFile
+				for _, d := range dirPaths {
+					if strings.HasPrefix(path, d) {
+						lf = dto.NewLocalFile(path, d)
+						break
 					}
-					lf.ParsedData.Season = strconv.Itoa(nfo.Season)
-					lf.ParsedData.Episode = strconv.Itoa(nfo.Episode)
 				}
+				if lf == nil {
+					lf = dto.NewLocalFile(path, filepath.Dir(path))
+				}
+
+				// NFO Parsing Logic (Jellyfin/Kodi compatible)
+				nfoPath := findNfoForFile(path, dirPaths)
+				if nfoPath != "" {
+					if nfo, err := ParseNfoFile(nfoPath); err == nil && nfo != nil {
+						if nfo.ID > 0 {
+							lf.MediaId = nfo.ID
+						} else if nfo.TmdbId > 0 {
+							lf.MediaId = -nfo.TmdbId
+						}
+
+						// Explicit Season/Episode overriding logic
+						if nfo.Season > 0 || nfo.Episode > 0 {
+							if lf.ParsedData == nil {
+								lf.ParsedData = &dto.LocalFileParsedData{}
+							}
+							lf.ParsedData.Season = strconv.Itoa(nfo.Season)
+							lf.ParsedData.Episode = strconv.Itoa(nfo.Episode)
+						}
+					}
+				}
+				results <- lf
 			}
-		}
+		}()
+	}
 
-		return lf
-	})
+	for _, p := range paths {
+		jobs <- p
+	}
+	close(jobs)
 
-	valid := make([]*dto.LocalFile, 0, len(localFiles))
-	for _, lf := range localFiles {
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	valid := make([]*dto.LocalFile, 0, len(paths))
+	for lf := range results {
 		if lf != nil {
 			valid = append(valid, lf)
 		}
@@ -167,12 +198,12 @@ func (s *MediaScanner) RunScan(ctx context.Context, mode ScanMode) (ScanResult, 
 	// Stage 4: Technical Probing (FFprobe Parallel Workers)
 	s.logf(zerolog.InfoLevel, "scanner: running technical probe (ffprobe)")
 	analyzer := video_analyzer.New(s.opts.Logger)
-	
+
 	validPaths := make([]string, 0, len(valid))
 	for _, lf := range valid {
 		validPaths = append(validPaths, lf.Path)
 	}
-	
+
 	analysisResults := analyzer.AnalyzeParallel(ctx, validPaths)
 	analysisMap := make(map[string]*video_analyzer.VideoInfo, len(analysisResults))
 	for _, res := range analysisResults {
@@ -182,7 +213,7 @@ func (s *MediaScanner) RunScan(ctx context.Context, mode ScanMode) (ScanResult, 
 			s.logf(zerolog.WarnLevel, "scanner: ffprobe failed for %s: %v", res.Filepath, res.Error)
 		}
 	}
-	
+
 	for _, lf := range valid {
 		if info, ok := analysisMap[lf.Path]; ok {
 			lf.TechnicalInfo = mapVideoInfoToDto(info)
@@ -312,6 +343,12 @@ func (s *MediaScanner) persist(newFiles []*dto.LocalFile) error {
 	}
 
 	_, err = db.SaveLocalFiles(s.opts.Database, lfsID, merged)
+	if err == nil && s.opts.EventHub != nil {
+		go s.opts.EventHub.Broadcast("library_updated", map[string]string{
+			"status":  "success",
+			"message": "Library metadata has been refreshed",
+		})
+	}
 	return err
 }
 
@@ -351,25 +388,25 @@ func (s *MediaScanner) logf(level zerolog.Level, format string, args ...any) {
 // findNfoForFile traverses upwards to find a Jellyfin/Kodi compatible NFO file.
 func findNfoForFile(videoPath string, libraryDirs []string) string {
 	dir := filepath.Dir(videoPath)
-	
+
 	// 1. Episode/Movie specific NFO (same name)
 	specificNfo := strings.TrimSuffix(videoPath, filepath.Ext(videoPath)) + ".nfo"
 	if _, err := os.Stat(specificNfo); err == nil {
 		return specificNfo
 	}
-	
+
 	// 2. Folder-level TV show NFO
 	for {
 		tvshowNfo := filepath.Join(dir, "tvshow.nfo")
 		if _, err := os.Stat(tvshowNfo); err == nil {
 			return tvshowNfo
 		}
-		
+
 		movieNfo := filepath.Join(dir, "movie.nfo")
 		if _, err := os.Stat(movieNfo); err == nil {
 			return movieNfo
 		}
-		
+
 		// Stop ascending if we hit a library root
 		isRoot := false
 		for _, lib := range libraryDirs {
@@ -388,7 +425,7 @@ func findNfoForFile(videoPath string, libraryDirs []string) string {
 		}
 		dir = parent
 	}
-	
+
 	return ""
 }
 
@@ -397,14 +434,14 @@ func mapVideoInfoToDto(info *video_analyzer.VideoInfo) *dto.FileTechnicalInfo {
 	if info == nil {
 		return nil
 	}
-	
+
 	tech := &dto.FileTechnicalInfo{
 		Duration: info.Duration,
 		Size:     info.Size,
 		Bitrate:  info.Bitrate,
 		Format:   info.Format,
 	}
-	
+
 	if info.VideoStream != nil {
 		tech.VideoStream = &dto.VideoStreamInfo{
 			Codec:          info.VideoStream.Codec,
@@ -417,7 +454,7 @@ func mapVideoInfoToDto(info *video_analyzer.VideoInfo) *dto.FileTechnicalInfo {
 			ColorPrimaries: info.VideoStream.ColorPrimaries,
 		}
 	}
-	
+
 	for _, audio := range info.AudioStreams {
 		tech.AudioStreams = append(tech.AudioStreams, &dto.AudioStreamInfo{
 			Codec:    audio.Codec,
@@ -425,7 +462,7 @@ func mapVideoInfoToDto(info *video_analyzer.VideoInfo) *dto.FileTechnicalInfo {
 			Title:    audio.Title,
 		})
 	}
-	
+
 	for _, sub := range info.SubtitleStreams {
 		tech.SubtitleStreams = append(tech.SubtitleStreams, &dto.AudioStreamInfo{
 			Codec:    sub.Codec,
@@ -433,6 +470,6 @@ func mapVideoInfoToDto(info *video_analyzer.VideoInfo) *dto.FileTechnicalInfo {
 			Title:    sub.Title,
 		})
 	}
-	
+
 	return tech
 }

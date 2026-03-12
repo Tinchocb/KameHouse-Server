@@ -646,7 +646,7 @@ func (ap *AnilistPlatform) AddMediaToCollection(ctx context.Context, mIds []int)
 	for _, _id := range mIds {
 		wg.Add(1)
 		go func(id int) {
-			rateLimiter.Wait()
+			rateLimiter.Wait(context.Background())
 			defer wg.Done()
 
 			if customsource.IsExtensionId(id) {

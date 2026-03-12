@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"kamehouse/internal/api/anilist"
@@ -58,7 +59,7 @@ func NewMediaTreeAnalysis(opts *MediaTreeAnalysisOptions) (*MediaTreeAnalysis, e
 	p := pool.NewWithResults[*MediaTreeAnalysisBranch]().WithErrors()
 	for _, rel := range relations {
 		p.Go(func() (*MediaTreeAnalysisBranch, error) {
-			opts.rateLimiter.Wait()
+			opts.rateLimiter.Wait(context.Background())
 
 			animeMetadata, err := opts.metadataProviderRef.Get().GetAnimeMetadata(metadata.AnilistPlatform, rel.ID)
 			if err != nil {

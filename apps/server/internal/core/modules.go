@@ -68,11 +68,7 @@ func (a *App) initModulesOnce() {
 	// |     Continuity      |
 	// +---------------------+
 
-	a.ContinuityManager = continuity.NewManager(&continuity.NewManagerOptions{
-		FileCacher: a.FileCacher,
-		Logger:     a.Logger,
-		Database:   a.Database,
-	})
+	// ContinuityManager is now initialized in app.go (Phase 2)
 
 	// +---------------------+
 	// | Torrent Repository  |
@@ -130,8 +126,8 @@ func (a *App) initModulesOnce() {
 			_, _ = a.RefreshAnimeCollection()
 		},
 		IsOfflineRef: a.IsOfflineRef(),
-		NativePlayer: nil,
-		VideoCore:    nil,
+		NativePlayer: a.NativePlayer,
+		VideoCore:    a.VideoCore,
 	})
 
 	// +---------------------+
@@ -148,7 +144,7 @@ func (a *App) initModulesOnce() {
 		WSEventManager:      a.WSEventManager,
 		Database:            a.Database,
 		DirectStreamManager: a.DirectStreamManager,
-		NativePlayer:        nil,
+		NativePlayer:        a.NativePlayer,
 	})
 
 	// +---------------------+
@@ -245,8 +241,8 @@ func (a *App) initModulesOnce() {
 		PlatformRef:             a.Metadata.AnilistPlatformRef,
 		ServerHost:              a.Config.Server.Host,
 		ServerPort:              a.Config.Server.Port,
-		NativePlayer:            nil,
-		VideoCore:               nil,
+		NativePlayer:            a.NativePlayer,
+		VideoCore:               a.VideoCore,
 		DirectStreamManager:     a.DirectStreamManager,
 		IsOfflineRef:            a.IsOfflineRef(),
 	})
@@ -262,7 +258,7 @@ func (a *App) initModulesOnce() {
 		PlatformRef:             a.Metadata.AnilistPlatformRef,
 		WSEventManager:          a.WSEventManager,
 		NakamaManager:           a.NakamaManager,
-		NativePlayer:            nil,
+		NativePlayer:            a.NativePlayer,
 		Database:                a.Database,
 		Logger:                  a.Logger,
 	})

@@ -149,7 +149,7 @@ func (ts *Stream) GetIndex() (string, error) {
 }
 
 // GetSegment returns the path to the segment and waits for it to be ready.
-func (ts *Stream) GetSegment(segment int32) (string, error) {
+func (ts *Stream) GetSegment(ctx context.Context, segment int32) (string, error) {
 	// DEVNOTE: Reset the kill channel
 	// This is needed because when the segment is needed again, this channel should be open
 	ts.killCh = make(chan struct{})
@@ -195,6 +195,8 @@ func (ts *Stream) GetSegment(segment int32) (string, error) {
 		// It's used to interrupt the waiting process but might not be needed since there's a timeout
 		case <-ts.killCh:
 			return "", fmt.Errorf("transcoder: Stream killed while waiting for segment %d", segment)
+		case <-ctx.Done():
+			return "", ctx.Err()
 		case <-readyChan:
 			break
 		case <-time.After(25 * time.Second):
@@ -500,13 +502,31 @@ func (ts *Stream) run(start int32) error {
 	if err != nil {
 		return err
 	}
-	var stderr strings.Builder
-	cmd.Stderr = &stderr
+	stderrPipe, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
 
 	err = cmd.Start()
 	if err != nil {
 		return err
 	}
+
+	// Unbounded memory fix: Consume stderr to avoid FFmpeg choking on OS pipe
+	var stderrLock sync.Mutex
+	var stderrLines []string
+	go func() {
+		scanner := bufio.NewScanner(stderrPipe)
+		for scanner.Scan() {
+			stderrLock.Lock()
+			stderrLines = append(stderrLines, scanner.Text())
+			if len(stderrLines) > 50 { // Cap ring buffer to 50 lines avoiding OOM
+				stderrLines = stderrLines[1:]
+			}
+			stderrLock.Unlock()
+		}
+	}()
+
 	ts.lockHeads()
 	ts.heads[encoderId].command = cmd
 	ts.heads[encoderId].stdin = stdin
@@ -594,10 +614,15 @@ func (ts *Stream) run(start int32) error {
 	// Listen for process termination
 	go func() {
 		err := cmd.Wait()
+
+		stderrLock.Lock()
+		stderrStr := strings.Join(stderrLines, "\n")
+		stderrLock.Unlock()
+
 		var exitErr *exec.ExitError
 		// Check if hardware acceleration was attempted and if stderr indicates a failure to use it
 		if len(ts.settings.HwAccel.DecodeFlags) > 0 {
-			lowerOutput := strings.ToLower(stderr.String())
+			lowerOutput := strings.ToLower(stderrStr)
 			if strings.Contains(lowerOutput, "failed") &&
 				(strings.Contains(lowerOutput, "hwaccel") || strings.Contains(lowerOutput, "vaapi") || strings.Contains(lowerOutput, "cuvid") || strings.Contains(lowerOutput, "vdpau")) {
 				streamLogger.Warn().Int("eid", encoderId).Msg("transcoder: ffmpeg failed to use hardware acceleration settings; falling back to CPU")
@@ -606,8 +631,8 @@ func (ts *Stream) run(start int32) error {
 
 		if errors.As(err, &exitErr) && exitErr.ExitCode() == 255 {
 			streamLogger.Trace().Int("eid", encoderId).Msgf("transcoder: ffmpeg process was terminated")
-		} else if err != nil {
-			streamLogger.Error().Int("eid", encoderId).Err(fmt.Errorf("%s: %s", err, stderr.String())).Msgf("transcoder: ffmpeg process failed")
+		} else if err != nil && err.Error() != "signal: killed" && !errors.Is(err, context.Canceled) {
+			streamLogger.Error().Int("eid", encoderId).Err(fmt.Errorf("%s: %s", err, stderrStr)).Msgf("transcoder: ffmpeg process failed")
 		} else {
 			streamLogger.Trace().Int("eid", encoderId).Msgf("transcoder: ffmpeg process for %s exited", ts.kind)
 		}

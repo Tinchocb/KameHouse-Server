@@ -4,8 +4,9 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/labstack/echo/v4"
 	"kamehouse/internal/videocore"
+
+	"github.com/labstack/echo/v4"
 )
 
 // HandleVideoCoreInSightGetCharacterDetails
@@ -28,7 +29,7 @@ func (h *Handler) HandleVideoCoreInSightGetCharacterDetails(c echo.Context) erro
 func (h *Handler) HandleGetVideoInsights(c echo.Context) error {
 	episodeId := c.Param("episodeId")
 	durationStr := c.QueryParam("duration")
-	
+
 	duration := 1440.0 // 24 minutes default
 	if d, err := strconv.ParseFloat(durationStr, 64); err == nil && d > 0 {
 		duration = d

@@ -1,6 +1,7 @@
 package transcoder
 
 import (
+	"context"
 	"fmt"
 	"kamehouse/internal/mediastream/videofile"
 	"kamehouse/internal/util/result"
@@ -200,6 +201,7 @@ func (t *Transcoder) GetAudioIndex(
 }
 
 func (t *Transcoder) GetVideoSegment(
+	ctx context.Context,
 	path string,
 	hash string,
 	mediaInfo *videofile.MediaInfo,
@@ -227,10 +229,11 @@ func (t *Transcoder) GetVideoSegment(
 		head:    segment,
 	}
 	//t.logger.Trace().Msgf("transcoder: Getting video segment %d (%s) [GetVideoSegment]", segment, quality)
-	return stream.GetVideoSegment(quality, segment)
+	return stream.GetVideoSegment(ctx, quality, segment)
 }
 
 func (t *Transcoder) GetAudioSegment(
+	ctx context.Context,
 	path string,
 	hash string,
 	mediaInfo *videofile.MediaInfo,
@@ -255,5 +258,5 @@ func (t *Transcoder) GetAudioSegment(
 		audio:  audio,
 		head:   segment,
 	}
-	return stream.GetAudioSegment(audio, segment)
+	return stream.GetAudioSegment(ctx, audio, segment)
 }

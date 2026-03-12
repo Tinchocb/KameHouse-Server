@@ -2,6 +2,7 @@ package manga
 
 import (
 	"cmp"
+	"context"
 	"errors"
 	"fmt"
 	"kamehouse/internal/api/anilist"
@@ -294,7 +295,7 @@ func (r *Repository) RefreshChapterContainers(mangaCollection *anilist.MangaColl
 			rateLimiter, ok := rateLimiters[selectedProviderId]
 			mu.Unlock()
 			if ok {
-				rateLimiter.Wait()
+				rateLimiter.Wait(context.Background())
 			}
 
 			// Refetch the container

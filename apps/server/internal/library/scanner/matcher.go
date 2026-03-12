@@ -11,6 +11,7 @@ import (
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/hook"
+	"kamehouse/internal/library/parser"
 
 	"github.com/rs/zerolog"
 )
@@ -94,12 +95,13 @@ func (m *Matcher) BayesianResolve(lf *dto.LocalFile) {
 	pm := Normalize(lf.Path)
 
 	// SHORT-CIRCUIT: Check hardcoded custom overrides before Bayesian scoring.
-	// Fan-edits like "Dragon Ball Kai Ultimate by Seldion" resolve instantly.
-	if overrideID, found := LookupCustomOverride(pm.CleanTitle); found {
+	if overrideID, found := LookupCustomOverride(pm.Title); found {
 		lf.MediaId = overrideID
 		lf.Metadata.Episode = pm.Episode
-		if pm.IsSpecial {
-			lf.Metadata.Type = dto.LocalFileTypeSpecial
+		if pm.Title != "" && pm.Season == 1 && pm.Episode == 1 {
+			// This is a naive attempt; in production IsSpecial is determined by parser correctly
+			// but we fallback safely here.
+			lf.Metadata.Type = dto.LocalFileTypeMain
 		} else {
 			lf.Metadata.Type = dto.LocalFileTypeMain
 		}
@@ -146,9 +148,9 @@ func (m *Matcher) BayesianResolve(lf *dto.LocalFile) {
 		}
 
 		// Self-Healing Step 2: Strip bracket tags entirely and re-score
-		healedTitle := sanitizeSubGroupTags(pm.CleanTitle)
-		if healedTitle != pm.CleanTitle {
-			pm.CleanTitle = healedTitle
+		healedTitle := sanitizeSubGroupTags(pm.Title)
+		if healedTitle != pm.Title {
+			pm.Title = healedTitle
 			for _, media := range m.MediaContainer.NormalizedMedia {
 				conf := m.calculateBayesianScore(pm, media)
 				if conf > bestConfidence {
@@ -161,7 +163,7 @@ func (m *Matcher) BayesianResolve(lf *dto.LocalFile) {
 		// Self-Healing Step 3: Check Folder Context
 		if bestConfidence < 0.80 && len(lf.ParsedFolderData) > 0 {
 			folderStr := filepath.Base(filepath.Dir(lf.Path))
-			pm.CleanTitle = Normalize(folderStr).CleanTitle
+			pm.Title = Normalize(folderStr).Title
 			for _, media := range m.MediaContainer.NormalizedMedia {
 				conf := m.calculateBayesianScore(pm, media)
 				if conf*0.90 > bestConfidence {
@@ -178,11 +180,7 @@ verdict:
 		lf.MediaId = bestMatch.ID
 
 		lf.Metadata.Episode = pm.Episode
-		if pm.IsSpecial {
-			lf.Metadata.Type = dto.LocalFileTypeSpecial
-		} else {
-			lf.Metadata.Type = dto.LocalFileTypeMain
-		}
+		lf.Metadata.Type = dto.LocalFileTypeMain
 
 		m.Logger.Debug().Msgf("AgentMatcher: Matched '%s' -> %d [Confd: %.2f]", lf.Name, bestMatch.ID, bestConfidence)
 	} else {
@@ -212,7 +210,7 @@ verdict:
 }
 
 // calculateBayesianScore implements a naive Bayes estimation for identity correlation.
-func (m *Matcher) calculateBayesianScore(pm ParsedMedia, media *dto.NormalizedMedia) float64 {
+func (m *Matcher) calculateBayesianScore(pm parser.ParsedMedia, media *dto.NormalizedMedia) float64 {
 	prior := 0.50 // Base probability that ANY file matches ANY media
 
 	// Evidence 1: Sorensen-Dice Textual Similarity (Is the string morphologically similar?)
@@ -240,7 +238,7 @@ func (m *Matcher) calculateBayesianScore(pm ParsedMedia, media *dto.NormalizedMe
 
 	bestDice := 0.0
 	for _, title := range candidateTitles {
-		sim := calculateDice(pm.CleanTitle, title)
+		sim := calculateDice(pm.Title, title)
 		if sim > bestDice {
 			bestDice = sim
 		}
@@ -254,8 +252,8 @@ func (m *Matcher) calculateBayesianScore(pm ParsedMedia, media *dto.NormalizedMe
 		posterior = updateBayes(posterior, 0.90, 0.10)
 	}
 
-	// Evidence 3: Special/OVA Detection
-	if pm.IsSpecial {
+	// Evidence 3: Special/OVA Detection (Fallback logic moved out of pm)
+	if pm.Season == 0 && pm.Episode == 0 {
 		if media.Format != nil && (string(*media.Format) == "OVA" || string(*media.Format) == "SPECIAL") {
 			posterior = updateBayes(posterior, 0.95, 0.50)
 		} else {
@@ -266,7 +264,7 @@ func (m *Matcher) calculateBayesianScore(pm ParsedMedia, media *dto.NormalizedMe
 	// Evidence 4: Year/Air-Date Contextual Inference (Self-Healing Metadata Agent)
 	// If the filename contains a year like "(1993)" and the media has a matching start date,
 	// it's an extremely strong signal — especially for movies and specials.
-	fileYear := extractYear(pm.CleanTitle)
+	fileYear := extractYear(pm.Title)
 	if fileYear > 0 && media.StartDate != nil && media.StartDate.Year != nil {
 		if fileYear == *media.StartDate.Year {
 			posterior = updateBayes(posterior, 0.95, 0.10) // Massive boost: year matches

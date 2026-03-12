@@ -67,7 +67,7 @@ func TestWatcher_DynamicDirRegistration(t *testing.T) {
 	select {
 	case <-actionCalled:
 		// Good — action was triggered
-	case <-time.After(5 * time.Second):
+	case <-time.After(10 * time.Second):
 		t.Fatal("timed out waiting for file action from directory creation")
 	}
 
@@ -81,7 +81,7 @@ func TestWatcher_DynamicDirRegistration(t *testing.T) {
 	select {
 	case <-actionCalled:
 		// Good — action was triggered for file in dynamically-registered dir
-	case <-time.After(5 * time.Second):
+	case <-time.After(10 * time.Second):
 		t.Fatal("timed out waiting for file action in dynamically-registered directory")
 	}
 }

@@ -205,7 +205,7 @@ export function PlayerSettingsMenu({
                 aria-expanded={isOpen}
                 onClick={(e) => { e.stopPropagation(); setIsOpen((v) => !v) }}
                 className={cn(
-                    "relative flex items-center justify-center w-9 h-9 rounded-full",
+                    "relative flex items-center justify-center w-12 h-12 rounded-full",
                     "text-white/70 hover:text-white",
                     "transition-all duration-200 hover:scale-110",
                     isOpen && "text-white rotate-45 bg-white/10",

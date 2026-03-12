@@ -24,14 +24,11 @@ func NewCmd(arg string, args ...string) *exec.Cmd {
 }
 
 func NewCmdCtx(ctx context.Context, arg string, args ...string) *exec.Cmd {
-	//cmdPrompt := "C:\\Windows\\system32\\cmd.exe"
-	//cmdArgs := append([]string{"/c", arg}, args...)
-	//cmd := exec.CommandContext(ctx, cmdPrompt, cmdArgs...)
-	//cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	cmd := exec.CommandContext(ctx, arg, args...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{
-		CreationFlags: 0x08000000,
-		//HideWindow:    true,
+		// 0x08000000 = CREATE_NO_WINDOW
+		// 0x00000200 = CREATE_NEW_PROCESS_GROUP
+		CreationFlags: 0x08000200,
 	}
 	return cmd
 }

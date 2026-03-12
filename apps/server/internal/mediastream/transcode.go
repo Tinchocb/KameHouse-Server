@@ -1,15 +1,15 @@
 package mediastream
 
 import (
+	"context"
 	"errors"
 	"kamehouse/internal/events"
 	"kamehouse/internal/mediastream/transcoder"
 	"strconv"
 	"strings"
 
-	"github.com/samber/mo"
-
 	"github.com/labstack/echo/v4"
+	"github.com/samber/mo"
 )
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -104,8 +104,11 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientId string) e
 			return err
 		}
 
-		ret, err := r.transcoder.MustGet().GetVideoSegment(mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, quality, segment, clientId)
+		ret, err := r.transcoder.MustGet().GetVideoSegment(c.Request().Context(), mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, quality, segment, clientId)
 		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return nil
+			}
 			return err
 		}
 
@@ -130,8 +133,11 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientId string) e
 			return err
 		}
 
-		ret, err := r.transcoder.MustGet().GetAudioSegment(mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, int32(audio), segment, clientId)
+		ret, err := r.transcoder.MustGet().GetAudioSegment(c.Request().Context(), mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, int32(audio), segment, clientId)
 		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return nil
+			}
 			return err
 		}
 

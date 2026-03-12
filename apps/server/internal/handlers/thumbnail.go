@@ -48,20 +48,39 @@ func (h *Handler) HandleGetVideoThumbnail(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to create cache directory"})
 	}
 
-	// Generate cache key from video path
-	hash := sha256.Sum256([]byte(videoPath))
-	cacheFile := filepath.Join(cacheDir, fmt.Sprintf("%x.jpg", hash))
+	// Generate cache key
+	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(videoPath)))
+	cacheFile := filepath.Join(cacheDir, hash+".jpg")
 
-	// Return cached thumbnail if it exists
-	if _, err := os.Stat(cacheFile); err == nil {
-		c.Response().Header().Set("Cache-Control", "public, max-age=86400")
-		return c.File(cacheFile)
+	// 1. Check HTTP Request ETag for returning 304 Not Modified
+	fileStat, err := os.Stat(cacheFile)
+	if err == nil {
+		eTag := fmt.Sprintf(`"%x-%x"`, fileStat.Size(), fileStat.ModTime().UnixNano())
+		if match := c.Request().Header.Get("If-None-Match"); match == eTag {
+			return c.NoContent(http.StatusNotModified)
+		}
+		c.Response().Header().Set("ETag", eTag)
 	}
 
-	// Get video duration to determine seek timestamp
-	seekTime := getSeekTimestamp(ffprobePath, videoPath)
+	c.Response().Header().Set("Cache-Control", "public, max-age=86400, immutable")
 
-	// Extract frame with ffmpeg
+	// 2. Check LRU Memory Cache (Instant 0ms retrieval)
+	if imgBytes, found := h.App.ThumbnailCache.Get(hash); found {
+		return c.Blob(http.StatusOK, "image/jpeg", imgBytes)
+	}
+
+	// 3. Fallback to Disk Cache if FFMpeg already extracted it previously
+	if err == nil {
+		imgBytes, readErr := os.ReadFile(cacheFile)
+		if readErr == nil {
+			// Populate LRU cache for next rapid requests
+			h.App.ThumbnailCache.Set(hash, imgBytes)
+			return c.Blob(http.StatusOK, "image/jpeg", imgBytes)
+		}
+	}
+
+	// 4. Generate thumbnail via FFMpeg (Cold Cache)
+	seekTime := getSeekTimestamp(ffprobePath, videoPath)
 	cmd := exec.Command(
 		ffmpegPath,
 		"-ss", seekTime,
@@ -78,7 +97,18 @@ func (h *Handler) HandleGetVideoThumbnail(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to extract thumbnail"})
 	}
 
-	c.Response().Header().Set("Cache-Control", "public, max-age=86400")
+	// Re-read from disk to serve and place into LRU memory map
+	imgBytes, readErr := os.ReadFile(cacheFile)
+	if readErr == nil {
+		h.App.ThumbnailCache.Set(hash, imgBytes)
+		fileStat, err = os.Stat(cacheFile)
+		if err == nil {
+			eTag := fmt.Sprintf(`"%x-%x"`, fileStat.Size(), fileStat.ModTime().UnixNano())
+			c.Response().Header().Set("ETag", eTag)
+		}
+		return c.Blob(http.StatusOK, "image/jpeg", imgBytes)
+	}
+
 	return c.File(cacheFile)
 }
 

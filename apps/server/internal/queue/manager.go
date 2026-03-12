@@ -64,7 +64,7 @@ type Manager struct {
 	index    map[string]*Job
 	handlers map[string]JobHandler
 	// per-job cancel functions for graceful shutdown interrupt
-	running  map[string]*cancelHandle
+	running map[string]*cancelHandle
 
 	logger *zerolog.Logger
 	gormdb *gorm.DB

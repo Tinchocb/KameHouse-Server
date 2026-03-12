@@ -17,6 +17,7 @@ type Watcher struct {
 	Logger         *zerolog.Logger
 	WSEventManager events.WSEventManagerInterface
 	TotalSize      string
+	Debouncer      *FileDebouncer
 }
 
 type NewWatcherOptions struct {
@@ -35,6 +36,7 @@ func NewWatcher(opts *NewWatcherOptions) (*Watcher, error) {
 		Watcher:        watcher,
 		Logger:         opts.Logger,
 		WSEventManager: opts.WSEventManager,
+		Debouncer:      NewFileDebouncer(),
 	}, nil
 }
 
@@ -77,12 +79,17 @@ func (w *Watcher) StartWatching(
 ) {
 	// Start a goroutine to handle file system events
 	go func() {
-		var debounceTimer *time.Timer
-		debounceDuration := 2 * time.Second
-
 		triggerAction := func() {
 			w.Logger.Debug().Msg("watcher: Debounce timer triggered, calling onFileAction")
 			onFileAction()
+		}
+
+		validExtensions := map[string]bool{
+			".mkv":  true,
+			".mp4":  true,
+			".avi":  true,
+			".m4v":  true,
+			".webm": true,
 		}
 
 		for {
@@ -91,11 +98,25 @@ func (w *Watcher) StartWatching(
 				if !ok {
 					return
 				}
-				if strings.Contains(event.Name, ".part") || strings.Contains(event.Name, ".tmp") || strings.Contains(event.Name, ".DS_Store") {
+
+				// 1. Ignore pure chmod events
+				if event.Op == fsnotify.Chmod {
 					continue
 				}
 
-				shouldDebounce := false
+				// 2. Ignore temporary files or known bad extensions
+				if strings.Contains(event.Name, ".part") || strings.Contains(event.Name, ".tmp") || 
+					strings.Contains(event.Name, ".DS_Store") || strings.Contains(event.Name, ".!qB") || 
+					strings.Contains(event.Name, ".crdownload") || strings.Contains(event.Name, ".utxt") {
+					continue
+				}
+
+				// 3. Filter by valid media extensions for Write/Create events
+				ext := strings.ToLower(filepath.Ext(event.Name))
+				isDirCreate := event.Op&fsnotify.Create != 0 && ext == ""
+				if event.Op&(fsnotify.Create|fsnotify.Write) != 0 && !validExtensions[ext] && !isDirCreate {
+					continue
+				}
 
 				if event.Op&fsnotify.Create == fsnotify.Create {
 					// If a new directory is created, register it and its subdirectories for watching
@@ -106,30 +127,35 @@ func (w *Watcher) StartWatching(
 							}
 							if fi.IsDir() {
 								if addErr := w.Watcher.Add(p); addErr != nil {
-									w.Logger.Warn().Err(addErr).Msgf("watcher: Failed to watch new directory: %s", p)
+									// 4. OS Limit Mitigation
+									if strings.Contains(addErr.Error(), "too many open files") || strings.Contains(addErr.Error(), "no space left on device") {
+										w.Logger.Warn().Err(addErr).Msgf("watcher: OS watch limit reached. Consider increasing fs.inotify.max_user_watches. Skipping directory %s", p)
+									} else {
+										w.Logger.Warn().Err(addErr).Msgf("watcher: Failed to watch new directory: %s", p)
+									}
 								} else {
 									w.Logger.Debug().Msgf("watcher: Now watching new directory: %s", p)
 								}
 							}
 							return nil
 						})
+					} else {
+						w.Logger.Debug().Msgf("watcher: Media file created/modified: %s", event.Name)
+						w.WSEventManager.SendEvent(events.LibraryWatcherFileAdded, event.Name)
+						// 5. Debounce the library scan action
+						w.Debouncer.Add(event.Name, 5*time.Second, triggerAction)
 					}
-					w.Logger.Debug().Msgf("watcher: File created: %s", event.Name)
-					w.WSEventManager.SendEvent(events.LibraryWatcherFileAdded, event.Name)
-					shouldDebounce = true
+				}
+
+				if event.Op&fsnotify.Write == fsnotify.Write {
+					w.Logger.Debug().Msgf("watcher: Media file modified: %s", event.Name)
+					w.Debouncer.Add(event.Name, 5*time.Second, triggerAction)
 				}
 
 				if event.Op&fsnotify.Remove == fsnotify.Remove {
-					w.Logger.Debug().Msgf("watcher: File removed: %s", event.Name)
+					w.Logger.Debug().Msgf("watcher: File/Directory removed: %s", event.Name)
 					w.WSEventManager.SendEvent(events.LibraryWatcherFileRemoved, event.Name)
-					shouldDebounce = true
-				}
-
-				if shouldDebounce {
-					if debounceTimer != nil {
-						debounceTimer.Stop()
-					}
-					debounceTimer = time.AfterFunc(debounceDuration, triggerAction)
+					w.Debouncer.Add(event.Name, 5*time.Second, triggerAction)
 				}
 
 			case err, ok := <-w.Watcher.Errors:

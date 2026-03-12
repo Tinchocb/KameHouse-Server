@@ -26,7 +26,7 @@ func ExtractExplicitProvider(title string, media *dto.NormalizedMedia) string {
 			media.ExplicitID = m[idIdx]
 		}
 	}
-	
+
 	cleaned := ReExplicitProvider.ReplaceAllString(title, "")
 	return strings.TrimSpace(cleaned)
 }

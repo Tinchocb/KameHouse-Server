@@ -72,17 +72,17 @@ type Manifest struct {
 
 // ManifestCatalog describes a single metadata catalog exposed by the addon.
 type ManifestCatalog struct {
-	Type  string `json:"type"`
-	ID    string `json:"id"`
-	Name  string `json:"name,omitempty"`
+	Type  string           `json:"type"`
+	ID    string           `json:"id"`
+	Name  string           `json:"name,omitempty"`
 	Extra *[]ManifestExtra `json:"extra,omitempty"`
 }
 
 // ManifestExtra describes optional extra parameters a catalog accepts.
 type ManifestExtra struct {
-	Name     string   `json:"name"`
-	IsRequired bool   `json:"isRequired,omitempty"`
-	Options  []string `json:"options,omitempty"`
+	Name       string   `json:"name"`
+	IsRequired bool     `json:"isRequired,omitempty"`
+	Options    []string `json:"options,omitempty"`
 }
 
 // StreamBehaviorHints carries optional extra metadata per stream.

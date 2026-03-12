@@ -261,7 +261,7 @@ func (is *InSight) fetchCharacters(malId int) {
 	}
 	is.logger.Debug().Int("malId", malId).Msg("insight: Fetching characters")
 
-	is.rateLimiter.Wait()
+	is.rateLimiter.Wait(context.Background())
 	resp, err := req.C().R().Get(fmt.Sprintf(JikanSeriesCharactersUrl, malId))
 	if err != nil {
 		is.logger.Error().Err(err).Msg("insight: Failed to fetch characters")
@@ -544,7 +544,7 @@ func (is *InSight) GetCharacterInfo(malId int) (*InSightCharacterDetails, error)
 
 	is.logger.Debug().Int("malId", malId).Msg("insight: Fetching character info")
 
-	is.rateLimiter.Wait()
+	is.rateLimiter.Wait(context.Background())
 
 	resp, err := req.C().R().Get(fmt.Sprintf(JikanCharacterUrl, malId))
 	if err != nil {
@@ -583,37 +583,37 @@ func GenerateVideoInsights(seedString string, duration float64) ([]InsightNode, 
 	}
 
 	insights := make([]InsightNode, 0)
-	
+
 	// Create a simple deterministic seed from the string
 	var seed int64
 	for _, char := range seedString {
 		seed += int64(char)
 	}
-	
+
 	// Simple PRNG multiplier and increment (LCG-style)
 	// We want peaks and valleys, so we use Perlin-noise-like or just smoothed random.
 	// We'll generate a point every 5 seconds.
-	
+
 	currentVal := float64(seed%100) / 100.0
-	
+
 	for t := 0.0; t <= duration; t += 5.0 {
 		// randomize slightly
 		seed = (seed*9301 + 49297) % 233280
 		rnd := float64(seed) / 233280.0
-		
+
 		// smooth transition
 		currentVal = currentVal*0.7 + rnd*0.3
-		
+
 		// Map some peaks (spikes) randomly if random threshold is met
 		if rnd > 0.9 {
 			currentVal = 0.9 + (rnd * 0.1) // 0.9-1.0 spike!
 		}
-		
+
 		intensity := currentVal
 		if intensity > 1.0 {
 			intensity = 1.0
 		}
-		
+
 		insights = append(insights, InsightNode{
 			Timestamp: t,
 			Intensity: intensity,

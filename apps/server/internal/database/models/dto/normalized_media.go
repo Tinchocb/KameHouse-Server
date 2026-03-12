@@ -5,22 +5,22 @@ import (
 )
 
 type NormalizedMedia struct {
-	ID                 int
-	IdMal              *int
-	TmdbId             *int
+	ID               int
+	IdMal            *int
+	TmdbId           *int
 	TvdbId           *int
 	ExplicitProvider string
 	ExplicitID       string
-	Title              *NormalizedMediaTitle
-	Synonyms    []*string
-	Format      *MediaFormat
-	Status      *MediaStatus
-	Season      *MediaSeason
-	Year        *int
-	StartDate   *NormalizedMediaDate
-	Episodes    *int
-	BannerImage *string
-	CoverImage  *NormalizedMediaCoverImage
+	Title            *NormalizedMediaTitle
+	Synonyms         []*string
+	Format           *MediaFormat
+	Status           *MediaStatus
+	Season           *MediaSeason
+	Year             *int
+	StartDate        *NormalizedMediaDate
+	Episodes         *int
+	BannerImage      *string
+	CoverImage       *NormalizedMediaCoverImage
 	//Relations         *anilist.CompleteAnimeById_Media_CompleteAnime_Relations
 	NextAiringEpisode *NormalizedMediaNextAiringEpisode
 	// Whether it was fetched from AniList

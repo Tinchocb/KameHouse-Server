@@ -1,6 +1,7 @@
 package anime
 
 import (
+	"context"
 	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/api/metadata_provider"
@@ -102,7 +103,7 @@ func NewUpcomingEpisodes(opts *NewUpcomingEpisodesOptions) *UpcomingEpisodes {
 			}
 
 			// Fetch episode metadata
-			rateLimiter.Wait()
+			rateLimiter.Wait(context.Background())
 			animeMetadata, err := opts.MetadataProviderRef.Get().GetAnimeMetadata(metadata.AnilistPlatform, media.ID)
 			if err == nil && animeMetadata != nil {
 				// Get episode metadata

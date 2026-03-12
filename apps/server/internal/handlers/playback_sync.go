@@ -59,20 +59,20 @@ func (h *Handler) HandlePlaybackSync(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, NewErrorResponse(fmt.Errorf("mediaId and episodeNumber are required")))
 	}
 
+	// ─── 1. Update Continuity (watch position) ─────────────────────────
+	if b.Duration > 0 {
+		h.App.ContinuityManager.TelemetryManager.Queue(continuity.TelemetryEvent{
+			MediaId:       b.MediaId,
+			EpisodeNumber: b.EpisodeNumber,
+			CurrentTime:   b.CurrentTime,
+			Duration:      b.Duration,
+			Kind:          "mediastream",
+			IsFinal:       false,
+		})
+	}
+
 	// Process updates asynchronously to ensure <20ms HTTP response time
 	go func(payload PlaybackSyncPayload) {
-		// ─── 1. Update Continuity (watch position) ─────────────────────────
-		if payload.Duration > 0 {
-			h.App.ContinuityManager.TelemetryManager.Queue(continuity.TelemetryEvent{
-				MediaId:       payload.MediaId,
-				EpisodeNumber: payload.EpisodeNumber,
-				CurrentTime:   payload.CurrentTime,
-				Duration:      payload.Duration,
-				Kind:          "mediastream",
-				IsFinal:       false,
-			})
-		}
-
 		// ─── 2. Auto-scrobble at 85% ───────────────────────────────────────
 		if payload.Progress >= 0.85 {
 			key := scrobbleKey(payload.MediaId, payload.EpisodeNumber)

@@ -27,6 +27,18 @@ type Account struct {
 }
 
 // +---------------------+
+// |   Watch History     |
+// +---------------------+
+
+type WatchHistory struct {
+	BaseModel
+	MediaID       int     `gorm:"column:media_id;uniqueIndex:idx_media_episode" json:"mediaId"`
+	EpisodeNumber int     `gorm:"column:episode_number;uniqueIndex:idx_media_episode" json:"episodeNumber"`
+	CurrentTime   float64 `gorm:"column:current_time" json:"currentTime"`
+	Duration      float64 `gorm:"column:duration" json:"duration"`
+}
+
+// +---------------------+
 // |     LocalFiles      |
 // +---------------------+
 

@@ -1,6 +1,7 @@
 package mocks
 
 import (
+	"context"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/continuity"
 	"kamehouse/internal/database/db"
@@ -9,7 +10,6 @@ import (
 	"kamehouse/internal/extension_repo"
 	"kamehouse/internal/manga"
 	"kamehouse/internal/util"
-	"context"
 	"kamehouse/internal/util/filecache"
 	"path/filepath"
 	"testing"

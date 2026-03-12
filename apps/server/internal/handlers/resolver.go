@@ -11,8 +11,8 @@ import (
 
 // HandleResolveStreams resolves all available playback sources for a given
 // episode using the UnifiedResolver priority chain:
-//   1. Local file (instant)
-//   2. Torrentio streams (concurrent, ≤3s)
+//  1. Local file (instant)
+//  2. Torrentio streams (concurrent, ≤3s)
 //
 // @summary  Resolve all playback sources for an episode
 // @desc     Returns a prioritised list of ResolvedSource objects. Local files

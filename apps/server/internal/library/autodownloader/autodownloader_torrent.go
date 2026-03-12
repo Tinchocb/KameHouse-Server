@@ -179,7 +179,7 @@ func (ad *AutoDownloader) fetchTorrentsFromProviders(
 						if i >= 2 || resolution == "-" {
 							break
 						}
-						rateLimiter.Wait()
+						rateLimiter.Wait(context.Background())
 						ad.logger.Debug().Str("extensionId", pExt.GetID()).Str("releaseGroup", rg).Str("resolution", resolution).Msg("autodownloader: Searching for torrents")
 						result, err := pExt.GetProvider().Search(hibiketorrent.AnimeSearchOptions{
 							Media: hibiketorrent.Media{},
@@ -204,7 +204,7 @@ func (ad *AutoDownloader) fetchTorrentsFromProviders(
 
 					// Search without resolution as a fallback if nothing found for specific resolutions
 					if !foundForGroup {
-						rateLimiter.Wait()
+						rateLimiter.Wait(context.Background())
 						ad.logger.Debug().Str("extensionId", pExt.GetID()).Str("releaseGroup", rg).Msg("autodownloader: Searching for torrents without resolution")
 						result, err := pExt.GetProvider().Search(hibiketorrent.AnimeSearchOptions{
 							Media: hibiketorrent.Media{},

@@ -8,12 +8,12 @@ import (
 // NfoFile represents the root of a Kodi/Jellyfin NFO file.
 type NfoFile struct {
 	XMLName       xml.Name `xml:"tvshow"`
-	ID            int      `xml:"id"`     // Fallback / AniList ID usually
-	TmdbId        int      `xml:"tmdbid"` // TMDB ID
-	TvdbId        int      `xml:"tvdbid"` // TVDB ID
-	ImdbId        string   `xml:"imdbid"` // IMDB ID
-	Season        int      `xml:"season"` // Season number
-	Episode       int      `xml:"episode"`// Episode number
+	ID            int      `xml:"id"`      // Fallback / AniList ID usually
+	TmdbId        int      `xml:"tmdbid"`  // TMDB ID
+	TvdbId        int      `xml:"tvdbid"`  // TVDB ID
+	ImdbId        string   `xml:"imdbid"`  // IMDB ID
+	Season        int      `xml:"season"`  // Season number
+	Episode       int      `xml:"episode"` // Episode number
 	Title         string   `xml:"title"`
 	OriginalTitle string   `xml:"originaltitle"` // In anime, this is often Romaji or Kanji
 	SortTitle     string   `xml:"sorttitle"`

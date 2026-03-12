@@ -24,7 +24,7 @@ func FetchMediaTree(
 		return nil
 	}
 
-	rl.Wait()
+	rl.Wait(context.Background())
 	res, err := anilistClient.CompleteAnimeByID(context.Background(), &m.ID)
 	if err != nil {
 		return err

@@ -2,6 +2,7 @@ package image_downloader
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"image"
 	_ "image/gif"
@@ -88,7 +89,7 @@ func (id *ImageDownloader) DownloadImages(urls []string) (err error) {
 				id.logger.Warn().Msg("image downloader: Download process canceled")
 				return
 			default:
-				rateLimiter.Wait()
+				_ = rateLimiter.Wait(context.Background())
 				id.downloadImage(url)
 			}
 		}(url)

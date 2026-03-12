@@ -29,10 +29,10 @@ type ArcName = string
 
 // EpisodeIntelligence carries computed intelligence about a single episode.
 type EpisodeIntelligence struct {
-	Rating  float64    `json:"rating"`  // 0–10 (derived from LibraryMedia.Score ÷ 10)
-	IsFiller bool      `json:"isFiller"`
-	ArcName ArcName    `json:"arcName"` // Empty string when unknown
-	Tag     ContentTag `json:"tag"`
+	Rating   float64    `json:"rating"` // 0–10 (derived from LibraryMedia.Score ÷ 10)
+	IsFiller bool       `json:"isFiller"`
+	ArcName  ArcName    `json:"arcName"` // Empty string when unknown
+	Tag      ContentTag `json:"tag"`
 }
 
 // SmartMetadataResult wraps episode metadata enriched with intelligence data.

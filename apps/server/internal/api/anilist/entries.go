@@ -27,7 +27,7 @@ func (c *Client) AddMediaToPlanning(mIds []int, rateLimiter *limiter.Limiter, lo
 	for _, _id := range mIds {
 		wg.Add(1)
 		go func(id int) {
-			rateLimiter.Wait()
+			_ = rateLimiter.Wait(context.Background())
 			defer wg.Done()
 			_, err := c.UpdateMediaListEntry(
 				context.Background(),

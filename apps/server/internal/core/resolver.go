@@ -83,7 +83,7 @@ func (r *UnifiedResolver) ResolveUnifiedMedia(ctx context.Context, mediaID strin
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		
+
 		// If kitsuID is available, use legacy GetStreams. Alternatively IMDB if using Provider generic IDs.
 		if kitsuID > 0 {
 			extSources := r.getTorrentioSources(ctx, kitsuID, episode)
@@ -263,13 +263,13 @@ func extractSeeders(title string) int {
 	if idx == -1 {
 		return 0
 	}
-	
+
 	part := title[idx+len("👥 "):]
 	spaceIdx := strings.Index(part, " ")
 	if spaceIdx != -1 {
 		part = part[:spaceIdx]
 	}
-	
+
 	seeders, _ := strconv.Atoi(part)
 	return seeders
 }

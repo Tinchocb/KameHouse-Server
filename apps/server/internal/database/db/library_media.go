@@ -3,6 +3,7 @@ package db
 import (
 	"kamehouse/internal/database/models"
 
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -96,6 +97,7 @@ func TrimLocalFileEntries(d *Database) {
 		}
 	}
 }
+
 // GetLibraryMediaByExternalID retrieves a LibraryMedia by its external ID (e.g. slug or custom mapping).
 func GetLibraryMediaByExternalID(d *Database, externalId string) (*models.LibraryMedia, error) {
 	var media models.LibraryMedia
@@ -107,4 +109,18 @@ func GetLibraryMediaByExternalID(d *Database, externalId string) (*models.Librar
 		return nil, err
 	}
 	return &media, nil
+}
+
+// UpsertLibraryMediaBatch inserts or updates a slice of LibraryMedia atomically in a single transaction.
+func UpsertLibraryMediaBatch(d *Database, media []*models.LibraryMedia, batchSize int) error {
+	if len(media) == 0 {
+		return nil
+	}
+
+	return d.Gorm().Transaction(func(tx *gorm.DB) error {
+		return tx.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "tmdb_id"}}, // Unique constraint
+			UpdateAll: true,
+		}).CreateInBatches(media, batchSize).Error
+	})
 }

@@ -106,10 +106,10 @@ func (fh *FileHydrator) HydrateMetadata() {
 		if len(files) == 0 {
 			continue
 		}
-		
+
 		capturedMId := mId
 		capturedFiles := files
-		
+
 		eg.Go(func() error {
 			fh.hydrateGroupMetadata(capturedMId, capturedFiles, rateLimiter)
 			return nil
@@ -601,7 +601,7 @@ func (fh *FileHydrator) tryPartRelativeNormalization(
 		return 0, false
 	}
 
-	rateLimiter.Wait()
+	rateLimiter.Wait(context.Background())
 
 	animeMetadata, err := fh.MetadataProviderRef.Get().GetAnimeMetadata(metadata.AnilistPlatform, mediaId)
 	if err != nil {

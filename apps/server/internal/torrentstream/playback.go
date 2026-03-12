@@ -15,9 +15,20 @@ type (
 )
 
 func (r *Repository) listenToNativePlayerEvents() {
-	r.nativePlayer.VideoCore().Unsubscribe("torrentstream")
+	if r.nativePlayer == nil {
+		r.logger.Debug().Msg("Native player or VideoCore is nil, skipping torrent event subscription")
+		return
+	}
+
+	videoCore := r.nativePlayer.VideoCore()
+	if videoCore == nil {
+		r.logger.Debug().Msg("Native player or VideoCore is nil, skipping torrent event subscription")
+		return
+	}
+
+	videoCore.Unsubscribe("torrentstream")
 	r.logger.Trace().Msg("torrentstream: Subscribing to video core events")
-	videoCoreSubscriber := r.nativePlayer.VideoCore().Subscribe("torrentstream")
+	videoCoreSubscriber := videoCore.Subscribe("torrentstream")
 
 	go func(sub *videocore.Subscriber) {
 		defer func() {

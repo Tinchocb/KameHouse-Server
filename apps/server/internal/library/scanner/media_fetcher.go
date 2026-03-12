@@ -14,6 +14,7 @@ import (
 	"kamehouse/internal/library/anime"
 	librarymetadata "kamehouse/internal/library/metadata"
 	"kamehouse/internal/platforms/platform"
+	"kamehouse/internal/util"
 	"kamehouse/internal/util/limiter"
 	"path/filepath"
 	"strings"
@@ -174,6 +175,7 @@ func NewMediaFetcher(ctx context.Context, opts *MediaFetcherOptions) (ret *Media
 			opts.MetadataProviders,
 			opts.LocalFiles,
 			mf.ScanLogger,
+			opts.AnilistRateLimiter,
 		)
 		if ok {
 			mf.AllMedia = append(mf.AllMedia, newMedia...)
@@ -319,6 +321,7 @@ func FetchMediaFromLocalFiles(
 	providers []librarymetadata.Provider,
 	localFiles []*dto.LocalFile,
 	scanLogger *ScanLogger,
+	limiter *limiter.Limiter,
 ) (ret []*dto.NormalizedMedia, ok bool) {
 	defer util.HandlePanicInModuleThen("library/scanner/FetchMediaFromLocalFiles", func() {
 		ok = false
@@ -351,7 +354,7 @@ func FetchMediaFromLocalFiles(
 	// For each unique title, delegate to the cache which handles deduplication,
 	// singleflight grouping, and 429 exponential back-off internally.
 	for _, title := range titles {
-		matchedMedia, fetchErr := cache.FetchOnce(ctx, title, providers)
+		matchedMedia, fetchErr := cache.FetchOnce(ctx, title, providers, limiter)
 		if fetchErr != nil {
 			if scanLogger != nil {
 				scanLogger.LogMediaFetcher(zerolog.WarnLevel).
@@ -516,7 +519,7 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 		// 2. Default Behavior (TMDB First)
 		if len(results) == 0 && err == nil {
 			results, err = opts.TMDBProvider.SearchMedia(query)
-			
+
 			if err != nil || len(results) == 0 {
 				// Fallback: for movies with compound titles like "Dragon Ball Z - La batalla",
 				// try searching with just the series prefix (before " - ")

@@ -26,6 +26,10 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 
 	e.Use(middleware.Recover())
 
+	e.GET("/api/ws", func(c echo.Context) error {
+		return app.WSHub.ServeWS(c)
+	})
+
 	distFS, err := fs.Sub(webFS, "web")
 	if err != nil {
 		log.Fatal(err)
@@ -51,9 +55,6 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 					return true // Continue to the next handler
 				}
 				if !strings.HasSuffix(cUrl.Path, ".html") && filepath.Ext(cUrl.Path) == "" {
-					cUrl.Path = cUrl.Path + ".html"
-				}
-				if cUrl.Path == "/.html" {
 					cUrl.Path = "/index.html"
 				}
 				return false // Continue to the filesystem handler

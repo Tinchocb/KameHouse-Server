@@ -86,7 +86,7 @@ func FetchNormalizedMedia(anilistClient anilist.AnilistClient, l *limiter.Limite
 		}
 	}
 
-	l.Wait()
+	l.Wait(context.Background())
 	complete, err := anilistClient.CompleteAnimeByID(context.Background(), &m.ID)
 	if err != nil {
 		return err

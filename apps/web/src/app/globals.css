@@ -56,6 +56,14 @@
 
     body {
         @apply bg-background text-foreground;
+        overscroll-behavior-y: none;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    html {
+        overscroll-behavior-y: none;
     }
 
     * {
