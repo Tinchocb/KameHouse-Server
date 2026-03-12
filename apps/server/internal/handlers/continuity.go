@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"kamehouse/internal/continuity"
 	"strconv"
 
@@ -26,15 +27,8 @@ func (h *Handler) HandleUpdateContinuityWatchHistoryItem(c echo.Context) error {
 
 	// Zero-Latency Telemetry Dispatch
 	if h.App.ContinuityManager.TelemetryManager != nil {
-		h.App.ContinuityManager.TelemetryManager.Queue(continuity.TelemetryEvent{
-			MediaId:       b.Options.MediaId,
-			EpisodeNumber: b.Options.EpisodeNumber,
-			CurrentTime:   b.Options.CurrentTime,
-			Duration:      b.Options.Duration,
-			Kind:          b.Options.Kind,
-			Filepath:      b.Options.Filepath,
-			IsFinal:       false, // For typical interval beacons
-		})
+		key := fmt.Sprintf("%d:%d:%f", b.Options.MediaId, b.Options.EpisodeNumber, b.Options.Duration)
+		h.App.ContinuityManager.TelemetryManager.UpdateProgress(key, int(b.Options.CurrentTime))
 	}
 
 	return h.RespondWithData(c, true)

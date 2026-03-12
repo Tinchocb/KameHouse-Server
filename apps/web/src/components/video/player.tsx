@@ -11,7 +11,9 @@ import { VideoPlayerModal, type VideoPlayerModalProps } from "@/components/ui/vi
 import { useRequestMediastreamMediaContainer } from "@/api/hooks/mediastream.hooks"
 import { Loader2, AlertTriangle } from "lucide-react"
 
-export type VideoPlayerProps = Omit<VideoPlayerModalProps, "trackInfo">
+export type VideoPlayerProps = Omit<VideoPlayerModalProps, "trackInfo"> & {
+    initialProgressSeconds?: number
+}
 
 export function VideoPlayer(props: VideoPlayerProps) {
     // If the stream is "online" (e.g. Debrid/External CDN), skip the internal media container request

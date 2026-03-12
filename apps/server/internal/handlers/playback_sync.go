@@ -3,7 +3,6 @@ package handlers
 import (
 	"fmt"
 	"kamehouse/internal/api/mal"
-	"kamehouse/internal/continuity"
 	"net/http"
 	"sync"
 
@@ -61,14 +60,8 @@ func (h *Handler) HandlePlaybackSync(c echo.Context) error {
 
 	// ─── 1. Update Continuity (watch position) ─────────────────────────
 	if b.Duration > 0 {
-		h.App.ContinuityManager.TelemetryManager.Queue(continuity.TelemetryEvent{
-			MediaId:       b.MediaId,
-			EpisodeNumber: b.EpisodeNumber,
-			CurrentTime:   b.CurrentTime,
-			Duration:      b.Duration,
-			Kind:          "mediastream",
-			IsFinal:       false,
-		})
+		key := fmt.Sprintf("%d:%d:%f", b.MediaId, b.EpisodeNumber, b.Duration)
+		h.App.ContinuityManager.TelemetryManager.UpdateProgress(key, int(b.CurrentTime))
 	}
 
 	// Process updates asynchronously to ensure <20ms HTTP response time

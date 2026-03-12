@@ -1,25 +1,22 @@
 import { useRef, useEffect } from "react";
 
 export function usePlaybackTelemetry(
-    videoRef: React.RefObject<HTMLVideoElement | null>,
     mediaId?: number | string,
-    episodeNumber?: number | string
+    episodeNumber?: number | string,
+    videoRef?: React.RefObject<HTMLVideoElement | null>
 ) {
     const lastSyncTimeRef = useRef(0);
 
     useEffect(() => {
-        if (!videoRef.current || !mediaId || !episodeNumber) return;
+        if (!videoRef || !videoRef.current || !mediaId || !episodeNumber) return;
+
+        const video = videoRef.current;
 
         const sendSyncTick = (isFinal: boolean) => {
-            const video = videoRef.current;
-            if (!video) return;
-
             const currentTime = video.currentTime;
             const duration = video.duration || 0;
-            const isPaused = video.paused;
 
-            // Only sync if video is playing/progressed or it's a final unload tick
-            if (!isFinal && (isPaused || currentTime === lastSyncTimeRef.current)) {
+            if (!isFinal && currentTime === lastSyncTimeRef.current) {
                 return;
             }
 
@@ -54,16 +51,25 @@ export function usePlaybackTelemetry(
             }
         };
 
-        // Fire heartbeat every 10 seconds
-        const intervalId = setInterval(() => sendSyncTick(false), 10000);
+        // 1. Periodic Sync (5 seconds)
+        const intervalId = setInterval(() => sendSyncTick(false), 5000);
 
+        // 2. Event Listeners for immediate sync
+        const handleInteractionSync = () => sendSyncTick(false);
+        video.addEventListener("pause", handleInteractionSync);
+        video.addEventListener("seeked", handleInteractionSync);
+
+        // 3. Unload Guarantee
         const handleUnload = () => sendSyncTick(true);
         window.addEventListener("beforeunload", handleUnload);
 
         return () => {
             clearInterval(intervalId);
+            video.removeEventListener("pause", handleInteractionSync);
+            video.removeEventListener("seeked", handleInteractionSync);
             window.removeEventListener("beforeunload", handleUnload);
-            // Fire one last tick upon unmount (e.g. user hits "Back")
+            
+            // Fire one last tick upon unmount
             sendSyncTick(true);
         };
     }, [mediaId, episodeNumber, videoRef]);

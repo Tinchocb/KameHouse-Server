@@ -730,6 +730,12 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 					if nm.BannerImage != nil {
 						newMedia.BannerImage = *nm.BannerImage
 					}
+					if nm.Description != nil {
+						newMedia.Description = *nm.Description
+					}
+					if nm.MetadataStatus != nil {
+						newMedia.MetadataStatus = *nm.MetadataStatus
+					}
 				}
 
 				// Fallback title: use file-derived title instead of generic "TMDB Media XXXXX"

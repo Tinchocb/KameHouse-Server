@@ -7,8 +7,9 @@ import "time"
 type LibraryMedia struct {
 	BaseModel
 	Type   string `gorm:"column:type" json:"type"`     // e.g., "ANIME", "SHOW", "MOVIE"
-	Format string `gorm:"column:format" json:"format"` // e.g., "TV", "TV_SHORT", "MOVIE", "OVA", "SPECIAL"
-	Status string `gorm:"column:status" json:"status"`
+	Format         string `gorm:"column:format" json:"format"` // e.g., "TV", "TV_SHORT", "MOVIE", "OVA", "SPECIAL"
+	Status         string `gorm:"column:status" json:"status"`
+	MetadataStatus string `gorm:"column:metadata_status;default:'COMPLETE'" json:"metadataStatus"` // "COMPLETE", "MISSING", "LOCAL"
 
 	// Titles
 	TitleOriginal string `gorm:"column:title_original" json:"titleOriginal"`

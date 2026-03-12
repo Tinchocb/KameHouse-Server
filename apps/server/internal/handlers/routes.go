@@ -363,7 +363,10 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	//
 	// Playback Manager
 	//
-
+	
+	v1.GET("/media/:id/play", h.HandleStreamingPlay)
+	v1.GET("/media/:id/direct", h.HandleStreamingDirect)
+	v1.GET("/media/:id/hls/*", h.HandleStreamingHLS)
 	//
 	// Playlists
 	//

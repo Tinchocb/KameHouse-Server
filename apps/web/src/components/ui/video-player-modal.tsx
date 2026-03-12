@@ -53,6 +53,8 @@ export interface VideoPlayerModalProps {
      * Falls back to `duration - 120` if undefined.
      */
     outroStart?: number
+    /** Jump to this timestamp on component mount for continuity auto-resume. */
+    initialProgressSeconds?: number
 }
 
 const formatTime = (secs: number) => {
@@ -107,6 +109,7 @@ export function VideoPlayerModal({
     nextEpisodeTitle,
     introEnd: introEndProp,
     outroStart: outroStartProp,
+    initialProgressSeconds
 }: VideoPlayerModalProps) {
     const videoRef = useRef<HTMLVideoElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
@@ -243,8 +246,8 @@ export function VideoPlayerModal({
     // Addon Subtitles
     const { data: addonSubtitles } = useGetAddonSubtitles("series", mediaId)
 
-    // Playback Telemetry
-    usePlaybackTelemetry(videoRef, mediaId, episodeNumber)
+    // ── Telemetry (Watch Progress Background Sync) ─────────────────────────
+    usePlaybackTelemetry(mediaId, episodeNumber, videoRef)
 
     // Settings
     const { data: settings } = useGetSettings()
@@ -414,12 +417,14 @@ export function VideoPlayerModal({
         if (lsKey) {
             const saved = localStorage.getItem(lsKey)
             // Restore saved position once metadata is available
+            // Priority: initialProgressSeconds (backend continuity) > LocalStorage memory
             video.addEventListener("loadedmetadata", () => {
-                if (saved) {
-                    const savedTime = Number(saved)
-                    if (savedTime > 10 && savedTime < (video.duration - 5)) {
-                        video.currentTime = savedTime
-                    }
+                const targetTime = (initialProgressSeconds && initialProgressSeconds > 0) 
+                    ? initialProgressSeconds 
+                    : (saved ? Number(saved) : 0)
+
+                if (targetTime > 10 && targetTime < (video.duration - 5)) {
+                    video.currentTime = targetTime
                 }
             }, { once: true })
         }

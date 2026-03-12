@@ -23,6 +23,8 @@ type NormalizedMedia struct {
 	CoverImage       *NormalizedMediaCoverImage
 	//Relations         *anilist.CompleteAnimeById_Media_CompleteAnime_Relations
 	NextAiringEpisode *NormalizedMediaNextAiringEpisode
+	MetadataStatus    *string // "COMPLETE", "MISSING", "LOCAL"
+	Description       *string
 	// Whether it was fetched from AniList
 	fetched bool
 }

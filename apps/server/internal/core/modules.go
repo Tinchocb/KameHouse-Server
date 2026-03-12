@@ -25,6 +25,7 @@ import (
 	"kamehouse/internal/notifier"
 	"kamehouse/internal/platforms/shared_platform"
 	"kamehouse/internal/playlist"
+	"kamehouse/internal/streaming"
 	"kamehouse/internal/torrent_clients/qbittorrent"
 	"kamehouse/internal/torrent_clients/torrent_client"
 	"kamehouse/internal/torrent_clients/transmission"
@@ -98,6 +99,15 @@ func (a *App) initModulesOnce() {
 	// +---------------------+
 	// |    Media Stream     |
 	// +---------------------+
+
+	a.StreamOrchestrator = streaming.NewStreamOrchestrator(
+		a.Database,
+		a.Logger,
+		a.FileCacher,
+		&streaming.StreamingOptions{
+			FfmpegPath: "ffmpeg",
+		},
+	)
 
 	a.MediastreamRepository = mediastream.NewRepository(&mediastream.NewRepositoryOptions{
 		Logger:         a.Logger,

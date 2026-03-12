@@ -45,6 +45,7 @@ const MemoizedCard = React.memo(({ entry }: { entry: Anime_LibraryCollectionEntr
                     year={year}
                     rating={rating}
                     badge={media.format || undefined}
+                    progress={progress > 0 ? progress : undefined}
                     onClick={() => window.location.href = `/series/${media.id}`}
                 />
             </div>

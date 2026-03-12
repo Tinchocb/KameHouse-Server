@@ -9,6 +9,7 @@ export interface MediaCardInteractiveProps {
     year?: string | number
     rating?: number
     badge?: string
+    progress?: number // Percentage 0 - 100
     onClick?: () => void
     children?: ReactNode
 }
@@ -23,13 +24,14 @@ export function MediaCardInteractive({
     year,
     rating,
     badge,
+    progress,
     onClick,
     children,
 }: MediaCardInteractiveProps) {
     return (
         <button
             type="button"
-            className="group absolute inset-0 z-10 flex h-full w-full cursor-pointer flex-col justify-end text-left outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded-md"
+            className="group absolute inset-0 z-10 flex h-full w-full cursor-pointer flex-col justify-end text-left outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded-md overflow-hidden"
             onClick={onClick}
             aria-label={`Play ${title}`}
         >
@@ -44,7 +46,7 @@ export function MediaCardInteractive({
 
             {/* Quick metadata ribbon (appears on hover) */}
             {(year || rating || badge) && (
-                <div className="pointer-events-none absolute bottom-0 left-0 right-0 translate-y-3 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+                <div className="pointer-events-none absolute bottom-0 left-0 right-0 translate-y-3 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 pb-1">
                     <div className="flex items-center justify-between gap-2 rounded-b-md bg-black/70 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/80 backdrop-blur">
                         <div className="flex items-center gap-2">
                             {year && <span className="rounded-full border border-white/10 px-2 py-0.5 text-white/80">{year}</span>}
@@ -56,6 +58,16 @@ export function MediaCardInteractive({
                             </span>
                         )}
                     </div>
+                </div>
+            )}
+
+            {/* Playback Progress Bottom Stroke */}
+             {progress !== undefined && progress > 0 && progress < 100 && (
+                <div className="absolute bottom-0 left-0 w-full h-1 bg-gray-800/50 z-20">
+                    <div 
+                        className="h-full bg-orange-600 shadow-[0_0_10px_rgba(234,88,12,0.8)] transition-all duration-300"
+                        style={{ width: `${Math.max(2, Math.min(100, progress))}%` }}
+                    />
                 </div>
             )}
 

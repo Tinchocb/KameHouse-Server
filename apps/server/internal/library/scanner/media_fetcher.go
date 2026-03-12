@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"kamehouse/internal/api/anidb"
 	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/animeofflinedb"
@@ -379,8 +380,9 @@ func FetchMediaFromLocalFiles(
 				scanLogger.LogMediaFetcher(zerolog.WarnLevel).
 					Str("module", "Enhanced").
 					Str("title", title).
-					Msg("Failed to find media using providers")
+					Msg("Metadata fetch failed for " + title + ", falling back...")
 			}
+			results = append(results, GenerateLocalMetadata(title))
 		}
 	}
 
@@ -541,7 +543,12 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 			}
 		} else if err != nil {
 			opts.Logger.Warn().Str("query", query).Str("explicitProvider", info.ExplicitProvider).Str("explicitId", info.ExplicitID).Err(err).Msg("media fetcher: Explicit provider search failed")
-			continue
+			// We continue so the fallback logic can trigger if results is still empty
+		}
+
+		if len(results) == 0 {
+			opts.Logger.Warn().Str("query", query).Msg("media fetcher: Metadata fetch failed for " + query + ", falling back...")
+			results = []*dto.NormalizedMedia{GenerateLocalMetadata(query)}
 		}
 
 		for _, media := range results {
@@ -588,4 +595,43 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 		Msg("media fetcher: TMDB mode completed")
 
 	return mf, nil
+}
+
+// GenerateLocalMetadata creates a synthetic OrganizedMedia object when external
+// providers fail to identify the series. This ensures the media still appears
+// in the UI, allowing the user to match it manually later.
+func GenerateLocalMetadata(title string) *dto.NormalizedMedia {
+	// We generate a deterministic pseudo-ID to avoid collisions
+	// We use the negative CRC32 of the title text so TMDB DB maps nicely.
+	h := crc32.NewIEEE()
+	h.Write([]byte(title))
+	hash := int(h.Sum32())
+	if hash > 0 {
+		hash = -hash
+	}
+
+	posterURL := "/no-cover.png"
+	metadataStatus := "MISSING_METADATA"
+	synopsis := "Metadatos no encontrados. Nombre original: " + title
+
+	return &dto.NormalizedMedia{
+		ID:     hash,
+		TmdbId: &hash, // Assign to tmdbId to allow TMDB pipeline to map it properly
+		Title: &dto.NormalizedMediaTitle{
+			English: &title,
+			Romaji:  &title,
+			Native:  &title,
+		},
+		Synonyms:       nil,
+		Format:         lo.ToPtr(dto.MediaFormatTV), // Assume TV mostly
+		CoverImage: &dto.NormalizedMediaCoverImage{
+			Large:      &posterURL,
+			ExtraLarge: &posterURL,
+			Medium:     &posterURL,
+		},
+		Status:         lo.ToPtr(dto.MediaStatusFinished),
+		MetadataStatus: &metadataStatus,
+		Episodes:       lo.ToPtr(1000), // Arbitrary high count
+		Description:    &synopsis, // Inject synthetic synopsis here
+	}
 }

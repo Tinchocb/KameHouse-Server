@@ -2,7 +2,9 @@ package continuity
 
 import (
 	"context"
+	"fmt"
 	"kamehouse/internal/database/db"
+	"kamehouse/internal/database/models"
 	"kamehouse/internal/test_utils"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/filecache"
@@ -45,13 +47,8 @@ func TestTelemetryManager_Stress(t *testing.T) {
 
 			// Each worker pushes 10 fast progress updates (simulating a few seconds of watching)
 			for j := 0; j < 10; j++ {
-				manager.TelemetryManager.Queue(TelemetryEvent{
-					MediaId:       1,
-					EpisodeNumber: 1,
-					CurrentTime:   float64(workerID*10 + j),
-					Duration:      1000.0,
-					Kind:          MediastreamKind,
-				})
+				key := fmt.Sprintf("%d:%d:%f", 1, 1, 1000.0)
+				manager.TelemetryManager.UpdateProgress(key, workerID*10+j)
 				time.Sleep(2 * time.Millisecond)
 			}
 		}(i)
@@ -66,12 +63,13 @@ func TestTelemetryManager_Stress(t *testing.T) {
 	manager.TelemetryManager.Stop()    // Force the context done and flush memory
 	time.Sleep(500 * time.Millisecond) // Give time for the real DB to commit
 
-	// Verify that the entry exists in the DB/Cache
-	items, err := filecache.GetAll[WatchHistoryItem](cacher, *manager.watchHistoryFileCacheBucket)
+	// Verify that the entry exists in the DB
+	var records []models.WatchHistory
+	err = database.Gorm().Find(&records).Error
 	require.NoError(t, err)
 
 	// Because of deduplication across 500 concurrent goroutines updating mediaId 1,
 	// only the absolute last processed tick should survive. We expect 1 item.
-	require.Len(t, items, 1)
-	require.Contains(t, items, "1")
+	require.Len(t, records, 1)
+	require.Equal(t, 1, records[0].MediaID)
 }

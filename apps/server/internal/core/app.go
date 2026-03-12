@@ -29,6 +29,7 @@ import (
 	"kamehouse/internal/mediastream"
 	"kamehouse/internal/nakama"
 	"kamehouse/internal/nativeplayer"
+	"kamehouse/internal/streaming"
 	"kamehouse/internal/onlinestream"
 	"kamehouse/internal/platforms/anilist_platform"
 	"kamehouse/internal/platforms/offline_platform"
@@ -98,6 +99,7 @@ type (
 		ExtensionPlaygroundRepository *extension_playground.PlaygroundRepository
 
 		// Streaming
+		StreamOrchestrator      *streaming.StreamOrchestrator
 		DirectStreamManager     *directstream.Manager
 		OnlinestreamRepository  *onlinestream.Repository
 		MediastreamRepository   *mediastream.Repository
@@ -475,6 +477,7 @@ func NewAntigravity(configOpts *ConfigOptions, selfupdater *updater.SelfUpdater)
 		MangaDownloader:               nil, // Initialized in App.initModulesOnce
 		AutoDownloader:                nil, // Initialized in App.initModulesOnce
 		AutoScanner:                   nil, // Initialized in App.initModulesOnce
+		StreamOrchestrator:            nil, // Initialized in App.initModulesOnce
 		MediastreamRepository:         nil, // Initialized in App.initModulesOnce
 		TorrentstreamRepository:       nil, // Initialized in App.initModulesOnce
 		DebridClientRepository:        nil, // Initialized in App.initModulesOnce

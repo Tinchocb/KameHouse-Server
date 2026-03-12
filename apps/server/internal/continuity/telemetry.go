@@ -1,7 +1,7 @@
 package continuity
 
 import (
-	"context"
+	"fmt"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"sync"
@@ -21,117 +21,100 @@ type TelemetryEvent struct {
 	IsFinal       bool
 }
 
-// TelemetryManager orchestrates asynchronous, non-blocking playback progress aggregation.
+// TelemetryManager orchestrates high-speed, thread-safe playback progress buffering.
 type TelemetryManager struct {
-	manager       *Manager
-	logger        *zerolog.Logger
-	eventQueue    chan TelemetryEvent
-	memoryBatch   map[int]TelemetryEvent
-	batchMutex    sync.Mutex
-	flushInterval time.Duration
-	ctx           context.Context
-	cancel        context.CancelFunc
+	mu         sync.RWMutex
+	buffer     map[string]int
+	repository *db.WatchHistoryRepository
+	ticker     *time.Ticker
+	quit       chan struct{}
+	logger     *zerolog.Logger
 }
 
+// NewTelemetryManager initializes the TelemetryManager
 func NewTelemetryManager(manager *Manager, logger *zerolog.Logger, flushInterval time.Duration) *TelemetryManager {
-	ctx, cancel := context.WithCancel(context.Background())
-
 	tm := &TelemetryManager{
-		manager:       manager,
-		logger:        logger,
-		eventQueue:    make(chan TelemetryEvent, 1000), // Buffer handles sudden traffic spikes
-		memoryBatch:   make(map[int]TelemetryEvent),
-		flushInterval: flushInterval,
-		ctx:           ctx,
-		cancel:        cancel,
+		buffer:     make(map[string]int),
+		repository: db.NewWatchHistoryRepository(manager.db.Gorm()),
+		quit:       make(chan struct{}),
+		logger:     logger,
 	}
-
-	go tm.StartWorker()
-
-	tm.logger.Info().Dur("flushInterval", flushInterval).Msg("telemetry: Initialized High-Speed Telemetry Manager")
+	tm.Start(flushInterval)
+	tm.logger.Info().Dur("flushInterval", flushInterval).Msg("telemetry: Initialized High-Speed Buffered Telemetry Manager")
 	return tm
 }
 
-// Queue instantly queues the event (Sub-1ms guarantee) and returns control to the HTTP handler
-func (tm *TelemetryManager) Queue(event TelemetryEvent) {
-	select {
-	case tm.eventQueue <- event:
-		// Sent successfully without blocking
-	default:
-		tm.logger.Warn().Int("MediaId", event.MediaId).Msg("telemetry: Queue saturated, dropped frequent tick")
-	}
+// UpdateProgress safely and instantly updates the memory buffer.
+func (tm *TelemetryManager) UpdateProgress(mediaID string, seconds int) {
+	tm.mu.Lock()
+	tm.buffer[mediaID] = seconds
+	tm.mu.Unlock()
 }
 
-// StartWorker is the core Event Loop.
-func (tm *TelemetryManager) StartWorker() {
-	ticker := time.NewTicker(tm.flushInterval)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-tm.ctx.Done():
-			tm.logger.Info().Msg("telemetry: Shutting down Telemetry Manager")
-			tm.FlushToDatabase()
-			return
-
-		case event := <-tm.eventQueue:
-			tm.batchMutex.Lock()
-			tm.memoryBatch[event.MediaId] = event
-			tm.batchMutex.Unlock()
-
-			if event.IsFinal {
-				tm.handleFinalEvent(&event)
+// Start launches the Flush Engine Background Worker.
+func (tm *TelemetryManager) Start(flushInterval time.Duration) {
+	tm.ticker = time.NewTicker(flushInterval)
+	go func() {
+		for {
+			select {
+			case <-tm.ticker.C:
+				tm.flush()
+			case <-tm.quit:
+				tm.flush() // Ensure no progress is lost on server shutdown
+				return
 			}
-
-		case <-ticker.C:
-			tm.FlushToDatabase()
 		}
-	}
+	}()
 }
 
-func (tm *TelemetryManager) FlushToDatabase() {
-	tm.batchMutex.Lock()
-
-	if len(tm.memoryBatch) == 0 {
-		tm.batchMutex.Unlock()
+// flush safely duplicates the map and calls the DB repository outside the lock
+func (tm *TelemetryManager) flush() {
+	tm.mu.Lock()
+	if len(tm.buffer) == 0 {
+		tm.mu.Unlock()
 		return
 	}
 
-	clonedBatch := make(map[int]TelemetryEvent, len(tm.memoryBatch))
-	for k, v := range tm.memoryBatch {
-		clonedBatch[k] = v
+	// Copy and reinitialize
+	localBatch := make(map[string]int, len(tm.buffer))
+	for k, v := range tm.buffer {
+		localBatch[k] = v
 	}
-	tm.memoryBatch = make(map[int]TelemetryEvent)
-	tm.batchMutex.Unlock()
+	tm.buffer = make(map[string]int)
+	tm.mu.Unlock()
 
+	// Parse keys back and run bulk DB Upsert outside the mutex payload
 	var records []models.WatchHistory
-	for _, event := range clonedBatch {
-		records = append(records, models.WatchHistory{
-			MediaID:       event.MediaId,
-			EpisodeNumber: event.EpisodeNumber,
-			CurrentTime:   event.CurrentTime,
-			Duration:      event.Duration,
-		})
+	for key, seconds := range localBatch {
+		// Expects key format: "mediaId:episodeNumber:duration"
+		var mediaId, epNum int
+		var duration float64
+		fmt.Sscanf(key, "%d:%d:%f", &mediaId, &epNum, &duration)
+
+		if mediaId > 0 {
+			records = append(records, models.WatchHistory{
+				MediaID:       mediaId,
+				EpisodeNumber: epNum,
+				CurrentTime:   float64(seconds),
+				Duration:      duration,
+			})
+		}
 	}
 
-	repo := db.NewWatchHistoryRepository(tm.manager.db.Gorm())
-	err := repo.UpsertBatch(records)
-	if err != nil {
-		tm.logger.Error().Err(err).Int("batchSize", len(records)).Msg("telemetry: Async DB Flush failed")
-	} else {
-		tm.logger.Trace().Int("batchSize", len(records)).Msg("telemetry: Flushed bulk tick to disk successfully")
-	}
-}
-
-func (tm *TelemetryManager) handleFinalEvent(event *TelemetryEvent) {
-	if event.Duration > 0 {
-		completionRatio := event.CurrentTime / event.Duration
-		if completionRatio >= IgnoreRatioThreshold {
-			tm.logger.Info().Int("MediaId", event.MediaId).Int("Episode", event.EpisodeNumber).Msg("telemetry: User completed episode, signaling Scrobbler hooks")
+	if len(records) > 0 {
+		if err := tm.repository.UpsertBatch(records); err != nil {
+			tm.logger.Error().Err(err).Int("batchSize", len(records)).Msg("telemetry: Async DB Flush failed")
+		} else {
+			tm.logger.Trace().Int("batchSize", len(records)).Msg("telemetry: Flushed bulk tick to disk successfully")
 		}
 	}
 }
 
+// Stop initiates a graceful shutdown and blocks until the final synchronous flush is performed.
 func (tm *TelemetryManager) Stop() {
-	tm.cancel()
+	if tm.ticker != nil {
+		tm.ticker.Stop()
+	}
+	// Send signal to close the background worker
+	tm.quit <- struct{}{}
 }
