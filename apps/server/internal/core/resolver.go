@@ -7,13 +7,10 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"kamehouse/internal/api/anizip"
 	"kamehouse/internal/database/db"
-	torrentio "kamehouse/internal/onlinestream/providers/torrentio"
-
 	"github.com/rs/zerolog"
 )
 
@@ -67,35 +64,29 @@ func (r *UnifiedResolver) ResolveUnifiedMedia(ctx context.Context, mediaID strin
 	}
 
 	var (
-		mu      sync.Mutex
 		sources []MediaSource
-		wg      sync.WaitGroup
 	)
 
 	// Step 1: Local Files (Instantaneous via DB)
 	localFiles := r.getLocalSources(id, episode)
 	sources = append(sources, localFiles...)
 
-	// ID Mapping Bridge: Translate AniList -> IMDB/Kitsu for external addons
-	imdbID, kitsuID := r.translateAniListIDs(id)
+	// Step 2: External Streams (Deactivated)
+	/*
+		imdbID, kitsuID := r.translateAniListIDs(id)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
 
-	// Step 2: External Streams (Torrentio / Debrid) Concurrent Fetch
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
-		// If kitsuID is available, use legacy GetStreams. Alternatively IMDB if using Provider generic IDs.
-		if kitsuID > 0 {
-			extSources := r.getTorrentioSources(ctx, kitsuID, episode)
-			mu.Lock()
-			sources = append(sources, extSources...)
-			mu.Unlock()
-		} else if imdbID != "" {
-			// Fallback placeholder
-		}
-	}()
-
-	wg.Wait()
+			if kitsuID > 0 {
+				extSources := r.getTorrentioSources(ctx, kitsuID, episode)
+				mu.Lock()
+				sources = append(sources, extSources...)
+				mu.Unlock()
+			}
+		}()
+		wg.Wait()
+	*/
 
 	// Step 3: Priority Sorting
 	sortSources(sources)
@@ -168,35 +159,7 @@ func (r *UnifiedResolver) getLocalSources(mediaID int, episode int) []MediaSourc
 // ── External Sources ─────────────────────────────────────────────────────────
 
 func (r *UnifiedResolver) getTorrentioSources(ctx context.Context, kitsuID int, episode int) []MediaSource {
-	provider := torrentio.NewProvider(r.logger)
-	streams, err := provider.GetStreams(ctx, kitsuID, episode)
-	if err != nil {
-		return nil
-	}
-
-	var sources []MediaSource
-	for _, s := range streams {
-		sourceType := SourceTypeTorrent
-		rank := 2
-		if isDebridURL(s.MagnetURI) {
-			sourceType = SourceTypeDebrid
-			rank = 1
-		}
-
-		seeders := extractSeeders(s.Title)
-		res := inferResolution(s.Quality)
-
-		sources = append(sources, MediaSource{
-			URLPath:    s.MagnetURI,
-			Type:       sourceType,
-			Quality:    s.Quality,
-			Resolution: res,
-			Provider:   "Torrentio",
-			Seeders:    seeders,
-			Rank:       rank,
-		})
-	}
-	return sources
+	return nil
 }
 
 // ── Sorting ──────────────────────────────────────────────────────────────────

@@ -4,7 +4,6 @@ import (
 	"database/sql/driver"
 	"errors"
 	"kamehouse/internal/api/metadata"
-	"kamehouse/internal/manga"
 	"time"
 
 	"github.com/goccy/go-json"
@@ -58,8 +57,7 @@ type AnimeSnapshot struct {
 type MangaSnapshot struct {
 	BaseModel
 	MediaId int `gorm:"column:media_id" json:"mediaId"`
-	//ListEntry         LocalMangaListEntry         `gorm:"column:list_entry" json:"listEntry"`
-	ChapterContainers LocalMangaChapterContainers `gorm:"column:chapter_Containers" json:"chapterContainers"`
+	//ChapterContainers LocalMangaChapterContainers `gorm:"column:chapter_Containers" json:"chapterContainers"`
 	BannerImagePath   string                      `gorm:"column:banner_image_path" json:"bannerImagePath"`
 	CoverImagePath    string                      `gorm:"column:cover_image_path" json:"coverImagePath"`
 	// ReferenceKey is used to compare the snapshot with the current data.
@@ -118,28 +116,6 @@ func (o *LocalAnimeMetadata) Scan(src interface{}) error {
 }
 
 func (o LocalAnimeMetadata) Value() (driver.Value, error) {
-	return json.Marshal(o)
-}
-
-//----------------------------------------------------------------------------------------------------------------------------------------------------
-
-type LocalMangaChapterContainers []*manga.ChapterContainer
-
-func (o *LocalMangaChapterContainers) Scan(src interface{}) error {
-	bytes, ok := src.([]byte)
-	if !ok {
-		return errors.New("src value cannot cast to []byte")
-	}
-	var ret []*manga.ChapterContainer
-	err := json.Unmarshal(bytes, &ret)
-	if err != nil {
-		return err
-	}
-	*o = LocalMangaChapterContainers(ret)
-	return nil
-}
-
-func (o LocalMangaChapterContainers) Value() (driver.Value, error) {
 	return json.Marshal(o)
 }
 

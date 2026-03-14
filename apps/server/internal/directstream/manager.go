@@ -5,11 +5,9 @@ import (
 	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/continuity"
-	discordrpc_presence "kamehouse/internal/discordrpc/presence"
 	"kamehouse/internal/events"
 	"kamehouse/internal/library/anime"
 	"kamehouse/internal/mkvparser"
-	"kamehouse/internal/nativeplayer"
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/result"
@@ -32,11 +30,8 @@ type (
 		wsEventManager             events.WSEventManagerInterface
 		continuityManager          *continuity.Manager
 		metadataProviderRef        *util.Ref[metadata_provider.Provider]
-		discordPresence            *discordrpc_presence.Presence
 		platformRef                *util.Ref[platform.Platform]
 		refreshAnimeCollectionFunc func() // This function is called to refresh the AniList collection
-
-		nativePlayer *nativeplayer.NativePlayer
 
 		videoCore           *videocore.VideoCore
 		videoCoreSubscriber *videocore.Subscriber
@@ -75,11 +70,9 @@ type (
 		WSEventManager             events.WSEventManagerInterface
 		MetadataProviderRef        *util.Ref[metadata_provider.Provider]
 		ContinuityManager          *continuity.Manager
-		DiscordPresence            *discordrpc_presence.Presence
 		PlatformRef                *util.Ref[platform.Platform]
 		RefreshAnimeCollectionFunc func()
 		IsOfflineRef               *util.Ref[bool]
-		NativePlayer               *nativeplayer.NativePlayer
 		VideoCore                  *videocore.VideoCore
 	}
 )
@@ -90,12 +83,10 @@ func NewManager(options NewManagerOptions) *Manager {
 		wsEventManager:             options.WSEventManager,
 		metadataProviderRef:        options.MetadataProviderRef,
 		continuityManager:          options.ContinuityManager,
-		discordPresence:            options.DiscordPresence,
 		platformRef:                options.PlatformRef,
 		refreshAnimeCollectionFunc: options.RefreshAnimeCollectionFunc,
 		isOfflineRef:               options.IsOfflineRef,
 		currentStream:              mo.None[Stream](),
-		nativePlayer:               options.NativePlayer,
 		parserCache:                result.NewCache[string, *mkvparser.MetadataParser](),
 		videoCore:                  options.VideoCore,
 	}

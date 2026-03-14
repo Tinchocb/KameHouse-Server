@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/components/ui/core/styling';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ImageOff } from 'lucide-react';
 
-interface DeferredImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+interface DeferredImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageElement>, "onDrag"> {
     src: string;
     alt: string;
     placeholderColor?: string;
@@ -8,9 +12,11 @@ interface DeferredImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
     threshold?: number | number[];
     priority?: boolean;
     aspectRatio?: string;
+    showSkeleton?: boolean;
 }
 
 const BLUR_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3Crect fill='%231a1a1b'/%3E%3C/svg%3E"
+const NO_COVER = "/no-cover.png"
 
 export function DeferredImage(props: DeferredImageProps) {
     const {
@@ -21,7 +27,9 @@ export function DeferredImage(props: DeferredImageProps) {
         rootMargin = '200px',
         threshold = 0,
         priority = false,
+        showSkeleton = true,
         onError,
+        onLoad,
         ...restProps
     } = props;
 
@@ -29,11 +37,11 @@ export function DeferredImage(props: DeferredImageProps) {
     const [isLoaded, setIsLoaded] = useState(false);
     const [hasError, setHasError] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
-    const imgRef = useRef<HTMLImageElement>(null);
 
-    const handleLoad = useCallback(() => {
+    const handleLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
         setIsLoaded(true);
-    }, []);
+        onLoad?.(e);
+    }, [onLoad]);
 
     const handleError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
         setHasError(true);
@@ -72,60 +80,70 @@ export function DeferredImage(props: DeferredImageProps) {
         };
     }, [rootMargin, threshold, priority]);
 
+    // Only apply srcSet if it's a known image provider that supports it (like TMDB/Anilist if they were proxied)
+    // For now, we'll keep it simple as we don't know the backend's image resizing capabilities for all sources
     const generateSrcSet = useCallback((url: string): string | undefined => {
-        if (!url || url.startsWith('data:') || url.startsWith('http') === false) {
+        if (!url || url.startsWith('data:') || url.includes('localhost') || url.includes('127.0.0.1')) {
             return undefined;
         }
-
-        const widths = [320, 480, 640, 960, 1280, 1920];
-        return widths
-            .map(w => `${url}?w=${w}&q=80 ${w}w`)
-            .join(', ');
+        // If it's a TMDB image, we could potentially use their API, but we'll stick to a safer approach
+        return undefined;
     }, []);
 
     return (
         <div
             ref={containerRef}
-            style={{ backgroundColor: placeholderColor }}
-            className={`relative overflow-hidden ${className || ''}`}
+            style={{ backgroundColor: isLoaded ? 'transparent' : placeholderColor }}
+            className={cn("relative overflow-hidden", className)}
         >
+            <AnimatePresence initial={false}>
+                {!isLoaded && !hasError && isIntersecting && showSkeleton && (
+                    <motion.div
+                        initial={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.4 }}
+                        className="absolute inset-0 z-10"
+                    >
+                        <Skeleton className="h-full w-full rounded-none" />
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {!hasError && isIntersecting && (
-                <img
-                    ref={imgRef}
-                    src={priority ? src : undefined}
-                    srcSet={!priority ? generateSrcSet(src) : undefined}
+                <motion.img
+                    initial={priority ? { opacity: 1 } : { opacity: 0 }}
+                    animate={isLoaded ? { opacity: 1 } : { opacity: 0 }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                    src={src}
+                    srcSet={generateSrcSet(src)}
                     alt={alt}
                     loading={priority ? "eager" : "lazy"}
                     onLoad={handleLoad}
                     onError={handleError}
-                    className={`
-                        w-full h-full object-cover
-                        transition-opacity duration-500
-                        ${isLoaded ? 'opacity-100' : 'opacity-0'}
-                    `}
-                    {...restProps}
-                />
-            )}
-
-            {!isIntersecting && (
-                <div className="absolute inset-0" />
-            )}
-
-            {isIntersecting && !isLoaded && !hasError && (
-                <img
-                    src={BLUR_PLACEHOLDER}
-                    alt=""
-                    aria-hidden="true"
-                    className="absolute inset-0 h-full w-full object-cover opacity-50"
+                    className={cn(
+                        "h-full w-full object-cover",
+                        !isLoaded && "invisible"
+                    )}
+                    {...(restProps as any)}
                 />
             )}
 
             {hasError && (
-                <img
-                    src={`data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='300'%3E%3Crect width='200' height='300' fill='%2318181b'/%3E%3C/svg%3E`}
-                    alt={alt}
-                    className="absolute inset-0 h-full w-full object-cover"
-                />
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 text-zinc-600">
+                    <ImageOff className="mb-2 h-8 w-8 opacity-20" />
+                    <img
+                        src={NO_COVER}
+                        alt={alt}
+                        className="absolute inset-0 h-full w-full object-cover opacity-10"
+                    />
+                    <span className="px-4 text-center text-[10px] font-medium uppercase tracking-wider opacity-40">
+                        {alt || "Imagen no disponible"}
+                    </span>
+                </div>
+            )}
+
+            {!isIntersecting && !priority && (
+                <div className="absolute inset-0" />
             )}
         </div>
     );

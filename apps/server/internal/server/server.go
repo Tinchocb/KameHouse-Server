@@ -1,13 +1,11 @@
 package server
 
 import (
-	"context"
 	"embed"
 	"fmt"
 	"kamehouse/internal/core"
 	"kamehouse/internal/cron"
 	"kamehouse/internal/handlers"
-	"kamehouse/internal/updater"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/crashlog"
 	golog "log"
@@ -18,20 +16,18 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func startApp(embeddedLogo []byte) (*core.App, core.KameHouseFlags, *updater.SelfUpdater) {
+func startApp(embeddedLogo []byte) (*core.App, core.KameHouseFlags) {
 	// Print the header
 	core.PrintHeader()
 
 	// Get the flags
 	flags := core.GetKameHouseFlags()
 
-	selfupdater := updater.NewSelfUpdater()
-
 	// Create the app instance
 	app := core.NewKameHouse(&core.ConfigOptions{
 		Flags:        flags,
 		EmbeddedLogo: embeddedLogo,
-	}, selfupdater)
+	})
 
 	// Create log file
 	logFilePath := filepath.Join(app.Config.Logs.Dir, fmt.Sprintf("kamehouse-%s.log", time.Now().Format("2006-01-02_15-04-05")))
@@ -61,10 +57,10 @@ func startApp(embeddedLogo []byte) (*core.App, core.KameHouseFlags, *updater.Sel
 		}()
 	}
 
-	return app, flags, selfupdater
+	return app, flags
 }
 
-func startAppLoop(webFS *embed.FS, app *core.App, flags core.KameHouseFlags, selfupdater *updater.SelfUpdater) {
+func startAppLoop(webFS *embed.FS, app *core.App, flags core.KameHouseFlags) {
 	updateMode := flags.Update
 
 appLoop:
@@ -76,11 +72,6 @@ appLoop:
 
 			// Print the header
 			core.PrintHeader()
-
-			// Run the self-updater
-			err := selfupdater.Run()
-			if err != nil {
-			}
 
 			log.Log().Msg("Shutting down in 10 seconds...")
 			time.Sleep(10 * time.Second)
@@ -100,14 +91,7 @@ appLoop:
 			// Run the jobs in the background
 			cron.RunJobs(app)
 
-			select {
-			case <-selfupdater.Started():
-				cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 15*time.Second)
-				app.Cleanup(cleanupCtx)
-				cleanupCancel()
-				updateMode = true
-				break
-			}
+			select {}
 		}
 		continue
 	}

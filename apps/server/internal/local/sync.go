@@ -9,7 +9,6 @@ import (
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/events"
 	"kamehouse/internal/library/anime"
-	"kamehouse/internal/manga"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/result"
 	"sync"
@@ -32,13 +31,10 @@ type (
 	// Synchronization can fail due to network issues. When it does, the anime or manga will be added to the failed queue.
 	Syncer struct {
 		animeJobQueue chan AnimeTask
-		mangaJobQueue chan MangaTask
 
 		failedAnimeQueue *result.Cache[int, *anilist.AnimeListEntry]
-		failedMangaQueue *result.Cache[int, *anilist.MangaListEntry]
 
 		trackedAnimeMap map[int]*TrackedMedia
-		trackedMangaMap map[int]*TrackedMedia
 
 		manager *ManagerImpl
 		mu      sync.RWMutex
@@ -52,7 +48,6 @@ type (
 
 	QueueState struct {
 		AnimeTasks map[int]*QueueMediaTask `json:"animeTasks"`
-		MangaTasks map[int]*QueueMediaTask `json:"mangaTasks"`
 	}
 
 	QueueMediaTask struct {
@@ -64,30 +59,23 @@ type (
 	AnimeTask struct {
 		Diff *AnimeDiffResult
 	}
-	MangaTask struct {
-		Diff *MangaDiffResult
-	}
 )
 
 func NewQueue(manager *ManagerImpl) *Syncer {
 	ret := &Syncer{
 		animeJobQueue:                make(chan AnimeTask, 100),
-		mangaJobQueue:                make(chan MangaTask, 100),
 		failedAnimeQueue:             result.NewCache[int, *anilist.AnimeListEntry](),
-		failedMangaQueue:             result.NewCache[int, *anilist.MangaListEntry](),
 		shouldUpdateLocalCollections: false,
 		doneUpdatingLocalCollections: make(chan struct{}, 1),
 		manager:                      manager,
 		mu:                           sync.RWMutex{},
 		queueState: QueueState{
 			AnimeTasks: make(map[int]*QueueMediaTask),
-			MangaTasks: make(map[int]*QueueMediaTask),
 		},
 		queueStateMu: sync.RWMutex{},
 	}
 
 	go ret.processAnimeJobs()
-	go ret.processMangaJobs()
 
 	return ret
 }
@@ -117,31 +105,6 @@ func (q *Syncer) processAnimeJobs() {
 	}
 }
 
-func (q *Syncer) processMangaJobs() {
-	for job := range q.mangaJobQueue {
-
-		q.queueStateMu.Lock()
-		q.queueState.MangaTasks[job.Diff.MangaEntry.Media.ID] = &QueueMediaTask{
-			MediaId: job.Diff.MangaEntry.Media.ID,
-			Image:   job.Diff.MangaEntry.Media.GetCoverImageSafe(),
-			Title:   job.Diff.MangaEntry.Media.GetPreferredTitle(),
-			Type:    "manga",
-		}
-		q.SendQueueStateToClient()
-		q.queueStateMu.Unlock()
-
-		q.shouldUpdateLocalCollections = true
-		q.synchronizeManga(job.Diff)
-
-		q.queueStateMu.Lock()
-		delete(q.queueState.MangaTasks, job.Diff.MangaEntry.Media.ID)
-		q.SendQueueStateToClient()
-		q.queueStateMu.Unlock()
-
-		q.checkAndUpdateLocalCollections()
-	}
-}
-
 // checkAndUpdateLocalCollections will synchronize the local collections once the job queue is emptied.
 func (q *Syncer) checkAndUpdateLocalCollections() {
 	q.mu.Lock()
@@ -150,7 +113,7 @@ func (q *Syncer) checkAndUpdateLocalCollections() {
 	// Check if we need to update the local collections
 	if q.shouldUpdateLocalCollections {
 		// Check if both queues are empty
-		if len(q.animeJobQueue) == 0 && len(q.mangaJobQueue) == 0 {
+		if len(q.animeJobQueue) == 0 {
 			// Update the local collections
 			err := q.synchronizeCollections()
 			if err != nil {
@@ -193,63 +156,24 @@ func (q *Syncer) synchronizeCollections() (err error) {
 	q.manager.logger.Trace().Msg("local manager: Synchronizing local collections")
 
 	_animeCollection := q.manager.animeCollection.MustGet()
-	_mangaCollection := q.manager.mangaCollection.MustGet()
 
-	// Get up-to-date snapshots
 	animeSnapshots, _ := q.manager.localDb.GetAnimeSnapshots()
-	mangaSnapshots, _ := q.manager.localDb.GetMangaSnapshots()
-
 	animeSnapshotMap := make(map[int]*AnimeSnapshot)
 	for _, snapshot := range animeSnapshots {
 		animeSnapshotMap[snapshot.MediaId] = snapshot
 	}
 
-	mangaSnapshotMap := make(map[int]*MangaSnapshot)
-	for _, snapshot := range mangaSnapshots {
-		mangaSnapshotMap[snapshot.MediaId] = snapshot
-	}
-
 	localAnimeCollection := &anilist.AnimeCollection{
 		MediaListCollection: &anilist.AnimeCollection_MediaListCollection{
-			Lists: []*anilist.AnimeCollection_MediaListCollection_Lists{},
+			Lists: make([]*anilist.AnimeCollection_MediaListCollection_Lists, 0),
 		},
 	}
-
-	localMangaCollection := &anilist.MangaCollection{
-		MediaListCollection: &anilist.MangaCollection_MediaListCollection{
-			Lists: []*anilist.MangaCollection_MediaListCollection_Lists{},
-		},
-	}
-
-	// Re-create all anime collection lists, without entries
 	for _, _animeList := range _animeCollection.MediaListCollection.GetLists() {
-		if _animeList.GetStatus() == nil {
-			continue
-		}
-		list := &anilist.AnimeCollection_MediaListCollection_Lists{
-			Status:       ToNewPointer(_animeList.Status),
-			Name:         ToNewPointer(_animeList.Name),
-			IsCustomList: ToNewPointer(_animeList.IsCustomList),
-			Entries:      []*anilist.AnimeListEntry{},
-		}
-		localAnimeCollection.MediaListCollection.Lists = append(localAnimeCollection.MediaListCollection.Lists, list)
+		localAnimeCollection.MediaListCollection.Lists = append(localAnimeCollection.MediaListCollection.Lists, &anilist.AnimeCollection_MediaListCollection_Lists{
+			Status:  _animeList.GetStatus(),
+			Entries: make([]*anilist.AnimeListEntry, 0),
+		})
 	}
-
-	// Re-create all manga collection lists, without entries
-	for _, _mangaList := range _mangaCollection.MediaListCollection.GetLists() {
-		if _mangaList.GetStatus() == nil {
-			continue
-		}
-		list := &anilist.MangaCollection_MediaListCollection_Lists{
-			Status:       ToNewPointer(_mangaList.Status),
-			Name:         ToNewPointer(_mangaList.Name),
-			IsCustomList: ToNewPointer(_mangaList.IsCustomList),
-			Entries:      []*anilist.MangaListEntry{},
-		}
-		localMangaCollection.MediaListCollection.Lists = append(localMangaCollection.MediaListCollection.Lists, list)
-	}
-
-	//visited := make(map[int]struct{})
 
 	if len(animeSnapshots) > 0 {
 		// Create local anime collection
@@ -326,117 +250,22 @@ func (q *Syncer) synchronizeCollections() (err error) {
 		}
 	}
 
-	if len(mangaSnapshots) > 0 {
-		// Create local manga collection
-		for _, _mangaList := range _mangaCollection.MediaListCollection.GetLists() {
-			if _mangaList.GetStatus() == nil {
-				continue
-			}
-			for _, _mangaEntry := range _mangaList.GetEntries() {
-				// Check if the manga is tracked
-				_, found := q.trackedMangaMap[_mangaEntry.GetMedia().GetID()]
-				if !found {
-					continue
-				}
-				// Get the manga snapshot
-				snapshot, found := mangaSnapshotMap[_mangaEntry.GetMedia().GetID()]
-				if !found {
-					continue
-				}
-
-				// Add the manga to the right list
-				for _, list := range localMangaCollection.MediaListCollection.GetLists() {
-					if list.GetStatus() == nil {
-						continue
-					}
-
-					if *list.GetStatus() != *_mangaList.GetStatus() {
-						continue
-					}
-
-					editedManga := BaseMangaDeepCopy(_mangaEntry.GetMedia())
-					editedManga.BannerImage = FormatAssetUrl(snapshot.MediaId, snapshot.BannerImagePath)
-					editedManga.CoverImage = &anilist.BaseManga_CoverImage{
-						ExtraLarge: FormatAssetUrl(snapshot.MediaId, snapshot.CoverImagePath),
-						Large:      FormatAssetUrl(snapshot.MediaId, snapshot.CoverImagePath),
-						Medium:     FormatAssetUrl(snapshot.MediaId, snapshot.CoverImagePath),
-						Color:      FormatAssetUrl(snapshot.MediaId, snapshot.CoverImagePath),
-					}
-
-					var startedAt *anilist.MangaCollection_MediaListCollection_Lists_Entries_StartedAt
-					if _mangaEntry.GetStartedAt() != nil {
-						startedAt = &anilist.MangaCollection_MediaListCollection_Lists_Entries_StartedAt{
-							Year:  ToNewPointer(_mangaEntry.GetStartedAt().GetYear()),
-							Month: ToNewPointer(_mangaEntry.GetStartedAt().GetMonth()),
-							Day:   ToNewPointer(_mangaEntry.GetStartedAt().GetDay()),
-						}
-					}
-
-					var completedAt *anilist.MangaCollection_MediaListCollection_Lists_Entries_CompletedAt
-					if _mangaEntry.GetCompletedAt() != nil {
-						completedAt = &anilist.MangaCollection_MediaListCollection_Lists_Entries_CompletedAt{
-							Year:  ToNewPointer(_mangaEntry.GetCompletedAt().GetYear()),
-							Month: ToNewPointer(_mangaEntry.GetCompletedAt().GetMonth()),
-							Day:   ToNewPointer(_mangaEntry.GetCompletedAt().GetDay()),
-						}
-					}
-
-					entry := &anilist.MangaListEntry{
-						ID:          _mangaEntry.GetID(),
-						Score:       ToNewPointer(_mangaEntry.GetScore()),
-						Progress:    ToNewPointer(_mangaEntry.GetProgress()),
-						Status:      ToNewPointer(_mangaEntry.GetStatus()),
-						Notes:       ToNewPointer(_mangaEntry.GetNotes()),
-						Repeat:      ToNewPointer(_mangaEntry.GetRepeat()),
-						Private:     ToNewPointer(_mangaEntry.GetPrivate()),
-						StartedAt:   startedAt,
-						CompletedAt: completedAt,
-						Media:       editedManga,
-					}
-					list.Entries = append(list.Entries, entry)
-					break
-				}
-
-			}
-		}
-	}
-
-	// Save the local collections
-	err = q.manager.localDb.SaveAnimeCollection(localAnimeCollection)
-	if err != nil {
-		return err
-	}
-
-	err = q.manager.localDb.SaveMangaCollection(localMangaCollection)
-	if err != nil {
-		return err
-	}
-
-	q.manager.loadLocalAnimeCollection()
-	q.manager.loadLocalMangaCollection()
-
-	q.manager.logger.Debug().Msg("local manager: Synchronized local collections")
-
 	return nil
 }
 
-//----------------------------------------------------------------------------------------------------------------------------------------------------
-
 func (q *Syncer) sendAnimeToFailedQueue(entry *anilist.AnimeListEntry) {
+	if entry == nil || entry.Media == nil {
+		return
+	}
 	q.failedAnimeQueue.Set(entry.Media.ID, entry)
 }
-
-func (q *Syncer) sendMangaToFailedQueue(entry *anilist.MangaListEntry) {
-	q.failedMangaQueue.Set(entry.Media.ID, entry)
-}
-
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 
 func (q *Syncer) refreshCollections() {
 
 	q.manager.logger.Trace().Msg("local manager: Refreshing collections")
 
-	if len(q.animeJobQueue) > 0 || len(q.mangaJobQueue) > 0 {
+	if len(q.animeJobQueue) > 0 {
 		q.manager.logger.Trace().Msg("local manager: Skipping refreshCollections, job queues are not empty")
 		return
 	}
@@ -450,10 +279,7 @@ func (q *Syncer) refreshCollections() {
 func (q *Syncer) runDiffs(
 	trackedAnimeMap map[int]*TrackedMedia,
 	trackedAnimeSnapshotMap map[int]*AnimeSnapshot,
-	trackedMangaMap map[int]*TrackedMedia,
-	trackedMangaSnapshotMap map[int]*MangaSnapshot,
 	localFiles []*dto.LocalFile,
-	downloadedChapterContainers []*manga.ChapterContainer,
 ) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
@@ -465,12 +291,7 @@ func (q *Syncer) runDiffs(
 		return
 	}
 
-	if q.manager.mangaCollection.IsAbsent() {
-		q.manager.logger.Error().Msg("local manager: Cannot get diffs, manga collection is absent")
-		return
-	}
-
-	if len(q.animeJobQueue) > 0 || len(q.mangaJobQueue) > 0 {
+	if len(q.animeJobQueue) > 0 {
 		q.manager.logger.Trace().Msg("local manager: Skipping diffs, job queues are not empty")
 		return
 	}
@@ -496,34 +317,17 @@ func (q *Syncer) runDiffs(
 		//q.manager.logger.Trace().Msg("local manager: Finished getting anime diffs")
 	}()
 
-	var mangaDiffs map[int]*MangaDiffResult
-
-	go func() {
-		mangaDiffs = diff.GetMangaDiffs(GetMangaDiffOptions{
-			Collection:                  q.manager.mangaCollection.MustGet(),
-			LocalCollection:             q.manager.localMangaCollection,
-			DownloadedChapterContainers: downloadedChapterContainers,
-			TrackedManga:                trackedMangaMap,
-			Snapshots:                   trackedMangaSnapshotMap,
-		})
-		wg.Done()
-		//q.manager.logger.Trace().Msg("local manager: Finished getting manga diffs")
-	}()
-
 	wg.Wait()
 
 	// Add the diffs to be synced asynchronously
 	go func() {
-		q.manager.logger.Trace().Int("animeJobs", len(animeDiffs)).Int("mangaJobs", len(mangaDiffs)).Msg("local manager: Adding diffs to the job queues")
+		q.manager.logger.Trace().Int("animeJobs", len(animeDiffs)).Msg("local manager: Adding diffs to the job queues")
 
 		for _, i := range animeDiffs {
 			q.animeJobQueue <- AnimeTask{Diff: i}
 		}
-		for _, i := range mangaDiffs {
-			q.mangaJobQueue <- MangaTask{Diff: i}
-		}
 
-		if len(animeDiffs) == 0 && len(mangaDiffs) == 0 {
+		if len(animeDiffs) == 0 {
 			q.manager.logger.Trace().Msg("local manager: No diffs found")
 			//q.refreshCollections()
 		}
@@ -674,97 +478,6 @@ func (q *Syncer) synchronizeAnime(diff *AnimeDiffResult) {
 		if err != nil {
 			q.sendAnimeToFailedQueue(entry)
 			q.manager.logger.Error().Err(err).Msgf("local manager: Failed to save anime snapshot for anime %d", entry.GetMedia().GetID())
-		}
-		return
-	}
-
-	// The snapshot is up-to-date
-	return
-}
-
-// synchronizeManga creates or updates the manga snapshot in the local database.
-// We know that the manga is tracked.
-//   - If the manga has no chapter containers, it will be removed entirely from the local database.
-//   - If the manga has chapter containers, we create or update the snapshot.
-func (q *Syncer) synchronizeManga(diff *MangaDiffResult) {
-	defer util.HandlePanicInModuleThen("sync/synchronizeManga", func() {})
-
-	entry := diff.MangaEntry
-
-	if entry == nil {
-		return
-	}
-
-	q.manager.logger.Trace().Msgf("local manager: Starting synchronization of manga %d, diff type: %+v", entry.GetMedia().GetID(), diff.DiffType)
-
-	if q.manager.mangaCollection.IsAbsent() {
-		return
-	}
-
-	eContainers := make([]*manga.ChapterContainer, 0)
-
-	// Get the manga
-	listEntry, ok := q.manager.mangaCollection.MustGet().GetListEntryFromMangaId(entry.GetMedia().GetID())
-	if !ok {
-		q.manager.logger.Error().Msgf("local manager: Failed to get manga")
-		return
-	}
-
-	if listEntry.GetStatus() == nil {
-		return
-	}
-
-	// Get all chapter containers for this manga
-	// A manga entry can have multiple chapter containers due to different sources
-	for _, c := range q.manager.downloadedChapterContainers {
-		if c.MediaId == entry.GetMedia().GetID() {
-			eContainers = append(eContainers, c)
-		}
-	}
-
-	// If there are no chapter containers (they may have been deleted), remove the manga from the local database
-	if len(eContainers) == 0 {
-		_ = q.manager.removeManga(entry.GetMedia().GetID())
-		return
-	}
-
-	if diff.DiffType == DiffTypeMissing {
-		bannerImage, coverImage, ok := DownloadMangaImages(q.manager.logger, q.manager.localAssetsDir, entry)
-		if !ok {
-			q.sendMangaToFailedQueue(entry)
-			return
-		}
-
-		// Create a new snapshot
-		snapshot := &MangaSnapshot{
-			MediaId:           entry.GetMedia().GetID(),
-			ChapterContainers: eContainers,
-			BannerImagePath:   bannerImage,
-			CoverImagePath:    coverImage,
-			ReferenceKey:      GetMangaReferenceKey(entry.GetMedia(), eContainers),
-		}
-
-		// Save the snapshot
-		err := q.manager.localDb.SaveMangaSnapshot(snapshot)
-		if err != nil {
-			q.sendMangaToFailedQueue(entry)
-			q.manager.logger.Error().Err(err).Msgf("local manager: Failed to save manga snapshot for manga %d", entry.GetMedia().GetID())
-		}
-		return
-	}
-
-	if diff.DiffType == DiffTypeMetadata && diff.MangaSnapshot != nil {
-		snapshot := *diff.MangaSnapshot
-
-		// Update the snapshot
-		snapshot.ChapterContainers = eContainers
-		snapshot.ReferenceKey = GetMangaReferenceKey(entry.GetMedia(), eContainers)
-
-		// Save the snapshot
-		err := q.manager.localDb.SaveMangaSnapshot(&snapshot)
-		if err != nil {
-			q.sendMangaToFailedQueue(entry)
-			q.manager.logger.Error().Err(err).Msgf("local manager: Failed to save manga snapshot for manga %d", entry.GetMedia().GetID())
 		}
 		return
 	}

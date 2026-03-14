@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testSetupManager(t *testing.T) (Manager, *anilist.AnimeCollection, *anilist.MangaCollection) {
+func testSetupManager(t *testing.T) (Manager, *anilist.AnimeCollection) {
 
 	logger := util.NewLogger()
 
@@ -29,22 +29,19 @@ func testSetupManager(t *testing.T) (Manager, *anilist.AnimeCollection, *anilist
 	anilistPlatform.SetUsername(test_utils.ConfigData.Provider.AnilistUsername)
 	animeCollection, err := anilistPlatform.GetAnimeCollection(context.Background(), true)
 	require.NoError(t, err)
-	mangaCollection, err := anilistPlatform.GetMangaCollection(context.Background(), true)
-	require.NoError(t, err)
 
 	manager := GetMockManager(t, database)
 
 	manager.SetAnimeCollection(animeCollection)
-	manager.SetMangaCollection(mangaCollection)
 
-	return manager, animeCollection, mangaCollection
+	return manager, animeCollection
 }
 
 func TestSync2(t *testing.T) {
 	test_utils.SetTwoLevelDeep()
 	test_utils.InitTestProvider(t, test_utils.Anilist())
 
-	manager, animeCollection, _ := testSetupManager(t)
+	manager, animeCollection := testSetupManager(t)
 
 	err := manager.TrackAnime(130003) // Bocchi the rock
 	if err != nil && !errors.Is(err, ErrAlreadyTracked) {
@@ -58,10 +55,7 @@ func TestSync2(t *testing.T) {
 	if err != nil && !errors.Is(err, ErrAlreadyTracked) {
 		require.NoError(t, err)
 	}
-	err = manager.TrackManga(101517) // JJK
-	if err != nil && !errors.Is(err, ErrAlreadyTracked) {
-		require.NoError(t, err)
-	}
+
 
 	err = manager.SynchronizeLocal()
 	require.NoError(t, err)
@@ -69,7 +63,7 @@ func TestSync2(t *testing.T) {
 	select {
 	case <-manager.GetSyncer().doneUpdatingLocalCollections:
 		util.Spew(manager.GetLocalAnimeCollection().MustGet())
-		util.Spew(manager.GetLocalMangaCollection().MustGet())
+
 		break
 	case <-time.After(10 * time.Second):
 		t.Log("Timeout")
@@ -90,7 +84,7 @@ func TestSync2(t *testing.T) {
 	select {
 	case <-manager.GetSyncer().doneUpdatingLocalCollections:
 		util.Spew(manager.GetLocalAnimeCollection().MustGet())
-		util.Spew(manager.GetLocalMangaCollection().MustGet())
+
 		break
 	case <-time.After(10 * time.Second):
 		t.Log("Timeout")
@@ -103,7 +97,7 @@ func TestSync(t *testing.T) {
 	test_utils.SetTwoLevelDeep()
 	test_utils.InitTestProvider(t, test_utils.Anilist())
 
-	manager, _, _ := testSetupManager(t)
+	manager, _ := testSetupManager(t)
 
 	err := manager.TrackAnime(130003) // Bocchi the rock
 	if err != nil && !errors.Is(err, ErrAlreadyTracked) {
@@ -117,10 +111,7 @@ func TestSync(t *testing.T) {
 	if err != nil && !errors.Is(err, ErrAlreadyTracked) {
 		require.NoError(t, err)
 	}
-	err = manager.TrackManga(101517) // JJK
-	if err != nil && !errors.Is(err, ErrAlreadyTracked) {
-		require.NoError(t, err)
-	}
+
 
 	err = manager.SynchronizeLocal()
 	require.NoError(t, err)
@@ -128,7 +119,7 @@ func TestSync(t *testing.T) {
 	select {
 	case <-manager.GetSyncer().doneUpdatingLocalCollections:
 		util.Spew(manager.GetLocalAnimeCollection().MustGet())
-		util.Spew(manager.GetLocalMangaCollection().MustGet())
+
 		break
 	case <-time.After(10 * time.Second):
 		t.Log("Timeout")

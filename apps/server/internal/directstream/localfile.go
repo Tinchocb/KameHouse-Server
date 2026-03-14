@@ -9,7 +9,6 @@ import (
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/library/anime"
 	"kamehouse/internal/mkvparser"
-	"kamehouse/internal/nativeplayer"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/result"
 	"net/http"
@@ -42,8 +41,8 @@ func (s *LocalFileStream) newReader() (io.ReadSeekCloser, error) {
 	return r, nil
 }
 
-func (s *LocalFileStream) Type() nativeplayer.StreamType {
-	return nativeplayer.StreamTypeFile
+func (s *LocalFileStream) Type() StreamType {
+	return StreamTypeLocal
 }
 
 func (s *LocalFileStream) LoadContentType() string {
@@ -56,10 +55,10 @@ func (s *LocalFileStream) LoadContentType() string {
 	return s.contentType
 }
 
-func (s *LocalFileStream) LoadPlaybackInfo() (ret *nativeplayer.PlaybackInfo, err error) {
+func (s *LocalFileStream) LoadPlaybackInfo() (ret *PlaybackInfo, err error) {
 	s.playbackInfoOnce.Do(func() {
 		if s.localFile == nil {
-			s.playbackInfo = &nativeplayer.PlaybackInfo{}
+			s.playbackInfo = &PlaybackInfo{}
 			err = fmt.Errorf("local file is not set")
 			s.playbackInfoErr = err
 			return
@@ -103,7 +102,7 @@ func (s *LocalFileStream) LoadPlaybackInfo() (ret *nativeplayer.PlaybackInfo, er
 			}
 		}
 
-		playbackInfo := nativeplayer.PlaybackInfo{
+		playbackInfo := PlaybackInfo{
 			ID:                id,
 			StreamType:        s.Type(),
 			StreamPath:        s.localFile.Path,
@@ -115,7 +114,6 @@ func (s *LocalFileStream) LoadPlaybackInfo() (ret *nativeplayer.PlaybackInfo, er
 			Episode:           s.episode,
 			Media:             s.media,
 			EntryListData:     entryListData,
-			LocalFile:         s.localFile,
 		}
 
 		// If the content type is an EBML content type, we can create a metadata parser

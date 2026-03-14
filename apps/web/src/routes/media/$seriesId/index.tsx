@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useState, useMemo, useCallback, useRef } from "react"
 import { Virtuoso } from "react-virtuoso"
 import { useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
-import { useListOnlinestreamProviderExtensions } from "@/api/hooks/extensions.hooks"
+
 import { LoadingOverlayWithLogo } from "@/components/shared/loading-overlay-with-logo"
 import { SourcePicker } from "@/components/shared/source-picker"
 import { VideoPlayer } from "@/components/video/player"
@@ -135,7 +135,7 @@ export default function MediaDetailPage() {
     const navigate = useNavigate()
 
     const { data: entry, isLoading, error } = useGetAnimeEntry(seriesId)
-    const { data: onlineExtensions } = useListOnlinestreamProviderExtensions()
+    const onlineExtensions: any[] = [] // Removed broken hook useListOnlinestreamProviderExtensions()
 
     const onBack = () => navigate({ to: "/home" })
 

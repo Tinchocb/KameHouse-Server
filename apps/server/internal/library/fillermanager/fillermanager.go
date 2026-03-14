@@ -5,7 +5,6 @@ import (
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/hook"
 	"kamehouse/internal/library/anime"
-	"kamehouse/internal/onlinestream"
 	"kamehouse/internal/util"
 	"strconv"
 	"sync"
@@ -236,32 +235,7 @@ func (fm *FillerManager) HydrateFillerData(e *anime.Entry) {
 	})
 }
 
-func (fm *FillerManager) HydrateOnlinestreamFillerData(mId int, episodes []*onlinestream.Episode) {
-	if fm == nil {
-		return
-	}
-	if episodes == nil || len(episodes) == 0 {
-		return
-	}
 
-	event := &HydrateOnlinestreamFillerDataRequestedEvent{
-		Episodes: episodes,
-	}
-	_ = hook.GlobalHookManager.OnHydrateOnlinestreamFillerDataRequested().Trigger(event)
-	if event.DefaultPrevented {
-		return
-	}
-	episodes = event.Episodes
-
-	// Check if the filler data has been fetched
-	if !fm.HasFillerFetched(mId) {
-		return
-	}
-
-	for _, ep := range episodes {
-		ep.IsFiller = fm.IsEpisodeFiller(mId, ep.Number)
-	}
-}
 
 func (fm *FillerManager) HydrateEpisodeFillerData(mId int, episodes []*anime.Episode) {
 	if fm == nil || len(episodes) == 0 {

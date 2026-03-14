@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"errors"
 	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/database/db"
@@ -22,7 +21,7 @@ import (
 //	@returns bool
 func (h *Handler) HandleRunAutoDownloader(c echo.Context) error {
 
-	h.App.AutoDownloader.Run(false)
+	h.App.AutoDownloader.Run()
 
 	return h.RespondWithData(c, true)
 }
@@ -43,7 +42,7 @@ func (h *Handler) HandleRunAutoDownloaderSimulation(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	h.App.AutoDownloader.RunCheck(context.Background(), true, b.RuleIds...)
+	h.App.AutoDownloader.RunCheck()
 	res := h.App.AutoDownloader.GetSimulationResults()
 	h.App.AutoDownloader.ClearSimulationResults()
 

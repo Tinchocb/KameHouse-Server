@@ -33,20 +33,6 @@ func BaseAnimeDeepCopy(animeCollection *anilist.BaseAnime) *anilist.BaseAnime {
 }
 
 // BaseMangaDeepCopy creates a deep copy of the given base manga struct.
-func BaseMangaDeepCopy(animeCollection *anilist.BaseManga) *anilist.BaseManga {
-	bytes, err := json.Marshal(animeCollection)
-	if err != nil {
-		return nil
-	}
-
-	deepCopy := &anilist.BaseManga{}
-	err = json.Unmarshal(bytes, deepCopy)
-	if err != nil {
-		return nil
-	}
-
-	return deepCopy
-}
 
 func ToNewPointer[A any](a *A) *A {
 	if a == nil {
@@ -211,34 +197,3 @@ func DownloadAnimeImages(
 //
 //	DownloadMangaImages(logger, "path/to/datadir/local/assets", entry)
 //	-> "banner.jpg", "cover.jpg"
-func DownloadMangaImages(logger *zerolog.Logger, assetsDir string, entry *anilist.MangaListEntry) (string, string, bool) {
-	logger.Trace().Msgf("local manager: Downloading images for manga %d", entry.Media.ID)
-
-	// e.g. /datadir/local/assets/123
-	mediaAssetPath := filepath.Join(assetsDir, fmt.Sprintf("%d", entry.Media.ID))
-	imageDownloader := image_downloader.NewImageDownloader(mediaAssetPath, logger)
-	// Download the images
-	ogBannerImage := entry.GetMedia().GetBannerImageSafe()
-	ogCoverImage := entry.GetMedia().GetCoverImageSafe()
-
-	imgUrls := []string{ogBannerImage, ogCoverImage}
-
-	err := imageDownloader.DownloadImages(imgUrls)
-	if err != nil {
-		logger.Error().Err(err).Msgf("local manager: Failed to download images for anime %d", entry.Media.ID)
-		return "", "", false
-	}
-
-	images, err := imageDownloader.GetImageFilenamesByUrls(imgUrls)
-	if err != nil {
-		logger.Error().Err(err).Msgf("local manager: Failed to get image filenames for anime %d", entry.Media.ID)
-		return "", "", false
-	}
-
-	bannerImage := images[ogBannerImage]
-	coverImage := images[ogCoverImage]
-
-	logger.Debug().Msgf("local manager: Stored images for manga %d, %+v, %+v", entry.Media.ID, bannerImage, coverImage)
-
-	return bannerImage, coverImage, true
-}

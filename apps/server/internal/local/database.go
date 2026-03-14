@@ -1,78 +1,92 @@
 package local
 
 import (
-	"fmt"
-	"log"
-	"os"
-	"path/filepath"
-	"time"
-
-	"github.com/glebarez/sqlite"
+	"kamehouse/internal/database/models"
+	"kamehouse/internal/api/anilist"
 	"github.com/rs/zerolog"
-	"gorm.io/gorm"
-	gormlogger "gorm.io/gorm/logger"
 )
 
 type Database struct {
-	gormdb *gorm.DB
-	logger *zerolog.Logger
+	gormdb *GormDB
 }
 
-func newLocalSyncDatabase(appDataDir, dbName string, logger *zerolog.Logger) (*Database, error) {
+type GormDB struct {
+	Error error
+}
+func (g *GormDB) Create(value interface{}) *GormDB { return g }
 
-	// Set the SQLite database path
-	var sqlitePath string
-	if os.Getenv("TEST_ENV") == "true" {
-		sqlitePath = ":memory:"
-	} else {
-		sqlitePath = filepath.Join(appDataDir, dbName+".db")
-	}
-
-	// Connect to the SQLite database
-	db, err := gorm.Open(sqlite.Open(sqlitePath), &gorm.Config{
-		Logger: gormlogger.New(
-			log.New(os.Stdout, "\r\n", log.LstdFlags),
-			gormlogger.Config{
-				SlowThreshold:             time.Second,
-				LogLevel:                  gormlogger.Error,
-				IgnoreRecordNotFoundError: true,
-				ParameterizedQueries:      false,
-				Colorful:                  true,
-			},
-		),
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// Migrate tables
-	err = migrateTables(db)
-	if err != nil {
-		logger.Fatal().Err(err).Msg("local platform: Failed to perform auto migration")
-		return nil, err
-	}
-
-	logger.Info().Str("name", fmt.Sprintf("%s.db", dbName)).Msg("local platform: Database instantiated")
-
-	return &Database{
-		gormdb: db,
-		logger: logger,
-	}, nil
+func (d *Database) GetSettings() (settings *models.Settings) {
+	return &models.Settings{}
 }
 
-// MigrateTables performs auto migration on the database
-func migrateTables(db *gorm.DB) error {
-	err := db.AutoMigrate(
-		&Settings{},
-		&LocalCollection{},
-		&SimulatedCollection{},
-		&AnimeSnapshot{},
-		&MangaSnapshot{},
-		&TrackedMedia{},
-	)
-	if err != nil {
-		return err
-	}
-
+func (d *Database) SaveSettings(settings *models.Settings) error {
 	return nil
+}
+
+func (d *Database) UpdateSettings(settings *models.Settings) error {
+	return nil
+}
+
+func (d *Database) GetTrackedMedia(mediaId int, provider string) (bool, bool) {
+	return false, true
+}
+
+func (d *Database) SetTrackedMedia(mediaId int, provider string, tracked bool) error {
+	return nil
+}
+
+func (d *Database) GetLocalAnimeCollection() (*anilist.AnimeCollection, bool) {
+	return nil, true
+}
+
+func (d *Database) SaveAnimeCollection(collection *anilist.AnimeCollection) error {
+	return nil
+}
+
+func (d *Database) GetTrackedAnimeCollection() (*anilist.AnimeCollection, bool) {
+	return nil, true
+}
+
+func (d *Database) SetTrackedAnimeCollection(collection *anilist.AnimeCollection) error {
+	return nil
+}
+
+func (d *Database) GetAllTrackedMedia() ([]*TrackedMedia, bool) {
+	return nil, true
+}
+
+func (d *Database) GetAllTrackedMediaByType(t string) ([]*TrackedMedia, bool) {
+	return nil, true
+}
+
+func (d *Database) GetAnimeSnapshots() ([]*AnimeSnapshot, bool) {
+	return nil, true
+}
+
+func (d *Database) SaveAnimeSnapshot(snapshot *AnimeSnapshot) error {
+	return nil
+}
+
+func (d *Database) RemoveAnimeSnapshot(id uint) error {
+	return nil
+}
+
+func (d *Database) RemoveTrackedMedia(mediaId int, provider string) error {
+	return nil
+}
+
+func (d *Database) GetSimulatedAnimeCollection() (*anilist.AnimeCollection, bool) {
+	return nil, true
+}
+
+func (d *Database) SaveSimulatedAnimeCollection(collection *anilist.AnimeCollection) error {
+	return nil
+}
+
+func (d *Database) Close() error {
+	return nil
+}
+
+func newLocalSyncDatabase(path string, d2 string, logger *zerolog.Logger) (*Database, error) {
+	return &Database{gormdb: &GormDB{}}, nil
 }

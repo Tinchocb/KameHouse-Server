@@ -6,10 +6,8 @@ import (
 	"io"
 	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/database/models"
-	hibiketorrent "kamehouse/internal/extension/hibike/torrent"
 	"kamehouse/internal/library/anime"
 	"kamehouse/internal/mkvparser"
-	"kamehouse/internal/nativeplayer"
 	httputil "kamehouse/internal/util/http"
 	"kamehouse/internal/util/result"
 	"net/http"
@@ -30,12 +28,12 @@ type DebridStream struct {
 	streamUrl     string
 	contentLength int64
 	filepath      string
-	torrent       *hibiketorrent.AnimeTorrent
+	torrent       interface{}
 	streamReadyCh chan struct{} // Closed by the initiator when the stream is ready
 }
 
-func (s *DebridStream) Type() nativeplayer.StreamType {
-	return nativeplayer.StreamTypeDebrid
+func (s *DebridStream) Type() StreamType {
+	return StreamTypeDebrid
 }
 
 func (s *DebridStream) LoadContentType() string {
@@ -62,10 +60,10 @@ func (s *DebridStream) Terminate() {
 	s.BaseStream.Terminate()
 }
 
-func (s *DebridStream) LoadPlaybackInfo() (ret *nativeplayer.PlaybackInfo, err error) {
+func (s *DebridStream) LoadPlaybackInfo() (ret *PlaybackInfo, err error) {
 	s.playbackInfoOnce.Do(func() {
 		if s.streamUrl == "" {
-			ret = &nativeplayer.PlaybackInfo{}
+			ret = &PlaybackInfo{}
 			err = fmt.Errorf("stream url is not set")
 			s.playbackInfoErr = err
 			return
@@ -76,13 +74,16 @@ func (s *DebridStream) LoadPlaybackInfo() (ret *nativeplayer.PlaybackInfo, err e
 		var entryListData *anime.EntryListData
 		if animeCollection, ok := s.manager.animeCollection.Get(); ok {
 			if listEntry, ok := animeCollection.GetListEntryFromAnimeId(s.media.ID); ok {
+				/* if customsource.IsExtensionId(entry.Media.GetID()) {
+					continue
+				} */
 				entryListData = anime.NewEntryListData(models.ToMediaEntryListData(listEntry))
 			}
 		}
 
 		contentType := s.LoadContentType()
 
-		playbackInfo := nativeplayer.PlaybackInfo{
+		playbackInfo := PlaybackInfo{
 			ID:                id,
 			StreamType:        s.Type(),
 			StreamPath:        s.filepath,
@@ -182,8 +183,8 @@ type PlayDebridStreamOptions struct {
 	MediaId      int
 	AnidbEpisode string // Anizip episode
 	Media        *anilist.BaseAnime
-	Torrent      *hibiketorrent.AnimeTorrent // Selected torrent
-	FileId       string                      // File ID or index
+	Torrent      interface{} // Selected torrent
+	FileId       string      // File ID or index
 	UserAgent    string
 	ClientId     string
 	AutoSelect   bool

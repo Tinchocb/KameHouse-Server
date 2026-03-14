@@ -7,7 +7,6 @@ import (
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/continuity"
 	"kamehouse/internal/database/models"
-	discordrpc_presence "kamehouse/internal/discordrpc/presence"
 	"kamehouse/internal/events"
 	"kamehouse/internal/mkvparser"
 	"kamehouse/internal/platforms/platform"
@@ -34,7 +33,6 @@ type (
 
 		continuityManager          *continuity.Manager
 		metadataProviderRef        *util.Ref[metadata_provider.Provider]
-		discordPresence            *discordrpc_presence.Presence
 		platformRef                *util.Ref[platform.Platform]
 		refreshAnimeCollectionFunc func() // This function is called to refresh the AniList collection
 		isOfflineRef               *util.Ref[bool]
@@ -71,7 +69,6 @@ type (
 		Logger                     *zerolog.Logger
 		MetadataProviderRef        *util.Ref[metadata_provider.Provider]
 		ContinuityManager          *continuity.Manager
-		DiscordPresence            *discordrpc_presence.Presence
 		PlatformRef                *util.Ref[platform.Platform]
 		RefreshAnimeCollectionFunc func()
 		IsOfflineRef               *util.Ref[bool]
@@ -83,7 +80,6 @@ func New(opts NewVideoCoreOptions) *VideoCore {
 	vc := &VideoCore{
 		wsEventManager:              opts.WsEventManager,
 		continuityManager:           opts.ContinuityManager,
-		discordPresence:             opts.DiscordPresence,
 		metadataProviderRef:         opts.MetadataProviderRef,
 		platformRef:                 opts.PlatformRef,
 		refreshAnimeCollectionFunc:  opts.RefreshAnimeCollectionFunc,

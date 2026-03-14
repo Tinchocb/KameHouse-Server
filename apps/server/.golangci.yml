@@ -9,3 +9,6 @@ linters:
 
   enable:
     - exhaustruct
+    - errcheck   # ensure errors are checked
+    - govet      # go vet: correctness
+    - ineffassign # detect ineffectual assignments

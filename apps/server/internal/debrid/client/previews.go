@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/debrid/debrid"
-	hibiketorrent "kamehouse/internal/extension/hibike/torrent"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/comparison"
 	"path/filepath"
@@ -27,7 +26,7 @@ type (
 	}
 
 	GetTorrentFilePreviewsOptions struct {
-		Torrent        *hibiketorrent.AnimeTorrent
+		Torrent        interface{}
 		Magnet         string
 		EpisodeNumber  int
 		AbsoluteOffset int
@@ -42,11 +41,11 @@ func (r *Repository) GetTorrentFilePreviewsFromManualSelection(opts *GetTorrentF
 		return nil, fmt.Errorf("torrentstream: Invalid options")
 	}
 
-	r.logger.Trace().Str("hash", opts.Torrent.InfoHash).Msg("debridstream: Getting file previews for torrent selection")
+	r.logger.Trace().Msg("debridstream: Getting file previews for torrent selection")
 
 	torrentInfo, err := r.GetTorrentInfo(debrid.GetTorrentInfoOptions{
 		MagnetLink: opts.Magnet,
-		InfoHash:   opts.Torrent.InfoHash,
+		InfoHash:   "", // InfoHash property removed from generic interface
 	})
 	if err != nil {
 		r.logger.Error().Err(err).Msgf("debridstream: Error adding torrent %s", opts.Magnet)

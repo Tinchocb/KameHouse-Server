@@ -101,29 +101,4 @@ func (a *App) RefreshAnimeCollection() (*anilist.AnimeCollection, error) {
 	return ret, nil
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// GetMangaCollection is the same as GetAnimeCollection but for manga
-func (a *App) GetMangaCollection(bypassCache bool) (*anilist.MangaCollection, error) {
-	return a.Metadata.AnilistPlatformRef.Get().GetMangaCollection(context.Background(), bypassCache)
-}
-
-// GetRawMangaCollection does not exclude custom lists
-func (a *App) GetRawMangaCollection(bypassCache bool) (*anilist.MangaCollection, error) {
-	return a.Metadata.AnilistPlatformRef.Get().GetRawMangaCollection(context.Background(), bypassCache)
-}
-
-// RefreshMangaCollection queries Anilist for the user's manga collection
-func (a *App) RefreshMangaCollection() (*anilist.MangaCollection, error) {
-	mc, err := a.Metadata.AnilistPlatformRef.Get().RefreshMangaCollection(context.Background())
-
-	if err != nil {
-		return nil, err
-	}
-
-	a.LocalManager.SetMangaCollection(mc)
-
-	a.WSEventManager.SendEvent(events.RefreshedAnilistMangaCollection, nil)
-
-	return mc, nil
-}

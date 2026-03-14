@@ -469,7 +469,7 @@ func TestSelectBestCandidate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := ad.selectBestCandidate(tt.candidates)
-			assert.Equal(t, tt.expectedTorrent, result.Torrent.Name, "torrent names should match")
+			assert.Equal(t, tt.expectedTorrent, result.Torrent.GetName(), "torrent names should match")
 		})
 	}
 }

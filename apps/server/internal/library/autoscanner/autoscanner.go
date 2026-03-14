@@ -12,7 +12,6 @@ import (
 	"kamehouse/internal/library/autodownloader"
 	"kamehouse/internal/library/scanner"
 	"kamehouse/internal/library/summary"
-	"kamehouse/internal/notifier"
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
 	"sync"
@@ -313,8 +312,6 @@ func (as *AutoScanner) scan() {
 	if as.onRefreshCollection != nil {
 		go as.onRefreshCollection()
 	}
-
-	notifier.GlobalNotifier.Notify(notifier.AutoScanner, "Your library has been scanned.")
 
 	as.logger.Info().
 		Dur("duration", time.Since(scanStart)).

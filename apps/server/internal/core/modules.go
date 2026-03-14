@@ -5,31 +5,25 @@ import (
 	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/continuity"
 	"kamehouse/internal/database/db"
-
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
 	debrid_client "kamehouse/internal/debrid/client"
 	"kamehouse/internal/directstream"
-	discordrpc_presence "kamehouse/internal/discordrpc/presence"
 	"kamehouse/internal/events"
 	"kamehouse/internal/hook"
 	"kamehouse/internal/hook_resolver"
-	"kamehouse/internal/jellyfin"
 	"kamehouse/internal/library/autodownloader"
 	"kamehouse/internal/library/autoscanner"
 	"kamehouse/internal/library/fillermanager"
 	"kamehouse/internal/library_explorer"
-	"kamehouse/internal/manga"
 	"kamehouse/internal/mediastream"
-	"kamehouse/internal/nakama"
-	"kamehouse/internal/notifier"
 	"kamehouse/internal/platforms/shared_platform"
 	"kamehouse/internal/playlist"
 	"kamehouse/internal/streaming"
 	"kamehouse/internal/torrent_clients/qbittorrent"
 	"kamehouse/internal/torrent_clients/torrent_client"
 	"kamehouse/internal/torrent_clients/transmission"
-	"kamehouse/internal/torrents/torrent"
+	itorrent "kamehouse/internal/torrents/torrent"
 	"kamehouse/internal/torrentstream"
 	"kamehouse/internal/user"
 
@@ -44,16 +38,6 @@ func (a *App) initModulesOnce() {
 
 	a.LocalManager.SetRefreshAnilistCollectionsFunc(func() {
 		_, _ = a.RefreshAnimeCollection()
-		_, _ = a.RefreshMangaCollection()
-	})
-
-	// +---------------------+
-	// |     Discord RPC     |
-	// +---------------------+
-
-	a.DiscordPresence = discordrpc_presence.New(nil, a.Logger)
-	a.AddCleanupFunction(func() {
-		a.DiscordPresence.Close()
 	})
 
 	// +---------------------+
@@ -75,26 +59,10 @@ func (a *App) initModulesOnce() {
 	// | Torrent Repository  |
 	// +---------------------+
 
-	a.TorrentRepository = torrent.NewRepository(&torrent.NewRepositoryOptions{
+	a.TorrentRepository = itorrent.NewRepository(&itorrent.NewRepositoryOptions{
 		Logger:              a.Logger,
-		MetadataProviderRef: a.Metadata.ProviderRef,
-		ExtensionBankRef:    a.ExtensionBankRef,
+		MetadataProviderRef: nil,
 	})
-
-	// +---------------------+
-	// |  Manga Downloader   |
-	// +---------------------+
-
-	a.MangaDownloader = manga.NewDownloader(&manga.NewDownloaderOptions{
-		Database:       a.Database,
-		Logger:         a.Logger,
-		WSEventManager: a.WSEventManager,
-		DownloadDir:    a.Config.Manga.DownloadDir,
-		Repository:     a.MangaRepository,
-		IsOfflineRef:   a.IsOfflineRef(),
-	})
-
-	a.MangaDownloader.Start()
 
 	// +---------------------+
 	// |    Media Stream     |
@@ -130,13 +98,11 @@ func (a *App) initModulesOnce() {
 		WSEventManager:      a.WSEventManager,
 		ContinuityManager:   a.ContinuityManager,
 		MetadataProviderRef: a.Metadata.ProviderRef,
-		DiscordPresence:     a.DiscordPresence,
 		PlatformRef:         a.Metadata.AnilistPlatformRef,
 		RefreshAnimeCollectionFunc: func() {
 			_, _ = a.RefreshAnimeCollection()
 		},
 		IsOfflineRef: a.IsOfflineRef(),
-		NativePlayer: a.NativePlayer,
 		VideoCore:    a.VideoCore,
 	})
 
@@ -154,7 +120,6 @@ func (a *App) initModulesOnce() {
 		WSEventManager:      a.WSEventManager,
 		Database:            a.Database,
 		DirectStreamManager: a.DirectStreamManager,
-		NativePlayer:        a.NativePlayer,
 	})
 
 	// +---------------------+
@@ -175,19 +140,10 @@ func (a *App) initModulesOnce() {
 	// |   Auto Downloader   |
 	// +---------------------+
 
-	a.AutoDownloader = autodownloader.New(&autodownloader.NewAutoDownloaderOptions{
-		Logger:                  a.Logger,
-		TorrentClientRepository: a.TorrentClientRepository,
-		TorrentRepository:       a.TorrentRepository,
-		Database:                a.Database,
-		WSEventManager:          a.WSEventManager,
-		MetadataProviderRef:     a.Metadata.ProviderRef,
-		DebridClientRepository:  a.DebridClientRepository,
-		IsOfflineRef:            a.IsOfflineRef(),
-	})
+	a.AutoDownloader = autodownloader.New(a.Logger, a.Database, a.WSEventManager)
 
 	// This is run in a goroutine
-	a.AutoDownloader.Start()
+	a.AutoDownloader.Start(context.Background())
 
 	// +---------------------+
 	// |   Predictive Cache  |
@@ -210,7 +166,7 @@ func (a *App) initModulesOnce() {
 				}
 			}
 			if len(ruleIDs) > 0 {
-				a.AutoDownloader.RunCheck(context.Background(), false, ruleIDs...)
+				a.AutoDownloader.RunCheck()
 			}
 		}()
 		return event.Next()
@@ -241,24 +197,6 @@ func (a *App) initModulesOnce() {
 	a.AutoScanner.Start()
 
 	// +---------------------+
-	// |       Nakama        |
-	// +---------------------+
-
-	a.NakamaManager = nakama.NewManager(&nakama.NewManagerOptions{
-		Logger:                  a.Logger,
-		WSEventManager:          a.WSEventManager,
-		TorrentstreamRepository: a.TorrentstreamRepository,
-		DebridClientRepository:  a.DebridClientRepository,
-		PlatformRef:             a.Metadata.AnilistPlatformRef,
-		ServerHost:              a.Config.Server.Host,
-		ServerPort:              a.Config.Server.Port,
-		NativePlayer:            a.NativePlayer,
-		VideoCore:               a.VideoCore,
-		DirectStreamManager:     a.DirectStreamManager,
-		IsOfflineRef:            a.IsOfflineRef(),
-	})
-
-	// +---------------------+
 	// |      Playlist       |
 	// +---------------------+
 
@@ -268,8 +206,6 @@ func (a *App) initModulesOnce() {
 		DirectStreamManager:     a.DirectStreamManager,
 		PlatformRef:             a.Metadata.AnilistPlatformRef,
 		WSEventManager:          a.WSEventManager,
-		NakamaManager:           a.NakamaManager,
-		NativePlayer:            a.NativePlayer,
 		Database:                a.Database,
 		Logger:                  a.Logger,
 	})
@@ -316,11 +252,6 @@ func (a *App) InitOrRefreshModules() {
 		a.Watcher.StopWatching()
 	}
 
-	// If Discord presence is already initialized, close it
-	if a.DiscordPresence != nil {
-		a.DiscordPresence.Close()
-	}
-
 	// Get settings from database
 	settings, err := a.Database.GetSettings()
 	if err != nil || settings == nil {
@@ -349,37 +280,13 @@ func (a *App) InitOrRefreshModules() {
 	// +---------------------+
 	// Refresh settings of modules that were initialized in initModulesOnce
 
-	notifier.GlobalNotifier.SetSettings(a.Config.Data.AppDataDir, a.Settings.GetNotifications(), a.Logger)
-
 	// Refresh updater settings
 	if settings.Library != nil {
 		// Refreshed plugin context removed
 
-		if a.Updater != nil {
-			a.Updater.SetEnabled(true)
-		}
-
-		// Refresh auto scanner settings (thread safe)
-		if a.AutoScanner != nil {
-			go a.AutoScanner.SetSettings(*settings.Library)
-		}
-
-		// Update the torrent manager settings (thread safe)
-		go a.TorrentRepository.SetSettings(&torrent.RepositorySettings{
-			DefaultAnimeProvider: settings.Library.TorrentProvider,
-			AutoSelectProvider:   settings.Library.AutoSelectTorrentProvider,
-		})
-
 		if a.LibraryExplorer != nil {
 			// Update the library paths for the library explorer (thread safe)
 			go a.LibraryExplorer.SetLibraryPaths(settings.GetLibrary().GetLibraryPaths())
-		}
-
-		// Initialize Jellyfin client if enabled
-		if settings.Jellyfin != nil && settings.Jellyfin.Enabled && settings.Jellyfin.ServerURL != "" && settings.Jellyfin.ApiKey != "" {
-			a.JellyfinClient = jellyfin.NewClient(settings.Jellyfin.ServerURL, settings.Jellyfin.ApiKey, settings.Jellyfin.Username, a.Logger)
-		} else {
-			a.JellyfinClient = nil
 		}
 	}
 
@@ -458,7 +365,7 @@ func (a *App) InitOrRefreshModules() {
 
 	// Update Auto Downloader
 	if settings.AutoDownloader != nil {
-		go a.AutoDownloader.SetSettings(settings.AutoDownloader)
+		go a.AutoDownloader.SetSettings(*settings.AutoDownloader)
 	}
 
 	// +---------------------+
@@ -471,14 +378,6 @@ func (a *App) InitOrRefreshModules() {
 	}
 
 	// +---------------------+
-	// |       Discord       |
-	// +---------------------+
-
-	if settings.Discord != nil && a.DiscordPresence != nil {
-		go a.DiscordPresence.SetSettings(settings.Discord)
-	}
-
-	// +---------------------+
 	// |     Continuity      |
 	// +---------------------+
 
@@ -486,18 +385,6 @@ func (a *App) InitOrRefreshModules() {
 		go a.ContinuityManager.SetSettings(&continuity.Settings{
 			WatchContinuityEnabled: settings.Library.EnableWatchContinuity,
 		})
-	}
-
-	if settings.Manga != nil {
-		go a.MangaRepository.SetSettings(settings)
-	}
-
-	// +---------------------+
-	// |       Nakama        |
-	// +---------------------+
-
-	if settings.Nakama != nil {
-		go a.NakamaManager.SetSettings(settings.Nakama)
 	}
 
 	a.Logger.Info().Msg("app: Refreshed modules")
@@ -580,7 +467,7 @@ func (a *App) InitOrRefreshTorrentstreamSettings() {
 		}
 	}
 
-	err := a.TorrentstreamRepository.InitModules(settings, a.Config.Server.Host, a.Config.Server.Port)
+	err := a.TorrentstreamRepository.InitModules(settings)
 	if err != nil && settings.Enabled {
 		a.Logger.Error().Err(err).Msg("app: Failed to initialize Torrent streaming module")
 		//_, _ = a.Database.UpsertTorrentstreamSettings(&models.TorrentstreamSettings{
@@ -592,7 +479,7 @@ func (a *App) InitOrRefreshTorrentstreamSettings() {
 	}
 
 	a.Cleanups = append(a.Cleanups, func() {
-		a.TorrentstreamRepository.Shutdown()
+		_ = a.TorrentstreamRepository.Shutdown()
 	})
 
 	// Set torrent streaming settings in secondary settings
@@ -666,15 +553,7 @@ func (a *App) InitOrRefreshAnilistData() {
 		a.ServerReady = true
 		a.WSEventManager.SendEvent(events.ServerReady, nil)
 
-		_, err = a.RefreshMangaCollection()
-		if err != nil {
-			a.Logger.Error().Err(err).Msg("app: Failed to fetch Anilist manga collection")
-		}
 	}()
-
-	go func(username string) {
-		a.DiscordPresence.SetUsername(username)
-	}(currUser.Viewer.Name)
 
 	a.Logger.Info().Msg("app: Fetched Anilist data")
 }

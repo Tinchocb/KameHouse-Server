@@ -61,7 +61,7 @@ func run(ctx context.Context) error {
 		EmbeddedLogo: embeddedLogo,
 	}
 
-	app := core.NewKameHouse(configOpts, nil)
+	app := core.NewKameHouse(configOpts)
 
 	// Since NewEchoApp returns an unstarted Echo instance, we run it manually
 	// Or use core.RunEchoServer if adapted to take context

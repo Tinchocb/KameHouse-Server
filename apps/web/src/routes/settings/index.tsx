@@ -12,12 +12,7 @@ import { PageHeader } from "@/components/ui/page-header/page-header"
 import { ScannerProgress } from "@/components/ui/scanner-progress"
 import { useGetSettings, useSaveSettings } from "@/api/hooks/settings.hooks"
 import { useScanLocalFiles } from "@/api/hooks/scan.hooks"
-import {
-    useListExtensionData,
-    useInstallExternalExtension,
-    useUninstallExternalExtension,
-    type ExtensionData,
-} from "@/api/hooks/extensions.hooks"
+
 import type { SaveSettings_Variables } from "@/api/generated/endpoint.types"
 import type { Models_Settings } from "@/api/generated/types"
 
@@ -342,40 +337,7 @@ function SettingsPage() {
                                     </div>
                                 </TabsContent>
 
-                                {/* Add-ons */}
-                                <TabsContent value="addons" className="mt-0 space-y-6">
-                                    <SectionHeader title="Streaming por Torrent" description="Configura el motor de torrents integrado." />
-                                    <SettingToggle
-                                        control={form.control}
-                                        name="torrentstream.enabled"
-                                        label="Activar TorrentStream"
-                                        description="Scrapea torrents y magnets de fuentes públicas."
-                                        onSave={commitToggle}
-                                        disabled={isSaving}
-                                    />
-                                    <SettingToggle
-                                        control={form.control}
-                                        name="torrentstream.preloadNextStream"
-                                        label="Pre-cargar próximo episodio"
-                                        description="Mejora la velocidad de carga al encadenar episodios consecutivos."
-                                        onSave={commitToggle}
-                                        disabled={isSaving}
-                                    />
 
-                                    {/* Save all button */}
-                                    <Button
-                                        type="submit"
-                                        intent="primary"
-                                        className="mt-4 font-bold px-8 min-h-[48px]"
-                                        disabled={isSaving}
-                                    >
-                                        {isSaving ? "Guardando..." : "Guardar Ajustes"}
-                                    </Button>
-
-                                    <div className="mt-8 pt-8 border-t border-white/5">
-                                        <AddonManager />
-                                    </div>
-                                </TabsContent>
 
                                 {/* Interface */}
                                 <TabsContent value="interface" className="mt-0 space-y-6">
@@ -421,7 +383,7 @@ function SettingsPage() {
 const NAV_TABS = [
     { value: "library", label: "Biblioteca Local" },
     { value: "playback", label: "Reproductor y Calidad" },
-    { value: "addons", label: "Add-ons y Extensiones" },
+
     { value: "interface", label: "Interfaz de Usuario" },
 ]
 
@@ -614,111 +576,4 @@ function LibraryPathsManager({ form }: { form: any }) {
     )
 }
 
-// ─── Addon Manager (unchanged functionality, cleaner) ─────────────────────────
 
-function AddonManager() {
-    const [addonUrl, setAddonUrl] = useState("")
-    const [validationError, setValidationError] = useState<string | null>(null)
-
-    const { data: extensions, isLoading: extensionsLoading } = useListExtensionData()
-    const { mutate: installAddon, isPending: isInstalling } = useInstallExternalExtension()
-    const { mutate: uninstallAddon, isPending: isUninstalling } = useUninstallExternalExtension()
-
-    const handleInstall = useCallback(() => {
-        const trimmed = addonUrl.trim()
-        if (!trimmed) { setValidationError("Ingresa una URL válida."); return }
-        try { new URL(trimmed) } catch { setValidationError("La URL no es válida."); return }
-        if (!trimmed.endsWith("manifest.json")) { setValidationError("La URL debe terminar en manifest.json"); return }
-        setValidationError(null)
-        installAddon({ manifestURI: trimmed } as any, {
-            onSuccess: () => { setAddonUrl(""); toast.success("Add-on instalado") },
-            onError: () => { setValidationError("Error al instalar"); toast.error("Error al instalar el addon") },
-        })
-    }, [addonUrl, installAddon])
-
-    const handleUninstall = useCallback((ext: ExtensionData) => {
-        if (!confirm(`¿Desinstalar "${ext.name || ext.id}"?`)) return
-        uninstallAddon({ id: ext.id } as any, {
-            onSuccess: () => toast.success(`"${ext.name || ext.id}" desinstalado`),
-            onError: () => toast.error("Error al desinstalar"),
-        })
-    }, [uninstallAddon])
-
-    return (
-        <div>
-            <h2 className="text-2xl font-bold mb-2">Add-ons <span className="text-orange-500">HTTP</span></h2>
-            <p className="text-gray-400 mb-6 font-medium">Instala add-ons externos (estilo Stremio) desde una URL de manifiesto.</p>
-
-            <div className="flex gap-3 items-start mb-6">
-                <div className="flex-1">
-                    <input
-                        id="addon-url-input"
-                        type="url"
-                        value={addonUrl}
-                        onChange={(e) => { setAddonUrl(e.target.value); if (validationError) setValidationError(null) }}
-                        onKeyDown={(e) => { if (e.key === "Enter") handleInstall() }}
-                        placeholder="https://addon.example.com/manifest.json"
-                        className="w-full px-4 py-3 bg-[#1C1C28] border border-white/10 rounded-md text-white placeholder-gray-500 focus:outline-none focus:border-orange-500/60 focus:ring-1 focus:ring-orange-500/30 transition-all text-sm font-mono"
-                    />
-                    {validationError && <p className="mt-2 text-sm text-red-400 font-medium">{validationError}</p>}
-                </div>
-                <Button
-                    id="install-addon-btn"
-                    type="button"
-                    intent="primary"
-                    className="font-bold text-white px-6 py-3 whitespace-nowrap min-h-[48px]"
-                    onClick={handleInstall}
-                    disabled={isInstalling}
-                >
-                    {isInstalling
-                        ? <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Instalando…</span>
-                        : "Instalar Addon"
-                    }
-                </Button>
-            </div>
-
-            <div className="space-y-3">
-                {extensionsLoading ? (
-                    <div className="p-6 text-center text-gray-500 animate-pulse">Cargando extensiones…</div>
-                ) : !extensions || extensions.length === 0 ? (
-                    <EmptyState message="No hay add-ons instalados." />
-                ) : (
-                    extensions.map((ext) => (
-                        <div key={ext.id} className="flex items-center justify-between p-4 bg-[#1C1C28] rounded-md border border-white/5 hover:border-orange-500/20 transition-all">
-                            <div className="flex items-center gap-4 min-w-0">
-                                {ext.icon ? (
-                                    <img src={ext.icon} alt={ext.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
-                                ) : (
-                                    <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center flex-shrink-0">
-                                        <span className="text-orange-400 font-black text-lg">{(ext.name || ext.id || "?")[0].toUpperCase()}</span>
-                                    </div>
-                                )}
-                                <div className="min-w-0">
-                                    <p className="font-bold truncate">
-                                        {ext.name || ext.id}
-                                        {ext.version && <span className="ml-2 text-xs text-gray-500 font-mono">v{ext.version}</span>}
-                                    </p>
-                                    {ext.description && <p className="text-sm text-gray-400 truncate">{ext.description}</p>}
-                                    <div className="flex gap-2 mt-1">
-                                        {ext.type && <span className="text-xs bg-orange-500/10 text-orange-400 px-2 py-0.5 rounded">{ext.type}</span>}
-                                        {ext.author && <span className="text-xs text-gray-500">por {ext.author}</span>}
-                                    </div>
-                                </div>
-                            </div>
-                            <Button
-                                id={`uninstall-addon-${ext.id}`}
-                                type="button"
-                                intent="alert-basic"
-                                className="hover:bg-red-500/10 hover:text-red-400 flex-shrink-0 ml-4 min-h-[48px]"
-                                onClick={() => handleUninstall(ext)}
-                                disabled={isUninstalling}
-                            >
-                                Desinstalar
-                            </Button>
-                        </div>
-                    ))
-                )}
-            </div>
-        </div>
-    )
-}

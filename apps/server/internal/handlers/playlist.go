@@ -1,17 +1,14 @@
 package handlers
 
 import (
-	"kamehouse/internal/customsource"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/library/anime"
 
-	"kamehouse/internal/database/models/dto"
 	"strconv"
 
 	"github.com/goccy/go-json"
 	"github.com/labstack/echo/v4"
-	"github.com/samber/lo"
 )
 
 // HandleCreatePlaylist
@@ -182,16 +179,7 @@ func (h *Handler) HandleGetPlaylistEpisodes(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	// Get the host anime library files
-	nakamaLfs, _, hydratedFromNakama := h.App.NakamaManager.GetHostAnimeLibraryFiles(c.Request().Context(), mId)
-	if hydratedFromNakama && len(nakamaLfs) > 0 {
-		lfs = nakamaLfs
-		// Filter out custom source local files
-		// TODO: Handle custom source local files (IDs to be converted to local use and back)
-		lfs = lo.Filter(lfs, func(item *dto.LocalFile, _ int) bool {
-			return !customsource.IsExtensionId(item.MediaId)
-		})
-	}
+	// removed nakama check
 
 	lfw := anime.NewLocalFileWrapper(lfs)
 
@@ -213,11 +201,6 @@ func (h *Handler) HandleGetPlaylistEpisodes(c echo.Context) error {
 			return h.RespondWithError(c, err)
 		}
 
-		watchType := anime.WatchTypeLocalFile
-		if hydratedFromNakama {
-			watchType = anime.WatchTypeNakama
-		}
-
 		for _, ep := range entry.Episodes {
 			if !ep.IsMain() || currentProgress >= ep.ProgressNumber {
 				continue
@@ -225,7 +208,7 @@ func (h *Handler) HandleGetPlaylistEpisodes(c echo.Context) error {
 			episodes = append(episodes, &anime.PlaylistEpisode{
 				Episode:     ep,
 				IsCompleted: false,
-				WatchType:   watchType,
+				WatchType:   anime.WatchTypeLocalFile,
 			})
 		}
 	} else {

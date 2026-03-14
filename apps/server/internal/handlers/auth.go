@@ -4,8 +4,7 @@ import (
 	"context"
 	"errors"
 	"kamehouse/internal/database/models"
-	"kamehouse/internal/platforms/anilist_platform"
-	"kamehouse/internal/platforms/simulated_platform"
+	simulated_platform "kamehouse/internal/platforms/simulated_platform"
 	"kamehouse/internal/util"
 	"time"
 
@@ -71,8 +70,7 @@ func (h *Handler) HandleLogin(c echo.Context) error {
 	h.App.Logger.Info().Msg("app: Authenticated to AniList")
 
 	// Update the platform
-	anilistPlatform := anilist_platform.NewAnilistPlatform(h.App.Metadata.AnilistClientRef, h.App.ExtensionBankRef, h.App.Logger, h.App.Database)
-	h.App.UpdatePlatform(anilistPlatform)
+	// h.App.UpdatePlatform(anilistPlatform)
 
 	// Create a new status
 	status := h.NewStatus(c)
@@ -106,13 +104,9 @@ func (h *Handler) HandleLogout(c echo.Context) error {
 	h.App.UpdateAnilistClientToken("")
 
 	// Update the platform
-	simulatedPlatform, err := simulated_platform.NewSimulatedPlatform(h.App.LocalManager, h.App.Metadata.AnilistClientRef, h.App.ExtensionBankRef, h.App.Logger, h.App.Database)
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
-	h.App.UpdatePlatform(simulatedPlatform)
+	h.App.UpdatePlatform(simulated_platform.NewSimulatedPlatform(h.App.Logger, h.App.Database))
 
-	_, err = h.App.Database.UpsertAccount(&models.Account{
+	_, err := h.App.Database.UpsertAccount(&models.Account{
 		BaseModel: models.BaseModel{
 			ID:        1,
 			UpdatedAt: time.Now(),

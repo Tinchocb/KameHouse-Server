@@ -53,7 +53,7 @@ func RunJobs(app *core.App) {
 				if app.IsOffline() {
 					continue
 				}
-				app.Updater.ShouldRefetchReleases()
+				//
 			}
 		}
 	}()
@@ -65,7 +65,7 @@ func RunJobs(app *core.App) {
 				if app.IsOffline() {
 					continue
 				}
-				app.Updater.FetchAnnouncements()
+				//
 			}
 		}
 	}()

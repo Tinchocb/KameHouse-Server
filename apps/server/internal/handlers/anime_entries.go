@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"kamehouse/internal/api/anilist"
-	"kamehouse/internal/customsource"
 
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
@@ -55,33 +54,7 @@ func getActiveProvider(h *Handler) librarymetadata.Provider {
 }
 
 func (h *Handler) getAnimeEntry(c echo.Context, lfs []*dto.LocalFile, mId int) (*anime.Entry, error) {
-	// Get the host anime library files
-	nakamaLfs, customSourceMap, hydratedFromNakama := h.App.NakamaManager.GetHostAnimeLibraryFiles(c.Request().Context(), mId)
-	if hydratedFromNakama && nakamaLfs != nil {
-		lfs = nakamaLfs
-		// for each local file, if it's matched to a custom source, convert the ID using the local extension identifier
-		// this is needed because the custom source media ID returned by the host will not match the local one
-		for _, lf := range lfs {
-			if !customsource.IsExtensionId(lf.MediaId) {
-				continue
-			}
-			_, localId := customsource.ExtractExtensionData(lf.MediaId)
-			extensionId, ok := customSourceMap[lf.MediaId]
-			if !ok {
-				continue // custom source not found
-			}
-
-			// Find the same extension, if it's not installed, skip it
-			customSource, ok := h.App.ExtensionRepository.GetCustomSourceExtensionByID(extensionId)
-			if !ok {
-				continue
-			}
-
-			// Generate a new ID for the custom source media
-			newId := customsource.GenerateMediaId(customSource.GetExtensionIdentifier(), localId)
-			lf.MediaId = newId
-		}
-	}
+	// removed nakama hydrated variables
 
 	// Anime collection is no longer used for getting entries
 
@@ -108,13 +81,6 @@ func (h *Handler) getAnimeEntry(c echo.Context, lfs []*dto.LocalFile, mId int) (
 
 	if !fillerEvent.DefaultPrevented {
 		h.App.FillerManager.HydrateFillerData(fillerEvent.Entry)
-	}
-
-	if hydratedFromNakama {
-		entry.IsNakamaEntry = true
-		for _, ep := range entry.Episodes {
-			ep.IsNakamaEpisode = true
-		}
 	}
 
 	return entry, nil

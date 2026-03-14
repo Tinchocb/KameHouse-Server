@@ -30,22 +30,18 @@ func (a *App) SetOfflineMode(enabled bool) {
 
 	// Update the platform and metadata provider
 	if enabled {
-		if a.NakamaManager.IsConnectedToHost() || a.NakamaManager.IsHost() {
-			a.NakamaManager.Stop()
-		}
 
 		anilistPlatform, _ := offline_platform.NewOfflinePlatform(a.LocalManager, a.Metadata.AnilistClientRef, a.Logger)
 		a.Metadata.AnilistPlatformRef.Set(anilistPlatform)
 		a.Metadata.ProviderRef.Set(a.LocalManager.GetOfflineMetadataProvider())
 	} else {
 		// DEVNOTE: We don't handle local platform since the feature doesn't allow offline mode
-		anilistPlatform := anilist_platform.NewAnilistPlatform(a.Metadata.AnilistClientRef, a.ExtensionBankRef, a.Logger, a.Database)
+		anilistPlatform := anilist_platform.NewAnilistPlatform(a.Metadata.AnilistClientRef, nil, a.Logger, a.Database)
 		a.Metadata.AnilistPlatformRef.Set(anilistPlatform)
 		a.Metadata.ProviderRef.Set(metadata_provider.NewProvider(&metadata_provider.NewProviderImplOptions{
-			Logger:           a.Logger,
-			FileCacher:       a.FileCacher,
-			ExtensionBankRef: a.ExtensionBankRef,
-			Database:         a.Database,
+			Logger:     a.Logger,
+			FileCacher: a.FileCacher,
+			Database:   a.Database,
 		}))
 		a.InitOrRefreshAnilistData()
 	}

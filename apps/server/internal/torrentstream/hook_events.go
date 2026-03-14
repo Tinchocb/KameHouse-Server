@@ -1,26 +1,8 @@
 package torrentstream
 
-import (
-	"kamehouse/internal/api/anilist"
-	hibiketorrent "kamehouse/internal/extension/hibike/torrent"
-	"kamehouse/internal/hook_resolver"
-)
-
-// TorrentStreamAutoSelectTorrentsFetchedEvent is triggered when the torrents are fetched for auto select.
-// The torrents are sorted by seeders from highest to lowest.
-// This event is triggered before the top 3 torrents are analyzed.
-type TorrentStreamAutoSelectTorrentsFetchedEvent struct {
-	hook_resolver.Event
-	Torrents []*hibiketorrent.AnimeTorrent
+type TorrentSelectionRequestedEvent struct {
+	Torrent interface{}
 }
 
-// TorrentStreamSendStreamToMediaPlayerEvent is triggered when the torrent stream is about to send a stream to the media player.
-// Prevent default to skip the default playback and override the playback.
-type TorrentStreamSendStreamToMediaPlayerEvent struct {
-	hook_resolver.Event
-	WindowTitle  string             `json:"windowTitle"`
-	StreamURL    string             `json:"streamURL"`
-	Media        *anilist.BaseAnime `json:"media"`
-	AniDbEpisode string             `json:"aniDbEpisode"`
-	PlaybackType string             `json:"playbackType"`
+func (e *TorrentSelectionRequestedEvent) PreventDefault() {
 }

@@ -60,8 +60,7 @@ func (h *Handler) HandleLocalAddTrackedMedia(c echo.Context) error {
 		switch m.Type {
 		case "anime":
 			err = h.App.LocalManager.TrackAnime(m.MediaId)
-		case "manga":
-			err = h.App.LocalManager.TrackManga(m.MediaId)
+		
 		}
 	}
 
@@ -93,8 +92,7 @@ func (h *Handler) HandleLocalRemoveTrackedMedia(c echo.Context) error {
 	switch b.Type {
 	case "anime":
 		err = h.App.LocalManager.UntrackAnime(b.MediaId)
-	case "manga":
-		err = h.App.LocalManager.UntrackManga(b.MediaId)
+	
 	}
 
 	if err != nil {

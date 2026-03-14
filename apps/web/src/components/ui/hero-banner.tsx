@@ -1,4 +1,5 @@
 import { cn } from "@/components/ui/core/styling"
+import { Skeleton } from "@/components/ui/skeleton"
 import type { ContentTag } from "@/hooks/useHomeIntelligence"
 import { Flame, Info, Play, Sparkles, Star } from "lucide-react"
 import * as React from "react"
@@ -287,6 +288,45 @@ export function HeroBanner({
                     ))}
                 </div>
             )}
+        </section>
+    )
+}
+
+export function HeroBannerSkeleton({ className }: { className?: string }) {
+    return (
+        <section
+            className={cn(
+                "relative h-[480px] w-full overflow-hidden bg-zinc-950 md:h-[580px] lg:h-[680px]",
+                className,
+            )}
+        >
+            <div className="absolute inset-0 flex items-center px-6 md:px-10 lg:px-14">
+                <div className="z-10 w-full max-w-2xl">
+                    <div className="flex flex-wrap items-center gap-3">
+                        <Skeleton className="h-6 w-24 rounded-full" />
+                        <Skeleton className="h-6 w-32 rounded-full" />
+                    </div>
+
+                    <Skeleton className="mt-6 h-12 w-3/4 md:h-16 lg:h-20" />
+
+                    <div className="mt-4 flex flex-wrap items-center gap-4">
+                        <Skeleton className="h-4 w-16" />
+                        <Skeleton className="h-4 w-16" />
+                        <Skeleton className="h-4 w-16" />
+                    </div>
+
+                    <div className="mt-6 space-y-2">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-5/6" />
+                        <Skeleton className="h-4 w-4/6" />
+                    </div>
+
+                    <div className="mt-10 flex flex-wrap items-center gap-4">
+                        <Skeleton className="h-12 w-40 rounded-full" />
+                        <Skeleton className="h-12 w-40 rounded-full" />
+                    </div>
+                </div>
+            </div>
         </section>
     )
 }

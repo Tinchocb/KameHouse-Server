@@ -8,7 +8,6 @@ import (
 	"kamehouse/internal/debrid/debrid"
 	"kamehouse/internal/events"
 	"kamehouse/internal/hook"
-	"kamehouse/internal/notifier"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/result"
 	"mime"
@@ -158,7 +157,6 @@ func (r *Repository) downloadTorrentItem(tId string, torrentName string, destina
 		wg.Wait()
 
 		r.sendDownloadCompletedEvent(tId)
-		notifier.GlobalNotifier.Notify(notifier.Debrid, fmt.Sprintf("Downloaded %q", torrentName))
 	}(ctx)
 
 	// Send a starting event

@@ -3,7 +3,6 @@ package videocore
 import (
 	"context"
 	"kamehouse/internal/continuity"
-	discordrpc_presence "kamehouse/internal/discordrpc/presence"
 	"kamehouse/internal/events"
 	"kamehouse/internal/mkvparser"
 
@@ -22,38 +21,14 @@ func (vc *VideoCore) setupSharedEffects() {
 		for e := range subscriber.Events() {
 			switch event := e.(type) {
 			case *VideoPausedEvent:
-				if vc.discordPresence != nil && !vc.isOfflineRef.Get() {
-					go vc.discordPresence.UpdateAnimeActivity(int(event.CurrentTime), int(event.Duration), true)
-				}
 			case *VideoResumedEvent:
-				if vc.discordPresence != nil && !vc.isOfflineRef.Get() {
-					go vc.discordPresence.UpdateAnimeActivity(int(event.CurrentTime), int(event.Duration), false)
-				}
 			case *VideoEndedEvent:
-				if vc.discordPresence != nil && !vc.isOfflineRef.Get() {
-					go vc.discordPresence.Close()
-				}
 			case *VideoLoadedMetadataEvent:
-				state, ok := vc.GetPlaybackState()
+				_, ok := vc.GetPlaybackState()
 				if !ok {
 					continue
 				}
-				if vc.discordPresence != nil && !vc.isOfflineRef.Get() {
-					vc.logger.Debug().Msgf("videocore: Setting Discord presence for %s", state.PlaybackInfo.Media.GetPreferredTitle())
-					go vc.discordPresence.SetAnimeActivity(&discordrpc_presence.AnimeActivity{
-						ID:            state.PlaybackInfo.Media.GetID(),
-						Title:         state.PlaybackInfo.Media.GetPreferredTitle(),
-						Image:         state.PlaybackInfo.Media.GetCoverImageSafe(),
-						IsMovie:       state.PlaybackInfo.Media.IsMovie(),
-						EpisodeNumber: state.PlaybackInfo.Episode.EpisodeNumber,
-						Progress:      int(event.CurrentTime),
-						Duration:      int(event.Duration),
-					})
-				}
 			case *VideoErrorEvent:
-				if vc.discordPresence != nil && !vc.isOfflineRef.Get() {
-					go vc.discordPresence.Close()
-				}
 			case *VideoCompletedEvent:
 				state, ok := vc.GetPlaybackState()
 				if !ok {
@@ -88,9 +63,6 @@ func (vc *VideoCore) setupSharedEffects() {
 					vc.refreshAnimeCollectionFunc()
 				}
 			case *VideoTerminatedEvent:
-				if vc.discordPresence != nil && !vc.isOfflineRef.Get() {
-					go vc.discordPresence.Close()
-				}
 			case *VideoStatusEvent:
 				state, ok := vc.GetPlaybackState()
 				if !ok {
@@ -106,9 +78,7 @@ func (vc *VideoCore) setupSharedEffects() {
 					})
 				}
 
-				if vc.discordPresence != nil && !vc.isOfflineRef.Get() {
-					go vc.discordPresence.UpdateAnimeActivity(int(event.CurrentTime), int(event.Duration), event.Paused)
-				}
+
 			}
 		}
 	}(subscriber)

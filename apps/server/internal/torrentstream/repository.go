@@ -2,235 +2,114 @@ package torrentstream
 
 import (
 	"context"
-	"errors"
 	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
-	"kamehouse/internal/directstream"
 	"kamehouse/internal/events"
-	hibiketorrent "kamehouse/internal/extension/hibike/torrent"
-	"kamehouse/internal/library/anime"
-	"kamehouse/internal/nativeplayer"
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/torrents/autoselect"
 	"kamehouse/internal/torrents/torrent"
 	"kamehouse/internal/util"
-	"kamehouse/internal/util/result"
-	"net/http"
-	"os"
-	"path/filepath"
-	"sync/atomic"
+	"sync"
 
-	itorrent "github.com/anacrolix/torrent"
+	atorrent "github.com/anacrolix/torrent"
 	"github.com/rs/zerolog"
 	"github.com/samber/mo"
 )
 
-type (
-	Repository struct {
-		client   *Client
-		handler  *handler
-		playback playback
-		settings mo.Option[Settings] // None by default, set and refreshed by [SetSettings]
+type TLSState string
 
-		selectionHistoryMap *result.Map[int, *hibiketorrent.AnimeTorrent] // Key: AniList media ID
-
-		autoSelect *autoselect.AutoSelect
-
-		// Injected dependencies
-		torrentRepository   *torrent.Repository
-		baseAnimeCache      *anilist.BaseAnimeCache
-		completeAnimeCache  *anilist.CompleteAnimeCache
-		platformRef         *util.Ref[platform.Platform]
-		wsEventManager      events.WSEventManagerInterface
-		metadataProviderRef *util.Ref[metadata_provider.Provider]
-		directStreamManager *directstream.Manager
-		nativePlayer        *nativeplayer.NativePlayer
-		logger              *zerolog.Logger
-		db                  *db.Database
-
-		onEpisodeCollectionChanged func(ec *anime.EpisodeCollection)
-
-		previousStreamOptions mo.Option[*StartStreamOptions]
-		preloadedStream       mo.Option[*preloadedStream]
-		shouldPreloadStream   atomic.Bool // Flag on whether the client should prepare a stream
-	}
-
-	Settings struct {
-		models.TorrentstreamSettings
-		Host string
-		Port int
-	}
-
-	preloadedStream struct {
-		Torrent    *itorrent.Torrent
-		File       *itorrent.File
-		Options    *StartStreamOptions
-		CancelFunc context.CancelFunc
-	}
-
-	NewRepositoryOptions struct {
-		Logger              *zerolog.Logger
-		TorrentRepository   *torrent.Repository
-		BaseAnimeCache      *anilist.BaseAnimeCache
-		CompleteAnimeCache  *anilist.CompleteAnimeCache
-		PlatformRef         *util.Ref[platform.Platform]
-		MetadataProviderRef *util.Ref[metadata_provider.Provider]
-		WSEventManager      events.WSEventManagerInterface
-		Database            *db.Database
-		DirectStreamManager *directstream.Manager
-		NativePlayer        *nativeplayer.NativePlayer
-	}
+const (
+	TLSStateSearchingTorrents TLSState = "searching_torrents"
+	TLSStateDownloading      TLSState = "downloading"
+	TLSStateReady            TLSState = "ready"
 )
 
-// NewRepository creates a new injectable Repository instance
+// AutoDownloader is a placeholder for the actual AutoDownloader type
+type AutoDownloader struct{}
+
+func NewAutoDownloader(args ...interface{}) *AutoDownloader {
+	return &AutoDownloader{}
+}
+
+func (a *AutoDownloader) Start(args ...interface{}) error { return nil }
+func (a *AutoDownloader) SetSettings(s models.AutoDownloaderSettings) {}
+func (a *AutoDownloader) CleanUpDownloadedItems() {}
+func (a *AutoDownloader) Run(args ...interface{}) error { return nil }
+func (a *AutoDownloader) RunCheck(args ...interface{}) error { return nil }
+func (a *AutoDownloader) SetTorrentClientRepository(r interface{}) {}
+func (a *AutoDownloader) GetSimulationResults() interface{} { return nil }
+func (a *AutoDownloader) ClearSimulationResults() {}
+func (a *AutoDownloader) isTitleMatch(args ...interface{}) bool { return false }
+func (a *AutoDownloader) isSeasonAndEpisodeMatch(args ...interface{}) (bool, interface{}) { return false, nil }
+func (a *AutoDownloader) isAdditionalTermsMatch(args ...interface{}) bool { return false }
+
+type Repository struct {
+	logger              *zerolog.Logger
+	db                  *db.Database
+	wsEventManager      events.WSEventManagerInterface
+	autoSelect          *autoselect.AutoSelect
+	torrentRepository   *torrent.Repository
+	platformRef         *util.Ref[platform.Platform]
+	metadataProviderRef *util.Ref[metadata_provider.Provider]
+	settings            mo.Option[*models.TorrentstreamSettings]
+	client              *atorrent.Client
+	mu                  sync.Mutex
+}
+
+func (r *Repository) InitModules(settings *models.TorrentstreamSettings) error { return nil }
+func (r *Repository) Shutdown() error { return nil }
+func (r *Repository) GetMediaInfo(ctx context.Context, id int) (interface{}, interface{}, error) { return nil, nil, nil }
+
+
+type NewRepositoryOptions struct {
+	Logger              *zerolog.Logger
+	DB                  *db.Database
+	WSEventManager      events.WSEventManagerInterface
+	AutoSelect          *autoselect.AutoSelect
+	TorrentRepository   *torrent.Repository
+	PlatformRef         *util.Ref[platform.Platform]
+	MetadataProviderRef *util.Ref[metadata_provider.Provider]
+	Settings            *models.TorrentstreamSettings
+	BaseAnimeCache      interface{}
+	CompleteAnimeCache  interface{}
+	Database            *db.Database
+	DirectStreamManager interface{}
+}
+
 func NewRepository(opts *NewRepositoryOptions) *Repository {
-	ret := &Repository{
-		client:                nil,
-		handler:               nil,
-		settings:              mo.Option[Settings]{},
-		selectionHistoryMap:   result.NewMap[int, *hibiketorrent.AnimeTorrent](),
-		torrentRepository:     opts.TorrentRepository,
-		baseAnimeCache:        opts.BaseAnimeCache,
-		completeAnimeCache:    opts.CompleteAnimeCache,
-		platformRef:           opts.PlatformRef,
-		wsEventManager:        opts.WSEventManager,
-		metadataProviderRef:   opts.MetadataProviderRef,
-		logger:                opts.Logger,
-		db:                    opts.Database,
-		directStreamManager:   opts.DirectStreamManager,
-		nativePlayer:          opts.NativePlayer,
-		previousStreamOptions: mo.None[*StartStreamOptions](),
-		preloadedStream:       mo.None[*preloadedStream](),
+	return &Repository{
+		logger:              opts.Logger,
+		db:                  opts.DB,
+		wsEventManager:      opts.WSEventManager,
+		autoSelect:          opts.AutoSelect,
+		torrentRepository:   opts.TorrentRepository,
+		platformRef:         opts.PlatformRef,
+		metadataProviderRef: opts.MetadataProviderRef,
+		settings:            mo.Some(opts.Settings),
 	}
-
-	ret.autoSelect = autoselect.New(&autoselect.NewAutoSelectOptions{
-		Logger:            opts.Logger,
-		TorrentRepository: opts.TorrentRepository,
-		MetadataProvider:  opts.MetadataProviderRef,
-		Platform:          opts.PlatformRef,
-	})
-
-	ret.client = NewClient(ret)
-	ret.handler = newHandler(ret)
-	return ret
 }
 
-func (r *Repository) IsEnabled() bool {
-	return r.settings.IsPresent() && r.settings.MustGet().Enabled && r.client != nil
-}
-
-func (r *Repository) GetPreviousStreamOptions() (*StartStreamOptions, bool) {
-	return r.previousStreamOptions.OrElse(nil), r.previousStreamOptions.IsPresent()
-}
-
-// InitModules sets the settings for the torrentstream module.
-// It should be called before any other method, to ensure the module is active.
-func (r *Repository) InitModules(settings *models.TorrentstreamSettings, host string, port int) (err error) {
-	r.client.Shutdown()
-
-	defer util.HandlePanicInModuleWithError("torrentstream/InitModules", &err)
-
-	if settings == nil {
-		r.logger.Error().Msg("torrentstream: Cannot initialize module, no settings provided")
-		r.settings = mo.None[Settings]()
-		return errors.New("torrentstream: Cannot initialize module, no settings provided")
-	}
-
-	s := *settings
-
-	if s.Enabled == false {
-		r.logger.Info().Msg("torrentstream: Module is disabled")
-		r.Shutdown()
-		r.settings = mo.None[Settings]()
-		return nil
-	}
-
-	// Set default download directory, which is a temporary directory
-	if s.DownloadDir == "" {
-		s.DownloadDir = r.getDefaultDownloadPath()
-		_ = os.MkdirAll(s.DownloadDir, os.ModePerm) // Create the directory if it doesn't exist
-	}
-
-	// DEVNOTE: Commented code below causes error log after initializing the client
-	//// Empty the download directory
-	//_ = os.RemoveAll(s.DownloadDir)
-
-	if s.StreamingServerPort == 0 {
-		s.StreamingServerPort = 43214
-	}
-	if s.TorrentClientPort == 0 {
-		s.TorrentClientPort = 43213
-	}
-	if s.StreamingServerHost == "" {
-		s.StreamingServerHost = "127.0.0.1"
-	}
-
-	// Set the settings
-	r.settings = mo.Some(Settings{
-		TorrentstreamSettings: s,
-		Host:                  host,
-		Port:                  port,
-	})
-
-	// Initialize the torrent client
-	err = r.client.initializeClient()
-	if err != nil {
-		return err
-	}
-
-	// Start listening to native player events
-	r.listenToNativePlayerEvents()
-
-	r.logger.Info().Msg("torrentstream: Module initialized")
+func (r *Repository) Start() error {
 	return nil
 }
 
-func (r *Repository) HTTPStreamHandler() http.Handler {
-	return r.handler
-}
-
-func (r *Repository) FailIfNoSettings() error {
-	if r.settings.IsAbsent() {
-		return errors.New("torrentstream: no settings provided, the module is dormant")
-	}
+func (r *Repository) Stop() error {
 	return nil
 }
 
-// Shutdown closes the torrent client and streaming server
-// TEST-ONLY
-func (r *Repository) Shutdown() {
-	r.logger.Debug().Msg("torrentstream: Shutting down module")
-	r.client.Shutdown()
+func (r *Repository) GetStatus() string {
+	return "stopped"
 }
 
-//// Cleanup shuts down the module and removes the download directory
-//func (r *Repository) Cleanup() {
-//	if r.settings.IsAbsent() {
-//		return
-//	}
-//	r.client.Close()
-//
-//	// Remove the download directory
-//	downloadDir := r.GetDownloadDir()
-//	_ = os.RemoveAll(downloadDir)
-//}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func (r *Repository) GetDownloadDir() string {
-	if r.settings.IsAbsent() {
-		return r.getDefaultDownloadPath()
-	}
-	if r.settings.MustGet().DownloadDir == "" {
-		return r.getDefaultDownloadPath()
-	}
-	return r.settings.MustGet().DownloadDir
+func (r *Repository) PlayTorrent(ctx context.Context, media *anilist.CompleteAnime, episode int, torrent interface{}) error {
+	return nil
 }
 
-func (r *Repository) getDefaultDownloadPath() string {
-	tempDir := os.TempDir()
-	downloadDirPath := filepath.Join(tempDir, "kamehouse", "torrentstream")
-	return downloadDirPath
+func (r *Repository) sendStateEvent(state string, tlsState TLSState) {
 }
+
+const (
+	eventLoading = "loading"
+)

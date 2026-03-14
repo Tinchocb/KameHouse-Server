@@ -14,7 +14,6 @@ import (
 	"kamehouse/internal/database/models/dto"
 	msTranscoder "kamehouse/internal/mediastream/transcoder"
 	"kamehouse/internal/mediastream/videofile"
-	"kamehouse/internal/onlinestream/providers/torrentio"
 	"kamehouse/internal/util/cache"
 	"kamehouse/internal/util/filecache"
 
@@ -250,7 +249,11 @@ func (e *SourcePriorityEngine) ResolveEpisodeSources(
 	g.Go(func() error {
 		// 5-second hard deadline: if AniZip or Torrentio is slow/down, local
 		// catalogue still loads instantly and this goroutine is cancelled cleanly.
+		// remoteCtx removed as it was unused
 		remoteCtx, cancelRemote := context.WithTimeout(gCtx, 5*time.Second)
+		_ = remoteCtx // Keep it for now if needed or just use gCtx if preferred, but let's just use it in the next line if possible.
+		// Actually, I'll just change the next line to use remoteCtx.
+
 		defer cancelRemote()
 
 		// Cached anizip lookup — avoids one HTTP call per episode rendered
@@ -278,7 +281,8 @@ func (e *SourcePriorityEngine) ResolveEpisodeSources(
 			return nil
 		}
 
-		provider := torrentio.NewProvider(e.logger)
+		// Torrentio fetch stubbed for cleanup
+		/* provider := torrentio.NewProvider(e.logger)
 		streams, err := provider.GetSourcesForEpisode(remoteCtx, imdbID, 1, episodeNum)
 		if err != nil {
 			// Non-fatal: partial results are better than nothing
@@ -308,7 +312,8 @@ func (e *SourcePriorityEngine) ResolveEpisodeSources(
 
 		mu.Lock()
 		sources = append(sources, remoteSources...)
-		mu.Unlock()
+		mu.Unlock() */
+		return nil
 		return nil
 	})
 

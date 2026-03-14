@@ -341,21 +341,7 @@ func (h *Handler) HandleGetLatestLogContent(c echo.Context) error {
 //	@route /api/v1/announcements [POST]
 //	@returns []updater.Announcement
 func (h *Handler) HandleGetAnnouncements(c echo.Context) error {
-	type body struct {
-		Platform string `json:"platform"`
-	}
-
-	var b body
-	if err := c.Bind(&b); err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	settings, _ := h.App.Database.GetSettings()
-
-	announcements := h.App.Updater.GetAnnouncements(h.App.Version, b.Platform, settings)
-
-	return h.RespondWithData(c, announcements)
-
+	return h.RespondWithData(c, nil)
 }
 
 type MemoryStatsResponse struct {

@@ -4,11 +4,8 @@ import (
 	"context"
 	"errors"
 	"kamehouse/internal/api/anilist"
-	"kamehouse/internal/customsource"
 	"kamehouse/internal/database/db"
-	"kamehouse/internal/extension"
 	"kamehouse/internal/hook"
-	"kamehouse/internal/jellyfin"
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/platforms/shared_platform"
 	"kamehouse/internal/util"
@@ -34,12 +31,11 @@ type (
 		offlinePlatformEnabled bool
 		helper                 *shared_platform.PlatformHelper
 		db                     *db.Database
-		extensionBankRef       *util.Ref[*extension.UnifiedBank]
-		jellyfinClient         *jellyfin.Client
+		extensionBankRef       interface{}
 	}
 )
 
-func NewAnilistPlatform(anilistClientRef *util.Ref[anilist.AnilistClient], extensionBankRef *util.Ref[*extension.UnifiedBank], logger *zerolog.Logger, db *db.Database) platform.Platform {
+func NewAnilistPlatform(anilistClientRef *util.Ref[anilist.AnilistClient], extensionBankRef interface{}, logger *zerolog.Logger, db *db.Database) platform.Platform {
 	ap := &AnilistPlatform{
 		anilistClient:      shared_platform.NewCacheLayer(anilistClientRef),
 		logger:             logger,
@@ -48,8 +44,8 @@ func NewAnilistPlatform(anilistClientRef *util.Ref[anilist.AnilistClient], exten
 		rawAnimeCollection: mo.None[*anilist.AnimeCollection](),
 		mangaCollection:    mo.None[*anilist.MangaCollection](),
 		rawMangaCollection: mo.None[*anilist.MangaCollection](),
-		extensionBankRef:   extensionBankRef,
-		helper:             shared_platform.NewPlatformHelper(extensionBankRef, db, logger),
+		extensionBankRef:   nil,
+		helper:             shared_platform.NewPlatformHelper(nil, db, logger),
 		db:                 db,
 	}
 
@@ -79,10 +75,6 @@ func (ap *AnilistPlatform) SetAnilistClient(client anilist.AnilistClient) {
 	ap.anilistClient = client
 }
 
-func (ap *AnilistPlatform) SetJellyfinClient(client *jellyfin.Client) {
-	ap.jellyfinClient = client
-}
-
 func (ap *AnilistPlatform) UpdateEntry(ctx context.Context, mediaID int, status *anilist.MediaListStatus, scoreRaw *int, progress *int, startedAt *anilist.FuzzyDateInput, completedAt *anilist.FuzzyDateInput) error {
 	ap.logger.Trace().Msg("anilist platform: Updating entry")
 
@@ -91,21 +83,6 @@ func (ap *AnilistPlatform) UpdateEntry(ctx context.Context, mediaID int, status 
 		// Check if this is a custom source entry (after hooks have been triggered)
 		if handled, err := ap.helper.HandleCustomSourceUpdateEntry(ctx, mediaID, event.Status, event.ScoreRaw, event.Progress, event.StartedAt, event.CompletedAt); handled {
 			return err
-		}
-
-		// Check if this media id belongs to a Jellyfin library item
-		if ap.jellyfinClient != nil {
-			if itemId, ok := ap.jellyfinClient.GetItemId(mediaID); ok {
-				user, err := ap.jellyfinClient.GetCurrentUser(ctx)
-				if err == nil {
-					// Mark as played if status is COMPLETED
-					if event.Status != nil && *event.Status == anilist.MediaListStatusCompleted {
-						_ = ap.jellyfinClient.MarkItemAsPlayed(ctx, user.ID, itemId, true)
-					}
-					// Progress update isn't sent here but in UpdateEntryProgress usually for Jellyfin
-					return nil // bypass Anilist updates
-				}
-			}
 		}
 
 		_, err := ap.anilistClient.UpdateMediaListEntry(ctx, event.MediaID, event.Status, event.ScoreRaw, event.Progress, event.StartedAt, event.CompletedAt)
@@ -150,23 +127,6 @@ func (ap *AnilistPlatform) UpdateEntryProgress(ctx context.Context, mediaID int,
 
 		if realTotalCount > 0 && *event.Progress > realTotalCount {
 			*event.Progress = realTotalCount
-		}
-
-		// Check if this media id belongs to a Jellyfin library item
-		if ap.jellyfinClient != nil {
-			if itemId, ok := ap.jellyfinClient.GetItemId(mediaID); ok {
-				user, err := ap.jellyfinClient.GetCurrentUser(ctx)
-				if err == nil {
-					// Jellyfin tracks progress in percentage or ticks, here we assume episodes as generic ticks
-					// Ticks logic would need actual playback ticks, but we will send the generic episode completion if we want.
-					// However, Anime uses MarkItemAsPlayed for the whole item or episode. The JellyfinItemId belongs to the Series.
-					// We might need an episode-level ID, but for now we bypass AniList so it doesn't fail.
-					if event.Status != nil && *event.Status == anilist.MediaListStatusCompleted {
-						_ = ap.jellyfinClient.MarkItemAsPlayed(ctx, user.ID, itemId, true)
-					}
-					return nil // Bypass Anilist
-				}
-			}
 		}
 
 		_, err := ap.anilistClient.UpdateMediaListEntryProgress(
@@ -608,9 +568,6 @@ func (ap *AnilistPlatform) refreshMangaCollection(ctx context.Context) error {
 		return err
 	}
 
-	// Merge the custom entries into the collection
-	ap.helper.MergeCustomSourceMangaEntries(collection)
-
 	// Save the raw collection to App (retains the lists with no status)
 	collectionCopy := *collection
 	ap.rawMangaCollection = mo.Some(&collectionCopy)
@@ -649,7 +606,8 @@ func (ap *AnilistPlatform) AddMediaToCollection(ctx context.Context, mIds []int)
 			rateLimiter.Wait(context.Background())
 			defer wg.Done()
 
-			if customsource.IsExtensionId(id) {
+			// Custom source logic stubbed for cleanup
+			/* if customsource.IsExtensionId(id) {
 				_, err := ap.helper.HandleCustomSourceUpdateEntry(ctx,
 					id,
 					lo.ToPtr(anilist.MediaListStatusPlanning),
@@ -662,7 +620,7 @@ func (ap *AnilistPlatform) AddMediaToCollection(ctx context.Context, mIds []int)
 					ap.logger.Error().Msg("anilist: An error occurred while adding media to planning list: " + err.Error())
 				}
 				return
-			}
+			} */
 
 			_, err := ap.anilistClient.UpdateMediaListEntry(
 				ctx,

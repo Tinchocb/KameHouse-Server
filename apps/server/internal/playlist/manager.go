@@ -5,17 +5,13 @@ import (
 	"encoding/json"
 	"kamehouse/internal/database/db"
 
-	"kamehouse/internal/database/models/dto"
 	debrid_client "kamehouse/internal/debrid/client"
 	"kamehouse/internal/directstream"
 	"kamehouse/internal/events"
 	"kamehouse/internal/library/anime"
-	"kamehouse/internal/nakama"
-	"kamehouse/internal/nativeplayer"
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/torrentstream"
 	"kamehouse/internal/util"
-	"kamehouse/internal/videocore"
 	"sync"
 	"sync/atomic"
 
@@ -105,10 +101,8 @@ type (
 		wsEventManager        events.WSEventManagerInterface
 
 		directstreamManager     *directstream.Manager
-		nativePlayer            *nativeplayer.NativePlayer
 		torrentstreamRepository *torrentstream.Repository
 		debridClientRepository  *debrid_client.Repository
-		nakamaManager           *nakama.Manager
 
 		mu     sync.Mutex
 		logger *zerolog.Logger
@@ -130,8 +124,6 @@ type (
 		DirectStreamManager     *directstream.Manager
 		TorrentstreamRepository *torrentstream.Repository
 		DebridClientRepository  *debrid_client.Repository
-		NativePlayer            *nativeplayer.NativePlayer
-		NakamaManager           *nakama.Manager
 		Logger                  *zerolog.Logger
 		PlatformRef             *util.Ref[platform.Platform]
 		WSEventManager          events.WSEventManagerInterface
@@ -145,8 +137,6 @@ func NewManager(opts *NewManagerOptions) *Manager {
 		logger:                  opts.Logger,
 		torrentstreamRepository: opts.TorrentstreamRepository,
 		debridClientRepository:  opts.DebridClientRepository,
-		nativePlayer:            opts.NativePlayer,
-		nakamaManager:           opts.NakamaManager,
 		platformRef:             opts.PlatformRef,
 		db:                      opts.Database,
 		wsEventManager:          opts.WSEventManager,
@@ -296,48 +286,11 @@ func (m *Manager) startPlaylist(playlist *anime.Playlist, options *startPlaylist
 	// create a new context
 	m.ctx, m.cancel = context.WithCancel(context.Background())
 
-	videoCoreSubscriber := m.nativePlayer.VideoCore().Subscribe("playlist-manager")
-
 	// continue in goroutine
 	go func() {
-		for {
-			select {
-			case <-m.ctx.Done():
-				m.logger.Trace().Uint("dbId", playlist.DbId).Msg("playlist: Current playlist context done")
-				m.resetPlaylist()
-				m.nativePlayer.VideoCore().Unsubscribe("playlist-manager")
-				return
-
-			case event := <-videoCoreSubscriber.Events():
-				if m.playerType.Load() != NativePlayer {
-					continue
-				}
-				if !event.IsNativePlayer() {
-					continue
-				}
-				switch event.(type) {
-				case *videocore.VideoLoadedMetadataEvent:
-					m.state.Store(StateStarted)
-					m.playerType.Store(NativePlayer)
-
-				case *videocore.VideoCompletedEvent:
-					m.markCurrentAsCompleted()
-					m.state.Store(StateCompleted)
-
-				case *videocore.VideoEndedEvent:
-					if m.state.Load() == StateCompleted {
-						m.markCurrentAsCompleted()
-						m.playNextEpisode()
-					}
-					m.state.Store(StateIdle)
-
-				case *videocore.VideoTerminatedEvent:
-					if m.state.Load() == StateStarted || m.state.Load() == StateCompleted {
-						m.StopPlaylist("Playlist stopped")
-					}
-				}
-			}
-		}
+		<-m.ctx.Done()
+		m.logger.Trace().Uint("dbId", playlist.DbId).Msg("playlist: Current playlist context done")
+		m.resetPlaylist()
 	}()
 
 	// Continue playlist
@@ -477,7 +430,7 @@ func (m *Manager) resetPlaylist() {
 }
 
 func (m *Manager) playEpisode(episode *anime.PlaylistEpisode) {
-	data, ok := m.currentPlaylistData.Get()
+	_, ok := m.currentPlaylistData.Get()
 	if !ok {
 		return
 	}
@@ -505,58 +458,7 @@ func (m *Manager) playEpisode(episode *anime.PlaylistEpisode) {
 	// - if local file & desktop player, launch it from server
 	// - if torrent/debrid stream, launch it from client
 
-	isLf := isLocalFile(episode)
-	isNakama := episode.IsNakama
-	isTorrentOrDebridStream := !isLf && !isNakama
 
-	//// it's a local file and user uses an external player link, do nothing
-	//if (isLf && data.options.LocalFilePlaybackMethod == ClientPlaybackMethodExternalPlayerLink) ||
-	//	(isNakama && data.options.LocalFilePlaybackMethod == ClientPlaybackMethodExternalPlayerLink) ||
-	//	(isTorrentOrDebridStream && data.options.StreamPlaybackMethod == ClientPlaybackMethodExternalPlayerLink) {
-	//	m.logger.Trace().Msg("playlist: External player link, skipping playback")
-	//
-	//	m.currentPlaybackMethod = ClientPlaybackMethodExternalPlayerLink
-	//
-	//	return
-	//}
-
-	if (isLf && data.options.LocalFilePlaybackMethod != ClientPlaybackMethodNativePlayer) ||
-		(isNakama && data.options.LocalFilePlaybackMethod != ClientPlaybackMethodNativePlayer) ||
-		(isTorrentOrDebridStream && data.options.StreamPlaybackMethod != ClientPlaybackMethodNativePlayer) ||
-		episode.WatchType == anime.WatchTypeOnline {
-		m.nativePlayer.Stop()
-	}
-
-	if isLf && !isNakama && data.options.LocalFilePlaybackMethod == ClientPlaybackMethodNativePlayer {
-		// local file and native media player, play it from server
-		m.logger.Debug().Msg("playlist: Local file and native media player, playing from server")
-		err := m.directstreamManager.PlayLocalFile(context.Background(), directstream.PlayLocalFileOptions{
-			ClientId:   "",
-			Path:       episode.Episode.LocalFile.Path,
-			LocalFiles: []*dto.LocalFile{episode.Episode.LocalFile},
-		})
-		if err != nil {
-			m.logger.Error().Err(err).Msg("playlist: Failed to start playing local file")
-			m.StopPlaylist("Failed to start playing local file")
-		}
-
-		m.currentPlaybackMethod = ClientPlaybackMethodNativePlayer
-
-		return
-	}
-	// nakama and desktop media player or native player, play it from server
-	if isNakama && (data.options.LocalFilePlaybackMethod == ClientPlaybackMethodDefault || data.options.LocalFilePlaybackMethod == ClientPlaybackMethodNativePlayer) {
-		m.logger.Debug().Msg("playlist: Nakama stream and desktop media player, playing from server")
-		err := m.nakamaManager.PlayHostAnimeLibraryFile(episode.Episode.LocalFile.Path, "", m.clientId, episode.Episode.BaseAnime, episode.Episode.AniDBEpisode, "")
-		if err != nil {
-			m.logger.Error().Err(err).Msg("playlist: Failed to start playing nakama stream")
-			m.StopPlaylist("Failed to start playing nakama stream")
-		}
-
-		m.currentPlaybackMethod = ClientPlaybackMethodDefault
-
-		return
-	}
 
 	m.logger.Trace().Msg("playlist: Sending play episode event to client")
 

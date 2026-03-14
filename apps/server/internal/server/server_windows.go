@@ -9,7 +9,6 @@ import (
 	"kamehouse/internal/core"
 	"kamehouse/internal/handlers"
 	"kamehouse/internal/icon"
-	"kamehouse/internal/updater"
 
 	"fyne.io/systray"
 	"github.com/cli/browser"
@@ -21,10 +20,10 @@ func StartServer(webFS embed.FS, embeddedLogo []byte) {
 	onExit := func() {}
 	hideConsole()
 
-	app, flags, selfupdater := startApp(embeddedLogo)
+	app, flags := startApp(embeddedLogo)
 
 	// Blocks until systray.Quit() is called
-	systray.Run(onReady(&webFS, app, flags, selfupdater), onExit)
+	systray.Run(onReady(&webFS, app, flags), onExit)
 }
 
 func addQuitItem() {
@@ -39,7 +38,7 @@ func addQuitItem() {
 	}()
 }
 
-func onReady(webFS *embed.FS, app *core.App, flags core.KameHouseFlags, selfupdater *updater.SelfUpdater) func() {
+func onReady(webFS *embed.FS, app *core.App, flags core.KameHouseFlags) func() {
 	return func() {
 		systray.SetTemplateIcon(icon.Data, icon.Data)
 		systray.SetTitle(fmt.Sprintf("KameHouse v%s", constants.Version))
@@ -59,7 +58,7 @@ func onReady(webFS *embed.FS, app *core.App, flags core.KameHouseFlags, selfupda
 			// Close the systray when the app exits
 			defer systray.Quit()
 
-			startAppLoop(webFS, app, flags, selfupdater)
+			startAppLoop(webFS, app, flags)
 		}()
 
 		go func() {

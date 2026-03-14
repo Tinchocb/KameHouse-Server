@@ -5,7 +5,6 @@ import (
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/events"
-	"kamehouse/internal/extension"
 	"kamehouse/internal/platforms/anilist_platform"
 	"kamehouse/internal/util"
 	"testing"
@@ -16,8 +15,7 @@ func GetMockRepository(t *testing.T, db *db.Database) *Repository {
 	wsEventManager := events.NewWSEventManager(logger)
 	anilistClient := anilist.TestGetMockAnilistClient()
 	anilistClientRef := util.NewRef(anilistClient)
-	extensionBankRef := util.NewRef(extension.NewUnifiedBank())
-	platform := anilist_platform.NewAnilistPlatform(anilistClientRef, extensionBankRef, logger, db)
+	platform := anilist_platform.NewAnilistPlatform(anilistClientRef, nil, logger, db)
 	metadataProvider := metadata_provider.GetFakeProvider(t, db)
 	platformRef := util.NewRef(platform)
 	metadataProviderRef := util.NewRef(metadataProvider)

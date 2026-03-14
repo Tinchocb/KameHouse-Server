@@ -11,42 +11,31 @@ import (
 	"kamehouse/internal/database/models"
 	debrid_client "kamehouse/internal/debrid/client"
 	"kamehouse/internal/directstream"
-	discordrpc_presence "kamehouse/internal/discordrpc/presence"
-	"kamehouse/internal/doh"
 	"kamehouse/internal/events"
-	"kamehouse/internal/extension"
-	"kamehouse/internal/extension_playground"
-	"kamehouse/internal/extension_repo"
 	"kamehouse/internal/hook"
-	"kamehouse/internal/jellyfin"
 	"kamehouse/internal/library/autodownloader"
 	"kamehouse/internal/library/autoscanner"
 	"kamehouse/internal/library/fillermanager"
 	"kamehouse/internal/library/scanner"
 	"kamehouse/internal/library_explorer"
 	"kamehouse/internal/local"
-	"kamehouse/internal/manga"
 	"kamehouse/internal/mediastream"
-	"kamehouse/internal/nakama"
-	"kamehouse/internal/nativeplayer"
-	"kamehouse/internal/streaming"
-	"kamehouse/internal/onlinestream"
 	"kamehouse/internal/platforms/anilist_platform"
 	"kamehouse/internal/platforms/offline_platform"
 	"kamehouse/internal/platforms/platform"
-	"kamehouse/internal/platforms/simulated_platform"
+	simulated_platform "kamehouse/internal/platforms/simulated_platform"
 	"kamehouse/internal/playlist"
 	"kamehouse/internal/report"
+	"kamehouse/internal/streaming"
 	"kamehouse/internal/torrent_clients/torrent_client"
-	"kamehouse/internal/torrents/torrent"
+	itorrent "kamehouse/internal/torrents/torrent"
 	"kamehouse/internal/torrentstream"
-	"kamehouse/internal/updater"
 	"kamehouse/internal/user"
 	"kamehouse/internal/util"
-	"kamehouse/internal/videocore"
 	"kamehouse/internal/util/cache"
 	"kamehouse/internal/util/filecache"
 	"kamehouse/internal/util/result"
+	"kamehouse/internal/videocore"
 	"kamehouse/internal/ws"
 	"log"
 	"os"
@@ -75,7 +64,7 @@ type (
 
 		// Torrent and debrid services
 		TorrentClientRepository *torrent_client.Repository
-		TorrentRepository       *torrent.Repository
+		TorrentRepository       *itorrent.Repository
 		DebridClientRepository  *debrid_client.Repository
 
 		// File system monitoring
@@ -93,38 +82,28 @@ type (
 		WSEventManager *events.WSEventManager
 		WSHub          *ws.Hub
 
-		// Extensions
-		ExtensionRepository           *extension_repo.Repository
-		ExtensionBankRef              *util.Ref[*extension.UnifiedBank]
-		ExtensionPlaygroundRepository *extension_playground.PlaygroundRepository
+		ExtensionRepository interface {
+			ListExtensionData() []interface{}
+		}
+		ExtensionBankRef interface{}
 
-		// Streaming
-		StreamOrchestrator      *streaming.StreamOrchestrator
-		DirectStreamManager     *directstream.Manager
-		OnlinestreamRepository  *onlinestream.Repository
-		MediastreamRepository   *mediastream.Repository
+		HookManager             hook.Manager
 		TorrentstreamRepository *torrentstream.Repository
 
+		// Streaming
+		StreamOrchestrator    *streaming.StreamOrchestrator
+		DirectStreamManager   *directstream.Manager
+		MediastreamRepository *mediastream.Repository
 		// Phase 2: Base Providers
-		NativePlayer *nativeplayer.NativePlayer
-		VideoCore    *videocore.VideoCore
-
-		// Manga services
-		MangaRepository *manga.Repository
-		MangaDownloader *manga.Downloader
+		VideoCore *videocore.VideoCore
 
 		// Offline and local account
 		LocalManager local.Manager
 
 		// Utilities
 		FileCacher       *filecache.Cacher
-		Updater          *updater.Updater
-		SelfUpdater      *updater.SelfUpdater
 		ReportRepository *report.Repository
 		ThumbnailCache   *cache.ThumbnailCache
-
-		// Integrations
-		DiscordPresence *discordrpc_presence.Presence
 
 		// Continuity and sync
 		ContinuityManager *continuity.Manager
@@ -161,20 +140,13 @@ type (
 		isOfflineRef       *util.Ref[bool]
 		ServerPasswordHash string
 
-		// Plugin system
-		HookManager hook.Manager
-
 		// Features
 		PlaylistManager *playlist.Manager
 		LibraryExplorer *library_explorer.LibraryExplorer
-		NakamaManager   *nakama.Manager
 
 		// Show this version's tour on the frontend
 		// Hydrated by migrations.go when there's a version change
 		ShowTour string
-
-		// Jellyfin integration
-		JellyfinClient *jellyfin.Client
 	}
 
 	App = KameHouse
@@ -188,21 +160,9 @@ func WithDatabase(db *db.Database) AppOption      { return func(a *KameHouse) { 
 func WithWSEventManager(ws *events.WSEventManager) AppOption {
 	return func(a *KameHouse) { a.WSEventManager = ws }
 }
-func WithFlags(flags KameHouseFlags) AppOption { return func(a *KameHouse) { a.Flags = flags } }
-func WithSelfUpdater(u *updater.SelfUpdater) AppOption {
-	return func(a *KameHouse) { a.SelfUpdater = u }
-}
-func WithHookManager(hm hook.Manager) AppOption { return func(a *KameHouse) { a.HookManager = hm } }
-func WithFileCacher(fc *filecache.Cacher) AppOption {
-	return func(a *KameHouse) { a.FileCacher = fc }
-}
-
-func (a *KameHouse) GetJellyfinClient() *jellyfin.Client {
-	return a.JellyfinClient
-}
 
 // NewApp creates a new server instance
-func NewKameHouse(configOpts *ConfigOptions, selfupdater *updater.SelfUpdater) *App {
+func NewKameHouse(configOpts *ConfigOptions) *App {
 
 	// Initialize logger with predefined format
 	logger := util.NewLogger()
@@ -285,53 +245,25 @@ func NewKameHouse(configOpts *ConfigOptions, selfupdater *updater.SelfUpdater) *
 		wsEventManager.ExitIfNoConnsAsDesktopSidecar()
 	}
 
-	// Initialize DNS-over-HTTPS service in background
-	go doh.HandleDoH(cfg.Server.DoHUrl, logger)
-
 	// Initialize file cache system for media and metadata
 	fileCacher, err := filecache.NewCacher(cfg.Cache.Dir)
+	// torrentio.Resolve ...
 	if err != nil {
 		logger.Fatal().Err(err).Msgf("app: Failed to initialize file cacher")
 	}
 
-	// Initialize the extension bank that will be shared across modules
-	extensionBankRef := util.NewRef(extension.NewUnifiedBank())
-
-	// Initialize extension repository
-	extensionRepository := extension_repo.NewRepository(&extension_repo.NewRepositoryOptions{
-		Logger:           logger,
-		ExtensionDir:     cfg.Extensions.Dir,
-		WSEventManager:   wsEventManager,
-		FileCacher:       fileCacher,
-		HookManager:      hookManager,
-		ExtensionBankRef: extensionBankRef,
-	})
-
 	// Initialize metadata provider for media information
 	metadataProvider := metadata_provider.NewProvider(&metadata_provider.NewProviderImplOptions{
-		Logger:           logger,
-		FileCacher:       fileCacher,
-		Database:         database,
-		ExtensionBankRef: extensionBankRef,
+		Logger:     logger,
+		FileCacher: fileCacher,
+		Database:   database,
 	})
 
 	// Set initial metadata provider (will change if offline mode is enabled)
 	activeMetadataProvider := metadataProvider
 
-	// Initialize manga repository
-	mangaRepository := manga.NewRepository(&manga.NewRepositoryOptions{
-		Logger:           logger,
-		FileCacher:       fileCacher,
-		CacheDir:         cfg.Cache.Dir,
-		ServerURI:        cfg.GetServerURI(),
-		WsEventManager:   wsEventManager,
-		DownloadDir:      cfg.Manga.DownloadDir,
-		Database:         database,
-		ExtensionBankRef: extensionBankRef,
-	})
-
 	// Initialize Anilist platform
-	anilistPlatform := anilist_platform.NewAnilistPlatform(anilistCWRef, extensionBankRef, logger, database)
+	anilistPlatform := anilist_platform.NewAnilistPlatform(anilistCWRef, nil, logger, database)
 
 	activePlatformRef := util.NewRef[platform.Platform](anilistPlatform)
 	metadataProviderRef := util.NewRef[metadata_provider.Provider](activeMetadataProvider)
@@ -342,7 +274,6 @@ func NewKameHouse(configOpts *ConfigOptions, selfupdater *updater.SelfUpdater) *
 		AssetDir:            cfg.Offline.AssetDir,
 		Logger:              logger,
 		MetadataProviderRef: metadataProviderRef,
-		MangaRepository:     mangaRepository,
 		Database:            database,
 		WSEventManager:      wsEventManager,
 		IsOffline:           cfg.Server.Offline,
@@ -364,8 +295,8 @@ func NewKameHouse(configOpts *ConfigOptions, selfupdater *updater.SelfUpdater) *
 	}
 
 	// Initialize simulated platform for unauthenticated operations
-	simulatedPlatform, err := simulated_platform.NewSimulatedPlatform(localManager, anilistCWRef, extensionBankRef, logger, database)
-	if err != nil {
+	simulatedPlatform := simulated_platform.NewSimulatedPlatform(logger, database)
+	if simulatedPlatform == nil {
 		logger.Fatal().Err(err).Msgf("app: Failed to initialize simulated platform")
 	}
 
@@ -393,46 +324,25 @@ func NewKameHouse(configOpts *ConfigOptions, selfupdater *updater.SelfUpdater) *
 
 	telemetryManager := continuity.NewTelemetryManager(continuityManager, logger, 5*time.Second)
 
-	discordPresence := discordrpc_presence.New(nil, logger)
-
 	var provisionalApp *KameHouse
 
 	videoCore := videocore.New(videocore.NewVideoCoreOptions{
-		WsEventManager:             wsEventManager,
-		Logger:                     logger,
-		MetadataProviderRef:        metadataProviderRef,
-		ContinuityManager:          continuityManager,
-		DiscordPresence:            discordPresence,
-		PlatformRef:                activePlatformRef,
+		WsEventManager:      wsEventManager,
+		Logger:              logger,
+		MetadataProviderRef: metadataProviderRef,
+		ContinuityManager:   continuityManager,
+		PlatformRef:         activePlatformRef,
 		RefreshAnimeCollectionFunc: func() {
 			if provisionalApp != nil {
 				_, _ = provisionalApp.RefreshAnimeCollection()
 			}
 		},
-		IsOfflineRef:               isOfflineRef,
+		IsOfflineRef: isOfflineRef,
 	})
 
-	nativePlayer := nativeplayer.New(nativeplayer.NewNativePlayerOptions{
-		WsEventManager: wsEventManager,
-		Logger:         logger,
-		VideoCore:      videoCore,
-	})
-
-	// Create a provisional ref for Continuity Manager that will be hydrated in initModulesOnce
-	continuityManagerRef := util.NewRef[any](continuityManager)
-
-	onlinestreamRepository := onlinestream.NewRepository(&onlinestream.NewRepositoryOptions{
-		Logger:              logger,
-		FileCacher:          fileCacher,
-		MetadataProviderRef: metadataProviderRef,
-		PlatformRef:         activePlatformRef,
-		ContinuityManager:   continuityManagerRef,
-		Database:            database,
-		ExtensionBankRef:    extensionBankRef,
-	})
 
 	// Initialize extension playground for testing extensions
-	extensionPlaygroundRepository := extension_playground.NewPlaygroundRepository(logger, activePlatformRef, metadataProviderRef)
+	// extensionPlaygroundRepository := extension_playground.NewPlaygroundRepository(logger, activePlatformRef, metadataProviderRef)
 
 	// Initialize Thumbnail Cache (LRU bounded to 1000 items to prevent OOM)
 	thumbnailCache, err := cache.NewThumbnailCache(1000)
@@ -457,32 +367,21 @@ func NewKameHouse(configOpts *ConfigOptions, selfupdater *updater.SelfUpdater) *
 		WSHub:                         ws.NewHub(context.Background(), events.NewDispatcher()),
 		AnilistCacheDir:               anilistCacheDir,
 		Logger:                        logger,
-		Version:                       constants.Version,
-		Updater:                       updater.New(constants.Version, logger, wsEventManager),
-		FileCacher:                    fileCacher,
-		OnlinestreamRepository:        onlinestreamRepository,
-		MangaRepository:               mangaRepository,
-		ExtensionRepository:           extensionRepository,
-		ExtensionBankRef:              extensionBankRef,
-		ExtensionPlaygroundRepository: extensionPlaygroundRepository,
-		ReportRepository:              report.NewRepository(logger),
-		ThumbnailCache:                thumbnailCache,
-		NativePlayer:                  nativePlayer,
-		VideoCore:                     videoCore,
-		ContinuityManager:             continuityManager,
-		TelemetryManager:              telemetryManager,
-		DiscordPresence:               discordPresence,
+		Version:            constants.Version,
+		FileCacher:         fileCacher,
+		ReportRepository:   report.NewRepository(logger),
+		ThumbnailCache:     thumbnailCache,
+		VideoCore:          videoCore,
+		ContinuityManager:  continuityManager,
+		TelemetryManager:   telemetryManager,
 		TorrentRepository:             nil, // Initialized in App.initModulesOnce
 		FillerManager:                 nil, // Initialized in App.initModulesOnce
-		MangaDownloader:               nil, // Initialized in App.initModulesOnce
 		AutoDownloader:                nil, // Initialized in App.initModulesOnce
 		AutoScanner:                   nil, // Initialized in App.initModulesOnce
 		StreamOrchestrator:            nil, // Initialized in App.initModulesOnce
 		MediastreamRepository:         nil, // Initialized in App.initModulesOnce
-		TorrentstreamRepository:       nil, // Initialized in App.initModulesOnce
 		DebridClientRepository:        nil, // Initialized in App.initModulesOnce
 		DirectStreamManager:           nil, // Initialized in App.initModulesOnce
-		NakamaManager:                 nil, // Initialized in App.initModulesOnce
 		LibraryExplorer:               nil, // Initialized in App.initModulesOnce
 		TorrentClientRepository:       nil, // Initialized in App.InitOrRefreshModules
 		previousVersion:               previousVersion,
@@ -493,7 +392,6 @@ func NewKameHouse(configOpts *ConfigOptions, selfupdater *updater.SelfUpdater) *
 			Torrentstream *models.TorrentstreamSettings
 			Debrid        *models.DebridSettings
 		}{Mediastream: nil, Torrentstream: nil},
-		SelfUpdater:                     selfupdater,
 		moduleMu:                        sync.Mutex{},
 		OnRefreshAnilistCollectionFuncs: result.NewMap[string, func()](),
 		HookManager:                     hookManager,
@@ -506,21 +404,11 @@ func NewKameHouse(configOpts *ConfigOptions, selfupdater *updater.SelfUpdater) *
 	// Initialize MAL Scrobbler DLQ Queue
 	app.Metadata.MalScrobbler = mal.NewMalScrobblerWorker(database, logger)
 
-	// Run database migrations if version has changed
-	app.runMigrations()
-
 	// Initialize modules that only need to be initialized once
 	app.initModulesOnce()
 
-	if !app.IsOffline() {
-		go app.Updater.FetchAnnouncements()
-	}
-
 	// Initialize all modules that depend on settings
 	app.InitOrRefreshModules()
-
-	// Load custom source extensions before fetching AniList data
-	LoadCustomSourceExtensions(extensionRepository)
 
 	// Initialize Anilist data if not in offline mode
 	if !app.IsOffline() {
@@ -528,9 +416,6 @@ func NewKameHouse(configOpts *ConfigOptions, selfupdater *updater.SelfUpdater) *
 	} else {
 		app.ServerReady = true
 	}
-
-	// Load the other extensions asynchronously
-	go LoadExtensions(extensionRepository, logger, cfg)
 
 	// Initialize mediastream settings (for streaming media)
 	app.InitOrRefreshMediastreamSettings()
@@ -540,9 +425,6 @@ func NewKameHouse(configOpts *ConfigOptions, selfupdater *updater.SelfUpdater) *
 
 	// Initialize debrid settings (for debrid services)
 	app.InitOrRefreshDebridSettings()
-
-	// Register Nakama manager cleanup
-	app.AddCleanupFunction(app.NakamaManager.Cleanup)
 
 	// Run one-time initialization actions
 	app.performActionsOnce()

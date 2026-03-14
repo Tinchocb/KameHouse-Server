@@ -35,8 +35,8 @@ func NewOfflineMetadataProvider(manager *ManagerImpl) metadata_provider.Provider
 	return ret
 }
 
-func (mp *OfflineMetadataProvider) Close() {
-	// no-op
+func (mp *OfflineMetadataProvider) Close() error {
+	return nil
 }
 
 func (mp *OfflineMetadataProvider) ClearCache() {

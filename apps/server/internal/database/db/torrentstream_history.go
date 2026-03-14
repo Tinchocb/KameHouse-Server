@@ -2,23 +2,22 @@ package db
 
 import (
 	"kamehouse/internal/database/models"
-	hibiketorrent "kamehouse/internal/extension/hibike/torrent"
 
 	"github.com/goccy/go-json"
 )
 
-func GetTorrentstreamHistory(db *Database, mId int) (*hibiketorrent.AnimeTorrent, *hibiketorrent.BatchEpisodeFiles, error) {
+func GetTorrentstreamHistory(db *Database, mId int) (interface{}, interface{}, error) {
 	var history models.TorrentstreamHistory
 	if err := db.Gorm().Where("media_id = ?", mId).First(&history).Error; err != nil {
 		return nil, nil, err
 	}
 
-	var torrent hibiketorrent.AnimeTorrent
+	var torrent interface{}
 	if err := json.Unmarshal(history.Torrent, &torrent); err != nil {
 		return nil, nil, err
 	}
 
-	var files *hibiketorrent.BatchEpisodeFiles
+	var files interface{}
 	if len(history.BatchEpisodeFiles) > 0 {
 		_ = json.Unmarshal(history.BatchEpisodeFiles, &files)
 	}
@@ -26,7 +25,7 @@ func GetTorrentstreamHistory(db *Database, mId int) (*hibiketorrent.AnimeTorrent
 	return &torrent, files, nil
 }
 
-func InsertTorrentstreamHistory(db *Database, mId int, torrent *hibiketorrent.AnimeTorrent, files *hibiketorrent.BatchEpisodeFiles) error {
+func InsertTorrentstreamHistory(db *Database, mId int, torrent interface{}, files interface{}) error {
 	if torrent == nil {
 		return nil
 	}

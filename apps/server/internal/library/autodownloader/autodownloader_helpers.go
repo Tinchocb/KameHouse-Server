@@ -27,18 +27,20 @@ func (ad *AutoDownloader) isExcludedTermsMatch(torrentName string, rule *dto.Aut
 }
 
 func (ad *AutoDownloader) isConstraintsMatch(t *NormalizedTorrent, rule *dto.AutoDownloaderRule) bool {
-	if t.Seeders > -1 && rule.MinSeeders > 0 && t.Seeders < rule.MinSeeders {
+	seeders := t.GetSeeders()
+	size := t.GetSize()
+	if seeders > -1 && rule.MinSeeders > 0 && seeders < rule.MinSeeders {
 		return false
 	}
-	if t.Size > 0 && rule.MinSize != "" {
+	if size > 0 && rule.MinSize != "" {
 		minSize, err := util.StringToBytes(rule.MinSize)
-		if err == nil && t.Size < minSize {
+		if err == nil && size < minSize {
 			return false
 		}
 	}
-	if t.Size > 0 && rule.MaxSize != "" {
+	if size > 0 && rule.MaxSize != "" {
 		maxSize, err := util.StringToBytes(rule.MaxSize)
-		if err == nil && t.Size > maxSize {
+		if err == nil && size > maxSize {
 			return false
 		}
 	}
@@ -52,21 +54,25 @@ func (ad *AutoDownloader) isProfileValidChecks(t *NormalizedTorrent, profile *dt
 		return true
 	}
 
+	seeders := t.GetSeeders()
+	size := t.GetSize()
+	name := t.GetName()
+
 	// Check thresholds
 	// Only check if torrent has seeders info
-	if t.Seeders > -1 && profile.MinSeeders > 0 && t.Seeders < profile.MinSeeders {
+	if seeders > -1 && profile.MinSeeders > 0 && seeders < profile.MinSeeders {
 		return false
 	}
 	// Only check if torrent has size info
-	if profile.MinSize != "" && t.Size > 0 {
+	if profile.MinSize != "" && size > 0 {
 		minSize, err := util.StringToBytes(profile.MinSize)
-		if err == nil && t.Size < minSize {
+		if err == nil && size < minSize {
 			return false
 		}
 	}
-	if profile.MaxSize != "" && t.Size > 0 {
+	if profile.MaxSize != "" && size > 0 {
 		maxSize, err := util.StringToBytes(profile.MaxSize)
-		if err == nil && t.Size > maxSize {
+		if err == nil && size > maxSize {
 			return false
 		}
 	}
@@ -83,14 +89,14 @@ func (ad *AutoDownloader) isProfileValidChecks(t *NormalizedTorrent, profile *dt
 		}
 	}
 
-	torrentNameLower := strings.ToLower(t.Name)
+	torrentNameLower := strings.ToLower(name)
 
 	for _, condition := range profile.Conditions {
 		isMatch := false
 		if condition.IsRegex {
 			re, err := regexp.Compile(condition.Term)
 			if err == nil {
-				isMatch = re.MatchString(t.Name)
+				isMatch = re.MatchString(name)
 			}
 		} else {
 			terms := strings.Split(condition.Term, ",")
@@ -129,7 +135,8 @@ func (ad *AutoDownloader) calculateTorrentScore(t *NormalizedTorrent, profile *d
 	}
 
 	score := 0
-	torrentNameLower := strings.ToLower(t.Name)
+	name := t.GetName()
+	torrentNameLower := strings.ToLower(name)
 
 	for _, condition := range profile.Conditions {
 		if condition.Action != dto.AutoDownloaderProfileRuleFormatActionScore {
@@ -140,7 +147,7 @@ func (ad *AutoDownloader) calculateTorrentScore(t *NormalizedTorrent, profile *d
 		if condition.IsRegex {
 			re, err := regexp.Compile(condition.Term)
 			if err == nil {
-				isMatch = re.MatchString(t.Name)
+				isMatch = re.MatchString(name)
 			}
 		} else {
 			terms := strings.Split(condition.Term, ",")
@@ -160,6 +167,7 @@ func (ad *AutoDownloader) calculateTorrentScore(t *NormalizedTorrent, profile *d
 
 	return score
 }
+
 func (ad *AutoDownloader) isResolutionMatch(quality string, resolutions []string) (ok bool) {
 	defer util.HandlePanicInModuleThen("autodownloader/isResolutionMatch", func() {
 		ok = false
@@ -237,4 +245,73 @@ func (ad *AutoDownloader) getReleaseGroupToResolutionsMap(rules []*dto.AutoDownl
 	}
 
 	return res
+}
+
+// calculateCandidateScore computes the aggregate score for a torrent across all provided profiles.
+// Returns (totalScore, minimumRequiredScore).
+func (ad *AutoDownloader) calculateCandidateScore(t *NormalizedTorrent, profiles []*dto.AutoDownloaderProfile) (int, int) {
+	totalScore := 0
+	minScore := 0
+	for _, profile := range profiles {
+		totalScore += ad.calculateTorrentScore(t, profile)
+		if profile.MinimumScore > minScore {
+			minScore = profile.MinimumScore
+		}
+	}
+	return totalScore, minScore
+}
+
+// selectBestCandidate picks the candidate with the highest score, breaking ties by seeder count.
+func (ad *AutoDownloader) selectBestCandidate(candidates []*Candidate) *Candidate {
+	if len(candidates) == 0 {
+		return nil
+	}
+	best := candidates[0]
+	for _, c := range candidates[1:] {
+		if c.Score > best.Score {
+			best = c
+		} else if c.Score == best.Score && c.Torrent.GetSeeders() > best.Torrent.GetSeeders() {
+			best = c
+		}
+	}
+	return best
+}
+
+// getRuleProfiles returns the profiles applicable to a given rule (its specific profile + all global profiles, deduped).
+func (ad *AutoDownloader) getRuleProfiles(rule *dto.AutoDownloaderRule, profiles []*dto.AutoDownloaderProfile) []*dto.AutoDownloaderProfile {
+	result := make([]*dto.AutoDownloaderProfile, 0)
+	seen := make(map[uint]bool)
+
+	// Add the specific profile first
+	if rule.ProfileID != nil {
+		for _, p := range profiles {
+			if p.DbID == *rule.ProfileID && !seen[p.DbID] {
+				result = append(result, p)
+				seen[p.DbID] = true
+			}
+		}
+	}
+
+	// Add all global profiles (deduped)
+	for _, p := range profiles {
+		if p.Global && !seen[p.DbID] {
+			result = append(result, p)
+			seen[p.DbID] = true
+		}
+	}
+
+	return result
+}
+
+// inheritResolutionsFromProfiles returns the effective resolutions for a rule, inheriting from profiles when not explicitly set.
+func (ad *AutoDownloader) inheritResolutionsFromProfiles(rule *dto.AutoDownloaderRule, profiles []*dto.AutoDownloaderProfile) []string {
+	if len(rule.Resolutions) > 0 {
+		return rule.Resolutions
+	}
+
+	var inherited []string
+	for _, p := range profiles {
+		inherited = append(inherited, p.Resolutions...)
+	}
+	return lo.Uniq(inherited)
 }

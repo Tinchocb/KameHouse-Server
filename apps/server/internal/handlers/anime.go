@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
@@ -27,8 +28,8 @@ func (h *Handler) getAnimeEpisodeCollection(c echo.Context, mId int) (*anime.Epi
 	}
 
 	ec, err := anime.NewEpisodeCollection(anime.NewEpisodeCollectionOptions{
-		AnimeMetadata:       animeMetadata,
-		Media:               models.ToLibraryMedia(completeAnime.ToBaseAnime()),
+		AnimeMetadata:       animeMetadata.(*metadata.AnimeMetadata),
+		Media:               completeAnime.(interface{ ToBaseAnime() *models.LibraryMedia }).ToBaseAnime(),
 		MetadataProviderRef: h.App.Metadata.ProviderRef,
 		Logger:              h.App.Logger,
 	})

@@ -17,9 +17,7 @@ import (
 )
 
 type Handler struct {
-	App             *core.App
-	JellyfinHandler *JellyfinHandler
-	WebhookHandler  *WebhookHandler
+	App *core.App
 }
 
 func InitRoutes(app *core.App, e *echo.Echo) {
@@ -135,9 +133,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	e.Use(headMethodMiddleware)
 
 	h := &Handler{
-		App:             app,
-		JellyfinHandler: NewJellyfinHandler(app.Database, app.Logger),
-		WebhookHandler:  NewWebhookHandler(app),
+		App: app,
 	}
 
 	v1 := e.Group("/api/v1")
@@ -378,7 +374,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	//
 	// Playback Manager
 	//
-	
+
 	v1.GET("/stream/:id/master.m3u8", h.HandleMasterPlaylist)
 	v1.GET("/stream/:id/:file", h.HandleHlsSegment)
 	v1.DELETE("/stream/:id", h.StopStreamSession)
@@ -427,38 +423,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	// Manga
 	//
 
-	v1Manga := v1.Group("/manga")
-	v1Manga.POST("/anilist/collection", h.HandleGetAnilistMangaCollection)
-	v1Manga.GET("/anilist/collection/raw", h.HandleGetRawAnilistMangaCollection)
-	v1Manga.POST("/anilist/collection/raw", h.HandleGetRawAnilistMangaCollection)
-	v1Manga.POST("/anilist/list", h.HandleAnilistListManga)
-	v1Manga.GET("/collection", h.HandleGetMangaCollection)
-	v1Manga.GET("/latest-chapter-numbers", h.HandleGetMangaLatestChapterNumbersMap)
-	v1Manga.POST("/refetch-chapter-containers", h.HandleRefetchMangaChapterContainers)
-	v1Manga.GET("/entry/:id", h.HandleGetMangaEntry)
-	v1Manga.GET("/entry/:id/details", h.HandleGetMangaEntryDetails)
-	v1Manga.DELETE("/entry/cache", h.HandleEmptyMangaEntryCache)
-	v1Manga.POST("/chapters", h.HandleGetMangaEntryChapters)
-	v1Manga.POST("/pages", h.HandleGetMangaEntryPages)
-	v1Manga.POST("/update-progress", h.HandleUpdateMangaProgress)
 
-	v1Manga.GET("/downloaded-chapters/:id", h.HandleGetMangaEntryDownloadedChapters)
-	v1Manga.GET("/downloads", h.HandleGetMangaDownloadsList)
-	v1Manga.POST("/download-chapters", h.HandleDownloadMangaChapters)
-	v1Manga.POST("/download-data", h.HandleGetMangaDownloadData)
-	v1Manga.DELETE("/download-chapter", h.HandleDeleteMangaDownloadedChapters)
-	v1Manga.GET("/download-queue", h.HandleGetMangaDownloadQueue)
-	v1Manga.POST("/download-queue/start", h.HandleStartMangaDownloadQueue)
-	v1Manga.POST("/download-queue/stop", h.HandleStopMangaDownloadQueue)
-	v1Manga.DELETE("/download-queue", h.HandleClearAllChapterDownloadQueue)
-	v1Manga.POST("/download-queue/reset-errored", h.HandleResetErroredChapterDownloadQueue)
-
-	v1Manga.POST("/search", h.HandleMangaManualSearch)
-	v1Manga.POST("/manual-mapping", h.HandleMangaManualMapping)
-	v1Manga.POST("/get-mapping", h.HandleGetMangaMapping)
-	v1Manga.POST("/remove-mapping", h.HandleRemoveMangaMapping)
-
-	v1Manga.GET("/local-page/:path", h.HandleGetLocalMangaPage)
 
 	//
 	// File Cache
@@ -473,13 +438,6 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	//
 	// Discord
 	//
-
-	v1Discord := v1.Group("/discord")
-	v1Discord.POST("/presence/manga", h.HandleSetDiscordMangaActivity)
-	v1Discord.POST("/presence/legacy-anime", h.HandleSetDiscordLegacyAnimeActivity)
-	v1Discord.POST("/presence/anime", h.HandleSetDiscordAnimeActivityWithProgress)
-	v1Discord.POST("/presence/anime-update", h.HandleUpdateDiscordAnimeActivityWithProgress)
-	v1Discord.POST("/presence/cancel", h.HandleCancelDiscordActivity)
 
 	//
 	// Media Stream
@@ -526,7 +484,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	v1.POST("/torrentstream/stop", h.HandleTorrentstreamStopStream)
 	v1.POST("/torrentstream/drop", h.HandleTorrentstreamDropTorrent)
 	v1.POST("/torrentstream/torrent-file-previews", h.HandleGetTorrentstreamTorrentFilePreviews)
-	v1.POST("/torrentstream/batch-history", h.HandleGetTorrentstreamBatchHistory)
+	v1.POST("/torrentstream/batch-history", h.HandleTorrentstreamGetBatchHistory)
 	v1.GET("/torrentstream/stream/*", h.HandleTorrentstreamServeStream)
 
 	//
@@ -538,30 +496,6 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	// Extensions
 	//
 
-	v1Extensions := v1.Group("/extensions")
-	v1Extensions.POST("/playground/run", h.HandleRunExtensionPlaygroundCode)
-	v1Extensions.POST("/external/fetch", h.HandleFetchExternalExtensionData)
-	v1Extensions.POST("/external/install", h.HandleInstallExternalExtension)
-	v1Extensions.POST("/external/install-repository", h.HandleInstallExternalExtensionRepository)
-	v1Extensions.POST("/external/uninstall", h.HandleUninstallExternalExtension)
-	v1Extensions.POST("/external/edit-payload", h.HandleUpdateExtensionCode)
-	v1Extensions.POST("/external/reload", h.HandleReloadExternalExtensions)
-	v1Extensions.POST("/external/reload", h.HandleReloadExternalExtension)
-	v1Extensions.POST("/all", h.HandleGetAllExtensions)
-	v1Extensions.GET("/updates", h.HandleGetExtensionUpdateData)
-	v1Extensions.GET("/list", h.HandleListExtensionData)
-	v1Extensions.GET("/payload/:id", h.HandleGetExtensionPayload)
-	v1Extensions.GET("/list/development", h.HandleListDevelopmentModeExtensions)
-	v1Extensions.GET("/list/manga-provider", h.HandleListMangaProviderExtensions)
-	v1Extensions.GET("/list/onlinestream-provider", h.HandleListOnlinestreamProviderExtensions)
-	v1Extensions.GET("/list/anime-torrent-provider", h.HandleListAnimeTorrentProviderExtensions)
-	v1Extensions.GET("/list/custom-source", h.HandleListCustomSourceExtensions)
-	v1Extensions.GET("/user-config/:id", h.HandleGetExtensionUserConfig)
-	v1Extensions.POST("/user-config", h.HandleSaveExtensionUserConfig)
-	v1Extensions.GET("/marketplace", h.HandleGetMarketplaceExtensions)
-	v1Extensions.GET("/plugin-settings", h.HandleGetPluginSettings)
-	v1Extensions.POST("/plugin-settings/pinned-trays", h.HandleSetPluginSettingsPinnedTrays)
-	v1Extensions.POST("/plugin-permissions/grant", h.HandleGrantPluginPermissions)
 
 	//
 	// Addon Subtitles
@@ -610,37 +544,6 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	v1.POST("/report/issue/decompress", h.HandleDecompressIssueReport)
 
 	//
-	// Nakama
-	//
-
-	v1Nakama := v1.Group("/nakama")
-	v1Nakama.GET("/ws", h.HandleNakamaWebSocket)
-	v1Nakama.POST("/message", h.HandleSendNakamaMessage)
-	v1Nakama.POST("/reconnect", h.HandleNakamaReconnectToHost)
-	v1Nakama.POST("/cleanup", h.HandleNakamaRemoveStaleConnections)
-	v1Nakama.GET("/room/available", h.HandleNakamaRoomsAvailable)
-	v1Nakama.POST("/room/create", h.HandleNakamaCreateAndJoinRoom)
-	v1Nakama.POST("/room/disconnect", h.HandleNakamaDisconnectFromRoom)
-	v1Nakama.GET("/host/anime/library", h.HandleGetNakamaAnimeLibrary)
-	v1Nakama.GET("/host/anime/library/shared", h.HandleGetNakamaAnimeLibraryShared)
-	v1Nakama.GET("/host/anime/library/files/:id", h.HandleGetNakamaAnimeLibraryFiles)
-	v1Nakama.GET("/host/anime/library/files", h.HandleGetNakamaAnimeAllLibraryFiles)
-	v1Nakama.POST("/play", h.HandleNakamaPlayVideo)
-	v1Nakama.GET("/host/torrentstream/stream", h.HandleNakamaHostTorrentstreamServeStream)
-	v1Nakama.HEAD("/host/torrentstream/stream", h.HandleNakamaHostTorrentstreamServeStream)
-	v1Nakama.GET("/host/anime/library/stream", h.HandleNakamaHostAnimeLibraryServeStream)
-	v1Nakama.HEAD("/host/anime/library/stream", h.HandleNakamaHostAnimeLibraryServeStream)
-	v1Nakama.GET("/host/debridstream/stream", h.HandleNakamaHostDebridstreamServeStream)
-	v1Nakama.HEAD("/host/debridstream/stream", h.HandleNakamaHostDebridstreamServeStream)
-	v1Nakama.GET("/host/debridstream/url", h.HandleNakamaHostGetDebridstreamURL)
-	v1Nakama.GET("/stream", h.HandleNakamaProxyStream)
-	v1Nakama.HEAD("/stream", h.HandleNakamaProxyStream)
-	v1Nakama.POST("/watch-party/create", h.HandleNakamaCreateWatchParty)
-	v1Nakama.POST("/watch-party/join", h.HandleNakamaJoinWatchParty)
-	v1Nakama.POST("/watch-party/leave", h.HandleNakamaLeaveWatchParty)
-	v1Nakama.POST("/watch-party/chat", h.HandleNakamaSendChatMessage)
-
-	//
 	// Custom Sources (disabled)
 	//
 
@@ -650,24 +553,6 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	v1TMDB := v1.Group("/tmdb")
 	v1TMDB.POST("/search", h.HandleTMDBSearch)
 	v1TMDB.POST("/details", h.HandleTMDBGetDetails)
-
-	//
-	// Jellyfin
-	//
-	v1Jellyfin := v1.Group("/jellyfin")
-	v1Jellyfin.GET("/libraries", h.JellyfinHandler.HandleGetVirtualFolders)
-	v1Jellyfin.POST("/libraries", h.JellyfinHandler.HandleAddVirtualFolder)
-	v1Jellyfin.DELETE("/libraries/:name", h.JellyfinHandler.HandleRemoveVirtualFolder)
-	v1Jellyfin.POST("/refresh", h.JellyfinHandler.HandleRefreshLibrary)
-	v1Jellyfin.POST("/search", h.JellyfinHandler.HandleSearchItems)
-	v1Jellyfin.GET("/items/:id", h.JellyfinHandler.HandleGetItem)
-	v1Jellyfin.POST("/auth", h.JellyfinHandler.HandleAuthenticate)
-	v1Jellyfin.POST("/api-key", h.JellyfinHandler.HandleCreateAPIKey)
-
-	//
-	// Jellyfin Webhook
-	//
-	e.POST("/api/v1/jellyfin/webhook", h.WebhookHandler.HandleJellyfinWebhook)
 
 }
 
@@ -686,8 +571,7 @@ func (h *Handler) RespondWithError(c echo.Context, err error) error {
 func headMethodMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		// Skip stream routes
-		if strings.Contains(c.Request().URL.Path, "/directstream/stream") ||
-			strings.Contains(c.Request().URL.Path, "/nakama") {
+		if strings.Contains(c.Request().URL.Path, "/directstream/stream") {
 			return next(c)
 		}
 

@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/database/models/dto"
-	hibikemanga "kamehouse/internal/extension/hibike/manga"
-	"kamehouse/internal/manga"
 	"slices"
 	"strings"
 
@@ -149,112 +147,6 @@ func (d *Diff) GetAnimeDiffs(opts GetAnimeDiffOptions) map[int]*AnimeDiffResult 
 
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 
-type GetMangaDiffOptions struct {
-	Collection                  *anilist.MangaCollection
-	LocalCollection             mo.Option[*anilist.MangaCollection]
-	DownloadedChapterContainers []*manga.ChapterContainer
-	TrackedManga                map[int]*TrackedMedia
-	Snapshots                   map[int]*MangaSnapshot
-}
-
-type MangaDiffResult struct {
-	MangaEntry    *anilist.MangaListEntry
-	MangaSnapshot *MangaSnapshot
-	DiffType      DiffType
-}
-
-// GetMangaDiffs returns the manga that have changed.
-func (d *Diff) GetMangaDiffs(opts GetMangaDiffOptions) map[int]*MangaDiffResult {
-
-	collection := opts.Collection
-	localCollection := opts.LocalCollection
-	trackedMangaMap := opts.TrackedManga
-	snapshotMap := opts.Snapshots
-
-	changedMap := make(map[int]*MangaDiffResult)
-
-	if len(collection.MediaListCollection.Lists) == 0 || len(trackedMangaMap) == 0 {
-		return changedMap
-	}
-
-	for _, _list := range collection.MediaListCollection.Lists {
-		if _list.GetStatus() == nil || _list.GetEntries() == nil {
-			continue
-		}
-		for _, _entry := range _list.GetEntries() {
-			// Check if the manga is tracked
-			_, isTracked := trackedMangaMap[_entry.GetMedia().GetID()]
-			if !isTracked {
-				continue
-			}
-
-			if localCollection.IsAbsent() {
-				d.Logger.Trace().Msgf("local manager: Diff > Manga %d, local collection is missing", _entry.GetMedia().GetID())
-				changedMap[_entry.GetMedia().GetID()] = &MangaDiffResult{
-					MangaEntry: _entry,
-					DiffType:   DiffTypeMissing,
-				}
-				continue // Go to the next manga
-			}
-
-			// Check if the manga has a snapshot
-			snapshot, hasSnapshot := snapshotMap[_entry.GetMedia().GetID()]
-			if !hasSnapshot {
-				d.Logger.Trace().Msgf("local manager: Diff > Manga %d is missing a snapshot", _entry.GetMedia().GetID())
-				changedMap[_entry.GetMedia().GetID()] = &MangaDiffResult{
-					MangaEntry: _entry,
-					DiffType:   DiffTypeMissing,
-				}
-				continue // Go to the next manga
-			}
-
-			// Check if the manga has changed
-			_referenceKey := GetMangaReferenceKey(_entry.Media, opts.DownloadedChapterContainers)
-
-			// Check if the reference key is different
-			if snapshotMap[_entry.GetMedia().GetID()].ReferenceKey != _referenceKey {
-				d.Logger.Trace().Str("localReferenceKey", snapshotMap[_entry.GetMedia().GetID()].ReferenceKey).Str("currentReferenceKey", _referenceKey).Msgf("local manager: Diff > Manga %d has an outdated snapshot", _entry.GetMedia().GetID())
-				changedMap[_entry.GetMedia().GetID()] = &MangaDiffResult{
-					MangaEntry:    _entry,
-					MangaSnapshot: snapshot,
-					DiffType:      DiffTypeMetadata,
-				}
-				continue // Go to the next manga
-			}
-
-			localEntry, found := localCollection.MustGet().GetListEntryFromMangaId(_entry.GetMedia().GetID())
-			if !found {
-				d.Logger.Trace().Msgf("local manager: Diff > Manga %d is missing from the local collection", _entry.GetMedia().GetID())
-				changedMap[_entry.GetMedia().GetID()] = &MangaDiffResult{
-					MangaEntry:    _entry,
-					MangaSnapshot: snapshot,
-					DiffType:      DiffTypeMissing,
-				}
-				continue // Go to the next manga
-			}
-
-			// Check if the list data has changed
-			_listDataKey := GetMangaListDataKey(_entry)
-			localListDataKey := GetMangaListDataKey(localEntry)
-
-			if _listDataKey != localListDataKey {
-				d.Logger.Trace().Str("localListDataKey", localListDataKey).Str("currentListDataKey", _listDataKey).Msgf("local manager: Diff > Manga %d has changed list data", _entry.GetMedia().GetID())
-				changedMap[_entry.GetMedia().GetID()] = &MangaDiffResult{
-					MangaEntry:    _entry,
-					MangaSnapshot: snapshot,
-					DiffType:      DiffTypeListData,
-				}
-				continue // Go to the next manga
-			}
-
-		}
-	}
-
-	return changedMap
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 func GetAnimeReferenceKey(bAnime *anilist.BaseAnime, lfs []*dto.LocalFile) string {
 	// Reference key is used to compare the snapshot with the current data.
 	// If the reference key is different, the snapshot is outdated.
@@ -271,47 +163,7 @@ func GetAnimeReferenceKey(bAnime *anilist.BaseAnime, lfs []*dto.LocalFile) strin
 	return fmt.Sprintf("%d-%s", bAnime.ID, strings.Join(paths, ","))
 }
 
-func GetMangaReferenceKey(bManga *anilist.BaseManga, dcc []*manga.ChapterContainer) string {
-	// Reference key is used to compare the snapshot with the current data.
-	// If the reference key is different, the snapshot is outdated.
-	mangaDcc := lo.Filter(dcc, func(dc *manga.ChapterContainer, _ int) bool {
-		return dc.MediaId == bManga.ID
-	})
-
-	slices.SortFunc(mangaDcc, func(i, j *manga.ChapterContainer) int {
-		return strings.Compare(i.Provider, j.Provider)
-	})
-	var k string
-	for _, dc := range mangaDcc {
-		l := dc.Provider + "-"
-		slices.SortFunc(dc.Chapters, func(i, j *hibikemanga.ChapterDetails) int {
-			return strings.Compare(i.ID, j.ID)
-		})
-		for _, c := range dc.Chapters {
-			l += c.ID + "-"
-		}
-		k += l
-	}
-
-	return fmt.Sprintf("%d-%s", bManga.ID, k)
-}
-
 func GetAnimeListDataKey(entry *anilist.AnimeListEntry) string {
-	return fmt.Sprintf("%s-%d-%f-%d-%v-%v-%v-%v-%v-%v",
-		MediaListStatusPointerValue(entry.GetStatus()),
-		IntPointerValue(entry.GetProgress()),
-		Float64PointerValue(entry.GetScore()),
-		IntPointerValue(entry.GetRepeat()),
-		IntPointerValue(entry.GetStartedAt().GetYear()),
-		IntPointerValue(entry.GetStartedAt().GetMonth()),
-		IntPointerValue(entry.GetStartedAt().GetDay()),
-		IntPointerValue(entry.GetCompletedAt().GetYear()),
-		IntPointerValue(entry.GetCompletedAt().GetMonth()),
-		IntPointerValue(entry.GetCompletedAt().GetDay()),
-	)
-}
-
-func GetMangaListDataKey(entry *anilist.MangaListEntry) string {
 	return fmt.Sprintf("%s-%d-%f-%d-%v-%v-%v-%v-%v-%v",
 		MediaListStatusPointerValue(entry.GetStatus()),
 		IntPointerValue(entry.GetProgress()),

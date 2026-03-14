@@ -2,7 +2,6 @@ package debrid_client
 
 import (
 	"kamehouse/internal/api/anilist"
-	hibiketorrent "kamehouse/internal/extension/hibike/torrent"
 	"kamehouse/internal/hook_resolver"
 )
 
@@ -11,7 +10,7 @@ import (
 // This event is triggered before the top 3 torrents are analyzed.
 type DebridAutoSelectTorrentsFetchedEvent struct {
 	hook_resolver.Event
-	Torrents []*hibiketorrent.AnimeTorrent
+	Torrents []interface{}
 }
 
 // DebridSkipStreamCheckEvent is triggered when the debrid client is about to skip the stream check.

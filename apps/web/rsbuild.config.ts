@@ -128,6 +128,7 @@ export default defineConfig({
                     routesDirectory: "./src/routes",
                     generatedRouteTree: "./src/routeTree.gen.ts",
                     autoCodeSplitting: true,
+                    routeFileIgnorePattern: "\\.(components|hooks|helpers|mappers|types|utils)\\.(ts|tsx)$",
                 }),
                 process.env.NODE_ENV === 'production' && new GenerateSW({
                     clientsClaim: true,

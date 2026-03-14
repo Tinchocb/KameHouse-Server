@@ -8,21 +8,16 @@ require (
 	github.com/5rahim/habari v0.1.12
 	github.com/5rahim/hls-m3u8 v0.1.0
 	github.com/Masterminds/semver/v3 v3.4.0
-	github.com/Microsoft/go-winio v0.6.2
 	github.com/PuerkitoBio/goquery v1.11.0
 	github.com/Yamashou/gqlgenc v0.25.4
 	github.com/adrg/strutil v0.3.1
-	github.com/anacrolix/log v0.17.1-0.20251118025802-918f1157b7bb
 	github.com/anacrolix/torrent v1.61.0
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/cli/browser v1.3.0
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
-	github.com/dop251/goja v0.0.0-20260106131823-651366fbe6e3
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/gen2brain/beeep v0.0.0-20240516210008-9c006672e7f4
 	github.com/glebarez/sqlite v1.11.0
-	github.com/go-toast/toast v0.0.0-20190211030409-01e6764cf0a4
 	github.com/goccy/go-json v0.10.5
 	github.com/gonutz/w32/v2 v2.12.1
 	github.com/google/go-querystring v1.2.0
@@ -30,13 +25,11 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/hekmon/transmissionrpc/v3 v3.0.0
-	github.com/huin/goupnp v1.3.0
 	github.com/imroc/req/v3 v3.57.0
 	github.com/kr/pretty v0.3.1
 	github.com/labstack/echo/v4 v4.15.0
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/mileusna/useragent v1.3.5
-	github.com/ncruces/go-dns v1.3.2
 	github.com/neilotoole/streamcache v0.3.5
 	github.com/nssteinbrenner/anitogo v1.0.0
 	github.com/nwaples/rardecode/v2 v2.2.2
@@ -61,6 +54,7 @@ require (
 
 require (
 	github.com/anacrolix/btree v0.0.0-20251201064447-d86c3fa41bd8 // indirect
+	github.com/anacrolix/log v0.17.1-0.20251118025802-918f1157b7bb // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	golang.org/x/crypto v0.47.0 // indirect
@@ -98,14 +92,12 @@ require (
 	github.com/charmbracelet/x/ansi v0.8.0 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.13-0.20250311204145-2c3ea96c31dd // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
-	github.com/dlclark/regexp2 v1.11.4 // indirect
 	github.com/edsrzf/mmap-go v1.1.0 // indirect
 	github.com/glebarez/go-sqlite v1.21.2 // indirect
 	github.com/go-llsqlite/adapter v0.0.0-20230927005056-7f5ce7f0c916 // indirect
 	github.com/go-llsqlite/crawshaw v0.5.6-0.20250312230104-194977a03421 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-sourcemap/sourcemap v2.1.4+incompatible // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/google/btree v1.1.2 // indirect
@@ -132,7 +124,6 @@ require (
 	github.com/multiformats/go-varint v0.0.6 // indirect
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/neilotoole/fifomu v0.1.2 // indirect
-	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/pion/datachannel v1.5.9 // indirect
 	github.com/pion/dtls/v3 v3.0.3 // indirect
@@ -166,7 +157,6 @@ require (
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	github.com/tadvi/systray v0.0.0-20190226123456-11a2b8fa57af // indirect
 	github.com/tidwall/btree v1.8.1 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
@@ -177,7 +167,6 @@ require (
 	go.opentelemetry.io/otel v1.38.0 // indirect
 	go.opentelemetry.io/otel/metric v1.38.0 // indirect
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
-	go.uber.org/atomic v1.11.0
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/exp v0.0.0-20251113190631-e25ba8c21ef6 // indirect
 	golang.org/x/sync v0.19.0

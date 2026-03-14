@@ -1,5 +1,6 @@
 import { HorizontalDraggableScroll } from "@/components/ui/horizontal-draggable-scroll"
 import { MediaCard } from "@/components/ui/media-card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/components/ui/core/styling"
 import type { CardAspect } from "@/lib/home-catalog"
 import * as React from "react"
@@ -97,6 +98,57 @@ const SwimlaneInner = React.memo(function SwimlaneInner({
     )
 })
 SwimlaneInner.displayName = "Swimlane"
+
+
+
+export function SwimlaneSkeleton({
+    title,
+    aspect = "poster",
+    itemCount = 6,
+    className,
+}: {
+    title?: string
+    aspect?: CardAspect
+    itemCount?: number
+    className?: string
+}) {
+    const cardWidths = {
+        poster: "w-[160px] md:w-[200px] lg:w-[240px]",
+        wide: "w-[280px] md:w-[360px] lg:w-[440px]",
+        square: "w-[180px] md:w-[240px] lg:w-[300px]",
+    }
+
+    const cardAspects = {
+        poster: "aspect-[2/3]",
+        wide: "aspect-[16/9]",
+        square: "aspect-square",
+    }
+
+    return (
+        <section className={cn("relative", className)}>
+            <div className="mb-5 flex items-center gap-3 px-6 md:px-10 lg:px-14">
+                <span className="h-6 w-1 rounded-full bg-zinc-800" />
+                {title ? (
+                    <h2 className="text-lg font-semibold uppercase tracking-[0.18em] text-zinc-200 md:text-xl">
+                        {title}
+                    </h2>
+                ) : (
+                    <Skeleton className="h-6 w-32" />
+                )}
+            </div>
+
+            <div className="flex gap-4 overflow-hidden px-6 pb-3 md:px-10 lg:px-14">
+                {Array.from({ length: itemCount }).map((_, i) => (
+                    <div key={i} className={cn("flex-shrink-0", cardWidths[aspect])}>
+                        <Skeleton className={cn("mb-3", cardAspects[aspect])} />
+                        <Skeleton className="mb-2 h-4 w-3/4" />
+                        <Skeleton className="h-3 w-1/2" />
+                    </div>
+                ))}
+            </div>
+        </section>
+    )
+}
 
 /** Public API — Swimlane with React.memo for backdrop-change isolation. */
 export const Swimlane = SwimlaneInner

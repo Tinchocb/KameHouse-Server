@@ -3,7 +3,6 @@ package anime
 import (
 	"fmt"
 	"kamehouse/internal/api/anilist"
-	"kamehouse/internal/customsource"
 	"kamehouse/internal/hook"
 	"time"
 
@@ -27,9 +26,12 @@ func GetScheduleItems(animeSchedule *anilist.AnimeAiringSchedule, animeCollectio
 	animeEntryMap := make(map[int]*anilist.AnimeListEntry)
 	for _, list := range animeCollection.MediaListCollection.GetLists() {
 		for _, entry := range list.GetEntries() {
+			// Extension ID check removed
+			/*
 			if customsource.IsExtensionId(entry.Media.GetID()) {
 				continue
 			}
+			*/
 			animeEntryMap[entry.GetMedia().GetID()] = entry
 		}
 	}

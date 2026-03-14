@@ -3,3 +3,4 @@ kamehouse.exe
 kamehouse
 build_errors.log
 coverage.out
+.env

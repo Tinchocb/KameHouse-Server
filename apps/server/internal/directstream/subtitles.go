@@ -162,7 +162,7 @@ func (s *BaseStream) StartSubtitleStreamP(stream Stream, playbackCtx context.Con
 				if subtitle != nil {
 					onFirstEventSent()
 					// Send the event to the player
-					s.manager.nativePlayer.SubtitleEvent(stream.ClientId(), subtitle)
+					// native player removed
 					lastSubtitleEventRWMutex.Lock()
 					lastSubtitleEvent = subtitle
 					lastSubtitleEventRWMutex.Unlock()

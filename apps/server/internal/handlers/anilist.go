@@ -43,7 +43,7 @@ func (h *Handler) HandleGetAnimeCollection(c echo.Context) error {
 	}
 
 	go func() {
-		_, _ = h.App.RefreshMangaCollection()
+//
 	}()
 
 	return h.RespondWithData(c, animeCollection)
@@ -109,11 +109,8 @@ func (h *Handler) HandleEditAnilistListEntry(c echo.Context) error {
 	switch p.Type {
 	case "anime":
 		_, _ = h.App.RefreshAnimeCollection()
-	case "manga":
-		_, _ = h.App.RefreshMangaCollection()
 	default:
 		_, _ = h.App.RefreshAnimeCollection()
-		_, _ = h.App.RefreshMangaCollection()
 	}
 
 	return h.RespondWithData(c, true)
@@ -290,18 +287,6 @@ func (h *Handler) HandleDeleteAnilistListEntry(c echo.Context) error {
 			return h.RespondWithError(c, errors.New("list entry not found"))
 		}
 		listEntryID = listEntry.ID
-	case "manga":
-		// Get the list entry ID
-		mangaCollection, err := h.App.GetMangaCollection(false)
-		if err != nil {
-			return h.RespondWithError(c, err)
-		}
-
-		listEntry, found := mangaCollection.GetListEntryFromMangaId(*p.MediaId)
-		if !found {
-			return h.RespondWithError(c, errors.New("list entry not found"))
-		}
-		listEntryID = listEntry.ID
 	}
 
 	// Delete the list entry
@@ -313,8 +298,6 @@ func (h *Handler) HandleDeleteAnilistListEntry(c echo.Context) error {
 	switch *p.Type {
 	case "anime":
 		_, _ = h.App.RefreshAnimeCollection()
-	case "manga":
-		_, _ = h.App.RefreshMangaCollection()
 	}
 
 	return h.RespondWithData(c, true)

@@ -6,11 +6,10 @@ import (
 	"io"
 	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/library/anime"
-	"kamehouse/internal/mkvparser"
-	"kamehouse/internal/nativeplayer"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/result"
 	"kamehouse/internal/videocore"
+	"kamehouse/internal/mkvparser"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -22,10 +21,34 @@ import (
 	"github.com/samber/mo"
 )
 
+// StreamType represents the type of stream.
+type StreamType string
+
+const (
+	StreamTypeDebrid  StreamType = "debrid"
+	StreamTypeLocal   StreamType = "local"
+	StreamTypeTorrent StreamType = "torrent"
+)
+
+// PlaybackInfo contains the info required for playback.
+type PlaybackInfo struct {
+	ID                string
+	StreamType        StreamType
+	StreamPath        string
+	MimeType          string
+	StreamUrl         string
+	ContentLength     int64
+	MkvMetadata       *mkvparser.Metadata
+	MkvMetadataParser mo.Option[*mkvparser.MetadataParser]
+	Episode           *anime.Episode
+	Media             *anilist.BaseAnime
+	EntryListData     *anime.EntryListData
+}
+
 // Stream is the common interface for all stream types.
 type Stream interface {
 	// Type returns the type of the stream.
-	Type() nativeplayer.StreamType
+	Type() StreamType
 	// LoadContentType loads and returns the content type of the stream.
 	// e.g. "video/mp4", "video/webm", "video/x-matroska"
 	LoadContentType() string
@@ -40,7 +63,7 @@ type Stream interface {
 	// EpisodeCollection returns the episode collection for the media of the current stream.
 	EpisodeCollection() *anime.EpisodeCollection
 	// LoadPlaybackInfo loads and returns the playback info.
-	LoadPlaybackInfo() (*nativeplayer.PlaybackInfo, error)
+	LoadPlaybackInfo() (*PlaybackInfo, error)
 	// GetAttachmentByName returns the attachment by name for the stream.
 	// It is used to serve fonts and other attachments.
 	GetAttachmentByName(filename string) (*mkvparser.AttachmentInfo, bool)
@@ -101,9 +124,8 @@ func (m *Manager) prepareNewStream(clientId string, step string) {
 		m.currentStream = mo.None[Stream]()
 	}
 
-	m.Logger.Debug().Msgf("directstream: Signaling native player that a new stream is starting")
-	// Signal the native player that a new stream is starting
-	m.nativePlayer.OpenAndAwait(clientId, step)
+	// Signal stream is starting (no-op since native player is removed)
+	m.Logger.Debug().Msgf("directstream: Preparing new stream for client %s", clientId)
 }
 
 func (m *Manager) abortPreparation(clientId string, err error) {
@@ -121,9 +143,7 @@ func (m *Manager) abortPreparation(clientId string, err error) {
 		m.currentStream = mo.None[Stream]()
 	}
 
-	m.Logger.Debug().Msgf("directstream: Signaling native player to abort stream preparation, reason: %s", err.Error())
-	// Signal the native player that a new stream is starting
-	m.nativePlayer.AbortOpen(clientId, err.Error())
+	m.Logger.Debug().Msgf("directstream: Aborting stream preparation, reason: %s", err.Error())
 }
 
 // loadStream loads a new stream and cancels the previous one.
@@ -140,7 +160,6 @@ func (m *Manager) loadStream(stream Stream) {
 	m.playbackCtxCancelFunc = cancel
 
 	m.Logger.Debug().Msgf("directstream: Loading content type")
-	m.nativePlayer.OpenAndAwait(stream.ClientId(), "Loading metadata...")
 	// Load the content type
 	contentType := stream.LoadContentType()
 	if contentType == "" {
@@ -153,7 +172,7 @@ func (m *Manager) loadStream(stream Stream) {
 
 	// Load the playback info
 	// If EBML, it will block until the metadata is parsed
-	playbackInfo, err := stream.LoadPlaybackInfo()
+	_, err := stream.LoadPlaybackInfo()
 	if err != nil {
 		m.Logger.Error().Err(err).Msg("directstream: Failed to load playback info")
 		m.preStreamError(stream, fmt.Errorf("failed to load playback info: %w", err))
@@ -166,8 +185,7 @@ func (m *Manager) loadStream(stream Stream) {
 	//	parser.SetLoggerEnabled(false)
 	//}
 
-	m.Logger.Debug().Msgf("directstream: Signaling native player that stream is ready")
-	m.nativePlayer.Watch(stream.ClientId(), playbackInfo)
+	m.Logger.Debug().Msgf("directstream: Stream is ready")
 }
 
 func (m *Manager) listenToPlayerEvents() {
@@ -271,7 +289,7 @@ type BaseStream struct {
 	media                  *anilist.BaseAnime
 	listEntryData          *anime.EntryListData
 	episodeCollection      *anime.EpisodeCollection
-	playbackInfo           *nativeplayer.PlaybackInfo
+	playbackInfo           *PlaybackInfo
 	playbackInfoErr        error
 	playbackInfoOnce       sync.Once
 	subtitleEventCache     *result.Map[string, *mkvparser.SubtitleEvent]
@@ -300,11 +318,11 @@ func (s *BaseStream) LoadContentType() string {
 	return s.contentType
 }
 
-func (s *BaseStream) LoadPlaybackInfo() (*nativeplayer.PlaybackInfo, error) {
+func (s *BaseStream) LoadPlaybackInfo() (*PlaybackInfo, error) {
 	return s.playbackInfo, s.playbackInfoErr
 }
 
-func (s *BaseStream) Type() nativeplayer.StreamType {
+func (s *BaseStream) Type() StreamType {
 	return ""
 }
 
@@ -349,7 +367,6 @@ func (s *BaseStream) Terminate() {
 
 func (s *BaseStream) StreamError(err error) {
 	s.logger.Error().Err(err).Msg("directstream: Stream error occurred")
-	s.manager.nativePlayer.Error(s.clientId, err)
 	s.Terminate()
 	s.manager.playbackMu.Lock()
 	s.manager.unloadStream()
@@ -400,7 +417,6 @@ func loadContentType(path string, reader ...io.ReadSeekCloser) string {
 
 func (m *Manager) preStreamError(stream Stream, err error) {
 	stream.Terminate()
-	m.nativePlayer.Error(stream.ClientId(), err)
 	m.unloadStream()
 }
 

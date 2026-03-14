@@ -18,8 +18,7 @@ func RefreshAnilistDataJob(c *JobCtx) {
 	animeCollection, _ := c.App.RefreshAnimeCollection()
 	c.App.WSEventManager.SendEvent(events.RefreshedAnilistAnimeCollection, animeCollection)
 
-	mangaCollection, _ := c.App.RefreshMangaCollection()
-	c.App.WSEventManager.SendEvent(events.RefreshedAnilistMangaCollection, mangaCollection)
+
 }
 
 func SyncLocalDataJob(c *JobCtx) {

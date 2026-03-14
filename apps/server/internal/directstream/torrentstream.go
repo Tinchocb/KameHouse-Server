@@ -7,7 +7,6 @@ import (
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/library/anime"
 	"kamehouse/internal/mkvparser"
-	"kamehouse/internal/nativeplayer"
 	"kamehouse/internal/util/result"
 	"kamehouse/internal/util/torrentutil"
 	"net/http"
@@ -33,8 +32,8 @@ type TorrentStream struct {
 	streamReadyCh chan struct{} // Closed by the initiator when the stream is ready
 }
 
-func (s *TorrentStream) Type() nativeplayer.StreamType {
-	return nativeplayer.StreamTypeTorrent
+func (s *TorrentStream) Type() StreamType {
+	return StreamTypeTorrent
 }
 
 func (s *TorrentStream) LoadContentType() string {
@@ -47,10 +46,10 @@ func (s *TorrentStream) LoadContentType() string {
 	return s.contentType
 }
 
-func (s *TorrentStream) LoadPlaybackInfo() (ret *nativeplayer.PlaybackInfo, err error) {
+func (s *TorrentStream) LoadPlaybackInfo() (ret *PlaybackInfo, err error) {
 	s.playbackInfoOnce.Do(func() {
 		if s.file == nil || s.torrent == nil {
-			ret = &nativeplayer.PlaybackInfo{}
+			ret = &PlaybackInfo{}
 			err = fmt.Errorf("torrent is not set")
 			s.playbackInfoErr = err
 			return
@@ -65,7 +64,7 @@ func (s *TorrentStream) LoadPlaybackInfo() (ret *nativeplayer.PlaybackInfo, err 
 			}
 		}
 
-		playbackInfo := nativeplayer.PlaybackInfo{
+		playbackInfo := PlaybackInfo{
 			ID:                id,
 			StreamType:        s.Type(),
 			StreamPath:        s.file.Path(),

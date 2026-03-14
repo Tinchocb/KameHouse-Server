@@ -2,9 +2,7 @@ package handlers
 
 import (
 	"fmt"
-	"kamehouse/internal/updater"
 	"kamehouse/internal/util/result"
-	"time"
 
 	"github.com/labstack/echo/v4"
 )
@@ -24,17 +22,7 @@ func (h *Handler) HandleInstallLatestUpdate(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	go func() {
-		time.Sleep(2 * time.Second)
-		h.App.SelfUpdater.StartSelfUpdate(b.FallbackDestination)
-	}()
-
-	status := h.NewStatus(c)
-	status.Updating = true
-
-	time.Sleep(1 * time.Second)
-
-	return h.RespondWithData(c, status)
+	return h.RespondWithData(c, nil)
 }
 
 // HandleGetLatestUpdate
@@ -43,14 +31,9 @@ func (h *Handler) HandleInstallLatestUpdate(c echo.Context) error {
 //	@desc This will return the latest update.
 //	@desc If an error occurs, it will return an empty update.
 //	@route /api/v1/latest-update [GET]
-//	@returns updater.Update
+//	@returns any
 func (h *Handler) HandleGetLatestUpdate(c echo.Context) error {
-	update, err := h.App.Updater.GetLatestUpdate()
-	if err != nil {
-		return h.RespondWithData(c, &updater.Update{})
-	}
-
-	return h.RespondWithData(c, update)
+	return h.RespondWithData(c, nil)
 }
 
 type changelogItem struct {

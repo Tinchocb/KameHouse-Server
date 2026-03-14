@@ -9,7 +9,6 @@ import (
 	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/animeofflinedb"
 	"kamehouse/internal/api/metadata_provider"
-	"kamehouse/internal/customsource"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/hook"
 	"kamehouse/internal/library/anime"
@@ -131,22 +130,7 @@ func NewMediaFetcher(ctx context.Context, opts *MediaFetcherOptions) (ret *Media
 				opts.CompleteAnimeCache.Set(entry.GetMedia().ID, entry.GetMedia())
 			}
 		}
-		// Handle custom sources
-		// Devnote: For now we just get them from opts.AnimeCollection but in the future we could introduce a new method for custom sources to return many CompleteAnime at once
-		// right now custom source media wont have any relations data
-		if opts.OptionalAnimeCollection != nil {
-			for _, list := range opts.OptionalAnimeCollection.GetMediaListCollection().GetLists() {
-				if list == nil {
-					continue
-				}
-				for _, entry := range list.GetEntries() {
-					if entry == nil || entry.GetMedia() == nil || !customsource.IsExtensionId(entry.GetMedia().GetID()) {
-						continue
-					}
-					allCompleteAnime = append(allCompleteAnime, entry.GetMedia().ToCompleteAnime())
-				}
-			}
-		}
+		// Handle custom sources removed
 	}
 
 	if mf.ScanLogger != nil {
@@ -311,12 +295,6 @@ func NormalizedMediaFromAnilistComplete(c []*anilist.CompleteAnime) []*dto.Norma
 //----------------------------------------------------------------------------------------------------------------------
 
 // FetchMediaFromLocalFiles gets media and their relations from local file titles.
-// It retrieves unique titles from local files,
-// fetches mal.SearchResultAnime from MAL,
-// uses these search results to get AniList IDs using metadata.AnimeMetadata mappings,
-// queries AniList to retrieve all anilist.BaseAnime using anilist.GetBaseAnimeById and their relations using anilist.FetchMediaTree.
-// It does not return an error if one of the steps fails.
-// It returns the scanned media and a boolean indicating whether the process was successful.
 func FetchMediaFromLocalFiles(
 	ctx context.Context,
 	providers []librarymetadata.Provider,
@@ -348,7 +326,6 @@ func FetchMediaFromLocalFiles(
 
 	// Per-scan metadata cache: collapses duplicate API calls for the same title
 	// (singleflight) and memoises resolved results (sync.Map) across the loop.
-	// Cleared on return so memory is released as soon as the scan completes.
 	cache := newMetadataFetchCache()
 	defer cache.Clear()
 
@@ -394,9 +371,6 @@ func FetchMediaFromLocalFiles(
 var errRateLimited = errors.New("upstream rate-limited (HTTP 429)")
 
 // retryWithBackoff calls fn up to maxAttempts times.
-// If fn returns an error whose message contains "429" it treats it as a
-// rate-limit signal and waits an exponentially growing delay before retrying.
-// Other errors are returned immediately without retrying.
 func retryWithBackoff(ctx context.Context, maxAttempts int, fn func() error) error {
 	delay := time.Second
 	for attempt := 0; attempt < maxAttempts; attempt++ {
@@ -422,7 +396,6 @@ func retryWithBackoff(ctx context.Context, maxAttempts int, fn func() error) err
 }
 
 // newMediaFetcherTMDB creates a MediaFetcher using TMDB + folder structure
-// instead of AniList as the source of media candidates.
 func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*MediaFetcher, error) {
 	mf := new(MediaFetcher)
 	mf.ScanLogger = opts.ScanLogger
@@ -435,9 +408,7 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 	}
 
 	// Group local files by their parent folder to get unique series.
-	// For movie files directly in a category folder, each file gets its own entry.
 	seriesMap := make(map[string]*FolderInfo) // folderPath (or filePath for movies) -> FolderInfo
-	fileToFolder := make(map[string]string)   // filePath -> folderPath
 
 	for _, lf := range opts.LocalFiles {
 		info := ParseFolderStructure(lf.Path, opts.LibraryPaths)
@@ -446,19 +417,16 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 		}
 
 		if info.IsMovie {
-			// Each movie file gets its own key so it's searched individually
 			seriesMap[lf.Path] = info
-			fileToFolder[lf.Path] = lf.Path
 		} else {
 			dir := filepath.Dir(lf.Path)
 			if _, exists := seriesMap[dir]; !exists {
 				seriesMap[dir] = info
 			}
-			fileToFolder[lf.Path] = dir
 		}
 	}
 
-	// Deduplicate series names to avoid searching the same series multiple times
+	// Deduplicate series names
 	uniqueSeries := make(map[string]*FolderInfo)
 	for _, info := range seriesMap {
 		key := info.SeriesName
@@ -472,16 +440,9 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 		}
 	}
 
-	if mf.ScanLogger != nil {
-		mf.ScanLogger.LogMediaFetcher(zerolog.DebugLevel).
-			Int("uniqueSeriesCount", len(uniqueSeries)).
-			Msg("Parsed unique series from folder structure")
-	}
-
-	// Search TMDB for each unique series
 	seenIds := make(map[int]bool)
 
-	// Build provider map for strategy routing
+	// Build provider map
 	providerMap := make(map[string]librarymetadata.Provider)
 	for _, p := range opts.MetadataProviders {
 		providerMap[strings.ToLower(p.GetProviderID())] = p
@@ -496,7 +457,6 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 		// 1. Explicit Routing
 		if info.ExplicitProvider != "" {
 			providerToUse, exists := providerMap[info.ExplicitProvider]
-			// Fallback to TMDB for IMDB ids if IMDB has no separate provider
 			if !exists && info.ExplicitProvider == "imdb" {
 				providerToUse, exists = providerMap["tmdb"]
 			}
@@ -513,8 +473,6 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 					media.ExplicitID = info.ExplicitID
 					results = []*dto.NormalizedMedia{media}
 				}
-			} else {
-				err = fmt.Errorf("explicit provider not found: %s", info.ExplicitProvider)
 			}
 		}
 
@@ -523,31 +481,23 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 			results, err = opts.TMDBProvider.SearchMedia(ctx, query)
 
 			if err != nil || len(results) == 0 {
-				// Fallback: for movies with compound titles like "Dragon Ball Z - La batalla",
-				// try searching with just the series prefix (before " - ")
 				if info.IsMovie {
 					if idx := strings.Index(query, " - "); idx > 0 {
 						prefix := strings.TrimSpace(query[:idx])
-						opts.Logger.Debug().Str("originalQuery", query).Str("fallbackQuery", prefix).Msg("media fetcher: Retrying movie search with prefix")
 						results, err = opts.TMDBProvider.SearchMedia(ctx, prefix)
 					}
 				}
 
 				// 3. Fallback Mechanism (AniList)
 				if len(results) == 0 {
-					opts.Logger.Debug().Str("query", query).Msg("media fetcher: TMDB returned zero results, falling back to AniList provider")
 					if alProvider, exists := providerMap["anilist"]; exists {
 						results, err = alProvider.SearchMedia(ctx, query)
 					}
 				}
 			}
-		} else if err != nil {
-			opts.Logger.Warn().Str("query", query).Str("explicitProvider", info.ExplicitProvider).Str("explicitId", info.ExplicitID).Err(err).Msg("media fetcher: Explicit provider search failed")
-			// We continue so the fallback logic can trigger if results is still empty
 		}
 
 		if len(results) == 0 {
-			opts.Logger.Warn().Str("query", query).Msg("media fetcher: Metadata fetch failed for " + query + ", falling back...")
 			results = []*dto.NormalizedMedia{GenerateLocalMetadata(query)}
 		}
 
@@ -559,50 +509,24 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 			// For movies with a known year, strongly prefer year-matched results
 			if info.IsMovie && info.Year > 0 && media.Year != nil {
 				if *media.Year != info.Year {
-					continue // Skip year-mismatched movies
+					continue 
 				}
 			}
 
 			mf.AllMedia = append(mf.AllMedia, media)
 			seenIds[media.ID] = true
 		}
-
-		if mf.ScanLogger != nil {
-			mf.ScanLogger.LogMediaFetcher(zerolog.DebugLevel).
-				Str("series", info.SeriesName).
-				Int("resultsCount", len(results)).
-				Bool("isMovie", info.IsMovie).
-				Msg("TMDB search completed for series")
-		}
 	}
 
-	// In TMDB mode, ALL fetched media are considered part of the user's collection.
-	// This prevents them from being flagged as "Unknown" / "Hidden Media".
 	mf.CollectionMediaIds = make([]int, 0, len(mf.AllMedia))
 	for _, media := range mf.AllMedia {
 		mf.CollectionMediaIds = append(mf.CollectionMediaIds, media.ID)
 	}
 
-	if mf.ScanLogger != nil {
-		mf.ScanLogger.LogMediaFetcher(zerolog.InfoLevel).
-			Int("totalMediaCount", len(mf.AllMedia)).
-			Msg("Finished TMDB media fetcher")
-	}
-
-	opts.Logger.Info().
-		Int("totalMedia", len(mf.AllMedia)).
-		Int("uniqueSeries", len(uniqueSeries)).
-		Msg("media fetcher: TMDB mode completed")
-
 	return mf, nil
 }
 
-// GenerateLocalMetadata creates a synthetic OrganizedMedia object when external
-// providers fail to identify the series. This ensures the media still appears
-// in the UI, allowing the user to match it manually later.
 func GenerateLocalMetadata(title string) *dto.NormalizedMedia {
-	// We generate a deterministic pseudo-ID to avoid collisions
-	// We use the negative CRC32 of the title text so TMDB DB maps nicely.
 	h := crc32.NewIEEE()
 	h.Write([]byte(title))
 	hash := int(h.Sum32())
@@ -616,14 +540,14 @@ func GenerateLocalMetadata(title string) *dto.NormalizedMedia {
 
 	return &dto.NormalizedMedia{
 		ID:     hash,
-		TmdbId: &hash, // Assign to tmdbId to allow TMDB pipeline to map it properly
+		TmdbId: &hash,
 		Title: &dto.NormalizedMediaTitle{
 			English: &title,
 			Romaji:  &title,
 			Native:  &title,
 		},
 		Synonyms: nil,
-		Format:   lo.ToPtr(dto.MediaFormatTV), // Assume TV mostly
+		Format:   lo.ToPtr(dto.MediaFormatTV), 
 		CoverImage: &dto.NormalizedMediaCoverImage{
 			Large:      &posterURL,
 			ExtraLarge: &posterURL,
@@ -631,7 +555,7 @@ func GenerateLocalMetadata(title string) *dto.NormalizedMedia {
 		},
 		Status:         lo.ToPtr(dto.MediaStatusFinished),
 		MetadataStatus: &metadataStatus,
-		Episodes:       lo.ToPtr(1000), // Arbitrary high count
-		Description:    &synopsis,      // Inject synthetic synopsis here
+		Episodes:       lo.ToPtr(1000), 
+		Description:    &synopsis,      
 	}
 }

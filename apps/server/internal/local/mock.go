@@ -5,10 +5,6 @@ import (
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/events"
-	"kamehouse/internal/extension"
-	"kamehouse/internal/manga"
-	"kamehouse/internal/platforms/anilist_platform"
-	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/test_utils"
 	"kamehouse/internal/util"
 	"path/filepath"
@@ -21,14 +17,11 @@ func GetMockManager(t *testing.T, db *db.Database) Manager {
 	logger := util.NewLogger()
 	metadataProvider := metadata_provider.GetFakeProvider(t, db)
 	metadataProviderRef := util.NewRef[metadata_provider.Provider](metadataProvider)
-	mangaRepository := manga.GetFakeRepository(t, db)
 
 	wsEventManager := events.NewMockWSEventManager(logger)
-	anilistClient := anilist.NewMockAnilistClient()
-	anilistClientRef := util.NewRef[anilist.AnilistClient](anilistClient)
-	extensionBankRef := util.NewRef(extension.NewUnifiedBank())
-	anilistPlatform := anilist_platform.NewAnilistPlatform(anilistClientRef, extensionBankRef, logger, db)
-	anilistPlatformRef := util.NewRef[platform.Platform](anilistPlatform)
+	_ = anilist.NewMockAnilistClient()
+	
+	// extension dependency removed
 
 	localDir := filepath.Join(test_utils.ConfigData.Path.DataDir, "offline")
 	assetsDir := filepath.Join(test_utils.ConfigData.Path.DataDir, "offline", "assets")
@@ -38,10 +31,9 @@ func GetMockManager(t *testing.T, db *db.Database) Manager {
 		AssetDir:            assetsDir,
 		Logger:              util.NewLogger(),
 		MetadataProviderRef: metadataProviderRef,
-		MangaRepository:     mangaRepository,
 		Database:            db,
 		WSEventManager:      wsEventManager,
-		AnilistPlatformRef:  anilistPlatformRef,
+		AnilistPlatformRef:  nil, // platform dependency removed
 		IsOffline:           false,
 	})
 	require.NoError(t, err)

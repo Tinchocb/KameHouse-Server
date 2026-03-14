@@ -326,7 +326,7 @@ func (h *Handler) HandleSaveAutoDownloaderSettings(c echo.Context) error {
 	}
 
 	// Update Auto Downloader settings
-	h.App.AutoDownloader.SetSettings(autoDownloaderSettings)
+	h.App.AutoDownloader.SetSettings(*autoDownloaderSettings)
 
 	return h.RespondWithData(c, true)
 }

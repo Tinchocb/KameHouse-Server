@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, type UseQueryResult } from "@tanstack/react-query"
 import type {
     Anime_Episode,
     Anime_LibraryCollectionEntry,
@@ -59,7 +59,7 @@ async function fetchContinueWatching(): Promise<ContinueWatchingEntry[]> {
     return json.data
 }
 
-export function useHomeIntelligence() {
+export function useHomeIntelligence(): UseQueryResult<CuratedHomeResponse, Error> {
     return useQuery({
         queryKey: ["home", "curated"],
         queryFn: fetchCuratedHome,
@@ -67,7 +67,7 @@ export function useHomeIntelligence() {
     })
 }
 
-export function useContinueWatching() {
+export function useContinueWatching(): UseQueryResult<ContinueWatchingEntry[], Error> {
     return useQuery({
         queryKey: ["home", "continue-watching"],
         queryFn: fetchContinueWatching,

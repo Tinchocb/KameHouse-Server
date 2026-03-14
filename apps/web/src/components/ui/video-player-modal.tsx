@@ -17,7 +17,7 @@ import { cn } from "@/components/ui/core/styling"
 import type { Mediastream_StreamType } from "@/api/generated/types"
 import { useUpdateContinuityWatchHistoryItem } from "@/api/hooks/continuity.hooks"
 import { useGetSettings } from "@/api/hooks/settings.hooks"
-import { useGetAddonSubtitles } from "@/api/hooks/addon-subtitles.hooks"
+
 import { usePlaybackTelemetry } from "@/hooks/usePlaybackTelemetry"
 import { useJassub } from "@/hooks/useJassub"
 import { PlayerSettingsMenu } from "@/components/ui/PlayerSettingsMenu"
@@ -272,8 +272,7 @@ export function VideoPlayerModal({
 
     const [isJassubLoading, setIsJassubLoading] = useState(false)
 
-    // Addon Subtitles
-    const { data: addonSubtitles } = useGetAddonSubtitles("series", mediaId)
+
 
     // ── Telemetry (Watch Progress Background Sync) ─────────────────────────
     usePlaybackTelemetry(mediaId, episodeNumber, videoRef)
@@ -835,8 +834,7 @@ export function VideoPlayerModal({
                     "w-full h-full object-contain bg-black outline-none",
                     status !== "ready" && "opacity-0"
                 )}
-                // Enable CORS for external CDN streams (Debrid redirects)
-                crossOrigin={isExternalStream || (addonSubtitles && addonSubtitles.length > 0) ? "anonymous" : undefined}
+                crossOrigin={isExternalStream ? "anonymous" : undefined}
                 // Ocultar controles nativos
                 controls={false}
                 // Playback telemetry
@@ -849,17 +847,7 @@ export function VideoPlayerModal({
                     if (video) {} 
                 }}
             >
-                {/* Addon subtitle tracks (external WebVTT sources from addon system) */}
-                {addonSubtitles?.map((sub, idx) => (
-                    <track
-                        key={sub.id || idx}
-                        kind="subtitles"
-                        src={sub.url}
-                        srcLang={sub.lang}
-                        label={sub.lang.toUpperCase()}
-                        default={idx === 0}
-                    />
-                ))}
+
             </video>
 
             {/* JASSUB WASM Lazy Loaded Renderer */}

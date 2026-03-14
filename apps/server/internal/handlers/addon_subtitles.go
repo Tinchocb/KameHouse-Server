@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strings"
 	"sync"
-	"time"
 
 	json "github.com/goccy/go-json"
 	"github.com/labstack/echo/v4"
@@ -55,10 +54,16 @@ func (h *Handler) HandleGetAddonSubtitles(c echo.Context) error {
 		wg      sync.WaitGroup
 	)
 
-	client := &http.Client{Timeout: 10 * time.Second}
+	for _, e := range extensions {
+		ext, ok := e.(interface {
+			GetManifestURI() string
+			GetName() string
+		})
+		if !ok {
+			continue
+		}
 
-	for _, ext := range extensions {
-		manifestURI := ext.ManifestURI
+		manifestURI := ext.GetManifestURI()
 		if manifestURI == "" || manifestURI == "builtin" {
 			continue
 		}
@@ -71,12 +76,13 @@ func (h *Handler) HandleGetAddonSubtitles(c echo.Context) error {
 		}
 
 		subtitleURL := fmt.Sprintf("%s/subtitles/%s/%s.json", baseURL, mediaType, mediaId)
-		extName := ext.Name
+		extName := ext.GetName() // Changed from ext.Name to ext.GetName()
 
 		wg.Add(1)
 		go func(url string, name string) {
 			defer wg.Done()
 
+			client := &http.Client{Timeout: 10 * http.DefaultClient.Timeout} // Added client initialization
 			resp, err := client.Get(url)
 			if err != nil {
 				h.App.Logger.Debug().Str("addon", name).Err(err).Msg("addon subtitles: fetch failed")

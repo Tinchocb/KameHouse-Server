@@ -101,7 +101,6 @@ func (h *Handler) HandleGetMediaMetadataParent(c echo.Context) error {
 //	@returns models.MediaMetadataParent
 func (h *Handler) HandleSaveMediaMetadataParent(c echo.Context) error {
 	type body struct {
-		MediaId       int `json:"mediaId"`
 		ParentId      int `json:"parentId"`
 		SpecialOffset int `json:"specialOffset"`
 	}
@@ -111,17 +110,15 @@ func (h *Handler) HandleSaveMediaMetadataParent(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	if b.MediaId == 0 {
-		return h.RespondWithError(c, errors.New("invalid media id"))
+	if b.ParentId == 0 {
+		return h.RespondWithError(c, errors.New("invalid parent id"))
 	}
 
-	parent := models.MediaMetadataParent{
-		MediaId:       b.MediaId,
+	savedParent, err := h.App.Database.InsertMediaMetadataParent(models.MediaMetadataParent{
+		MediaId:       b.ParentId,
 		ParentId:      b.ParentId,
 		SpecialOffset: b.SpecialOffset,
-	}
-
-	savedParent, err := h.App.Database.InsertMediaMetadataParent(parent)
+	})
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}

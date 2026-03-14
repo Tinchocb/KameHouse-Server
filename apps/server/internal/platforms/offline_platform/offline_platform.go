@@ -176,47 +176,7 @@ func (lp *OfflinePlatform) UpdateEntry(ctx context.Context, mediaID int, status 
 		}
 	}
 
-	if lp.localManager.GetLocalMangaCollection().IsPresent() {
-		mangaCollection := lp.localManager.GetLocalMangaCollection().MustGet()
 
-		// Find the entry
-		for _, list := range mangaCollection.MediaListCollection.Lists {
-			for _, entry := range list.Entries {
-				if entry.GetMedia().GetID() == mediaID {
-					// Update the entry
-					if status != nil {
-						entry.Status = status
-					}
-					if scoreRaw != nil {
-						entry.Score = lo.ToPtr(float64(*scoreRaw))
-					}
-					if progress != nil {
-						entry.Progress = progress
-					}
-					if startedAt != nil {
-						entry.StartedAt = &anilist.MangaCollection_MediaListCollection_Lists_Entries_StartedAt{
-							Year:  startedAt.Year,
-							Month: startedAt.Month,
-							Day:   startedAt.Day,
-						}
-					}
-					if completedAt != nil {
-						entry.CompletedAt = &anilist.MangaCollection_MediaListCollection_Lists_Entries_CompletedAt{
-							Year:  completedAt.Year,
-							Month: completedAt.Month,
-							Day:   completedAt.Day,
-						}
-					}
-
-					// Save the collection
-					rearrangeMangaCollectionLists(mangaCollection)
-					lp.localManager.UpdateLocalMangaCollection(mangaCollection)
-					lp.localManager.SetHasLocalChanges(true)
-					return nil
-				}
-			}
-		}
-	}
 
 	return ErrMediaNotFound
 }
@@ -245,28 +205,7 @@ func (lp *OfflinePlatform) UpdateEntryProgress(ctx context.Context, mediaID int,
 		}
 	}
 
-	if lp.localManager.GetLocalMangaCollection().IsPresent() {
-		mangaCollection := lp.localManager.GetLocalMangaCollection().MustGet()
 
-		// Find the entry
-		for _, list := range mangaCollection.MediaListCollection.Lists {
-			for _, entry := range list.Entries {
-				if entry.GetMedia().GetID() == mediaID {
-					// Update the entry
-					entry.Progress = &progress
-					if totalEpisodes != nil {
-						entry.Media.Chapters = totalEpisodes
-					}
-
-					// Save the collection
-					rearrangeMangaCollectionLists(mangaCollection)
-					lp.localManager.UpdateLocalMangaCollection(mangaCollection)
-					lp.localManager.SetHasLocalChanges(true)
-					return nil
-				}
-			}
-		}
-	}
 
 	return ErrMediaNotFound
 }
@@ -292,25 +231,7 @@ func (lp *OfflinePlatform) UpdateEntryRepeat(ctx context.Context, mediaID int, r
 		}
 	}
 
-	if lp.localManager.GetLocalMangaCollection().IsPresent() {
-		mangaCollection := lp.localManager.GetLocalMangaCollection().MustGet()
 
-		// Find the entry
-		for _, list := range mangaCollection.MediaListCollection.Lists {
-			for _, entry := range list.Entries {
-				if entry.GetMedia().GetID() == mediaID {
-					// Update the entry
-					entry.Repeat = &repeat
-
-					// Save the collection
-					rearrangeMangaCollectionLists(mangaCollection)
-					lp.localManager.UpdateLocalMangaCollection(mangaCollection)
-					lp.localManager.SetHasLocalChanges(true)
-					return nil
-				}
-			}
-		}
-	}
 
 	return ErrMediaNotFound
 }
@@ -365,18 +286,7 @@ func (lp *OfflinePlatform) GetAnimeWithRelations(ctx context.Context, mediaID in
 }
 
 func (lp *OfflinePlatform) GetManga(ctx context.Context, mediaID int) (*anilist.BaseManga, error) {
-	if lp.localManager.GetLocalMangaCollection().IsPresent() {
-		mangaCollection := lp.localManager.GetLocalMangaCollection().MustGet()
 
-		// Find the entry
-		for _, list := range mangaCollection.MediaListCollection.Lists {
-			for _, entry := range list.Entries {
-				if entry.GetMedia().GetID() == mediaID {
-					return entry.Media, nil
-				}
-			}
-		}
-	}
 
 	return nil, ErrMediaNotFound
 }
@@ -417,28 +327,15 @@ func (lp *OfflinePlatform) GetAnimeCollectionWithRelations(ctx context.Context) 
 }
 
 func (lp *OfflinePlatform) GetMangaCollection(ctx context.Context, bypassCache bool) (*anilist.MangaCollection, error) {
-	if lp.localManager.GetLocalMangaCollection().IsPresent() {
-		return lp.localManager.GetLocalMangaCollection().MustGet(), nil
-	} else {
-		return nil, ErrorNoLocalMangaCollection
-	}
+	return nil, ErrorNoLocalMangaCollection
 }
 
 func (lp *OfflinePlatform) GetRawMangaCollection(ctx context.Context, bypassCache bool) (*anilist.MangaCollection, error) {
-	if lp.localManager.GetLocalMangaCollection().IsPresent() {
-		return lp.localManager.GetLocalMangaCollection().MustGet(), nil
-	} else {
-		return nil, ErrorNoLocalMangaCollection
-	}
+	return nil, ErrorNoLocalMangaCollection
 }
 
 func (lp *OfflinePlatform) RefreshMangaCollection(ctx context.Context) (*anilist.MangaCollection, error) {
-	mangaCollection, ok := lp.localManager.GetLocalMangaCollection().Get()
-	if !ok {
-		return nil, ErrorNoLocalMangaCollection
-	}
-
-	return mangaCollection, nil
+	return nil, ErrorNoLocalMangaCollection
 }
 
 // AddMediaToCollection isn't supported for the local platform, always returns an error.
