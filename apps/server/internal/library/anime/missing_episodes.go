@@ -3,7 +3,6 @@ package anime
 import (
 	"context"
 	"fmt"
-	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/hook"
@@ -96,7 +95,7 @@ func NewMissingEpisodes(opts *NewMissingEpisodesOptions) *MissingEpisodes {
 
 			rateLimiter.Wait(context.Background())
 			// Fetch anime metadata
-			animeMetadata, err := opts.MetadataProviderRef.Get().GetAnimeMetadata(metadata.AnilistPlatform, int(media.ID))
+			animeMetadata, err := opts.MetadataProviderRef.Get().GetAnimeMetadata(int(media.ID))
 			if err != nil {
 				return
 			}

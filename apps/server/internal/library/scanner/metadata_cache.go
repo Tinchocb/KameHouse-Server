@@ -395,6 +395,12 @@ func bigrams(s string) []string {
 // defined in media_fetcher.go (initial delay = 1 s).
 // ─────────────────────────────────────────────────────────────────────────────
 
+var errRateLimited = errors.New("rate limited")
+
+func retryWithBackoff(ctx context.Context, maxAttempts int, fn func() error) error {
+	return retryProviderCall(ctx, maxAttempts, time.Second, fn)
+}
+
 // retryProviderCall wraps a provider call with 429-aware exponential backoff
 // and a hard context deadline so a hung upstream cannot stall the scanner
 // indefinitely.

@@ -4,43 +4,34 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/metadata"
+	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
 	"net/http"
 	"path/filepath"
 	"strings"
 )
 
-func (s *StreamManager) getMediaInfo(ctx context.Context, mediaId int) (media *anilist.CompleteAnime, animeMetadata *metadata.AnimeMetadata, err error) {
-	// Get the media
-	var found bool
-	media, found = s.repository.completeAnimeCache.Get(mediaId)
-	if !found {
-		// Fetch the media
-		media, err = s.repository.platformRef.Get().GetAnimeWithRelations(ctx, mediaId)
+func (s *StreamManager) getMediaInfo(ctx context.Context, mediaId int) (media *platform.UnifiedMedia, animeMetadata *metadata.AnimeMetadata, err error) {
+	// Fetch the media
+	res, err := s.repository.platformRef.Get().GetAnimeWithRelations(ctx, mediaId)
+	if err != nil {
+		res, err = s.repository.platformRef.Get().GetAnime(ctx, mediaId)
 		if err != nil {
-			baseMedia, lErr := s.repository.platformRef.Get().GetAnime(ctx, mediaId)
-			if lErr != nil {
-				return nil, nil, fmt.Errorf("torrentstream: Failed to fetch media: %w", err)
-			}
-			media = baseMedia.ToCompleteAnime()
-			err = nil
+			return nil, nil, fmt.Errorf("debrid_client: Failed to fetch media: %w", err)
 		}
 	}
+	media = res.(*platform.UnifiedMedia)
 
 	// Get the media
-	animeMetadata, err = s.repository.metadataProviderRef.Get().GetAnimeMetadata(metadata.AnilistPlatform, mediaId)
+	animeMetadata, err = s.repository.metadataProviderRef.Get().GetAnimeMetadata(mediaId)
 	if err != nil {
-		//return nil, nil, fmt.Errorf("torrentstream: Could not fetch AniDB media: %w", err)
 		animeMetadata = &metadata.AnimeMetadata{
 			Titles:       make(map[string]string),
 			Episodes:     make(map[string]*metadata.EpisodeMetadata),
 			EpisodeCount: 0,
 			SpecialCount: 0,
-			Mappings: &metadata.AnimeMappings{
-				AnilistId: media.GetID(),
-			},
+			Mappings:     &metadata.AnimeMappings{},
 		}
 		animeMetadata.Titles["en"] = media.GetTitleSafe()
 		animeMetadata.Titles["x-jat"] = media.GetRomajiTitleSafe()

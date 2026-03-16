@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"errors"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/library/anime"
+	"kamehouse/internal/platforms/platform"
 
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models/dto"
@@ -20,8 +20,8 @@ import (
 //	@summary returns the main local anime collection.
 //	@desc This creates a new LibraryCollection struct and returns it.
 //	@desc This is used to get the main anime collection of the user.
-//	@desc It uses the cached Anilist anime collection for the GET method.
-//	@desc It refreshes the AniList anime collection if the POST method is used.
+//	@desc It uses the cached platform anime collection for the GET method.
+//	@desc It refreshes the platform anime collection if the POST method is used.
 //	@route /api/v1/library/collection [GET,POST]
 //	@returns anime.LibraryCollection
 func (h *Handler) HandleGetLibraryCollection(c echo.Context) error {
@@ -32,7 +32,7 @@ func (h *Handler) HandleGetLibraryCollection(c echo.Context) error {
 	}
 
 	if animeCollection == nil {
-		animeCollection = &anilist.AnimeCollection{}
+		animeCollection = &platform.UnifiedCollection{}
 	}
 
 	originalAnimeCollection := animeCollection
@@ -45,7 +45,7 @@ func (h *Handler) HandleGetLibraryCollection(c echo.Context) error {
 
 	libraryCollection, err := anime.NewLibraryCollection(c.Request().Context(), &anime.NewLibraryCollectionOptions{
 		Database:            h.App.Database,
-		PlatformRef:         h.App.Metadata.AnilistPlatformRef,
+		PlatformRef:         h.App.Metadata.PlatformRef,
 		LocalFiles:          lfs,
 		MetadataProviderRef: h.App.Metadata.ProviderRef,
 	})
@@ -85,8 +85,8 @@ var animeScheduleCache = result.NewCache[int, []*anime.ScheduleItem]()
 //	@returns []anime.ScheduleItem
 func (h *Handler) HandleGetAnimeCollectionSchedule(c echo.Context) error {
 
-	// Invalidate the cache when the Anilist collection is refreshed
-	h.App.AddOnRefreshAnilistCollectionFunc("HandleGetAnimeCollectionSchedule", func() {
+	// Invalidate the cache when the platform collection is refreshed
+	h.App.AddOnRefreshAnimeCollectionFunc("HandleGetAnimeCollectionSchedule", func() {
 		animeScheduleCache.Clear()
 	})
 
@@ -94,10 +94,11 @@ func (h *Handler) HandleGetAnimeCollectionSchedule(c echo.Context) error {
 		return h.RespondWithData(c, ret)
 	}
 
-	animeSchedule, err := h.App.Metadata.AnilistPlatformRef.Get().GetAnimeAiringSchedule(c.Request().Context())
+	animeScheduleData, err := h.App.Metadata.PlatformRef.Get().GetAnimeAiringSchedule(c.Request().Context())
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
+	animeSchedule := animeScheduleData.(*platform.UnifiedAiringSchedule)
 
 	animeCollection, err := h.App.GetAnimeCollection(false)
 	if err != nil {
@@ -130,14 +131,14 @@ func (h *Handler) HandleAddUnknownMedia(c echo.Context) error {
 	}
 
 	// Add non-added media entries to AniList collection
-	if err := h.App.Metadata.AnilistPlatformRef.Get().AddMediaToCollection(c.Request().Context(), b.MediaIds); err != nil {
-		return h.RespondWithError(c, errors.New("error: Anilist responded with an error, this is most likely a rate limit issue"))
+	if err := h.App.Metadata.PlatformRef.Get().AddMediaToCollection(c.Request().Context(), b.MediaIds); err != nil {
+		return h.RespondWithError(c, errors.New("error: Platform responded with an error, this is most likely a rate limit issue"))
 	}
 
 	// Bypass the cache
 	animeCollection, err := h.App.GetAnimeCollection(true)
 	if err != nil {
-		return h.RespondWithError(c, errors.New("error: Anilist responded with an error, wait one minute before refreshing"))
+		return h.RespondWithError(c, errors.New("error: Platform responded with an error, wait one minute before refreshing"))
 	}
 
 	return h.RespondWithData(c, animeCollection)

@@ -2,7 +2,7 @@ package directstream
 
 import (
 	"context"
-	"kamehouse/internal/api/anilist"
+	"fmt"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/continuity"
 	"kamehouse/internal/events"
@@ -13,7 +13,6 @@ import (
 	"kamehouse/internal/util/result"
 	"kamehouse/internal/videocore"
 	"sync"
-	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/samber/mo"
@@ -31,7 +30,7 @@ type (
 		continuityManager          *continuity.Manager
 		metadataProviderRef        *util.Ref[metadata_provider.Provider]
 		platformRef                *util.Ref[platform.Platform]
-		refreshAnimeCollectionFunc func() // This function is called to refresh the AniList collection
+		refreshAnimeCollectionFunc func() // This function is called to refresh the collection
 
 		videoCore           *videocore.VideoCore
 		videoCoreSubscriber *videocore.Subscriber
@@ -53,8 +52,7 @@ type (
 		settings *Settings
 
 		isOfflineRef    *util.Ref[bool]
-		animeCollection mo.Option[*anilist.AnimeCollection]
-		animeCache      *result.Cache[int, *anilist.BaseAnime]
+		animeCollection mo.Option[*platform.UnifiedCollection]
 
 		parserCache *result.Cache[string, *mkvparser.MetadataParser]
 		//playbackStatusSubscribers *result.Map[string, *PlaybackStatusSubscriber]
@@ -100,7 +98,7 @@ func NewManager(options NewManagerOptions) *Manager {
 	return ret
 }
 
-func (m *Manager) SetAnimeCollection(ac *anilist.AnimeCollection) {
+func (m *Manager) SetAnimeCollection(ac *platform.UnifiedCollection) {
 	m.animeCollection = mo.Some(ac)
 }
 
@@ -110,18 +108,13 @@ func (m *Manager) SetSettings(s *Settings) {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func (m *Manager) getAnime(ctx context.Context, mediaId int) (*anilist.BaseAnime, error) {
-	media, ok := m.animeCache.Get(mediaId)
-	if ok {
-		return media, nil
-	}
-
+func (m *Manager) getAnime(ctx context.Context, mediaId int) (*platform.UnifiedMedia, error) {
 	// Find in anime collection
 	animeCollection, ok := m.animeCollection.Get()
 	if ok {
-		media, ok := animeCollection.FindAnime(mediaId)
-		if ok {
-			return media, nil
+		entry, found := animeCollection.GetListEntryFromMediaId(mediaId)
+		if found {
+			return entry.Media, nil
 		}
 	}
 
@@ -131,8 +124,8 @@ func (m *Manager) getAnime(ctx context.Context, mediaId int) (*anilist.BaseAnime
 		return nil, err
 	}
 
-	// Cache
-	m.animeCache.SetT(mediaId, media, 1*time.Hour)
-
-	return media, nil
+	if pm, ok := media.(*platform.UnifiedMedia); ok {
+		return pm, nil
+	}
+	return nil, fmt.Errorf("directstream: failed to cast unified media")
 }

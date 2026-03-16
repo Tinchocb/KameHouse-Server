@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"errors"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/database/db"
 	"path/filepath"
 
@@ -75,7 +74,7 @@ func (h *Handler) HandleGetAutoDownloaderRule(c echo.Context) error {
 //
 //	@summary returns the rules with the given media id.
 //	@route /api/v1/auto-downloader/rule/anime/{id} [GET]
-//	@param id - int - true - "The AniList anime id of the rules"
+//	@param id - int - true - "The anime id of the rules"
 //	@returns []dto.AutoDownloaderRule
 func (h *Handler) HandleGetAutoDownloaderRulesByAnime(c echo.Context) error {
 
@@ -106,36 +105,21 @@ func (h *Handler) HandleGetAutoDownloaderRules(c echo.Context) error {
 // HandleCreateAutoDownloaderRule
 //
 //	@summary creates a new rule.
-//	@desc The body should contain the same fields as entities.AutoDownloaderRule.
-//	@desc It returns the created rule.
+//	@desc This is used to create a new rule.
 //	@route /api/v1/auto-downloader/rule [POST]
+//	@param rule - dto.AutoDownloaderRule - true - "The rule to create"
 //	@returns dto.AutoDownloaderRule
 func (h *Handler) HandleCreateAutoDownloaderRule(c echo.Context) error {
-	type body struct {
-		Rule dto.AutoDownloaderRule `json:"rule"`
-	}
 
-	var b body
-
-	if err := c.Bind(&b); err != nil {
+	var rule dto.AutoDownloaderRule
+	if err := c.Bind(&rule); err != nil {
 		return h.RespondWithError(c, err)
 	}
 
-	if b.Rule.Destination == "" {
-		return h.RespondWithError(c, errors.New("destination is required"))
-	}
-	if b.Rule.MediaId == 0 {
-		return h.RespondWithError(c, errors.New("media id is required"))
-	}
+	rule.Destination = filepath.ToSlash(rule.Destination)
 
-	if !filepath.IsAbs(b.Rule.Destination) {
-		return h.RespondWithError(c, errors.New("destination must be an absolute path"))
-	}
-
-	b.Rule.DbID = 0
-	rule := &b.Rule
-
-	if err := db.InsertAutoDownloaderRule(h.App.Database, rule); err != nil {
+	err := db.InsertAutoDownloaderRule(h.App.Database, &rule)
+	if err != nil {
 		return h.RespondWithError(c, err)
 	}
 
@@ -144,222 +128,103 @@ func (h *Handler) HandleCreateAutoDownloaderRule(c echo.Context) error {
 
 // HandleUpdateAutoDownloaderRule
 //
-//	@summary updates a rule.
-//	@desc The body should contain the same fields as entities.AutoDownloaderRule.
-//	@desc It returns the updated rule.
+//	@summary updates the rule with the given DB id.
+//	@desc This is used to update a specific rule.
 //	@route /api/v1/auto-downloader/rule [PATCH]
+//	@param rule - dto.AutoDownloaderRule - true - "The rule to update"
 //	@returns dto.AutoDownloaderRule
 func (h *Handler) HandleUpdateAutoDownloaderRule(c echo.Context) error {
 
-	type body struct {
-		Rule *dto.AutoDownloaderRule `json:"rule"`
-	}
-
-	var b body
-
-	if err := c.Bind(&b); err != nil {
+	var rule dto.AutoDownloaderRule
+	if err := c.Bind(&rule); err != nil {
 		return h.RespondWithError(c, err)
 	}
 
-	if b.Rule == nil {
-		return h.RespondWithError(c, errors.New("invalid rule"))
-	}
+	rule.Destination = filepath.ToSlash(rule.Destination)
 
-	if b.Rule.DbID == 0 {
-		return h.RespondWithError(c, errors.New("invalid id"))
-	}
-
-	// Update the rule based on its DbID (primary key)
-	if err := db.UpdateAutoDownloaderRule(h.App.Database, b.Rule.DbID, b.Rule); err != nil {
+	err := db.UpdateAutoDownloaderRule(h.App.Database, rule.DbID, &rule)
+	if err != nil {
 		return h.RespondWithError(c, err)
 	}
 
-	return h.RespondWithData(c, b.Rule)
+	return h.RespondWithData(c, rule)
 }
 
 // HandleDeleteAutoDownloaderRule
 //
-//	@summary deletes a rule.
-//	@desc It returns 'true' if the rule was deleted.
+//	@summary deletes the rule with the given DB id.
+//	@desc This is used to delete a specific rule.
 //	@route /api/v1/auto-downloader/rule/{id} [DELETE]
 //	@param id - int - true - "The DB id of the rule"
 //	@returns bool
 func (h *Handler) HandleDeleteAutoDownloaderRule(c echo.Context) error {
+
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		return h.RespondWithError(c, errors.New("invalid id"))
 	}
 
-	// -1 deletes all no longer airing
-	if id == -1 {
-		animeCollection, err := h.App.GetAnimeCollection(false)
-		if err != nil {
-			return h.RespondWithError(c, err)
-		}
-		rules, err := db.GetAutoDownloaderRules(h.App.Database)
-		if err != nil {
-			return h.RespondWithError(c, err)
-		}
-		for _, rule := range rules {
-			media, ok := animeCollection.FindAnime(rule.MediaId)
-			if !ok {
-				continue
-			}
-			if media.Status != nil && *media.Status == anilist.MediaStatusFinished {
-				_ = db.DeleteAutoDownloaderRule(h.App.Database, rule.DbID)
-			}
-		}
-		return h.RespondWithData(c, true)
-	}
-
-	if err := db.DeleteAutoDownloaderRule(h.App.Database, uint(id)); err != nil {
+	err = db.DeleteAutoDownloaderRule(h.App.Database, uint(id))
+	if err != nil {
 		return h.RespondWithError(c, err)
 	}
 
 	return h.RespondWithData(c, true)
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// HandleGetAutoDownloaderProfiles
+// HandleGetAutoDownloaderItem
 //
-//	@summary returns all profiles.
-//	@route /api/v1/auto-downloader/profiles [GET]
-//	@returns []dto.AutoDownloaderProfile
-func (h *Handler) HandleGetAutoDownloaderProfiles(c echo.Context) error {
-	profiles, err := db.GetAutoDownloaderProfiles(h.App.Database)
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
+//	@summary returns the item with the given DB id.
+//	@desc This is used to get a specific item, useful for editing.
+//	@route /api/v1/auto-downloader/item/{id} [GET]
+//	@param id - int - true - "The DB id of the item"
+//	@returns dto.AutoDownloaderItem
+func (h *Handler) HandleGetAutoDownloaderItem(c echo.Context) error {
 
-	return h.RespondWithData(c, profiles)
-}
-
-// HandleGetAutoDownloaderProfile
-//
-//	@summary returns the profile with the given DB id.
-//	@route /api/v1/auto-downloader/profile/{id} [GET]
-//	@param id - int - true - "The DB id of the profile"
-//	@returns dto.AutoDownloaderProfile
-func (h *Handler) HandleGetAutoDownloaderProfile(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		return h.RespondWithError(c, errors.New("invalid id"))
 	}
 
-	profile, err := db.GetAutoDownloaderProfile(h.App.Database, uint(id))
+	item, err := h.App.Database.GetAutoDownloaderItem(uint(id))
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
 
-	return h.RespondWithData(c, profile)
+	return h.RespondWithData(c, item)
 }
-
-// HandleCreateAutoDownloaderProfile
-//
-//	@summary creates a new profile.
-//	@route /api/v1/auto-downloader/profile [POST]
-//	@returns dto.AutoDownloaderProfile
-func (h *Handler) HandleCreateAutoDownloaderProfile(c echo.Context) error {
-	var profile dto.AutoDownloaderProfile
-	if err := c.Bind(&profile); err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	if profile.Name == "" {
-		return h.RespondWithError(c, errors.New("profile name is required"))
-	}
-
-	if err := db.InsertAutoDownloaderProfile(h.App.Database, &profile); err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	return h.RespondWithData(c, profile)
-}
-
-// HandleUpdateAutoDownloaderProfile
-//
-//	@summary updates a profile.
-//	@route /api/v1/auto-downloader/profile [PATCH]
-//	@returns dto.AutoDownloaderProfile
-func (h *Handler) HandleUpdateAutoDownloaderProfile(c echo.Context) error {
-	var profile dto.AutoDownloaderProfile
-	if err := c.Bind(&profile); err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	if profile.DbID == 0 {
-		return h.RespondWithError(c, errors.New("invalid profile id"))
-	}
-
-	if profile.Name == "" {
-		return h.RespondWithError(c, errors.New("profile name is required"))
-	}
-
-	if err := db.UpdateAutoDownloaderProfile(h.App.Database, profile.DbID, &profile); err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	return h.RespondWithData(c, profile)
-}
-
-// HandleDeleteAutoDownloaderProfile
-//
-//	@summary deletes a profile.
-//	@route /api/v1/auto-downloader/profile/{id} [DELETE]
-//	@param id - int - true - "The DB id of the profile"
-//	@returns bool
-func (h *Handler) HandleDeleteAutoDownloaderProfile(c echo.Context) error {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		return h.RespondWithError(c, errors.New("invalid id"))
-	}
-
-	if err := db.DeleteAutoDownloaderProfile(h.App.Database, uint(id)); err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	return h.RespondWithData(c, true)
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // HandleGetAutoDownloaderItems
 //
-//	@summary returns all queued items.
-//	@desc Queued items are episodes that are downloaded but not scanned or not yet downloaded.
-//	@desc The AutoDownloader uses these items in order to not download the same episode twice.
+//	@summary returns all items.
+//	@desc This is used to list all items. It returns an empty slice if there are no items.
 //	@route /api/v1/auto-downloader/items [GET]
-//	@returns []models.AutoDownloaderItem
+//	@returns []dto.AutoDownloaderItem
 func (h *Handler) HandleGetAutoDownloaderItems(c echo.Context) error {
-	rules, err := h.App.Database.GetAutoDownloaderItems()
+	items, err := h.App.Database.GetAutoDownloaderItems()
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
 
-	return h.RespondWithData(c, rules)
+	return h.RespondWithData(c, items)
 }
 
 // HandleDeleteAutoDownloaderItem
 //
-//	@summary delete a queued item.
-//	@desc This is used to remove a queued item from the list.
-//	@desc Returns 'true' if the item was deleted.
-//	@route /api/v1/auto-downloader/item [DELETE]
+//	@summary deletes the item with the given DB id.
+//	@desc This is used to delete a specific item.
+//	@route /api/v1/auto-downloader/item/{id} [DELETE]
 //	@param id - int - true - "The DB id of the item"
 //	@returns bool
 func (h *Handler) HandleDeleteAutoDownloaderItem(c echo.Context) error {
 
-	type body struct {
-		ID uint `json:"id"`
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return h.RespondWithError(c, errors.New("invalid id"))
 	}
 
-	var b body
-	if err := c.Bind(&b); err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	if err := h.App.Database.DeleteAutoDownloaderItem(b.ID); err != nil {
+	err = h.App.Database.DeleteAutoDownloaderItem(uint(id))
+	if err != nil {
 		return h.RespondWithError(c, err)
 	}
 

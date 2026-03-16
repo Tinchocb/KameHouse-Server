@@ -1,10 +1,10 @@
 package metadata_provider
 
 import (
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/hook"
+	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/filecache"
 	"regexp"
@@ -19,7 +19,7 @@ type (
 	AnimeWrapperImpl struct {
 		metadata   mo.Option[*metadata.AnimeMetadata]
 		db         *db.Database
-		baseAnime  *anilist.BaseAnime
+		baseAnime  *platform.UnifiedMedia
 		fileCacher *filecache.Cacher
 		logger     *zerolog.Logger
 
@@ -65,7 +65,7 @@ func (aw *AnimeWrapperImpl) GetEpisodeMetadata(ep string) (ret metadata.EpisodeM
 	defer util.HandlePanicInModuleThen("api/metadata/GetEpisodeMetadata", func() {})
 
 	reqEvent := &metadata.AnimeEpisodeMetadataRequestedEvent{}
-	reqEvent.MediaId = aw.baseAnime.GetID()
+	reqEvent.MediaId = aw.baseAnime.ID
 	reqEvent.Episode = ep
 	reqEvent.EpisodeNumber = epNumber
 	reqEvent.EpisodeMetadata = &ret
@@ -127,7 +127,7 @@ func (aw *AnimeWrapperImpl) GetEpisodeMetadata(ep string) (ret metadata.EpisodeM
 		EpisodeMetadata: &ret,
 		Episode:         ep,
 		EpisodeNumber:   epNumber,
-		MediaId:         aw.baseAnime.GetID(),
+		MediaId:         aw.baseAnime.ID,
 	}
 	_ = hook.GlobalHookManager.OnAnimeEpisodeMetadata().Trigger(event)
 	if event.EpisodeMetadata == nil {
@@ -138,7 +138,7 @@ func (aw *AnimeWrapperImpl) GetEpisodeMetadata(ep string) (ret metadata.EpisodeM
 	return ret
 }
 
-func getDefaultOverview(baseAnime *anilist.BaseAnime, ep string, epNumber int) string {
+func getDefaultOverview(baseAnime *platform.UnifiedMedia, ep string, epNumber int) string {
 	if ep == "" {
 		return ""
 	}

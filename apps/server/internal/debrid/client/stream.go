@@ -392,7 +392,7 @@ func (s *StreamManager) startStream(ctx context.Context, opts *StartStreamOption
 		event := &DebridSendStreamToMediaPlayerEvent{
 			WindowTitle:  windowTitle,
 			StreamURL:    streamUrl,
-			Media:        media.ToBaseAnime(),
+			Media:        media,
 			AniDbEpisode: aniDbEpisode,
 			PlaybackType: string(opts.PlaybackType),
 		}
@@ -454,7 +454,7 @@ func (s *StreamManager) startStream(ctx context.Context, opts *StartStreamOption
 				StreamUrl:    streamUrl,
 				MediaId:      media.ID,
 				AnidbEpisode: opts.AniDBEpisode,
-				Media:        media.ToBaseAnime(),
+				Media:        media,
 				Torrent:      selectedTorrent,
 				FileId:       fileId,
 				UserAgent:    opts.UserAgent,

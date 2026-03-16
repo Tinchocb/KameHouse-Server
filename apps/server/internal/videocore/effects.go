@@ -5,6 +5,7 @@ import (
 	"kamehouse/internal/continuity"
 	"kamehouse/internal/events"
 	"kamehouse/internal/mkvparser"
+	"kamehouse/internal/platforms/platform"
 
 	"github.com/samber/lo"
 )
@@ -66,10 +67,14 @@ func (vc *VideoCore) setupSharedEffects() {
 
 					progress := state.PlaybackInfo.Episode.GetProgressNumber()
 
-					if listEntry, hasEntry := collection.GetListEntryFromAnimeId(mediaId); hasEntry {
-						if listEntry.Progress != nil && progress <= *listEntry.Progress {
-							continue
+					if c, ok := collection.(*platform.UnifiedCollection); ok {
+						if listEntry, hasEntry := c.GetListEntryFromMediaId(mediaId); hasEntry {
+							if listEntry.Progress != nil && progress <= *listEntry.Progress {
+								continue
+							}
 						}
+					} else if mediaId == 0 {
+						continue
 					}
 
 					err = vc.platformRef.Get().UpdateEntryProgress(context.Background(), mediaId, progress, totalEpisodes)
@@ -84,21 +89,20 @@ func (vc *VideoCore) setupSharedEffects() {
 					continue
 				}
 				if event.Duration != 0 {
-						_ = vc.continuityManager.UpdateWatchHistoryItem(&continuity.UpdateWatchHistoryItemOptions{
-							CurrentTime:   event.CurrentTime,
-							Duration:      event.Duration,
-							MediaId: func() int {
-								if m, ok := state.PlaybackInfo.Media.(interface{ GetID() int }); ok {
-									return m.GetID()
-								}
-								// Fallback/Placeholder
-								return 0
-							}(),
-							EpisodeNumber: state.PlaybackInfo.Episode.GetEpisodeNumber(),
-							Kind:          continuity.MediastreamKind,
-						})
+					_ = vc.continuityManager.UpdateWatchHistoryItem(&continuity.UpdateWatchHistoryItemOptions{
+						CurrentTime: event.CurrentTime,
+						Duration:    event.Duration,
+						MediaId: func() int {
+							if m, ok := state.PlaybackInfo.Media.(interface{ GetID() int }); ok {
+								return m.GetID()
+							}
+							// Fallback/Placeholder
+							return 0
+						}(),
+						EpisodeNumber: state.PlaybackInfo.Episode.GetEpisodeNumber(),
+						Kind:          continuity.MediastreamKind,
+					})
 				}
-
 
 			}
 		}

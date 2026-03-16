@@ -13,7 +13,7 @@ import (
 
 func (h *Handler) getAnimeEpisodeCollection(c echo.Context, mId int) (*anime.EpisodeCollection, error) {
 
-	h.App.AddOnRefreshAnilistCollectionFunc("HandleGetAnimeEpisodeCollection", func() {
+	h.App.AddOnRefreshAnimeCollectionFunc("HandleGetAnimeEpisodeCollection", func() {
 		anime.ClearEpisodeCollectionCache()
 	})
 

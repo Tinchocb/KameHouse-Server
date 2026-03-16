@@ -2,11 +2,10 @@ package torrentstream
 
 import (
 	"fmt"
-	"kamehouse/internal/api/anilist"
-	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/hook"
 	"kamehouse/internal/library/anime"
+	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
 	"strconv"
 	"sync"
@@ -52,7 +51,7 @@ func (r *Repository) HydrateStreamCollection(opts *HydrateStreamCollectionOption
 
 	currentlyWatching := make([]*models.MediaEntryListData, 0)
 	for _, entry := range entries {
-		if entry.Status == string(anilist.MediaListStatusCurrent) || entry.Status == string(anilist.MediaListStatusRepeating) {
+		if entry.Status == string(platform.MediaListStatusCurrent) || entry.Status == string(platform.MediaListStatusRepeating) {
 			currentlyWatching = append(currentlyWatching, entry)
 		}
 	}
@@ -103,12 +102,12 @@ func (r *Repository) HydrateStreamCollection(opts *HydrateStreamCollectionOption
 				}
 			}
 
-			if entry.LibraryMedia.Status == string(anilist.MediaStatusNotYetReleased) {
+			if entry.LibraryMedia.Status == string(platform.MediaStatusNotYetReleased) {
 				return
 			}
 
 			// Get the media info
-			animeMetadata, err := opts.MetadataProviderRef.Get().GetAnimeMetadata(metadata.AnilistPlatform, mediaId)
+			animeMetadata, err := opts.MetadataProviderRef.Get().GetAnimeMetadata(mediaId)
 			if err != nil {
 				animeMetadata = anime.NewAnimeMetadataFromEpisodeCount(entry.LibraryMedia, lo.RangeFrom(1, nextEpisodeToWatch))
 			}
@@ -158,7 +157,7 @@ func (r *Repository) HydrateStreamCollection(opts *HydrateStreamCollectionOption
 
 	// Remove anime that are already in the library collection
 	for _, list := range opts.LibraryCollection.Lists {
-		if list.Status == string(anilist.MediaListStatusCurrent) {
+		if list.Status == string(platform.MediaListStatusCurrent) {
 			for _, entry := range list.Entries {
 				libraryAnimeMap[entry.MediaId] = struct{}{}
 				if _, found := animeAdded[entry.MediaId]; found {
@@ -172,7 +171,7 @@ func (r *Repository) HydrateStreamCollection(opts *HydrateStreamCollectionOption
 		if _, found := libraryAnimeMap[int(entry.LibraryMediaID)]; found {
 			continue
 		}
-		if entry.LibraryMedia.Status == string(anilist.MediaStatusNotYetReleased) {
+		if entry.LibraryMedia.Status == string(platform.MediaStatusNotYetReleased) {
 			continue
 		}
 		animeAdded[int(entry.LibraryMediaID)] = entry

@@ -1,8 +1,8 @@
 package debrid_client
 
 import (
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/hook_resolver"
+	"kamehouse/internal/platforms/platform"
 )
 
 // DebridAutoSelectTorrentsFetchedEvent is triggered when the torrents are fetched for auto select.
@@ -26,11 +26,11 @@ type DebridSkipStreamCheckEvent struct {
 // Prevent default to skip the playback.
 type DebridSendStreamToMediaPlayerEvent struct {
 	hook_resolver.Event
-	WindowTitle  string             `json:"windowTitle"`
-	StreamURL    string             `json:"streamURL"`
-	Media        *anilist.BaseAnime `json:"media"`
-	AniDbEpisode string             `json:"aniDbEpisode"`
-	PlaybackType string             `json:"playbackType"`
+	WindowTitle  string                 `json:"windowTitle"`
+	StreamURL    string                 `json:"streamURL"`
+	Media        *platform.UnifiedMedia `json:"media"`
+	AniDbEpisode string                 `json:"aniDbEpisode"`
+	PlaybackType string                 `json:"playbackType"`
 }
 
 // DebridLocalDownloadRequestedEvent is triggered when KameHouse is about to download a debrid torrent locally.

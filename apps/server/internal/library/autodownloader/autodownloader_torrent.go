@@ -2,9 +2,9 @@ package autodownloader
 
 import (
 	"context"
-	"kamehouse/internal/api/anilist"
+	"kamehouse/internal/platforms/platform"
 )
 
-func (ad *AutoDownloader) selectAndDownloadTorrent(ctx context.Context, media *anilist.CompleteAnime, episode int) error {
+func (ad *AutoDownloader) selectAndDownloadTorrent(ctx context.Context, media *platform.UnifiedMedia, episode int) error {
 	return nil
 }

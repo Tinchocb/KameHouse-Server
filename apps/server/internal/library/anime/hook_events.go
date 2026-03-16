@@ -1,11 +1,11 @@
 package anime
 
 import (
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/hook_resolver"
+	"kamehouse/internal/platforms/platform"
 )
 
 /////////////////////////////
@@ -18,9 +18,9 @@ import (
 // If the modified entry is nil, an error will be returned.
 type AnimeEntryRequestedEvent struct {
 	hook_resolver.Event
-	MediaId         int                      `json:"mediaId"`
-	LocalFiles      []*LocalFile             `json:"localFiles"`
-	AnimeCollection *anilist.AnimeCollection `json:"animeCollection"`
+	MediaId         int                         `json:"mediaId"`
+	LocalFiles      []*LocalFile                `json:"localFiles"`
+	AnimeCollection *platform.UnifiedCollection `json:"animeCollection"`
 	// Empty entry object, will be used if the hook prevents the default behavior
 	Entry *Entry `json:"entry"`
 }
@@ -89,8 +89,8 @@ type MissingEpisodesEvent struct {
 // Prevent default to skip the default process and return the modified upcoming episodes.
 type UpcomingEpisodesRequestedEvent struct {
 	hook_resolver.Event
-	AnimeCollection *anilist.AnimeCollection `json:"animeCollection"`
-	LocalFiles      []*LocalFile             `json:"localFiles"`
+	AnimeCollection *platform.UnifiedCollection `json:"animeCollection"`
+	LocalFiles      []*LocalFile                `json:"localFiles"`
 	// Empty upcoming episodes object, will be used if the hook prevents the default behavior
 	UpcomingEpisodes *UpcomingEpisodes `json:"upcomingEpisodes"`
 }
@@ -180,6 +180,6 @@ type AnimeEpisodeCollectionEvent struct {
 // AnimeScheduleItemsEvent is triggered when the schedule items are being returned.
 type AnimeScheduleItemsEvent struct {
 	hook_resolver.Event
-	AnimeCollection *anilist.AnimeCollection `json:"animeCollection"`
-	Items           []*ScheduleItem          `json:"items"`
+	AnimeCollection *platform.UnifiedCollection `json:"animeCollection"`
+	Items           []*ScheduleItem             `json:"items"`
 }

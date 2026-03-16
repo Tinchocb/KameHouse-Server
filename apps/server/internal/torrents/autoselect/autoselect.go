@@ -3,7 +3,6 @@ package autoselect
 import (
 	"context"
 	"fmt"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/models/dto"
 	hibiketorrent "kamehouse/internal/extension/hibike/torrent"
@@ -52,7 +51,7 @@ func New(opts *NewAutoSelectOptions) *AutoSelect {
 	}
 }
 
-func (a *AutoSelect) SelectEpisode(ctx context.Context, media *anilist.CompleteAnime, aniDbEpisode string, episodeNumber int) (interface{}, error) {
+func (a *AutoSelect) SelectEpisode(ctx context.Context, media *platform.UnifiedMedia, aniDbEpisode string, episodeNumber int) (interface{}, error) {
 	return nil, nil
 }
 
@@ -284,7 +283,7 @@ func (a *AutoSelect) filterAndSort(
 func (a *AutoSelect) searchFromProvider(
 	ctx context.Context,
 	providerID string,
-	media *anilist.CompleteAnime,
+	media *platform.UnifiedMedia,
 	episodeNumber int,
 	isBatch bool,
 	profile *dto.AutoSelectProfile,
@@ -305,7 +304,7 @@ func (a *AutoSelect) searchFromProvider(
 func (a *AutoSelect) searchFromProviders(
 	ctx context.Context,
 	providerIDs []string,
-	media *anilist.CompleteAnime,
+	media *platform.UnifiedMedia,
 	episodeNumber int,
 	isBatch bool,
 	profile *dto.AutoSelectProfile,
@@ -316,7 +315,7 @@ func (a *AutoSelect) searchFromProviders(
 // search runs the full search pipeline across providers.
 func (a *AutoSelect) search(
 	ctx context.Context,
-	media *anilist.CompleteAnime,
+	media *platform.UnifiedMedia,
 	episodeNumber int,
 	profile *dto.AutoSelectProfile,
 ) ([]*hibiketorrent.AnimeTorrent, error) {
@@ -324,14 +323,14 @@ func (a *AutoSelect) search(
 }
 
 // shouldSearchBatch returns true if the media is a finished TV series that ended at least 2 weeks ago.
-func (a *AutoSelect) shouldSearchBatch(media *anilist.CompleteAnime) bool {
+func (a *AutoSelect) shouldSearchBatch(media *platform.UnifiedMedia) bool {
 	if media == nil {
 		return false
 	}
-	if media.Format != nil && *media.Format == anilist.MediaFormatMovie {
+	if media.Format == platform.MediaFormatMovie {
 		return false
 	}
-	if media.Status == nil || *media.Status != anilist.MediaStatusFinished {
+	if media.Status != platform.MediaStatusFinished {
 		return false
 	}
 	if media.EndDate == nil || media.EndDate.Year == nil {

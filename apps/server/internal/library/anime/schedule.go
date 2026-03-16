@@ -2,8 +2,8 @@ package anime
 
 import (
 	"fmt"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/hook"
+	"kamehouse/internal/platforms/platform"
 	"time"
 
 	"github.com/samber/lo"
@@ -22,95 +22,50 @@ type ScheduleItem struct {
 	IsSeasonFinale bool      `json:"isSeasonFinale"`
 }
 
-func GetScheduleItems(animeSchedule *anilist.AnimeAiringSchedule, animeCollection *anilist.AnimeCollection) []*ScheduleItem {
-	animeEntryMap := make(map[int]*anilist.AnimeListEntry)
-	for _, list := range animeCollection.MediaListCollection.GetLists() {
-		for _, entry := range list.GetEntries() {
-			// Extension ID check removed
-			/*
-			if customsource.IsExtensionId(entry.Media.GetID()) {
-				continue
-			}
-			*/
-			animeEntryMap[entry.GetMedia().GetID()] = entry
-		}
+func GetScheduleItems(animeSchedule *platform.UnifiedAiringSchedule, animeCollection *platform.UnifiedCollection) []*ScheduleItem {
+	if animeSchedule == nil {
+		return nil
 	}
-
-	type animeScheduleNode interface {
-		GetAiringAt() int
-		GetTimeUntilAiring() int
-		GetEpisode() int
-	}
-
-	type animeScheduleMedia interface {
-		GetMedia() []*anilist.AnimeSchedule
-	}
-
-	formatNodeItem := func(node animeScheduleNode, entry *anilist.AnimeListEntry) *ScheduleItem {
-		t := time.Unix(int64(node.GetAiringAt()), 0)
-		item := &ScheduleItem{
-			MediaId:        entry.GetMedia().GetID(),
-			Title:          *entry.GetMedia().GetTitle().GetUserPreferred(),
-			Time:           t.UTC().Format("15:04"),
-			DateTime:       t.UTC(),
-			Image:          entry.GetMedia().GetCoverImageSafe(),
-			EpisodeNumber:  node.GetEpisode(),
-			IsMovie:        entry.GetMedia().IsMovie(),
-			IsSeasonFinale: false,
-		}
-		if entry.GetMedia().GetTotalEpisodeCount() > 0 && node.GetEpisode() == entry.GetMedia().GetTotalEpisodeCount() {
-			item.IsSeasonFinale = true
-		}
-		return item
-	}
-
-	formatPart := func(m animeScheduleMedia) ([]*ScheduleItem, bool) {
-		if m == nil {
-			return nil, false
-		}
-		ret := make([]*ScheduleItem, 0)
-		for _, m := range m.GetMedia() {
-			entry, ok := animeEntryMap[m.GetID()]
-			if !ok || entry.Status == nil || *entry.Status == anilist.MediaListStatusDropped {
-				continue
-			}
-			for _, n := range m.GetPrevious().GetNodes() {
-				ret = append(ret, formatNodeItem(n, entry))
-			}
-			for _, n := range m.GetUpcoming().GetNodes() {
-				ret = append(ret, formatNodeItem(n, entry))
-			}
-		}
-		return ret, true
-	}
-
-	ongoingItems, _ := formatPart(animeSchedule.GetOngoing())
-	ongoingNextItems, _ := formatPart(animeSchedule.GetOngoingNext())
-	precedingItems, _ := formatPart(animeSchedule.GetPreceding())
-	upcomingItems, _ := formatPart(animeSchedule.GetUpcoming())
-	upcomingNextItems, _ := formatPart(animeSchedule.GetUpcomingNext())
 
 	allItems := make([]*ScheduleItem, 0)
-	allItems = append(allItems, ongoingItems...)
-	allItems = append(allItems, ongoingNextItems...)
-	allItems = append(allItems, precedingItems...)
-	allItems = append(allItems, upcomingItems...)
-	allItems = append(allItems, upcomingNextItems...)
+
+	for _, media := range animeSchedule.Media {
+		if media.NextAiringEpisode == nil {
+			continue
+		}
+
+		entry, found := animeCollection.GetListEntryFromMediaId(media.ID)
+		if found && entry.Status == platform.MediaListStatusDropped {
+			continue
+		}
+
+		t := time.Unix(int64(media.NextAiringEpisode.AiringAt), 0)
+		item := &ScheduleItem{
+			MediaId:        media.ID,
+			Title:          media.GetTitleSafe(),
+			Time:           t.UTC().Format("15:04"),
+			DateTime:       t.UTC(),
+			Image:          media.GetCoverImageSafe(),
+			EpisodeNumber:  media.NextAiringEpisode.Episode,
+			IsMovie:        media.IsMovie(),
+			IsSeasonFinale: false,
+		}
+		if media.Episodes != nil && *media.Episodes > 0 && media.NextAiringEpisode.Episode == *media.Episodes {
+			item.IsSeasonFinale = true
+		}
+		allItems = append(allItems, item)
+	}
 
 	ret := lo.UniqBy(allItems, func(item *ScheduleItem) string {
-		if item == nil {
-			return ""
-		}
-		return fmt.Sprintf("%d-%d-%d", item.MediaId, item.EpisodeNumber, item.DateTime.Unix())
+		return fmt.Sprintf("%d-%d", item.MediaId, item.EpisodeNumber)
 	})
 
-	event := &AnimeScheduleItemsEvent{
-		AnimeCollection: animeCollection,
-		Items:           ret,
-	}
+	event := new(AnimeScheduleItemsEvent)
+	event.AnimeCollection = animeCollection
+	event.Items = ret
 	err := hook.GlobalHookManager.OnAnimeScheduleItems().Trigger(event)
 	if err != nil {
-		return ret
+		return nil
 	}
 
 	return event.Items

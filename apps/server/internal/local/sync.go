@@ -2,13 +2,13 @@ package local
 
 import (
 	"context"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/events"
 	"kamehouse/internal/library/anime"
+	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/result"
 	"sync"
@@ -32,7 +32,7 @@ type (
 	Syncer struct {
 		animeJobQueue chan AnimeTask
 
-		failedAnimeQueue *result.Cache[int, *anilist.AnimeListEntry]
+		failedAnimeQueue *result.Cache[int, *platform.UnifiedCollectionEntry]
 
 		trackedAnimeMap map[int]*TrackedMedia
 
@@ -64,7 +64,7 @@ type (
 func NewQueue(manager *ManagerImpl) *Syncer {
 	ret := &Syncer{
 		animeJobQueue:                make(chan AnimeTask, 100),
-		failedAnimeQueue:             result.NewCache[int, *anilist.AnimeListEntry](),
+		failedAnimeQueue:             result.NewCache[int, *platform.UnifiedCollectionEntry](),
 		shouldUpdateLocalCollections: false,
 		doneUpdatingLocalCollections: make(chan struct{}, 1),
 		manager:                      manager,
@@ -80,6 +80,13 @@ func NewQueue(manager *ManagerImpl) *Syncer {
 	return ret
 }
 
+func (q *Syncer) GetQueueState() QueueState {
+	q.queueStateMu.RLock()
+	defer q.queueStateMu.RUnlock()
+	return q.queueState
+}
+
+
 func (q *Syncer) processAnimeJobs() {
 	for job := range q.animeJobQueue {
 
@@ -87,7 +94,7 @@ func (q *Syncer) processAnimeJobs() {
 		q.queueState.AnimeTasks[job.Diff.AnimeEntry.Media.ID] = &QueueMediaTask{
 			MediaId: job.Diff.AnimeEntry.Media.ID,
 			Image:   job.Diff.AnimeEntry.Media.GetCoverImageSafe(),
-			Title:   job.Diff.AnimeEntry.Media.GetPreferredTitle(),
+			Title:   job.Diff.AnimeEntry.Media.GetTitleSafe(),
 			Type:    "anime",
 		}
 		q.SendQueueStateToClient()
@@ -101,27 +108,9 @@ func (q *Syncer) processAnimeJobs() {
 		q.SendQueueStateToClient()
 		q.queueStateMu.Unlock()
 
-		q.checkAndUpdateLocalCollections()
-	}
-}
-
-// checkAndUpdateLocalCollections will synchronize the local collections once the job queue is emptied.
-func (q *Syncer) checkAndUpdateLocalCollections() {
-	q.mu.Lock()
-	defer q.mu.Unlock()
-
-	// Check if we need to update the local collections
-	if q.shouldUpdateLocalCollections {
-		// Check if both queues are empty
-		if len(q.animeJobQueue) == 0 {
-			// Update the local collections
-			err := q.synchronizeCollections()
-			if err != nil {
-				q.manager.logger.Error().Err(err).Msg("local manager: Failed to synchronize collections")
-			}
-			q.SendQueueStateToClient()
-			q.manager.wsEventManager.SendEvent(events.SyncLocalFinished, nil)
+		if len(q.animeJobQueue) == 0 && q.shouldUpdateLocalCollections {
 			q.shouldUpdateLocalCollections = false
+			_ = q.synchronizeCollections()
 			select {
 			case q.doneUpdatingLocalCollections <- struct{}{}:
 			default:
@@ -130,254 +119,25 @@ func (q *Syncer) checkAndUpdateLocalCollections() {
 	}
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func (q *Syncer) GetQueueState() QueueState {
-	return q.queueState
-}
-
-func (q *Syncer) SendQueueStateToClient() {
-	q.manager.wsEventManager.SendEvent(events.SyncLocalQueueState, q.GetQueueState())
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// synchronizeCollections should be called after the tracked anime & manga snapshots have been updated.
-// The ManagerImpl.animeCollection and ManagerImpl.mangaCollection should be set & up-to-date.
-// Instead of modifying the local collections directly, we create new collections that mirror the remote collections, but with up-to-date data.
-func (q *Syncer) synchronizeCollections() (err error) {
-	defer util.HandlePanicInModuleWithError("sync/synchronizeCollections", &err)
-
-	q.manager.loadTrackedMedia()
-
-	// DEVNOTE: "_" prefix = original/remote collection
-	// We shouldn't modify the remote collection, so making sure we get new pointers
-
-	q.manager.logger.Trace().Msg("local manager: Synchronizing local collections")
-
-	_animeCollection := q.manager.animeCollection.MustGet()
-
-	animeSnapshots, _ := q.manager.localDb.GetAnimeSnapshots()
-	animeSnapshotMap := make(map[int]*AnimeSnapshot)
-	for _, snapshot := range animeSnapshots {
-		animeSnapshotMap[snapshot.MediaId] = snapshot
-	}
-
-	localAnimeCollection := &anilist.AnimeCollection{
-		MediaListCollection: &anilist.AnimeCollection_MediaListCollection{
-			Lists: make([]*anilist.AnimeCollection_MediaListCollection_Lists, 0),
-		},
-	}
-	for _, _animeList := range _animeCollection.MediaListCollection.GetLists() {
-		localAnimeCollection.MediaListCollection.Lists = append(localAnimeCollection.MediaListCollection.Lists, &anilist.AnimeCollection_MediaListCollection_Lists{
-			Status:  _animeList.GetStatus(),
-			Entries: make([]*anilist.AnimeListEntry, 0),
-		})
-	}
-
-	if len(animeSnapshots) > 0 {
-		// Create local anime collection
-		for _, _animeList := range _animeCollection.MediaListCollection.GetLists() {
-			if _animeList.GetStatus() == nil {
-				continue
-			}
-			for _, _animeEntry := range _animeList.GetEntries() {
-				// Check if the anime is tracked
-				_, found := q.trackedAnimeMap[_animeEntry.GetMedia().GetID()]
-				if !found {
-					continue
-				}
-				// Get the anime snapshot
-				snapshot, found := animeSnapshotMap[_animeEntry.GetMedia().GetID()]
-				if !found {
-					continue
-				}
-
-				// Add the anime to the right list
-				for _, list := range localAnimeCollection.MediaListCollection.GetLists() {
-					if list.GetStatus() == nil {
-						continue
-					}
-
-					if *list.GetStatus() != *_animeList.GetStatus() {
-						continue
-					}
-
-					editedAnime := BaseAnimeDeepCopy(_animeEntry.GetMedia())
-					editedAnime.BannerImage = FormatAssetUrl(snapshot.MediaId, snapshot.BannerImagePath)
-					editedAnime.CoverImage = &anilist.BaseAnime_CoverImage{
-						ExtraLarge: FormatAssetUrl(snapshot.MediaId, snapshot.CoverImagePath),
-						Large:      FormatAssetUrl(snapshot.MediaId, snapshot.CoverImagePath),
-						Medium:     FormatAssetUrl(snapshot.MediaId, snapshot.CoverImagePath),
-						Color:      FormatAssetUrl(snapshot.MediaId, snapshot.CoverImagePath),
-					}
-
-					var startedAt *anilist.AnimeCollection_MediaListCollection_Lists_Entries_StartedAt
-					if _animeEntry.GetStartedAt() != nil {
-						startedAt = &anilist.AnimeCollection_MediaListCollection_Lists_Entries_StartedAt{
-							Year:  ToNewPointer(_animeEntry.GetStartedAt().GetYear()),
-							Month: ToNewPointer(_animeEntry.GetStartedAt().GetMonth()),
-							Day:   ToNewPointer(_animeEntry.GetStartedAt().GetDay()),
-						}
-					}
-
-					var completedAt *anilist.AnimeCollection_MediaListCollection_Lists_Entries_CompletedAt
-					if _animeEntry.GetCompletedAt() != nil {
-						completedAt = &anilist.AnimeCollection_MediaListCollection_Lists_Entries_CompletedAt{
-							Year:  ToNewPointer(_animeEntry.GetCompletedAt().GetYear()),
-							Month: ToNewPointer(_animeEntry.GetCompletedAt().GetMonth()),
-							Day:   ToNewPointer(_animeEntry.GetCompletedAt().GetDay()),
-						}
-					}
-
-					entry := &anilist.AnimeListEntry{
-						ID:          _animeEntry.GetID(),
-						Score:       ToNewPointer(_animeEntry.GetScore()),
-						Progress:    ToNewPointer(_animeEntry.GetProgress()),
-						Status:      ToNewPointer(_animeEntry.GetStatus()),
-						Notes:       ToNewPointer(_animeEntry.GetNotes()),
-						Repeat:      ToNewPointer(_animeEntry.GetRepeat()),
-						Private:     ToNewPointer(_animeEntry.GetPrivate()),
-						StartedAt:   startedAt,
-						CompletedAt: completedAt,
-						Media:       editedAnime,
-					}
-					list.Entries = append(list.Entries, entry)
-					break
-				}
-
-			}
-		}
-	}
-
-	return nil
-}
-
-func (q *Syncer) sendAnimeToFailedQueue(entry *anilist.AnimeListEntry) {
-	if entry == nil || entry.Media == nil {
-		return
-	}
-	q.failedAnimeQueue.Set(entry.Media.ID, entry)
-}
-//----------------------------------------------------------------------------------------------------------------------------------------------------
-
-func (q *Syncer) refreshCollections() {
-
-	q.manager.logger.Trace().Msg("local manager: Refreshing collections")
-
-	if len(q.animeJobQueue) > 0 {
-		q.manager.logger.Trace().Msg("local manager: Skipping refreshCollections, job queues are not empty")
-		return
-	}
-
-	q.shouldUpdateLocalCollections = true
-	q.checkAndUpdateLocalCollections()
-}
-
-// runDiffs runs the diffing process to find outdated anime & manga.
-// The diffs are then added to the job queues for synchronization.
-func (q *Syncer) runDiffs(
-	trackedAnimeMap map[int]*TrackedMedia,
-	trackedAnimeSnapshotMap map[int]*AnimeSnapshot,
-	localFiles []*dto.LocalFile,
-) {
-	q.mu.Lock()
-	defer q.mu.Unlock()
-
-	q.manager.logger.Trace().Msg("local manager: Running diffs")
-
-	if q.manager.animeCollection.IsAbsent() {
-		q.manager.logger.Error().Msg("local manager: Cannot get diffs, anime collection is absent")
-		return
-	}
-
-	if len(q.animeJobQueue) > 0 {
-		q.manager.logger.Trace().Msg("local manager: Skipping diffs, job queues are not empty")
-		return
-	}
-
-	diff := &Diff{
-		Logger: q.manager.logger,
-	}
-
-	wg := sync.WaitGroup{}
-	wg.Add(2)
-
-	var animeDiffs map[int]*AnimeDiffResult
-
-	go func() {
-		animeDiffs = diff.GetAnimeDiffs(GetAnimeDiffOptions{
-			Collection:      q.manager.animeCollection.MustGet(),
-			LocalCollection: q.manager.localAnimeCollection,
-			LocalFiles:      localFiles,
-			TrackedAnime:    trackedAnimeMap,
-			Snapshots:       trackedAnimeSnapshotMap,
-		})
-		wg.Done()
-		//q.manager.logger.Trace().Msg("local manager: Finished getting anime diffs")
-	}()
-
-	wg.Wait()
-
-	// Add the diffs to be synced asynchronously
-	go func() {
-		q.manager.logger.Trace().Int("animeJobs", len(animeDiffs)).Msg("local manager: Adding diffs to the job queues")
-
-		for _, i := range animeDiffs {
-			q.animeJobQueue <- AnimeTask{Diff: i}
-		}
-
-		if len(animeDiffs) == 0 {
-			q.manager.logger.Trace().Msg("local manager: No diffs found")
-			//q.refreshCollections()
-		}
-	}()
-
-	// Done
-	q.manager.logger.Trace().Msg("local manager: Done running diffs")
-}
-
-//----------------------------------------------------------------------------------------------------------------------------------------------------
-
-// synchronizeAnime creates or updates the anime snapshot in the local database.
-// The anime should be tracked.
-//   - If the anime has no local files, it will be removed entirely from the local database.
-//   - If the anime has local files, we create or update the snapshot.
 func (q *Syncer) synchronizeAnime(diff *AnimeDiffResult) {
-	defer util.HandlePanicInModuleThen("sync/synchronizeAnime", func() {})
-
 	entry := diff.AnimeEntry
-
-	if entry == nil {
-		return
-	}
-
-	q.manager.logger.Trace().Msgf("local manager: Starting synchronization of anime %d, diff type: %+v", entry.Media.ID, diff.DiffType)
-
-	lfs := lo.Filter(q.manager.localFiles, func(f *dto.LocalFile, _ int) bool {
-		return f.MediaId == entry.Media.ID
+	lfs := lo.Filter(q.manager.localFiles, func(lf *dto.LocalFile, _ int) bool {
+		return lf.MediaId == entry.Media.ID
 	})
-
-	// If the anime (which is tracked) has no local files, remove it entirely from the local database
-	if len(lfs) == 0 {
-		q.manager.logger.Warn().Msgf("local manager: No local files found for anime %d, removing from the local database", entry.Media.ID)
-		_ = q.manager.removeAnime(entry.Media.ID)
-		return
-	}
 
 	var animeMetadata *metadata.AnimeMetadata
 	var metadataWrapper metadata_provider.AnimeMetadataWrapper
 	if diff.DiffType == DiffTypeMissing || diff.DiffType == DiffTypeMetadata {
 		// Get the anime metadata
 		var err error
-		animeMetadata, err = q.manager.metadataProviderRef.Get().GetAnimeMetadata(metadata.AnilistPlatform, entry.Media.ID)
+		animeMetadata, err = q.manager.metadataProviderRef.Get().GetAnimeMetadata(entry.Media.ID)
 		if err != nil {
 			// If the anime metadata doesn't exist, create a fake one
 			simpleEntry, err := anime.NewSimpleEntry(context.Background(), &anime.NewSimpleAnimeEntryOptions{
 				MediaId:             entry.Media.ID,
 				LocalFiles:          lfs,
 				Database:            nil,
-				PlatformRef:         q.manager.anilistPlatformRef,
+				PlatformRef:         q.manager.platformRef,
 				MetadataProviderRef: q.manager.metadataProviderRef,
 			})
 			if err != nil {
@@ -388,8 +148,7 @@ func (q *Syncer) synchronizeAnime(diff *AnimeDiffResult) {
 
 			animeMetadata = anime.NewAnimeMetadataFromEntry(models.ToLibraryMedia(entry.Media), simpleEntry.Episodes)
 		}
-
-		metadataWrapper = q.manager.metadataProviderRef.Get().GetAnimeMetadataWrapper(diff.AnimeEntry.Media, animeMetadata)
+		metadataWrapper = q.manager.metadataProviderRef.Get().GetAnimeMetadataWrapper(entry.Media, animeMetadata)
 	}
 
 	//
@@ -404,19 +163,19 @@ func (q *Syncer) synchronizeAnime(diff *AnimeDiffResult) {
 
 		// Create a new snapshot
 		snapshot := &AnimeSnapshot{
-			MediaId:           entry.GetMedia().GetID(),
+			MediaId:           entry.Media.ID,
 			AnimeMetadata:     LocalAnimeMetadata(*animeMetadata),
 			BannerImagePath:   bannerImage,
 			CoverImagePath:    coverImage,
 			EpisodeImagePaths: episodeImagePaths,
-			ReferenceKey:      GetAnimeReferenceKey(entry.GetMedia(), q.manager.localFiles),
+			ReferenceKey:      GetAnimeReferenceKey(entry.Media, q.manager.localFiles),
 		}
 
 		// Save the snapshot
 		err := q.manager.localDb.SaveAnimeSnapshot(snapshot)
 		if err != nil {
 			q.sendAnimeToFailedQueue(entry)
-			q.manager.logger.Error().Err(err).Msgf("local manager: Failed to save anime snapshot for anime %d", entry.GetMedia().GetID())
+			q.manager.logger.Error().Err(err).Msgf("local manager: Failed to save anime snapshot for anime %d", entry.Media.ID)
 		}
 		return
 	}
@@ -429,7 +188,7 @@ func (q *Syncer) synchronizeAnime(diff *AnimeDiffResult) {
 
 		snapshot := *diff.AnimeSnapshot
 		snapshot.AnimeMetadata = LocalAnimeMetadata(*animeMetadata)
-		snapshot.ReferenceKey = GetAnimeReferenceKey(entry.GetMedia(), q.manager.localFiles)
+		snapshot.ReferenceKey = GetAnimeReferenceKey(entry.Media, q.manager.localFiles)
 
 		lfMap := make(map[string]*dto.LocalFile)
 		for _, lf := range lfs {
@@ -461,7 +220,7 @@ func (q *Syncer) synchronizeAnime(diff *AnimeDiffResult) {
 		// Download the episode images if needed
 		if len(episodeImageUrlsToDownload) > 0 {
 			// Download only the episode images that we need to download
-			episodeImagePaths, ok := DownloadAnimeEpisodeImages(q.manager.logger, q.manager.localAssetsDir, entry.GetMedia().GetID(), episodeImageUrlsToDownload)
+			episodeImagePaths, ok := DownloadAnimeEpisodeImages(q.manager.logger, q.manager.localAssetsDir, entry.Media.ID, episodeImageUrlsToDownload)
 			if !ok {
 				// DownloadAnimeEpisodeImages will log the error
 				q.sendAnimeToFailedQueue(entry)
@@ -477,11 +236,105 @@ func (q *Syncer) synchronizeAnime(diff *AnimeDiffResult) {
 		err := q.manager.localDb.SaveAnimeSnapshot(&snapshot)
 		if err != nil {
 			q.sendAnimeToFailedQueue(entry)
-			q.manager.logger.Error().Err(err).Msgf("local manager: Failed to save anime snapshot for anime %d", entry.GetMedia().GetID())
+			q.manager.logger.Error().Err(err).Msgf("local manager: Failed to save anime snapshot for anime %d", entry.Media.ID)
 		}
 		return
 	}
+}
 
-	// The snapshot is up-to-date
-	return
+func (q *Syncer) synchronizeCollections() (err error) {
+	defer util.HandlePanicInModuleWithError("sync/synchronizeCollections", &err)
+
+	q.manager.loadTrackedMedia()
+
+	// DEVNOTE: "_" prefix = original/remote collection
+	// We shouldn't modify the remote collection, so making sure we get new pointers
+
+	q.manager.logger.Trace().Msg("local manager: Synchronizing local collections")
+
+	_animeCollection := q.manager.animeCollection.MustGet()
+
+	animeSnapshots, _ := q.manager.localDb.GetAnimeSnapshots()
+	animeSnapshotMap := make(map[int]*AnimeSnapshot)
+	for _, snapshot := range animeSnapshots {
+		animeSnapshotMap[snapshot.MediaId] = snapshot
+	}
+
+	localAnimeCollection := &platform.UnifiedCollection{
+		Lists: make([]*platform.UnifiedCollectionList, 0),
+	}
+	for _, _animeList := range _animeCollection.Lists {
+		localAnimeCollection.Lists = append(localAnimeCollection.Lists, &platform.UnifiedCollectionList{
+			Status:  _animeList.Status,
+			Entries: make([]*platform.UnifiedCollectionEntry, 0),
+		})
+	}
+
+	if len(animeSnapshots) > 0 {
+		// Create local anime collection
+		for _, _animeList := range _animeCollection.Lists {
+			for _, _animeEntry := range _animeList.Entries {
+				// Check if the anime is tracked
+				_, found := q.trackedAnimeMap[_animeEntry.Media.ID]
+				if !found {
+					continue
+				}
+				// Get the anime snapshot
+				snapshot, found := animeSnapshotMap[_animeEntry.Media.ID]
+				if !found {
+					continue
+				}
+
+				// Add the anime to the right list
+				for _, list := range localAnimeCollection.Lists {
+					if list.Status == _animeList.Status {
+						// Create a new entry and modify it with local snapshot data
+						entry := *_animeEntry
+						entry.Media = _animeEntry.Media // We keep the media pointer
+						entry.Media.Episodes = lo.ToPtr(snapshot.AnimeMetadata.EpisodeCount)
+
+						list.Entries = append(list.Entries, &entry)
+						break
+					}
+				}
+			}
+		}
+	}
+
+	q.manager.UpdateLocalAnimeCollection(localAnimeCollection)
+
+	return nil
+}
+
+func (q *Syncer) SendQueueStateToClient() {
+	q.queueStateMu.RLock()
+	defer q.queueStateMu.RUnlock()
+	q.manager.wsEventManager.SendEvent(events.LocalGetSyncQueueStateEndpoint, q.queueState)
+}
+ 
+func (q *Syncer) runDiffs(trackedAnimeMap map[int]*TrackedMedia, animeSnapshotMap map[int]*AnimeSnapshot, localFiles []*dto.LocalFile) {
+	q.mu.Lock()
+	q.trackedAnimeMap = trackedAnimeMap
+	q.mu.Unlock()
+ 
+	diff := &Diff{Logger: q.manager.logger}
+	animeDiffs := diff.GetAnimeDiffs(GetAnimeDiffOptions{
+		Collection:      q.manager.animeCollection.MustGet(),
+		LocalCollection: q.manager.localAnimeCollection,
+		LocalFiles:      localFiles,
+		TrackedAnime:    trackedAnimeMap,
+		Snapshots:       animeSnapshotMap,
+	})
+ 
+	for _, d := range animeDiffs {
+		q.animeJobQueue <- AnimeTask{Diff: d}
+	}
+}
+ 
+func (q *Syncer) refreshCollections() {
+	_ = q.synchronizeCollections()
+}
+
+func (q *Syncer) sendAnimeToFailedQueue(entry *platform.UnifiedCollectionEntry) {
+	q.failedAnimeQueue.Set(entry.Media.ID, entry)
 }

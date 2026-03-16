@@ -2,7 +2,6 @@ package library_explorer
 
 import (
 	"fmt"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
@@ -13,7 +12,7 @@ import (
 
 type LibraryExplorer struct {
 	mu              sync.RWMutex
-	animeCollection *anilist.AnimeCollection
+	animeCollection *platform.UnifiedCollection
 	platformRef     *util.Ref[platform.Platform]
 	libraryPaths    []string
 	logger          *zerolog.Logger
@@ -37,7 +36,7 @@ func NewLibraryExplorer(opts NewLibraryExplorerOptions) *LibraryExplorer {
 	}
 }
 
-func (l *LibraryExplorer) SetAnimeCollection(collection *anilist.AnimeCollection) {
+func (l *LibraryExplorer) SetAnimeCollection(collection *platform.UnifiedCollection) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.animeCollection = collection

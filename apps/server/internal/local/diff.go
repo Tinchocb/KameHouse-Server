@@ -2,8 +2,8 @@ package local
 
 import (
 	"fmt"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/database/models/dto"
+	"kamehouse/internal/platforms/platform"
 	"slices"
 	"strings"
 
@@ -35,15 +35,15 @@ type (
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 
 type GetAnimeDiffOptions struct {
-	Collection      *anilist.AnimeCollection
-	LocalCollection mo.Option[*anilist.AnimeCollection]
+	Collection      *platform.UnifiedCollection
+	LocalCollection mo.Option[*platform.UnifiedCollection]
 	LocalFiles      []*dto.LocalFile
 	TrackedAnime    map[int]*TrackedMedia
 	Snapshots       map[int]*AnimeSnapshot
 }
 
 type AnimeDiffResult struct {
-	AnimeEntry    *anilist.AnimeListEntry
+	AnimeEntry    *platform.UnifiedCollectionEntry
 	AnimeSnapshot *AnimeSnapshot
 	DiffType      DiffType
 }
@@ -61,24 +61,24 @@ func (d *Diff) GetAnimeDiffs(opts GetAnimeDiffOptions) map[int]*AnimeDiffResult 
 
 	changedMap := make(map[int]*AnimeDiffResult)
 
-	if len(collection.MediaListCollection.Lists) == 0 || len(trackedAnimeMap) == 0 {
+	if len(collection.Lists) == 0 || len(trackedAnimeMap) == 0 {
 		return changedMap
 	}
 
-	for _, _list := range collection.MediaListCollection.Lists {
-		if _list.GetStatus() == nil || _list.GetEntries() == nil {
+	for _, _list := range collection.Lists {
+		if _list.Entries == nil {
 			continue
 		}
-		for _, _entry := range _list.GetEntries() {
+		for _, _entry := range _list.Entries {
 			// Check if the anime is tracked
-			_, isTracked := trackedAnimeMap[_entry.GetMedia().GetID()]
+			_, isTracked := trackedAnimeMap[_entry.Media.ID]
 			if !isTracked {
 				continue
 			}
 
 			if localCollection.IsAbsent() {
-				d.Logger.Trace().Msgf("local manager: Diff > Anime %d, local collection is missing", _entry.GetMedia().GetID())
-				changedMap[_entry.GetMedia().GetID()] = &AnimeDiffResult{
+				d.Logger.Trace().Msgf("local manager: Diff > Anime %d, local collection is missing", _entry.Media.ID)
+				changedMap[_entry.Media.ID] = &AnimeDiffResult{
 					AnimeEntry: _entry,
 					DiffType:   DiffTypeMissing,
 				}
@@ -86,10 +86,10 @@ func (d *Diff) GetAnimeDiffs(opts GetAnimeDiffOptions) map[int]*AnimeDiffResult 
 			}
 
 			// Check if the anime has a snapshot
-			snapshot, hasSnapshot := snapshotMap[_entry.GetMedia().GetID()]
+			snapshot, hasSnapshot := snapshotMap[_entry.Media.ID]
 			if !hasSnapshot {
-				d.Logger.Trace().Msgf("local manager: Diff > Anime %d is missing a snapshot", _entry.GetMedia().GetID())
-				changedMap[_entry.GetMedia().GetID()] = &AnimeDiffResult{
+				d.Logger.Trace().Msgf("local manager: Diff > Anime %d is missing a snapshot", _entry.Media.ID)
+				changedMap[_entry.Media.ID] = &AnimeDiffResult{
 					AnimeEntry: _entry,
 					DiffType:   DiffTypeMissing,
 				}
@@ -97,16 +97,16 @@ func (d *Diff) GetAnimeDiffs(opts GetAnimeDiffOptions) map[int]*AnimeDiffResult 
 			}
 
 			_lfs := lo.Filter(opts.LocalFiles, func(lf *dto.LocalFile, _ int) bool {
-				return lf.MediaId == _entry.GetMedia().GetID()
+				return lf.MediaId == _entry.Media.ID
 			})
 
 			// Check if the anime has changed
 			_referenceKey := GetAnimeReferenceKey(_entry.Media, _lfs)
 
 			// Check if the reference key is different
-			if snapshotMap[_entry.GetMedia().GetID()].ReferenceKey != _referenceKey {
-				d.Logger.Trace().Str("localReferenceKey", snapshotMap[_entry.GetMedia().GetID()].ReferenceKey).Str("currentReferenceKey", _referenceKey).Msgf("local manager: Diff > Anime %d has an outdated snapshot", _entry.GetMedia().GetID())
-				changedMap[_entry.GetMedia().GetID()] = &AnimeDiffResult{
+			if snapshotMap[_entry.Media.ID].ReferenceKey != _referenceKey {
+				d.Logger.Trace().Str("localReferenceKey", snapshotMap[_entry.Media.ID].ReferenceKey).Str("currentReferenceKey", _referenceKey).Msgf("local manager: Diff > Anime %d has an outdated snapshot", _entry.Media.ID)
+				changedMap[_entry.Media.ID] = &AnimeDiffResult{
 					AnimeEntry:    _entry,
 					AnimeSnapshot: snapshot,
 					DiffType:      DiffTypeMetadata,
@@ -114,10 +114,10 @@ func (d *Diff) GetAnimeDiffs(opts GetAnimeDiffOptions) map[int]*AnimeDiffResult 
 				continue // Go to the next anime
 			}
 
-			localEntry, found := localCollection.MustGet().GetListEntryFromAnimeId(_entry.GetMedia().GetID())
+			localEntry, found := localCollection.MustGet().GetListEntryFromMediaId(_entry.Media.ID)
 			if !found {
-				d.Logger.Trace().Msgf("local manager: Diff > Anime %d is missing from the local collection", _entry.GetMedia().GetID())
-				changedMap[_entry.GetMedia().GetID()] = &AnimeDiffResult{
+				d.Logger.Trace().Msgf("local manager: Diff > Anime %d is missing from the local collection", _entry.Media.ID)
+				changedMap[_entry.Media.ID] = &AnimeDiffResult{
 					AnimeEntry:    _entry,
 					AnimeSnapshot: snapshot,
 					DiffType:      DiffTypeMissing,
@@ -130,8 +130,8 @@ func (d *Diff) GetAnimeDiffs(opts GetAnimeDiffOptions) map[int]*AnimeDiffResult 
 			localListDataKey := GetAnimeListDataKey(localEntry)
 
 			if _listDataKey != localListDataKey {
-				d.Logger.Trace().Str("localListDataKey", localListDataKey).Str("currentListDataKey", _listDataKey).Msgf("local manager: Diff > Anime %d has changed list data", _entry.GetMedia().GetID())
-				changedMap[_entry.GetMedia().GetID()] = &AnimeDiffResult{
+				d.Logger.Trace().Str("localListDataKey", localListDataKey).Str("currentListDataKey", _listDataKey).Msgf("local manager: Diff > Anime %d has changed list data", _entry.Media.ID)
+				changedMap[_entry.Media.ID] = &AnimeDiffResult{
 					AnimeEntry:    _entry,
 					AnimeSnapshot: snapshot,
 					DiffType:      DiffTypeListData,
@@ -147,7 +147,7 @@ func (d *Diff) GetAnimeDiffs(opts GetAnimeDiffOptions) map[int]*AnimeDiffResult 
 
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 
-func GetAnimeReferenceKey(bAnime *anilist.BaseAnime, lfs []*dto.LocalFile) string {
+func GetAnimeReferenceKey(bAnime *platform.UnifiedMedia, lfs []*dto.LocalFile) string {
 	// Reference key is used to compare the snapshot with the current data.
 	// If the reference key is different, the snapshot is outdated.
 	animeLfs := lo.Filter(lfs, func(lf *dto.LocalFile, _ int) bool {
@@ -163,17 +163,47 @@ func GetAnimeReferenceKey(bAnime *anilist.BaseAnime, lfs []*dto.LocalFile) strin
 	return fmt.Sprintf("%d-%s", bAnime.ID, strings.Join(paths, ","))
 }
 
-func GetAnimeListDataKey(entry *anilist.AnimeListEntry) string {
+func GetAnimeListDataKey(entry *platform.UnifiedCollectionEntry) string {
+	startedYear := 0
+	startedMonth := 0
+	startedDay := 0
+	if entry.StartedAt != nil {
+		if entry.StartedAt.Year != nil {
+			startedYear = *entry.StartedAt.Year
+		}
+		if entry.StartedAt.Month != nil {
+			startedMonth = *entry.StartedAt.Month
+		}
+		if entry.StartedAt.Day != nil {
+			startedDay = *entry.StartedAt.Day
+		}
+	}
+
+	completedYear := 0
+	completedMonth := 0
+	completedDay := 0
+	if entry.CompletedAt != nil {
+		if entry.CompletedAt.Year != nil {
+			completedYear = *entry.CompletedAt.Year
+		}
+		if entry.CompletedAt.Month != nil {
+			completedMonth = *entry.CompletedAt.Month
+		}
+		if entry.CompletedAt.Day != nil {
+			completedDay = *entry.CompletedAt.Day
+		}
+	}
+
 	return fmt.Sprintf("%s-%d-%f-%d-%v-%v-%v-%v-%v-%v",
-		MediaListStatusPointerValue(entry.GetStatus()),
-		IntPointerValue(entry.GetProgress()),
-		Float64PointerValue(entry.GetScore()),
-		IntPointerValue(entry.GetRepeat()),
-		IntPointerValue(entry.GetStartedAt().GetYear()),
-		IntPointerValue(entry.GetStartedAt().GetMonth()),
-		IntPointerValue(entry.GetStartedAt().GetDay()),
-		IntPointerValue(entry.GetCompletedAt().GetYear()),
-		IntPointerValue(entry.GetCompletedAt().GetMonth()),
-		IntPointerValue(entry.GetCompletedAt().GetDay()),
+		entry.Status,
+		entry.Progress,
+		entry.Score,
+		entry.Repeat,
+		startedYear,
+		startedMonth,
+		startedDay,
+		completedYear,
+		completedMonth,
+		completedDay,
 	)
 }

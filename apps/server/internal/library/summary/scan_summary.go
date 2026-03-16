@@ -2,8 +2,8 @@ package summary
 
 import (
 	"fmt"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/database/models/dto"
+	"kamehouse/internal/platforms/platform"
 
 	"github.com/google/uuid"
 )
@@ -35,7 +35,7 @@ type (
 		Logs            []*dto.ScanSummaryLog
 		LocalFiles      []*dto.LocalFile
 		AllMedia        []*dto.NormalizedMedia
-		AnimeCollection *anilist.AnimeCollectionWithRelations
+		AnimeCollection *platform.UnifiedCollection
 	}
 )
 
@@ -46,7 +46,7 @@ func NewScanSummaryLogger() *ScanSummaryLogger {
 }
 
 // HydrateData will hydrate the data needed to generate the summary.
-func (l *ScanSummaryLogger) HydrateData(lfs []*dto.LocalFile, media []*dto.NormalizedMedia, animeCollection *anilist.AnimeCollectionWithRelations) {
+func (l *ScanSummaryLogger) HydrateData(lfs []*dto.LocalFile, media []*dto.NormalizedMedia, animeCollection *platform.UnifiedCollection) {
 	l.LocalFiles = lfs
 	l.AllMedia = media
 	l.AnimeCollection = animeCollection

@@ -2,13 +2,12 @@ package torrent_analyzer
 
 import (
 	"errors"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/models/dto"
+	"kamehouse/internal/library/anime"
 	"kamehouse/internal/library/scanner"
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
-	"kamehouse/internal/util/limiter"
 	"path/filepath"
 
 	"github.com/rs/zerolog"
@@ -20,7 +19,7 @@ type (
 	// i.e. torrent files instead of local files.
 	Analyzer struct {
 		files               []*File
-		media               *anilist.CompleteAnime
+		media               *platform.UnifiedMedia
 		platformRef         *util.Ref[platform.Platform]
 		logger              *zerolog.Logger
 		metadataProviderRef *util.Ref[metadata_provider.Provider]
@@ -31,7 +30,7 @@ type (
 	Analysis struct {
 		files         []*File // Hydrated after scanFiles is called
 		selectedFiles []*File // Hydrated after findCorrespondingFiles is called
-		media         *anilist.CompleteAnime
+		media         *platform.UnifiedMedia
 	}
 
 	// File represents a torrent file and contains its metadata.
@@ -46,7 +45,7 @@ type (
 	NewAnalyzerOptions struct {
 		Logger              *zerolog.Logger
 		Filepaths           []string               // Filepath of the torrent files
-		Media               *anilist.CompleteAnime // The media to compare the files with
+		Media               *platform.UnifiedMedia // The media to compare the files with
 		PlatformRef         *util.Ref[platform.Platform]
 		MetadataProviderRef *util.Ref[metadata_provider.Provider]
 		// This basically skips the matching process and forces the media ID to be set.
@@ -200,24 +199,17 @@ func (f *File) GetPath() string {
 // scanFiles scans the files and matches them with the media.
 func (a *Analyzer) scanFiles() error {
 
-	completeAnimeCache := anilist.NewCompleteAnimeCache()
-	anilistRateLimiter := limiter.NewAnilistLimiter()
-
 	lfs := a.getLocalFiles() // Extract local files from the Files
 
 	// +---------------------+
 	// |   MediaContainer    |
 	// +---------------------+
 
-	tree := anilist.NewCompleteAnimeRelationTree()
-	if err := a.media.FetchMediaTree(anilist.FetchMediaTreeAll, a.platformRef.Get().GetAnilistClient(), anilistRateLimiter, tree, completeAnimeCache); err != nil {
-		return err
-	}
-
-	allMedia := tree.Values()
+	normalizedMedia := anime.NewNormalizedMedia(a.media)
+	allMedia := []*dto.NormalizedMedia{normalizedMedia}
 
 	mc := scanner.NewMediaContainer(&scanner.MediaContainerOptions{
-		AllMedia: scanner.NormalizedMediaFromAnilistComplete(allMedia),
+		AllMedia: allMedia,
 	})
 
 	//scanLogger, _ := scanner.NewScanLogger("./logs")
@@ -239,7 +231,7 @@ func (a *Analyzer) scanFiles() error {
 
 	if a.forceMatch {
 		for _, lf := range lfs {
-			lf.MediaId = a.media.GetID()
+			lf.MediaId = a.media.ID
 		}
 	}
 
@@ -250,20 +242,19 @@ func (a *Analyzer) scanFiles() error {
 	fh := &scanner.FileHydrator{
 		LocalFiles:          lfs,
 		AllMedia:            mc.NormalizedMedia,
-		CompleteAnimeCache:  completeAnimeCache,
 		PlatformRef:         a.platformRef,
 		MetadataProviderRef: a.metadataProviderRef,
-		AnilistRateLimiter:  anilistRateLimiter,
-		Logger:              a.logger,
-		ScanLogger:          nil,
-		ScanSummaryLogger:   nil,
-		ForceMediaId:        map[bool]int{true: a.media.GetID(), false: 0}[a.forceMatch],
+		Logger:              util.NewLogger(),
 	}
 
 	fh.HydrateMetadata()
 
-	for _, af := range a.files {
-		for _, lf := range lfs {
+	// +---------------------+
+	// |    Map to Files     |
+	// +---------------------+
+
+	for _, lf := range lfs {
+		for _, af := range a.files {
 			if lf.Path == af.localFile.Path {
 				af.localFile = lf // Update the local file in the File
 				break

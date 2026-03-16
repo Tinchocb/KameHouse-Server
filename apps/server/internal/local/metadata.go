@@ -3,6 +3,7 @@ package local
 import (
 	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/api/metadata_provider"
+	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util/result"
 
 	"github.com/pkg/errors"
@@ -57,7 +58,7 @@ func (mp *OfflineMetadataProvider) loadAnimeSnapshots() {
 	}
 }
 
-func (mp *OfflineMetadataProvider) GetAnimeMetadata(platform metadata.Platform, mId int) (*metadata.AnimeMetadata, error) {
+func (mp *OfflineMetadataProvider) GetAnimeMetadata(mId int) (*metadata.AnimeMetadata, error) {
 	if snapshot, ok := mp.animeSnapshots[mId]; ok {
 		localAnimeMetadata := snapshot.AnimeMetadata
 		for _, episode := range localAnimeMetadata.Episodes {
@@ -82,9 +83,9 @@ func (mp *OfflineMetadataProvider) GetCache() *result.BoundedCache[string, *meta
 	return mp.animeMetadataCache
 }
 
-func (mp *OfflineMetadataProvider) GetAnimeMetadataWrapper(anime interface{}, metadata *metadata.AnimeMetadata) metadata_provider.AnimeMetadataWrapper {
+func (mp *OfflineMetadataProvider) GetAnimeMetadataWrapper(baseAnime *platform.UnifiedMedia, metadata *metadata.AnimeMetadata) metadata_provider.AnimeMetadataWrapper {
 	return &OfflineAnimeMetadataWrapper{
-		anime:    anime,
+		anime:    baseAnime,
 		metadata: metadata,
 	}
 }

@@ -2,7 +2,6 @@ package torrentstream
 
 import (
 	"context"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
@@ -103,7 +102,7 @@ func (r *Repository) GetStatus() string {
 	return "stopped"
 }
 
-func (r *Repository) PlayTorrent(ctx context.Context, media *anilist.CompleteAnime, episode int, torrent interface{}) error {
+func (r *Repository) PlayTorrent(ctx context.Context, media *platform.UnifiedMedia, episode int, torrent interface{}) error {
 	return nil
 }
 

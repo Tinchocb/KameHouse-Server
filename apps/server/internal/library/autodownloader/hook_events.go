@@ -1,7 +1,6 @@
 package autodownloader
 
 import (
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/hook_resolver"
@@ -29,7 +28,7 @@ type AutoDownloaderMatchVerifiedEvent struct {
 	// Fetched torrent
 	Torrent    *NormalizedTorrent           `json:"torrent"`
 	Rule       *dto.AutoDownloaderRule      `json:"rule"`
-	ListEntry  *anilist.AnimeListEntry      `json:"listEntry"`
+	ListEntry  interface{}                  `json:"listEntry"`
 	LocalEntry *anime.LocalFileWrapperEntry `json:"localEntry"`
 	// The episode number found for the match
 	// If the match failed, this will be 0

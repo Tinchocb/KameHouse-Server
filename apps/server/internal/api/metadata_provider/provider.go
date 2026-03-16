@@ -1,15 +1,15 @@
 package metadata_provider
 
 import (
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/database/db"
+	"kamehouse/internal/platforms/platform"
 	"testing"
 )
 
 type Provider interface {
-	GetAnimeMetadata(platform metadata.Platform, id int) (*metadata.AnimeMetadata, error)
-	GetAnimeMetadataWrapper(baseAnime *anilist.BaseAnime, animeMetadata *metadata.AnimeMetadata) AnimeMetadataWrapper
+	GetAnimeMetadata(id int) (*metadata.AnimeMetadata, error)
+	GetAnimeMetadataWrapper(baseAnime *platform.UnifiedMedia, animeMetadata *metadata.AnimeMetadata) AnimeMetadataWrapper
 	SetUseFallbackProvider(v bool)
 	ClearCache()
 	Close() error
@@ -22,17 +22,17 @@ type AnimeMetadataWrapper interface {
 type ProviderImpl struct {
 }
 
-func (p *ProviderImpl) GetAnimeMetadata(platform metadata.Platform, id int) (*metadata.AnimeMetadata, error) {
+func (p *ProviderImpl) GetAnimeMetadata(id int) (*metadata.AnimeMetadata, error) {
 	return nil, nil
 }
 
-func (p *ProviderImpl) GetAnimeMetadataWrapper(baseAnime *anilist.BaseAnime, animeMetadata *metadata.AnimeMetadata) AnimeMetadataWrapper {
+func (p *ProviderImpl) GetAnimeMetadataWrapper(baseAnime *platform.UnifiedMedia, animeMetadata *metadata.AnimeMetadata) AnimeMetadataWrapper {
 	return nil
 }
 
 func (p *ProviderImpl) SetUseFallbackProvider(v bool) {}
-func (p *ProviderImpl) ClearCache()             {}
-func (p *ProviderImpl) Close() error            { return nil }
+func (p *ProviderImpl) ClearCache()                   {}
+func (p *ProviderImpl) Close() error                  { return nil }
 
 func NewProvider(opts *NewProviderImplOptions) Provider {
 	return &ProviderImpl{}

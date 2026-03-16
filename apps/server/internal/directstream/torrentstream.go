@@ -3,10 +3,10 @@ package directstream
 import (
 	"context"
 	"fmt"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/library/anime"
 	"kamehouse/internal/mkvparser"
+	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util/result"
 	"kamehouse/internal/util/torrentutil"
 	"net/http"
@@ -59,7 +59,7 @@ func (s *TorrentStream) LoadPlaybackInfo() (ret *PlaybackInfo, err error) {
 
 		var entryListData *anime.EntryListData
 		if animeCollection, ok := s.manager.animeCollection.Get(); ok {
-			if listEntry, ok := animeCollection.GetListEntryFromAnimeId(s.media.ID); ok {
+			if listEntry, ok := animeCollection.GetListEntryFromMediaId(s.media.ID); ok {
 				entryListData = anime.NewEntryListData(models.ToMediaEntryListData(listEntry))
 			}
 		}
@@ -180,7 +180,7 @@ type PlayTorrentStreamOptions struct {
 	ClientId      string
 	EpisodeNumber int
 	AnidbEpisode  string
-	Media         *anilist.BaseAnime
+	Media         *platform.UnifiedMedia
 	Torrent       *torrent.Torrent
 	File          *torrent.File
 	OnTerminate   func()

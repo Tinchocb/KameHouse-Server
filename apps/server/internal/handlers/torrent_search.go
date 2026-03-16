@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/database/db"
+	"kamehouse/internal/platforms/platform"
 
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/debrid/debrid"
@@ -26,16 +26,16 @@ func (h *Handler) HandleSearchTorrent(c echo.Context) error {
 
 	type body struct {
 		// "smart" or "simple"
-		Type                    string            `json:"type,omitempty"`
-		Provider                string            `json:"provider,omitempty"`
-		Query                   string            `json:"query,omitempty"`
-		EpisodeNumber           int               `json:"episodeNumber,omitempty"`
-		Batch                   bool              `json:"batch,omitempty"`
-		Media                   anilist.BaseAnime `json:"media,omitempty"`
-		AbsoluteOffset          int               `json:"absoluteOffset,omitempty"`
-		Resolution              string            `json:"resolution,omitempty"`
-		BestRelease             bool              `json:"bestRelease,omitempty"`
-		IncludeSpecialProviders bool              `json:"includeSpecialProviders,omitempty"`
+		Type                    string                 `json:"type,omitempty"`
+		Provider                string                 `json:"provider,omitempty"`
+		Query                   string                 `json:"query,omitempty"`
+		EpisodeNumber           int                    `json:"episodeNumber,omitempty"`
+		Batch                   bool                   `json:"batch,omitempty"`
+		Media                   platform.UnifiedMedia `json:"media,omitempty"`
+		AbsoluteOffset          int                    `json:"absoluteOffset,omitempty"`
+		Resolution              string                 `json:"resolution,omitempty"`
+		BestRelease             bool                   `json:"bestRelease,omitempty"`
+		IncludeSpecialProviders bool                   `json:"includeSpecialProviders,omitempty"`
 	}
 
 	var b body

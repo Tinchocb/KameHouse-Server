@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/library/anime"
 	"kamehouse/internal/mkvparser"
 	httputil "kamehouse/internal/util/http"
+	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util/result"
 	"net/http"
 
@@ -73,7 +73,7 @@ func (s *DebridStream) LoadPlaybackInfo() (ret *PlaybackInfo, err error) {
 
 		var entryListData *anime.EntryListData
 		if animeCollection, ok := s.manager.animeCollection.Get(); ok {
-			if listEntry, ok := animeCollection.GetListEntryFromAnimeId(s.media.ID); ok {
+			if listEntry, ok := animeCollection.GetListEntryFromMediaId(s.media.ID); ok {
 				/* if customsource.IsExtensionId(entry.Media.GetID()) {
 					continue
 				} */
@@ -182,7 +182,7 @@ type PlayDebridStreamOptions struct {
 	StreamUrl    string
 	MediaId      int
 	AnidbEpisode string // Anizip episode
-	Media        *anilist.BaseAnime
+	Media        *platform.UnifiedMedia
 	Torrent      interface{} // Selected torrent
 	FileId       string      // File ID or index
 	UserAgent    string

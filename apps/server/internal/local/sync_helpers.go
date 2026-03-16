@@ -2,26 +2,27 @@ package local
 
 import (
 	"fmt"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/models/dto"
+	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/image_downloader"
 	"path/filepath"
 
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
+	"github.com/samber/lo"
 )
 
-// BaseAnimeDeepCopy creates a deep copy of the given base anime struct.
-func BaseAnimeDeepCopy(animeCollection *anilist.BaseAnime) *anilist.BaseAnime {
-	bytes, err := json.Marshal(animeCollection)
+// UnifiedMediaDeepCopy creates a deep copy of the given unified media struct.
+func UnifiedMediaDeepCopy(media *platform.UnifiedMedia) *platform.UnifiedMedia {
+	bytes, err := json.Marshal(media)
 	if err != nil {
 		return nil
 	}
 
-	deepCopy := &anilist.BaseAnime{}
+	deepCopy := &platform.UnifiedMedia{}
 	err = json.Unmarshal(bytes, deepCopy)
 	if err != nil {
 		return nil
@@ -31,8 +32,6 @@ func BaseAnimeDeepCopy(animeCollection *anilist.BaseAnime) *anilist.BaseAnime {
 
 	return deepCopy
 }
-
-// BaseMangaDeepCopy creates a deep copy of the given base manga struct.
 
 func ToNewPointer[A any](a *A) *A {
 	if a == nil {
@@ -52,13 +51,6 @@ func IntPointerValue[A int](a *A) A {
 func Float64PointerValue[A float64](a *A) A {
 	if a == nil {
 		return 0
-	}
-	return *a
-}
-
-func MediaListStatusPointerValue(a *anilist.MediaListStatus) anilist.MediaListStatus {
-	if a == nil {
-		return anilist.MediaListStatusPlanning
 	}
 	return *a
 }
@@ -110,90 +102,68 @@ func DownloadAnimeEpisodeImages(logger *zerolog.Logger, assetsDir string, mId in
 	return episodeImagePaths, true
 }
 
-// DownloadAnimeImages saves the banner, cover, and episode images for the given anime entry.
-// This should be used to download the images for an anime for the first time.
-//
-// It will download the images to the `<assetsDir>/<mId>` directory and return the filenames of the banner, cover, and episode images.
-//
-//	DownloadAnimeImages(logger, "path/to/datadir/local/assets", entry, animeMetadata)
-//	-> "banner.jpg", "cover.jpg", map[string]string{"1": "filename1.jpg", "2": "filename2.jpg"}
-func DownloadAnimeImages(
-	logger *zerolog.Logger,
-	assetsDir string,
-	entry *anilist.AnimeListEntry,
-	animeMetadata *metadata.AnimeMetadata, // This is updated
-	metadataWrapper metadata_provider.AnimeMetadataWrapper,
-	lfs []*dto.LocalFile,
-) (string, string, map[string]string, bool) {
+// DownloadAnimeImages saves the banner and cover images for the given anime list entry.
+// It will also download the episode images for the anime.
+// It will return the downloaded banner and cover filenames, and a map of episode numbers to the downloaded episode image filenames.
+func DownloadAnimeImages(logger *zerolog.Logger, assetsDir string, entry *platform.UnifiedCollectionEntry, animeMetadata *metadata.AnimeMetadata, metadataWrapper metadata_provider.AnimeMetadataWrapper, lfs []*dto.LocalFile) (string, string, map[string]string, bool) {
 	defer util.HandlePanicInModuleThen("sync/DownloadAnimeImages", func() {})
 
-	logger.Trace().Msgf("local manager: Downloading images for anime %d", entry.Media.ID)
-	// e.g. /datadir/local/assets/123
-	mediaAssetPath := filepath.Join(assetsDir, fmt.Sprintf("%d", entry.Media.ID))
+	mId := entry.Media.ID
+	logger.Trace().Msgf("local manager: Downloading images for anime %d", mId)
+
+	// e.g. /path/to/datadir/local/assets/123
+	mediaAssetPath := filepath.Join(assetsDir, fmt.Sprintf("%d", mId))
 	imageDownloader := image_downloader.NewImageDownloader(mediaAssetPath, logger)
-	// Download the images
-	ogBannerImage := entry.GetMedia().GetBannerImageSafe()
-	ogCoverImage := entry.GetMedia().GetCoverImageSafe()
 
-	imgUrls := []string{ogBannerImage, ogCoverImage}
-
-	lfMap := make(map[string]*dto.LocalFile)
-	for _, lf := range lfs {
-		lfMap[lf.Metadata.AniDBEpisode] = lf
+	// Get all images
+	imgUrls := make([]string, 0)
+	if entry.Media.BannerImage != nil && *entry.Media.BannerImage != "" {
+		imgUrls = append(imgUrls, *entry.Media.BannerImage)
+	}
+	if entry.Media.GetCoverImageSafe() != "" {
+		imgUrls = append(imgUrls, entry.Media.GetCoverImageSafe())
 	}
 
-	ogEpisodeImages := make(map[string]string)
-	for episodeNum, episode := range animeMetadata.Episodes {
-		// Check if the episode is in the local files
-		if _, ok := lfMap[episodeNum]; !ok {
+	// Filter local files for the current media
+	mediaLfs := lo.Filter(lfs, func(lf *dto.LocalFile, _ int) bool {
+		return lf.MediaId == mId
+	})
+
+	episodeImageUrls := make(map[string]string)
+	for _, lf := range mediaLfs {
+		if lf.Metadata.AniDBEpisode == "" {
 			continue
 		}
-
-		_, ok := util.StringToInt(episodeNum)
-		if !ok {
-			ogEpisodeImages[episodeNum] = episode.Image
-			imgUrls = append(imgUrls, episode.Image)
+		epMetadata := metadataWrapper.GetEpisodeMetadata(lf.Metadata.AniDBEpisode)
+		if epMetadata.Image == "" {
 			continue
 		}
-
-		epMetadata := metadataWrapper.GetEpisodeMetadata(episodeNum)
-		episode = &epMetadata
-
-		ogEpisodeImages[episodeNum] = episode.Image
-		imgUrls = append(imgUrls, episode.Image)
+		episodeImageUrls[lf.Metadata.AniDBEpisode] = epMetadata.Image
+		imgUrls = append(imgUrls, epMetadata.Image)
 	}
 
 	err := imageDownloader.DownloadImages(imgUrls)
 	if err != nil {
-		logger.Error().Err(err).Msgf("local manager: Failed to download images for anime %d", entry.Media.ID)
+		logger.Error().Err(err).Msgf("local manager: Failed to download images for anime %d", mId)
 		return "", "", nil, false
 	}
 
 	images, err := imageDownloader.GetImageFilenamesByUrls(imgUrls)
 	if err != nil {
-		logger.Error().Err(err).Msgf("local manager: Failed to get image filenames for anime %d", entry.Media.ID)
+		logger.Error().Err(err).Msgf("local manager: Failed to get image filenames for anime %d", mId)
 		return "", "", nil, false
 	}
 
-	bannerImage := images[ogBannerImage]
-	coverImage := images[ogCoverImage]
-	episodeImagePaths := make(map[string]string)
-	for episodeNum, episodeImage := range ogEpisodeImages {
-		if episodeImage == "" {
-			continue
-		}
-		episodeImagePaths[episodeNum] = images[episodeImage]
+	bannerImage := ""
+	if entry.Media.BannerImage != nil {
+		bannerImage = images[*entry.Media.BannerImage]
 	}
+	coverImage := images[entry.Media.GetCoverImageSafe()]
 
-	logger.Debug().Msgf("local manager: Stored images for anime %d, %+v, %+v, episode images: %+v", entry.Media.ID, bannerImage, coverImage, len(episodeImagePaths))
+	episodeImagePaths := make(map[string]string)
+	for epNum, epImageUrl := range episodeImageUrls {
+		episodeImagePaths[epNum] = images[epImageUrl]
+	}
 
 	return bannerImage, coverImage, episodeImagePaths, true
 }
-
-// DownloadMangaImages saves the banner and cover images for the given manga entry.
-// This should be used to download the images for a manga for the first time.
-//
-// It will download the images to the `<assetsDir>/<mId>` directory and return the filenames of the banner and cover images.
-//
-//	DownloadMangaImages(logger, "path/to/datadir/local/assets", entry)
-//	-> "banner.jpg", "cover.jpg"

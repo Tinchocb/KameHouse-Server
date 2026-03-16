@@ -1,7 +1,6 @@
 package local
 
 import (
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/events"
@@ -19,8 +18,7 @@ func GetMockManager(t *testing.T, db *db.Database) Manager {
 	metadataProviderRef := util.NewRef[metadata_provider.Provider](metadataProvider)
 
 	wsEventManager := events.NewMockWSEventManager(logger)
-	_ = anilist.NewMockAnilistClient()
-	
+
 	// extension dependency removed
 
 	localDir := filepath.Join(test_utils.ConfigData.Path.DataDir, "offline")
@@ -33,7 +31,7 @@ func GetMockManager(t *testing.T, db *db.Database) Manager {
 		MetadataProviderRef: metadataProviderRef,
 		Database:            db,
 		WSEventManager:      wsEventManager,
-		AnilistPlatformRef:  nil, // platform dependency removed
+		PlatformRef:         nil, // platform dependency removed
 		IsOffline:           false,
 	})
 	require.NoError(t, err)

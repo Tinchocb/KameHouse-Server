@@ -4,6 +4,7 @@ import (
 	"errors"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/library/anime"
+	"kamehouse/internal/platforms/platform"
 	"strconv"
 
 	"github.com/labstack/echo/v4"
@@ -30,18 +31,33 @@ func (h *Handler) HandlePopulateFillerData(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	media, found := animeCollection.FindAnime(b.MediaId)
+	entry, found := animeCollection.GetListEntryFromMediaId(b.MediaId)
+	var media *platform.UnifiedMedia
 	if !found {
 		// Fetch media from active platform (TMDB-based)
 		m, err := h.App.Metadata.PlatformRef.Get().GetAnime(c.Request().Context(), b.MediaId)
 		if err != nil {
 			return h.RespondWithError(c, err)
 		}
-		media = m
+		media = m.(*platform.UnifiedMedia)
+	} else {
+		media = entry.Media
 	}
 
 	// Fetch filler data
-	err = h.App.FillerManager.FetchAndStoreFillerData(b.MediaId, media.GetAllTitlesDeref())
+	titles := make([]string, 0)
+	if media.Title != nil {
+		if media.Title.Romaji != nil {
+			titles = append(titles, *media.Title.Romaji)
+		}
+		if media.Title.English != nil {
+			titles = append(titles, *media.Title.English)
+		}
+		if media.Title.Native != nil {
+			titles = append(titles, *media.Title.Native)
+		}
+	}
+	err = h.App.FillerManager.FetchAndStoreFillerData(b.MediaId, titles)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}

@@ -71,7 +71,7 @@ func NewEpisodeCollection(opts NewEpisodeCollectionOptions) (ec *EpisodeCollecti
 
 	if opts.AnimeMetadata == nil {
 		// Fetch the metadata
-		opts.AnimeMetadata, err = opts.MetadataProviderRef.Get().GetAnimeMetadata(metadata.AnilistPlatform, int(opts.Media.ID))
+		opts.AnimeMetadata, err = opts.MetadataProviderRef.Get().GetAnimeMetadata(int(opts.Media.ID))
 		if err != nil {
 			opts.AnimeMetadata = &metadata.AnimeMetadata{
 				Titles:       make(map[string]string),
@@ -228,7 +228,7 @@ func NewEpisodeCollectionFromLocalFiles(ctx context.Context, opts NewEpisodeColl
 	}
 
 	// Should be cached if it exists
-	animeMetadata, err := opts.MetadataProviderRef.Get().GetAnimeMetadata(metadata.AnilistPlatform, int(opts.Media.ID))
+	animeMetadata, err := opts.MetadataProviderRef.Get().GetAnimeMetadata(int(opts.Media.ID))
 	if err != nil {
 		animeMetadata = &metadata.AnimeMetadata{
 			Titles:       make(map[string]string),

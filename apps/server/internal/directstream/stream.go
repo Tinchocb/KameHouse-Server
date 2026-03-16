@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/library/anime"
+	"kamehouse/internal/mkvparser"
+	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/result"
 	"kamehouse/internal/videocore"
-	"kamehouse/internal/mkvparser"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -41,7 +41,7 @@ type PlaybackInfo struct {
 	MkvMetadata       *mkvparser.Metadata
 	MkvMetadataParser mo.Option[*mkvparser.MetadataParser]
 	Episode           *anime.Episode
-	Media             *anilist.BaseAnime
+	Media             *platform.UnifiedMedia
 	EntryListData     *anime.EntryListData
 }
 
@@ -55,7 +55,7 @@ type Stream interface {
 	// ClientId returns the client ID of the current stream.
 	ClientId() string
 	// Media returns the media of the current stream.
-	Media() *anilist.BaseAnime
+	Media() *platform.UnifiedMedia
 	// Episode returns the episode of the current stream.
 	Episode() *anime.Episode
 	// ListEntryData returns the list entry data for the current stream.
@@ -286,7 +286,7 @@ type BaseStream struct {
 	contentType            string
 	contentTypeOnce        sync.Once
 	episode                *anime.Episode
-	media                  *anilist.BaseAnime
+	media                  *platform.UnifiedMedia
 	listEntryData          *anime.EntryListData
 	episodeCollection      *anime.EpisodeCollection
 	playbackInfo           *PlaybackInfo
@@ -326,7 +326,7 @@ func (s *BaseStream) Type() StreamType {
 	return ""
 }
 
-func (s *BaseStream) Media() *anilist.BaseAnime {
+func (s *BaseStream) Media() *platform.UnifiedMedia {
 	return s.media
 }
 

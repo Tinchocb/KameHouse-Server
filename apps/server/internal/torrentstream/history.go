@@ -2,14 +2,14 @@ package torrentstream
 
 import (
 	"context"
-	"kamehouse/internal/api/anilist"
+	"kamehouse/internal/platforms/platform"
 )
 
 func (r *Repository) GetStreamHistory(ctx context.Context) ([]interface{}, error) {
 	return nil, nil
 }
 
-func (r *Repository) AddStreamHistory(ctx context.Context, media *anilist.CompleteAnime, episode int, torrent interface{}) error {
+func (r *Repository) AddStreamHistory(ctx context.Context, media *platform.UnifiedMedia, episode int, torrent interface{}) error {
 	return nil
 }
 

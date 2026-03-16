@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/api/tmdb"
 	"kamehouse/internal/database/db"
@@ -19,7 +18,6 @@ import (
 	"kamehouse/internal/library/summary"
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
-	"kamehouse/internal/util/limiter"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -65,7 +63,7 @@ type Scanner struct {
 	Config               *Config
 	ConfigAsString       string
 	// Optional, used to add custom sources
-	AnimeCollection *anilist.AnimeCollection
+	AnimeCollection *platform.UnifiedCollection
 	// TMDB mode: use folder structure + TMDB instead of AniList
 	UseTMDB bool
 
@@ -102,10 +100,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	telemetry.Send(events.EventScanProgress, 0)
 	telemetry.Send(events.EventScanStatus, "Retrieving local files...")
 
-	completeAnimeCache := anilist.NewCompleteAnimeCache()
 
-	// Create a new Anilist rate limiter
-	anilistRateLimiter := limiter.NewAnilistLimiter()
 
 	if scn.ScanSummaryLogger == nil {
 		scn.ScanSummaryLogger = summary.NewScanSummaryLogger()
@@ -561,25 +556,17 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 			providers = append(providers, tmdbProvider)
 		}
 		providers = append(providers, librarymetadata.NewAniDBProvider("", scn.Logger))
-		if scn.PlatformRef != nil && !scn.PlatformRef.IsAbsent() {
-			providers = append(providers, librarymetadata.NewAniListProvider(scn.PlatformRef.Get().GetAnilistClient()))
-		}
 	}
 
 	mf, err := NewMediaFetcher(ctx, &MediaFetcherOptions{
-		Enhanced:                   scn.Enhanced,
-		EnhanceWithOfflineDatabase: scn.EnhanceWithOfflineDatabase,
 		PlatformRef:                scn.PlatformRef,
 		MetadataProviderRef:        scn.MetadataProviderRef,
 		MetadataProviders:          providers,
 		LocalFiles:                 localFiles,
-		CompleteAnimeCache:         completeAnimeCache,
 		Logger:                     scn.Logger,
-		AnilistRateLimiter:         anilistRateLimiter,
 		DisableAnimeCollection:     false,
 		ScanLogger:                 scn.ScanLogger,
 		OptionalAnimeCollection:    scn.AnimeCollection,
-		UseTMDB:                    useTMDB,
 		TMDBProvider:               tmdbProvider,
 		LibraryPaths:               libraryPaths,
 	})
@@ -651,8 +638,6 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		LocalFiles:          localFiles,
 		MetadataProviderRef: scn.MetadataProviderRef,
 		PlatformRef:         scn.PlatformRef,
-		CompleteAnimeCache:  completeAnimeCache,
-		AnilistRateLimiter:  anilistRateLimiter,
 		Logger:              scn.Logger,
 		ScanLogger:          scn.ScanLogger,
 		ScanSummaryLogger:   scn.ScanSummaryLogger,
@@ -917,7 +902,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	})
 
 	// Hydrate the summary logger before merging files
-	scn.ScanSummaryLogger.HydrateData(localFiles, mc.NormalizedMedia, mf.AnimeCollectionWithRelations)
+	scn.ScanSummaryLogger.HydrateData(localFiles, mc.NormalizedMedia, nil)
 
 	// +---------------------+
 	// |    Merge files      |

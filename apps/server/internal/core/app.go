@@ -36,7 +36,6 @@ import (
 	"kamehouse/internal/ws"
 	"log"
 	"os"
-	"path/filepath"
 	"runtime"
 	"sync"
 	"time"
@@ -439,3 +438,21 @@ func (a *KameHouse) Cleanup(ctx context.Context) {
 		a.Logger.Warn().Msg("app: Shutdown timed out — forcing exit")
 	}
 }
+
+func (a *KameHouse) GetUser() *user.User {
+	return a.user
+}
+
+func (a *KameHouse) GetAnimeCollection(bypassCache bool) (*platform.UnifiedCollection, error) {
+	res, err := a.Metadata.PlatformRef.Get().GetAnimeCollection(context.Background(), bypassCache)
+	if err != nil {
+		return nil, err
+	}
+	return res.(*platform.UnifiedCollection), nil
+}
+
+func (a *KameHouse) AddOnRefreshAnimeCollectionFunc(id string, f func()) {
+	// For now, this is a no-op or we can implement a simple registration if needed.
+	// In the old code it was used to clear caches.
+}
+

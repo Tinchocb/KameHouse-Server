@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"kamehouse/internal/api/anilist"
+	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
 	"net/http"
 	"os"
@@ -21,9 +21,9 @@ import (
 func (h *Handler) HandleDownloadTorrentFile(c echo.Context) error {
 
 	type body struct {
-		DownloadUrls []string           `json:"download_urls"`
-		Destination  string             `json:"destination"`
-		Media        *anilist.BaseAnime `json:"media"`
+		DownloadUrls []string                `json:"download_urls"`
+		Destination  string                  `json:"destination"`
+		Media        *platform.UnifiedMedia `json:"media"`
 	}
 
 	var b body

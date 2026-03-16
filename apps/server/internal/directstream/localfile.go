@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/library/anime"
 	"kamehouse/internal/mkvparser"
+	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/result"
 	"net/http"
@@ -97,7 +97,7 @@ func (s *LocalFileStream) LoadPlaybackInfo() (ret *PlaybackInfo, err error) {
 
 		var entryListData *anime.EntryListData
 		if animeCollection, ok := s.manager.animeCollection.Get(); ok {
-			if listEntry, ok := animeCollection.GetListEntryFromAnimeId(s.media.ID); ok {
+			if listEntry, ok := animeCollection.GetListEntryFromMediaId(s.media.ID); ok {
 				entryListData = anime.NewEntryListData(models.ToMediaEntryListData(listEntry))
 			}
 		}
@@ -268,8 +268,8 @@ func (m *Manager) PlayLocalFile(ctx context.Context, opts PlayLocalFileOptions) 
 	}
 
 	mId := lf.MediaId
-	var media *anilist.BaseAnime
-	listEntry, ok := animeCollection.GetListEntryFromAnimeId(mId)
+	var media *platform.UnifiedMedia
+	listEntry, ok := animeCollection.GetListEntryFromMediaId(mId)
 	if ok {
 		media = listEntry.Media
 	}

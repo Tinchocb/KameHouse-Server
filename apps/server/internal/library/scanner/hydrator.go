@@ -3,12 +3,10 @@ package scanner
 import (
 	"context"
 	"errors"
-	"kamehouse/internal/api/anilist"
-	"kamehouse/internal/api/metadata"
+
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/hook"
-	"kamehouse/internal/library/anime"
 	"kamehouse/internal/library/summary"
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
@@ -18,7 +16,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -30,13 +27,10 @@ import (
 // FileHydrator hydrates the metadata of all (matched) LocalFiles.
 // LocalFiles should already have their media ID hydrated.
 type FileHydrator struct {
-	LocalFiles []*dto.LocalFile       // Local files to hydrate
-	AllMedia   []*dto.NormalizedMedia // All media used to hydrate local files
-	// Used by media tree analysis
-	CompleteAnimeCache  *anilist.CompleteAnimeCache
+	LocalFiles          []*dto.LocalFile       // Local files to hydrate
+	AllMedia            []*dto.NormalizedMedia // All media used to hydrate local files
 	PlatformRef         *util.Ref[platform.Platform]
 	MetadataProviderRef *util.Ref[metadata_provider.Provider]
-	AnilistRateLimiter  *limiter.Limiter
 	Logger              *zerolog.Logger
 	ScanLogger          *ScanLogger                // optional
 	ScanSummaryLogger   *summary.ScanSummaryLogger // optional
@@ -56,7 +50,7 @@ type compiledHydrationFileRule struct {
 	rule  *HydrationFileRule
 }
 
-// HydrateMetadata will hydrate the metadata of each LocalFile with the metadata of the matched anilist.BaseAnime.
+// HydrateMetadata will hydrate the metadata of each LocalFile with the metadata of the matched platform.UnifiedMedia.
 // It will divide the LocalFiles into groups based on their media ID and process each group in parallel.
 func (fh *FileHydrator) HydrateMetadata() {
 	start := time.Now()
@@ -143,17 +137,7 @@ func (fh *FileHydrator) hydrateGroupMetadata(
 		return
 	}
 
-	// Make sure the media is fetched (skip if no AniList platform is configured, e.g. TMDB-only mode)
-	if fh.PlatformRef != nil && !fh.PlatformRef.IsAbsent() && fh.AnilistRateLimiter != nil && fh.CompleteAnimeCache != nil {
-		_ = anime.FetchNormalizedMedia(fh.PlatformRef.Get().GetAnilistClient(), fh.AnilistRateLimiter, fh.CompleteAnimeCache, media)
-	}
 
-	// Tree contains media relations
-	tree := anilist.NewCompleteAnimeRelationTree()
-	// Tree analysis used for episode normalization
-	var mediaTreeAnalysis *MediaTreeAnalysis
-	treeFetched := false
-	mediaTreeAnalysisMu := sync.Mutex{}
 
 	// Process each local file in the group sequentially
 	for _, lf := range lfs {
@@ -392,81 +376,21 @@ func (fh *FileHydrator) hydrateGroupMetadata(
 					return
 				}
 
-				mediaTreeAnalysisMu.Lock()
-				if !treeFetched {
+				// Media tree analysis skipped during migration
+				diff := episode - dto.GetCurrentEpisodeCount(media)
+				lf.Metadata.Episode = diff
+				lf.Metadata.AniDBEpisode = "S" + strconv.Itoa(diff)
+				lf.Metadata.Type = dto.LocalFileTypeSpecial
 
-					mediaTreeFetchStart := time.Now()
-					// Fetch media tree (requires AniList platform)
-					// The media tree will be used to normalize episode numbers
-					if fh.PlatformRef != nil && !fh.PlatformRef.IsAbsent() && fh.AnilistRateLimiter != nil && fh.CompleteAnimeCache != nil {
-						if err := anime.FetchMediaTree(media, anilist.FetchMediaTreeAll, fh.PlatformRef.Get().GetAnilistClient(), fh.AnilistRateLimiter, tree, fh.CompleteAnimeCache); err == nil {
-							// Create a new media tree analysis that will be used for episode normalization
-							mta, _ := NewMediaTreeAnalysis(&MediaTreeAnalysisOptions{
-								tree:                tree,
-								metadataProviderRef: fh.MetadataProviderRef,
-								rateLimiter:         rateLimiter,
-							})
-							// Hoist the media tree analysis, so it will be used by other files
-							// We don't care if it's nil because [normalizeEpisodeNumberAndHydrate] will handle it
-							mediaTreeAnalysis = mta
-							treeFetched = true
-
-							/*Log */
-							if mta != nil && mta.branches != nil {
-								if fh.ScanLogger != nil {
-									fh.ScanLogger.LogFileHydrator(zerolog.DebugLevel).
-										Int("mediaId", mId).
-										Int64("ms", time.Since(mediaTreeFetchStart).Milliseconds()).
-										Int("requests", len(mediaTreeAnalysis.branches)).
-										Any("branches", mediaTreeAnalysis.printBranches()).
-										Msg("Media tree fetched")
-								}
-								fh.ScanSummaryLogger.LogMetadataMediaTreeFetched(lf, time.Since(mediaTreeFetchStart).Milliseconds(), len(mediaTreeAnalysis.branches))
-							}
-						} else {
-							if fh.ScanLogger != nil {
-								fh.ScanLogger.LogFileHydrator(zerolog.ErrorLevel).
-									Int("mediaId", mId).
-									Str("error", err.Error()).
-									Int64("ms", time.Since(mediaTreeFetchStart).Milliseconds()).
-									Msg("Could not fetch media tree")
-							}
-							fh.ScanSummaryLogger.LogMetadataMediaTreeFetchFailed(lf, err, time.Since(mediaTreeFetchStart).Milliseconds())
-						}
-					} else {
-						// No AniList platform available (e.g. TMDB-only mode), skip media tree fetch
-						treeFetched = true
-					}
+				/*Log */
+				if fh.ScanLogger != nil {
+					fh.logFileHydration(zerolog.WarnLevel, lf, mId, episode).
+						Dict("mediaTreeAnalysis", zerolog.Dict().
+							Bool("normalized", false).
+							Str("reason", "Episode normalization failed (tree analysis disabled)")).
+						Msg("File has been marked as special")
 				}
-				mediaTreeAnalysisMu.Unlock()
-
-				// Normalize episode number
-				if err := fh.normalizeEpisodeNumberAndHydrate(mediaTreeAnalysis, lf, episode, dto.GetCurrentEpisodeCount(media)); err != nil {
-
-					/*Log */
-					if fh.ScanLogger != nil {
-						fh.logFileHydration(zerolog.WarnLevel, lf, mId, episode).
-							Dict("mediaTreeAnalysis", zerolog.Dict().
-								Bool("normalized", false).
-								Str("error", err.Error()).
-								Str("reason", "Episode normalization failed"),
-							).
-							Msg("File has been marked as special")
-					}
-					fh.ScanSummaryLogger.LogMetadataEpisodeNormalizationFailed(lf, err, lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
-				} else {
-					/*Log */
-					if fh.ScanLogger != nil {
-						fh.logFileHydration(zerolog.DebugLevel, lf, mId, episode).
-							Dict("mediaTreeAnalysis", zerolog.Dict().
-								Bool("normalized", true).
-								Bool("hasNewMediaId", lf.MediaId != mId).
-								Int("newMediaId", lf.MediaId),
-							).
-							Msg("File has been marked as main")
-					}
-					fh.ScanSummaryLogger.LogMetadataEpisodeNormalized(lf, mId, episode, lf.Metadata.Episode, lf.MediaId, lf.Metadata.AniDBEpisode)
-				}
+				fh.ScanSummaryLogger.LogMetadataEpisodeNormalizationFailed(lf, errors.New("tree analysis disabled"), lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
 				return
 			}
 
@@ -475,7 +399,7 @@ func (fh *FileHydrator) hydrateGroupMetadata(
 
 				// When we encounter a file with an episode number higher than the media's episode count
 				// we have a forced media ID, we will fetch the media from AniList and get the offset
-				animeMetadata, err := fh.MetadataProviderRef.Get().GetAnimeMetadata(metadata.AnilistPlatform, fh.ForceMediaId)
+				animeMetadata, err := fh.MetadataProviderRef.Get().GetAnimeMetadata(fh.ForceMediaId)
 				if err != nil {
 					/*Log */
 					if fh.ScanLogger != nil {
@@ -603,7 +527,7 @@ func (fh *FileHydrator) tryPartRelativeNormalization(
 
 	rateLimiter.Wait(context.Background())
 
-	animeMetadata, err := fh.MetadataProviderRef.Get().GetAnimeMetadata(metadata.AnilistPlatform, mediaId)
+	animeMetadata, err := fh.MetadataProviderRef.Get().GetAnimeMetadata(mediaId)
 	if err != nil {
 		return 0, false
 	}
@@ -648,39 +572,7 @@ func (fh *FileHydrator) tryPartRelativeNormalization(
 	return relativeEp, true
 }
 
-// normalizeEpisodeNumberAndHydrate will normalize the episode number and hydrate the metadata of the LocalFile.
-// If the MediaTreeAnalysis is nil, the episode number will not be normalized.
-func (fh *FileHydrator) normalizeEpisodeNumberAndHydrate(
-	mta *MediaTreeAnalysis,
-	lf *dto.LocalFile,
-	ep int, // The absolute episode number of the media
-	maxEp int, // The maximum episode number of the media
-) error {
-	// No media tree analysis
-	if mta == nil {
-		diff := ep - maxEp // e.g. 14 - 12 = 2
-		// Let's consider this a special episode (it might not exist on AniDB, but it's better than setting everything to "S1")
-		lf.Metadata.Episode = diff                          // e.g. 2
-		lf.Metadata.AniDBEpisode = "S" + strconv.Itoa(diff) // e.g. S2
-		lf.Metadata.Type = dto.LocalFileTypeSpecial
-		return errors.New("[hydrator] could not find media tree")
-	}
 
-	relativeEp, mediaId, ok := mta.getRelativeEpisodeNumber(ep)
-	if !ok {
-		diff := ep - maxEp // e.g. 14 - 12 = 2
-		// Do the same as above
-		lf.Metadata.Episode = diff
-		lf.Metadata.AniDBEpisode = "S" + strconv.Itoa(diff) // e.g. S2
-		lf.Metadata.Type = dto.LocalFileTypeSpecial
-		return errors.New("[hydrator] could not find relative episode number from media tree")
-	}
-
-	lf.Metadata.Episode = relativeEp
-	lf.Metadata.AniDBEpisode = strconv.Itoa(relativeEp)
-	lf.MediaId = mediaId
-	return nil
-}
 
 func (fh *FileHydrator) precompileRules() {
 	defer util.HandlePanicInModuleThenS("scanner/matcher/precompileRules", func(stackTrace string) {

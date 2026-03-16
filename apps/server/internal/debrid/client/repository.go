@@ -3,7 +3,6 @@ package debrid_client
 import (
 	"context"
 	"fmt"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
@@ -41,9 +40,9 @@ type (
 		directStreamManager    *directstream.Manager
 
 		streamManager       *StreamManager
-		completeAnimeCache  *anilist.CompleteAnimeCache
 		metadataProviderRef *util.Ref[metadata_provider.Provider]
 		platformRef         *util.Ref[platform.Platform]
+		completeAnimeCache  map[int]*platform.UnifiedMedia
 
 		autoSelect *autoselect.AutoSelect
 
@@ -74,10 +73,10 @@ func NewRepository(opts *NewRepositoryOptions) (ret *Repository) {
 		torrentRepository:     opts.TorrentRepository,
 		platformRef:           opts.PlatformRef,
 		metadataProviderRef:   opts.MetadataProviderRef,
-		completeAnimeCache:    anilist.NewCompleteAnimeCache(),
 		ctxMap:                result.NewMap[string, context.CancelFunc](),
 		previousStreamOptions: mo.None[*StartStreamOptions](),
 		directStreamManager:   opts.DirectStreamManager,
+		completeAnimeCache:    make(map[int]*platform.UnifiedMedia),
 	}
 
 	ret.streamManager = NewStreamManager(ret)

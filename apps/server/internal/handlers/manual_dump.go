@@ -1,9 +1,7 @@
 package handlers
 
 import (
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/library/scanner"
-	"kamehouse/internal/util/limiter"
 
 	"github.com/labstack/echo/v4"
 )
@@ -31,16 +29,11 @@ func (h *Handler) HandleTestDump(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	completeAnimeCache := anilist.NewCompleteAnimeCache()
-
 	mc, err := scanner.NewMediaFetcher(c.Request().Context(), &scanner.MediaFetcherOptions{
-		Enhanced:               false,
-		PlatformRef:            h.App.Metadata.AnilistPlatformRef,
+		PlatformRef:            h.App.Metadata.PlatformRef,
 		MetadataProviderRef:    h.App.Metadata.ProviderRef,
 		LocalFiles:             localFiles,
-		CompleteAnimeCache:     completeAnimeCache,
 		Logger:                 h.App.Logger,
-		AnilistRateLimiter:     limiter.NewAnilistLimiter(),
 		DisableAnimeCollection: false,
 		ScanLogger:             nil,
 	})

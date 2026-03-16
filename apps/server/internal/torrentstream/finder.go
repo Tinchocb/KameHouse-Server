@@ -2,7 +2,7 @@ package torrentstream
 
 import (
 	"fmt"
-	"kamehouse/internal/api/anilist"
+	"kamehouse/internal/platforms/platform"
 
 	"github.com/anacrolix/torrent"
 )
@@ -19,10 +19,10 @@ type (
 	}
 )
 
-func (r *Repository) findBestTorrent(media *anilist.CompleteAnime, aniDbEpisode string, episodeNumber int) (ret *playbackTorrent, err error) {
+func (r *Repository) findBestTorrent(media *platform.UnifiedMedia, aniDbEpisode string, episodeNumber int) (ret *playbackTorrent, err error) {
 	return nil, nil
 }
 
-func (r *Repository) findBestTorrentFromManualSelection(t interface{}, media *anilist.CompleteAnime, aniDbEpisode string, chosenFileIndex *int) (*playbackTorrent, error) {
+func (r *Repository) findBestTorrentFromManualSelection(t interface{}, media *platform.UnifiedMedia, aniDbEpisode string, chosenFileIndex *int) (*playbackTorrent, error) {
 	return nil, nil
 }

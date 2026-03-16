@@ -40,7 +40,7 @@ type Status struct {
 	MediastreamSettings   *models.MediastreamSettings   `json:"mediastreamSettings"`
 	TorrentstreamSettings *models.TorrentstreamSettings `json:"torrentstreamSettings"`
 	DebridSettings        *models.DebridSettings        `json:"debridSettings"`
-	AnilistClientID       string                        `json:"anilistClientId"`
+	// AnilistClientID       string                        `json:"anilistClientId"`
 	Updating              bool                          `json:"updating"`         // If true, a new screen will be displayed
 	IsDesktopSidecar      bool                          `json:"isDesktopSidecar"` // The server is running as a desktop sidecar
 	FeatureFlags          core.FeatureFlags             `json:"featureFlags"`
@@ -102,7 +102,7 @@ func (h *Handler) NewStatus(c echo.Context) *Status {
 		MediastreamSettings:   h.App.SecondarySettings.Mediastream,
 		TorrentstreamSettings: h.App.SecondarySettings.Torrentstream,
 		DebridSettings:        h.App.SecondarySettings.Debrid,
-		AnilistClientID:       h.App.Config.Anilist.ClientID,
+		// AnilistClientID:       h.App.Config.Anilist.ClientID,
 		Updating:              false,
 		IsDesktopSidecar:      h.App.IsDesktopSidecar,
 		FeatureFlags:          h.App.FeatureFlags,

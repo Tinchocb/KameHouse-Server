@@ -18,7 +18,7 @@ const (
 type AnimeSearchOptions struct {
 	Provider                string
 	Type                    AnimeSearchType
-	Media                   interface{} // *anilist.BaseAnime
+	Media                   interface{} // *platform.UnifiedMedia
 	Query                   string
 	Batch                   bool
 	EpisodeNumber           int

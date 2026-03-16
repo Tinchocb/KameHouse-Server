@@ -177,8 +177,7 @@ func (a *App) initModulesOnce() {
 		EventDispatcher: a.WSHub.EventDispatcher(), // Assuming WSHub gives access to it, or passing it directly
 	})
 
-	// This is run in a goroutine
-	a.AutoScanner.Start()
+	// AutoScanner is event-driven now, no Start method.
 
 	// +---------------------+
 	// |   Anime Library     |
@@ -473,7 +472,7 @@ func (a *App) performActionsOnce() {
 		if a.Settings.GetLibrary().RefreshLibraryOnStart {
 			go func() {
 				a.Logger.Debug().Msg("app: Refreshing library")
-				a.AutoScanner.RunNow()
+				a.AutoScanner.TriggerScan()
 				a.Logger.Info().Msg("app: Refreshed library")
 			}()
 		}

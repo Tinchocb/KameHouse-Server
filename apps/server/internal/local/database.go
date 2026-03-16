@@ -2,7 +2,8 @@ package local
 
 import (
 	"kamehouse/internal/database/models"
-	"kamehouse/internal/api/anilist"
+	"kamehouse/internal/platforms/platform"
+
 	"github.com/rs/zerolog"
 )
 
@@ -13,6 +14,7 @@ type Database struct {
 type GormDB struct {
 	Error error
 }
+
 func (g *GormDB) Create(value interface{}) *GormDB { return g }
 
 func (d *Database) GetSettings() (settings *models.Settings) {
@@ -35,19 +37,19 @@ func (d *Database) SetTrackedMedia(mediaId int, provider string, tracked bool) e
 	return nil
 }
 
-func (d *Database) GetLocalAnimeCollection() (*anilist.AnimeCollection, bool) {
+func (d *Database) GetLocalAnimeCollection() (*platform.UnifiedCollection, bool) {
 	return nil, true
 }
 
-func (d *Database) SaveAnimeCollection(collection *anilist.AnimeCollection) error {
+func (d *Database) SaveAnimeCollection(collection *platform.UnifiedCollection) error {
 	return nil
 }
 
-func (d *Database) GetTrackedAnimeCollection() (*anilist.AnimeCollection, bool) {
+func (d *Database) GetTrackedAnimeCollection() (*platform.UnifiedCollection, bool) {
 	return nil, true
 }
 
-func (d *Database) SetTrackedAnimeCollection(collection *anilist.AnimeCollection) error {
+func (d *Database) SetTrackedAnimeCollection(collection *platform.UnifiedCollection) error {
 	return nil
 }
 
@@ -75,11 +77,11 @@ func (d *Database) RemoveTrackedMedia(mediaId int, provider string) error {
 	return nil
 }
 
-func (d *Database) GetSimulatedAnimeCollection() (*anilist.AnimeCollection, bool) {
+func (d *Database) GetSimulatedAnimeCollection() (*platform.UnifiedCollection, bool) {
 	return nil, true
 }
 
-func (d *Database) SaveSimulatedAnimeCollection(collection *anilist.AnimeCollection) error {
+func (d *Database) SaveSimulatedAnimeCollection(collection *platform.UnifiedCollection) error {
 	return nil
 }
 

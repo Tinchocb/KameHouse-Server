@@ -2,11 +2,11 @@ package torrentstream
 
 import (
 	"context"
-	"kamehouse/internal/api/anilist"
+	"kamehouse/internal/platforms/platform"
 )
 
 type StartStreamOptions struct {
-	Media        *anilist.CompleteAnime
+	Media        *platform.UnifiedMedia
 	AniDbEpisode string
 	EpisodeNumber int
 	Torrent       interface{}

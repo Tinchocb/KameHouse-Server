@@ -99,3 +99,54 @@ func (h *Handler) HandleDebridStartStream(c echo.Context) error {
 func (h *Handler) HandleDebridCancelStream(c echo.Context) error {
 	return h.RespondWithData(c, true)
 }
+
+// --- Auto Downloader Profile stubs ---
+
+func (h *Handler) HandleGetAutoDownloaderProfiles(c echo.Context) error {
+	return h.RespondWithData(c, []interface{}{})
+}
+
+func (h *Handler) HandleGetAutoDownloaderProfile(c echo.Context) error {
+	return h.RespondWithData(c, nil)
+}
+
+func (h *Handler) HandleCreateAutoDownloaderProfile(c echo.Context) error {
+	return h.RespondWithData(c, true)
+}
+
+func (h *Handler) HandleUpdateAutoDownloaderProfile(c echo.Context) error {
+	return h.RespondWithData(c, true)
+}
+
+func (h *Handler) HandleDeleteAutoDownloaderProfile(c echo.Context) error {
+	return h.RespondWithData(c, true)
+}
+
+// --- Anime Entry Suggestions stub ---
+
+func (h *Handler) HandleFetchAnimeEntrySuggestions(c echo.Context) error {
+	return h.RespondWithData(c, []interface{}{})
+}
+
+func (h *Handler) HandleAnimeEntryBulkAction(c echo.Context) error {
+	return h.RespondWithData(c, true)
+}
+
+func (h *Handler) HandleOpenAnimeEntryInExplorer(c echo.Context) error {
+	return h.RespondWithData(c, true)
+}
+
+func (h *Handler) HandleGetAnimeEntrySilenceStatus(c echo.Context) error {
+	return h.RespondWithData(c, false)
+}
+
+func (h *Handler) HandleToggleAnimeEntrySilenceStatus(c echo.Context) error {
+	return h.RespondWithData(c, true)
+}
+
+func (h *Handler) HandleAnimeEntryManualMatch(c echo.Context) error {
+	return h.RespondWithData(c, true)
+}
+
+
+

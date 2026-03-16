@@ -2,8 +2,6 @@ package autoscanner
 
 import (
 	"context"
-	"errors"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
 
@@ -11,7 +9,7 @@ import (
 	"kamehouse/internal/events"
 	"kamehouse/internal/library/autodownloader"
 	"kamehouse/internal/library/scanner"
-	"kamehouse/internal/library/summary"
+
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
 	"sync"
@@ -40,7 +38,7 @@ type (
 		logsDir             string
 		scanning            atomic.Bool
 		onRefreshCollection func()
-		animeCollection     *anilist.AnimeCollection
+		animeCollection     *platform.UnifiedCollection
 		eventDispatcher     events.Dispatcher
 	}
 	NewAutoScannerOptions struct {
@@ -84,7 +82,7 @@ func New(opts *NewAutoScannerOptions) *AutoScanner {
 	}
 }
 
-func (as *AutoScanner) SetAnimeCollection(ac *anilist.AnimeCollection) {
+func (as *AutoScanner) SetAnimeCollection(ac *platform.UnifiedCollection) {
 	as.animeCollection = ac
 }
 
@@ -101,222 +99,116 @@ func (as *AutoScanner) Notify() {
 	as.mu.Lock()
 	defer as.mu.Unlock()
 
-	// If we are currently scanning, we will set the missedAction flag to true.
+	// If we are already waiting for a scan, we don't need to do anything.
 	if as.waiting {
+		return
+	}
+
+	// If we are currently scanning, we need to indicate that a file action was missed.
+	if as.scanning.Load() {
 		as.missedAction = true
 		return
 	}
 
-	if as.enabled {
-		go func() {
-			// Otherwise, we will send a signal to the fileActionCh.
-			as.fileActionCh <- struct{}{}
-		}()
-	}
-}
-
-// Start starts the AutoScanner in a goroutine.
-func (as *AutoScanner) Start() {
+	as.waiting = true
 	go func() {
-		if as.enabled {
-			as.logger.Info().Msg("autoscanner: Module started")
-		}
+		timer := time.NewTimer(as.waitTime)
+		defer timer.Stop()
 
-		as.watch()
+		for {
+			select {
+			case <-timer.C:
+				as.mu.Lock()
+				as.waiting = false
+				as.mu.Unlock()
+				as.TriggerScan()
+				return
+			case <-as.fileActionCh:
+				if !timer.Stop() {
+					<-timer.C
+				}
+				timer.Reset(as.waitTime)
+			}
+		}
 	}()
 }
 
-// SetSettings should be called after the settings are fetched and updated from the database.
-func (as *AutoScanner) SetSettings(settings models.LibrarySettings) {
-	as.mu.Lock()
-	defer as.mu.Unlock()
-
-	as.enabled = settings.AutoScan
-	as.settings = settings
-}
-
-// watch is used to watch for file actions and trigger a scan.
-// When a file action occurs, it will wait 30 seconds before triggering a scan.
-// If another file action occurs within that 30 seconds, it will reset the timer.
-// After the 30 seconds have passed, it will trigger a scan.
-// When a scan is complete, it will check the missedAction flag and trigger another scan if necessary.
-func (as *AutoScanner) watch() {
-	defer util.HandlePanicInModuleThen("scanner/autoscanner/watch", func() {
-		as.logger.Error().Msg("autoscanner: recovered from panic")
-	})
-
-	for {
-		// Block until the file action channel is ready to receive a signal.
-		<-as.fileActionCh
-		as.waitAndScan()
-	}
-
-}
-
-// waitAndScan is used to wait for additional file actions before triggering a scan.
-func (as *AutoScanner) waitAndScan() {
-	as.logger.Info().
-		Float64("waitSeconds", as.waitTime.Seconds()).
-		Msg("autoscanner: Debounce started, waiting for additional file events")
-	as.mu.Lock()
-	as.waiting = true       // Set the scanning flag to true.
-	as.missedAction = false // Reset the missedAction flag.
-	as.mu.Unlock()
-
-	// Wait 30 seconds before triggering a scan.
-	// During this time, if another file action occurs, it will reset the timer after it has expired.
-	<-time.After(as.waitTime)
-
-	as.mu.Lock()
-	// If a file action occurred while we were waiting, wait again.
-	if as.missedAction {
-		as.logger.Info().Msg("autoscanner: Additional file events detected during debounce, restarting wait")
-		as.mu.Unlock()
-		as.waitAndScan()
+func (as *AutoScanner) TriggerScan() {
+	if as == nil || !as.enabled {
 		return
 	}
 
-	as.waiting = false
-	as.mu.Unlock()
-
-	// Trigger a scan.
-	as.scan()
-}
-
-// RunNow bypasses checks and triggers a scan immediately, even if the autoscanner is disabled.
-func (as *AutoScanner) RunNow() {
-	as.scan()
-}
-
-// scan is used to trigger a scan.
-func (as *AutoScanner) scan() {
-	defer util.HandlePanicInModuleThen("scanner/autoscanner/scan", func() {
-		as.logger.Error().Msg("autoscanner: Recovered from panic")
-	})
-
-	// Guard: prevent concurrent scans
-	if !as.scanning.CompareAndSwap(false, true) {
-		as.logger.Warn().Msg("autoscanner: Scan already in progress, skipping")
+	if as.scanning.Load() {
 		return
 	}
+
+	as.scanning.Store(true)
 	defer as.scanning.Store(false)
 
-	// Create scan summary logger
-	scanSummaryLogger := summary.NewScanSummaryLogger()
-	scanStart := time.Now()
+	as.logger.Info().Msg("autoscanner: Triggering library scan")
 
-	as.logger.Info().Msg("autoscanner: Starting scan")
-	as.wsEventManager.SendEvent(events.AutoScanStarted, nil)
-	defer as.wsEventManager.SendEvent(events.AutoScanCompleted, nil)
-
+	// Get latest library settings
 	settings, err := as.db.GetSettings()
-	if err != nil || settings == nil {
-		as.logger.Error().Err(err).Msg("autoscanner: Failed to get settings")
+	if err != nil {
+		as.logger.Error().Err(err).Msg("autoscanner: Failed to get library settings")
 		return
 	}
+	as.settings = *settings.Library
 
-	if settings.Library.LibraryPath == "" {
-		as.logger.Error().Msg("autoscanner: Library path is not set")
-		return
+	additionalPaths, _ := as.db.GetAdditionalLibraryPathsFromSettings()
+
+	// Scan the library
+	scn := &scanner.Scanner{
+		DirPath:            as.settings.LibraryPath,
+		OtherDirPaths:      additionalPaths,
+		Logger:             as.logger,
+		PlatformRef:        as.platformRef,
+		Database:           as.db,
+		MetadataProviderRef:   as.metadataProviderRef,
+		UseTMDB:            as.settings.ScannerProvider == "tmdb",
+		EventDispatcher:    as.eventDispatcher,
 	}
 
-	// Get existing local files
-	existingLfs, _, err := db.GetLocalFiles(as.db)
+	_, err = scn.Scan(context.Background())
 	if err != nil {
-		as.logger.Error().Err(err).Msg("autoscanner: Failed to get existing local files")
-		return
-	}
-
-	// Get the latest shelved local files
-	existingShelvedLfs, err := db.GetShelvedLocalFiles(as.db)
-	if err != nil {
-		as.logger.Error().Err(err).Msg("autoscanner: Failed to get existing shelved local files")
-	}
-
-	// Create a new scan logger
-	var scanLogger *scanner.ScanLogger
-	if as.logsDir != "" {
-		scanLogger, err = scanner.NewScanLogger(as.logsDir)
-		if err != nil {
-			as.logger.Error().Err(err).Msg("autoscanner: Failed to create scan logger")
-			return
-		}
-		defer scanLogger.Done()
-	}
-
-	// Create a new scanner
-	sc := scanner.Scanner{
-		DirPath:             settings.Library.LibraryPath,
-		OtherDirPaths:       settings.Library.LibraryPaths,
-		Enhanced:            false, // Do not use enhanced mode for auto scanner.
-		PlatformRef:         as.platformRef,
-		Logger:              as.logger,
-		WSEventManager:      as.wsEventManager,
-		ExistingLocalFiles:  existingLfs,
-		SkipLockedFiles:     true, // Skip locked files by default.
-		SkipIgnoredFiles:    true,
-		ScanSummaryLogger:   scanSummaryLogger,
-		ScanLogger:          scanLogger,
-		MetadataProviderRef: as.metadataProviderRef,
-		MatchingThreshold:   as.settings.ScannerMatchingThreshold,
-
-		MatchingAlgorithm:    as.settings.ScannerMatchingAlgorithm,
-		StrictStructure:      as.settings.ScannerStrictStructure,
-		WithShelving:         true,
-		ExistingShelvedFiles: existingShelvedLfs,
-		ConfigAsString:       as.settings.ScannerConfig,
-		AnimeCollection:      as.animeCollection,
-		UseTMDB:              settings.Library.ScannerProvider == "tmdb",
-		EventDispatcher:      as.eventDispatcher,
-	}
-
-	allLfs, err := sc.Scan(context.Background())
-	if err != nil {
-		if errors.Is(err, scanner.ErrNoLocalFiles) {
-			return
-		}
-
 		as.logger.Error().Err(err).Msg("autoscanner: Failed to scan library")
 		return
 	}
 
-	if as.db != nil && len(allLfs) > 0 {
-		as.logger.Trace().Msg("autoscanner: Updating local files")
+	as.logger.Info().Msg("autoscanner: Library scan completed")
 
-		// Insert the local files
-		_, err = db.InsertLocalFiles(as.db, allLfs)
-		if err != nil {
-			as.logger.Error().Err(err).Msg("autoscanner: failed to insert local files")
-			return
-		}
-	}
 
-	if as.db != nil {
-		as.logger.Trace().Msg("autoscanner: Updating shelved local files")
-		// Save the shelved local files
-		err = db.SaveShelvedLocalFiles(as.db, sc.GetShelvedLocalFiles())
-		if err != nil {
-			as.logger.Error().Err(err).Msg("autoscanner: failed to save shelved local files")
-		}
-	}
 
-	// Save the scan summary
-	err = db.InsertScanSummary(as.db, scanSummaryLogger.GenerateSummary())
-	if err != nil {
-		as.logger.Error().Err(err).Msg("autoscanner: failed to insert scan summary")
-	}
-
-	// Refresh the queue
-	go as.autoDownloader.CleanUpDownloadedItems()
-
+	// Refresh the collection
 	if as.onRefreshCollection != nil {
-		go as.onRefreshCollection()
+		as.onRefreshCollection()
 	}
 
-	as.logger.Info().
-		Dur("duration", time.Since(scanStart)).
-		Int("filesFound", len(allLfs)).
-		Msg("autoscanner: Scan completed")
+	// Trigger autodownloader
+	if as.autoDownloader != nil {
+		as.autoDownloader.Run()
+	}
 
-	return
+	as.mu.Lock()
+	if as.missedAction {
+		as.missedAction = false
+		as.mu.Unlock()
+		as.Notify()
+	} else {
+		as.mu.Unlock()
+	}
+
+	// Notify that the scan is completed
+	select {
+	case as.scannedCh <- struct{}{}:
+	default:
+	}
+}
+
+func (as *AutoScanner) SetEnabled(enabled bool) {
+	as.enabled = enabled
+}
+
+func (as *AutoScanner) GetScannedCh() chan struct{} {
+	return as.scannedCh
 }

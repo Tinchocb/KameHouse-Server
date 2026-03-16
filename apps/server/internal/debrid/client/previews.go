@@ -2,8 +2,8 @@ package debrid_client
 
 import (
 	"fmt"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/debrid/debrid"
+	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/comparison"
 	"path/filepath"
@@ -30,7 +30,7 @@ type (
 		Magnet         string
 		EpisodeNumber  int
 		AbsoluteOffset int
-		Media          *anilist.BaseAnime
+		Media          *platform.UnifiedMedia
 	}
 )
 
@@ -73,7 +73,7 @@ func (r *Repository) GetTorrentFilePreviewsFromManualSelection(opts *GetTorrentF
 	for _, metadata := range fileMetadataMap {
 		if len(metadata.EpisodeNumber) == 1 {
 			ep := util.StringToIntMust(metadata.EpisodeNumber[0])
-			if ep > opts.Media.GetTotalEpisodeCount() {
+			if opts.Media.Episodes != nil && ep > *opts.Media.Episodes {
 				containsAbsoluteEps = true
 				break
 			}

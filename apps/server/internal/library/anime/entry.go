@@ -217,7 +217,7 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 	// +---------------------+
 
 	// Fetch AniDB data and cache it for 30 minutes
-	animeMetadata, err := opts.MetadataProviderRef.Get().GetAnimeMetadata(metadata.AnilistPlatform, opts.MediaId)
+	animeMetadata, err := opts.MetadataProviderRef.Get().GetAnimeMetadata(opts.MediaId)
 	if err != nil {
 
 		// +---------------- Start

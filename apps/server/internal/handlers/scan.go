@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 
 	"kamehouse/internal/database/db"
@@ -79,7 +80,7 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		OtherDirPaths:              additionalLibraryPaths,
 		Enhanced:                   b.Enhanced,
 		EnhanceWithOfflineDatabase: b.EnhanceWithOfflineDatabase,
-		PlatformRef:                h.App.Metadata.AnilistPlatformRef,
+		PlatformRef:                h.App.Metadata.PlatformRef,
 		Logger:                     h.App.Logger,
 		WSEventManager:             h.App.WSEventManager,
 		ExistingLocalFiles:         existingLfs,
@@ -127,7 +128,9 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 
 	go h.App.AutoDownloader.CleanUpDownloadedItems()
 
-	go h.App.RefreshAnimeCollection()
+	go func() {
+		_, _ = h.App.Metadata.PlatformRef.Get().RefreshAnimeCollection(context.Background())
+	}()
 
 	return h.RespondWithData(c, lfs)
 
