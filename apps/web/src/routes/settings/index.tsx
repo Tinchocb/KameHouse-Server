@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs/tabs"
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { DirectorySelector } from "@/components/shared/directory-selector"
 import { PageHeader } from "@/components/ui/page-header/page-header"
 import { ScannerProgress } from "@/components/ui/scanner-progress"
@@ -27,7 +28,7 @@ export const Route = createFileRoute("/settings/")({
 const settingsSchema = z.object({
     library: z.object({
         libraryPath: z.string().default(""),
-        libraryPaths: z.array(z.string()).default([]),
+        libraryPaths: z.array(z.string()).nullish().transform(v => v ?? []),
         autoUpdateProgress: z.boolean().default(false),
         torrentProvider: z.string().default(""),
         autoSelectTorrentProvider: z.string().default(""),
@@ -97,24 +98,6 @@ const settingsSchema = z.object({
         showActiveTorrentCount: z.boolean().default(false),
         hideTorrentList: z.boolean().default(false),
     }).default({}),
-    anilist: z.object({
-        hideAudienceScore: z.boolean().default(false),
-        disableCacheLayer: z.boolean().default(false),
-    }).default({}),
-    discord: z.object({
-        enableRichPresence: z.boolean().default(false),
-        enableAnimeRichPresence: z.boolean().default(false),
-        enableMangaRichPresence: z.boolean().default(false),
-        richPresenceHideKameHouseRepositoryButton: z.boolean().default(false),
-        richPresenceShowAniListMediaButton: z.boolean().default(false),
-        richPresenceShowAniListProfileButton: z.boolean().default(false),
-        richPresenceUseMediaTitleStatus: z.boolean().default(false),
-    }).default({}),
-    manga: z.object({
-        defaultMangaProvider: z.string().default(""),
-        mangaAutoUpdateProgress: z.boolean().default(false),
-        mangaLocalSourceDirectory: z.string().default(""),
-    }).default({}),
     notifications: z.object({
         disableNotifications: z.boolean().default(false),
         disableAutoDownloaderNotifications: z.boolean().default(false),
@@ -129,7 +112,7 @@ const settingsSchema = z.object({
         remoteServerPassword: z.string().default(""),
         includeNakamaAnimeLibrary: z.boolean().default(false),
         hostShareLocalAnimeLibrary: z.boolean().default(false),
-        hostUnsharedAnimeIds: z.array(z.number()).default([]),
+        hostUnsharedAnimeIds: z.array(z.number()).nullish().transform(v => v ?? []),
         hostEnablePortForwarding: z.boolean().default(false),
     }).default({}),
     jellyfin: z.object({
@@ -157,8 +140,6 @@ function toFormValues(s: Models_Settings): SettingsFormValues {
         library: s.library ?? {},
         mediaPlayer: s.mediaPlayer ?? {},
         torrent: s.torrent ?? {},
-        anilist: s.anilist ?? {},
-        discord: s.discord ?? {},
         manga: s.manga ?? {},
         notifications: s.notifications ?? {},
         nakama: s.nakama ?? {},
@@ -275,14 +256,6 @@ function SettingsPage() {
                                         onSave={commitToggle}
                                         disabled={isSaving}
                                     />
-                                    <SettingToggle
-                                        control={form.control}
-                                        name="library.autoUpdateProgress"
-                                        label="Actualizar progreso AniList automáticamente"
-                                        description="Marca episodios como vistos en AniList al completarlos."
-                                        onSave={commitToggle}
-                                        disabled={isSaving}
-                                    />
 
                                     <Button
                                         type="submit"
@@ -342,22 +315,9 @@ function SettingsPage() {
                                 {/* Interface */}
                                 <TabsContent value="interface" className="mt-0 space-y-6">
                                     <SectionHeader title="Personalización Visual" description="Ajusta el tema y opciones visuales de la app." />
-                                    <SettingToggle
-                                        control={form.control}
-                                        name="anilist.hideAudienceScore"
-                                        label="Ocultar puntuación de audiencia"
-                                        description="No muestra la puntuación media de la comunidad en las tarjetas de anime."
-                                        onSave={commitToggle}
-                                        disabled={isSaving}
-                                    />
-                                    <SettingToggle
-                                        control={form.control}
-                                        name="discord.enableRichPresence"
-                                        label="Discord Rich Presence"
-                                        description="Muestra tu actividad de reproducción en Discord."
-                                        onSave={commitToggle}
-                                        disabled={isSaving}
-                                    />
+                                    <div className="p-4 bg-white/5 rounded-md border border-white/5 text-gray-400 text-sm italic">
+                                        Opciones de interfaz adicionales próximamente.
+                                    </div>
 
                                     {/* Save all button */}
                                     <Button
@@ -422,6 +382,7 @@ interface SettingToggleProps {
     description?: string
     disabled?: boolean
     onSave?: () => void
+    showConnectionBadge?: boolean
     /** For fields stored as string internally (e.g. defaultPlayer "vlc") */
     booleanTransform?: {
         fromBool: (v: boolean) => any
@@ -436,6 +397,7 @@ const SettingToggle = memo(function SettingToggle({
     description,
     disabled,
     onSave,
+    showConnectionBadge,
     booleanTransform,
 }: SettingToggleProps) {
     return (
@@ -450,15 +412,22 @@ const SettingToggle = memo(function SettingToggle({
                             <p className="font-bold text-base">{label}</p>
                             {description && <p className="text-sm text-gray-500 mt-0.5">{description}</p>}
                         </div>
-                        <Switch
-                            value={checked}
-                            disabled={disabled}
-                            onValueChange={(v) => {
-                                const next = booleanTransform ? booleanTransform.fromBool(v) : v
-                                field.onChange(next)
-                                onSave?.()
-                            }}
-                        />
+                        <div className="flex items-center gap-4">
+                            {showConnectionBadge && (
+                                <Badge intent={checked ? "success" : "gray-basic"} className="transition-all duration-300 pointer-events-none">
+                                    {checked ? "Conectado" : "Desconectado"}
+                                </Badge>
+                            )}
+                            <Switch
+                                value={checked}
+                                disabled={disabled}
+                                onValueChange={(v) => {
+                                    const next = booleanTransform ? booleanTransform.fromBool(v) : v
+                                    field.onChange(next)
+                                    onSave?.()
+                                }}
+                            />
+                        </div>
                     </div>
                 )
             }}

@@ -32,11 +32,12 @@ func (h *Handler) HandlePopulateFillerData(c echo.Context) error {
 
 	media, found := animeCollection.FindAnime(b.MediaId)
 	if !found {
-		// Fetch media
-		media, err = h.App.Metadata.AnilistPlatformRef.Get().GetAnime(c.Request().Context(), b.MediaId)
+		// Fetch media from active platform (TMDB-based)
+		m, err := h.App.Metadata.PlatformRef.Get().GetAnime(c.Request().Context(), b.MediaId)
 		if err != nil {
 			return h.RespondWithError(c, err)
 		}
+		media = m
 	}
 
 	// Fetch filler data

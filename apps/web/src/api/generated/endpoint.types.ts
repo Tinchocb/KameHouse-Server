@@ -24,7 +24,6 @@ import type {
     Mediastream_StreamType,
     Models_AnilistSettings,
     Models_DebridSettings,
-    Models_DiscordSettings,
     Models_HomeItem,
     Models_JellyfinSettings,
     Models_LibrarySettings,
@@ -1801,7 +1800,6 @@ export type GettingStarted_Variables = {
     mediaPlayer: Models_MediaPlayerSettings
     torrent: Models_TorrentSettings
     anilist: Models_AnilistSettings
-    discord: Models_DiscordSettings
     manga: Models_MangaSettings
     notifications: Models_NotificationSettings
     nakama: Models_NakamaSettings
@@ -1824,7 +1822,6 @@ export type SaveSettings_Variables = {
     mediaPlayer: Models_MediaPlayerSettings
     torrent: Models_TorrentSettings
     anilist: Models_AnilistSettings
-    discord: Models_DiscordSettings
     manga: Models_MangaSettings
     notifications: Models_NotificationSettings
     nakama: Models_NakamaSettings

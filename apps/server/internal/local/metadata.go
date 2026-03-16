@@ -1,7 +1,6 @@
 package local
 
 import (
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/util/result"
@@ -17,7 +16,7 @@ type OfflineMetadataProvider struct {
 }
 
 type OfflineAnimeMetadataWrapper struct {
-	anime    *anilist.BaseAnime
+	anime    interface{}
 	metadata *metadata.AnimeMetadata
 }
 
@@ -59,10 +58,6 @@ func (mp *OfflineMetadataProvider) loadAnimeSnapshots() {
 }
 
 func (mp *OfflineMetadataProvider) GetAnimeMetadata(platform metadata.Platform, mId int) (*metadata.AnimeMetadata, error) {
-	if platform != metadata.AnilistPlatform {
-		return nil, errors.New("unsupported platform")
-	}
-
 	if snapshot, ok := mp.animeSnapshots[mId]; ok {
 		localAnimeMetadata := snapshot.AnimeMetadata
 		for _, episode := range localAnimeMetadata.Episodes {
@@ -87,7 +82,7 @@ func (mp *OfflineMetadataProvider) GetCache() *result.BoundedCache[string, *meta
 	return mp.animeMetadataCache
 }
 
-func (mp *OfflineMetadataProvider) GetAnimeMetadataWrapper(anime *anilist.BaseAnime, metadata *metadata.AnimeMetadata) metadata_provider.AnimeMetadataWrapper {
+func (mp *OfflineMetadataProvider) GetAnimeMetadataWrapper(anime interface{}, metadata *metadata.AnimeMetadata) metadata_provider.AnimeMetadataWrapper {
 	return &OfflineAnimeMetadataWrapper{
 		anime:    anime,
 		metadata: metadata,

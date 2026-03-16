@@ -46,8 +46,6 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 		Library                models.LibrarySettings      `json:"library"`
 		MediaPlayer            models.MediaPlayerSettings  `json:"mediaPlayer"`
 		Torrent                models.TorrentSettings      `json:"torrent"`
-		Anilist                models.AnilistSettings      `json:"anilist"`
-		Discord                models.DiscordSettings      `json:"discord"`
 		Manga                  models.MangaSettings        `json:"manga"`
 		Notifications          models.NotificationSettings `json:"notifications"`
 		Nakama                 models.NakamaSettings       `json:"nakama"`
@@ -73,8 +71,6 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 		Library:       &b.Library,
 		MediaPlayer:   &b.MediaPlayer,
 		Torrent:       &b.Torrent,
-		Anilist:       &b.Anilist,
-		Discord:       &b.Discord,
 		Manga:         &b.Manga,
 		Notifications: &b.Notifications,
 		Nakama:        &b.Nakama,
@@ -143,8 +139,6 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		Library       models.LibrarySettings        `json:"library"`
 		MediaPlayer   models.MediaPlayerSettings    `json:"mediaPlayer"`
 		Torrent       models.TorrentSettings        `json:"torrent"`
-		Anilist       models.AnilistSettings        `json:"anilist"`
-		Discord       models.DiscordSettings        `json:"discord"`
 		Manga         models.MangaSettings          `json:"manga"`
 		Notifications models.NotificationSettings   `json:"notifications"`
 		Nakama        models.NakamaSettings         `json:"nakama"`
@@ -219,8 +213,6 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		Library:        &b.Library,
 		MediaPlayer:    &b.MediaPlayer,
 		Torrent:        &b.Torrent,
-		Anilist:        &b.Anilist,
-		Discord:        &b.Discord,
 		Manga:          &b.Manga,
 		Notifications:  &b.Notifications,
 		Nakama:         &b.Nakama,

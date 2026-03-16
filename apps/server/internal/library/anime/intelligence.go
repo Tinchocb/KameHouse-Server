@@ -62,23 +62,23 @@ type arcRange struct {
 	name ArcName
 }
 
-// dragonBallArcs maps AniList media IDs to their ordered arc slices.
-// IDs: Dragon Ball (529), Dragon Ball Z (813), Dragon Ball GT (568)
-// Dragon Ball Super (30694), Dragon Ball Z Kai (6033)
+// dragonBallArcs maps TMDB media IDs to their ordered arc slices.
+// IDs: Dragon Ball (12609), Dragon Ball Z (12971), Dragon Ball GT (12695)
+// Dragon Ball Super (62715), Dragon Ball Z Kai (61709), Dragon Ball Daima (236825)
 var dragonBallArcs = map[int][]arcRange{
-	// ─── Dragon Ball (529) ───────────────────────────────────────────
-	529: {
+	// ─── Dragon Ball (12609) ─────────────────────────────────────────
+	12609: {
 		{1, 13, "Saga de la Búsqueda de las Dragon Balls"},
-		{14, 28, "Saga del Torneo de Artes Marciales"},
-		{29, 45, "Saga del Castel Muscle Tower"},
+		{14, 28, "Saga del Torneo de Artes Malciales"},
+		{29, 45, "Saga del Ejercito del General Blue (Red Ribbon)"},
 		{46, 68, "Saga de la Búsqueda del Mar Rojo"},
 		{69, 83, "Saga del 22° Torneo"},
 		{84, 101, "Saga de Piccolo Daimao"},
 		{102, 123, "Saga del 23° Torneo"},
 		{124, 153, "Saga de Garlic Jr. (Relleno)"},
 	},
-	// ─── Dragon Ball Z (813) ─────────────────────────────────────────
-	813: {
+	// ─── Dragon Ball Z (12971) ───────────────────────────────────────
+	12971: {
 		{1, 35, "Saga de los Saiyajin"},
 		{36, 74, "Saga de Namek"},
 		{75, 107, "Saga de Freezer"},
@@ -94,15 +94,15 @@ var dragonBallArcs = map[int][]arcRange{
 		{374, 391, "Saga de Fusión"},
 		{392, 421, "Saga de Kid Buu"},
 	},
-	// ─── Dragon Ball Z Kai (6033) ────────────────────────────────────
-	6033: {
+	// ─── Dragon Ball Z Kai (61709) ───────────────────────────────────
+	61709: {
 		{1, 26, "Saga de los Saiyajin"},
 		{27, 54, "Saga de Frieza"},
 		{55, 77, "Saga de Cell"},
 		{78, 98, "Saga de Majin Buu"},
 	},
-	// ─── Dragon Ball Super (30694) ───────────────────────────────────
-	30694: {
+	// ─── Dragon Ball Super (62715) ───────────────────────────────────
+	62715: {
 		{1, 14, "Saga del Dios de la Destrucción Beerus"},
 		{15, 27, "Saga de la Resurrección F"},
 		{28, 46, "Saga de Universe 6"},
@@ -110,11 +110,15 @@ var dragonBallArcs = map[int][]arcRange{
 		{77, 96, "Saga del Torneo de la Fuerza"},
 		{97, 131, "Saga del Torneo del Poder"},
 	},
-	// ─── Dragon Ball GT (568) ────────────────────────────────────────
-	568: {
+	// ─── Dragon Ball GT (12695) ──────────────────────────────────────
+	12695: {
 		{1, 16, "Saga de Baby"},
 		{17, 40, "Saga de Super 17"},
 		{41, 64, "Saga de los Dragon Balls de la Sombra"},
+	},
+	// ─── Dragon Ball Daima (236825) ──────────────────────────────────
+	236825: {
+		{1, 20, "Saga de la Conspiración del Reino Demoniaco"},
 	},
 }
 

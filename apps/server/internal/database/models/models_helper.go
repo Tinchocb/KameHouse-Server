@@ -14,12 +14,6 @@ func (s *Settings) GetTorrent() *TorrentSettings {
 	return s.Torrent
 }
 
-func (s *Settings) GetAnilist() *AnilistSettings {
-	if s == nil || s.Anilist == nil {
-		return &AnilistSettings{}
-	}
-	return s.Anilist
-}
 
 func (s *Settings) GetManga() *MangaSettings {
 	if s == nil || s.Manga == nil {
@@ -49,12 +43,6 @@ func (s *Settings) GetAutoDownloader() *AutoDownloaderSettings {
 	return s.AutoDownloader
 }
 
-func (s *Settings) GetDiscord() *DiscordSettings {
-	if s == nil || s.Discord == nil {
-		return &DiscordSettings{}
-	}
-	return s.Discord
-}
 
 func (s *Settings) GetNotifications() *NotificationSettings {
 	if s == nil || s.Notifications == nil {

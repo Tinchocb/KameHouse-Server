@@ -51,10 +51,8 @@ type Settings struct {
 	MediaPlayer    *MediaPlayerSettings    `gorm:"embedded" json:"mediaPlayer"`
 	Torrent        *TorrentSettings        `gorm:"embedded" json:"torrent"`
 	Manga          *MangaSettings          `gorm:"embedded" json:"manga"`
-	Anilist        *AnilistSettings        `gorm:"embedded" json:"anilist"`
 	ListSync       *ListSyncSettings       `gorm:"embedded" json:"listSync"`
 	AutoDownloader *AutoDownloaderSettings `gorm:"embedded" json:"autoDownloader"`
-	Discord        *DiscordSettings        `gorm:"embedded" json:"discord"`
 	Notifications  *NotificationSettings   `gorm:"embedded" json:"notifications"`
 	Nakama         *NakamaSettings         `gorm:"embedded;embeddedPrefix:nakama_" json:"nakama"`
 	Mediastream    *MediastreamSettings    `gorm:"-" json:"mediastream"`
@@ -88,10 +86,6 @@ type TorrentstreamSettings struct {
 	PreloadNextStream   bool   `gorm:"preload_next_stream" json:"preloadNextStream"`
 }
 
-type AnilistSettings struct {
-	HideAudienceScore bool `gorm:"column:hide_audience_score" json:"hideAudienceScore"`
-	DisableCacheLayer bool `gorm:"column:disable_cache_layer" json:"disableCacheLayer"`
-}
 
 type LibrarySettings struct {
 	LibraryPath                     string       `gorm:"column:library_path" json:"libraryPath"`
@@ -240,11 +234,6 @@ type ListSyncSettings struct {
 	Origin    string `gorm:"column:sync_origin" json:"origin"`
 }
 
-type DiscordSettings struct {
-	EnableRichPresence      bool `gorm:"column:enable_rich_presence" json:"enableRichPresence"`
-	EnableAnimeRichPresence bool `gorm:"column:enable_anime_rich_presence" json:"enableAnimeRichPresence"`
-	EnableMangaRichPresence bool `gorm:"column:enable_manga_rich_presence" json:"enableMangaRichPresence"`
-}
 
 type NotificationSettings struct {
 	DisableNotifications bool `gorm:"column:disable_notifications" json:"disableNotifications"`

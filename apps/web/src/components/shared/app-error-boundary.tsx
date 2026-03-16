@@ -1,4 +1,4 @@
-import { LuffyError } from "@/components/shared/luffy-error"
+import { BulmaError } from "@/components/shared/bulma-error"
 import { useQueryClient } from "@tanstack/react-query"
 import { useLocation, useRouter } from "@tanstack/react-router"
 import React from "react"
@@ -50,7 +50,7 @@ export function AppErrorBoundary({ error, reset, resetErrorBoundary }: AppErrorB
                              error?.message?.toLowerCase().includes("import");
 
     return (
-        <LuffyError
+        <BulmaError
             title={isChunkLoadError ? "Actualización disponible" : "Error en el cliente"}
             reset={handleReset}
         >
@@ -66,6 +66,6 @@ export function AppErrorBoundary({ error, reset, resetErrorBoundary }: AppErrorB
                     </p>
                 </div>
             )}
-        </LuffyError>
+        </BulmaError>
     )
 }

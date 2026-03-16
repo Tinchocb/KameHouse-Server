@@ -133,11 +133,6 @@ type Manager interface {
 	OnWatchHistoryStreamEpisodeItemRequested() *Hook[hook_resolver.Resolver]
 	OnPredictiveCacheEpisodeRequested() *Hook[hook_resolver.Resolver]
 
-	// Discord RPC events
-	OnDiscordPresenceAnimeActivityRequested() *Hook[hook_resolver.Resolver]
-	OnDiscordPresenceMangaActivityRequested() *Hook[hook_resolver.Resolver]
-	OnDiscordPresenceClientClosed() *Hook[hook_resolver.Resolver]
-
 	// Anilist events
 	OnListMissedSequelsRequested() *Hook[hook_resolver.Resolver]
 	OnListMissedSequels() *Hook[hook_resolver.Resolver]
@@ -262,10 +257,6 @@ type ManagerImpl struct {
 	onWatchHistoryLocalFileEpisodeItemRequested *Hook[hook_resolver.Resolver]
 	onWatchHistoryStreamEpisodeItemRequested    *Hook[hook_resolver.Resolver]
 	onPredictiveCacheEpisodeRequested           *Hook[hook_resolver.Resolver]
-	// Discord RPC events
-	onDiscordPresenceAnimeActivityRequested *Hook[hook_resolver.Resolver]
-	onDiscordPresenceMangaActivityRequested *Hook[hook_resolver.Resolver]
-	onDiscordPresenceClientClosed           *Hook[hook_resolver.Resolver]
 	// Anilist events
 	onListMissedSequelsRequested *Hook[hook_resolver.Resolver]
 	onListMissedSequels          *Hook[hook_resolver.Resolver]
@@ -408,10 +399,6 @@ func (m *ManagerImpl) initHooks() {
 	m.onWatchHistoryLocalFileEpisodeItemRequested = &Hook[hook_resolver.Resolver]{}
 	m.onWatchHistoryStreamEpisodeItemRequested = &Hook[hook_resolver.Resolver]{}
 	m.onPredictiveCacheEpisodeRequested = &Hook[hook_resolver.Resolver]{}
-	// Discord RPC events
-	m.onDiscordPresenceAnimeActivityRequested = &Hook[hook_resolver.Resolver]{}
-	m.onDiscordPresenceMangaActivityRequested = &Hook[hook_resolver.Resolver]{}
-	m.onDiscordPresenceClientClosed = &Hook[hook_resolver.Resolver]{}
 	// Anilist events
 	m.onListMissedSequelsRequested = &Hook[hook_resolver.Resolver]{}
 	m.onListMissedSequels = &Hook[hook_resolver.Resolver]{}
@@ -1083,29 +1070,6 @@ func (m *ManagerImpl) OnPredictiveCacheEpisodeRequested() *Hook[hook_resolver.Re
 		return &Hook[hook_resolver.Resolver]{}
 	}
 	return m.onPredictiveCacheEpisodeRequested
-}
-
-// Discord RPC events
-
-func (m *ManagerImpl) OnDiscordPresenceAnimeActivityRequested() *Hook[hook_resolver.Resolver] {
-	if m == nil {
-		return &Hook[hook_resolver.Resolver]{}
-	}
-	return m.onDiscordPresenceAnimeActivityRequested
-}
-
-func (m *ManagerImpl) OnDiscordPresenceMangaActivityRequested() *Hook[hook_resolver.Resolver] {
-	if m == nil {
-		return &Hook[hook_resolver.Resolver]{}
-	}
-	return m.onDiscordPresenceMangaActivityRequested
-}
-
-func (m *ManagerImpl) OnDiscordPresenceClientClosed() *Hook[hook_resolver.Resolver] {
-	if m == nil {
-		return &Hook[hook_resolver.Resolver]{}
-	}
-	return m.onDiscordPresenceClientClosed
 }
 
 // Anilist events

@@ -3,7 +3,6 @@ package videocore
 import (
 	"context"
 	"encoding/json"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/continuity"
 	"kamehouse/internal/database/models"
@@ -31,11 +30,10 @@ type (
 
 		translatorService *TranslatorService
 
-		continuityManager          *continuity.Manager
-		metadataProviderRef        *util.Ref[metadata_provider.Provider]
-		platformRef                *util.Ref[platform.Platform]
-		refreshAnimeCollectionFunc func() // This function is called to refresh the AniList collection
-		isOfflineRef               *util.Ref[bool]
+		continuityManager   *continuity.Manager
+		metadataProviderRef *util.Ref[metadata_provider.Provider]
+		platformRef         *util.Ref[platform.Platform]
+		isOfflineRef        *util.Ref[bool]
 
 		playbackStatusMu  sync.RWMutex
 		playbackStatus    *PlaybackStatus
@@ -65,13 +63,12 @@ type (
 	}
 
 	NewVideoCoreOptions struct {
-		WsEventManager             events.WSEventManagerInterface
-		Logger                     *zerolog.Logger
-		MetadataProviderRef        *util.Ref[metadata_provider.Provider]
-		ContinuityManager          *continuity.Manager
-		PlatformRef                *util.Ref[platform.Platform]
-		RefreshAnimeCollectionFunc func()
-		IsOfflineRef               *util.Ref[bool]
+		WsEventManager      events.WSEventManagerInterface
+		Logger              *zerolog.Logger
+		MetadataProviderRef *util.Ref[metadata_provider.Provider]
+		ContinuityManager    *continuity.Manager
+		PlatformRef         *util.Ref[platform.Platform]
+		IsOfflineRef        *util.Ref[bool]
 	}
 )
 
@@ -82,7 +79,6 @@ func New(opts NewVideoCoreOptions) *VideoCore {
 		continuityManager:           opts.ContinuityManager,
 		metadataProviderRef:         opts.MetadataProviderRef,
 		platformRef:                 opts.PlatformRef,
-		refreshAnimeCollectionFunc:  opts.RefreshAnimeCollectionFunc,
 		isOfflineRef:                opts.IsOfflineRef,
 		subscribers:                 result.NewMap[string, *Subscriber](),
 		clientPlayerEventSubscriber: opts.WsEventManager.SubscribeToClientVideoCoreEvents("videocore"),
@@ -299,7 +295,7 @@ func (vc *VideoCore) GetCurrentPlaybackInfo() (*VideoPlaybackInfo, bool) {
 
 // GetCurrentMedia returns the current media.
 // This will return nil right after VideoTerminatedEvent is received.
-func (vc *VideoCore) GetCurrentMedia() (*anilist.BaseAnime, bool) {
+func (vc *VideoCore) GetCurrentMedia() (interface{}, bool) {
 	info, ok := vc.GetCurrentPlaybackInfo()
 	if !ok {
 		return nil, false

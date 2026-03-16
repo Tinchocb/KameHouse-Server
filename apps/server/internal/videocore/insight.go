@@ -124,11 +124,19 @@ func (is *InSight) Start() {
 			switch e := event.(type) {
 			case *VideoLoadedEvent:
 				go func(ev *VideoLoadedEvent) {
-					if ev.State.PlaybackInfo != nil && ev.State.PlaybackInfo.Media != nil && ev.State.PlaybackInfo.Media.IDMal != nil {
-						is.fetchCharacters(*ev.State.PlaybackInfo.Media.IDMal)
-						// send to player
-						is.sendToPlayer()
-						//is.startPolling() todo
+					if ev.State.PlaybackInfo != nil && ev.State.PlaybackInfo.Media != nil {
+						var malId int
+						// Try to extract MalID if it exists in the polymorphic media object
+						if m, ok := ev.State.PlaybackInfo.Media.(map[string]interface{}); ok {
+							if id, ok := m["idMal"].(float64); ok {
+								malId = int(id)
+							}
+						}
+						
+						if malId != 0 {
+							is.fetchCharacters(malId)
+							is.sendToPlayer()
+						}
 					}
 				}(e)
 			case *VideoSubtitleTrackEvent:

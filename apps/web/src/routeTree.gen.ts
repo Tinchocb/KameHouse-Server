@@ -17,7 +17,6 @@ import { Route as SeriesIndexRouteImport } from './routes/series/index'
 import { Route as MoviesIndexRouteImport } from './routes/movies/index'
 import { Route as LibraryIndexRouteImport } from './routes/library/index'
 import { Route as HomeIndexRouteImport } from './routes/home/index'
-import { Route as CalendarIndexRouteImport } from './routes/calendar/index'
 import { Route as SplashscreenCrashIndexRouteImport } from './routes/splashscreen/crash/index'
 import { Route as SeriesSeriesIdIndexRouteImport } from './routes/series/$seriesId/index'
 import { Route as PublicAuthIndexRouteImport } from './routes/public/auth/index'
@@ -77,11 +76,6 @@ const HomeIndexRoute = HomeIndexRouteImport.update({
   path: '/home/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CalendarIndexRoute = CalendarIndexRouteImport.update({
-  id: '/calendar/',
-  path: '/calendar/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SplashscreenCrashIndexRoute = SplashscreenCrashIndexRouteImport.update({
   id: '/splashscreen/crash/',
   path: '/splashscreen/crash/',
@@ -109,7 +103,6 @@ const SeriesSeriesIdSagaIdRoute = SeriesSeriesIdSagaIdRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/calendar/': typeof CalendarIndexRoute
   '/home/': typeof HomeIndexRoute
   '/library/': typeof LibraryIndexRoute
   '/movies/': typeof MoviesIndexRoute
@@ -126,7 +119,6 @@ export interface FileRoutesByFullPath {
   '/splashscreen/crash/': typeof SplashscreenCrashIndexRoute
 }
 export interface FileRoutesByTo {
-  '/calendar': typeof CalendarIndexRoute
   '/home': typeof HomeIndexRoute
   '/library': typeof LibraryIndexRoute
   '/movies': typeof MoviesIndexRoute
@@ -144,7 +136,6 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/calendar/': typeof CalendarIndexRoute
   '/home/': typeof HomeIndexRoute
   '/library/': typeof LibraryIndexRoute
   '/movies/': typeof MoviesIndexRoute
@@ -163,7 +154,6 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/calendar/'
     | '/home/'
     | '/library/'
     | '/movies/'
@@ -180,7 +170,6 @@ export interface FileRouteTypes {
     | '/splashscreen/crash/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/calendar'
     | '/home'
     | '/library'
     | '/movies'
@@ -197,7 +186,6 @@ export interface FileRouteTypes {
     | '/splashscreen/crash'
   id:
     | '__root__'
-    | '/calendar/'
     | '/home/'
     | '/library/'
     | '/movies/'
@@ -215,7 +203,6 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  CalendarIndexRoute: typeof CalendarIndexRoute
   HomeIndexRoute: typeof HomeIndexRoute
   LibraryIndexRoute: typeof LibraryIndexRoute
   MoviesIndexRoute: typeof MoviesIndexRoute
@@ -297,13 +284,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HomeIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/calendar/': {
-      id: '/calendar/'
-      path: '/calendar'
-      fullPath: '/calendar/'
-      preLoaderRoute: typeof CalendarIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/splashscreen/crash/': {
       id: '/splashscreen/crash/'
       path: '/splashscreen/crash'
@@ -343,7 +323,6 @@ declare module '@tanstack/react-router' {
 }
 
 const rootRouteChildren: RootRouteChildren = {
-  CalendarIndexRoute: CalendarIndexRoute,
   HomeIndexRoute: HomeIndexRoute,
   LibraryIndexRoute: LibraryIndexRoute,
   MoviesIndexRoute: MoviesIndexRoute,

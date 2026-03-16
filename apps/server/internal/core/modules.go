@@ -2,14 +2,12 @@ package core
 
 import (
 	"context"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/continuity"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
 	debrid_client "kamehouse/internal/debrid/client"
 	"kamehouse/internal/directstream"
-	"kamehouse/internal/events"
 	"kamehouse/internal/hook"
 	"kamehouse/internal/hook_resolver"
 	"kamehouse/internal/library/autodownloader"
@@ -17,27 +15,22 @@ import (
 	"kamehouse/internal/library/fillermanager"
 	"kamehouse/internal/library_explorer"
 	"kamehouse/internal/mediastream"
-	"kamehouse/internal/platforms/shared_platform"
 	"kamehouse/internal/streaming"
 	"kamehouse/internal/torrent_clients/qbittorrent"
 	"kamehouse/internal/torrent_clients/torrent_client"
 	"kamehouse/internal/torrent_clients/transmission"
 	itorrent "kamehouse/internal/torrents/torrent"
 	"kamehouse/internal/torrentstream"
-	"kamehouse/internal/user"
 
 	"github.com/cli/browser"
 	"github.com/rs/zerolog"
 )
 
+
 // initModulesOnce will initialize modules that need to persist.
 // This function is called once after the App instance is created.
 // The settings of these modules will be set/refreshed in InitOrRefreshModules.
 func (a *App) initModulesOnce() {
-
-	a.LocalManager.SetRefreshAnilistCollectionsFunc(func() {
-		_, _ = a.RefreshAnimeCollection()
-	})
 
 	// +---------------------+
 	// |       Filler        |
@@ -97,9 +90,8 @@ func (a *App) initModulesOnce() {
 		WSEventManager:      a.WSEventManager,
 		ContinuityManager:   a.ContinuityManager,
 		MetadataProviderRef: a.Metadata.ProviderRef,
-		PlatformRef:         a.Metadata.AnilistPlatformRef,
 		RefreshAnimeCollectionFunc: func() {
-			_, _ = a.RefreshAnimeCollection()
+			// No-op for now
 		},
 		IsOfflineRef: a.IsOfflineRef(),
 		VideoCore:    a.VideoCore,
@@ -111,11 +103,8 @@ func (a *App) initModulesOnce() {
 
 	a.TorrentstreamRepository = torrentstream.NewRepository(&torrentstream.NewRepositoryOptions{
 		Logger:              a.Logger,
-		BaseAnimeCache:      anilist.NewBaseAnimeCache(),
-		CompleteAnimeCache:  anilist.NewCompleteAnimeCache(),
 		MetadataProviderRef: a.Metadata.ProviderRef,
 		TorrentRepository:   a.TorrentRepository,
-		PlatformRef:         a.Metadata.AnilistPlatformRef,
 		WSEventManager:      a.WSEventManager,
 		Database:            a.Database,
 		DirectStreamManager: a.DirectStreamManager,
@@ -130,7 +119,6 @@ func (a *App) initModulesOnce() {
 		WSEventManager:      a.WSEventManager,
 		Database:            a.Database,
 		MetadataProviderRef: a.Metadata.ProviderRef,
-		PlatformRef:         a.Metadata.AnilistPlatformRef,
 		TorrentRepository:   a.TorrentRepository,
 		DirectStreamManager: a.DirectStreamManager,
 	})
@@ -177,7 +165,6 @@ func (a *App) initModulesOnce() {
 
 	a.AutoScanner = autoscanner.New(&autoscanner.NewAutoScannerOptions{
 		Database:            a.Database,
-		PlatformRef:         a.Metadata.AnilistPlatformRef,
 		Logger:              a.Logger,
 		WSEventManager:      a.WSEventManager,
 		Enabled:             false, // Will be set in InitOrRefreshModules
@@ -185,9 +172,7 @@ func (a *App) initModulesOnce() {
 		MetadataProviderRef: a.Metadata.ProviderRef,
 		LogsDir:             a.Config.Logs.Dir,
 		OnRefreshCollection: func() {
-			go func() {
-				_, _ = a.RefreshAnimeCollection()
-			}()
+			// No-op for now
 		},
 		EventDispatcher: a.WSHub.EventDispatcher(), // Assuming WSHub gives access to it, or passing it directly
 	})
@@ -199,7 +184,6 @@ func (a *App) initModulesOnce() {
 	// |   Anime Library     |
 	// +---------------------+
 	a.LibraryExplorer = library_explorer.NewLibraryExplorer(library_explorer.NewLibraryExplorerOptions{
-		PlatformRef: a.Metadata.AnilistPlatformRef,
 		Logger:      a.Logger,
 		Database:    a.Database,
 	})
@@ -250,14 +234,6 @@ func (a *App) InitOrRefreshModules() {
 
 		// Update feature toggles from settings
 		a.FeatureManager.UpdateFromSettings(settings.Library)
-
-		if a.Metadata.ProviderRef.IsPresent() {
-			a.Metadata.ProviderRef.Get().SetUseFallbackProvider(settings.GetLibrary().UseFallbackMetadataProvider)
-		}
-	}
-
-	if settings.Anilist != nil {
-		shared_platform.ShouldCache.Store(!settings.Anilist.DisableCacheLayer)
 	}
 
 	// +---------------------+
@@ -267,8 +243,6 @@ func (a *App) InitOrRefreshModules() {
 
 	// Refresh updater settings
 	if settings.Library != nil {
-		// Refreshed plugin context removed
-
 		if a.LibraryExplorer != nil {
 			// Update the library paths for the library explorer (thread safe)
 			go a.LibraryExplorer.SetLibraryPaths(settings.GetLibrary().GetLibraryPaths())
@@ -338,10 +312,6 @@ func (a *App) InitOrRefreshModules() {
 
 		// Set AutoDownloader qBittorrent client
 		a.AutoDownloader.SetTorrentClientRepository(a.TorrentClientRepository)
-
-		// Refreshed plugin context removed
-	} else {
-		a.Logger.Warn().Msg("app: Did not initialize torrent client module, no settings found")
 	}
 
 	// +---------------------+
@@ -376,15 +346,11 @@ func (a *App) InitOrRefreshModules() {
 
 }
 
-// InitOrRefreshMediastreamSettings will initialize or refresh the mediastream settings.
-// It is called after the App instance is created and after settings are updated.
 func (a *App) InitOrRefreshMediastreamSettings() {
-
 	var settings *models.MediastreamSettings
 	var found bool
 	settings, found = a.Database.GetMediastreamSettings()
 	if !found {
-
 		var err error
 		settings, err = a.Database.UpsertMediastreamSettings(&models.MediastreamSettings{
 			BaseModel: models.BaseModel{
@@ -403,13 +369,10 @@ func (a *App) InitOrRefreshMediastreamSettings() {
 
 	a.MediastreamRepository.InitializeModules(settings, a.Config.Cache.Dir, a.Config.Cache.TranscodeDir)
 
-	// Cleanup cache
 	go func() {
 		if settings.TranscodeEnabled {
-			// If transcoding is enabled, trim files
 			_ = a.FileCacher.TrimMediastreamVideoFiles()
 		} else {
-			// If transcoding is disabled, clear all files
 			_ = a.FileCacher.ClearMediastreamVideoFiles()
 		}
 	}()
@@ -417,15 +380,11 @@ func (a *App) InitOrRefreshMediastreamSettings() {
 	a.SecondarySettings.Mediastream = settings
 }
 
-// InitOrRefreshTorrentstreamSettings will initialize or refresh the mediastream settings.
-// It is called after the App instance is created and after settings are updated.
 func (a *App) InitOrRefreshTorrentstreamSettings() {
-
 	var settings *models.TorrentstreamSettings
 	var found bool
 	settings, found = a.Database.GetTorrentstreamSettings()
 	if !found {
-
 		var err error
 		settings, err = a.Database.UpsertTorrentstreamSettings(&models.TorrentstreamSettings{
 			BaseModel: models.BaseModel{
@@ -455,28 +414,18 @@ func (a *App) InitOrRefreshTorrentstreamSettings() {
 	err := a.TorrentstreamRepository.InitModules(settings)
 	if err != nil && settings.Enabled {
 		a.Logger.Error().Err(err).Msg("app: Failed to initialize Torrent streaming module")
-		//_, _ = a.Database.UpsertTorrentstreamSettings(&models.TorrentstreamSettings{
-		//	BaseModel: models.BaseModel{
-		//		ID: 1,
-		//	},
-		//	Enabled: false,
-		//})
 	}
 
 	a.Cleanups = append(a.Cleanups, func() {
 		_ = a.TorrentstreamRepository.Shutdown()
 	})
 
-	// Set torrent streaming settings in secondary settings
-	// so the client can use them
 	a.SecondarySettings.Torrentstream = settings
 }
 
 func (a *App) InitOrRefreshDebridSettings() {
-
 	settings, found := a.Database.GetDebridSettings()
 	if !found {
-
 		var err error
 		settings, err = a.Database.UpsertDebridSettings(&models.DebridSettings{
 			BaseModel: models.BaseModel{
@@ -502,45 +451,6 @@ func (a *App) InitOrRefreshDebridSettings() {
 		a.Logger.Error().Err(err).Msg("app: Failed to initialize debrid provider")
 		return
 	}
-}
-
-// InitOrRefreshAnilistData will initialize the Anilist anime collection and the account.
-// This function should be called after App.Database is initialized and after settings are updated.
-func (a *App) InitOrRefreshAnilistData() {
-	a.Logger.Debug().Msg("app: Fetching Anilist data")
-
-	var currUser *user.User
-	acc, err := a.Database.GetAccount()
-	if err != nil || acc.Username == "" {
-		a.ServerReady = true
-		currUser = user.NewSimulatedUser() // Create a simulated user if no account is found
-	} else {
-		currUser, err = user.NewUser(acc)
-		if err != nil {
-			a.Logger.Error().Err(err).Msg("app: Failed to create user from account")
-			return
-		}
-	}
-
-	a.user = currUser
-
-	// Set username to Anilist platform
-	a.Metadata.AnilistPlatformRef.Get().SetUsername(currUser.Viewer.Name)
-
-	a.Logger.Info().Msg("app: Authenticated to AniList")
-
-	go func() {
-		_, err = a.RefreshAnimeCollection()
-		if err != nil {
-			a.Logger.Error().Err(err).Msg("app: Failed to fetch Anilist anime collection")
-		}
-
-		a.ServerReady = true
-		a.WSEventManager.SendEvent(events.ServerReady, nil)
-
-	}()
-
-	a.Logger.Info().Msg("app: Fetched Anilist data")
 }
 
 func (a *App) performActionsOnce() {

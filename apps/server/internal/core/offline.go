@@ -2,14 +2,11 @@ package core
 
 import (
 	"kamehouse/internal/api/metadata_provider"
-	"kamehouse/internal/platforms/anilist_platform"
-	"kamehouse/internal/platforms/offline_platform"
 
 	"github.com/spf13/viper"
 )
 
 // SetOfflineMode changes the offline mode.
-// It updates the config and active AniList platform.
 func (a *App) SetOfflineMode(enabled bool) {
 	// Update the config
 	a.Config.Server.Offline = enabled
@@ -21,33 +18,20 @@ func (a *App) SetOfflineMode(enabled bool) {
 	a.Logger.Info().Bool("enabled", enabled).Msg("app: Offline mode set")
 	a.isOfflineRef.Set(enabled)
 
-	if a.Metadata.AnilistPlatformRef.IsPresent() {
-		a.Metadata.AnilistPlatformRef.Get().Close()
-	}
 	if a.Metadata.ProviderRef.IsPresent() {
 		a.Metadata.ProviderRef.Get().Close()
 	}
 
 	// Update the platform and metadata provider
 	if enabled {
-
-		anilistPlatform, _ := offline_platform.NewOfflinePlatform(a.LocalManager, a.Metadata.AnilistClientRef, a.Logger)
-		a.Metadata.AnilistPlatformRef.Set(anilistPlatform)
 		a.Metadata.ProviderRef.Set(a.LocalManager.GetOfflineMetadataProvider())
 	} else {
-		// DEVNOTE: We don't handle local platform since the feature doesn't allow offline mode
-		anilistPlatform := anilist_platform.NewAnilistPlatform(a.Metadata.AnilistClientRef, nil, a.Logger, a.Database)
-		a.Metadata.AnilistPlatformRef.Set(anilistPlatform)
 		a.Metadata.ProviderRef.Set(metadata_provider.NewProvider(&metadata_provider.NewProviderImplOptions{
 			Logger:     a.Logger,
 			FileCacher: a.FileCacher,
 			Database:   a.Database,
 		}))
-		a.InitOrRefreshAnilistData()
 	}
-	a.AddOnRefreshAnilistCollectionFunc("anilist-platform", func() {
-		a.Metadata.AnilistPlatformRef.Get().ClearCache()
-	})
 
 	a.InitOrRefreshModules()
 }

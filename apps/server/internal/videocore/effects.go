@@ -46,9 +46,25 @@ func (vc *VideoCore) setupSharedEffects() {
 						continue
 					}
 
-					mediaId := state.PlaybackInfo.Media.GetID()
+					// Helper to extract properties from various media types
+					var mediaId int
+					var totalEpisodes *int
+
+					// Try to extract from common types or ignore if not possible
+					// This is a temporary measure until a proper Media interface is used across Videocore
+					if m, ok := state.PlaybackInfo.Media.(map[string]interface{}); ok {
+						if id, ok := m["id"].(float64); ok {
+							mediaId = int(id)
+						}
+						if eps, ok := m["episodes"].(float64); ok {
+							te := int(eps)
+							totalEpisodes = &te
+						}
+					} else if m, ok := state.PlaybackInfo.Media.(interface{ GetID() int }); ok {
+						mediaId = m.GetID()
+					}
+
 					progress := state.PlaybackInfo.Episode.GetProgressNumber()
-					totalEpisodes := state.PlaybackInfo.Media.Episodes
 
 					if listEntry, hasEntry := collection.GetListEntryFromAnimeId(mediaId); hasEntry {
 						if listEntry.Progress != nil && progress <= *listEntry.Progress {
@@ -60,7 +76,6 @@ func (vc *VideoCore) setupSharedEffects() {
 					if err != nil {
 						vc.logger.Error().Err(err).Msgf("videocore: Failed to update progress for media %d", mediaId)
 					}
-					vc.refreshAnimeCollectionFunc()
 				}
 			case *VideoTerminatedEvent:
 			case *VideoStatusEvent:
@@ -69,13 +84,19 @@ func (vc *VideoCore) setupSharedEffects() {
 					continue
 				}
 				if event.Duration != 0 {
-					_ = vc.continuityManager.UpdateWatchHistoryItem(&continuity.UpdateWatchHistoryItemOptions{
-						CurrentTime:   event.CurrentTime,
-						Duration:      event.Duration,
-						MediaId:       state.PlaybackInfo.Media.GetID(),
-						EpisodeNumber: state.PlaybackInfo.Episode.GetEpisodeNumber(),
-						Kind:          continuity.MediastreamKind,
-					})
+						_ = vc.continuityManager.UpdateWatchHistoryItem(&continuity.UpdateWatchHistoryItemOptions{
+							CurrentTime:   event.CurrentTime,
+							Duration:      event.Duration,
+							MediaId: func() int {
+								if m, ok := state.PlaybackInfo.Media.(interface{ GetID() int }); ok {
+									return m.GetID()
+								}
+								// Fallback/Placeholder
+								return 0
+							}(),
+							EpisodeNumber: state.PlaybackInfo.Episode.GetEpisodeNumber(),
+							Kind:          continuity.MediastreamKind,
+						})
 				}
 
 

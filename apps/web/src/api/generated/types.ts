@@ -3767,20 +3767,6 @@ export type Models_DebridSettings = {
     updatedAt?: string
 }
 
-/**
- * - Filepath: internal/database/models/models.go
- * - Filename: models.go
- * - Package: models
- */
-export type Models_DiscordSettings = {
-    enableRichPresence: boolean
-    enableAnimeRichPresence: boolean
-    enableMangaRichPresence: boolean
-    richPresenceHideKameHouseRepositoryButton: boolean
-    richPresenceShowAniListMediaButton: boolean
-    richPresenceShowAniListProfileButton: boolean
-    richPresenceUseMediaTitleStatus: boolean
-}
 
 /**
  * - Filepath: internal/database/models/models.go
@@ -4081,7 +4067,6 @@ export type Models_Settings = {
     anilist?: Models_AnilistSettings
     listSync?: Models_ListSyncSettings
     autoDownloader?: Models_AutoDownloaderSettings
-    discord?: Models_DiscordSettings
     notifications?: Models_NotificationSettings
     nakama?: Models_NakamaSettings
     jellyfin?: Models_JellyfinSettings

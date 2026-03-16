@@ -26,6 +26,7 @@ type Config struct {
 		Systray       bool   `mapstructure:"systray"`
 		DoHUrl        string `mapstructure:"dohUrl"`
 		Password      string `mapstructure:"password"`
+		CorsOrigins   []string `mapstructure:"corsOrigins"`
 		Tls           struct {
 			Enabled  bool   `mapstructure:"enabled"`
 			CertPath string `mapstructure:"certPath"`
@@ -60,9 +61,9 @@ type Config struct {
 	Extensions struct {
 		Dir string `mapstructure:"dir"`
 	} `mapstructure:"extensions"`
-	Anilist struct {
-		ClientID string `mapstructure:"clientID"`
-	} `mapstructure:"anilist"`
+	Metadata struct {
+		TMDBApiKey string `mapstructure:"tmdbApiKey"`
+	} `mapstructure:"metadata"`
 	Experimental struct {
 		MainServerTorrentStreaming bool `mapstructure:"mainServerTorrentStreaming"`
 	} `mapstructure:"experimental"`
@@ -191,6 +192,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("offline.dir", "$KAMEHOUSE_DATA_DIR/offline")
 	v.SetDefault("offline.assetDir", "$KAMEHOUSE_DATA_DIR/offline/assets")
 	v.SetDefault("extensions.dir", "$KAMEHOUSE_DATA_DIR/extensions")
+	v.SetDefault("metadata.tmdbApiKey", "")
 }
 
 func initAppDataDir(defined string, logger *zerolog.Logger) (string, string, error) {

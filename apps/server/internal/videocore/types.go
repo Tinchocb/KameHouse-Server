@@ -2,7 +2,6 @@ package videocore
 
 import (
 	"encoding/json"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/library/anime"
 	"kamehouse/internal/mkvparser"
@@ -136,7 +135,7 @@ type VideoPlaybackInfo struct {
 	SelectedVideoSource            *int                  `json:"selectedVideoSource"` // index of VideoSource
 	DisableRestoreFromContinuity   *bool                 `json:"disableRestoreFromContinuity"`
 	InitialState                   *VideoInitialState    `json:"initialState"`
-	Media                          *anilist.BaseAnime    `json:"media"`
+	Media                          interface{}           `json:"media"`
 	Episode                        *anime.Episode        `json:"episode"`
 	StreamType                     string                `json:"streamType"` // "native" | "hls" | "unknown"
 	IsNakamaWatchParty             bool                  `json:"isNakamaWatchParty,omitempty"`

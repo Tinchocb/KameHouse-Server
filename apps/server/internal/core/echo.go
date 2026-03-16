@@ -7,6 +7,7 @@ import (
 	"kamehouse/internal/constants"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -25,6 +26,32 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 	e.StdLogger = log.Default()
 
 	e.Use(middleware.Recover())
+
+	corsOrigins := app.Config.Server.CorsOrigins
+	if len(corsOrigins) == 0 {
+		if envOrigins := os.Getenv("KAMEHOUSE_DEV_CORS_ORIGINS"); envOrigins != "" {
+			corsOrigins = strings.Split(envOrigins, ",")
+		} else if os.Getenv("KAMEHOUSE_ENV") != "production" {
+			// Por defecto en desarrollo permitimos el puerto de Vite/UI (43210)
+			corsOrigins = []string{"http://localhost:43210", "http://127.0.0.1:43210"}
+		}
+	}
+
+	var validOrigins []string
+	for _, o := range corsOrigins {
+		if strings.TrimSpace(o) != "" {
+			validOrigins = append(validOrigins, strings.TrimSpace(o))
+		}
+	}
+
+	if len(validOrigins) > 0 {
+		app.Logger.Debug().Msgf("app: Enabling CORS for origins: %v", validOrigins)
+		e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+			AllowOrigins: validOrigins,
+			AllowMethods: []string{http.MethodGet, http.MethodHead, http.MethodPut, http.MethodPatch, http.MethodPost, http.MethodDelete},
+			AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
+		}))
+	}
 
 	e.GET("/api/ws", func(c echo.Context) error {
 		return app.WSHub.ServeWS(c)

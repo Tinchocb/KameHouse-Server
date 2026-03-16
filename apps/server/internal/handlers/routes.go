@@ -27,8 +27,18 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 		for _, o := range strings.Split(allowedOriginsStr, ",") {
 			allowedOrigins = append(allowedOrigins, strings.TrimSpace(o))
 		}
-	} else if os.Getenv("DEV_MODE") == "true" {
-		allowedOrigins = []string{"*"}
+	} else if devOrigins := os.Getenv("KAMEHOUSE_DEV_CORS_ORIGINS"); devOrigins != "" {
+		for _, o := range strings.Split(devOrigins, ",") {
+			allowedOrigins = append(allowedOrigins, strings.TrimSpace(o))
+		}
+	} else if os.Getenv("KAMEHOUSE_ENV") != "production" {
+		// Development defaults: allow the frontend dev server on port 43210
+		allowedOrigins = []string{
+			"http://localhost:43210",
+			"http://127.0.0.1:43210",
+			"http://localhost",
+			"http://127.0.0.1",
+		}
 	} else {
 		allowedOrigins = []string{"http://localhost", "http://127.0.0.1"}
 	}
@@ -216,36 +226,8 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	v1.POST("/open-in-explorer", h.HandleOpenInExplorer)
 
 	//
-	// AniList
+	// MAL
 	//
-
-	v1Anilist := v1.Group("/anilist")
-
-	v1Anilist.GET("/collection", h.HandleGetAnimeCollection)
-	v1Anilist.POST("/collection", h.HandleGetAnimeCollection)
-
-	v1Anilist.GET("/collection/raw", h.HandleGetRawAnimeCollection)
-	v1Anilist.POST("/collection/raw", h.HandleGetRawAnimeCollection)
-
-	v1Anilist.GET("/media-details/:id", h.HandleGetAnilistAnimeDetails)
-
-	v1Anilist.GET("/studio-details/:id", h.HandleGetAnilistStudioDetails)
-
-	v1Anilist.POST("/list-entry", h.HandleEditAnilistListEntry)
-
-	v1Anilist.DELETE("/list-entry", h.HandleDeleteAnilistListEntry)
-
-	v1Anilist.POST("/list-anime", h.HandleAnilistListAnime)
-
-	v1Anilist.POST("/list-recent-anime", h.HandleAnilistListRecentAiringAnime)
-
-	v1Anilist.GET("/list-missed-sequels", h.HandleAnilistListMissedSequels)
-
-	v1Anilist.GET("/stats", h.HandleGetAniListStats)
-
-	v1Anilist.GET("/cache-layer/status", h.HandleGetAnilistCacheLayerStatus)
-
-	v1Anilist.POST("/cache-layer/status", h.HandleToggleAnilistCacheLayerStatus)
 
 	//
 	// MAL

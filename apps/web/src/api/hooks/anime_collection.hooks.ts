@@ -1,4 +1,4 @@
-import { useServerMutation, useServerQuery } from "@/api/client/requests"
+import { useServerMutation, useServerQuery, buildSeaQuery } from "@/api/client/requests"
 import { AddUnknownMedia_Variables } from "@/api/generated/endpoint.types"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { AL_AnimeCollection, Anime_LibraryCollection, Anime_ScheduleItem, Anime_LibraryCollectionEntry } from "@/api/generated/types"
@@ -23,7 +23,6 @@ export interface ExtendedLibraryCollection extends Omit<Anime_LibraryCollection,
 }
 
 export const fetchLibraryCollection = async () => {
-    const { buildSeaQuery } = await import("@/api/client/requests")
     return buildSeaQuery<Anime_LibraryCollection>({
         endpoint: API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.endpoint,
         method: API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.methods[0],
@@ -74,13 +73,4 @@ export function useAddUnknownMedia() {
     })
 }
 
-export function useGetAnimeCollectionSchedule({ enabled }: { enabled?: boolean } = { enabled: true }) {
-    return useServerQuery<Array<Anime_ScheduleItem>>({
-        endpoint: API_ENDPOINTS.ANIME_COLLECTION.GetAnimeCollectionSchedule.endpoint,
-        method: API_ENDPOINTS.ANIME_COLLECTION.GetAnimeCollectionSchedule.methods[0],
-        queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetAnimeCollectionSchedule.key],
-        enabled: enabled,
-        refetchOnWindowFocus: false,
-        staleTime: 30_000,
-    })
-}
+

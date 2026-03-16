@@ -2,8 +2,8 @@ package core
 
 import (
 	"context"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/mal"
+	"kamehouse/internal/api/tmdb"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/constants"
 	"kamehouse/internal/continuity"
@@ -20,7 +20,6 @@ import (
 	"kamehouse/internal/library_explorer"
 	"kamehouse/internal/local"
 	"kamehouse/internal/mediastream"
-	"kamehouse/internal/platforms/anilist_platform"
 	"kamehouse/internal/platforms/offline_platform"
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/platforms/simulated_platform"
@@ -33,7 +32,6 @@ import (
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/cache"
 	"kamehouse/internal/util/filecache"
-	"kamehouse/internal/util/result"
 	"kamehouse/internal/videocore"
 	"kamehouse/internal/ws"
 	"log"
@@ -48,9 +46,9 @@ import (
 
 type (
 	MetadataProviders struct {
-		AnilistClientRef   *util.Ref[anilist.AnilistClient]
-		AnilistPlatformRef *util.Ref[platform.Platform]
+		TMDBClient         *tmdb.Client
 		OfflinePlatformRef *util.Ref[platform.Platform]
+		PlatformRef        *util.Ref[platform.Platform]
 		ProviderRef        *util.Ref[metadata_provider.Provider]
 		MalScrobbler       *mal.MalScrobblerWorker
 	}
@@ -109,9 +107,8 @@ type (
 		TelemetryManager  *continuity.TelemetryManager
 
 		// Lifecycle management
-		Cleanups                        []func()
-		OnRefreshAnilistCollectionFuncs *result.Map[string, func()]
-		OnFlushLogs                     func()
+		Cleanups         []func()
+		OnFlushLogs      func()
 
 		// Configuration and feature flags
 		FeatureFlags      FeatureFlags
@@ -127,7 +124,6 @@ type (
 		Version          string
 		TotalLibrarySize uint64
 		LibraryDir       string
-		AnilistCacheDir  string
 		IsDesktopSidecar bool
 		Flags            KameHouseFlags
 
@@ -224,15 +220,8 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 	// Get anime library paths for context
 	_, _ = database.GetAllLibraryPathsFromSettings()
 
-	// Get Anilist token from database if available
-	anilistToken := database.GetAnilistToken()
-
-	anilistCacheDir := filepath.Join(cfg.Cache.Dir, "anilist")
-
-	// Initialize Anilist API client with the token
-	// If the token is empty, the client will not be authenticated
-	anilistCW := anilist.NewAnilistClient(anilistToken, anilistCacheDir)
-	anilistCWRef := util.NewRef[anilist.AnilistClient](anilistCW)
+	tmdbToken := cfg.Metadata.TMDBApiKey // Assuming it's in config
+	tmdbClient := tmdb.NewClient(tmdbToken)
 
 	// Initialize WebSocket event manager for real-time communication
 	wsEventManager := events.NewWSEventManager(logger)
@@ -259,10 +248,7 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 	// Set initial metadata provider (will change if offline mode is enabled)
 	activeMetadataProvider := metadataProvider
 
-	// Initialize Anilist platform
-	anilistPlatform := anilist_platform.NewAnilistPlatform(anilistCWRef, nil, logger, database)
-
-	activePlatformRef := util.NewRef[platform.Platform](anilistPlatform)
+	activePlatformRef := util.NewRef[platform.Platform](nil)
 	metadataProviderRef := util.NewRef[metadata_provider.Provider](activeMetadataProvider)
 
 	// Initialize sync manager for offline/online synchronization
@@ -274,7 +260,6 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 		Database:            database,
 		WSEventManager:      wsEventManager,
 		IsOffline:           cfg.Server.Offline,
-		AnilistPlatformRef:  activePlatformRef,
 	})
 	if err != nil {
 		logger.Fatal().Err(err).Msgf("app: Failed to initialize sync manager")
@@ -286,7 +271,7 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 	}
 
 	// Initialize local platform for offline operations
-	offlinePlatform, err := offline_platform.NewOfflinePlatform(localManager, anilistCWRef, logger)
+	offlinePlatform, err := offline_platform.NewOfflinePlatform(localManager, logger)
 	if err != nil {
 		logger.Fatal().Err(err).Msgf("app: Failed to initialize local platform")
 	}
@@ -301,8 +286,8 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 	if cfg.Server.Offline {
 		logger.Warn().Msg("app: Offline mode is active, using offline platform")
 		activePlatformRef.Set(offlinePlatform)
-	} else if !anilistCWRef.Get().IsAuthenticated() {
-		logger.Warn().Msg("app: Anilist client is not authenticated, using simulated platform")
+	} else {
+		logger.Warn().Msg("app: Using simulated platform")
 		activePlatformRef.Set(simulatedPlatform)
 	}
 
@@ -319,9 +304,8 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 		Database:   database,
 	})
 
-	telemetryManager := continuity.NewTelemetryManager(continuityManager, logger, 5*time.Second)
 
-	var provisionalApp *KameHouse
+	telemetryManager := continuity.NewTelemetryManager(continuityManager, logger, 5*time.Second)
 
 	videoCore := videocore.New(videocore.NewVideoCoreOptions{
 		WsEventManager:      wsEventManager,
@@ -329,11 +313,6 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 		MetadataProviderRef: metadataProviderRef,
 		ContinuityManager:   continuityManager,
 		PlatformRef:         activePlatformRef,
-		RefreshAnimeCollectionFunc: func() {
-			if provisionalApp != nil {
-				_, _ = provisionalApp.RefreshAnimeCollection()
-			}
-		},
 		IsOfflineRef: isOfflineRef,
 	})
 
@@ -354,15 +333,14 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 		FeatureManager: NewFeatureManager(logger, configOpts.Flags),
 		Database:       database,
 		Metadata: MetadataProviders{
-			AnilistClientRef:   anilistCWRef,
-			AnilistPlatformRef: activePlatformRef,
+			TMDBClient:         tmdbClient,
+			PlatformRef:        activePlatformRef,
 			OfflinePlatformRef: offlinePlatformRef,
 			ProviderRef:        metadataProviderRef,
 		},
-		LocalManager:                  localManager,
-		WSEventManager:                wsEventManager,
-		WSHub:                         ws.NewHub(context.Background(), events.NewDispatcher()),
-		AnilistCacheDir:               anilistCacheDir,
+		LocalManager:   localManager,
+		WSEventManager: wsEventManager,
+		WSHub:          ws.NewHub(context.Background(), events.NewDispatcher()),
 		Logger:                        logger,
 		Version:            constants.Version,
 		FileCacher:         fileCacher,
@@ -389,14 +367,12 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 			Torrentstream *models.TorrentstreamSettings
 			Debrid        *models.DebridSettings
 		}{Mediastream: nil, Torrentstream: nil},
-		moduleMu:                        sync.Mutex{},
-		OnRefreshAnilistCollectionFuncs: result.NewMap[string, func()](),
-		HookManager:                     hookManager,
-		isOfflineRef:                    isOfflineRef,
-		ServerPasswordHash:              serverPasswordHash,
+		moduleMu:           sync.Mutex{},
+		HookManager:        hookManager,
+		isOfflineRef:       isOfflineRef,
+		ServerPasswordHash: serverPasswordHash,
 	}
 
-	provisionalApp = app
 
 	// Initialize MAL Scrobbler DLQ Queue
 	app.Metadata.MalScrobbler = mal.NewMalScrobblerWorker(database, logger)
@@ -407,12 +383,8 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 	// Initialize all modules that depend on settings
 	app.InitOrRefreshModules()
 
-	// Initialize Anilist data if not in offline mode
-	if !app.IsOffline() {
-		app.InitOrRefreshAnilistData()
-	} else {
-		app.ServerReady = true
-	}
+	// Set ServerReady
+	app.ServerReady = true
 
 	// Initialize mediastream settings (for streaming media)
 	app.InitOrRefreshMediastreamSettings()
@@ -439,12 +411,6 @@ func (a *KameHouse) IsOfflineRef() *util.Ref[bool] {
 
 func (a *KameHouse) AddCleanupFunction(f func()) {
 	a.Cleanups = append(a.Cleanups, f)
-}
-func (a *KameHouse) AddOnRefreshAnilistCollectionFunc(key string, f func()) {
-	if key == "" {
-		return
-	}
-	a.OnRefreshAnilistCollectionFuncs.Set(key, f)
 }
 
 func (a *KameHouse) Cleanup(ctx context.Context) {
