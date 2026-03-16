@@ -107,17 +107,6 @@ lint:
 	@echo "✅ Lint passed"
 
 # ======================================================================
-# Code Generation
-# ======================================================================
-
-## gqlgen: Regenerate AniList GraphQL client
-gqlgen:
-	@echo "⚙️ Regenerating GraphQL client..."
-	cd internal/api/anilist && $(GO) run github.com/Yamashou/gqlgenc
-	cd ../../.. && $(GO) mod tidy
-	@echo "✅ GraphQL client regenerated"
-
-# ======================================================================
 # Maintenance
 # ======================================================================
 
