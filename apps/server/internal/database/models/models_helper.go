@@ -1,5 +1,10 @@
 package models
 
+import (
+	"kamehouse/internal/platforms/platform"
+	"time"
+)
+
 func (s *Settings) GetMediaPlayer() *MediaPlayerSettings {
 	if s == nil || s.MediaPlayer == nil {
 		return &MediaPlayerSettings{}
@@ -82,4 +87,80 @@ func (s *DebridSettings) GetSensitiveValues() []string {
 	return []string{
 		s.ApiKey,
 	}
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func ToLibraryMedia(m *platform.UnifiedMedia) *LibraryMedia {
+	if m == nil {
+		return nil
+	}
+	lm := &LibraryMedia{
+		BaseModel: BaseModel{
+			ID: uint(m.ID),
+		},
+		Type:   string(m.Type),
+		Format: string(m.Format),
+		Status: string(m.Status),
+	}
+	if m.Title != nil {
+		if m.Title.Romaji != nil {
+			lm.TitleRomaji = *m.Title.Romaji
+		}
+		if m.Title.English != nil {
+			lm.TitleEnglish = *m.Title.English
+		}
+		if m.Title.Native != nil {
+			lm.TitleOriginal = *m.Title.Native
+		}
+	}
+	if m.CoverImage != nil {
+		lm.PosterImage = m.GetCoverImageSafe()
+	}
+	if m.BannerImage != nil {
+		lm.BannerImage = *m.BannerImage
+	}
+	if m.Episodes != nil {
+		lm.TotalEpisodes = *m.Episodes
+	}
+	if m.StartDate != nil {
+		lm.StartDate = time.Date(
+			loValue(m.StartDate.Year, 0),
+			time.Month(loValue(m.StartDate.Month, 1)),
+			loValue(m.StartDate.Day, 1),
+			0, 0, 0, 0, time.UTC,
+		)
+		lm.Year = loValue(m.StartDate.Year, 0)
+	}
+	return lm
+}
+
+func ToMediaEntryListData(e *platform.UnifiedCollectionEntry) *MediaEntryListData {
+	if e == nil {
+		return nil
+	}
+	res := &MediaEntryListData{
+		BaseModel: BaseModel{
+			ID: uint(e.ID),
+		},
+		LibraryMediaID: uint(e.Media.ID),
+		Status:         string(e.Status),
+	}
+	if e.Progress != nil {
+		res.Progress = *e.Progress
+	}
+	if e.Score != nil {
+		res.Score = *e.Score
+	}
+	if e.Repeat != nil {
+		res.Repeat = *e.Repeat
+	}
+	return res
+}
+
+func loValue[T any](v *T, fallback T) T {
+	if v == nil {
+		return fallback
+	}
+	return *v
 }

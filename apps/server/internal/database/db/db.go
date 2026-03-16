@@ -152,7 +152,6 @@ func migrateTables(ctx context.Context, db *gorm.DB) error {
 		&models.Token{},
 		&models.ProviderMapping{},
 		&models.MediaEntryListData{},
-		&models.AnilistCacheEntry{},
 		&models.WatchHistory{},
 	)
 }
