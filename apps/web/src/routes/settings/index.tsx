@@ -16,9 +16,11 @@ import {
     LucideLibrary, LucidePlay, LucideCloud, LucideDownload,
     LucidePalette, LucideFolder, LucideTrash2,
     LucideSave, LucideRefreshCw, LucideCheckCircle2,
+    LucideHardDrive, LucideSettings,
 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/components/ui/core/styling"
+import { Select } from "@/components/ui/select"
 import type { SaveSettings_Variables } from "@/api/generated/endpoint.types"
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
@@ -54,7 +56,6 @@ const settingsSchema = z.object({
         scannerProvider: z.string().default(""),
         disableLocalScanning: z.boolean().default(false),
         disableTorrentStreaming: z.boolean().default(false),
-        disableDebridService: z.boolean().default(false),
         disableTorrentProvider: z.boolean().default(false),
     }).default({}),
     mediaPlayer: z.object({
@@ -77,37 +78,6 @@ const settingsSchema = z.object({
         vcTranslateProvider: z.string().default(""),
         vcTranslateApiKey: z.string().default(""),
     }).default({}),
-    torrent: z.object({
-        defaultTorrentClient: z.string().default(""),
-        qbittorrentPath: z.string().default(""),
-        qbittorrentHost: z.string().default(""),
-        qbittorrentPort: z.number().default(0),
-        qbittorrentUsername: z.string().default(""),
-        qbittorrentPassword: z.string().default(""),
-        qbittorrentTags: z.string().default(""),
-        qbittorrentCategory: z.string().default(""),
-        transmissionPath: z.string().default(""),
-        transmissionHost: z.string().default(""),
-        transmissionPort: z.number().default(0),
-        transmissionUsername: z.string().default(""),
-        transmissionPassword: z.string().default(""),
-        showActiveTorrentCount: z.boolean().default(false),
-        hideTorrentList: z.boolean().default(false),
-    }).default({}),
-    notifications: z.object({
-        disableNotifications: z.boolean().default(false),
-        disableAutoDownloaderNotifications: z.boolean().default(false),
-        disableAutoScannerNotifications: z.boolean().default(false),
-    }).default({}),
-    debrid: z.object({
-        enabled: z.boolean().default(false),
-        provider: z.string().default(""),
-        apiKey: z.string().default(""),
-        includeDebridStreamInLibrary: z.boolean().default(false),
-        streamAutoSelect: z.boolean().default(false),
-        streamPreferredResolution: z.string().default(""),
-        torrentioUrl: z.string().default(""),
-    }).default({}),
     mediastream: z.object({
         transcodeEnabled: z.boolean().default(false),
         transcodeHwAccel: z.string().default(""),
@@ -126,6 +96,14 @@ const settingsSchema = z.object({
         disableIPV6: z.boolean().default(false),
         downloadDir: z.string().default(""),
         addToLibrary: z.boolean().default(false),
+        includeInLibrary: z.boolean().default(false),
+        torrentioUrl: z.string().default(""),
+        cacheLimitGB: z.number().default(5),
+        cachePath: z.string().default(""),
+    }).default({}),
+    torrent: z.object({
+        showBufferingStatus: z.boolean().default(false),
+        showNetworkSpeed: z.boolean().default(false),
     }).default({}),
     theme: z.object({
         enableColorSettings: z.boolean().default(false),
@@ -152,8 +130,7 @@ export const Route = createFileRoute("/settings/")({
 const NAV_ITEMS = [
     { value: "library",    icon: LucideLibrary,  label: "Biblioteca"      },
     { value: "playback",   icon: LucidePlay,     label: "Reproducción"    },
-    { value: "streaming",  icon: LucideCloud,    label: "Debrid & Cloud"  },
-    { value: "torrent",    icon: LucideDownload, label: "Torrents"        },
+    { value: "streaming",  icon: LucideCloud,    label: "Streaming"       },
     { value: "appearance", icon: LucidePalette,  label: "Apariencia"      },
 ]
 
@@ -329,67 +306,108 @@ function SettingsPage() {
                                 </div>
                             </TabsContent>
 
-                            {/* ── Debrid ── */}
+                            {/* ── Streaming ── */}
                             <TabsContent value="streaming" className="m-0 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 <header className="space-y-2">
-                                    <h1 className="text-3xl font-black tracking-tighter text-white">Debrid & Cloud</h1>
-                                    <p className="text-zinc-500 text-sm">Conectá servicios externos para streaming instantáneo.</p>
+                                    <h1 className="text-3xl font-black tracking-tighter text-white">Streaming</h1>
+                                    <p className="text-zinc-500 text-sm">Configurá el motor de streaming interno y la gestión de caché.</p>
                                 </header>
 
                                 <div className="space-y-8">
-                                    <Section label="Servicio Debrid" right={<span className={cn("os-pill", form.watch("debrid.enabled") ? "os-pill-green" : "os-pill-gray")}>{form.watch("debrid.enabled") ? "Activo" : "Inactivo"}</span>}>
+                                    <Section label="Motor de Búsqueda">
                                         <Card>
-                                            <OsToggle control={form.control} name="debrid.enabled"
-                                                label="Activar servicio"
-                                                desc="Habilita la integración con Real-Debrid u otros proveedores."
-                                                onSave={commitToggle} />
-                                            <InputRow label="API Token">
-                                                <Input {...form.register("debrid.apiKey")} type="password" placeholder="Real-Debrid / AllDebrid token..." />
-                                            </InputRow>
-                                            <OsToggle control={form.control} name="debrid.streamAutoSelect"
-                                                label="Selección automática del stream"
-                                                desc="Elige el mejor stream disponible sin intervención manual."
-                                                onSave={commitToggle} />
-                                            <OsToggle control={form.control} name="debrid.includeDebridStreamInLibrary"
-                                                label="Incluir en biblioteca"
-                                                onSave={commitToggle} />
-                                            <InputRow label="Torrentio Addon URL">
-                                                <Input {...form.register("debrid.torrentioUrl")} placeholder="https://torrentio.strem.fun/..." />
+                                            <InputRow label="Torrentio Addon URL" desc="La URL del addon de Torrentio para rasquetear enlaces magnet.">
+                                                <Input {...form.register("torrentstream.torrentioUrl")} className="bg-white/5 border-white/10" placeholder="https://torrentio.strem.fun/..." />
                                             </InputRow>
                                         </Card>
                                     </Section>
-                                </div>
-                            </TabsContent>
 
-                            {/* ── Torrent ── */}
-                            <TabsContent value="torrent" className="m-0 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                <header className="space-y-2">
-                                    <h1 className="text-3xl font-black tracking-tighter text-white">Torrents</h1>
-                                    <p className="text-zinc-500 text-sm">Configurá tu cliente de descargas local.</p>
-                                </header>
-
-                                <div className="space-y-8">
-                                    <Section label="qBittorrent">
+                                    <Section label="Selección Automática">
                                         <Card>
-                                            <InputRow label="Host">
-                                                <Input {...form.register("torrent.qbittorrentHost")} placeholder="http://localhost" />
-                                            </InputRow>
-                                            <div className="grid grid-cols-2 gap-4 px-4 py-3">
-                                                <div className="space-y-1.5">
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 px-1">Usuario</p>
-                                                    <Input {...form.register("torrent.qbittorrentUsername")} placeholder="admin" />
+                                            <OsToggle control={form.control} name="torrentstream.autoSelect"
+                                                label="Elección inteligente"
+                                                desc="Busca automáticamente el mejor torrent disponible (seeders/calidad) y le da Play."
+                                                onSave={commitToggle} />
+                                            
+                                            <div className="px-5 py-4 flex items-center justify-between border-t border-white/5">
+                                                <div className="space-y-1">
+                                                    <p className="text-sm font-semibold text-zinc-200">Resolución Preferida</p>
+                                                    <p className="text-xs text-zinc-500">Calidad deseada para la selección automática.</p>
                                                 </div>
-                                                <div className="space-y-1.5">
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 px-1">Contraseña</p>
-                                                    <Input {...form.register("torrent.qbittorrentPassword")} type="password" placeholder="••••••" />
-                                                </div>
+                                                <Controller
+                                                    control={form.control}
+                                                    name="torrentstream.preferredResolution"
+                                                    render={({ field }) => (
+                                                        <Select
+                                                            options={[
+                                                                { value: "", label: "Cualquiera" },
+                                                                { value: "480p", label: "480p" },
+                                                                { value: "720p", label: "720p" },
+                                                                { value: "1080p", label: "1080p" },
+                                                                { value: "4K", label: "4K" },
+                                                            ]}
+                                                            value={field.value}
+                                                            onValueChange={(v) => {
+                                                                field.onChange(v)
+                                                                commitToggle()
+                                                            }}
+                                                            className="w-40"
+                                                        />
+                                                    )}
+                                                />
                                             </div>
-                                            <OsToggle control={form.control} name="torrent.showActiveTorrentCount"
-                                                label="Mostrar contador de descargas activas"
+                                        </Card>
+                                    </Section>
+
+                                    <Section label="Biblioteca y Descargas">
+                                        <Card>
+                                            <OsToggle control={form.control} name="torrentstream.includeInLibrary"
+                                                label="Incluir en biblioteca"
+                                                desc="Agrega automáticamente el contenido a tu lista para seguimiento."
                                                 onSave={commitToggle} />
-                                            <OsToggle control={form.control} name="torrent.hideTorrentList"
-                                                label="Ocultar lista de torrents"
-                                                onSave={commitToggle} />
+                                        </Card>
+                                    </Section>
+
+                                    <Section label="Gestión de Caché">
+                                        <Card>
+                                            <div className="px-5 py-4 flex items-center justify-between border-b border-white/5">
+                                                <div className="space-y-1">
+                                                    <p className="text-sm font-semibold text-zinc-200">Límite de Caché</p>
+                                                    <p className="text-xs text-zinc-500">Espacio máximo en disco para archivos temporales.</p>
+                                                </div>
+                                                <Controller
+                                                    control={form.control}
+                                                    name="torrentstream.cacheLimitGB"
+                                                    render={({ field }) => (
+                                                        <Select
+                                                            options={[
+                                                                { value: "2", label: "2 GB" },
+                                                                { value: "5", label: "5 GB" },
+                                                                { value: "10", label: "10 GB" },
+                                                                { value: "0", label: "Infinito" },
+                                                            ]}
+                                                            value={String(field.value)}
+                                                            onValueChange={(v) => {
+                                                                field.onChange(parseInt(v))
+                                                                commitToggle()
+                                                            }}
+                                                            className="w-40"
+                                                        />
+                                                    )}
+                                                />
+                                            </div>
+                                            <div className="px-5 py-6">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2">Ruta de Caché</p>
+                                                <DirectorySelector
+                                                    value={form.watch("torrentstream.cachePath")}
+                                                    onSelect={(p) => {
+                                                        form.setValue("torrentstream.cachePath", p)
+                                                        commitToggle()
+                                                    }}
+                                                    label="Elegir carpeta temporal"
+                                                />
+                                                <p className="mt-2 text-[11px] text-zinc-600">Si no se especifica, se usará la ruta por defecto del sistema.</p>
+                                            </div>
                                         </Card>
                                     </Section>
                                 </div>
@@ -414,6 +432,19 @@ function SettingsPage() {
                                                 onSave={commitToggle} />
                                             <OsToggle control={form.control} name="theme.enableMediaPageBlurredBackground"
                                                 label="Fondo difuminado en páginas de detalle"
+                                                onSave={commitToggle} />
+                                        </Card>
+                                    </Section>
+
+                                    <Section label="Indicadores de Actividad">
+                                        <Card>
+                                            <OsToggle control={form.control} name="torrent.showBufferingStatus"
+                                                label="Mostrar estado de buffering"
+                                                desc="Activa un indicador visual cuando el video se está cargando."
+                                                onSave={commitToggle} />
+                                            <OsToggle control={form.control} name="torrent.showNetworkSpeed"
+                                                label="Mostrar velocidad de red"
+                                                desc="Muestra la tasa de transferencia en tiempo real."
                                                 onSave={commitToggle} />
                                         </Card>
                                     </Section>

@@ -3,7 +3,6 @@ package torrent
 import (
 	"context"
 
-	"kamehouse/internal/debrid/debrid"
 )
 
 // AnimeSearchType describes the search strategy.
@@ -49,7 +48,6 @@ type SearchPreview struct {
 type SearchData struct {
 	Torrents                  []TorrentItem                                    `json:"torrents"`
 	Previews                  []*SearchPreview                                 `json:"previews,omitempty"`
-	DebridInstantAvailability map[string]debrid.TorrentItemInstantAvailability `json:"debridInstantAvailability,omitempty"`
 }
 
 // SearchAnime performs a torrent search for anime (stub).

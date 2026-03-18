@@ -3,6 +3,7 @@ import type { CardAspect } from "@/lib/home-catalog"
 import { Folder, Zap } from "lucide-react"
 import * as React from "react"
 import { DeferredImage } from "@/components/shared/deferred-image"
+import { motion } from "framer-motion"
 
 // ─── Intelligence tag colours ─────────────────────────────────────────────────
 
@@ -33,6 +34,8 @@ export interface MediaCardProps {
     rating?: number
     onClick?: () => void
     className?: string
+    /** Unique ID for shared element transitions */
+    layoutId?: string
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -69,16 +72,18 @@ export const MediaCard = React.memo(function MediaCard({
     rating,
     onClick,
     className,
+    layoutId,
 }: MediaCardProps) {
     const isPoster = aspect === "poster"
 
     return (
-        <div
+        <motion.div
             role="button"
             tabIndex={0}
             aria-label={title}
             onClick={onClick}
             onKeyDown={(e) => e.key === "Enter" && onClick?.()}
+            layoutId={layoutId}
             className={cn(
                 // Base — group for child hover triggers
                 "group/card relative shrink-0 cursor-pointer overflow-hidden rounded-md",
@@ -86,8 +91,8 @@ export const MediaCard = React.memo(function MediaCard({
                 "border border-white/5 hover:border-white/20",
                 // Flat lift: scale only, no translate — hardware-composited
                 "transition-all duration-500 cubic-bezier(0.16, 1, 0.3, 1) will-change-transform",
-                "hover:-translate-y-2 hover:scale-[1.04] hover:z-50",
-                "hover:shadow-[0_20px_50px_rgba(0,0,0,0.5),0_0_30px_rgba(249,115,22,0.1)]",
+                "hover:-translate-y-3 hover:scale-[1.05] hover:z-50",
+                "hover:shadow-[0_30px_60px_rgba(0,0,0,0.6),0_0_40px_rgba(249,115,22,0.15)]",
                 // Aria / focus ring
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40",
                 // Intrinsic sizing by aspect ratio
@@ -104,8 +109,13 @@ export const MediaCard = React.memo(function MediaCard({
             <DeferredImage
                 src={artwork}
                 alt={title}
-                className="absolute inset-0 h-full w-full select-none object-cover"
+                className="absolute inset-0 h-full w-full select-none object-cover transition-transform duration-700 group-hover/card:scale-110"
             />
+
+            {/* ── Spotlight Shine Effect (Hover) ────────────────────────── */}
+            <div className="absolute inset-0 z-10 opacity-0 group-hover/card:opacity-100 transition-opacity duration-700 pointer-events-none">
+                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent -translate-x-full group-hover/card:animate-[shine_1s_ease-in-out_forwards]" />
+            </div>
 
             {/* ── Top-right: source icon (Folder / Zap) ─────────────────── */}
             {availabilityType && (
@@ -217,6 +227,6 @@ export const MediaCard = React.memo(function MediaCard({
                     />
                 </div>
             )}
-        </div>
+        </motion.div>
     )
 }, MediaCardCompare)

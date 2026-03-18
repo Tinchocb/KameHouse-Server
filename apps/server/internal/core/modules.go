@@ -6,7 +6,6 @@ import (
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
-	debrid_client "kamehouse/internal/debrid/client"
 	"kamehouse/internal/directstream"
 	"kamehouse/internal/hook"
 	"kamehouse/internal/hook_resolver"
@@ -16,9 +15,6 @@ import (
 	"kamehouse/internal/library_explorer"
 	"kamehouse/internal/mediastream"
 	"kamehouse/internal/streaming"
-	"kamehouse/internal/torrent_clients/qbittorrent"
-	"kamehouse/internal/torrent_clients/torrent_client"
-	"kamehouse/internal/torrent_clients/transmission"
 	itorrent "kamehouse/internal/torrents/torrent"
 	"kamehouse/internal/torrentstream"
 	"kamehouse/internal/platforms/tmdb_platform"
@@ -108,19 +104,6 @@ func (a *App) initModulesOnce() {
 		TorrentRepository:   a.TorrentRepository,
 		WSEventManager:      a.WSEventManager,
 		Database:            a.Database,
-		DirectStreamManager: a.DirectStreamManager,
-	})
-
-	// +---------------------+
-	// | Debrid Client Repo  |
-	// +---------------------+
-
-	a.DebridClientRepository = debrid_client.NewRepository(&debrid_client.NewRepositoryOptions{
-		Logger:              a.Logger,
-		WSEventManager:      a.WSEventManager,
-		Database:            a.Database,
-		MetadataProviderRef: a.Metadata.ProviderRef,
-		TorrentRepository:   a.TorrentRepository,
 		DirectStreamManager: a.DirectStreamManager,
 	})
 
@@ -223,7 +206,7 @@ func (a *App) InitOrRefreshModules() {
 
 	// Get settings from database
 	settings, err := a.Database.GetSettings()
-	if err != nil || settings == nil {
+	if err != nil || settings == nil { // Keep original check for settings object itself
 		a.Logger.Warn().Msg("app: Did not initialize modules, no settings found")
 		return
 	}
@@ -234,7 +217,7 @@ func (a *App) InitOrRefreshModules() {
 		a.LibraryDir = allPaths[0]
 
 		// Update feature toggles from settings
-		a.FeatureManager.UpdateFromSettings(settings.Library)
+		a.FeatureManager.UpdateFromSettings(&settings.Library)
 	}
 
 	// +---------------------+
@@ -243,76 +226,9 @@ func (a *App) InitOrRefreshModules() {
 	// Refresh settings of modules that were initialized in initModulesOnce
 
 	// Refresh updater settings
-	if settings.Library != nil {
-		if a.LibraryExplorer != nil {
-			// Update the library paths for the library explorer (thread safe)
-			go a.LibraryExplorer.SetLibraryPaths(settings.GetLibrary().GetAllPaths())
-		}
-	}
-
-	// +---------------------+
-	// |       Torrents      |
-	// +---------------------+
-
-	if settings.Torrent != nil {
-		// Init qBittorrent
-		qbit := qbittorrent.NewClient(&qbittorrent.NewClientOptions{
-			Logger:   a.Logger,
-			Username: settings.Torrent.QBittorrentUsername,
-			Password: settings.Torrent.QBittorrentPassword,
-			Port:     settings.Torrent.QBittorrentPort,
-			Host:     settings.Torrent.QBittorrentHost,
-			Path:     settings.Torrent.QBittorrentPath,
-			Tags:     settings.Torrent.QBittorrentTags,
-			Category: settings.Torrent.QBittorrentCategory,
-		})
-		// Login to qBittorrent
-		go func() {
-			if settings.Torrent.Default == "qbittorrent" {
-				if settings.Torrent.QBittorrentHost != "" {
-					err = qbit.Login()
-					if err != nil {
-						a.Logger.Error().Err(err).Msg("app: Failed to login to qBittorrent")
-					} else {
-						a.Logger.Info().Msg("app: Logged in to qBittorrent")
-					}
-				} else {
-					a.Logger.Warn().Msg("app: qBittorrent host is empty, skipping login")
-				}
-			}
-		}()
-		// Init Transmission
-		trans, err := transmission.New(&transmission.NewTransmissionOptions{
-			Logger:   a.Logger,
-			Username: settings.Torrent.TransmissionUsername,
-			Password: settings.Torrent.TransmissionPassword,
-			Port:     settings.Torrent.TransmissionPort,
-			Host:     settings.Torrent.TransmissionHost,
-			Path:     settings.Torrent.TransmissionPath,
-		})
-		if err != nil && settings.Torrent.TransmissionUsername != "" && settings.Torrent.TransmissionPassword != "" { // Only log error if username and password are set
-			a.Logger.Error().Err(err).Msg("app: Failed to initialize transmission client")
-		}
-
-		// Shutdown torrent client first
-		if a.TorrentClientRepository != nil {
-			a.TorrentClientRepository.Shutdown()
-		}
-
-		// Torrent Client Repository
-		a.TorrentClientRepository = torrent_client.NewRepository(&torrent_client.NewRepositoryOptions{
-			Logger:              a.Logger,
-			QbittorrentClient:   qbit,
-			Transmission:        trans,
-			TorrentRepository:   a.TorrentRepository,
-			Provider:            settings.Torrent.Default,
-			MetadataProviderRef: a.Metadata.ProviderRef,
-		})
-
-		a.TorrentClientRepository.InitActiveTorrentCount(settings.Torrent.ShowActiveTorrentCount, a.WSEventManager)
-
-		// Set AutoDownloader qBittorrent client
-		a.AutoDownloader.SetTorrentClientRepository(a.TorrentClientRepository)
+	if a.LibraryExplorer != nil {
+		// Update the library paths for the library explorer (thread safe)
+		go a.LibraryExplorer.SetLibraryPaths(settings.GetLibrary().GetAllPaths())
 	}
 
 	// +---------------------+
@@ -320,44 +236,40 @@ func (a *App) InitOrRefreshModules() {
 	// +---------------------+
 
 	// Update Auto Downloader
-	if settings.AutoDownloader != nil {
-		go a.AutoDownloader.SetSettings(*settings.AutoDownloader)
-	}
+	go a.AutoDownloader.SetSettings(settings.AutoDownloader)
 
 	// +---------------------+
 	// |   Library Watcher   |
 	// +---------------------+
 
 	// Initialize library watcher
-	if settings.Library != nil && len(settings.GetLibrary().GetAllPaths()) > 0 {
+	if len(settings.GetLibrary().GetAllPaths()) > 0 {
 		go a.initLibraryWatcher(settings.GetLibrary().GetAllPaths())
 	}
 	// +---------------------+
 	// |     Continuity      |
 	// +---------------------+
 
-	if settings.Library != nil {
-		go a.ContinuityManager.SetSettings(&continuity.Settings{
-			WatchContinuityEnabled: settings.Library.EnableWatchContinuity,
-		})
+	a.ContinuityManager.SetSettings(&continuity.Settings{
+		WatchContinuityEnabled: settings.Library.EnableWatchContinuity,
+	})
 
-		// +---------------------+
-		// |      Platform       |
-		// +---------------------+
+	// +---------------------+
+	// |      Platform       |
+	// +---------------------+
 
-		// Refresh active platform from settings
-		if !a.IsOffline() {
-			if settings.Library.TmdbApiKey != "" {
-				a.Logger.Info().Msg("app: Using TMDb platform")
-				a.Metadata.PlatformRef.Set(tmdb_platform.NewPlatform(settings.Library.TmdbApiKey, settings.Library.TmdbLanguage))
-			} else {
-				// Default back to simulated if no other platform is suitable
-				// TMDb is the primary platform, defaulting to simulated if unavailable.
-				a.Logger.Info().Msg("app: No metadata provider configured or available, using simulated platform")
-				// Simulated platform is already initialized in NewKameHouse, we should probably keep that one or create a new one
-				// For now, let's keep the existing one if it's already simulated, or reset it.
-				// a.Metadata.PlatformRef.Set(simulated_platform.NewSimulatedPlatform(a.Logger, a.Database))
-			}
+	// Refresh active platform from settings
+	if !a.IsOffline() {
+		if settings.Library.TmdbApiKey != "" {
+			a.Logger.Info().Msg("app: Using TMDb platform")
+			a.Metadata.PlatformRef.Set(tmdb_platform.NewPlatform(settings.Library.TmdbApiKey, settings.Library.TmdbLanguage))
+		} else {
+			// Default back to simulated if no other platform is suitable
+			// TMDb is the primary platform, defaulting to simulated if unavailable.
+			a.Logger.Info().Msg("app: No metadata provider configured or available, using simulated platform")
+			// Simulated platform is already initialized in NewKameHouse, we should probably keep that one or create a new one
+			// For now, let's keep the existing one if it's already simulated, or reset it.
+			// a.Metadata.PlatformRef.Set(simulated_platform.NewSimulatedPlatform(a.Logger, a.Database))
 		}
 	}
 
@@ -423,9 +335,12 @@ func (a *App) InitOrRefreshTorrentstreamSettings() {
 			StreamUrlAddress:    "",
 			SlowSeeding:         false,
 			PreloadNextStream:   false,
+			TorrentioUrl:        "",
+			CacheLimitGB:        5,
+			CachePath:           "",
 		})
 		if err != nil {
-			a.Logger.Error().Err(err).Msg("app: Failed to initialize mediastream module")
+			a.Logger.Error().Err(err).Msg("app: Failed to initialize torrentstream module")
 			return
 		}
 	}
@@ -442,40 +357,10 @@ func (a *App) InitOrRefreshTorrentstreamSettings() {
 	a.SecondarySettings.Torrentstream = settings
 }
 
-func (a *App) InitOrRefreshDebridSettings() {
-	settings, found := a.Database.GetDebridSettings()
-	if !found {
-		var err error
-		settings, err = a.Database.UpsertDebridSettings(&models.DebridSettings{
-			BaseModel: models.BaseModel{
-				ID: 1,
-			},
-			Enabled:                      false,
-			Provider:                     "",
-			ApiKey:                       "",
-			IncludeDebridStreamInLibrary: false,
-			StreamAutoSelect:             false,
-			StreamPreferredResolution:    "",
-		})
-		if err != nil {
-			a.Logger.Error().Err(err).Msg("app: Failed to initialize debrid module")
-			return
-		}
-	}
-
-	a.SecondarySettings.Debrid = settings
-
-	err := a.DebridClientRepository.InitializeProvider(settings)
-	if err != nil {
-		a.Logger.Error().Err(err).Msg("app: Failed to initialize debrid provider")
-		return
-	}
-}
-
 func (a *App) performActionsOnce() {
 
 	go func() {
-		if a.Settings == nil || a.Settings.Library == nil {
+		if a.Settings == nil {
 			return
 		}
 
@@ -493,19 +378,7 @@ func (a *App) performActionsOnce() {
 			go func() {
 				a.Logger.Debug().Msg("app: Refreshing library")
 				a.AutoScanner.TriggerScan()
-				a.Logger.Info().Msg("app: Refreshed library")
 			}()
-		}
-
-		if a.Settings.GetLibrary().OpenTorrentClientOnStart && a.TorrentClientRepository != nil {
-			// Start the torrent client
-			ok := a.TorrentClientRepository.Start()
-			if !ok {
-				a.Logger.Warn().Msg("app: Failed to open torrent client")
-			} else {
-				a.Logger.Info().Msg("app: Started torrent client")
-			}
-
 		}
 	}()
 

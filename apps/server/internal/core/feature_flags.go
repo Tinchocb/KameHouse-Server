@@ -39,7 +39,6 @@ const (
 	RefreshMetadata      FeatureKey = "RefreshMetadata"
 	WatchingLocalAnime   FeatureKey = "WatchingLocalAnime"
 	TorrentStreaming     FeatureKey = "TorrentStreaming"
-	DebridStreaming      FeatureKey = "DebridStreaming"
 	OnlineStreaming      FeatureKey = "OnlineStreaming"
 	Transcode            FeatureKey = "Transcode"
 	// ViewAutoDownloader allows viewing the auto downloader page.
@@ -53,7 +52,6 @@ const (
 	ManageHomeScreen  FeatureKey = "ManageHomeScreen"
 	OpenInExplorer    FeatureKey = "OpenInExplorer"
 	PluginTray        FeatureKey = "PluginTray"
-	ManageDebrid      FeatureKey = "ManageDebrid"
 	Proxy             FeatureKey = "Proxy"
 	PushRequests      FeatureKey = "PushRequests"
 	// v3.6+ Service toggle keys
@@ -76,7 +74,6 @@ func NewFeatureManager(logger *zerolog.Logger, flags KameHouseFlags) *FeatureMan
 			RefreshMetadata,
 			WatchingLocalAnime,
 			TorrentStreaming,
-			DebridStreaming,
 			OnlineStreaming,
 			ViewAutoDownloader,
 			ManageAutoDownloader,
@@ -86,7 +83,6 @@ func NewFeatureManager(logger *zerolog.Logger, flags KameHouseFlags) *FeatureMan
 			ManageHomeScreen,
 			OpenInExplorer,
 			PluginTray,
-			ManageDebrid,
 			Proxy,
 			Transcode,
 			PushRequests,
@@ -137,7 +133,6 @@ func (m *FeatureManager) UpdateFromSettings(library *models.LibrarySettings) {
 	toggles := []toggle{
 		{library.DisableLocalScanning, []FeatureKey{ManageLocalAnimeLibrary, WatchingLocalAnime}},
 		{library.DisableTorrentStreaming, []FeatureKey{TorrentStreaming}},
-		{library.DisableDebridService, []FeatureKey{DebridStreaming, ManageDebrid}},
 		{library.DisableTorrentProvider, []FeatureKey{TorrentProvider}},
 	}
 

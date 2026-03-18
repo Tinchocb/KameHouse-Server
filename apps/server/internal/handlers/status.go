@@ -39,7 +39,6 @@ type Status struct {
 	IsOffline             bool                          `json:"isOffline"`
 	MediastreamSettings   *models.MediastreamSettings   `json:"mediastreamSettings"`
 	TorrentstreamSettings *models.TorrentstreamSettings `json:"torrentstreamSettings"`
-	DebridSettings        *models.DebridSettings        `json:"debridSettings"`
 	// PlatformClientID       string                        `json:"PlatformClientId"`
 	Updating              bool                          `json:"updating"`         // If true, a new screen will be displayed
 	IsDesktopSidecar      bool                          `json:"isDesktopSidecar"` // The server is running as a desktop sidecar
@@ -72,10 +71,8 @@ func (h *Handler) NewStatus(c echo.Context) *Status {
 		currentUser = user.NewSimulatedUser()
 	}
 
-	if settings, _ = h.App.Database.GetSettings(); settings != nil {
-		if settings.ID == 0 || settings.Library == nil || settings.Torrent == nil || settings.MediaPlayer == nil {
-			settings = nil
-		}
+	if settings, _ = h.App.Database.GetSettings(); settings == nil {
+		settings = &models.Settings{}
 	}
 
 	clientInfo, found := clientInfoCache.Get(c.Request().UserAgent())
@@ -101,7 +98,6 @@ func (h *Handler) NewStatus(c echo.Context) *Status {
 		IsOffline:             h.App.Config.Server.Offline,
 		MediastreamSettings:   h.App.SecondarySettings.Mediastream,
 		TorrentstreamSettings: h.App.SecondarySettings.Torrentstream,
-		DebridSettings:        h.App.SecondarySettings.Debrid,
 		// PlatformClientID:       h.App.Config.Platform.ClientID,
 		Updating:              false,
 		IsDesktopSidecar:      h.App.IsDesktopSidecar,
@@ -121,7 +117,6 @@ func (h *Handler) NewStatus(c echo.Context) *Status {
 		status.MediastreamSettings = nil
 		status.TorrentstreamSettings = nil
 		status.Settings = &models.Settings{}
-		status.DebridSettings = nil
 		status.FeatureFlags = core.FeatureFlags{}
 	}
 
@@ -177,7 +172,6 @@ func (h *Handler) HandleGetLogContent(c echo.Context) error {
 	content := h.App.ReportRepository.Anonymize(report.AnonymizeOptions{
 		Content:        contentB,
 		Settings:       h.App.Settings,
-		DebridSettings: h.App.SecondarySettings.Debrid,
 	})
 
 	return h.RespondWithData(c, content)
@@ -328,7 +322,6 @@ func (h *Handler) HandleGetLatestLogContent(c echo.Context) error {
 	content := h.App.ReportRepository.Anonymize(report.AnonymizeOptions{
 		Content:        contentB,
 		Settings:       h.App.Settings,
-		DebridSettings: h.App.SecondarySettings.Debrid,
 	})
 
 	return h.RespondWithData(c, content)

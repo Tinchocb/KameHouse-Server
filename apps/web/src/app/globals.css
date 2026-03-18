@@ -1,6 +1,17 @@
+@keyframes shine {
+  0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+  100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer utilities {
+    .perspective-1000 {
+        perspective: 1000px;
+    }
+}
 
 @layer components {
     /* ── Reusable glassmorphism panel ─────────────────────────────────────── */
@@ -92,6 +103,16 @@
     .animate-ken-burns {
         animation: ken-burns 60s ease-out forwards;
     }
+
+    .font-display {
+        font-family: "Bebas Neue", cursive;
+        letter-spacing: 0.02em;
+    }
+
+    .glass-layer {
+        @apply backdrop-blur-xl bg-background/30 border border-white/10;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
 }
 
 @layer base {
@@ -130,6 +151,13 @@
         --glow-primary: rgba(249, 115, 22, 0.4);
         --glow-secondary: rgba(255, 255, 255, 0.1);
         --glow-epic: rgba(251, 191, 36, 0.5);
+
+        /* ── Dynamic Extracted Colors (Stage 5) ── */
+        --extracted-vibrant: var(--primary);
+        --extracted-vibrant-dark: 240 10% 10%;
+        --extracted-vibrant-light: 240 10% 60%;
+        --extracted-muted: 240 4% 30%;
+        --extracted-bg-gradient: radial-gradient(circle at top left, rgba(249, 115, 22, 0.15), transparent 70%);
     }
 
     body {
@@ -154,19 +182,25 @@
 /*}*/
 
 h1 {
-    @apply scroll-m-20 text-4xl font-black tracking-tight lg:text-5xl text-gray-100
+    @apply scroll-m-20 font-black tracking-tight text-gray-100 font-display;
+    font-size: clamp(2.5rem, 6vw + 1rem, 5.5rem);
+    line-height: 0.95;
+    text-transform: uppercase;
 }
 
 h2 {
-    @apply scroll-m-20 text-3xl font-extrabold tracking-tight first:mt-0 text-gray-100
+    @apply scroll-m-20 font-extrabold tracking-tight first:mt-0 text-gray-100;
+    font-size: clamp(1.5rem, 3vw + 1rem, 3rem);
 }
 
 h3 {
-    @apply scroll-m-20 text-2xl font-bold tracking-tight text-gray-200
+    @apply scroll-m-20 font-bold tracking-tight text-gray-200;
+    font-size: clamp(1.25rem, 2vw + 1rem, 2.25rem);
 }
 
 h4 {
-    @apply scroll-m-20 text-xl font-bold tracking-tight text-gray-200
+    @apply scroll-m-20 font-bold tracking-tight text-gray-200;
+    font-size: clamp(1.1rem, 1.5vw + 1rem, 1.75rem);
 }
 
 h5 {

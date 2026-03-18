@@ -160,8 +160,7 @@ func (o *StreamOrchestrator) Orchestrate(ctx context.Context, mediaId int, clien
 // Priority constants for sources. Lower = higher priority.
 const (
 	PriorityLocal   = 1 // Direct local file — zero network cost
-	PriorityDebrid  = 2 // Debrid-cached torrent — fast HTTP, near-instant
-	PriorityTorrent = 3 // Raw P2P magnet — seeders variable
+	PriorityTorrent = 2 // Raw P2P magnet — seeders variable
 )
 
 // SourcePriorityEngine is responsible for unifying local and online media sources.
@@ -279,11 +278,7 @@ func (e *SourcePriorityEngine) ResolveEpisodeSources(
 		}
 
 		// Fetch from Torrentio addon.
-		debridSettings, _ := e.database.GetDebridSettings()
 		torrentioUrl := ""
-		if debridSettings != nil {
-			torrentioUrl = debridSettings.TorrentioUrl
-		}
 		provider := torrentio.NewProvider(torrentioUrl)
 		streams, fetchErr := provider.GetSourcesForEpisode(remoteCtx, imdbID, 1, episodeNum)
 		if fetchErr != nil {
@@ -295,9 +290,6 @@ func (e *SourcePriorityEngine) ResolveEpisodeSources(
 		var remoteSources []dto.EpisodeSource
 		for _, s := range streams {
 			priority := PriorityTorrent
-			if s.IsDebrid {
-				priority = PriorityDebrid
-			}
 			// Resolve the playable URL: debrid streams have a direct HTTP URL,
 			// P2P streams use the magnet URI.
 			playURL := s.MagnetURI

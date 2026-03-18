@@ -49,16 +49,10 @@ func (db *Database) GetAllLibraryPathsFromSettings() ([]string, error) {
 	if err != nil {
 		return []string{}, err
 	}
-	if settings.Library == nil {
-		return []string{}, nil
-	}
 	return settings.Library.GetAllPaths(), nil
 }
 
 func (db *Database) AllLibraryPathsFromSettings(settings *models.Settings) *[]string {
-	if settings.Library == nil {
-		return &[]string{}
-	}
 	r := settings.Library.GetAllPaths()
 	return &r
 }
@@ -140,41 +134,6 @@ func (db *Database) GetTorrentstreamSettings() (*models.TorrentstreamSettings, b
 	var settings models.TorrentstreamSettings
 	err := db.gormdb.Where("id = ?", 1).First(&settings).Error
 
-	if err != nil {
-		return nil, false
-	}
-	return &settings, true
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-var CurrentDebridSettings *models.DebridSettings
-
-func (db *Database) UpsertDebridSettings(settings *models.DebridSettings) (*models.DebridSettings, error) {
-	err := db.gormdb.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		UpdateAll: true,
-	}).Create(settings).Error
-
-	if err != nil {
-		db.Logger.Error().Err(err).Msg("db: Failed to save debrid settings in the database")
-		return nil, err
-	}
-
-	CurrentDebridSettings = settings
-
-	db.Logger.Debug().Msg("db: Debrid settings saved")
-	return settings, nil
-}
-
-func (db *Database) GetDebridSettings() (*models.DebridSettings, bool) {
-
-	if CurrentDebridSettings != nil {
-		return CurrentDebridSettings, true
-	}
-
-	var settings models.DebridSettings
-	err := db.gormdb.Where("id = ?", 1).First(&settings).Error
 	if err != nil {
 		return nil, false
 	}

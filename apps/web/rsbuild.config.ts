@@ -112,6 +112,9 @@ export default defineConfig({
             forceSplitting: {
                 "hls": /hls\.js/,
                 "rrweb": /rrweb/,
+                "lucide": /lucide-react/,
+                "tanstack-query": /@tanstack\/react-query/,
+                "tanstack-router": /@tanstack\/react-router/,
             },
         },
     },
@@ -151,6 +154,19 @@ export default defineConfig({
                             options: {
                                 backgroundSync: {
                                     name: 'continuity-sync-queue',
+                                    options: {
+                                        maxRetentionTime: 24 * 60,
+                                    },
+                                },
+                            },
+                        },
+                        {
+                            urlPattern: /\/api\/v1\/report\/issue/,
+                            handler: 'NetworkOnly',
+                            method: 'POST',
+                            options: {
+                                backgroundSync: {
+                                    name: 'report-sync-queue',
                                     options: {
                                         maxRetentionTime: 24 * 60,
                                     },

@@ -1,5 +1,7 @@
 import { HorizontalDraggableScroll } from "@/components/ui/horizontal-draggable-scroll"
-import { MediaCard } from "@/components/ui/media-card"
+import { MediaCard } from "./media-card"
+import { MediaStack } from "./media-stack"
+import { motion } from "framer-motion"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/components/ui/core/styling"
 import type { CardAspect } from "@/lib/home-catalog"
@@ -68,29 +70,57 @@ const SwimlaneInner = React.memo(function SwimlaneInner({
                     safeDisplacement={18}
                     applyRubberBandEffect
                 >
-                    {items.map((item) => (
-                        <div
+                    {items.map((item, index) => (
+                        <motion.div
                             key={item.id}
                             className="snap-start"
                             onMouseEnter={() => onHover?.(item.backdropUrl ?? null)}
                             onMouseLeave={() => onHover?.(null)}
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ 
+                                duration: 0.5, 
+                                delay: index * 0.05,
+                                ease: [0.21, 0.47, 0.32, 0.98] 
+                            }}
                         >
-                            <MediaCard
-                                artwork={item.image}
-                                title={item.title}
-                                subtitle={item.subtitle}
-                                badge={item.badge}
-                                availabilityType={item.availabilityType}
-                                description={item.description}
-                                progress={item.progress}
-                                aspect={item.aspect ?? defaultAspect}
-                                intelligenceTag={item.intelligenceTag}
-                                year={item.year}
-                                rating={item.rating}
-                                onClick={item.onClick}
-                                className="motion-reduce:transition-none"
-                            />
-                        </div>
+                            {item.badge === "TV" ? (
+                                <MediaStack
+                                    artwork={item.image}
+                                    title={item.title}
+                                    subtitle={item.subtitle}
+                                    badge={item.badge}
+                                    availabilityType={item.availabilityType}
+                                    description={item.description}
+                                    progress={item.progress}
+                                    aspect={item.aspect ?? defaultAspect}
+                                    intelligenceTag={item.intelligenceTag}
+                                    year={item.year}
+                                    rating={item.rating}
+                                    onClick={item.onClick}
+                                    layoutId={`poster-${item.id}`}
+                                    className="motion-reduce:transition-none"
+                                />
+                            ) : (
+                                <MediaCard
+                                    artwork={item.image}
+                                    title={item.title}
+                                    subtitle={item.subtitle}
+                                    badge={item.badge}
+                                    availabilityType={item.availabilityType}
+                                    description={item.description}
+                                    progress={item.progress}
+                                    aspect={item.aspect ?? defaultAspect}
+                                    intelligenceTag={item.intelligenceTag}
+                                    year={item.year}
+                                    rating={item.rating}
+                                    onClick={item.onClick}
+                                    layoutId={`poster-${item.id}`}
+                                    className="motion-reduce:transition-none"
+                                />
+                            )}
+                        </motion.div>
                     ))}
                 </HorizontalDraggableScroll>
             </div>

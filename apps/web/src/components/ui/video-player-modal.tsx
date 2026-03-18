@@ -981,7 +981,8 @@ export function VideoPlayerModal({
                     <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
                         <button
                             onClick={(e) => { e.stopPropagation(); onClose(); }}
-                            className="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 text-white/70 hover:text-white transition-colors group bg-black/20 hover:bg-black/40 rounded-full backdrop-blur-md"
+                            aria-label="Cerrar reproductor"
+                            className="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 text-white/70 hover:text-white transition-colors group glass-layer rounded-full"
                         >
                             <FiX className="w-6 h-6 drop-shadow-md" />
                         </button>
@@ -1063,20 +1064,32 @@ export function VideoPlayerModal({
 
                         {/* Left Wing */}
                         <div className="flex items-center gap-2 md:gap-4">
-                            <button onClick={(e) => { e.stopPropagation(); togglePlay(); }} className="text-zinc-400 hover:text-white transition-colors flex items-center justify-center transform hover:scale-110 p-2">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); togglePlay(); }}
+                                aria-label={isPlaying ? "Pausar" : "Reproducir"}
+                                className="text-zinc-400 hover:text-white transition-colors flex items-center justify-center transform hover:scale-110 p-2">
                                 {isPlaying ? <FaPause className="w-5 h-5" /> : <FaPlay className="w-5 h-5 pl-0.5" />}
                             </button>
 
-                            <button onClick={(e) => { e.stopPropagation(); skipTime(-10); }} className="text-zinc-400 hover:text-white transition-colors flex items-center justify-center p-2 hidden sm:block">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); skipTime(-10); }}
+                                aria-label="Retroceder 10 segundos"
+                                className="text-zinc-400 hover:text-white transition-colors flex items-center justify-center p-2 hidden sm:block">
                                 <FaBackward className="w-4 h-4" />
                             </button>
-                            <button onClick={(e) => { e.stopPropagation(); skipTime(10); }} className="text-zinc-400 hover:text-white transition-colors flex items-center justify-center p-2 hidden sm:block">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); skipTime(10); }}
+                                aria-label="Adelantar 10 segundos"
+                                className="text-zinc-400 hover:text-white transition-colors flex items-center justify-center p-2 hidden sm:block">
                                 <FaForward className="w-4 h-4" />
                             </button>
 
                             {/* Volume Control */}
                             <div className="hidden md:flex items-center gap-2 group ml-2">
-                                <button onClick={(e) => { e.stopPropagation(); toggleMute(); }} className="text-zinc-400 hover:text-white transition-colors flex items-center justify-center p-2">
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); toggleMute(); }}
+                                    aria-label={isMuted || volume === 0 ? "Activar sonido" : "Silenciar"}
+                                    className="text-zinc-400 hover:text-white transition-colors flex items-center justify-center p-2">
                                     {isMuted || volume === 0 ? <FaVolumeMute className="w-4 h-4" /> : <FaVolumeUp className="w-4 h-4" />}
                                 </button>
                                 <div className="w-0 group-hover:w-20 transition-all duration-300 overflow-hidden relative h-1 flex items-center bg-white/20 rounded-full cursor-pointer" onClick={(e) => e.stopPropagation()}>
@@ -1114,7 +1127,10 @@ export function VideoPlayerModal({
                                 onSourceChange={handleSourceSwitch}
                             />
 
-                            <button onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }} className="text-zinc-400 hover:text-white transition-colors flex items-center justify-center p-2">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
+                                aria-label={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+                                className="text-zinc-400 hover:text-white transition-colors flex items-center justify-center p-2">
                                 {isFullscreen ? <FaCompress className="w-4 h-4" /> : <FaExpand className="w-4 h-4" />}
                             </button>
                         </div>

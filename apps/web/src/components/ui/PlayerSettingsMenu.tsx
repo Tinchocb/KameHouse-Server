@@ -257,13 +257,9 @@ export function PlayerSettingsMenu({
                         "absolute bottom-12 right-0 z-50",
                         // Size
                         "w-72",
-                        // Glassmorphism base
-                        "bg-neutral-900/90 backdrop-blur-xl",
-                        "border border-white/10 rounded-2xl",
+                        // Unified Glassmorphism
+                        "glass-layer overflow-hidden rounded-2xl",
                         "shadow-[0_8px_32px_rgba(0,0,0,0.6)]",
-                        "overflow-hidden",
-                        // Entrance animation (Tailwind doesn't have keyframes built-in,
-                        // so we use the subtle CSS animation below via inline style)
                     )}
                     style={{
                         animation: "settingsFadeUp 0.18s ease-out both",

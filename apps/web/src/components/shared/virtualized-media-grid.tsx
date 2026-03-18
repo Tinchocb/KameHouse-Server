@@ -3,19 +3,23 @@
 import React, { useRef, useState, useEffect } from "react"
 import { useWindowVirtualizer } from "@tanstack/react-virtual"
 import { MediaCardInteractive } from "@/components/shared/MediaCardInteractive.client"
+import { MediaStack } from "@/components/ui/media-stack"
 import { Anime_LibraryCollectionEntry, Models_LibraryMedia } from "@/api/generated/types"
 
 function getTitle(media: Models_LibraryMedia | null | undefined): string {
     return media?.titleEnglish || media?.titleRomaji || media?.titleOriginal || "Desconocido"
 }
 
-interface VirtualizedMediaGridProps {
-    entries: Anime_LibraryCollectionEntry[]
-    emptyMessage: string
-}
+import {
+    ContextMenu,
+    ContextMenuContent,
+    ContextMenuItem,
+    ContextMenuTrigger,
+} from "@/components/ui/context-menu/context-menu"
+import { Link2 } from "lucide-react"
 
 // Memoized MediaCard wrapper for strict 60fps performance 
-const MemoizedCard = React.memo(({ entry }: { entry: Anime_LibraryCollectionEntry }) => {
+const MemoizedCard = React.memo(({ entry, onMatch }: { entry: Anime_LibraryCollectionEntry; onMatch?: (paths: string[], query?: string) => void }) => {
     const media = entry?.media
     if (!media) return null
 
@@ -27,26 +31,56 @@ const MemoizedCard = React.memo(({ entry }: { entry: Anime_LibraryCollectionEntr
     const year = media.year ? String(media.year) : undefined
     const rating = media.score ? media.score / 10 : undefined
 
+    const menu = (
+        <ContextMenuContent>
+            <ContextMenuItem 
+                onClick={(e) => {
+                    e.stopPropagation()
+                    const paths = entry.libraryData?.localFiles?.map(f => f.path || "").filter(Boolean) || []
+                    onMatch?.(paths, getTitle(media))
+                }}
+            >
+                <Link2 className="w-4 h-4 mr-2" />
+                CAMBIAR MATCH
+            </ContextMenuItem>
+        </ContextMenuContent>
+    )
+
     return (
         <div className="w-full flex justify-center px-2 md:px-3">
             <div className="relative w-full max-w-[220px]">
-                <MediaCardInteractive
-                    id={media.id || 0}
-                    title={getTitle(media)}
-                    posterUrl={media.posterImage || media.bannerImage || undefined}
-                    year={year}
-                    rating={rating}
-                    badge={media.format || undefined}
-                    progress={progress > 0 ? progress : undefined}
-                    onClick={() => window.location.href = `/series/${media.id}`}
-                />
+                <ContextMenu>
+                    <ContextMenuTrigger className="block h-full w-full">
+                        {media.format === "TV" ? (
+                            <MediaStack
+                                artwork={media.posterPath || ""}
+                                title={media.title || ""}
+                                badge={media.format || undefined}
+                                progress={progress > 0 ? progress : undefined}
+                                onClick={() => window.location.href = `/series/${media.id}`}
+                                layoutId={`poster-${media.id}`}
+                            />
+                        ) : (
+                            <MediaCardInteractive
+                                id={media.id}
+                                title={media.title || ""}
+                                posterUrl={media.posterPath}
+                                badge={media.format || undefined}
+                                progress={progress > 0 ? progress : undefined}
+                                onClick={() => window.location.href = `/series/${media.id}`}
+                                layoutId={`poster-${media.id}`}
+                            />
+                        )}
+                    </ContextMenuTrigger>
+                    {onMatch && menu}
+                </ContextMenu>
             </div>
         </div>
     )
 })
 MemoizedCard.displayName = "MemoizedCard"
 
-export function VirtualizedMediaGrid({ entries, emptyMessage }: VirtualizedMediaGridProps) {
+export function VirtualizedMediaGrid({ entries, emptyMessage, onMatch }: VirtualizedMediaGridProps & { onMatch?: (paths: string[], query?: string) => void }) {
     const containerRef = useRef<HTMLDivElement>(null)
     const [columns, setColumns] = useState(1)
 
@@ -115,7 +149,7 @@ export function VirtualizedMediaGrid({ entries, emptyMessage }: VirtualizedMedia
 
                                 return (
                                     <div key={entry.media?.id || index} style={{ width: `${100 / columns}%` }}>
-                                        <MemoizedCard entry={entry} />
+                                        <MemoizedCard entry={entry} onMatch={onMatch} />
                                     </div>
                                 )
                             })}

@@ -3,6 +3,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import type { ContentTag } from "@/hooks/useHomeIntelligence"
 import { Flame, Info, Play, Sparkles, Star } from "lucide-react"
 import * as React from "react"
+import { useExtractColor } from "@/hooks/use-extract-color"
+import { motion } from "framer-motion"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -122,6 +124,7 @@ export function HeroBanner({
     if (items.length === 0) return null
 
     const activeItem = items[activeIndex] ?? items[0]
+    const { palette } = useExtractColor(activeItem?.backdropUrl)
 
     return (
         <section
@@ -158,6 +161,13 @@ export function HeroBanner({
             </div>
 
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.06),transparent_45%)]" />
+            
+            {/* Dynamic Content-Aware Glow (Stage 5) */}
+            <div 
+                className="absolute inset-0 opacity-40 transition-opacity duration-1000"
+                style={{ background: "var(--extracted-bg-gradient)" }}
+            />
+
             <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent" />
             <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60" />
             
@@ -198,7 +208,7 @@ export function HeroBanner({
                             className="mb-6 max-h-28 max-w-[min(32rem,80vw)] object-contain object-left"
                         />
                     ) : (
-                        <h1 className="mb-6 max-w-4xl text-5xl font-black leading-[0.92] tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-white via-zinc-200 to-zinc-600 drop-shadow-2xl md:text-7xl xl:text-[5.5rem]">
+                        <h1 className="mb-6 max-w-4xl font-display font-black leading-[0.92] tracking-normal bg-clip-text text-transparent bg-gradient-to-br from-white via-zinc-200 to-zinc-600 drop-shadow-2xl md:text-7xl xl:text-[6.5rem] [font-size:clamp(3.5rem,10vw,7.5rem)] uppercase">
                             {activeItem.title}
                         </h1>
                     )}
@@ -208,32 +218,26 @@ export function HeroBanner({
                     </p>
 
                     {/* CTAs */}
-                    <div className="mt-8 flex flex-wrap items-center gap-3">
-                        <button
-                            type="button"
-                            onClick={activeItem.onPlay}
-                            className={cn(
-                                "inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-bold text-primary-foreground",
-                                "shadow-[0_0_20px_rgba(249,115,22,0.45)]",
-                                "transition-all duration-200 hover:bg-primary/90 hover:shadow-[0_0_28px_rgba(249,115,22,0.6)]",
-                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/80",
-                            )}
+                    <div className="mt-8 flex flex-wrap items-center gap-4">
+                        <motion.button
+                            whileHover={{ scale: 1.05, boxShadow: "0 0 25px rgba(249,115,22,0.4)" }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => activeItem.onPlay()}
+                            className="flex items-center justify-center gap-3 bg-primary hover:bg-orange-400 text-white h-12 md:h-14 px-8 rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-[0_4px_20px_rgba(249,115,22,0.3)]"
                         >
-                            <Play className="h-4 w-4 fill-current" />
-                            Reproducir
-                        </button>
-                        <button
-                            type="button"
-                            onClick={activeItem.onMoreInfo}
-                            className={cn(
-                                "inline-flex items-center gap-2 rounded-full border border-white/16 bg-white/8 px-7 py-3.5 text-sm font-semibold text-white backdrop-blur-md",
-                                "transition-all duration-200 hover:border-white/25 hover:bg-white/14",
-                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80",
-                            )}
+                            <Play className="w-5 h-5 fill-current" />
+                            Ver ahora
+                        </motion.button>
+
+                        <motion.button
+                            whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.1)" }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => activeItem.onMoreInfo()}
+                            className="flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 text-white h-12 md:h-14 px-8 rounded-2xl font-black text-sm uppercase tracking-widest transition-all border border-white/10 backdrop-blur-md"
                         >
-                            <Info className="h-4 w-4" />
-                            Más info
-                        </button>
+                            <Info className="w-5 h-5" />
+                            Detalles
+                        </motion.button>
                     </div>
                 </div>
 

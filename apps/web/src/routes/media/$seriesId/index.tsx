@@ -25,6 +25,7 @@ import {
     CheckCircle2,
     SkipForward
 } from "lucide-react"
+import { motion } from "framer-motion"
 import { cn } from "@/components/ui/core/styling"
 import type { Anime_Entry, Anime_Episode, Models_LibraryMedia, Mediastream_StreamType } from "@/api/generated/types"
 
@@ -195,18 +196,28 @@ export default function MediaDetailPage() {
                             <span className="text-orange-500 text-xs font-black uppercase tracking-[0.2em] drop-shadow-md">
                                 {media.format}
                             </span>
-                            <h1 className="text-4xl md:text-6xl font-black text-white leading-[1.1] tracking-tight text-pretty drop-shadow-xl">
+                            <motion.h1 
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.6, ease: "easeOut" }}
+                                className="text-4xl md:text-6xl font-black text-white leading-[1.1] tracking-tight text-pretty drop-shadow-xl"
+                            >
                                 {getTitle(media)}
-                            </h1>
+                            </motion.h1>
                             
                             {/* Global Progress */}
                             {maxEpisodes > 1 && (
-                                <div className="flex items-center gap-3 mt-4 max-w-md">
+                                <motion.div 
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: 0.3 }}
+                                    className="flex items-center gap-3 mt-4 max-w-md"
+                                >
                                     <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden backdrop-blur-md">
                                         <div className="h-full bg-orange-500 rounded-full transition-all duration-1000 ease-out" style={{ width: `${watchPercent}%` }} />
                                     </div>
                                     <span className="text-xs font-bold text-zinc-400 whitespace-nowrap">{watchProgress} / {maxEpisodes} eps vistos</span>
-                                </div>
+                                </motion.div>
                             )}
                         </div>
 
@@ -246,18 +257,25 @@ export default function MediaDetailPage() {
                         </p>
 
                         {/* CTAs */}
-                        <div className="flex flex-wrap items-center gap-4 mt-4">
-                            <button
+                        <motion.div 
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.5, duration: 0.4 }}
+                            className="flex flex-wrap items-center gap-4 mt-4"
+                        >
+                            <motion.button
+                                whileHover={{ scale: 1.02, boxShadow: "0 0 20px rgba(249,115,22,0.4)" }}
+                                whileTap={{ scale: 0.96 }}
                                 onClick={() => resumeEp && handleEpisodeClick(resumeEp)}
-                                className="flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-400 text-white min-h-[52px] px-8 rounded-xl font-bold text-sm transition-all shadow-[0_4px_20px_rgba(249,115,22,0.3)] active:scale-95"
+                                className="flex items-center justify-center gap-2 bg-primary hover:bg-orange-400 text-white min-h-[52px] px-8 rounded-xl font-bold text-sm transition-all shadow-[0_4px_20px_rgba(249,115,22,0.3)] active:scale-95"
                             >
                                 <Play className="w-5 h-5 fill-current" />
                                 {watchProgress > 0 && watchProgress < maxEpisodes ? `Continuar (Ep. ${resumeEp?.episodeNumber})` : "Reproducir"}
-                            </button>
-                        </div>
+                            </motion.button>
+                        </motion.div>
 
                         {/* Marathon Control Center */}
-                        <div className="mt-6 p-6 rounded-2xl glass-panel bg-white/[0.02] border-white/5 backdrop-blur-md flex flex-col gap-5 max-w-xl">
+                        <div className="mt-6 p-6 rounded-2xl glass-layer flex flex-col gap-5 max-w-xl">
                             <div className="flex items-center justify-between">
                                 <h3 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-200 flex items-center gap-2.5">
                                     <MonitorPlay className="w-4 h-4 text-primary" />
@@ -303,7 +321,7 @@ export default function MediaDetailPage() {
 
                     {/* Right Tech Specs Panel */}
                     <aside className="w-full lg:w-72 flex flex-col gap-4">
-                        <div className="p-6 rounded-2xl glass-panel bg-white/[0.02] border-white/5 backdrop-blur-md flex flex-col gap-5">
+                        <div className="p-6 rounded-2xl glass-layer flex flex-col gap-5">
                             <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 flex items-center gap-2">
                                 <Settings2 className="w-4 h-4" />
                                 Especificaciones
@@ -344,7 +362,12 @@ export default function MediaDetailPage() {
                 </div>
 
                 {/* ── 2. Unified Episode Grid (Virtualized) ── */}
-                <div className="mt-20 flex flex-col gap-6">
+                <motion.div 
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.6, duration: 0.8 }}
+                    className="mt-20 flex flex-col gap-6"
+                >
                     <div className="flex items-center gap-3">
                         <span className="w-1 h-5 rounded-full bg-orange-500" />
                         <h2 className="text-xl font-black text-white tracking-tight">Episodios</h2>

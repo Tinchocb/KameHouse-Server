@@ -9,8 +9,10 @@ import { Anime_LocalFile, Models_LibraryMedia, Anime_LibraryCollectionEntry } fr
 import { VirtualizedMediaGrid } from "@/components/shared/virtualized-media-grid"
 import { MediaGridSkeleton } from "@/components/shared/media-grid-skeleton"
 import { EmptyState } from "@/components/shared/empty-state"
-import { Search, Filter, Loader2, FileVideo, ChevronRight, Zap } from "lucide-react"
+import { Search, Filter, Loader2, FileVideo, ChevronRight, Zap, AlertTriangle, FolderOpen, Link, MoreVertical } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
+import { MatchDialog } from "./-match-dialog"
+import { Button } from "@/components/ui/button"
 
 function getTitle(media: Models_LibraryMedia | null | undefined): string {
     return media?.titleEnglish || media?.titleRomaji || media?.titleOriginal || "Desconocido"
@@ -84,6 +86,11 @@ export function LibraryClientGrid() {
         isFetchingNextPage,
     } = useGetLocalFilesInfinite()
 
+    const [matchDialog, setMatchDialog] = useState<{ isOpen: boolean; paths: string[]; query?: string }>({
+        isOpen: false,
+        paths: [],
+    })
+
     const localData = useMemo(() => {
         const items = localInfiniteData?.pages.flatMap(p => p.items) || []
         if (!searchQuery) return items
@@ -114,8 +121,18 @@ export function LibraryClientGrid() {
         return entries.filter(e => getTitle(e.media).toLowerCase().includes(searchQuery.toLowerCase()))
     }, [lists, searchQuery])
 
+    const unmatchedGroups = useMemo(() => {
+        const groups = libraryData?.unmatchedGroups || []
+        if (!searchQuery) return groups
+        return groups.filter(g => g.dir?.toLowerCase().includes(searchQuery.toLowerCase()))
+    }, [libraryData?.unmatchedGroups, searchQuery])
+
     const renderGrid = (entries: Anime_LibraryCollectionEntry[], emptyMessage: string) => (
-        <VirtualizedMediaGrid entries={entries} emptyMessage={emptyMessage} />
+        <VirtualizedMediaGrid 
+            entries={entries} 
+            emptyMessage={emptyMessage} 
+            onMatch={(paths, query) => setMatchDialog({ isOpen: true, paths, query })}
+        />
     )
 
     if (libError) {
@@ -165,6 +182,8 @@ export function LibraryClientGrid() {
                                 <StatItem count={planned.length} label="Planeado" />
                                 <div className="hidden sm:block w-[1px] h-10 bg-white/5" />
                                 <StatItem count={completed.length} label="Completado" />
+                                <div className="hidden sm:block w-[1px] h-10 bg-white/5" />
+                                <StatItem count={unmatchedGroups.length} label="Sin Match" />
                             </div>
                         </div>
 
@@ -196,6 +215,7 @@ export function LibraryClientGrid() {
                             <TabTrigger value="current" label="VIENDO" count={currentlyWatching.length} />
                             <TabTrigger value="planned" label="PLANEADO" count={planned.length} />
                             <TabTrigger value="completed" label="COMPLETADO" count={completed.length} />
+                            <TabTrigger value="unmatched" label="SIN MATCH" count={unmatchedGroups.length} />
                             <TabTrigger value="local" label="LOCALES" />
                         </TabsList>
                     </div>
@@ -213,6 +233,30 @@ export function LibraryClientGrid() {
 
                     <TabsContent value="completed" className="m-0 focus-visible:outline-none">
                         {libLoading ? <LoadingGrid /> : renderGrid(completed, "Aún no has terminado ninguna serie.")}
+                    </TabsContent>
+
+                    <TabsContent value="unmatched" className="m-0 focus-visible:outline-none">
+                        {libLoading ? (
+                            <LoadingGrid />
+                        ) : !unmatchedGroups.length ? (
+                            <EmptyState
+                                title="¡Todo en orden!"
+                                message="No tienes archivos sin identificar. Buen trabajo manteniendo el orden."
+                                illustration={<AlertTriangle className="w-16 h-16 text-zinc-800" />}
+                            />
+                        ) : (
+                            <div className="animate-in fade-in slide-in-from-bottom-6 duration-1000">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                    {unmatchedGroups.map((group, idx) => (
+                                        <UnmatchedGroupCard 
+                                            key={group.dir || idx} 
+                                            group={group} 
+                                            onMatch={(paths, query) => setMatchDialog({ isOpen: true, paths, query })}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </TabsContent>
 
                     <TabsContent value="local" className="m-0 focus-visible:outline-none">
@@ -263,6 +307,13 @@ export function LibraryClientGrid() {
                     -webkit-text-stroke: 1.5px white;
                 }
             `}</style>
+
+            <MatchDialog 
+                isOpen={matchDialog.isOpen}
+                onClose={() => setMatchDialog(prev => ({ ...prev, isOpen: false }))}
+                paths={matchDialog.paths}
+                initialQuery={matchDialog.query}
+            />
         </div>
     )
 }
@@ -279,6 +330,56 @@ const StatItem = memo(function StatItem({ count, label, active }: { count: numbe
                 {count.toString().padStart(2, '0')}
             </span>
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 mt-1">{label}</span>
+        </div>
+    )
+})
+
+const UnmatchedGroupCard = memo(function UnmatchedGroupCard({ group, onMatch }: { group: any; onMatch: (paths: string[], initialQuery?: string) => void }) {
+    const dirName = group.dir?.split(/[\\/]/).pop() || "Directorio desconocido"
+    
+    return (
+        <div className="flex flex-col gap-4 p-5 glass-panel-premium border border-white/5 rounded-2xl group hover:border-primary/30 transition-all duration-300">
+            <div className="flex items-start justify-between gap-4">
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                    <AlertTriangle className="w-6 h-6 text-amber-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <h3 className="font-bebas text-xl tracking-wider text-zinc-300 group-hover:text-white transition-colors truncate">
+                        {dirName}
+                    </h3>
+                    <p className="text-[10px] font-mono text-zinc-600 truncate mt-1">
+                        {group.dir}
+                    </p>
+                </div>
+            </div>
+            
+            <div className="space-y-2 py-2 border-y border-white/[0.03]">
+                <div className="flex items-center gap-2 text-zinc-500">
+                    <FolderOpen className="w-3 h-3 text-zinc-700" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">{group.localFiles.length} ARCHIVOS REZAGADOS</span>
+                </div>
+                <div className="pl-5 space-y-1">
+                    {group.localFiles.slice(0, 3).map((f: any, i: number) => (
+                        <div key={i} className="text-[10px] text-zinc-600 truncate font-medium">
+                            {f.path?.split(/[\\/]/).pop()}
+                        </div>
+                    ))}
+                    {group.localFiles.length > 3 && (
+                        <div className="text-[9px] text-zinc-700 font-black italic">
+                            + {group.localFiles.length - 3} MÁS...
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <Button 
+                variant="outline"
+                className="w-full bg-white/[0.03] hover:bg-primary border border-white/5 hover:border-primary text-zinc-400 hover:text-white font-bebas tracking-[0.2em] gap-2 transition-all duration-300 active:scale-[0.98]"
+                onClick={() => onMatch(group.localFiles.map((f: any) => f.path), dirName)}
+            >
+                <Link className="w-4 h-4" />
+                VINCULAR MEDIA
+            </Button>
         </div>
     )
 })

@@ -5,7 +5,7 @@
  * Do NOT merge into api/generated/types.ts — that file is auto-generated.
  */
 
-export type SourceType = "Local" | "Torrent" | "Debrid"
+export type SourceType = "Local" | "Torrent"
 
 export interface SourceMetadata {
     bitrate?: number
@@ -43,7 +43,7 @@ export interface ResolveStreamsParams {
 /**
  * Mirrors `dto.SourceType` constants on the server.
  * - `"local"`     → file on disk, served via /api/v1/directstream/local
- * - `"torrentio"` → magnet URI resolved via Torrentio/Debrid
+ * - `"torrentio"` → magnet URI resolved via Torrentio
  */
 export type EpisodeSourceType = "local" | "torrentio"
 
@@ -56,7 +56,7 @@ export interface EpisodeSource {
     path?: string
     /** Human-readable quality label, e.g. "1080p", "4K". */
     quality: string
-    /** Lower number = higher priority. Local = 1, Debrid = 2, Torrent = 3. */
+    /** Lower number = higher priority. Local = 1, Torrent = 2. */
     priority: number
     /** Display title, e.g. release group name or "Local — Episode 5". */
     title: string

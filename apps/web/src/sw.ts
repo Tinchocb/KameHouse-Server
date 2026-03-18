@@ -53,8 +53,7 @@ registerRoute(
     ({ request }) => {
         const url = new URL(request.url);
         // Intercept common streaming chunk formats. 
-        // Note: Real-Debrid direct mp4 streams are huge, we might not intercept the whole blob,
-        // but for HLS/DASH segments (.ts/.m4s), OPFS shines.
+        // For HLS/DASH segments (.ts/.m4s), OPFS shines.
         return url.pathname.endsWith('.ts') || url.pathname.endsWith('.m4s') || url.pathname.includes('/file/');
     },
     async ({ request }) => {

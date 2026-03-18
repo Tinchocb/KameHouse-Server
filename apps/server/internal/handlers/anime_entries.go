@@ -25,7 +25,7 @@ func getActiveProvider(h *Handler) librarymetadata.Provider {
 	var useTMDB bool
 	var tmdbToken string
 	var tmdbLanguage string
-	if settings, err := h.App.Database.GetSettings(); err == nil && settings.Library != nil {
+	if settings, err := h.App.Database.GetSettings(); err == nil && settings != nil {
 		useTMDB = settings.Library.ScannerProvider == "tmdb"
 		tmdbToken = settings.Library.TmdbApiKey
 		tmdbLanguage = settings.Library.TmdbLanguage

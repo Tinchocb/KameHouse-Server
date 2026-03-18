@@ -9,6 +9,7 @@ import (
 	"kamehouse/internal/events"
 	"kamehouse/internal/library/autodownloader"
 	"kamehouse/internal/library/scanner"
+	"kamehouse/internal/library/summary"
 
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
@@ -153,19 +154,37 @@ func (as *AutoScanner) TriggerScan() {
 		as.logger.Error().Err(err).Msg("autoscanner: Failed to get library settings")
 		return
 	}
-	as.settings = *settings.Library
+	as.settings = settings.Library
 
-	additionalPaths := as.settings.GetAllPaths()
+	libraryPaths := as.settings.GetAllPaths()
+	var libraryPath string
+	var additionalPaths []string
+	if len(libraryPaths) > 0 {
+		libraryPath = libraryPaths[0]
+		if len(libraryPaths) > 1 {
+			additionalPaths = libraryPaths[1:]
+		}
+	}
 
 	// Scan the library
 	scn := &scanner.Scanner{
-		OtherDirPaths:      additionalPaths,
-		Logger:             as.logger,
-		PlatformRef:        as.platformRef,
-		Database:           as.db,
+		DirPath:               libraryPath,
+		OtherDirPaths:         additionalPaths,
+		SeriesPaths:           as.settings.SeriesPaths,
+		MoviePaths:            as.settings.MoviePaths,
+		Logger:                as.logger,
+		PlatformRef:           as.platformRef,
+		Database:              as.db,
 		MetadataProviderRef:   as.metadataProviderRef,
-		UseTMDB:            as.settings.ScannerProvider == "tmdb",
-		EventDispatcher:    as.eventDispatcher,
+		UseTMDB:               as.settings.ScannerProvider == "tmdb",
+		EventDispatcher:       as.eventDispatcher,
+		MatchingAlgorithm:     as.settings.ScannerMatchingAlgorithm,
+		MatchingThreshold:     as.settings.ScannerMatchingThreshold,
+		UseLegacyMatching:     as.settings.ScannerUseLegacyMatching,
+		StrictStructure:       as.settings.ScannerStrictStructure,
+		ConfigAsString:        as.settings.ScannerConfig,
+		ScanSummaryLogger:     summary.NewScanSummaryLogger(),
+		WithShelving:          true,
 	}
 
 	_, err = scn.Scan(context.Background())

@@ -43,7 +43,6 @@ type SaveIssueReportOptions struct {
 	RRWebEvents         []json.RawMessage      `json:"rrwebEvents"`
 	LocalFiles          []*dto.LocalFile       `json:"localFiles"`
 	Settings            *models.Settings       `json:"settings"`
-	DebridSettings      *models.DebridSettings `json:"debridSettings"`
 	IsAnimeLibraryIssue bool                   `json:"isAnimeLibraryIssue"`
 	ServerStatus        interface{}            `json:"serverStatus"`
 	ViewportWidth       int                    `json:"viewportWidth"`
@@ -56,9 +55,6 @@ func (r *Repository) SaveIssueReport(opts SaveIssueReportOptions) error {
 	var toRedact []string
 	if opts.Settings != nil {
 		toRedact = opts.Settings.GetSensitiveValues()
-	}
-	if opts.DebridSettings != nil {
-		toRedact = append(toRedact, opts.DebridSettings.GetSensitiveValues()...)
 	}
 	toRedact = lo.Filter(toRedact, func(s string, _ int) bool {
 		return s != ""
@@ -122,7 +118,6 @@ func (r *Repository) GetSavedIssueReport() (*IssueReport, bool) {
 type AnonymizeOptions struct {
 	Content        []byte `json:"content"`
 	Settings       *models.Settings
-	DebridSettings *models.DebridSettings
 }
 
 func (r *Repository) Anonymize(opts AnonymizeOptions) string {
@@ -133,9 +128,6 @@ func (r *Repository) Anonymize(opts AnonymizeOptions) string {
 	var toRedact []string
 	if opts.Settings != nil {
 		toRedact = opts.Settings.GetSensitiveValues()
-	}
-	if opts.DebridSettings != nil {
-		toRedact = append(toRedact, opts.DebridSettings.GetSensitiveValues()...)
 	}
 
 	// Remove empty strings to avoid infinite replacements

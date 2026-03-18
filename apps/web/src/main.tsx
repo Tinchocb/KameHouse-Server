@@ -5,6 +5,7 @@ import React from "react"
 import ReactDOM from "react-dom/client"
 import { routeTree } from "./routeTree.gen"
 import "@fontsource-variable/inter"
+import "@fontsource/bebas-neue/400.css"
 
 const router = createRouter({
     routeTree,

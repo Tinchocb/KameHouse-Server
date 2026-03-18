@@ -525,7 +525,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	tmdbToken := ""
 	tmdbLanguage := ""
 	if scn.Database != nil {
-		if settings, err := scn.Database.GetSettings(); err == nil && settings.Library != nil {
+		if settings, err := scn.Database.GetSettings(); err == nil && settings != nil {
 			tmdbToken = settings.Library.TmdbApiKey
 			tmdbLanguage = settings.Library.TmdbLanguage
 		}

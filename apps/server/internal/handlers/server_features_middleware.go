@@ -37,7 +37,6 @@ func (h *Handler) FeaturesMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			{"/api/v1/start", h.App.FeatureManager.IsDisabled(core.UpdateSettings), UpdateMethods, Empty},
 			{"/api/v1/settings", h.App.FeatureManager.IsDisabled(core.UpdateSettings), UpdateMethods, Empty},
 			{"/api/v1/torrentstream/settings", h.App.FeatureManager.IsDisabled(core.UpdateSettings), UpdateMethods, Empty},
-			{"/api/v1/debrid/settings", h.App.FeatureManager.IsDisabled(core.UpdateSettings), UpdateMethods, Empty},
 			{"/api/v1/mediastream/settings", h.App.FeatureManager.IsDisabled(core.UpdateSettings), UpdateMethods, Empty},
 			{"/api/v1/report", h.App.FeatureManager.IsDisabled(core.UpdateSettings), UpdateMethods, Empty},
 			{"/api/v1/theme", h.App.FeatureManager.IsDisabled(core.UpdateSettings), UpdateMethods, Empty},
@@ -66,9 +65,6 @@ func (h *Handler) FeaturesMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			// open in explorer
 			{"/api/v1/open-in-explorer", h.App.FeatureManager.IsDisabled(core.OpenInExplorer), Empty, Empty},
 			{"/api/v1/library/anime-entry/open-in-explorer", h.App.FeatureManager.IsDisabled(core.OpenInExplorer), UpdateMethods, Empty},
-			// debrid
-			{"/api/v1/debrid", h.App.FeatureManager.IsDisabled(core.ManageDebrid), UpdateMethods, []string{"/api/v1/debrid/settings", "/api/v1/debrid/torrents/info", "/api/v1/debrid/torrents/file-previews"}},
-			{"/api/v1/debrid/stream", h.App.FeatureManager.IsDisabled(core.DebridStreaming), UpdateMethods, Empty},
 			// home items
 			{"/api/v1/status/home-items", h.App.FeatureManager.IsDisabled(core.ManageHomeScreen), UpdateMethods, Empty},
 			// extensions

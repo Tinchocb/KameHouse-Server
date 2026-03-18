@@ -75,7 +75,6 @@ func (h *Handler) HandleSaveIssueReport(c echo.Context) error {
 		WebSocketLogs:       b.WebSocketLogs,
 		RRWebEvents:         b.RRWebEvents,
 		Settings:            h.App.Settings,
-		DebridSettings:      h.App.SecondarySettings.Debrid,
 		IsAnimeLibraryIssue: b.IsAnimeLibraryIssue,
 		LocalFiles:          localFiles,
 		ServerStatus:        status,

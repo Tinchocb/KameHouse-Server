@@ -27,7 +27,6 @@ func (h *Handler) HandleGetSettings(c echo.Context) error {
 	// Attach separate-table sub-settings for the full settings view
 	settings.Mediastream, _ = h.App.Database.GetMediastreamSettings()
 	settings.Torrentstream, _ = h.App.Database.GetTorrentstreamSettings()
-	settings.Debrid, _ = h.App.Database.GetDebridSettings()
 	settings.Theme, _ = h.App.Database.GetTheme()
 
 	return h.RespondWithData(c, settings)
@@ -48,9 +47,6 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 		Torrent                models.TorrentSettings      `json:"torrent"`
 		Notifications          models.NotificationSettings `json:"notifications"`
 		EnableTranscode        bool                        `json:"enableTranscode"`
-		EnableTorrentStreaming bool                        `json:"enableTorrentStreaming"`
-		DebridProvider         string                      `json:"debridProvider"`
-		DebridApiKey           string                      `json:"debridApiKey"`
 	}
 
 	var b body
@@ -68,11 +64,11 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 
 	settings, err := h.App.Database.UpsertSettings(&models.Settings{
 		BaseModel:     models.BaseModel{ID: 1, UpdatedAt: time.Now()},
-		Library:       &b.Library,
-		MediaPlayer:   &b.MediaPlayer,
-		Torrent:       &b.Torrent,
-		Notifications: &b.Notifications,
-		AutoDownloader: &models.AutoDownloaderSettings{
+		Library:       b.Library,
+		MediaPlayer:   b.MediaPlayer,
+		Torrent:       b.Torrent,
+		Notifications: b.Notifications,
+		AutoDownloader: models.AutoDownloaderSettings{
 			Provider:              b.Library.TorrentProvider,
 			Interval:              20,
 			Enabled:               false,
@@ -84,34 +80,12 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	if b.EnableTorrentStreaming {
-		go func() {
-			defer util.HandlePanicThen(func() {})
-			if prev, found := h.App.Database.GetTorrentstreamSettings(); found {
-				prev.Enabled = true
-				prev.IncludeInLibrary = true
-				_, _ = h.App.Database.UpsertTorrentstreamSettings(prev)
-			}
-		}()
-	}
 	if b.EnableTranscode {
 		go func() {
 			defer util.HandlePanicThen(func() {})
 			if prev, found := h.App.Database.GetMediastreamSettings(); found {
 				prev.TranscodeEnabled = true
 				_, _ = h.App.Database.UpsertMediastreamSettings(prev)
-			}
-		}()
-	}
-	if b.DebridProvider != "" && b.DebridProvider != "none" {
-		go func() {
-			defer util.HandlePanicThen(func() {})
-			if prev, found := h.App.Database.GetDebridSettings(); found {
-				prev.Enabled = true
-				prev.Provider = b.DebridProvider
-				prev.ApiKey = b.DebridApiKey
-				prev.IncludeDebridStreamInLibrary = true
-				_, _ = h.App.Database.UpsertDebridSettings(prev)
 			}
 		}()
 	}
@@ -134,13 +108,12 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 func (h *Handler) HandleSaveSettings(c echo.Context) error {
 
 	type body struct {
-		Library       models.LibrarySettings        `json:"library"`
-		MediaPlayer   models.MediaPlayerSettings    `json:"mediaPlayer"`
-		Torrent       models.TorrentSettings        `json:"torrent"`
-		Notifications models.NotificationSettings   `json:"notifications"`
+		Library       *models.LibrarySettings       `json:"library"`
+		MediaPlayer   *models.MediaPlayerSettings   `json:"mediaPlayer"`
+		Torrent       *models.TorrentSettings       `json:"torrent"`
+		Notifications *models.NotificationSettings  `json:"notifications"`
 		Mediastream   *models.MediastreamSettings   `json:"mediastream"`
 		Torrentstream *models.TorrentstreamSettings `json:"torrentstream"`
-		Debrid        *models.DebridSettings        `json:"debrid"`
 		Theme         *models.Theme                 `json:"theme"`
 	}
 
@@ -149,41 +122,54 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	// ── 1. Sanitize library paths ─────────────────────────────────────────────
-	if b.Library.SeriesPaths == nil {
-		b.Library.SeriesPaths = []string{}
-	}
-	if b.Library.MoviePaths == nil {
-		b.Library.MoviePaths = []string{}
-	}
+	// ── 1. Sanitize library paths (if provided) ───────────────────────────────
+	if b.Library != nil {
+		if b.Library.SeriesPaths == nil {
+			b.Library.SeriesPaths = []string{}
+		}
+		if b.Library.MoviePaths == nil {
+			b.Library.MoviePaths = []string{}
+		}
 
-	cleanSeries := b.Library.SeriesPaths[:0]
-	for _, p := range b.Library.SeriesPaths {
-		clean := filepath.ToSlash(filepath.Clean(p))
-		if clean == "" { continue }
-		info, err := os.Stat(filepath.FromSlash(clean))
-		if err == nil && info.IsDir() {
+		cleanSeries := make([]string, 0, len(b.Library.SeriesPaths))
+		for _, p := range b.Library.SeriesPaths {
+			clean := filepath.ToSlash(filepath.Clean(p))
+			if clean == "" {
+				continue
+			}
+			// Relaxed validation: check if it exists, but don't drop if it doesn't
+			info, err := os.Stat(filepath.FromSlash(clean))
+			if err != nil {
+				h.App.Logger.Warn().Err(err).Str("path", clean).Msg("settings: library path not accessible")
+			} else if !info.IsDir() {
+				h.App.Logger.Warn().Str("path", clean).Msg("settings: library path is not a directory")
+			}
 			cleanSeries = append(cleanSeries, clean)
 		}
-	}
-	b.Library.SeriesPaths = cleanSeries
+		b.Library.SeriesPaths = cleanSeries
 
-	cleanMovies := b.Library.MoviePaths[:0]
-	for _, p := range b.Library.MoviePaths {
-		clean := filepath.ToSlash(filepath.Clean(p))
-		if clean == "" { continue }
-		info, err := os.Stat(filepath.FromSlash(clean))
-		if err == nil && info.IsDir() {
+		cleanMovies := make([]string, 0, len(b.Library.MoviePaths))
+		for _, p := range b.Library.MoviePaths {
+			clean := filepath.ToSlash(filepath.Clean(p))
+			if clean == "" {
+				continue
+			}
+			info, err := os.Stat(filepath.FromSlash(clean))
+			if err != nil {
+				h.App.Logger.Warn().Err(err).Str("path", clean).Msg("settings: library path not accessible")
+			} else if !info.IsDir() {
+				h.App.Logger.Warn().Str("path", clean).Msg("settings: library path is not a directory")
+			}
 			cleanMovies = append(cleanMovies, clean)
 		}
-	}
-	b.Library.MoviePaths = cleanMovies
+		b.Library.MoviePaths = cleanMovies
 
-	allPaths := b.Library.GetAllPaths()
-	for i, p1 := range allPaths {
-		for j, p2 := range allPaths {
-			if i != j && util.IsSubdirectory(p1, p2) {
-				return h.RespondWithError(c, errors.New("library paths cannot be subdirectories of each other"))
+		allPaths := b.Library.GetAllPaths()
+		for i, p1 := range allPaths {
+			for j, p2 := range allPaths {
+				if i != j && util.IsSubdirectory(p1, p2) {
+					return h.RespondWithError(c, errors.New("library paths cannot be subdirectories of each other"))
+				}
 			}
 		}
 	}
@@ -195,29 +181,40 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 	}
 
 	// ── 3. Preserve AutoDownloader: always carry the stored state forward ─────
-	autoDownloader := models.AutoDownloaderSettings{}
-	if prev.AutoDownloader != nil {
-		autoDownloader = *prev.AutoDownloader
-	}
+	autoDownloader := prev.AutoDownloader
 	// If the provider is being cleared, disable the scheduler proactively
-	if b.Library.TorrentProvider == torrent.ProviderNone && autoDownloader.Enabled {
+	if b.Library != nil && b.Library.TorrentProvider == torrent.ProviderNone && autoDownloader.Enabled {
 		h.App.Logger.Debug().Msg("settings: disabling auto-downloader – torrent provider set to none")
 		autoDownloader.Enabled = false
 	}
 
-	// ── 4. Build merged Settings – incoming payload wins for every sub-object ──
-	merged := &models.Settings{
-		BaseModel: models.BaseModel{
-			ID:        1,
-			UpdatedAt: time.Now(),
-		},
-		Library:        &b.Library,
-		MediaPlayer:    &b.MediaPlayer,
-		Torrent:        &b.Torrent,
-		Notifications:  &b.Notifications,
-		AutoDownloader: &autoDownloader,
-		// ListSync is not sent by the client — carry forward from DB
-		ListSync: prev.ListSync,
+	// ── 4. Build merged Settings – existing data as base, incoming payload wins 
+	merged := prev
+	merged.ID = 1
+	merged.UpdatedAt = time.Now()
+
+	if b.Library != nil {
+		merged.Library = *b.Library
+	}
+	if b.MediaPlayer != nil {
+		merged.MediaPlayer = *b.MediaPlayer
+	}
+	if b.Torrent != nil {
+		merged.Torrent = *b.Torrent
+	}
+	if b.Notifications != nil {
+		merged.Notifications = *b.Notifications
+	}
+
+	merged.AutoDownloader = autoDownloader
+
+	// If the provider was updated, check if we need to disable auto-downloader
+	if b.Library != nil {
+		if b.Library.TorrentProvider == torrent.ProviderNone && autoDownloader.Enabled {
+			h.App.Logger.Debug().Msg("settings: disabling auto-downloader – torrent provider set to none")
+			autoDownloader.Enabled = false
+			merged.AutoDownloader.Enabled = false
+		}
 	}
 
 	// ── 5. Single upsert for the main embedded settings ───────────────────────
@@ -236,11 +233,6 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		b.Torrentstream.ID = 1
 		b.Torrentstream.UpdatedAt = time.Now()
 		_, _ = h.App.Database.UpsertTorrentstreamSettings(b.Torrentstream)
-	}
-	if b.Debrid != nil {
-		b.Debrid.ID = 1
-		b.Debrid.UpdatedAt = time.Now()
-		_, _ = h.App.Database.UpsertDebridSettings(b.Debrid)
 	}
 	if b.Theme != nil {
 		b.Theme.ID = 1
@@ -272,7 +264,6 @@ func (h *Handler) HandleSaveAutoDownloaderSettings(c echo.Context) error {
 		DownloadAutomatically bool   `json:"downloadAutomatically"`
 		EnableEnhancedQueries bool   `json:"enableEnhancedQueries"`
 		EnableSeasonCheck     bool   `json:"enableSeasonCheck"`
-		UseDebrid             bool   `json:"useDebrid"`
 	}
 
 	var b body
@@ -298,10 +289,9 @@ func (h *Handler) HandleSaveAutoDownloaderSettings(c echo.Context) error {
 		DownloadAutomatically: b.DownloadAutomatically,
 		EnableEnhancedQueries: b.EnableEnhancedQueries,
 		EnableSeasonCheck:     b.EnableSeasonCheck,
-		UseDebrid:             b.UseDebrid,
 	}
 
-	currSettings.AutoDownloader = autoDownloaderSettings
+	currSettings.AutoDownloader = *autoDownloaderSettings
 	currSettings.BaseModel = models.BaseModel{
 		ID:        1,
 		UpdatedAt: time.Now(),
@@ -340,7 +330,11 @@ func (h *Handler) HandleSaveMediaPlayerSettings(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	currSettings.MediaPlayer = b.MediaPlayer
+	if b.MediaPlayer == nil {
+		return h.RespondWithError(c, errors.New("mediaPlayer is required"))
+	}
+
+	currSettings.MediaPlayer = *b.MediaPlayer
 	currSettings.BaseModel = models.BaseModel{
 		ID:        1,
 		UpdatedAt: time.Now(),

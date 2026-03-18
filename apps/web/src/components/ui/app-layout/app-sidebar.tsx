@@ -85,7 +85,7 @@ export function AppSidebar() {
     return (
         <>
             {/* Desktop Fixed Sidebar */}
-            <aside className="hidden md:flex flex-col fixed inset-y-0 left-0 w-24 border-r border-white/[0.04] bg-background/40 backdrop-blur-3xl z-40 shadow-[10px_0_40px_rgba(0,0,0,0.5)]">
+            <aside className="hidden md:flex flex-col fixed inset-y-0 left-0 w-24 border-r border-white/[0.04] bg-background/20 backdrop-blur-2xl z-40 shadow-[10px_0_40px_rgba(0,0,0,0.5)]">
                 <div className="absolute inset-y-0 right-0 w-[1px] bg-gradient-to-b from-transparent via-primary/20 to-transparent" />
                 <SidebarContent />
             </aside>
@@ -93,7 +93,7 @@ export function AppSidebar() {
             {/* Mobile Drawer */}
             <Vaul open={sidebarOpen} onOpenChange={setSidebarOpen} direction="left">
                 <VaulContent 
-                    className="md:hidden fixed inset-y-0 left-0 z-50 flex h-full w-[280px] flex-col border-r border-white/10 bg-background/90 backdrop-blur-3xl shadow-2xl"
+                    className="md:hidden fixed inset-y-0 left-0 z-50 flex h-full w-[280px] flex-col border-r border-white/10 bg-background/60 backdrop-blur-2xl shadow-2xl"
                     overlayClass="bg-black/40 backdrop-blur-sm"
                 >
                     <SidebarContent />

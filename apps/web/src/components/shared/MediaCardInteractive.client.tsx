@@ -2,6 +2,7 @@
 
 import React, { ReactNode, useState } from "react"
 import { Play } from "lucide-react"
+import { motion } from "framer-motion"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export interface MediaCardInteractiveProps {
@@ -14,6 +15,8 @@ export interface MediaCardInteractiveProps {
     progress?: number // Percentage 0 - 100
     onClick?: () => void
     children?: ReactNode
+    /** Unique ID for shared element transitions */
+    layoutId?: string
 }
 
 /**
@@ -32,6 +35,7 @@ export function MediaCardInteractive({
     progress,
     onClick,
     children,
+    layoutId,
 }: MediaCardInteractiveProps) {
     const [isLoaded, setIsLoaded] = useState(false)
 
@@ -43,7 +47,10 @@ export function MediaCardInteractive({
             aria-label={`Play ${title}`}
         >
             {/* ── Poster image container with locked 2:3 aspect ratio ─────────── */}
-            <div className="aspect-[2/3] relative overflow-hidden rounded-md">
+            <motion.div 
+                layoutId={layoutId}
+                className="aspect-[2/3] relative overflow-hidden rounded-md"
+            >
                 {/* Skeleton shimmer — visible until image loads */}
                 <Skeleton
                     className={[
@@ -118,7 +125,7 @@ export function MediaCardInteractive({
                         />
                     </div>
                 )}
-            </div>
+            </motion.div>
 
             <span className="sr-only">Play {title}</span>
         </button>

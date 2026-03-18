@@ -4,7 +4,8 @@ import path from "node:path"
 export default defineConfig({
     test: {
         globals: true,
-        environment: "node",
+        environment: "happy-dom",
+        setupFiles: ["./src/test/setup.ts"],
         include: ["src/**/*.test.{ts,tsx}", "src/**/*.spec.{ts,tsx}"],
     },
     resolve: {

@@ -1,19 +1,29 @@
-/**
- * components/video/player.tsx
- *
- * Public facade that wraps the UI VideoPlayerModal with TanStack Query.
- * This component fetches the real streaming endpoint (HLS/Direct) and MKV
- * track metadata from the backend before mounting the actual player.
- */
-
-import React from "react"
-import { VideoPlayerModal, type VideoPlayerModalProps } from "@/components/ui/video-player-modal"
+import React, { Suspense } from "react"
 import { useRequestMediastreamMediaContainer } from "@/api/hooks/mediastream.hooks"
 import { Loader2, AlertTriangle } from "lucide-react"
+import type { VideoPlayerModalProps } from "@/components/ui/video-player-modal"
+
+// Lazy-load the heavy player modal + hls.js only when a stream is opened
+const VideoPlayerModal = React.lazy(() =>
+    import("@/components/ui/video-player-modal").then(m => ({ default: m.VideoPlayerModal }))
+)
+
+/** Shared loading state used in Suspense fallback and local isLoading state */
+function PlayerLoadingScreen() {
+    return (
+        <div className="fixed inset-0 z-[10000] bg-black w-screen h-screen flex flex-col items-center justify-center gap-4 text-white">
+            <Loader2 className="w-14 h-14 text-orange-500 animate-spin drop-shadow-[0_0_15px_rgba(249,115,22,0.8)]" />
+            <p className="font-bold tracking-widest uppercase text-sm opacity-80 animate-pulse">
+                Cargando Reproductor
+            </p>
+        </div>
+    )
+}
 
 export type VideoPlayerProps = Omit<VideoPlayerModalProps, "trackInfo"> & {
     initialProgressSeconds?: number
 }
+
 
 export function VideoPlayer(props: VideoPlayerProps) {
     // If the stream is "online" (e.g. Debrid/External CDN), skip the internal media container request
@@ -26,14 +36,7 @@ export function VideoPlayer(props: VideoPlayerProps) {
 
     if (isLocal) {
         if (isLoading) {
-            return (
-                <div className="fixed inset-0 z-[10000] bg-black w-screen h-screen flex flex-col items-center justify-center gap-4 text-white">
-                    <Loader2 className="w-14 h-14 text-orange-500 animate-spin drop-shadow-[0_0_15px_rgba(249,115,22,0.8)]" />
-                    <p className="font-bold tracking-widest uppercase text-sm opacity-80 animate-pulse">
-                        Solicitando Stream
-                    </p>
-                </div>
-            )
+            return <PlayerLoadingScreen />
         }
 
         if (error || !data || !data.streamUrl) {
@@ -52,32 +55,38 @@ export function VideoPlayer(props: VideoPlayerProps) {
         }
 
         return (
-            <VideoPlayerModal
-                {...props}
-                streamUrl={data.streamUrl}
-                trackInfo={{
-                    audioTracks: data.mediaInfo?.audios?.map((a: any, i: number) => ({
-                        index: a.index ?? i,
-                        language: a.language ?? "und",
-                        title: a.title || a.language || `Audio ${i + 1}`,
-                        codec: a.codec,
-                        channels: a.channels,
-                        default: a.default
-                    })) || [],
-                    subtitleTracks: data.mediaInfo?.subtitles?.map((s: any, i: number) => ({
-                        index: s.index ?? i,
-                        language: s.language ?? "und",
-                        title: s.title || s.language || `Subtitle ${i + 1}`,
-                        codec: s.codec,
-                        default: s.default,
-                        forced: s.forced,
-                        url: `/api/v1/mediastream/subtitles?path=${encodeURIComponent(props.streamUrl)}&trackIndex=${s.index ?? i}`
-                    })) || []
-                }}
-            />
+            <Suspense fallback={<PlayerLoadingScreen />}>
+                <VideoPlayerModal
+                    {...props}
+                    streamUrl={data.streamUrl}
+                    trackInfo={{
+                        audioTracks: data.mediaInfo?.audios?.map((a: any, i: number) => ({
+                            index: a.index ?? i,
+                            language: a.language ?? "und",
+                            title: a.title || a.language || `Audio ${i + 1}`,
+                            codec: a.codec,
+                            channels: a.channels,
+                            default: a.default
+                        })) || [],
+                        subtitleTracks: data.mediaInfo?.subtitles?.map((s: any, i: number) => ({
+                            index: s.index ?? i,
+                            language: s.language ?? "und",
+                            title: s.title || s.language || `Subtitle ${i + 1}`,
+                            codec: s.codec,
+                            default: s.default,
+                            forced: s.forced,
+                            url: `/api/v1/mediastream/subtitles?path=${encodeURIComponent(props.streamUrl)}&trackIndex=${s.index ?? i}`
+                        })) || []
+                    }}
+                />
+            </Suspense>
         )
     }
 
     // Direct / External URL pass-through
-    return <VideoPlayerModal {...props} />
+    return (
+        <Suspense fallback={<PlayerLoadingScreen />}>
+            <VideoPlayerModal {...props} />
+        </Suspense>
+    )
 }

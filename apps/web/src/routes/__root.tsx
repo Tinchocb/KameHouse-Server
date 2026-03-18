@@ -12,6 +12,7 @@ import { AnimatePresence } from "motion/react"
 import { useRouterState } from "@tanstack/react-router"
 import { PageTransition } from "@/components/shared/page-transition"
 import { WebsocketProvider } from "@/app/websocket-provider"
+import { OfflineStatus } from "@/components/shared/offline-status"
 
 export const Route = createRootRouteWithContext<{
     queryClient: QueryClient
@@ -28,6 +29,7 @@ export const Route = createRootRouteWithContext<{
                     <AppTopNav />
                     <AppSidebar />
                     <CommandPalette />
+                    <OfflineStatus />
                     <AppLayoutContent className="pt-20 md:pt-0 md:pl-20">
                         <AnimatePresence mode="wait">
                             <PageTransition transitionKey={routerState.location.pathname} className="flex-1 max-w-screen-2xl mx-auto px-4 md:px-8 py-6 lg:py-10">

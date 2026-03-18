@@ -33,7 +33,6 @@ func (h *Handler) HandleLogin(c echo.Context) error {
 		defer util.HandlePanicThen(func() {})
 		h.App.InitOrRefreshTorrentstreamSettings()
 		h.App.InitOrRefreshMediastreamSettings()
-		h.App.InitOrRefreshDebridSettings()
 	}()
 
 	// Return new status

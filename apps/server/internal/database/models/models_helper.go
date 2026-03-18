@@ -6,48 +6,45 @@ import (
 )
 
 func (s *Settings) GetMediaPlayer() *MediaPlayerSettings {
-	if s == nil || s.MediaPlayer == nil {
+	if s == nil {
 		return &MediaPlayerSettings{}
 	}
-	return s.MediaPlayer
+	return &s.MediaPlayer
 }
 
 func (s *Settings) GetTorrent() *TorrentSettings {
-	if s == nil || s.Torrent == nil {
+	if s == nil {
 		return &TorrentSettings{}
 	}
-	return s.Torrent
+	return &s.Torrent
 }
 
-
-
 func (s *Settings) GetLibrary() *LibrarySettings {
-	if s == nil || s.Library == nil {
+	if s == nil {
 		return &LibrarySettings{}
 	}
-	return s.Library
+	return &s.Library
 }
 
 func (s *Settings) GetListSync() *ListSyncSettings {
-	if s == nil || s.ListSync == nil {
+	if s == nil {
 		return &ListSyncSettings{}
 	}
-	return s.ListSync
+	return &s.ListSync
 }
 
 func (s *Settings) GetAutoDownloader() *AutoDownloaderSettings {
-	if s == nil || s.AutoDownloader == nil {
+	if s == nil {
 		return &AutoDownloaderSettings{}
 	}
-	return s.AutoDownloader
+	return &s.AutoDownloader
 }
 
-
 func (s *Settings) GetNotifications() *NotificationSettings {
-	if s == nil || s.Notifications == nil {
+	if s == nil {
 		return &NotificationSettings{}
 	}
-	return s.Notifications
+	return &s.Notifications
 }
 
 
@@ -59,17 +56,6 @@ func (s *Settings) GetSensitiveValues() []string {
 	}
 	return []string{
 		s.GetMediaPlayer().VlcPassword,
-		s.GetTorrent().QBittorrentPassword,
-		s.GetTorrent().TransmissionPassword,
-	}
-}
-
-func (s *DebridSettings) GetSensitiveValues() []string {
-	if s == nil || s.ApiKey == "" {
-		return []string{}
-	}
-	return []string{
-		s.ApiKey,
 	}
 }
 

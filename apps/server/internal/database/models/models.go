@@ -54,17 +54,18 @@ type AnimapCache struct {
 
 type Settings struct {
 	BaseModel
-	Library        *LibrarySettings        `gorm:"embedded" json:"library"`
-	MediaPlayer    *MediaPlayerSettings    `gorm:"embedded" json:"mediaPlayer"`
-	Torrent        *TorrentSettings        `gorm:"embedded" json:"torrent"`
-	ListSync       *ListSyncSettings       `gorm:"embedded" json:"listSync"`
-	AutoDownloader *AutoDownloaderSettings `gorm:"embedded" json:"autoDownloader"`
-	Notifications  *NotificationSettings   `gorm:"embedded" json:"notifications"`
-	Mediastream    *MediastreamSettings    `gorm:"-" json:"mediastream"`
-	Torrentstream  *TorrentstreamSettings  `gorm:"-" json:"torrentstream"`
-	Debrid         *DebridSettings         `gorm:"-" json:"debrid"`
-	Theme          *Theme                  `gorm:"-" json:"theme"`
-	Updated        bool                    `gorm:"-" json:"updated"`
+	Library        LibrarySettings        `json:"library" gorm:"embedded;embeddedPrefix:library_"`
+	MediaPlayer    MediaPlayerSettings    `json:"mediaPlayer" gorm:"embedded;embeddedPrefix:media_player_"`
+	Torrent        TorrentSettings        `json:"torrent" gorm:"embedded;embeddedPrefix:torrent_"`
+	ListSync       ListSyncSettings       `json:"listSync" gorm:"embedded;embeddedPrefix:list_sync_"`
+	Notifications  NotificationSettings   `json:"notifications" gorm:"embedded;embeddedPrefix:notifications_"`
+	AutoDownloader AutoDownloaderSettings `json:"autoDownloader" gorm:"embedded;embeddedPrefix:auto_downloader_"`
+
+	// Separate tables
+	Mediastream   *MediastreamSettings   `json:"mediastream" gorm:"-"`
+	Torrentstream *TorrentstreamSettings `json:"torrentstream" gorm:"-"`
+	Theme         *Theme                 `json:"theme" gorm:"-"`
+	Updated       bool                    `gorm:"-" json:"updated"`
 }
 
 type UserAnime struct {
@@ -89,6 +90,9 @@ type TorrentstreamSettings struct {
 	StreamUrlAddress    string `gorm:"stream_url_address" json:"streamUrlAddress"`
 	SlowSeeding         bool   `gorm:"slow_seeding" json:"slowSeeding"`
 	PreloadNextStream   bool   `gorm:"preload_next_stream" json:"preloadNextStream"`
+	TorrentioUrl        string `gorm:"torrentio_url" json:"torrentioUrl"`
+	CacheLimitGB        int    `gorm:"cache_limit_gb" json:"cacheLimitGB"`
+	CachePath           string `gorm:"cache_path" json:"cachePath"`
 }
 
 
@@ -122,7 +126,6 @@ type LibrarySettings struct {
 	ScannerProvider                 string       `gorm:"column:scanner_provider" json:"scannerProvider"`
 	DisableLocalScanning            bool         `gorm:"column:disable_local_scanning" json:"disableLocalScanning"`
 	DisableTorrentStreaming         bool         `gorm:"column:disable_torrent_streaming" json:"disableTorrentStreaming"`
-	DisableDebridService            bool         `gorm:"column:disable_debrid_service" json:"disableDebridService"`
 	DisableTorrentProvider          bool         `gorm:"column:disable_torrent_provider" json:"disableTorrentProvider"`
 	ScannerUseLegacyMatching        bool         `gorm:"column:scanner_use_legacy_matching" json:"scannerUseLegacyMatching"`
 }
@@ -227,20 +230,8 @@ type MediaPlayerSettings struct {
 }
 
 type TorrentSettings struct {
-	Default              string `gorm:"column:default_torrent_client" json:"defaultTorrentClient"`
-	QBittorrentPath      string `gorm:"column:qbittorrent_path" json:"qbittorrentPath"`
-	QBittorrentHost      string `gorm:"column:qbittorrent_host" json:"qbittorrentHost"`
-	QBittorrentPort      int    `gorm:"column:qbittorrent_port" json:"qbittorrentPort"`
-	QBittorrentUsername  string `gorm:"column:qbittorrent_username" json:"qbittorrentUsername"`
-	QBittorrentPassword  string `gorm:"column:qbittorrent_password" json:"qbittorrentPassword"`
-	TransmissionPath     string `gorm:"column:transmission_path" json:"transmissionPath"`
-	TransmissionHost     string `gorm:"column:transmission_host" json:"transmissionHost"`
-	TransmissionPort     int    `gorm:"column:transmission_port" json:"transmissionPort"`
-	TransmissionUsername string `gorm:"column:transmission_username" json:"transmissionUsername"`
-	TransmissionPassword string `gorm:"column:transmission_password" json:"transmissionPassword"`
-	QBittorrentTags      string `gorm:"column:qbittorrent_tags" json:"qbittorrentTags"`
-	QBittorrentCategory  string `gorm:"column:qbittorrent_category" json:"qbittorrentCategory"`
-	ShowActiveTorrentCount bool   `gorm:"column:show_active_torrent_count" json:"showActiveTorrentCount"`
+	ShowBufferingStatus bool `gorm:"column:show_buffering_status" json:"showBufferingStatus"`
+	ShowNetworkSpeed    bool `gorm:"column:show_network_speed" json:"showNetworkSpeed"`
 }
 
 type ListSyncSettings struct {
@@ -250,7 +241,9 @@ type ListSyncSettings struct {
 
 
 type NotificationSettings struct {
-	DisableNotifications bool `gorm:"column:disable_notifications" json:"disableNotifications"`
+	DisableNotifications               bool `gorm:"column:disable_notifications" json:"disableNotifications"`
+	DisableAutoDownloaderNotifications bool `gorm:"column:disable_auto_downloader_notifications" json:"disableAutoDownloaderNotifications"`
+	DisableAutoScannerNotifications    bool `gorm:"column:disable_auto_scanner_notifications" json:"disableAutoScannerNotifications"`
 }
 
 type Mal struct {
@@ -302,7 +295,6 @@ type AutoDownloaderSettings struct {
 	DownloadAutomatically bool   `gorm:"column:auto_downloader_download_automatically" json:"downloadAutomatically"`
 	EnableEnhancedQueries bool   `gorm:"column:enable_enhanced_queries" json:"enableEnhancedQueries"`
 	EnableSeasonCheck     bool   `gorm:"column:enable_season_check" json:"enableSeasonCheck"`
-	UseDebrid             bool   `gorm:"column:use_debrid" json:"useDebrid"`
 }
 
 type Theme struct {
@@ -333,26 +325,6 @@ type MediastreamSettings struct {
 	DirectPlayOnly                 bool   `gorm:"column:direct_play_only" json:"directPlayOnly"`
 }
 
-type DebridSettings struct {
-	BaseModel
-	Enabled  bool   `gorm:"column:enabled" json:"enabled"`
-	Provider string `gorm:"column:provider" json:"provider"`
-	ApiKey   string `gorm:"column:api_key" json:"apiKey"`
-	IncludeDebridStreamInLibrary bool `gorm:"column:include_debrid_stream_in_library" json:"includeDebridStreamInLibrary"`
-	StreamAutoSelect             bool `gorm:"column:stream_auto_select" json:"streamAutoSelect"`
-	StreamPreferredResolution    string `gorm:"column:stream_preferred_resolution" json:"streamPreferredResolution"`
-	TorrentioUrl                 string `gorm:"column:torrentio_url" json:"torrentioUrl"`
-}
-
-
-
-type DebridTorrentItem struct {
-	BaseModel
-	MediaId       int    `json:"mediaId"`
-	TorrentItemID string `json:"torrentItemId"`
-	Destination   string `json:"destination"`
-	Provider      string `json:"provider"`
-}
 
 type GhostAssociatedMedia struct {
 	BaseModel

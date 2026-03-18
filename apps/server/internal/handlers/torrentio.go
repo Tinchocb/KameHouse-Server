@@ -84,10 +84,10 @@ func (h *Handler) HandleGetTorrentioStreams(c echo.Context) error {
 	}
 
 	// ── Fetch from Torrentio addon ───────────────────────────────────────────
-	debridSettings, _ := h.App.Database.GetDebridSettings()
+	tsSettings, _ := h.App.Database.GetTorrentstreamSettings()
 	torrentioUrl := ""
-	if debridSettings != nil {
-		torrentioUrl = debridSettings.TorrentioUrl
+	if tsSettings != nil {
+		torrentioUrl = tsSettings.TorrentioUrl
 	}
 
 	provider := torrentio.NewProvider(torrentioUrl)

@@ -147,8 +147,6 @@ func migrateTables(ctx context.Context, db *gorm.DB) error {
 		&models.TorrentstreamHistory{},
 		&models.MediastreamSettings{},
 		&models.MediaFiller{},
-		&models.DebridSettings{},
-		&models.DebridTorrentItem{},
 		&models.PluginData{},
 		&models.CustomSourceCollection{},
 		&models.CustomSourceIdentifier{},

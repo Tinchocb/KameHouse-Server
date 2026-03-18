@@ -44,9 +44,7 @@ func (h *Handler) HandleGetTorrentstreamTorrentFilePreviews(c echo.Context) erro
 	return h.RespondWithData(c, []interface{}{})
 }
 
-func (h *Handler) HandleGetTorrentstreamBatchHistory(c echo.Context) error {
-	return h.RespondWithData(c, []interface{}{})
-}
+
 
 func (h *Handler) HandleTorrentstreamServeStream(c echo.Context) error {
 	return nil

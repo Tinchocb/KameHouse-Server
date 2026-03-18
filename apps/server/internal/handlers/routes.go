@@ -280,6 +280,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	v1Library.DELETE("/local-files", h.HandleDeleteLocalFiles)
 	v1Library.GET("/local-files/dump", h.HandleDumpLocalFilesToFile)
 	v1Library.POST("/local-files/import", h.HandleImportLocalFiles)
+	v1Library.POST("/local-files/tmdb-assign", h.HandleTMDBAssign)
 	v1Library.PATCH("/local-file", h.HandleUpdateLocalFileData)
 	v1Library.PATCH("/local-files/super-update", h.HandleSuperUpdateLocalFiles)
 
@@ -442,6 +443,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	v1.PATCH("/torrentstream/settings", h.HandleSaveTorrentstreamSettings)
 	v1.POST("/torrentstream/start", h.HandleTorrentstreamStartStream)
 	v1.POST("/torrentstream/stop", h.HandleTorrentstreamStopStream)
+	v1.GET("/torrentstream/status", h.HandleTorrentstreamGetStatus)
 	v1.POST("/torrentstream/drop", h.HandleTorrentstreamDropTorrent)
 	v1.POST("/torrentstream/torrent-file-previews", h.HandleGetTorrentstreamTorrentFilePreviews)
 	v1.POST("/torrentstream/batch-history", h.HandleTorrentstreamGetBatchHistory)

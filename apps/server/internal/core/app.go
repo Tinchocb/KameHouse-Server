@@ -9,7 +9,6 @@ import (
 	"kamehouse/internal/continuity"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
-	debrid_client "kamehouse/internal/debrid/client"
 	"kamehouse/internal/directstream"
 	"kamehouse/internal/events"
 	"kamehouse/internal/hook"
@@ -25,7 +24,6 @@ import (
 	"kamehouse/internal/platforms/simulated_platform"
 	"kamehouse/internal/report"
 	"kamehouse/internal/streaming"
-	"kamehouse/internal/torrent_clients/torrent_client"
 	itorrent "kamehouse/internal/torrents/torrent"
 	"kamehouse/internal/torrentstream"
 	"kamehouse/internal/user"
@@ -59,9 +57,7 @@ type (
 		Logger   *zerolog.Logger
 
 		// Torrent and debrid services
-		TorrentClientRepository *torrent_client.Repository
 		TorrentRepository       *itorrent.Repository
-		DebridClientRepository  *debrid_client.Repository
 
 		// File system monitoring
 		Watcher *scanner.Watcher
@@ -116,7 +112,6 @@ type (
 		SecondarySettings struct {
 			Mediastream   *models.MediastreamSettings
 			Torrentstream *models.TorrentstreamSettings
-			Debrid        *models.DebridSettings
 		}
 
 		// Metadata
@@ -354,17 +349,14 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 		AutoScanner:                   nil, // Initialized in App.initModulesOnce
 		StreamOrchestrator:            nil, // Initialized in App.initModulesOnce
 		MediastreamRepository:         nil, // Initialized in App.initModulesOnce
-		DebridClientRepository:        nil, // Initialized in App.initModulesOnce
 		DirectStreamManager:           nil, // Initialized in App.initModulesOnce
 		LibraryExplorer:               nil, // Initialized in App.initModulesOnce
-		TorrentClientRepository:       nil, // Initialized in App.InitOrRefreshModules
 		previousVersion:               previousVersion,
 		FeatureFlags:                  NewFeatureFlags(cfg, logger),
 		IsDesktopSidecar:              configOpts.Flags.IsDesktopSidecar,
 		SecondarySettings: struct {
 			Mediastream   *models.MediastreamSettings
 			Torrentstream *models.TorrentstreamSettings
-			Debrid        *models.DebridSettings
 		}{Mediastream: nil, Torrentstream: nil},
 		moduleMu:           sync.Mutex{},
 		HookManager:        hookManager,
@@ -390,9 +382,6 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 
 	// Initialize torrentstream settings (for torrent streaming)
 	app.InitOrRefreshTorrentstreamSettings()
-
-	// Initialize debrid settings (for debrid services)
-	app.InitOrRefreshDebridSettings()
 
 	// Run one-time initialization actions
 	app.performActionsOnce()
