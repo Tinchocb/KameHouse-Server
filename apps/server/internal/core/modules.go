@@ -347,7 +347,7 @@ func (a *App) InitOrRefreshModules() {
 
 		// Refresh active platform from settings
 		if !a.IsOffline() {
-			if settings.Library.PrimaryMetadataProvider == "tmdb" && settings.Library.TmdbApiKey != "" {
+			if settings.Library.TmdbApiKey != "" {
 				a.Logger.Info().Msg("app: Using TMDb platform")
 				a.Metadata.PlatformRef.Set(tmdb_platform.NewPlatform(settings.Library.TmdbApiKey, settings.Library.TmdbLanguage))
 			} else {

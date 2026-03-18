@@ -119,6 +119,16 @@ func (db *Database) Close() error {
 
 // migrateTables strictly ensures that schema migration executes within standard timeout.
 func migrateTables(ctx context.Context, db *gorm.DB) error {
+	// Clean up duplicate tmdb_ids before auto-migration to allow UNIQUE constraint creation
+	db.Exec(`
+		DELETE FROM library_media
+		WHERE id NOT IN (
+			SELECT MIN(id)
+			FROM library_media
+			GROUP BY tmdb_id
+		)
+	`)
+
 	return db.WithContext(ctx).AutoMigrate(
 		&models.LocalFiles{},
 		&models.ShelvedLocalFiles{},

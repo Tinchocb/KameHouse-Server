@@ -21,7 +21,7 @@ type LibraryMedia struct {
 	PosterImage string `gorm:"column:poster_image" json:"posterImage"` // Path or URL
 	BannerImage string `gorm:"column:banner_image" json:"bannerImage"` // Path or URL
 
-	TmdbId         int    `gorm:"column:tmdb_id" json:"tmdbId"`
+	TmdbId         int    `gorm:"column:tmdb_id;uniqueIndex" json:"tmdbId"`
 
 	SeasonNumber int       `gorm:"column:season_number" json:"seasonNumber"`
 	StartDate    time.Time `gorm:"column:start_date" json:"startDate"`

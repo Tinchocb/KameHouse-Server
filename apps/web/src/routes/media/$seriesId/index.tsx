@@ -2,6 +2,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useState, useMemo, useCallback, useRef } from "react"
 import { Virtuoso } from "react-virtuoso"
 import { useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
+import { useResolveStreams } from "@/api/hooks/useResolveStreams"
+
 
 import { LoadingOverlayWithLogo } from "@/components/shared/loading-overlay-with-logo"
 import { SourcePicker } from "@/components/shared/source-picker"
@@ -41,63 +43,7 @@ function fmtDuration(minutes?: number): string {
 }
 
 // ─── Extended StreamSource with local metadata ─────────────────────────────
-interface RealStreamSource extends StreamSource {
-    _localPath?: string
-    _streamType?: Mediastream_StreamType | "online"
-    _onlineProvider?: string
-}
-
-function buildSourcesForEpisode(ep: Anime_Episode, onlineExts?: any[]): RealStreamSource[] {
-    const sources: RealStreamSource[] = []
-
-    if (ep.isDownloaded && ep.localFile?.path) {
-        const path = ep.localFile.path
-        const filename = path.split(/[/\\]/).pop() ?? path
-        sources.push(
-            {
-                id: `local-${ep.episodeNumber}-direct`,
-                type: "local",
-                label: filename,
-                quality: "1080p",
-                info: "Archivo local · Reproducción directa",
-                codec: "Nativo",
-                _localPath: path,
-                _streamType: "direct",
-            },
-            {
-                id: `local-${ep.episodeNumber}-transcode`,
-                type: "local",
-                label: `${filename}`,
-                quality: "1080p",
-                info: "HLS · Transcodificado por el servidor",
-                codec: "H.264 HLS",
-                _localPath: path,
-                _streamType: "transcode",
-            }
-        )
-    }
-
-    if (onlineExts && onlineExts.length > 0) {
-        onlineExts.forEach(ext => {
-            sources.push({
-                id: `online-${ep.episodeNumber}-${ext?.id}`,
-                type: "direct",
-                label: ext?.name || "Web Stream",
-                quality: "1080p",
-                info: ext?.language ? `Stream Online (${ext.language})` : "Stream Online",
-                codec: "Web",
-                _streamType: "online",
-                _onlineProvider: ext?.id,
-            })
-        })
-    }
-
-    if (sources.length === 0) {
-        return []
-    }
-
-    return sources
-}
+// (Removed static stub: dynamic sources are now handled by useResolveStreams)
 
 // ─── Error Banner ─────────────────────────────────────────────────────────────
 function ErrorBanner({ message, onBack }: { message: string; onBack: () => void }) {
@@ -135,7 +81,6 @@ export default function MediaDetailPage() {
     const navigate = useNavigate()
 
     const { data: entry, isLoading, error } = useGetAnimeEntry(seriesId)
-    const onlineExtensions: any[] = [] // Removed broken hook useListOnlinestreamProviderExtensions()
 
     const onBack = () => navigate({ to: "/home" })
 
@@ -156,45 +101,45 @@ export default function MediaDetailPage() {
         seriesId: number
     } | null>(null)
 
-    // SourcePicker Modal State
-    const [sourcePickerEp, setSourcePickerEp] = useState<Anime_Episode | null>(null)
-    const sourcePickerSources = useMemo(
-        () => sourcePickerEp ? buildSourcesForEpisode(sourcePickerEp, onlineExtensions) : [],
-        [sourcePickerEp, onlineExtensions]
+    // SourcePicker Modal & Resolution State
+    const [resolvingEp, setResolvingEp] = useState<Anime_Episode | null>(null)
+    const { data: resolutionData, isFetching: isResolving } = useResolveStreams(
+        resolvingEp ? { mediaId: Number(seriesId), episode: resolvingEp.episodeNumber } : null,
+        { enabled: !!resolvingEp }
     )
 
     // Playback Logic
-    const handlePlayEpisode = useCallback((ep: Anime_Episode, preferredSource?: RealStreamSource) => {
-        const sources = preferredSource ? [preferredSource] : buildSourcesForEpisode(ep, onlineExtensions)
-        const src = sources[0]
-        if (!src) return
+    const handlePlayEpisode = useCallback((source: any) => {
+        if (!source || !resolvingEp) return
+
+        const isExternal = source.type !== "Local"
 
         setPlayTarget({
-            path: src._localPath ?? "hybrid",
-            streamType: src._streamType ?? "online",
-            onlineProvider: src._onlineProvider,
-            episodeLabel: ep.displayTitle || ep.episodeTitle || `Ep. ${ep.episodeNumber}`,
-            episodeNumber: ep.episodeNumber,
+            path: source.urlPath ?? "hybrid",
+            streamType: isExternal ? "online" : "direct",
+            onlineProvider: source.provider,
+            episodeLabel: resolvingEp.displayTitle || resolvingEp.episodeTitle || `Ep. ${resolvingEp.episodeNumber}`,
+            episodeNumber: resolvingEp.episodeNumber,
             seriesId: Number(seriesId)
         })
+        setResolvingEp(null)
         setIsPlayerOpen(true)
-    }, [onlineExtensions, seriesId])
+    }, [resolvingEp, seriesId])
 
     const handleEpisodeClick = useCallback((ep: Anime_Episode) => {
-        const sources = buildSourcesForEpisode(ep, onlineExtensions)
-        if (sources.length > 1) {
-            setSourcePickerEp(ep)
-        } else if (sources.length === 1) {
-            handlePlayEpisode(ep, sources[0])
-        }
-    }, [onlineExtensions, handlePlayEpisode])
+        setResolvingEp(ep)
+    }, [])
 
     const handleNextEpisode = useCallback(() => {
         if (!entry || !entry.episodes || !playTarget) return
         const nextEp = entry.episodes.find(e => e.episodeNumber === playTarget.episodeNumber + 1)
-        if (nextEp) handlePlayEpisode(nextEp)
+        if (nextEp) {
+            setResolvingEp(nextEp) 
+            // In marathons we should probably auto-play the best source instead of opening the picker, 
+            // but for safety we open the picker. Or we can auto-pick later.
+        }
         else setIsPlayerOpen(false) // Series finished
-    }, [entry, playTarget, handlePlayEpisode])
+    }, [entry, playTarget])
 
 
     if (isLoading) return <LoadingOverlayWithLogo />
@@ -278,9 +223,9 @@ export default function MediaDetailPage() {
                             {/* Smart Status Pill */}
                             <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md">
                                 {downloadPercent === 100 ? (
-                                    <><HardDrive className="w-3.5 h-3.5 text-emerald-400" /> <span className="text-emerald-400 text-xs">100% Local</span></>
+                                    <><HardDrive className="w-3.5 h-3.5 text-emerald-400" /> <span className="text-emerald-400 text-xs text-nowrap">100% Local</span></>
                                 ) : (
-                                    <><Zap className="w-3.5 h-3.5 text-amber-400" /> <span className="text-amber-400 text-xs">{downloadPercent}% Local</span></>
+                                    <><Zap className="w-3.5 h-3.5 text-amber-400" /> <span className="text-amber-400 text-xs text-nowrap">{downloadPercent}% Local</span></>
                                 )}
                             </span>
                         </div>
@@ -513,20 +458,22 @@ export default function MediaDetailPage() {
             </main>
 
             {/* ── Source Picker Modal ── */}
-            {sourcePickerEp && (
+            {resolvingEp && !isResolving && resolutionData && (
                 <SourcePicker 
-                    response={{ 
-                        id: String(media.id),
-                        title: getTitle(media),
-                        availabilityType: "hybrid",
-                        sources: sourcePickerSources as any 
-                    } as any}
-                    onSelect={(src: any) => {
-                        setSourcePickerEp(null)
-                        handlePlayEpisode(sourcePickerEp, src)
-                    }}
-                    onClose={() => setSourcePickerEp(null)}
+                    response={resolutionData}
+                    onSelect={handlePlayEpisode}
+                    onClose={() => setResolvingEp(null)}
                 />
+            )}
+            {resolvingEp && isResolving && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                    <div className="flex flex-col items-center gap-4 bg-zinc-900/80 px-8 py-6 rounded-2xl border border-white/10 shadow-2xl">
+                        <Zap className="w-10 h-10 text-primary animate-pulse drop-shadow-[0_0_15px_rgba(249,115,22,0.8)]" />
+                        <p className="text-sm font-bold uppercase tracking-widest text-zinc-300 animate-pulse">
+                            Buscando Fuentes...
+                        </p>
+                    </div>
+                </div>
             )}
 
             {/* ── Video Player Modal ── */}
