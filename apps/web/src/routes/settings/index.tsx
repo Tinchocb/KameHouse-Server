@@ -57,6 +57,7 @@ const settingsSchema = z.object({
         disableLocalScanning: z.boolean().default(false),
         disableTorrentStreaming: z.boolean().default(false),
         disableTorrentProvider: z.boolean().default(false),
+        primaryMetadataProvider: z.string().default("tmdb"),
     }).default({}),
     mediaPlayer: z.object({
         defaultPlayer: z.string().default(""),

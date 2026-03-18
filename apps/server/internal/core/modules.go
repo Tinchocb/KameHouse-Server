@@ -17,6 +17,7 @@ import (
 	"kamehouse/internal/streaming"
 	itorrent "kamehouse/internal/torrents/torrent"
 	"kamehouse/internal/torrentstream"
+	"kamehouse/internal/api/tmdb"
 	"kamehouse/internal/platforms/tmdb_platform"
 
 	"github.com/cli/browser"
@@ -263,6 +264,8 @@ func (a *App) InitOrRefreshModules() {
 		if settings.Library.TmdbApiKey != "" {
 			a.Logger.Info().Msg("app: Using TMDb platform")
 			a.Metadata.PlatformRef.Set(tmdb_platform.NewPlatform(settings.Library.TmdbApiKey, settings.Library.TmdbLanguage))
+			// Also update the TMDB client used by the scanner
+			a.Metadata.TMDBClient = tmdb.NewClient(settings.Library.TmdbApiKey, settings.Library.TmdbLanguage)
 		} else {
 			// Default back to simulated if no other platform is suitable
 			// TMDb is the primary platform, defaulting to simulated if unavailable.

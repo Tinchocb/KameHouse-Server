@@ -448,6 +448,9 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		nfoFolderMap := make(map[string]uint) // folder path -> LibraryMedia ID
 
 		for _, lf := range localFiles {
+			if lf == nil {
+				continue
+			}
 			if lf.LibraryMediaId != 0 || lf.MediaId != 0 {
 				continue // Already assigned
 			}
@@ -490,6 +493,11 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 							Year:          nfo.Year,
 						}
 
+						if scn.Database == nil {
+							scn.Logger.Warn().Msg("scanner: database is nil, cannot insert LibraryMedia from NFO")
+							break
+						}
+
 						if saved, err := db.InsertLibraryMedia(scn.Database, newMedia); err == nil && saved != nil {
 							lf.LibraryMediaId = saved.ID
 							nfoFolderMap[lfDir] = saved.ID
@@ -504,6 +512,8 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 								Uint("libraryMediaId", saved.ID).
 								Msg("scanner: Created LibraryMedia via local NFO")
 							break
+						} else if err != nil {
+							scn.Logger.Warn().Err(err).Msg("scanner: failed to insert LibraryMedia from NFO")
 						}
 					}
 				}

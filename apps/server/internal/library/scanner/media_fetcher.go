@@ -46,10 +46,15 @@ type MediaFetcherOptions struct {
 func NewMediaFetcher(ctx context.Context, opts *MediaFetcherOptions) (ret *MediaFetcher, retErr error) {
 	defer util.HandlePanicInModuleWithError("library/scanner/NewMediaFetcher", &retErr)
 
-	if opts.LocalFiles == nil ||
-		opts.Logger == nil ||
-		opts.TMDBProvider == nil {
+	if opts.LocalFiles == nil || opts.Logger == nil {
 		return nil, errors.New("missing options")
+	}
+
+	// If no TMDB provider is configured, return an empty fetcher
+	// The caller will still be able to match files by other means
+	if opts.TMDBProvider == nil {
+		opts.Logger.Warn().Msg("scanner: No TMDB provider available, skipping remote media fetch")
+		return &MediaFetcher{ScanLogger: opts.ScanLogger}, nil
 	}
 
 	return newMediaFetcherTMDB(ctx, opts)

@@ -477,7 +477,7 @@ export default function MediaDetailPage() {
                             }}
                         />
                     </div>
-                </div>
+                </motion.div>
             </main>
 
             {/* ── Source Picker Modal ── */}

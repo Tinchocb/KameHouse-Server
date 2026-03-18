@@ -194,7 +194,45 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 	merged.UpdatedAt = time.Now()
 
 	if b.Library != nil {
-		merged.Library = *b.Library
+		if b.Library.SeriesPaths != nil {
+			merged.Library.SeriesPaths = b.Library.SeriesPaths
+		}
+		if b.Library.MoviePaths != nil {
+			merged.Library.MoviePaths = b.Library.MoviePaths
+		}
+		merged.Library.AutoUpdateProgress = b.Library.AutoUpdateProgress
+		merged.Library.TorrentProvider = b.Library.TorrentProvider
+		merged.Library.AutoSelectTorrentProvider = b.Library.AutoSelectTorrentProvider
+		merged.Library.AutoScan = b.Library.AutoScan
+		merged.Library.EnableOnlinestream = b.Library.EnableOnlinestream
+		merged.Library.IncludeOnlineStreamingInLibrary = b.Library.IncludeOnlineStreamingInLibrary
+		merged.Library.DisableAnimeCardTrailers = b.Library.DisableAnimeCardTrailers
+		merged.Library.DOHProvider = b.Library.DOHProvider
+		merged.Library.OpenTorrentClientOnStart = b.Library.OpenTorrentClientOnStart
+		merged.Library.OpenWebURLOnStart = b.Library.OpenWebURLOnStart
+		merged.Library.RefreshLibraryOnStart = b.Library.RefreshLibraryOnStart
+		merged.Library.AutoPlayNextEpisode = b.Library.AutoPlayNextEpisode
+		merged.Library.EnableWatchContinuity = b.Library.EnableWatchContinuity
+		merged.Library.AutoSyncOfflineLocalData = b.Library.AutoSyncOfflineLocalData
+		merged.Library.ScannerMatchingThreshold = b.Library.ScannerMatchingThreshold
+		merged.Library.ScannerMatchingAlgorithm = b.Library.ScannerMatchingAlgorithm
+		merged.Library.AutoSyncToLocalAccount = b.Library.AutoSyncToLocalAccount
+		merged.Library.AutoSaveCurrentMediaOffline = b.Library.AutoSaveCurrentMediaOffline
+		merged.Library.UseFallbackMetadataProvider = b.Library.UseFallbackMetadataProvider
+		merged.Library.TmdbApiKey = b.Library.TmdbApiKey
+		merged.Library.TmdbLanguage = b.Library.TmdbLanguage
+		merged.Library.ScannerUseLegacyMatching = b.Library.ScannerUseLegacyMatching
+		merged.Library.ScannerConfig = b.Library.ScannerConfig
+		merged.Library.ScannerStrictStructure = b.Library.ScannerStrictStructure
+		merged.Library.ScannerProvider = b.Library.ScannerProvider
+		merged.Library.DisableLocalScanning = b.Library.DisableLocalScanning
+		merged.Library.DisableTorrentStreaming = b.Library.DisableTorrentStreaming
+		merged.Library.DisableTorrentProvider = b.Library.DisableTorrentProvider
+
+		// If a TMDB API key is provided and the primary provider is empty, set it to "tmdb"
+		if merged.Library.TmdbApiKey != "" && merged.Library.PrimaryMetadataProvider == "" {
+			merged.Library.PrimaryMetadataProvider = "tmdb"
+		}
 	}
 	if b.MediaPlayer != nil {
 		merged.MediaPlayer = *b.MediaPlayer
