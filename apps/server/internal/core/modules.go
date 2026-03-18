@@ -229,8 +229,9 @@ func (a *App) InitOrRefreshModules() {
 	}
 
 	a.Settings = settings // Store settings instance in app
-	if settings.Library != nil {
-		a.LibraryDir = settings.GetLibrary().LibraryPath
+	allPaths := settings.GetLibrary().GetAllPaths()
+	if len(allPaths) > 0 {
+		a.LibraryDir = allPaths[0]
 
 		// Update feature toggles from settings
 		a.FeatureManager.UpdateFromSettings(settings.Library)
@@ -245,7 +246,7 @@ func (a *App) InitOrRefreshModules() {
 	if settings.Library != nil {
 		if a.LibraryExplorer != nil {
 			// Update the library paths for the library explorer (thread safe)
-			go a.LibraryExplorer.SetLibraryPaths(settings.GetLibrary().GetLibraryPaths())
+			go a.LibraryExplorer.SetLibraryPaths(settings.GetLibrary().GetAllPaths())
 		}
 	}
 
@@ -328,10 +329,9 @@ func (a *App) InitOrRefreshModules() {
 	// +---------------------+
 
 	// Initialize library watcher
-	if settings.Library != nil && len(settings.Library.LibraryPath) > 0 {
-		go a.initLibraryWatcher(settings.Library.GetLibraryPaths())
+	if settings.Library != nil && len(settings.GetLibrary().GetAllPaths()) > 0 {
+		go a.initLibraryWatcher(settings.GetLibrary().GetAllPaths())
 	}
-
 	// +---------------------+
 	// |     Continuity      |
 	// +---------------------+

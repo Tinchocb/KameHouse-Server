@@ -45,6 +45,13 @@ type ShelvedLocalFiles struct {
 	Value []byte `gorm:"column:value" json:"value"`
 }
 
+type AnimapCache struct {
+	BaseModel
+	Provider string `gorm:"column:provider;uniqueIndex:idx_provider_id" json:"provider"`
+	MediaID  int    `gorm:"column:media_id;uniqueIndex:idx_provider_id" json:"mediaId"`
+	Data     []byte `gorm:"column:data" json:"data"`
+}
+
 type Settings struct {
 	BaseModel
 	Library        *LibrarySettings        `gorm:"embedded" json:"library"`
@@ -86,7 +93,8 @@ type TorrentstreamSettings struct {
 
 
 type LibrarySettings struct {
-	LibraryPath                     string       `gorm:"column:library_path" json:"libraryPath"`
+	SeriesPaths                     LibraryPaths `gorm:"column:series_paths;type:text" json:"seriesPaths"`
+	MoviePaths                      LibraryPaths `gorm:"column:movie_paths;type:text" json:"moviePaths"`
 	AutoUpdateProgress              bool         `gorm:"column:auto_update_progress" json:"autoUpdateProgress"`
 	TorrentProvider                 string       `gorm:"column:torrent_provider" json:"torrentProvider"`
 	AutoSelectTorrentProvider       string       `gorm:"column:auto_select_torrent_provider" json:"autoSelectTorrentProvider"`
@@ -100,7 +108,6 @@ type LibrarySettings struct {
 	RefreshLibraryOnStart           bool         `gorm:"column:refresh_library_on_start" json:"refreshLibraryOnStart"`
 	AutoPlayNextEpisode             bool         `gorm:"column:auto_play_next_episode" json:"autoPlayNextEpisode"`
 	EnableWatchContinuity           bool         `gorm:"column:enable_watch_continuity" json:"enableWatchContinuity"`
-	LibraryPaths                    LibraryPaths `gorm:"column:library_paths;type:text" json:"libraryPaths"`
 	AutoSyncOfflineLocalData        bool         `gorm:"column:auto_sync_offline_local_data" json:"autoSyncOfflineLocalData"`
 	ScannerMatchingThreshold        float64      `gorm:"column:scanner_matching_threshold" json:"scannerMatchingThreshold"`
 	ScannerMatchingAlgorithm        string       `gorm:"column:scanner_matching_algorithm" json:"scannerMatchingAlgorithm"`
@@ -120,17 +127,43 @@ type LibrarySettings struct {
 	ScannerUseLegacyMatching        bool         `gorm:"column:scanner_use_legacy_matching" json:"scannerUseLegacyMatching"`
 }
 
-func (s *LibrarySettings) GetLibraryPaths() []string {
-	return s.LibraryPaths
+func (s *LibrarySettings) GetAllPaths() []string {
+	var paths []string
+	for _, p := range s.SeriesPaths {
+		if p != "" {
+			paths = append(paths, p)
+		}
+	}
+	for _, p := range s.MoviePaths {
+		if p != "" {
+			paths = append(paths, p)
+		}
+	}
+	return paths
 }
 
 type LibraryPaths []string
 
 func (o *LibraryPaths) Scan(src interface{}) error {
+	if src == nil {
+		*o = []string{}
+		return nil
+	}
+	
 	str, ok := src.(string)
 	if !ok {
-		return errors.New("src value cannot cast to string")
+		b, ok := src.([]byte)
+		if !ok {
+			return errors.New("src value cannot cast to string")
+		}
+		str = string(b)
 	}
+	
+	if str == "" {
+		*o = []string{}
+		return nil
+	}
+	
 	*o = strings.Split(str, ",")
 	return nil
 }

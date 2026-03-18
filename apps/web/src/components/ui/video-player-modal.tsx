@@ -139,6 +139,7 @@ export function VideoPlayerModal({
     // Status
     const [status, setStatus] = useState<"loading" | "ready" | "error">("loading")
     const [errorMsg, setErrorMsg] = useState<string>("")
+    const [isBuffering, setIsBuffering] = useState(false)
 
     // Center play/pause flash overlay
     const [centerFlash, setCenterFlash] = useState<"play" | "pause" | null>(null)
@@ -327,15 +328,11 @@ export function VideoPlayerModal({
                 case "Space":
                 case "KeyK":
                     e.preventDefault()
-                    if (videoRef.current) {
-                        if (videoRef.current.paused) videoRef.current.play()
-                        else videoRef.current.pause()
-                    }
+                    togglePlay()
                     break
                 case "KeyF":
-                    if (!containerRef.current) break
-                    if (!document.fullscreenElement) containerRef.current.requestFullscreen().catch(() => {})
-                    else document.exitFullscreen()
+                    e.preventDefault()
+                    toggleFullscreen()
                     break
                 case "KeyM":
                     if (videoRef.current) {
@@ -673,11 +670,11 @@ export function VideoPlayerModal({
     )
 
     // Controls Logic
-    const togglePlay = () => {
+    const togglePlay = useCallback(() => {
         if (!videoRef.current) return
-        if (isPlaying) videoRef.current.pause()
+        if (isPlaying || !videoRef.current.paused) videoRef.current.pause()
         else videoRef.current.play()
-    }
+    }, [isPlaying])
 
     const skipTime = (amount: number) => {
         if (!videoRef.current) return
@@ -713,7 +710,7 @@ export function VideoPlayerModal({
         }
     }
 
-    const toggleFullscreen = () => {
+    const toggleFullscreen = useCallback(() => {
         if (!containerRef.current) return
         if (!document.fullscreenElement) {
             containerRef.current.requestFullscreen().catch(() => { })
@@ -722,7 +719,7 @@ export function VideoPlayerModal({
             document.exitFullscreen()
             setIsFullscreen(false)
         }
-    }
+    }, [setIsFullscreen])
 
     useEffect(() => {
         const onFsChange = () => setIsFullscreen(!!document.fullscreenElement)
@@ -815,6 +812,13 @@ export function VideoPlayerModal({
                 </div>
             )}
 
+            {/* Buffering State (Mid-playback) */}
+            {isBuffering && status === "ready" && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center z-10 text-white pointer-events-none bg-black/10 backdrop-blur-[2px]">
+                    <Loader2 className="w-14 h-14 text-orange-500 animate-spin drop-shadow-[0_0_15px_rgba(249,115,22,0.8)]" />
+                </div>
+            )}
+
             {status === "error" && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-10 px-6 text-center text-white bg-black/90">
                     <AlertTriangle className="w-16 h-16 text-orange-500" />
@@ -837,7 +841,9 @@ export function VideoPlayerModal({
                 crossOrigin={isExternalStream ? "anonymous" : undefined}
                 // Ocultar controles nativos
                 controls={false}
-                // Playback telemetry
+                // Playback telemetry y buffering
+                onWaiting={() => setIsBuffering(true)}
+                onPlaying={() => setIsBuffering(false)}
                 onEnded={() => {
                     const video = videoRef.current
                     if (video) {} 

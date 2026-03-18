@@ -47,7 +47,7 @@ func (l *LibraryExplorer) SuperUpdateFiles(opts []*SuperUpdateFileOptions) error
 			sem <- struct{}{}
 			defer func() { <-sem }()
 			defer wg.Done()
-			_ = l.superUpdateFile(opt, lfs, lfsId, settings.GetLibrary().GetLibraryPaths())
+			_ = l.superUpdateFile(opt, lfs, lfsId, settings.GetLibrary().GetAllPaths())
 		}(opt)
 	}
 

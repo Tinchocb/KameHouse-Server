@@ -85,6 +85,38 @@ func (p *TMDBProvider) SearchMedia(ctx context.Context, query string) ([]*dto.No
 	return results, nil
 }
 
+func (p *TMDBProvider) SearchTV(ctx context.Context, query string) ([]*dto.NormalizedMedia, error) {
+	var results []*dto.NormalizedMedia
+	tvResults, err := p.client.SearchTV(ctx, query)
+	if err == nil {
+		for _, r := range tvResults {
+			nm := tmdbTVResultToNormalizedMedia(r)
+			results = append(results, nm)
+		}
+		if len(results) == 0 {
+			return nil, ErrNotFound
+		}
+		return results, nil
+	}
+	return nil, err
+}
+
+func (p *TMDBProvider) SearchMovie(ctx context.Context, query string) ([]*dto.NormalizedMedia, error) {
+	var results []*dto.NormalizedMedia
+	movieResults, err := p.client.SearchMovie(ctx, query)
+	if err == nil {
+		for _, r := range movieResults {
+			nm := tmdbMovieResultToNormalizedMedia(r)
+			results = append(results, nm)
+		}
+		if len(results) == 0 {
+			return nil, ErrNotFound
+		}
+		return results, nil
+	}
+	return nil, err
+}
+
 // GetMediaDetails fetches full details for a specific TMDB media.
 func (p *TMDBProvider) GetMediaDetails(ctx context.Context, id string) (*dto.NormalizedMedia, error) {
 	// If it's a number, try to determine if it's TV or Movie based on offset

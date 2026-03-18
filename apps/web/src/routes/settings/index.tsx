@@ -25,8 +25,8 @@ import type { SaveSettings_Variables } from "@/api/generated/endpoint.types"
 
 const settingsSchema = z.object({
     library: z.object({
-        libraryPath: z.string().default(""),
-        libraryPaths: z.array(z.string()).nullish().transform(v => v ?? []),
+        seriesPaths: z.array(z.string()).nullish().transform(v => v ?? []),
+        moviePaths: z.array(z.string()).nullish().transform(v => v ?? []),
         autoUpdateProgress: z.boolean().default(false),
         torrentProvider: z.string().default(""),
         autoSelectTorrentProvider: z.string().default(""),
@@ -545,38 +545,50 @@ function OsToggle({ control, name, label, desc, onSave }: any) {
 function LibraryPathsManager({ form }: { form: any }) {
     const { mutateAsync: saveSettings } = useSaveSettings()
     const { mutate: scanLibrary, isPending: isScanning } = useScanLocalFiles()
-    const paths = form.watch("library.libraryPaths") || []
+    
+    const [newSeriesPath, setNewSeriesPath] = useState("")
+    const [newMoviePath, setNewMoviePath] = useState("")
+    
+    const seriesPaths = form.watch("library.seriesPaths") || []
+    const moviePaths = form.watch("library.moviePaths") || []
 
-    const addPath = async (p: string) => {
+    const addPath = async (type: "series" | "movie", p: string) => {
+        const paths = type === "series" ? seriesPaths : moviePaths
+        const field = type === "series" ? "library.seriesPaths" : "library.moviePaths"
         if (!p || paths.includes(p)) return
         const next = [...paths, p]
-        form.setValue("library.libraryPaths", next)
+        form.setValue(field, next)
         await saveSettings(form.getValues())
         toast.success("Carpeta añadida")
     }
 
-    const removePath = async (p: string) => {
+    const removePath = async (type: "series" | "movie", p: string) => {
+        const paths = type === "series" ? seriesPaths : moviePaths
+        const field = type === "series" ? "library.seriesPaths" : "library.moviePaths"
         const next = paths.filter((x: string) => x !== p)
-        form.setValue("library.libraryPaths", next)
+        form.setValue(field, next)
         await saveSettings(form.getValues())
         toast.info("Carpeta eliminada")
     }
 
-    return (
-        <Card>
+    const renderPathList = (type: "series" | "movie", paths: string[], label: string, emptyText: string) => (
+        <Card className="flex flex-col w-full h-full">
+            <div className="px-5 py-4 border-b border-white/5 bg-white/[0.02]">
+                <h3 className="text-sm font-bold text-white/90">{label}</h3>
+            </div>
             {paths.length === 0
-                ? <div className="px-6 py-10 text-center text-zinc-600 italic text-sm">No hay carpetas configuradas en tu biblioteca local.</div>
-                : <div className="p-2 space-y-1">
+                ? <div className="px-6 py-10 flex-1 flex items-center justify-center text-center text-zinc-500 italic text-xs">{emptyText}</div>
+                : <div className="p-2 space-y-1 flex-1">
                     {paths.map((p: string) => (
                         <div key={p} className="flex items-center gap-4 px-4 py-3 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-white/10 hover:bg-white/5 transition-all group/path shadow-sm">
                             <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover/path:scale-110 transition-transform">
                                 <LucideFolder size={16} className="text-primary" />
                             </div>
-                            <span className="flex-1 font-mono text-[11px] text-zinc-400 truncate tracking-tight">{p}</span>
+                            <span className="flex-1 font-mono text-[10px] text-zinc-400 truncate tracking-tight">{p}</span>
                             <button 
                                 type="button" 
                                 className="p-2 rounded-xl text-zinc-600 hover:text-rose-400 hover:bg-rose-400/10 transition-all opacity-0 group-hover/path:opacity-100" 
-                                onClick={() => removePath(p)}
+                                onClick={() => removePath(type, p)}
                             >
                                 <LucideTrash2 size={16} />
                             </button>
@@ -584,28 +596,61 @@ function LibraryPathsManager({ form }: { form: any }) {
                     ))}
                 </div>
             }
-            <div className="px-4 py-3 bg-black/20 flex items-center justify-between gap-4 border-t border-white/5">
-                <DirectorySelector
-                    value=""
-                    onSelect={(p) => addPath(p)}
-                    shouldExist={true}
-                    label="Añadir carpeta"
-                />
+            <div className="px-4 py-3 bg-black/20 flex items-center justify-between gap-4 border-t border-white/5 mt-auto">
+                <div className="flex-1">
+                    <DirectorySelector
+                        value={type === "series" ? newSeriesPath : newMoviePath}
+                        onSelect={(p) => type === "series" ? setNewSeriesPath(p) : setNewMoviePath(p)}
+                        shouldExist={true}
+                        label="Añadir carpeta"
+                    />
+                </div>
+                <button
+                    type="button"
+                    disabled={!(type === "series" ? newSeriesPath : newMoviePath)}
+                    onClick={() => {
+                        const val = type === "series" ? newSeriesPath : newMoviePath
+                        if (val) {
+                            addPath(type, val)
+                            type === "series" ? setNewSeriesPath("") : setNewMoviePath("")
+                        }
+                    }}
+                    className={cn(
+                        "rounded-xl px-4 py-2 text-xs font-bold transition-all",
+                        (type === "series" ? newSeriesPath : newMoviePath) 
+                            ? "bg-primary text-black hover:bg-primary/90" 
+                            : "bg-white/5 text-zinc-500 cursor-not-allowed"
+                    )}
+                >
+                    Añadir
+                </button>
+            </div>
+        </Card>
+    )
+
+    return (
+        <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+                {renderPathList("series", seriesPaths, "Series y Anime", "Aún no has importado descargas de series o anime.")}
+                {renderPathList("movie", moviePaths, "Películas", "Aún no has importado descargas de películas.")}
+            </div>
+            
+            <div className="flex justify-end pt-2">
                 <button
                     type="button"
                     className={cn(
-                        "flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all",
+                        "flex items-center gap-3 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
                         isScanning 
-                            ? "text-zinc-500 bg-white/5" 
-                            : "text-primary bg-primary/10 hover:bg-primary/20 hover:scale-105 active:scale-95"
+                            ? "text-zinc-500 bg-white/5 cursor-wait" 
+                            : "text-primary bg-primary/10 border border-primary/20 hover:bg-primary/20 hover:scale-105 active:scale-95 shadow-lg shadow-primary/5"
                     )}
                     disabled={isScanning}
                     onClick={() => scanLibrary({ enhanced: false, enhanceWithOfflineDatabase: false, skipLockedFiles: false, skipIgnoredFiles: false })}
                 >
-                    <LucideRefreshCw size={14} className={cn(isScanning && "animate-spin")} />
-                    {isScanning ? "Escaneando" : "Escanear"}
+                    <LucideRefreshCw size={16} className={cn(isScanning && "animate-spin")} />
+                    {isScanning ? "Sincronizando Catálogo..." : "Regenerar Bóveda de Contenido"}
                 </button>
             </div>
-        </Card>
+        </div>
     )
 }

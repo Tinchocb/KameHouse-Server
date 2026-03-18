@@ -96,6 +96,9 @@ export const MediaCard = React.memo(function MediaCard({
                     : "aspect-[16/9] w-[240px] md:w-[300px] lg:w-[340px]",
                 className,
             )}
+            style={{
+                aspectRatio: isPoster ? '2 / 3' : '16 / 9',
+            }}
         >
             {/* ── Poster / Backdrop image (Deferred) ────────────────────── */}
             <DeferredImage

@@ -155,11 +155,10 @@ func (as *AutoScanner) TriggerScan() {
 	}
 	as.settings = *settings.Library
 
-	additionalPaths, _ := as.db.GetAdditionalLibraryPathsFromSettings()
+	additionalPaths := as.settings.GetAllPaths()
 
 	// Scan the library
 	scn := &scanner.Scanner{
-		DirPath:            as.settings.LibraryPath,
 		OtherDirPaths:      additionalPaths,
 		Logger:             as.logger,
 		PlatformRef:        as.platformRef,

@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"kamehouse/internal/api/anizip"
+	"kamehouse/internal/api/animap"
 	"kamehouse/internal/api/torrentio"
 
 	"github.com/labstack/echo/v4"
@@ -26,10 +26,7 @@ type TorrentioStreamResult struct {
 	MagnetURI    string `json:"magnetUri,omitempty"`
 }
 
-// torrentioAniZipCache is a request-scoped cache shared across handler calls.
-// A package-level instance avoids duplicated AniZip HTTP calls between
-// /torrentio/streams and the SourcePriorityEngine.
-var torrentioAniZipCache = anizip.NewCache()
+// (Removed anizip cache)
 
 // HandleGetTorrentioStreams responds to:
 //
@@ -65,25 +62,25 @@ func (h *Handler) HandleGetTorrentioStreams(c echo.Context) error {
 		})
 	}
 
-	// ── Map kitsuId → imdbID via AniZip ─────────────────────────────────────
-	ctx, cancel := context.WithTimeout(c.Request().Context(), 8*time.Second)
-	defer cancel()
-
-	mapping, anizipErr := anizip.FetchAniZipMediaC("kitsu", kitsuId, torrentioAniZipCache)
-	if anizipErr != nil || mapping == nil || mapping.Mappings == nil {
+	// ── Map kitsuId → Provider Identifier via Animap ─────────────────────────────────────
+	// Local DB persistent cache bypasses network redundancy completely
+	mapping, animapErr := animap.FetchAnimapMediaPersistent(h.App.Database, "kitsu", kitsuId)
+	if animapErr != nil || mapping == nil || mapping.Mappings == nil {
 		h.App.Logger.Warn().
-			Err(anizipErr).
+			Err(animapErr).
 			Int("kitsuId", kitsuId).
-			Msg("torrentio handler: anizip lookup failed — returning empty streams")
+			Msg("torrentio handler: animap lookup failed — returning empty streams")
 		return c.JSON(http.StatusOK, []TorrentioStreamResult{})
 	}
 
-	imdbID := mapping.Mappings.ImdbID
-	if imdbID == "" {
-		h.App.Logger.Warn().
-			Int("kitsuId", kitsuId).
-			Msg("torrentio handler: no IMDB ID in anizip mapping — returning empty streams")
-		return c.JSON(http.StatusOK, []TorrentioStreamResult{})
+	identifier := ""
+	if mapping.Mappings.TheMovieDbID != "" {
+		identifier = "tmdb:" + mapping.Mappings.TheMovieDbID
+	} else if imdb, ok := mapping.Titles["imdb"]; ok && imdb != "" {
+		identifier = imdb
+	} else {
+		// Fallback to Kitsu itself if TMDB/IMDB fails mapping
+		identifier = "kitsu:" + strconv.Itoa(kitsuId)
 	}
 
 	// ── Fetch from Torrentio addon ───────────────────────────────────────────
@@ -94,14 +91,32 @@ func (h *Handler) HandleGetTorrentioStreams(c echo.Context) error {
 	}
 
 	provider := torrentio.NewProvider(torrentioUrl)
-	streams, fetchErr := provider.GetSourcesForEpisode(ctx, imdbID, 1, episode)
+
+	// Since we introduced a memory cache layer inside `provider.go`, we can attempt a
+	// pseudo-fetch check synchronously with a tiny timeout, or check if it's there.
+	// But actually `GetSourcesForEpisode` handles everything. Fast returning cache is inside it.
+	
+	// ── Background Resolution ─────────────────
+	// Si el usuario entra y sale rápido, absorbemos todo mediante caché y despachamos en paralelo
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 10*time.Second)
+	defer cancel()
+
+	streams, fetchErr := provider.GetSourcesForEpisode(ctx, identifier, 1, episode)
 	if fetchErr != nil {
+		// The error could be an ErrRateLimit (HTTP 429) OR Timeout
 		h.App.Logger.Warn().
 			Err(fetchErr).
-			Str("imdbID", imdbID).
+			Str("identifier", identifier).
 			Int("episode", episode).
-			Msg("torrentio handler: provider fetch failed — returning empty streams")
-		// Return 200 with empty array so the frontend shows "no results", not an error.
+			Msg("torrentio handler: provider fetch failed — returning graceful empty UI state")
+			
+		// Despachar en background para pre-cachear si se recupera la conexión
+		go func() {
+			bgCtx, bgCancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer bgCancel()
+			_, _ = provider.GetSourcesForEpisode(bgCtx, identifier, 1, episode)
+		}()
+		
 		return c.JSON(http.StatusOK, []TorrentioStreamResult{})
 	}
 
@@ -126,7 +141,7 @@ func (h *Handler) HandleGetTorrentioStreams(c echo.Context) error {
 	}
 
 	h.App.Logger.Info().
-		Str("imdbID", imdbID).
+		Str("identifier", identifier).
 		Int("kitsuId", kitsuId).
 		Int("episode", episode).
 		Int("count", len(results)).

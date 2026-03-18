@@ -34,7 +34,7 @@ var DefaultCircuitBreakerConfig = CircuitBreakerConfig{
 }
 
 // CircuitBreaker implements the Circuit Breaker pattern for external remote resolvers.
-type CircuitBreaker struct {
+type CircuitBreaker[T any] struct {
 	mu sync.RWMutex
 
 	state       CircuitState
@@ -46,17 +46,18 @@ type CircuitBreaker struct {
 }
 
 // NewCircuitBreaker creates a new circuit breaker with the given configuration.
-func NewCircuitBreaker(config CircuitBreakerConfig) *CircuitBreaker {
-	return &CircuitBreaker{
+func NewCircuitBreaker[T any](config CircuitBreakerConfig) *CircuitBreaker[T] {
+	return &CircuitBreaker[T]{
 		state:  CircuitClosed,
 		config: config,
 	}
 }
 
 // Execute wraps an operation with the circuit breaker logic.
-func (cb *CircuitBreaker) Execute(ctx context.Context, op func(ctx context.Context) ([]*StreamResult, error)) ([]*StreamResult, error) {
+func (cb *CircuitBreaker[T]) Execute(ctx context.Context, op func(ctx context.Context) (T, error)) (T, error) {
 	if err := cb.acquire(); err != nil {
-		return nil, err
+		var zero T
+		return zero, err
 	}
 
 	res, err := op(ctx)
@@ -69,14 +70,15 @@ func (cb *CircuitBreaker) Execute(ctx context.Context, op func(ctx context.Conte
 		} else {
 			cb.recordSuccess()
 		}
-		return nil, err
+		var zero T
+		return zero, err
 	}
 
 	cb.recordSuccess()
 	return res, nil
 }
 
-func (cb *CircuitBreaker) acquire() error {
+func (cb *CircuitBreaker[T]) acquire() error {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
 
@@ -100,7 +102,7 @@ func (cb *CircuitBreaker) acquire() error {
 	return nil
 }
 
-func (cb *CircuitBreaker) recordSuccess() {
+func (cb *CircuitBreaker[T]) recordSuccess() {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
 
@@ -109,7 +111,7 @@ func (cb *CircuitBreaker) recordSuccess() {
 	cb.halfOpenOps = 0
 }
 
-func (cb *CircuitBreaker) recordFailure() {
+func (cb *CircuitBreaker[T]) recordFailure() {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
 
@@ -124,7 +126,7 @@ func (cb *CircuitBreaker) recordFailure() {
 	}
 }
 
-func (cb *CircuitBreaker) transitionToOpen() {
+func (cb *CircuitBreaker[T]) transitionToOpen() {
 	cb.state = CircuitOpen
 	cb.openedAt = time.Now()
 }

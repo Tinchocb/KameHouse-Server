@@ -37,6 +37,8 @@ var ErrNoLocalFiles = errors.New("[matcher] no local files")
 type Scanner struct {
 	DirPath                    string
 	OtherDirPaths              []string
+	SeriesPaths                []string
+	MoviePaths                 []string
 	Enhanced                   bool
 	EnhanceWithOfflineDatabase bool
 	PlatformRef                *util.Ref[platform.Platform]
@@ -568,7 +570,8 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		ScanLogger:                 scn.ScanLogger,
 		OptionalAnimeCollection:    scn.AnimeCollection,
 		TMDBProvider:               tmdbProvider,
-		LibraryPaths:               libraryPaths,
+		SeriesPaths:                scn.SeriesPaths,
+		MoviePaths:                 scn.MoviePaths,
 	})
 	if err != nil {
 		return nil, err
@@ -716,17 +719,25 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 					continue
 				}
 
-				// Determine the correct format
 				format := "TV"
 				if movieIds[id] {
 					format = "MOVIE"
+				}
+
+				// Determine the actual real TMDB ID to store.
+				// - For TV: NormalizedMedia.ID == positive TMDB ID
+				// - For Movies: NormalizedMedia.ID == tmdbId + 1_000_000 (offset)
+				// We always store positive real TMDB IDs.
+				realTmdbId := id
+				if movieIds[id] {
+					realTmdbId = id - 1_000_000
 				}
 
 				// Build the LibraryMedia from NormalizedMedia if available
 				newMedia := &models.LibraryMedia{
 					Type:   "ANIME",
 					Format: format,
-					TmdbId: -id, // id is negative (-tmdbId from NormalizedMedia.ID), so -id gives us the positive TMDB ID
+					TmdbId: realTmdbId, // Always a positive real TMDB ID
 				}
 
 				if nm, ok := normalizedMap[id]; ok {
@@ -791,7 +802,14 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 			if scn.Database != nil {
 				scn.Database.Gorm().Where("tmdb_id IN ?", lo.Map(mediaBatch, func(m *models.LibraryMedia, _ int) int { return m.TmdbId })).Find(&insertedMedia)
 				for _, m := range insertedMedia {
-					libraryMediaIdMap[-m.TmdbId] = m.ID
+					// The map key must be the NormalizedMedia.ID (not the real TMDB ID)
+					// For TV: NormalizedMedia.ID == TmdbId (positive)
+					// For Movies: NormalizedMedia.ID == TmdbId + 1_000_000
+					mapKey := m.TmdbId
+					if m.Format == "MOVIE" {
+						mapKey = m.TmdbId + 1_000_000
+					}
+					libraryMediaIdMap[mapKey] = m.ID
 				}
 			}
 
@@ -813,10 +831,11 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 			if tmdbProvider != nil {
 				tmdbSeasonFetched := make(map[int]bool)
 				for tmdbMediaId, libMediaId := range libraryMediaIdMap {
-					if movieIds[-tmdbMediaId] {
+					if movieIds[tmdbMediaId] || movieIds[tmdbMediaId-1_000_000] {
 						continue // Skip movies
 					}
-					positiveTmdbId := -tmdbMediaId // IDs are stored as negative in NormalizedMedia
+					// For TV: tmdbMediaId is the NormalizedMedia.ID which equals the positive TMDB ID directly
+					positiveTmdbId := tmdbMediaId
 					if positiveTmdbId <= 0 {
 						continue
 					}

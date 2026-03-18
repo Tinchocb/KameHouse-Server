@@ -27,7 +27,7 @@ func (h *Handler) HandleGetLibraryExplorerFileTree(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	libraryPaths := settings.GetLibrary().GetLibraryPaths()
+	libraryPaths := settings.GetLibrary().GetAllPaths()
 	h.App.LibraryExplorer.SetLibraryPaths(libraryPaths)
 
 	// Get file tree
@@ -90,7 +90,7 @@ func (h *Handler) HandleRefreshLibraryExplorerFileTree(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	libraryPaths := settings.GetLibrary().GetLibraryPaths()
+	libraryPaths := settings.GetLibrary().GetAllPaths()
 	h.App.LibraryExplorer.SetLibraryPaths(libraryPaths)
 
 	// Refresh file tree
@@ -130,7 +130,7 @@ func (h *Handler) HandleLoadLibraryExplorerDirectoryChildren(c echo.Context) err
 		return h.RespondWithError(c, err)
 	}
 
-	libraryPaths := settings.GetLibrary().GetLibraryPaths()
+	libraryPaths := settings.GetLibrary().GetAllPaths()
 	h.App.LibraryExplorer.SetLibraryPaths(libraryPaths)
 
 	// Load directory children into the tree

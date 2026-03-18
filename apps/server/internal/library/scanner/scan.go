@@ -10,13 +10,13 @@ import (
 	"io/fs"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/library/parser"
 	"kamehouse/internal/metadata"
 
+	"kamehouse/internal/queue"
 	"github.com/rs/zerolog"
 	"github.com/samber/lo"
 )
@@ -33,6 +33,7 @@ type ScannerAgentOptions struct {
 	MediaContainer *MediaContainer
 	Database       *db.Database
 	Logger         *zerolog.Logger
+	QueueManager   *queue.Manager
 }
 
 // ScannerAgent is the autonomous AI-driven file scanner.
@@ -45,6 +46,7 @@ type ScannerAgent struct {
 	database       *db.Database
 	fetcher        *metadata.Fetcher
 	logger         *zerolog.Logger
+	queueManager   *queue.Manager
 
 	triggerCh chan struct{}
 }
@@ -109,13 +111,14 @@ func NewScannerAgent(rootDir string, opts ...ScannerAgentOptions) *ScannerAgent 
 		agent.mediaContainer = opts[0].MediaContainer
 		agent.database = opts[0].Database
 		agent.logger = opts[0].Logger
+		agent.queueManager = opts[0].QueueManager
 	}
 
 	return agent
 }
 
-// Scan orchestrates the massive 4-stage pipeline: Ingest -> Parse -> Resolve -> Commit.
-// Massive concurrency handled via internal/util/parallel mapped across bounded chunks.
+// Scan handles the fast ingestion Phase 1. It scans the disk to map files, catalogues them,
+// and purely dispatches tasks via queue/manager instead of blocking the main thread.
 func (a *ScannerAgent) Scan(ctx context.Context) error {
 	// STAGE 1 (Ingestion): Scan disk to map all fast-paths into memory
 	paths, err := a.ingestFS(ctx)
@@ -123,57 +126,23 @@ func (a *ScannerAgent) Scan(ctx context.Context) error {
 		return err
 	}
 
-	// STAGE 2 & 3: Parallel Processing & Atomic Writes
-	// WorkerPool caps goroutines to a.config.Workers (default NumCPU*2, max 16).
-	var (
-		mu         sync.Mutex
-		allResults []MediaMatch
-	)
-
-	pool := NewWorkerPool(ctx, a.config.Workers)
-	for _, path := range paths {
-		path := path // capture
-		pool.Submit(func(ctx context.Context) {
-			match := a.processPath(ctx, path)
-			if match.OriginalPath == "" {
-				return
-			}
-			mu.Lock()
-			allResults = append(allResults, match)
-			mu.Unlock()
-		})
-	}
-	pool.Wait()
-
-	batches := lo.Chunk(allResults, a.config.BatchSize)
-
-	totalProcessed := 0
-	for _, batchResults := range batches {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-
-		if len(batchResults) == 0 {
-			continue
-		}
-
-		// Single SQLite Transaction for the entire batch to evade WAL contention
-		tx := a.database.Gorm().Begin()
-		for _, m := range batchResults {
-			err := tx.Exec(`
-				INSERT INTO local_files (path, updated_at) VALUES (?, ?)
-				ON CONFLICT(path) DO UPDATE SET updated_at = excluded.updated_at
-			`, m.OriginalPath, time.Now()).Error
-			if err != nil && a.logger != nil {
-				a.logger.Warn().Err(err).Str("path", m.OriginalPath).Msg("Batch insert skip")
+	// STAGE 2: Dispatch Block Processing to Queue Manager
+	// Instead of blocking horizontally for metadata/matching, just send pure events to queue.
+	if a.queueManager != nil {
+		a.logger.Info().Int("count", len(paths)).Msg("ScannerAgent: Dispatching paths to async queue...")
+		batches := lo.Chunk(paths, a.config.BatchSize)
+		for _, batch := range batches {
+			// Enqueue each batch to be picked up by the 'library.match' consumer.
+			_, err := a.queueManager.Enqueue("library.match", map[string]interface{}{
+				"paths": batch,
+			})
+			if err != nil {
+				a.logger.Error().Err(err).Msg("ScannerAgent: Failed to enqueue batch")
 			}
 		}
-		tx.Commit()
-
-		totalProcessed += len(batchResults)
-		if a.logger != nil {
-			a.logger.Info().Int("flushed", len(batchResults)).Int("total", totalProcessed).Msg("ScannerAgent: Batch committed")
-		}
+	} else {
+		// Fallback for isolated testing instances if no QueueManager exists.
+		a.logger.Warn().Msg("ScannerAgent: QueueManager is nil, skipping matching dispatch.")
 	}
 
 	// Ensure final visual update is guaranteed to hit the frontend

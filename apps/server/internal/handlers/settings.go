@@ -58,10 +58,12 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	if b.Library.LibraryPaths == nil {
-		b.Library.LibraryPaths = []string{}
+	if b.Library.SeriesPaths == nil {
+		b.Library.SeriesPaths = []string{}
 	}
-	b.Library.LibraryPath = filepath.ToSlash(b.Library.LibraryPath)
+	if b.Library.MoviePaths == nil {
+		b.Library.MoviePaths = []string{}
+	}
 	b.Library.IncludeOnlineStreamingInLibrary = b.Library.EnableOnlinestream
 
 	settings, err := h.App.Database.UpsertSettings(&models.Settings{
@@ -148,33 +150,38 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 	}
 
 	// ── 1. Sanitize library paths ─────────────────────────────────────────────
-	if b.Library.LibraryPath != "" {
-		b.Library.LibraryPath = filepath.ToSlash(filepath.Clean(b.Library.LibraryPath))
+	if b.Library.SeriesPaths == nil {
+		b.Library.SeriesPaths = []string{}
+	}
+	if b.Library.MoviePaths == nil {
+		b.Library.MoviePaths = []string{}
 	}
 
-	if b.Library.LibraryPaths == nil {
-		b.Library.LibraryPaths = []string{}
-	}
-
-	cleanPaths := b.Library.LibraryPaths[:0]
-	for _, p := range b.Library.LibraryPaths {
+	cleanSeries := b.Library.SeriesPaths[:0]
+	for _, p := range b.Library.SeriesPaths {
 		clean := filepath.ToSlash(filepath.Clean(p))
-		if clean == "" || util.IsSameDir(clean, b.Library.LibraryPath) {
-			continue
-		}
+		if clean == "" { continue }
 		info, err := os.Stat(filepath.FromSlash(clean))
-		if err != nil || !info.IsDir() {
-			continue
+		if err == nil && info.IsDir() {
+			cleanSeries = append(cleanSeries, clean)
 		}
-		cleanPaths = append(cleanPaths, clean)
 	}
-	b.Library.LibraryPaths = cleanPaths
+	b.Library.SeriesPaths = cleanSeries
 
-	for i, p1 := range b.Library.LibraryPaths {
-		if util.IsSubdirectory(b.Library.LibraryPath, p1) || util.IsSubdirectory(p1, b.Library.LibraryPath) {
-			return h.RespondWithError(c, errors.New("library paths cannot be subdirectories of each other"))
+	cleanMovies := b.Library.MoviePaths[:0]
+	for _, p := range b.Library.MoviePaths {
+		clean := filepath.ToSlash(filepath.Clean(p))
+		if clean == "" { continue }
+		info, err := os.Stat(filepath.FromSlash(clean))
+		if err == nil && info.IsDir() {
+			cleanMovies = append(cleanMovies, clean)
 		}
-		for j, p2 := range b.Library.LibraryPaths {
+	}
+	b.Library.MoviePaths = cleanMovies
+
+	allPaths := b.Library.GetAllPaths()
+	for i, p1 := range allPaths {
+		for j, p2 := range allPaths {
 			if i != j && util.IsSubdirectory(p1, p2) {
 				return h.RespondWithError(c, errors.New("library paths cannot be subdirectories of each other"))
 			}

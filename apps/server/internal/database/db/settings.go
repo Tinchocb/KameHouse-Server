@@ -44,22 +44,6 @@ func (db *Database) GetSettings() (*models.Settings, error) {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func (db *Database) GetLibraryPathFromSettings() (string, error) {
-	settings, err := db.GetSettings()
-	if err != nil {
-		return "", err
-	}
-	return settings.Library.LibraryPath, nil
-}
-
-func (db *Database) GetAdditionalLibraryPathsFromSettings() ([]string, error) {
-	settings, err := db.GetSettings()
-	if err != nil {
-		return []string{}, err
-	}
-	return settings.Library.LibraryPaths, nil
-}
-
 func (db *Database) GetAllLibraryPathsFromSettings() ([]string, error) {
 	settings, err := db.GetSettings()
 	if err != nil {
@@ -68,14 +52,14 @@ func (db *Database) GetAllLibraryPathsFromSettings() ([]string, error) {
 	if settings.Library == nil {
 		return []string{}, nil
 	}
-	return append([]string{settings.Library.LibraryPath}, settings.Library.LibraryPaths...), nil
+	return settings.Library.GetAllPaths(), nil
 }
 
 func (db *Database) AllLibraryPathsFromSettings(settings *models.Settings) *[]string {
 	if settings.Library == nil {
 		return &[]string{}
 	}
-	r := append([]string{settings.Library.LibraryPath}, settings.Library.LibraryPaths...)
+	r := settings.Library.GetAllPaths()
 	return &r
 }
 

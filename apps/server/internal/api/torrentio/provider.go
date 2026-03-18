@@ -9,8 +9,10 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/goccy/go-json"
+	"kamehouse/internal/util/cache"
 )
 
 // DefaultAddonURL is the public Torrentio Stremio addon endpoint.
@@ -75,6 +77,7 @@ type behaviorHints struct {
 type Provider struct {
 	addonURL string
 	client   *http.Client
+	cache    *cache.Cache[[]TorrentioSource]
 }
 
 // NewProvider creates a Provider. The addon base URL is read from the customUrl parameter,
@@ -90,6 +93,7 @@ func NewProvider(customUrl string) *Provider {
 	return &Provider{
 		addonURL: url,
 		client:   &http.Client{},
+		cache:    cache.NewCache[[]TorrentioSource](15 * time.Minute),
 	}
 }
 
@@ -108,6 +112,11 @@ func (p *Provider) GetSourcesForEpisode(
 
 	// Stremio series stream URL: /stream/series/<imdbID>:<season>:<episode>.json
 	endpoint := fmt.Sprintf("%s/stream/series/%s:%d:%d.json", p.addonURL, imdbID, season, episode)
+
+	// Intercept via memory cache layer
+	if cached, ok := p.cache.Get(endpoint); ok {
+		return cached, nil
+	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
@@ -139,7 +148,12 @@ func (p *Provider) GetSourcesForEpisode(
 		return nil, fmt.Errorf("torrentio: parse response: %w", err)
 	}
 
-	return mapStreams(raw.Streams), nil
+	result := mapStreams(raw.Streams)
+
+	// Persist the resulting streams to cache
+	p.cache.Set(endpoint, result)
+
+	return result, nil
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

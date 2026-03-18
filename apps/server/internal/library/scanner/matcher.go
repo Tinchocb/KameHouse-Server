@@ -4,7 +4,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	"kamehouse/internal/database/db"
@@ -12,6 +11,8 @@ import (
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/hook"
 	"kamehouse/internal/library/parser"
+	"kamehouse/internal/util/parallel"
+	"context"
 
 	"github.com/rs/zerolog"
 )
@@ -56,35 +57,37 @@ func (m *Matcher) MatchLocalFilesWithMedia() error {
 		return nil
 	}
 
-	var wg sync.WaitGroup
-	fileChan := make(chan *dto.LocalFile, 1000)
-
-	// Spin up Thinking Workers
-	workerCount := 8
-	for i := 0; i < workerCount; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for lf := range fileChan {
-				m.BayesianResolve(lf)
-			}
-		}()
-	}
-
-	// Feed workers
-	for _, lf := range m.LocalFiles {
-		fileChan <- lf
-	}
-	close(fileChan)
-
-	// Wait for all evaluations and self-healing loops to complete
-	wg.Wait()
+	// Use generic parallel processing module
+	parallel.EachTask(m.LocalFiles, func(lf *dto.LocalFile, _ int) {
+		m.BayesianResolve(lf)
+	})
 
 	m.Logger.Info().Msgf("AgentMatcher: Completed Bayesian Pass on %d files in %v", len(m.LocalFiles), time.Since(start))
 
 	// Trigger Post-Match Hooks
 	completedEvent := &ScanMatchingCompletedEvent{LocalFiles: m.LocalFiles}
 	hook.GlobalHookManager.OnScanMatchingCompleted().Trigger(completedEvent)
+
+	return nil
+}
+
+// MatchBatch processes an asynchronous batch of paths coming from the queue
+func (m *Matcher) MatchBatch(ctx context.Context, batchPaths []string) error {
+	m.Logger.Info().Int("count", len(batchPaths)).Msg("AgentMatcher: Processing async batch from queue")
+
+	localFiles := make([]*dto.LocalFile, len(batchPaths))
+	for i, path := range batchPaths {
+		localFiles[i] = dto.NewLocalFileS(path, nil)
+	}
+
+	parallel.EachTask(localFiles, func(lf *dto.LocalFile, _ int) {
+		if ctx.Err() != nil {
+			return
+		}
+		m.BayesianResolve(lf)
+	})
+
+	// Add batch insertion logic here if needed, decoupled from scanner UI thread
 
 	return nil
 }

@@ -35,8 +35,8 @@ func GetMediaIdsFromLocalFiles(lfs []*dto.LocalFile) []int {
 	// Group local files by media id
 	groupedLfs := GroupLocalFilesByMediaID(lfs)
 
-	// Get slice of media ids from local files
-	mIds := make([]int, len(groupedLfs))
+	// Get slice of media ids from local files (avoid pre-allocating with len which adds leading zeros)
+	mIds := make([]int, 0, len(groupedLfs))
 	for key := range groupedLfs {
 		if !slices.Contains(mIds, key) {
 			mIds = append(mIds, key)

@@ -8,6 +8,7 @@ import (
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/library/anime"
 	librarymetadata "kamehouse/internal/library/metadata"
+	"kamehouse/internal/library/parser"
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
 	"path/filepath"
@@ -37,7 +38,8 @@ type MediaFetcherOptions struct {
 	OptionalAnimeCollection interface{}
 	// TMDB mode
 	TMDBProvider *librarymetadata.TMDBProvider
-	LibraryPaths []string // used for folder structure parsing in TMDB mode
+	SeriesPaths []string
+	MoviePaths  []string
 }
 
 // NewMediaFetcher creates a MediaFetcher using TMDB + folder structure
@@ -82,57 +84,75 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 		}
 	}
 
-	// 2. Parse titles from folder structure and search TMDB
-	// Group files by parent directory (assumed to be the anime folder)
+	// 2. Parse titles from local files using pure robust name parser
+	// This prevents the bug where generic root library folders like "Series" or "Peliculas" break TMDB
 	groups := lo.GroupBy(opts.LocalFiles, func(lf *dto.LocalFile) string {
-		return filepath.Dir(lf.Path)
+		pm := parser.Parse(lf.Name)
+		if pm.Title != "" {
+			return pm.Title
+		}
+		// Fallback to strict directory name
+		return filepath.Base(filepath.Dir(lf.Path))
 	})
 
-	for dir, files := range groups {
-		// Try to find which library path this directory belongs to
-		var libraryPath string
-		for _, lp := range opts.LibraryPaths {
-			if strings.HasPrefix(dir, lp) {
-				libraryPath = lp
-				break
+	for titleGroup, files := range groups {
+		if titleGroup == "" || strings.EqualFold(titleGroup, "Series") || strings.EqualFold(titleGroup, "Peliculas") {
+			continue
+		}
+
+		// Determine type hint based on file paths
+		var hint string
+		if len(files) > 0 {
+			// Check if file is in series paths or movie paths
+			for _, rp := range opts.SeriesPaths {
+				if strings.HasPrefix(files[0].Path, rp) {
+					hint = "series"
+					break
+				}
+			}
+			if hint == "" {
+				for _, rp := range opts.MoviePaths {
+					if strings.HasPrefix(files[0].Path, rp) {
+						hint = "movie"
+						break
+					}
+				}
 			}
 		}
 
-		if libraryPath == "" {
-			continue
+		// Search TMDB for this robust title group
+		var searchRes []*dto.NormalizedMedia
+		var err error
+		if hint == "series" {
+			searchRes, err = opts.TMDBProvider.SearchTV(ctx, titleGroup)
+		} else if hint == "movie" {
+			searchRes, err = opts.TMDBProvider.SearchMovie(ctx, titleGroup)
+		} else {
+			searchRes, err = opts.TMDBProvider.SearchMedia(ctx, titleGroup)
 		}
 
-		// The folder name is the part of the path after the library path
-		folderName := strings.TrimPrefix(dir, libraryPath)
-		folderName = strings.TrimPrefix(folderName, string(filepath.Separator))
-		// Take only the first part of the folder name
-		parts := strings.Split(folderName, string(filepath.Separator))
-		if len(parts) == 0 || parts[0] == "" {
-			continue
-		}
-		animeFolderName := parts[0]
-
-		// Search TMDB for this folder name
-		searchRes, err := opts.TMDBProvider.SearchMedia(ctx, animeFolderName)
-		if err != nil {
+		if err != nil && !errors.Is(err, librarymetadata.ErrNotFound) {
 			if mf.ScanLogger != nil {
 				mf.ScanLogger.LogMediaFetcher(zerolog.WarnLevel).
-					Str("folder", animeFolderName).
+					Str("title", titleGroup).
 					Err(err).
-					Msg("Failed to search TMDB for folder")
+					Msg("Failed to search TMDB for title group")
 			}
 			continue
 		}
 
 		if len(searchRes) > 0 {
-			// Take the best match (for now just the first one)
+			// Take the best match
 			bestMatch := searchRes[0]
 			mf.AllMedia = append(mf.AllMedia, bestMatch)
 			mf.UnknownMediaIds = append(mf.UnknownMediaIds, bestMatch.ID)
 
-			// Assign media ID to files in this folder
+			// The matcher phase will verify each file strictly afterwards,
+			// but we bind the TMDB cache so bayesian engine has data to work with.
 			for _, lf := range files {
-				lf.MediaId = bestMatch.ID
+				if lf.MediaId == 0 {
+					lf.MediaId = bestMatch.ID
+				}
 			}
 		}
 	}

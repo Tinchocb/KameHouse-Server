@@ -37,13 +37,14 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 	}
 
 	// Retrieve the user's library path
-	libraryPath, err := h.App.Database.GetLibraryPathFromSettings()
-	if err != nil {
-		return h.RespondWithError(c, err)
+	libraryPaths := h.App.Settings.GetLibrary().GetAllPaths()
+	if len(libraryPaths) == 0 {
+		return h.RespondWithError(c, errors.New("no hay carpetas de origen configuradas"))
 	}
-	additionalLibraryPaths, err := h.App.Database.GetAdditionalLibraryPathsFromSettings()
-	if err != nil {
-		return h.RespondWithError(c, err)
+	libraryPath := libraryPaths[0]
+	var additionalLibraryPaths []string
+	if len(libraryPaths) > 1 {
+		additionalLibraryPaths = libraryPaths[1:]
 	}
 
 	// Get the latest local files
@@ -78,6 +79,8 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 	sc := scanner.Scanner{
 		DirPath:                    libraryPath,
 		OtherDirPaths:              additionalLibraryPaths,
+		SeriesPaths:                h.App.Settings.GetLibrary().SeriesPaths,
+		MoviePaths:                 h.App.Settings.GetLibrary().MoviePaths,
 		Enhanced:                   b.Enhanced,
 		EnhanceWithOfflineDatabase: b.EnhanceWithOfflineDatabase,
 		PlatformRef:                h.App.Metadata.PlatformRef,

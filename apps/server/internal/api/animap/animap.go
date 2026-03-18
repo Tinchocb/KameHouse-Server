@@ -4,12 +4,15 @@ import (
 	"errors"
 	"io"
 	"kamehouse/internal/constants"
+	"kamehouse/internal/database/db"
+	"kamehouse/internal/database/models"
 	"kamehouse/internal/hook"
 	"kamehouse/internal/util/result"
 	"net/http"
 	"strconv"
 
 	"github.com/goccy/go-json"
+	"gorm.io/gorm"
 )
 
 type (
@@ -133,4 +136,45 @@ func FetchAnimapMedia(from string, id int) (*Anime, error) {
 	}
 
 	return event.Media, nil
+}
+
+// FetchAnimapMediaPersistent fetches animap.Anime from the local DB cache if available,
+// falling back to the Animap API. It centralises translation to Torrentio Formats (Kitsu/IMDB).
+func FetchAnimapMediaPersistent(database *db.Database, from string, id int) (*Anime, error) {
+	if database == nil {
+		return FetchAnimapMedia(from, id)
+	}
+
+	var cacheEntry models.AnimapCache
+	// 1. Try to read from local cache
+	err := database.Gorm().Where("provider = ? AND media_id = ?", from, id).First(&cacheEntry).Error
+	if err == nil && len(cacheEntry.Data) > 0 {
+		var media Anime
+		if err := json.Unmarshal(cacheEntry.Data, &media); err == nil {
+			return &media, nil
+		}
+	} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		// Log but continue to fetch if DB fails unexpectedly
+	}
+
+	// 2. Fetch from External API
+	media, err := FetchAnimapMedia(from, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. Cache to DB for subsequent calls
+	if b, err := json.Marshal(media); err == nil {
+		newCache := models.AnimapCache{
+			Provider: from,
+			MediaID:  id,
+			Data:     b,
+		}
+		// Create or Update
+		database.Gorm().Where(models.AnimapCache{Provider: from, MediaID: id}).
+			Assign(newCache).
+			FirstOrCreate(&cacheEntry)
+	}
+
+	return media, nil
 }

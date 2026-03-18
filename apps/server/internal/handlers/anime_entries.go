@@ -57,7 +57,7 @@ func (h *Handler) getAnimeEntry(c echo.Context, lfs []*dto.LocalFile, mId int) (
 		Database:            h.App.Database,
 		PlatformRef:         h.App.Metadata.PlatformRef,
 		MetadataProviderRef: h.App.Metadata.ProviderRef,
-		IsSimulated:         h.App.GetUser().IsSimulated,
+		IsSimulated:         h.App.GetUser() != nil && h.App.GetUser().IsSimulated,
 	})
 	if err != nil {
 		return nil, err
@@ -423,9 +423,6 @@ func (h *Handler) HandleGetMissingEpisodes(c echo.Context) error {
 		SilencedMediaIds:    mIds,
 		MetadataProviderRef: h.App.Metadata.ProviderRef,
 	})
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
 
 	return h.RespondWithData(c, missing)
 }

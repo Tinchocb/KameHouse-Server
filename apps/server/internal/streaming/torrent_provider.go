@@ -8,12 +8,16 @@ import (
 // TorrentProvider resolves streams via torrent streaming.
 // It wraps the existing torrentstream.Repository.
 type TorrentProvider struct {
-	repo *torrentstream.Repository
+	repo    *torrentstream.Repository
+	breaker *CircuitBreaker[*StreamResult]
 }
 
 // NewTorrentProvider creates a new torrent stream provider.
 func NewTorrentProvider(repo *torrentstream.Repository) *TorrentProvider {
-	return &TorrentProvider{repo: repo}
+	return &TorrentProvider{
+		repo:    repo,
+		breaker: NewCircuitBreaker[*StreamResult](DefaultCircuitBreakerConfig),
+	}
 }
 
 func (p *TorrentProvider) Name() string { return "torrent" }
@@ -28,8 +32,10 @@ func (p *TorrentProvider) ResolveStream(ctx context.Context, req StreamRequest) 
 		return nil, ErrUnsupported
 	}
 
-	// The actual stream URL is managed by the torrent client within the repository.
-	// This provider signals availability; the actual URL resolution happens
-	// through the existing torrentstream API endpoints.
-	return nil, ErrStreamNotReady
+	return p.breaker.Execute(ctx, func(c context.Context) (*StreamResult, error) {
+		// The actual stream URL is managed by the torrent client within the repository.
+		// This provider signals availability; the actual URL resolution happens
+		// through the existing torrentstream API endpoints.
+		return nil, ErrStreamNotReady
+	})
 }

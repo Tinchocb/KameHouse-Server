@@ -136,6 +136,7 @@ func migrateTables(ctx context.Context, db *gorm.DB) error {
 		&models.Account{},
 		&models.Mal{},
 		&models.ScanSummary{},
+		&models.AnimapCache{},
 		&models.AutoSelectProfile{},
 		&models.AutoDownloaderRule{},
 		&models.AutoDownloaderProfile{},

@@ -3346,7 +3346,8 @@ export type Models_LibrarySeason = {
  * - Package: models
  */
 export type Models_LibrarySettings = {
-    libraryPath: string
+    seriesPaths: Models_LibraryPaths
+    moviePaths: Models_LibraryPaths
     autoUpdateProgress: boolean
     torrentProvider: string
     autoSelectTorrentProvider: string
@@ -3360,7 +3361,7 @@ export type Models_LibrarySettings = {
     refreshLibraryOnStart: boolean
     autoPlayNextEpisode: boolean
     enableWatchContinuity: boolean
-    libraryPaths: Models_LibraryPaths
+    enableWatchContinuity: boolean
     autoSyncOfflineLocalData: boolean
     scannerMatchingThreshold: number
     scannerMatchingAlgorithm: string

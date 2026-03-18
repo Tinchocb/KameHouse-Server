@@ -48,9 +48,9 @@ type StreamResolutionService interface {
 type HybridPlaybackOrchestrator struct {
 	localResolver   LocalResolver
 	remoteResolvers map[string]RemoteResolver
-	circuitBreakers map[string]*CircuitBreaker
+	circuitBreakers map[string]*CircuitBreaker[[]*StreamResult]
 	// localCircuitBreaker guards the local resolver path independently from remote ones.
-	localCircuitBreaker *CircuitBreaker
+	localCircuitBreaker *CircuitBreaker[[]*StreamResult]
 	// transcodeSem is a channel-based semaphore capping concurrent FFmpeg sessions.
 	// Injected to keep the orchestrator fully testable.
 	transcodeSem chan struct{}
@@ -75,8 +75,8 @@ func newOrchestrator(local LocalResolver, remotes []RemoteResolver, maxTranscode
 	h := &HybridPlaybackOrchestrator{
 		localResolver:       local,
 		remoteResolvers:     make(map[string]RemoteResolver),
-		circuitBreakers:     make(map[string]*CircuitBreaker),
-		localCircuitBreaker: NewCircuitBreaker(DefaultCircuitBreakerConfig),
+		circuitBreakers:     make(map[string]*CircuitBreaker[[]*StreamResult]),
+		localCircuitBreaker: NewCircuitBreaker[[]*StreamResult](DefaultCircuitBreakerConfig),
 		transcodeSem:        sem,
 		reqCh:               make(chan streamReqMsg, defaultReqBufferSize),
 		quit:                make(chan struct{}),
@@ -85,7 +85,7 @@ func newOrchestrator(local LocalResolver, remotes []RemoteResolver, maxTranscode
 	for _, r := range remotes {
 		name := r.Name()
 		h.remoteResolvers[name] = r
-		h.circuitBreakers[name] = NewCircuitBreaker(DefaultCircuitBreakerConfig)
+		h.circuitBreakers[name] = NewCircuitBreaker[[]*StreamResult](DefaultCircuitBreakerConfig)
 	}
 
 	go h.loop()
