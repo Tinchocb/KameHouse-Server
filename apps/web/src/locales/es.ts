@@ -5,7 +5,7 @@ export const es: LocaleDict = {
         empty: {
             title: "Tu pantalla de inicio está vacía",
             unmatchedTitle: "Archivos locales detectados pero sin coincidencia",
-            unmatchedDesc: "El escáner encontró archivos, pero no pudo asociarlos automáticamente. Revisa tus ajustes de TMDB/AniList o usa el gestor de archivos sin coincidencia abajo.",
+            unmatchedDesc: "El escáner encontró archivos, pero no pudo asociarlos automáticamente. Revisa tus ajustes de TMDB/Platform o usa el gestor de archivos sin coincidencia abajo.",
             configureLibrary: "Configurar biblioteca en Ajustes",
             addSeries: "Añadir series a tu colección",
             addCurrentlyWatching: "Añadir series que estás viendo actualmente a tu biblioteca",
@@ -37,7 +37,6 @@ export const es: LocaleDict = {
         openDirectory: "Abrir directorio",
         bulkActions: "Acciones en lote",
         ignoredFiles: "Archivos ignorados",
-        nakamaLibrary: "Biblioteca de",
     },
     modal: {
         homeItemAdded: "Elemento añadido al inicio",

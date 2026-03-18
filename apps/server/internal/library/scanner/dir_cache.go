@@ -19,7 +19,7 @@ type DirCacheEntry struct {
 // redundant API calls when multiple episodes share the same folder.
 //
 // Example: 50 Dragon Ball Z episodes in /anime/Dragon Ball Z/
-// → First file triggers an AniList lookup, remaining 49 hit the cache.
+// → First file triggers a metadata lookup, remaining 49 hit the cache.
 type DirCache struct {
 	m sync.Map // map[string]*DirCacheEntry (key = directory path)
 }

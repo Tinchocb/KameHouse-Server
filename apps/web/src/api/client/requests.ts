@@ -243,15 +243,15 @@ function _handleSeaError(data: unknown): string {
     if (!err) return "Unknown error"
 
     if (err.includes("Too many requests"))
-        return "AniList: Too many requests, please wait a moment and try again."
+        return "Platform: Too many requests, please wait a moment and try again."
 
     try {
         const graphqlErr = JSON.parse(err) as { graphqlErrors?: Array<{ message?: string }> }
-        console.log("AniList error", graphqlErr)
+        console.log("Platform error", graphqlErr)
         if (graphqlErr.graphqlErrors && graphqlErr.graphqlErrors.length > 0 && !!graphqlErr.graphqlErrors[0]?.message) {
-            return "AniList error: " + graphqlErr.graphqlErrors[0]?.message
+            return "Platform error: " + graphqlErr.graphqlErrors[0]?.message
         }
-        return "AniList error"
+        return "Platform error"
     }
     catch (e) {
         if (err.includes("no cached data") || err.includes("cache lookup failed")) {

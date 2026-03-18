@@ -9,14 +9,6 @@ export function getLibraryCollectionTitle(type?: string) {
     }
 }
 
-export function getMangaCollectionTitle(type?: string) {
-    switch (type) {
-        case "CURRENT":
-            return "Currently reading"
-        default:
-            return capitalize(type ?? "")
-    }
-}
 
 export function formatDateAndTimeShort(date: string) {
     return new Date(date).toLocaleString(undefined, {

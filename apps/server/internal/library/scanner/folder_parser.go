@@ -8,13 +8,13 @@ import (
 	"strings"
 )
 
-// FolderInfo contains metadata extracted from the folder structure (Jellyfin/Kodi style).
+// FolderInfo contains metadata extracted from the folder structure (Kodi/Standard style).
 type FolderInfo struct {
 	SeriesName       string // e.g. "Dragon Ball Z"
 	Year             int    // e.g. 1989 (0 if not found)
 	Season           int    // e.g. 2 (0 if not in a Season folder)
 	IsMovie          bool   // true if detected as a movie
-	ExplicitProvider string // e.g. "anilist", "tmdb", "imdb"
+	ExplicitProvider string // e.g. "mal", "tmdb", "imdb"
 	ExplicitID       string // e.g. "12345", "tt12345"
 }
 
@@ -40,7 +40,7 @@ var (
 )
 
 // ParseFolderStructure extracts series name, year, and season from a file path
-// using Jellyfin/Kodi folder conventions.
+// using Kodi/Standard folder conventions.
 //
 // Supported structures:
 //   - Library/Show Name (Year)/Season XX/episode.mkv

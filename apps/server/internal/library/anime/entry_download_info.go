@@ -90,24 +90,24 @@ func NewEntryDownloadInfo(opts *NewEntryDownloadInfoOptions) (*EntryDownloadInfo
 	// |     Discrepancy     |
 	// +---------------------+
 
-	// Whether AniList includes episode 0 as part of main episodes, but AniDB does not, however AniDB has "S1"
+	// Whether the platform includes episode 0 as part of main episodes, but AniDB does not, however AniDB has "S1"
 	discrepancy := FindDiscrepancy(opts.Media, opts.AnimeMetadata)
 
-	// AniList is the source of truth for episode numbers
+	// Platform is the source of truth for episode numbers
 	epSlice := newEpisodeSlice(currentEpisodeCount)
 
 	// Handle discrepancies
 	if discrepancy != DiscrepancyNone {
 
-		// If AniList includes episode 0 as part of main episodes, but AniDB does not, however AniDB has "S1"
-		if discrepancy == DiscrepancyAniListCountsEpisodeZero {
+		// If platform includes episode 0 as part of main episodes, but AniDB does not, however AniDB has "S1"
+		if discrepancy == DiscrepancyPlatformCountsEpisodeZero {
 			// Add "S1" to the beginning of the episode slice
 			epSlice.trimEnd(1)
 			epSlice.prepend(0, "S1")
 		}
 
-		// If AniList includes specials, but AniDB does not
-		if discrepancy == DiscrepancyAniListCountsSpecials {
+		// If platform includes specials, but AniDB does not
+		if discrepancy == DiscrepancyPlatformCountsSpecials {
 			diff := currentEpisodeCount - opts.AnimeMetadata.GetMainEpisodeCount()
 			epSlice.trimEnd(diff)
 			for i := 0; i < diff; i++ {
@@ -115,7 +115,7 @@ func NewEntryDownloadInfo(opts *NewEntryDownloadInfoOptions) (*EntryDownloadInfo
 			}
 		}
 
-		// If AniDB has more episodes than AniList
+		// If AniDB has more episodes than the platform
 		if discrepancy == DiscrepancyAniDBHasMore {
 			// Do nothing
 		}
@@ -174,7 +174,7 @@ func NewEntryDownloadInfo(opts *NewEntryDownloadInfoOptions) (*EntryDownloadInfo
 				isDownloaded = true
 			}
 			// If the slice episode number is 0 and the file is a main S1
-			if discrepancy == DiscrepancyAniListCountsEpisodeZero && item.episodeNumber == 0 && lf.Metadata.AniDBEpisode == "S1" {
+			if discrepancy == DiscrepancyPlatformCountsEpisodeZero && item.episodeNumber == 0 && lf.Metadata.AniDBEpisode == "S1" {
 				isDownloaded = true
 			}
 		}
@@ -193,7 +193,7 @@ func NewEntryDownloadInfo(opts *NewEntryDownloadInfoOptions) (*EntryDownloadInfo
 	mediaWrapper := opts.MetadataProviderRef.Get().GetAnimeMetadataWrapper(nil, opts.AnimeMetadata)
 
 	progressOffset := 0
-	if discrepancy == DiscrepancyAniListCountsEpisodeZero {
+	if discrepancy == DiscrepancyPlatformCountsEpisodeZero {
 		progressOffset = 1
 	}
 

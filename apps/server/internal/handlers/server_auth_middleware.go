@@ -26,9 +26,8 @@ func (h *Handler) OptionalAuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc
 			strings.HasPrefix(path, "/api/v1/mediastream/direct") || // used by media players
 			strings.HasPrefix(path, "/api/v1/mediastream/transcode/") || // used by media players
 			strings.HasPrefix(path, "/api/v1/mediastream/subs/") || // path-based
-			strings.HasPrefix(path, "/api/v1/manga/local-page") || // Path-based
-			strings.HasPrefix(path, "/api/v1/torrentstream/stream/") || // accessible by media players
-			strings.HasPrefix(path, "/api/v1/nakama/stream") { // ID-based
+
+			strings.HasPrefix(path, "/api/v1/torrentstream/stream/") { // accessible by media players
 
 			if path == "/api/v1/status" {
 				// allow status requests by anyone but mark as unauthenticated
@@ -54,28 +53,6 @@ func (h *Handler) OptionalAuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc
 				return next(c)
 			} else {
 				h.App.Logger.Debug().Err(err).Str("path", path).Msg("server auth: HMAC token validation failed")
-			}
-		}
-
-		// Handle Nakama client connections
-		if h.App.Settings.GetNakama().Enabled && h.App.Settings.GetNakama().IsHost {
-			// Verify the Nakama host password in the client request
-			nakamaPasswordHeader := c.Request().Header.Get("X-KameHouse-Nakama-Token")
-
-			// Allow WebSocket connections for peer-to-host communication
-			if path == "/api/v1/nakama/ws" {
-				if nakamaPasswordHeader == h.App.Settings.GetNakama().HostPassword {
-					c.Response().Header().Set("X-KameHouse-Nakama-Is-Client", "true")
-					return next(c)
-				}
-			}
-
-			// Only allow the following paths to be accessed by Nakama clients
-			if strings.HasPrefix(path, "/api/v1/nakama/host/") {
-				if nakamaPasswordHeader == h.App.Settings.GetNakama().HostPassword {
-					c.Response().Header().Set("X-KameHouse-Nakama-Is-Client", "true")
-					return next(c)
-				}
 			}
 		}
 

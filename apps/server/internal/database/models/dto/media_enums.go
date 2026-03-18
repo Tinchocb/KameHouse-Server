@@ -10,9 +10,6 @@ const (
 	MediaFormatOVA     MediaFormat = "OVA"
 	MediaFormatONA     MediaFormat = "ONA"
 	MediaFormatMusic   MediaFormat = "MUSIC"
-	MediaFormatManga   MediaFormat = "MANGA"
-	MediaFormatNovel   MediaFormat = "NOVEL"
-	MediaFormatOneShot MediaFormat = "ONE_SHOT"
 )
 
 type MediaStatus string

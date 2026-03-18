@@ -43,7 +43,7 @@ func (h *Handler) getAnimeEpisodeCollection(c echo.Context, mId int) (*anime.Epi
 }
 
 // getTMDBEpisodeCollection builds an EpisodeCollection from local LibraryEpisode records.
-// Used for TMDB-only media that don't have AniList metadata.
+// Used for TMDB-only media that don't have Platform metadata.
 func (h *Handler) getTMDBEpisodeCollection(mId int) (*anime.EpisodeCollection, error) {
 	// The TMDB ID is stored as the negative of the NormalizedMedia ID
 	tmdbId := -mId
@@ -111,10 +111,10 @@ func (h *Handler) getTMDBEpisodeCollection(mId int) (*anime.EpisodeCollection, e
 // HandleGetAnimeEpisodeCollection
 //
 //	@summary gets list of main episodes
-//	@desc This returns a list of main episodes for the given anime media id (AniList or TMDB).
+//	@desc This returns a list of main episodes for the given anime media id (Platform or TMDB).
 //	@desc It also loads the episode list into the different modules.
 //	@returns anime.EpisodeCollection
-//	@param id - int - true - "Anime media ID (positive=AniList, negative=TMDB)"
+//	@param id - int - true - "Anime media ID (positive=Platform, negative=TMDB)"
 //	@route /api/v1/anime/episode-collection/{id} [GET]
 func (h *Handler) HandleGetAnimeEpisodeCollection(c echo.Context) error {
 	mId, err := strconv.Atoi(c.Param("id"))

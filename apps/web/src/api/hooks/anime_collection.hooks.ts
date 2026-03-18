@@ -1,8 +1,8 @@
 import { useServerMutation, useServerQuery, buildSeaQuery } from "@/api/client/requests"
 import { AddUnknownMedia_Variables } from "@/api/generated/endpoint.types"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
-import { AL_AnimeCollection, Anime_LibraryCollection, Anime_ScheduleItem, Anime_LibraryCollectionEntry } from "@/api/generated/types"
-import { useRefreshAnimeCollection } from "@/api/hooks/anilist.hooks"
+import { Platform_UnifiedCollection, Anime_LibraryCollection, Anime_ScheduleItem, Anime_LibraryCollectionEntry } from "@/api/generated/types"
+import { useRefreshCollection } from "@/api/hooks/platform.hooks"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
@@ -56,9 +56,9 @@ export function useGetLibraryCollection({ enabled }: { enabled?: boolean } = { e
 
 export function useAddUnknownMedia() {
     const queryClient = useQueryClient()
-    const { mutate } = useRefreshAnimeCollection()
+    const { mutate } = useRefreshCollection()
 
-    return useServerMutation<AL_AnimeCollection, AddUnknownMedia_Variables>({
+    return useServerMutation<Platform_UnifiedCollection, AddUnknownMedia_Variables>({
         endpoint: API_ENDPOINTS.ANIME_COLLECTION.AddUnknownMedia.endpoint,
         method: API_ENDPOINTS.ANIME_COLLECTION.AddUnknownMedia.methods[0],
         mutationKey: [API_ENDPOINTS.ANIME_COLLECTION.AddUnknownMedia.key],

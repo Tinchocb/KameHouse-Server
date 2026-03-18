@@ -12,7 +12,7 @@ import (
 // MediaRepository interface matches the generic domain abstraction for Media operations
 type MediaRepository interface {
 	GetMediaByID(ctx context.Context, id uint) (*models.LibraryMedia, error)
-	GetMediaByAniListID(ctx context.Context, anilistID int) (*models.LibraryMedia, error)
+	GetMediaByTMDbID(ctx context.Context, tmdbID int) (*models.LibraryMedia, error)
 	SaveMedia(ctx context.Context, media *models.LibraryMedia) error
 }
 
@@ -36,9 +36,9 @@ func (r *sqliteMediaRepository) GetMediaByID(ctx context.Context, id uint) (*mod
 	return &media, nil
 }
 
-func (r *sqliteMediaRepository) GetMediaByAniListID(ctx context.Context, anilistID int) (*models.LibraryMedia, error) {
+func (r *sqliteMediaRepository) GetMediaByTMDbID(ctx context.Context, tmdbID int) (*models.LibraryMedia, error) {
 	var media models.LibraryMedia
-	if err := r.db.WithContext(ctx).Where("anilist_id = ?", anilistID).First(&media).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("tmdb_id = ?", tmdbID).First(&media).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}

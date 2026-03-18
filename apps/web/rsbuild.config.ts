@@ -84,6 +84,13 @@ export default defineConfig({
             "Cross-Origin-Embedder-Policy": "credentialless",
             "Cross-Origin-Opener-Policy": "same-origin",
         },
+        proxy: {
+            '/api': {
+                target: 'http://127.0.0.1:43211',
+                changeOrigin: true,
+                ws: true,
+            },
+        },
     },
     output: {
         cleanDistPath: true,

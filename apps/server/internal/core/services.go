@@ -17,7 +17,7 @@ import (
 //
 // Usage (progressive adoption):
 //   1. Handlers that only need anime operations accept AnimeService
-//   2. Handlers that only need manga accept MangaService
+
 //   3. Each interface is small and focused (Interface Segregation)
 //
 // Example migration:
@@ -36,13 +36,7 @@ type AnimeService interface {
 	RefreshAnimeCollection(ctx context.Context) error
 }
 
-// MangaService abstracts manga repository operations.
-type MangaService interface {
-	GetMangaCollection(ctx context.Context) (interface{}, error)
-	GetMangaEntry(ctx context.Context, mediaID int) (interface{}, error)
-	SearchManga(ctx context.Context, query string) (interface{}, error)
-	DownloadChapter(ctx context.Context, mediaID int, chapterID string) error
-}
+
 
 // LibraryService abstracts local file and library scanning.
 type LibraryService interface {
@@ -108,8 +102,6 @@ type AuthService interface {
 type ServiceContainer struct {
 	Database       *db.Database
 	Logger         *zerolog.Logger
-	Anime          AnimeService
-	Manga          MangaService
 	Library        LibraryService
 	MediaStream    MediaStreamService
 	Torrent        TorrentService

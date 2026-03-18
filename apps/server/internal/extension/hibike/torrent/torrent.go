@@ -26,7 +26,7 @@ type AnimeSearchOptions struct {
 
 // AnimeSmartSearchOptions holds parameters for a smart (structured) torrent search.
 type AnimeSmartSearchOptions struct {
-	Media      interface{} // *anilist.BaseAnime or similar
+	Media      interface{} // *platform.BaseAnime or similar
 	Query      string
 	Episode    int
 	Resolution string

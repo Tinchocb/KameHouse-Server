@@ -40,7 +40,6 @@ export interface LocaleDict {
         openDirectory: string
         bulkActions: string
         ignoredFiles: string
-        nakamaLibrary: string
     }
     modal: {
         homeItemAdded: string

@@ -50,10 +50,6 @@ type Config struct {
 		Dir      string `mapstructure:"dir"`
 		AssetDir string `mapstructure:"assetDir"`
 	} `mapstructure:"offline"`
-	Manga struct {
-		DownloadDir string `mapstructure:"downloadDir"`
-		LocalDir    string `mapstructure:"localDir"`
-	} `mapstructure:"manga"`
 	Data struct {
 		AppDataDir string
 		WorkingDir string
@@ -186,8 +182,6 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("web.assetDir", "$KAMEHOUSE_DATA_DIR/assets")
 	v.SetDefault("cache.dir", "$KAMEHOUSE_DATA_DIR/cache")
 	v.SetDefault("cache.transcodeDir", "$KAMEHOUSE_DATA_DIR/cache/transcode")
-	v.SetDefault("manga.downloadDir", "$KAMEHOUSE_DATA_DIR/manga")
-	v.SetDefault("manga.localDir", "$KAMEHOUSE_DATA_DIR/manga-local")
 	v.SetDefault("logs.dir", "$KAMEHOUSE_DATA_DIR/logs")
 	v.SetDefault("offline.dir", "$KAMEHOUSE_DATA_DIR/offline")
 	v.SetDefault("offline.assetDir", "$KAMEHOUSE_DATA_DIR/offline/assets")
@@ -261,8 +255,6 @@ func expandEnvironmentValues(cfg *Config) {
 	cfg.Cache.Dir = expandPath(cfg.Cache.Dir)
 	cfg.Cache.TranscodeDir = expandPath(cfg.Cache.TranscodeDir)
 	cfg.Logs.Dir = expandPath(cfg.Logs.Dir)
-	cfg.Manga.DownloadDir = expandPath(cfg.Manga.DownloadDir)
-	cfg.Manga.LocalDir = expandPath(cfg.Manga.LocalDir)
 	cfg.Offline.Dir = expandPath(cfg.Offline.Dir)
 	cfg.Offline.AssetDir = expandPath(cfg.Offline.AssetDir)
 	cfg.Extensions.Dir = expandPath(cfg.Extensions.Dir)
@@ -369,10 +361,6 @@ transcodeDir = "$KAMEHOUSE_DATA_DIR/cache/transcode"
 [offline]
 dir = "$KAMEHOUSE_DATA_DIR/offline"
 assetDir = "$KAMEHOUSE_DATA_DIR/offline/assets"
-
-[manga]
-downloadDir = "$KAMEHOUSE_DATA_DIR/manga"
-localDir = "$KAMEHOUSE_DATA_DIR/manga-local"
 
 [extensions]
 dir = "$KAMEHOUSE_DATA_DIR/extensions"

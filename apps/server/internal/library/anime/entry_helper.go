@@ -70,7 +70,7 @@ func (e *Entry) FindLatestLocalFile() (*LocalFile, bool) {
 //----------------------------------------------------------------------------------------------------------------------
 
 // GetCurrentProgress returns the progress number.
-// If the media entry is not in any AniList list, returns 0.
+// If the media entry is not in any collection list, returns 0.
 func (e *Entry) GetCurrentProgress() int {
 	listData, ok := e.FindListData()
 	if !ok {

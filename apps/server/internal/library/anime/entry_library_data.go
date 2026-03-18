@@ -15,11 +15,6 @@ type (
 		MainFileCount  int    `json:"mainFileCount"`
 	}
 
-	NakamaEntryLibraryData struct {
-		UnwatchedCount int `json:"unwatchedCount"`
-		MainFileCount  int `json:"mainFileCount"`
-	}
-
 	NewEntryLibraryDataOptions struct {
 		EntryLocalFiles []*LocalFile
 		MediaId         int

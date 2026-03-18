@@ -10,7 +10,7 @@ package core
 //
 // Migration path:
 //   1. Call WireServices(app) during server startup
-//   2. Pass container.Anime / container.Manga / etc. to new-style handlers
+//   2. Pass container.Anime / etc. to new-style handlers
 //   3. Old handlers continue using app.* until migrated
 // ─────────────────────────────────────────────────────────────────────
 
@@ -25,7 +25,7 @@ func WireServices(app *App) *ServiceContainer {
 		// are created. Each can be wired independently:
 		//
 		// container.Anime = NewAnimeServiceImpl(app.AnimeCollection, app.Database)
-		// container.Manga = NewMangaServiceImpl(app.MangaRepository)
+
 		// container.Library = NewLibraryServiceImpl(app.Database, app.FileCacher)
 		// etc.
 		//

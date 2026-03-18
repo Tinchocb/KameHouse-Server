@@ -16,7 +16,7 @@ func TestFetchAniZipMedia(t *testing.T) {
 	}{
 		{
 			name:          "Cowboy Bebop",
-			provider:      "anilist",
+			provider:      "mal",
 			id:            1,
 			expectedTitle: "Cowboy Bebop",
 		},

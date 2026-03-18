@@ -21,8 +21,8 @@ func (h *Handler) HandleLogin(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	// AniList logic removed
-	h.App.Logger.Info().Msg("app: Login handler called (AniList removed)")
+	// Platform logic removed
+	h.App.Logger.Info().Msg("app: Login handler called (Platform removed)")
 
 	// Create a new status
 	status := h.NewStatus(c)
@@ -46,8 +46,8 @@ func (h *Handler) HandleLogin(c echo.Context) error {
 //	@route /api/v1/auth/logout [POST]
 //	@returns handlers.Status
 func (h *Handler) HandleLogout(c echo.Context) error {
-	// AniList logic removed
-	h.App.Logger.Info().Msg("Logged out (AniList removed)")
+	// Platform logic removed
+	h.App.Logger.Info().Msg("Logged out (Platform removed)")
 
 	status := h.NewStatus(c)
 

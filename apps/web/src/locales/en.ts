@@ -5,7 +5,7 @@ export const en: LocaleDict = {
         empty: {
             title: "Your home screen is empty",
             unmatchedTitle: "Local files detected but unmatched",
-            unmatchedDesc: "The scanner found files but could not match them automatically. Check your TMDB/AniList settings or use the unmatched file manager below.",
+            unmatchedDesc: "The scanner found files but could not match them automatically. Check your TMDB/Platform settings or use the unmatched file manager below.",
             configureLibrary: "Configure library in Settings",
             addSeries: "Add series to your collection",
             addCurrentlyWatching: "Add currently watching series to your library",
@@ -37,7 +37,6 @@ export const en: LocaleDict = {
         openDirectory: "Open directory",
         bulkActions: "Bulk actions",
         ignoredFiles: "Ignored files",
-        nakamaLibrary: "Library of",
     },
     modal: {
         homeItemAdded: "Home item added",

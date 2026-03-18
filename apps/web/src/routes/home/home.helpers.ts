@@ -24,6 +24,6 @@ export function getBackdrop(media: Models_LibraryMedia): string {
 }
 
 /**
- * Dragon Ball franchise AniList IDs for special handling if needed.
+ * Dragon Ball franchise Platform IDs for special handling if needed.
  */
 export const DRAGON_BALL_IDS = new Set([529, 813, 568, 30694, 6033, 107, 235])

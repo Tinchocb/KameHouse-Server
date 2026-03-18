@@ -34,12 +34,9 @@ type (
 		AnidbId             int                     `json:"anidbId"`
 		CurrentEpisodeCount int                     `json:"currentEpisodeCount"`
 		Seasons             []*models.LibrarySeason `json:"seasons,omitempty"`
-
-		IsNakamaEntry     bool                    `json:"_isNakamaEntry"`
-		NakamaLibraryData *NakamaEntryLibraryData `json:"nakamaLibraryData,omitempty"`
 	}
 
-	// EntryListData holds the details of the AniList entry.
+	// EntryListData holds the details of the platform entry (TMDb/MAL/etc).
 	EntryListData struct {
 		Progress    int     `json:"progress,omitempty"`
 		Score       float64 `json:"score,omitempty"`
@@ -68,7 +65,7 @@ type (
 // It is the primary data structure used by the frontend.
 //
 // It has the following properties:
-//   - EntryListData: Details of the AniList entry (if any)
+//   - EntryListData: Details of the platform entry (if any)
 //   - EntryLibraryData: Details of the local files (if any)
 //   - EntryDownloadInfo: Details of the download status
 //   - Episodes: List of episodes (if any)
@@ -120,21 +117,16 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 	// Fetch the media from local database
 	var fetchedMedia *models.LibraryMedia
 
-	// For positive IDs (AniList), try direct lookup
-	if opts.MediaId > 0 {
-		fetchedMedia, _ = db.GetLibraryMediaByID(opts.Database, uint(opts.MediaId))
-	}
 
-	// For negative IDs (TMDB), try looking it up by TMDB ID
-	if fetchedMedia == nil && opts.MediaId < 0 {
-		tmdbId := -opts.MediaId
-		m, err := db.GetLibraryMediaByTmdbId(opts.Database, tmdbId)
+	// If not found, try looking it up by TMDB ID
+	if fetchedMedia == nil {
+		m, err := db.GetLibraryMediaByTmdbId(opts.Database, opts.MediaId)
 		if err == nil && m != nil {
 			fetchedMedia = m
 		}
 	}
 
-	// For negative IDs (TMDB) or if direct lookup failed,
+	// If direct lookup or TMDB lookup failed,
 	// find the LibraryMediaId from local files
 	if fetchedMedia == nil {
 		for _, lf := range opts.LocalFiles {
@@ -303,7 +295,7 @@ func (e *Entry) hydrateEntryEpisodeData(
 
 	// We offset the progress number by 1 if there is a discrepancy
 	progressOffset := 0
-	if FindDiscrepancy(e.Media, animeMetadata) == DiscrepancyAniListCountsEpisodeZero {
+	if FindDiscrepancy(e.Media, animeMetadata) == DiscrepancyPlatformCountsEpisodeZero {
 		progressOffset = 1
 
 		_, ok := lo.Find(e.LocalFiles, func(lf *LocalFile) bool {
@@ -315,8 +307,7 @@ func (e *Entry) hydrateEntryEpisodeData(
 		}
 	}
 
-	// Wait, GetAnimeMetadataWrapper takes anilist.BaseAnime, we will need to refactor metadata provider later or pass nil
-	// For now let's pass nil and refactor it in Phase 3/4
+	// Pass nil as platform.UnifiedMedia since we are moving away from legacy provider types
 	amw := metadataProviderRef.Get().GetAnimeMetadataWrapper(nil, animeMetadata)
 
 	// +---------------------+
@@ -474,8 +465,8 @@ func NewEntryListData(listData *models.MediaEntryListData) *EntryListData {
 type Discrepancy int
 
 const (
-	DiscrepancyAniListCountsEpisodeZero Discrepancy = iota
-	DiscrepancyAniListCountsSpecials
+	DiscrepancyPlatformCountsEpisodeZero Discrepancy = iota
+	DiscrepancyPlatformCountsSpecials
 	DiscrepancyAniDBHasMore
 	DiscrepancyNone
 )
@@ -498,11 +489,11 @@ func FindDiscrepancy(media *models.LibraryMedia, animeMetadata *metadata.AnimeMe
 	}
 
 	if difference == 1 && aniDBHasS1 {
-		return DiscrepancyAniListCountsEpisodeZero
+		return DiscrepancyPlatformCountsEpisodeZero
 	}
 
 	if difference > 1 && aniDBHasS1 && aniDBHasS2 {
-		return DiscrepancyAniListCountsSpecials
+		return DiscrepancyPlatformCountsSpecials
 	}
 
 	return DiscrepancyNone

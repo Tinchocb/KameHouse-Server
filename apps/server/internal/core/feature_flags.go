@@ -32,18 +32,16 @@ const (
 	ManageAccount FeatureKey = "ManageAccount"
 	// ViewAccount allows viewing the user account info.
 	ViewAccount FeatureKey = "ViewAccount"
-	// ManageLists allows managing AniList/Custom source/Local lists.
+	// ManageLists allows managing Platform/Custom source/Local lists.
 	//	- Adding/updating/removing entries
 	ManageLists FeatureKey = "ManageLists"
-	// RefreshMetadata allows refreshing anime/manga metadata from Anilist and custom sources.
+	// RefreshMetadata allows refreshing anime metadata from Platform and custom sources.
 	RefreshMetadata      FeatureKey = "RefreshMetadata"
-	ManageMangaDownloads FeatureKey = "ManageMangaDownloads"
 	WatchingLocalAnime   FeatureKey = "WatchingLocalAnime"
 	TorrentStreaming     FeatureKey = "TorrentStreaming"
 	DebridStreaming      FeatureKey = "DebridStreaming"
 	OnlineStreaming      FeatureKey = "OnlineStreaming"
 	Transcode            FeatureKey = "Transcode"
-	Reading              FeatureKey = "Reading"
 	// ViewAutoDownloader allows viewing the auto downloader page.
 	ViewAutoDownloader FeatureKey = "ViewAutoDownloader"
 	// ManageAutoDownloader allows performing actions in the auto downloader.
@@ -55,11 +53,8 @@ const (
 	ManageHomeScreen  FeatureKey = "ManageHomeScreen"
 	OpenInExplorer    FeatureKey = "OpenInExplorer"
 	PluginTray        FeatureKey = "PluginTray"
-	ManageMangaReaders FeatureKey = "ManageMangaReaders"
-	ManageNakama      FeatureKey = "ManageNakama"
 	ManageDebrid      FeatureKey = "ManageDebrid"
 	Proxy             FeatureKey = "Proxy"
-	ManageMangaSource FeatureKey = "ManageMangaSource"
 	PushRequests      FeatureKey = "PushRequests"
 	// v3.6+ Service toggle keys
 	TorrentProvider FeatureKey = "TorrentProvider"
@@ -78,18 +73,11 @@ func NewFeatureManager(logger *zerolog.Logger, flags KameHouseFlags) *FeatureMan
 			ViewSettings,
 			ViewLogs,
 			UpdateSettings,
-			ManageMangaReaders,
-			ManageLocalAnimeLibrary,
-			ManageAccount,
-			ViewAccount,
-			ManageLists,
 			RefreshMetadata,
-			ManageMangaDownloads,
 			WatchingLocalAnime,
 			TorrentStreaming,
 			DebridStreaming,
 			OnlineStreaming,
-			Reading,
 			ViewAutoDownloader,
 			ManageAutoDownloader,
 			ViewScanSummaries,
@@ -98,11 +86,9 @@ func NewFeatureManager(logger *zerolog.Logger, flags KameHouseFlags) *FeatureMan
 			ManageHomeScreen,
 			OpenInExplorer,
 			PluginTray,
-			ManageNakama,
 			ManageDebrid,
 			Proxy,
 			Transcode,
-			ManageMangaSource,
 			PushRequests,
 		}
 	}

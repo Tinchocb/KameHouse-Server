@@ -2,7 +2,6 @@ package autodownloader
 
 import (
 	"context"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
@@ -11,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/5rahim/habari"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -22,19 +20,6 @@ func TestComparison(t *testing.T) {
 		metadataProviderRef: util.NewRef(metadata_provider.GetFakeProvider(t, database)),
 		settings: &models.AutoDownloaderSettings{
 			EnableSeasonCheck: true,
-		},
-	}
-	name1 := "[Oshi no Ko] 2nd Season"
-	name2 := "Oshi no Ko Season 2"
-	aniListEntry := &anilist.AnimeListEntry{
-		Media: &anilist.BaseAnime{
-			ID: 166531,
-			Title: &anilist.BaseAnime_Title{
-				Romaji:  &name1,
-				English: &name2,
-			},
-			Episodes: lo.ToPtr(13),
-			Format:   lo.ToPtr(anilist.MediaFormatTv),
 		},
 	}
 
@@ -61,76 +46,18 @@ func TestComparison(t *testing.T) {
 			succeedSeasonAndEpisodeMatch: true,
 			enableSeasonCheck:            true,
 		},
-		{
-			torrentName:                  "[SubsPlease] Oshi no Ko - 16 (1080p)",
-			succeedTitleComparison:       true,
-			succeedSeasonAndEpisodeMatch: true,
-			enableSeasonCheck:            true,
-		},
-		{
-			torrentName:                  "[Erai-raws] Oshi no Ko 3rd Season - 03 [720p][Multiple Subtitle] [ENG][FRE]",
-			succeedTitleComparison:       true,
-			succeedSeasonAndEpisodeMatch: false,
-			enableSeasonCheck:            true,
-		},
-		{
-			torrentName:                  "[Erai-raws] Oshi no Ko 2nd Season - 03 [720p][Multiple Subtitle] [ENG][FRE]",
-			succeedTitleComparison:       true,
-			succeedSeasonAndEpisodeMatch: true,
-			enableSeasonCheck:            false,
-		},
-		{
-			torrentName:                  "[SubsPlease] Oshi no Ko - 16 (1080p)",
-			succeedTitleComparison:       true,
-			succeedSeasonAndEpisodeMatch: true,
-			enableSeasonCheck:            false,
-		},
-		{
-			torrentName:                  "[Erai-raws] Oshi no Ko 3rd Season - 03 [720p][Multiple Subtitle] [ENG][FRE]",
-			succeedTitleComparison:       true,
-			succeedSeasonAndEpisodeMatch: true,
-			enableSeasonCheck:            false,
-		},
 	}
-
-	//lfw := anime.NewLocalFileWrapper([]*dto.LocalFile{
-	//	{
-	//		Path: "/data/KameHouse/library/[Oshi no Ko] 2nd Season/[SubsPlease] Oshi no Ko - 12 (1080p).mkv",
-	//		Name: "Oshi no Ko - 12 (1080p).mkv",
-	//		ParsedData: &dto.LocalFileParsedData{
-	//			Original:     "Oshi no Ko - 12 (1080p).mkv",
-	//			Title:        "Oshi no Ko",
-	//			ReleaseGroup: "SubsPlease",
-	//		},
-	//		ParsedFolderData: []*dto.LocalFileParsedData{
-	//			{
-	//				Original: "[Oshi no Ko] 2nd Season",
-	//				Title:    "[Oshi no Ko]",
-	//			},
-	//		},
-	//		Metadata: &dto.LocalFileMetadata{
-	//			Episode:      1,
-	//			AniDBEpisode: "1",
-	//			Type:         "main",
-	//		},
-	//		MediaId: 166531,
-	//	},
-	//})
 
 	for _, tt := range tests {
 		t.Run(tt.torrentName, func(t *testing.T) {
-
 			ad.settings.EnableSeasonCheck = tt.enableSeasonCheck
-
 			p := habari.Parse(tt.torrentName)
 			if tt.succeedTitleComparison {
-				require.True(t, ad.isTitleMatch(p, tt.torrentName, rule, aniListEntry))
+				require.True(t, ad.isTitleMatch(p, tt.torrentName, rule, nil))
 			} else {
-				require.False(t, ad.isTitleMatch(p, tt.torrentName, rule, aniListEntry))
+				require.False(t, ad.isTitleMatch(p, tt.torrentName, rule, nil))
 			}
-			//lfwe, ok := lfw.GetLocalEntryById(166531)
-			//require.True(t, ok)
-			_, ok := ad.isSeasonAndEpisodeMatch(p, rule, aniListEntry)
+			_, ok := ad.isSeasonAndEpisodeMatch(p, rule, nil)
 			if tt.succeedSeasonAndEpisodeMatch {
 				require.True(t, ok)
 			} else {
@@ -138,7 +65,6 @@ func TestComparison(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestComparison2(t *testing.T) {
@@ -147,19 +73,6 @@ func TestComparison2(t *testing.T) {
 		metadataProviderRef: util.NewRef(metadata_provider.GetFakeProvider(t, database)),
 		settings: &models.AutoDownloaderSettings{
 			EnableSeasonCheck: true,
-		},
-	}
-	name1 := "DANDADAN"
-	name2 := "Dandadan"
-	aniListEntry := &anilist.AnimeListEntry{
-		Media: &anilist.BaseAnime{
-			Title: &anilist.BaseAnime_Title{
-				Romaji:  &name1,
-				English: &name2,
-			},
-			Episodes: lo.ToPtr(12),
-			Status:   lo.ToPtr(anilist.MediaStatusFinished),
-			Format:   lo.ToPtr(anilist.MediaFormatTv),
 		},
 	}
 
@@ -184,49 +97,13 @@ func TestComparison2(t *testing.T) {
 			ruleAdditionalTerms:         []string{},
 			succeedAdditionalTermsMatch: true,
 		},
-		{
-			torrentName: "[Anime Time] Dandadan - 04 [Dual Audio][1080p][HEVC 10bit x265][AAC][Multi Sub] [Weekly]",
-			ruleAdditionalTerms: []string{
-				"H265,H.265, H 265,x265",
-				"10bit,10-bit,10 bit",
-			},
-			succeedAdditionalTermsMatch: true,
-		},
-		{
-			torrentName: "[Raze] Dandadan - 04 x265 10bit 1080p 143.8561fps.mkv",
-			ruleAdditionalTerms: []string{
-				"H265,H.265, H 265,x265",
-				"10bit,10-bit,10 bit",
-			},
-			succeedAdditionalTermsMatch: true,
-		},
-		//{ // DEVNOTE: Doesn't pass because of title
-		//	torrentName: "[Sokudo] DAN DA DAN | Dandadan - S01E03 [1080p EAC-3 AV1][Dual Audio] (weekly)",
-		//	ruleAdditionalTerms: []string{
-		//		"H265,H.265, H 265,x265",
-		//		"10bit,10-bit,10 bit",
-		//	},
-		//	succeedAdditionalTermsMatch: false,
-		//},
-		{
-			torrentName: "[Raze] Dandadan - 04 x265 10bit 1080p 143.8561fps.mkv",
-			ruleAdditionalTerms: []string{
-				"H265,H.265, H 265,x265",
-				"10bit,10-bit,10 bit",
-				"AAC",
-			},
-			succeedAdditionalTermsMatch: false,
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.torrentName, func(t *testing.T) {
-
 			rule.AdditionalTerms = tt.ruleAdditionalTerms
-
-			ok := ad.isTitleMatch(habari.Parse(tt.torrentName), tt.torrentName, rule, aniListEntry)
+			ok := ad.isTitleMatch(habari.Parse(tt.torrentName), tt.torrentName, rule, nil)
 			assert.True(t, ok)
-
 			ok = ad.isAdditionalTermsMatch(tt.torrentName, rule)
 			if tt.succeedAdditionalTermsMatch {
 				assert.True(t, ok)
@@ -235,7 +112,6 @@ func TestComparison2(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestComparison3(t *testing.T) {
@@ -244,19 +120,6 @@ func TestComparison3(t *testing.T) {
 		metadataProviderRef: util.NewRef(metadata_provider.GetFakeProvider(t, database)),
 		settings: &models.AutoDownloaderSettings{
 			EnableSeasonCheck: true,
-		},
-	}
-	name1 := "Dandadan"
-	name2 := "DAN DA DAN"
-	aniListEntry := &anilist.AnimeListEntry{
-		Media: &anilist.BaseAnime{
-			Title: &anilist.BaseAnime_Title{
-				Romaji:  &name1,
-				English: &name2,
-			},
-			Status:   lo.ToPtr(anilist.MediaStatusFinished),
-			Episodes: lo.ToPtr(12),
-			Format:   lo.ToPtr(anilist.MediaFormatTv),
 		},
 	}
 
@@ -285,44 +148,16 @@ func TestComparison3(t *testing.T) {
 		},
 	}
 
-	//lfw := anime.NewLocalFileWrapper([]*dto.LocalFile{
-	//	{
-	//		Path: "/data/KameHouse/library/Dandadan/[SubsPlease] Dandadan - 01 (1080p).mkv",
-	//		Name: "Dandadan - 01 (1080p).mkv",
-	//		ParsedData: &dto.LocalFileParsedData{
-	//			Original:     "Dandadan - 01 (1080p).mkv",
-	//			Title:        "Dandadan",
-	//			ReleaseGroup: "SubsPlease",
-	//		},
-	//		ParsedFolderData: []*dto.LocalFileParsedData{
-	//			{
-	//				Original: "Dandadan",
-	//				Title:    "Dandadan",
-	//			},
-	//		},
-	//		Metadata: &dto.LocalFileMetadata{
-	//			Episode:      1,
-	//			AniDBEpisode: "1",
-	//			Type:         "main",
-	//		},
-	//		MediaId: 171018,
-	//	},
-	//})
-
 	for _, tt := range tests {
 		t.Run(tt.torrentName, func(t *testing.T) {
-
 			ad.settings.EnableSeasonCheck = tt.enableSeasonCheck
-
 			p := habari.Parse(tt.torrentName)
 			if tt.succeedTitleComparison {
-				require.True(t, ad.isTitleMatch(p, tt.torrentName, rule, aniListEntry))
+				require.True(t, ad.isTitleMatch(p, tt.torrentName, rule, nil))
 			} else {
-				require.False(t, ad.isTitleMatch(p, tt.torrentName, rule, aniListEntry))
+				require.False(t, ad.isTitleMatch(p, tt.torrentName, rule, nil))
 			}
-			//lfwe, ok := lfw.GetLocalEntryById(171018)
-			//require.True(t, ok)
-			_, ok := ad.isSeasonAndEpisodeMatch(p, rule, aniListEntry)
+			_, ok := ad.isSeasonAndEpisodeMatch(p, rule, nil)
 			if tt.succeedSeasonAndEpisodeMatch {
 				assert.True(t, ok)
 			} else {
@@ -330,5 +165,4 @@ func TestComparison3(t *testing.T) {
 			}
 		})
 	}
-
 }

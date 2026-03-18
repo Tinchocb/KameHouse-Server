@@ -34,7 +34,7 @@ type (
 		KitsuID       int    `json:"kitsu_id,omitempty"`
 		MalID         int    `json:"mal_id,omitempty"`
 		Type          string `json:"type,omitempty"`
-		AnilistID     int    `json:"anilist_id,omitempty"`
+
 		AnisearchID   int    `json:"anisearch_id,omitempty"`
 		AnidbID       int    `json:"anidb_id,omitempty"`
 		NotifymoeID   string `json:"notifymoe_id,omitempty"`

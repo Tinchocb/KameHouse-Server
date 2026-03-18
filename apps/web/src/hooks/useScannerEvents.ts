@@ -10,6 +10,10 @@ export function useScannerEvents() {
 
     const wsUrl = (() => {
         const base = getServerBaseUrl();
+        if (base === "") {
+            const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+            return `${protocol}//${window.location.host}/api/v1/ws`;
+        }
         if (base.startsWith("http://")) return base.replace("http://", "ws://") + "/api/v1/ws";
         if (base.startsWith("https://")) return base.replace("https://", "wss://") + "/api/v1/ws";
         return "ws://127.0.0.1:43211/api/v1/ws";

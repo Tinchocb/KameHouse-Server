@@ -194,10 +194,15 @@ func GetAnimeListDataKey(entry *platform.UnifiedCollectionEntry) string {
 		}
 	}
 
-	return fmt.Sprintf("%s-%d-%f-%d-%v-%v-%v-%v-%v-%v",
+	score := float64(0)
+	if entry.Score != nil {
+		score = *entry.Score
+	}
+
+	return fmt.Sprintf("%v-%d-%f-%d-%v-%v-%v-%v-%v-%v",
 		entry.Status,
 		entry.Progress,
-		entry.Score,
+		score,
 		entry.Repeat,
 		startedYear,
 		startedMonth,

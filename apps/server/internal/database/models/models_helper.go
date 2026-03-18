@@ -20,12 +20,6 @@ func (s *Settings) GetTorrent() *TorrentSettings {
 }
 
 
-func (s *Settings) GetManga() *MangaSettings {
-	if s == nil || s.Manga == nil {
-		return &MangaSettings{}
-	}
-	return s.Manga
-}
 
 func (s *Settings) GetLibrary() *LibrarySettings {
 	if s == nil || s.Library == nil {
@@ -56,12 +50,6 @@ func (s *Settings) GetNotifications() *NotificationSettings {
 	return s.Notifications
 }
 
-func (s *Settings) GetNakama() *NakamaSettings {
-	if s == nil || s.Nakama == nil {
-		return &NakamaSettings{}
-	}
-	return s.Nakama
-}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -73,10 +61,6 @@ func (s *Settings) GetSensitiveValues() []string {
 		s.GetMediaPlayer().VlcPassword,
 		s.GetTorrent().QBittorrentPassword,
 		s.GetTorrent().TransmissionPassword,
-		s.GetNakama().RemoteServerPassword,
-		s.GetNakama().HostPassword,
-		s.GetNakama().RemoteServerURL,
-		s.GetNakama().Username,
 	}
 }
 

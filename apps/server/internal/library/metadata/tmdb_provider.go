@@ -87,25 +87,37 @@ func (p *TMDBProvider) SearchMedia(ctx context.Context, query string) ([]*dto.No
 
 // GetMediaDetails fetches full details for a specific TMDB media.
 func (p *TMDBProvider) GetMediaDetails(ctx context.Context, id string) (*dto.NormalizedMedia, error) {
-	if strings.HasPrefix(id, "-") {
-		numID, err := strconv.Atoi(id)
-		if err == nil {
-			if numID <= -1000000 {
-				// Movie
-				realID := -(numID + 1000000)
+	// If it's a number, try to determine if it's TV or Movie based on offset
+	if numID, err := strconv.Atoi(id); err == nil {
+		if numID >= 1000000 {
+			// Movie
+			realID := numID - 1000000
+			movieRes, err := p.client.GetMovieDetails(ctx, strconv.Itoa(realID))
+			if err == nil {
+				return tmdbMovieResultToNormalizedMedia(movieRes), nil
+			}
+		} else if numID > 0 {
+			// TV
+			tvRes, err := p.client.GetTVDetails(ctx, id)
+			if err == nil {
+				return tmdbTVResultToNormalizedMedia(tvRes), nil
+			}
+		}
+		// If it's negative, it might be an old cached ID. Try to handle it by stripping the sign.
+		if numID < 0 {
+			posID := -numID
+			if posID >= 1000000 {
+				realID := posID - 1000000
 				movieRes, err := p.client.GetMovieDetails(ctx, strconv.Itoa(realID))
 				if err == nil {
 					return tmdbMovieResultToNormalizedMedia(movieRes), nil
 				}
 			} else {
-				// TV
-				realID := -numID
-				tvRes, err := p.client.GetTVDetails(ctx, strconv.Itoa(realID))
+				tvRes, err := p.client.GetTVDetails(ctx, strconv.Itoa(posID))
 				if err == nil {
 					return tmdbTVResultToNormalizedMedia(tvRes), nil
 				}
 			}
-			return nil, ErrNotFound
 		}
 	}
 
@@ -188,7 +200,7 @@ func tmdbTVResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia {
 	}
 
 	return &dto.NormalizedMedia{
-		ID:               -tmdbId, // Negative ID to avoid collision with AniList IDs
+		ID:               tmdbId,
 		TmdbId:           &tmdbId,
 		ExplicitProvider: "tmdb",
 		ExplicitID:       strconv.Itoa(tmdbId),
@@ -252,7 +264,7 @@ func tmdbMovieResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia 
 	}
 
 	return &dto.NormalizedMedia{
-		ID:               -(tmdbId + 1000000), // Offset to avoid collisions with TV IDs
+		ID:               tmdbId + 1000000, // Offset to avoid collisions with TV IDs
 		TmdbId:           &tmdbId,
 		ExplicitProvider: "tmdb",
 		ExplicitID:       strconv.Itoa(tmdbId),

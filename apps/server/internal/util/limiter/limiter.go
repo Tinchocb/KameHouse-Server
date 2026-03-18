@@ -7,9 +7,14 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// NewAnilistLimiter creates a rate limiter for AniList (e.g. 5 req per 10s)
-func NewAnilistLimiter() *Limiter {
+// NewPlatformLimiter creates a rate limiter for the platform (e.g. 5 req per 10s)
+func NewPlatformLimiter() *Limiter {
 	return NewLimiter(10*time.Second, 5)
+}
+
+// NewTmdbLimiter creates a rate limiter for TMDB (e.g. 50 req per 1s, TMDB default)
+func NewTmdbLimiter() *Limiter {
+	return NewLimiter(1*time.Second, 50)
 }
 
 //----------------------------------------------------------------------------------------------------------------------

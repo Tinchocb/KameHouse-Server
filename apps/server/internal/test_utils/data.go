@@ -33,18 +33,14 @@ type (
 	}
 
 	FlagsConfig struct {
-		EnableAnilistTests         bool `mapstructure:"enable_anilist_tests"`
-		EnableAnilistMutationTests bool `mapstructure:"enable_anilist_mutation_tests"`
-		EnableMalTests             bool `mapstructure:"enable_mal_tests"`
-		EnableMalMutationTests     bool `mapstructure:"enable_mal_mutation_tests"`
-		EnableTorrentClientTests   bool `mapstructure:"enable_torrent_client_tests"`
-		EnableTorrentstreamTests   bool `mapstructure:"enable_torrentstream_tests"`
+		EnableMalTests           bool `mapstructure:"enable_mal_tests"`
+		EnableMalMutationTests   bool `mapstructure:"enable_mal_mutation_tests"`
+		EnableTorrentClientTests bool `mapstructure:"enable_torrent_client_tests"`
+		EnableTorrentstreamTests bool `mapstructure:"enable_torrentstream_tests"`
 	}
 
 	ProviderConfig struct {
-		AnilistJwt           string `mapstructure:"anilist_jwt"`
-		AnilistUsername      string `mapstructure:"anilist_username"`
-		MalJwt               string `mapstructure:"mal_jwt"`
+		MalJwt string `mapstructure:"mal_jwt"`
 		QbittorrentHost      string `mapstructure:"qbittorrent_host"`
 		QbittorrentPort      int    `mapstructure:"qbittorrent_port"`
 		QbittorrentUsername  string `mapstructure:"qbittorrent_username"`
@@ -80,26 +76,7 @@ type (
 	FlagFunc func() bool
 )
 
-func Anilist() FlagFunc {
-	return func() bool {
-		return ConfigData.Flags.EnableAnilistTests
-	}
-}
 
-func AnilistMutation() FlagFunc {
-	return func() bool {
-		f := ConfigData.Flags.EnableAnilistMutationTests
-		if !f {
-			fmt.Println("skipping anilist mutation tests")
-			return false
-		}
-		if ConfigData.Provider.AnilistJwt == "" {
-			fmt.Println("skipping anilist mutation tests, no anilist jwt")
-			return false
-		}
-		return true
-	}
-}
 func MyAnimeList() FlagFunc {
 	return func() bool {
 		f := ConfigData.Flags.EnableMalTests

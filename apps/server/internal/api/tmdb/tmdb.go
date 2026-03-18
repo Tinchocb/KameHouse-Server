@@ -225,6 +225,60 @@ func (c *Client) SearchMovie(ctx context.Context, query string) ([]SearchResult,
 	return results, nil
 }
 
+// DiscoverTV discovers TV shows on TMDb based on various filters.
+// It prioritizes Japanese animation (with origin_country=JP and with_genres=16).
+func (c *Client) DiscoverTV(ctx context.Context, page *int, sort *string, status *string, genres []string, year *int, airingAtGreater *int, airingAtLesser *int) ([]SearchResult, int, error) {
+	// Check cache for a deterministic key
+	cacheKey := fmt.Sprintf("discover_tv:p=%v:s=%v:st=%v:g=%v:y=%v:ag=%v:al=%v", page, sort, status, genres, year, airingAtGreater, airingAtLesser)
+	if cached, ok := c.cache.Load(cacheKey); ok {
+		resp := cached.(SearchResponse)
+		return resp.Results, resp.TotalPages, nil
+	}
+
+	params := url.Values{}
+	params.Set("language", c.language)
+	params.Set("api_key", c.bearerToken)
+	params.Set("with_origin_country", "JP") // Default to Japanese origin for anime
+	params.Set("with_genres", "16")         // Default to Animation genre
+
+	if page != nil {
+		params.Set("page", strconv.Itoa(*page))
+	} else {
+		params.Set("page", "1")
+	}
+
+	if sort != nil && *sort != "" {
+		params.Set("sort_by", *sort)
+	}
+
+	if status != nil && *status != "" {
+		// TMDB uses integer codes for status sometimes in discover, or we might need to map them if possible.
+		// For now, TMDB discover uses `with_status` (0=Returning Series, 1=Planned, 2=In Production, 3=Ended, 4=Canceled, 5=Pilot)
+		params.Set("with_status", *status)
+	}
+
+	if year != nil && *year > 0 {
+		params.Set("first_air_date_year", strconv.Itoa(*year))
+	}
+
+	if airingAtGreater != nil {
+		dateStr := time.Unix(int64(*airingAtGreater), 0).Format("2006-01-02")
+		params.Set("air_date.gte", dateStr)
+	}
+	if airingAtLesser != nil {
+		dateStr := time.Unix(int64(*airingAtLesser), 0).Format("2006-01-02")
+		params.Set("air_date.lte", dateStr)
+	}
+
+	resp, err := executeWithRetry[SearchResponse](ctx, c, "/discover/tv?"+params.Encode())
+	if err != nil {
+		return nil, 0, fmt.Errorf("tmdb discover tv: %w", err)
+	}
+
+	c.cache.Store(cacheKey, *resp)
+	return resp.Results, resp.TotalPages, nil
+}
+
 // GetTVAlternativeTitles gets all alternative titles for a TV show.
 func (c *Client) GetTVAlternativeTitles(ctx context.Context, tvID int) ([]AlternativeTitle, error) {
 	cacheKey := fmt.Sprintf("tv_alt:%d", tvID)

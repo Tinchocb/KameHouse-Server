@@ -63,19 +63,6 @@ func (h *PlatformHelper) HandleCustomSourceAnimeWithRelations(ctx context.Contex
 	return nil, false, nil
 }
 func (h *PlatformHelper) SetCachedCompleteAnime(mediaID int, media interface{}) {}
-func (h *PlatformHelper) TriggerGetMangaEvent(media interface{}) (interface{}, error) {
-	return media, nil
-}
-func (h *PlatformHelper) GetCachedBaseManga(mediaID int) (interface{}, bool) {
-	return nil, false
-}
-func (h *PlatformHelper) HandleCustomSourceManga(ctx context.Context, mediaID int) (interface{}, bool, error) {
-	return nil, false, nil
-}
-func (h *PlatformHelper) SetCachedBaseManga(mediaID int, media interface{}) {}
-func (h *PlatformHelper) HandleCustomSourceMangaDetails(ctx context.Context, mediaID int) (interface{}, bool, error) {
-	return nil, false, nil
-}
 func (h *PlatformHelper) MergeCustomSourceAnimeEntries(collection interface{}) {}
 func (h *PlatformHelper) TriggerGetStudioDetailsEvent(ret interface{}) (interface{}, error) {
 	return ret, nil
@@ -88,7 +75,3 @@ func (h *PlatformHelper) BuildAnimeAiringSchedule(ctx context.Context, collectio
 func (h *PlatformHelper) FilterOutCustomAnimeLists(lists interface{}) interface{} {
 	return lists
 }
-func (h *PlatformHelper) FilterOutCustomMangaLists(lists interface{}) interface{} {
-	return lists
-}
-func (h *PlatformHelper) RemoveNovelsFromMangaCollection(collection interface{}) {}

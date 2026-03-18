@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"kamehouse/internal/api/anizip"
+	"kamehouse/internal/api/torrentio"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models/dto"
 	msTranscoder "kamehouse/internal/mediastream/transcoder"
@@ -249,17 +250,12 @@ func (e *SourcePriorityEngine) ResolveEpisodeSources(
 	g.Go(func() error {
 		// 5-second hard deadline: if AniZip or Torrentio is slow/down, local
 		// catalogue still loads instantly and this goroutine is cancelled cleanly.
-		// remoteCtx removed as it was unused
 		remoteCtx, cancelRemote := context.WithTimeout(gCtx, 5*time.Second)
-		_ = remoteCtx // Keep it for now if needed or just use gCtx if preferred, but let's just use it in the next line if possible.
-		// Actually, I'll just change the next line to use remoteCtx.
-
 		defer cancelRemote()
 
-		// Cached anizip lookup — avoids one HTTP call per episode rendered
-		mapping, err := anizip.FetchAniZipMediaC("anilist", mediaId, e.anizipCache)
+		// Cached anizip lookup — avoids one HTTP call per episode rendered.
+		mapping, err := anizip.FetchAniZipMediaC("themoviedb", mediaId, e.anizipCache)
 		if err != nil || mapping == nil || mapping.Mappings == nil {
-			// Non-fatal: local sources may still satisfy the request
 			e.logger.Warn().Err(err).Int("mediaId", mediaId).
 				Msg("decision_engine: anizip mapping unavailable — skipping torrentio tier")
 			return nil
@@ -272,22 +268,27 @@ func (e *SourcePriorityEngine) ResolveEpisodeSources(
 			return nil
 		}
 
-		// Check memory cache
+		// Check memory cache first.
 		cacheKey := fmt.Sprintf("%s-%d-%d", imdbID, 1, episodeNum)
 		if cachedSources, found := e.remoteCache.Get(cacheKey); found {
+			e.logger.Debug().Str("cacheKey", cacheKey).Msg("decision_engine: torrentio cache hit")
 			mu.Lock()
 			sources = append(sources, cachedSources...)
 			mu.Unlock()
 			return nil
 		}
 
-		// Torrentio fetch stubbed for cleanup
-		/* provider := torrentio.NewProvider(e.logger)
-		streams, err := provider.GetSourcesForEpisode(remoteCtx, imdbID, 1, episodeNum)
-		if err != nil {
-			// Non-fatal: partial results are better than nothing
-			e.logger.Warn().Err(err).Str("imdbID", imdbID).
-				Msg("decision_engine: torrentio fetch failed")
+		// Fetch from Torrentio addon.
+		debridSettings, _ := e.database.GetDebridSettings()
+		torrentioUrl := ""
+		if debridSettings != nil {
+			torrentioUrl = debridSettings.TorrentioUrl
+		}
+		provider := torrentio.NewProvider(torrentioUrl)
+		streams, fetchErr := provider.GetSourcesForEpisode(remoteCtx, imdbID, 1, episodeNum)
+		if fetchErr != nil {
+			e.logger.Warn().Err(fetchErr).Str("imdbID", imdbID).
+				Msg("decision_engine: torrentio fetch failed — skipping torrentio tier")
 			return nil
 		}
 
@@ -297,22 +298,37 @@ func (e *SourcePriorityEngine) ResolveEpisodeSources(
 			if s.IsDebrid {
 				priority = PriorityDebrid
 			}
+			// Resolve the playable URL: debrid streams have a direct HTTP URL,
+			// P2P streams use the magnet URI.
+			playURL := s.MagnetURI
+			if s.URL != "" {
+				playURL = s.URL
+			}
 			remoteSources = append(remoteSources, dto.EpisodeSource{
-				Type:     dto.SourceTypeTorrentio,
-				URL:      s.MagnetURI,
-				Quality:  s.Quality,
-				Priority: priority,
-				Title:    s.ReleaseGroup,
+				Type:         dto.SourceTypeTorrentio,
+				URL:          playURL,
+				Quality:      s.Quality,
+				Priority:     priority,
+				Title:        s.Filename,
+				MagnetURI:    s.MagnetURI,
+				InfoHash:     s.InfoHash,
+				FileIdx:      s.FileIdx,
+				Seeders:      s.Seeders,
+				ReleaseGroup: s.ReleaseGroup,
 			})
 		}
 
 		if len(remoteSources) > 0 {
 			e.remoteCache.Set(cacheKey, remoteSources)
+			e.logger.Info().
+				Str("imdbID", imdbID).
+				Int("count", len(remoteSources)).
+				Msg("decision_engine: torrentio sources resolved")
 		}
 
 		mu.Lock()
 		sources = append(sources, remoteSources...)
-		mu.Unlock() */
+		mu.Unlock()
 		return nil
 	})
 

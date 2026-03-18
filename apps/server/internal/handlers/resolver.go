@@ -24,7 +24,7 @@ import (
 // @route    /api/v1/resolver/streams [GET]
 //
 // Query parameters:
-//   - mediaId  (required) — AniList media ID (positive) or TMDB ID (negative)
+//   - mediaId  (required) — Platform media ID (positive) or TMDB ID (negative)
 //   - episode  (required) — 1-based episode number
 //   - kitsuId  (optional) — Kitsu anime ID; if absent, Torrentio is skipped
 func (h *Handler) HandleResolveStreams(c echo.Context) error {

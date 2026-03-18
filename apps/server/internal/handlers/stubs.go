@@ -52,11 +52,6 @@ func (h *Handler) HandleTorrentstreamServeStream(c echo.Context) error {
 	return nil
 }
 
-// --- Torrentio stub ---
-
-func (h *Handler) HandleGetTorrentioStreams(c echo.Context) error {
-	return h.RespondWithData(c, []interface{}{})
-}
 
 // --- Debrid stubs ---
 

@@ -11,7 +11,6 @@ import (
 
 var (
 	ErrNoLocalAnimeCollection   = errors.New("no local anime collection")
-	ErrorNoLocalMangaCollection = errors.New("no local manga collection")
 	// ErrMediaNotFound means the media wasn't found in the local collection
 	ErrMediaNotFound = errors.New("media not found")
 	// ErrActionNotSupported means the action isn't valid on the local platform
@@ -77,14 +76,6 @@ func (lp *OfflinePlatform) GetAnimeWithRelations(ctx context.Context, mediaID in
 	return nil, ErrActionNotSupported
 }
 
-func (lp *OfflinePlatform) GetManga(ctx context.Context, mediaID int) (interface{}, error) {
-	return nil, ErrMediaNotFound
-}
-
-func (lp *OfflinePlatform) GetMangaDetails(ctx context.Context, mediaID int) (interface{}, error) {
-	return nil, nil
-}
-
 func (lp *OfflinePlatform) GetAnimeCollection(ctx context.Context, bypassCache bool) (interface{}, error) {
 	return nil, ErrNoLocalAnimeCollection
 }
@@ -101,18 +92,6 @@ func (lp *OfflinePlatform) GetAnimeCollectionWithRelations(ctx context.Context) 
 	return nil, ErrActionNotSupported
 }
 
-func (lp *OfflinePlatform) GetMangaCollection(ctx context.Context, bypassCache bool) (interface{}, error) {
-	return nil, ErrorNoLocalMangaCollection
-}
-
-func (lp *OfflinePlatform) GetRawMangaCollection(ctx context.Context, bypassCache bool) (interface{}, error) {
-	return nil, ErrorNoLocalMangaCollection
-}
-
-func (lp *OfflinePlatform) RefreshMangaCollection(ctx context.Context) (interface{}, error) {
-	return nil, ErrorNoLocalMangaCollection
-}
-
 func (lp *OfflinePlatform) AddMediaToCollection(ctx context.Context, mIds []int) error {
 	return ErrActionNotSupported
 }
@@ -126,5 +105,13 @@ func (lp *OfflinePlatform) GetViewerStats(ctx context.Context) (interface{}, err
 }
 
 func (lp *OfflinePlatform) GetAnimeAiringSchedule(ctx context.Context) (interface{}, error) {
+	return nil, ErrActionNotSupported
+}
+
+func (lp *OfflinePlatform) ListAnime(ctx context.Context, page *int, search *string, perPage *int, sort []platform.MediaSort, status []platform.MediaStatus, genres []string, averageScoreGreater *int, season *platform.MediaSeason, seasonYear *int, format *platform.MediaFormat, isAdult *bool) (interface{}, error) {
+	return nil, ErrActionNotSupported
+}
+
+func (lp *OfflinePlatform) ListRecentAnime(ctx context.Context, page *int, perPage *int, airingAtGreater *int, airingAtLesser *int, notYetAired *bool) (interface{}, error) {
 	return nil, ErrActionNotSupported
 }

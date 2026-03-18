@@ -13,7 +13,7 @@ const SimulatedUserToken = "SIMULATED"
 type User struct {
 	Viewer *platform.PlatformUser `json:"viewer"`
 	Token  string                 `json:"token"`
-	// IsSimulated indicates whether the user is not a real AniList account.
+	// IsSimulated indicates whether the user is not a real Platform account.
 	IsSimulated bool `json:"isSimulated"`
 }
 

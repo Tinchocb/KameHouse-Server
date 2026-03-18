@@ -1,40 +1,26 @@
 import {
-    AL_BaseAnime,
-    AL_BaseManga,
+    Platform_UnifiedMedia,
     Models_LibraryMedia,
 } from "@/api/generated/types"
 
 /**
- * Checks if a given object is a valid AniList Media object (Anime or Manga).
- * This is useful when the backend returns a heterogeneous mix of `Models_LibraryMedia`
- * and AniList DTOs, preventing TypeScript compilation errors for missing fields like
- * `coverImage`, `title`, or `episodes`.
+ * Checks if a given object is a valid Platform Unified Media object.
  */
-export function isAniListMedia(media: any): media is AL_BaseAnime | AL_BaseManga {
+export function isPlatformMedia(media: any): media is Platform_UnifiedMedia {
     return (
         media &&
         typeof media === "object" &&
-        ("title" in media || "coverImage" in media || "meanScore" in media)
+        ("title" in media || "coverImage" in media)
     )
 }
 
 /**
- * Ensures a polymorphic media object is explicitly cast to `AL_BaseAnime`
- * when it resolves from the library collection endpoints.
+ * Ensures a polymorphic media object is explicitly cast to `Platform_UnifiedMedia`
+ * when it resolves from various media endpoints.
  */
-export function asBaseAnime(media: AL_BaseAnime | AL_BaseManga | Models_LibraryMedia | undefined | null): AL_BaseAnime | undefined {
-    if (isAniListMedia(media)) {
-        return media as AL_BaseAnime
-    }
-    return undefined // or map it if you want to create a synthetic object
-}
-
-/**
- * Ensures a polymorphic media object is explicitly cast to `AL_BaseManga`
- */
-export function asBaseManga(media: AL_BaseAnime | AL_BaseManga | Models_LibraryMedia | undefined | null): AL_BaseManga | undefined {
-    if (isAniListMedia(media)) {
-        return media as AL_BaseManga
+export function asUnifiedMedia(media: any): Platform_UnifiedMedia | undefined {
+    if (isPlatformMedia(media)) {
+        return media as Platform_UnifiedMedia
     }
     return undefined
 }

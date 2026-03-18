@@ -18,55 +18,30 @@ type GetAnimeDetailsEvent struct {
 	Anime interface{} `json:"anime"`
 }
 
-type GetMangaEvent struct {
-	hook_resolver.Event
-	Manga interface{} `json:"manga"`
-}
-
-type GetMangaDetailsEvent struct {
-	hook_resolver.Event
-	Manga interface{} `json:"manga"`
-}
 
 type GetCachedAnimeCollectionEvent struct {
 	hook_resolver.Event
 	AnimeCollection interface{} `json:"animeCollection"`
 }
 
-type GetCachedMangaCollectionEvent struct {
-	hook_resolver.Event
-	MangaCollection interface{} `json:"mangaCollection"`
-}
 
 type GetAnimeCollectionEvent struct {
 	hook_resolver.Event
 	AnimeCollection interface{} `json:"animeCollection"`
 }
 
-type GetMangaCollectionEvent struct {
-	hook_resolver.Event
-	MangaCollection interface{} `json:"mangaCollection"`
-}
 
 type GetCachedRawAnimeCollectionEvent struct {
 	hook_resolver.Event
 	AnimeCollection interface{} `json:"animeCollection"`
 }
 
-type GetCachedRawMangaCollectionEvent struct {
-	hook_resolver.Event
-	MangaCollection interface{} `json:"mangaCollection"`
-}
 
 type GetRawAnimeCollectionEvent struct {
 	hook_resolver.Event
 	AnimeCollection interface{} `json:"animeCollection"`
 }
 
-type GetRawMangaCollectionEvent struct {
-	hook_resolver.Event
-	MangaCollection interface{} `json:"mangaCollection"`
-}
 
 type GetStudioDetailsEvent struct {
 	hook_resolver.Event

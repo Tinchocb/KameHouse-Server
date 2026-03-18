@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	AnilistPlatform Platform = "anilist"
+	TMDBPlatform Platform = "tmdb"
 	MalPlatform     Platform = "mal"
 )
 
@@ -32,7 +32,7 @@ type (
 		KitsuId       int    `json:"kitsuId,omitempty"`
 		MalId         int    `json:"malId,omitempty"`
 		Type          string `json:"type,omitempty"`
-		AnilistId     int    `json:"anilistId,omitempty"`
+
 		AnisearchId   int    `json:"anisearchId,omitempty"`
 		AnidbId       int    `json:"anidbId,omitempty"`
 		NotifymoeId   string `json:"notifymoeId,omitempty"`

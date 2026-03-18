@@ -22,32 +22,30 @@ type Platform interface {
 	GetAnimeWithRelations(context context.Context, mediaID int) (interface{}, error)
 	// GetAnimeDetails gets the anime details for the given media ID
 	GetAnimeDetails(context context.Context, mediaID int) (interface{}, error)
-	// GetManga gets the manga for the given media ID
-	GetManga(context context.Context, mediaID int) (interface{}, error)
+
 	// GetAnimeCollection gets the anime collection without custom lists
 	GetAnimeCollection(context context.Context, bypassCache bool) (interface{}, error)
 	// GetRawAnimeCollection gets the anime collection with custom lists
 	GetRawAnimeCollection(context context.Context, bypassCache bool) (interface{}, error)
-	// GetMangaDetails gets the manga details for the given media ID
-	GetMangaDetails(context context.Context, mediaID int) (interface{}, error)
+
 	// GetAnimeCollectionWithRelations gets the anime collection with relations
 	GetAnimeCollectionWithRelations(context context.Context) (interface{}, error)
-	// GetMangaCollection gets the manga collection without custom lists
-	GetMangaCollection(context context.Context, bypassCache bool) (interface{}, error)
-	// GetRawMangaCollection gets the manga collection with custom lists
-	GetRawMangaCollection(context context.Context, bypassCache bool) (interface{}, error)
+
 	// AddMediaToCollection adds the media to the collection
 	AddMediaToCollection(context context.Context, mIds []int) error
 	// GetStudioDetails gets the studio details for the given studio ID
 	GetStudioDetails(context context.Context, studioID int) (interface{}, error)
 	// RefreshAnimeCollection refreshes the anime collection
 	RefreshAnimeCollection(context context.Context) (interface{}, error)
-	// RefreshMangaCollection refreshes the manga collection
-	RefreshMangaCollection(context context.Context) (interface{}, error)
+
 	// GetViewerStats gets the viewer stats
 	GetViewerStats(context context.Context) (interface{}, error)
 	// GetAnimeAiringSchedule gets the schedule for airing anime in the collection
 	GetAnimeAiringSchedule(context context.Context) (interface{}, error)
+	// ListAnime lists anime based on search parameters
+	ListAnime(ctx context.Context, page *int, search *string, perPage *int, sort []MediaSort, status []MediaStatus, genres []string, averageScoreGreater *int, season *MediaSeason, seasonYear *int, format *MediaFormat, isAdult *bool) (interface{}, error)
+	// ListRecentAnime lists recently aired anime
+	ListRecentAnime(ctx context.Context, page *int, perPage *int, airingAtGreater *int, airingAtLesser *int, notYetAired *bool) (interface{}, error)
 	ClearCache()
 	Close()
 }

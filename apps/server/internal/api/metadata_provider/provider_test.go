@@ -9,7 +9,7 @@ import (
 )
 
 func TestProvider(t *testing.T) {
-	t.Skip("Skipping because of Anilist API missing/fake data for 199112")
+	t.Skip("Skipping because of Platform API (TMDB) missing/fake data for 199112")
 
 	metadataProvider := GetFakeProvider(t, nil)
 
@@ -18,12 +18,12 @@ func TestProvider(t *testing.T) {
 		mediaId          int
 		expectedEpisodes int
 	}{
-		{platform: metadata.AnilistPlatform, mediaId: 199112, expectedEpisodes: 8},
+		{platform: metadata.TMDBPlatform, mediaId: 199112, expectedEpisodes: 8},
 	}
 
 	for _, tt := range tests {
 		t.Run(strconv.Itoa(tt.mediaId), func(t *testing.T) {
-			res, err := metadataProvider.GetAnimeMetadata(tt.platform, tt.mediaId)
+			res, err := metadataProvider.GetAnimeMetadata(tt.mediaId)
 			if assert.NoError(t, err) {
 				t.Logf("Titles: %v", res.Titles)
 				t.Logf("\tEpisode count: %d", len(res.Episodes))

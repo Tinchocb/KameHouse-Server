@@ -1,4 +1,4 @@
-import { useAnilistListAnime, useAnilistListRecentAiringAnime } from "@/api/hooks/anilist.hooks"
+import { usePlatformListAnime, usePlatformListRecentAiringAnime } from "@/api/hooks/platform.hooks"
 import { useState } from "react"
 import { useDebounce } from "react-use"
 
@@ -19,7 +19,7 @@ export function useGlobalSearch() {
     const {
         data: searchResults,
         isLoading: isSearchLoading,
-    } = useAnilistListAnime(
+    } = usePlatformListAnime(
         {
             search: debouncedQuery,
             perPage: 10,
@@ -30,7 +30,7 @@ export function useGlobalSearch() {
     const {
         data: recentAnime,
         isLoading: isRecentLoading,
-    } = useAnilistListRecentAiringAnime(
+    } = usePlatformListRecentAiringAnime(
         {
             perPage: 10,
         },
@@ -40,7 +40,7 @@ export function useGlobalSearch() {
     return {
         query,
         setQuery,
-        results: isSearchActive ? searchResults?.Page?.media || [] : recentAnime?.Page?.airingSchedules?.map(s => s.media).filter(Boolean) || [],
+        results: isSearchActive ? searchResults?.media || [] : recentAnime?.media || [],
         isLoading: isSearchActive ? isSearchLoading : isRecentLoading,
         isSearchActive,
     }

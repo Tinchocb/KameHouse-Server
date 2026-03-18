@@ -5,10 +5,9 @@ type WebsocketClientEventType string
 const (
 	NativePlayerEventType WebsocketClientEventType = "native-player"
 	VideoCoreEventType    WebsocketClientEventType = "videocore"
-	NakamaEventType       WebsocketClientEventType = "nakama"
 	PluginEvent           WebsocketClientEventType = "plugin"
-
 )
+
 
 type WebsocketClientEvent struct {
 	ClientID string                   `json:"clientId"`
@@ -17,13 +16,13 @@ type WebsocketClientEvent struct {
 }
 
 const (
-	ServerReady = "server-ready" // The anilist data has been loaded
+	ServerReady = "server-ready" // The platform data has been loaded
 
 	EventScanProgress               = "scan-progress"                      // Progress of the scan
 	EventScanProgressDetailed       = "scan-progress-detailed"             // Optional detailed scan progress (structured payload)
 	EventScanStatus                 = "scan-status"                        // Status text of the scan
-	RefreshedAnilistAnimeCollection = "refreshed-anilist-anime-collection" // The anilist collection has been refreshed
-	RefreshedAnilistMangaCollection = "refreshed-anilist-manga-collection" // The manga collection has been refreshed
+	RefreshedAnimeCollection = "refreshed-anime-collection" // The anime collection has been refreshed
+
 	LibraryWatcherFileAdded         = "library-watcher-file-added"         // A new file has been added to the library
 	LibraryWatcherFileRemoved       = "library-watcher-file-removed"       // A file has been removed from the library
 	AutoDownloaderItemAdded         = "auto-downloader-item-added"         // An item has been added to the auto downloader queue
@@ -51,8 +50,7 @@ const (
 	CheckForUpdates       = "check-for-updates"
 	CheckForAnnouncements = "check-for-announcements"
 
-	RefreshedMangaDownloadData  = "refreshed-manga-download-data"
-	ChapterDownloadQueueUpdated = "chapter-download-queue-updated"
+
 	OfflineSnapshotCreated      = "offline-snapshot-created"
 
 	MediastreamShutdownStream = "mediastream-shutdown-stream"
@@ -66,7 +64,7 @@ const (
 
 	SyncLocalQueueState = "sync-local-queue-state"
 	SyncLocalFinished   = "sync-local-finished"
-	SyncAnilistFinished = "sync-anilist-finished"
+	SyncPlatformFinished = "sync-platform-finished"
 
 	TorrentStreamState = "torrentstream-state"
 
@@ -80,27 +78,5 @@ const (
 	ShowIndefiniteLoader = "show-indefinite-loader"
 	HideIndefiniteLoader = "hide-indefinite-loader"
 
-	// Nakama events
-	NakamaHostStarted          = "nakama-host-started"
-	NakamaHostStopped          = "nakama-host-stopped"
-	NakamaPeerConnected        = "nakama-peer-connected"
-	NakamaPeerDisconnected     = "nakama-peer-disconnected"
-	NakamaHostConnected        = "nakama-host-connected"
-	NakamaHostDisconnected     = "nakama-host-disconnected"
-	NakamaError                = "nakama-error"
-	NakamaAnimeLibraryReceived = "nakama-anime-library-received"
-	NakamaCustomMessage        = "nakama-custom-message"
-	NakamaStatusRequested      = "nakama-status-requested"
-	NakamaStatus               = "nakama-status"
-	NakamaRoomCreated          = "nakama-room-created"
-	NakamaRoomClosed           = "nakama-room-closed"
-	NakamaRoomReconnected      = "nakama-room-reconnected"
-
-	NakamaOnlineStreamEvent = "nakama-online-stream-event"
-
-	// Nakama Watch Party events
-	NakamaWatchPartyState                                 = "nakama-watch-party-state"
-	NakamaWatchPartyEnableRelayMode                       = "nakama-watch-party-enable-relay-mode"
-	NakamaWatchPartyRelayModeToggleShareLibraryWithOrigin = "nakama-watch-party-relay-mode-toggle-share-library-with-origin"
-	NakamaWatchPartyChatMessage                           = "nakama-watch-party-chat-message"
 )
+

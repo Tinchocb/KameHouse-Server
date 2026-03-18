@@ -59,21 +59,18 @@ func NewSimpleEntry(ctx context.Context, opts *NewSimpleAnimeEntryOptions) (*Sim
 	// Get local DB media
 	var fetchedMedia *models.LibraryMedia
 
-	// For positive IDs (AniList), try direct lookup
-	if opts.MediaId > 0 {
-		fetchedMedia, _ = db.GetLibraryMediaByID(opts.Database, uint(opts.MediaId))
-	}
+	// Try direct lookup by potential PK
+	fetchedMedia, _ = db.GetLibraryMediaByID(opts.Database, uint(opts.MediaId))
 
-	// For negative IDs (TMDB), try looking it up by TMDB ID
-	if fetchedMedia == nil && opts.MediaId < 0 {
-		tmdbId := -opts.MediaId
-		m, err := db.GetLibraryMediaByTmdbId(opts.Database, tmdbId)
+	// If not found, try looking it up by TMDB ID
+	if fetchedMedia == nil {
+		m, err := db.GetLibraryMediaByTmdbId(opts.Database, opts.MediaId)
 		if err == nil && m != nil {
 			fetchedMedia = m
 		}
 	}
 
-	// For negative IDs (TMDB) or if direct lookup failed,
+	// If direct lookup or TMDB lookup failed,
 	// find the LibraryMediaId from local files
 	if fetchedMedia == nil {
 		for _, lf := range opts.LocalFiles {
@@ -199,9 +196,8 @@ func NewAnimeMetadataFromEntry(media *models.LibraryMedia, episodes []*Episode) 
 		Titles:       make(map[string]string),
 		Episodes:     make(map[string]*metadata.EpisodeMetadata),
 		EpisodeCount: 0,
-		SpecialCount: 0,
 		Mappings: &metadata.AnimeMappings{
-			AnilistId: int(media.ID),
+			ThemoviedbId: strconv.Itoa(int(media.ID)),
 		},
 	}
 	animeMetadata.Titles["en"] = media.TitleEnglish
@@ -236,9 +232,8 @@ func NewAnimeMetadataFromEpisodeCount(media *models.LibraryMedia, episodes []int
 		Titles:       make(map[string]string),
 		Episodes:     make(map[string]*metadata.EpisodeMetadata),
 		EpisodeCount: 0,
-		SpecialCount: 0,
 		Mappings: &metadata.AnimeMappings{
-			AnilistId: int(media.ID),
+			ThemoviedbId: strconv.Itoa(int(media.ID)), // Generic media ID marker
 		},
 	}
 	animeMetadata.Titles["en"] = media.TitleEnglish

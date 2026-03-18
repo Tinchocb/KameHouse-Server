@@ -54,7 +54,6 @@ export const DrawerAnatomy = defineStyleAnatomy({
     ], {
         variants: {
             side: {
-                mangaReader: "w-full inset-x-0 top-0 border data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
                 top: "w-full lg:w-[calc(100%_-_20px)] inset-x-0 top-0 border data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
                 bottom: "w-full lg:w-[calc(100%_-_20px)] inset-x-0 bottom-0 border data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
                 left: "inset-y-0 left-0 h-full lg:h-[calc(100%_-_20px)] border data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left",
@@ -175,7 +174,7 @@ export function Drawer(props: DrawerProps) {
         onPointerDownCapture,
         onInteractOutside,
         portalContainer,
-        borderToBorder: mangaReader,
+        borderToBorder,
         ...rest
     } = props
 
@@ -194,16 +193,16 @@ export function Drawer(props: DrawerProps) {
 
                 <DialogPrimitive.Content
                     className={cn(
-                        DrawerAnatomy.content({ size, side: mangaReader ? "mangaReader" : side }),
+                        DrawerAnatomy.content({ size, side: side }),
                         // __isDesktop__ && "pt-12",
-                        !mangaReader && "lg:m-[10px] rounded-[--radius]",
+                        !borderToBorder && "lg:m-[10px] rounded-[--radius]",
                         contentClass,
                     )}
                     style={{
-                        marginTop: (__isDesktop__ && !mangaReader) ? "30px" : undefined,
+                        marginTop: (__isDesktop__ && !borderToBorder) ? "30px" : undefined,
                         height: (
                             __isDesktop__
-                            && !mangaReader
+                            && !borderToBorder
                             && (side === "left" || side === "right")
                         ) ? "calc(100dvh - 50px)" : undefined,
                     }}

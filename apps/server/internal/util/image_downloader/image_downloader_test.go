@@ -12,7 +12,7 @@ import (
 )
 
 func TestImageDownloader_DownloadImages(t *testing.T) {
-	t.Skip("Skipping: requires live anilist.co CDN access (integration test)")
+	t.Skip("Skipping: requires live CDN access (integration test)")
 	tests := []struct {
 		name        string
 		urls        []string
@@ -23,9 +23,9 @@ func TestImageDownloader_DownloadImages(t *testing.T) {
 		{
 			name: "test1",
 			urls: []string{
-				"https://s4.anilist.co/file/anilistcdn/media/anime/banner/153518-7uRvV7SLqmHV.jpg",
-				"https://s4.anilist.co/file/anilistcdn/media/anime/banner/153518-7uRvV7SLqmHV.jpg",
-				"https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx153518-LEK6pAXtI03D.jpg",
+				"https://placehold.co/600x400.jpg",
+				"https://placehold.co/600x400.jpg",
+				"https://placehold.co/400x600.jpg",
 			},
 			downloadDir: t.TempDir(),
 			expectedNum: 2,
@@ -33,7 +33,7 @@ func TestImageDownloader_DownloadImages(t *testing.T) {
 		},
 		//{
 		//	name:        "test1",
-		//	urls:        []string{"https://s4.anilist.co/file/anilistcdn/media/anime/banner/153518-7uRvV7SLqmHVn.jpg"},
+		//	urls:        []string{"https://placehold.co/600x400.jpg"},
 		//	downloadDir: t.TempDir(),
 		//	cancelAfter: 0,
 		//},

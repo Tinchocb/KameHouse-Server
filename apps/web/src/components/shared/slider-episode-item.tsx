@@ -1,6 +1,6 @@
 import { Anime_Episode } from "@/api/generated/types"
 const EpisodeItemBottomGradient = () => null
-import { asBaseAnime } from "@/lib/helpers/type-guards"
+import { asUnifiedMedia } from "@/lib/helpers/type-guards"
 import { imageShimmer } from "@/components/shared/image-helpers"
 import { SeaImage } from "@/components/shared/sea-image"
 import { cn } from "@/components/ui/core/styling"
@@ -16,7 +16,7 @@ export const SliderEpisodeItem = React.forwardRef<HTMLDivElement, SliderEpisodeI
 
     // const date = episode.episodeMetadata?.airDate ? new Date(episode.episodeMetadata.airDate) : undefined
     const offset = episode.progressNumber - episode.episodeNumber
-    const baseAnime = asBaseAnime(episode.baseAnime)
+    const baseAnime = asUnifiedMedia(episode.baseAnime)
 
     return (
         <div

@@ -306,7 +306,7 @@ func (fh *FileHydrator) hydrateGroupMetadata(
 
 			// Episode number is higher but media only has 1 episode
 			// - Might be a movie that was not correctly identified as such
-			// - Or, the torrent files were divided into multiple episodes from a media that is listed as a movie on AniList
+			// - Or, the torrent files were divided into multiple episodes from a media that is listed as a movie on the metadata provider
 			if episode > dto.GetCurrentEpisodeCount(media) && dto.GetTotalEpisodeCount(media) == 1 {
 				lf.Metadata.Episode = 1 // Coerce episode number to 1 because it is used for tracking
 				lf.Metadata.AniDBEpisode = "1"
@@ -398,19 +398,19 @@ func (fh *FileHydrator) hydrateGroupMetadata(
 			if fh.ForceMediaId != 0 && episode > dto.GetCurrentEpisodeCount(media) {
 
 				// When we encounter a file with an episode number higher than the media's episode count
-				// we have a forced media ID, we will fetch the media from AniList and get the offset
+				// we have a forced media ID, we will fetch the media from TMDB and get the offset
 				animeMetadata, err := fh.MetadataProviderRef.Get().GetAnimeMetadata(fh.ForceMediaId)
 				if err != nil {
 					/*Log */
 					if fh.ScanLogger != nil {
 						fh.logFileHydration(zerolog.ErrorLevel, lf, mId, episode).
 							Str("error", err.Error()).
-							Msg("Could not fetch AniDB metadata")
+							Msg("Could not fetch TMDB metadata")
 					}
 					lf.Metadata.Episode = episode
 					lf.Metadata.AniDBEpisode = strconv.Itoa(episode)
 					lf.MediaId = fh.ForceMediaId
-					fh.ScanSummaryLogger.LogMetadataEpisodeNormalizationFailed(lf, errors.New("could not fetch AniDB metadata"), lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
+					fh.ScanSummaryLogger.LogMetadataEpisodeNormalizationFailed(lf, errors.New("could not fetch TMDB metadata"), lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
 					return
 				}
 

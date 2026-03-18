@@ -69,7 +69,7 @@ func (e *LocalFileWrapperEntry) GetMainLocalFiles() ([]*LocalFile, bool) {
 // GetUnwatchedLocalFiles returns the *main* local files that have not been watched.
 // It returns an empty slice if all local files have been watched.
 //
-// /!\ IF Episode 0 is present, progress will be decremented by 1. This is because we assume AniList includes the episode 0 in the total count.
+// /!\ IF Episode 0 is present, progress will be decremented by 1. This is because we assume the metadata provider includes the episode 0 in the total count.
 func (e *LocalFileWrapperEntry) GetUnwatchedLocalFiles(progress int) []*LocalFile {
 	ret := make([]*LocalFile, 0)
 	lfs, ok := e.GetMainLocalFiles()

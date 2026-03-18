@@ -53,7 +53,7 @@ func NewUnifiedResolver(database *db.Database, logger *zerolog.Logger) *UnifiedR
 	return &UnifiedResolver{db: database, logger: logger}
 }
 
-// ResolveUnifiedMedia aggregates sources. mediaID should be the AniList ID.
+// ResolveUnifiedMedia aggregates sources. mediaID should be the Platform ID (TMDb).
 func (r *UnifiedResolver) ResolveUnifiedMedia(ctx context.Context, mediaID string, episode int, mediaType string) (*UnifiedResolutionResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, 3500*time.Millisecond)
 	defer cancel()
@@ -73,7 +73,7 @@ func (r *UnifiedResolver) ResolveUnifiedMedia(ctx context.Context, mediaID strin
 
 	// Step 2: External Streams (Deactivated)
 	/*
-		imdbID, kitsuID := r.translateAniListIDs(id)
+		imdbID, kitsuID := r.translateMediaIDs(id)
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -119,9 +119,9 @@ func (r *UnifiedResolver) ResolveUnifiedMedia(ctx context.Context, mediaID strin
 
 // ── ID Mapping Bridge ────────────────────────────────────────────────────────
 
-// translateAniListIDs maps AniList ID to IMDB and Kitsu using AniZip API.
-func (r *UnifiedResolver) translateAniListIDs(anilistID int) (imdbID string, kitsuID int) {
-	media, err := anizip.FetchAniZipMedia("anilist", anilistID)
+// translateMediaIDs maps media ID (TMDb) to IMDB and Kitsu using AniZip API.
+func (r *UnifiedResolver) translateMediaIDs(mediaID int) (imdbID string, kitsuID int) {
+	media, err := anizip.FetchAniZipMedia("tmdb", mediaID)
 	if err != nil || media == nil || media.Mappings == nil {
 		return "", 0
 	}

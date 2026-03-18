@@ -372,30 +372,23 @@ export default function MediaDetailPage() {
                                 </div>
                             </div>
                             
-                            {((media as any).studios?.nodes && (media as any).studios.nodes.length > 0) && (
-                                <div className="flex justify-between items-center text-sm border-b border-white/5 pb-3">
-                                    <span className="text-zinc-400">Estudio</span>
-                                    <span className="font-bold text-zinc-200 text-right max-w-[120px] truncate" title={(media as any).studios.nodes[0].name}>
-                                        {(media as any).studios.nodes[0].name}
-                                    </span>
-                                </div>
-                            )}
+
                             
                             <div className="flex justify-between items-center text-sm border-b border-white/5 pb-3">
                                 <span className="text-zinc-400">Origen</span>
-                                <span className="font-bold text-orange-400">{downloadPercent > 50 ? "HDD Local" : "Torrentio"}</span>
+                                <span className="font-bold text-orange-400">{downloadPercent === 100 ? "HDD Local" : downloadPercent > 0 ? "Híbrido" : "Remote Stream"}</span>
                             </div>
                             <div className="flex justify-between items-center text-sm border-b border-white/5 pb-3">
-                                <span className="text-zinc-400">Calidad Max</span>
-                                <span className="font-bold text-zinc-200">1080p BD</span>
+                                <span className="text-zinc-400">Resolución</span>
+                                <span className="font-bold text-zinc-200">{episodes[0]?.localFile?.name?.includes("2160") ? "4K UHD" : "1080p FHD"}</span>
                             </div>
                             <div className="flex justify-between items-center text-sm border-b border-white/5 pb-3">
-                                <span className="text-zinc-400">Video</span>
-                                <span className="font-bold text-zinc-200">H264/HEVC</span>
+                                <span className="text-zinc-400">Formato</span>
+                                <span className="font-bold text-zinc-200">{media.format}</span>
                             </div>
                             <div className="flex justify-between items-center text-sm">
-                                <span className="text-zinc-400">Audio Tracks</span>
-                                <span className="font-bold text-zinc-200">JPN / ENG</span>
+                                <span className="text-zinc-400">Estado</span>
+                                <span className="font-bold text-zinc-200">{media.status}</span>
                             </div>
                         </div>
                     </aside>

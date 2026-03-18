@@ -71,25 +71,23 @@ export const settingsSchema = z.object({
     enableOnlinestream: z.boolean().optional().default(false),
     includeOnlineStreamingInLibrary: z.boolean().optional().default(false),
     disableAnimeCardTrailers: z.boolean().optional().default(false),
-    enableManga: z.boolean().optional().default(true),
-    mangaLocalSourceDirectory: z.string().optional().default(""),
+
     enableRichPresence: z.boolean().optional().default(false),
     enableAnimeRichPresence: z.boolean().optional().default(false),
-    enableMangaRichPresence: z.boolean().optional().default(false),
+
 
     dohProvider: z.string().optional().default(""),
     openTorrentClientOnStart: z.boolean().optional().default(false),
     openWebURLOnStart: z.boolean().optional().default(false),
     refreshLibraryOnStart: z.boolean().optional().default(false),
     richPresenceHideKameHouseRepositoryButton: z.boolean().optional().default(false),
-    richPresenceShowAniListMediaButton: z.boolean().optional().default(false),
-    richPresenceShowAniListProfileButton: z.boolean().optional().default(false),
+    richPresenceShowPlatformMediaButton: z.boolean().optional().default(false),
+    richPresenceShowPlatformProfileButton: z.boolean().optional().default(false),
     richPresenceUseMediaTitleStatus: z.boolean().optional().default(true),
     disableNotifications: z.boolean().optional().default(false),
     disableAutoDownloaderNotifications: z.boolean().optional().default(false),
     disableAutoScannerNotifications: z.boolean().optional().default(false),
-    defaultMangaProvider: z.string().optional().default(""),
-    mangaAutoUpdateProgress: z.boolean().optional().default(false),
+
     autoPlayNextEpisode: z.boolean().optional().default(false),
     showActiveTorrentCount: z.boolean().optional().default(false),
     enableWatchContinuity: z.boolean().optional().default(false),
@@ -98,16 +96,6 @@ export const settingsSchema = z.object({
     scannerMatchingThreshold: z.number().optional().default(0.5),
     scannerMatchingAlgorithm: z.string().optional().default(""),
     autoSyncToLocalAccount: z.boolean().optional().default(false),
-    nakamaIsHost: z.boolean().optional().default(false),
-    nakamaHostPassword: z.string().optional().default(""),
-    nakamaRemoteServerURL: z.string().optional().default(""),
-    nakamaRemoteServerPassword: z.string().optional().default(""),
-    nakamaHostShareLocalAnimeLibrary: z.boolean().optional().default(false),
-    nakamaEnabled: z.boolean().optional().default(false),
-    nakamaHostEnablePortForwarding: z.boolean().optional().default(false),
-    nakamaUsername: z.string().optional().default(""),
-    includeNakamaAnimeLibrary: z.boolean().optional().default(false),
-    nakamaHostUnsharedAnimeIds: z.array(z.number()).optional().default([]),
     autoSaveCurrentMediaOffline: z.boolean().optional().default(false),
     disableCacheLayer: z.boolean().optional().default(false),
     autoSelectTorrentProvider: z.string().optional().default(""),
@@ -125,15 +113,6 @@ export const settingsSchema = z.object({
     disableTorrentStreaming: z.boolean().optional().default(false),
     disableDebridService: z.boolean().optional().default(false),
     disableTorrentProvider: z.boolean().optional().default(false),
-    disableJellyfin: z.boolean().optional().default(false),
-    jellyfinEnabled: z.boolean().optional().default(false),
-    jellyfinServerUrl: z.string().url().optional().or(z.literal("")),
-    jellyfinApiKey: z.string().optional().default(""),
-    jellyfinUsername: z.string().optional().default(""),
-    jellyfinPassword: z.string().optional().default(""),
-    jellyfinScanOnItemAdd: z.boolean().optional().default(true),
-    jellyfinScanDelayMs: z.number().optional().default(5000),
-
     // Mediastream
     transcodeEnabled: z.boolean().default(false),
     transcodeHwAccel: z.string().default("cpu"),
@@ -165,6 +144,7 @@ export const settingsSchema = z.object({
     debridIncludeDebridStreamInLibrary: z.boolean().default(false),
     debridStreamAutoSelect: z.boolean().default(false),
     debridStreamPreferredResolution: z.string().default("-"),
+    debridTorrentioUrl: z.string().optional().default(""),
 
     // Theme (UI Settings)
     themeAnimeEntryScreenLayout: z.string().min(0).optional(),
@@ -194,9 +174,9 @@ export const settingsSchema = z.object({
     themeShowEpisodeCardAnimeInfo: z.boolean().default(true),
     themeContinueWatchingDefaultSorting: z.string().default("LAST_WATCHED_DESC"),
     themeAnimeLibraryCollectionDefaultSorting: z.string().default("TITLE_ASC"),
-    themeMangaLibraryCollectionDefaultSorting: z.string().default("TITLE_ASC"),
+
     themeShowAnimeUnwatchedCount: z.boolean().default(true),
-    themeShowMangaUnreadCount: z.boolean().default(true),
+
     themeHideEpisodeCardDescription: z.boolean().default(false),
     themeHideDownloadedEpisodeCardFilename: z.boolean().default(false),
     themeCustomCSS: z.string().default(""),
@@ -216,7 +196,7 @@ export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>): 
         autoSelectTorrentProvider: "",
         autoScan: false,
         disableAnimeCardTrailers: false,
-        enableManga: data.enableManga,
+
         enableOnlinestream: data.enableOnlinestream,
         dohProvider: DEFAULT_DOH_PROVIDER,
         openTorrentClientOnStart: false,
@@ -240,26 +220,8 @@ export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>): 
         disableTorrentStreaming: data.disableTorrentStreaming,
         disableDebridService: data.disableDebridService,
         disableTorrentProvider: data.disableTorrentProvider,
-        disableJellyfin: data.disableJellyfin,
         tmdbApiKey: data.tmdbApiKey,
         tmdbLanguage: "en",
-    },
-    nakama: {
-        enabled: false,
-        isHost: false,
-        hostPassword: "",
-        remoteServerURL: "",
-        remoteServerPassword: "",
-        hostShareLocalAnimeLibrary: false,
-        username: data.nakamaUsername,
-        includeNakamaAnimeLibrary: false,
-        hostUnsharedAnimeIds: [],
-        hostEnablePortForwarding: false,
-    },
-    manga: {
-        defaultMangaProvider: "",
-        mangaAutoUpdateProgress: false,
-        mangaLocalSourceDirectory: "",
     },
     mediaPlayer: {
         host: data.mediaPlayerHost,
@@ -281,15 +243,6 @@ export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>): 
         vcTranslateProvider: "",
         vcTranslateTargetLanguage: "",
     },
-    discord: {
-        enableRichPresence: data.enableRichPresence,
-        enableAnimeRichPresence: true,
-        enableMangaRichPresence: true,
-        richPresenceHideKameHouseRepositoryButton: false,
-        richPresenceShowAniListMediaButton: false,
-        richPresenceShowAniListProfileButton: false,
-        richPresenceUseMediaTitleStatus: true,
-    },
     torrent: {
         defaultTorrentClient: data.defaultTorrentClient,
         qbittorrentPath: data.qbittorrentPath,
@@ -307,7 +260,7 @@ export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>): 
         showActiveTorrentCount: false,
         hideTorrentList: false,
     },
-    anilist: {
+    Platform: {
         hideAudienceScore: false,
 
         disableCacheLayer: false,
@@ -321,15 +274,6 @@ export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>): 
     },
     debridProvider: data.debridProvider,
     debridApiKey: data.debridApiKey,
-    jellyfin: {
-        enabled: data.jellyfinEnabled,
-        serverUrl: data.jellyfinServerUrl || "",
-        apiKey: data.jellyfinApiKey,
-        username: data.jellyfinUsername,
-        password: data.jellyfinPassword,
-        scanOnItemAdd: data.jellyfinScanOnItemAdd,
-        scanDelayMs: data.jellyfinScanDelayMs,
-    },
 })
 
 

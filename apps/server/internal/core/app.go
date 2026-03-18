@@ -448,6 +448,9 @@ func (a *KameHouse) GetAnimeCollection(bypassCache bool) (*platform.UnifiedColle
 	if err != nil {
 		return nil, err
 	}
+	if res == nil {
+		return &platform.UnifiedCollection{}, nil
+	}
 	return res.(*platform.UnifiedCollection), nil
 }
 

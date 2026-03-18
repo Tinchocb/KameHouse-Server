@@ -71,7 +71,7 @@ func NewAnalyzer(opts *NewAnalyzerOptions) *Analyzer {
 // AnalyzeTorrentFiles scans the files and returns an Analysis struct containing methods to get the results.
 func (a *Analyzer) AnalyzeTorrentFiles() (*Analysis, error) {
 	if a.platformRef.IsAbsent() {
-		return nil, errors.New("anilist client wrapper is nil")
+		return nil, errors.New("platform client wrapper is nil")
 	}
 
 	if err := a.scanFiles(); err != nil {

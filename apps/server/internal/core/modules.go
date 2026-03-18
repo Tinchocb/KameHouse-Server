@@ -21,6 +21,7 @@ import (
 	"kamehouse/internal/torrent_clients/transmission"
 	itorrent "kamehouse/internal/torrents/torrent"
 	"kamehouse/internal/torrentstream"
+	"kamehouse/internal/platforms/tmdb_platform"
 
 	"github.com/cli/browser"
 	"github.com/rs/zerolog"
@@ -339,6 +340,25 @@ func (a *App) InitOrRefreshModules() {
 		go a.ContinuityManager.SetSettings(&continuity.Settings{
 			WatchContinuityEnabled: settings.Library.EnableWatchContinuity,
 		})
+
+		// +---------------------+
+		// |      Platform       |
+		// +---------------------+
+
+		// Refresh active platform from settings
+		if !a.IsOffline() {
+			if settings.Library.PrimaryMetadataProvider == "tmdb" && settings.Library.TmdbApiKey != "" {
+				a.Logger.Info().Msg("app: Using TMDb platform")
+				a.Metadata.PlatformRef.Set(tmdb_platform.NewPlatform(settings.Library.TmdbApiKey, settings.Library.TmdbLanguage))
+			} else {
+				// Default back to simulated if no other platform is suitable
+				// TMDb is the primary platform, defaulting to simulated if unavailable.
+				a.Logger.Info().Msg("app: No metadata provider configured or available, using simulated platform")
+				// Simulated platform is already initialized in NewKameHouse, we should probably keep that one or create a new one
+				// For now, let's keep the existing one if it's already simulated, or reset it.
+				// a.Metadata.PlatformRef.Set(simulated_platform.NewSimulatedPlatform(a.Logger, a.Database))
+			}
+		}
 	}
 
 	a.Logger.Info().Msg("app: Refreshed modules")

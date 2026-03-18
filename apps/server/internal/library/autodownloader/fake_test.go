@@ -6,7 +6,6 @@ import (
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/extension"
 	hibiketorrent "kamehouse/internal/extension/hibike/torrent"
-	"kamehouse/internal/test_utils"
 	"kamehouse/internal/torrents/torrent"
 	"kamehouse/internal/util"
 	"testing"
@@ -78,7 +77,6 @@ func (f *Fake) New(t *testing.T) *AutoDownloader {
 	}
 	repo := torrent.NewRepository(repoOpts)
 
-	test_utils.InitTestProvider(t, test_utils.Anilist())
 
 	ad := New(logger, database, nil)
 	// Setup the dependencies using setter or direct assignment

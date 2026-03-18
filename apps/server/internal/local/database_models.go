@@ -19,7 +19,7 @@ type BaseModel struct {
 
 type Settings struct {
 	BaseModel
-	// Flag to determine if there are local changes that need to be synced with AniList.
+	// Flag to determine if there are local changes that need to be synced with Platform.
 	Updated bool `gorm:"column:updated" json:"updated"`
 }
 
@@ -27,11 +27,11 @@ type Settings struct {
 // |      Offline        |
 // +---------------------+
 
-// LocalCollection is an anilist collection that is stored locally for offline use.
-// It is meant to be kept in sync with the real AniList collection when online.
+// LocalCollection is an Platform collection that is stored locally for offline use.
+// It is meant to be kept in sync with the real Platform collection when online.
 type LocalCollection struct {
 	BaseModel
-	Type  string `gorm:"column:type" json:"type"`   // "anime" or "manga"
+	Type  string `gorm:"column:type" json:"type"`   // "anime"
 	Value []byte `gorm:"column:value" json:"value"` // Marshalled struct
 }
 
@@ -39,7 +39,7 @@ type LocalCollection struct {
 type TrackedMedia struct {
 	BaseModel
 	MediaId int    `gorm:"column:media_id" json:"mediaId"`
-	Type    string `gorm:"column:type" json:"type"` // "anime" or "manga"
+	Type    string `gorm:"column:type" json:"type"` // "anime"
 }
 
 type AnimeSnapshot struct {
@@ -54,15 +54,7 @@ type AnimeSnapshot struct {
 	ReferenceKey string `gorm:"column:reference_key" json:"referenceKey"`
 }
 
-type MangaSnapshot struct {
-	BaseModel
-	MediaId int `gorm:"column:media_id" json:"mediaId"`
-	//ChapterContainers LocalMangaChapterContainers `gorm:"column:chapter_Containers" json:"chapterContainers"`
-	BannerImagePath   string                      `gorm:"column:banner_image_path" json:"bannerImagePath"`
-	CoverImagePath    string                      `gorm:"column:cover_image_path" json:"coverImagePath"`
-	// ReferenceKey is used to compare the snapshot with the current data.
-	ReferenceKey string `gorm:"column:reference_key" json:"referenceKey"`
-}
+
 
 // +---------------------+
 // |      Simulated      |
@@ -71,7 +63,7 @@ type MangaSnapshot struct {
 // SimulatedCollection is used for users without an account.
 type SimulatedCollection struct {
 	BaseModel
-	Type  string `gorm:"column:type" json:"type"`   // "anime" or "manga"
+	Type  string `gorm:"column:type" json:"type"`   // "anime"
 	Value []byte `gorm:"column:value" json:"value"` // Marshalled struct
 }
 
@@ -119,41 +111,18 @@ func (o LocalAnimeMetadata) Value() (driver.Value, error) {
 	return json.Marshal(o)
 }
 
-//----------------------------------------------------------------------------------------------------------------------------------------------------
 
-//type LocalMangaListEntry anilist.MangaListEntry
-//
-//func (o *LocalMangaListEntry) Scan(src interface{}) error {
-//	bytes, ok := src.([]byte)
-//	if !ok {
-//		return errors.New("src value cannot cast to []byte")
-//	}
-//	var ret anilist.MangaListEntry
-//	err := json.Unmarshal(bytes, &ret)
-//	if err != nil {
-//		return err
-//	}
-//	*o = LocalMangaListEntry(ret)
-//	return nil
-//}
-//
-//func (o LocalMangaListEntry) Value() (driver.Value, error) {
-//	if o.ID == 0 {
-//		return nil, nil
-//	}
-//	return json.Marshal(o)
-//}
 
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 
-//type LocalAnimeListEntry anilist.AnimeListEntry
+//type LocalAnimeListEntry Platform.AnimeListEntry
 //
 //func (o *LocalAnimeListEntry) Scan(src interface{}) error {
 //	bytes, ok := src.([]byte)
 //	if !ok {
 //		return errors.New("src value cannot cast to []byte")
 //	}
-//	var ret anilist.AnimeListEntry
+//	var ret Platform.AnimeListEntry
 //	err := json.Unmarshal(bytes, &ret)
 //	if err != nil {
 //		return err

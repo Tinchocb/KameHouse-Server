@@ -52,7 +52,7 @@ type FillerChecker interface {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Dragon Ball arc map — static episode ranges keyed by AniList media ID
+// Dragon Ball arc map — static episode ranges keyed by TMDB media ID
 // Range: [from, to] inclusive episode numbers.
 // ─────────────────────────────────────────────────────────────────────────────
 

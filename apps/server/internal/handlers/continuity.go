@@ -45,7 +45,7 @@ func (h *Handler) HandleUpdateContinuityWatchHistoryItem(c echo.Context) error {
 //	@summary Returns a watch history item.
 //	@desc This endpoint is used to retrieve a watch history item.
 //	@route /api/v1/continuity/item/{id} [GET]
-//	@param id - int - true - "AniList anime media ID"
+//	@param id - int - true - "Platform anime media ID"
 //	@returns continuity.WatchHistoryItemResponse
 func (h *Handler) HandleGetContinuityWatchHistoryItem(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))

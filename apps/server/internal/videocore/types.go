@@ -64,7 +64,6 @@ const (
 	PlaybackTypeLocalFile    PlaybackType = "localfile"    // NativePlayer only
 	PlaybackTypeTorrent      PlaybackType = "torrent"      // NativePlayer only
 	PlaybackTypeDebrid       PlaybackType = "debrid"       // NativePlayer only
-	PlaybackTypeNakama       PlaybackType = "nakama"       // NativePlayer only
 	PlaybackTypeOnlinestream PlaybackType = "onlinestream" // WebPlayer only
 )
 
@@ -127,18 +126,8 @@ type VideoPlaybackInfo struct {
 	MkvMetadata *mkvparser.Metadata `json:"mkvMetadata"` // NativePlayer only
 	// LocalFile is only set for local file streams. NativePlayer
 	LocalFile *dto.LocalFile `json:"localFile"`
-	// Set by WebPlayer when online stream starts. Used for Nakama watch parties.
-	OnlinestreamParams             *OnlinestreamParams   `json:"onlinestreamParams"`
-	SubtitleTracks                 []*VideoSubtitleTrack `json:"subtitleTracks"`
-	LibassFonts                    []*VideoLibassFont    `json:"libassFonts"`
-	VideoSources                   []*VideoSource        `json:"videoSources"`
-	SelectedVideoSource            *int                  `json:"selectedVideoSource"` // index of VideoSource
-	DisableRestoreFromContinuity   *bool                 `json:"disableRestoreFromContinuity"`
-	InitialState                   *VideoInitialState    `json:"initialState"`
-	Media                          interface{}           `json:"media"`
-	Episode                        *anime.Episode        `json:"episode"`
-	StreamType                     string                `json:"streamType"` // "native" | "hls" | "unknown"
-	IsNakamaWatchParty             bool                  `json:"isNakamaWatchParty,omitempty"`
+	Media     interface{}    `json:"media"`
+	Episode   *anime.Episode `json:"episode"`
 }
 
 type (
@@ -235,7 +224,6 @@ type VideoEvent interface {
 	IsNativePlayer() bool
 	IsOnlinestream() bool
 	IsTorrent() bool
-	IsNakama() bool
 	IsDebrid() bool
 	GetPlayerType() PlayerType
 	GetPlaybackType() PlaybackType
@@ -258,7 +246,6 @@ func (e *BaseVideoEvent) IsNativePlayer() bool          { return e.PlayerType ==
 func (e *BaseVideoEvent) IsWebPlayer() bool             { return e.PlayerType == WebPlayer }
 func (e *BaseVideoEvent) IsOnlinestream() bool          { return e.PlaybackType == PlaybackTypeOnlinestream }
 func (e *BaseVideoEvent) IsTorrent() bool               { return e.PlaybackType == PlaybackTypeTorrent }
-func (e *BaseVideoEvent) IsNakama() bool                { return e.PlaybackType == PlaybackTypeNakama }
 func (e *BaseVideoEvent) IsDebrid() bool                { return e.PlaybackType == PlaybackTypeDebrid }
 func (e *BaseVideoEvent) IsCritical() bool              { return true }
 func (e *BaseVideoEvent) identify(id string, clientId string, playerType PlayerType, playbackType PlaybackType) {

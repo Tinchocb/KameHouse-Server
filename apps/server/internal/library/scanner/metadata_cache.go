@@ -129,22 +129,12 @@ func (c *metadataFetchCache) FetchOnce(
 				if best == nil || score < 0.75 {
 					continue
 				}
-				if providerID == "tmdb" {
-					if best.TmdbId == nil {
-						continue
-					}
-					anilistID, err := mapAniListIDFromTMDB(ctx, *best.TmdbId)
-					if err != nil || anilistID <= 0 {
-						continue
-					}
-					best.ID = anilistID
-				} else {
+				if providerID == "anidb" {
 					anidbID := best.ID
-					anilistID, err := mapAniListIDFromAniDB(ctx, anidbID)
-					if err != nil || anilistID <= 0 {
-						continue
+					tmdbID, err := mapTMDBIDFromAniDB(ctx, anidbID)
+					if err == nil && tmdbID > 0 {
+						best.ID = tmdbID
 					}
-					best.ID = anilistID
 				}
 				result = best
 				break
@@ -183,7 +173,7 @@ func (c *metadataFetchCache) Clear() {
 	})
 }
 
-var providerOrder = []string{"tmdb", "anidb", "anilist"}
+var providerOrder = []string{"tmdb", "anidb"}
 
 func orderProviders(providers []librarymetadata.Provider) []librarymetadata.Provider {
 	byID := make(map[string]librarymetadata.Provider, len(providers))

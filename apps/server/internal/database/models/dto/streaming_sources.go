@@ -22,6 +22,13 @@ type EpisodeSource struct {
 	Quality  string     `json:"quality"`            // e.g. "1080p", "4K", "unknown"
 	Priority int        `json:"priority"`           // PriorityLocal < PriorityDebrid < PriorityTorrent
 	Title    string     `json:"title,omitempty"`    // Human-readable label shown in the UI badge
+
+	// Torrentio-specific fields (omitted for local sources)
+	MagnetURI    string `json:"magnetUri,omitempty"`    // Full magnet link or debrid HTTP URL
+	InfoHash     string `json:"infoHash,omitempty"`     // Torrent info hash
+	FileIdx      int    `json:"fileIdx,omitempty"`      // File index inside the torrent batch
+	Seeders      int    `json:"seeders,omitempty"`      // Active seeders count (-1 = unknown)
+	ReleaseGroup string `json:"releaseGroup,omitempty"` // e.g. "SubsPlease", "Erai-raws"
 }
 
 // EpisodeSourcesResponse is the top-level DTO returned by the episode sources endpoint.

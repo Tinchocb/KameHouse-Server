@@ -46,7 +46,7 @@ func getActiveProvider(h *Handler) librarymetadata.Provider {
 }
 
 func (h *Handler) getAnimeEntry(c echo.Context, lfs []*dto.LocalFile, mId int) (*anime.Entry, error) {
-	// removed nakama hydrated variables
+	//
 
 	// Anime collection is no longer used for getting entries
 
@@ -382,8 +382,8 @@ func (h *Handler) HandleUnmatchFiles(c echo.Context) error {
 	return h.RespondWithData(c, true)
 }
 
-// HandleDeleteAnilistEntry will delete the given media entry from AniList.
-func (h *Handler) HandleDeleteAnilistEntry(c echo.Context) error {
+// HandleDeletePlatformEntry will delete the given media entry from Platform.
+func (h *Handler) HandleDeletePlatformEntry(c echo.Context) error {
 	type body struct {
 		MediaId int `json:"mediaId"`
 	}

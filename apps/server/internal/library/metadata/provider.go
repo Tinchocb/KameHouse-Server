@@ -10,9 +10,9 @@ import (
 // ErrNotFound is returned by providers when no matching results are found.
 var ErrNotFound = errors.New("metadata: not found")
 
-// Provider represents a generic source of media metadata (AniList, TMDb, TVDB, etc.)
+// Provider represents a generic source of media metadata (TMDb, TVDB, etc.)
 type Provider interface {
-	// GetProviderID returns the unique identifier for this provider (e.g., "anilist", "tmdb")
+	// GetProviderID returns the unique identifier for this provider (e.g., "mal", "tmdb")
 	GetProviderID() string
 
 	// GetName returns the human-readable name of the provider

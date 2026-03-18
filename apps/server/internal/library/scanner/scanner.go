@@ -170,7 +170,7 @@ func (s *MediaScanner) RunScan(ctx context.Context, mode ScanMode) (ScanResult, 
 				lf = dto.NewLocalFile(p, filepath.Dir(p))
 			}
 
-			// NFO Parsing Logic (Jellyfin/Kodi compatible)
+			// NFO Parsing Logic (Kodi/Standard compatible)
 			nfoPath := findNfoForFile(p, dirPaths)
 			if nfoPath != "" {
 				if nfo, err := ParseNfoFile(nfoPath); err == nil && nfo != nil {
@@ -403,7 +403,7 @@ func (s *MediaScanner) logf(level zerolog.Level, format string, args ...any) {
 	s.opts.Logger.WithLevel(level).Msgf(format, args...)
 }
 
-// findNfoForFile traverses upwards to find a Jellyfin/Kodi compatible NFO file.
+// findNfoForFile traverses upwards to find a Kodi/Standard compatible NFO file.
 func findNfoForFile(videoPath string, libraryDirs []string) string {
 	dir := filepath.Dir(videoPath)
 

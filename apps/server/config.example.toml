@@ -52,9 +52,6 @@ transcodeDir = "$KAMEHOUSE_DATA_DIR/cache/transcode"
 dir = "$KAMEHOUSE_DATA_DIR/offline"
 assetDir = "$KAMEHOUSE_DATA_DIR/offline/assets"
 
-[manga]
-downloadDir = "$KAMEHOUSE_DATA_DIR/manga"
-localDir = "$KAMEHOUSE_DATA_DIR/manga-local"
 
 [extensions]
 dir = "$KAMEHOUSE_DATA_DIR/extensions"
@@ -62,13 +59,5 @@ dir = "$KAMEHOUSE_DATA_DIR/extensions"
 # ------------------------------------------
 # 4. Integraciones (Integrations)
 # ------------------------------------------
-[jellyfin]
-enabled = false           # Habilita Jellyfin como proveedor primario
-serverUrl = ""            # Ejemplo: "http://192.168.1.100:8096"
-apiKey = ""               # Token de API de Jellyfin (opcional si usas username/password)
-username = ""
-password = ""
-# libraryPaths = ["D:/Anime", "E:/Movies"] # Forzar rutas específicas escaneadas (opcional)
-
-[anilist]
-# clientID = ""           # ID cliente personalizado de AniList de ser requerido
+[tmdb]
+# apiKey = ""               # TMDB API Key personalizado (opcional, el servidor incluye uno por defecto)

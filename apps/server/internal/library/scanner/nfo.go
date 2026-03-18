@@ -5,10 +5,10 @@ import (
 	"os"
 )
 
-// NfoFile represents the root of a Kodi/Jellyfin NFO file.
+// NfoFile represents the root of a Kodi/Standard NFO file.
 type NfoFile struct {
 	XMLName       xml.Name `xml:"tvshow"`
-	ID            int      `xml:"id"`      // Fallback / AniList ID usually
+	ID            int      `xml:"id"`      // Fallback / TMDB ID usually
 	TmdbId        int      `xml:"tmdbid"`  // TMDB ID
 	TvdbId        int      `xml:"tvdbid"`  // TVDB ID
 	ImdbId        string   `xml:"imdbid"`  // IMDB ID
@@ -31,7 +31,7 @@ type NfoFile struct {
 }
 
 // ParseNfoFile reads an XML .nfo file and extracts full metadata tags.
-// This allows KameHouse to use Jellyfin/Kodi metadata to guarantee a perfect match and avoid external API calls.
+// This allows KameHouse to use Kodi/Standard metadata to guarantee a perfect match and avoid external API calls.
 func ParseNfoFile(path string) (*NfoFile, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {

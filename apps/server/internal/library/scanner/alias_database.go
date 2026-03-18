@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// customIDOverrides maps normalized fan-edit/custom release titles directly to AniList IDs.
+// customIDOverrides maps normalized fan-edit/custom release titles directly to Platform IDs.
 // Matched titles short-circuit the Bayesian engine and skip external API calls entirely.
 var customIDOverrides = map[string]int{
 	// Dragon Ball Kai fan-edits
@@ -30,8 +30,8 @@ var customIDOverrides = map[string]int{
 // Pre-compiled at init to avoid per-file allocation.
 var reFanEditTokens = regexp.MustCompile(`(?i)\b(?:ultimate\s+by\s+\w+|by\s+seldion|saga\s+(?:saiyajin|saiyan|bu+|cell|freez?e?r?|frieza|namek))\b`)
 
-// LookupCustomOverride checks if a cleaned title matches a hardcoded AniList ID override.
-// Returns the AniList media ID and true if found; 0 and false otherwise.
+// LookupCustomOverride checks if a cleaned title matches a hardcoded Platform ID override.
+// Returns the Platform media ID and true if found; 0 and false otherwise.
 func LookupCustomOverride(cleanTitle string) (int, bool) {
 	normalized := normalizeForAliasLookup(cleanTitle)
 	// Strip fan-edit tokens for a second-pass lookup
@@ -47,7 +47,7 @@ func LookupCustomOverride(cleanTitle string) (int, bool) {
 }
 
 // StripFanEditTokens removes fan-edit markers from a title string,
-// returning a clean version suitable for upstream AniList matching.
+// returning a clean version suitable for upstream Platform matching.
 func StripFanEditTokens(title string) string {
 	cleaned := reFanEditTokens.ReplaceAllString(title, " ")
 	// Collapse any resulting double spaces
@@ -59,7 +59,7 @@ func StripFanEditTokens(title string) string {
 
 // animeAliases maps canonical anime titles to their commonly used alternative names.
 // These aliases help the matcher find the correct media when file names use non-standard
-// or abbreviated titles that don't appear in AniList/MAL databases.
+// or abbreviated titles that don't appear in Platform databases (MAL/TMDB/AniDB).
 //
 // Keys are lowercase canonical titles; values are lowercase alternative names.
 var animeAliases = map[string][]string{

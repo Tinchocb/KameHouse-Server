@@ -48,14 +48,10 @@ func (h *Handler) FeaturesMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			{"/api/v1/mal/auth", h.App.FeatureManager.IsDisabled(core.ManageAccount), UpdateMethods, Empty},
 			{"/api/v1/mal/logout", h.App.FeatureManager.IsDisabled(core.ManageAccount), UpdateMethods, Empty},
 			// lists
-			{"/api/v1/anilist/list-entry", h.App.FeatureManager.IsDisabled(core.ManageLists), UpdateMethods, Empty},
+			{"/api/v1/platform/list-entry", h.App.FeatureManager.IsDisabled(core.ManageLists), UpdateMethods, Empty},
 			{"/api/v1/library/anime-entry/update-progress", h.App.FeatureManager.IsDisabled(core.ManageLists), UpdateMethods, Empty},
 			{"/api/v1/library/anime-entry/update-repeat", h.App.FeatureManager.IsDisabled(core.ManageLists), UpdateMethods, Empty},
-			{"/api/v1/manga/update-progress", h.App.FeatureManager.IsDisabled(core.ManageLists), UpdateMethods, Empty},
-			// refresh metadata
-			{"/api/v1/anilist/cache-layer/status", h.App.FeatureManager.IsDisabled(core.RefreshMetadata), UpdateMethods, Empty},
 			{"/api/v1/library/scan", h.App.FeatureManager.IsDisabled(core.RefreshMetadata), UpdateMethods, []string{"/api/v1/library/scan", "/api/v1/library/scan-summaries"}},
-			{"/api/v1/manga/refetch-chapter-containers", h.App.FeatureManager.IsDisabled(core.RefreshMetadata), UpdateMethods, Empty},
 			// playback
 			{"/api/v1/playback-manager", h.App.FeatureManager.IsDisabled(core.WatchingLocalAnime), UpdateMethods, Empty},
 			{"/api/v1/media-player/start", h.App.FeatureManager.IsDisabled(core.WatchingLocalAnime), UpdateMethods, Empty},
@@ -66,14 +62,7 @@ func (h *Handler) FeaturesMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			{"/api/v1/auto-downloader", h.App.FeatureManager.IsDisabled(core.ManageAutoDownloader), UpdateMethods, Empty},
 			// onlinestream
 			{"/api/v1/onlinestream", h.App.FeatureManager.IsDisabled(core.OnlineStreaming), UpdateMethods, []string{"/api/v1/onlinestream/search", "/api/v1/onlinestream/manual-mapping", "/api/v1/onlinestream/get-mapping", "/api/v1/onlinestream/remove-mapping"}},
-			{"/api/v1/onlinestream/search", h.App.FeatureManager.IsDisabled(core.ManageMangaSource), UpdateMethods, Empty},
-			{"/api/v1/onlinestream/manual-mapping", h.App.FeatureManager.IsDisabled(core.ManageMangaSource), UpdateMethods, Empty},
-			{"/api/v1/onlinestream/get-mapping", h.App.FeatureManager.IsDisabled(core.ManageMangaSource), UpdateMethods, Empty},
-			{"/api/v1/onlinestream/remove-mapping", h.App.FeatureManager.IsDisabled(core.ManageMangaSource), UpdateMethods, Empty},
-			// custom source
-			//{"/api/v1/custom-source", h.App.FeatureManager.IsDisabled(core.ManageMangaSource), UpdateMethods, Empty},
-			// nakama
-			{"/api/v1/nakama", h.App.FeatureManager.IsDisabled(core.ManageNakama), UpdateMethods, Empty},
+
 			// open in explorer
 			{"/api/v1/open-in-explorer", h.App.FeatureManager.IsDisabled(core.OpenInExplorer), Empty, Empty},
 			{"/api/v1/library/anime-entry/open-in-explorer", h.App.FeatureManager.IsDisabled(core.OpenInExplorer), UpdateMethods, Empty},
@@ -99,12 +88,6 @@ func (h *Handler) FeaturesMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			{"/api/v1/directstream", h.App.FeatureManager.IsDisabled(core.WatchingLocalAnime), UpdateMethods, Empty},
 			{"/api/v1/mediastream/file", h.App.FeatureManager.IsDisabled(core.WatchingLocalAnime), Empty, Empty},
 			{"/api/v1/mediastream", h.App.FeatureManager.IsDisabled(core.WatchingLocalAnime), Empty, Empty},
-			// manga
-			{"/api/v1/manga", h.App.FeatureManager.IsDisabled(core.ManageMangaSource), UpdateMethods, []string{"/api/v1/manga/pages", "/api/v1/manga/chapters"}},
-			{"/api/v1/manga", h.App.FeatureManager.IsDisabled(core.Reading), UpdateMethods, Empty},
-			// manga downloads
-			{"/api/v1/manga/download", h.App.FeatureManager.IsDisabled(core.ManageMangaDownloads), UpdateMethods, Empty},
-			// local anime library
 			{"/api/v1/metadata-provider", h.App.FeatureManager.IsDisabled(core.ManageLocalAnimeLibrary), UpdateMethods, Empty},
 			{"/api/v1/library", h.App.FeatureManager.IsDisabled(core.ManageLocalAnimeLibrary), UpdateMethods, []string{"/api/v1/library/anime-entry/update-progress", "/api/v1/library/anime-entry/update-repeat", "/api/v1/library/scan", "/api/v1/library/scan-summaries", "/api/v1/library/explorer/file-tree", "/api/v1/library/explorer/file-tree/refresh", "/api/v1/library/explorer/directory-children"}},
 		}
@@ -122,7 +105,7 @@ func (h *Handler) FeaturesMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 
 		if h.App.FeatureManager.IsDisabled(core.PushRequests) {
-			pathPrefixes = append(pathPrefixes, "/api/v1/anilist/list-anime", "/api/v1/anilist/list-manga", "/api/v1/anilist/list-recent-anime", "/api/v1/manga/anilist/list", "/api/v1/announcements")
+			pathPrefixes = append(pathPrefixes, "/api/v1/platform/list-anime", "/api/v1/platform/list-recent-anime", "/api/v1/announcements")
 			if !slices.ContainsFunc(pathPrefixes, func(i string) bool { return strings.HasPrefix(path, i) }) {
 				if strings.Contains(strings.Join(UpdateMethods, ","), strings.ToUpper(method)) {
 					//return h.RespondWithError(c, ErrFeatureDisabled)

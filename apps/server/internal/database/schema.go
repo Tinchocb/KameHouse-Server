@@ -22,7 +22,6 @@ func InitDB(dbPath string) (*sql.DB, error) {
 	schema := `
 	CREATE TABLE IF NOT EXISTS media (
 		id UUID PRIMARY KEY,
-		anilist_id INT,
 		tmdb_id INT,
 		imdb_id TEXT,
 		type TEXT,
@@ -60,7 +59,6 @@ func InitDB(dbPath string) (*sql.DB, error) {
 
 	-- Indexes for Dragon Ball Scale fast lookup operations
 	CREATE INDEX IF NOT EXISTS idx_episodes_media_number ON episodes(media_id, number);
-	CREATE INDEX IF NOT EXISTS idx_media_anilist ON media(anilist_id);
 	CREATE INDEX IF NOT EXISTS idx_media_tmdb ON media(tmdb_id);
 	CREATE INDEX IF NOT EXISTS idx_media_sources_episode ON media_sources(episode_id);
 	`

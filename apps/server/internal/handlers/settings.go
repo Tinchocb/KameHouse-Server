@@ -46,9 +46,7 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 		Library                models.LibrarySettings      `json:"library"`
 		MediaPlayer            models.MediaPlayerSettings  `json:"mediaPlayer"`
 		Torrent                models.TorrentSettings      `json:"torrent"`
-		Manga                  models.MangaSettings        `json:"manga"`
 		Notifications          models.NotificationSettings `json:"notifications"`
-		Nakama                 models.NakamaSettings       `json:"nakama"`
 		EnableTranscode        bool                        `json:"enableTranscode"`
 		EnableTorrentStreaming bool                        `json:"enableTorrentStreaming"`
 		DebridProvider         string                      `json:"debridProvider"`
@@ -71,9 +69,7 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 		Library:       &b.Library,
 		MediaPlayer:   &b.MediaPlayer,
 		Torrent:       &b.Torrent,
-		Manga:         &b.Manga,
 		Notifications: &b.Notifications,
-		Nakama:        &b.Nakama,
 		AutoDownloader: &models.AutoDownloaderSettings{
 			Provider:              b.Library.TorrentProvider,
 			Interval:              20,
@@ -139,9 +135,7 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		Library       models.LibrarySettings        `json:"library"`
 		MediaPlayer   models.MediaPlayerSettings    `json:"mediaPlayer"`
 		Torrent       models.TorrentSettings        `json:"torrent"`
-		Manga         models.MangaSettings          `json:"manga"`
 		Notifications models.NotificationSettings   `json:"notifications"`
-		Nakama        models.NakamaSettings         `json:"nakama"`
 		Mediastream   *models.MediastreamSettings   `json:"mediastream"`
 		Torrentstream *models.TorrentstreamSettings `json:"torrentstream"`
 		Debrid        *models.DebridSettings        `json:"debrid"`
@@ -213,9 +207,7 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		Library:        &b.Library,
 		MediaPlayer:    &b.MediaPlayer,
 		Torrent:        &b.Torrent,
-		Manga:          &b.Manga,
 		Notifications:  &b.Notifications,
-		Nakama:         &b.Nakama,
 		AutoDownloader: &autoDownloader,
 		// ListSync is not sent by the client — carry forward from DB
 		ListSync: prev.ListSync,

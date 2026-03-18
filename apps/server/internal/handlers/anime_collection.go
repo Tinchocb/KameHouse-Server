@@ -53,7 +53,6 @@ func (h *Handler) HandleGetLibraryCollection(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	// Ignore original anime collection since we no longer restore from Nakama
 	_ = originalAnimeCollection
 	if (h.App.SecondarySettings.Torrentstream != nil && h.App.SecondarySettings.Torrentstream.Enabled && h.App.SecondarySettings.Torrentstream.IncludeInLibrary) ||
 		(h.App.Settings.GetLibrary() != nil && h.App.Settings.GetLibrary().EnableOnlinestream && h.App.Settings.GetLibrary().IncludeOnlineStreamingInLibrary) ||
@@ -114,11 +113,11 @@ func (h *Handler) HandleGetAnimeCollectionSchedule(c echo.Context) error {
 
 // HandleAddUnknownMedia
 //
-//	@summary adds the given media to the user's AniList planning collections
-//	@desc Since media not found in the user's AniList collection are not displayed in the library, this route is used to add them.
+//	@summary adds the given media to the user's Platform planning collections
+//	@desc Since media not found in the user's Platform collection are not displayed in the library, this route is used to add them.
 //	@desc The response is ignored in the frontend, the client should just refetch the entire library collection.
 //	@route /api/v1/library/unknown-media [POST]
-//	@returns anilist.AnimeCollection
+//	@returns Platform.AnimeCollection
 func (h *Handler) HandleAddUnknownMedia(c echo.Context) error {
 
 	type body struct {
@@ -130,7 +129,7 @@ func (h *Handler) HandleAddUnknownMedia(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	// Add non-added media entries to AniList collection
+	// Add non-added media entries to Platform collection
 	if err := h.App.Metadata.PlatformRef.Get().AddMediaToCollection(c.Request().Context(), b.MediaIds); err != nil {
 		return h.RespondWithError(c, errors.New("error: Platform responded with an error, this is most likely a rate limit issue"))
 	}

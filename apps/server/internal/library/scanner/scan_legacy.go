@@ -64,7 +64,7 @@ type Scanner struct {
 	ConfigAsString       string
 	// Optional, used to add custom sources
 	AnimeCollection *platform.UnifiedCollection
-	// TMDB mode: use folder structure + TMDB instead of AniList
+	// TMDB mode: use folder structure + TMDB instead of other metadata providers
 	UseTMDB bool
 
 	EventDispatcher events.Dispatcher
@@ -492,7 +492,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 							lf.LibraryMediaId = saved.ID
 							nfoFolderMap[lfDir] = saved.ID
 
-							// Map external IDs if provided (note: this may be a TMDB ID, not necessarily AniList)
+							// Map external IDs if provided (note: this may be a TMDB ID, not necessarily Platform-specific)
 							if nfo.ID > 0 {
 								lf.MediaId = nfo.ID
 							}
@@ -545,7 +545,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		if tmdbProvider != nil {
 			scn.Logger.Info().Msg("scanner: TMDB mode enabled")
 		} else {
-			scn.Logger.Warn().Msg("scanner: TMDB mode requested but TMDB token not set, falling back to AniList")
+			scn.Logger.Warn().Msg("scanner: TMDB mode requested but TMDB token not set, falling back to default provider")
 			useTMDB = false
 		}
 	}
@@ -651,14 +651,12 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	// |  Add missing media  |
 	// +---------------------+
 
-	// Add non-added media entries to AniList collection
-	// Max of 4 to avoid rate limit issues
-	// Skip this step in TMDB-only mode (no AniList platform)
+	// Add non-added media entries to platform collection
 	if len(mf.UnknownMediaIds) < 5 && scn.PlatformRef != nil && !scn.PlatformRef.IsAbsent() {
-		scn.WSEventManager.SendEvent(events.EventScanStatus, "Adding missing media to AniList...")
+		scn.WSEventManager.SendEvent(events.EventScanStatus, "Adding missing media to platform...")
 
 		if err = scn.PlatformRef.Get().AddMediaToCollection(ctx, mf.UnknownMediaIds); err != nil {
-			scn.Logger.Warn().Msg("scanner: An error occurred while adding media to planning list: " + err.Error())
+			scn.Logger.Warn().Msg("scanner: An error occurred while adding media to collection: " + err.Error())
 		}
 	}
 

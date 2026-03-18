@@ -2,45 +2,28 @@ package scanner
 
 import (
 	"context"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models/dto"
-	"kamehouse/internal/extension"
 	"kamehouse/internal/library/summary"
-	"kamehouse/internal/platforms/anilist_platform"
 	"kamehouse/internal/test_utils"
 	"kamehouse/internal/util"
-	"kamehouse/internal/util/limiter"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestFileHydrator_HydrateMetadata(t *testing.T) {
-	test_utils.InitTestProvider(t, test_utils.Anilist())
 
-	if test_utils.ConfigData.Provider.AnilistJwt == "" {
-		t.Skip("skipping test because AnilistJwt is not set")
-	}
-
-	completeAnimeCache := anilist.NewCompleteAnimeCache()
-	anilistRateLimiter := limiter.NewAnilistLimiter()
 	logger := util.NewLogger()
+	test_utils.InitTestProvider(t)
 	database, err := db.NewDatabase(context.Background(), test_utils.ConfigData.Path.DataDir, test_utils.ConfigData.Database.Name, logger)
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("Failed to connect to database: %v", err)
+	}
+	_ = database
 	metadataProvider := metadata_provider.GetFakeProvider(t, database)
-	anilistClient := anilist.NewAnilistClient(test_utils.ConfigData.Provider.AnilistJwt, "")
-	anilistClientRef := util.NewRef[anilist.AnilistClient](anilistClient)
-	extensionBankRef := util.NewRef(extension.NewUnifiedBank())
-	anilistPlatform := anilist_platform.NewAnilistPlatform(anilistClientRef, extensionBankRef, logger, database)
-	anilistPlatform.SetUsername(test_utils.ConfigData.Provider.AnilistUsername)
-	animeCollection, err := anilistPlatform.GetAnimeCollectionWithRelations(t.Context())
-	require.NoError(t, err)
-	require.NotNil(t, animeCollection)
-
-	allMedia := animeCollection.GetAllAnime()
+	allMedia := make([]*dto.NormalizedMedia, 0)
 
 	tests := []struct {
 		name            string
@@ -77,8 +60,8 @@ func TestFileHydrator_HydrateMetadata(t *testing.T) {
 			expectedType:    dto.LocalFileTypeMain,
 		},
 		{
-			// anidb lists 1 main episode but anilist lists 5
-			// the media tree analysis should use the anilist episode count so normalize the episode numbers
+			// anidb lists 1 main episode but other provider lists 5
+			// the media tree analysis should use the metadata provider episode count so normalize the episode numbers
 			name: "Muri ja Nakatta!",
 			paths: []string{
 				"E:/Anime/Watashi ga Koibito ni Nareru Wake Naijan, Murimuri! (※Muri ja Nakatta! ) Next Shine!/Theres.No.Freaking.Way.Ill.Be.Your.Lover.Unless.S01E13.1080p.AMZN.WEB-DL.JPN.DDP2.0.H.264.MSubs-ToonsHub.mkv",
@@ -129,7 +112,7 @@ func TestFileHydrator_HydrateMetadata(t *testing.T) {
 			// +---------------------+
 
 			mc := NewMediaContainer(&MediaContainerOptions{
-				AllMedia:   NormalizedMediaFromAnilistComplete(allMedia),
+				AllMedia:   allMedia,
 				ScanLogger: scanLogger,
 			})
 
@@ -161,9 +144,6 @@ func TestFileHydrator_HydrateMetadata(t *testing.T) {
 			fh := &FileHydrator{
 				LocalFiles:          lfs,
 				AllMedia:            mc.NormalizedMedia,
-				CompleteAnimeCache:  completeAnimeCache,
-				PlatformRef:         util.NewRef(anilistPlatform),
-				AnilistRateLimiter:  anilistRateLimiter,
 				MetadataProviderRef: util.NewRef(metadataProvider),
 				Logger:              logger,
 				ScanLogger:          scanLogger,

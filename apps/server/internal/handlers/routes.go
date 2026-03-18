@@ -52,8 +52,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 			// Byte-range streaming — without these the browser cannot seek in video
 			"Range", "Accept-Ranges", "Content-Range", "If-Range",
 			// App-specific auth headers
-			"X-KameHouse-Token", "X-KameHouse-Nakama-Token", "X-KameHouse-Nakama-Username",
-			"X-KameHouse-Nakama-Server-Version", "X-KameHouse-Nakama-Peer-Id",
+			"X-KameHouse-Token",
 		},
 		// ExposeHeaders lets the browser READ these headers from streaming responses
 		ExposeHeaders: []string{
@@ -238,6 +237,13 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	v1.POST("/mal/logout", h.HandleMALLogout)
 
 	//
+	// Progress
+	//
+
+	v1.GET("/progress", h.HandleGetProgress)
+	v1.POST("/progress", h.HandleSaveProgress)
+
+	//
 	// Local
 	//
 
@@ -252,11 +258,11 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 
 	v1Local.POST("/local", h.HandleLocalSyncData)
 	v1Local.GET("/queue", h.HandleLocalGetSyncQueueState)
-	v1Local.POST("/anilist", h.HandleLocalSyncAnilistData)
+	v1Local.POST("/platform", h.HandleLocalSyncPlatformData)
+	v1Local.POST("/sync-simulated-to-platform", h.HandleLocalSyncSimulatedDataToPlatform)
 	v1Local.POST("/updated", h.HandleLocalSetHasLocalChanges)
 	v1Local.GET("/updated", h.HandleLocalGetHasLocalChanges)
 	v1Local.GET("/storage/size", h.HandleLocalGetLocalStorageSize)
-	v1Local.POST("/sync-simulated-to-anilist", h.HandleLocalSyncSimulatedDataToAnilist)
 
 	//
 	// Library
@@ -279,6 +285,13 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 
 	v1Library.GET("/collection", h.HandleGetLibraryCollection)
 	v1Library.GET("/schedule", h.HandleGetAnimeCollectionSchedule)
+
+	// Platform
+	v1Platform := v1.Group("/platform")
+	v1Platform.GET("/collection", h.HandleGetLibraryCollection)
+	v1Platform.POST("/list-anime", h.HandlePlatformListAnime)
+	v1Platform.POST("/list-recent-anime", h.HandlePlatformListRecentAiringAnime)
+	v1Platform.GET("/stats", h.HandleGetPlatformStats)
 
 	v1Library.GET("/scan-summaries", h.HandleGetScanSummaries)
 
@@ -389,12 +402,6 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	v1.DELETE("/metadata/parent", h.HandleDeleteMediaMetadataParent)
 
 	//
-	// Manga
-	//
-
-
-
-	//
 	// File Cache
 	//
 
@@ -403,10 +410,6 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	v1FileCache.DELETE("/bucket", h.HandleRemoveFileCacheBucket)
 	v1FileCache.GET("/mediastream/videofiles/total-size", h.HandleGetFileCacheMediastreamVideoFilesTotalSize)
 	v1FileCache.DELETE("/mediastream/videofiles", h.HandleClearFileCacheMediastreamVideoFiles)
-
-	//
-	// Discord
-	//
 
 	//
 	// Media Stream

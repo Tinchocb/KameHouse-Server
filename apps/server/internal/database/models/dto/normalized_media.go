@@ -21,11 +21,10 @@ type NormalizedMedia struct {
 	Episodes         *int
 	BannerImage      *string
 	CoverImage       *NormalizedMediaCoverImage
-	//Relations         *anilist.CompleteAnimeById_Media_CompleteAnime_Relations
 	NextAiringEpisode *NormalizedMediaNextAiringEpisode
 	MetadataStatus    *string // "COMPLETE", "MISSING", "LOCAL"
 	Description       *string
-	// Whether it was fetched from AniList
+	// Whether it was fetched from TMDB
 	fetched bool
 }
 
@@ -73,7 +72,7 @@ func SetNormalizedMediaFetched(m *NormalizedMedia, fetched bool) {
 }
 
 // NewNormalizedMediaFromOfflineDB creates a NormalizedMedia from the anime-offline-database.
-// The media is marked as not fetched (fetched=false) since it lacks some AniList-specific data.
+// The media is marked as not fetched (fetched=false) since it lacks some TMDB-specific data.
 func NewNormalizedMediaFromOfflineDB(
 	id int,
 	idMal *int,

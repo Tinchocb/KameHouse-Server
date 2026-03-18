@@ -34,7 +34,6 @@ type animeSeason struct {
 }
 
 const (
-	anilistPrefix   = "https://anilist.co/anime/"
 	malPrefix       = "https://myanimelist.net/anime/"
 	tmdbTvPrefix    = "https://themoviedb.org/tv/"
 	tmdbMoviePrefix = "https://themoviedb.org/movie/"
@@ -47,7 +46,7 @@ var (
 )
 
 // FetchAndConvertDatabase fetches the database and converts entries to NormalizedMedia.
-// Only entries with valid AniList IDs are included.
+// Only entries with valid provider IDs are included.
 // Entries that already exist in existingMediaIDs are excluded.
 func FetchAndConvertDatabase(existingMediaIDs map[int]bool) ([]*dto.NormalizedMedia, error) {
 	// check cache first
@@ -71,7 +70,7 @@ func FetchAndConvertDatabase(existingMediaIDs map[int]bool) ([]*dto.NormalizedMe
 	}
 
 	// stream and convert directly to NormalizedMedia
-	// estimate ~20300 entries with anilist ids
+	// estimate ~20300 entries with provider ids
 	allMedia := make([]*dto.NormalizedMedia, 0, 20300)
 	result := make([]*dto.NormalizedMedia, 0, 20300)
 
@@ -100,10 +99,10 @@ func FetchAndConvertDatabase(existingMediaIDs map[int]bool) ([]*dto.NormalizedMe
 		// convert immediately and discard raw entry
 		media := convertEntryToNormalizedMedia(&entry)
 		if media == nil {
-			continue // no anilist id
+			continue // no tmdb id or provider id
 		}
 
-		// add to cache (all media with anilist ids)
+		// add to cache (all media with provider ids)
 		allMedia = append(allMedia, media)
 
 		// check if should be included in result
@@ -148,11 +147,11 @@ func ClearCache() {
 }
 
 // convertEntryToNormalizedMedia converts an animeEntry to NormalizedMedia.
-// Returns nil if the entry has no anilist id.
+// Returns nil if the entry has no external provider id.
 func convertEntryToNormalizedMedia(e *animeEntry) *dto.NormalizedMedia {
-	// extract anilist id
-	anilistID := extractAnilistID(e.Sources)
-	if anilistID == 0 {
+	tmdbID := extractTmdbID(e.Sources)
+	// We require at least one ID to store it effectively
+	if tmdbID == 0 {
 		return nil
 	}
 
@@ -162,7 +161,6 @@ func convertEntryToNormalizedMedia(e *animeEntry) *dto.NormalizedMedia {
 		malIDPtr = &malID
 	}
 
-	tmdbID := extractTmdbID(e.Sources)
 	var tmdbIDPtr *int
 	if tmdbID > 0 {
 		tmdbIDPtr = &tmdbID
@@ -271,8 +269,11 @@ func convertEntryToNormalizedMedia(e *animeEntry) *dto.NormalizedMedia {
 		}
 	}
 
+	primaryID := tmdbID
+
+
 	return dto.NewNormalizedMediaFromOfflineDB(
-		anilistID,
+		primaryID, 
 		malIDPtr,
 		tmdbIDPtr,
 		tvdbIDPtr,
@@ -288,21 +289,6 @@ func convertEntryToNormalizedMedia(e *animeEntry) *dto.NormalizedMedia {
 	)
 }
 
-func extractAnilistID(sources []string) int {
-	for _, source := range sources {
-		if strings.HasPrefix(source, anilistPrefix) {
-			idStr := source[len(anilistPrefix):]
-			// handle potential trailing slashes or query params
-			if idx := strings.IndexAny(idStr, "/?"); idx != -1 {
-				idStr = idStr[:idx]
-			}
-			if id, err := strconv.Atoi(idStr); err == nil {
-				return id
-			}
-		}
-	}
-	return 0
-}
 
 func extractMALID(sources []string) int {
 	for _, source := range sources {
@@ -319,10 +305,8 @@ func extractMALID(sources []string) int {
 	return 0
 }
 
-// GetAnilistIdFromThirdParty iterates through the cached AOD database and returns
-// the AniList ID if it finds a matching TMDB or TVDB ID.
-// This is used by the NFO Parser to definitively identify local metadata.
-func GetAnilistIdFromThirdParty(tmdbId int, tvdbId int) int {
+// GetTmdbIdFromThirdParty extracts TMDB ID from the cache based on external provider IDs.
+func GetTmdbIdFromThirdParty(tvdbId int) int {
 	normalizedMediaCacheMu.RLock()
 	defer normalizedMediaCacheMu.RUnlock()
 
@@ -331,11 +315,10 @@ func GetAnilistIdFromThirdParty(tmdbId int, tvdbId int) int {
 	}
 
 	for _, media := range normalizedMediaCache {
-		if tmdbId > 0 && media.TmdbId != nil && *media.TmdbId == tmdbId {
-			return media.ID
-		}
-		if tvdbId > 0 && media.TvdbId != nil && *media.TvdbId == tvdbId {
-			return media.ID
+		if media.TmdbId != nil {
+			if tvdbId > 0 && media.TvdbId != nil && *media.TvdbId == tvdbId {
+				return *media.TmdbId
+			}
 		}
 	}
 

@@ -77,9 +77,8 @@ func NewEpisodeCollection(opts NewEpisodeCollectionOptions) (ec *EpisodeCollecti
 				Titles:       make(map[string]string),
 				Episodes:     make(map[string]*metadata.EpisodeMetadata),
 				EpisodeCount: 0,
-				SpecialCount: 0,
 				Mappings: &metadata.AnimeMappings{
-					AnilistId: int(opts.Media.ID),
+					ThemoviedbId: strconv.Itoa(int(opts.Media.ID)), // Store it in ThemoviedbId field for now as a generic media ID marker
 				},
 			}
 			opts.AnimeMetadata.Titles["en"] = opts.Media.TitleEnglish
@@ -130,7 +129,7 @@ func NewEpisodeCollection(opts NewEpisodeCollectionOptions) (ec *EpisodeCollecti
 	// As of v2.8.0, this should never happen, getMediaInfo always returns an anime metadata struct, even if it's not found
 	// causing NewEntryDownloadInfo to return a valid list of episodes to download
 	if info == nil || info.EpisodesToDownload == nil {
-		opts.Logger.Debug().Msg("torrentstream: no episodes found from AniDB, using AniList")
+		opts.Logger.Debug().Msg("torrentstream: no episodes found from AniDB, using internal provider")
 		mediaWrapper := opts.MetadataProviderRef.Get().GetAnimeMetadataWrapper(nil, nil)
 		for epIdx := range 0 /* TODO: Use actual episode count when available locally */ {
 			episodeNumber := epIdx + 1
@@ -234,9 +233,8 @@ func NewEpisodeCollectionFromLocalFiles(ctx context.Context, opts NewEpisodeColl
 			Titles:       make(map[string]string),
 			Episodes:     make(map[string]*metadata.EpisodeMetadata),
 			EpisodeCount: 0,
-			SpecialCount: 0,
 			Mappings: &metadata.AnimeMappings{
-				AnilistId: int(opts.Media.ID),
+				ThemoviedbId: strconv.Itoa(int(opts.Media.ID)),
 			},
 		}
 		animeMetadata.Titles["en"] = opts.Media.TitleEnglish

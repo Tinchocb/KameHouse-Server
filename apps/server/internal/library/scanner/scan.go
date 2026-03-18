@@ -1,5 +1,5 @@
 // EXPERIMENTAL: This file contains the ScannerAgent concurrent pipeline.
-// It is NOT connected to the production TMDB/AniList scanning flow.
+// It is NOT connected to the production TMDB/Platform scanning flow.
 // Production scanning is handled by Scanner in scan_legacy.go.
 // This agent is retained for future iteration on a channel-based architecture.
 package scanner
@@ -236,7 +236,7 @@ func (a *ScannerAgent) processPath(ctx context.Context, path string) MediaMatch 
 		match = MediaMatch{
 			ParsedMedia: pm,
 			CleanTitle:  parsed.Title,
-			ExternalID:  fmt.Sprintf("AL:%d", cachedEntry.MediaID),
+			ExternalID:  fmt.Sprintf("TMDB:%d", cachedEntry.MediaID),
 			Confidence:  cachedEntry.Confidence,
 		}
 	} else {
@@ -246,7 +246,7 @@ func (a *ScannerAgent) processPath(ctx context.Context, path string) MediaMatch 
 		// Run regex parser
 		parsed := parser.Parse(path)
 		
-		// Use fetcher to get proper TMDB/AniList metadata and cache it
+		// Use fetcher to get proper TMDB metadata and cache it
 		if parsed.Title != "" {
 			meta, _ := a.fetcher.Search(parsed.Title)
 			if meta.Title != "" {

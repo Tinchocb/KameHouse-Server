@@ -64,7 +64,7 @@ export interface Episode {
     /** True if a local media file is available. False implies cloud/stremio. */
     hasLocalFile?: boolean
     /**
-     * AniList media ID — required to resolve sources from the unified engine.
+     * Platform media ID — required to resolve sources from the unified engine.
      * When provided, the card fetches `EpisodeSourcesResponse` and renders
      * dynamic source badges (LOCAL / STREAM / LOCAL+STREAM).
      */

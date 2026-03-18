@@ -11,8 +11,9 @@ const (
 	GcTime               = time.Minute * 30
 	ConfigFileName       = "config.toml"
 	MalClientId          = "51cb4294feb400f3ddc66a30f9b9a00f"
-	DiscordApplicationId = "1224777421941899285"
-	AnilistApiUrl        = "https://graphql.anilist.co"
+
+	TmdbApiUrl           = "https://api.themoviedb.org/3"
+	TmdbImageBaseUrl     = "https://image.tmdb.org/t/p/original"
 	IsRspackFrontend     = true
 )
 

@@ -77,7 +77,6 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 				if strings.HasPrefix(cUrl.RequestURI(), "/api") ||
 					strings.HasPrefix(cUrl.RequestURI(), "/events") ||
 					strings.HasPrefix(cUrl.RequestURI(), "/assets") ||
-					strings.HasPrefix(cUrl.RequestURI(), "/manga-downloads") ||
 					strings.HasPrefix(cUrl.RequestURI(), "/offline-assets") {
 					return true // Continue to the next handler
 				}
@@ -95,7 +94,6 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 				if strings.HasPrefix(cUrl, "/api") ||
 					strings.HasPrefix(cUrl, "/events") ||
 					strings.HasPrefix(cUrl, "/assets") ||
-					strings.HasPrefix(cUrl, "/manga-downloads") ||
 					strings.HasPrefix(cUrl, "/offline-assets") {
 					return next(c)
 				}
@@ -115,7 +113,6 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 				if strings.HasPrefix(cUrl.RequestURI(), "/api") ||
 					strings.HasPrefix(cUrl.RequestURI(), "/events") ||
 					strings.HasPrefix(cUrl.RequestURI(), "/assets") ||
-					strings.HasPrefix(cUrl.RequestURI(), "/manga-downloads") ||
 					strings.HasPrefix(cUrl.RequestURI(), "/offline-assets") {
 					return true
 				}
@@ -130,11 +127,6 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 	app.Logger.Info().Msgf("app: Web assets path: %s", app.Config.Web.AssetDir)
 	e.Static("/assets", app.Config.Web.AssetDir)
 
-	// Serve manga downloads
-	if app.Config.Manga.DownloadDir != "" {
-		app.Logger.Info().Msgf("app: Manga downloads path: %s", app.Config.Manga.DownloadDir)
-		e.Static("/manga-downloads", app.Config.Manga.DownloadDir)
-	}
 
 	// Serve offline assets
 	app.Logger.Info().Msgf("app: Offline assets path: %s", app.Config.Offline.AssetDir)

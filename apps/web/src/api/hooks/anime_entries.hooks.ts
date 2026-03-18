@@ -9,7 +9,7 @@ import {
     UpdateAnimeEntryRepeat_Variables,
 } from "@/api/generated/endpoint.types"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
-import { AL_BaseAnime, Anime_Entry, Anime_LocalFile, Anime_MissingEpisodes, Anime_UpcomingEpisodes, Nullish } from "@/api/generated/types"
+import { Platform_BaseAnime, Anime_Entry, Anime_LocalFile, Anime_MissingEpisodes, Anime_UpcomingEpisodes, Nullish } from "@/api/generated/types"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
@@ -58,7 +58,7 @@ export function useOpenAnimeEntryInExplorer() {
 }
 
 export function useFetchAnimeEntrySuggestions() {
-    return useServerMutation<Array<AL_BaseAnime>, FetchAnimeEntrySuggestions_Variables>({
+    return useServerMutation<Array<Platform_BaseAnime>, FetchAnimeEntrySuggestions_Variables>({
         endpoint: API_ENDPOINTS.ANIME_ENTRIES.FetchAnimeEntrySuggestions.endpoint,
         method: API_ENDPOINTS.ANIME_ENTRIES.FetchAnimeEntrySuggestions.methods[0],
         mutationKey: [API_ENDPOINTS.ANIME_ENTRIES.FetchAnimeEntrySuggestions.key],
@@ -151,7 +151,7 @@ export function useUpdateAnimeEntryProgress(id: Nullish<string | number>, episod
             }
         },
         onSettled: async () => {
-            await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANILIST.GetAnimeCollection.key] })
+            await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.PLATFORM.GetCollection.key] })
             await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key] })
             if (id) {
                 await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, String(id)] })

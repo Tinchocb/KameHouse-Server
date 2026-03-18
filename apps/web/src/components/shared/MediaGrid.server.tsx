@@ -4,7 +4,7 @@ export interface MediaItem {
     id: string | number
     title: string
     coverImage: string
-    type: "anime" | "manga" | "series" | "movie" | "local"
+    type: "anime" | "series" | "movie" | "local"
     // Optional slot for client-side interactive wrapper injection
     interactiveElement?: ReactNode
 }

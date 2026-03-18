@@ -24,7 +24,6 @@ var (
 
 const (
 	AnimeType = "anime"
-	MangaType = "manga"
 )
 
 type Manager interface {
@@ -36,7 +35,7 @@ type Manager interface {
 	UpdateLocalAnimeCollection(ac *platform.UnifiedCollection)
 	// GetOfflineMetadataProvider returns the offline metadata provider.
 	GetOfflineMetadataProvider() metadata_provider.Provider
-	// GetSyncer returns the syncer (used to synchronize the anime and manga snapshots in the local database).
+	// GetSyncer returns the syncer (used to synchronize the anime snapshots in the local database).
 	GetSyncer() *Syncer
 	AutoTrackCurrentMedia() (bool, error)
 	// TrackAnime adds an anime to track for offline use.
@@ -49,12 +48,12 @@ type Manager interface {
 	// GetTrackedMediaItems returns all tracked media items.
 	GetTrackedMediaItems() []*TrackedMediaItem
 	// SynchronizeLocal syncs all currently tracked media.
-	// Compares the local database with the user's anime and manga collections and updates the local database accordingly.
+	// Compares the local database with the user's anime collection and updates the local database accordingly.
 	SynchronizeLocal() error
-	// SynchronizeAnilist syncs the user's AniList data with data stored in the local database.
-	SynchronizeAnilist() error
-	// SetRefreshAnilistCollectionsFunc sets the function to call to refresh the online AniList collections.
-	SetRefreshAnilistCollectionsFunc(func())
+	// SynchronizePlatform syncs the user's Platform data with data stored in the local database.
+	SynchronizePlatform() error
+	// SetRefreshPlatformCollectionsFunc sets the function to call to refresh the online Platform collections.
+	SetRefreshPlatformCollectionsFunc(func())
 	// HasLocalChanges checks if there are any local changes that need to be uploaded or ignored.
 	HasLocalChanges() bool
 	// SetHasLocalChanges sets the flag to determine if there are local changes that need to be uploaded or ignored.
@@ -65,10 +64,10 @@ type Manager interface {
 	GetSimulatedAnimeCollection() mo.Option[*platform.UnifiedCollection]
 	// SaveSimulatedAnimeCollection sets the simulated anime collection for unauthenticated users.
 	SaveSimulatedAnimeCollection(ac *platform.UnifiedCollection)
-	// SynchronizeSimulatedCollectionToAnilist synchronizes the simulated anime and manga collections to the user's AniList account.
-	SynchronizeSimulatedCollectionToAnilist() error
-	// SynchronizeAnilistToSimulatedCollection synchronizes the user's AniList account to the simulated anime and manga collections.
-	SynchronizeAnilistToSimulatedCollection() error
+	// SynchronizeSimulatedCollectionToPlatform synchronizes the simulated anime collection to the user's Platform account.
+	SynchronizeSimulatedCollectionToPlatform() error
+	// SynchronizePlatformToSimulatedCollection synchronizes the user's Platform account to the simulated anime collection.
+	SynchronizePlatformToSimulatedCollection() error
 
 	SetOffline(bool)
 }
@@ -98,7 +97,7 @@ type (
 		// Local files, set by ManagerImpl.Synchronize, accessed by the synchronization Syncer
 		localFiles []*dto.LocalFile
 
-		RefreshAnilistCollectionsFunc func()
+		RefreshPlatformCollectionsFunc func()
 	}
 	TrackedMediaItem struct {
 		MediaId    int                              `json:"mediaId"`
@@ -140,7 +139,7 @@ func NewManager(opts *NewManagerOptions) (Manager, error) {
 		wsEventManager:                opts.WSEventManager,
 		isOffline:                     opts.IsOffline,
 		platformRef:                   opts.PlatformRef,
-		RefreshAnilistCollectionsFunc: func() {},
+		RefreshPlatformCollectionsFunc: func() {},
 	}
 
 	ret.syncer = NewQueue(ret)
@@ -154,8 +153,8 @@ func NewManager(opts *NewManagerOptions) (Manager, error) {
 	return ret, nil
 }
 
-func (m *ManagerImpl) SetRefreshAnilistCollectionsFunc(f func()) {
-	m.RefreshAnilistCollectionsFunc = f
+func (m *ManagerImpl) SetRefreshPlatformCollectionsFunc(f func()) {
+	m.RefreshPlatformCollectionsFunc = f
 }
 
 func (m *ManagerImpl) GetSyncer() *Syncer {
@@ -357,16 +356,16 @@ func (m *ManagerImpl) GetTrackedMediaItems() (ret []*TrackedMediaItem) {
 
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 
-// SynchronizeLocal should be called after updates to the user's anime and manga collections.
+// SynchronizeLocal should be called after updates to the user's anime collection.
 //
-//   - After adding/removing an anime or manga to track
-//   - After the user's anime and manga collections have been updated (e.g. after a user's anime and manga list has been updated)
+//   - After adding/removing an anime to track
+//   - After the user's anime collection has been updated (e.g. after a user's anime list has been updated)
 //
 // It will add media list entries from the user's collection to the Syncer only if the media is tracked.
-//   - The Syncer will then synchronize the anime & manga with the local database if needed
+//   - The Syncer will then synchronize the anime with the local database if needed
 //
-// It will remove any anime & manga from the local database that are not in the user's collection anymore.
-// It will then update the ManagerImpl.localAnimeCollection and ManagerImpl.localMangaCollection
+// It will remove any anime from the local database that are not in the user's collection anymore.
+// It will then update the ManagerImpl.localAnimeCollection
 func (m *ManagerImpl) SynchronizeLocal() error {
 
 	localStorageSizeCache = 0
@@ -383,7 +382,7 @@ func (m *ManagerImpl) SynchronizeLocal() error {
 		return fmt.Errorf("local manager: Couldn't start syncing, failed to get local files: %w", err)
 	}
 
-	// Check if the anime and manga collections are set
+	// Check if the anime collection is set
 	if m.animeCollection.IsAbsent() {
 		return fmt.Errorf("local manager: Couldn't start syncing, anime collection not set")
 	}
@@ -397,7 +396,7 @@ func (m *ManagerImpl) synchronize(lfs []*dto.LocalFile) error {
 
 	m.localFiles = lfs
 
-	// Check if the anime and manga collections are set
+	// Check if the anime collection is set
 	if m.animeCollection.IsAbsent() {
 		return fmt.Errorf("local manager: Anime collection not set")
 	}
@@ -430,7 +429,7 @@ func (m *ManagerImpl) synchronize(lfs []*dto.LocalFile) error {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func (m *ManagerImpl) SynchronizeAnilist() error {
+func (m *ManagerImpl) SynchronizePlatform() error {
 	if m.animeCollection.IsAbsent() {
 		return fmt.Errorf("local manager: Anime collection not set")
 	}
@@ -489,9 +488,9 @@ func (m *ManagerImpl) SynchronizeAnilist() error {
 		}
 	}
 
-	m.RefreshAnilistCollectionsFunc()
+	m.RefreshPlatformCollectionsFunc()
 
-	m.wsEventManager.SendEvent(events.RefreshedAnilistAnimeCollection, nil)
+	m.wsEventManager.SendEvent(events.RefreshedAnimeCollection, nil)
 
 	return nil
 }
@@ -584,8 +583,8 @@ func (m *ManagerImpl) SaveSimulatedAnimeCollection(ac *platform.UnifiedCollectio
 	_ = m.localDb.SaveSimulatedAnimeCollection(ac)
 }
 
-func (m *ManagerImpl) SynchronizeAnilistToSimulatedCollection() error {
-	m.logger.Trace().Msg("local manager: Synchronizing Anilist to simulated (local) collection")
+func (m *ManagerImpl) SynchronizePlatformToSimulatedCollection() error {
+	m.logger.Trace().Msg("local manager: Synchronizing Platform to simulated (local) collection")
 
 	if animeCollection, ok := m.animeCollection.Get(); ok {
 		m.SaveSimulatedAnimeCollection(animeCollection)
@@ -594,7 +593,7 @@ func (m *ManagerImpl) SynchronizeAnilistToSimulatedCollection() error {
 	return nil
 }
 
-func (m *ManagerImpl) SynchronizeSimulatedCollectionToAnilist() error {
+func (m *ManagerImpl) SynchronizeSimulatedCollectionToPlatform() error {
 	if localAnimeCollection, ok := m.localDb.GetSimulatedAnimeCollection(); ok {
 		for _, list := range localAnimeCollection.Lists {
 			if list.Entries == nil {
@@ -648,9 +647,9 @@ func (m *ManagerImpl) SynchronizeSimulatedCollectionToAnilist() error {
 		}
 	}
 
-	m.RefreshAnilistCollectionsFunc()
+	m.RefreshPlatformCollectionsFunc()
 
-	m.wsEventManager.SendEvent(events.RefreshedAnilistAnimeCollection, nil)
+	m.wsEventManager.SendEvent(events.RefreshedAnimeCollection, nil)
 
 	return nil
 }

@@ -1,6 +1,6 @@
 package util
 
-//go:generate go run ../../../cmd/gen-useragents/main.go
+//go:generate go run ../../cmd/gen-useragents/main.go
 
 import (
 	"bufio"

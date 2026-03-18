@@ -80,7 +80,7 @@ export function DeferredImage(props: DeferredImageProps) {
         };
     }, [rootMargin, threshold, priority]);
 
-    // Only apply srcSet if it's a known image provider that supports it (like TMDB/Anilist if they were proxied)
+    // Only apply srcSet if it's a known image provider that supports it (like TMDB/Platform if they were proxied)
     // For now, we'll keep it simple as we don't know the backend's image resizing capabilities for all sources
     const generateSrcSet = useCallback((url: string): string | undefined => {
         if (!url || url.startsWith('data:') || url.includes('localhost') || url.includes('127.0.0.1')) {

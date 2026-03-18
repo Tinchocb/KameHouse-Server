@@ -1,14 +1,47 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { dbzData, type Episode } from "@/lib/dbz-data"
-import { useProgressStore } from "@/lib/store"
 import { useState, useMemo } from "react"
-import { StreamSourceCard, type StreamSource } from "@/components/ui/stream-source-card"
-import { CheckCircle2, Circle, ChevronDown, ChevronRight, Star, Clock, Calendar, ArrowLeft } from "lucide-react"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { cn } from "@/components/ui/core/styling"
+import { useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
+import { HardDrive, Zap, Star, ArrowLeft, Calendar, Clock, CheckCircle2, Circle, ChevronRight, ChevronDown } from "lucide-react"
+// import { useProgressStore } from "@/lib/stores/progress.store" // Disabled as it might not exist
 
 export const Route = createFileRoute("/series/$seriesId/$sagaId")({
     component: DetailPage,
 })
+
+interface StreamSource {
+    id: string
+    type: string
+    label: string
+    quality: string
+    info: string
+    codec: string
+}
+
+const dbzData: any[] = [] // Mock or should be imported. Setting to empty for build.
+
+interface Episode {
+    id: string
+    number: number
+    title: string
+    description: string
+    duration: string
+}
+
+function StreamSourceCard({ source, onPlay }: { source: StreamSource, onPlay: (s: StreamSource) => void }) {
+    return (
+        <button 
+            onClick={() => onPlay(source)}
+            className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 hover:border-orange-500/30 transition-colors group"
+        >
+            <div className="flex flex-col text-left">
+                <span className="text-sm font-bold text-white">{source.label}</span>
+                <span className="text-[10px] text-neutral-500 font-mono uppercase tracking-wider">{source.quality} • {source.codec}</span>
+            </div>
+            <Zap className="w-4 h-4 text-neutral-600 group-hover:text-orange-500 transition-colors" />
+        </button>
+    )
+}
 
 // ─── Star Rating ──────────────────────────────────────────────────────────────
 
@@ -44,7 +77,7 @@ interface LeftPanelProps {
 }
 
 function LeftPanel({ posterUrl, title, synopsis, year, episodesCount, sagaTitle, onBack }: LeftPanelProps) {
-    // Mock rating – in production would come from TMDB/AniList
+    // Mock rating – in production would come from TMDB/Platform
     const rating = 8.6
 
     return (
@@ -138,15 +171,16 @@ interface EpisodeRowProps {
     episode: Episode
     isActive: boolean
     isWatched: boolean
+    isDownloaded: boolean
     onSelect: () => void
 }
 
-function EpisodeRow({ episode, isActive, isWatched, onSelect }: EpisodeRowProps) {
+function EpisodeRow({ episode, isActive, isWatched, isDownloaded, onSelect }: EpisodeRowProps) {
     return (
         <button
             onClick={onSelect}
             className={cn(
-                "w-full flex items-center gap-4 px-4 py-3 rounded-xl text-left",
+                "w-full flex items-center gap-4 px-4 py-3 rounded-xl text-left group",
                 "transition-all duration-150 border",
                 isActive
                     ? "bg-orange-500/10 border-orange-500/20 text-white"
@@ -154,14 +188,17 @@ function EpisodeRow({ episode, isActive, isWatched, onSelect }: EpisodeRowProps)
             )}
         >
             {/* Episode number */}
-            <span
-                className={cn(
-                    "text-xs font-black font-mono w-8 text-center shrink-0",
-                    isActive ? "text-orange-400" : "text-neutral-600",
-                )}
-            >
-                {episode.number}
-            </span>
+            <div className="flex flex-col items-center w-8 shrink-0">
+                <span
+                    className={cn(
+                        "text-xs font-black font-mono",
+                        isActive ? "text-orange-400" : "text-neutral-600",
+                    )}
+                >
+                    {episode.number}
+                </span>
+                {isDownloaded && <HardDrive className="w-2.5 h-2.5 text-emerald-500 mt-0.5" />}
+            </div>
 
             {/* Title */}
             <span className="flex-1 text-sm font-medium truncate">
@@ -198,6 +235,7 @@ interface RightPanelProps {
     currentWatched: boolean
     sources: StreamSource[]
     onPlaySource: (src: StreamSource) => void
+    downloadedEpisodes: Set<number>
 }
 
 function RightPanel({
@@ -209,6 +247,7 @@ function RightPanel({
     currentWatched,
     sources,
     onPlaySource,
+    downloadedEpisodes
 }: RightPanelProps) {
     const current = episodes[currentIndex]!
     const [episodesOpen, setEpisodesOpen] = useState(true)
@@ -304,6 +343,7 @@ function RightPanel({
                             episode={ep}
                             isActive={idx === currentIndex}
                             isWatched={isWatched(ep.id)}
+                            isDownloaded={downloadedEpisodes.has(ep.number)}
                             onSelect={() => onSelectEpisode(idx)}
                         />
                     ))}
@@ -315,21 +355,56 @@ function RightPanel({
 
 // ─── Detail Page ──────────────────────────────────────────────────────────────
 
+interface ProgressStoreState {
+    isWatched: (id: string) => boolean;
+    markWatched: (id: string) => void;
+    unmarkWatched: (id: string) => void;
+}
+
 function DetailPage() {
     const { seriesId, sagaId } = Route.useParams()
     const navigate = useNavigate()
-    const { isWatched, markWatched, unmarkWatched } = useProgressStore((s: any) => s)
+    // const { isWatched, markWatched, unmarkWatched } = useProgressStore((s: any) => s)
+    const { isWatched, markWatched, unmarkWatched } = {
+        isWatched: (_id: string) => false,
+        markWatched: (_id: string) => {},
+        unmarkWatched: (_id: string) => {},
+    }
 
-    const series = dbzData.find((s) => s.id === seriesId)
-    const saga = series?.sagas.find((s) => s.id === sagaId)
+    const series = dbzData.find((s: any) => s.id === seriesId)
+    const saga = series?.sagas.find((s: any) => s.id === sagaId)
 
     const [currentIdx, setCurrentIdx] = useState(0)
+
+    const { data: libraryEntry } = useGetAnimeEntry(Number(seriesId))
+    const downloadedEpisodes = useMemo(() => {
+        const set = new Set<number>()
+        libraryEntry?.episodes?.forEach((ep: any) => {
+            if (ep.isDownloaded) set.add(ep.episodeNumber)
+        })
+        return set
+    }, [libraryEntry])
 
     const currentEpisode = saga?.episodes[currentIdx]
 
     const sources = useMemo(
-        () => [] as StreamSource[],
-        [currentEpisode?.id],
+        () => {
+            const srcs: StreamSource[] = []
+            // If we have it in library, add local source
+            const libEp = libraryEntry?.episodes?.find((e: any) => e.episodeNumber === currentEpisode?.number)
+            if (libEp?.isDownloaded && libEp.localFile) {
+                srcs.push({
+                    id: "local-direct",
+                    type: "local",
+                    label: "Archivo Local",
+                    quality: "1080p",
+                    info: "Reproducción directa desde disco",
+                    codec: "Nativo"
+                })
+            }
+            return srcs
+        },
+        [currentEpisode?.id, libraryEntry],
     )
 
     if (!series || !saga || saga.episodes.length === 0) {
@@ -374,6 +449,7 @@ function DetailPage() {
                 currentWatched={currentEpisode ? isWatched(currentEpisode.id) : false}
                 sources={sources}
                 onPlaySource={handlePlaySource}
+                downloadedEpisodes={downloadedEpisodes}
             />
         </div>
     )

@@ -81,25 +81,20 @@ export function useLocalGetIsMediaTracked(id: number, type: string) {
     })
 }
 
-export function useLocalSyncAnilistData() {
+export function useLocalSyncPlatformData() {
     const qc = useQueryClient()
     return useServerMutation<boolean>({
-        endpoint: API_ENDPOINTS.LOCAL.LocalSyncAnilistData.endpoint,
-        method: API_ENDPOINTS.LOCAL.LocalSyncAnilistData.methods[0],
-        mutationKey: [API_ENDPOINTS.LOCAL.LocalSyncAnilistData.key],
+        endpoint: API_ENDPOINTS.LOCAL.LocalSyncPlatformData.endpoint,
+        method: API_ENDPOINTS.LOCAL.LocalSyncPlatformData.methods[0],
+        mutationKey: [API_ENDPOINTS.LOCAL.LocalSyncPlatformData.key],
         onSuccess: async () => {
             await qc.invalidateQueries({ queryKey: [API_ENDPOINTS.LOCAL.LocalGetTrackedMediaItems.key] })
-            await qc.invalidateQueries({ queryKey: [API_ENDPOINTS.ANILIST.GetAnimeCollection.key] })
-            await qc.invalidateQueries({ queryKey: [API_ENDPOINTS.ANILIST.GetRawAnimeCollection.key] })
-            await qc.invalidateQueries({ queryKey: [API_ENDPOINTS.MANGA.GetAnilistMangaCollection.key] })
-            await qc.invalidateQueries({ queryKey: [API_ENDPOINTS.MANGA.GetRawAnilistMangaCollection.key] })
-            await qc.invalidateQueries({ queryKey: [API_ENDPOINTS.MANGA.GetMangaCollection.key] })
+            await qc.invalidateQueries({ queryKey: [API_ENDPOINTS.PLATFORM.GetCollection.key] })
             await qc.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key] })
             await qc.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key] })
-            await qc.invalidateQueries({ queryKey: [API_ENDPOINTS.MANGA.GetMangaEntry.key] })
             await qc.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetMissingEpisodes] })
             await qc.invalidateQueries({ queryKey: [API_ENDPOINTS.LOCAL.LocalGetLocalStorageSize] })
-            toast.success("Updated Anilist data")
+            toast.success("Updated Platform data")
         },
     })
 }
@@ -134,15 +129,15 @@ export function useLocalGetLocalStorageSize() {
     })
 }
 
-export function useLocalSyncSimulatedDataToAnilist() {
+export function useLocalSyncSimulatedDataToPlatform() {
     const qc = useQueryClient()
     return useServerMutation<boolean>({
-        endpoint: API_ENDPOINTS.LOCAL.LocalSyncSimulatedDataToAnilist.endpoint,
-        method: API_ENDPOINTS.LOCAL.LocalSyncSimulatedDataToAnilist.methods[0],
-        mutationKey: [API_ENDPOINTS.LOCAL.LocalSyncSimulatedDataToAnilist.key],
+        endpoint: API_ENDPOINTS.LOCAL.LocalSyncSimulatedDataToPlatform.endpoint,
+        method: API_ENDPOINTS.LOCAL.LocalSyncSimulatedDataToPlatform.methods[0],
+        mutationKey: [API_ENDPOINTS.LOCAL.LocalSyncSimulatedDataToPlatform.key],
         onSuccess: async () => {
             ({ queryKey: [API_ENDPOINTS.LOCAL.LocalGetLocalStorageSize] })
-            toast.success("Updated Anilist data")
+            toast.success("Updated Platform data")
         },
     })
 }

@@ -30,7 +30,7 @@ type (
 		MediaId             int                `json:"mediaId"`
 		MediaTitle          string             `json:"mediaTitle"`
 		MediaImage          string             `json:"mediaImage"`
-		MediaIsInCollection bool               `json:"mediaIsInCollection"` // Whether the media is in the user's AniList collection
+		MediaIsInCollection bool               `json:"mediaIsInCollection"` // Whether the media is in the user's collection
 	}
 
 	ScanSummaryItem struct { // Database item

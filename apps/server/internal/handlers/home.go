@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/library/anime"
 
 	"github.com/labstack/echo/v4"
@@ -44,6 +45,10 @@ func (h *Handler) HandleGetContinueWatching(c echo.Context) error {
 	resp, err := svc.GetContinueWatching(ctx, userID)
 	if err != nil {
 		return h.JSON(c, 500, NewErrorResponse(err))
+	}
+
+	if resp == nil {
+		resp = make([]dto.ContinueWatchingItem, 0)
 	}
 
 	return h.JSON(c, 200, NewDataResponse(resp))

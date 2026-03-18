@@ -9,8 +9,8 @@ import (
 	"unicode"
 )
 
-// ReExplicitProvider matches explicit provider tags like [anilist-12345], [tmdb-12345], etc.
-var ReExplicitProvider = regexp.MustCompile(`\[(?i)(?P<provider>anilist|tmdb|imdb)-(?P<id>[a-zA-Z0-9]+)\]`)
+// ReExplicitProvider matches explicit provider tags like [tmdb-12345], [mal-12344], etc.
+var ReExplicitProvider = regexp.MustCompile(`\[(?i)(?P<provider>tmdb|imdb)-(?P<id>[a-zA-Z0-9]+)\]`)
 
 // ExtractExplicitProvider parses the title, extracts ExplicitProvider and ExplicitID
 // into the NormalizedMedia struct, and returns the stripped title.

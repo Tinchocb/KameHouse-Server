@@ -16,19 +16,19 @@ import (
 	"github.com/samber/lo"
 )
 
-// DEVNOTE: The synchronization process is split into 3 parts:
-// 1. ManagerImpl.synchronize removes outdated tracked anime & manga, runs Syncer.runDiffs and adds changed tracked anime & manga to the queue.
-// 2. The Syncer processes the queue, calling Syncer.synchronizeAnime and Syncer.synchronizeManga for each job.
-// 3. Syncer.synchronizeCollections creates a local collection that mirrors the remote collection, containing only the tracked anime & manga. Only called when the queue is emptied.
+// DEVNOTE: The synchronization process is split into 2 parts:
+// 1. ManagerImpl.synchronize removes outdated tracked anime, runs Syncer.runDiffs and adds changed tracked anime to the queue.
+// 2. The Syncer processes the queue, calling Syncer.synchronizeAnime for each job.
+// 3. Syncer.synchronizeCollections creates a local collection that mirrors the remote collection, containing only the tracked anime. Only called when the queue is emptied.
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type (
-	// Syncer will synchronize the anime and manga snapshots in the local database.
-	// Anytime Manager.Synchronize is called, tracked anime and manga will be added to the queue.
-	// The queue will synchronize one anime and one manga every X minutes, until it's empty.
+	// Syncer will synchronize the anime snapshots in the local database.
+	// Anytime Manager.Synchronize is called, tracked anime will be added to the queue.
+	// The queue will synchronize one anime every X minutes, until it's empty.
 	//
-	// Synchronization can fail due to network issues. When it does, the anime or manga will be added to the failed queue.
+	// Synchronization can fail due to network issues. When it does, the anime will be added to the failed queue.
 	Syncer struct {
 		animeJobQueue chan AnimeTask
 
@@ -250,7 +250,7 @@ func (q *Syncer) synchronizeCollections() (err error) {
 	// DEVNOTE: "_" prefix = original/remote collection
 	// We shouldn't modify the remote collection, so making sure we get new pointers
 
-	q.manager.logger.Trace().Msg("local manager: Synchronizing local collections")
+	q.manager.logger.Trace().Msg("local manager: Synchronizing local collection")
 
 	_animeCollection := q.manager.animeCollection.MustGet()
 

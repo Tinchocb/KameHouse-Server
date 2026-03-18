@@ -3,7 +3,7 @@ package models
 import "time"
 
 // LibraryMedia represents a local TV show, Anime, or Movie.
-// It is decoupled from AniList and uses its own primary key.
+// It is decoupled from third-party platforms and uses its own primary key.
 type LibraryMedia struct {
 	BaseModel
 	Type   string `gorm:"column:type" json:"type"`     // e.g., "ANIME", "SHOW", "MOVIE"
@@ -42,7 +42,7 @@ func (m *LibraryMedia) IsMovieOrSingleEpisode() bool {
 	if m == nil {
 		return false
 	}
-	return m.Format == "MOVIE" || m.Format == "SPECIAL" || m.Format == "MUSIC" || m.Format == "MANGA" || m.Format == "NOVEL" || m.Format == "ONE_SHOT"
+	return m.Format == "MOVIE" || m.Format == "SPECIAL" || m.Format == "MUSIC"
 }
 
 func (m *LibraryMedia) GetID() int {
@@ -144,7 +144,7 @@ type ProviderMapping struct {
 	LibraryMediaID uint          `gorm:"column:library_media_id;index" json:"libraryMediaId"`
 	LibraryMedia   *LibraryMedia `gorm:"foreignKey:LibraryMediaID" json:"-"`
 
-	Provider   string `gorm:"column:provider;index" json:"provider"` // "tmdb", "anilist", "tvdb"
+	Provider   string `gorm:"column:provider;index" json:"provider"` // "tmdb", "platform", "tvdb"
 	ExternalID string `gorm:"column:external_id;index" json:"externalId"`
 }
 

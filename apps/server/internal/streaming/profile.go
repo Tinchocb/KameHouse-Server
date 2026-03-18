@@ -66,7 +66,7 @@ var remuxFriendlyCodecs = map[string]bool{
 }
 
 // AnalyzePlayback evaluates container and codecs against client capabilities in O(1).
-// Technical substitution: Extracts pure Jellyfin domain logic independent of FFmpeg commands.
+// Technical substitution: Extracts pure playback decision logic independent of FFmpeg commands.
 func AnalyzePlayback(container, videoCodec, audioCodec string, burnSubs bool, profile *ClientProfile) PlaybackMethod {
 	if profile == nil {
 		return Transcode

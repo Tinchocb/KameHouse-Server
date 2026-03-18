@@ -106,8 +106,8 @@ func (h *Handler) HandleLocalRemoveTrackedMedia(c echo.Context) error {
 //
 //	@summary checks if media is being tracked for offline sync.
 //	@route /api/v1/local/track/{id}/{type} [GET]
-//	@param id - int - true - "AniList anime media ID"
-//	@param type - string - true - "Type of media (anime/manga)"
+//	@param id - int - true - "Platform anime media ID"
+//	@param type - string - true - "Type of media (anime)"
 //	@returns bool
 func (h *Handler) HandleLocalGetIsMediaTracked(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
@@ -123,7 +123,7 @@ func (h *Handler) HandleLocalGetIsMediaTracked(c echo.Context) error {
 
 // HandleLocalSyncData
 //
-//	@summary syncs local data with AniList.
+//	@summary syncs local data with Platform.
 //	@route /api/v1/local/local [POST]
 //	@returns bool
 func (h *Handler) HandleLocalSyncData(c echo.Context) error {
@@ -158,13 +158,13 @@ func (h *Handler) HandleLocalGetSyncQueueState(c echo.Context) error {
 	return h.RespondWithData(c, h.App.LocalManager.GetSyncer().GetQueueState())
 }
 
-// HandleLocalSyncAnilistData
+// HandleLocalSyncPlatformData
 //
-//	@summary syncs AniList data with local.
-//	@route /api/v1/local/anilist [POST]
+//	@summary syncs Platform data with local.
+//	@route /api/v1/local/Platform [POST]
 //	@returns bool
-func (h *Handler) HandleLocalSyncAnilistData(c echo.Context) error {
-	err := h.App.LocalManager.SynchronizeAnilist()
+func (h *Handler) HandleLocalSyncPlatformData(c echo.Context) error {
+	err := h.App.LocalManager.SynchronizePlatform()
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
@@ -173,7 +173,7 @@ func (h *Handler) HandleLocalSyncAnilistData(c echo.Context) error {
 
 // HandleLocalSetHasLocalChanges
 //
-//	@summary sets the flag to determine if there are local changes that need to be synced with AniList.
+//	@summary sets the flag to determine if there are local changes that need to be synced with Platform.
 //	@route /api/v1/local/updated [POST]
 //	@returns bool
 func (h *Handler) HandleLocalSetHasLocalChanges(c echo.Context) error {
@@ -192,7 +192,7 @@ func (h *Handler) HandleLocalSetHasLocalChanges(c echo.Context) error {
 
 // HandleLocalGetHasLocalChanges
 //
-//	@summary gets the flag to determine if there are local changes that need to be synced with AniList.
+//	@summary gets the flag to determine if there are local changes that need to be synced with Platform.
 //	@route /api/v1/local/updated [GET]
 //	@returns bool
 func (h *Handler) HandleLocalGetHasLocalChanges(c echo.Context) error {
@@ -210,13 +210,13 @@ func (h *Handler) HandleLocalGetLocalStorageSize(c echo.Context) error {
 	return h.RespondWithData(c, util.Bytes(uint64(size)))
 }
 
-// HandleLocalSyncSimulatedDataToAnilist
+// HandleLocalSyncSimulatedDataToPlatform
 //
-//	@summary syncs the simulated data to AniList.
-//	@route /api/v1/local/sync-simulated-to-anilist [POST]
+//	@summary syncs the simulated data to Platform.
+//	@route /api/v1/local/sync-simulated-to-Platform [POST]
 //	@returns bool
-func (h *Handler) HandleLocalSyncSimulatedDataToAnilist(c echo.Context) error {
-	err := h.App.LocalManager.SynchronizeSimulatedCollectionToAnilist()
+func (h *Handler) HandleLocalSyncSimulatedDataToPlatform(c echo.Context) error {
+	err := h.App.LocalManager.SynchronizeSimulatedCollectionToPlatform()
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}

@@ -27,11 +27,11 @@ export type Series = {
 // Temporary Local Data Database
 export const dbzData: Series[] = [
     {
-        id: "db",
+        id: "12691", // Dragon Ball
         title: "Dragon Ball",
         description: "Goku, un niño con cola de mono y fuerza sobrehumana, se une a Bulma en la búsqueda de las legendarias Esferas del Dragón.",
         year: "1986",
-        image: "https://artworks.thetvdb.com/banners/posters/76666-3.jpg",
+        image: "https://www.themoviedb.org/t/p/w600_and_h900_face/n7FeFLG1DK8LpXYVYEMHNhzRyuu.jpg",
         episodesCount: 153,
         sagas: [
             {
@@ -58,11 +58,11 @@ export const dbzData: Series[] = [
         ]
     },
     {
-        id: "dbz",
+        id: "12971", // Dragon Ball Z
         title: "Dragon Ball Z",
         description: "Cinco años después del torneo, Goku descubre su verdadero origen extraterrestre y enfrenta amenazas cósmicas.",
         year: "1989",
-        image: "https://artworks.thetvdb.com/banners/posters/81472-1.jpg",
+        image: "https://image.tmdb.org/t/p/w600_and_h900_face/ogH4r9HsimigseBNLzHn4uVNOxh.jpg",
         episodesCount: 291,
         sagas: [
             {
@@ -87,11 +87,11 @@ export const dbzData: Series[] = [
         ]
     },
     {
-        id: "dbgt",
+        id: "12690", // Dragon Ball GT
         title: "Dragon Ball GT",
         description: "Goku es convertido en niño por un deseo accidental de Pilaf y debe viajar por el universo.",
         year: "1996",
-        image: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx225-bT41PZ2Wf6GZ.png",
+        image: "https://www.themoviedb.org/t/p/w600_and_h900_face/pLYjbFYHOX1SrHs5BQsGlmv83lZ.jpg",
         episodesCount: 64,
         sagas: [
             {
@@ -106,20 +106,11 @@ export const dbzData: Series[] = [
         ]
     },
     {
-        id: "dbkai-tfc",
-        title: "Dragon Ball Kai: The Final Chapters",
-        description: "La remasterización en HD y sin relleno de la climática saga de Majin Buu.",
-        year: "2014",
-        image: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx20655-aXWdgbvUu82U.png",
-        episodesCount: 61,
-        sagas: []
-    },
-    {
-        id: "dbs",
+        id: "62715", // Dragon Ball Super
         title: "Dragon Ball Super",
         description: "Tras la derrota de Majin Buu, Goku se enfrenta a Dioses de la Destrucción y guerreros de otros universos.",
         year: "2015",
-        image: "https://artworks.thetvdb.com/banners/posters/295068-1.jpg",
+        image: "https://image.tmdb.org/t/p/w600_and_h900_face/qEUrbXJ2qt4Rg84Btlx4STOhgte.jpg",
         episodesCount: 131,
         sagas: [
             {
@@ -136,20 +127,11 @@ export const dbzData: Series[] = [
         ]
     },
     {
-        id: "dbkai-ultimate",
-        title: "Dragon Ball Kai Ultimate 2.0",
-        description: "Edición definitiva creada por SeldionDB (339 episodios). Remasterización sin relleno, corrección de color y banda sonora adaptada. InfoHash: 747d16330de709d715efae8081267bca1567751",
-        year: "2023",
-        image: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx5877-npeXmXm4vG0L.png",
-        episodesCount: 339,
-        sagas: []
-    },
-    {
-        id: "db-daima",
+        id: "240417", // Dragon Ball Daima
         title: "Dragon Ball Daima",
         description: "Por una conspiración, Goku y sus amigos son re-convertidos en niños. Para solucionarlo, viajan a un mundo desconocido.",
         year: "2024",
-        image: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx170133-KccU0g2G3VzF.jpg",
+        image: "https://www.themoviedb.org/t/p/w600_and_h900_face/brd9Bp1MlH8oK2nzR6VV9imY46k.jpg",
         episodesCount: 20,
         sagas: []
     }

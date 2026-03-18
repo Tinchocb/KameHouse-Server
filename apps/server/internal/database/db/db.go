@@ -132,13 +132,10 @@ func migrateTables(ctx context.Context, db *gorm.DB) error {
 		&models.AutoDownloaderItem{},
 		&models.SilencedMediaEntry{},
 		&models.Theme{},
-		&models.ChapterDownloadQueueItem{},
 		&models.TorrentstreamSettings{},
 		&models.TorrentstreamHistory{},
 		&models.MediastreamSettings{},
 		&models.MediaFiller{},
-		&models.MangaMapping{},
-		&models.OnlinestreamMapping{},
 		&models.DebridSettings{},
 		&models.DebridTorrentItem{},
 		&models.PluginData{},
@@ -153,6 +150,7 @@ func migrateTables(ctx context.Context, db *gorm.DB) error {
 		&models.ProviderMapping{},
 		&models.MediaEntryListData{},
 		&models.WatchHistory{},
+		&models.UserMediaProgress{},
 	)
 }
 

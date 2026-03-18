@@ -2,10 +2,7 @@ package torrent
 
 import (
 	"context"
-	"kamehouse/internal/api/anilist"
 	"kamehouse/internal/database/db"
-	"kamehouse/internal/extension"
-	"kamehouse/internal/platforms/anilist_platform"
 	"kamehouse/internal/test_utils"
 	"kamehouse/internal/util"
 	"testing"
@@ -13,17 +10,14 @@ import (
 
 func TestSmartSearch(t *testing.T) {
 	t.Skip("Add fake provider")
-	test_utils.InitTestProvider(t)
 
-	anilistClient := anilist.TestGetMockAnilistClient()
 	logger := util.NewLogger()
 	database, err := db.NewDatabase(context.Background(), test_utils.ConfigData.Path.DataDir, test_utils.ConfigData.Database.Name, logger)
 	if err != nil {
 		t.Fatalf("Failed to connect to database: %v", err)
 	}
-	extensionBankRef := util.NewRef(extension.NewUnifiedBank())
-	anilistPlatform := anilist_platform.NewAnilistPlatform(util.NewRef(anilistClient), extensionBankRef, logger, database)
 
+	_ = database
 	repo := getTestRepo(t)
 
 	tests := []struct {
@@ -81,15 +75,12 @@ func TestSmartSearch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.query, func(t *testing.T) {
 
-			media, err := anilistPlatform.GetAnime(context.Background(), tt.mediaId)
-			if err != nil {
-				t.Fatalf("could not fetch media id %d", tt.mediaId)
-			}
+			// Get media logic removed
 
 			data, err := repo.SearchAnime(context.Background(), AnimeSearchOptions{
 				Provider:      tt.provider,
 				Type:          AnimeSearchTypeSmart,
-				Media:         media,
+				Media:         nil,
 				Query:         "",
 				Batch:         tt.batch,
 				EpisodeNumber: tt.episodeNumber,

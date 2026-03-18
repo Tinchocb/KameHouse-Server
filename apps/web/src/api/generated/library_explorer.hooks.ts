@@ -35,7 +35,6 @@ export function useSuperUpdateLocalFiles() {
         onSuccess: async () => {
             refreshLibraryExplorerTree()
             queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key] })
-            queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.MANGA.GetMangaEntry.key] })
         },
     })
 }

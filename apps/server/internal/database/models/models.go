@@ -50,11 +50,9 @@ type Settings struct {
 	Library        *LibrarySettings        `gorm:"embedded" json:"library"`
 	MediaPlayer    *MediaPlayerSettings    `gorm:"embedded" json:"mediaPlayer"`
 	Torrent        *TorrentSettings        `gorm:"embedded" json:"torrent"`
-	Manga          *MangaSettings          `gorm:"embedded" json:"manga"`
 	ListSync       *ListSyncSettings       `gorm:"embedded" json:"listSync"`
 	AutoDownloader *AutoDownloaderSettings `gorm:"embedded" json:"autoDownloader"`
 	Notifications  *NotificationSettings   `gorm:"embedded" json:"notifications"`
-	Nakama         *NakamaSettings         `gorm:"embedded;embeddedPrefix:nakama_" json:"nakama"`
 	Mediastream    *MediastreamSettings    `gorm:"-" json:"mediastream"`
 	Torrentstream  *TorrentstreamSettings  `gorm:"-" json:"torrentstream"`
 	Debrid         *DebridSettings         `gorm:"-" json:"debrid"`
@@ -96,7 +94,6 @@ type LibrarySettings struct {
 	EnableOnlinestream              bool         `gorm:"column:enable_onlinestream" json:"enableOnlinestream"`
 	IncludeOnlineStreamingInLibrary bool         `gorm:"column:include_online_streaming_in_library" json:"includeOnlineStreamingInLibrary"`
 	DisableAnimeCardTrailers        bool         `gorm:"column:disable_anime_card_trailers" json:"disableAnimeCardTrailers"`
-	EnableManga                     bool         `gorm:"column:enable_manga" json:"enableManga"`
 	DOHProvider                     string       `gorm:"column:doh_provider" json:"dohProvider"`
 	OpenTorrentClientOnStart        bool         `gorm:"column:open_torrent_client_on_start" json:"openTorrentClientOnStart"`
 	OpenWebURLOnStart               bool         `gorm:"column:open_web_url_on_start" json:"openWebURLOnStart"`
@@ -145,18 +142,6 @@ func (o LibraryPaths) Value() (driver.Value, error) {
 	return strings.Join(o, ","), nil
 }
 
-type NakamaSettings struct {
-	Enabled                    bool     `gorm:"column:enabled" json:"enabled"`
-	Username                   string   `gorm:"column:username" json:"username"`
-	IsHost                     bool     `gorm:"column:is_host" json:"isHost"`
-	HostPassword               string   `gorm:"column:host_password" json:"hostPassword"`
-	RemoteServerURL            string   `gorm:"column:remote_server_url" json:"remoteServerURL"`
-	RemoteServerPassword       string   `gorm:"column:remote_server_password" json:"remoteServerPassword"`
-	IncludeNakamaAnimeLibrary  bool     `gorm:"column:include_nakama_anime_library" json:"includeNakamaAnimeLibrary"`
-	HostShareLocalAnimeLibrary bool     `gorm:"column:host_share_local_anime_library" json:"hostShareLocalAnimeLibrary"`
-	HostUnsharedAnimeIds       IntSlice `gorm:"column:host_unshared_anime_ids;type:text" json:"hostUnsharedAnimeIds"`
-	HostEnablePortForwarding   bool     `gorm:"column:host_enable_port_forwarding" json:"hostEnablePortForwarding"`
-}
 
 type IntSlice []int
 
@@ -185,11 +170,7 @@ func (o IntSlice) Value() (driver.Value, error) {
 	return strings.Join(strs, ","), nil
 }
 
-type MangaSettings struct {
-	DefaultProvider      string `gorm:"column:default_manga_provider" json:"defaultMangaProvider"`
-	AutoUpdateProgress   bool   `gorm:"column:manga_auto_update_progress" json:"mangaAutoUpdateProgress"`
-	LocalSourceDirectory string `gorm:"column:manga_local_source_directory" json:"mangaLocalSourceDirectory"`
-}
+
 
 type MediaPlayerSettings struct {
 	Default                       string `gorm:"column:default_player" json:"defaultPlayer"`
@@ -327,15 +308,10 @@ type DebridSettings struct {
 	IncludeDebridStreamInLibrary bool `gorm:"column:include_debrid_stream_in_library" json:"includeDebridStreamInLibrary"`
 	StreamAutoSelect             bool `gorm:"column:stream_auto_select" json:"streamAutoSelect"`
 	StreamPreferredResolution    string `gorm:"column:stream_preferred_resolution" json:"streamPreferredResolution"`
+	TorrentioUrl                 string `gorm:"column:torrentio_url" json:"torrentioUrl"`
 }
 
-type ChapterDownloadQueueItem struct {
-	BaseModel
-	MediaID       int    `json:"mediaId"`
-	Provider      string `json:"provider"`
-	ChapterID     string `json:"chapterId"`
-	ChapterNumber string `json:"chapterNumber"`
-}
+
 
 type DebridTorrentItem struct {
 	BaseModel
@@ -390,9 +366,7 @@ type MediaFiller struct {
 	LastFetchedAt time.Time `json:"lastFetchedAt"`
 }
 
-type MangaMapping struct {
-	BaseModel
-}
+
 
 type PluginData struct {
 	BaseModel
@@ -401,7 +375,15 @@ type PluginData struct {
 type CustomSourceCollection struct {
 	BaseModel
 }
-
 type CustomSourceIdentifier struct {
 	BaseModel
+}
+
+type UserMediaProgress struct {
+	BaseModel
+	AnonUserId string  `gorm:"column:anon_user_id;uniqueIndex:idx_anon_media" json:"anonUserId"`
+	MediaId    int     `gorm:"column:media_id;uniqueIndex:idx_anon_media" json:"mediaId"`
+	Status     string  `gorm:"column:status" json:"status"`
+	Progress   int     `gorm:"column:progress" json:"progress"`
+	Score      float64 `gorm:"column:score" json:"score"`
 }

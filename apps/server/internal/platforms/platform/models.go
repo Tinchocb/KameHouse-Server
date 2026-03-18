@@ -60,6 +60,8 @@ type UnifiedMedia struct {
 	EndDate           *FuzzyDate              `json:"endDate,omitempty"`
 	Season            *MediaSeason            `json:"season,omitempty"`
 	SeasonYear        *int                    `json:"seasonYear,omitempty"`
+	IsAdult           bool                    `json:"isAdult"`
+	Genres            []string                `json:"genres,omitempty"`
 	NextAiringEpisode *NextAiringEpisode      `json:"nextAiringEpisode,omitempty"`
 	Relations         []*UnifiedMediaRelation `json:"relations,omitempty"`
 }

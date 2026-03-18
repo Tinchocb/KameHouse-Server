@@ -26,7 +26,7 @@ func GetKameHouseFlags() KameHouseFlags {
 	var disableFeaturesStr string
 
 	flag.Usage = func() {
-		fmt.Printf("The Anime and Manga media server.\n\n")
+		fmt.Printf("The Anime media server.\n\n")
 		if runtime.GOOS == "windows" {
 			fmt.Printf("Usage: KameHouse.exe [flags]\n\n")
 		} else {

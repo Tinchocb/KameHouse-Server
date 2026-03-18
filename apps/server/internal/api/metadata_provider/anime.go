@@ -107,7 +107,7 @@ func (aw *AnimeWrapperImpl) GetEpisodeMetadata(ep string) (ret metadata.EpisodeM
 
 	ret = *episode.MustGet()
 
-	// If TVDB image is not set, use Animap image, if that is not set, use the AniList banner image
+	// If TVDB image is not set, use Animap image, if that is not set, use the fallback platform image
 	if ret.Image == "" {
 		// Set Animap image if TVDB image is not set
 		if episode.MustGet().Image != "" {

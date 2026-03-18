@@ -26,7 +26,7 @@ type (
 	//  - UnmatchedLocalFiles: a list of unmatched local files (Media id == 0). "Resolve unmatched" feature.
 	//  - UnmatchedGroups: a list of UnmatchedGroup instances. Like UnmatchedLocalFiles, but grouped by directory. "Resolve unmatched" feature.
 	//  - IgnoredLocalFiles: a list of ignored local files. (DEVNOTE: Unused for now)
-	//  - UnknownGroups: a list of UnknownGroup instances. Group of files whose media is not in the user's AniList "Resolve unknown media" feature.
+	//  - UnknownGroups: a list of UnknownGroup instances. Group of files whose media is not in the user's platform collection. "Resolve unknown media" feature.
 	LibraryCollection struct {
 		ContinueWatchingList []*Episode               `json:"continueWatchingList"`
 		Lists                []*LibraryCollectionList `json:"lists"`
@@ -67,9 +67,8 @@ type (
 		Media                  *models.LibraryMedia    `json:"media"`
 		MediaId                int                     `json:"mediaId"`
 		AvailabilityType       string                  `json:"availabilityType"`            // FULL_LOCAL, HYBRID, ONLY_ONLINE
-		EntryLibraryData       *EntryLibraryData       `json:"libraryData"`                 // Library data
-		NakamaEntryLibraryData *NakamaEntryLibraryData `json:"nakamaLibraryData,omitempty"` // Library data from Nakama
-		EntryListData          *EntryListData          `json:"listData"`                    // Local list data
+		EntryLibraryData       *EntryLibraryData       `json:"libraryData"`  // Library data
+		EntryListData          *EntryListData          `json:"listData"`     // Local list data
 	}
 
 	// UnmatchedGroup holds the data for a group of unmatched local files.
@@ -78,8 +77,8 @@ type (
 		LocalFiles  []*LocalFile           `json:"localFiles"`
 		Suggestions []*models.LibraryMedia `json:"suggestions"`
 	}
-	// UnknownGroup holds the data for a group of local files whose media is not in the user's AniList.
-	// The client will use this data to suggest media to the user, so they can add it to their AniList.
+	// UnknownGroup holds the data for a group of local files whose media is not in the user's platform collection.
+	// The client will use this data to suggest media to the user, so they can add it to their platform collection.
 	UnknownGroup struct {
 		MediaId    int          `json:"mediaId"`
 		LocalFiles []*LocalFile `json:"localFiles"`
@@ -178,8 +177,8 @@ func (lc *LibraryCollection) hydrateCollectionLists(
 	mIds := GetMediaIdsFromLocalFiles(localFiles)
 
 	// Build a mapping from MediaId → LibraryMediaId using local files.
-	// This is needed because for TMDB media (negative MediaIds), the DB primary key
-	// (LibraryMediaId) differs from the external MediaId, and uint(negativeId) wraps around.
+	// This is needed because for TMDB media, the DB primary key
+	// (LibraryMediaId) might differ from the external MediaId.
 	mediaIdToLibraryMediaId := make(map[int]uint)
 	for _, lf := range localFiles {
 		if lf.MediaId != 0 && lf.LibraryMediaId != 0 {
@@ -201,8 +200,8 @@ func (lc *LibraryCollection) hydrateCollectionLists(
 		var listData *models.MediaEntryListData
 		var lookupId uint
 
-		// First, try looking up by MediaId directly (works for AniList positive IDs
-		// where the DB primary key == AniList ID)
+		// First, try looking up by MediaId directly (works for positive IDs
+		// where the DB primary key == external ID)
 		if id > 0 {
 			m, err := db.GetLibraryMediaByID(dbInfo, uint(id))
 			if err == nil && m != nil {
@@ -212,7 +211,7 @@ func (lc *LibraryCollection) hydrateCollectionLists(
 		}
 
 		// If not found by MediaId, try using the LibraryMediaId from local files
-		// (needed for TMDB media with negative MediaIds)
+		// (needed for TMDB media)
 		if media == nil {
 			if libMediaId, ok := mediaIdToLibraryMediaId[id]; ok && libMediaId > 0 {
 				m, err := db.GetLibraryMediaByID(dbInfo, libMediaId)
@@ -384,11 +383,10 @@ func (lc *LibraryCollection) hydrateContinueWatchingList(
 
 	// If no currently watching list is found, return an empty slice
 	if !found {
-		println("CURRENT list NOT FOUND!")
 		lc.ContinueWatchingList = make([]*Episode, 0) // Set empty slice
 		return
 	}
-	println("CURRENT list FOUND! Number of entries:", len(current.Entries))
+
 	// Get media ids from current list
 	mIds := make([]int, len(current.Entries))
 	for i, entry := range current.Entries {

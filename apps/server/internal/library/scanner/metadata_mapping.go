@@ -22,40 +22,30 @@ var (
 	anizipBaseURL = "https://api.ani.zip"
 )
 
-func mapAniListIDFromTMDB(ctx context.Context, tmdbID int) (int, error) {
-	if tmdbID <= 0 {
-		return 0, metadata.ErrNotFound
-	}
-	return mapAniListID(ctx, "themoviedb", tmdbID)
-}
-
-func mapAniListIDFromAniDB(ctx context.Context, anidbID int) (int, error) {
+func mapTMDBIDFromAniDB(ctx context.Context, anidbID int) (int, error) {
 	if anidbID <= 0 {
 		return 0, metadata.ErrNotFound
 	}
-	return mapAniListID(ctx, "anidb", anidbID)
+	return mapTMDBID(ctx, "anidb", anidbID)
 }
 
-func mapAniListID(ctx context.Context, from string, id int) (int, error) {
+func mapTMDBID(ctx context.Context, from string, id int) (int, error) {
 	ctx, cancel := context.WithTimeout(ctx, mappingTimeout)
 	defer cancel()
 
-	if anilistID, err := fetchAnimapAniListID(ctx, from, id); err == nil && anilistID > 0 {
-		return anilistID, nil
-	}
-	if anilistID, err := fetchAniZipAniListID(ctx, from, id); err == nil && anilistID > 0 {
-		return anilistID, nil
+	if tmdbID, err := fetchAnimapTMDBID(ctx, from, id); err == nil && tmdbID > 0 {
+		return tmdbID, nil
 	}
 	return 0, metadata.ErrNotFound
 }
 
 type animapResponse struct {
 	Mappings struct {
-		AnilistID int `json:"anilist_id,omitempty"`
+		TMDBID int `json:"themoviedb_id,omitempty"`
 	} `json:"mappings,omitempty"`
 }
 
-func fetchAnimapAniListID(ctx context.Context, from string, id int) (int, error) {
+func fetchAnimapTMDBID(ctx context.Context, from string, id int) (int, error) {
 	url := fmt.Sprintf("%s/entry?%s_id=%d", animapBaseURL, from, id)
 	headers := map[string]string{
 		"X-KameHouse-Version": "KameHouse/" + constants.Version,
@@ -74,38 +64,10 @@ func fetchAnimapAniListID(ctx context.Context, from string, id int) (int, error)
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return 0, err
 	}
-	if resp.Mappings.AnilistID <= 0 {
+	if resp.Mappings.TMDBID <= 0 {
 		return 0, metadata.ErrNotFound
 	}
-	return resp.Mappings.AnilistID, nil
-}
-
-type anizipResponse struct {
-	Mappings struct {
-		AnilistID int `json:"anilist_id,omitempty"`
-	} `json:"mappings,omitempty"`
-}
-
-func fetchAniZipAniListID(ctx context.Context, from string, id int) (int, error) {
-	url := fmt.Sprintf("%s/v1/episodes?%s_id=%d", anizipBaseURL, from, id)
-	body, status, err := getWithRetry(ctx, url, nil)
-	if err != nil {
-		return 0, err
-	}
-	if status == http.StatusNotFound {
-		return 0, metadata.ErrNotFound
-	}
-	if status < 200 || status >= 300 {
-		return 0, fmt.Errorf("anizip status %d", status)
-	}
-	var resp anizipResponse
-	if err := json.Unmarshal(body, &resp); err != nil {
-		return 0, err
-	}
-	if resp.Mappings.AnilistID <= 0 {
-		return 0, metadata.ErrNotFound
-	}
-	return resp.Mappings.AnilistID, nil
+	return resp.Mappings.TMDBID, nil
 }
 
 func getWithRetry(ctx context.Context, url string, headers map[string]string) ([]byte, int, error) {

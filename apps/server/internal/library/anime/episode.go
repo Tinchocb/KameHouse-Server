@@ -18,21 +18,19 @@ type (
 		SeasonNumber          int                  `json:"seasonNumber,omitempty"`
 		AniDBEpisode          string               `json:"aniDBEpisode,omitempty"` // AniDB episode number
 		AbsoluteEpisodeNumber int                  `json:"absoluteEpisodeNumber"`
-		ProgressNumber        int                  `json:"progressNumber"` // Usually the same as EpisodeNumber, unless there is a discrepancy between AniList and AniDB
+		ProgressNumber        int                  `json:"progressNumber"` // Usually the same as EpisodeNumber, unless there is a discrepancy between platform and metadata provider
 		LocalFile             *LocalFile           `json:"localFile"`
 		AdditionalFiles       []*LocalFile         `json:"additionalFiles,omitempty"` // Multiple versions of the same episode
 		IsDownloaded          bool                 `json:"isDownloaded"`              // Is in the local files
 		EpisodeMetadata       *EpisodeMetadata     `json:"episodeMetadata"`           // (image, airDate, length, summary, overview)
 		FileMetadata          *LocalFileMetadata   `json:"fileMetadata"`              // (episode, aniDBEpisode, type...)
 		IsInvalid             bool                 `json:"isInvalid"`                 // No AniDB data
-		MetadataIssue         string               `json:"metadataIssue,omitempty"`   // Alerts the user that there is a discrepancy between AniList and AniDB
+		MetadataIssue         string               `json:"metadataIssue,omitempty"`   // Alerts the user that there is a discrepancy between platform and metadata provider
 		BaseAnime             *models.LibraryMedia `json:"baseAnime,omitempty"`
-		// IsNakamaEpisode indicates that this episode is from the Nakama host's anime library.
-		IsNakamaEpisode bool `json:"_isNakamaEpisode"`
 	}
 
 	// EpisodeMetadata represents the metadata of an Episode.
-	// Metadata is fetched from Animap (AniDB) and, optionally, AniList (if Animap is not available).
+	// Metadata is fetched from Animap (AniDB) and, optionally, the platform (if Animap is not available).
 	EpisodeMetadata struct {
 		AnidbId  int    `json:"anidbId,omitempty"`
 		Image    string `json:"image,omitempty"`
@@ -55,7 +53,7 @@ type (
 		MetadataWrapper      metadata_provider.AnimeMetadataWrapper
 		OptionalAniDBEpisode string
 		// ProgressOffset will offset the ProgressNumber for a specific MAIN file
-		// This is used when there is a discrepancy between AniList and AniDB
+		// This is used when there is a discrepancy between providers
 		// When this is -1, it means that a re-mapping of AniDB Episode is needed
 		ProgressOffset   int
 		IsDownloaded     bool
@@ -287,7 +285,7 @@ func NewEpisode(opts *NewEpisodeOptions) *Episode {
 	return entryEp
 }
 
-// NewEpisodeMetadata creates a new EpisodeMetadata from an Animap episode and AniList media.
+// NewEpisodeMetadata creates a new EpisodeMetadata from an Animap episode and media entry.
 // If the Animap episode is nil, it will just set the image from the media.
 func NewEpisodeMetadata(
 	aw metadata_provider.AnimeMetadataWrapper,

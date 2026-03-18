@@ -43,7 +43,7 @@ export function ManualMatchModal({ isOpen, onClose, directoryPath, currentMediaI
             <div className="mt-4 space-y-4">
                     <input
                         type="text"
-                        placeholder="Search AniList..."
+                        placeholder="Search Platform..."
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         className="w-full rounded-lg bg-white/5 border border-white/10 px-4 py-3 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"

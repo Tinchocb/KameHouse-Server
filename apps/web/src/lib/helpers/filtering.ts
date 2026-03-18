@@ -1,21 +1,16 @@
 import {
-    AL_AnimeCollection_MediaListCollection_Lists_Entries,
-    AL_BaseAnime,
-    AL_BaseManga,
-    AL_MangaCollection_MediaListCollection_Lists_Entries,
-    AL_MediaFormat,
-    AL_MediaSeason,
-    AL_MediaStatus,
+    Platform_MediaStatus,
+    Platform_MediaFormat,
     Anime_Episode,
     Anime_LibraryCollectionEntry,
     Continuity_WatchHistory,
-    Manga_MangaLatestChapterNumberItem,
-    Manga_CollectionEntry,
+    Platform_BaseAnime as Platform_UnifiedMedia,
 } from "@/api/generated/types"
-type MangaEntryFilters = any; const getMangaEntryLatestChapterNumber = (...args: any[]) => 0;
 import sortBy from "lodash/sortBy"
-import { anilist_getUnwatchedCount } from "./media"
-import { asBaseAnime, asBaseManga } from "./type-guards"
+import { media_getUnwatchedCount } from "./media"
+function asUnifiedMedia(media: any): Platform_UnifiedMedia | null {
+    return media as Platform_UnifiedMedia
+}
 
 type BaseCollectionSorting =
     "START_DATE"
@@ -37,9 +32,6 @@ type CollectionSorting<T extends CollectionType> = BaseCollectionSorting | (T ex
     | "PROGRESS"
     | "AIRDATE"
     | "AIRDATE_DESC"
-    : T extends "manga" ?
-    "PROGRESS"
-    | "PROGRESS_DESC"
     : never)
 
 
@@ -98,25 +90,18 @@ export const ANIME_COLLECTION_SORTING_OPTIONS = [
     ...COLLECTION_SORTING_OPTIONS,
 ]
 
-export const MANGA_COLLECTION_SORTING_OPTIONS = [
-    { label: "Most unread chapters", value: "UNREAD_CHAPTERS_DESC" },
-    { label: "Least unread chapters", value: "UNREAD_CHAPTERS" },
-    ...COLLECTION_SORTING_OPTIONS,
-]
 
-export type CollectionType = "anime" | "manga"
+export type CollectionType = "anime"
 
 export type CollectionParams<T extends CollectionType> = {
     sorting: CollectionSorting<T>
     genre: string[] | null
-    status: AL_MediaStatus | null
-    format: AL_MediaFormat | null
-    season: AL_MediaSeason | null
+    status: Platform_MediaStatus | null
+    format: Platform_MediaFormat | null
+    season: string | null
     year: string | null
     isAdult: boolean
-} & (T extends "manga" ? {
-    unreadOnly: boolean
-} : T extends "anime" ? {
+} & (T extends "anime" ? {
     continueWatchingOnly: boolean
 } : never)
 
@@ -143,16 +128,6 @@ export const DEFAULT_ANIME_COLLECTION_PARAMS: CollectionParams<"anime"> = {
     continueWatchingOnly: false,
 }
 
-export const DEFAULT_MANGA_COLLECTION_PARAMS: CollectionParams<"manga"> = {
-    sorting: "SCORE_DESC",
-    genre: null,
-    status: null,
-    format: null,
-    season: null,
-    year: null,
-    isAdult: false,
-    unreadOnly: false,
-}
 
 
 function getParamValue<T extends any>(value: T | ""): any {
@@ -164,26 +139,25 @@ function getParamValue<T extends any>(value: T | ""): any {
 }
 
 
-export function filterEntriesByTitle<T extends { media?: AL_BaseAnime | AL_BaseManga }[] | null | undefined>(arr: T, input: string): T {
+export function filterEntriesByTitle<T extends { media?: Platform_UnifiedMedia }[] | null | undefined>(arr: T, input: string): T {
     // @ts-expect-error
     if (!arr) return []
     if (arr.length > 0 && input.length > 0) {
         const _input = input.toLowerCase().trim().replace(/\s+/g, " ")
         // @ts-expect-error
         return arr.filter(entry => {
-            const baseMedia = asBaseAnime(entry.media) || asBaseManga(entry.media)
+            const media = entry.media
             return (
-                baseMedia?.title?.english?.toLowerCase().includes(_input)
-                || baseMedia?.title?.userPreferred?.toLowerCase().includes(_input)
-                || baseMedia?.title?.romaji?.toLowerCase().includes(_input)
-                || baseMedia?.synonyms?.some(syn => syn?.toLowerCase().includes(_input))
+                media?.title?.english?.toLowerCase().includes(_input)
+                || media?.title?.romaji?.toLowerCase().includes(_input)
+                || media?.title?.native?.toLowerCase().includes(_input)
             )
         })
     }
     return arr
 }
 
-export function filterListEntries<T extends AL_MangaCollection_MediaListCollection_Lists_Entries[] | AL_AnimeCollection_MediaListCollection_Lists_Entries[], V extends CollectionType>(
+export function filterListEntries<T extends any[], V extends CollectionType>(
     type: V,
     entries: T | null | undefined,
     params: CollectionParams<V>,
@@ -209,54 +183,61 @@ export function filterListEntries<T extends AL_MangaCollection_MediaListCollecti
 
     // Filter by year
     if (!!arr && !!params.year) arr = arr.filter(n => {
-        const baseAnime = asBaseAnime(n.media)
-        if (baseAnime?.seasonYear) {
-            return baseAnime.seasonYear === Number(params.year) || baseAnime.startDate?.year === Number(params.year)
+        const media = asUnifiedMedia(n.media)
+        if (media?.seasonYear) {
+            return media.seasonYear === Number(params.year) || media.startDate?.year === Number(params.year)
         }
-        return asBaseManga(n.media)?.startDate?.year === Number(params.year)
+        return media?.startDate?.year === Number(params.year)
     })
 
     // Filter by genre
     if (!!arr && !!params.genre?.length) {
         arr = arr.filter(n => {
-            const baseMedia = asBaseAnime(n.media) || asBaseManga(n.media)
-            return params.genre?.every(genre => baseMedia?.genres?.includes(genre))
+            const media = asUnifiedMedia(n.media)
+            return params.genre?.every(genre => (media as any)?.genres?.includes(genre))
         })
     }
 
     // Initial sort by name
-    arr = sortBy(arr, n => asBaseAnime(n?.media)?.title?.userPreferred || asBaseManga(n?.media)?.title?.userPreferred).reverse()
+    arr = sortBy(arr, n => {
+        const title = asUnifiedMedia(n?.media)?.title
+        return title?.english || title?.romaji || ""
+    }).reverse()
 
     // Sort by title
     if (getParamValue(params.sorting) === "TITLE")
         arr.sort((a, b) => {
-            const titleA = asBaseAnime(a?.media)?.title?.userPreferred || asBaseManga(a?.media)?.title?.userPreferred || ""
-            const titleB = asBaseAnime(b?.media)?.title?.userPreferred || asBaseManga(b?.media)?.title?.userPreferred || ""
-            return titleA.localeCompare(titleB)
+            const titleA = asUnifiedMedia(a?.media)?.title
+            const strA = titleA?.english || titleA?.romaji || ""
+            const titleB = asUnifiedMedia(b?.media)?.title
+            const strB = titleB?.english || titleB?.romaji || ""
+            return strA.localeCompare(strB)
         })
     if (getParamValue(params.sorting) === "TITLE_DESC")
         arr.sort((a, b) => {
-            const titleA = asBaseAnime(a?.media)?.title?.userPreferred || asBaseManga(a?.media)?.title?.userPreferred || ""
-            const titleB = asBaseAnime(b?.media)?.title?.userPreferred || asBaseManga(b?.media)?.title?.userPreferred || ""
-            return titleB.localeCompare(titleA)
+            const titleA = asUnifiedMedia(a?.media)?.title
+            const strA = titleA?.english || titleA?.romaji || ""
+            const titleB = asUnifiedMedia(b?.media)?.title
+            const strB = titleB?.english || titleB?.romaji || ""
+            return strB.localeCompare(strA)
         }).reverse()
 
     // Sort by release date
     if (getParamValue(params.sorting) === "RELEASE_DATE" || getParamValue(params.sorting) === "RELEASE_DATE_DESC") {
         arr = arr?.filter(n => {
-            const baseMedia = asBaseAnime(n?.media) || asBaseManga(n?.media)
-            return baseMedia?.startDate && !!baseMedia.startDate.year && !!baseMedia.startDate.month
+            const media = asUnifiedMedia(n?.media)
+            return media?.startDate && !!media.startDate.year && !!media.startDate.month
         })
     }
     if (getParamValue(params.sorting) === "RELEASE_DATE")
         arr = sortBy(arr, n => {
-            const baseMedia = asBaseAnime(n?.media) || asBaseManga(n?.media)
-            return new Date(baseMedia?.startDate?.year!, baseMedia?.startDate?.month! - 1)
+            const media = asUnifiedMedia(n?.media)
+            return new Date(media?.startDate?.year!, media?.startDate?.month! - 1)
         })
     if (getParamValue(params.sorting) === "RELEASE_DATE_DESC")
         arr = sortBy(arr, n => {
-            const baseMedia = asBaseAnime(n?.media) || asBaseManga(n?.media)
-            return new Date(baseMedia?.startDate?.year!, baseMedia?.startDate?.month! - 1)
+            const media = asUnifiedMedia(n?.media)
+            return new Date(media?.startDate?.year!, media?.startDate?.month! - 1)
         }).reverse()
 
     // Sort by score
@@ -266,9 +247,6 @@ export function filterListEntries<T extends AL_MangaCollection_MediaListCollecti
         arr = sortBy(arr, n => n?.score || 0).reverse()
 
     // Sort by start date
-    // if (getParamValue(params.sorting) === "START_DATE" || getParamValue(params.sorting) === "START_DATE_DESC") {
-    //     arr = arr?.filter(n => n.startedAt && !!n.startedAt.year && !!n.startedAt.month && !!n.startedAt.day)
-    // }
     if (getParamValue(params.sorting) === "START_DATE")
         arr = sortBy(arr, n => new Date(n?.startedAt?.year || 9999, (n?.startedAt?.month || 1) - 1, n?.startedAt?.day || 1))
     if (getParamValue(params.sorting) === "START_DATE_DESC")
@@ -285,14 +263,14 @@ export function filterListEntries<T extends AL_MangaCollection_MediaListCollecti
 
     // Sort by progress
     if (getParamValue(params.sorting) === "PROGRESS")
-        arr = sortBy(arr, n => n?.progress || 0)
+        arr = sortBy(arr, n => (n as any)?.progress || 0)
     if (getParamValue(params.sorting) === "PROGRESS_DESC")
-        arr = sortBy(arr, n => n?.progress || 0).reverse()
+        arr = sortBy(arr, n => (n as any)?.progress || 0).reverse()
 
     return arr
 }
 
-export function filterCollectionEntries<T extends Anime_LibraryCollectionEntry[] | Manga_CollectionEntry[], V extends CollectionType>(
+export function filterCollectionEntries<T extends Anime_LibraryCollectionEntry[], V extends CollectionType>(
     type: V,
     entries: T | null | undefined,
     params: CollectionParams<V>,
@@ -302,74 +280,79 @@ export function filterCollectionEntries<T extends Anime_LibraryCollectionEntry[]
     let arr = [...entries]
 
     // Filter by isAdult
-    if (!!arr && params.isAdult) arr = arr.filter(n => asBaseAnime(n.media)?.isAdult || asBaseManga(n.media)?.isAdult)
+    if (!!arr && params.isAdult) arr = arr.filter(n => asUnifiedMedia(n.media)?.isAdult)
 
     // Filter by showAdultContent
-    if (!showAdultContent) arr = arr.filter(n => !(asBaseAnime(n.media)?.isAdult || asBaseManga(n.media)?.isAdult))
+    if (!showAdultContent) arr = arr.filter(n => !asUnifiedMedia(n.media)?.isAdult)
 
     // Filter by format
-    if (!!arr && !!params.format) arr = arr.filter(n => (asBaseAnime(n.media)?.format === params.format) || (asBaseManga(n.media)?.format as unknown as string === params.format))
+    if (!!arr && !!params.format) arr = arr.filter(n => asUnifiedMedia(n.media)?.format === params.format)
 
     // Filter by season
-    if (!!arr && !!params.season) arr = arr.filter(n => asBaseAnime(n.media)?.season === params.season)
+    if (!!arr && !!params.season) arr = arr.filter(n => asUnifiedMedia(n.media)?.season === params.season)
 
     // Filter by status
-    if (!!arr && !!params.status) arr = arr.filter(n => (asBaseAnime(n.media)?.status === params.status) || (asBaseManga(n.media)?.status as unknown as string === params.status))
+    if (!!arr && !!params.status) arr = arr.filter(n => asUnifiedMedia(n.media)?.status === params.status)
 
     // Filter by year
     if (!!arr && !!params.year) arr = arr.filter(n => {
-        const baseAnime = asBaseAnime(n.media)
-        return baseAnime?.seasonYear === Number(params.year) || baseAnime?.startDate?.year === Number(params.year)
+        const media = asUnifiedMedia(n.media)
+        return media?.seasonYear === Number(params.year) || media?.startDate?.year === Number(params.year)
     })
 
     // Filter by genre
     if (!!arr && !!params.genre?.length) {
         arr = arr.filter(n => {
-            const baseMedia = asBaseAnime(n.media) || asBaseManga(n.media)
-            return params.genre?.every(genre => baseMedia?.genres?.includes(genre))
+            const media = asUnifiedMedia(n.media)
+            return params.genre?.every(genre => (media as any)?.genres?.includes(genre))
         })
     }
 
     // Initial sort by name
-    arr = sortBy(arr, n => asBaseAnime(n?.media)?.title?.userPreferred || asBaseManga(n?.media)?.title?.userPreferred).reverse()
+    arr = sortBy(arr, n => {
+        const title = asUnifiedMedia(n?.media)?.title
+        return title?.english || title?.romaji || ""
+    }).reverse()
 
     // Sort by title
     if (getParamValue(params.sorting) === "TITLE")
-        // arr = sortBy(arr, n => n?.media?.title?.userPreferred)
         arr.sort((a, b) => {
-            const titleA = asBaseAnime(a?.media)?.title?.userPreferred || asBaseManga(a?.media)?.title?.userPreferred || ""
-            const titleB = asBaseAnime(b?.media)?.title?.userPreferred || asBaseManga(b?.media)?.title?.userPreferred || ""
-            return titleA.localeCompare(titleB)
+            const titleA = asUnifiedMedia(a?.media)?.title
+            const strA = titleA?.english || titleA?.romaji || ""
+            const titleB = asUnifiedMedia(b?.media)?.title
+            const strB = titleB?.english || titleB?.romaji || ""
+            return strA.localeCompare(strB)
         })
     if (getParamValue(params.sorting) === "TITLE_DESC")
-        // arr = sortBy(arr, n => n?.media?.title?.userPreferred).reverse()
         arr.sort((a, b) => {
-            const titleA = asBaseAnime(a?.media)?.title?.userPreferred || asBaseManga(a?.media)?.title?.userPreferred || ""
-            const titleB = asBaseAnime(b?.media)?.title?.userPreferred || asBaseManga(b?.media)?.title?.userPreferred || ""
-            return titleB.localeCompare(titleA)
+            const titleA = asUnifiedMedia(a?.media)?.title
+            const strA = titleA?.english || titleA?.romaji || ""
+            const titleB = asUnifiedMedia(b?.media)?.title
+            const strB = titleB?.english || titleB?.romaji || ""
+            return strB.localeCompare(strA)
         }).reverse()
 
     // Sort by release date
     if (getParamValue(params.sorting) === "RELEASE_DATE" || getParamValue(params.sorting) === "RELEASE_DATE_DESC") {
         arr = arr?.filter(n => {
-            const baseMedia = asBaseAnime(n.media) || asBaseManga(n.media)
-            if (typeof baseMedia?.startDate === 'string') {
-                return !!baseMedia.startDate && new Date(baseMedia.startDate).toString() !== 'Invalid Date'
+            const media = asUnifiedMedia(n.media)
+            if (typeof media?.startDate === 'string') {
+                return !!media.startDate && new Date(media.startDate).toString() !== 'Invalid Date'
             }
-            return baseMedia?.startDate && !!(baseMedia.startDate as any).year && !!(baseMedia.startDate as any).month
+            return media?.startDate && !!(media.startDate as any).year && !!(media.startDate as any).month
         })
     }
     if (getParamValue(params.sorting) === "RELEASE_DATE")
         arr = sortBy(arr, n => {
-            const baseMedia = asBaseAnime(n.media) || asBaseManga(n.media)
-            if (typeof baseMedia?.startDate === 'string') return new Date(baseMedia.startDate)
-            return new Date((baseMedia?.startDate as any)?.year!, (baseMedia?.startDate as any)?.month! - 1)
+            const media = asUnifiedMedia(n.media)
+            if (typeof media?.startDate === 'string') return new Date(media.startDate)
+            return new Date((media?.startDate as any)?.year!, (media?.startDate as any)?.month! - 1)
         })
     if (getParamValue(params.sorting) === "RELEASE_DATE_DESC")
         arr = sortBy(arr, n => {
-            const baseMedia = asBaseAnime(n.media) || asBaseManga(n.media)
-            if (typeof baseMedia?.startDate === 'string') return new Date(baseMedia.startDate)
-            return new Date((baseMedia?.startDate as any)?.year!, (baseMedia?.startDate as any)?.month! - 1)
+            const media = asUnifiedMedia(n.media)
+            if (typeof media?.startDate === 'string') return new Date(media.startDate)
+            return new Date((media?.startDate as any)?.year!, (media?.startDate as any)?.month! - 1)
         }).reverse()
 
     // Sort by score
@@ -381,9 +364,6 @@ export function filterCollectionEntries<T extends Anime_LibraryCollectionEntry[]
         arr = sortBy(arr, n => n?.listData?.score || 0).reverse()
 
     // Sort by start date
-    // if (getParamValue(params.sorting) === "START_DATE" || getParamValue(params.sorting) === "START_DATE_DESC") {
-    //     arr = arr?.filter(n => !!n.listData?.startedAt)
-    // }
     if (getParamValue(params.sorting) === "START_DATE")
         arr = sortBy(arr, n => new Date(n?.listData?.startedAt ?? new Date(9999, 1, 1).toISOString()))
     if (getParamValue(params.sorting) === "START_DATE_DESC")
@@ -400,9 +380,9 @@ export function filterCollectionEntries<T extends Anime_LibraryCollectionEntry[]
 
     // Sort by progress
     if (getParamValue(params.sorting) === "PROGRESS")
-        arr = sortBy(arr, n => n?.listData?.progress || 0)
+        arr = sortBy(arr, n => (n as any)?.progress || 0)
     if (getParamValue(params.sorting) === "PROGRESS_DESC")
-        arr = sortBy(arr, n => n?.listData?.progress || 0).reverse()
+        arr = sortBy(arr, n => (n as any)?.progress || 0).reverse()
 
     return arr
 }
@@ -434,24 +414,14 @@ export function filterAnimeCollectionEntries<T extends Anime_LibraryCollectionEn
 
     // Sort by unwatched episodes
     if (getParamValue(params.sorting) === "UNWATCHED_EPISODES") {
-        // arr = sortBy(arr,
-        //     n => !!n.libraryData?.mainFileCount ? n.libraryData?.unwatchedCount : (anilist_getUnwatchedCount(n.media, n.listData?.progress) ||
-        // 99999))
         arr = sortBy(arr,
-            n => !!n.libraryData?.mainFileCount ? n.libraryData?.unwatchedCount : (
-                !!n.nakamaLibraryData?.mainFileCount ? n.nakamaLibraryData?.unwatchedCount : (anilist_getUnwatchedCount(n.media as AL_BaseAnime,
-                    n.listData?.progress) || 99999)
-            ))
+            n => !!n.libraryData?.mainFileCount ? n.libraryData?.unwatchedCount : (media_getUnwatchedCount(asUnifiedMedia(n.media)!,
+                n.listData?.progress) || 99999))
     }
     if (getParamValue(params.sorting) === "UNWATCHED_EPISODES_DESC") {
-        // arr = sortBy(arr,
-        //     n => !!n.libraryData?.mainFileCount ? n.libraryData?.unwatchedCount : anilist_getUnwatchedCount(n.media,
-        // n.listData?.progress)).reverse()
         arr = sortBy(arr,
-            n => !!n.libraryData?.mainFileCount ? n.libraryData?.unwatchedCount : (
-                !!n.nakamaLibraryData?.mainFileCount ? n.nakamaLibraryData?.unwatchedCount : (anilist_getUnwatchedCount(n.media as AL_BaseAnime,
-                    n.listData?.progress) || 99999)
-            ))
+            n => !!n.libraryData?.mainFileCount ? n.libraryData?.unwatchedCount : (media_getUnwatchedCount(asUnifiedMedia(n.media)!,
+                n.listData?.progress) || 99999))
             .reverse()
     }
 
@@ -467,50 +437,6 @@ export function filterAnimeCollectionEntries<T extends Anime_LibraryCollectionEn
 }
 
 
-/** */
-export function filterMangaCollectionEntries<T extends Manga_CollectionEntry[]>(
-    entries: T | null | undefined,
-    params: CollectionParams<"manga">,
-    showAdultContent: boolean | undefined,
-    storedProviders: Record<string, string> | null | undefined,
-    storedProviderFilters: Record<number, MangaEntryFilters> | null | undefined,
-    latestChapterNumbers: Record<number, Manga_MangaLatestChapterNumberItem[]> | null | undefined,
-) {
-    if (!latestChapterNumbers || !storedProviders || !storedProviderFilters) return []
-    let arr = filterCollectionEntries("manga", entries, params, showAdultContent)
-
-
-    if (params.unreadOnly) {
-        arr = arr.filter(n => {
-            const baseManga = asBaseManga(n.media)
-            const latestChapterNumber = getMangaEntryLatestChapterNumber(baseManga?.id!, latestChapterNumbers, storedProviders, storedProviderFilters)
-            const mangaChapterCount = latestChapterNumber || 999999
-            return mangaChapterCount - (n.listData?.progress || 0) > 0
-        })
-    }
-
-    // Sort by unwatched chapters
-    if (getParamValue(params.sorting) === "UNREAD_CHAPTERS") {
-        arr = sortBy(arr, n => {
-            const baseManga = asBaseManga(n.media)
-            const latestChapterNumber = getMangaEntryLatestChapterNumber(baseManga?.id!, latestChapterNumbers, storedProviders, storedProviderFilters)
-            // console.log(n.media?.id, latestChapterNumber)
-            const mangaChapterCount = latestChapterNumber || 999999
-            return mangaChapterCount - (n.listData?.progress || 0)
-        })
-    }
-    if (getParamValue(params.sorting) === "UNREAD_CHAPTERS_DESC") {
-        arr = sortBy(arr, n => {
-            const baseManga = asBaseManga(n.media)
-            const latestChapterNumber = getMangaEntryLatestChapterNumber(baseManga?.id!, latestChapterNumbers, storedProviders, storedProviderFilters)
-            // console.log(n.media?.id, latestChapterNumber)
-            const mangaChapterCount = latestChapterNumber || 0
-            return mangaChapterCount - (n.listData?.progress || 0)
-        }).reverse()
-    }
-
-    return arr
-}
 
 export function sortContinueWatchingEntries(
     entries: Anime_Episode[] | null | undefined,
@@ -539,11 +465,11 @@ export function sortContinueWatchingEntries(
     // Sort by unwatched episodes
     if (sorting === "UNWATCHED_EPISODES")
         arr = sortBy(arr,
-            n => libraryEntries?.find(e => e.media?.id === n.baseAnime?.id)?.libraryData?.unwatchedCount ?? (anilist_getUnwatchedCount(n.baseAnime as AL_BaseAnime,
+            n => libraryEntries?.find(e => e.media?.id === n.baseAnime?.id)?.libraryData?.unwatchedCount ?? (media_getUnwatchedCount(asUnifiedMedia(n.baseAnime)!,
                 libraryEntries?.find(e => e.media?.id === n.baseAnime?.id)?.listData?.progress) || 99999))
     if (sorting === "UNWATCHED_EPISODES_DESC")
         arr = sortBy(arr,
-            n => libraryEntries?.find(e => e.media?.id === n.baseAnime?.id)?.libraryData?.unwatchedCount ?? anilist_getUnwatchedCount(n.baseAnime as AL_BaseAnime,
+            n => libraryEntries?.find(e => e.media?.id === n.baseAnime?.id)?.libraryData?.unwatchedCount ?? media_getUnwatchedCount(asUnifiedMedia(n.baseAnime)!,
                 libraryEntries?.find(e => e.media?.id === n.baseAnime?.id)?.listData?.progress))
             .reverse()
 

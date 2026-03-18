@@ -14,7 +14,7 @@ type ScanStartedEvent struct {
 	// Other directories to scan
 	OtherLibraryPaths []string `json:"otherLibraryPaths"`
 	// Whether to use enhanced scanning,
-	// Enhanced scanning will fetch media from AniList based on the local files' titles,
+	// Enhanced scanning will fetch media from the metadata provider based on the local files' titles,
 	// and use the metadata to match the local files.
 	Enhanced bool `json:"enhanced"`
 	// Whether to skip locked files
@@ -53,7 +53,7 @@ type ScanCompletedEvent struct {
 type ScanMediaFetcherStartedEvent struct {
 	hook_resolver.Event
 	// Whether to use enhanced scanning.
-	// Enhanced scanning will fetch media from AniList based on the local files' titles,
+	// Enhanced scanning will fetch media from the metadata provider based on the local files' titles,
 	// and use the metadata to match the local files.
 	Enhanced bool `json:"enhanced"`
 	// Whether enhanced scanning will use Anime Offline Database as matching data.
@@ -64,11 +64,11 @@ type ScanMediaFetcherStartedEvent struct {
 }
 
 // ScanMediaFetcherCompletedEvent is triggered when the media fetcher completes.
-// The event includes all the media fetched from AniList.
+// The event includes all the media fetched from the metadata provider.
 // The event includes the media IDs that are not in the user's collection.
 type ScanMediaFetcherCompletedEvent struct {
 	hook_resolver.Event
-	// All media fetched from AniList, to be matched against the local files.
+	// All media fetched from the metadata provider, to be matched against the local files.
 	AllMedia []*dto.NormalizedMedia `json:"allMedia"`
 	// Media IDs that are not in the user's collection.
 	UnknownMediaIds []int `json:"unknownMediaIds"`

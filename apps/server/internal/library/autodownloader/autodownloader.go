@@ -103,7 +103,7 @@ func (a *AutoDownloader) isEpisodeAlreadyHandled(
 }
 
 // isTitleMatch compares a torrent title against the autodownload rule.
-// args: parsed (habari parsed), torrentName (string), rule (*dto.AutoDownloaderRule), entry (*anilist.AnimeListEntry)
+// args: parsed (habari parsed), torrentName (string), rule (*dto.AutoDownloaderRule), entry (*models.MediaEntry)
 func (a *AutoDownloader) isTitleMatch(args ...interface{}) bool { return false }
 
 // isSeasonAndEpisodeMatch checks if the parsed torrent matches the expected season/episode for the rule.

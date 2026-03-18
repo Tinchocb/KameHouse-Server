@@ -9,19 +9,9 @@ import (
 
 // Manager manages all hooks in the application
 type Manager interface {
-	// AniList events
+	// Provider events
 	OnGetAnime() *Hook[hook_resolver.Resolver]
 	OnGetAnimeDetails() *Hook[hook_resolver.Resolver]
-	OnGetManga() *Hook[hook_resolver.Resolver]
-	OnGetMangaDetails() *Hook[hook_resolver.Resolver]
-	OnGetAnimeCollection() *Hook[hook_resolver.Resolver]
-	OnGetMangaCollection() *Hook[hook_resolver.Resolver]
-	OnGetCachedAnimeCollection() *Hook[hook_resolver.Resolver]
-	OnGetCachedMangaCollection() *Hook[hook_resolver.Resolver]
-	OnGetRawAnimeCollection() *Hook[hook_resolver.Resolver]
-	OnGetRawMangaCollection() *Hook[hook_resolver.Resolver]
-	OnGetCachedRawAnimeCollection() *Hook[hook_resolver.Resolver]
-	OnGetCachedRawMangaCollection() *Hook[hook_resolver.Resolver]
 	OnGetStudioDetails() *Hook[hook_resolver.Resolver]
 	OnPreUpdateEntry() *Hook[hook_resolver.Resolver]
 	OnPostUpdateEntry() *Hook[hook_resolver.Resolver]
@@ -93,17 +83,6 @@ type Manager interface {
 	OnAnimeEpisodeMetadataRequested() *Hook[hook_resolver.Resolver]
 	OnAnimeEpisodeMetadata() *Hook[hook_resolver.Resolver]
 
-	// Manga events
-	OnMangaEntryRequested() *Hook[hook_resolver.Resolver]
-	OnMangaEntry() *Hook[hook_resolver.Resolver]
-	OnMangaLibraryCollectionRequested() *Hook[hook_resolver.Resolver]
-	OnMangaLibraryCollection() *Hook[hook_resolver.Resolver]
-	OnMangaDownloadedChapterContainersRequested() *Hook[hook_resolver.Resolver]
-	OnMangaDownloadedChapterContainers() *Hook[hook_resolver.Resolver]
-	OnMangaLatestChapterNumbersMap() *Hook[hook_resolver.Resolver]
-	OnMangaDownloadMap() *Hook[hook_resolver.Resolver]
-	OnMangaChapterContainerRequested() *Hook[hook_resolver.Resolver]
-	OnMangaChapterContainer() *Hook[hook_resolver.Resolver]
 
 	// Playback events
 	OnLocalFilePlaybackRequested() *Hook[hook_resolver.Resolver]
@@ -133,7 +112,7 @@ type Manager interface {
 	OnWatchHistoryStreamEpisodeItemRequested() *Hook[hook_resolver.Resolver]
 	OnPredictiveCacheEpisodeRequested() *Hook[hook_resolver.Resolver]
 
-	// Anilist events
+	// Platform events
 	OnListMissedSequelsRequested() *Hook[hook_resolver.Resolver]
 	OnListMissedSequels() *Hook[hook_resolver.Resolver]
 
@@ -153,19 +132,13 @@ type Manager interface {
 
 type ManagerImpl struct {
 	logger *zerolog.Logger
-	// AniList events
+	// Provider events
 	onGetAnime                    *Hook[hook_resolver.Resolver]
 	onGetAnimeDetails             *Hook[hook_resolver.Resolver]
-	onGetManga                    *Hook[hook_resolver.Resolver]
-	onGetMangaDetails             *Hook[hook_resolver.Resolver]
 	onGetAnimeCollection          *Hook[hook_resolver.Resolver]
-	onGetMangaCollection          *Hook[hook_resolver.Resolver]
 	onGetCachedAnimeCollection    *Hook[hook_resolver.Resolver]
-	onGetCachedMangaCollection    *Hook[hook_resolver.Resolver]
 	onGetRawAnimeCollection       *Hook[hook_resolver.Resolver]
-	onGetRawMangaCollection       *Hook[hook_resolver.Resolver]
 	onGetCachedRawAnimeCollection *Hook[hook_resolver.Resolver]
-	onGetCachedRawMangaCollection *Hook[hook_resolver.Resolver]
 	onGetStudioDetails            *Hook[hook_resolver.Resolver]
 	onPreUpdateEntry              *Hook[hook_resolver.Resolver]
 	onPostUpdateEntry             *Hook[hook_resolver.Resolver]
@@ -223,17 +196,6 @@ type ManagerImpl struct {
 	onAnimeMetadata                 *Hook[hook_resolver.Resolver]
 	onAnimeEpisodeMetadataRequested *Hook[hook_resolver.Resolver]
 	onAnimeEpisodeMetadata          *Hook[hook_resolver.Resolver]
-	// Manga events
-	onMangaEntryRequested                       *Hook[hook_resolver.Resolver]
-	onMangaEntry                                *Hook[hook_resolver.Resolver]
-	onMangaLibraryCollectionRequested           *Hook[hook_resolver.Resolver]
-	onMangaLibraryCollection                    *Hook[hook_resolver.Resolver]
-	onMangaDownloadedChapterContainersRequested *Hook[hook_resolver.Resolver]
-	onMangaDownloadedChapterContainers          *Hook[hook_resolver.Resolver]
-	onMangaLatestChapterNumbersMap              *Hook[hook_resolver.Resolver]
-	onMangaDownloadMap                          *Hook[hook_resolver.Resolver]
-	onMangaChapterContainerRequested            *Hook[hook_resolver.Resolver]
-	onMangaChapterContainer                     *Hook[hook_resolver.Resolver]
 	// Playback events
 	onLocalFilePlaybackRequested        *Hook[hook_resolver.Resolver]
 	onPlaybackBeforeTracking            *Hook[hook_resolver.Resolver]
@@ -257,7 +219,7 @@ type ManagerImpl struct {
 	onWatchHistoryLocalFileEpisodeItemRequested *Hook[hook_resolver.Resolver]
 	onWatchHistoryStreamEpisodeItemRequested    *Hook[hook_resolver.Resolver]
 	onPredictiveCacheEpisodeRequested           *Hook[hook_resolver.Resolver]
-	// Anilist events
+	// Platform events
 	onListMissedSequelsRequested *Hook[hook_resolver.Resolver]
 	onListMissedSequels          *Hook[hook_resolver.Resolver]
 	// Anizip events
@@ -295,19 +257,13 @@ func NewHookManager(opts NewHookManagerOptions) Manager {
 }
 
 func (m *ManagerImpl) initHooks() {
-	// AniList events
+	// Provider events
 	m.onGetAnime = &Hook[hook_resolver.Resolver]{}
 	m.onGetAnimeDetails = &Hook[hook_resolver.Resolver]{}
-	m.onGetManga = &Hook[hook_resolver.Resolver]{}
-	m.onGetMangaDetails = &Hook[hook_resolver.Resolver]{}
 	m.onGetAnimeCollection = &Hook[hook_resolver.Resolver]{}
-	m.onGetMangaCollection = &Hook[hook_resolver.Resolver]{}
 	m.onGetCachedAnimeCollection = &Hook[hook_resolver.Resolver]{}
-	m.onGetCachedMangaCollection = &Hook[hook_resolver.Resolver]{}
 	m.onGetRawAnimeCollection = &Hook[hook_resolver.Resolver]{}
-	m.onGetRawMangaCollection = &Hook[hook_resolver.Resolver]{}
 	m.onGetCachedRawAnimeCollection = &Hook[hook_resolver.Resolver]{}
-	m.onGetCachedRawMangaCollection = &Hook[hook_resolver.Resolver]{}
 	m.onGetStudioDetails = &Hook[hook_resolver.Resolver]{}
 	m.onPreUpdateEntry = &Hook[hook_resolver.Resolver]{}
 	m.onPostUpdateEntry = &Hook[hook_resolver.Resolver]{}
@@ -365,17 +321,6 @@ func (m *ManagerImpl) initHooks() {
 	m.onAnimeMetadata = &Hook[hook_resolver.Resolver]{}
 	m.onAnimeEpisodeMetadataRequested = &Hook[hook_resolver.Resolver]{}
 	m.onAnimeEpisodeMetadata = &Hook[hook_resolver.Resolver]{}
-	// Manga events
-	m.onMangaEntryRequested = &Hook[hook_resolver.Resolver]{}
-	m.onMangaEntry = &Hook[hook_resolver.Resolver]{}
-	m.onMangaLibraryCollectionRequested = &Hook[hook_resolver.Resolver]{}
-	m.onMangaLibraryCollection = &Hook[hook_resolver.Resolver]{}
-	m.onMangaDownloadedChapterContainersRequested = &Hook[hook_resolver.Resolver]{}
-	m.onMangaDownloadedChapterContainers = &Hook[hook_resolver.Resolver]{}
-	m.onMangaLatestChapterNumbersMap = &Hook[hook_resolver.Resolver]{}
-	m.onMangaDownloadMap = &Hook[hook_resolver.Resolver]{}
-	m.onMangaChapterContainerRequested = &Hook[hook_resolver.Resolver]{}
-	m.onMangaChapterContainer = &Hook[hook_resolver.Resolver]{}
 	// Playback events
 	m.onLocalFilePlaybackRequested = &Hook[hook_resolver.Resolver]{}
 	m.onPlaybackBeforeTracking = &Hook[hook_resolver.Resolver]{}
@@ -399,7 +344,7 @@ func (m *ManagerImpl) initHooks() {
 	m.onWatchHistoryLocalFileEpisodeItemRequested = &Hook[hook_resolver.Resolver]{}
 	m.onWatchHistoryStreamEpisodeItemRequested = &Hook[hook_resolver.Resolver]{}
 	m.onPredictiveCacheEpisodeRequested = &Hook[hook_resolver.Resolver]{}
-	// Anilist events
+	// Platform events
 	m.onListMissedSequelsRequested = &Hook[hook_resolver.Resolver]{}
 	m.onListMissedSequels = &Hook[hook_resolver.Resolver]{}
 	// Anizip events
@@ -428,20 +373,6 @@ func (m *ManagerImpl) OnGetAnimeDetails() *Hook[hook_resolver.Resolver] {
 	return m.onGetAnimeDetails
 }
 
-func (m *ManagerImpl) OnGetManga() *Hook[hook_resolver.Resolver] {
-	if m == nil {
-		return &Hook[hook_resolver.Resolver]{}
-	}
-	return m.onGetManga
-}
-
-func (m *ManagerImpl) OnGetMangaDetails() *Hook[hook_resolver.Resolver] {
-	if m == nil {
-		return &Hook[hook_resolver.Resolver]{}
-	}
-	return m.onGetMangaDetails
-}
-
 func (m *ManagerImpl) OnGetAnimeCollection() *Hook[hook_resolver.Resolver] {
 	if m == nil {
 		return &Hook[hook_resolver.Resolver]{}
@@ -449,53 +380,11 @@ func (m *ManagerImpl) OnGetAnimeCollection() *Hook[hook_resolver.Resolver] {
 	return m.onGetAnimeCollection
 }
 
-func (m *ManagerImpl) OnGetMangaCollection() *Hook[hook_resolver.Resolver] {
-	if m == nil {
-		return &Hook[hook_resolver.Resolver]{}
-	}
-	return m.onGetMangaCollection
-}
-
-func (m *ManagerImpl) OnGetCachedAnimeCollection() *Hook[hook_resolver.Resolver] {
-	if m == nil {
-		return &Hook[hook_resolver.Resolver]{}
-	}
-	return m.onGetCachedAnimeCollection
-}
-
-func (m *ManagerImpl) OnGetCachedMangaCollection() *Hook[hook_resolver.Resolver] {
-	if m == nil {
-		return &Hook[hook_resolver.Resolver]{}
-	}
-	return m.onGetCachedMangaCollection
-}
-
 func (m *ManagerImpl) OnGetRawAnimeCollection() *Hook[hook_resolver.Resolver] {
 	if m == nil {
 		return &Hook[hook_resolver.Resolver]{}
 	}
 	return m.onGetRawAnimeCollection
-}
-
-func (m *ManagerImpl) OnGetRawMangaCollection() *Hook[hook_resolver.Resolver] {
-	if m == nil {
-		return &Hook[hook_resolver.Resolver]{}
-	}
-	return m.onGetRawMangaCollection
-}
-
-func (m *ManagerImpl) OnGetCachedRawAnimeCollection() *Hook[hook_resolver.Resolver] {
-	if m == nil {
-		return &Hook[hook_resolver.Resolver]{}
-	}
-	return m.onGetCachedRawAnimeCollection
-}
-
-func (m *ManagerImpl) OnGetCachedRawMangaCollection() *Hook[hook_resolver.Resolver] {
-	if m == nil {
-		return &Hook[hook_resolver.Resolver]{}
-	}
-	return m.onGetCachedRawMangaCollection
 }
 
 func (m *ManagerImpl) OnGetStudioDetails() *Hook[hook_resolver.Resolver] {
@@ -864,78 +753,6 @@ func (m *ManagerImpl) OnAnimeEpisodeMetadata() *Hook[hook_resolver.Resolver] {
 	return m.onAnimeEpisodeMetadata
 }
 
-// Manga events
-
-func (m *ManagerImpl) OnMangaEntryRequested() *Hook[hook_resolver.Resolver] {
-	if m == nil {
-		return &Hook[hook_resolver.Resolver]{}
-	}
-	return m.onMangaEntryRequested
-}
-
-func (m *ManagerImpl) OnMangaEntry() *Hook[hook_resolver.Resolver] {
-	if m == nil {
-		return &Hook[hook_resolver.Resolver]{}
-	}
-	return m.onMangaEntry
-}
-
-func (m *ManagerImpl) OnMangaLibraryCollectionRequested() *Hook[hook_resolver.Resolver] {
-	if m == nil {
-		return &Hook[hook_resolver.Resolver]{}
-	}
-	return m.onMangaLibraryCollectionRequested
-}
-
-func (m *ManagerImpl) OnMangaLibraryCollection() *Hook[hook_resolver.Resolver] {
-	if m == nil {
-		return &Hook[hook_resolver.Resolver]{}
-	}
-	return m.onMangaLibraryCollection
-}
-
-func (m *ManagerImpl) OnMangaDownloadedChapterContainersRequested() *Hook[hook_resolver.Resolver] {
-	if m == nil {
-		return &Hook[hook_resolver.Resolver]{}
-	}
-	return m.onMangaDownloadedChapterContainersRequested
-}
-
-func (m *ManagerImpl) OnMangaDownloadedChapterContainers() *Hook[hook_resolver.Resolver] {
-	if m == nil {
-		return &Hook[hook_resolver.Resolver]{}
-	}
-	return m.onMangaDownloadedChapterContainers
-}
-
-func (m *ManagerImpl) OnMangaLatestChapterNumbersMap() *Hook[hook_resolver.Resolver] {
-	if m == nil {
-		return &Hook[hook_resolver.Resolver]{}
-	}
-	return m.onMangaLatestChapterNumbersMap
-}
-
-func (m *ManagerImpl) OnMangaDownloadMap() *Hook[hook_resolver.Resolver] {
-	if m == nil {
-		return &Hook[hook_resolver.Resolver]{}
-	}
-	return m.onMangaDownloadMap
-}
-
-func (m *ManagerImpl) OnMangaChapterContainerRequested() *Hook[hook_resolver.Resolver] {
-	if m == nil {
-		return &Hook[hook_resolver.Resolver]{}
-	}
-	return m.onMangaChapterContainerRequested
-}
-
-func (m *ManagerImpl) OnMangaChapterContainer() *Hook[hook_resolver.Resolver] {
-	if m == nil {
-		return &Hook[hook_resolver.Resolver]{}
-	}
-	return m.onMangaChapterContainer
-}
-
 // Playback events
 
 func (m *ManagerImpl) OnLocalFilePlaybackRequested() *Hook[hook_resolver.Resolver] {
@@ -1072,7 +889,7 @@ func (m *ManagerImpl) OnPredictiveCacheEpisodeRequested() *Hook[hook_resolver.Re
 	return m.onPredictiveCacheEpisodeRequested
 }
 
-// Anilist events
+// Platform events
 
 func (m *ManagerImpl) OnListMissedSequelsRequested() *Hook[hook_resolver.Resolver] {
 	if m == nil {

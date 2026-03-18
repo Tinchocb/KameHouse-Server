@@ -7,139 +7,51 @@ export type ApiEndpoints = Record<string, Record<string, {
 }>>
 
 export const API_ENDPOINTS = {
-    ANILIST: {
+    PLATFORM: {
         /**
          *  @description
-         *  Route returns the user's AniList anime collection.
-         *  Calling GET will return the cached anime collection.
-         *  The manga collection is also refreshed in the background, and upon completion, a WebSocket event is sent.
-         *  Calling POST will refetch both the anime and manga collections.
+         *  Route returns the user's media collection from the active platform.
          */
-        GetAnimeCollection: {
-            key: "ANILIST-get-anime-collection",
+        GetCollection: {
+            key: "PLATFORM-get-collection",
             methods: ["GET", "POST"],
-            endpoint: "/api/v1/anilist/collection",
+            endpoint: "/api/v1/platform/collection",
         },
         /**
          *  @description
-         *  Route returns the user's AniList anime collection without filtering out custom lists.
-         *  Calling GET will return the cached anime collection.
-         */
-        GetRawAnimeCollection: {
-            key: "ANILIST-get-raw-anime-collection",
-            methods: ["GET", "POST"],
-            endpoint: "/api/v1/anilist/collection/raw",
-        },
-        /**
-         *  @description
-         *  Route updates the user's list entry on Anilist.
-         *  This is used to edit an entry on AniList.
-         *  The "type" field is used to determine if the entry is an anime or manga and refreshes the collection accordingly.
-         *  The client should refetch collection-dependent queries after this mutation.
-         */
-        EditAnilistListEntry: {
-            key: "ANILIST-edit-anilist-list-entry",
-            methods: ["POST"],
-            endpoint: "/api/v1/anilist/list-entry",
-        },
-        /**
-         *  @description
-         *  Route returns more details about an AniList anime entry.
-         *  This fetches more fields omitted from the base queries.
-         */
-        GetAnilistAnimeDetails: {
-            key: "ANILIST-get-anilist-anime-details",
-            methods: ["GET"],
-            endpoint: "/api/v1/anilist/media-details/{id}",
-        },
-        /**
-         *  @description
-         *  Route returns details about a studio.
-         *  This fetches media produced by the studio.
-         */
-        GetAnilistStudioDetails: {
-            key: "ANILIST-get-anilist-studio-details",
-            methods: ["GET"],
-            endpoint: "/api/v1/anilist/studio-details/{id}",
-        },
-        /**
-         *  @description
-         *  Route deletes an entry from the user's AniList list.
-         *  This is used to delete an entry on AniList.
-         *  The "type" field is used to determine if the entry is an anime or manga and refreshes the collection accordingly.
-         *  The client should refetch collection-dependent queries after this mutation.
-         */
-        DeleteAnilistListEntry: {
-            key: "ANILIST-delete-anilist-list-entry",
-            methods: ["DELETE"],
-            endpoint: "/api/v1/anilist/list-entry",
-        },
-        /**
-         *  @description
-         *  Route returns a list of anime based on the search parameters.
+         *  Route returns a list of media based on the search parameters.
          *  This is used by the "Discover" and "Advanced Search".
          */
-        AnilistListAnime: {
-            key: "ANILIST-anilist-list-anime",
+        ListAnime: {
+            key: "PLATFORM-list-anime",
             methods: ["POST"],
-            endpoint: "/api/v1/anilist/list-anime",
+            endpoint: "/api/v1/platform/list-anime",
         },
         /**
          *  @description
-         *  Route returns a list of recently aired anime.
-         *  This is used by the "Schedule" page to display recently aired anime.
+         *  Route returns a list of recently aired media.
+         *  This is used by the "Schedule" page.
          */
-        AnilistListRecentAiringAnime: {
-            key: "ANILIST-anilist-list-recent-airing-anime",
+        ListRecentAiringAnime: {
+            key: "PLATFORM-list-recent-airing-anime",
             methods: ["POST"],
-            endpoint: "/api/v1/anilist/list-recent-anime",
+            endpoint: "/api/v1/platform/list-recent-anime",
         },
         /**
          *  @description
-         *  Route returns a list of sequels not in the user's list.
-         *  This is used by the "Discover" page to display sequels the user may have missed.
+         *  Route returns the platform stats.
          */
-        AnilistListMissedSequels: {
-            key: "ANILIST-anilist-list-missed-sequels",
+        GetStats: {
+            key: "PLATFORM-get-stats",
             methods: ["GET"],
-            endpoint: "/api/v1/anilist/list-missed-sequels",
-        },
-        /**
-         *  @description
-         *  Route returns the anilist stats.
-         *  This returns the AniList stats for the user.
-         */
-        GetAniListStats: {
-            key: "ANILIST-get-ani-list-stats",
-            methods: ["GET"],
-            endpoint: "/api/v1/anilist/stats",
-        },
-        /**
-         *  @description
-         *  Route returns the status of the AniList cache layer.
-         *  This returns the status of the AniList cache layer.
-         */
-        GetAnilistCacheLayerStatus: {
-            key: "ANILIST-get-anilist-cache-layer-status",
-            methods: ["GET"],
-            endpoint: "/api/v1/anilist/cache-layer/status",
-        },
-        /**
-         *  @description
-         *  Route toggles the status of the AniList cache layer.
-         *  This toggles the status of the AniList cache layer.
-         */
-        ToggleAnilistCacheLayerStatus: {
-            key: "ANILIST-toggle-anilist-cache-layer-status",
-            methods: ["POST"],
-            endpoint: "/api/v1/anilist/cache-layer/status",
+            endpoint: "/api/v1/platform/stats",
         },
     },
     ANIME: {
         /**
          *  @description
          *  Route gets list of main episodes
-         *  This returns a list of main episodes for the given anime media id (AniList or TMDB).
+         *  This returns a list of main episodes for the given anime media id (Platform or TMDB).
          *  It also loads the episode list into the different modules.
          */
         GetAnimeEpisodeCollection: {
@@ -154,8 +66,8 @@ export const API_ENDPOINTS = {
          *  Route returns the main local anime collection.
          *  This creates a new LibraryCollection struct and returns it.
          *  This is used to get the main anime collection of the user.
-         *  It uses the cached Anilist anime collection for the GET method.
-         *  It refreshes the AniList anime collection if the POST method is used.
+         *  It uses the cached Platform anime collection for the GET method.
+         *  It refreshes the Platform anime collection if the POST method is used.
          */
         GetLibraryCollection: {
             key: "ANIME-COLLECTION-get-library-collection",
@@ -174,8 +86,8 @@ export const API_ENDPOINTS = {
         },
         /**
          *  @description
-         *  Route adds the given media to the user's AniList planning collections
-         *  Since media not found in the user's AniList collection are not displayed in the library, this route is used to add them.
+         *  Route adds the given media to the user's Platform planning collections
+         *  Since media not found in the user's Platform collection are not displayed in the library, this route is used to add them.
          *  The response is ignored in the frontend, the client should just refetch the entire library collection.
          */
         AddUnknownMedia: {
@@ -187,9 +99,9 @@ export const API_ENDPOINTS = {
     ANIME_ENTRIES: {
         /**
          *  @description
-         *  Route return a media entry for the given AniList anime media id.
+         *  Route return a media entry for the given Platform anime media id.
          *  This is used by the anime media entry pages to get all the data about the anime.
-         *  This includes episodes and metadata (if any), AniList list data, download info...
+         *  This includes episodes and metadata (if any), Platform list data, download info...
          */
         GetAnimeEntry: {
             key: "ANIME-ENTRIES-get-anime-entry",
@@ -244,7 +156,7 @@ export const API_ENDPOINTS = {
         /**
          *  @description
          *  Route returns a list of episodes missing from the user's library collection
-         *  It detects missing episodes by comparing the user's AniList collection 'next airing' data with the local files.
+         *  It detects missing episodes by comparing the user's Platform collection 'next airing' data with the local files.
          *  This route can be called multiple times, as it does not bypass the cache.
          */
         GetMissingEpisodes: {
@@ -255,7 +167,7 @@ export const API_ENDPOINTS = {
         /**
          *  @description
          *  Route returns a list of upcoming episodes based on the user's anime collection
-         *  It uses the AniList 'next airing episode' data to determine upcoming episodes.
+         *  It uses the Platform 'next airing episode' data to determine upcoming episodes.
          *  This route can be called multiple times, as it does not bypass the cache.
          */
         GetUpcomingEpisodes: {
@@ -281,7 +193,7 @@ export const API_ENDPOINTS = {
         /**
          *  @description
          *  Route update the progress of the given anime media entry.
-         *  This is used to update the progress of the given anime media entry on AniList.
+         *  This is used to update the progress of the given anime media entry on Platform.
          *  The response is not used in the frontend, the client should just refetch the entire media entry data.
          *  NOTE: This is currently only used by the 'Online streaming' feature since anime progress updates are handled by the Playback Manager.
          */
@@ -293,7 +205,7 @@ export const API_ENDPOINTS = {
         /**
          *  @description
          *  Route update the repeat value of the given anime media entry.
-         *  This is used to update the repeat value of the given anime media entry on AniList.
+         *  This is used to update the repeat value of the given anime media entry on Platform.
          *  The response is not used in the frontend, the client should just refetch the entire media entry data.
          */
         UpdateAnimeEntryRepeat: {
@@ -306,8 +218,8 @@ export const API_ENDPOINTS = {
         /**
          *  @description
          *  Route logs in the user by saving the JWT token in the database.
-         *  This is called when the JWT token is obtained from AniList after logging in with redirection on the client.
-         *  It also fetches the Viewer data from AniList and saves it in the database.
+         *  This is called when the JWT token is obtained from Platform after logging in with redirection on the client.
+         *  It also fetches the Viewer data from Platform and saves it in the database.
          *  It creates a new handlers.Status and refreshes App modules.
          */
         Login: {
@@ -498,16 +410,6 @@ export const API_ENDPOINTS = {
             methods: ["POST"],
             endpoint: "/api/v1/custom-source/provider/list/anime",
         },
-        /**
-         *  @description
-         *  Route returns a paginated list of manga from the provider.
-         *  This will search for media from the provider.
-         */
-        CustomSourceListManga: {
-            key: "CUSTOM-SOURCE-custom-source-list-manga",
-            methods: ["POST"],
-            endpoint: "/api/v1/custom-source/provider/list/manga",
-        },
     },
     DEBRID: {
         /**
@@ -648,33 +550,7 @@ export const API_ENDPOINTS = {
             endpoint: "/api/v1/directstream/subs/convert-subs",
         },
     },
-    DISCORD: {
-        SetDiscordMangaActivity: {
-            key: "DISCORD-set-discord-manga-activity",
-            methods: ["POST"],
-            endpoint: "/api/v1/discord/presence/manga",
-        },
-        SetDiscordLegacyAnimeActivity: {
-            key: "DISCORD-set-discord-legacy-anime-activity",
-            methods: ["POST"],
-            endpoint: "/api/v1/discord/presence/legacy-anime",
-        },
-        SetDiscordAnimeActivityWithProgress: {
-            key: "DISCORD-set-discord-anime-activity-with-progress",
-            methods: ["POST"],
-            endpoint: "/api/v1/discord/presence/anime",
-        },
-        UpdateDiscordAnimeActivityWithProgress: {
-            key: "DISCORD-update-discord-anime-activity-with-progress",
-            methods: ["POST"],
-            endpoint: "/api/v1/discord/presence/anime-update",
-        },
-        CancelDiscordActivity: {
-            key: "DISCORD-cancel-discord-activity",
-            methods: ["POST"],
-            endpoint: "/api/v1/discord/presence/cancel",
-        },
-    },
+
     DOCS: {
         GetDocs: {
             key: "DOCS-get-docs",
@@ -779,11 +655,6 @@ export const API_ENDPOINTS = {
             key: "EXTENSIONS-get-extension-update-data",
             methods: ["GET"],
             endpoint: "/api/v1/extensions/updates",
-        },
-        ListMangaProviderExtensions: {
-            key: "EXTENSIONS-list-manga-provider-extensions",
-            methods: ["GET"],
-            endpoint: "/api/v1/extensions/list/manga-provider",
         },
         ListOnlinestreamProviderExtensions: {
             key: "EXTENSIONS-list-onlinestream-provider-extensions",
@@ -970,10 +841,10 @@ export const API_ENDPOINTS = {
             methods: ["GET"],
             endpoint: "/api/v1/local/queue",
         },
-        LocalSyncAnilistData: {
-            key: "LOCAL-local-sync-anilist-data",
+        LocalSyncPlatformData: {
+            key: "LOCAL-local-sync-Platform-data",
             methods: ["POST"],
-            endpoint: "/api/v1/local/anilist",
+            endpoint: "/api/v1/local/Platform",
         },
         LocalSetHasLocalChanges: {
             key: "LOCAL-local-set-has-local-changes",
@@ -990,10 +861,10 @@ export const API_ENDPOINTS = {
             methods: ["GET"],
             endpoint: "/api/v1/local/storage/size",
         },
-        LocalSyncSimulatedDataToAnilist: {
-            key: "LOCAL-local-sync-simulated-data-to-anilist",
+        LocalSyncSimulatedDataToPlatform: {
+            key: "LOCAL-local-sync-simulated-data-to-Platform",
             methods: ["POST"],
-            endpoint: "/api/v1/local/sync-simulated-to-anilist",
+            endpoint: "/api/v1/local/sync-simulated-to-Platform",
         },
     },
     LOCALFILES: {
@@ -1110,254 +981,6 @@ export const API_ENDPOINTS = {
             key: "MAL-mal-logout",
             methods: ["POST"],
             endpoint: "/api/v1/mal/logout",
-        },
-    },
-    MANGA: {
-        GetAnilistMangaCollection: {
-            key: "MANGA-get-anilist-manga-collection",
-            methods: ["GET"],
-            endpoint: "/api/v1/manga/anilist/collection",
-        },
-        GetRawAnilistMangaCollection: {
-            key: "MANGA-get-raw-anilist-manga-collection",
-            methods: ["GET", "POST"],
-            endpoint: "/api/v1/manga/anilist/collection/raw",
-        },
-        /**
-         *  @description
-         *  Route returns the user's main manga collection.
-         *  This is an object that contains all the user's manga entries in a structured format.
-         */
-        GetMangaCollection: {
-            key: "MANGA-get-manga-collection",
-            methods: ["GET"],
-            endpoint: "/api/v1/manga/collection",
-        },
-        /**
-         *  @description
-         *  Route returns a manga entry for the given AniList manga id.
-         *  This is used by the manga media entry pages to get all the data about the anime. It includes metadata and AniList list data.
-         */
-        GetMangaEntry: {
-            key: "MANGA-get-manga-entry",
-            methods: ["GET"],
-            endpoint: "/api/v1/manga/entry/{id}",
-        },
-        /**
-         *  @description
-         *  Route returns more details about an AniList manga entry.
-         *  This fetches more fields omitted from the base queries.
-         */
-        GetMangaEntryDetails: {
-            key: "MANGA-get-manga-entry-details",
-            methods: ["GET"],
-            endpoint: "/api/v1/manga/entry/{id}/details",
-        },
-        GetMangaLatestChapterNumbersMap: {
-            key: "MANGA-get-manga-latest-chapter-numbers-map",
-            methods: ["GET"],
-            endpoint: "/api/v1/manga/latest-chapter-numbers",
-        },
-        RefetchMangaChapterContainers: {
-            key: "MANGA-refetch-manga-chapter-containers",
-            methods: ["POST"],
-            endpoint: "/api/v1/manga/refetch-chapter-containers",
-        },
-        /**
-         *  @description
-         *  Route empties the cache for a manga entry.
-         *  This will empty the cache for a manga entry (chapter lists and pages), allowing the client to fetch fresh data.
-         *  HandleGetMangaEntryChapters should be called after this to fetch the new chapter list.
-         *  Returns 'true' if the operation was successful.
-         */
-        EmptyMangaEntryCache: {
-            key: "MANGA-empty-manga-entry-cache",
-            methods: ["DELETE"],
-            endpoint: "/api/v1/manga/entry/cache",
-        },
-        GetMangaEntryChapters: {
-            key: "MANGA-get-manga-entry-chapters",
-            methods: ["POST"],
-            endpoint: "/api/v1/manga/chapters",
-        },
-        /**
-         *  @description
-         *  Route returns the pages for a manga entry based on the provider and chapter id.
-         *  This will return the pages for a manga chapter.
-         *  If the app is offline and the chapter is not downloaded, it will return an error.
-         *  If the app is online and the chapter is not downloaded, it will return the pages from the provider.
-         *  If the chapter is downloaded, it will return the appropriate struct.
-         *  If 'double page' is requested, it will fetch image sizes and include the dimensions in the response.
-         */
-        GetMangaEntryPages: {
-            key: "MANGA-get-manga-entry-pages",
-            methods: ["POST"],
-            endpoint: "/api/v1/manga/pages",
-        },
-        GetMangaEntryDownloadedChapters: {
-            key: "MANGA-get-manga-entry-downloaded-chapters",
-            methods: ["GET"],
-            endpoint: "/api/v1/manga/downloaded-chapters/{id}",
-        },
-        /**
-         *  @description
-         *  Route returns a list of manga based on the search parameters.
-         *  This is used by "Advanced Search" and search function.
-         */
-        AnilistListManga: {
-            key: "MANGA-anilist-list-manga",
-            methods: ["POST"],
-            endpoint: "/api/v1/manga/anilist/list",
-        },
-        /**
-         *  @description
-         *  Route updates the progress of a manga entry.
-         *  Note: MyAnimeList is not supported
-         */
-        UpdateMangaProgress: {
-            key: "MANGA-update-manga-progress",
-            methods: ["POST"],
-            endpoint: "/api/v1/manga/update-progress",
-        },
-        /**
-         *  @description
-         *  Route returns search results for a manual search.
-         *  Returns search results for a manual search.
-         */
-        MangaManualSearch: {
-            key: "MANGA-manga-manual-search",
-            methods: ["POST"],
-            endpoint: "/api/v1/manga/search",
-        },
-        /**
-         *  @description
-         *  Route manually maps a manga entry to a manga ID from the provider.
-         *  This is used to manually map a manga entry to a manga ID from the provider.
-         *  The client should re-fetch the chapter container after this.
-         */
-        MangaManualMapping: {
-            key: "MANGA-manga-manual-mapping",
-            methods: ["POST"],
-            endpoint: "/api/v1/manga/manual-mapping",
-        },
-        /**
-         *  @description
-         *  Route returns the mapping for a manga entry.
-         *  This is used to get the mapping for a manga entry.
-         *  An empty string is returned if there's no manual mapping. If there is, the manga ID will be returned.
-         */
-        GetMangaMapping: {
-            key: "MANGA-get-manga-mapping",
-            methods: ["POST"],
-            endpoint: "/api/v1/manga/get-mapping",
-        },
-        /**
-         *  @description
-         *  Route removes the mapping for a manga entry.
-         *  This is used to remove the mapping for a manga entry.
-         *  The client should re-fetch the chapter container after this.
-         */
-        RemoveMangaMapping: {
-            key: "MANGA-remove-manga-mapping",
-            methods: ["POST"],
-            endpoint: "/api/v1/manga/remove-mapping",
-        },
-        GetLocalMangaPage: {
-            key: "MANGA-get-local-manga-page",
-            methods: ["GET"],
-            endpoint: "/api/v1/manga/local-page/{path}",
-        },
-    },
-    MANGA_DOWNLOAD: {
-        DownloadMangaChapters: {
-            key: "MANGA-DOWNLOAD-download-manga-chapters",
-            methods: ["POST"],
-            endpoint: "/api/v1/manga/download-chapters",
-        },
-        /**
-         *  @description
-         *  Route returns the download data for a specific media.
-         *  This is used to display information about the downloaded and queued chapters in the UI.
-         *  If the 'cached' parameter is false, it will refresh the data by rescanning the download folder.
-         */
-        GetMangaDownloadData: {
-            key: "MANGA-DOWNLOAD-get-manga-download-data",
-            methods: ["POST"],
-            endpoint: "/api/v1/manga/download-data",
-        },
-        GetMangaDownloadQueue: {
-            key: "MANGA-DOWNLOAD-get-manga-download-queue",
-            methods: ["GET"],
-            endpoint: "/api/v1/manga/download-queue",
-        },
-        /**
-         *  @description
-         *  Route starts the download queue if it's not already running.
-         *  This will start the download queue if it's not already running.
-         *  Returns 'true' whether the queue was started or not.
-         */
-        StartMangaDownloadQueue: {
-            key: "MANGA-DOWNLOAD-start-manga-download-queue",
-            methods: ["POST"],
-            endpoint: "/api/v1/manga/download-queue/start",
-        },
-        /**
-         *  @description
-         *  Route stops the manga download queue.
-         *  This will stop the manga download queue.
-         *  Returns 'true' whether the queue was stopped or not.
-         */
-        StopMangaDownloadQueue: {
-            key: "MANGA-DOWNLOAD-stop-manga-download-queue",
-            methods: ["POST"],
-            endpoint: "/api/v1/manga/download-queue/stop",
-        },
-        /**
-         *  @description
-         *  Route clears all chapters from the download queue.
-         *  This will clear all chapters from the download queue.
-         *  Returns 'true' whether the queue was cleared or not.
-         *  This will also send a websocket event telling the client to refetch the download queue.
-         */
-        ClearAllChapterDownloadQueue: {
-            key: "MANGA-DOWNLOAD-clear-all-chapter-download-queue",
-            methods: ["DELETE"],
-            endpoint: "/api/v1/manga/download-queue",
-        },
-        /**
-         *  @description
-         *  Route resets the errored chapters in the download queue.
-         *  This will reset the errored chapters in the download queue, so they can be re-downloaded.
-         *  Returns 'true' whether the queue was reset or not.
-         *  This will also send a websocket event telling the client to refetch the download queue.
-         */
-        ResetErroredChapterDownloadQueue: {
-            key: "MANGA-DOWNLOAD-reset-errored-chapter-download-queue",
-            methods: ["POST"],
-            endpoint: "/api/v1/manga/download-queue/reset-errored",
-        },
-        /**
-         *  @description
-         *  Route deletes downloaded chapters.
-         *  This will delete downloaded chapters from the filesystem.
-         *  Returns 'true' whether the chapters were deleted or not.
-         *  The client should refetch the download data after this.
-         */
-        DeleteMangaDownloadedChapters: {
-            key: "MANGA-DOWNLOAD-delete-manga-downloaded-chapters",
-            methods: ["DELETE"],
-            endpoint: "/api/v1/manga/download-chapter",
-        },
-        /**
-         *  @description
-         *  Route displays the list of downloaded manga.
-         *  This analyzes the download folder and returns a well-formatted structure for displaying downloaded manga.
-         *  It returns a list of manga.DownloadListItem where the media data might be nil if it's not in the AniList collection.
-         */
-        GetMangaDownloadsList: {
-            key: "MANGA-DOWNLOAD-get-manga-downloads-list",
-            methods: ["GET"],
-            endpoint: "/api/v1/manga/downloads",
         },
     },
     MANUAL_DUMP: {
@@ -1480,159 +1103,6 @@ export const API_ENDPOINTS = {
             endpoint: "/api/v1/metadata/parent",
         },
     },
-    NAKAMA: {
-        /**
-         *  @description
-         *  Route handles WebSocket connections for Nakama peers.
-         *  This endpoint handles WebSocket connections from Nakama peers when this instance is acting as a host.
-         */
-        NakamaWebSocket: {
-            key: "NAKAMA-nakama-web-socket",
-            methods: ["GET"],
-            endpoint: "/api/v1/nakama/ws",
-        },
-        /**
-         *  @description
-         *  Route sends a custom message through Nakama.
-         *  This allows sending custom messages to connected peers or the host.
-         */
-        SendNakamaMessage: {
-            key: "NAKAMA-send-nakama-message",
-            methods: ["POST"],
-            endpoint: "/api/v1/nakama/message",
-        },
-        /**
-         *  @description
-         *  Route shares the local anime collection with Nakama clients.
-         *  This creates a new LibraryCollection struct and returns it.
-         *  This is used to share the local anime collection with Nakama clients.
-         */
-        GetNakamaAnimeLibrary: {
-            key: "NAKAMA-get-nakama-anime-library",
-            methods: ["GET"],
-            endpoint: "/api/v1/nakama/host/anime/library",
-        },
-        /**
-         *  @description
-         *  Route returns true if the library is being shared.
-         *  This is used by Nakama peers to check if the library is being shared.
-         */
-        GetNakamaAnimeLibraryShared: {
-            key: "NAKAMA-get-nakama-anime-library-shared",
-            methods: ["GET"],
-            endpoint: "/api/v1/nakama/host/anime/library/shared",
-        },
-        /**
-         *  @description
-         *  Route return the local files for the given AniList anime media id.
-         *  This is used by the anime media entry pages to get all the data about the anime.
-         */
-        GetNakamaAnimeLibraryFiles: {
-            key: "NAKAMA-get-nakama-anime-library-files",
-            methods: ["POST"],
-            endpoint: "/api/v1/nakama/host/anime/library/files/{id}",
-        },
-        /**
-         *  @description
-         *  Route return all the local files for the host.
-         *  This is used to share the local anime collection with Nakama clients.
-         */
-        GetNakamaAnimeAllLibraryFiles: {
-            key: "NAKAMA-get-nakama-anime-all-library-files",
-            methods: ["POST"],
-            endpoint: "/api/v1/nakama/host/anime/library/files",
-        },
-        NakamaPlayVideo: {
-            key: "NAKAMA-nakama-play-video",
-            methods: ["POST"],
-            endpoint: "/api/v1/nakama/play",
-        },
-        /**
-         *  @description
-         *  Route reconnects to the Nakama host.
-         *  This attempts to reconnect to the configured Nakama host if the connection was lost.
-         */
-        NakamaReconnectToHost: {
-            key: "NAKAMA-nakama-reconnect-to-host",
-            methods: ["POST"],
-            endpoint: "/api/v1/nakama/reconnect",
-        },
-        /**
-         *  @description
-         *  Route removes stale peer connections.
-         *  This removes peer connections that haven't responded to ping messages for a while.
-         */
-        NakamaRemoveStaleConnections: {
-            key: "NAKAMA-nakama-remove-stale-connections",
-            methods: ["POST"],
-            endpoint: "/api/v1/nakama/cleanup",
-        },
-        NakamaRoomsAvailable: {
-            key: "NAKAMA-nakama-rooms-available",
-            methods: ["GET"],
-            endpoint: "/api/v1/nakama/room/available",
-        },
-        /**
-         *  @description
-         *  Route creates a KameHouse Room and connects to it as host.
-         *  This creates a room on the KameHouse Rooms relay server and connects as the host. Peers can then join using the returned URL.
-         */
-        NakamaCreateAndJoinRoom: {
-            key: "NAKAMA-nakama-create-and-join-room",
-            methods: ["POST"],
-            endpoint: "/api/v1/nakama/room/create",
-        },
-        /**
-         *  @description
-         *  Route disconnects the host from the current room.
-         *  This closes the room connection and returns to direct mode.
-         */
-        NakamaDisconnectFromRoom: {
-            key: "NAKAMA-nakama-disconnect-from-room",
-            methods: ["POST"],
-            endpoint: "/api/v1/nakama/room/disconnect",
-        },
-        /**
-         *  @description
-         *  Route creates a new watch party session.
-         *  This creates a new watch party that peers can join to watch content together in sync.
-         */
-        NakamaCreateWatchParty: {
-            key: "NAKAMA-nakama-create-watch-party",
-            methods: ["POST"],
-            endpoint: "/api/v1/nakama/watch-party/create",
-        },
-        /**
-         *  @description
-         *  Route joins an existing watch party.
-         *  This allows a peer to join an active watch party session.
-         */
-        NakamaJoinWatchParty: {
-            key: "NAKAMA-nakama-join-watch-party",
-            methods: ["POST"],
-            endpoint: "/api/v1/nakama/watch-party/join",
-        },
-        /**
-         *  @description
-         *  Route leaves the current watch party.
-         *  This removes the user from the active watch party session.
-         */
-        NakamaLeaveWatchParty: {
-            key: "NAKAMA-nakama-leave-watch-party",
-            methods: ["POST"],
-            endpoint: "/api/v1/nakama/watch-party/leave",
-        },
-        /**
-         *  @description
-         *  Route sends a chat message in a watch party.
-         *  This sends a chat message to all participants in the active watch party session.
-         */
-        NakamaSendChatMessage: {
-            key: "NAKAMA-nakama-send-chat-message",
-            methods: ["POST"],
-            endpoint: "/api/v1/nakama/watch-party/chat",
-        },
-    },
     ONLINESTREAM: {
         /**
          *  @description
@@ -1727,7 +1197,7 @@ export const API_ENDPOINTS = {
         },
         /**
          *  @description
-         *  Route updates the AniList progress of the currently playing media.
+         *  Route updates the Platform progress of the currently playing media.
          *  This is called after 'Update progress' is clicked when watching a media.
          *  This route returns the media ID of the currently playing media, so the client can refetch the media entry data.
          */
@@ -1884,6 +1354,18 @@ export const API_ENDPOINTS = {
             key: "RELEASES-get-changelog",
             methods: ["GET"],
             endpoint: "/api/v1/changelog",
+        },
+    },
+    PROGRESS: {
+        GetProgress: {
+            key: "PROGRESS-get-progress",
+            methods: ["GET"],
+            endpoint: "/api/v1/progress",
+        },
+        SaveProgress: {
+            key: "PROGRESS-save-progress",
+            methods: ["POST"],
+            endpoint: "/api/v1/progress",
         },
     },
     REPORT: {
@@ -2327,5 +1809,5 @@ export const API_ENDPOINTS = {
             endpoint: "/api/v1/torrentio/streams",
         },
     },
-} satisfies ApiEndpoints
+} as ApiEndpoints
 

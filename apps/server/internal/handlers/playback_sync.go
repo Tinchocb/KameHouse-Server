@@ -45,7 +45,7 @@ func scrobbleKey(mediaId, episode int) string {
 //
 //	@summary receives playback telemetry from the frontend.
 //	@desc    Updates continuity watch history and, when progress >= 85%,
-//	         automatically scrobbles the episode as watched to AniList/MAL.
+//	         automatically scrobbles the episode as watched to Platform/MAL.
 //	@route /api/v1/playback/sync [POST]
 //	@returns bool
 func (h *Handler) HandlePlaybackSync(c echo.Context) error {

@@ -49,7 +49,7 @@ func (h *Handler) HandlePlaybackPlayRandomVideo(c echo.Context) error {
 
 // HandlePlaybackSyncCurrentProgress
 //
-//	@summary updates the AniList progress of the currently playing media.
+//	@summary updates the Platform progress of the currently playing media.
 //	@route /api/v1/playback-manager/sync-current-progress [POST]
 //	@returns int
 func (h *Handler) HandlePlaybackSyncCurrentProgress(c echo.Context) error {

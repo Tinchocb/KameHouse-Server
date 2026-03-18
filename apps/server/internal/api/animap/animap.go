@@ -26,7 +26,6 @@ type (
 
 	AnimeMapping struct {
 		AnidbID          int    `json:"anidb_id,omitempty"`
-		AnilistID        int    `json:"anilist_id,omitempty"`
 		KitsuID          int    `json:"kitsu_id,omitempty"`
 		TheTvdbID        int    `json:"thetvdb_id,omitempty"`
 		TheMovieDbID     string `json:"themoviedb_id,omitempty"` // Can be int or string, forced to string
