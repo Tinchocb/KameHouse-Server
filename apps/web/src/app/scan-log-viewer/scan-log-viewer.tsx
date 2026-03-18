@@ -260,8 +260,12 @@ export function ScanLogViewer({ content }: { content: string }) {
 
     if (!content) {
         return (
-            <div className="flex items-center justify-center h-[40vh] text-[--muted]">
-                <p className="text-lg">Load a scan log file to begin analysis</p>
+            <div className="flex flex-col items-center justify-center h-[40vh] gap-4 glass-panel rounded-[2rem] border-white/5 bg-white/[0.01]">
+                <div className="p-4 rounded-full bg-primary/10 border border-primary/20">
+                    <BiInfoCircle className="w-8 h-8 text-primary opacity-50" />
+                </div>
+                <p className="font-bebas text-2xl tracking-widest text-zinc-500 uppercase">Sin datos cargados</p>
+                <p className="text-xs font-bold text-zinc-600 uppercase tracking-tighter">Arrastra un archivo de log para comenzar el análisis</p>
             </div>
         )
     }
@@ -270,19 +274,27 @@ export function ScanLogViewer({ content }: { content: string }) {
     if (selectedFile) {
         const group = fileGroupMap.get(selectedFile)
         return (
-            <div className="space-y-0">
-                <div className="flex items-center gap-2 bg-gray-950 border-b border-[--border] p-2 rounded-t-lg sticky top-0 z-20">
-                    <Button intent="gray" size="sm" onClick={() => setSelectedFile(null)}>
-                        ← Back
-                    </Button>
-                    <BiFile className="text-blue-400" />
-                    <span className="text-sm font-medium text-gray-200 break-all">{selectedFile}</span>
+            <div className="glass-panel-premium rounded-[2rem] overflow-hidden animate-in fade-in zoom-in-95 duration-500">
+                <div className="flex items-center gap-4 px-8 py-6 border-b border-white/5 bg-white/[0.02] backdrop-blur-xl">
+                    <button 
+                        onClick={() => setSelectedFile(null)}
+                        className="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 hover:bg-primary/20 border border-white/10 hover:border-primary/30 transition-all duration-300"
+                    >
+                        <BiChevronRight className="w-6 h-6 text-white group-hover:text-primary rotate-180 transition-transform" />
+                    </button>
+                    <div className="flex flex-col">
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">Trace de Archivo</span>
+                        <h2 className="text-sm font-bold text-white break-all tracking-tight leading-none mt-1">{selectedFile}</h2>
+                    </div>
                 </div>
-                <div className="bg-gray-950 rounded-b-lg min-h-[60vh] p-4">
+                <div className="p-8 min-h-[60vh] bg-gradient-to-b from-transparent to-black/20">
                     {group ? (
                         <FileFlowPanel group={group} />
                     ) : (
-                        <p className="text-gray-500 text-sm">No logs found for this file.</p>
+                        <div className="flex flex-col items-center justify-center h-full py-20 opacity-40">
+                            <BiFile className="w-12 h-12 mb-4" />
+                            <p className="text-sm font-bold uppercase tracking-widest">Sin registros encontrados</p>
+                        </div>
                     )}
                 </div>
             </div>
@@ -290,61 +302,71 @@ export function ScanLogViewer({ content }: { content: string }) {
     }
 
     return (
-        <div className="space-y-0">
-            <div className="flex gap-1 bg-gray-950 border-b border-[--border] p-1 rounded-t-lg sticky top-0 z-20">
+        <div className="glass-panel-premium rounded-[2.5rem] overflow-hidden shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-1000">
+            {/* ── Tabs Navigation ── */}
+            <div className="flex flex-wrap gap-1 px-4 pt-4 border-b border-white/5 bg-white/[0.02]">
                 {([
-                    { key: "overview", label: "Overview", icon: BiInfoCircle },
-                    { key: "parsing", label: "Parsed Files", icon: BiFile },
+                    { key: "overview", label: "Panorama", icon: BiInfoCircle },
+                    { key: "parsing", label: "Parsers", icon: BiFile },
                     { key: "matcher", label: "Matcher", icon: BiSearch },
                     { key: "hydrator", label: "Hydrator", icon: RiFileSettingsFill },
-                    { key: "issues", label: `Issues (${stats.errorCount + stats.warningCount})`, icon: BiError },
+                    { key: "issues", label: `Incidencias (${stats.errorCount + stats.warningCount})`, icon: BiError },
                 ] as const).map(({ key, label, icon: Icon }) => (
                     <button
                         key={key}
                         onClick={() => setActivePhase(key as Phase)}
                         className={cn(
-                            "flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-all font-medium",
-                            activePhase === key
-                                ? "bg-gray-800 text-white"
-                                : "text-gray-400 hover:text-gray-200 hover:bg-gray-900",
+                            "group relative flex items-center gap-2.5 px-6 py-4 transition-all duration-500",
+                            activePhase === key ? "text-white" : "text-zinc-500 hover:text-zinc-300"
                         )}
                     >
-                        <Icon className="text-base" />
-                        {label}
+                        <Icon className={cn(
+                            "text-xl transition-all duration-500",
+                            activePhase === key ? "text-primary drop-shadow-[0_0_8px_rgba(249,115,22,0.4)]" : "opacity-50"
+                        )} />
+                        <span className="font-bebas text-lg tracking-[0.1em]">{label}</span>
+                        
+                        {/* Active Indicator */}
+                        <div className={cn(
+                            "absolute bottom-0 left-4 right-4 h-1 rounded-t-full bg-primary transition-all duration-500 shadow-[0_0_12px_rgba(249,115,22,0.6)]",
+                            activePhase === key ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"
+                        )} />
                     </button>
                 ))}
             </div>
 
-            <div className="bg-gray-950 rounded-b-lg min-h-[60vh]">
-                {activePhase === "overview" && (
-                    <OverviewPanel stats={stats} lines={systemLines} />
-                )}
-                {activePhase === "parsing" && (
-                    <ParsingPanel lines={parsingLines} searchQuery={searchQuery} setSearchQuery={setSearchQuery} onSelectFile={onSelectFile} />
-                )}
-                {activePhase === "matcher" && (
-                    <MatcherPanel
-                        fileGroups={fileGroups}
-                        searchQuery={searchQuery}
-                        setSearchQuery={setSearchQuery}
-                        statusFilter={statusFilter}
-                        setStatusFilter={setStatusFilter}
-                        onSelectFile={onSelectFile}
-                    />
-                )}
-                {activePhase === "hydrator" && (
-                    <HydratorPanel
-                        fileGroups={fileGroups}
-                        searchQuery={searchQuery}
-                        setSearchQuery={setSearchQuery}
-                        levelFilter={levelFilter}
-                        setLevelFilter={setLevelFilter}
-                        onSelectFile={onSelectFile}
-                    />
-                )}
-                {activePhase === "issues" && (
-                    <IssuesPanel lines={issueLines} searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-                )}
+            <div className="min-h-[60vh] bg-white/[0.01]">
+                <div className="p-8">
+                    {activePhase === "overview" && (
+                        <OverviewPanel stats={stats} lines={systemLines} />
+                    )}
+                    {activePhase === "parsing" && (
+                        <ParsingPanel lines={parsingLines} searchQuery={searchQuery} setSearchQuery={setSearchQuery} onSelectFile={onSelectFile} />
+                    )}
+                    {activePhase === "matcher" && (
+                        <MatcherPanel
+                            fileGroups={fileGroups}
+                            searchQuery={searchQuery}
+                            setSearchQuery={setSearchQuery}
+                            statusFilter={statusFilter}
+                            setStatusFilter={setStatusFilter}
+                            onSelectFile={onSelectFile}
+                        />
+                    )}
+                    {activePhase === "hydrator" && (
+                        <HydratorPanel
+                            fileGroups={fileGroups}
+                            searchQuery={searchQuery}
+                            setSearchQuery={setSearchQuery}
+                            levelFilter={levelFilter}
+                            setLevelFilter={setLevelFilter}
+                            onSelectFile={onSelectFile}
+                        />
+                    )}
+                    {activePhase === "issues" && (
+                        <IssuesPanel lines={issueLines} searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+                    )}
+                </div>
             </div>
         </div>
     )
@@ -355,112 +377,175 @@ export function ScanLogViewer({ content }: { content: string }) {
 
 function OverviewPanel({ stats, lines }: { stats: ScanStats; lines: ParsedLogLine[] }) {
     return (
-        <div className="p-4 space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <StatCard label="Total Files" value={stats.totalFiles} icon={<BiFile />} color="text-blue-400" />
+        <div className="space-y-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatCard 
+                    label="Archivos Totales" 
+                    value={stats.totalFiles} 
+                    icon={<BiFile />} 
+                    color="text-blue-400" 
+                    glowColor="rgba(59,130,246,0.3)"
+                />
                 <StatCard
-                    label="Matched"
+                    label="Emparejados"
                     value={stats.matchedFiles}
                     icon={<BiCheck />}
-                    color="text-green-400"
+                    color="text-emerald-400"
+                    glowColor="rgba(16,185,129,0.3)"
                     sub={stats.totalFiles > 0 ? `${((stats.matchedFiles / stats.totalFiles) * 100).toFixed(0)}%` : undefined}
+                    active
                 />
                 <StatCard
-                    label="Unmatched"
+                    label="Sin Coincidencia"
                     value={stats.unmatchedFiles}
                     icon={<BiX />}
-                    color={stats.unmatchedFiles > 0 ? "text-orange-400" : "text-gray-500"}
+                    color={stats.unmatchedFiles > 0 ? "text-amber-400" : "text-zinc-600"}
+                    glowColor="rgba(245,158,11,0.3)"
                 />
                 <StatCard
-                    label="Issues"
+                    label="Incidencias"
                     value={stats.errorCount + stats.warningCount}
                     icon={<BiError />}
-                    color={stats.errorCount > 0 ? "text-red-400" : "text-gray-500"}
+                    color={stats.errorCount > 0 ? "text-rose-400" : "text-zinc-600"}
+                    glowColor="rgba(244,63,94,0.3)"
+                    danger={stats.errorCount > 0}
                 />
             </div>
 
-            <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Pipeline</h3>
-                <div className="flex items-center gap-2 flex-wrap">
-                    <PipelineStep label="File Discovery" detail={`${stats.totalFiles} files`} />
-                    <BiChevronRight className="text-[--muted] text-lg flex-shrink-0" />
-                    <PipelineStep label="Media Fetch" detail={`${stats.fetchedMediaCount} media (${stats.unknownMediaCount} new)`} />
-                    <BiChevronRight className="text-[--muted] text-lg flex-shrink-0" />
+            <div className="space-y-6">
+                <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600">Pipeline Timeline</span>
+                    <div className="h-px flex-1 bg-white/5" />
+                </div>
+                <div className="flex items-center gap-4 flex-wrap">
+                    <PipelineStep label="Descubrimiento" detail={`${stats.totalFiles} archivos`} active />
+                    <BiChevronRight className="text-zinc-700 text-2xl" />
+                    <PipelineStep label="Media Fetch" detail={`${stats.fetchedMediaCount} media`} />
+                    <BiChevronRight className="text-zinc-700 text-2xl" />
                     <PipelineStep label="Token Index" detail={`${stats.tokenIndexSize} tokens`} />
-                    <BiChevronRight className="text-[--muted] text-lg flex-shrink-0" />
-                    <PipelineStep label="Matcher" detail={stats.matcherDuration || "—"} />
-                    <BiChevronRight className="text-[--muted] text-lg flex-shrink-0" />
+                    <BiChevronRight className="text-zinc-700 text-2xl" />
+                    <PipelineStep label="Matcher" detail={stats.matcherDuration || "—"} active highlight />
+                    <BiChevronRight className="text-zinc-700 text-2xl" />
                     <PipelineStep label="Hydrator" detail={stats.hydratorDuration || "—"} />
                 </div>
             </div>
 
-            <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Events</h3>
-                <Virtuoso
-                    style={{ height: "40vh" }}
-                    totalCount={lines.length}
-                    itemContent={(index) => (
-                        <div className="pb-1">
-                            <SystemLogLine line={lines[index]} />
-                        </div>
-                    )}
-                />
+            <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600">Eventos de Sistema</span>
+                </div>
+                <div className="glass-panel rounded-3xl overflow-hidden border-white/5 bg-black/40">
+                    <Virtuoso
+                        style={{ height: "40vh" }}
+                        totalCount={lines.length}
+                        itemContent={(index) => (
+                            <div className="border-b border-white/[0.02] last:border-none">
+                                <SystemLogLine line={lines[index]} />
+                            </div>
+                        )}
+                    />
+                </div>
             </div>
         </div>
     )
 }
 
-function StatCard({ label, value, icon, color, sub }: { label: string; value: number; icon: React.ReactNode; color: string; sub?: string }) {
+function StatCard({ 
+    label, value, icon, color, glowColor, sub, active, danger 
+}: { 
+    label: string; value: number; icon: React.ReactNode; color: string; glowColor: string; sub?: string; active?: boolean; danger?: boolean 
+}) {
     return (
-        <div className="bg-gray-900 border border-[--border] rounded-lg p-3 space-y-1">
-            <div className="flex items-center gap-2">
-                <span className={cn("text-lg", color)}>{icon}</span>
-                <span className="text-sm text-gray-400 font-medium">{label}</span>
-            </div>
-            <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold text-white">{value}</span>
-                {sub && <span className="text-sm text-gray-500">{sub}</span>}
+        <div className={cn(
+            "group relative p-8 rounded-[2rem] border transition-all duration-500 overflow-hidden",
+            active ? "bg-white/[0.03] border-white/10" : "bg-black/20 border-white/5 hover:border-white/10 hover:bg-white/[0.01]",
+            danger && "border-rose-500/20 bg-rose-500/[0.02]"
+        )}>
+            {/* Background Glow */}
+            <div 
+                className="absolute -right-8 -bottom-8 w-32 h-32 rounded-full blur-[60px] opacity-0 group-hover:opacity-100 transition-opacity duration-700"
+                style={{ backgroundColor: glowColor }}
+            />
+            
+            <div className="relative space-y-4">
+                <div className="flex items-center gap-3">
+                    <span className={cn(
+                        "text-2xl p-3 rounded-2xl bg-black/40 border border-white/10 transition-transform duration-500 group-hover:scale-110 group-hover:border-white/20",
+                        color
+                    )}>
+                        {icon}
+                    </span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 group-hover:text-zinc-400 transition-colors">{label}</span>
+                </div>
+                <div className="flex items-baseline gap-3">
+                    <span className="font-bebas text-5xl text-white tracking-tight">{value}</span>
+                    {sub && <span className="font-bebas text-xl text-zinc-600">{sub}</span>}
+                </div>
             </div>
         </div>
     )
 }
 
-function PipelineStep({ label, detail }: { label: string; detail: string }) {
+function PipelineStep({ label, detail, active, highlight }: { label: string; detail: string; active?: boolean; highlight?: boolean }) {
     return (
-        <div className="bg-gray-900 border border-[--border] rounded-md px-3 py-2 text-center min-w-[120px]">
-            <p className="text-sm font-semibold text-gray-300">{label}</p>
-            <p className="text-sm text-gray-500 mt-0.5">{detail}</p>
+        <div className={cn(
+            "relative px-6 py-4 rounded-2xl border transition-all duration-500 min-w-[150px]",
+            highlight ? "bg-primary/5 border-primary/20" : 
+            active ? "bg-white/5 border-white/10" : "bg-transparent border-white/5 opacity-50"
+        )}>
+            <p className={cn(
+                "text-[9px] font-black uppercase tracking-widest",
+                highlight ? "text-primary" : active ? "text-zinc-400" : "text-zinc-600"
+            )}>{label}</p>
+            <p className={cn(
+                "font-bebas text-xl mt-1 tracking-wide",
+                highlight ? "text-white" : active ? "text-zinc-200" : "text-zinc-500"
+            )}>{detail}</p>
+            
+            {highlight && (
+                <div className="absolute inset-0 bg-primary/10 blur-xl -z-10 rounded-2xl" />
+            )}
         </div>
     )
 }
 
-function SystemLogLine({ line }: { line: ParsedLogLine }) {
+function SystemLogLine({ line, showFilename = true }: { line: ParsedLogLine; showFilename?: boolean }) {
     const d = line.raw
     return (
-        <div
-            className={cn(
-                "flex items-start gap-2 px-2 py-1 rounded text-sm font-mono",
-                line.level === "error" && "bg-red-950/30 text-red-300",
-                line.level === "warn" && "bg-orange-950/30 text-orange-300",
-                (line.level === "info" || line.level === "debug") && "text-gray-400",
-            )}
-        >
-            <LevelBadge level={line.level} />
-            {d.context && <span className="text-indigo-400 flex-shrink-0">[{d.context}]</span>}
-            <span className="break-all">{d.message}</span>
-            {d.count !== undefined && <span className="text-gray-500 flex-shrink-0">count={d.count}</span>}
-            {d.startTime !== undefined &&
-                <span className="text-gray-500 flex-shrink-0">start=<span className="text-white">{d.startTime}</span></span>}
-            {d.duration !== undefined &&
-                <span className="text-gray-500 flex-shrink-0">duration=<span className="text-white">{d.duration}</span></span>}
-            {d.ms !== undefined && <span className="text-white flex-shrink-0">{d.ms}ms</span>}
+        <div className={cn(
+            "flex items-start gap-4 px-6 py-3 text-sm font-mono group transition-colors",
+            line.level === "error" ? "bg-rose-500/5" : line.level === "warn" ? "bg-amber-500/5" : "hover:bg-white/[0.02]"
+        )}>
+            <div className="mt-1">
+                <LevelBadge level={line.level} />
+            </div>
+            <div className="flex-1 min-w-0 flex flex-wrap items-center gap-x-4 gap-y-1">
+                {d.context && (
+                    <span className="text-[10px] font-black uppercase tracking-widest text-primary/60">
+                        {d.context}
+                    </span>
+                )}
+                {showFilename && d.filename && <span className="text-[10px] font-black uppercase tracking-widest text-blue-400/60">{d.filename}</span>}
+                <span className={cn(
+                    "break-all tracking-tight",
+                    line.level === "error" ? "text-rose-300 font-bold" : 
+                    line.level === "warn" ? "text-amber-300" : "text-zinc-400"
+                )}>
+                    {d.message}
+                </span>
+                
+                <div className="flex gap-4 ml-auto opacity-40 group-hover:opacity-100 transition-opacity">
+                    {d.ms !== undefined && <span className="text-[10px] font-bold text-primary">{d.ms}ms</span>}
+                    {d.count !== undefined && <span className="text-[10px] text-zinc-500">n={d.count}</span>}
+                </div>
+            </div>
         </div>
     )
 }
 
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 function ParsingPanel({ lines, searchQuery, setSearchQuery, onSelectFile }: {
     lines: ParsedLogLine[];
@@ -486,33 +571,42 @@ function ParsingPanel({ lines, searchQuery, setSearchQuery, onSelectFile }: {
     }, [lines, searchQuery])
 
     return (
-        <div className="p-4 space-y-3">
-            <div className="flex gap-2 items-center sticky top-12 z-10 bg-gray-950 py-2">
-                <TextInput
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search parsed files..."
-                    className="max-w-md"
-                />
-                <span className="text-sm text-gray-500">{filtered.length} files</span>
+        <div className="space-y-6 animate-in fade-in duration-700">
+            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between sticky top-0 z-10 bg-background/50 backdrop-blur-md py-2 px-1 rounded-2xl">
+                <div className="relative w-full max-w-md group">
+                    <BiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-primary transition-colors" />
+                    <TextInput
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Buscar archivos procesados..."
+                        className="pl-12 bg-white/[0.03] border-white/5 rounded-2xl h-12 focus:ring-primary/20 transition-all"
+                    />
+                </div>
+                <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-white/[0.03] border border-white/5">
+                    <span className="font-bebas text-lg text-white">{filtered.length}</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Archivos</span>
+                </div>
             </div>
-            <Virtuoso
-                style={{ height: "calc(100vh - 200px)" }}
-                totalCount={filtered.length}
-                itemContent={(index) => {
-                    const line = filtered[index]
-                    return (
-                        <div className="pb-1">
-                            <ParsedFileLine
-                                line={line}
-                                onSelectFile={onSelectFile}
-                                isExpanded={expandedIds.has(line.idx)}
-                                toggleExpanded={() => toggleExpanded(line.idx)}
-                            />
-                        </div>
-                    )
-                }}
-            />
+
+            <div className="glass-panel rounded-3xl overflow-hidden border-white/5 bg-black/20">
+                <Virtuoso
+                    style={{ height: "calc(100vh - 400px)" }}
+                    totalCount={filtered.length}
+                    itemContent={(index) => {
+                        const line = filtered[index]
+                        return (
+                            <div className="border-b border-white/[0.02] last:border-none">
+                                <ParsedFileLine
+                                    line={line}
+                                    onSelectFile={onSelectFile}
+                                    isExpanded={expandedIds.has(line.idx)}
+                                    toggleExpanded={() => toggleExpanded(line.idx)}
+                                />
+                            </div>
+                        )
+                    }}
+                />
+            </div>
         </div>
     )
 }
@@ -537,55 +631,92 @@ function ParsedFileLine({ line, onSelectFile, isExpanded, toggleExpanded }: {
     const title = pd.title || ""
 
     return (
-        <div className="bg-gray-900 border border-[--border] rounded-md overflow-hidden">
+        <div className="group transition-all duration-300">
             <button
                 onClick={handleToggle}
-                className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-gray-800/50 transition-colors"
+                className={cn(
+                    "flex items-center gap-4 w-full px-6 py-4 text-left transition-all duration-300",
+                    expanded ? "bg-white/[0.04]" : "hover:bg-white/[0.02]"
+                )}
             >
-                {expanded ? <BiChevronDown className="text-gray-500 flex-shrink-0" /> : <BiChevronRight className="text-gray-500 flex-shrink-0" />}
-                <BiFile className="text-blue-400 flex-shrink-0" />
-                <span className="text-sm text-blue-200 font-mono truncate flex-1">{d.filename}</span>
-                <div className="flex gap-1 flex-shrink-0">
-                    {title && <Badge size="sm" intent="unstyled">{title}</Badge>}
+                <div className={cn(
+                    "transition-transform duration-500",
+                    expanded ? "rotate-90 text-primary" : "text-zinc-600"
+                )}>
+                    <BiChevronRight className="text-xl" />
+                </div>
+                
+                <BiFile className={cn(
+                    "text-xl flex-shrink-0 transition-colors",
+                    expanded ? "text-blue-400" : "text-zinc-500"
+                )} />
+                
+                <span className="text-sm font-bold text-zinc-300 truncate flex-1 tracking-tight">
+                    {d.filename}
+                </span>
+
+                <div className="flex gap-2 flex-shrink-0">
+                    {title && (
+                        <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-tighter text-zinc-400">
+                            {title}
+                        </span>
+                    )}
                     {hasSeason && <Badge size="sm" intent="blue">S{pd.season}</Badge>}
-                    {hasEpisode && <Badge size="sm" intent="gray">{pd.episode}</Badge>}
-                    {/* {pd.releaseGroup && <Badge size="sm" intent="gray">{pd.releaseGroup}</Badge>} */}
+                    {hasEpisode && <Badge size="sm" intent="gray">E{pd.episode}</Badge>}
                 </div>
             </button>
+
             {expanded && (
-                <div className="px-3 py-2 border-t border-[--border] bg-gray-950 space-y-2">
+                <div className="px-16 pb-6 pt-2 space-y-6 animate-in fade-in slide-in-from-top-2 duration-500">
                     {onSelectFile && (
-                        <div className="flex justify-start">
-                            <Button
-                                intent="primary-subtle" size="xs" onClick={(e) => {
+                        <button
+                            onClick={(e) => {
                                 e.stopPropagation()
                                 onSelectFile(d.filename)
                             }}
-                            >
-                                View full flow
-                            </Button>
-                        </div>
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-all group/btn"
+                        >
+                            <BiLinkAlt className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                            <span className="font-bebas text-sm tracking-widest">VER TRAZA COMPLETA</span>
+                        </button>
                     )}
-                    <div className="text-sm text-gray-500 font-mono break-all">{d.path}</div>
-                    {d.parsedData && (
-                        <div className="space-y-1">
-                            <p className="text-sm font-semibold text-gray-400">Parsed Data</p>
-                            <DataGrid data={d.parsedData} />
+                    
+                    <div className="space-y-4">
+                        <div className="p-4 rounded-2xl bg-black/40 border border-white/5">
+                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600 block mb-2">Ruta de Origen</span>
+                            <span className="text-xs font-mono text-zinc-400 break-all leading-relaxed whitespace-pre-wrap">{d.path}</span>
                         </div>
-                    )}
-                    {d.parsedFolderData && d.parsedFolderData.length > 0 && (
-                        <div className="space-y-1">
-                            <p className="text-sm font-semibold text-gray-400">Folder Data
-                                                                               ({d.parsedFolderData.length} level{d.parsedFolderData.length > 1
-                                    ? "s"
-                                    : ""})</p>
-                            {d.parsedFolderData.map((fd: any, i: number) => (
-                                <div key={i} className="pl-2 border-l-2 border-gray-700" style={{ marginLeft: `${i * 10}px` }}>
-                                    <DataGrid data={fd} />
+
+                        {d.parsedData && (
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                                    <div className="w-1 h-1 rounded-full bg-primary shadow-[0_0_8px_rgba(249,115,22,1)]" />
+                                    Data Extraída
                                 </div>
-                            ))}
-                        </div>
-                    )}
+                                <div className="p-4 rounded-2xl bg-black/40 border border-white/5">
+                                    <DataGrid data={d.parsedData} />
+                                </div>
+                            </div>
+                        )}
+                        
+                        {d.parsedFolderData && d.parsedFolderData.length > 0 && (
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                                    <div className="w-1 h-1 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,1)]" />
+                                    Jerarquía de Carpetas ({d.parsedFolderData.length})
+                                </div>
+                                <div className="space-y-2">
+                                    {d.parsedFolderData.map((fd: any, i: number) => (
+                                        <div key={i} className="pl-4 border-l-2 border-white/5">
+                                            <div className="p-3 rounded-xl bg-black/40 border border-white/5">
+                                                <DataGrid data={fd} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
         </div>
@@ -648,53 +779,60 @@ function MatcherPanel({
     const unmatchedCount = fileGroups.filter((g) => g.matcherLogs.length > 0 && (g.isUnmatched || !g.matchResult)).length
 
     return (
-        <div className="p-4 space-y-3">
-            <div className="flex flex-col sm:flex-row gap-2 sticky top-12 z-10 bg-gray-950 py-2">
-                <TextInput
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search by filename or match..."
-                    className="max-w-md"
-                />
-                <div className="flex gap-1">
+        <div className="space-y-6 animate-in fade-in duration-700">
+            <div className="flex flex-col lg:flex-row gap-6 items-center justify-between sticky top-0 z-10 bg-background/50 backdrop-blur-md py-4 rounded-2xl">
+                <div className="relative w-full max-w-md group">
+                    <BiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-primary transition-colors" />
+                    <TextInput
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Buscar por nombre o ID de coincidencia..."
+                        className="pl-12 bg-white/[0.03] border-white/5 rounded-2xl h-12 focus:ring-primary/20 transition-all"
+                    />
+                </div>
+                
+                <div className="flex flex-wrap gap-2 p-1.5 rounded-2xl bg-black/40 border border-white/5">
                     {([
-                        { key: "all" as const, label: "All" },
-                        { key: "matched" as const, label: `Matched (${matchedCount})` },
-                        { key: "unmatched" as const, label: `Unmatched (${unmatchedCount})` },
-                        { key: "errors" as const, label: "Issues" },
+                        { key: "all" as const, label: "Todos" },
+                        { key: "matched" as const, label: `Match (${matchedCount})` },
+                        { key: "unmatched" as const, label: `Sin Match (${unmatchedCount})` },
+                        { key: "errors" as const, label: "Errores" },
                     ]).map(({ key, label }) => (
                         <button
                             key={key}
                             onClick={() => setStatusFilter(key)}
                             className={cn(
-                                "px-2.5 py-1 text-sm rounded-md font-medium transition-colors",
-                                statusFilter === key ? "bg-gray-700 text-white" : "text-gray-500 hover:text-gray-300 hover:bg-gray-800",
+                                "px-4 py-2 text-xs font-black uppercase tracking-widest rounded-xl transition-all duration-300",
+                                statusFilter === key 
+                                    ? "bg-primary text-white shadow-[0_4px_12px_rgba(249,115,22,0.3)]" 
+                                    : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
                             )}
                         >
                             {label}
                         </button>
                     ))}
                 </div>
-                <span className="text-sm text-gray-500 self-center">{filtered.length} files</span>
             </div>
 
-            <Virtuoso
-                style={{ height: "calc(100vh - 200px)" }}
-                totalCount={filtered.length}
-                itemContent={(index) => {
-                    const group = filtered[index]
-                    return (
-                        <div className="pb-1">
-                            <MatcherFileGroup
-                                group={group}
-                                onSelectFile={onSelectFile}
-                                isExpanded={expandedFiles.has(group.filename)}
-                                toggleExpanded={() => toggleExpanded(group.filename)}
-                            />
-                        </div>
-                    )
-                }}
-            />
+            <div className="glass-panel rounded-3xl overflow-hidden border-white/5 bg-black/20">
+                <Virtuoso
+                    style={{ height: "calc(100vh - 400px)" }}
+                    totalCount={filtered.length}
+                    itemContent={(index) => {
+                        const group = filtered[index]
+                        return (
+                            <div className="border-b border-white/[0.02] last:border-none">
+                                <MatcherFileGroup
+                                    group={group}
+                                    onSelectFile={onSelectFile}
+                                    isExpanded={expandedFiles.has(group.filename)}
+                                    toggleExpanded={() => toggleExpanded(group.filename)}
+                                />
+                            </div>
+                        )
+                    }}
+                />
+            </div>
         </div>
     )
 }
@@ -715,59 +853,75 @@ function MatcherFileGroup({ group, onSelectFile, isExpanded, toggleExpanded }: {
     const mr = group.matchResult
 
     return (
-        <div
-            className={cn(
-                "bg-gray-900 border rounded-md overflow-hidden",
-                group.hasError ? "border-red-800/50" : group.isUnmatched ? "border-orange-800/50" : "border-[--border]",
-            )}
-        >
+        <div className={cn(
+            "group transition-all duration-300 border-l-4",
+            group.hasError ? "border-rose-500" : group.isUnmatched ? "border-amber-500" : "border-emerald-500/30"
+        )}>
             <button
                 onClick={handleToggle}
-                className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-gray-800/50 transition-colors"
+                className={cn(
+                    "flex items-center gap-4 w-full px-6 py-4 text-left transition-all duration-300",
+                    expanded ? "bg-white/[0.04]" : "hover:bg-white/[0.02]"
+                )}
             >
-                {expanded ? <BiChevronDown className="text-gray-500" /> : <BiChevronRight className="text-gray-500" />}
+                <div className={cn(
+                    "transition-transform duration-500",
+                    expanded ? "rotate-90 text-primary" : "text-zinc-600"
+                )}>
+                    <BiChevronRight className="text-xl" />
+                </div>
 
                 {mr ? (
-                    <BiCheck className="text-green-400 text-lg flex-shrink-0" />
+                    <div className="p-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                        <BiCheck className="text-emerald-400 text-lg flex-shrink-0" />
+                    </div>
                 ) : (
-                    <BiX className="text-orange-400 text-lg flex-shrink-0" />
+                    <div className="p-1 rounded-full bg-amber-500/10 border border-amber-500/20">
+                        <BiX className="text-amber-400 text-lg flex-shrink-0" />
+                    </div>
                 )}
 
-                <span className="text-[0.8rem] leading-5 text-gray-200 truncate flex-1">{group.filename}</span>
+                <span className="text-sm font-bold text-zinc-300 truncate flex-1 tracking-tight">
+                    {group.filename}
+                </span>
 
-                <div className="flex gap-1.5 items-center flex-shrink-0">
+                <div className="flex gap-2 items-center flex-shrink-0">
                     {mr && (
                         <>
-                            <BiLinkAlt className="text-gray-500" />
-                            <span className="text-sm text-indigo-300 font-medium max-w-[200px] truncate">{mr.match}</span>
-                            <Badge size="sm" intent="primary">{mr.id}</Badge>
-                            <Badge size="sm" intent={mr.score >= 15 ? "success" : mr.score >= 10 ? "warning" : "alert"}>
-                                score: {mr.score}
+                            <div className="hidden sm:flex items-center gap-2 px-2 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/20 overflow-hidden max-w-[200px]">
+                                <BiLinkAlt className="text-indigo-400 text-xs" />
+                                <span className="text-[10px] font-bold text-indigo-300 truncate">{mr.match}</span>
+                            </div>
+                            <Badge size="sm" intent={mr.score >= 15 ? "success" : mr.score >= 10 ? "warning" : "alert-subtle"}>
+                                S: {mr.score}
                             </Badge>
                         </>
                     )}
-                    {group.isUnmatched && <Badge size="sm" intent="warning">unmatched</Badge>}
-                    {group.hasError && <Badge size="sm" intent="alert">error</Badge>}
-                    <Badge size="sm" intent="gray">{group.matcherLogs.length} logs</Badge>
+                    {group.isUnmatched && <Badge size="sm" intent="warning">Unmatched</Badge>}
+                    <span className="text-[10px] font-black uppercase text-zinc-600 ml-2 tracking-tighter">
+                        {group.matcherLogs.length} TRACES
+                    </span>
                 </div>
             </button>
 
             {expanded && (
-                <div className="border-t border-[--border] bg-gray-950">
-                    <div className="flex justify-start px-2 pt-2">
-                        <Button
-                            intent="primary-subtle" size="xs" onClick={(e) => {
+                <div className="px-16 pb-6 pt-2 space-y-4 animate-in fade-in slide-in-from-top-2 duration-500">
+                    <button
+                        onClick={(e) => {
                             e.stopPropagation()
                             onSelectFile(group.filename)
                         }}
-                        >
-                            View full flow
-                        </Button>
-                    </div>
-                    <div className="space-y-0.5 p-2">
-                        {group.matcherLogs.map((log) => (
-                            <MatcherLogLine key={log.idx} line={log} />
-                        ))}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/20 transition-all font-bebas text-sm tracking-widest"
+                    >
+                        EXPLORAR FLUJO CRÍTICO
+                    </button>
+                    
+                    <div className="rounded-2xl bg-black/40 border border-white/5 overflow-hidden">
+                        <div className="p-4 space-y-1">
+                            {group.matcherLogs.map((log) => (
+                                <MatcherLogLine key={log.idx} line={log} />
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}
@@ -775,120 +929,33 @@ function MatcherFileGroup({ group, onSelectFile, isExpanded, toggleExpanded }: {
     )
 }
 
-function MatcherLogLine({ line }: { line: ParsedLogLine }) {
-    const [showDetail, setShowDetail] = useState(false)
-    const d = line.raw
-    const msg = d.message || ""
+function ParsingLogLine({ line }: { line: ParsedLogLine }) {
+    const l = line.raw
+    return (
+        <div className="flex gap-3 text-xs font-mono group hover:bg-white/[0.02] py-0.5 px-2 rounded-lg transition-colors">
+            <span className="text-zinc-700 w-10 text-right select-none">{line.idx}</span>
+            <span className="text-blue-400 font-black uppercase tracking-tighter w-14">PARSER</span>
+            <span className="text-zinc-400 flex-1 break-all line-clamp-1 group-hover:line-clamp-none transition-all">{l.message}</span>
+        </div>
+    )
+}
 
-    const isMatch = msg === "Best match found"
-    const isNoMatch = msg === "No match found"
-    const isComparison = msg === "Comparison"
-    const isVariations = msg === "Found title variations"
-    const isCandidates = msg === "Found candidates"
-    const isMetadata = msg === "Extracted metadata"
+function MatcherLogLine({ line }: { line: ParsedLogLine }) {
+    const l = line.raw
+    const isError = l.level === "error"
+    const isWarn = l.level === "warn"
 
     return (
-        <div className="group">
-            <button
-                onClick={() => setShowDetail(!showDetail)}
-                className={cn(
-                    "flex items-start gap-2 w-full px-2 py-1 text-left rounded text-[0.8rem] leading-5 transition-colors",
-                    isMatch && "text-green-300 bg-green-950/20",
-                    isNoMatch && "text-orange-400 bg-orange-950/20",
-                    isComparison && "text-gray-400",
-                    isVariations && "text-blue-300/80",
-                    isCandidates && "text-gray-400",
-                    isMetadata && "text-gray-500",
-                    line.level === "error" && "text-red-400 bg-red-950/20",
-                    !isMatch && !isNoMatch && !isComparison && !isVariations && !isCandidates && !isMetadata && line.level !== "error" && "text-gray-400",
-                    "hover:bg-gray-800/50",
-                )}
-            >
-                <LevelDot level={line.level} />
-                <span className="break-all flex-1">
-                    {isMatch && (
-                        <>✓ Matched → <span className="text-indigo-300">{d.match}</span> <span className="text-gray-500">[{d.id}]</span> <span
-                            className="text-green-400"
-                        >(score: {d.score})</span></>
-                    )}
-                    {isNoMatch && (
-                        <>✗ No match found <span className="text-gray-500">(best score: {d.score})</span></>
-                    )}
-                    {isComparison && d.match && (
-                        <>
-                            <span className="text-gray-500 mr-1">vs</span>
-                            <span className="text-indigo-300">{d.match}</span>
-                            <span className="text-[--muted] mx-1">[{d.id}]</span>
-                            <span className="text-gray-300">= {d.score}</span>
-                            <span className="text-[--muted] ml-1">(title={d.titleScore} base={d.baseTitleScore} season={d.seasonPartScore} year={d.yearScore})</span>
-                        </>
-                    )}
-                    {isVariations && d.titleVariations && (
-                        <span className="flex flex-wrap gap-1 items-center">
-                            <span className="text-gray-500 mr-0.5">Variations:</span>
-                            {(d.titleVariations as string[]).map((v: string, i: number) => (
-                                <span key={i} className="text-blue-200 px-1.5 py-0.5 rounded text-sm">{v}</span>
-                            ))}
-                        </span>
-                    )}
-                    {isCandidates && (
-                        <><span className="text-white">{d.candidates}</span> candidates found</>
-                    )}
-                    {isMetadata && (
-                        <>
-                            <span className="text-gray-500">season=</span><span className="text-gray-300">{d.season}</span>{" "}
-                            <span className="text-gray-500">part=</span><span className="text-gray-300">{d.part}</span>{" "}
-                            <span className="text-gray-500">year=</span><span className="text-gray-300">{d.year}</span>
-                        </>
-                    )}
-                    {!isMatch && !isNoMatch && !isComparison && !isVariations && !isCandidates && !isMetadata && (
-                        <>{msg}</>
-                    )}
-                </span>
-            </button>
-            {showDetail && (
-                <div className="ml-6 px-2 py-2 mb-1 bg-gray-900 rounded text-[0.8rem] leading-5 space-y-2">
-                    {isComparison && d.titles && Array.isArray(d.titles) ? (
-                        <div className="space-y-2">
-                            <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
-                                {Object.entries(d).map(([key, value]) => {
-                                    if (key === "level" || key === "context" || key === "titles") return null
-                                    const isObj = typeof value === "object" && value !== null
-                                    return (
-                                        <React.Fragment key={key}>
-                                            <span className="text-gray-500 text-sm select-all">{key}</span>
-                                            <span className={cn("text-sm break-all select-all", isObj ? "text-gray-400" : "text-gray-200")}>
-                                                {isObj ? JSON.stringify(value) : String(value)}
-                                            </span>
-                                        </React.Fragment>
-                                    )
-                                })}
-                            </div>
-                            <p className="text-sm font-semibold text-gray-400">Titles ({d.titles.length})</p>
-                            <div className="grid gap-1">
-                                {(d.titles as any[]).map((t: any, i: number) => (
-                                    <div
-                                        key={i} className={cn(
-                                        "flex flex-wrap items-center gap-x-2 gap-y-0.5 px-2 py-1 rounded text-sm",
-                                        t.IsMain ? "bg-indigo-950/30 border border-indigo-800/30" : "bg-gray-800/50",
-                                    )}
-                                    >
-                                        {/* {t.IsMain && <Badge size="sm" intent="primary">main</Badge>} */}
-                                        <span className="text-gray-200 font-medium">{t.Original}</span>
-                                        {t.Season > 0 && <Badge size="sm" intent="blue">S{t.Season}</Badge>}
-                                        {t.Part > 0 && <Badge size="sm" intent="gray">P{t.Part}</Badge>}
-                                        {t.Year > 0 && <Badge size="sm" intent="gray">{t.Year}</Badge>}
-                                        <span className="text-[--muted]">→ {t.Normalized}</span>
-                                        {t.Tokens && <span className="text-[--muted]">[{t.Tokens.join(", ")}]</span>}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    ) : (
-                        <DataGrid data={d} />
-                    )}
-                </div>
-            )}
+        <div className="flex gap-3 text-xs font-mono group hover:bg-white/[0.02] py-0.5 px-2 rounded-lg transition-colors">
+            <span className="text-zinc-700 w-10 text-right select-none">{line.idx}</span>
+            <span className={cn(
+                "font-black uppercase tracking-tighter w-14",
+                isError ? "text-rose-400" : isWarn ? "text-amber-400" : "text-emerald-400"
+            )}>MATCHER</span>
+            <span className={cn(
+                "flex-1 break-all line-clamp-1 group-hover:line-clamp-none transition-all",
+                isError ? "text-rose-300/70" : isWarn ? "text-amber-300/70" : "text-zinc-400"
+            )}>{l.message}</span>
         </div>
     )
 }
@@ -943,48 +1010,55 @@ function HydratorPanel({
     }, [fileGroups, searchQuery, levelFilter])
 
     return (
-        <div className="p-4 space-y-3">
-            <div className="flex flex-col sm:flex-row gap-2 sticky top-12 z-10 bg-gray-950 py-2">
-                <TextInput
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search by filename or media ID..."
-                    className="max-w-md"
-                />
-                <div className="flex gap-1">
+        <div className="space-y-6 animate-in fade-in duration-700">
+            <div className="flex flex-col lg:flex-row gap-6 items-center justify-between sticky top-0 z-10 bg-background/50 backdrop-blur-md py-4 rounded-2xl">
+                <div className="relative w-full max-w-md group">
+                    <BiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-primary transition-colors" />
+                    <TextInput
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Buscar por nombre o ID de media..."
+                        className="pl-12 bg-white/[0.03] border-white/5 rounded-2xl h-12 focus:ring-primary/20 transition-all font-bold tracking-tight"
+                    />
+                </div>
+                
+                <div className="flex flex-wrap gap-2 p-1.5 rounded-2xl bg-black/40 border border-white/5">
                     {(["all", "error", "warn", "debug"] as const).map((lvl) => (
                         <button
                             key={lvl}
                             onClick={() => setLevelFilter(lvl)}
                             className={cn(
-                                "px-2.5 py-1 text-sm rounded-md font-medium transition-colors",
-                                levelFilter === lvl ? "bg-gray-700 text-white" : "text-gray-500 hover:text-gray-300 hover:bg-gray-800",
+                                "px-4 py-2 text-xs font-black uppercase tracking-widest rounded-xl transition-all duration-300",
+                                levelFilter === lvl 
+                                    ? "bg-cyan-500 text-white shadow-[0_4px_12px_rgba(6,182,212,0.3)]" 
+                                    : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
                             )}
                         >
-                            {lvl}
+                            {lvl === "all" ? "Todos" : lvl}
                         </button>
                     ))}
                 </div>
-                <span className="text-sm text-gray-500 self-center flex-none">{filtered.length} files</span>
             </div>
 
-            <Virtuoso
-                style={{ height: "calc(100vh - 200px)" }}
-                totalCount={filtered.length}
-                itemContent={(index) => {
-                    const group = filtered[index]
-                    return (
-                        <div className="pb-1">
-                            <HydratorFileGroup
-                                group={group}
-                                onSelectFile={onSelectFile}
-                                isExpanded={expandedFiles.has(group.filename)}
-                                toggleExpanded={() => toggleExpanded(group.filename)}
-                            />
-                        </div>
-                    )
-                }}
-            />
+            <div className="glass-panel rounded-3xl overflow-hidden border-white/5 bg-black/20">
+                <Virtuoso
+                    style={{ height: "calc(100vh - 400px)" }}
+                    totalCount={filtered.length}
+                    itemContent={(index) => {
+                        const group = filtered[index]
+                        return (
+                            <div className="border-b border-white/[0.02] last:border-none">
+                                <HydratorFileGroup
+                                    group={group}
+                                    onSelectFile={onSelectFile}
+                                    isExpanded={expandedFiles.has(group.filename)}
+                                    toggleExpanded={() => toggleExpanded(group.filename)}
+                                />
+                            </div>
+                        )
+                    }}
+                />
+            </div>
         </div>
     )
 }
@@ -1007,50 +1081,66 @@ function HydratorFileGroup({ group, onSelectFile, isExpanded, toggleExpanded }: 
     const mediaId = lastLog?.raw?.mediaId
 
     return (
-        <div
-            className={cn(
-                "bg-gray-900 border rounded-md overflow-hidden",
-                group.hasError ? "border-red-800/50" : group.hasWarning ? "border-orange-800/50" : "border-[--border]",
-            )}
-        >
+        <div className={cn(
+            "group transition-all duration-300 border-l-4",
+            group.hasError ? "border-rose-500" : group.hasWarning ? "border-amber-500" : "border-cyan-500/30"
+        )}>
             <button
                 onClick={handleToggle}
-                className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-gray-800/50 transition-colors"
+                className={cn(
+                    "flex items-center gap-4 w-full px-6 py-4 text-left transition-all duration-300",
+                    expanded ? "bg-white/[0.04]" : "hover:bg-white/[0.02]"
+                )}
             >
-                {expanded ? <BiChevronDown className="text-gray-500" /> : <BiChevronRight className="text-gray-500" />}
-                <RiFileSettingsFill className="text-cyan-400 flex-shrink-0" />
-                <span className="text-[0.8rem] leading-5 text-gray-200 truncate flex-1">{group.filename}</span>
+                <div className={cn(
+                    "transition-transform duration-500",
+                    expanded ? "rotate-90 text-primary" : "text-zinc-600"
+                )}>
+                    <BiChevronRight className="text-xl" />
+                </div>
+                
+                <div className="p-1 rounded-full bg-cyan-500/10 border border-cyan-500/20">
+                    <RiFileSettingsFill className="text-cyan-400 text-lg flex-shrink-0" />
+                </div>
 
-                <div className="flex gap-1.5 items-center flex-shrink-0">
-                    {mediaId && <Badge size="sm" intent="primary">{mediaId}</Badge>}
+                <span className="text-sm font-bold text-zinc-300 truncate flex-1 tracking-tight">
+                    {group.filename}
+                </span>
+
+                <div className="flex gap-2 items-center flex-shrink-0">
+                    {mediaId && <Badge size="sm" intent="primary">ID: {mediaId}</Badge>}
                     {hr && (
                         <>
-                            <Badge size="sm" intent={hr.type === "main" ? "success" : hr.type === "special" ? "info" : "info"}>
+                            <Badge size="sm" intent={hr.type === "main" ? "success" : "info"}>
                                 {hr.type || "unknown"}
                             </Badge>
-                            <span className="text-sm text-gray-500">{`ep${hr.episode}`}{hr.aniDBEpisode && ` (${hr.aniDBEpisode})`}</span>
+                            <span className="font-bebas text-lg text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.3)]">
+                                {`EP${hr.episode}`}
+                            </span>
                         </>
                     )}
-                    {group.hasError && <Badge size="sm" intent="alert">error</Badge>}
-                    {group.hasWarning && <Badge size="sm" intent="warning">warning</Badge>}
                 </div>
             </button>
 
             {expanded && (
-                <div className="border-t border-[--border] bg-gray-950 p-2 space-y-1">
-                    <div className="flex justify-start">
-                        <Button
-                            intent="primary-subtle" size="xs" onClick={(e) => {
+                <div className="px-16 pb-6 pt-2 space-y-4 animate-in fade-in slide-in-from-top-2 duration-500">
+                    <button
+                        onClick={(e) => {
                             e.stopPropagation()
                             onSelectFile(group.filename)
                         }}
-                        >
-                            View full flow
-                        </Button>
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/20 transition-all font-bebas text-sm tracking-widest"
+                    >
+                        INSPECCIONAR SECUENCIA
+                    </button>
+                    
+                    <div className="rounded-2xl bg-black/40 border border-white/5 overflow-hidden">
+                        <div className="p-4 space-y-1">
+                            {group.hydratorLogs.map((log) => (
+                                <HydratorLogLine key={log.idx} line={log} />
+                            ))}
+                        </div>
                     </div>
-                    {group.hydratorLogs.map((log) => (
-                        <HydratorLogLine key={log.idx} line={log} />
-                    ))}
                 </div>
             )}
         </div>
@@ -1058,39 +1148,20 @@ function HydratorFileGroup({ group, onSelectFile, isExpanded, toggleExpanded }: 
 }
 
 function HydratorLogLine({ line }: { line: ParsedLogLine }) {
-    const [showDetail, setShowDetail] = useState(false)
-    const d = line.raw
+    const l = line.raw
+    const isError = l.level === "error"
 
     return (
-        <div>
-            <button
-                onClick={() => setShowDetail(!showDetail)}
-                className={cn(
-                    "flex items-start gap-2 w-full px-2 py-1 text-left rounded text-[0.8rem] leading-5 transition-colors hover:bg-gray-800/50",
-                    line.level === "error" && "text-red-400",
-                    line.level === "warn" && "text-orange-300",
-                    line.level === "debug" && "text-gray-400",
-                    line.level === "info" && "text-cyan-300",
-                )}
-            >
-                <LevelDot level={line.level} />
-                <span className="break-all flex-1">
-                    {d.message}
-                    {d.parsed && <> | Parsed: <span className="text-white">"{d.parsed.parsedEpisode || "?"}"</span></>}
-                    {d.hydrated && <> → <span className="text-white">Ep: {d.hydrated.episode}</span>
-                        <span className="text-white">(AniDB: {d.hydrated.aniDBEpisode || "—"})</span></>}
-                    {d.mediaTreeAnalysis?.normalized !== undefined && (
-                        d.mediaTreeAnalysis.normalized ? <span className="text-green-400"> [normalized]</span> :
-                            <span className="text-orange-400"> [not normalized]</span>
-                    )}
-                    {d.mediaTreeAnalysis?.error && <span className="text-red-400"> ⚠ {d.mediaTreeAnalysis.error}</span>}
-                </span>
-            </button>
-            {showDetail && (
-                <div className="ml-6 px-2 py-2 mb-1 bg-gray-900 rounded text-[0.8rem] leading-5">
-                    <DataGrid data={d} />
-                </div>
-            )}
+        <div className="flex gap-3 text-xs font-mono group hover:bg-white/[0.02] py-0.5 px-2 rounded-lg transition-colors">
+            <span className="text-zinc-700 w-10 text-right select-none">{line.idx}</span>
+            <span className={cn(
+                "font-black uppercase tracking-tighter w-14",
+                isError ? "text-rose-400" : "text-cyan-400"
+            )}>HYDRATOR</span>
+            <span className={cn(
+                "flex-1 break-all line-clamp-1 group-hover:line-clamp-none transition-all",
+                isError ? "text-rose-300/70" : "text-zinc-400"
+            )}>{l.message}</span>
         </div>
     )
 }
@@ -1122,135 +1193,110 @@ function IssuesPanel({ lines, searchQuery, setSearchQuery }: { lines: ParsedLogL
     }, [lines, searchQuery])
 
     return (
-        <div className="p-4 space-y-3">
-            <div className="flex gap-2 items-center sticky top-12 z-10 bg-gray-950 py-2">
-                <TextInput
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search issues..."
-                    className="max-w-md"
-                />
-                <span className="text-sm text-gray-500">{filtered.length} issues</span>
+        <div className="space-y-6 animate-in fade-in duration-700">
+            <div className="flex items-center justify-between sticky top-0 z-10 bg-background/50 backdrop-blur-md py-2">
+                <div className="relative w-full max-w-md group">
+                    <BiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-primary transition-colors" />
+                    <TextInput
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Filtrar por mensaje de error..."
+                        className="pl-12 bg-white/[0.03] border-white/5 rounded-2xl h-12"
+                    />
+                </div>
+                <div className={cn(
+                    "px-4 py-2 rounded-xl border font-bebas text-lg",
+                    filtered.length > 0 ? "bg-rose-500/10 border-rose-500/20 text-rose-400" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                )}>
+                    {filtered.length} INCIDENCIAS
+                </div>
             </div>
 
             {filtered.length === 0 && (
-                <div className="flex items-center justify-center h-[20vh] text-green-400">
-                    <p className="flex items-center gap-2"><BiCheck className="text-xl" /> No issues found</p>
+                <div className="flex flex-col items-center justify-center py-24 gap-4 opacity-50">
+                    <div className="p-6 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                        <BiCheck className="w-12 h-12 text-emerald-400" />
+                    </div>
+                    <p className="font-bebas text-2xl tracking-widest text-emerald-400/60 uppercase">Estado Nominal</p>
+                    <p className="text-xs font-bold text-zinc-600 uppercase tracking-tighter italic">No se han detectado anomalías de nivel crítico o advertencia.</p>
                 </div>
             )}
 
-            <Virtuoso
-                style={{ height: "calc(100vh - 200px)" }}
-                totalCount={filtered.length}
-                itemContent={(index) => {
-                    const line = filtered[index]
-                    return (
-                        <div className="pb-1">
-                            <IssueLine
-                                line={line}
-                                isExpanded={expandedIds.has(line.idx)}
-                                toggleExpanded={() => toggleExpanded(line.idx)}
-                            />
-                        </div>
-                    )
-                }}
-            />
+            <div className="glass-panel rounded-3xl overflow-hidden border-white/5 bg-black/20">
+                <Virtuoso
+                    style={{ height: "calc(100vh - 400px)" }}
+                    totalCount={filtered.length}
+                    itemContent={(index) => {
+                        const line = filtered[index]
+                        return (
+                            <div className="border-b border-white/[0.02] last:border-none">
+                                <IssueLine
+                                    line={line}
+                                    isExpanded={expandedIds.has(line.idx)}
+                                    toggleExpanded={() => toggleExpanded(line.idx)}
+                                />
+                            </div>
+                        )
+                    }}
+                />
+            </div>
         </div>
     )
 }
 
-function IssueLine({ line, isExpanded, toggleExpanded }: { line: ParsedLogLine; isExpanded?: boolean; toggleExpanded?: () => void }) {
-    const [internalExpanded, setInternalExpanded] = useState(false)
-    const expanded = isExpanded !== undefined ? isExpanded : internalExpanded
-    const handleToggle = () => {
-        if (toggleExpanded) toggleExpanded()
-        else setInternalExpanded(!internalExpanded)
-    }
-
-    const d = line.raw
+function IssueLine({ line, isExpanded, toggleExpanded }: { line: ParsedLogLine; isExpanded: boolean; toggleExpanded: () => void }) {
+    const l = line.raw
+    const isError = l.level === "error"
 
     return (
-        <div
-            className={cn(
-                "bg-gray-900 border rounded-md overflow-hidden",
-                line.level === "error" ? "border-red-800/50" : "border-orange-800/50",
-            )}
-        >
+        <div className={cn(
+            "group transition-all duration-300 border-l-4",
+            isError ? "border-rose-500" : "border-amber-500"
+        )}>
             <button
-                onClick={handleToggle}
-                className="flex items-start gap-2 w-full px-3 py-2 text-left hover:bg-gray-800/50 transition-colors"
+                onClick={toggleExpanded}
+                className={cn(
+                    "flex items-center gap-4 w-full px-6 py-4 text-left transition-all duration-300",
+                    isExpanded ? "bg-white/[0.04]" : "hover:bg-white/[0.02]"
+                )}
             >
-                <LevelBadge level={line.level} />
-                {d.context && <span className="text-sm text-indigo-400 flex-shrink-0">[{d.context}]</span>}
-                {d.filename && <span className="text-sm text-blue-300 font-mono flex-shrink-0 max-w-[250px] truncate">{d.filename}</span>}
-                <span
-                    className={cn(
-                        "text-sm break-all flex-1",
-                        line.level === "error" ? "text-red-300" : "text-orange-300",
-                    )}
-                >
-                    {d.message}
-                </span>
+                <div className={cn(
+                    "transition-transform duration-500",
+                    isExpanded ? "rotate-90 text-primary" : "text-zinc-600"
+                )}>
+                    <BiChevronRight className="text-xl" />
+                </div>
+
+                <div className={cn(
+                    "p-1.5 rounded-lg border",
+                    isError ? "bg-rose-500/10 border-rose-500/20 text-rose-400" : "bg-amber-500/10 border-amber-500/20 text-amber-400"
+                )}>
+                    {isError ? <BiX className="text-lg" /> : <BiError className="text-lg" />}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-zinc-200 truncate group-hover:text-white transition-colors">
+                        {l.message}
+                    </p>
+                    <p className="text-[10px] font-black uppercase tracking-tighter text-zinc-500 mt-0.5 max-w-lg truncate">
+                        {l.filename || "System Event"}
+                    </p>
+                </div>
+
+                <div className="flex gap-2 items-center flex-shrink-0">
+                    <span className="text-[10px] font-mono text-zinc-600">#{line.idx}</span>
+                    <LevelBadge level={l.level} />
+                </div>
             </button>
-            {expanded && (
-                <div className="border-t border-[--border] bg-gray-950 p-3">
-                    <DataGrid data={d} />
+
+            {isExpanded && (
+                <div className="px-16 pb-6 pt-2 space-y-4 animate-in fade-in slide-in-from-top-2 duration-500">
+                    <div className="p-4 rounded-2xl bg-black/40 border border-white/5">
+                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600 block mb-2">Metadata Completa</span>
+                        <DataGrid data={l} />
+                    </div>
                 </div>
             )}
-        </div>
-    )
-}
-
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-function LevelBadge({ level }: { level: LogLevel }) {
-    const intents: Record<string, "alert" | "warning" | "success" | "info" | "gray"> = {
-        error: "alert",
-        warn: "warning",
-        info: "info",
-        debug: "gray",
-        trace: "gray",
-    }
-    return <Badge size="sm" intent={intents[level] || "gray"}>{level}</Badge>
-}
-
-function LevelDot({ level }: { level: LogLevel }) {
-    return (
-        <span
-            className={cn(
-                "inline-block w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0",
-                level === "error" && "bg-red-400",
-                level === "warn" && "bg-orange-400",
-                level === "info" && "bg-blue-400",
-                level === "debug" && "bg-gray-600",
-                level === "trace" && "bg-gray-700",
-            )}
-        />
-    )
-}
-
-function DataGrid({ data }: { data: Record<string, any> }) {
-    return (
-        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
-            {Object.entries(data).map(([key, value]) => {
-                if (key === "level" || key === "context") return null
-                const isObj = typeof value === "object" && value !== null
-                return (
-                    <React.Fragment key={key}>
-                        <span className="text-gray-500 text-sm select-all">{key}</span>
-                        <span
-                            className={cn(
-                                "text-sm break-all select-all",
-                                isObj ? "text-gray-400" : "text-gray-200",
-                            )}
-                        >
-                            {isObj ? JSON.stringify(value, null, 1) : String(value)}
-                        </span>
-                    </React.Fragment>
-                )
-            })}
         </div>
     )
 }
@@ -1260,73 +1306,98 @@ function DataGrid({ data }: { data: Record<string, any> }) {
 
 
 function FileFlowPanel({ group }: { group: FileGroup }) {
+    const allLogs = useMemo(() => {
+        const logs = [...group.matcherLogs, ...group.hydratorLogs]
+        if (group.parsingLog) logs.unshift(group.parsingLog)
+        return logs.sort((a, b) => a.idx - b.idx)
+    }, [group])
+
     return (
-        <div className="space-y-4">
-            {/* Parsing */}
-            {group.parsingLog && (
-                <FlowSection title="Parsing" icon={<BiFile className="text-blue-400" />}>
-                    <ParsedFileLine line={group.parsingLog} />
-                </FlowSection>
-            )}
-
-            {/* Matcher */}
-            {group.matcherLogs.length > 0 && (
-                <FlowSection
-                    title="Matcher"
-                    icon={<BiSearch className="text-indigo-400" />}
-                    badge={group.matchResult
-                        ? <Badge size="sm" intent="unstyled" className="text-[--green]">→ {group.matchResult.match} [{group.matchResult.id}]
-                                                                                        (score: {group.matchResult.score})</Badge>
-                        : group.isUnmatched
-                            ? <Badge size="sm" intent="warning">unmatched</Badge>
-                            : undefined
-                    }
-                >
-                    <div className="space-y-0.5">
-                        {group.matcherLogs.map((log) => (
-                            <MatcherLogLine key={log.idx} line={log} />
-                        ))}
+        <div className="space-y-6">
+            {allLogs.map((log, i) => (
+                <div key={log.idx} className="relative pl-8 group">
+                    {/* Vertical Line */}
+                    {i < allLogs.length - 1 && (
+                        <div className="absolute left-[15px] top-6 bottom-[-20px] w-px bg-gradient-to-b from-primary/30 to-transparent" />
+                    )}
+                    
+                    {/* Circle Indicator */}
+                    <div className="absolute left-0 top-1.5 w-[31px] h-[31px] rounded-full bg-black border border-white/10 flex items-center justify-center z-10 group-hover:border-primary transition-colors">
+                        <div className={cn(
+                            "w-1.5 h-1.5 rounded-full",
+                            log.context === "Matcher" ? "bg-indigo-500" : 
+                            log.context === "FileHydrator" ? "bg-cyan-500" : "bg-blue-500",
+                            "shadow-[0_0_8px_rgba(255,255,255,0.3)]"
+                        )} />
                     </div>
-                </FlowSection>
-            )}
-
-            {/* Hydrator */}
-            {group.hydratorLogs.length > 0 && (
-                <FlowSection
-                    title="Hydrator"
-                    icon={<RiFileSettingsFill className="text-cyan-400" />}
-                    badge={group.hydrationResult
-                        ? <Badge size="sm" intent={group.hydrationResult.type === "main" ? "success" : "warning"}>{group.hydrationResult.type} →
-                                                                                                                                               ep{group.hydrationResult.episode}</Badge>
-                        : undefined
-                    }
-                >
-                    <div className="space-y-0.5">
-                        {group.hydratorLogs.map((log) => (
-                            <HydratorLogLine key={log.idx} line={log} />
-                        ))}
+                    
+                    <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 hover:bg-white/[0.05] transition-all">
+                        <div className="flex items-center gap-3 mb-2">
+                            <span className={cn(
+                                "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border",
+                                log.context === "Matcher" ? "text-indigo-400 border-indigo-500/20 bg-indigo-500/5" :
+                                log.context === "FileHydrator" ? "text-cyan-400 border-cyan-500/20 bg-cyan-500/5" :
+                                "text-blue-400 border-blue-500/20 bg-blue-500/5"
+                            )}>
+                                {log.context || "Parser"}
+                            </span>
+                            <span className="text-[10px] font-mono text-zinc-600 ml-auto">Line #{log.idx}</span>
+                        </div>
+                        
+                        {log.context === "Matcher" ? (
+                            <MatcherLogLine line={log} />
+                        ) : log.context === "FileHydrator" ? (
+                            <HydratorLogLine line={log} />
+                        ) : (
+                            <ParsingLogLine line={log} />
+                        )}
+                        
+                        <div className="mt-3">
+                            <DataGrid data={log.raw} />
+                        </div>
                     </div>
-                </FlowSection>
-            )}
-
-            {group.matcherLogs.length === 0 && group.hydratorLogs.length === 0 && !group.parsingLog && (
-                <p className="text-gray-500 text-sm">No logs found for this file across any phase.</p>
-            )}
+                </div>
+            ))}
         </div>
     )
 }
 
-function FlowSection({ title, icon, badge, children }: { title: string; icon: React.ReactNode; badge?: React.ReactNode; children: React.ReactNode }) {
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+function LevelBadge({ level }: { level: LogLevel }) {
     return (
-        <div className="border border-[--border] rounded-lg overflow-hidden">
-            <div className="flex items-center gap-2 px-3 py-2 bg-gray-900">
-                {icon}
-                <span className="text-sm font-semibold text-gray-200">{title}</span>
-                {badge}
-            </div>
-            <div className="p-2 bg-gray-950">
-                {children}
-            </div>
+        <span className={cn(
+            "px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border",
+            level === "error" ? "bg-rose-500/10 border-rose-500/20 text-rose-400" :
+            level === "warn" ? "bg-amber-500/10 border-amber-500/20 text-amber-400" :
+            level === "info" ? "bg-blue-500/10 border-blue-500/20 text-blue-400" :
+            "bg-zinc-500/10 border-white/10 text-zinc-500"
+        )}>
+            {level}
+        </span>
+    )
+}
+
+function DataGrid({ data }: { data: Record<string, any> }) {
+    return (
+        <div className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 bg-black/20 p-3 rounded-xl border border-white/[0.02]">
+            {Object.entries(data).map(([key, value]) => {
+                if (key === "level" || key === "context" || key === "filename" || key === "message" || key === "time") return null
+                const isObj = typeof value === "object" && value !== null
+                return (
+                    <React.Fragment key={key}>
+                        <span className="text-[10px] font-black uppercase tracking-wider text-zinc-600 select-all">{key}</span>
+                        <span className={cn(
+                            "text-[11px] font-mono break-all select-all",
+                            isObj ? "text-zinc-500" : "text-zinc-300"
+                        )}>
+                            {isObj ? JSON.stringify(value) : String(value)}
+                        </span>
+                    </React.Fragment>
+                )
+            })}
         </div>
     )
 }

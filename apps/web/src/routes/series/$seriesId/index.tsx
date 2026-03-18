@@ -3,6 +3,7 @@ import { HydrationBoundary, QueryClient, dehydrate } from "@tanstack/react-query
 import React, { useMemo, useState, useEffect, useRef } from "react"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { cn } from "@/components/ui/core/styling"
 import { fetchAnimeEntry, useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { Anime_Episode } from "@/api/generated/types"
@@ -37,7 +38,7 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
 
     if (!entry || !entry.media) {
         return (
-            <div className="min-h-screen bg-[#0B0B0F] text-white flex items-center justify-center px-6">
+            <div className="min-h-screen bg-background text-white flex items-center justify-center px-6">
                 <EmptyState
                     title="Serie no encontrada"
                     message="No pudimos cargar esta serie. Vuelve al inicio o intenta con otra."
@@ -55,7 +56,7 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     const episodesCount = entry.media.totalEpisodes || entry.episodes?.length || 0
 
     return (
-        <div className="min-h-screen bg-[#0B0B0F] text-white pb-16">
+        <div className="min-h-screen bg-background text-white pb-16">
             <HeroSection
                 seriesId={seriesId}
                 directoryPath={entry.libraryData?.sharedPath || ""}
@@ -96,12 +97,12 @@ const HeroSection = React.memo(({ seriesId, directoryPath, backdropUrl, coverUrl
                 <img
                     src={backdropUrl}
                     alt={title}
-                    className="h-full w-full object-cover blur-[2px] scale-105"
+                    className="h-full w-full object-cover blur-[2px] opacity-60 animate-ken-burns"
                     loading="lazy"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#05050a] via-[#05050a]/70 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-r from-[#05050a] via-[#05050a]/65 to-transparent" />
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.08),transparent_45%)]" />
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-r from-background via-background/65 to-transparent" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.05),transparent_45%)]" />
             </div>
 
             <div className="relative px-6 sm:px-10 lg:px-16 pt-24 pb-18 lg:pb-24">
@@ -111,7 +112,7 @@ const HeroSection = React.memo(({ seriesId, directoryPath, backdropUrl, coverUrl
                             src={coverUrl}
                             alt={`${title} cover`}
                             loading="lazy"
-                            className="aspect-[2/3] w-full rounded-3xl border border-white/10 object-cover shadow-[0_25px_80px_rgba(0,0,0,0.6)]"
+                            className="aspect-[2/3] w-full rounded-2xl border border-white/10 object-cover shadow-[0_20px_50px_rgba(0,0,0,0.5)] group/cover hover:scale-[1.02] transition-transform duration-500"
                         />
                     </div>
 
@@ -135,7 +136,7 @@ const HeroSection = React.memo(({ seriesId, directoryPath, backdropUrl, coverUrl
                             ))}
                         </div>
 
-                        <p className="max-w-4xl text-base sm:text-lg text-white/85 leading-relaxed line-clamp-4" dangerouslySetInnerHTML={{ __html: synopsis }}></p>
+                        <p className="max-w-4xl text-base sm:text-lg text-zinc-400 leading-relaxed line-clamp-4" dangerouslySetInnerHTML={{ __html: synopsis }}></p>
 
                         <MediaActionButtons 
                             seriesId={seriesId} 
@@ -219,7 +220,11 @@ const EpisodesSection = React.memo(({ seriesTitle, fallbackThumb, episodes }: Ep
                                     <TabsTrigger
                                         key={s}
                                         value={s.toString()}
-                                        className="h-11 whitespace-nowrap rounded-full border border-white/10 bg-white/5 px-6 text-xs font-bold uppercase tracking-widest text-white/60 transition-all hover:bg-white/10 data-[state=active]:border-orange-500/50 data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow-[0_8px_20px_rgba(249,115,22,0.3)]"
+                                        className={cn(
+                                            "h-11 whitespace-nowrap rounded-full border border-white/5 bg-white/[0.03] px-6 text-xs font-bold uppercase tracking-widest text-zinc-400 transition-all backdrop-blur-md",
+                                            "hover:bg-white/[0.05] hover:text-zinc-200",
+                                            "data-[state=active]:border-primary/50 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-[0_0_20px_rgba(249,115,22,0.3)]"
+                                        )}
                                     >
                                         {s === 0 ? "Especiales" : `Temporada ${s}`}
                                     </TabsTrigger>

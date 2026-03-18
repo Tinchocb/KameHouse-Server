@@ -187,10 +187,52 @@ function SeriesPage() {
                     transition: background 180ms, color 180ms;
                     width: fit-content;
                 }
+                .stroke-text {
+                    -webkit-text-stroke: 1.5px white;
+                }
             `}</style>
 
-            <div className="series-page">
-                <h1 className="page-title">KameHouse</h1>
+            <div className="series-page relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] via-transparent to-rose-600/[0.02] pointer-events-none" />
+                
+                {/* Cinematic Decorations */}
+                <svg
+                    aria-hidden
+                    className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.03]"
+                    viewBox="0 0 900 320"
+                    preserveAspectRatio="xMidYMid slice"
+                >
+                    {Array.from({ length: 32 }).map((_, i) => {
+                        const angle = (i / 32) * 360
+                        const rad = (angle * Math.PI) / 180
+                        return (
+                            <line
+                                key={i}
+                                x1="450" y1="160"
+                                x2={450 + Math.cos(rad) * 1400}
+                                y2={160 + Math.sin(rad) * 1400}
+                                stroke="white"
+                                strokeWidth={i % 4 === 0 ? "1.5" : "0.6"}
+                            />
+                        )
+                    })}
+                </svg>
+
+                <svg
+                    aria-hidden
+                    className="absolute inset-0 w-full h-full opacity-[0.02] pointer-events-none"
+                >
+                    <defs>
+                        <pattern id="dots-series" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse">
+                            <circle cx="6" cy="6" r="1.5" fill="white" />
+                        </pattern>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#dots-series)" />
+                </svg>
+
+                <h1 className="page-title z-10">
+                    MI <span className="text-transparent stroke-text opacity-30">COLEC</span>CIÓN
+                </h1>
 
                 <div className="card-stack">
                     {dbzData.map((series, idx) => {

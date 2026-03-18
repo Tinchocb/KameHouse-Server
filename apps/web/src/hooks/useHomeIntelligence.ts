@@ -44,7 +44,8 @@ export interface ContinueWatchingEntry {
 }
 
 async function fetchCuratedHome(): Promise<CuratedHomeResponse> {
-    const url = new URL(getServerBaseUrl() + "/api/v1/home/curated")
+    const base = getServerBaseUrl() || (typeof window !== "undefined" ? window.location.origin : "http://localhost")
+    const url = new URL("/api/v1/home/curated", base)
     const res = await fetch(url.toString())
     if (!res.ok) throw new Error("Failed to fetch curated home list")
     const json = (await res.json()) as { data: CuratedHomeResponse }
@@ -52,7 +53,8 @@ async function fetchCuratedHome(): Promise<CuratedHomeResponse> {
 }
 
 async function fetchContinueWatching(): Promise<ContinueWatchingEntry[]> {
-    const url = new URL(getServerBaseUrl() + "/api/v1/home/continue-watching")
+    const base = getServerBaseUrl() || (typeof window !== "undefined" ? window.location.origin : "http://localhost")
+    const url = new URL("/api/v1/home/continue-watching", base)
     const res = await fetch(url.toString())
     if (!res.ok) throw new Error("Failed to fetch continue watching list")
     const json = (await res.json()) as { data: ContinueWatchingEntry[] }

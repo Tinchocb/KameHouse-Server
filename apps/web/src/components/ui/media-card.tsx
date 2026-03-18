@@ -85,9 +85,9 @@ export const MediaCard = React.memo(function MediaCard({
                 // Stremio-style subtle border — brightens on hover
                 "border border-white/5 hover:border-white/20",
                 // Flat lift: scale only, no translate — hardware-composited
-                "transition-all duration-300 ease-out will-change-transform",
-                "hover:-translate-y-1 hover:scale-105",
-                "hover:shadow-[0_0_30px_rgba(249,115,22,0.15)] hover:z-50",
+                "transition-all duration-500 cubic-bezier(0.16, 1, 0.3, 1) will-change-transform",
+                "hover:-translate-y-2 hover:scale-[1.04] hover:z-50",
+                "hover:shadow-[0_20px_50px_rgba(0,0,0,0.5),0_0_30px_rgba(249,115,22,0.1)]",
                 // Aria / focus ring
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40",
                 // Intrinsic sizing by aspect ratio
@@ -172,9 +172,14 @@ export const MediaCard = React.memo(function MediaCard({
             </div>
 
             {/* ── Play button overlay (appears on hover) ────────────────── */}
-            <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/0 opacity-0 backdrop-blur-none transition-all duration-300 group-hover/card:bg-black/40 group-hover/card:opacity-100 group-hover/card:backdrop-blur-[1px]">
-                <div className="flex h-12 w-12 transform items-center justify-center rounded-full bg-orange-500 text-white shadow-[0_0_20px_rgba(249,115,22,0.5)] transition-transform duration-300 group-hover/card:scale-110">
-                    <svg viewBox="0 0 24 24" className="ml-1 h-6 w-6 fill-current" xmlns="http://www.w3.org/2000/svg">
+            <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/0 opacity-0 transition-all duration-500 group-hover/card:bg-black/40 group-hover/card:opacity-100 group-hover/card:backdrop-blur-sm">
+                <div 
+                    className={cn(
+                        "flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_0_30px_rgba(249,115,22,0.5)]",
+                        "translate-y-4 scale-90 opacity-0 transition-all duration-500 group-hover/card:translate-y-0 group-hover/card:scale-100 group-hover/card:opacity-100"
+                    )}
+                >
+                    <svg viewBox="0 0 24 24" className="ml-1 h-7 w-7 fill-current" xmlns="http://www.w3.org/2000/svg">
                         <path d="M8 5v14l11-7z" />
                     </svg>
                 </div>

@@ -450,64 +450,75 @@ export default function Page() {
     }
 
     return (
-        <div
-            className="container mx-auto p-4 min-h-screen relative"
-            onDragEnter={handleDragEnter}
-            onDragLeave={handleDragLeave}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-        >
-            {isDragging && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/80 backdrop-blur-sm">
-                    <div className="flex flex-col items-center gap-3 p-8 border-2 border-dashed border-indigo-500 rounded-xl bg-gray-900/50">
-                        <BiUpload className="text-4xl text-indigo-400" />
-                        <p className="text-lg font-medium text-indigo-300">Drop report file</p>
+        <div className="min-h-screen bg-[#020202] text-zinc-400 relative overflow-hidden p-6 md:p-12 custom-scrollbar">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.02] via-transparent to-rose-600/[0.01] pointer-events-none" />
+            
+            <div className="relative z-10">
+                <div className="mb-10">
+                    <div className="flex items-center gap-4 justify-between">
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-4 duration-700">
+                                <div className="h-[2px] w-10 bg-primary shadow-[0_0_15px_rgba(249,115,22,0.5)]" />
+                                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/90">Technical Audit</span>
+                            </div>
+                            <h1 className="font-bebas text-6xl md:text-8xl leading-[0.85] tracking-[0.02em] text-white animate-in fade-in slide-in-from-left-6 duration-1000">
+                                INFORME DE<br />
+                                <span className="text-transparent stroke-text opacity-30">INCIDEN</span>CIAS
+                            </h1>
+                        </div>
+
+                        <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-4 duration-1000">
+                            <label
+                                className="group flex items-center gap-3 px-6 py-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 hover:border-primary/40 rounded-xl cursor-pointer transition-all duration-300"
+                            >
+                                <BiUpload className="text-xl text-zinc-500 group-hover:text-primary transition-colors" />
+                                <span className="font-bebas text-lg tracking-widest text-zinc-400 group-hover:text-white transition-colors">
+                                    {report ? "CARGAR OTRO" : "CARGAR REPORTE"}
+                                </span>
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleFileChange}
+                                    accept=".json,.zip"
+                                    className="hidden"
+                                />
+                            </label>
+                            
+                            {report && (
+                                <button
+                                    onClick={async () => {
+                                        await clearReportFromDB()
+                                        setReport(null)
+                                        toast.success("Cleared report")
+                                    }}
+                                    className="group p-3 bg-white/[0.02] hover:bg-rose-500/10 border border-white/5 hover:border-rose-500/30 rounded-xl transition-all duration-300"
+                                    title="Limpiar reporte"
+                                >
+                                    <BiTrash className="text-xl text-zinc-600 group-hover:text-rose-400" />
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
-            )}
 
-            <div className="mb-4">
-                <div className="flex items-center gap-4 justify-between">
-                    <div className="flex items-center gap-4">
-                        <h1 className="text-xl font-bold text-gray-200 tracking-tight">Issue Report</h1>
-                        <label
-                            className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 border border-[--border] rounded-md cursor-pointer hover:bg-gray-700 transition-colors text-sm text-gray-300"
-                        >
-                            <BiUpload />
-                            <span>{report ? "Load another file" : "Load report file"}</span>
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                onChange={handleFileChange}
-                                accept=".json,.zip"
-                                className="hidden"
-                            />
-                        </label>
+                {report ? (
+                    <ReportViewer report={report} />
+                ) : (
+                    <div className="flex flex-col items-center justify-center py-32 text-center animate-in fade-in zoom-in-95 duration-1000">
+                        <div className="w-24 h-24 rounded-3xl bg-white/[0.02] border border-white/5 flex items-center justify-center mb-8 shadow-2xl">
+                            <BiFile className="w-10 h-10 text-zinc-800 animate-pulse" />
+                        </div>
+                        <h2 className="font-bebas text-3xl tracking-widest text-zinc-600">BÓVEDA DE DIAGNÓSTICO VACÍA</h2>
+                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-800 mt-4">Carga un archivo .JSON o .ZIP para iniciar la autopsia</p>
                     </div>
-
-                    {report && (
-                        <button
-                            onClick={async () => {
-                                await clearReportFromDB()
-                                setReport(null)
-                                toast.success("Cleared report")
-                            }}
-                            className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-950/30 rounded-md transition-colors"
-                        >
-                            <BiTrash />
-                            Clear report
-                        </button>
-                    )}
-                </div>
+                )}
             </div>
 
-            {report ? (
-                <ReportViewer report={report} />
-            ) : (
-                <div className="flex items-center justify-center h-[40vh] text-[--muted]">
-                    <p className="text-lg">Load an issue report JSON or ZIP file</p>
-                </div>
-            )}
+            <style>{`
+                .stroke-text {
+                    -webkit-text-stroke: 1.5px white;
+                }
+            `}</style>
         </div>
     )
 }
@@ -539,28 +550,30 @@ function ReportViewer({ report }: { report: ExtendedReport }) {
     ]
 
     return (
-        <div className="space-y-0">
-            <div className="flex gap-1 bg-gray-950 border-b border-[--border] p-1 rounded-t-lg sticky top-0 z-20 overflow-x-auto">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-1000">
+            <div className="sticky top-4 z-40 glass-panel-premium border border-white/5 p-1.5 rounded-2xl flex gap-1 items-center overflow-x-auto no-scrollbar shadow-2xl backdrop-blur-3xl">
                 {tabs.filter(t => t.show !== false).map(({ key, label, icon: Icon, accent }) => (
                     <button
                         key={key}
                         onClick={() => setActivePhase(key)}
                         className={cn(
-                            "flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-all font-medium whitespace-nowrap",
+                            "flex items-center gap-2.5 px-6 py-2.5 text-sm rounded-xl transition-all duration-300 font-bold tracking-wide whitespace-nowrap",
                             activePhase === key
-                                ? accent ? "bg-indigo-600 text-white" : "bg-gray-800 text-white"
+                                ? accent 
+                                    ? "bg-primary text-white shadow-[0_0_20px_rgba(249,115,22,0.4)]" 
+                                    : "bg-white/10 text-white border border-white/10 shadow-xl"
                                 : accent
-                                    ? "text-indigo-400 hover:text-indigo-300 hover:bg-indigo-950/30"
-                                    : "text-gray-400 hover:text-gray-200 hover:bg-gray-900",
+                                    ? "text-primary hover:bg-primary/10"
+                                    : "text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.05]",
                         )}
                     >
-                        <Icon className="text-base" />
-                        {label}
+                        <Icon className={cn("text-lg", activePhase === key ? "scale-110" : "scale-100")} />
+                        <span className="font-bebas tracking-widest text-lg">{label}</span>
                     </button>
                 ))}
             </div>
 
-            <div className="bg-gray-950 rounded-b-lg min-h-[80vh]">
+            <div className="min-h-[70vh] pb-20">
                 {activePhase === "overview" && (
                     <OverviewPanel report={report} stats={stats} events={events} />
                 )}
@@ -610,60 +623,75 @@ function ReportViewer({ report }: { report: ExtendedReport }) {
 function OverviewPanel({ report, stats, events }: { report: ExtendedReport; stats: ReportStats; events: UnifiedEvent[] }) {
     return (
         <div className="p-4 space-y-4">
-            {/* report info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="bg-gray-900 border border-[--border] rounded-lg p-4 space-y-2">
-                    <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Report Info</h3>
-                    <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
-                        <DetailLabel>Version</DetailLabel>
-                        <DetailValue>{report.appVersion || "—"}</DetailValue>
-                        <DetailLabel>OS</DetailLabel>
-                        <DetailValue>{report.os || "—"} / {report.arch || "—"}</DetailValue>
-                        <DetailLabel>User Agent</DetailLabel>
-                        <DetailValue className="truncate max-w-[300px]">{report.userAgent || "—"}</DetailValue>
-                        <DetailLabel>Created</DetailLabel>
-                        <DetailValue>{report.createdAt ? format(parseISO(report.createdAt), "yyyy-MM-dd HH:mm:ss") : "—"}</DetailValue>
-                        {report.viewportWidth ? (
-                            <>
-                                <DetailLabel>Viewport</DetailLabel>
-                                <DetailValue>{report.viewportWidth}×{report.viewportHeight}</DetailValue>
-                            </>
-                        ) : null}
+            {/* stats */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard label="EVENTOS TOTALES" value={stats.totalEvents} icon={<BiInfoCircle />} color="text-blue-400" />
+                <StatCard
+                    label="ERRORES CRÍTICOS"
+                    value={stats.errorCount}
+                    icon={<BiError />}
+                    color={stats.errorCount > 0 ? "text-rose-500" : "text-zinc-700"}
+                />
+                <StatCard
+                    label="FALLOS DE RED"
+                    value={stats.networkErrors}
+                    icon={<LuNetwork />}
+                    color={stats.networkErrors > 0 ? "text-rose-500" : "text-zinc-700"}
+                />
+                <StatCard
+                    label="DURACIÓN"
+                    value={0}
+                    icon={<BiPlay />}
+                    color="text-primary"
+                    sub={stats.recordingDuration || stats.duration || "—"}
+                    hideValue
+                />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* report info */}
+                <div className="md:col-span-2 glass-panel-premium border-white/5 p-6 rounded-2xl relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                        <BiInfoCircle className="w-20 h-20 text-white" />
+                    </div>
+                    <h3 className="font-bebas text-2xl tracking-widest text-zinc-500 mb-6">METADATOS DEL SISTEMA</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                        <div className="space-y-1">
+                            <DetailLabel>VERSIÓN APP</DetailLabel>
+                            <DetailValue className="font-bebas text-xl tracking-wider text-white">{report.appVersion || "—"}</DetailValue>
+                        </div>
+                        <div className="space-y-1">
+                            <DetailLabel>SISTEMA OPERATIVO</DetailLabel>
+                            <DetailValue className="font-bebas text-xl tracking-wider text-white">{report.os || "—"} / {report.arch || "—"}</DetailValue>
+                        </div>
+                        <div className="space-y-1 col-span-full">
+                            <DetailLabel>USER AGENT</DetailLabel>
+                            <DetailValue className="text-xs font-mono text-zinc-500 break-all">{report.userAgent || "—"}</DetailValue>
+                        </div>
+                        <div className="space-y-1">
+                            <DetailLabel>CAPTURADO EN</DetailLabel>
+                            <DetailValue className="font-bebas text-xl tracking-wider text-white">
+                                {report.createdAt ? format(parseISO(report.createdAt), "yyyy-MM-dd HH:mm:ss") : "—"}
+                            </DetailValue>
+                        </div>
+                        {report.viewportWidth && (
+                            <div className="space-y-1">
+                                <DetailLabel>RESOLUCIÓN</DetailLabel>
+                                <DetailValue className="font-bebas text-xl tracking-wider text-white">{report.viewportWidth}×{report.viewportHeight}</DetailValue>
+                            </div>
+                        )}
                     </div>
                 </div>
 
                 {/* description */}
                 {report.description && (
-                    <div className="bg-gray-900 border border-[--border] rounded-lg p-4 space-y-2">
-                        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">User Description</h3>
-                        <p className="text-sm text-gray-200 whitespace-pre-wrap">{report.description}</p>
+                    <div className="glass-panel-premium border-white/5 p-6 rounded-2xl">
+                        <h3 className="font-bebas text-2xl tracking-widest text-zinc-500 mb-4">NOTAS DEL USUARIO</h3>
+                        <p className="text-sm text-zinc-300 leading-relaxed font-medium italic">
+                            "{report.description}"
+                        </p>
                     </div>
                 )}
-            </div>
-
-            {/* stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <StatCard label="Total Events" value={stats.totalEvents} icon={<BiInfoCircle />} color="text-blue-400" />
-                <StatCard
-                    label="Errors"
-                    value={stats.errorCount}
-                    icon={<BiError />}
-                    color={stats.errorCount > 0 ? "text-red-400" : "text-gray-500"}
-                />
-                <StatCard
-                    label="Net Errors"
-                    value={stats.networkErrors}
-                    icon={<LuNetwork />}
-                    color={stats.networkErrors > 0 ? "text-red-400" : "text-gray-500"}
-                />
-                <StatCard
-                    label="Recording"
-                    value={0}
-                    icon={<BiPlay />}
-                    color="text-indigo-400"
-                    sub={stats.recordingDuration || stats.duration || "—"}
-                    hideValue
-                />
             </div>
 
             {/* pipeline */}
@@ -789,78 +817,90 @@ function TimelinePanel({ events, searchQuery, setSearchQuery, includeServerLogs,
     const errorCount = events.filter(e => e.level === "error" || e.level === "warn").length
 
     return (
-        <div className="flex h-[calc(100vh-140px)]">
-            <div className="w-[260px] flex-none p-4 border-r border-[--border] space-y-4 bg-gray-950 overflow-y-auto">
-                <TextInput
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search events..."
-                    className="w-full"
-                />
+        <div className="flex h-[calc(100vh-220px)] glass-panel-premium border-white/5 rounded-2xl overflow-hidden shadow-2xl">
+            <div className="w-[280px] flex-none p-6 border-r border-white/5 space-y-6 bg-white/[0.02] overflow-y-auto custom-scrollbar">
+                <div className="space-y-2">
+                    <DetailLabel>BÚSQUEDA TÉCNICA</DetailLabel>
+                    <TextInput
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Filtrar eventos..."
+                        className="w-full bg-white/[0.03] border-white/10"
+                    />
+                </div>
 
-                <div className="space-y-1">
-                    <div className="flex items-center justify-between">
+                <div className="space-y-4">
+                    <DetailLabel>FILTROS CRÍTICOS</DetailLabel>
+                    <div className="flex items-center justify-between p-3 bg-rose-500/5 rounded-xl border border-rose-500/10 group hover:border-rose-500/30 transition-colors">
                         <Checkbox
-                            label="Errors only"
+                            label={<span className="font-bebas tracking-widest text-rose-400 group-hover:text-rose-300 transition-colors">SOLO ERRORES</span>}
                             value={showOnlyErrors}
                             onValueChange={v => setShowOnlyErrors(v as boolean)}
                             size="sm"
                         />
-                        <span className="text-xs text-red-400 font-mono tracking-wider tabular-nums bg-red-950/30 px-1.5 rounded">
+                        <span className="text-[10px] font-black tabular-nums bg-rose-500/20 px-2 py-0.5 rounded-full text-rose-500">
                             {errorCount}
                         </span>
                     </div>
                 </div>
 
-                <div className="h-px bg-[--border]" />
+                <div className="h-px bg-white/5" />
 
-                <div className="space-y-1">
-                    {FILTER_OPTIONS.map(({ key, label }) => (
-                        <div key={key} className="flex items-center justify-between group">
-                            <Checkbox
-                                label={label}
-                                value={typeFilters.has(key)}
-                                onValueChange={() => toggleFilter(key)}
-                                size="sm"
-                            />
-                            <span className="text-xs text-gray-500 tabular-nums group-hover:text-gray-300 transition-colors">
-                                {events.filter(e => e.type === key).length}
-                            </span>
-                        </div>
-                    ))}
+                <div className="space-y-2">
+                    <DetailLabel>TIPOS DE EVENTO</DetailLabel>
+                    <div className="grid gap-1">
+                        {FILTER_OPTIONS.map(({ key, label }) => (
+                            <div key={key} className="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-white/[0.03] transition-colors group">
+                                <Checkbox
+                                    label={<span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-zinc-300 transition-colors">{label}</span>}
+                                    value={typeFilters.has(key)}
+                                    onValueChange={() => toggleFilter(key)}
+                                    size="sm"
+                                />
+                                <span className="text-[10px] font-bold text-zinc-700 tabular-nums">
+                                    {events.filter(e => e.type === key).length}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
                 </div>
 
-                <div className="h-px bg-[--border]" />
+                <div className="h-px bg-white/5" />
 
-                <Checkbox
-                    label="Include server logs"
-                    value={includeServerLogs}
-                    onValueChange={v => setIncludeServerLogs(v as boolean)}
-                    size="sm"
-                />
+                <div className="px-2">
+                    <Checkbox
+                        label={<span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">INCLUIR LOGS SERVIDOR</span>}
+                        value={includeServerLogs}
+                        onValueChange={v => setIncludeServerLogs(v as boolean)}
+                        size="sm"
+                    />
+                </div>
             </div>
 
-            <div className="flex-1 min-w-0 bg-gray-950">
-                <div className="p-2 border-b border-[--border] flex items-center justify-between">
-                    <span className="text-sm text-gray-400 font-medium">Events</span>
-                    <span className="text-xs text-gray-500">{filtered.length} filtered events</span>
+            <div className="flex-1 min-w-0 flex flex-col">
+                <div className="px-6 py-4 border-b border-white/5 bg-white/[0.01] flex items-center justify-between">
+                    <h4 className="font-bebas tracking-[0.2em] text-sm text-zinc-500">SECUENCIA DE EVENTOS</h4>
+                    <span className="text-[10px] font-black uppercase tracking-tighter text-zinc-700">{filtered.length} DISPARADORES FILTRADOS</span>
                 </div>
-                <Virtuoso
-                    style={{ height: "calc(100% - 40px)" }}
-                    totalCount={filtered.length}
-                    itemContent={(index) => {
-                        const event = filtered[index]
-                        return (
-                            <div className="pb-1 px-4 pt-1">
-                                <TimelineEventRow
-                                    event={event}
-                                    isExpanded={expandedIds.has(event.id)}
-                                    toggleExpanded={() => toggleExpanded(event.id)}
-                                />
-                            </div>
-                        )
-                    }}
-                />
+                <div className="flex-1 overflow-hidden">
+                    <Virtuoso
+                        style={{ height: "100%" }}
+                        totalCount={filtered.length}
+                        className="custom-scrollbar"
+                        itemContent={(index) => {
+                            const event = filtered[index]
+                            return (
+                                <div className="pb-2 px-6 pt-2">
+                                    <TimelineEventRow
+                                        event={event}
+                                        isExpanded={expandedIds.has(event.id)}
+                                        toggleExpanded={() => toggleExpanded(event.id)}
+                                    />
+                                </div>
+                            )
+                        }}
+                    />
+                </div>
             </div>
         </div>
     )
@@ -913,49 +953,64 @@ function TimelineEventRow({ event, isExpanded, toggleExpanded }: {
     return (
         <div
             className={cn(
-                "bg-gray-900 border rounded-md overflow-hidden",
-                event.level === "error" ? "border-red-800/50" : event.level === "warn" ? "border-orange-800/50" : "border-[--border]",
+                "glass-panel-premium border-white/5 rounded-xl overflow-hidden transition-all duration-300",
+                isExpanded ? "ring-1 ring-primary/30 shadow-[0_0_30px_rgba(249,115,22,0.1)]" : "hover:border-white/10",
+                event.level === "error" && "border-rose-500/20 bg-rose-500/[0.02]",
+                event.level === "warn" && "border-orange-500/20 bg-orange-500/[0.02]",
             )}
         >
             <button
                 onClick={toggleExpanded}
-                className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-gray-800/50 transition-colors"
+                className="flex items-center gap-4 w-full px-5 py-3 text-left transition-colors group"
             >
-                {isExpanded ? <BiChevronDown className="text-gray-500 flex-shrink-0" /> :
-                    <BiChevronRight className="text-gray-500 flex-shrink-0" />}
+                <div className="flex-shrink-0 flex items-center gap-3">
+                    {isExpanded ? <BiChevronDown className="text-zinc-600 transition-transform group-hover:text-primary" /> :
+                        <BiChevronRight className="text-zinc-600 transition-transform group-hover:text-primary" />}
+                    
+                    <span className="text-[10px] font-black text-zinc-600 font-mono tracking-tighter w-[60px] tabular-nums">
+                        {format(event.timestamp, "HH:mm:ss")}
+                    </span>
+                </div>
 
-                <span className="text-xs text-gray-500 font-mono flex-shrink-0 w-[70px]">
-                    {format(event.timestamp, "HH:mm:ss")}
-                </span>
-
-                <span className={cn("text-xs font-semibold px-1.5 py-0.5 rounded flex-shrink-0", typeBadgeColors[event.type])}>
+                <div className={cn(
+                    "font-bebas tracking-[0.2em] text-[10px] px-2.5 py-1 rounded-lg flex-shrink-0 border transition-all shadow-lg",
+                    typeBadgeColors[event.type],
+                    "border-white/5"
+                )}>
                     {typeLabels[event.type]}
-                </span>
+                </div>
 
-                <span className="flex-shrink-0">{typeIcons[event.type]}</span>
+                <span className="flex-shrink-0 opacity-40 group-hover:opacity-100 transition-opacity translate-y-[1px]">{typeIcons[event.type]}</span>
 
                 <span
                     className={cn(
-                        "text-[0.8rem] leading-5 truncate flex-1 font-mono",
-                        event.level === "error" ? "text-red-300" : event.level === "warn" ? "text-orange-300" : "text-gray-300",
+                        "text-[0.85rem] leading-5 truncate flex-1 font-mono tracking-tight",
+                        event.level === "error" ? "text-rose-400 font-bold" : event.level === "warn" ? "text-orange-400" : "text-zinc-300",
                     )}
                 >
                     {event.summary}
                 </span>
 
                 {event.pageUrl && (
-                    <span className="text-xs text-gray-600 truncate max-w-[160px] flex-shrink-0">{event.pageUrl}</span>
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-700 truncate max-w-[200px] flex-shrink-0 animate-in fade-in slide-in-from-right-4 duration-500">
+                        {event.pageUrl.replace(window.location.origin, "") || "/"}
+                    </span>
                 )}
             </button>
             {isExpanded && (
-                <div className="border-t border-[--border] bg-gray-950 p-3">
+                <div className="border-t border-white/5 bg-black/40 p-6 animate-in slide-in-from-top-2 duration-300">
                     {event.type === "screenshot" && event.raw.data ? (
-                        <div className="space-y-2">
-                            {event.raw.caption && <p className="text-sm text-gray-300 italic">"{event.raw.caption}"</p>}
-                            <img src={event.raw.data} alt="Screenshot" className="max-w-full max-h-[50vh] rounded-lg border border-[--border]" />
+                        <div className="space-y-4">
+                            {event.raw.caption && <p className="font-bebas tracking-widest text-zinc-500 uppercase">"{event.raw.caption}"</p>}
+                            <div className="relative group">
+                                <img src={event.raw.data} alt="Screenshot" className="max-w-full max-h-[60vh] rounded-2xl border border-white/10 shadow-2xl relative z-10" />
+                                <div className="absolute inset-0 blur-2xl bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+                            </div>
                         </div>
                     ) : (
-                        <DataGrid data={event.raw} />
+                        <div className="glass-panel-premium border-white/5 p-4 rounded-xl">
+                            <DataGrid data={event.raw} />
+                        </div>
                     )}
                 </div>
             )}
@@ -1753,14 +1808,17 @@ function StatCard({ label, value, icon, color, sub, hideValue }: {
     label: string; value: number; icon: React.ReactNode; color: string; sub?: string; hideValue?: boolean
 }) {
     return (
-        <div className="bg-gray-900 border border-[--border] rounded-lg p-3 space-y-1">
-            <div className="flex items-center gap-2">
-                <span className={cn("text-lg", color)}>{icon}</span>
-                <span className="text-sm text-gray-400 font-medium">{label}</span>
+        <div className="glass-panel-premium border-white/5 p-4 rounded-2xl relative overflow-hidden group transition-all duration-500 hover:shadow-[0_0_30px_rgba(0,0,0,0.3)]">
+            <div className="absolute -right-2 -bottom-2 opacity-[0.03] group-hover:scale-110 transition-transform duration-700">
+                <div className="text-6xl">{icon}</div>
             </div>
-            <div className="flex items-baseline gap-2">
-                {!hideValue && <span className="text-2xl font-bold text-white">{value}</span>}
-                {sub && <span className={cn("text-sm", hideValue ? "text-2xl font-bold text-white" : "text-gray-500")}>{sub}</span>}
+            <div className="flex items-center gap-2 mb-2 relative z-10">
+                <span className={cn("text-lg", color)}>{icon}</span>
+                <span className="font-bebas tracking-[0.2em] text-[10px] text-zinc-500 group-hover:text-zinc-400 transition-colors uppercase">{label}</span>
+            </div>
+            <div className="flex items-baseline gap-2 relative z-10">
+                {!hideValue && <span className="text-4xl font-bebas tracking-wider text-white">{value}</span>}
+                {sub && <span className={cn("font-bebas tracking-widest", hideValue ? "text-3xl text-white" : "text-[11px] font-black text-zinc-600 uppercase pt-2")}>{sub}</span>}
             </div>
         </div>
     )
@@ -1768,19 +1826,19 @@ function StatCard({ label, value, icon, color, sub, hideValue }: {
 
 function PipelineStep({ label, detail }: { label: string; detail: string }) {
     return (
-        <div className="bg-gray-900 border border-[--border] rounded-md px-3 py-2 text-center min-w-[100px]">
-            <p className="text-sm font-semibold text-gray-300">{label}</p>
-            <p className="text-sm text-gray-500 mt-0.5">{detail}</p>
+        <div className="glass-panel-premium border-white/5 rounded-xl px-5 py-3 text-center min-w-[120px] group hover:border-primary/20 transition-colors">
+            <p className="font-bebas tracking-widest text-[11px] text-zinc-500 group-hover:text-zinc-400 transition-colors uppercase">{label}</p>
+            <p className="font-bebas text-xl tracking-wider text-white mt-1">{detail}</p>
         </div>
     )
 }
 
 function DetailLabel({ children }: { children: React.ReactNode }) {
-    return <span className="text-sm text-gray-500 font-medium">{children}</span>
+    return <span className="font-black text-[9px] tracking-[0.2em] text-zinc-600 uppercase block mb-1">{children}</span>
 }
 
 function DetailValue({ children, className }: { children: React.ReactNode; className?: string }) {
-    return <span className={cn("text-sm text-gray-200", className)}>{children}</span>
+    return <span className={cn("text-zinc-200", className)}>{children}</span>
 }
 
 type LogLevel = "error" | "warn" | "info" | "debug" | "log"

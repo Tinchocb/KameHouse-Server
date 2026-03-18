@@ -4,13 +4,60 @@ import { FaPlay, FaSearch, FaFilter } from "react-icons/fa"
 import { EmptyState } from "@/components/shared/empty-state"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { Anime_LibraryCollectionEntry } from "@/api/generated/types"
-import { Loader2 } from "lucide-react"
+import { Loader2, Clapperboard, Search, Filter } from "lucide-react"
+import { cn } from "@/components/ui/core/styling"
+import { MediaCard } from "@/components/ui/media-card"
+
+// ─── Shared Cinematic Decorations ───────────────────────
+
+function SpeedLines({ opacity = 0.04 }: { opacity?: number }) {
+    return (
+        <svg
+            aria-hidden
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ opacity }}
+            viewBox="0 0 900 320"
+            preserveAspectRatio="xMidYMid slice"
+        >
+            {Array.from({ length: 32 }).map((_, i) => {
+                const angle = (i / 32) * 360
+                const rad = (angle * Math.PI) / 180
+                return (
+                    <line
+                        key={i}
+                        x1="450" y1="160"
+                        x2={450 + Math.cos(rad) * 1400}
+                        y2={160 + Math.sin(rad) * 1400}
+                        stroke="white"
+                        strokeWidth={i % 4 === 0 ? "1.5" : "0.6"}
+                    />
+                )
+            })}
+        </svg>
+    )
+}
+
+function HalftoneDots() {
+    return (
+        <svg
+            aria-hidden
+            className="absolute inset-0 w-full h-full opacity-[0.025] pointer-events-none"
+        >
+            <defs>
+                <pattern id="dots" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse">
+                    <circle cx="6" cy="6" r="1.5" fill="white" />
+                </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#dots)" />
+        </svg>
+    )
+}
 
 export const Route = createFileRoute("/movies/")({
     component: MoviesPage,
 })
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Component ────────────────────────────────────────────────────────────────
 
 function MoviesPage() {
     const [search, setSearch] = useState("")
@@ -49,458 +96,156 @@ function MoviesPage() {
     }, [search, activeGenre, allMovies])
 
     return (
-        <>
-            <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap');
-
-                /* ── Page shell ── */
-                .mp-page {
-                    flex: 1;
-                    width: 100%;
-                    min-height: 100vh;
-                    background: #0b0b0f;
-                    color: #fff;
-                    overflow-y: auto;
-                    padding-bottom: 96px;
-                    font-family: 'Inter', sans-serif;
-                }
-
-                /* ── Hero ── */
-                .mp-hero {
-                    position: relative;
-                    overflow: hidden;
-                    padding: 96px 56px 52px;
-                }
-                @media (max-width: 768px) { .mp-hero { padding: 80px 24px 40px; } }
-
-                .mp-hero-glow {
-                    position: absolute;
-                    top: -160px; left: -80px;
-                    width: 640px; height: 520px;
-                    border-radius: 50%;
-                    background: radial-gradient(circle, #f97316 0%, #dc2626 100%);
-                    opacity: 0.08;
-                    filter: blur(120px);
-                    pointer-events: none;
-                }
-
-                .mp-hero-inner {
-                    position: relative;
-                    z-index: 1;
-                    max-width: 1200px;
-                    margin: 0 auto;
-                }
-
-                .mp-eyebrow {
-                    font-size: 10px;
-                    font-weight: 700;
-                    letter-spacing: 0.35em;
-                    text-transform: uppercase;
-                    color: #f97316;
-                    margin: 0 0 12px;
-                }
-
-                .mp-title {
-                    font-family: 'Bebas Neue', sans-serif;
-                    font-size: clamp(52px, 7vw, 88px);
-                    line-height: 0.92;
-                    letter-spacing: 0.04em;
-                    color: #fff;
-                    margin: 0;
-                }
-
-                .mp-subtitle {
-                    font-family: 'Bebas Neue', sans-serif;
-                    font-size: clamp(26px, 3.5vw, 42px);
-                    letter-spacing: 0.04em;
-                    color: #f97316;
-                    margin: 2px 0 20px;
-                }
-
-                .mp-count {
-                    font-size: 13px;
-                    font-weight: 500;
-                    color: rgba(255,255,255,0.3);
-                    letter-spacing: 0.04em;
-                }
-
-                /* ── Controls bar ── */
-                .mp-controls {
-                    position: sticky;
-                    top: 0;
-                    z-index: 30;
-                    background: rgba(11,11,15,0.9);
-                    backdrop-filter: blur(24px);
-                    -webkit-backdrop-filter: blur(24px);
-                    border-bottom: 1px solid rgba(255,255,255,0.05);
-                }
-                .mp-controls-inner {
-                    max-width: 1200px;
-                    margin: 0 auto;
-                    padding: 14px 56px;
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 12px;
-                    align-items: center;
-                    justify-content: space-between;
-                }
-                @media (max-width: 768px) { .mp-controls-inner { padding: 12px 24px; } }
-
-                /* Search */
-                .mp-search-wrap {
-                    position: relative;
-                    width: 260px;
-                    flex-shrink: 0;
-                }
-                @media (max-width: 640px) { .mp-search-wrap { width: 100%; } }
-
-                .mp-search-icon {
-                    position: absolute;
-                    left: 12px;
-                    top: 50%;
-                    transform: translateY(-50%);
-                    color: rgba(255,255,255,0.22);
-                    pointer-events: none;
-                    width: 13px; height: 13px;
-                }
-
-                .mp-search-input {
-                    width: 100%;
-                    padding: 10px 14px 10px 34px;
-                    background: rgba(255,255,255,0.04);
-                    border: 1px solid rgba(255,255,255,0.07);
-                    border-radius: 8px;
-                    color: #fff;
-                    font-family: 'Inter', sans-serif;
-                    font-size: 13px;
-                    outline: none;
-                    transition: border-color 200ms, box-shadow 200ms;
-                    box-sizing: border-box;
-                }
-                .mp-search-input::placeholder { color: rgba(255,255,255,0.22); }
-                .mp-search-input:focus {
-                    border-color: rgba(249,115,22,0.45);
-                    box-shadow: 0 0 0 3px rgba(249,115,22,0.08);
-                }
-
-                /* Genre pills */
-                .mp-pills {
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 6px;
-                    align-items: center;
-                }
-
-                .mp-pill {
-                    padding: 6px 13px;
-                    border-radius: 999px;
-                    font-family: 'Inter', sans-serif;
-                    font-size: 11px;
-                    font-weight: 600;
-                    letter-spacing: 0.05em;
-                    border: 1px solid;
-                    cursor: pointer;
-                    white-space: nowrap;
-                    transition: background 160ms, border-color 160ms, color 160ms, box-shadow 160ms;
-                }
-                .mp-pill.on {
-                    background: #f97316;
-                    border-color: #f97316;
-                    color: #fff;
-                    box-shadow: 0 0 16px rgba(249,115,22,0.3);
-                }
-                .mp-pill.off {
-                    background: rgba(255,255,255,0.04);
-                    border-color: rgba(255,255,255,0.07);
-                    color: rgba(255,255,255,0.4);
-                }
-                .mp-pill.off:hover {
-                    border-color: rgba(249,115,22,0.4);
-                    color: #f97316;
-                    background: rgba(249,115,22,0.05);
-                }
-
-                /* ── Grid wrapper ── */
-                .mp-grid-wrap {
-                    max-width: 1200px;
-                    margin: 0 auto;
-                    padding: 36px 56px 0;
-                }
-                @media (max-width: 768px) { .mp-grid-wrap { padding: 24px 24px 0; } }
-
-                .mp-grid {
-                    display: grid;
-                    grid-template-columns: repeat(2, 1fr);
-                    gap: 16px;
-                }
-                @media (min-width: 480px)  { .mp-grid { grid-template-columns: repeat(3, 1fr); } }
-                @media (min-width: 768px)  { .mp-grid { grid-template-columns: repeat(4, 1fr); gap: 20px; } }
-                @media (min-width: 1024px) { .mp-grid { grid-template-columns: repeat(5, 1fr); } }
-                @media (min-width: 1280px) { .mp-grid { grid-template-columns: repeat(6, 1fr); } }
-
-                /* ── Movie card ── */
-                .mc {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 10px;
-                    cursor: pointer;
-                }
-
-                .mc-poster {
-                    position: relative;
-                    aspect-ratio: 2 / 3;
-                    border-radius: 10px;
-                    overflow: hidden;
-                    background: rgba(255,255,255,0.04);
-                    box-shadow:
-                        0 0 0 1px rgba(255,255,255,0.06),
-                        0 8px 24px rgba(0,0,0,0.5);
-                    transition:
-                        box-shadow 300ms cubic-bezier(0.4,0,0.2,1),
-                        transform 300ms cubic-bezier(0.4,0,0.2,1);
-                }
-                .mc:hover .mc-poster {
-                    box-shadow:
-                        0 0 0 1.5px rgba(249,115,22,0.55),
-                        0 20px 48px rgba(0,0,0,0.7);
-                    transform: translateY(-5px) scale(1.01);
-                }
-
-                .mc-poster img {
-                    width: 100%; height: 100%;
-                    object-fit: cover;
-                    display: block;
-                    transition: transform 500ms cubic-bezier(0.4,0,0.2,1);
-                }
-                .mc:hover .mc-poster img { transform: scale(1.07); }
-
-                /* Gradient scrim */
-                .mc-scrim {
-                    position: absolute;
-                    inset: 0;
-                    background: linear-gradient(
-                        to top,
-                        rgba(0,0,0,0.9) 0%,
-                        rgba(0,0,0,0.05) 50%,
-                        transparent 100%
-                    );
-                    opacity: 0;
-                    transition: opacity 280ms;
-                }
-                .mc:hover .mc-scrim { opacity: 1; }
-
-                /* Play button */
-                .mc-play {
-                    position: absolute;
-                    inset: 0;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    opacity: 0;
-                    transform: scale(0.85);
-                    transition: opacity 240ms, transform 240ms cubic-bezier(0.4,0,0.2,1);
-                }
-                .mc:hover .mc-play { opacity: 1; transform: scale(1); }
-
-                .mc-play-btn {
-                    width: 50px; height: 50px;
-                    border-radius: 50%;
-                    background: rgba(249,115,22,0.9);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    box-shadow: 0 0 32px rgba(249,115,22,0.5);
-                    backdrop-filter: blur(4px);
-                }
-
-                /* Badges */
-                .mc-badge {
-                    position: absolute;
-                    padding: 3px 7px;
-                    border-radius: 5px;
-                    font-size: 10px;
-                    font-weight: 700;
-                    backdrop-filter: blur(8px);
-                    letter-spacing: 0.04em;
-                    line-height: 1.4;
-                }
-                .mc-badge-score { top: 8px; right: 8px; background: rgba(0,0,0,0.6); color: #fff; }
-                .mc-badge-year  { top: 8px; left:  8px; background: rgba(249,115,22,0.85); color: #fff; }
-
-                /* Fallback */
-                .mc-fallback {
-                    width: 100%; height: 100%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    background: #1c1c28;
-                    font-size: 44px;
-                }
-
-                /* Card info */
-                .mc-info { padding: 0 2px; display: flex; flex-direction: column; gap: 3px; }
-
-                .mc-title {
-                    font-size: 13px;
-                    font-weight: 600;
-                    color: #fff;
-                    line-height: 1.35;
-                    display: -webkit-box;
-                    -webkit-line-clamp: 2;
-                    -webkit-box-orient: vertical;
-                    overflow: hidden;
-                    transition: color 200ms;
-                }
-                .mc:hover .mc-title { color: #f97316; }
-
-                .mc-genre {
-                    font-size: 11px;
-                    font-weight: 500;
-                    color: rgba(249,115,22,0.55);
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                }
-
-                /* Loader */
-                .mp-loader {
-                    display: flex;
-                    height: 256px;
-                    align-items: center;
-                    justify-content: center;
-                }
-                @keyframes mp-spin { to { transform: rotate(360deg); } }
-                .mp-spinner {
-                    width: 32px; height: 32px;
-                    color: #f97316;
-                    animation: mp-spin 1s linear infinite;
-                }
-            `}</style>
-
-            <div className="mp-page">
-
-                {/* ── Hero ── */}
-                <div className="mp-hero">
-                    <div className="mp-hero-glow" />
-                    <div className="mp-hero-inner">
-                        <p className="mp-eyebrow">Colección</p>
-                        <h1 className="mp-title">PELÍCULAS</h1>
-                        <p className="mp-subtitle">Biblioteca Local</p>
-                        <p className="mp-count">
-                            {isLoading ? "Cargando..." : `${allMovies.length} películas en tu biblioteca`}
-                        </p>
-                    </div>
+        <div className="flex-1 w-full min-h-screen bg-background text-white overflow-y-auto pb-32 font-sans selection:bg-primary/30">
+            {/* ── Hero ── */}
+            <div className="relative overflow-hidden pt-24 pb-14 px-6 md:px-14">
+                {/* Cinematic Glow & Decorations */}
+                <div className="absolute top-[-160px] left-[-80px] w-[640px] h-[520px] rounded-full bg-gradient-to-br from-primary to-rose-600 opacity-[0.08] blur-[120px] pointer-events-none" />
+                <SpeedLines opacity={0.03} />
+                <HalftoneDots />
+                <div className="absolute right-6 top-1/2 -translate-y-1/2 [writing-mode:vertical-rl] font-black text-[10px] tracking-[0.5em] text-zinc-800 uppercase pointer-events-none select-none">
+                    PELÍCULAS · CINE · ARCHIVOS
                 </div>
 
-                {/* ── Controls ── */}
-                <div className="mp-controls">
-                    <div className="mp-controls-inner">
-                        <div className="mp-search-wrap">
-                            <FaSearch className="mp-search-icon" />
-                            <input
-                                className="mp-search-input"
-                                type="text"
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                placeholder="Buscar película..."
-                            />
-                        </div>
-                        <div className="mp-pills">
-                            <FaFilter style={{ color: "rgba(255,255,255,0.2)", width: 13, height: 13, flexShrink: 0 }} />
-                            <GenrePill label="Todo"  active={activeGenre === null} onClick={() => setActiveGenre(null)} />
-                            {ALL_GENRES.slice(0, 10).map(g => (
-                                <GenrePill
-                                    key={g}
-                                    label={g}
-                                    active={activeGenre === g}
-                                    onClick={() => setActiveGenre(activeGenre === g ? null : g)}
-                                />
-                            ))}
+                <div className="relative z-10 max-w-[1400px] mx-auto">
+                    <div className="flex items-center gap-3 mb-4 animate-in fade-in slide-in-from-left-4 duration-700">
+                        <div className="h-[2px] w-8 bg-primary shadow-[0_0_15px_rgba(249,115,22,0.5)]" />
+                        <p className="text-[11px] font-black uppercase tracking-[0.4em] text-primary/90">Colección Premium</p>
+                    </div>
+                    
+                    <h1 className="font-bebas text-6xl md:text-8xl lg:text-9xl leading-[0.8] tracking-[0.02em] text-white animate-in fade-in slide-in-from-left-6 duration-1000">
+                        MI<br />
+                        <span className="text-transparent stroke-text opacity-30">PELÍ</span>CULA
+                    </h1>
+                    <p className="font-bebas text-2xl md:text-4xl tracking-[0.05em] text-primary mt-2 animate-in fade-in slide-in-from-left-8 duration-1000 delay-100">
+                        Biblioteca Cinematográfica
+                    </p>
+                    
+                    <div className="flex items-center gap-4 mt-8 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
+                        <div className="px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/5 backdrop-blur-md">
+                            <p className="text-[12px] font-bold text-zinc-400 tabular-nums">
+                                {isLoading ? "..." : allMovies.length} <span className="text-[10px] font-black text-zinc-600 uppercase ml-1">Títulos</span>
+                            </p>
                         </div>
                     </div>
-                </div>
-
-                {/* ── Grid ── */}
-                <div className="mp-grid-wrap">
-                    {isLoading ? (
-                        <div className="mp-loader">
-                            <Loader2 className="mp-spinner" />
-                        </div>
-                    ) : filtered.length === 0 ? (
-                        <EmptyState title="Sin resultados" message="Intenta con otro filtro o búsqueda" />
-                    ) : (
-                        <div className="mp-grid">
-                            {filtered.map(entry => (
-                                <MovieCard key={entry.mediaId} entry={entry} />
-                            ))}
-                        </div>
-                    )}
                 </div>
             </div>
-        </>
+
+            {/* ── Controls ── */}
+            <div className="sticky top-0 z-30 glass-panel-premium border-y border-white/[0.03] backdrop-blur-3xl">
+                <div className="max-w-[1400px] mx-auto px-6 md:px-14 py-4 flex flex-wrap gap-6 items-center justify-between">
+                    {/* Search */}
+                    <div className="relative w-full sm:w-80 group">
+                        <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-primary transition-colors text-sm" />
+                        <input
+                            className="w-full pl-12 pr-4 py-2.5 bg-white/[0.03] hover:bg-white/[0.05] focus:bg-white/[0.08] border border-white/5 focus:border-primary/40 rounded-xl text-sm outline-none transition-all duration-300 placeholder:text-zinc-600"
+                            type="text"
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            placeholder="Buscar en la filmoteca..."
+                        />
+                    </div>
+
+                    {/* Genres */}
+                    <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex items-center gap-2 mr-2 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/5">
+                            <FaFilter className="text-[10px] text-zinc-500" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Géneros</span>
+                        </div>
+                        
+                        <GenrePill label="TODO" active={activeGenre === null} onClick={() => setActiveGenre(null)} />
+                        {ALL_GENRES.slice(0, 12).map(g => (
+                            <GenrePill
+                                key={g}
+                                label={g.toUpperCase()}
+                                active={activeGenre === g}
+                                onClick={() => setActiveGenre(activeGenre === g ? null : g)}
+                            />
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* ── Grid ── */}
+            <div className="max-w-[1400px] mx-auto px-6 md:px-14 pt-12">
+                {isLoading ? (
+                    <div className="h-64 flex flex-col items-center justify-center gap-4">
+                        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600">Procesando Biblioteca</p>
+                    </div>
+                ) : filtered.length === 0 ? (
+                    <EmptyState 
+                        title="Sin coincidencias" 
+                        message="No hemos encontrado películas que coincidan con tu búsqueda actual."
+                        illustration={<Clapperboard className="w-20 h-20 text-zinc-800" />}
+                    />
+                ) : (
+                    <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-x-6 gap-y-10 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+                        {filtered.map(entry => (
+                            <MovieCard key={entry.mediaId} entry={entry} />
+                        ))}
+                    </div>
+                )}
+            </div>
+            <style>{`
+                .stroke-text {
+                    -webkit-text-stroke: 1.5px white;
+                }
+            `}</style>
+        </div>
     )
 }
 
-// ─── Genre pill ───────────────────────────────────────────────────────────────
+// ─── Sub-components ──────────────────────────────────────────────────────────
 
 const GenrePill = memo(function GenrePill({
     label, active, onClick,
 }: { label: string; active: boolean; onClick: () => void }) {
     return (
-        <button className={`mp-pill ${active ? "on" : "off"}`} onClick={onClick}>
+        <button 
+            className={cn(
+                "px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest transition-all duration-300 border",
+                active 
+                    ? "bg-primary text-white border-primary shadow-[0_0_20px_rgba(249,115,22,0.3)] scale-105" 
+                    : "bg-white/[0.03] text-zinc-500 border-white/5 hover:border-primary/40 hover:text-primary"
+            )}
+            onClick={onClick}
+        >
             {label}
         </button>
     )
 })
 
-// ─── Movie card ───────────────────────────────────────────────────────────────
-
 const MovieCard = memo(function MovieCard({ entry }: { entry: Anime_LibraryCollectionEntry }) {
     const navigate = useNavigate()
-    const [imgError, setImgError] = useState(false)
     const movie = entry.media
 
     if (!movie) return null
 
     return (
-        <div
-            className="mc"
-            onClick={() => navigate({ to: "/series/$seriesId", params: { seriesId: entry.mediaId.toString() } })}
-        >
-            <div className="mc-poster">
-                {!imgError ? (
-                    <img
-                        src={movie.posterImage}
-                        alt={movie.titleRomaji || movie.titleEnglish || ""}
-                        onError={() => setImgError(true)}
-                        loading="lazy"
-                    />
-                ) : (
-                    <div className="mc-fallback">🎬</div>
-                )}
-
-                <div className="mc-scrim" />
-
-                <div className="mc-play">
-                    <div className="mc-play-btn">
-                        <FaPlay style={{ width: 17, height: 17, color: "#fff", marginLeft: 3 }} />
-                    </div>
-                </div>
-
-                {movie.score > 0 && (
-                    <div className="mc-badge mc-badge-score">★ {(movie.score / 10).toFixed(1)}</div>
-                )}
-                {movie.year > 0 && (
-                    <div className="mc-badge mc-badge-year">{movie.year}</div>
-                )}
-            </div>
-
-            <div className="mc-info">
-                <p className="mc-title" title={movie.titleRomaji || movie.titleEnglish}>
+        <div className="flex flex-col gap-3 group">
+            <MediaCard 
+                artwork={movie.posterImage || ""}
+                title={movie.titleRomaji || movie.titleEnglish || "Sin título"}
+                badge={movie.format === "MOVIE" ? "PELÍCULA" : undefined}
+                year={movie.year}
+                rating={movie.score ? movie.score / 10 : undefined}
+                aspect="poster"
+                onClick={() => navigate({ to: "/series/$seriesId", params: { seriesId: entry.mediaId.toString() } })}
+                className="w-full"
+            />
+            
+            <div className="px-1 space-y-1">
+                <h3 className="text-[13px] font-bold text-zinc-200 group-hover:text-primary transition-colors line-clamp-2 leading-tight">
                     {movie.titleRomaji || movie.titleEnglish || "Sin título"}
-                </p>
-                <p className="mc-genre">{movie.genres?.[0] || "Anime"}</p>
+                </h3>
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black text-zinc-600 uppercase tracking-wider">{movie.genres?.[0] || "Anime"}</span>
+                    {movie.totalEpisodes && movie.totalEpisodes > 1 && (
+                        <span className="text-[10px] font-bold text-zinc-700 tabular-nums">{movie.totalEpisodes} eps</span>
+                    )}
+                </div>
             </div>
         </div>
     )
-})
+})

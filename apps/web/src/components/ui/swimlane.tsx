@@ -140,9 +140,9 @@ export function SwimlaneSkeleton({
             <div className="flex gap-4 overflow-hidden px-6 pb-3 md:px-10 lg:px-14">
                 {Array.from({ length: itemCount }).map((_, i) => (
                     <div key={i} className={cn("flex-shrink-0", cardWidths[aspect])}>
-                        <Skeleton className={cn("mb-3", cardAspects[aspect])} />
-                        <Skeleton className="mb-2 h-4 w-3/4" />
-                        <Skeleton className="h-3 w-1/2" />
+                        <Skeleton className={cn("mb-3 bg-white/[0.03] border border-white/5", cardAspects[aspect])} />
+                        <Skeleton className="mb-2 h-4 w-3/4 bg-white/[0.03]" />
+                        <Skeleton className="h-3 w-1/2 bg-white/[0.02]" />
                     </div>
                 ))}
             </div>

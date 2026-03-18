@@ -80,7 +80,7 @@ func (a *App) initModulesOnce() {
 		a.MediastreamRepository.OnCleanup()
 	})
 
-	// NativePlayer and VideoCore have been removed
+	// NativePlayer has been removed. VideoCore handles orchestration logic safely in Phase 2.
 
 	// +---------------------+
 	// |   Direct Stream     |

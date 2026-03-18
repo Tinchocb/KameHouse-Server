@@ -29,7 +29,7 @@ export function AppSidebar() {
         <div className="flex flex-col h-full py-6 md:py-8 px-4 md:px-0 w-full items-center">
             {/* Header */}
             <div className="mb-10 px-2 flex justify-center">
-                <img src="/kamehouse-logo.png" alt="KameHouse" className="h-10 w-10 shrink-0 object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" />
+                <img src="/kamehouse-logo.png" alt="KameHouse" className="h-9 w-9 shrink-0 object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] animate-pulse-slow" />
             </div>
 
             {/* Navigation */}
@@ -41,20 +41,23 @@ export function AppSidebar() {
                         title={item.label}
                         onClick={() => setSidebarOpen(false)}
                         activeProps={{
-                            className: "bg-orange-500/15 text-orange-400 border border-orange-500/30 shadow-[0_0_20px_rgba(249,115,22,0.15)]",
+                            className: "bg-primary/20 text-primary border-primary/40 shadow-[0_0_25px_rgba(249,115,22,0.25)]",
                         }}
                         inactiveProps={{
-                            className: "text-zinc-500 hover:bg-white/5 hover:text-white border border-transparent",
+                            className: "text-zinc-500 hover:bg-white/[0.05] hover:text-zinc-200 border-transparent",
                         }}
                         className={cn(
-                            "flex items-center justify-center w-12 h-12 rounded-2xl md:rounded-xl",
-                            "transition-all duration-300 ease-out active:scale-90 group font-bold"
+                            "flex items-center justify-center w-12 h-12 rounded-2xl border transition-all duration-500 relative overflow-hidden",
+                            "hover:scale-105 active:scale-95 group font-bold"
                         )}
                     >
-                        <span className="shrink-0 transition-transform group-hover:scale-110">
+                        <span className="shrink-0 transition-transform group-hover:scale-110 group-active:scale-90 z-10">
                             {item.icon}
                         </span>
-                        <span className="md:hidden ml-4 flex-1">{item.label}</span>
+                        <span className="md:hidden ml-4 flex-1 uppercase tracking-[0.2em] text-[11px] font-black z-10">{item.label}</span>
+                        
+                        {/* Neon Glow on hover / active */}
+                        <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/5 transition-colors duration-500" />
                     </Link>
                 ))}
             </nav>
@@ -82,15 +85,16 @@ export function AppSidebar() {
     return (
         <>
             {/* Desktop Fixed Sidebar */}
-            <aside className="hidden md:flex flex-col fixed inset-y-0 left-0 w-20 border-r border-white/5 bg-black/40 backdrop-blur-3xl z-40 bg-zinc-950">
+            <aside className="hidden md:flex flex-col fixed inset-y-0 left-0 w-24 border-r border-white/[0.04] bg-background/40 backdrop-blur-3xl z-40 shadow-[10px_0_40px_rgba(0,0,0,0.5)]">
+                <div className="absolute inset-y-0 right-0 w-[1px] bg-gradient-to-b from-transparent via-primary/20 to-transparent" />
                 <SidebarContent />
             </aside>
 
             {/* Mobile Drawer */}
             <Vaul open={sidebarOpen} onOpenChange={setSidebarOpen} direction="left">
                 <VaulContent 
-                    className="md:hidden fixed inset-y-0 left-0 z-50 flex h-full w-[280px] flex-col border-r border-white/10 bg-zinc-950/95 backdrop-blur-2xl shadow-2xl"
-                    overlayClass="bg-black/60 backdrop-blur-sm"
+                    className="md:hidden fixed inset-y-0 left-0 z-50 flex h-full w-[280px] flex-col border-r border-white/10 bg-background/90 backdrop-blur-3xl shadow-2xl"
+                    overlayClass="bg-black/40 backdrop-blur-sm"
                 >
                     <SidebarContent />
                 </VaulContent>

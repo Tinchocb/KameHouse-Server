@@ -1,26 +1,28 @@
 import * as React from "react"
-import { AlertTriangle, FolderOpen } from "lucide-react"
+import { AlertTriangle, FolderOpen, RefreshCcw } from "lucide-react"
+import { EmptyState as SharedEmptyState } from "@/components/shared/empty-state"
 
 /**
  * Banner shown when a library error occurs.
  */
 export function ErrorBanner({ message }: { message: string }) {
     return (
-        <div className="flex min-h-screen items-center justify-center bg-background px-6">
-            <div className="max-w-md text-center">
-                <AlertTriangle className="mx-auto mb-5 h-12 w-12 text-muted-foreground" />
-                <h2 className="mb-3 text-2xl font-semibold uppercase tracking-[0.18em] text-foreground">
-                    No se pudo cargar la biblioteca
-                </h2>
-                <p className="text-sm leading-6 text-muted-foreground">{message}</p>
-                <button
-                    type="button"
-                    onClick={() => window.location.reload()}
-                    className="mt-6 rounded-full border border-border bg-secondary/50 px-6 py-3 text-sm font-semibold text-foreground transition-colors duration-200 hover:bg-secondary"
-                >
-                    Reintentar
-                </button>
-            </div>
+        <div className="flex min-h-screen items-center justify-center -mt-20">
+            <SharedEmptyState
+                title="CONEXIÓN INTERRUMPIDA"
+                message={message}
+                illustration={<AlertTriangle className="w-16 h-16 text-rose-500/40" />}
+                action={
+                    <button
+                        type="button"
+                        onClick={() => window.location.reload()}
+                        className="flex items-center gap-3 px-8 py-3 rounded-full bg-primary text-white font-bebas tracking-widest hover:scale-105 transition-all shadow-lg active:scale-95"
+                    >
+                        <RefreshCcw className="w-4 h-4" />
+                        REINTENTAR ACCESO
+                    </button>
+                }
+            />
         </div>
     )
 }
@@ -30,16 +32,12 @@ export function ErrorBanner({ message }: { message: string }) {
  */
 export function EmptyState() {
     return (
-        <div className="flex min-h-screen items-center justify-center bg-background px-6">
-            <div className="max-w-md text-center">
-                <FolderOpen className="mx-auto mb-5 h-12 w-12 text-muted-foreground" />
-                <h2 className="mb-3 text-2xl font-semibold uppercase tracking-[0.18em] text-foreground">
-                    Biblioteca vacía
-                </h2>
-                <p className="text-sm leading-6 text-muted-foreground">
-                    Aún no hay contenido listo para mostrar. Escanea tus rutas desde configuración.
-                </p>
-            </div>
+        <div className="flex min-h-screen items-center justify-center -mt-20">
+            <SharedEmptyState
+                title="BÓVEDA VACÍA"
+                message="Aún no hay contenido listo para mostrar. Escanea tus rutas desde configuración para iniciar la sincronización."
+                illustration={<FolderOpen className="w-16 h-16 text-zinc-800" />}
+            />
         </div>
     )
 }

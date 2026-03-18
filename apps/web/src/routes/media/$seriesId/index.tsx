@@ -221,14 +221,14 @@ export default function MediaDetailPage() {
         <div className="relative min-h-screen bg-zinc-950 text-white selection:bg-orange-500/30 font-sans">
             
             {/* ── 1. Cinematic Hero Header ── */}
-            <div className="absolute top-0 inset-x-0 h-[85vh] -z-10 pointer-events-none">
+            <div className="absolute top-0 inset-x-0 h-[85vh] -z-10 pointer-events-none overflow-hidden">
                 <img 
                     src={media.bannerImage || media.posterImage} 
                     alt="" 
-                    className="w-full h-full object-cover opacity-60 mix-blend-screen"
+                    className="w-full h-full object-cover opacity-60 animate-ken-burns"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/40 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-r from-background via-background/40 to-transparent" />
             </div>
 
             <header className="px-6 md:px-12 py-8 relative z-20">
@@ -312,39 +312,43 @@ export default function MediaDetailPage() {
                         </div>
 
                         {/* Marathon Control Center */}
-                        <div className="mt-6 p-4 rounded-xl bg-zinc-900/60 border border-white/5 backdrop-blur-md flex flex-col gap-4 max-w-xl">
+                        <div className="mt-6 p-6 rounded-2xl glass-panel bg-white/[0.02] border-white/5 backdrop-blur-md flex flex-col gap-5 max-w-xl">
                             <div className="flex items-center justify-between">
-                                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                                    <MonitorPlay className="w-4 h-4 text-amber-500" />
-                                    Marathon Control Center
+                                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-200 flex items-center gap-2.5">
+                                    <MonitorPlay className="w-4 h-4 text-primary" />
+                                    Marathon Center
                                 </h3>
                                 <button
                                     onClick={() => setMarathonSettings(s => ({ ...s, enabled: !s.enabled }))}
                                     className={cn(
-                                        "px-3 py-1 rounded-full text-xs font-bold transition-all",
-                                        marathonSettings.enabled ? "bg-amber-500 text-white shadow-[0_0_10px_rgba(245,158,11,0.3)]" : "bg-white/10 text-zinc-400 hover:bg-white/20"
+                                        "px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-300",
+                                        marathonSettings.enabled 
+                                            ? "bg-primary text-white shadow-[0_0_15px_rgba(249,115,22,0.3)]" 
+                                            : "bg-white/5 text-zinc-500 hover:bg-white/10 hover:text-zinc-300"
                                     )}
                                 >
-                                    {marathonSettings.enabled ? "ON" : "OFF"}
+                                    {marathonSettings.enabled ? "Active" : "Disabled"}
                                 </button>
                             </div>
                             {marathonSettings.enabled && (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-3 border-t border-white/5">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 border-t border-white/5">
                                     {[
-                                        { key: 'skipIntros', label: 'Saltar Intros', icon: <SkipForward className="w-3 h-3" /> },
-                                        { key: 'autoPlayNext', label: 'Auto-Play', icon: <Play className="w-3 h-3" /> },
-                                        { key: 'skipFillers', label: 'Saltar Relleno', icon: <CheckCircle2 className="w-3 h-3" /> }
+                                        { key: 'skipIntros', label: 'Skip Intros', icon: <SkipForward className="w-3.5 h-3.5" /> },
+                                        { key: 'autoPlayNext', label: 'Auto-Play', icon: <Play className="w-3.5 h-3.5" /> },
+                                        { key: 'skipFillers', label: 'Skip Fillers', icon: <CheckCircle2 className="w-3.5 h-3.5" /> }
                                     ].map((opt) => (
                                         <button
                                             key={opt.key}
                                             onClick={() => setMarathonSettings(s => ({ ...s, [opt.key]: !(s as any)[opt.key] }))}
                                             className={cn(
-                                                "flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all border",
-                                                (marathonSettings as any)[opt.key] ? "bg-amber-500/10 border-amber-500/30 text-amber-400" : "bg-zinc-800/50 border-white/5 text-zinc-500 hover:bg-zinc-800"
+                                                "flex flex-col items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-bold transition-all border",
+                                                (marathonSettings as any)[opt.key] 
+                                                    ? "bg-primary/10 border-primary/30 text-primary" 
+                                                    : "bg-white/[0.02] border-white/5 text-zinc-500 hover:bg-white/[0.05] hover:text-zinc-300"
                                             )}
                                         >
                                             {opt.icon}
-                                            {opt.label}
+                                            <span className="uppercase tracking-widest">{opt.label}</span>
                                         </button>
                                     ))}
                                 </div>
@@ -354,41 +358,41 @@ export default function MediaDetailPage() {
 
                     {/* Right Tech Specs Panel */}
                     <aside className="w-full lg:w-72 flex flex-col gap-4">
-                        <div className="p-5 rounded-2xl bg-zinc-900/50 border border-white/5 backdrop-blur-md flex flex-col gap-4">
-                            <h3 className="text-xs font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                        <div className="p-6 rounded-2xl glass-panel bg-white/[0.02] border-white/5 backdrop-blur-md flex flex-col gap-5">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 flex items-center gap-2">
                                 <Settings2 className="w-4 h-4" />
                                 Especificaciones
                             </h3>
                             
-                            <div className="flex flex-col gap-2 border-b border-white/5 pb-3">
-                                <div className="flex justify-between items-center text-sm">
-                                    <span className="text-zinc-400">Library Health</span>
-                                    <span className={cn("font-bold text-xs", downloadPercent === 100 ? "text-emerald-400" : downloadPercent > 50 ? "text-amber-400" : "text-zinc-500")}>
-                                        {downloadPercent}% Local
+                            <div className="flex flex-col gap-2.5 border-b border-white/5 pb-4">
+                                <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-wider">
+                                    <span className="text-zinc-500">Estado Local</span>
+                                    <span className={cn(downloadPercent === 100 ? "text-emerald-400" : downloadPercent > 50 ? "text-primary" : "text-zinc-600")}>
+                                        {downloadPercent}%
                                     </span>
                                 </div>
-                                <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-                                    <div className={cn("h-full rounded-full transition-all", downloadPercent === 100 ? "bg-emerald-500" : "bg-amber-500")} style={{ width: `${downloadPercent}%` }} />
+                                <div className="w-full h-1 bg-white/[0.05] rounded-full overflow-hidden">
+                                    <div className={cn("h-full rounded-full transition-all duration-1000", downloadPercent === 100 ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]" : "bg-primary shadow-[0_0_10px_rgba(249,115,22,0.3)]")} style={{ width: `${downloadPercent}%` }} />
                                 </div>
                             </div>
                             
-
-                            
-                            <div className="flex justify-between items-center text-sm border-b border-white/5 pb-3">
-                                <span className="text-zinc-400">Origen</span>
-                                <span className="font-bold text-orange-400">{downloadPercent === 100 ? "HDD Local" : downloadPercent > 0 ? "Híbrido" : "Remote Stream"}</span>
-                            </div>
-                            <div className="flex justify-between items-center text-sm border-b border-white/5 pb-3">
-                                <span className="text-zinc-400">Resolución</span>
-                                <span className="font-bold text-zinc-200">{episodes[0]?.localFile?.name?.includes("2160") ? "4K UHD" : "1080p FHD"}</span>
-                            </div>
-                            <div className="flex justify-between items-center text-sm border-b border-white/5 pb-3">
-                                <span className="text-zinc-400">Formato</span>
-                                <span className="font-bold text-zinc-200">{media.format}</span>
-                            </div>
-                            <div className="flex justify-between items-center text-sm">
-                                <span className="text-zinc-400">Estado</span>
-                                <span className="font-bold text-zinc-200">{media.status}</span>
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-center text-[11px] font-medium border-b border-white/5 pb-3">
+                                    <span className="text-zinc-500 uppercase tracking-widest">Origen</span>
+                                    <span className="font-bold text-zinc-200">{downloadPercent === 100 ? "HDD Local" : downloadPercent > 0 ? "Híbrido" : "Stream"}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-[11px] font-medium border-b border-white/5 pb-3">
+                                    <span className="text-zinc-500 uppercase tracking-widest">Calidad</span>
+                                    <span className="font-bold text-zinc-200">{episodes[0]?.localFile?.name?.includes("2160") ? "4K UHD" : "1080p FHD"}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-[11px] font-medium border-b border-white/5 pb-3">
+                                    <span className="text-zinc-500 uppercase tracking-widest">Formato</span>
+                                    <span className="font-bold text-zinc-200">{media.format}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-[11px] font-medium">
+                                    <span className="text-zinc-500 uppercase tracking-widest">Status</span>
+                                    <span className="font-bold text-zinc-200">{media.status}</span>
+                                </div>
                             </div>
                         </div>
                     </aside>
@@ -411,94 +415,97 @@ export default function MediaDetailPage() {
                         */}
                         <Virtuoso
                             style={{ height: '100%', width: '100%' }}
-                            // The margin right is required for the scrollbar visually in windows
-                            className="scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent pr-2"
-                            data={episodes}
-                            itemContent={(_, ep) => {
-                                // Intelligence Styling
-                                const intel = (ep.episodeMetadata as any)?.Intel
-                                const isEpic = intel?.Tag === "EPIC"
-                                const isFiller = intel?.Tag === "FILLER"
-                                
+                            className="scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
+                            totalCount={episodes.length}
+                            itemContent={(index) => {
+                                const ep = episodes[index]
+                                const isEpic = (ep.episodeMetadata as any)?.Intel?.Tag === "EPIC"
+                                const isFiller = ep.episodeMetadata?.isFiller
                                 return (
-                                    <div className="px-4 py-2">
+                                    <div className="px-5 py-2">
                                         <div 
                                             className={cn(
-                                                "group flex flex-col sm:flex-row items-stretch sm:items-center gap-4 p-3 rounded-xl transition-all cursor-pointer relative overflow-hidden",
-                                                "bg-zinc-900/40 hover:bg-zinc-800/80 border",
-                                                isEpic ? "border-amber-500/50 hover:border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.15)] hover:shadow-[0_0_20px_rgba(245,158,11,0.3)]" : "border-white/5",
-                                                isFiller ? "grayscale opacity-50 hover:opacity-100 transition-opacity" : ""
+                                                "group flex flex-col md:flex-row items-stretch md:items-center gap-6 p-4 rounded-2xl transition-all duration-300 cursor-pointer relative overflow-hidden",
+                                                "bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 hover:border-white/10 hover:shadow-[0_15px_40px_rgba(0,0,0,0.3)]",
+                                                isEpic ? "border-primary/40 bg-primary/[0.03] hover:border-primary/60 hover:shadow-[0_0_25px_rgba(249,115,22,0.15)]" : "",
+                                                isFiller ? "grayscale opacity-40 hover:opacity-100 transition-all duration-500" : ""
                                             )}
                                             onClick={() => handleEpisodeClick(ep)}
                                         >
                                             {/* Thumbnail */}
-                                            <div className="relative w-full sm:w-48 aspect-video shrink-0 rounded-lg overflow-hidden bg-zinc-950">
+                                            <div className="relative w-full md:w-56 aspect-video shrink-0 rounded-xl overflow-hidden bg-zinc-950 shadow-lg">
                                                 {ep.episodeMetadata?.image ? (
-                                                    <img src={ep.episodeMetadata.image} alt={ep.displayTitle} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                                    <img src={ep.episodeMetadata.image} alt={ep.displayTitle} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                                                 ) : (
-                                                    <div className="w-full h-full flex items-center justify-center bg-zinc-900 text-zinc-700">
-                                                        <MonitorPlay className="w-6 h-6" />
+                                                    <div className="w-full h-full flex items-center justify-center bg-zinc-900 text-zinc-800">
+                                                        <MonitorPlay className="w-8 h-8" />
                                                     </div>
                                                 )}
                                                 
                                                 {isFiller && (
-                                                    <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-black/80 text-zinc-400 border border-white/10 backdrop-blur-md shadow-md z-10">
-                                                        Relleno
+                                                    <div className="absolute top-2 left-2 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-[0.2em] bg-black/80 text-zinc-500 border border-white/10 backdrop-blur-md z-10">
+                                                        Filler
                                                     </div>
                                                 )}
                                                 
                                                 {/* Play Overlay */}
                                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                    <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/40">
-                                                        <Play className="w-4 h-4 text-white fill-white ml-0.5" />
+                                                    <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center shadow-[0_0_25px_rgba(249,115,22,0.5)] scale-90 group-hover:scale-100 transition-all duration-300">
+                                                        <Play className="w-5 h-5 text-white fill-white ml-0.5" />
                                                     </div>
                                                 </div>
 
-                                                {/* Hybrid Badge */}
-                                                <div className="absolute top-2 right-2 flex gap-1">
+                                                {/* Status Badges */}
+                                                <div className="absolute top-2.5 right-2.5 flex gap-1.5">
                                                     {isEpic && (
-                                                        <span className="w-5 h-5 rounded-md bg-amber-500 text-white flex items-center justify-center shadow-[0_0_10px_rgba(245,158,11,0.5)]">
-                                                            <Star className="w-3 h-3 fill-current" />
+                                                        <span className="w-6 h-6 rounded-lg bg-primary text-white flex items-center justify-center shadow-[0_0_15px_rgba(249,115,22,0.5)]">
+                                                            <Star className="w-3.5 h-3.5 fill-current" />
                                                         </span>
                                                     )}
-                                                    <button 
-                                                        onClick={(e) => { e.stopPropagation(); setSourcePickerEp(ep); }}
-                                                        className="w-5 h-5 rounded-md bg-zinc-900/80 backdrop-blur text-white flex items-center justify-center hover:bg-white hover:text-black transition-colors"
-                                                        title={ep.isDownloaded ? "Archivo Local" : "Streaming Remoto"}
+                                                    <div 
+                                                        className={cn(
+                                                            "w-6 h-6 rounded-lg backdrop-blur-md flex items-center justify-center transition-colors border border-white/10",
+                                                            ep.isDownloaded ? "bg-emerald-500/20 text-emerald-400" : "bg-black/40 text-primary"
+                                                        )}
+                                                        title={ep.isDownloaded ? "Local File" : "Stream"}
                                                     >
-                                                        {ep.isDownloaded ? <HardDrive className="w-3 h-3" /> : <Zap className="w-3 h-3 text-amber-400" />}
-                                                    </button>
+                                                        {ep.isDownloaded ? <HardDrive className="w-3.5 h-3.5" /> : <Zap className="w-3.5 h-3.5" />}
+                                                    </div>
                                                 </div>
                                             </div>
 
                                             {/* Info */}
-                                            <div className="flex-1 flex flex-col justify-center gap-1.5 py-1 min-w-0">
+                                            <div className="flex-1 flex flex-col justify-center gap-2 py-1 min-w-0">
                                                 <div className="flex items-center justify-between gap-4">
-                                                    <h4 className={cn(
-                                                        "text-sm font-bold truncate",
-                                                        isEpic ? "text-amber-400" : "text-zinc-200"
-                                                    )}>
-                                                        {ep.episodeNumber}. {ep.displayTitle || ep.episodeTitle || `Episodio ${ep.episodeNumber}`}
-                                                    </h4>
-                                                    <span className="text-[10px] font-mono text-zinc-500 shrink-0 tabular-nums">
+                                                    <div className="space-y-0.5 min-w-0">
+                                                        <p className="text-[10px] font-black uppercase tracking-[0.25em] text-primary/80">Episode {ep.episodeNumber}</p>
+                                                        <h4 className={cn(
+                                                            "text-[15px] font-black truncate transition-colors",
+                                                            isEpic ? "text-primary" : "text-zinc-100 group-hover:text-primary"
+                                                        )}>
+                                                            {ep.displayTitle || ep.episodeTitle || `Chapter ${ep.episodeNumber}`}
+                                                        </h4>
+                                                    </div>
+                                                    <span className="text-[10px] font-mono text-zinc-500 shrink-0 tabular-nums bg-white/[0.03] px-2 py-1 rounded-md border border-white/5">
                                                         {fmtDuration(ep.episodeMetadata?.length)}
                                                     </span>
                                                 </div>
                                                 
-                                                <p className="text-xs text-zinc-500 line-clamp-2 leading-relaxed max-w-2xl">
-                                                    {ep.episodeMetadata?.summary || ep.episodeMetadata?.overview || "No hay sinopsis."}
+                                                <p className="text-[13px] text-zinc-500 line-clamp-2 leading-relaxed max-w-3xl group-hover:text-zinc-400 transition-colors">
+                                                    {ep.episodeMetadata?.summary || ep.episodeMetadata?.overview || "No synopsis available for this episode."}
                                                 </p>
                                                 
                                                 {/* Intelligence Tags */}
-                                                <div className="flex items-center gap-2 mt-auto pt-1">
-                                                    <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">
-                                                        {(ep.episodeMetadata as any)?.Intel?.ArcName || "Canon"}
-                                                    </span>
-                                                </div>
+                                                {(ep.episodeMetadata as any)?.Intel?.ArcName && (
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <span className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-600 group-hover:text-zinc-500 transition-colors">
+                                                            {(ep.episodeMetadata as any).Intel.ArcName}
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
-                                    </div>
-                                )
+                                    </div>                                )
                             }}
                         />
                     </div>

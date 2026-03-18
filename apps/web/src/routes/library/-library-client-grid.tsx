@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useMemo, useState } from "react"
+import React, { useMemo, useState, memo } from "react"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { useGetLocalFilesInfinite } from "@/api/hooks/localfiles.hooks"
 import { MediaCard } from "@/components/ui/media-card"
@@ -9,6 +9,8 @@ import { Anime_LocalFile, Models_LibraryMedia, Anime_LibraryCollectionEntry } fr
 import { VirtualizedMediaGrid } from "@/components/shared/virtualized-media-grid"
 import { MediaGridSkeleton } from "@/components/shared/media-grid-skeleton"
 import { EmptyState } from "@/components/shared/empty-state"
+import { Search, Filter, Loader2, FileVideo, ChevronRight, Zap } from "lucide-react"
+import { cn } from "@/components/ui/core/styling"
 
 function getTitle(media: Models_LibraryMedia | null | undefined): string {
     return media?.titleEnglish || media?.titleRomaji || media?.titleOriginal || "Desconocido"
@@ -20,11 +22,8 @@ function SpeedLines({ opacity = 0.04 }: { opacity?: number }) {
     return (
         <svg
             aria-hidden
-            style={{
-                position: "absolute", inset: 0,
-                width: "100%", height: "100%",
-                opacity, pointerEvents: "none",
-            }}
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ opacity }}
             viewBox="0 0 900 320"
             preserveAspectRatio="xMidYMid slice"
         >
@@ -52,11 +51,7 @@ function HalftoneDots() {
     return (
         <svg
             aria-hidden
-            style={{
-                position: "absolute", inset: 0,
-                width: "100%", height: "100%",
-                opacity: 0.025, pointerEvents: "none",
-            }}
+            className="absolute inset-0 w-full h-full opacity-[0.025] pointer-events-none"
         >
             <defs>
                 <pattern id="dots" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse">
@@ -123,498 +118,234 @@ export function LibraryClientGrid() {
         <VirtualizedMediaGrid entries={entries} emptyMessage={emptyMessage} />
     )
 
-    const errorState = libError ? (
-        <div style={{
-            display: "flex", flexDirection: "column", alignItems: "center",
-            justifyContent: "center", minHeight: "40vh", gap: 20, textAlign: "center",
-        }}>
-            <div style={{ fontSize: 48, lineHeight: 1 }}>！</div>
-            <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, letterSpacing: "0.1em", color: "#e8001c" }}>
-                CONEXIÓN INTERRUMPIDA
-            </p>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", maxWidth: 360 }}>
-                {(libErrorData as any)?.message || "No se pudo cargar la biblioteca."}
-            </p>
-            <button className="lib-retry-btn" onClick={() => libRefetch()}>REINTENTAR</button>
-        </div>
-    ) : null
+    if (libError) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[50vh] gap-6 text-center animate-in fade-in duration-700 px-6">
+                <div className="text-6xl font-black text-primary opacity-20">!</div>
+                <div className="space-y-2">
+                    <h2 className="font-bebas text-3xl tracking-widest text-primary">CONEXIÓN INTERRUMPIDA</h2>
+                    <p className="text-sm text-zinc-500 max-w-sm mx-auto uppercase tracking-tighter">
+                        {(libErrorData as any)?.message || "No se pudo sincronizar la colección con el núcleo central."}
+                    </p>
+                </div>
+                <button 
+                    className="px-8 py-2.5 rounded-full border border-primary text-primary font-bebas tracking-[0.2em] text-sm hover:bg-primary hover:text-white transition-all duration-300 shadow-[0_0_20px_rgba(249,115,22,0.15)] active:scale-95"
+                    onClick={() => libRefetch()}
+                >
+                    REINTENTAR ACCESO
+                </button>
+            </div>
+        )
+    }
 
     return (
-        <>
-            <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@400;700;900&display=swap');
+        <div className="flex-1 w-full min-h-screen bg-background text-zinc-200 font-sans selection:bg-primary/30 pb-32">
+            <Tabs defaultValue="current">
+                {/* ── Hero ── */}
+                <div className="relative overflow-hidden pt-20 pb-16 px-6 md:px-14 border-b border-white/[0.03]">
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] via-transparent to-rose-600/[0.02] pointer-events-none" />
+                    <SpeedLines opacity={0.03} />
+                    <HalftoneDots />
 
-                /* ── Variables ── */
-                :root {
-                    --ink: #e8001c;
-                    --page: #0a0a0c;
-                    --panel: #111114;
-                    --border: rgba(255,255,255,0.07);
-                    --muted: rgba(255,255,255,0.3);
-                    --text: #f0ede8;
-                }
-
-                /* ── Page ── */
-                .lib-page {
-                    flex: 1;
-                    width: 100%;
-                    min-height: 100vh;
-                    background: var(--page);
-                    color: var(--text);
-                    font-family: 'Noto Sans JP', sans-serif;
-                    overflow-y: auto;
-                    padding-bottom: 80px;
-                }
-
-                /* ── Hero ── */
-                .lib-hero {
-                    position: relative;
-                    overflow: hidden;
-                    padding: 72px 56px 44px;
-                    border-bottom: 1px solid var(--border);
-                }
-                @media (max-width: 768px) { .lib-hero { padding: 60px 24px 36px; } }
-
-                .lib-hero-bg {
-                    position: absolute;
-                    inset: 0;
-                    background: radial-gradient(ellipse 60% 100% at 70% 50%, rgba(232,0,28,0.04) 0%, transparent 70%);
-                }
-
-                .lib-hero-inner {
-                    position: relative;
-                    z-index: 1;
-                    max-width: 1280px;
-                    margin: 0 auto;
-                    display: flex;
-                    align-items: flex-end;
-                    justify-content: space-between;
-                    flex-wrap: wrap;
-                    gap: 24px;
-                }
-
-                /* Vertical JP text accent */
-                .lib-hero-jp {
-                    position: absolute;
-                    right: 56px;
-                    top: 50%;
-                    transform: translateY(-50%);
-                    writing-mode: vertical-rl;
-                    font-family: 'Noto Sans JP', sans-serif;
-                    font-weight: 900;
-                    font-size: 11px;
-                    letter-spacing: 0.3em;
-                    color: rgba(255,255,255,0.06);
-                    text-transform: uppercase;
-                    user-select: none;
-                }
-
-                .lib-eyebrow {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    margin-bottom: 12px;
-                }
-                .lib-eyebrow-line {
-                    width: 28px;
-                    height: 2px;
-                    background: var(--ink);
-                }
-                .lib-eyebrow-text {
-                    font-size: 10px;
-                    font-weight: 700;
-                    letter-spacing: 0.3em;
-                    text-transform: uppercase;
-                    color: var(--ink);
-                }
-
-                .lib-title {
-                    font-family: 'Bebas Neue', sans-serif;
-                    font-size: clamp(52px, 7vw, 96px);
-                    line-height: 0.9;
-                    letter-spacing: 0.03em;
-                    color: var(--text);
-                    margin: 0;
-                }
-                .lib-title-outline {
-                    -webkit-text-stroke: 1px rgba(255,255,255,0.15);
-                    color: transparent;
-                }
-
-                .lib-count-row {
-                    display: flex;
-                    align-items: center;
-                    gap: 24px;
-                    margin-top: 16px;
-                    flex-wrap: wrap;
-                }
-                .lib-count-item {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 2px;
-                }
-                .lib-count-num {
-                    font-family: 'Bebas Neue', sans-serif;
-                    font-size: 28px;
-                    line-height: 1;
-                    color: var(--text);
-                }
-                .lib-count-label {
-                    font-size: 9px;
-                    font-weight: 700;
-                    letter-spacing: 0.2em;
-                    text-transform: uppercase;
-                    color: var(--muted);
-                }
-                .lib-count-divider {
-                    width: 1px;
-                    height: 32px;
-                    background: var(--border);
-                }
-
-                /* ── Search ── */
-                .lib-search-wrap {
-                    position: relative;
-                    width: 280px;
-                    flex-shrink: 0;
-                }
-                @media (max-width: 640px) { .lib-search-wrap { width: 100%; } }
-
-                .lib-search-input {
-                    width: 100%;
-                    padding: 11px 16px 11px 16px;
-                    background: rgba(255,255,255,0.04);
-                    border: 1px solid var(--border);
-                    border-bottom: 2px solid rgba(255,255,255,0.12);
-                    border-radius: 0;
-                    color: var(--text);
-                    font-family: 'Noto Sans JP', sans-serif;
-                    font-size: 13px;
-                    font-weight: 700;
-                    outline: none;
-                    letter-spacing: 0.02em;
-                    transition: border-color 180ms, box-shadow 180ms;
-                    box-sizing: border-box;
-                }
-                .lib-search-input::placeholder {
-                    color: rgba(255,255,255,0.2);
-                    font-weight: 400;
-                }
-                .lib-search-input:focus {
-                    border-bottom-color: var(--ink);
-                    box-shadow: 0 2px 0 0 rgba(232,0,28,0.15);
-                    background: rgba(255,255,255,0.06);
-                }
-
-                /* ── Controls bar ── */
-                .lib-controls {
-                    position: sticky;
-                    top: 0;
-                    z-index: 30;
-                    background: rgba(10,10,12,0.92);
-                    backdrop-filter: blur(20px);
-                    -webkit-backdrop-filter: blur(20px);
-                    border-bottom: 1px solid var(--border);
-                }
-                .lib-controls-inner {
-                    max-width: 1280px;
-                    margin: 0 auto;
-                    padding: 0 56px;
-                    display: flex;
-                    align-items: stretch;
-                }
-                @media (max-width: 768px) { .lib-controls-inner { padding: 0 24px; } }
-
-                /* ── Tabs ── */
-                .lib-tab-btn {
-                    position: relative;
-                    padding: 16px 24px;
-                    font-family: 'Bebas Neue', sans-serif;
-                    font-size: 15px;
-                    letter-spacing: 0.12em;
-                    color: rgba(255,255,255,0.3);
-                    background: transparent;
-                    border: none;
-                    cursor: pointer;
-                    transition: color 160ms;
-                    white-space: nowrap;
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                }
-                .lib-tab-btn:hover { color: rgba(255,255,255,0.7); }
-                .lib-tab-btn[data-state="active"] { color: var(--text); }
-                .lib-tab-btn[data-state="active"]::after {
-                    content: '';
-                    position: absolute;
-                    bottom: 0; left: 0; right: 0;
-                    height: 2px;
-                    background: var(--ink);
-                }
-
-                .lib-tab-count {
-                    font-family: 'Noto Sans JP', sans-serif;
-                    font-size: 11px;
-                    font-weight: 700;
-                    padding: 2px 7px;
-                    border-radius: 3px;
-                    background: rgba(255,255,255,0.08);
-                    color: rgba(255,255,255,0.5);
-                }
-                .lib-tab-btn[data-state="active"] .lib-tab-count {
-                    background: rgba(232,0,28,0.15);
-                    color: var(--ink);
-                }
-
-                /* ── Grid wrapper ── */
-                .lib-grid-wrap {
-                    max-width: 1280px;
-                    margin: 0 auto;
-                    padding: 36px 56px 0;
-                }
-                @media (max-width: 768px) { .lib-grid-wrap { padding: 24px 24px 0; } }
-
-                /* ── Local files grid ── */
-                .lib-local-grid {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-                    gap: 16px;
-                    padding-bottom: 48px;
-                }
-                @media (min-width: 768px) {
-                    .lib-local-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
-                }
-
-                /* ── Load more ── */
-                .lib-load-more {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    margin: 32px 0 48px;
-                }
-                .lib-load-btn {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    padding: 12px 32px;
-                    background: transparent;
-                    border: 1px solid rgba(255,255,255,0.12);
-                    border-bottom: 2px solid rgba(255,255,255,0.2);
-                    color: rgba(255,255,255,0.5);
-                    font-family: 'Bebas Neue', sans-serif;
-                    font-size: 14px;
-                    letter-spacing: 0.18em;
-                    cursor: pointer;
-                    transition: color 160ms, border-color 160ms, background 160ms;
-                }
-                .lib-load-btn:hover:not(:disabled) {
-                    color: var(--text);
-                    border-bottom-color: var(--ink);
-                    background: rgba(255,255,255,0.02);
-                }
-                .lib-load-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-                /* ── Retry ── */
-                .lib-retry-btn {
-                    padding: 10px 28px;
-                    background: transparent;
-                    border: 1px solid var(--ink);
-                    color: var(--ink);
-                    font-family: 'Bebas Neue', sans-serif;
-                    font-size: 14px;
-                    letter-spacing: 0.2em;
-                    cursor: pointer;
-                    transition: background 160ms;
-                }
-                .lib-retry-btn:hover { background: rgba(232,0,28,0.1); }
-
-                /* ── Loader ── */
-                .lib-loader {
-                    display: flex;
-                    height: 320px;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 6px;
-                }
-                .lib-loader-bar {
-                    width: 3px;
-                    background: var(--ink);
-                    border-radius: 2px;
-                    animation: lib-bar 1s ease-in-out infinite;
-                }
-                .lib-loader-bar:nth-child(1) { height: 20px; animation-delay: 0s; }
-                .lib-loader-bar:nth-child(2) { height: 36px; animation-delay: 0.15s; }
-                .lib-loader-bar:nth-child(3) { height: 48px; animation-delay: 0.3s; }
-                .lib-loader-bar:nth-child(4) { height: 36px; animation-delay: 0.45s; }
-                .lib-loader-bar:nth-child(5) { height: 20px; animation-delay: 0.6s; }
-                @keyframes lib-bar {
-                    0%, 100% { opacity: 0.2; transform: scaleY(0.6); }
-                    50% { opacity: 1; transform: scaleY(1); }
-                }
-
-                /* ── Panel divider ── */
-                .lib-panel-divider {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    margin-bottom: 28px;
-                }
-                .lib-panel-divider-line {
-                    flex: 1;
-                    height: 1px;
-                    background: var(--border);
-                }
-                .lib-panel-divider-text {
-                    font-size: 9px;
-                    font-weight: 700;
-                    letter-spacing: 0.3em;
-                    text-transform: uppercase;
-                    color: rgba(255,255,255,0.12);
-                }
-            `}</style>
-
-            <div className="lib-page">
-                <Tabs defaultValue="current">
-
-                    {/* ── Hero ── */}
-                    <div className="lib-hero">
-                        <div className="lib-hero-bg" />
-                        <SpeedLines opacity={0.035} />
-                        <HalftoneDots />
-
-                        <div className="lib-hero-inner">
-                            <div>
-                                <div className="lib-eyebrow">
-                                    <div className="lib-eyebrow-line" />
-                                    <span className="lib-eyebrow-text">Colección Personal</span>
-                                </div>
-                                <h1 className="lib-title">
-                                    MI<br />
-                                    <span className="lib-title-outline">BIBLIO</span>TECA
-                                </h1>
-                                <div className="lib-count-row">
-                                    <div className="lib-count-item">
-                                        <span className="lib-count-num">{currentlyWatching.length}</span>
-                                        <span className="lib-count-label">Viendo</span>
-                                    </div>
-                                    <div className="lib-count-divider" />
-                                    <div className="lib-count-item">
-                                        <span className="lib-count-num">{planned.length}</span>
-                                        <span className="lib-count-label">Planeado</span>
-                                    </div>
-                                    <div className="lib-count-divider" />
-                                    <div className="lib-count-item">
-                                        <span className="lib-count-num">{completed.length}</span>
-                                        <span className="lib-count-label">Completado</span>
-                                    </div>
-                                </div>
+                    <div className="relative z-10 max-w-[1400px] mx-auto flex flex-col md:flex-row md:items-end justify-between gap-10">
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-4 duration-700">
+                                <div className="h-[2px] w-10 bg-primary shadow-[0_0_15px_rgba(249,115,22,0.5)]" />
+                                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/90">Gestión de Archivos</span>
                             </div>
+                            
+                            <h1 className="font-bebas text-7xl md:text-9xl leading-[0.8] tracking-[0.02em] text-white animate-in fade-in slide-in-from-left-8 duration-1000">
+                                MI<br />
+                                <span className="text-transparent stroke-text opacity-30">BIBLIO</span>TECA
+                            </h1>
 
+                            <div className="flex flex-wrap items-center gap-10 mt-6 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
+                                <StatItem count={currentlyWatching.length} label="Viendo" active />
+                                <div className="hidden sm:block w-[1px] h-10 bg-white/5" />
+                                <StatItem count={planned.length} label="Planeado" />
+                                <div className="hidden sm:block w-[1px] h-10 bg-white/5" />
+                                <StatItem count={completed.length} label="Completado" />
+                            </div>
+                        </div>
+
+                        {/* Search Wrapper */}
+                        <div className="relative w-full md:w-80 group animate-in fade-in slide-in-from-right-4 duration-1000 delay-500">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-primary transition-colors" />
                             <input
-                                className="lib-search-input"
+                                className="w-full pl-12 pr-5 py-3.5 bg-white/[0.02] hover:bg-white/[0.04] focus:bg-white/[0.06] border border-white/5 focus:border-primary/40 rounded-xl text-sm font-bold tracking-wide outline-none transition-all duration-300 placeholder:text-zinc-700"
                                 type="text"
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
-                                placeholder="BUSCAR..."
+                                placeholder="LOCALIZAR TÍTULO..."
                             />
+                            {/* Japanese Accent decoration */}
+                            <div className="absolute -bottom-1 left-4 right-4 h-[2px] bg-gradient-to-r from-transparent via-primary/40 to-transparent scale-x-0 group-focus-within:scale-x-100 transition-transform duration-500" />
                         </div>
-
-                        <div className="lib-hero-jp">BIBLIOTECA · COLECCIÓN · ANIME</div>
                     </div>
 
-                    {/* ── Tab bar ── */}
-                    <div className="lib-controls">
-                        <TabsList
-                            className="lib-controls-inner"
-                            style={{ background: "transparent", height: "auto", padding: 0, borderRadius: 0, gap: 0 }}
-                        >
-                            <TabsTrigger value="current" className="lib-tab-btn">
-                                VIENDO <span className="lib-tab-count">{currentlyWatching.length}</span>
-                            </TabsTrigger>
-                            <TabsTrigger value="planned" className="lib-tab-btn">
-                                PLANEADO <span className="lib-tab-count">{planned.length}</span>
-                            </TabsTrigger>
-                            <TabsTrigger value="completed" className="lib-tab-btn">
-                                COMPLETADO <span className="lib-tab-count">{completed.length}</span>
-                            </TabsTrigger>
-                            <TabsTrigger value="local" className="lib-tab-btn">
-                                ARCHIVOS LOCALES
-                            </TabsTrigger>
+                    {/* Vertical JP decoration */}
+                    <div className="absolute right-6 top-1/2 -translate-y-1/2 [writing-mode:vertical-rl] font-black text-[10px] tracking-[0.5em] text-zinc-800 uppercase pointer-events-none select-none">
+                        BIBLIOTECA · COLECCIÓN · ARCHIVOS
+                    </div>
+                </div>
+
+                {/* ── Tab Navigation ── */}
+                <div className="sticky top-0 z-40 glass-panel-premium border-b border-white/[0.03] backdrop-blur-3xl">
+                    <div className="max-w-[1400px] mx-auto px-6 md:px-14">
+                        <TabsList className="bg-transparent h-auto p-0 rounded-none w-full justify-start overflow-x-auto no-scrollbar scroll-smooth">
+                            <TabTrigger value="current" label="VIENDO" count={currentlyWatching.length} />
+                            <TabTrigger value="planned" label="PLANEADO" count={planned.length} />
+                            <TabTrigger value="completed" label="COMPLETADO" count={completed.length} />
+                            <TabTrigger value="local" label="LOCALES" />
                         </TabsList>
                     </div>
+                </div>
 
-                    {/* ── Content ── */}
-                    <div className="lib-grid-wrap">
+                {/* ── Content Area ── */}
+                <div className="max-w-[1400px] mx-auto px-6 md:px-14 mt-10">
+                    <TabsContent value="current" className="m-0 focus-visible:outline-none">
+                        {libLoading ? <LoadingGrid /> : renderGrid(currentlyWatching, "No estás viendo nada en este momento.")}
+                    </TabsContent>
 
-                        <TabsContent value="current" className="m-0 mt-8">
-                            {libLoading
-                                ? <div className="lib-loader"><div className="lib-loader-bar"/><div className="lib-loader-bar"/><div className="lib-loader-bar"/><div className="lib-loader-bar"/><div className="lib-loader-bar"/></div>
-                                : libError
-                                    ? errorState
-                                    : renderGrid(currentlyWatching, "No estás viendo ninguna serie ahora mismo.")}
-                        </TabsContent>
+                    <TabsContent value="planned" className="m-0 focus-visible:outline-none">
+                        {libLoading ? <LoadingGrid /> : renderGrid(planned, "Tu lista de deseos está vacía.")}
+                    </TabsContent>
 
-                        <TabsContent value="planned" className="m-0 mt-8">
-                            {libLoading
-                                ? <div className="lib-loader"><div className="lib-loader-bar"/><div className="lib-loader-bar"/><div className="lib-loader-bar"/><div className="lib-loader-bar"/><div className="lib-loader-bar"/></div>
-                                : libError
-                                    ? errorState
-                                    : renderGrid(planned, "No tenés series planeadas para ver.")}
-                        </TabsContent>
+                    <TabsContent value="completed" className="m-0 focus-visible:outline-none">
+                        {libLoading ? <LoadingGrid /> : renderGrid(completed, "Aún no has terminado ninguna serie.")}
+                    </TabsContent>
 
-                        <TabsContent value="completed" className="m-0 mt-8">
-                            {libLoading
-                                ? <div className="lib-loader"><div className="lib-loader-bar"/><div className="lib-loader-bar"/><div className="lib-loader-bar"/><div className="lib-loader-bar"/><div className="lib-loader-bar"/></div>
-                                : libError
-                                    ? errorState
-                                    : renderGrid(completed, "Aún no completaste ninguna serie.")}
-                        </TabsContent>
-
-                        <TabsContent value="local" className="m-0 mt-8">
-                            {locLoading ? (
-                                <div className="lib-loader"><div className="lib-loader-bar"/><div className="lib-loader-bar"/><div className="lib-loader-bar"/><div className="lib-loader-bar"/><div className="lib-loader-bar"/></div>
-                            ) : !localData.length ? (
-                                <EmptyState
-                                    title="Sin archivos locales"
-                                    message="Configurá una carpeta en Ajustes y volvé a escanear."
-                                />
-                            ) : (
-                                <>
-                                    <div className="lib-local-grid">
-                                        {localData.map((file: Anime_LocalFile, idx: number) => {
-                                            const parseData: any = file.parsedInfo || (file as any).Parsed || (file as any).parsedData || {}
-                                            return (
-                                                <div key={file.path || `local-${idx}`}>
-                                                    <MediaCard
-                                                        title={parseData.title || parseData.Title || (file as any).name || "Archivo genérico"}
-                                                        artwork="https://placehold.co/220x330/111114/f0ede8?text=LOCAL"
-                                                        badge={parseData.resolution || parseData.Resolution || "LOCAL"}
-                                                        aspect="poster"
-                                                        className="w-full"
-                                                    />
-                                                </div>
-                                            )
-                                        })}
+                    <TabsContent value="local" className="m-0 focus-visible:outline-none">
+                        {locLoading ? (
+                            <LoadingGrid />
+                        ) : !localData.length ? (
+                            <EmptyState
+                                title="Bóveda vacía"
+                                message="No se han detectado archivos de video locales. Verifica tus carpetas de escaneo."
+                                illustration={<FileVideo className="w-16 h-16 text-zinc-800" />}
+                            />
+                        ) : (
+                            <div className="animate-in fade-in slide-in-from-bottom-6 duration-1000">
+                                <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-x-6 gap-y-10">
+                                    {localData.map((file, idx) => (
+                                        <LocalFileCard key={file.path || idx} file={file} />
+                                    ))}
+                                </div>
+                                
+                                {hasNextPage && (
+                                    <div className="flex justify-center mt-20 mb-10">
+                                        <button
+                                            className="group relative px-10 py-3 bg-white/[0.03] hover:bg-primary border border-white/5 hover:border-primary rounded-xl overflow-hidden transition-all duration-300"
+                                            onClick={() => fetchNextPage()}
+                                            disabled={isFetchingNextPage}
+                                        >
+                                            <div className="relative z-10 flex items-center gap-3">
+                                                {isFetchingNextPage ? (
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                ) : (
+                                                    <Zap className="w-4 h-4" />
+                                                )}
+                                                <span className="font-bebas text-lg tracking-widest text-zinc-400 group-hover:text-white transition-colors">
+                                                    {isFetchingNextPage ? "Sincronizando..." : "Cargar más fragmentos"}
+                                                </span>
+                                            </div>
+                                        </button>
                                     </div>
-                                    {hasNextPage && (
-                                        <div className="lib-load-more">
-                                            <button
-                                                className="lib-load-btn"
-                                                onClick={() => fetchNextPage()}
-                                                disabled={isFetchingNextPage}
-                                            >
-                                                {isFetchingNextPage
-                                                    ? "CARGANDO..."
-                                                    : "CARGAR MÁS"}
-                                            </button>
-                                        </div>
-                                    )}
-                                </>
-                            )}
-                        </TabsContent>
-                    </div>
-                </Tabs>
-            </div>
-        </>
+                                )}
+                            </div>
+                        )}
+                    </TabsContent>
+                </div>
+            </Tabs>
+
+            <style>{`
+                .stroke-text {
+                    -webkit-text-stroke: 1.5px white;
+                }
+            `}</style>
+        </div>
     )
 }
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+const StatItem = memo(function StatItem({ count, label, active }: { count: number; label: string; active?: boolean }) {
+    return (
+        <div className="flex flex-col">
+            <span className={cn(
+                "font-bebas text-4xl leading-none",
+                active ? "text-primary drop-shadow-[0_0_12px_rgba(249,115,22,0.4)]" : "text-white"
+            )}>
+                {count.toString().padStart(2, '0')}
+            </span>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 mt-1">{label}</span>
+        </div>
+    )
+})
+
+const TabTrigger = memo(function TabTrigger({ value, label, count }: { value: string; label: string; count?: number }) {
+    return (
+        <TabsTrigger 
+            value={value} 
+            className="group relative h-16 px-8 rounded-none border-none bg-transparent data-[state=active]:bg-transparent transition-all duration-500"
+        >
+            <div className="flex items-center gap-3">
+                <span className="font-bebas text-lg tracking-[0.15em] text-zinc-500 group-hover:text-zinc-300 group-data-[state=active]:text-white transition-colors">
+                    {label}
+                </span>
+                {count !== undefined && (
+                    <span className="px-2 py-0.5 rounded-md bg-white/[0.03] border border-white/5 text-[10px] font-black text-zinc-600 group-data-[state=active]:bg-primary/10 group-data-[state=active]:border-primary/20 group-data-[state=active]:text-primary transition-all duration-300 tabular-nums">
+                        {count}
+                    </span>
+                )}
+            </div>
+            {/* Active Indicator Line */}
+            <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-primary scale-x-0 group-data-[state=active]:scale-x-100 origin-center transition-transform duration-500 ease-out-expo shadow-[0_-4px_12px_rgba(249,115,22,0.4)]" />
+        </TabsTrigger>
+    )
+})
+
+const LoadingGrid = () => (
+    <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-x-6 gap-y-10">
+        {Array.from({ length: 14 }).map((_, i) => (
+            <div key={i} className="space-y-3 animate-pulse">
+                <div className="aspect-[2/3] w-full bg-white/[0.03] rounded-lg border border-white/5" />
+                <div className="h-4 w-3/4 bg-white/[0.02] rounded" />
+                <div className="h-3 w-1/2 bg-white/[0.01] rounded" />
+            </div>
+        ))}
+    </div>
+)
+
+const LocalFileCard = memo(function LocalFileCard({ file }: { file: Anime_LocalFile }) {
+    const parseData: any = file.parsedInfo || (file as any).Parsed || (file as any).parsedData || {}
+    const title = parseData.title || parseData.Title || (file as any).name || "Archivo genérico"
+    
+    return (
+        <div className="flex flex-col gap-3 group">
+            <div className="relative aspect-[2/3] w-full rounded-2xl overflow-hidden glass-panel border border-white/5 bg-gradient-to-br from-zinc-900 via-black to-zinc-900 group-hover:scale-[1.03] transition-transform duration-500 shadow-xl">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+                    <div className="w-16 h-16 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-center group-hover:scale-110 group-hover:border-primary/30 transition-all duration-500">
+                        <FileVideo className="w-8 h-8 text-zinc-700 group-hover:text-primary transition-colors" />
+                    </div>
+                    <span className="font-bebas text-lg tracking-[0.2em] text-zinc-800 group-hover:text-zinc-700 transition-colors">LOCAL FILE</span>
+                </div>
+                <div className="absolute top-3 right-3 px-2 py-0.5 rounded bg-black/60 border border-white/5 backdrop-blur-md text-[8px] font-black text-zinc-500 uppercase tracking-widest">
+                    {file.path?.split('.').pop()?.toUpperCase() || "RAW"}
+                </div>
+            </div>
+            <div className="px-1 space-y-1">
+                <h3 className="text-[12px] font-bold text-zinc-400 group-hover:text-primary transition-colors line-clamp-2 leading-tight">
+                    {title}
+                </h3>
+                <div className="flex items-center gap-2 opacity-50">
+                    <span className="text-[9px] font-black uppercase tracking-tighter text-zinc-500">
+                        {file.path?.split('.').pop()?.toUpperCase() || "MP4"}
+                    </span>
+                    <span className="w-1 h-1 rounded-full bg-zinc-700" />
+                    <span className="text-[9px] font-bold text-zinc-600 truncate max-w-[80px]">{file.path?.split(/[\\/]/).pop()}</span>
+                </div>
+            </div>
+        </div>
+    )
+})

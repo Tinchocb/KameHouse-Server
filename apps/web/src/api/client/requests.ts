@@ -51,7 +51,14 @@ export async function buildSeaQuery<T, D = void>(
         password,
     }: SeaQuery<D>): Promise<T | undefined> {
 
-    const url = new URL(getServerBaseUrl() + endpoint)
+    const base = getServerBaseUrl() || (typeof window !== "undefined" ? window.location.origin : "http://localhost")
+    try {
+        const url = new URL(endpoint, base)
+    } catch (e) {
+        console.error("FAILED URL:", endpoint, base)
+        throw e
+    }
+    const url = new URL(endpoint, base)
     if (params) {
         // Append query parameters
         Object.keys(params as Record<string, unknown>).forEach((key) => {

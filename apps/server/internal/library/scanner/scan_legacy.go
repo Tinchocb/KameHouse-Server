@@ -458,7 +458,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 				continue
 			}
 
-			// Typical Jellyfin/Kodi NFO paths
+			// Typical Kodi NFO paths
 			nfoPaths := []string{
 				filepath.Join(lfDir, "tvshow.nfo"),
 				filepath.Join(lfDir, "anime.nfo"),

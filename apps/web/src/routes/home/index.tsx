@@ -10,7 +10,7 @@ import { Swimlane, type SwimlaneItem, SwimlaneSkeleton } from "@/components/ui/s
 import { ErrorBoundary } from "@/components/shared/error-boundary"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Sparkles, Zap, Globe2, Clapperboard } from "lucide-react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import * as React from "react"
 import {
     useContinueWatching,
@@ -46,6 +46,9 @@ function HomePage() {
     const { data: intelligenceData, isLoading: isIntelligenceLoading } = useHomeIntelligence()
     const { data: cwData, isLoading: isCwLoading } = useContinueWatching()
     const { setBackdropUrl } = useIntelligenceStore()
+
+    const isLoading = isCollectionLoading || isIntelligenceLoading || isCwLoading
+    const isRefetching = false
 
     const handleNavigate = React.useCallback(
         (mediaId: number) => {
@@ -163,9 +166,10 @@ function HomePage() {
     }
 
     return (
-        <div className="min-h-screen bg-background flex flex-col gap-8 w-full max-w-screen-2xl mx-auto overflow-x-hidden">
+        <div className="min-h-screen bg-background flex flex-col gap-12 w-full max-w-screen-2xl mx-auto overflow-x-hidden pb-20">
             <DynamicBackdrop />
 
+            {/* ── Hero Experience ── */}
             {isIntelligenceLoading && heroItems.length === 0 ? (
                 <HeroBannerSkeleton className="-mt-[53px]" />
             ) : (
@@ -190,113 +194,121 @@ function HomePage() {
                 onClose={closeSourcePicker}
             />
 
-            <div className="relative z-10 -mt-20 flex flex-col gap-10 pb-24">
-                {/* 1. Continue Watching (Focus) */}
-                <ErrorBoundary className="px-6 md:px-10 lg:px-14">
-                    {isCwLoading ? (
-                        <SwimlaneSkeleton title="Continuar viendo" aspect="wide" />
-                    ) : (
-                        continueWatchingItems.length > 0 && (
-                            <motion.div 
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.5, delay: 0.1 }}
-                                className="space-y-4"
-                            >
-                                <SectionLabel icon={Zap} label="Continuar viendo" />
-                                <Swimlane
-                                    title="Continuar viendo"
-                                    items={continueWatchingItems}
-                                    defaultAspect="wide"
-                                    onHover={setBackdropUrl}
-                                />
-                            </motion.div>
-                        )
-                    )}
-                </ErrorBoundary>
-
-                {/* 2. Recently Added */}
-                <ErrorBoundary className="px-6 md:px-10 lg:px-14">
-                    {isCollectionLoading ? (
-                        <SwimlaneSkeleton title="Novedades en tu biblioteca" aspect="poster" />
-                    ) : (
-                        recentItems.length > 0 && (
-                            <motion.div 
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.5, delay: 0.2 }}
-                                className="space-y-4"
-                            >
-                                <SectionLabel icon={Sparkles} label="Novedades en tu biblioteca" />
-                                <Swimlane
-                                    title="Añadidos recientemente"
-                                    items={recentItems}
-                                    defaultAspect="poster"
-                                    onHover={setBackdropUrl}
-                                />
-                            </motion.div>
-                        )
-                    )}
-                </ErrorBoundary>
-
-                {/* 3. Curated Sagas / Intelligence */}
-                {isIntelligenceLoading && (!intelligenceData || (intelligenceData as any).swimlanes.length === 0) ? (
-                    <div className="px-6 md:px-10 lg:px-14 space-y-10">
-                        <SwimlaneSkeleton aspect="wide" />
-                        <SwimlaneSkeleton aspect="poster" />
-                    </div>
-                ) : (
-                    (intelligenceData as any)?.swimlanes.map((lane: any, index: number) => (
-                        <ErrorBoundary key={lane.id} className="px-6 md:px-10 lg:px-14">
-                            <motion.div 
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.5, delay: 0.3 + index * 0.1 }}
-                                className="space-y-4"
-                            >
-                                <SectionLabel 
-                                    icon={lane.type === "epic_moments" ? Zap : Clapperboard} 
-                                    label={lane.title} 
-                                />
-                                <SmartSwimlane
-                                    lane={lane}
-                                    onNavigate={(id) => handleNavigate(Number(id))}
-                                />
-                            </motion.div>
-                        </ErrorBoundary>
-                    ))
-                )}
-
-                {/* 4. Full Collection Fallback */}
-                <ErrorBoundary className="px-6 md:px-10 lg:px-14">
-                    {!isCollectionLoading && allEntries.length > 0 && (
+            {/* ── Content Sections ── */}
+            <div className="relative z-10 -mt-20 flex flex-col gap-12">
+                <AnimatePresence mode="wait">
+                    {isLoading || isRefetching ? (
                         <motion.div 
+                            key="skeletons"
                             initial={{ opacity: 0 }}
-                            whileInView={{ opacity: 1 }}
-                            viewport={{ once: true }}
-                            className="space-y-4 opacity-80 hover:opacity-100 transition-opacity"
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.6 }}
+                            className="space-y-12 px-6 md:px-10 lg:px-14"
                         >
-                            <SectionLabel icon={Globe2} label="Explorar colección completa" />
-                            <Swimlane
-                                title="Tu colección"
-                                items={allEntries.slice(0, 40).map((entry) => ({
-                                    id: `coll-${entry.mediaId}`,
-                                    title: getTitle(entry.media!),
-                                    image: entry.media!.posterImage || getBackdrop(entry.media!),
-                                    subtitle: entry.media!.year ? String(entry.media!.year) : entry.media!.format,
-                                    badge: entry.media!.format,
-                                    year: entry.media!.year,
-                                    rating: entry.media!.score ? entry.media!.score / 10 : undefined,
-                                    onClick: () => handleNavigate(entry.mediaId),
-                                    backdropUrl: getBackdrop(entry.media!),
-                                    aspect: "poster"
-                                }))}
-                                defaultAspect="poster"
-                                onHover={setBackdropUrl}
-                            />
+                            <SwimlaneSkeleton title="Continuar viendo" aspect="wide" />
+                            <SwimlaneSkeleton title="Novedades en tu biblioteca" aspect="poster" />
+                            <SwimlaneSkeleton aspect="wide" />
+                        </motion.div>
+                    ) : (
+                        <motion.div 
+                            key="content"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.8, ease: "easeOut" }}
+                            className="space-y-12"
+                        >
+                            {/* 1. Continue Watching */}
+                            <ErrorBoundary className="px-6 md:px-10 lg:px-14">
+                                {continueWatchingItems.length > 0 && (
+                                    <motion.div 
+                                        initial={{ opacity: 0, y: 30 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
+                                        className="space-y-4"
+                                    >
+                                        <SectionLabel icon={Zap} label="Continuar viendo" />
+                                        <Swimlane
+                                            title="Continuar viendo"
+                                            items={continueWatchingItems}
+                                            defaultAspect="wide"
+                                            onHover={setBackdropUrl}
+                                        />
+                                    </motion.div>
+                                )}
+                            </ErrorBoundary>
+
+                            {/* 2. Recently Added */}
+                            <ErrorBoundary className="px-6 md:px-10 lg:px-14">
+                                {recentItems.length > 0 && (
+                                    <motion.div 
+                                        initial={{ opacity: 0, y: 30 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
+                                        className="space-y-4"
+                                    >
+                                        <SectionLabel icon={Sparkles} label="Novedades en tu biblioteca" />
+                                        <Swimlane
+                                            title="Añadidos recientemente"
+                                            items={recentItems}
+                                            defaultAspect="poster"
+                                            onHover={setBackdropUrl}
+                                        />
+                                    </motion.div>
+                                )}
+                            </ErrorBoundary>
+
+                            {/* 3. Curated Sagas / Intelligence */}
+                            {(intelligenceData as any)?.swimlanes.map((lane: any, index: number) => (
+                                <ErrorBoundary key={lane.id} className="px-6 md:px-10 lg:px-14">
+                                    <motion.div 
+                                        initial={{ opacity: 0, y: 30 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.3 + index * 0.15 }}
+                                        className="space-y-4"
+                                    >
+                                        <SectionLabel 
+                                            icon={lane.type === "epic_moments" ? Zap : Clapperboard} 
+                                            label={lane.title} 
+                                        />
+                                        <SmartSwimlane
+                                            lane={lane}
+                                            onNavigate={(id) => handleNavigate(Number(id))}
+                                        />
+                                    </motion.div>
+                                </ErrorBoundary>
+                            ))}
+
+                            {/* 4. Full Collection Fallback */}
+                            <ErrorBoundary className="px-6 md:px-10 lg:px-14">
+                                {!isCollectionLoading && allEntries.length > 0 && (
+                                    <motion.div 
+                                        initial={{ opacity: 0 }}
+                                        whileInView={{ opacity: 1 }}
+                                        viewport={{ once: true }}
+                                        className="space-y-4 opacity-80 hover:opacity-100 transition-opacity pb-20"
+                                    >
+                                        <SectionLabel icon={Globe2} label="Explorar colección completa" />
+                                        <Swimlane
+                                            title="Tu colección"
+                                            items={allEntries.slice(0, 40).map((entry) => ({
+                                                id: `coll-${entry.mediaId}`,
+                                                title: getTitle(entry.media!),
+                                                image: entry.media!.posterImage || getBackdrop(entry.media!),
+                                                subtitle: entry.media!.year ? String(entry.media!.year) : entry.media!.format,
+                                                badge: entry.media!.format,
+                                                year: entry.media!.year,
+                                                rating: entry.media!.score ? entry.media!.score / 10 : undefined,
+                                                onClick: () => handleNavigate(entry.mediaId),
+                                            }))}
+                                            defaultAspect="poster"
+                                        />
+                                    </motion.div>
+                                )}
+                            </ErrorBoundary>
                         </motion.div>
                     )}
-                </ErrorBoundary>
+                </AnimatePresence>
             </div>
         </div>
     )

@@ -137,7 +137,6 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 		}
 	}
 
-	// 3. Add offline database if requested (TODO)
 
 	return mf, nil
 }

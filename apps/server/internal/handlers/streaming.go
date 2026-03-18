@@ -89,6 +89,12 @@ func (h *Handler) HandleMasterPlaylist(c echo.Context) error {
 			}
 			time.Sleep(200 * time.Millisecond)
 		}
+		
+		// If deadline passed and it still doesn't exist, FFmpeg likely failed or hung
+		if _, err := os.Stat(playlistPath); os.IsNotExist(err) {
+			h.App.Logger.Error().Msg("ffmpeg transcode timeout: index.m3u8 was not generated in time")
+			return echo.NewHTTPError(http.StatusGatewayTimeout, "Transcoder timed out or failed to start")
+		}
 	}
 
 	return c.File(playlistPath) // Zero-copy serve via OS net pipe

@@ -374,18 +374,6 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	v1.GET("/stream/:id/:file", h.HandleHlsSegment)
 	v1.DELETE("/stream/:id", h.StopStreamSession)
 	v1.GET("/streaming/:mediaId/episode/:epNum/sources", h.HandleGetEpisodeSources)
-	//
-	// Playback Manager
-	//
-	v1PlaybackManager := v1.Group("/playback-manager")
-	v1PlaybackManager.POST("/play", h.HandlePlaybackPlayVideo)
-	v1PlaybackManager.POST("/play-random", h.HandlePlaybackPlayRandomVideo)
-	v1PlaybackManager.POST("/sync-current-progress", h.HandlePlaybackSyncCurrentProgress)
-	v1PlaybackManager.POST("/next-episode", h.HandlePlaybackPlayNextEpisode)
-	v1PlaybackManager.GET("/next-episode", h.HandlePlaybackGetNextEpisode)
-	v1PlaybackManager.POST("/autoplay-next-episode", h.HandlePlaybackAutoPlayNextEpisode)
-	v1PlaybackManager.POST("/manual-tracking/start", h.HandlePlaybackStartManualTracking)
-	v1PlaybackManager.POST("/manual-tracking/cancel", h.HandlePlaybackCancelManualTracking)
 
 	//
 	// Online Streaming (disabled)

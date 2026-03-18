@@ -137,27 +137,32 @@ export function HeroBanner({
             {/* ── Backdrop images ────────────────────────────────────────── */}
             <div className="absolute inset-0">
                 {items.map((item, index) => (
-                    <img
+                    <div
                         key={item.id}
-                        src={item.backdropUrl}
-                        alt=""
-                        aria-hidden="true"
                         className={cn(
-                            "absolute inset-0 h-full w-full object-cover object-center",
-                            "transition-opacity duration-700 ease-out motion-reduce:transition-none",
-                            index === activeIndex ? "opacity-100" : "opacity-0",
+                            "absolute inset-0 transition-opacity duration-1000 ease-in-out",
+                            index === activeIndex ? "opacity-100 z-10" : "opacity-0 z-0",
                         )}
-                    />
+                    >
+                        <img
+                            src={item.backdropUrl}
+                            alt=""
+                            aria-hidden="true"
+                            className={cn(
+                                "h-full w-full object-cover object-center",
+                                index === activeIndex && "animate-ken-burns"
+                            )}
+                        />
+                    </div>
                 ))}
             </div>
 
-            {/* ── Cinematic vignette stack ───────────────────────────────── */}
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.08),transparent_38%)]" />
-            <div className="absolute inset-0 bg-gradient-to-r from-black via-black/65 to-black/5" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/10" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.06),transparent_45%)]" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60" />
             
             {/* The Perfect Fade to Black: seamless transition to the body bg */}
-            <div className="absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t from-black via-black/80 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-background via-background/90 to-transparent" />
 
             {/* ── Content ───────────────────────────────────────────────── */}
             <div className="relative z-10 mx-auto flex w-full max-w-[1680px] flex-col justify-end gap-6 px-6 pb-16 pt-36 md:px-10 lg:px-14 lg:pb-20 xl:flex-row xl:items-end xl:justify-between">

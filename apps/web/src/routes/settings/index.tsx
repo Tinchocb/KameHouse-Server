@@ -4,6 +4,7 @@ import { useForm, Controller, type SubmitHandler } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
+import { LoadingOverlayWithLogo } from "@/components/shared/loading-overlay-with-logo"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs/tabs"
 import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
@@ -16,6 +17,8 @@ import {
     LucidePalette, LucideFolder, LucideTrash2,
     LucideSave, LucideRefreshCw, LucideCheckCircle2,
 } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import { cn } from "@/components/ui/core/styling"
 import type { SaveSettings_Variables } from "@/api/generated/endpoint.types"
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
@@ -195,682 +198,323 @@ function SettingsPage() {
         await onSubmit(values)
     }, [form, onSubmit])
 
-    if (isLoading) return (
-        <div style={{
-            display: "flex", alignItems: "center", justifyContent: "center",
-            height: "100vh", background: "#111113", gap: 12,
-            color: "rgba(255,255,255,0.35)", fontSize: 13,
-            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        }}>
-            <LucideRefreshCw size={16} style={{ animation: "os-spin 1s linear infinite", color: "#f97316" }} />
-            Cargando ajustes...
-        </div>
-    )
+    if (isLoading) return <LoadingOverlayWithLogo />
 
     return (
         <>
-            <style>{`
-                @keyframes os-spin { to { transform: rotate(360deg); } }
-                @keyframes os-fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
-                /* ── Reset / Base ── */
-                .os-page {
-                    flex: 1;
-                    width: 100%;
-                    min-height: 100vh;
-                    background: #111113;
-                    color: #e8e8ea;
-                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", sans-serif;
-                    font-size: 14px;
-                    -webkit-font-smoothing: antialiased;
-                    overflow-y: auto;
-                    padding-bottom: 80px;
-                }
 
-                /* ── Shell ── */
-                .os-shell {
-                    display: flex;
-                    height: 100%;
-                    min-height: 100vh;
-                }
-
-                /* ── Sidebar ── */
-                .os-sidebar {
-                    width: 220px;
-                    flex-shrink: 0;
-                    background: #18181b;
-                    border-right: 1px solid rgba(255,255,255,0.06);
-                    padding: 28px 12px 24px;
-                    display: flex;
-                    flex-direction: column;
-                    position: sticky;
-                    top: 0;
-                    height: 100vh;
-                    overflow-y: auto;
-                }
-
-                .os-sidebar-title {
-                    font-size: 11px;
-                    font-weight: 600;
-                    letter-spacing: 0.06em;
-                    text-transform: uppercase;
-                    color: rgba(255,255,255,0.2);
-                    padding: 0 10px;
-                    margin-bottom: 10px;
-                    margin-top: 4px;
-                }
-
-                .os-nav-item {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    padding: 8px 10px;
-                    border-radius: 7px;
-                    cursor: pointer;
-                    font-size: 13.5px;
-                    font-weight: 500;
-                    color: rgba(255,255,255,0.45);
-                    transition: background 140ms, color 140ms;
-                    border: none;
-                    background: transparent;
-                    width: 100%;
-                    text-align: left;
-                    margin-bottom: 1px;
-                }
-                .os-nav-item:hover:not([data-state="active"]) {
-                    background: rgba(255,255,255,0.05);
-                    color: rgba(255,255,255,0.7);
-                }
-                .os-nav-item[data-state="active"] {
-                    background: rgba(249,115,22,0.12);
-                    color: #fff;
-                }
-                .os-nav-item[data-state="active"] .os-nav-icon {
-                    color: #f97316;
-                }
-                .os-nav-icon {
-                    width: 16px;
-                    height: 16px;
-                    flex-shrink: 0;
-                    color: rgba(255,255,255,0.3);
-                    transition: color 140ms;
-                }
-
-                .os-sidebar-footer {
-                    margin-top: auto;
-                    padding: 12px 10px 0;
-                    border-top: 1px solid rgba(255,255,255,0.05);
-                }
-                .os-version {
-                    font-size: 11px;
-                    color: rgba(255,255,255,0.15);
-                    font-weight: 500;
-                }
-                .os-online {
-                    display: flex;
-                    align-items: center;
-                    gap: 5px;
-                    font-size: 11px;
-                    font-weight: 600;
-                    color: rgba(34,197,94,0.7);
-                    margin-top: 4px;
-                }
-                .os-online-dot {
-                    width: 5px; height: 5px;
-                    border-radius: 50%;
-                    background: #22c55e;
-                }
-
-                /* ── Main ── */
-                .os-main {
-                    flex: 1;
-                    min-width: 0;
-                    padding: 36px 48px 32px;
-                    max-width: 740px;
-                }
-                @media (max-width: 900px) { .os-main { padding: 28px 24px; } }
-
-                /* ── Page heading ── */
-                .os-heading {
-                    margin-bottom: 28px;
-                    animation: os-fadein 220ms ease both;
-                }
-                .os-heading h1 {
-                    font-size: 22px;
-                    font-weight: 700;
-                    letter-spacing: -0.02em;
-                    color: #fff;
-                    margin: 0 0 4px;
-                }
-                .os-heading p {
-                    font-size: 13px;
-                    color: rgba(255,255,255,0.3);
-                    margin: 0;
-                    font-weight: 400;
-                }
-
-                /* ── Group ── */
-                .os-group {
-                    margin-bottom: 28px;
-                    animation: os-fadein 240ms ease both;
-                }
-                .os-group-label {
-                    font-size: 11px;
-                    font-weight: 600;
-                    letter-spacing: 0.06em;
-                    text-transform: uppercase;
-                    color: rgba(255,255,255,0.25);
-                    margin-bottom: 8px;
-                    padding: 0 2px;
-                }
-
-                /* ── Card ── */
-                .os-card {
-                    background: #1c1c1f;
-                    border: 1px solid rgba(255,255,255,0.07);
-                    border-radius: 12px;
-                    overflow: hidden;
-                }
-
-                /* ── Row ── */
-                .os-row {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    padding: 13px 16px;
-                    border-bottom: 1px solid rgba(255,255,255,0.05);
-                    gap: 16px;
-                    transition: background 120ms;
-                }
-                .os-row:last-child { border-bottom: none; }
-                .os-row:hover { background: rgba(255,255,255,0.02); }
-
-                .os-row-left { flex: 1; min-width: 0; }
-                .os-row-label {
-                    font-size: 14px;
-                    font-weight: 500;
-                    color: #e8e8ea;
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                }
-                .os-row-desc {
-                    font-size: 12px;
-                    color: rgba(255,255,255,0.28);
-                    margin-top: 2px;
-                    line-height: 1.4;
-                }
-
-                /* ── Input row ── */
-                .os-input-row {
-                    padding: 12px 16px;
-                    border-bottom: 1px solid rgba(255,255,255,0.05);
-                }
-                .os-input-row:last-child { border-bottom: none; }
-                .os-input-label {
-                    font-size: 11px;
-                    font-weight: 600;
-                    letter-spacing: 0.04em;
-                    text-transform: uppercase;
-                    color: rgba(255,255,255,0.25);
-                    margin-bottom: 6px;
-                }
-                .os-input-row input {
-                    width: 100%;
-                    padding: 8px 12px;
-                    background: rgba(255,255,255,0.05) !important;
-                    border: 1px solid rgba(255,255,255,0.09) !important;
-                    border-radius: 8px !important;
-                    color: #e8e8ea !important;
-                    font-size: 13px !important;
-                    font-family: inherit !important;
-                    outline: none !important;
-                    transition: border-color 160ms, box-shadow 160ms !important;
-                    box-sizing: border-box;
-                }
-                .os-input-row input:focus {
-                    border-color: rgba(249,115,22,0.5) !important;
-                    box-shadow: 0 0 0 3px rgba(249,115,22,0.08) !important;
-                }
-                .os-input-row input::placeholder { color: rgba(255,255,255,0.18) !important; }
-
-                /* ── Input grid ── */
-                .os-input-grid {
-                    display: grid;
-                    grid-template-columns: 1fr 1fr;
-                    gap: 12px;
-                    padding: 12px 16px;
-                    border-bottom: 1px solid rgba(255,255,255,0.05);
-                }
-                .os-input-grid:last-child { border-bottom: none; }
-
-                /* ── Pill badge ── */
-                .os-pill {
-                    font-size: 11px;
-                    font-weight: 600;
-                    padding: 3px 9px;
-                    border-radius: 999px;
-                    letter-spacing: 0.04em;
-                }
-                .os-pill-green {
-                    background: rgba(34,197,94,0.1);
-                    color: #4ade80;
-                    border: 1px solid rgba(34,197,94,0.2);
-                }
-                .os-pill-gray {
-                    background: rgba(255,255,255,0.05);
-                    color: rgba(255,255,255,0.3);
-                    border: 1px solid rgba(255,255,255,0.07);
-                }
-
-                /* ── Path items ── */
-                .os-paths { padding: 8px; display: flex; flex-direction: column; gap: 4px; }
-                .os-path {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    padding: 9px 10px;
-                    border-radius: 8px;
-                    background: rgba(255,255,255,0.03);
-                    border: 1px solid rgba(255,255,255,0.05);
-                    transition: border-color 140ms;
-                }
-                .os-path:hover { border-color: rgba(255,255,255,0.1); }
-                .os-path-name {
-                    flex: 1;
-                    font-size: 12px;
-                    font-family: "SF Mono", "Fira Code", "Consolas", monospace;
-                    color: rgba(255,255,255,0.45);
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
-                }
-                .os-path-del {
-                    width: 24px; height: 24px;
-                    border-radius: 6px;
-                    border: none;
-                    background: transparent;
-                    color: rgba(255,255,255,0.2);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    cursor: pointer;
-                    flex-shrink: 0;
-                    transition: background 120ms, color 120ms;
-                    padding: 0;
-                }
-                .os-path-del:hover { background: rgba(239,68,68,0.15); color: #f87171; }
-
-                .os-paths-empty {
-                    padding: 20px 16px;
-                    font-size: 13px;
-                    color: rgba(255,255,255,0.2);
-                    text-align: center;
-                    font-style: italic;
-                }
-
-                .os-paths-footer {
-                    padding: 8px 12px 12px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    gap: 8px;
-                }
-
-                /* ── Scan button ── */
-                .os-scan-btn {
-                    display: flex;
-                    align-items: center;
-                    gap: 6px;
-                    padding: 6px 12px;
-                    border-radius: 7px;
-                    border: 1px solid rgba(249,115,22,0.25);
-                    background: rgba(249,115,22,0.07);
-                    color: rgba(249,115,22,0.8);
-                    font-size: 12px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    transition: all 160ms;
-                    font-family: inherit;
-                }
-                .os-scan-btn:hover:not(:disabled) {
-                    background: rgba(249,115,22,0.14);
-                    color: #f97316;
-                    border-color: rgba(249,115,22,0.4);
-                }
-                .os-scan-btn:disabled { opacity: 0.45; cursor: not-allowed; }
-
-                /* ── Save bar ── */
-                .os-save-bar {
-                    position: fixed;
-                    bottom: 0; left: 220px; right: 0;
-                    z-index: 50;
-                    height: 56px;
-                    background: rgba(17,17,19,0.92);
-                    backdrop-filter: blur(20px);
-                    -webkit-backdrop-filter: blur(20px);
-                    border-top: 1px solid rgba(255,255,255,0.06);
-                    display: flex;
-                    align-items: center;
-                    justify-content: flex-end;
-                    padding: 0 48px;
-                    gap: 12px;
-                }
-                @media (max-width: 900px) { .os-save-bar { left: 0; padding: 0 24px; } }
-
-                .os-save-hint {
-                    font-size: 12px;
-                    color: rgba(255,255,255,0.2);
-                }
-                .os-save-hint.dirty { color: rgba(249,115,22,0.6); }
-
-                .os-save-btn {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 7px;
-                    padding: 8px 20px;
-                    border-radius: 8px;
-                    font-size: 13px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    border: none;
-                    transition: all 180ms;
-                    font-family: inherit;
-                    letter-spacing: 0.01em;
-                }
-                .os-save-btn.idle {
-                    background: #f97316;
-                    color: #fff;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 0 0 1px rgba(249,115,22,0.4);
-                }
-                .os-save-btn.idle:hover {
-                    background: #fb923c;
-                    box-shadow: 0 2px 8px rgba(249,115,22,0.4), 0 0 0 1px rgba(249,115,22,0.5);
-                }
-                .os-save-btn.saving {
-                    background: rgba(249,115,22,0.3);
-                    color: rgba(255,255,255,0.5);
-                    cursor: not-allowed;
-                    box-shadow: none;
-                }
-                .os-save-btn.saved {
-                    background: rgba(34,197,94,0.1);
-                    color: #4ade80;
-                    border: 1px solid rgba(34,197,94,0.25);
-                    box-shadow: none;
-                }
-            `}</style>
-
-            <div className="os-page">
-                <Tabs defaultValue="library">
-                    <div className="os-shell">
-
-                        {/* ── Sidebar ── */}
-                        <TabsList style={{
-                            display: "flex", flexDirection: "column", height: "auto",
-                            background: "transparent", padding: 0, gap: 0,
-                        }} className="os-sidebar">
-                            <p className="os-sidebar-title">Configuración</p>
-
-                            {NAV_ITEMS.map(item => (
-                                <TabsTrigger
-                                    key={item.value}
-                                    value={item.value}
-                                    className="os-nav-item"
-                                >
-                                    <item.icon size={15} className="os-nav-icon" />
-                                    {item.label}
-                                </TabsTrigger>
-                            ))}
-
-                            <div className="os-sidebar-footer">
-                                <div className="os-online">
-                                    <div className="os-online-dot" />
-                                    Servidor activo
+            <div className="flex h-screen w-full bg-background overflow-hidden relative">
+                <Tabs defaultValue="library" className="flex w-full h-full">
+                    {/* Sidebar */}
+                    <TabsList 
+                        className={cn(
+                            "w-64 h-full glass-panel border-r border-white/5 rounded-none flex flex-col p-6 gap-2 items-stretch bg-black/20",
+                            "hidden lg:flex"
+                        )}
+                    >
+                        <div className="mb-8 px-2">
+                            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Configuración</h2>
+                        </div>
+                        {NAV_ITEMS.map(item => (
+                            <TabsTrigger 
+                                key={item.value} 
+                                value={item.value} 
+                                className={cn(
+                                    "justify-start gap-3 px-4 py-3 rounded-xl transition-all duration-300",
+                                    "data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-[inset_0_0_20px_rgba(249,115,22,0.05)]",
+                                    "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
+                                )}
+                            >
+                                <item.icon size={16} />
+                                <span className="text-[13px] font-semibold tracking-tight">{item.label}</span>
+                            </TabsTrigger>
+                        ))}
+                        <div className="mt-auto px-2 pt-6 border-t border-white/5">
+                            <div className="flex items-center gap-3 text-[10px] font-bold text-green-500/80 uppercase tracking-widest">
+                                <div className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                                 </div>
-                                <p className="os-version">KameHouse v3.5.0</p>
+                                Servidor Activo
                             </div>
-                        </TabsList>
+                            <p className="text-[9px] text-zinc-600 mt-2 uppercase tracking-[0.1em] font-black">KameHouse v3.5.0</p>
+                        </div>
+                    </TabsList>
 
-                        {/* ── Content ── */}
-                        <form
-                            onSubmit={form.handleSubmit(onSubmit)}
-                            className="os-main"
-                            style={{ flex: 1 }}
-                        >
-
+                    {/* Content Area */}
+                    <div className="flex-1 overflow-y-auto pb-48 pt-12 px-6 md:px-16 scroll-smooth">
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="max-w-3xl mx-auto space-y-16">
+                            
                             {/* ── Biblioteca ── */}
-                            <TabsContent value="library" className="m-0">
-                                <div className="os-heading">
-                                    <h1>Biblioteca</h1>
-                                    <p>Administrá tus carpetas de contenido y configurá el escáner.</p>
-                                </div>
+                            <TabsContent value="library" className="m-0 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <header className="space-y-2">
+                                    <h1 className="text-3xl font-black tracking-tighter text-white">Biblioteca</h1>
+                                    <p className="text-zinc-500 text-sm">Administrá tus carpetas de contenido y configurá el escáner.</p>
+                                </header>
 
-                                <div className="os-group">
+                                <div className="space-y-8">
                                     <ScannerProgress />
-                                </div>
-
-                                <div className="os-group">
-                                    <p className="os-group-label">Carpetas de contenido</p>
-                                    <div className="os-card">
+                                    
+                                    <Section label="Carpetas de contenido">
                                         <LibraryPathsManager form={form} />
-                                    </div>
-                                </div>
+                                    </Section>
 
-                                <div className="os-group">
-                                    <p className="os-group-label">Metadatos</p>
-                                    <div className="os-card">
-                                        <div className="os-input-row">
-                                            <p className="os-input-label">TMDB API Key</p>
-                                            <Input {...form.register("library.tmdbApiKey")} placeholder="Ingresá tu clave de TMDB..." />
-                                        </div>
-                                    </div>
-                                </div>
+                                    <Section label="Metadatos">
+                                        <Card>
+                                            <InputRow label="TMDB API Key" desc="Requerido para obtener información de películas y series.">
+                                                <Input {...form.register("library.tmdbApiKey")} className="bg-white/5 border-white/10" placeholder="Ingresá tu clave de TMDB..." />
+                                            </InputRow>
+                                        </Card>
+                                    </Section>
 
-                                <div className="os-group">
-                                    <p className="os-group-label">Comportamiento</p>
-                                    <div className="os-card">
-                                        <OsToggle control={form.control} name="library.autoScan"
-                                            label="Escaneo automático"
-                                            desc="Detecta cambios en carpetas y escanea automáticamente."
-                                            onSave={commitToggle} />
-                                        <OsToggle control={form.control} name="library.useFallbackMetadataProvider"
-                                            label="Proveedor de metadatos alternativo"
-                                            desc="Usa fuentes secundarias si el principal falla."
-                                            onSave={commitToggle} />
-                                        <OsToggle control={form.control} name="library.refreshLibraryOnStart"
-                                            label="Actualizar biblioteca al iniciar"
-                                            onSave={commitToggle} />
-                                    </div>
+                                    <Section label="Comportamiento">
+                                        <Card>
+                                            <OsToggle control={form.control} name="library.autoScan"
+                                                label="Escaneo automático"
+                                                desc="Detecta cambios en carpetas y escanea automáticamente."
+                                                onSave={commitToggle} />
+                                            <OsToggle control={form.control} name="library.useFallbackMetadataProvider"
+                                                label="Proveedor de metadatos alternativo"
+                                                desc="Usa fuentes secundarias si el principal falla."
+                                                onSave={commitToggle} />
+                                            <OsToggle control={form.control} name="library.refreshLibraryOnStart"
+                                                label="Actualizar biblioteca al iniciar"
+                                                onSave={commitToggle} />
+                                        </Card>
+                                    </Section>
                                 </div>
                             </TabsContent>
 
                             {/* ── Reproducción ── */}
-                            <TabsContent value="playback" className="m-0">
-                                <div className="os-heading">
-                                    <h1>Reproducción</h1>
-                                    <p>Controlá cómo se reproduce el contenido en tu biblioteca.</p>
-                                </div>
+                            <TabsContent value="playback" className="m-0 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <header className="space-y-2">
+                                    <h1 className="text-3xl font-black tracking-tighter text-white">Reproducción</h1>
+                                    <p className="text-zinc-500 text-sm">Controlá cómo se reproduce el contenido en tu biblioteca.</p>
+                                </header>
 
-                                <div className="os-group">
-                                    <p className="os-group-label">General</p>
-                                    <div className="os-card">
-                                        <OsToggle control={form.control} name="library.autoPlayNextEpisode"
-                                            label="Auto-play siguiente episodio"
-                                            desc="Reproduce el próximo automáticamente al terminar uno."
-                                            onSave={commitToggle} />
-                                        <OsToggle control={form.control} name="library.enableWatchContinuity"
-                                            label="Continuar viendo"
-                                            desc="Recuerda desde dónde dejaste cada episodio."
-                                            onSave={commitToggle} />
-                                        <OsToggle control={form.control} name="library.disableAnimeCardTrailers"
-                                            label="Desactivar trailers en catálogo"
-                                            onSave={commitToggle} />
-                                    </div>
-                                </div>
+                                <div className="space-y-8">
+                                    <Section label="General">
+                                        <Card>
+                                            <OsToggle control={form.control} name="library.autoPlayNextEpisode"
+                                                label="Auto-play siguiente episodio"
+                                                desc="Reproduce el próximo automáticamente al terminar uno."
+                                                onSave={commitToggle} />
+                                            <OsToggle control={form.control} name="library.enableWatchContinuity"
+                                                label="Continuar viendo"
+                                                desc="Recuerda desde dónde dejaste cada episodio."
+                                                onSave={commitToggle} />
+                                            <OsToggle control={form.control} name="library.disableAnimeCardTrailers"
+                                                label="Desactivar trailers en catálogo"
+                                                onSave={commitToggle} />
+                                        </Card>
+                                    </Section>
 
-                                <div className="os-group">
-                                    <p className="os-group-label">Transcodificación</p>
-                                    <div className="os-card">
-                                        <OsToggle control={form.control} name="mediastream.transcodeEnabled"
-                                            label="Activar transcodificación"
-                                            desc="El servidor procesa archivos incompatibles en tiempo real."
-                                            onSave={commitToggle} />
-                                        <OsToggle control={form.control} name="mediastream.directPlayOnly"
-                                            label="Solo reproducción directa"
-                                            desc="Nunca transcodifica — puede fallar en algunos formatos."
-                                            onSave={commitToggle} />
-                                        <OsToggle control={form.control} name="mediastream.preTranscodeEnabled"
-                                            label="Pre-transcodificar"
-                                            desc="Procesa el archivo antes de que empiece la reproducción."
-                                            onSave={commitToggle} />
-                                    </div>
+                                    <Section label="Transcodificación">
+                                        <Card>
+                                            <OsToggle control={form.control} name="mediastream.transcodeEnabled"
+                                                label="Activar transcodificación"
+                                                desc="El servidor procesa archivos incompatibles en tiempo real."
+                                                onSave={commitToggle} />
+                                            <OsToggle control={form.control} name="mediastream.directPlayOnly"
+                                                label="Solo reproducción directa"
+                                                desc="Nunca transcodifica — puede fallar en algunos formatos."
+                                                onSave={commitToggle} />
+                                            <OsToggle control={form.control} name="mediastream.preTranscodeEnabled"
+                                                label="Pre-transcodificar"
+                                                desc="Procesa el archivo antes de que empiece la reproducción."
+                                                onSave={commitToggle} />
+                                        </Card>
+                                    </Section>
                                 </div>
                             </TabsContent>
 
                             {/* ── Debrid ── */}
-                            <TabsContent value="streaming" className="m-0">
-                                <div className="os-heading">
-                                    <h1>Debrid & Cloud</h1>
-                                    <p>Conectá servicios externos para streaming instantáneo.</p>
-                                </div>
+                            <TabsContent value="streaming" className="m-0 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <header className="space-y-2">
+                                    <h1 className="text-3xl font-black tracking-tighter text-white">Debrid & Cloud</h1>
+                                    <p className="text-zinc-500 text-sm">Conectá servicios externos para streaming instantáneo.</p>
+                                </header>
 
-                                <div className="os-group">
-                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                                        <p className="os-group-label" style={{ margin: 0 }}>Servicio Debrid</p>
-                                        <span className={`os-pill ${form.watch("debrid.enabled") ? "os-pill-green" : "os-pill-gray"}`}>
-                                            {form.watch("debrid.enabled") ? "Activo" : "Inactivo"}
-                                        </span>
-                                    </div>
-                                    <div className="os-card">
-                                        <OsToggle control={form.control} name="debrid.enabled"
-                                            label="Activar servicio"
-                                            desc="Habilita la integración con Real-Debrid u otros proveedores."
-                                            onSave={commitToggle} />
-                                        <div className="os-input-row">
-                                            <p className="os-input-label">API Token</p>
-                                            <Input {...form.register("debrid.apiKey")} type="password" placeholder="Real-Debrid / AllDebrid token..." />
-                                        </div>
-                                        <OsToggle control={form.control} name="debrid.streamAutoSelect"
-                                            label="Selección automática del stream"
-                                            desc="Elige el mejor stream disponible sin intervención manual."
-                                            onSave={commitToggle} />
-                                        <OsToggle control={form.control} name="debrid.includeDebridStreamInLibrary"
-                                            label="Incluir en biblioteca"
-                                            onSave={commitToggle} />
-                                        <div className="os-input-row">
-                                            <p className="os-input-label">Torrentio Addon URL</p>
-                                            <Input {...form.register("debrid.torrentioUrl")} placeholder="https://torrentio.strem.fun/..." />
-                                        </div>
-                                    </div>
+                                <div className="space-y-8">
+                                    <Section label="Servicio Debrid" right={<span className={cn("os-pill", form.watch("debrid.enabled") ? "os-pill-green" : "os-pill-gray")}>{form.watch("debrid.enabled") ? "Activo" : "Inactivo"}</span>}>
+                                        <Card>
+                                            <OsToggle control={form.control} name="debrid.enabled"
+                                                label="Activar servicio"
+                                                desc="Habilita la integración con Real-Debrid u otros proveedores."
+                                                onSave={commitToggle} />
+                                            <InputRow label="API Token">
+                                                <Input {...form.register("debrid.apiKey")} type="password" placeholder="Real-Debrid / AllDebrid token..." />
+                                            </InputRow>
+                                            <OsToggle control={form.control} name="debrid.streamAutoSelect"
+                                                label="Selección automática del stream"
+                                                desc="Elige el mejor stream disponible sin intervención manual."
+                                                onSave={commitToggle} />
+                                            <OsToggle control={form.control} name="debrid.includeDebridStreamInLibrary"
+                                                label="Incluir en biblioteca"
+                                                onSave={commitToggle} />
+                                            <InputRow label="Torrentio Addon URL">
+                                                <Input {...form.register("debrid.torrentioUrl")} placeholder="https://torrentio.strem.fun/..." />
+                                            </InputRow>
+                                        </Card>
+                                    </Section>
                                 </div>
                             </TabsContent>
 
                             {/* ── Torrent ── */}
-                            <TabsContent value="torrent" className="m-0">
-                                <div className="os-heading">
-                                    <h1>Torrents</h1>
-                                    <p>Configurá tu cliente de descargas local.</p>
-                                </div>
+                            <TabsContent value="torrent" className="m-0 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <header className="space-y-2">
+                                    <h1 className="text-3xl font-black tracking-tighter text-white">Torrents</h1>
+                                    <p className="text-zinc-500 text-sm">Configurá tu cliente de descargas local.</p>
+                                </header>
 
-                                <div className="os-group">
-                                    <p className="os-group-label">qBittorrent</p>
-                                    <div className="os-card">
-                                        <div className="os-input-row">
-                                            <p className="os-input-label">Host</p>
-                                            <Input {...form.register("torrent.qbittorrentHost")} placeholder="http://localhost" />
-                                        </div>
-                                        <div className="os-input-grid">
-                                            <div>
-                                                <p className="os-input-label">Usuario</p>
-                                                <Input {...form.register("torrent.qbittorrentUsername")} placeholder="admin" />
+                                <div className="space-y-8">
+                                    <Section label="qBittorrent">
+                                        <Card>
+                                            <InputRow label="Host">
+                                                <Input {...form.register("torrent.qbittorrentHost")} placeholder="http://localhost" />
+                                            </InputRow>
+                                            <div className="grid grid-cols-2 gap-4 px-4 py-3">
+                                                <div className="space-y-1.5">
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 px-1">Usuario</p>
+                                                    <Input {...form.register("torrent.qbittorrentUsername")} placeholder="admin" />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 px-1">Contraseña</p>
+                                                    <Input {...form.register("torrent.qbittorrentPassword")} type="password" placeholder="••••••" />
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="os-input-label">Contraseña</p>
-                                                <Input {...form.register("torrent.qbittorrentPassword")} type="password" placeholder="••••••" />
-                                            </div>
-                                        </div>
-                                        <OsToggle control={form.control} name="torrent.showActiveTorrentCount"
-                                            label="Mostrar contador de descargas activas"
-                                            onSave={commitToggle} />
-                                        <OsToggle control={form.control} name="torrent.hideTorrentList"
-                                            label="Ocultar lista de torrents"
-                                            onSave={commitToggle} />
-                                    </div>
+                                            <OsToggle control={form.control} name="torrent.showActiveTorrentCount"
+                                                label="Mostrar contador de descargas activas"
+                                                onSave={commitToggle} />
+                                            <OsToggle control={form.control} name="torrent.hideTorrentList"
+                                                label="Ocultar lista de torrents"
+                                                onSave={commitToggle} />
+                                        </Card>
+                                    </Section>
                                 </div>
                             </TabsContent>
 
                             {/* ── Apariencia ── */}
-                            <TabsContent value="appearance" className="m-0">
-                                <div className="os-heading">
-                                    <h1>Apariencia</h1>
-                                    <p>Personalizá los efectos visuales y el comportamiento de la interfaz.</p>
-                                </div>
+                            <TabsContent value="appearance" className="m-0 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <header className="space-y-2">
+                                    <h1 className="text-3xl font-black tracking-tighter text-white">Apariencia</h1>
+                                    <p className="text-zinc-500 text-sm">Personalizá los efectos visuales y el comportamiento de la interfaz.</p>
+                                </header>
 
-                                <div className="os-group">
-                                    <p className="os-group-label">Efectos</p>
-                                    <div className="os-card">
-                                        <OsToggle control={form.control} name="theme.enableBlurringEffects"
-                                            label="Efectos de desenfoque"
-                                            desc="Activa el backdrop-blur en toda la interfaz."
-                                            onSave={commitToggle} />
-                                        <OsToggle control={form.control} name="theme.enableMediaCardBlurredBackground"
-                                            label="Fondo difuminado en tarjetas"
-                                            onSave={commitToggle} />
-                                        <OsToggle control={form.control} name="theme.enableMediaPageBlurredBackground"
-                                            label="Fondo difuminado en páginas de detalle"
-                                            onSave={commitToggle} />
-                                    </div>
-                                </div>
+                                <div className="space-y-8">
+                                    <Section label="Efectos">
+                                        <Card>
+                                            <OsToggle control={form.control} name="theme.enableBlurringEffects"
+                                                label="Efectos de desenfoque"
+                                                desc="Activa el backdrop-blur en toda la interfaz."
+                                                onSave={commitToggle} />
+                                            <OsToggle control={form.control} name="theme.enableMediaCardBlurredBackground"
+                                                label="Fondo difuminado en tarjetas"
+                                                onSave={commitToggle} />
+                                            <OsToggle control={form.control} name="theme.enableMediaPageBlurredBackground"
+                                                label="Fondo difuminado en páginas de detalle"
+                                                onSave={commitToggle} />
+                                        </Card>
+                                    </Section>
 
-                                <div className="os-group">
-                                    <p className="os-group-label">Navegación</p>
-                                    <div className="os-card">
-                                        <OsToggle control={form.control} name="theme.expandSidebarOnHover"
-                                            label="Sidebar se expande al pasar el cursor"
-                                            onSave={commitToggle} />
-                                        <OsToggle control={form.control} name="theme.hideTopNavbar"
-                                            label="Ocultar barra superior"
-                                            desc="Más espacio en pantalla, menos elementos de navegación."
-                                            onSave={commitToggle} />
-                                    </div>
+                                    <Section label="Navegación">
+                                        <Card>
+                                            <OsToggle control={form.control} name="theme.expandSidebarOnHover"
+                                                label="Sidebar se expande al pasar el cursor"
+                                                onSave={commitToggle} />
+                                            <OsToggle control={form.control} name="theme.hideTopNavbar"
+                                                label="Ocultar barra superior"
+                                                desc="Más espacio en pantalla, menos elementos de navegación."
+                                                onSave={commitToggle} />
+                                        </Card>
+                                    </Section>
                                 </div>
                             </TabsContent>
-
-
                         </form>
                     </div>
 
-                    {/* ── Save bar ── */}
-                    <div className="os-save-bar">
-                        <span className={`os-save-hint ${isDirty ? "dirty" : ""}`}>
-                            {saveState === "saved"
-                                ? "Cambios guardados"
-                                : isDirty
-                                    ? "Tenés cambios sin guardar"
-                                    : ""}
-                        </span>
-                        <button
-                            type="button"
-                            disabled={saveState === "saving"}
-                            onClick={form.handleSubmit(onSubmit)}
-                            className={`os-save-btn ${saveState}`}
-                        >
-                            {saveState === "saved"
-                                ? <><LucideCheckCircle2 size={14} /> Guardado</>
-                                : saveState === "saving"
-                                    ? <><LucideRefreshCw size={14} style={{ animation: "os-spin 0.8s linear infinite" }} /> Guardando...</>
-                                    : <><LucideSave size={14} /> Guardar</>
-                            }
-                        </button>
-                    </div>
+                    {/* ── Save bar (Premium Floating Toast) ── */}
+                    <AnimatePresence>
+                        {isDirty && (
+                            <motion.div 
+                                initial={{ y: 100, opacity: 0, scale: 0.9 }}
+                                animate={{ y: 0, opacity: 1, scale: 1 }}
+                                exit={{ y: 100, opacity: 0, scale: 0.9 }}
+                                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50"
+                            >
+                                <div className="glass-panel-premium px-8 py-4 flex items-center gap-10 rounded-[2rem] border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+                                    <div className="flex flex-col">
+                                        <span className={cn(
+                                            "text-xs font-black uppercase tracking-widest",
+                                            saveState === "saved" ? "text-green-500" : "text-primary"
+                                        )}>
+                                            {saveState === "saved" ? "Sincronizado" : "Cambios Pendientes"}
+                                        </span>
+                                        <span className="text-[11px] text-zinc-400 font-medium">
+                                            {saveState === "saved" ? "Tus ajustes están al día" : "Tenés cambios sin guardar en tu perfil"}
+                                        </span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        disabled={saveState === "saving"}
+                                        onClick={form.handleSubmit(onSubmit)}
+                                        className={cn(
+                                            "flex items-center gap-2.5 px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300",
+                                            saveState === "saving" 
+                                                ? "bg-zinc-800 text-zinc-500 cursor-not-allowed" 
+                                                : "bg-primary text-primary-foreground shadow-[0_0_20px_rgba(249,115,22,0.3)] hover:shadow-[0_0_30px_rgba(249,115,22,0.5)] hover:scale-105 active:scale-95"
+                                        )}
+                                    >
+                                        {saveState === "saving" ? (
+                                            <LucideRefreshCw size={14} className="animate-spin" />
+                                        ) : (
+                                            <LucideSave size={14} />
+                                        )}
+                                        {saveState === "saving" ? "Guardando" : "Guardar"}
+                                    </button>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </Tabs>
             </div>
         </>
     )
 }
 
-// ─── OS Toggle Row ────────────────────────────────────────────────────────────
+// ─── OS Components ────────────────────────────────────────────────────────────
+
+function Section({ label, children, right }: { label: string; children: React.ReactNode; right?: React.ReactNode }) {
+    return (
+        <div className="space-y-4">
+            <div className="flex items-center justify-between px-2">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">{label}</p>
+                {right}
+            </div>
+            {children}
+        </div>
+    )
+}
+
+function Card({ children, className }: { children: React.ReactNode; className?: string }) {
+    return (
+        <div className={cn("glass-panel overflow-hidden bg-white/[0.02] border-white/5", className)}>
+            {children}
+        </div>
+    )
+}
+
+function InputRow({ label, children, desc }: { label: string; children: React.ReactNode; desc?: string }) {
+    return (
+        <div className="px-4 py-4 border-b border-white/5 last:border-0 hover:bg-white/[0.01] transition-colors">
+            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2 px-1">{label}</p>
+            {children}
+            {desc && <p className="mt-2 px-1 text-[11px] text-zinc-600 leading-relaxed">{desc}</p>}
+        </div>
+    )
+}
 
 function OsToggle({ control, name, label, desc, onSave }: any) {
     return (
@@ -878,10 +522,10 @@ function OsToggle({ control, name, label, desc, onSave }: any) {
             control={control}
             name={name}
             render={({ field }) => (
-                <div className="os-row">
-                    <div className="os-row-left">
-                        <p className="os-row-label">{label}</p>
-                        {desc && <p className="os-row-desc">{desc}</p>}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-white/5 last:border-0 hover:bg-white/[0.01] transition-colors gap-8">
+                    <div className="space-y-1">
+                        <p className="text-sm font-semibold text-zinc-200 tracking-tight">{label}</p>
+                        {desc && <p className="text-xs text-zinc-500 leading-normal max-w-md">{desc}</p>}
                     </div>
                     <Switch
                         value={!!field.value}
@@ -919,22 +563,28 @@ function LibraryPathsManager({ form }: { form: any }) {
     }
 
     return (
-        <>
+        <Card>
             {paths.length === 0
-                ? <div className="os-paths-empty">No hay carpetas configuradas.</div>
-                : <div className="os-paths">
+                ? <div className="px-6 py-10 text-center text-zinc-600 italic text-sm">No hay carpetas configuradas en tu biblioteca local.</div>
+                : <div className="p-2 space-y-1">
                     {paths.map((p: string) => (
-                        <div key={p} className="os-path">
-                            <LucideFolder size={13} style={{ color: "rgba(249,115,22,0.6)", flexShrink: 0 }} />
-                            <span className="os-path-name">{p}</span>
-                            <button type="button" className="os-path-del" onClick={() => removePath(p)}>
-                                <LucideTrash2 size={12} />
+                        <div key={p} className="flex items-center gap-4 px-4 py-3 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-white/10 hover:bg-white/5 transition-all group/path shadow-sm">
+                            <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover/path:scale-110 transition-transform">
+                                <LucideFolder size={16} className="text-primary" />
+                            </div>
+                            <span className="flex-1 font-mono text-[11px] text-zinc-400 truncate tracking-tight">{p}</span>
+                            <button 
+                                type="button" 
+                                className="p-2 rounded-xl text-zinc-600 hover:text-rose-400 hover:bg-rose-400/10 transition-all opacity-0 group-hover/path:opacity-100" 
+                                onClick={() => removePath(p)}
+                            >
+                                <LucideTrash2 size={16} />
                             </button>
                         </div>
                     ))}
                 </div>
             }
-            <div className="os-paths-footer">
+            <div className="px-4 py-3 bg-black/20 flex items-center justify-between gap-4 border-t border-white/5">
                 <DirectorySelector
                     value=""
                     onSelect={(p) => addPath(p)}
@@ -943,14 +593,19 @@ function LibraryPathsManager({ form }: { form: any }) {
                 />
                 <button
                     type="button"
-                    className="os-scan-btn"
+                    className={cn(
+                        "flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all",
+                        isScanning 
+                            ? "text-zinc-500 bg-white/5" 
+                            : "text-primary bg-primary/10 hover:bg-primary/20 hover:scale-105 active:scale-95"
+                    )}
                     disabled={isScanning}
                     onClick={() => scanLibrary({ enhanced: false, enhanceWithOfflineDatabase: false, skipLockedFiles: false, skipIgnoredFiles: false })}
                 >
-                    <LucideRefreshCw size={12} style={isScanning ? { animation: "os-spin 0.8s linear infinite" } : {}} />
-                    {isScanning ? "Escaneando..." : "Escanear"}
+                    <LucideRefreshCw size={14} className={cn(isScanning && "animate-spin")} />
+                    {isScanning ? "Escaneando" : "Escanear"}
                 </button>
             </div>
-        </>
+        </Card>
     )
 }

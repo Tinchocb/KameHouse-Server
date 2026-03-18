@@ -19,8 +19,25 @@ export function LoadingOverlayWithLogo({ refetch, title }: { refetch?: () => voi
         return () => clearTimeout(timer)
     }, [])
 
-    return <LoadingOverlay showSpinner={false}>
-        <SeaImage
+    return (
+        <LoadingOverlay showSpinner={false}>
+            {/* Cinematic Background Decoration */}
+            <div className="absolute inset-0 pointer-events-none opacity-[0.05]">
+                <svg className="w-full h-full" viewBox="0 0 900 320" preserveAspectRatio="xMidYMid slice">
+                    {Array.from({ length: 40 }).map((_, i) => (
+                        <line
+                            key={i}
+                            x1="450" y1="160"
+                            x2={450 + Math.cos((i / 40) * Math.PI * 2) * 1200}
+                            y2={160 + Math.sin((i / 40) * Math.PI * 2) * 1200}
+                            stroke="white"
+                            strokeWidth={i % 5 === 0 ? "2" : "0.5"}
+                        />
+                    ))}
+                </svg>
+            </div>
+            
+            <SeaImage
             src="/kamehouse-logo.png"
             alt="Loading..."
             priority
@@ -69,4 +86,5 @@ export function LoadingOverlayWithLogo({ refetch, title }: { refetch?: () => voi
             >Recargar</Button>
         )}
     </LoadingOverlay>
+    )
 }

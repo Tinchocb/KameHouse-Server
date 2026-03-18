@@ -1,7 +1,9 @@
 import { ScanLogViewer } from "@/app/scan-log-viewer/scan-log-viewer"
 import React, { useCallback, useEffect, useRef, useState } from "react"
 import { BiTrash, BiUpload } from "react-icons/bi"
+import { LuFileSearch, LuTrash2, LuUploadCloud, LuZap } from "react-icons/lu"
 import { toast } from "sonner"
+import { cn } from "@/components/ui/core/styling"
 
 const DB_NAME = "kamehouse-scan-logs-db"
 const STORE_NAME = "logs"
@@ -34,7 +36,7 @@ const saveLogToDB = async (content: string) => {
     }
     catch (error) {
         console.error("Failed to save log to DB:", error)
-        toast.error("Failed to save log to browser storage")
+        toast.error("Error al guardar en el almacenamiento local")
     }
 }
 
@@ -83,7 +85,7 @@ export default function Page() {
         getLogFromDB().then((savedContent) => {
             if (savedContent) {
                 setContent(savedContent)
-                toast.success("Restored previous scan log")
+                toast.success("Registro de escaneo restaurado")
             }
             setIsLoading(false)
         })
@@ -95,9 +97,9 @@ export default function Page() {
             const result = e.target?.result as string
             setContent(result)
             toast.promise(saveLogToDB(result), {
-                loading: "Saving log locally...",
-                success: "Log saved for future sessions",
-                error: "Failed to save log",
+                loading: "Analizando fragmentos...",
+                success: "Registro persistido exitosamente",
+                error: "Error al sincronizar el registro",
             })
         }
         reader.readAsText(file)
@@ -106,7 +108,7 @@ export default function Page() {
     const handleClear = useCallback(async () => {
         await clearLogFromDB()
         setContent("")
-        toast.success("Cleared saved log")
+        toast.success("Registro eliminado de la bóveda")
     }, [])
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -147,38 +149,60 @@ export default function Page() {
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center min-h-screen text-[--muted]">
-                <p>Loading saved logs...</p>
+            <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+                <LuZap className="w-8 h-8 text-primary animate-pulse" />
+                <p className="font-bebas text-xl tracking-[0.2em] text-zinc-500">ACCEDIENDO A LA BÓVEDA...</p>
             </div>
         )
     }
 
     return (
         <div
-            className="container mx-auto p-4 min-h-screen relative"
+            className="flex-1 w-full min-h-screen bg-background text-zinc-200 selection:bg-primary/30"
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
             onDragOver={handleDragOver}
             onDrop={handleDrop}
         >
-            {isDragging && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/80 backdrop-blur-sm">
-                    <div className="flex flex-col items-center gap-3 p-8 border-2 border-dashed border-indigo-500 rounded-xl bg-gray-900/50">
-                        <BiUpload className="text-4xl text-indigo-400" />
-                        <p className="text-lg font-medium text-indigo-300">Drop log file</p>
+            {/* ── Cinematic Drop Overlay ── */}
+            <div className={cn(
+                "fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-2xl transition-all duration-500 pointer-events-none",
+                isDragging ? "opacity-100 scale-100" : "opacity-0 scale-105"
+            )}>
+                <div className="flex flex-col items-center gap-6 p-16 rounded-[40px] border-2 border-dashed border-primary/40 bg-primary/5 shadow-[0_0_100px_rgba(249,115,22,0.1)]">
+                    <div className="relative">
+                        <LuUploadCloud className="w-24 h-24 text-primary animate-bounce-subtle" />
+                        <div className="absolute inset-0 bg-primary/20 blur-[40px] rounded-full animate-pulse" />
+                    </div>
+                    <div className="text-center space-y-2">
+                        <h2 className="font-bebas text-5xl tracking-[0.05em] text-white">DEPOSITAR REGISTRO</h2>
+                        <p className="text-sm font-bold text-primary tracking-widest uppercase opacity-70">Suelta el archivo para iniciar el análisis</p>
                     </div>
                 </div>
-            )}
+            </div>
 
-            <div className="mb-4">
-                <div className="flex items-center gap-4 justify-between">
+            <div className="max-w-[1400px] mx-auto px-6 md:px-14 pt-12 pb-24">
+                {/* ── Header Wrapper ── */}
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                            <div className="h-[2px] w-8 bg-primary shadow-[0_0_15px_rgba(249,115,22,0.5)]" />
+                            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/80 italic">Data Forensics</span>
+                        </div>
+                        <h1 className="font-bebas text-6xl md:text-8xl leading-none tracking-tight text-white m-0">
+                            ANALIZADOR DE <span className="text-transparent stroke-text opacity-40">LOGS</span>
+                        </h1>
+                        <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest max-w-lg">
+                            Herramienta de diagnóstico profundo para la traza de escaneo y sincronización de metadatos.
+                        </p>
+                    </div>
+
                     <div className="flex items-center gap-4">
-                        <h1 className="text-xl font-bold text-gray-200 tracking-tight">Scan Log Analyzer</h1>
-                        <label
-                            className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 border border-[--border] rounded-md cursor-pointer hover:bg-gray-700 transition-colors text-sm text-gray-300"
-                        >
-                            <BiUpload />
-                            <span>{content ? "Load another file" : "Load scan log file"}</span>
+                        <label className="group relative flex items-center gap-3 px-6 py-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 rounded-xl cursor-pointer transition-all duration-300 shadow-xl active:scale-95">
+                            <LuFileSearch className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
+                            <span className="font-bebas text-lg tracking-[0.1em] text-white">
+                                {content ? "CAMBIAR ORIGEN" : "CARGAR REGISTRO"}
+                            </span>
                             <input
                                 type="file"
                                 ref={fileInputRef}
@@ -186,21 +210,39 @@ export default function Page() {
                                 accept=".log,.txt"
                                 className="hidden"
                             />
+                            <div className="absolute -bottom-1 left-4 right-4 h-[2px] bg-primary opacity-0 group-hover:opacity-100 transition-opacity blur-[1px]" />
                         </label>
-                    </div>
 
-                    {content && (
-                        <button
-                            onClick={handleClear}
-                            className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-950/30 rounded-md transition-colors"
-                        >
-                            <BiTrash />
-                            Clear log
-                        </button>
-                    )}
+                        {content && (
+                            <button
+                                onClick={handleClear}
+                                className="p-3 text-zinc-500 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all duration-300"
+                                title="Limpiar bóveda"
+                            >
+                                <LuTrash2 className="w-6 h-6" />
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* ── Main Viewport ── */}
+                <div className="animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
+                    <ScanLogViewer content={content} />
                 </div>
             </div>
-            <ScanLogViewer content={content} />
+
+            <style>{`
+                .stroke-text {
+                    -webkit-text-stroke: 1.5px white;
+                }
+                @keyframes bounce-subtle {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-10px); }
+                }
+                .animate-bounce-subtle {
+                    animation: bounce-subtle 2s ease-in-out infinite;
+                }
+            `}</style>
         </div>
     )
 }
