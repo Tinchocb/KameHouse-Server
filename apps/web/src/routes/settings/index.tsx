@@ -16,12 +16,13 @@ import {
     LucideLibrary, LucidePlay, LucideCloud, LucideDownload,
     LucidePalette, LucideFolder, LucideTrash2,
     LucideSave, LucideRefreshCw, LucideCheckCircle2,
-    LucideHardDrive, LucideSettings,
+    LucideHardDrive, LucideSettings, LucideRadar,
 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/components/ui/core/styling"
 import { Select } from "@/components/ui/select"
 import type { SaveSettings_Variables } from "@/api/generated/endpoint.types"
+import { ScannerDashboard } from "@/components/ui/scanner/ScannerDashboard"
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -58,6 +59,9 @@ const settingsSchema = z.object({
         disableTorrentStreaming: z.boolean().default(false),
         disableTorrentProvider: z.boolean().default(false),
         primaryMetadataProvider: z.string().default("tmdb"),
+        fanartApiKey: z.string().default(""),
+        omdbApiKey: z.string().default(""),
+        openSubsApiKey: z.string().default(""),
     }).default({}),
     mediaPlayer: z.object({
         defaultPlayer: z.string().default(""),
@@ -130,6 +134,7 @@ export const Route = createFileRoute("/settings/")({
 
 const NAV_ITEMS = [
     { value: "library",    icon: LucideLibrary,  label: "Biblioteca"      },
+    { value: "scanner",    icon: LucideRadar,    label: "Scanner"         },
     { value: "playback",   icon: LucidePlay,     label: "Reproducción"    },
     { value: "streaming",  icon: LucideCloud,    label: "Streaming"       },
     { value: "appearance", icon: LucidePalette,  label: "Apariencia"      },
@@ -222,6 +227,10 @@ function SettingsPage() {
 
                     {/* Content Area */}
                     <div className="flex-1 overflow-y-auto pb-48 pt-12 px-6 md:px-16 scroll-smooth">
+                        <TabsContent value="scanner" className="m-0 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+                             <ScannerDashboard />
+                         </TabsContent>
+
                         <form onSubmit={form.handleSubmit(onSubmit)} className="max-w-3xl mx-auto space-y-16">
                             
                             {/* ── Biblioteca ── */}
@@ -238,13 +247,22 @@ function SettingsPage() {
                                         <LibraryPathsManager form={form} />
                                     </Section>
 
-                                    <Section label="Metadatos">
-                                        <Card>
-                                            <InputRow label="TMDB API Key" desc="Requerido para obtener información de películas y series.">
-                                                <Input {...form.register("library.tmdbApiKey")} className="bg-white/5 border-white/10" placeholder="Ingresá tu clave de TMDB..." />
-                                            </InputRow>
-                                        </Card>
-                                    </Section>
+                                     <Section label="Metadatos">
+                                         <Card>
+                                             <InputRow label="TMDB API Key" desc="Requerido para obtener información de películas y series.">
+                                                 <Input {...form.register("library.tmdbApiKey")} className="bg-white/5 border-white/10" placeholder="Ingresá tu clave de TMDB..." />
+                                             </InputRow>
+                                             <InputRow label="FanArt.tv API Key" desc="Usado para obtener logos en HD, ClearArt y banners de alta calidad.">
+                                                 <Input {...form.register("library.fanartApiKey")} className="bg-white/5 border-white/10" placeholder="Ingresá tu clave de FanArt.tv..." />
+                                             </InputRow>
+                                             <InputRow label="OMDb API Key" desc="Usado para obtener calificaciones de IMDb, director, premios y más.">
+                                                 <Input {...form.register("library.omdbApiKey")} className="bg-white/5 border-white/10" placeholder="Ingresá tu clave de OMDb..." />
+                                             </InputRow>
+                                             <InputRow label="OpenSubtitles API Key" desc="Requerido para buscar y descargar subtítulos remotos automáticamente.">
+                                                 <Input {...form.register("library.openSubsApiKey")} className="bg-white/5 border-white/10" placeholder="Ingresá tu clave de OpenSubtitles..." />
+                                             </InputRow>
+                                         </Card>
+                                     </Section>
 
                                     <Section label="Comportamiento">
                                         <Card>
@@ -258,6 +276,40 @@ function SettingsPage() {
                                                 onSave={commitToggle} />
                                             <OsToggle control={form.control} name="library.refreshLibraryOnStart"
                                                 label="Actualizar biblioteca al iniciar"
+                                                onSave={commitToggle} />
+                                        </Card>
+                                    </Section>
+
+                                    <Section label="Escáner Avanzado">
+                                        <Card>
+                                            <div className="px-5 py-4 flex items-center justify-between border-b border-white/5">
+                                                <div className="space-y-1">
+                                                    <p className="text-sm font-semibold text-zinc-200">Umbral de confianza</p>
+                                                    <p className="text-xs text-zinc-500">Mínimo requerido (0-1) para identificar un archivo automáticamente.</p>
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    <span className="text-xs font-mono text-primary bg-primary/10 px-2 py-1 rounded">
+                                                        {form.watch("library.scannerMatchingThreshold")}
+                                                    </span>
+                                                    <Input 
+                                                        type="range" 
+                                                        min="0" max="1" step="0.05"
+                                                        {...form.register("library.scannerMatchingThreshold", { valueAsNumber: true })}
+                                                        className="w-32 h-1.5 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-primary"
+                                                        onChange={(e) => {
+                                                            form.setValue("library.scannerMatchingThreshold", parseFloat(e.target.value))
+                                                            commitToggle()
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <OsToggle control={form.control} name="library.scannerStrictStructure"
+                                                label="Estructura Estricta"
+                                                desc="Solo reconoce archivos que sigan el patrón Nombre/Temporada/Episodio."
+                                                onSave={commitToggle} />
+                                            <OsToggle control={form.control} name="library.scannerUseLegacyMatching"
+                                                label="Usar Algoritmo Legado"
+                                                desc="Usa la lógica de búsqueda original en lugar del motor Bayesiano."
                                                 onSave={commitToggle} />
                                         </Card>
                                     </Section>

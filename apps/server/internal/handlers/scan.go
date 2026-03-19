@@ -103,6 +103,9 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		AnimeCollection:            ac,
 		UseTMDB:                    h.App.Settings.GetLibrary().ScannerProvider == "tmdb",
 		TMDBClient:                 h.App.Metadata.TMDBClient,
+		FanArtEnricher:             h.App.Metadata.FanArt,
+		OMDbEnricher:               h.App.Metadata.OMDb,
+		OpenSubsEnricher:           h.App.Metadata.OpenSubs,
 	}
 
 	// Scan the library
@@ -138,4 +141,34 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 
 	return h.RespondWithData(c, lfs)
 
+}
+
+// HandleGetScanStatus
+//
+//	@summary returns the latest scan summary.
+//	@desc Returns metadata about the most recent library scan:
+//	@desc  - timestamp, duration, matched/unmatched file counts, errors.
+//	@desc Clients can poll this endpoint instead of relying solely on WebSocket events.
+//	@route /api/v1/library/scan/status [GET]
+//	@returns dto.ScanSummaryItem
+func (h *Handler) HandleGetScanStatus(c echo.Context) error {
+	summaries, err := db.GetScanSummaries(h.App.Database)
+	if err != nil {
+		return h.RespondWithError(c, err)
+	}
+
+	if len(summaries) == 0 {
+		return h.RespondWithData(c, map[string]any{
+			"status":  "idle",
+			"message": "No scan has been performed yet",
+		})
+	}
+
+	// Return the most recent summary (GetScanSummaries returns them in insertion order).
+	latest := summaries[len(summaries)-1]
+	return h.RespondWithData(c, map[string]any{
+		"status":      "done",
+		"lastScanAt":  latest.CreatedAt,
+		"summary":     latest.ScanSummary,
+	})
 }

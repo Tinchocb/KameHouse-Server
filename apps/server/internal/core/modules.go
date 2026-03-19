@@ -22,6 +22,7 @@ import (
 	"kamehouse/internal/torrentstream"
 	"kamehouse/internal/api/tmdb"
 	"kamehouse/internal/platforms/tmdb_platform"
+	"kamehouse/internal/platforms/simulated_platform"
 
 	"github.com/cli/browser"
 	"github.com/rs/zerolog"
@@ -162,7 +163,7 @@ func (a *App) initModulesOnce() {
 		OnRefreshCollection: func() {
 			// No-op for now
 		},
-		EventDispatcher: a.WSHub.EventDispatcher(), // Assuming WSHub gives access to it, or passing it directly
+		EventDispatcher: a.WSEventManager.Dispatcher(),
 	})
 
 	// AutoScanner is event-driven now, no Start method.
@@ -286,11 +287,9 @@ func (a *App) InitOrRefreshModules() {
 			a.Metadata.TMDBClient = tmdb.NewClient(settings.Library.TmdbApiKey, settings.Library.TmdbLanguage)
 		} else {
 			// Default back to simulated if no other platform is suitable
-			// TMDb is the primary platform, defaulting to simulated if unavailable.
 			a.Logger.Info().Msg("app: No metadata provider configured or available, using simulated platform")
-			// Simulated platform is already initialized in NewKameHouse, we should probably keep that one or create a new one
-			// For now, let's keep the existing one if it's already simulated, or reset it.
-			// a.Metadata.PlatformRef.Set(simulated_platform.NewSimulatedPlatform(a.Logger, a.Database))
+			a.Metadata.PlatformRef.Set(simulated_platform.NewSimulatedPlatform(a.Logger, a.Database))
+			a.Metadata.TMDBClient = nil
 		}
 	}
 

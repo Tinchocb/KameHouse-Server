@@ -53,9 +53,6 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 		}))
 	}
 
-	e.GET("/api/ws", func(c echo.Context) error {
-		return app.WSHub.ServeWS(c)
-	})
 
 	distFS, err := fs.Sub(webFS, "web")
 	if err != nil {

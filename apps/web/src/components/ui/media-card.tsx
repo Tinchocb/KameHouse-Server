@@ -84,9 +84,14 @@ export const MediaCard = React.memo(function MediaCard({
             onClick={onClick}
             onKeyDown={(e) => e.key === "Enter" && onClick?.()}
             layoutId={layoutId}
+            whileHover={{ 
+                rotateY: 5, 
+                rotateX: -2,
+                transition: { duration: 0.4, ease: "easeOut" }
+            }}
             className={cn(
                 // Base — group for child hover triggers
-                "group/card relative shrink-0 cursor-pointer overflow-hidden rounded-md",
+                "group/card relative shrink-0 cursor-pointer overflow-hidden rounded-md perspective-1000 premium-reflection",
                 // Stremio-style subtle border — brightens on hover
                 "border border-white/5 hover:border-white/20",
                 // Flat lift: scale only, no translate — hardware-composited
@@ -109,7 +114,7 @@ export const MediaCard = React.memo(function MediaCard({
             <DeferredImage
                 src={artwork}
                 alt={title}
-                className="absolute inset-0 h-full w-full select-none object-cover transition-transform duration-700 group-hover/card:scale-110"
+                className="absolute inset-0 h-full w-full select-none object-cover transition-transform duration-700 group-hover/card:scale-110 group-hover/card:brightness-110"
             />
 
             {/* ── Spotlight Shine Effect (Hover) ────────────────────────── */}

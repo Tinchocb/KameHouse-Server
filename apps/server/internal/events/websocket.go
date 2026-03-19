@@ -58,6 +58,7 @@ type (
 		clientVideoCoreEventSubscribers    *result.Map[string, *ClientEventSubscriber]
 
 		torrentTelemetrySubscribers        *result.Map[string, *ClientEventSubscriber]
+		dispatcher                         Dispatcher
 	}
 
 	ClientEventSubscriber struct {
@@ -86,16 +87,31 @@ var wsEventPool = sync.Pool{
 }
 
 // NewWSEventManager creates a new WSEventManager instance for App.
-func NewWSEventManager(logger *zerolog.Logger) *WSEventManager {
+func NewWSEventManager(logger *zerolog.Logger, dispatcher Dispatcher) *WSEventManager {
 	ret := &WSEventManager{
 		Logger:                             logger,
 		Conns:                              make([]*WSConn, 0),
 		clientEventSubscribers:             result.NewMap[string, *ClientEventSubscriber](),
 		clientNativePlayerEventSubscribers: result.NewMap[string, *ClientEventSubscriber](),
 		clientVideoCoreEventSubscribers:    result.NewMap[string, *ClientEventSubscriber](),
-
 		torrentTelemetrySubscribers:        result.NewMap[string, *ClientEventSubscriber](),
+		dispatcher:                         dispatcher,
 	}
+
+	// Start bridging internal events to WebSockets
+	if dispatcher != nil {
+		go func() {
+			defer util.HandlePanicInModuleThen("events/WSEventManager/Bridge", func() {})
+			ch := dispatcher.Subscribe("*")
+			defer dispatcher.Unsubscribe("*", ch)
+			for e := range ch {
+				// Avoid loops: don't bridge events that might have originated from WS if they use the same topics
+				// For now, we bridge everything to the frontend.
+				ret.SendEvent(e.Topic, e.Payload)
+			}
+		}()
+	}
+
 	GlobalWSEventManager = &GlobalWSEventManagerWrapper{
 		WSEventManager: ret,
 	}
@@ -105,6 +121,10 @@ func NewWSEventManager(logger *zerolog.Logger) *WSEventManager {
 // ExitIfNoConnsAsDesktopSidecar monitors the websocket connection as a desktop sidecar.
 // It checks for a connection every 5 seconds. If a connection is lost, it starts a countdown a waits for 15 seconds.
 // If a connection is not established within 15 seconds, it will exit the app.
+func (m *WSEventManager) Dispatcher() Dispatcher {
+	return m.dispatcher
+}
+
 func (m *WSEventManager) ExitIfNoConnsAsDesktopSidecar() {
 	go func() {
 		defer util.HandlePanicInModuleThen("events/ExitIfNoConnsAsDesktopSidecar", func() {})

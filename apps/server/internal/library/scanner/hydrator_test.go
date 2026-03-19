@@ -150,7 +150,7 @@ func TestFileHydrator_HydrateMetadata(t *testing.T) {
 				Config:              config,
 			}
 
-			fh.HydrateMetadata()
+			fh.HydrateMetadata(context.Background())
 
 			for _, lf := range fh.LocalFiles {
 				t.Logf("local file: %s, media id: %d, type: %s, episode: %d, aniDbEpisode: %s\n", lf.Name, lf.MediaId, lf.GetType(), lf.Metadata.Episode, lf.Metadata.AniDBEpisode)

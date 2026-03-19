@@ -1,6 +1,7 @@
 package torrent_analyzer
 
 import (
+	"context"
 	"errors"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/models/dto"
@@ -247,7 +248,7 @@ func (a *Analyzer) scanFiles() error {
 		Logger:              util.NewLogger(),
 	}
 
-	fh.HydrateMetadata()
+	fh.HydrateMetadata(context.Background())
 
 	// +---------------------+
 	// |    Map to Files     |

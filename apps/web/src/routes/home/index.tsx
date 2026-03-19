@@ -133,8 +133,10 @@ function HomePage() {
         const items: HeroBannerItem[] = []
         const seen = new Set<number>()
 
+        // 1. Smart Intelligence (EPIC items)
         if (intelligenceData) {
             for (const lane of intelligenceData.swimlanes) {
+                if (lane.type === "trending") continue // Skip trending for hero primary
                 for (const entry of lane.entries) {
                     const intel = (entry as IntelligentEntry).intelligence
                     if (!entry.media || seen.has(entry.mediaId)) continue
@@ -148,6 +150,7 @@ function HomePage() {
             }
         }
 
+        // 2. Continue Watching
         for (const ep of continueWatchingEpisodes) {
             const media = resolveEpisodeMedia(ep)
             if (!media || seen.has(media.id)) continue
@@ -156,8 +159,31 @@ function HomePage() {
             if (items.length >= 5) break
         }
 
+        // 3. Robust Fallback: Recently Added
+        // If we still have fewer than 3 items, pull from recentItems
+        if (items.length < 3 && recentItems.length > 0) {
+            for (const recent of recentItems) {
+                if (seen.has(Number(recent.id.replace("recent-", "")))) continue
+                const mediaId = Number(recent.id.replace("recent-", ""))
+                seen.add(mediaId)
+                items.push({
+                    id: `hero-fallback-${mediaId}`,
+                    title: recent.title,
+                    synopsis: recent.description || "",
+                    backdropUrl: recent.backdropUrl || recent.image,
+                    posterUrl: recent.image,
+                    year: recent.year,
+                    rating: recent.rating,
+                    mediaId: mediaId,
+                    onPlay: () => handleNavigate(mediaId),
+                    onMoreInfo: () => handleNavigate(mediaId),
+                })
+                if (items.length >= 5) break
+            }
+        }
+
         return items
-    }, [continueWatchingEpisodes, handleNavigate, resolveEpisodeMedia, intelligenceData, watchHistory])
+    }, [continueWatchingEpisodes, handleNavigate, resolveEpisodeMedia, intelligenceData, watchHistory, recentItems])
 
     if (error && !data) return <ErrorBanner message={error instanceof Error ? error.message : "Error de conexión."} />
 
@@ -195,7 +221,7 @@ function HomePage() {
             />
 
             {/* ── Content Sections ── */}
-            <div className="relative z-10 -mt-20 flex flex-col gap-12">
+            <div className="relative z-10 -mt-24 flex flex-col gap-20">
                 <AnimatePresence mode="wait">
                     {isLoading || isRefetching ? (
                         <motion.div 
@@ -204,7 +230,7 @@ function HomePage() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.6 }}
-                            className="space-y-12 px-6 md:px-10 lg:px-14"
+                            className="space-y-20 px-6 md:px-10 lg:px-14"
                         >
                             <SwimlaneSkeleton title="Continuar viendo" aspect="wide" />
                             <SwimlaneSkeleton title="Novedades en tu biblioteca" aspect="poster" />
@@ -216,7 +242,7 @@ function HomePage() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ duration: 0.8, ease: "easeOut" }}
-                            className="space-y-12"
+                            className="space-y-20"
                         >
                             {/* 1. Continue Watching */}
                             <ErrorBoundary className="px-6 md:px-10 lg:px-14">

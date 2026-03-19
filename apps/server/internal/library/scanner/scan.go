@@ -34,6 +34,7 @@ type ScannerAgentOptions struct {
 	Database       *db.Database
 	Logger         *zerolog.Logger
 	QueueManager   *queue.Manager
+	Fetcher        *metadata.Fetcher
 }
 
 // ScannerAgent is the autonomous AI-driven file scanner.
@@ -112,6 +113,7 @@ func NewScannerAgent(rootDir string, opts ...ScannerAgentOptions) *ScannerAgent 
 		agent.database = opts[0].Database
 		agent.logger = opts[0].Logger
 		agent.queueManager = opts[0].QueueManager
+		agent.fetcher = opts[0].Fetcher
 	}
 
 	return agent

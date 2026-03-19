@@ -1,7 +1,7 @@
 import { ScanLogViewer } from "@/app/scan-log-viewer/scan-log-viewer"
 import React, { useCallback, useEffect, useRef, useState } from "react"
 import { BiTrash, BiUpload } from "react-icons/bi"
-import { LuFileSearch, LuTrash2, LuUploadCloud, LuZap } from "react-icons/lu"
+import { LuFileSearch, LuTrash2, LuCloudUpload, LuZap } from "react-icons/lu"
 import { toast } from "sonner"
 import { cn } from "@/components/ui/core/styling"
 
@@ -171,7 +171,7 @@ export default function Page() {
             )}>
                 <div className="flex flex-col items-center gap-6 p-16 rounded-[40px] border-2 border-dashed border-primary/40 bg-primary/5 shadow-[0_0_100px_rgba(249,115,22,0.1)]">
                     <div className="relative">
-                        <LuUploadCloud className="w-24 h-24 text-primary animate-bounce-subtle" />
+                        <LuCloudUpload className="w-24 h-24 text-primary animate-bounce-subtle" />
                         <div className="absolute inset-0 bg-primary/20 blur-[40px] rounded-full animate-pulse" />
                     </div>
                     <div className="text-center space-y-2">

@@ -71,6 +71,11 @@ type Scanner struct {
 
 	EventDispatcher events.Dispatcher
 	TMDBClient      *tmdb.Client
+
+	// Optional enrichers
+	FanArtEnricher   *librarymetadata.FanArtEnricher
+	OMDbEnricher     *librarymetadata.OMDbEnricher
+	OpenSubsEnricher *librarymetadata.OpenSubtitlesEnricher
 }
 
 // Scan will scan the directory and return a list of dto.LocalFile.
@@ -416,7 +421,9 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 			LocalFiles: localFiles,
 			Duration:   int(time.Since(startTime).Milliseconds()),
 		}
-		hook.GlobalHookManager.OnScanCompleted().Trigger(completedEvent)
+		if err := hook.GlobalHookManager.OnScanCompleted().Trigger(completedEvent); err != nil {
+			scn.Logger.Warn().Err(err).Msg("scanner: OnScanCompleted hook failed")
+		}
 		localFiles = completedEvent.LocalFiles
 
 		if scn.EventDispatcher != nil {
@@ -617,10 +624,13 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 
 	// Create a new matcher
 	matcher := &Matcher{
-		LocalFiles:     localFiles,
-		MediaContainer: mc,
-		Logger:         scn.Logger,
-		Database:       scn.Database,
+		LocalFiles:        localFiles,
+		MediaContainer:    mc,
+		Logger:            scn.Logger,
+		Database:          scn.Database,
+		Threshold:         scn.MatchingThreshold,
+		MatchingAlgorithm: scn.MatchingAlgorithm,
+		StrictStructure:   scn.StrictStructure,
 	}
 
 	telemetry.Send(events.EventScanProgress, 60)
@@ -660,7 +670,79 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		ScanSummaryLogger:   scn.ScanSummaryLogger,
 		Config:              scn.Config,
 	}
-	hydrator.HydrateMetadata()
+	hydrator.HydrateMetadata(ctx)
+
+	// +---------------------+
+	// |  Metadata Enrichers |
+	// +---------------------+
+
+	if scn.FanArtEnricher != nil || scn.OMDbEnricher != nil || scn.OpenSubsEnricher != nil {
+		scn.Logger.Info().Msg("scanner: running optional metadata enrichers")
+		normalizedMap := make(map[int]*dto.NormalizedMedia)
+		for _, nm := range mc.NormalizedMedia {
+			normalizedMap[nm.ID] = nm
+		}
+
+		for _, lf := range localFiles {
+			if lf.MediaId == 0 {
+				continue
+			}
+			matchedMedia, ok := normalizedMap[lf.MediaId]
+			if !ok {
+				continue
+			}
+
+			// P1: FanArt.tv — HD logos, clearart, thumbs
+			if scn.FanArtEnricher != nil {
+				nfoPath := findNfoForFile(lf.Path, libraryPaths)
+				tvdbID := ""
+				if nfoPath != "" {
+					if nfo, err := ParseNfoFile(nfoPath); err == nil && nfo != nil {
+						tvdbID = nfo.GetTvdbID()
+					}
+				}
+				if tvdbID != "" {
+					_ = scn.FanArtEnricher.EnrichTV(ctx, matchedMedia, tvdbID)
+				} else if matchedMedia.TmdbId != nil {
+					_ = scn.FanArtEnricher.EnrichMovie(ctx, matchedMedia, *matchedMedia.TmdbId)
+				}
+			}
+
+			// P2: OMDb — ratings, runtime, director, awards
+			if scn.OMDbEnricher != nil {
+				nfoPath := findNfoForFile(lf.Path, libraryPaths)
+				imdbID := ""
+				if nfoPath != "" {
+					if nfo, err := ParseNfoFile(nfoPath); err == nil && nfo != nil {
+						imdbID = nfo.GetImdbID()
+					}
+				}
+				if imdbID != "" {
+					_ = scn.OMDbEnricher.EnrichByImdbID(ctx, matchedMedia, imdbID)
+				} else if matchedMedia.Title != nil && matchedMedia.Title.UserPreferred != nil {
+					year := 0
+					if matchedMedia.Year != nil {
+						year = *matchedMedia.Year
+					}
+					_ = scn.OMDbEnricher.EnrichByTitle(ctx, matchedMedia, *matchedMedia.Title.UserPreferred, year)
+				}
+			}
+
+			// P3: OpenSubtitles — search for available remote subtitles
+			if scn.OpenSubsEnricher != nil {
+				season, episode := 0, 0
+				if lf.ParsedData != nil {
+					if lf.ParsedData.Season != "" {
+						season, _ = util.StringToInt(lf.ParsedData.Season)
+					}
+					if lf.ParsedData.Episode != "" {
+						episode, _ = util.StringToInt(lf.ParsedData.Episode)
+					}
+				}
+				_ = scn.OpenSubsEnricher.EnrichLocalFile(ctx, lf, matchedMedia, season, episode)
+			}
+		}
+	}
 
 	telemetry.Send(events.EventScanProgress, 80)
 
@@ -794,7 +876,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 					if fileTitle, ok := fileTitleMap[id]; ok && fileTitle != "" {
 						newMedia.TitleEnglish = fileTitle
 					} else {
-						newMedia.TitleEnglish = fmt.Sprintf("TMDB Media %d", -id)
+						newMedia.TitleEnglish = fmt.Sprintf("TMDB Media %d", realTmdbId)
 					}
 				}
 
@@ -859,6 +941,9 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 					tmdbSeasonFetched[positiveTmdbId] = true
 
 					for seasonNum := 0; seasonNum <= 50; seasonNum++ {
+						if ctx.Err() != nil {
+							return nil, ctx.Err()
+						}
 						seasonDetails, err := tmdbProvider.GetTVSeason(ctx, positiveTmdbId, seasonNum)
 						if err != nil {
 							if strings.Contains(err.Error(), "404") && seasonNum > 0 {

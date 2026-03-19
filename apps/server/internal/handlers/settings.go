@@ -193,12 +193,9 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 	merged.UpdatedAt = time.Now()
 
 	if b.Library != nil {
-		if len(b.Library.SeriesPaths) > 0 {
-			merged.Library.SeriesPaths = b.Library.SeriesPaths
-		}
-		if len(b.Library.MoviePaths) > 0 {
-			merged.Library.MoviePaths = b.Library.MoviePaths
-		}
+		merged.Library.SeriesPaths = b.Library.SeriesPaths
+		merged.Library.MoviePaths = b.Library.MoviePaths
+		
 		merged.Library.AutoUpdateProgress = b.Library.AutoUpdateProgress
 		merged.Library.TorrentProvider = b.Library.TorrentProvider
 		merged.Library.AutoSelectTorrentProvider = b.Library.AutoSelectTorrentProvider
@@ -218,12 +215,8 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		merged.Library.AutoSyncToLocalAccount = b.Library.AutoSyncToLocalAccount
 		merged.Library.AutoSaveCurrentMediaOffline = b.Library.AutoSaveCurrentMediaOffline
 		merged.Library.UseFallbackMetadataProvider = b.Library.UseFallbackMetadataProvider
-		if b.Library.TmdbApiKey != "" {
-			merged.Library.TmdbApiKey = b.Library.TmdbApiKey
-		}
-		if b.Library.TmdbLanguage != "" {
-			merged.Library.TmdbLanguage = b.Library.TmdbLanguage
-		}
+		merged.Library.TmdbApiKey = b.Library.TmdbApiKey
+		merged.Library.TmdbLanguage = b.Library.TmdbLanguage
 		merged.Library.ScannerUseLegacyMatching = b.Library.ScannerUseLegacyMatching
 		merged.Library.ScannerConfig = b.Library.ScannerConfig
 		merged.Library.ScannerStrictStructure = b.Library.ScannerStrictStructure

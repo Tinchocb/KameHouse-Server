@@ -37,13 +37,49 @@ type (
 
 	// FileTechnicalInfo holds FFprobe technical specifications of a video file.
 	FileTechnicalInfo struct {
-		Duration        time.Duration      `json:"duration,omitempty"`
-		Size            int64              `json:"size,omitempty"`
-		Bitrate         int64              `json:"bitrate,omitempty"`
-		Format          string             `json:"format,omitempty"`
-		VideoStream     *VideoStreamInfo   `json:"videoStream,omitempty"`
-		AudioStreams    []*AudioStreamInfo `json:"audioStreams,omitempty"`
-		SubtitleStreams []*AudioStreamInfo `json:"subtitleStreams,omitempty"` // Reusing Audio structure since they share basic properties
+		Duration           time.Duration        `json:"duration,omitempty"`
+		Size               int64                `json:"size,omitempty"`
+		Bitrate            int64                `json:"bitrate,omitempty"`
+		Format             string               `json:"format,omitempty"`
+		VideoStream        *VideoStreamInfo     `json:"videoStream,omitempty"`
+		AudioStreams        []*AudioStreamInfo   `json:"audioStreams,omitempty"`
+		SubtitleStreams     []*AudioStreamInfo   `json:"subtitleStreams,omitempty"` // Reusing Audio structure since they share basic properties
+		ExternalSubtitles  []*ExternalSubtitle  `json:"externalSubtitles,omitempty"`  // External .srt/.ass files (Jellyfin-style)
+		ExternalAudioFiles []*ExternalAudioFile `json:"externalAudioFiles,omitempty"` // External .dts/.ac3 files
+		RemoteSubtitles    []*RemoteSubtitle    `json:"remoteSubtitles,omitempty"`    // Available remote subtitles (e.g. OpenSubtitles)
+	}
+
+	// ExternalSubtitle represents a subtitle file found alongside a video file.
+	// Follows Jellyfin's naming convention: MovieName.{language}.{flags}.{ext}
+	// Example: "Movie.es.forced.srt" → Language="es", IsForced=true
+	ExternalSubtitle struct {
+		Path     string `json:"path"`               // Absolute path to the subtitle file
+		Filename string `json:"filename"`           // Base filename
+		Format   string `json:"format"`             // File extension: srt, ass, vtt, sup, etc.
+		Language string `json:"language,omitempty"` // ISO 639-1 code (e.g. "es", "en", "ja")
+		IsForced bool   `json:"isForced,omitempty"` // True if "forced" flag present in filename
+		IsSDH    bool   `json:"isSDH,omitempty"`    // True if "sdh" or "hi" flag present (Hearing Impaired)
+		IsCC     bool   `json:"isCC,omitempty"`     // True if "cc" flag present (Closed Captions)
+	}
+
+	// RemoteSubtitle represents a subtitle available for download from a remote provider (e.g. OpenSubtitles).
+	// It is NOT automatically downloaded — the client can request a download separately.
+	RemoteSubtitle struct {
+		ProviderID   string `json:"providerId"`             // e.g. "opensubtitles"
+		FileID       int    `json:"fileId"`                 // OpenSubtitles file_id for download
+		Language     string `json:"language,omitempty"`     // ISO 639-1 code
+		Format       string `json:"format,omitempty"`       // "srt", "ass", etc.
+		DownloadCount int   `json:"downloadCount,omitempty"` // Popularity signal
+		Release      string `json:"release,omitempty"`      // Release name or episode title
+	}
+
+	// ExternalAudioFile represents an external audio track found alongside a video file.
+	// Follows Jellyfin's naming convention: MovieName.{language}.{ext}
+	ExternalAudioFile struct {
+		Path     string `json:"path"`               // Absolute path to the audio file
+		Filename string `json:"filename"`           // Base filename
+		Format   string `json:"format"`             // File extension: dts, ac3, truehd, etc.
+		Language string `json:"language,omitempty"` // ISO 639-1 code
 	}
 
 	VideoStreamInfo struct {

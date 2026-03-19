@@ -106,6 +106,17 @@ export function HeroBanner({
     const prefersReducedMotion = usePrefersReducedMotion()
     const [activeIndex, setActiveIndex] = React.useState(initialIndex)
     const [isPaused, setIsPaused] = React.useState(false)
+    
+    // Parallax state
+    const [mousePos, setMousePos] = React.useState({ x: 0, y: 0 })
+    const handleMouseMove = React.useCallback((e: React.MouseEvent) => {
+        if (prefersReducedMotion) return
+        const { clientX, clientY } = e
+        const { innerWidth, innerHeight } = window
+        const x = (clientX / innerWidth - 0.5) * 20 // Max 20px offset
+        const y = (clientY / innerHeight - 0.5) * 20
+        setMousePos({ x, y })
+    }, [prefersReducedMotion])
 
     React.useEffect(() => {
         setActiveIndex(initialIndex)
@@ -130,15 +141,25 @@ export function HeroBanner({
         <section
             aria-label="Contenido destacado"
             onMouseEnter={() => setIsPaused(true)}
-            onMouseLeave={() => setIsPaused(false)}
+            onMouseLeave={() => {
+                setIsPaused(false)
+                setMousePos({ x: 0, y: 0 })
+            }}
+            onMouseMove={handleMouseMove}
             className={cn(
-                "relative flex min-h-[720px] w-full items-end overflow-hidden bg-black",
+                "relative flex min-h-[720px] w-full items-end overflow-hidden bg-black premium-noise premium-scanline",
                 "h-[100dvh] max-h-[1100px]",
                 className,
             )}
         >
             {/* ── Backdrop images ────────────────────────────────────────── */}
-            <div className="absolute inset-0">
+            <div 
+                className="absolute inset-x-[-20px] inset-y-[-20px]"
+                style={{
+                    transform: `translate3d(${mousePos.x}px, ${mousePos.y}px, 0)`,
+                    transition: isPaused ? "none" : "transform 0.2s ease-out",
+                }}
+            >
                 {items.map((item, index) => (
                     <div
                         key={item.id}
@@ -220,20 +241,29 @@ export function HeroBanner({
                     {/* CTAs */}
                     <div className="mt-8 flex flex-wrap items-center gap-4">
                         <motion.button
-                            whileHover={{ scale: 1.05, boxShadow: "0 0 25px rgba(249,115,22,0.4)" }}
+                            whileHover={{ 
+                                scale: 1.05, 
+                                boxShadow: "0 0 30px rgba(249,115,22,0.6)",
+                                backgroundColor: "rgb(251, 146, 60)" 
+                            }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => activeItem.onPlay()}
-                            className="flex items-center justify-center gap-3 bg-primary hover:bg-orange-400 text-white h-12 md:h-14 px-8 rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-[0_4px_20px_rgba(249,115,22,0.3)]"
+                            className="group/btn relative flex items-center justify-center gap-3 bg-primary text-white h-12 md:h-14 px-8 rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-[0_4px_20px_rgba(249,115,22,0.3)] overflow-hidden"
                         >
-                            <Play className="w-5 h-5 fill-current" />
-                            Ver ahora
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:animate-[shine_1.5s_infinite_ease-in-out]" />
+                            <Play className="w-5 h-5 fill-current relative z-10" />
+                            <span className="relative z-10">Ver ahora</span>
                         </motion.button>
 
                         <motion.button
-                            whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.1)" }}
+                            whileHover={{ 
+                                scale: 1.05, 
+                                backgroundColor: "rgba(255,255,255,0.15)",
+                                borderColor: "rgba(255,255,255,0.3)"
+                            }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => activeItem.onMoreInfo()}
-                            className="flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 text-white h-12 md:h-14 px-8 rounded-2xl font-black text-sm uppercase tracking-widest transition-all border border-white/10 backdrop-blur-md"
+                            className="flex items-center justify-center gap-3 bg-white/5 text-white h-12 md:h-14 px-8 rounded-2xl font-black text-sm uppercase tracking-widest transition-all border border-white/10 backdrop-blur-md"
                         >
                             <Info className="w-5 h-5" />
                             Detalles

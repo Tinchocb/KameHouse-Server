@@ -60,4 +60,14 @@ dir = "$KAMEHOUSE_DATA_DIR/extensions"
 # 4. Integraciones (Integrations)
 # ------------------------------------------
 [tmdb]
-# apiKey = ""               # TMDB API Key personalizado (opcional, el servidor incluye uno por defecto)
+apiKey = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIwNTg0ZDQ0MzdiZTRkMTMxNzQwODViYzliNDQzNTk4NSIsIm5iZiI6MTc2Mzg4ODUzOC43NzEwMDAxLCJzdWIiOiI2OTIyY2Q5YTNjYTJhNzM3Yzc5NTg4YmIiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.4OtRAEqcJhg9w7FoEgCbl_lkzAA8_gQHMTQ49eUkjgg"               # TMDB API Key personalizado (opcional, el servidor incluye uno por defecto)
+
+[metadata]
+tmdbApiKey = "0584d4437be4d13174085bc9b4435985"           # Bearer token de TMDb (opcional — hay uno incluido)
+fanartApiKey = "997ceb85607e120d62423b85a9764b39"         # API key de FanArt.tv — logos HD transparentes, clearart, thumbs
+#                           # Obtené una gratis en: https://fanart.tv/get-an-api-key/
+omdbApiKey = "2ba183d5"           # API key de OMDb — ratings IMDb, RT, Metacritic, runtime, director
+#                           # Obtené una gratis en: https://www.omdbapi.com/apikey.aspx (1000 req/día)
+# openSubsApiKey = ""       # API key de OpenSubtitles v1 — búsqueda de subtítulos remotos
+#                           # Obtené una gratis en: https://www.opensubtitles.com/en/consumers
+# openSubsLanguages = ["es", "en"]  # Idiomas a buscar en OpenSubtitles

@@ -25,10 +25,13 @@ var reYear = regexp.MustCompile(`\b((?:19|20)\d{2})\b`)
 // Instead of binary matching, it uses Bayesian Probabilities to evaluate file paths,
 // contextual folders, and metadata to establish confidence in an identity match.
 type Matcher struct { // Keep struct name 'Matcher' for backwards compatibility
-	LocalFiles     []*dto.LocalFile
-	MediaContainer *MediaContainer
-	Logger         *zerolog.Logger
-	Database       *db.Database
+	LocalFiles        []*dto.LocalFile
+	MediaContainer    *MediaContainer
+	Logger            *zerolog.Logger
+	Database          *db.Database
+	Threshold         float64
+	MatchingAlgorithm string
+	StrictStructure   bool
 }
 
 func NewMatcher(localFiles []*dto.LocalFile, mediaContainer *MediaContainer, logger *zerolog.Logger, db *db.Database) *Matcher {
@@ -37,6 +40,7 @@ func NewMatcher(localFiles []*dto.LocalFile, mediaContainer *MediaContainer, log
 		MediaContainer: mediaContainer,
 		Logger:         logger,
 		Database:       db,
+		Threshold:      0.80, // Default threshold
 	}
 }
 
@@ -116,17 +120,24 @@ func (m *Matcher) BayesianResolve(lf *dto.LocalFile) {
 	var bestMatch *dto.NormalizedMedia
 
 	// Evaluate against all media (The API catalog)
-	for _, media := range m.MediaContainer.NormalizedMedia {
-		confidence := m.calculateBayesianScore(pm, media)
+	if m.MediaContainer != nil {
+		for _, media := range m.MediaContainer.NormalizedMedia {
+			confidence := m.calculateBayesianScore(pm, media)
 
-		if confidence > bestConfidence {
-			bestConfidence = confidence
-			bestMatch = media
+			if confidence > bestConfidence {
+				bestConfidence = confidence
+				bestMatch = media
+			}
 		}
 	}
 
 	// 2. RECURSIVE FALLBACK ENGINE (Self-Healing Loop)
-	if bestConfidence < 0.80 {
+	threshold := m.Threshold
+	if threshold <= 0 {
+		threshold = 0.80
+	}
+
+	if bestConfidence < threshold {
 		m.Logger.Debug().Msgf("AgentMatcher: Sub-optimal confidence (%.2f) on '%s'. Initiating Heuristic Healing.", bestConfidence, lf.Name)
 
 		// Self-Healing Step 1: Check Ghost Associations first (Has the user or probability engine seen this anomaly before?)
@@ -164,7 +175,7 @@ func (m *Matcher) BayesianResolve(lf *dto.LocalFile) {
 		}
 
 		// Self-Healing Step 3: Check Folder Context
-		if bestConfidence < 0.80 && len(lf.ParsedFolderData) > 0 {
+		if bestConfidence < threshold && len(lf.ParsedFolderData) > 0 {
 			folderStr := filepath.Base(filepath.Dir(lf.Path))
 			pm.Title = Normalize(folderStr).Title
 			for _, media := range m.MediaContainer.NormalizedMedia {
@@ -179,7 +190,7 @@ func (m *Matcher) BayesianResolve(lf *dto.LocalFile) {
 
 verdict:
 	// 3. Verdict
-	if bestConfidence >= 0.80 && bestMatch != nil {
+	if bestMatch != nil && bestConfidence >= threshold {
 		lf.MediaId = bestMatch.ID
 
 		lf.Metadata.Episode = pm.Episode
@@ -205,7 +216,7 @@ verdict:
 	// Hook Integration
 	matchedEvent := &ScanLocalFileMatchedEvent{
 		Match:     bestMatch,
-		Found:     bestMatch != nil && bestConfidence >= 0.80,
+		Found:     bestMatch != nil && bestConfidence >= threshold,
 		LocalFile: lf,
 		Score:     bestConfidence,
 	}
@@ -308,11 +319,25 @@ func updateBayes(prior, p_e_given_h, p_e_given_not_h float64) float64 {
 
 // sanitizeSubGroupTags isolates things like [SubsPlease] or (1080p) from being mapped to titles
 func sanitizeSubGroupTags(input string) string {
-	parts := strings.Split(input, "] ")
-	if len(parts) > 1 {
-		return parts[1]
+	// 1. Remove [ReleaseGroup] at the start
+	if strings.HasPrefix(input, "[") {
+		closingIdx := strings.Index(input, "]")
+		if closingIdx > 0 && closingIdx < len(input)-1 {
+			input = strings.TrimSpace(input[closingIdx+1:])
+		}
 	}
-	return input
+
+	// 2. Remove trailing tags like [1080p], (TV), etc.
+	reTags := regexp.MustCompile(`\s*(\[.*?\]|\(.*?\))\s*$`)
+	for reTags.MatchString(input) {
+		input = reTags.ReplaceAllString(input, "")
+	}
+
+	// 3. Remove common CRC32 hashes at the end
+	reCRC := regexp.MustCompile(`(?i)\s*\[[0-9A-F]{8}\]\s*$`)
+	input = reCRC.ReplaceAllString(input, "")
+
+	return strings.TrimSpace(input)
 }
 
 // calculateDice implements the real Sørensen-Dice Coefficient using character bigrams.

@@ -24,6 +24,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+var calcRegex = regexp.MustCompile(`\{calc\(([^)]+)\)}`)
+
 // FileHydrator hydrates the metadata of all (matched) LocalFiles.
 // LocalFiles should already have their media ID hydrated.
 type FileHydrator struct {
@@ -52,7 +54,7 @@ type compiledHydrationFileRule struct {
 
 // HydrateMetadata will hydrate the metadata of each LocalFile with the metadata of the matched platform.UnifiedMedia.
 // It will divide the LocalFiles into groups based on their media ID and process each group in parallel.
-func (fh *FileHydrator) HydrateMetadata() {
+func (fh *FileHydrator) HydrateMetadata(ctx context.Context) {
 	start := time.Now()
 	rateLimiter := limiter.NewLimiter(5*time.Second, 20)
 
@@ -93,7 +95,7 @@ func (fh *FileHydrator) HydrateMetadata() {
 		maxWorkers = 4
 	}
 
-	eg, _ := errgroup.WithContext(context.Background())
+	eg, ctx := errgroup.WithContext(ctx)
 	eg.SetLimit(maxWorkers)
 
 	for mId, files := range groups {
@@ -756,9 +758,8 @@ func (fh *FileHydrator) evaluateCalcExpressions(input string) string {
 	}
 
 	// 1. Find all {calc(...)} patterns
-	re1 := regexp.MustCompile(`\{calc\(([^)]+)\)}`)
-	input = re1.ReplaceAllStringFunc(input, func(match string) string {
-		submatches := re1.FindStringSubmatch(match)
+	input = calcRegex.ReplaceAllStringFunc(input, func(match string) string {
+		submatches := calcRegex.FindStringSubmatch(match)
 		if len(submatches) < 2 {
 			return match
 		}

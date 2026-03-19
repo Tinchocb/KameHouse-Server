@@ -19,13 +19,20 @@ export function useScanLocalFiles(onSuccess?: () => void) {
         endpoint: API_ENDPOINTS.SCAN.ScanLocalFiles.endpoint,
         method: API_ENDPOINTS.SCAN.ScanLocalFiles.methods[0],
         mutationKey: [API_ENDPOINTS.SCAN.ScanLocalFiles.key],
-        onSuccess: async () => {
+        onSuccess: async (data) => {
             await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key] })
             toast.success("Library scanned")
             refreshLibraryExplorerTree()
             await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetMissingEpisodes.key] })
             await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.AUTO_DOWNLOADER.GetAutoDownloaderItems.key] })
-            await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key] })
+            if (data && data.length > 0) {
+                const mediaIds = [...new Set(data.map(f => f.mediaId).filter(id => !!id))]
+                for (const id of mediaIds) {
+                    await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, String(id)] })
+                }
+            } else {
+                await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key] })
+            }
             onSuccess?.()
         },
     })

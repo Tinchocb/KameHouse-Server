@@ -26,6 +26,20 @@ type NormalizedMedia struct {
 	Description       *string
 	// Whether it was fetched from TMDB
 	fetched bool
+
+	// FanArt.tv enrichment (filled in Stage 4 if FanArt API key is configured)
+	LogoImage    *string // HD transparent logo (hdtvlogo / hdmovielogo)
+	ThumbImage   *string // Thumb/tile image (tvthumb / moviethumb)
+	ClearArtImage *string // HD clearart (hdclearart / hdmovieclearart)
+
+	// OMDb enrichment (filled in Stage 4 if OMDb API key is configured)
+	ImdbRating *string // "8.4"
+	ImdbVotes  *string // "1,234,567"
+	Runtime    *string // "148 min"
+	Director   *string
+	Awards     *string
+	Rated      *string // "PG-13"
+	RTRating   *string // Rotten Tomatoes rating e.g. "94%"
 }
 
 type NormalizedMediaTitle struct {

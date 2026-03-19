@@ -45,7 +45,7 @@ func NewDispatcher() *InternalDispatcher {
 	}
 }
 
-// Publish sends the event only to the subscribers registered for e.Topic.
+// Publish sends the event to the subscribers registered for e.Topic and any wildcard "*" subscribers.
 // If a subscriber's buffer is full the event is dropped for that consumer only;
 // the remaining subscribers and the calling goroutine are unaffected.
 func (d *InternalDispatcher) Publish(e Event) {
@@ -55,16 +55,22 @@ func (d *InternalDispatcher) Publish(e Event) {
 
 	d.mu.RLock()
 	subs := d.subscribers[e.Topic]
+	wildcards := d.subscribers["*"]
 	d.mu.RUnlock()
 
-	for _, ch := range subs {
-		select {
-		case ch <- e:
-			// delivered
-		default:
-			// subscriber buffer full — drop silently
+	notify := func(channels []chan Event) {
+		for _, ch := range channels {
+			select {
+			case ch <- e:
+				// delivered
+			default:
+				// subscriber buffer full — drop silently
+			}
 		}
 	}
+
+	notify(subs)
+	notify(wildcards)
 }
 
 // Subscribe creates a buffered channel for topic, registers it, and returns it.

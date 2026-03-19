@@ -25,7 +25,7 @@ export function MatchDialog({ isOpen, onClose, initialQuery, paths }: MatchDialo
     const { mutate: search, data: results, isPending: isSearching } = useTMDBSearch()
     
     const { mutate: assign, isPending: isAssigning } = useServerMutation<any, any>({
-        endpoint: "/api/v1/tmdb/assign",
+        endpoint: "/api/v1/library/local-files/tmdb-assign",
         method: "POST",
         onSuccess: () => {
             toast.success("Media asignado correctamente")
@@ -42,10 +42,11 @@ export function MatchDialog({ isOpen, onClose, initialQuery, paths }: MatchDialo
         }
     }
 
-    const handleAssign = (tmdbId: number) => {
+    const handleAssign = (result: SearchResult) => {
         assign({
-            tmdbId,
-            paths
+            tmdbId: result.id,
+            paths,
+            mediaType: result.media_type === "movie" ? "movie" : "tv"
         })
     }
 
@@ -129,7 +130,7 @@ export function MatchDialog({ isOpen, onClose, initialQuery, paths }: MatchDialo
                                 <Button 
                                     size="sm" 
                                     variant="outline"
-                                    onClick={() => handleAssign(result.id)}
+                                    onClick={() => handleAssign(result)}
                                     disabled={isAssigning}
                                     className="group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all duration-300"
                                 >

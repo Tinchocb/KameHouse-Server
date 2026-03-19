@@ -15,6 +15,7 @@ import (
 	"kamehouse/internal/library/autodownloader"
 	"kamehouse/internal/library/autoscanner"
 	"kamehouse/internal/library/fillermanager"
+	"kamehouse/internal/library/metadata"
 	"kamehouse/internal/library/scanner"
 	"kamehouse/internal/library_explorer"
 	"kamehouse/internal/local"
@@ -31,7 +32,6 @@ import (
 	"kamehouse/internal/util/cache"
 	"kamehouse/internal/util/filecache"
 	"kamehouse/internal/videocore"
-	"kamehouse/internal/ws"
 	"log"
 	"os"
 	"runtime"
@@ -48,6 +48,11 @@ type (
 		PlatformRef        *util.Ref[platform.Platform]
 		ProviderRef        *util.Ref[metadata_provider.Provider]
 		MalScrobbler       *mal.MalScrobblerWorker
+
+		// Enrichers
+		FanArt      *metadata.FanArtEnricher
+		OMDb        *metadata.OMDbEnricher
+		OpenSubs    *metadata.OpenSubtitlesEnricher
 	}
 
 	KameHouse struct {
@@ -72,7 +77,6 @@ type (
 
 		// Real-time communication
 		WSEventManager *events.WSEventManager
-		WSHub          *ws.Hub
 
 		ExtensionRepository interface {
 			ListExtensionData() []interface{}
@@ -217,8 +221,23 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 	tmdbToken := cfg.Metadata.TMDBApiKey // Assuming it's in config
 	tmdbClient := tmdb.NewClient(tmdbToken)
 
-	// Initialize WebSocket event manager for real-time communication
-	wsEventManager := events.NewWSEventManager(logger)
+	// Initialize internal dispatcher and WebSocket event manager for real-time communication
+	dispatcher := events.NewDispatcher()
+	wsEventManager := events.NewWSEventManager(logger, dispatcher)
+
+	// Initialize Metadata Enrichers
+	var fanartEnricher *metadata.FanArtEnricher
+	if cfg.Metadata.FanArtApiKey != "" {
+		fanartEnricher = metadata.NewFanArtEnricher(cfg.Metadata.FanArtApiKey)
+	}
+	var omdbEnricher *metadata.OMDbEnricher
+	if cfg.Metadata.OMDbApiKey != "" {
+		omdbEnricher = metadata.NewOMDbEnricher(cfg.Metadata.OMDbApiKey)
+	}
+	var openSubsEnricher *metadata.OpenSubtitlesEnricher
+	if cfg.Metadata.OpenSubsApiKey != "" {
+		openSubsEnricher = metadata.NewOpenSubtitlesEnricher(cfg.Metadata.OpenSubsApiKey, cfg.Metadata.OpenSubsLanguages...)
+	}
 
 	// Exit if no WebSocket connections in desktop sidecar mode
 	if configOpts.Flags.IsDesktopSidecar {
@@ -331,10 +350,11 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 			PlatformRef:        activePlatformRef,
 			OfflinePlatformRef: offlinePlatformRef,
 			ProviderRef:        metadataProviderRef,
+			FanArt:             fanartEnricher,
+			OMDb:               omdbEnricher,
+			OpenSubs:           openSubsEnricher,
 		},
-		LocalManager:   localManager,
 		WSEventManager: wsEventManager,
-		WSHub:          ws.NewHub(context.Background(), events.NewDispatcher()),
 		Logger:                        logger,
 		Version:            constants.Version,
 		FileCacher:         fileCacher,

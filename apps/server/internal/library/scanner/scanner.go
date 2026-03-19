@@ -28,9 +28,11 @@ import (
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/events"
+	"kamehouse/internal/library/metadata"
 	"kamehouse/internal/library/scanner/video_analyzer"
 
 	"github.com/rs/zerolog"
+	"golang.org/x/sync/errgroup"
 )
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -72,6 +74,11 @@ type MediaScannerOptions struct {
 	Workers     int           // CRC32 goroutine pool size (default 4)
 	EventHub    EventBroadcaster
 	Dispatcher  events.Dispatcher
+
+	// Optional enrichers — only activated when the corresponding API key is configured.
+	FanArtEnricher      *metadata.FanArtEnricher      // logo/clearart/thumb images from FanArt.tv
+	OMDbEnricher        *metadata.OMDbEnricher        // ratings/runtime/director/awards from OMDb
+	OpenSubsEnricher    *metadata.OpenSubtitlesEnricher // remote subtitle availability from OpenSubtitles
 }
 
 // MediaScanner is named intentionally to avoid collision with the production
@@ -223,14 +230,124 @@ func (s *MediaScanner) RunScan(ctx context.Context, mode ScanMode) (ScanResult, 
 	for _, lf := range valid {
 		if info, ok := analysisMap[lf.Path]; ok {
 			lf.TechnicalInfo = mapVideoInfoToDto(info)
+		} else if lf.TechnicalInfo == nil {
+			lf.TechnicalInfo = &dto.FileTechnicalInfo{}
+		}
+
+		// External subtitle/audio detection (Jellyfin-style sidecar scan).
+		// Finds .srt/.ass/.vtt files alongside the video using the same
+		// naming convention as Jellyfin: VideoName.{lang}.{flags}.{ext}
+		extSubs, extAudio := ScanExternalSubtitles(lf.Path)
+		if lf.TechnicalInfo == nil {
+			lf.TechnicalInfo = &dto.FileTechnicalInfo{}
+		}
+		if len(extSubs) > 0 {
+			lf.TechnicalInfo.ExternalSubtitles = extSubs
+			s.logf(zerolog.DebugLevel, "scanner: found %d external subtitle(s) for %s", len(extSubs), filepath.Base(lf.Path))
+		}
+		if len(extAudio) > 0 {
+			lf.TechnicalInfo.ExternalAudioFiles = extAudio
+			s.logf(zerolog.DebugLevel, "scanner: found %d external audio file(s) for %s", len(extAudio), filepath.Base(lf.Path))
+		}
+
+		// --- Optional enrichers (non-fatal, best-effort) ---
+		// Resolve matched media for this file to get TMDb/TVDB IDs for enrichment.
+		var matchedMedia *dto.NormalizedMedia
+		if s.opts.Agent != nil && s.opts.Agent.mediaContainer != nil && lf.MediaId != 0 {
+			for _, m := range s.opts.Agent.mediaContainer.NormalizedMedia {
+				if m.ID == lf.MediaId {
+					matchedMedia = m
+					break
+				}
+			}
+		}
+
+		if matchedMedia != nil {
+			// Parse NFO once if it exists
+			var nfo *NfoFile
+			nfoPath := findNfoForFile(lf.Path, s.opts.LibraryDirs)
+			if nfoPath != "" {
+				if parsedNfo, err := ParseNfoFile(nfoPath); err == nil && parsedNfo != nil {
+					nfo = parsedNfo
+				}
+			}
+
+			// P1: FanArt.tv — HD logos, clearart, thumbs
+			if s.opts.FanArtEnricher != nil {
+				tvdbID := ""
+				if nfo != nil {
+					tvdbID = nfo.GetTvdbID()
+				}
+				if tvdbID != "" {
+					_ = s.opts.FanArtEnricher.EnrichTV(ctx, matchedMedia, tvdbID)
+				} else if matchedMedia.TmdbId != nil {
+					_ = s.opts.FanArtEnricher.EnrichMovie(ctx, matchedMedia, *matchedMedia.TmdbId)
+				}
+			}
+
+			// P2: OMDb — ratings, runtime, director, awards
+			if s.opts.OMDbEnricher != nil {
+				imdbID := ""
+				if nfo != nil {
+					imdbID = nfo.GetImdbID()
+				}
+				if imdbID != "" {
+					_ = s.opts.OMDbEnricher.EnrichByImdbID(ctx, matchedMedia, imdbID)
+				} else if matchedMedia.Title != nil && matchedMedia.Title.UserPreferred != nil {
+					year := 0
+					if matchedMedia.Year != nil {
+						year = *matchedMedia.Year
+					}
+					_ = s.opts.OMDbEnricher.EnrichByTitle(ctx, matchedMedia, *matchedMedia.Title.UserPreferred, year)
+				}
+			}
+		}
+
+		// P3: OpenSubtitles — search for available remote subtitles
+		if s.opts.OpenSubsEnricher != nil {
+			season, episode := 0, 0
+			if lf.ParsedData != nil {
+				if lf.ParsedData.Season != "" {
+					season, _ = strconv.Atoi(lf.ParsedData.Season)
+				}
+				if lf.ParsedData.Episode != "" {
+					episode, _ = strconv.Atoi(lf.ParsedData.Episode)
+				}
+			}
+			_ = s.opts.OpenSubsEnricher.EnrichLocalFile(ctx, lf, matchedMedia, season, episode)
 		}
 	}
 
-	// Stage 4: Persist merged snapshot
+	// Stage 5: Persist merged snapshot
 	if s.opts.Database != nil {
 		if err := s.persist(valid); err != nil {
 			s.logf(zerolog.ErrorLevel, "scanner: persistence failed: %v", err)
 			result.Errors++
+		}
+	}
+
+	// Stage 6: Prune deleted files (Jellyfin-style)
+	// Compare DB snapshot against discovered paths and remove entries
+	// whose files no longer exist on disk — matches Jellyfin's Phase 2.
+	if s.opts.Database != nil {
+		discoveredPaths := make(map[string]struct{}, result.TotalFound)
+		for _, p := range paths {
+			discoveredPaths[filepath.Clean(p)] = struct{}{}
+		}
+		pruned, pruneErr := s.pruneDeletedFiles(ctx, discoveredPaths)
+		if pruneErr != nil {
+			s.logf(zerolog.WarnLevel, "scanner: prune step failed: %v", pruneErr)
+		} else if pruned > 0 {
+			s.logf(zerolog.InfoLevel, "scanner: pruned %d stale entries from library", pruned)
+			if s.EventDispatcher != nil {
+				s.EventDispatcher.Publish(events.Event{
+					Topic: "library.scan",
+					Payload: map[string]any{
+						"status":  "PRUNED",
+						"removed": pruned,
+					},
+				})
+			}
 		}
 	}
 
@@ -261,57 +378,61 @@ func (s *MediaScanner) RunScan(ctx context.Context, mode ScanMode) (ScanResult, 
 // aborts the entire scan; they are counted in errCount for the ScanResult.
 func (s *MediaScanner) walk(ctx context.Context, mode ScanMode) (paths []string, errCount int) {
 	var mu sync.Mutex
+	eg, ctx := errgroup.WithContext(ctx)
 
 	for _, root := range s.opts.LibraryDirs {
-		walkErr := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-			if ctx.Err() != nil {
-				return ctx.Err()
-			}
+		root := root // capture for goroutine
+		eg.Go(func() error {
+			return filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+				if ctx.Err() != nil {
+					return ctx.Err()
+				}
 
-			if err != nil {
+				if err != nil {
+					mu.Lock()
+					errCount++
+					mu.Unlock()
+
+					if errors.Is(err, fs.ErrPermission) || errors.Is(err, os.ErrPermission) {
+						s.logf(zerolog.WarnLevel, "scanner: permission denied: %s", path)
+						if d != nil && d.IsDir() {
+							return fs.SkipDir
+						}
+					} else {
+						s.logf(zerolog.WarnLevel, "scanner: walk error at %s: %v", path, err)
+					}
+					return nil // always continue
+				}
+
+				if d.IsDir() {
+					return nil
+				}
+				if _, ok := videoExtensions[strings.ToLower(filepath.Ext(path))]; !ok {
+					return nil
+				}
+
+				// FastScan: compare CRC32 of first 256 KiB header with cached value.
+				if mode == FastScan {
+					if crc, crcErr := crc32File(path); crcErr == nil {
+						if prev, loaded := s.fingerprints.Load(path); loaded && prev.(uint32) == crc {
+							return nil // unchanged — skip
+						}
+						s.fingerprints.Store(path, crc)
+					}
+				}
+
 				mu.Lock()
-				errCount++
+				paths = append(paths, path)
 				mu.Unlock()
-
-				if errors.Is(err, fs.ErrPermission) || errors.Is(err, os.ErrPermission) {
-					s.logf(zerolog.WarnLevel, "scanner: permission denied: %s", path)
-					if d != nil && d.IsDir() {
-						return fs.SkipDir
-					}
-				} else {
-					s.logf(zerolog.WarnLevel, "scanner: walk error at %s: %v", path, err)
-				}
-				return nil // always continue
-			}
-
-			if d.IsDir() {
 				return nil
-			}
-			if _, ok := videoExtensions[strings.ToLower(filepath.Ext(path))]; !ok {
-				return nil
-			}
-
-			// FastScan: compare CRC32 of first 256 KiB header with cached value.
-			if mode == FastScan {
-				if crc, crcErr := crc32File(path); crcErr == nil {
-					if prev, loaded := s.fingerprints.Load(path); loaded && prev.(uint32) == crc {
-						return nil // unchanged — skip
-					}
-					s.fingerprints.Store(path, crc)
-				}
-			}
-
-			mu.Lock()
-			paths = append(paths, path)
-			mu.Unlock()
-			return nil
+			})
 		})
-
-		if walkErr != nil && walkErr != context.Canceled {
-			s.logf(zerolog.ErrorLevel, "scanner: walk failed for %s: %v", root, walkErr)
-			errCount++
-		}
 	}
+
+	if err := eg.Wait(); err != nil && !errors.Is(err, context.Canceled) {
+		s.logf(zerolog.ErrorLevel, "scanner: parallel walk encountered errors: %v", err)
+	}
+
 	return
 }
 
@@ -401,6 +522,55 @@ func (s *MediaScanner) logf(level zerolog.Level, format string, args ...any) {
 		return
 	}
 	s.opts.Logger.WithLevel(level).Msgf(format, args...)
+}
+
+// pruneDeletedFiles removes LocalFile entries from the DB whose file paths
+// no longer exist on disk. This is the Jellyfin Phase-2 equivalent.
+//
+// Strategy:
+//  1. Load the full DB snapshot of LocalFiles.
+//  2. Build a keep-list: any file whose path is in discoveredPaths (this scan)
+//     OR whose file still physically exists on disk is kept.
+//  3. Save the filtered keep-list back to the DB.
+//
+// Locked/shelved files: handled by checking os.Stat — if missing, still pruned
+// (the shelving system in scan_legacy.go handles locked file resurrection).
+func (s *MediaScanner) pruneDeletedFiles(_ context.Context, discoveredPaths map[string]struct{}) (int, error) {
+	existing, lfsID, err := db.GetLocalFiles(s.opts.Database)
+	if err != nil || len(existing) == 0 {
+		return 0, err // nothing to prune
+	}
+
+	kept := make([]*dto.LocalFile, 0, len(existing))
+	pruned := 0
+
+	for _, lf := range existing {
+		cleanPath := filepath.Clean(lf.Path)
+
+		// Fast-path: file was discovered in this scan — always keep.
+		if _, found := discoveredPaths[cleanPath]; found {
+			kept = append(kept, lf)
+			continue
+		}
+
+		// Slow-path: check disk (handles FastScan where unchanged files are
+		// not in discoveredPaths but still exist).
+		if _, statErr := os.Stat(lf.Path); statErr == nil {
+			kept = append(kept, lf)
+			continue
+		}
+
+		// File is neither discovered nor on disk — prune it.
+		s.logf(zerolog.DebugLevel, "scanner: pruning deleted file: %s", lf.Path)
+		pruned++
+	}
+
+	if pruned == 0 {
+		return 0, nil // No changes — avoid an unnecessary DB write.
+	}
+
+	_, err = db.SaveLocalFiles(s.opts.Database, lfsID, kept)
+	return pruned, err
 }
 
 // findNfoForFile traverses upwards to find a Kodi/Standard compatible NFO file.

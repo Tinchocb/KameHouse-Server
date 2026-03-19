@@ -48,8 +48,10 @@ export function EmptyState() {
 export function SectionLabel({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
     return (
         <div className="px-6 md:px-10 lg:px-14">
-            <div className="inline-flex items-center gap-3 rounded-full border border-border bg-secondary/50 px-4 py-2 text-[0.72rem] font-semibold uppercase tracking-[0.22em] text-foreground backdrop-blur-xl">
-                <Icon className="h-3.5 w-3.5 text-orange-500" />
+            <div className="group/label inline-flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.03] px-4 py-2.5 text-[0.7rem] font-bold uppercase tracking-[0.25em] text-zinc-100 backdrop-blur-2xl transition-all hover:bg-white/[0.06] hover:border-white/10 hover:shadow-[0_0_20px_rgba(255,255,255,0.02)]">
+                <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10 text-primary transition-transform group-hover/label:scale-110 group-hover/label:rotate-3">
+                    <Icon className="h-3.5 w-3.5" />
+                </div>
                 {label}
             </div>
         </div>

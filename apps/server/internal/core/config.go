@@ -58,7 +58,11 @@ type Config struct {
 		Dir string `mapstructure:"dir"`
 	} `mapstructure:"extensions"`
 	Metadata struct {
-		TMDBApiKey string `mapstructure:"tmdbApiKey"`
+		TMDBApiKey       string `mapstructure:"tmdbApiKey"`
+		FanArtApiKey     string `mapstructure:"fanartApiKey"`     // FanArt.tv — logos, clearart, thumbs (free key from fanart.tv/get-an-api-key)
+		OMDbApiKey       string `mapstructure:"omdbApiKey"`       // OMDb — ratings, runtime, director (free key, 1k req/day)
+		OpenSubsApiKey   string `mapstructure:"openSubsApiKey"`   // OpenSubtitles v1 REST — remote subtitle search (free key)
+		OpenSubsLanguages []string `mapstructure:"openSubsLanguages"` // Languages to search, e.g. ["es", "en"]
 	} `mapstructure:"metadata"`
 	Experimental struct {
 		MainServerTorrentStreaming bool `mapstructure:"mainServerTorrentStreaming"`
@@ -187,6 +191,11 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("offline.assetDir", "$KAMEHOUSE_DATA_DIR/offline/assets")
 	v.SetDefault("extensions.dir", "$KAMEHOUSE_DATA_DIR/extensions")
 	v.SetDefault("metadata.tmdbApiKey", "")
+	v.SetDefault("metadata.fanartApiKey", "")
+	v.SetDefault("metadata.omdbApiKey", "")
+	v.SetDefault("metadata.openSubsApiKey", "")
+	v.SetDefault("metadata.openSubsLanguages", []string{"es", "en"})
+
 }
 
 func initAppDataDir(defined string, logger *zerolog.Logger) (string, string, error) {
@@ -364,4 +373,11 @@ assetDir = "$KAMEHOUSE_DATA_DIR/offline/assets"
 
 [extensions]
 dir = "$KAMEHOUSE_DATA_DIR/extensions"
+
+[metadata]
+tmdbApiKey = ""
+fanartApiKey = ""
+omdbApiKey = ""
+openSubsApiKey = ""
+openSubsLanguages = ["es", "en"]
 `

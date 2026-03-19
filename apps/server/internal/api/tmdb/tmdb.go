@@ -368,6 +368,47 @@ func (c *Client) GetMovieDetails(ctx context.Context, id string) (SearchResult, 
 	return *resp, nil
 }
 
+// ExternalIDSource represents the type of external ID source for cross-referencing.
+type ExternalIDSource string
+
+const (
+	ExternalSourceTvdb ExternalIDSource = "tvdb_id"
+	ExternalSourceImdb ExternalIDSource = "imdb_id"
+)
+
+// FindResponse is the response from TMDb's /find endpoint.
+type FindResponse struct {
+	TVResults    []SearchResult `json:"tv_results"`
+	MovieResults []SearchResult `json:"movie_results"`
+}
+
+// FindByExternalID resolves a title from an external ID (e.g. TVDB, IMDb) using TMDb's /find endpoint.
+// This is free (uses existing TMDb key) and avoids the need for a paid TVDB v4 subscription.
+//
+// Example:
+//
+//	results, err := client.FindByExternalID(ctx, "81189", ExternalSourceTvdb)
+func (c *Client) FindByExternalID(ctx context.Context, externalID string, source ExternalIDSource) (*FindResponse, error) {
+	cacheKey := fmt.Sprintf("find:%s:%s", source, externalID)
+	if cached, ok := c.cache.Load(cacheKey); ok {
+		v := cached.(FindResponse)
+		return &v, nil
+	}
+
+	params := url.Values{}
+	params.Set("external_source", string(source))
+	params.Set("language", c.language)
+	params.Set("api_key", c.bearerToken)
+
+	resp, err := executeWithRetry[FindResponse](ctx, c, fmt.Sprintf("/find/%s?%s", externalID, params.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("tmdb find by external id (%s=%s): %w", source, externalID, err)
+	}
+
+	c.cache.Store(cacheKey, *resp)
+	return resp, nil
+}
+
 func executeWithRetry[T any](ctx context.Context, c *Client, endpoint string) (*T, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
 	var lastErr error

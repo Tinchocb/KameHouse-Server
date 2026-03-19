@@ -4,7 +4,7 @@ import { useAppStore } from "@/lib/store"
 import { Vaul, VaulContent } from "@/components/vaul"
 import { Link } from "@tanstack/react-router"
 import * as React from "react"
-import { FaBook, FaCog, FaHome, FaFilm, FaTv, FaMoon } from "react-icons/fa"
+import { FaBook, FaCog, FaHome, FaFilm, FaTv, FaMoon, FaSatelliteDish } from "react-icons/fa"
 import { cn } from "../core/styling"
 
 interface SidebarItem {

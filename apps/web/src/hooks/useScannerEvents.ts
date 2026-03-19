@@ -29,7 +29,7 @@ export function useScannerEvents() {
                 setScanning(true);
                 setScanProgress(0);
                 setScanningFile("");
-                toast.info("Starting library scan...", {
+                toast.info("Iniciando escaneo de biblioteca...", {
                     id: "library-scan-toast",
                     duration: Infinity,
                 });
@@ -47,13 +47,35 @@ export function useScannerEvents() {
                 break;
             }
 
+            case "PRUNED": {
+                // Stage 6: files deleted from disk were removed from the DB
+                const removed = data.removed ?? 0;
+                if (removed > 0) {
+                    toast.info(`Limpieza completada: ${removed} archivo${removed !== 1 ? "s" : ""} eliminado${removed !== 1 ? "s" : ""} de la biblioteca.`, {
+                        id: "library-scan-prune-toast",
+                        duration: 4000,
+                    });
+                }
+                break;
+            }
+
             case "FINISH":
                 setScanning(false);
                 setScanProgress(100);
-                toast.success("Scan complete", {
-                    id: "library-scan-toast",
-                    duration: 3000,
-                });
+                toast.dismiss("library-scan-toast");
+
+                const totalProcessed = data.total_processed ?? 0;
+                const durSec = data.duration_seconds ?? 0;
+                const durLabel = durSec > 60
+                    ? `${Math.round(durSec / 60)}m ${Math.round(durSec % 60)}s`
+                    : `${durSec.toFixed(1)}s`;
+
+                toast.success(
+                    totalProcessed > 0
+                        ? `Escaneo completado — ${totalProcessed} archivo${totalProcessed !== 1 ? "s" : ""} en ${durLabel}`
+                        : "Escaneo completado sin cambios",
+                    { id: "library-scan-toast", duration: 5000 }
+                );
                 
                 // Wait 3 seconds, then reset progress to 0
                 setTimeout(() => {

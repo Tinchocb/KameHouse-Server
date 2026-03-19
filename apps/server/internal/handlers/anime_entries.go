@@ -320,7 +320,7 @@ func (h *Handler) HandleManualMatch(c echo.Context) error {
 		UseLegacyMatching:   false,
 		WithShelving:        false,
 		UseTMDB:             h.App.Settings.Library.ScannerProvider == "tmdb",
-		EventDispatcher:     h.App.WSHub.EventDispatcher(),
+		EventDispatcher:     h.App.WSEventManager.Dispatcher(),
 	}
 
 	// Run the scanner for the selected files

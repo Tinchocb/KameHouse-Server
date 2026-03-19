@@ -76,13 +76,15 @@ const SwimlaneInner = React.memo(function SwimlaneInner({
                             className="snap-start"
                             onMouseEnter={() => onHover?.(item.backdropUrl ?? null)}
                             onMouseLeave={() => onHover?.(null)}
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
+                            initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                            whileInView={{ opacity: 1, scale: 1, y: 0 }}
+                            viewport={{ once: true, margin: "-50px" }}
                             transition={{ 
-                                duration: 0.5, 
-                                delay: index * 0.05,
-                                ease: [0.21, 0.47, 0.32, 0.98] 
+                                type: "spring",
+                                stiffness: 70,
+                                damping: 15,
+                                mass: 1,
+                                delay: index * 0.03,
                             }}
                         >
                             {item.badge === "TV" ? (

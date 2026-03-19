@@ -128,6 +128,9 @@ type LibrarySettings struct {
 	DisableTorrentStreaming         bool         `gorm:"column:disable_torrent_streaming" json:"disableTorrentStreaming"`
 	DisableTorrentProvider          bool         `gorm:"column:disable_torrent_provider" json:"disableTorrentProvider"`
 	ScannerUseLegacyMatching        bool         `gorm:"column:scanner_use_legacy_matching" json:"scannerUseLegacyMatching"`
+	FanartApiKey                    string       `gorm:"column:fanart_api_key" json:"fanartApiKey"`
+	OmdbApiKey                      string       `gorm:"column:omdb_api_key" json:"omdbApiKey"`
+	OpenSubsApiKey                  string       `gorm:"column:opensubs_api_key" json:"openSubsApiKey"`
 }
 
 func (s *LibrarySettings) GetAllPaths() []string {

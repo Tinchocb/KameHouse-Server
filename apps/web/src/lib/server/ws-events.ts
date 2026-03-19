@@ -66,10 +66,15 @@ export interface ScanProgressDetailedPayload {
 }
 
 export interface ScannerMessage {
-    status: "START" | "PROCESSING" | "FINISH"
+    status: "START" | "PROCESSING" | "FINISH" | "PRUNED"
     current?: number
     total?: number
     file?: string
+    // PRUNED event fields
+    removed?: number
+    // FINISH event fields
+    total_processed?: number
+    duration_seconds?: number
 }
 
 export type WebSocketMessage =
