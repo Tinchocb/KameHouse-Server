@@ -15,6 +15,8 @@ import (
 
 	"kamehouse/internal/core"
 	"kamehouse/internal/handlers"
+
+	"github.com/subosito/gotenv"
 )
 
 //go:embed all:web
@@ -43,6 +45,8 @@ func main() {
 
 
 func run(ctx context.Context) error {
+	_ = gotenv.Load()
+
 	portStr := os.Getenv("KAMEHOUSE_PORT")
 	portStrVal := 43211
 	if portStr != "" {

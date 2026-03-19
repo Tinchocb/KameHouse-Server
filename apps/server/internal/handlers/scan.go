@@ -102,6 +102,7 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		ConfigAsString:             h.App.Settings.GetLibrary().ScannerConfig,
 		AnimeCollection:            ac,
 		UseTMDB:                    h.App.Settings.GetLibrary().ScannerProvider == "tmdb",
+		TMDBClient:                 h.App.Metadata.TMDBClient,
 	}
 
 	// Scan the library

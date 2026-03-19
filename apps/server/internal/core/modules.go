@@ -2,6 +2,9 @@ package core
 
 import (
 	"context"
+	"os"
+	"strings"
+
 	"kamehouse/internal/continuity"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
@@ -213,6 +216,21 @@ func (a *App) InitOrRefreshModules() {
 	}
 
 	a.Settings = settings // Store settings instance in app
+
+	// Environment variable overrides
+	if envSeries := os.Getenv("KAMEHOUSE_SERIES_PATHS"); envSeries != "" {
+		settings.Library.SeriesPaths = strings.Split(envSeries, ",")
+	}
+	if envMovies := os.Getenv("KAMEHOUSE_MOVIE_PATHS"); envMovies != "" {
+		settings.Library.MoviePaths = strings.Split(envMovies, ",")
+	}
+	if envTmdb := os.Getenv("KAMEHOUSE_TMDB_TOKEN"); envTmdb != "" {
+		settings.Library.TmdbApiKey = envTmdb
+	}
+	if envTmdbLang := os.Getenv("KAMEHOUSE_TMDB_LANGUAGE"); envTmdbLang != "" {
+		settings.Library.TmdbLanguage = envTmdbLang
+	}
+
 	allPaths := settings.GetLibrary().GetAllPaths()
 	if len(allPaths) > 0 {
 		a.LibraryDir = allPaths[0]

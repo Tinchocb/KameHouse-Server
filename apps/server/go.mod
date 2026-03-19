@@ -22,7 +22,6 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/hashicorp/golang-lru/v2 v2.0.7
-	github.com/hekmon/transmissionrpc/v3 v3.0.0
 	github.com/imroc/req/v3 v3.57.0
 	github.com/kr/pretty v0.3.1
 	github.com/labstack/echo/v4 v4.15.0
@@ -100,8 +99,6 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/google/btree v1.1.2 // indirect
 	github.com/google/pprof v0.0.0-20250423184734-337e5dd93bb4 // indirect
-	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/hekmon/cunits/v2 v2.1.0 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/icholy/digest v1.1.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
@@ -153,7 +150,7 @@ require (
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
-	github.com/subosito/gotenv v1.6.0 // indirect
+	github.com/subosito/gotenv v1.6.0
 	github.com/tidwall/btree v1.8.1 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect

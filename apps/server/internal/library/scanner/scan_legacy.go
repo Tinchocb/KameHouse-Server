@@ -70,6 +70,7 @@ type Scanner struct {
 	UseTMDB bool
 
 	EventDispatcher events.Dispatcher
+	TMDBClient      *tmdb.Client
 }
 
 // Scan will scan the directory and return a list of dto.LocalFile.
@@ -531,25 +532,28 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	var tmdbProvider *librarymetadata.TMDBProvider
 	useTMDB := scn.UseTMDB
 
-	// Determine TMDB token and language
-	tmdbToken := ""
-	tmdbLanguage := ""
-	if scn.Database != nil {
-		if settings, err := scn.Database.GetSettings(); err == nil && settings != nil {
-			tmdbToken = settings.Library.TmdbApiKey
-			tmdbLanguage = settings.Library.TmdbLanguage
-		}
-	}
-	if tmdbToken == "" {
-		tmdbToken = os.Getenv("KAMEHOUSE_TMDB_TOKEN")
-	}
-
-	if tmdbToken != "" {
-		tmdbClient = tmdb.NewClient(tmdbToken, tmdbLanguage)
+	if scn.TMDBClient != nil {
+		tmdbClient = scn.TMDBClient
 		tmdbProvider = librarymetadata.NewTMDBProviderWithClient(tmdbClient)
-		scn.Logger.Debug().Msg("scanner: TMDb client initialized")
-		if scn.ScanLogger != nil {
-			scn.ScanLogger.logger.Info().Msg("TMDb client initialized")
+		scn.Logger.Debug().Msg("scanner: Using provided TMDb client")
+	} else {
+		// Fallback for cases where it's not provided (e.g. background runs)
+		tmdbToken := ""
+		tmdbLanguage := ""
+		if scn.Database != nil {
+			if settings, err := scn.Database.GetSettings(); err == nil && settings != nil {
+				tmdbToken = settings.Library.TmdbApiKey
+				tmdbLanguage = settings.Library.TmdbLanguage
+			}
+		}
+		if tmdbToken == "" {
+			tmdbToken = os.Getenv("KAMEHOUSE_TMDB_TOKEN")
+		}
+
+		if tmdbToken != "" {
+			tmdbClient = tmdb.NewClient(tmdbToken, tmdbLanguage)
+			tmdbProvider = librarymetadata.NewTMDBProviderWithClient(tmdbClient)
+			scn.Logger.Debug().Msg("scanner: TMDb client initialized from settings/env")
 		}
 	}
 

@@ -188,16 +188,15 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		autoDownloader.Enabled = false
 	}
 
-	// ── 4. Build merged Settings – existing data as base, incoming payload wins 
 	merged := prev
 	merged.ID = 1
 	merged.UpdatedAt = time.Now()
 
 	if b.Library != nil {
-		if b.Library.SeriesPaths != nil {
+		if len(b.Library.SeriesPaths) > 0 {
 			merged.Library.SeriesPaths = b.Library.SeriesPaths
 		}
-		if b.Library.MoviePaths != nil {
+		if len(b.Library.MoviePaths) > 0 {
 			merged.Library.MoviePaths = b.Library.MoviePaths
 		}
 		merged.Library.AutoUpdateProgress = b.Library.AutoUpdateProgress
@@ -219,8 +218,12 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		merged.Library.AutoSyncToLocalAccount = b.Library.AutoSyncToLocalAccount
 		merged.Library.AutoSaveCurrentMediaOffline = b.Library.AutoSaveCurrentMediaOffline
 		merged.Library.UseFallbackMetadataProvider = b.Library.UseFallbackMetadataProvider
-		merged.Library.TmdbApiKey = b.Library.TmdbApiKey
-		merged.Library.TmdbLanguage = b.Library.TmdbLanguage
+		if b.Library.TmdbApiKey != "" {
+			merged.Library.TmdbApiKey = b.Library.TmdbApiKey
+		}
+		if b.Library.TmdbLanguage != "" {
+			merged.Library.TmdbLanguage = b.Library.TmdbLanguage
+		}
 		merged.Library.ScannerUseLegacyMatching = b.Library.ScannerUseLegacyMatching
 		merged.Library.ScannerConfig = b.Library.ScannerConfig
 		merged.Library.ScannerStrictStructure = b.Library.ScannerStrictStructure
@@ -234,14 +237,31 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 			merged.Library.PrimaryMetadataProvider = "tmdb"
 		}
 	}
+
+	// Partial updates for Media Player Settings
 	if b.MediaPlayer != nil {
-		merged.MediaPlayer = *b.MediaPlayer
+		if b.MediaPlayer.Default != "" {
+			merged.MediaPlayer.Default = b.MediaPlayer.Default
+		}
+		if b.MediaPlayer.VlcPath != "" {
+			merged.MediaPlayer.VlcPath = b.MediaPlayer.VlcPath
+		}
+		if b.MediaPlayer.MpvPath != "" {
+			merged.MediaPlayer.MpvPath = b.MediaPlayer.MpvPath
+		}
 	}
+
+	// Partial updates for Torrent Settings
 	if b.Torrent != nil {
-		merged.Torrent = *b.Torrent
+		merged.Torrent.ShowBufferingStatus = b.Torrent.ShowBufferingStatus
+		merged.Torrent.ShowNetworkSpeed = b.Torrent.ShowNetworkSpeed
 	}
+
+	// Partial updates for Notification Settings
 	if b.Notifications != nil {
-		merged.Notifications = *b.Notifications
+		merged.Notifications.DisableNotifications = b.Notifications.DisableNotifications
+		merged.Notifications.DisableAutoDownloaderNotifications = b.Notifications.DisableAutoDownloaderNotifications
+		merged.Notifications.DisableAutoScannerNotifications = b.Notifications.DisableAutoScannerNotifications
 	}
 
 	merged.AutoDownloader = autoDownloader
