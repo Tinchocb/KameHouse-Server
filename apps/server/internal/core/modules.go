@@ -22,7 +22,6 @@ import (
 	"kamehouse/internal/torrentstream"
 	"kamehouse/internal/api/tmdb"
 	"kamehouse/internal/platforms/tmdb_platform"
-	"kamehouse/internal/platforms/simulated_platform"
 
 	"github.com/cli/browser"
 	"github.com/rs/zerolog"
@@ -280,17 +279,12 @@ func (a *App) InitOrRefreshModules() {
 
 	// Refresh active platform from settings
 	if !a.IsOffline() {
-		if settings.Library.TmdbApiKey != "" {
-			a.Logger.Info().Msg("app: Using TMDb platform")
-			a.Metadata.PlatformRef.Set(tmdb_platform.NewPlatform(settings.Library.TmdbApiKey, settings.Library.TmdbLanguage))
-			// Also update the TMDB client used by the scanner
-			a.Metadata.TMDBClient = tmdb.NewClient(settings.Library.TmdbApiKey, settings.Library.TmdbLanguage)
-		} else {
-			// Default back to simulated if no other platform is suitable
-			a.Logger.Info().Msg("app: No metadata provider configured or available, using simulated platform")
-			a.Metadata.PlatformRef.Set(simulated_platform.NewSimulatedPlatform(a.Logger, a.Database))
-			a.Metadata.TMDBClient = nil
-		}
+		a.Logger.Info().Msg("app: Using TMDb platform")
+		tmdbApiKey := "0584d4437be4d13174085bc9b4435985"
+		tmdbLanguage := "es-MX"
+		a.Metadata.PlatformRef.Set(tmdb_platform.NewPlatform(tmdbApiKey, tmdbLanguage))
+		// Also update the TMDB client used by the scanner
+		a.Metadata.TMDBClient = tmdb.NewClient(tmdbApiKey, tmdbLanguage)
 	}
 
 	a.Logger.Info().Msg("app: Refreshed modules")

@@ -20,7 +20,7 @@ import { Link2 } from "lucide-react"
 
 // Memoized MediaCard wrapper for strict 60fps performance 
 const MemoizedCard = React.memo(({ entry, onMatch }: { entry: Anime_LibraryCollectionEntry; onMatch?: (paths: string[], query?: string) => void }) => {
-    const media = entry?.media
+    const media = entry?.media as any
     if (!media) return null
 
     let progress = 0
@@ -36,7 +36,7 @@ const MemoizedCard = React.memo(({ entry, onMatch }: { entry: Anime_LibraryColle
             <ContextMenuItem 
                 onClick={(e) => {
                     e.stopPropagation()
-                    const paths = entry.libraryData?.localFiles?.map(f => f.path || "").filter(Boolean) || []
+                    const paths = (entry.libraryData as any)?.localFiles?.map((f: any) => f.path || "").filter(Boolean) || []
                     onMatch?.(paths, getTitle(media))
                 }}
             >
@@ -64,7 +64,7 @@ const MemoizedCard = React.memo(({ entry, onMatch }: { entry: Anime_LibraryColle
                             <MediaCardInteractive
                                 id={media.id}
                                 title={media.title || ""}
-                                posterUrl={media.posterPath}
+                                posterUrl={(media as any).posterPath}
                                 badge={media.format || undefined}
                                 progress={progress > 0 ? progress : undefined}
                                 onClick={() => window.location.href = `/series/${media.id}`}
@@ -79,6 +79,11 @@ const MemoizedCard = React.memo(({ entry, onMatch }: { entry: Anime_LibraryColle
     )
 })
 MemoizedCard.displayName = "MemoizedCard"
+
+type VirtualizedMediaGridProps = {
+    entries: Anime_LibraryCollectionEntry[]
+    emptyMessage: string
+}
 
 export function VirtualizedMediaGrid({ entries, emptyMessage, onMatch }: VirtualizedMediaGridProps & { onMatch?: (paths: string[], query?: string) => void }) {
     const containerRef = useRef<HTMLDivElement>(null)

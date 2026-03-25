@@ -144,6 +144,7 @@ func (s *MediaScanner) RunScan(ctx context.Context, mode ScanMode) (ScanResult, 
 	dirPaths := s.opts.LibraryDirs
 
 	var mu sync.Mutex
+	var nfoCache sync.Map
 	valid := make([]*dto.LocalFile, 0, len(paths))
 
 	var processed atomic.Int32
@@ -181,6 +182,7 @@ func (s *MediaScanner) RunScan(ctx context.Context, mode ScanMode) (ScanResult, 
 			nfoPath := findNfoForFile(p, dirPaths)
 			if nfoPath != "" {
 				if nfo, err := ParseNfoFile(nfoPath); err == nil && nfo != nil {
+					nfoCache.Store(p, nfo)
 					if nfo.ID > 0 {
 						lf.MediaId = nfo.ID
 					} else if nfo.TmdbId > 0 {
@@ -265,11 +267,8 @@ func (s *MediaScanner) RunScan(ctx context.Context, mode ScanMode) (ScanResult, 
 		if matchedMedia != nil {
 			// Parse NFO once if it exists
 			var nfo *NfoFile
-			nfoPath := findNfoForFile(lf.Path, s.opts.LibraryDirs)
-			if nfoPath != "" {
-				if parsedNfo, err := ParseNfoFile(nfoPath); err == nil && parsedNfo != nil {
-					nfo = parsedNfo
-				}
+			if cachedNfo, ok := nfoCache.Load(lf.Path); ok {
+				nfo = cachedNfo.(*NfoFile)
 			}
 
 			// P1: FanArt.tv — HD logos, clearart, thumbs

@@ -7,51 +7,8 @@ import { Anime_LibraryCollectionEntry } from "@/api/generated/types"
 import { Loader2, Clapperboard, Search, Filter } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 import { MediaCard } from "@/components/ui/media-card"
+import { HeroSection } from "@/components/shared/hero-section"
 
-// ─── Shared Cinematic Decorations ───────────────────────
-
-function SpeedLines({ opacity = 0.04 }: { opacity?: number }) {
-    return (
-        <svg
-            aria-hidden
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            style={{ opacity }}
-            viewBox="0 0 900 320"
-            preserveAspectRatio="xMidYMid slice"
-        >
-            {Array.from({ length: 32 }).map((_, i) => {
-                const angle = (i / 32) * 360
-                const rad = (angle * Math.PI) / 180
-                return (
-                    <line
-                        key={i}
-                        x1="450" y1="160"
-                        x2={450 + Math.cos(rad) * 1400}
-                        y2={160 + Math.sin(rad) * 1400}
-                        stroke="white"
-                        strokeWidth={i % 4 === 0 ? "1.5" : "0.6"}
-                    />
-                )
-            })}
-        </svg>
-    )
-}
-
-function HalftoneDots() {
-    return (
-        <svg
-            aria-hidden
-            className="absolute inset-0 w-full h-full opacity-[0.025] pointer-events-none"
-        >
-            <defs>
-                <pattern id="dots" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse">
-                    <circle cx="6" cy="6" r="1.5" fill="white" />
-                </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#dots)" />
-        </svg>
-    )
-}
 
 export const Route = createFileRoute("/movies/")({
     component: MoviesPage,
@@ -94,42 +51,18 @@ function MoviesPage() {
             return matchesGenre && matchesSearch
         })
     }, [search, activeGenre, allMovies])
-
-    return (
-        <div className="flex-1 w-full min-h-screen bg-background text-white overflow-y-auto pb-32 font-sans selection:bg-primary/30">
-            {/* ── Hero ── */}
-            <div className="relative overflow-hidden pt-24 pb-14 px-6 md:px-14">
-                {/* Cinematic Glow & Decorations */}
-                <div className="absolute top-[-160px] left-[-80px] w-[640px] h-[520px] rounded-full bg-gradient-to-br from-primary to-rose-600 opacity-[0.08] blur-[120px] pointer-events-none" />
-                <SpeedLines opacity={0.03} />
-                <HalftoneDots />
-                <div className="absolute right-6 top-1/2 -translate-y-1/2 [writing-mode:vertical-rl] font-black text-[10px] tracking-[0.5em] text-zinc-800 uppercase pointer-events-none select-none">
-                    PELÍCULAS · CINE · ARCHIVOS
-                </div>
-
-                <div className="relative z-10 max-w-[1400px] mx-auto">
-                    <div className="flex items-center gap-3 mb-4 animate-in fade-in slide-in-from-left-4 duration-700">
-                        <div className="h-[2px] w-8 bg-primary shadow-[0_0_15px_rgba(249,115,22,0.5)]" />
-                        <p className="text-[11px] font-black uppercase tracking-[0.4em] text-primary/90">Colección Premium</p>
-                    </div>
-                    
-                    <h1 className="font-bebas text-6xl md:text-8xl lg:text-9xl leading-[0.8] tracking-[0.02em] text-white animate-in fade-in slide-in-from-left-6 duration-1000">
-                        MI<br />
-                        <span className="text-transparent stroke-text opacity-30">PELÍ</span>CULA
-                    </h1>
-                    <p className="font-bebas text-2xl md:text-4xl tracking-[0.05em] text-primary mt-2 animate-in fade-in slide-in-from-left-8 duration-1000 delay-100">
-                        Biblioteca Cinematográfica
-                    </p>
-                    
-                    <div className="flex items-center gap-4 mt-8 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
-                        <div className="px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/5 backdrop-blur-md">
-                            <p className="text-[12px] font-bold text-zinc-400 tabular-nums">
-                                {isLoading ? "..." : allMovies.length} <span className="text-[10px] font-black text-zinc-600 uppercase ml-1">Títulos</span>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+ 
+     return (
+         <div className="flex-1 w-full min-h-screen bg-background text-white overflow-y-auto pb-32 font-sans selection:bg-primary/30">
+             <HeroSection
+                 title={<>A<br /><span className="text-transparent stroke-text opacity-30">RCHI</span>VO</>}
+                 subtitle="Módulo Cápsula"
+                 decorationTag="Corporación Cápsula"
+                 verticalTag="PELÍCULAS · CRÓNICAS · ARCHIVOS"
+                 count={isLoading ? "..." : allMovies.length}
+                 countLabel="Títulos"
+             />
+ 
 
             {/* ── Controls ── */}
             <div className="sticky top-0 z-30 glass-panel-premium border-y border-white/[0.03] backdrop-blur-3xl">
@@ -147,7 +80,7 @@ function MoviesPage() {
                     </div>
 
                     {/* Genres */}
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-nowrap sm:flex-wrap items-center gap-2 overflow-x-auto sm:overflow-x-visible no-scrollbar pb-2 sm:pb-0">
                         <div className="flex items-center gap-2 mr-2 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/5">
                             <FaFilter className="text-[10px] text-zinc-500" />
                             <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Géneros</span>
@@ -169,9 +102,10 @@ function MoviesPage() {
             {/* ── Grid ── */}
             <div className="max-w-[1400px] mx-auto px-6 md:px-14 pt-12">
                 {isLoading ? (
-                    <div className="h-64 flex flex-col items-center justify-center gap-4">
-                        <Loader2 className="w-10 h-10 text-primary animate-spin" />
-                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600">Procesando Biblioteca</p>
+                    <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-x-6 gap-y-10">
+                        {Array.from({ length: 14 }).map((_, i) => (
+                            <MovieCardSkeleton key={i} />
+                        ))}
                     </div>
                 ) : filtered.length === 0 ? (
                     <EmptyState 
@@ -190,6 +124,13 @@ function MoviesPage() {
             <style>{`
                 .stroke-text {
                     -webkit-text-stroke: 1.5px white;
+                }
+                .no-scrollbar::-webkit-scrollbar {
+                    display: none;
+                }
+                .no-scrollbar {
+                    -ms-overflow-style: none;
+                    scrollbar-width: none;
                 }
             `}</style>
         </div>
@@ -226,7 +167,7 @@ const MovieCard = memo(function MovieCard({ entry }: { entry: Anime_LibraryColle
         <div className="flex flex-col gap-3 group">
             <MediaCard 
                 artwork={movie.posterImage || ""}
-                title={movie.titleRomaji || movie.titleEnglish || "Sin título"}
+                title={movie.titleEnglish || movie.titleRomaji || movie.titleOriginal || "Sin título"}
                 badge={movie.format === "MOVIE" ? "PELÍCULA" : undefined}
                 year={movie.year}
                 rating={movie.score ? movie.score / 10 : undefined}
@@ -237,7 +178,7 @@ const MovieCard = memo(function MovieCard({ entry }: { entry: Anime_LibraryColle
             
             <div className="px-1 space-y-1">
                 <h3 className="text-[13px] font-bold text-zinc-200 group-hover:text-primary transition-colors line-clamp-2 leading-tight">
-                    {movie.titleRomaji || movie.titleEnglish || "Sin título"}
+                    {movie.titleEnglish || movie.titleRomaji || movie.titleOriginal || "Sin título"}
                 </h3>
                 <div className="flex items-center gap-2">
                     <span className="text-[10px] font-black text-zinc-600 uppercase tracking-wider">{movie.genres?.[0] || "Anime"}</span>
@@ -248,4 +189,20 @@ const MovieCard = memo(function MovieCard({ entry }: { entry: Anime_LibraryColle
             </div>
         </div>
     )
-})
+})
+ 
+export const MovieCardSkeleton = memo(function MovieCardSkeleton() {
+    return (
+        <div className="flex flex-col gap-3 animate-pulse">
+            <div className="aspect-[2/3] w-full bg-white/[0.03] rounded-2xl border border-white/5 shadow-xl" />
+            <div className="px-1 space-y-2">
+                <div className="h-4 w-5/6 bg-white/[0.04] rounded-md" />
+                <div className="flex items-center gap-2">
+                    <div className="h-3 w-12 bg-white/[0.02] rounded" />
+                    <div className="h-3 w-8 bg-white/[0.01] rounded" />
+                </div>
+            </div>
+        </div>
+    )
+})
+

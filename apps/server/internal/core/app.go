@@ -4,6 +4,7 @@ import (
 	"context"
 	"kamehouse/internal/api/mal"
 	"kamehouse/internal/api/tmdb"
+	"kamehouse/internal/api/torrentio"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/constants"
 	"kamehouse/internal/continuity"
@@ -85,6 +86,7 @@ type (
 
 		HookManager             hook.Manager
 		TorrentstreamRepository *torrentstream.Repository
+		TorrentioProvider       *torrentio.Provider
 
 		// Streaming
 		StreamOrchestrator    *streaming.StreamOrchestrator
@@ -227,17 +229,17 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 
 	// Initialize Metadata Enrichers
 	var fanartEnricher *metadata.FanArtEnricher
-	if cfg.Metadata.FanArtApiKey != "" {
-		fanartEnricher = metadata.NewFanArtEnricher(cfg.Metadata.FanArtApiKey)
-	}
+	fanartEnricher = metadata.NewFanArtEnricher(cfg.Metadata.FanArtApiKey)
+
 	var omdbEnricher *metadata.OMDbEnricher
-	if cfg.Metadata.OMDbApiKey != "" {
-		omdbEnricher = metadata.NewOMDbEnricher(cfg.Metadata.OMDbApiKey)
-	}
+	omdbEnricher = metadata.NewOMDbEnricher(cfg.Metadata.OMDbApiKey)
+
 	var openSubsEnricher *metadata.OpenSubtitlesEnricher
-	if cfg.Metadata.OpenSubsApiKey != "" {
-		openSubsEnricher = metadata.NewOpenSubtitlesEnricher(cfg.Metadata.OpenSubsApiKey, cfg.Metadata.OpenSubsLanguages...)
+	openSubsLangs := cfg.Metadata.OpenSubsLanguages
+	if len(openSubsLangs) == 0 {
+		openSubsLangs = []string{"es", "en"}
 	}
+	openSubsEnricher = metadata.NewOpenSubtitlesEnricher(cfg.Metadata.OpenSubsApiKey, openSubsLangs...)
 
 	// Exit if no WebSocket connections in desktop sidecar mode
 	if configOpts.Flags.IsDesktopSidecar {

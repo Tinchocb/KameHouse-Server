@@ -335,22 +335,27 @@ func (m *WSEventManager) UnsubscribeFromClientEvents(id string) {
 			m.Logger.Warn().Msg("ws: Failed to unsubscribe from client events")
 		}
 	}()
-	subscriber, ok := m.clientEventSubscribers.Get(id)
-	if !ok {
-		subscriber, ok = m.clientNativePlayerEventSubscribers.Get(id)
-		if !ok {
-			subscriber, ok = m.clientVideoCoreEventSubscribers.Get(id)
-			if !ok {
-				// Fallback to telemetry
-				subscriber, ok = m.torrentTelemetrySubscribers.Get(id)
-			}
-		}
+	var subscriber *ClientEventSubscriber
+	var ok bool
+
+	if s, found := m.clientEventSubscribers.Get(id); found {
+		subscriber, ok = s, true
+		m.clientEventSubscribers.Delete(id)
+	} else if s, found := m.clientNativePlayerEventSubscribers.Get(id); found {
+		subscriber, ok = s, true
+		m.clientNativePlayerEventSubscribers.Delete(id)
+	} else if s, found := m.clientVideoCoreEventSubscribers.Get(id); found {
+		subscriber, ok = s, true
+		m.clientVideoCoreEventSubscribers.Delete(id)
+	} else if s, found := m.torrentTelemetrySubscribers.Get(id); found {
+		subscriber, ok = s, true
+		m.torrentTelemetrySubscribers.Delete(id)
 	}
-	if ok {
+
+	if ok && subscriber != nil {
 		subscriber.mu.Lock()
 		defer subscriber.mu.Unlock()
 		subscriber.closed = true
-		m.clientEventSubscribers.Delete(id)
 		close(subscriber.Channel)
 	}
 }

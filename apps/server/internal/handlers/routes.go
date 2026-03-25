@@ -272,6 +272,8 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 
 	v1Library.POST("/scan", h.HandleScanLocalFiles)
 	v1Library.GET("/scan/status", h.HandleGetScanStatus)
+	v1Library.GET("/unlinked", h.HandleGetUnlinkedFiles)
+	v1Library.POST("/unlinked/resolve", h.HandleResolveUnlinkedFile)
 
 	v1Library.DELETE("/empty-directories", h.HandleRemoveEmptyDirectories)
 
@@ -531,6 +533,10 @@ func (h *Handler) RespondWithError(c echo.Context, err error) error {
 	return c.JSON(500, NewErrorResponse(err))
 }
 
+func (h *Handler) RespondWithCodeError(c echo.Context, code int, err error) error {
+	return c.JSON(code, NewErrorResponse(err))
+}
+
 func headMethodMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		// Skip stream routes
@@ -554,8 +560,11 @@ func headMethodMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 
 				return err
 			}
+			
+			return nil
 		}
 
 		return next(c)
 	}
 }
+

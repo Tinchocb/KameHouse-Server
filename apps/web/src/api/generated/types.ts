@@ -13,9 +13,7 @@ export type Models_MediaSeason = "WINTER" | "SPRING" | "SUMMER" | "FALL"
 // Platform
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-export type Platform_MediaFormat = "TV" | "MOVIE" | "SPECIAL" | "OVA" | "ONA" | "MUSIC"
-export type Platform_MediaStatus = "FINISHED" | "RELEASING" | "NOT_YET_RELEASED" | "CANCELLED" | "HIATUS"
-export type Platform_MediaListStatus = "CURRENT" | "PLANNING" | "COMPLETED" | "DROPPED" | "PAUSED" | "REPEATING"
+
 
 export type Platform_MediaTitle = {
     romaji?: string
@@ -87,7 +85,6 @@ export type Platform_UnifiedViewerStats = {
     animeCount: number
 }
 
-export type Platform_MediaSort = string
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Platform Alias section removed as it is now redundant.
@@ -3361,7 +3358,7 @@ export type Models_LibrarySettings = {
     refreshLibraryOnStart: boolean
     autoPlayNextEpisode: boolean
     enableWatchContinuity: boolean
-    enableWatchContinuity: boolean
+
     autoSyncOfflineLocalData: boolean
     scannerMatchingThreshold: number
     scannerMatchingAlgorithm: string

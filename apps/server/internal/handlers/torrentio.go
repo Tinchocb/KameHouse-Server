@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"kamehouse/internal/api/animap"
@@ -26,13 +27,11 @@ type TorrentioStreamResult struct {
 	MagnetURI    string `json:"magnetUri,omitempty"`
 }
 
-// (Removed anizip cache)
-
 // HandleGetTorrentioStreams responds to:
 //
-//	GET /api/v1/torrentio/streams?kitsuId=<int>&episode=<int>
+//	GET /api/v1/torrentio/streams?kitsuId=<int>&episode=<int>&season=<int>
 //
-// Flow: kitsuId → AniZip mapping → imdbID → Torrentio addon → TorrentioStreamResult[].
+// Flow: kitsuId → AniZip mapping → IMDB ID → Torrentio addon → TorrentioStreamResult[].
 //
 // The endpoint is intentionally non-fatal: all recoverable errors return 200 []
 // so the frontend can gracefully show "no Torrentio sources available" rather
@@ -41,6 +40,7 @@ func (h *Handler) HandleGetTorrentioStreams(c echo.Context) error {
 	// ── Parse query parameters ──────────────────────────────────────────────
 	kitsuIdStr := c.QueryParam("kitsuId")
 	episodeStr := c.QueryParam("episode")
+	seasonStr := c.QueryParam("season")
 
 	if kitsuIdStr == "" || episodeStr == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{
@@ -62,7 +62,14 @@ func (h *Handler) HandleGetTorrentioStreams(c echo.Context) error {
 		})
 	}
 
-	// ── Map kitsuId → Provider Identifier via Animap ─────────────────────────────────────
+	season := 1
+	if seasonStr != "" {
+		if s, err := strconv.Atoi(seasonStr); err == nil && s > 0 {
+			season = s
+		}
+	}
+
+	// ── Map kitsuId → IMDB identifier via Animap ─────────────────────────────────────
 	// Local DB persistent cache bypasses network redundancy completely
 	mapping, animapErr := animap.FetchAnimapMediaPersistent(h.App.Database, "kitsu", kitsuId)
 	if animapErr != nil || mapping == nil || mapping.Mappings == nil {
@@ -73,50 +80,49 @@ func (h *Handler) HandleGetTorrentioStreams(c echo.Context) error {
 		return c.JSON(http.StatusOK, []TorrentioStreamResult{})
 	}
 
+	// ── Resolve the correct identifier for Torrentio ──────────────────────
+	// Torrentio/Stremio only understands IMDB IDs (tt1234567) or kitsu:<id>.
+	// TMDB IDs are NOT supported by the Stremio addon protocol.
 	identifier := ""
-	if mapping.Mappings.TheMovieDbID != "" {
-		identifier = "tmdb:" + mapping.Mappings.TheMovieDbID
-	} else if imdb, ok := mapping.Titles["imdb"]; ok && imdb != "" {
-		identifier = imdb
-	} else {
-		// Fallback to Kitsu itself if TMDB/IMDB fails mapping
+
+	// Priority 1: IMDB from the titles map (most reliable for Torrentio)
+	if imdb, ok := mapping.Titles["imdb"]; ok && imdb != "" {
+		// Ensure it starts with "tt" (standard IMDB format)
+		if !strings.HasPrefix(imdb, "tt") {
+			identifier = "tt" + imdb
+		} else {
+			identifier = imdb
+		}
+	}
+
+	// Priority 2: Fallback to kitsu ID (Torrentio supports kitsu:<id>)
+	if identifier == "" {
 		identifier = "kitsu:" + strconv.Itoa(kitsuId)
 	}
 
-	// ── Fetch from Torrentio addon ───────────────────────────────────────────
-	tsSettings, _ := h.App.Database.GetTorrentstreamSettings()
-	torrentioUrl := ""
-	if tsSettings != nil {
-		torrentioUrl = tsSettings.TorrentioUrl
-	}
+	// ── Get or create the Torrentio provider (singleton) ─────────────────
+	provider := h.getOrCreateTorrentioProvider()
 
-	provider := torrentio.NewProvider(torrentioUrl)
-
-	// Since we introduced a memory cache layer inside `provider.go`, we can attempt a
-	// pseudo-fetch check synchronously with a tiny timeout, or check if it's there.
-	// But actually `GetSourcesForEpisode` handles everything. Fast returning cache is inside it.
-	
-	// ── Background Resolution ─────────────────
-	// Si el usuario entra y sale rápido, absorbemos todo mediante caché y despachamos en paralelo
+	// ── Fetch streams ────────────────────────────────────────────────────────
 	ctx, cancel := context.WithTimeout(c.Request().Context(), 10*time.Second)
 	defer cancel()
 
-	streams, fetchErr := provider.GetSourcesForEpisode(ctx, identifier, 1, episode)
+	streams, fetchErr := provider.GetSourcesForEpisode(ctx, identifier, season, episode)
 	if fetchErr != nil {
-		// The error could be an ErrRateLimit (HTTP 429) OR Timeout
 		h.App.Logger.Warn().
 			Err(fetchErr).
 			Str("identifier", identifier).
+			Int("season", season).
 			Int("episode", episode).
 			Msg("torrentio handler: provider fetch failed — returning graceful empty UI state")
-			
-		// Despachar en background para pre-cachear si se recupera la conexión
+
+		// Dispatch background pre-cache attempt if connection recovers
 		go func() {
 			bgCtx, bgCancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer bgCancel()
-			_, _ = provider.GetSourcesForEpisode(bgCtx, identifier, 1, episode)
+			_, _ = provider.GetSourcesForEpisode(bgCtx, identifier, season, episode)
 		}()
-		
+
 		return c.JSON(http.StatusOK, []TorrentioStreamResult{})
 	}
 
@@ -143,9 +149,25 @@ func (h *Handler) HandleGetTorrentioStreams(c echo.Context) error {
 	h.App.Logger.Info().
 		Str("identifier", identifier).
 		Int("kitsuId", kitsuId).
+		Int("season", season).
 		Int("episode", episode).
 		Int("count", len(results)).
 		Msg("torrentio handler: returning streams")
 
 	return c.JSON(http.StatusOK, results)
+}
+
+// getOrCreateTorrentioProvider returns the singleton Torrentio provider,
+// creating it on first use. This ensures the in-memory cache survives
+// across requests.
+func (h *Handler) getOrCreateTorrentioProvider() *torrentio.Provider {
+	if h.App.TorrentioProvider != nil {
+		return h.App.TorrentioProvider
+	}
+
+	// User specifically requested this language/quality filter config
+	torrentioUrl := "https://torrentio.strem.fun/language=latino|qualityfilter=scr,brremux,hdrall,dolbyvision,dolbyvisionwithhdr,4k,1080p,720p"
+
+	h.App.TorrentioProvider = torrentio.NewProvider(torrentioUrl)
+	return h.App.TorrentioProvider
 }

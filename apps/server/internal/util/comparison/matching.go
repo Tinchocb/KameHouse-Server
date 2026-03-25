@@ -24,7 +24,7 @@ func CompareWithLevenshteinCleanFunc(v *string, vals []*string, cleanFunc func(v
 	lev.CaseSensitive = false
 	//lev.DeleteCost = 1
 
-	res := make([]*LevenshteinResult, len(vals))
+	res := make([]*LevenshteinResult, 0, len(vals))
 
 	for _, val := range vals {
 		res = append(res, &LevenshteinResult{
@@ -75,7 +75,7 @@ func CompareWithJaroWinkler(v *string, vals []*string) []*JaroWinklerResult {
 	jw := metrics.NewJaroWinkler()
 	jw.CaseSensitive = false
 
-	res := make([]*JaroWinklerResult, len(vals))
+	res := make([]*JaroWinklerResult, 0, len(vals))
 
 	for _, val := range vals {
 		res = append(res, &JaroWinklerResult{
@@ -123,7 +123,7 @@ func CompareWithJaccard(v *string, vals []*string) []*JaccardResult {
 	jw.CaseSensitive = false
 	jw.NgramSize = 1
 
-	res := make([]*JaccardResult, len(vals))
+	res := make([]*JaccardResult, 0, len(vals))
 
 	for _, val := range vals {
 		res = append(res, &JaccardResult{
@@ -172,7 +172,7 @@ func CompareWithSorensenDice(v *string, vals []*string) []*SorensenDiceResult {
 	dice := metrics.NewSorensenDice()
 	dice.CaseSensitive = false
 
-	res := make([]*SorensenDiceResult, len(vals))
+	res := make([]*SorensenDiceResult, 0, len(vals))
 
 	for _, val := range vals {
 		res = append(res, &SorensenDiceResult{

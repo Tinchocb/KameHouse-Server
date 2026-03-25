@@ -1,17 +1,59 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { dbzData } from "@/lib/dbz-data"
-import { useState } from "react"
-import { useNavigate } from "@tanstack/react-router"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { useState, useMemo, memo } from "react"
+import { FaSearch, FaFilter } from "react-icons/fa"
+import { EmptyState } from "@/components/shared/empty-state"
+import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
+import { Anime_LibraryCollectionEntry } from "@/api/generated/types"
+import { Loader2, Tv } from "lucide-react"
+import { cn } from "@/components/ui/core/styling"
 
-export const Route = createFileRoute("/series/")({
-    component: SeriesPage,
-})
+export const Route = createFileRoute("/series/")(
+    { component: SeriesPage }
+)
 
 function SeriesPage() {
     const navigate = useNavigate()
     const [hoveredId, setHoveredId] = useState<string | null>(null)
+    const [search, setSearch] = useState("")
+    const [activeGenre, setActiveGenre] = useState<string | null>(null)
+
+    const { data: collection, isLoading } = useGetLibraryCollection()
 
     const accents = ["#f97316", "#3b82f6", "#a855f7", "#10b981", "#f43f5e"]
+
+    // ── All series (non-movie) ─────────────────────────────────────────────
+    const allSeries = useMemo(() => {
+        if (!collection?.lists) return []
+        const raw = collection.lists
+            .flatMap(list => list.entries || [])
+            .filter(entry => entry.media?.format !== "MOVIE")
+        const unique = new Map<number, NonNullable<typeof raw[0]>>()
+        raw.forEach(s => { if (s.mediaId) unique.set(s.mediaId, s) })
+        return Array.from(unique.values())
+    }, [collection])
+
+    const ALL_GENRES = useMemo(() => {
+        const genres = new Set<string>()
+        allSeries.forEach(s => { s.media?.genres?.forEach(g => genres.add(g)) })
+        return Array.from(genres).sort()
+    }, [allSeries])
+
+    const filtered = useMemo(() => {
+        return allSeries.filter(s => {
+            const media = s.media
+            if (!media) return false
+            const matchesGenre = activeGenre ? media.genres?.includes(activeGenre) : true
+            const title = media.titleRomaji || media.titleEnglish || media.titleOriginal || ""
+            const matchesSearch = search
+                ? title.toLowerCase().includes(search.toLowerCase()) ||
+                  (media.description || "").toLowerCase().includes(search.toLowerCase())
+                : true
+            return matchesGenre && matchesSearch
+        })
+    }, [allSeries, search, activeGenre])
+
+    // Limit fan-out cards to 8 most recent for UI performance
+    const displayCards = useMemo(() => filtered.slice(0, 40), [filtered])
 
     return (
         <>
@@ -25,9 +67,8 @@ function SeriesPage() {
                     display: flex;
                     flex-direction: column;
                     align-items: center;
-                    justify-content: center;
-                    padding: 32px 24px;
-                    gap: 32px;
+                    justify-content: flex-start;
+                    padding: 0;
                     overflow: hidden;
                 }
 
@@ -46,9 +87,11 @@ function SeriesPage() {
                     flex-direction: row;
                     align-items: stretch;
                     width: 100%;
-                    max-width: 1200px;
-                    height: min(90vh, 1200px);
+                    max-width: none;
+                    flex: 1;
+                    min-height: 0;
                     gap: 6px;
+                    padding: 0 4vw;
                 }
 
                 /* Each card */
@@ -58,7 +101,7 @@ function SeriesPage() {
                     cursor: pointer;
                     border-radius: 14px;
                     flex-shrink: 0;
-                    flex-grow: 1;          /* collapsed: equal share */
+                    flex-grow: 1;
                     transition:
                         flex-grow 360ms cubic-bezier(0.4, 0, 0.2, 1),
                         box-shadow 360ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -108,11 +151,9 @@ function SeriesPage() {
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    /* fade out when expanded, fade in when collapsed-while-any-hovered */
                     transition: opacity 280ms;
                 }
                 .card.is-hovered   .card-title-vertical { opacity: 0; pointer-events: none; }
-                /* Always show when nothing is hovered; hide when this one is collapsed */
                 .card-title-vertical-text {
                     font-family: 'Bebas Neue', sans-serif;
                     font-size: clamp(18px, 2.2vw, 26px);
@@ -190,113 +231,227 @@ function SeriesPage() {
                 .stroke-text {
                     -webkit-text-stroke: 1.5px white;
                 }
+
+                .series-controls {
+                    width: 100%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    flex-wrap: wrap;
+                    gap: 12px;
+                    padding: 20px 24px;
+                    border-bottom: 1px solid rgba(255,255,255,0.04);
+                    background: rgba(0,0,0,0.5);
+                    backdrop-filter: blur(20px);
+                    z-index: 20;
+                }
             `}</style>
 
-            <div className="series-page relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] via-transparent to-rose-600/[0.02] pointer-events-none" />
-                
-                {/* Cinematic Decorations */}
-                <svg
-                    aria-hidden
-                    className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.03]"
-                    viewBox="0 0 900 320"
-                    preserveAspectRatio="xMidYMid slice"
-                >
-                    {Array.from({ length: 32 }).map((_, i) => {
-                        const angle = (i / 32) * 360
-                        const rad = (angle * Math.PI) / 180
-                        return (
-                            <line
-                                key={i}
-                                x1="450" y1="160"
-                                x2={450 + Math.cos(rad) * 1400}
-                                y2={160 + Math.sin(rad) * 1400}
-                                stroke="white"
-                                strokeWidth={i % 4 === 0 ? "1.5" : "0.6"}
-                            />
-                        )
-                    })}
-                </svg>
+            <div className="series-page">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] via-transparent to-rose-600/[0.02] pointer-events-none z-0" />
 
-                <svg
-                    aria-hidden
-                    className="absolute inset-0 w-full h-full opacity-[0.02] pointer-events-none"
-                >
-                    <defs>
-                        <pattern id="dots-series" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse">
-                            <circle cx="6" cy="6" r="1.5" fill="white" />
-                        </pattern>
-                    </defs>
-                    <rect width="100%" height="100%" fill="url(#dots-series)" />
-                </svg>
-
-                <h1 className="page-title z-10">
-                    MI <span className="text-transparent stroke-text opacity-30">COLEC</span>CIÓN
-                </h1>
-
-                <div className="card-stack">
-                    {dbzData.map((series, idx) => {
-                        const isHovered = hoveredId === series.id
-                        const isAnyHovered = hoveredId !== null
-                        const isCollapsed = isAnyHovered && !isHovered
-                        const accent = accents[idx % accents.length]
-
-                        return (
-                            <div
-                                key={series.id}
-                                className={`card ${isHovered ? "is-hovered" : ""} ${isCollapsed ? "is-collapsed" : ""}`}
-                                onMouseEnter={() => setHoveredId(series.id)}
-                                onMouseLeave={() => setHoveredId(null)}
-                                onClick={() => navigate({ to: `/series/${series.id}` })}
-                            >
-                                <img className="card-bg" src={series.image} alt={series.title} />
-                                <div className="card-scrim" />
-                                <div className="card-accent-line" style={{ background: accent }} />
-
-                                {/* Vertical title — visible when not expanded */}
-                                <div className="card-title-vertical">
-                                    <span className="card-title-vertical-text">{series.title}</span>
-                                </div>
-
-                                {/* Expanded content */}
-                                <div className="card-content">
-                                    <p className="card-meta">{series.year} · {series.episodesCount} ep.</p>
-                                    <h2 className="card-title-expanded">{series.title}</h2>
-                                    <p className="card-description">{series.description}</p>
-                                    <button
-                                        className="card-cta"
-                                        style={{ borderColor: accent, color: accent }}
-                                        onMouseEnter={e => {
-                                            e.currentTarget.style.background = accent
-                                            e.currentTarget.style.color = "#000"
-                                        }}
-                                        onMouseLeave={e => {
-                                            e.currentTarget.style.background = "transparent"
-                                            e.currentTarget.style.color = accent
-                                        }}
-                                        onClick={e => {
-                                            e.stopPropagation()
-                                            navigate({ to: `/series/${series.id}` })
-                                        }}
-                                    >
-                                        ▶ Ver serie
-                                    </button>
-                                </div>
-                            </div>
-                        )
-                    })}
+                {/* ── Header ── */}
+                <div className="relative z-10 w-full max-w-none flex items-center justify-between pt-8 pb-6 px-[4vw]">
+                    <div>
+                        <h1 className="page-title">
+                            CRÓNICAS <span className="text-transparent stroke-text opacity-30">DB</span>
+                        </h1>
+                        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "rgba(255,255,255,0.3)", marginTop: "4px", letterSpacing: "0.1em" }}>
+                            {isLoading ? "Cargando..." : `${allSeries.length} series · ${filtered.length} mostradas`}
+                        </p>
+                    </div>
                 </div>
 
-                <p style={{
-                    fontFamily: "'Inter', sans-serif",
-                    fontSize: "10px",
-                    letterSpacing: "0.3em",
-                    color: "rgba(255,255,255,0.18)",
-                    textTransform: "uppercase",
-                }}>
-                    Pasá el mouse sobre una serie
-                </p>
+                {/* ── Controls ── */}
+                <div className="series-controls relative z-10">
+                    {/* Search */}
+                    <div className="relative w-72 group">
+                        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-primary transition-colors text-xs" />
+                        <input
+                            className="w-full pl-9 pr-4 py-2 bg-white/[0.03] border border-white/5 focus:border-primary/40 rounded-xl text-sm text-white outline-none transition-all duration-300 placeholder:text-zinc-600 hover:bg-white/[0.05] focus:bg-white/[0.08]"
+                            type="text"
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            placeholder="Buscar series..."
+                        />
+                    </div>
+
+                    {/* Genres */}
+                    <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex items-center gap-2 mr-1 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/5">
+                            <FaFilter className="text-[10px] text-zinc-500" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Géneros</span>
+                        </div>
+                        <GenrePill label="TODOS" active={activeGenre === null} onClick={() => setActiveGenre(null)} />
+                        {ALL_GENRES.slice(0, 10).map(g => (
+                            <GenrePill
+                                key={g}
+                                label={g.toUpperCase()}
+                                active={activeGenre === g}
+                                onClick={() => setActiveGenre(activeGenre === g ? null : g)}
+                            />
+                        ))}
+                    </div>
+                </div>
+
+                {/* ── Content ── */}
+                <div className="relative z-10 flex-1 min-h-0 w-full flex flex-col items-center justify-center">
+                    {isLoading ? (
+                        <div className="flex flex-col items-center justify-center gap-4">
+                            <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", letterSpacing: "0.3em", color: "rgba(255,255,255,0.3)", textTransform: "uppercase" }}>
+                                Cargando biblioteca...
+                            </p>
+                        </div>
+                    ) : filtered.length === 0 ? (
+                        <EmptyState
+                            title="Sin series"
+                            message={
+                                allSeries.length === 0
+                                    ? "No se encontraron series en tu biblioteca. Ejecutá un escaneo en Ajustes → Buscador."
+                                    : "Ninguna serie coincide con tu búsqueda actual."
+                            }
+                            illustration={<Tv className="w-20 h-20 text-zinc-800" />}
+                        />
+                    ) : (
+                        <div className="card-stack pb-6">
+                            {displayCards.map((entry, idx) => (
+                                <SeriesCard
+                                    key={entry.mediaId}
+                                    entry={entry}
+                                    isHovered={hoveredId === String(entry.mediaId)}
+                                    isAnyHovered={hoveredId !== null}
+                                    accent={accents[idx % accents.length]}
+                                    onHover={() => setHoveredId(String(entry.mediaId))}
+                                    onLeave={() => setHoveredId(null)}
+                                    onNavigate={() => navigate({ to: "/series/$seriesId", params: { seriesId: String(entry.mediaId) } })}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {filtered.length > 8 && (
+                    <p style={{
+                        fontFamily: "'Inter', sans-serif",
+                        fontSize: "10px",
+                        letterSpacing: "0.3em",
+                        color: "rgba(255,255,255,0.18)",
+                        textTransform: "uppercase",
+                        paddingBottom: "16px",
+                        position: "relative",
+                        zIndex: 10,
+                    }}>
+                        Mostrando las primeras 40 series · {filtered.length} en total
+                    </p>
+                )}
+                {filtered.length <= 40 && filtered.length > 0 && (
+                    <p style={{
+                        fontFamily: "'Inter', sans-serif",
+                        fontSize: "10px",
+                        letterSpacing: "0.3em",
+                        color: "rgba(255,255,255,0.18)",
+                        textTransform: "uppercase",
+                        paddingBottom: "16px",
+                        position: "relative",
+                        zIndex: 10,
+                    }}>
+                        Pasá el mouse sobre una serie
+                    </p>
+                )}
             </div>
         </>
     )
 }
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+const GenrePill = memo(function GenrePill({
+    label, active, onClick,
+}: { label: string; active: boolean; onClick: () => void }) {
+    return (
+        <button
+            className={cn(
+                "px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest transition-all duration-300 border",
+                active
+                    ? "bg-primary text-white border-primary shadow-[0_0_20px_rgba(249,115,22,0.3)] scale-105"
+                    : "bg-white/[0.03] text-zinc-500 border-white/5 hover:border-primary/40 hover:text-primary"
+            )}
+            onClick={onClick}
+        >
+            {label}
+        </button>
+    )
+})
+
+const SeriesCard = memo(function SeriesCard({
+    entry, isHovered, isAnyHovered, accent, onHover, onLeave, onNavigate,
+}: {
+    entry: Anime_LibraryCollectionEntry
+    isHovered: boolean
+    isAnyHovered: boolean
+    accent: string
+    onHover: () => void
+    onLeave: () => void
+    onNavigate: () => void
+}) {
+    const media = entry.media
+    if (!media) return null
+
+    const isCollapsed = isAnyHovered && !isHovered
+    const title = media.titleRomaji || media.titleEnglish || media.titleOriginal || "Sin título"
+    const image = media.bannerImage || media.posterImage || ""
+    const description = media.description?.replace(/<[^>]*>/g, "") || ""
+    const metaParts = [
+        media.year ? String(media.year) : null,
+        media.totalEpisodes ? `${media.totalEpisodes} ep.` : null,
+        media.format || null,
+    ].filter(Boolean)
+
+    return (
+        <div
+            className={`card ${isHovered ? "is-hovered" : ""} ${isCollapsed ? "is-collapsed" : ""}`}
+            onMouseEnter={onHover}
+            onMouseLeave={onLeave}
+            onClick={onNavigate}
+        >
+            {image ? (
+                <img className="card-bg" src={image} alt={title} />
+            ) : (
+                <div className="card-bg" style={{ background: `linear-gradient(135deg, rgba(15,15,15,1) 0%, rgba(30,30,30,1) 100%)` }} />
+            )}
+            <div className="card-scrim" />
+            <div className="card-accent-line" style={{ background: accent }} />
+
+            {/* Vertical title */}
+            <div className="card-title-vertical">
+                <span className="card-title-vertical-text">{title}</span>
+            </div>
+
+            {/* Expanded content */}
+            <div className="card-content">
+                <p className="card-meta">{metaParts.join(" · ")}</p>
+                <h2 className="card-title-expanded">{title}</h2>
+                <p className="card-description">{description}</p>
+                <button
+                    className="card-cta"
+                    style={{ borderColor: accent, color: accent }}
+                    onMouseEnter={e => {
+                        e.currentTarget.style.background = accent
+                        e.currentTarget.style.color = "#000"
+                    }}
+                    onMouseLeave={e => {
+                        e.currentTarget.style.background = "transparent"
+                        e.currentTarget.style.color = accent
+                    }}
+                    onClick={e => {
+                        e.stopPropagation()
+                        onNavigate()
+                    }}
+                >
+                    ▶ Ver serie
+                </button>
+            </div>
+        </div>
+    )
+})

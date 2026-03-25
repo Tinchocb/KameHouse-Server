@@ -3,6 +3,8 @@ import { useState, useMemo, useCallback, useRef } from "react"
 import { Virtuoso } from "react-virtuoso"
 import { useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import { useResolveStreams } from "@/api/hooks/useResolveStreams"
+import { useTorrentstreamStartStream } from "@/api/hooks/torrentstream.hooks"
+import { toast } from "sonner"
 
 
 import { LoadingOverlayWithLogo } from "@/components/shared/loading-overlay-with-logo"
@@ -108,16 +110,50 @@ export default function MediaDetailPage() {
         resolvingEp ? { mediaId: Number(seriesId), episode: resolvingEp.episodeNumber } : null,
         { enabled: !!resolvingEp }
     )
+    
+    const startTorrentStream = useTorrentstreamStartStream()
 
     // Playback Logic
-    const handlePlayEpisode = useCallback((source: any) => {
+    const handlePlayEpisode = useCallback(async (source: any) => {
         if (!source || !resolvingEp) return
 
         const isExternal = source.type !== "Local"
+        
+        let targetType: "direct" | "transcode" | "online" = isExternal ? "online" : "direct"
+        let streamPath = source.urlPath ?? "hybrid"
+        
+        if (isExternal && (source.type === "Torrent" || source.type === "Debrid")) {
+            // Initiate backend torrent proxy and transcoder
+            const clientId = `web-${Date.now()}`
+            
+            try {
+                // Must not use await inside a non-async function unless we convert it!
+                // Luckily we converted to async above.
+                toast.loading("Iniciando descarga P2P seguro...", { id: "p2p-toast" })
+                await startTorrentStream.mutateAsync({
+                    magnetLink: source.urlPath,
+                    mediaId: Number(seriesId),
+                    episodeNumber: resolvingEp.episodeNumber,
+                    aniDbEpisode: String(resolvingEp.episodeNumber),
+                    clientId: clientId,
+                } as any)
+                toast.success("Stream anclado al transcodificador", { id: "p2p-toast" })
+                
+                streamPath = `${window.location.origin}/api/v1/directstream/stream?clientId=${clientId}`
+                targetType = "transcode"
+            } catch (err) {
+                console.error("Failed to start torrent stream", err)
+                toast.error("Error al iniciar stream P2P", { id: "p2p-toast" })
+                return
+            }
+        } else if (!isExternal) {
+            const isMp4 = source.urlPath?.toLowerCase().includes(".mp4")
+            targetType = isMp4 ? "direct" : "transcode"
+        }
 
         setPlayTarget({
-            path: source.urlPath ?? "hybrid",
-            streamType: isExternal ? "online" : "direct",
+            path: streamPath,
+            streamType: targetType,
             onlineProvider: source.provider,
             episodeLabel: resolvingEp.displayTitle || resolvingEp.episodeTitle || `Ep. ${resolvingEp.episodeNumber}`,
             episodeNumber: resolvingEp.episodeNumber,

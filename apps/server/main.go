@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"syscall"
 	"time"
@@ -45,7 +46,7 @@ func main() {
 
 
 func run(ctx context.Context) error {
-	_ = gotenv.Load()
+	loadEnvFile()
 
 	portStr := os.Getenv("KAMEHOUSE_PORT")
 	portStrVal := 43211
@@ -98,5 +99,45 @@ func run(ctx context.Context) error {
 		// 2. Flush pending writes & close DB within deadline
 		app.Cleanup(shutdownCtx)
 		return nil
+	}
+}
+
+// loadEnvFile searches for a .env file starting from the CWD and
+// the executable's directory, then walking up to 5 parent directories.
+// This is needed because `go run` sets CWD to a temporary build directory.
+func loadEnvFile() {
+	// Candidate directories to search
+	candidates := make([]string, 0, 12)
+
+	if cwd, err := os.Getwd(); err == nil {
+		dir := cwd
+		for i := 0; i < 6; i++ {
+			candidates = append(candidates, dir)
+			parent := filepath.Dir(dir)
+			if parent == dir {
+				break
+			}
+			dir = parent
+		}
+	}
+
+	if exe, err := os.Executable(); err == nil {
+		dir := filepath.Dir(exe)
+		for i := 0; i < 6; i++ {
+			candidates = append(candidates, dir)
+			parent := filepath.Dir(dir)
+			if parent == dir {
+				break
+			}
+			dir = parent
+		}
+	}
+
+	for _, dir := range candidates {
+		envPath := filepath.Join(dir, ".env")
+		if _, err := os.Stat(envPath); err == nil {
+			_ = gotenv.OverLoad(envPath)
+			return
+		}
 	}
 }

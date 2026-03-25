@@ -15,15 +15,27 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
         const base = getServerBaseUrl()
         if (base.startsWith("http://")) return base.replace("http://", "ws://") + "/api/v1/ws"
         if (base.startsWith("https://")) return base.replace("https://", "wss://") + "/api/v1/ws"
+        if (base === "" && typeof window !== "undefined") {
+            const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
+            return `${protocol}//${window.location.host}/api/v1/ws`
+        }
         return "ws://127.0.0.1:43211/api/v1/ws"
     }, [])
 
-    const { lastJsonMessage } = useWebSocket(wsUrl, {
+    const { lastJsonMessage, sendJsonMessage } = useWebSocket(wsUrl, {
         shouldReconnect: () => true,
         reconnectAttempts: 10,
         reconnectInterval: 3000,
         share: true, // Allow multiple hooks to share this connection
     })
+
+    // Heartbeat loop to keep the WebSocket goroutine on the server alive
+    useEffect(() => {
+        const interval = setInterval(() => {
+            sendJsonMessage({ type: "ping", payload: { timestamp: Date.now() } })
+        }, 25000)
+        return () => clearInterval(interval)
+    }, [sendJsonMessage])
 
     useEffect(() => {
         if (!lastJsonMessage || typeof lastJsonMessage !== "object") return

@@ -240,7 +240,7 @@ func (h *Handler) HandleDeleteLogs(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	filepath.WalkDir(h.App.Config.Logs.Dir, func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(h.App.Config.Logs.Dir, func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() {
 			return nil
 		}
@@ -261,6 +261,10 @@ func (h *Handler) HandleDeleteLogs(c echo.Context) error {
 		}
 		return nil
 	})
+
+	if err != nil {
+		return h.RespondWithError(c, err)
+	}
 
 	return h.RespondWithData(c, true)
 }

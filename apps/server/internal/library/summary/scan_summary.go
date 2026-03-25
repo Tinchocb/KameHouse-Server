@@ -53,9 +53,15 @@ func (l *ScanSummaryLogger) HydrateData(lfs []*dto.LocalFile, media []*dto.Norma
 }
 
 func (l *ScanSummaryLogger) GenerateSummary() *dto.ScanSummary {
-	if l == nil || l.LocalFiles == nil || l.AllMedia == nil || l.AnimeCollection == nil {
+	if l == nil || l.LocalFiles == nil {
 		return nil
 	}
+
+	// AllMedia is optional — when nil, groups will have no title/image
+	if l.AllMedia == nil {
+		l.AllMedia = make([]*dto.NormalizedMedia, 0)
+	}
+
 	summary := &dto.ScanSummary{
 		ID:             uuid.NewString(),
 		Groups:         make([]*dto.ScanSummaryGroup, 0),
@@ -108,8 +114,10 @@ func (l *ScanSummaryLogger) GenerateSummary() *dto.ScanSummary {
 				break
 			}
 		}
-		if _, found := l.AnimeCollection.GetListEntryFromMediaId(mediaId); found {
-			mediaIsInCollection = true
+		if l.AnimeCollection != nil {
+			if _, found := l.AnimeCollection.GetListEntryFromMediaId(mediaId); found {
+				mediaIsInCollection = true
+			}
 		}
 
 		summary.Groups = append(summary.Groups, &dto.ScanSummaryGroup{

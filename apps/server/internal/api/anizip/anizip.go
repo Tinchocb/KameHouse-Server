@@ -7,6 +7,7 @@ import (
 	"kamehouse/internal/util/result"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/goccy/go-json"
 )
@@ -93,8 +94,8 @@ func FetchAniZipMedia(from string, id int) (*Media, error) {
 
 	apiUrl := "https://api.ani.zip/v1/episodes?" + from + "_id=" + strconv.Itoa(id)
 
-	// Send an HTTP GET request
-	response, err := http.Get(apiUrl)
+	client := &http.Client{Timeout: 15 * time.Second}
+	response, err := client.Get(apiUrl)
 	if err != nil {
 		return nil, err
 	}

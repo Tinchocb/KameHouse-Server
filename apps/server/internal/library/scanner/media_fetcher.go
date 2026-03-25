@@ -12,6 +12,8 @@ import (
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/rs/zerolog"
@@ -108,16 +110,30 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 		// Determine type hint based on file paths
 		var hint string
 		if len(files) > 0 {
+			// Normalize path to avoid Windows '\' vs Unix '/' mismatches
+			nfp := filepath.ToSlash(filepath.Clean(files[0].Path))
+
 			// Check if file is in series paths or movie paths
 			for _, rp := range opts.SeriesPaths {
-				if strings.HasPrefix(files[0].Path, rp) {
+				if rp == "" { continue }
+				nrp := filepath.ToSlash(filepath.Clean(rp))
+				// Ensure trailing slash to prevent partial matches (e.g. /movies vs /movies_old)
+				if !strings.HasSuffix(nrp, "/") {
+					nrp += "/"
+				}
+				if strings.HasPrefix(nfp, nrp) {
 					hint = "series"
 					break
 				}
 			}
 			if hint == "" {
 				for _, rp := range opts.MoviePaths {
-					if strings.HasPrefix(files[0].Path, rp) {
+					if rp == "" { continue }
+					nrp := filepath.ToSlash(filepath.Clean(rp))
+					if !strings.HasSuffix(nrp, "/") {
+						nrp += "/"
+					}
+					if strings.HasPrefix(nfp, nrp) {
 						hint = "movie"
 						break
 					}
@@ -128,12 +144,39 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 		// Search TMDB for this robust title group
 		var searchRes []*dto.NormalizedMedia
 		var err error
-		if hint == "series" {
-			searchRes, err = opts.TMDBProvider.SearchTV(ctx, titleGroup)
-		} else if hint == "movie" {
-			searchRes, err = opts.TMDBProvider.SearchMovie(ctx, titleGroup)
+
+		// PHASE 1: DBZ OVERRIDE - Bypass fuzzy TMDB matching for DBZ 100% accuracy
+		if dbId, isDb := ResolveDragonBallID(titleGroup); isDb {
+			if mf.ScanLogger != nil {
+				mf.ScanLogger.LogMediaFetcher(zerolog.InfoLevel).
+					Str("title", titleGroup).
+					Int("hardcoded_tmdb", dbId).
+					Msg("dragonball_resolver: Matched title natively")
+			}
+			exactMatch, detailErr := opts.TMDBProvider.GetMediaDetails(ctx, strconv.Itoa(dbId))
+			if detailErr == nil && exactMatch != nil {
+				searchRes = []*dto.NormalizedMedia{exactMatch}
+			} else {
+				err = detailErr
+			}
+		} else if anilistMatch, ok := findAniListExactMatch(mf.AllMedia, titleGroup); ok {
+			// PHASE 2: AniList Exact Match OVERRIDE - Bypass fuzzy TMDB if the user already has this in their AniList collection
+			if mf.ScanLogger != nil {
+				mf.ScanLogger.LogMediaFetcher(zerolog.InfoLevel).
+					Str("title", titleGroup).
+					Int("anilist_id", anilistMatch.ID).
+					Msg("anilist_resolver: Matched title strictly with offline AniList collection")
+			}
+			searchRes = []*dto.NormalizedMedia{anilistMatch}
 		} else {
-			searchRes, err = opts.TMDBProvider.SearchMedia(ctx, titleGroup)
+			// FALLBACK: Normal generic fuzzy search for non-identified tags
+			if hint == "series" {
+				searchRes, err = opts.TMDBProvider.SearchTV(ctx, titleGroup)
+			} else if hint == "movie" {
+				searchRes, err = opts.TMDBProvider.SearchMovie(ctx, titleGroup)
+			} else {
+				searchRes, err = opts.TMDBProvider.SearchMedia(ctx, titleGroup)
+			}
 		}
 
 		if err != nil && !errors.Is(err, librarymetadata.ErrNotFound) {
@@ -152,13 +195,7 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 			mf.AllMedia = append(mf.AllMedia, bestMatch)
 			mf.UnknownMediaIds = append(mf.UnknownMediaIds, bestMatch.ID)
 
-			// The matcher phase will verify each file strictly afterwards,
-			// but we bind the TMDB cache so bayesian engine has data to work with.
-			for _, lf := range files {
-				if lf.MediaId == 0 {
-					lf.MediaId = bestMatch.ID
-				}
-			}
+			// The matcher phase will verify each file strictly afterwards.
 		}
 	}
 
@@ -168,4 +205,41 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 
 func (mf *MediaFetcher) GetCollectionMediaIds() []int {
 	return mf.CollectionMediaIds
+}
+
+var anilistIdRegex = regexp.MustCompile(`(?i)(?:\[|\()(\d{1,6})(?:\]|\))`)
+
+func findAniListExactMatch(collection []*dto.NormalizedMedia, title string) (*dto.NormalizedMedia, bool) {
+	if match := anilistIdRegex.FindStringSubmatch(title); match != nil {
+		if id, err := strconv.Atoi(match[1]); err == nil {
+			for _, m := range collection {
+				if m.ID == id {
+					return m, true
+				}
+			}
+		}
+	}
+
+	cleanCompare := func(a *string, b string) bool {
+		if a == nil || *a == "" {
+			return false
+		}
+		cleanVal := anilistIdRegex.ReplaceAllString(b, "")
+		cleanVal = strings.TrimSpace(cleanVal)
+		return strings.EqualFold(strings.TrimSpace(*a), cleanVal)
+	}
+
+	for _, m := range collection {
+		if m.Title != nil {
+			if cleanCompare(m.Title.Romaji, title) || cleanCompare(m.Title.English, title) || cleanCompare(m.Title.Native, title) {
+				return m, true
+			}
+		}
+		for _, syn := range m.Synonyms {
+			if cleanCompare(syn, title) {
+				return m, true
+			}
+		}
+	}
+	return nil, false
 }

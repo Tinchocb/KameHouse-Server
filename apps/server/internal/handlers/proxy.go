@@ -19,13 +19,15 @@ import (
 
 var videoProxyClient2 = req.C().
 	SetTimeout(60 * time.Second).
-	EnableInsecureSkipVerify().
 	ImpersonateChrome()
 
 func (h *Handler) VideoProxy(c echo.Context) (err error) {
 	defer util.HandlePanicInModuleWithError("util/VideoProxy", &err)
 
 	url := c.QueryParam("url")
+	if !util.IsValidProxyURL(url) {
+		return echo.NewHTTPError(http.StatusForbidden, "SSRF blocked: invalid proxy URL")
+	}
 	headers := c.QueryParam("headers")
 	authToken := c.QueryParam("token")
 
@@ -84,10 +86,16 @@ func (h *Handler) VideoProxy(c echo.Context) (err error) {
 	// HLS Playlist
 	//log.Debug().Str("url", url).Msg("proxy: Processing HLS playlist")
 
-	bodyBytes, readErr := io.ReadAll(resp.Body)
+	const maxPlaylistSize = 5 * 1024 * 1024 // 5 MB limit
+	lr := io.LimitReader(resp.Body, maxPlaylistSize+1)
+	bodyBytes, readErr := io.ReadAll(lr)
 	if readErr != nil {
 		log.Error().Err(readErr).Str("url", url).Msg("proxy: Error reading HLS response body")
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to read HLS playlist")
+	}
+	if len(bodyBytes) > maxPlaylistSize {
+		log.Error().Str("url", url).Msg("proxy: HLS playlist exceeds maximum allowed size (DoS protect)")
+		return echo.NewHTTPError(http.StatusRequestEntityTooLarge, "HLS playlist too large")
 	}
 
 	buffer := bytes.NewBuffer(bodyBytes)

@@ -285,7 +285,7 @@ func (e *Entry) hydrateEntryEpisodeData(
 	libraryEpisodes map[string]*models.LibraryEpisode,
 ) {
 
-	if animeMetadata.Episodes == nil && len(animeMetadata.Episodes) == 0 {
+	if animeMetadata == nil || (animeMetadata.Episodes == nil && len(animeMetadata.Episodes) == 0) {
 		return
 	}
 

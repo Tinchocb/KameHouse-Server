@@ -223,8 +223,8 @@ func (a *ScannerAgent) processPath(ctx context.Context, path string) MediaMatch 
 			if meta.Title != "" {
 				// We attach the resolved title overriding the raw filename scrape
 				match.CleanTitle = meta.Title 
-			match.Synopsis = meta.Synopsis
-			match.PosterURL = meta.PosterURL
+				match.Synopsis = meta.Synopsis
+				match.PosterURL = meta.PosterURL
 			} else {
 				match.CleanTitle = parsed.Title
 			}

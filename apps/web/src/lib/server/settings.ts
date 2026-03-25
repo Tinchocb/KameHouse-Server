@@ -187,7 +187,7 @@ export const gettingStartedSchema = _gettingStartedSchema.extend(settingsSchema.
 
 export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>): GettingStarted_Variables => ({
     library: {
-        libraryPath: data.library.libraryPath,
+        // libraryPath: data.library.libraryPath, // Deprecated in backend schema
         autoUpdateProgress: true,
 
         torrentProvider: data.library.torrentProvider || DEFAULT_TORRENT_PROVIDER,
@@ -243,9 +243,9 @@ export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>): 
         vcTranslateTargetLanguage: "",
     },
     torrent: {
-        showBufferingStatus: data.torrent.showBufferingStatus || false,
-        showNetworkSpeed: data.torrent.showNetworkSpeed || false,
-    },
+        // showBufferingStatus: data.torrent.showBufferingStatus || false, // Deprecated in backend schema
+        // showNetworkSpeed: data.torrent.showNetworkSpeed || false, // Deprecated in backend schema
+    } as any,
     Platform: {
         hideAudienceScore: false,
 

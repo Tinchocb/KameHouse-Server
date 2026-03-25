@@ -24,9 +24,9 @@ type Client struct {
 	rateLimiter chan struct{}
 }
 
-// language is a BCP 47 language tag (e.g. "es-ES", "en-US"). If empty, defaults to "es-ES".
+// language is a BCP 47 language tag (e.g. "es-MX", "en-US"). If empty, defaults to "es-MX".
 func NewClient(bearerToken string, language ...string) *Client {
-	lang := "es-ES"
+	lang := "es-MX"
 	if len(language) > 0 && language[0] != "" {
 		lang = language[0]
 	}
@@ -52,6 +52,7 @@ type SearchResult struct {
 	OriginCountry    []string `json:"origin_country"`
 	PosterPath       string   `json:"poster_path"`
 	BackdropPath     string   `json:"backdrop_path"`
+	NumberOfEpisodes int      `json:"number_of_episodes"`
 }
 
 // SearchResponse is the paginated response from TMDb search.
@@ -229,7 +230,16 @@ func (c *Client) SearchMovie(ctx context.Context, query string) ([]SearchResult,
 // It prioritizes Japanese animation (with origin_country=JP and with_genres=16).
 func (c *Client) DiscoverTV(ctx context.Context, page *int, sort *string, status *string, genres []string, year *int, airingAtGreater *int, airingAtLesser *int) ([]SearchResult, int, error) {
 	// Check cache for a deterministic key
-	cacheKey := fmt.Sprintf("discover_tv:p=%v:s=%v:st=%v:g=%v:y=%v:ag=%v:al=%v", page, sort, status, genres, year, airingAtGreater, airingAtLesser)
+	var p, y, ag, al int
+	var s, st string
+	if page != nil { p = *page }
+	if sort != nil { s = *sort }
+	if status != nil { st = *status }
+	if year != nil { y = *year }
+	if airingAtGreater != nil { ag = *airingAtGreater }
+	if airingAtLesser != nil { al = *airingAtLesser }
+
+	cacheKey := fmt.Sprintf("discover_tv:p=%d:s=%s:st=%s:g=%v:y=%d:ag=%d:al=%d", p, s, st, genres, y, ag, al)
 	if cached, ok := c.cache.Load(cacheKey); ok {
 		resp := cached.(SearchResponse)
 		return resp.Results, resp.TotalPages, nil
@@ -298,10 +308,31 @@ func (c *Client) GetTVAlternativeTitles(ctx context.Context, tvID int) ([]Altern
 	return resp.Results, nil
 }
 
+// GetMovieAlternativeTitles gets all alternative titles for a movie.
+func (c *Client) GetMovieAlternativeTitles(ctx context.Context, movieID int) ([]AlternativeTitle, error) {
+	cacheKey := fmt.Sprintf("movie_alt:%d", movieID)
+	if cached, ok := c.cache.Load(cacheKey); ok {
+		return cached.([]AlternativeTitle), nil
+	}
+
+	params := url.Values{}
+	params.Set("api_key", c.bearerToken)
+
+	resp, err := executeWithRetry[AlternativeTitlesResponse](ctx, c, fmt.Sprintf("/movie/%d/alternative_titles?%s", movieID, params.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("tmdb get movie alternative titles: %w", err)
+	}
+
+	c.cache.Store(cacheKey, resp.Results)
+	return resp.Results, nil
+}
+
 // GetAllTitlesForResult returns all known titles for a search result,
 // including the main name, original name, and all alternative titles.
 func (c *Client) GetAllTitlesForResult(ctx context.Context, result SearchResult) []string {
 	titles := make([]string, 0, 10)
+
+	isMovie := result.Title != ""
 
 	// Add main titles
 	if result.Name != "" {
@@ -318,7 +349,14 @@ func (c *Client) GetAllTitlesForResult(ctx context.Context, result SearchResult)
 	}
 
 	// Fetch alternative titles
-	altTitles, err := c.GetTVAlternativeTitles(ctx, result.ID)
+	var altTitles []AlternativeTitle
+	var err error
+	if isMovie {
+		altTitles, err = c.GetMovieAlternativeTitles(ctx, result.ID)
+	} else {
+		altTitles, err = c.GetTVAlternativeTitles(ctx, result.ID)
+	}
+
 	if err == nil {
 		for _, alt := range altTitles {
 			if alt.Title != "" {
@@ -340,10 +378,16 @@ func (c *Client) GetAllTitlesForResult(ctx context.Context, result SearchResult)
 	return unique
 }
 
+
 // doRequest was removed. EdgeHTTPClient handles all request logic natively securely.
 
 // GetTVDetails fetches a specific TV show by ID and returns it as a SearchResult for mapping.
 func (c *Client) GetTVDetails(ctx context.Context, id string) (SearchResult, error) {
+	cacheKey := fmt.Sprintf("tv_detail:%s:%s", id, c.language)
+	if cached, ok := c.cache.Load(cacheKey); ok {
+		return cached.(SearchResult), nil
+	}
+
 	params := url.Values{}
 	params.Set("language", c.language)
 	params.Set("api_key", c.bearerToken)
@@ -352,11 +396,18 @@ func (c *Client) GetTVDetails(ctx context.Context, id string) (SearchResult, err
 	if err != nil {
 		return SearchResult{}, fmt.Errorf("tmdb get tv details: %w", err)
 	}
+
+	c.cache.Store(cacheKey, *resp)
 	return *resp, nil
 }
 
 // GetMovieDetails fetches a specific Movie by ID and returns it as a SearchResult for mapping.
 func (c *Client) GetMovieDetails(ctx context.Context, id string) (SearchResult, error) {
+	cacheKey := fmt.Sprintf("movie_detail:%s:%s", id, c.language)
+	if cached, ok := c.cache.Load(cacheKey); ok {
+		return cached.(SearchResult), nil
+	}
+
 	params := url.Values{}
 	params.Set("language", c.language)
 	params.Set("api_key", c.bearerToken)
@@ -365,6 +416,8 @@ func (c *Client) GetMovieDetails(ctx context.Context, id string) (SearchResult, 
 	if err != nil {
 		return SearchResult{}, fmt.Errorf("tmdb get movie details: %w", err)
 	}
+
+	c.cache.Store(cacheKey, *resp)
 	return *resp, nil
 }
 

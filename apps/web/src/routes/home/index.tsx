@@ -120,6 +120,7 @@ function HomePage() {
                     badge: m.format,
                     availabilityType: entry.availabilityType as SwimlaneItem["availabilityType"],
                     backdropUrl: getBackdrop(m) || undefined,
+                    description: m.description,
                     aspect: "poster",
                     year: m.year,
                     rating: m.score ? m.score / 10 : undefined,
@@ -192,7 +193,7 @@ function HomePage() {
     }
 
     return (
-        <div className="min-h-screen bg-background flex flex-col gap-12 w-full max-w-screen-2xl mx-auto overflow-x-hidden pb-20">
+        <div className="min-h-screen bg-background flex flex-col gap-8 w-full overflow-x-hidden pb-20">
             <DynamicBackdrop />
 
             {/* ── Hero Experience ── */}
@@ -221,7 +222,7 @@ function HomePage() {
             />
 
             {/* ── Content Sections ── */}
-            <div className="relative z-10 -mt-24 flex flex-col gap-20">
+            <div className="relative z-10 -mt-24 flex flex-col gap-12">
                 <AnimatePresence mode="wait">
                     {isLoading || isRefetching ? (
                         <motion.div 
@@ -230,24 +231,24 @@ function HomePage() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.6 }}
-                            className="space-y-20 px-6 md:px-10 lg:px-14"
+                            className="space-y-8 px-6 md:px-10 lg:px-16 xl:px-24 2xl:px-32"
                         >
                             <SwimlaneSkeleton title="Continuar viendo" aspect="wide" />
                             <SwimlaneSkeleton title="Novedades en tu biblioteca" aspect="poster" />
                             <SwimlaneSkeleton aspect="wide" />
                         </motion.div>
                     ) : (
-                        <motion.div 
+                        <motion.div
                             key="content"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ duration: 0.8, ease: "easeOut" }}
-                            className="space-y-20"
+                            className="space-y-8"
                         >
                             {/* 1. Continue Watching */}
-                            <ErrorBoundary className="px-6 md:px-10 lg:px-14">
+                            <ErrorBoundary className="px-6 md:px-10 lg:px-16 xl:px-24 2xl:px-32">
                                 {continueWatchingItems.length > 0 && (
-                                    <motion.div 
+                                    <motion.div
                                         initial={{ opacity: 0, y: 30 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
@@ -265,7 +266,7 @@ function HomePage() {
                             </ErrorBoundary>
 
                             {/* 2. Recently Added */}
-                            <ErrorBoundary className="px-6 md:px-10 lg:px-14">
+                            <ErrorBoundary className="px-6 md:px-10 lg:px-16 xl:px-24 2xl:px-32">
                                 {recentItems.length > 0 && (
                                     <motion.div 
                                         initial={{ opacity: 0, y: 30 }}
@@ -286,7 +287,7 @@ function HomePage() {
 
                             {/* 3. Curated Sagas / Intelligence */}
                             {(intelligenceData as any)?.swimlanes.map((lane: any, index: number) => (
-                                <ErrorBoundary key={lane.id} className="px-6 md:px-10 lg:px-14">
+                                <ErrorBoundary key={lane.id} className="px-6 md:px-10 lg:px-16 xl:px-24 2xl:px-32">
                                     <motion.div 
                                         initial={{ opacity: 0, y: 30 }}
                                         animate={{ opacity: 1, y: 0 }}
@@ -306,7 +307,7 @@ function HomePage() {
                             ))}
 
                             {/* 4. Full Collection Fallback */}
-                            <ErrorBoundary className="px-6 md:px-10 lg:px-14">
+                            <ErrorBoundary className="px-6 md:px-10 lg:px-16 xl:px-24 2xl:px-32">
                                 {!isCollectionLoading && allEntries.length > 0 && (
                                     <motion.div 
                                         initial={{ opacity: 0 }}
@@ -323,6 +324,9 @@ function HomePage() {
                                                 image: entry.media!.posterImage || getBackdrop(entry.media!),
                                                 subtitle: entry.media!.year ? String(entry.media!.year) : entry.media!.format,
                                                 badge: entry.media!.format,
+                                                availabilityType: entry.availabilityType as SwimlaneItem["availabilityType"],
+                                                backdropUrl: getBackdrop(entry.media!) || undefined,
+                                                description: entry.media!.description,
                                                 year: entry.media!.year,
                                                 rating: entry.media!.score ? entry.media!.score / 10 : undefined,
                                                 onClick: () => handleNavigate(entry.mediaId),

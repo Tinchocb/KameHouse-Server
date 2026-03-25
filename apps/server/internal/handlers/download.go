@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/labstack/echo/v4"
 )
@@ -56,8 +57,9 @@ func downloadTorrentFile(url string, dest string) (err error) {
 	fileName := filepath.Base(url)
 	filePath := filepath.Join(dest, fileName)
 
-	// Get the data
-	resp, err := http.Get(url)
+	// Get the data with a strict 15s timeout to prevent infinite hanging
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Get(url)
 	if err != nil {
 		return err
 	}

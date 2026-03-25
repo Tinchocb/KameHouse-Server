@@ -192,24 +192,9 @@ export function VideoPlayerModal({
     // Flag: did we already auto-trigger next episode during this session?
     const autoTriggeredRef = useRef(false)
 
-    // Fetch precise timestamps from backend intelligence service
-    useEffect(() => {
-        if (!mediaId || !episodeNumber) return
-        // Props already provided — skip API call
-        if (introEndProp !== undefined || outroStartProp !== undefined) return
-
-        let cancelled = false
-        fetch(`/api/v1/library/anime/intelligence?mediaId=${mediaId}&episode=${episodeNumber}`)
-            .then((r) => r.ok ? r.json() : null)
-            .then((rawData) => {
-                const data = rawData as { intro_end?: number; outro_start?: number } | null
-                if (cancelled || !data) return
-                if (typeof data.intro_end === "number") introEndRef.current = data.intro_end
-                if (typeof data.outro_start === "number") outroStartRef.current = data.outro_start
-            })
-            .catch(() => { /* silently use defaults */ })
-        return () => { cancelled = true }
-    }, [mediaId, episodeNumber, introEndProp, outroStartProp])
+    // NOTE: Intelligence timestamps (intro_end, outro_start) are not yet provided by the backend.
+    // When the /api/v1/library/anime/intelligence endpoint is implemented, re-enable the fetch here.
+    // Until then, defaults are used: intro=90s, outro=last 2min (set above in ref initialization).
 
     // Propagate prop changes to refs
     useEffect(() => { if (introEndProp !== undefined) introEndRef.current = introEndProp }, [introEndProp])

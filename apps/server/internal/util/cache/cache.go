@@ -20,10 +20,26 @@ type Cache[T any] struct {
 }
 
 func NewCache[T any](ttl time.Duration) *Cache[T] {
-	return &Cache[T]{
+	c := &Cache[T]{
 		entries: make(map[string]*CacheEntry[T]),
 		ttl:     ttl,
 	}
+
+	// Background reaper: periodically prune expired entries to prevent
+	// slow memory leaks from stale cache items that are never accessed again.
+	go func() {
+		interval := ttl
+		if interval < time.Minute {
+			interval = time.Minute
+		}
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for range ticker.C {
+			c.Cleanup()
+		}
+	}()
+
+	return c
 }
 
 func (c *Cache[T]) Get(key string) (T, bool) {

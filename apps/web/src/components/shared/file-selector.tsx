@@ -49,9 +49,9 @@ export function FileSelector(props: FileSelectorProps) {
         const node = findNodeByPath(exampleData, path)
         if (node) {
             setPath(node.path)
-            console.log("Manually selected:", node.path)
+            console.debug("Manually selected:", node.path)
         } else {
-            console.log("Path not found:", path)
+            console.debug("Path not found:", path)
             setPath("")
         }
     }
@@ -144,6 +144,7 @@ function FileSelectorModal(props: FileSelectorProps & { isOpen: boolean, onOpenC
                 >
                     {exampleData.children?.map(node => (
                         <TreeNode
+                            key={node.path}
                             data={node}
                             level={0}
                             kind={kind}
@@ -185,11 +186,7 @@ const TreeNode: React.FC<TreeProps & { level: number }> = ({
     fileExtensions,
 }) => {
 
-    React.useEffect(() => {
-        if (selectedPath && selectedPath.startsWith(data.path)) {
 
-        }
-    }, [selectedPath, data.path])
 
     const handleSelect = () => {
         if (kind === "both" || kind === data.type) {

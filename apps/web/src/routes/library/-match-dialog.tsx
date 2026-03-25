@@ -38,11 +38,11 @@ export function MatchDialog({ isOpen, onClose, initialQuery, paths }: MatchDialo
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault()
         if (query.trim()) {
-            search({ query })
+            search({ query, bearerToken: "" })
         }
     }
 
-    const handleAssign = (result: SearchResult) => {
+    const handleAssign = (result: SearchResult | any) => {
         assign({
             tmdbId: result.id,
             paths,
@@ -52,7 +52,7 @@ export function MatchDialog({ isOpen, onClose, initialQuery, paths }: MatchDialo
 
     return (
         <Modal
-            isOpen={isOpen}
+            open={isOpen}
             onOpenChange={(open) => !open && onClose()}
             title="Asignar Media Manualmente"
             description={
@@ -73,11 +73,12 @@ export function MatchDialog({ isOpen, onClose, initialQuery, paths }: MatchDialo
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             placeholder="Nombre de la película o serie..."
-                            className="pl-10"
+                            className={cn("pl-10", isAssigning && "opacity-50 cursor-not-allowed")}
                             autoFocus
+                            disabled={isAssigning}
                         />
                     </div>
-                    <Button type="submit" disabled={isSearching}>
+                    <Button type="submit" disabled={isSearching || isAssigning} aria-label="Buscar en TMDB" className={cn((isSearching || isAssigning) && "opacity-50 cursor-not-allowed")}>
                         {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : "BUSCAR"}
                     </Button>
                 </form>
@@ -96,7 +97,7 @@ export function MatchDialog({ isOpen, onClose, initialQuery, paths }: MatchDialo
                         </div>
                     )}
 
-                    {results?.map((result: SearchResult) => (
+                    {results?.map((result: any) => (
                         <div 
                             key={result.id}
                             className="group relative flex gap-4 p-3 bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 rounded-xl transition-all duration-300"
@@ -129,10 +130,13 @@ export function MatchDialog({ isOpen, onClose, initialQuery, paths }: MatchDialo
                             <div className="flex items-center">
                                 <Button 
                                     size="sm" 
-                                    variant="outline"
                                     onClick={() => handleAssign(result)}
-                                    disabled={isAssigning}
-                                    className="group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all duration-300"
+                                    disabled={isAssigning || isSearching}
+                                    aria-label={`Asignar ${result.name || result.title}`}
+                                    className={cn(
+                                        "group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all duration-300",
+                                        (isAssigning || isSearching) && "opacity-50 cursor-not-allowed pointer-events-none"
+                                    )}
                                 >
                                     {isAssigning ? <Loader2 className="w-4 h-4 animate-spin" /> : "ASIGNAR"}
                                 </Button>

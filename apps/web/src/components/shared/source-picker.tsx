@@ -151,7 +151,7 @@ interface SourceCardProps {
 const SourceCard = React.forwardRef<HTMLButtonElement, SourceCardProps>(
     ({ source, onClick, isRecommended }, ref) => {
         const isLocal = source.type === "Local"
-        const isDebrid = source.type === "Debrid"
+        const isDebrid = (source.type as any) === "Debrid"
 
         const Icon = isLocal ? HardDrive : isDebrid ? Zap : Magnet
         const iconBg = isLocal

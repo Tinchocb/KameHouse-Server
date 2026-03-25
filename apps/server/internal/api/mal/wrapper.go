@@ -28,7 +28,7 @@ type (
 func NewWrapper(accessToken string, logger *zerolog.Logger) *Wrapper {
 	return &Wrapper{
 		AccessToken: accessToken,
-		client:      &http.Client{},
+		client:      &http.Client{Timeout: 15 * time.Second},
 		logger:      logger,
 	}
 }
@@ -42,7 +42,7 @@ func VerifyMALAuth(malInfo *models.Mal, db *db.Database, logger *zerolog.Logger)
 	}
 
 	// Token is expired, refresh it
-	client := &http.Client{}
+	client := &http.Client{Timeout: 15 * time.Second}
 
 	// Build URL
 	urlData := url.Values{}

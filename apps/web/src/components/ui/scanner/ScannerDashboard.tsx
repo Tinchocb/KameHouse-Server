@@ -176,33 +176,33 @@ export function ScannerDashboard() {
     const recentSummaries = useMemo(() => (summaries ?? []).slice().reverse().slice(0, 8), [summaries])
 
     return (
-        <div className="space-y-12">
+        <div className="space-y-16">
             {/* ── Header ── */}
-            <header className="space-y-2">
-                <div className="flex items-center gap-3">
+            <header className="space-y-4">
+                <div className="flex items-center gap-4">
                     <div className="relative">
-                        <LucideRadar className="w-8 h-8 text-primary" />
+                        <LucideRadar className="w-12 h-12 text-primary" />
                         {isScanning && (
-                            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                            <span className="absolute -top-1 -right-1 flex h-4 w-4">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-primary" />
+                                <span className="relative inline-flex rounded-full h-4 w-4 bg-primary" />
                             </span>
                         )}
                     </div>
-                    <h1 className="text-4xl font-black tracking-tighter text-white">
+                    <h1 className="text-7xl font-black tracking-tighter text-white">
                         Scanner
                     </h1>
                     {isScanning && (
                         <motion.span
                             initial={{ opacity: 0, x: -8 }}
                             animate={{ opacity: 1, x: 0 }}
-                            className="text-[10px] font-black uppercase tracking-[0.2em] text-primary bg-primary/10 border border-primary/20 px-3 py-1 rounded-full"
+                            className="text-xs font-black uppercase tracking-[0.3em] text-primary bg-primary/10 border border-primary/20 px-4 py-2 rounded-full"
                         >
                             En progreso
                         </motion.span>
                     )}
                 </div>
-                <p className="text-zinc-500 text-sm max-w-xl">
+                <p className="text-zinc-400 text-xl font-medium leading-relaxed">
                     Centro de control del escáner de biblioteca. Visualizá el pipeline en tiempo real, iniciá escaneos y revisá el historial.
                 </p>
             </header>
@@ -215,27 +215,27 @@ export function ScannerDashboard() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -20, scale: 0.97 }}
                         transition={{ type: "spring", stiffness: 300, damping: 28 }}
-                        className="relative overflow-hidden rounded-[2rem] border border-primary/20 bg-primary/5 p-6 shadow-[0_0_60px_rgba(249,115,22,0.1)]"
+                        className="relative overflow-hidden rounded-[2.5rem] border border-primary/20 bg-primary/5 p-10 shadow-[0_0_80px_rgba(249,115,22,0.12)]"
                     >
-                        <div className="absolute inset-0 rounded-[2rem] overflow-hidden">
+                        <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden">
                             <div className="absolute inset-0 animate-[spin_4s_linear_infinite] opacity-20"
                                 style={{ background: "conic-gradient(from 0deg, transparent 60%, rgba(249,115,22,0.8) 80%, transparent 100%)" }} />
                         </div>
 
-                        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-6">
-                            <ProgressRing progress={scanProgress} size={80} stroke={6} />
+                        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
+                            <ProgressRing progress={scanProgress} size={100} stroke={7} />
 
-                            <div className="flex-1 min-w-0 space-y-2">
-                                <div className="flex items-center gap-3">
-                                    <LucideFlame className="w-5 h-5 text-primary animate-pulse" />
-                                    <span className="font-black text-white text-lg tracking-tight">Escaneando Biblioteca</span>
+                            <div className="flex-1 min-w-0 space-y-3">
+                                <div className="flex items-center gap-4">
+                                    <LucideFlame className="w-6 h-6 text-primary animate-pulse" />
+                                    <span className="font-black text-white text-2xl tracking-tight">Escaneando Biblioteca</span>
                                 </div>
-                                <p className="text-xs font-mono text-zinc-400 truncate max-w-lg" title={scanningFile}>
+                                <p className="text-sm font-mono text-zinc-400 truncate" title={scanningFile}>
                                     {scanningFile || "Preparando pipeline..."}
                                 </p>
-                                <div className="w-full bg-black/40 rounded-full h-1.5 overflow-hidden mt-2">
+                                <div className="w-full bg-black/40 rounded-full h-2 overflow-hidden mt-3">
                                     <motion.div
-                                        className="h-full bg-primary rounded-full shadow-[0_0_12px_rgba(249,115,22,0.6)]"
+                                        className="h-full bg-primary rounded-full shadow-[0_0_16px_rgba(249,115,22,0.6)]"
                                         style={{ width: `${scanProgress}%` }}
                                         transition={{ type: "spring", stiffness: 80 }}
                                     />
@@ -243,8 +243,8 @@ export function ScannerDashboard() {
                             </div>
 
                             <div className="text-right shrink-0">
-                                <span className="font-bebas text-5xl text-primary leading-none">{Math.round(scanProgress)}</span>
-                                <span className="font-bebas text-2xl text-primary/60">%</span>
+                                <span className="font-bebas text-7xl text-primary leading-none">{Math.round(scanProgress)}</span>
+                                <span className="font-bebas text-3xl text-primary/60">%</span>
                             </div>
                         </div>
                     </motion.div>
@@ -258,12 +258,12 @@ export function ScannerDashboard() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0 }}
-                        className="flex items-center gap-4 px-6 py-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5"
+                        className="flex items-center gap-6 px-8 py-6 rounded-3xl border border-emerald-500/20 bg-emerald-500/5"
                     >
-                        <LucideCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+                        <LucideCheck className="w-6 h-6 text-emerald-400 shrink-0" />
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-white">Último escaneo completado</p>
-                            <p className="text-xs text-zinc-500 mt-0.5">
+                            <p className="text-lg font-bold text-white">Último escaneo completado</p>
+                            <p className="text-sm text-zinc-500 mt-1">
                                 {lastFinish.total_processed
                                     ? `${lastFinish.total_processed} archivos procesados`
                                     : "Sin cambios detectados"}
@@ -278,9 +278,9 @@ export function ScannerDashboard() {
             </AnimatePresence>
 
             {/* ── Pipeline Visualization ── */}
-            <section className="space-y-6">
-                <SectionHeader label="Pipeline" icon={<LucideActivity size={14} />} />
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <section className="space-y-8">
+                <SectionHeader label="Pipeline" icon={<LucideActivity size={16} />} />
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                     {PIPELINE_STAGES.map((stage, idx) => (
                         <PipelineStageCard
                             key={stage.id}
@@ -293,13 +293,13 @@ export function ScannerDashboard() {
             </section>
 
             {/* ── Actions ── */}
-            <section className="space-y-6">
-                <SectionHeader label="Acciones" icon={<LucidePlay size={14} />} />
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <section className="space-y-8">
+                <SectionHeader label="Acciones" icon={<LucidePlay size={16} />} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     <ScanActionCard
                         label="FastScan"
                         desc="Detecta solo archivos nuevos o modificados (CRC32). Ideal para uso diario."
-                        icon={<LucideZap size={20} className="text-primary" />}
+                        icon={<LucideZap size={24} className="text-primary" />}
                         onClick={startFastScan}
                         disabled={isScanning || scanPending}
                         loading={isScanning}
@@ -308,7 +308,7 @@ export function ScannerDashboard() {
                     <ScanActionCard
                         label="DeepScan"
                         desc="Vuelve a procesar todos los archivos. Fuerza re-identificación completa."
-                        icon={<LucideRefreshCw size={20} className="text-violet-400" />}
+                        icon={<LucideRefreshCw size={24} className="text-violet-400" />}
                         onClick={startDeepScan}
                         disabled={isScanning || scanPending}
                         loading={false}
@@ -317,7 +317,7 @@ export function ScannerDashboard() {
                     <ScanActionCard
                         label="Analizador de Logs"
                         desc="Sube un log de escaneo y analiza el resultado con el visor de trazas."
-                        icon={<LucideFilter size={20} className="text-sky-400" />}
+                        icon={<LucideFilter size={24} className="text-sky-400" />}
                         href="/scan-log-viewer"
                         accentColor="sky"
                     />
@@ -326,16 +326,16 @@ export function ScannerDashboard() {
 
             {/* ── Live Event Feed ── */}
             {events.length > 0 && (
-                <section className="space-y-6">
-                    <SectionHeader label="Feed en Vivo" icon={<LucideActivity size={14} />} />
+                <section className="space-y-8">
+                    <SectionHeader label="Feed en Vivo" icon={<LucideActivity size={16} />} />
                     <EventFeed events={events} />
                 </section>
             )}
 
             {/* ── Scan History ── */}
             {recentSummaries.length > 0 && (
-                <section className="space-y-6">
-                    <SectionHeader label="Historial" icon={<LucideHistory size={14} />} />
+                <section className="space-y-8">
+                    <SectionHeader label="Historial" icon={<LucideHistory size={16} />} />
                     <ScanHistory summaries={recentSummaries} />
                 </section>
             )}
@@ -347,8 +347,9 @@ export function ScannerDashboard() {
 
 function SectionHeader({ label, icon }: { label: string; icon: React.ReactNode }) {
     return (
-        <div className="flex items-center gap-3">
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 flex items-center gap-2">
+        <div className="flex items-center gap-4">
+            <div className="h-px w-12 bg-gradient-to-r from-primary/60 to-transparent" />
+            <span className="text-sm font-black uppercase tracking-[0.4em] text-zinc-400 flex items-center gap-3">
                 {icon}
                 {label}
             </span>
@@ -365,11 +366,11 @@ function PipelineStageCard({ stage, isActive, isDone }: {
     return (
         <motion.div
             animate={isActive ? {
-                boxShadow: [`0 0 0 rgba(249,115,22,0)`, `0 0 30px ${stage.glowColor}`, `0 0 0 rgba(249,115,22,0)`],
+                boxShadow: [`0 0 0 rgba(249,115,22,0)`, `0 0 40px ${stage.glowColor}`, `0 0 0 rgba(249,115,22,0)`],
             } : {}}
             transition={isActive ? { duration: 1.5, repeat: Infinity } : {}}
             className={cn(
-                "relative p-5 rounded-[1.5rem] border transition-all duration-700 overflow-hidden group",
+                "relative p-7 rounded-[2rem] border transition-all duration-700 overflow-hidden group",
                 isActive
                     ? "border-white/20 bg-white/[0.06]"
                     : isDone
@@ -379,31 +380,31 @@ function PipelineStageCard({ stage, isActive, isDone }: {
         >
             {(isActive || isDone) && (
                 <div
-                    className="absolute -right-4 -bottom-4 w-24 h-24 rounded-full blur-[40px] transition-opacity duration-700"
+                    className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full blur-[50px] transition-opacity duration-700"
                     style={{ backgroundColor: stage.glowColor, opacity: isDone ? 0.2 : 0.5 }}
                 />
             )}
 
-            <div className="relative space-y-3">
+            <div className="relative space-y-4">
                 <div className={cn(
-                    "w-9 h-9 rounded-2xl flex items-center justify-center border transition-all duration-500",
+                    "w-12 h-12 rounded-2xl flex items-center justify-center border transition-all duration-500",
                     isActive
                         ? `${stage.color} border-white/20 bg-white/10 scale-110`
                         : isDone
                             ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/10"
                             : `${stage.color} border-white/10 bg-white/5 opacity-40 group-hover:opacity-70`
                 )}>
-                    {isDone && !isActive ? <LucideCheck size={16} /> : stage.icon}
+                    {isDone && !isActive ? <LucideCheck size={20} /> : stage.icon}
                 </div>
 
                 <div>
                     <p className={cn(
-                        "text-[10px] font-black uppercase tracking-widest transition-colors duration-500",
+                        "text-xs font-black uppercase tracking-widest transition-colors duration-500",
                         isActive ? stage.color : isDone ? "text-zinc-400" : "text-zinc-600"
                     )}>
                         {stage.shortLabel}
                     </p>
-                    <p className="text-xs font-semibold text-white/70 mt-0.5 leading-tight">{stage.label}</p>
+                    <p className="text-sm font-semibold text-white/70 mt-1 leading-tight">{stage.label}</p>
                 </div>
 
                 {isActive && (
@@ -445,21 +446,21 @@ function ScanActionCard({
         <Wrapper
             {...(wrapperProps as any)}
             className={cn(
-                "group relative block p-6 rounded-[2rem] border bg-white/[0.02] transition-all duration-500 text-left",
+                "group relative block p-8 rounded-[2.5rem] border bg-white/[0.02] transition-all duration-500 text-left",
                 c.border, c.bg, c.glow,
                 disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
             )}
         >
-            <div className="space-y-4">
+            <div className="space-y-5">
                 <div className="flex items-center justify-between">
-                    <div className="p-3 rounded-2xl bg-black/40 border border-white/10 group-hover:border-white/20 transition-all">
-                        {loading ? <LucideRefreshCw size={20} className={cn("animate-spin", c.text)} /> : icon}
+                    <div className="p-4 rounded-2xl bg-black/40 border border-white/10 group-hover:border-white/20 transition-all">
+                        {loading ? <LucideRefreshCw size={24} className={cn("animate-spin", c.text)} /> : icon}
                     </div>
-                    <LucideChevronRight size={16} className="text-zinc-600 group-hover:text-zinc-400 group-hover:translate-x-1 transition-all" />
+                    <LucideChevronRight size={20} className="text-zinc-600 group-hover:text-zinc-400 group-hover:translate-x-1 transition-all" />
                 </div>
                 <div>
-                    <p className="font-black text-white tracking-tight">{label}</p>
-                    <p className="text-xs text-zinc-500 mt-1 leading-relaxed">{desc}</p>
+                    <p className="font-black text-white text-lg tracking-tight">{label}</p>
+                    <p className="text-sm text-zinc-500 mt-2 leading-relaxed">{desc}</p>
                 </div>
             </div>
         </Wrapper>
@@ -500,28 +501,28 @@ function EventFeed({ events }: { events: ScanEvent[] }) {
         .slice(0, 50)
 
     return (
-        <div className="glass-panel rounded-3xl overflow-hidden border-white/5 bg-black/20">
+        <div className="glass-panel rounded-[2rem] overflow-hidden border-white/5 bg-black/20">
             <div
                 ref={listRef}
-                className="max-h-64 overflow-y-auto divide-y divide-white/[0.03]"
+                className="max-h-80 overflow-y-auto divide-y divide-white/[0.03]"
             >
                 {visibleEvents.map((evt: any) => (
                     <motion.div
                         key={evt.id || `${evt.timestamp}`}
                         initial={{ opacity: 0, x: -8 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="flex items-center gap-4 px-6 py-3"
+                        className="flex items-center gap-5 px-8 py-4"
                     >
-                        <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", {
+                        <div className={cn("w-2 h-2 rounded-full shrink-0", {
                             "bg-blue-400": evt.status === "START",
                             "bg-zinc-500": evt.status === "PROCESSING",
                             "bg-rose-400": evt.status === "PRUNED",
                             "bg-emerald-400": evt.status === "FINISH",
                         })} />
-                        <span className={cn("text-xs font-mono truncate flex-1", getEventColor(evt.status))}>
+                        <span className={cn("text-sm font-mono truncate flex-1", getEventColor(evt.status))}>
                             {getEventLabel(evt)}
                         </span>
-                        <span className="text-[10px] text-zinc-700 shrink-0">
+                        <span className="text-xs text-zinc-600 shrink-0">
                             {new Date(evt.timestamp).toLocaleTimeString()}
                         </span>
                     </motion.div>
@@ -533,12 +534,20 @@ function EventFeed({ events }: { events: ScanEvent[] }) {
 
 function ScanHistory({ summaries }: { summaries: any[] }) {
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {summaries.map((s, idx) => {
+                // The backend stores a dto.ScanSummary with Groups[] and UnmatchedFiles[]
+                // Unwrap if wrapped in a { scanSummary: ... } envelope
                 const summary = s.scanSummary ?? s
-                const files = summary?.stats?.total ?? summary?.total ?? "?"
-                const matched = summary?.stats?.matched ?? summary?.matched ?? "?"
-                const dur = summary?.stats?.duration ?? summary?.duration ?? null
+
+                const groups: any[] = summary?.groups ?? []
+                const unmatched: any[] = summary?.unmatchedFiles ?? []
+                const matchedCount = groups.reduce((acc: number, g: any) => acc + (g.files?.length ?? 0), 0)
+                const totalCount = matchedCount + unmatched.length
+
+                const files = totalCount > 0 ? totalCount : "?"
+                const matched = matchedCount > 0 || totalCount > 0 ? matchedCount : "?"
+
                 const createdAt = s.createdAt ? new Date(s.createdAt).toLocaleDateString("es-AR", {
                     day: "2-digit",
                     month: "short",
@@ -547,18 +556,18 @@ function ScanHistory({ summaries }: { summaries: any[] }) {
                 }) : "—"
 
                 return (
-                    <div key={idx} className="p-5 rounded-[1.5rem] border border-white/5 bg-white/[0.02] hover:bg-white/[0.03] hover:border-white/10 transition-all space-y-3 group">
-                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">
-                            <LucideHistory size={12} />
+                    <div key={idx} className="p-7 rounded-[2rem] border border-white/5 bg-white/[0.02] hover:bg-white/[0.03] hover:border-white/10 transition-all space-y-4 group">
+                        <div className="flex items-center gap-3 text-xs font-black uppercase tracking-widest text-zinc-600">
+                            <LucideHistory size={14} />
                             {createdAt}
                         </div>
-                        <div className="flex items-baseline gap-2">
-                            <span className="font-bebas text-3xl text-white">{files}</span>
-                            <span className="text-xs text-zinc-500">archivos</span>
+                        <div className="flex items-baseline gap-3">
+                            <span className="font-bebas text-5xl text-white">{files}</span>
+                            <span className="text-sm text-zinc-500">archivos</span>
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-zinc-500">
+                        <div className="flex items-center gap-4 text-sm text-zinc-500">
                             <span className="text-emerald-400 font-bold">{matched} match</span>
-                            {dur && <span>· {typeof dur === "number" ? `${(dur / 1e9).toFixed(1)}s` : dur}</span>}
+                            {unmatched.length > 0 && <span className="text-rose-400">· {unmatched.length} sin match</span>}
                         </div>
                     </div>
                 )

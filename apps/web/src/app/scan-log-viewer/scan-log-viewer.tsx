@@ -892,7 +892,7 @@ function MatcherFileGroup({ group, onSelectFile, isExpanded, toggleExpanded }: {
                                 <BiLinkAlt className="text-indigo-400 text-xs" />
                                 <span className="text-[10px] font-bold text-indigo-300 truncate">{mr.match}</span>
                             </div>
-                            <Badge size="sm" intent={mr.score >= 15 ? "success" : mr.score >= 10 ? "warning" : "alert-subtle"}>
+                            <Badge size="sm" intent={mr.score >= 15 ? "success" : mr.score >= 10 ? "warning" : "alert"}>
                                 S: {mr.score}
                             </Badge>
                         </>

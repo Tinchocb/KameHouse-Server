@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"sync/atomic"
 
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/library/scanner"
@@ -10,6 +11,8 @@ import (
 
 	"github.com/labstack/echo/v4"
 )
+
+var globalScanActive atomic.Bool
 
 // HandleScanLocalFiles
 //
@@ -60,6 +63,14 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 	}
 
 	// +---------------------+
+	// |   Concurrent Lock   |
+	// +---------------------+
+	
+	if !globalScanActive.CompareAndSwap(false, true) {
+		return h.RespondWithError(c, errors.New("ya hay un escaneo de biblioteca en curso, por favor espera"))
+	}
+
+	// +---------------------+
 	// |       Scanner       |
 	// +---------------------+
 
@@ -69,9 +80,9 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 	// Create a new scan logger
 	scanLogger, err := scanner.NewScanLogger(h.App.Config.Logs.Dir)
 	if err != nil {
+		globalScanActive.Store(false)
 		return h.RespondWithError(c, err)
 	}
-	defer scanLogger.Done()
 
 	ac, _ := h.App.GetAnimeCollection(false)
 
@@ -86,6 +97,7 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		PlatformRef:                h.App.Metadata.PlatformRef,
 		Logger:                     h.App.Logger,
 		WSEventManager:             h.App.WSEventManager,
+		EventDispatcher:            h.App.WSEventManager.Dispatcher(),
 		ExistingLocalFiles:         existingLfs,
 		SkipLockedFiles:            b.SkipLockedFiles,
 		SkipIgnoredFiles:           b.SkipIgnoredFiles,
@@ -108,38 +120,46 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		OpenSubsEnricher:           h.App.Metadata.OpenSubs,
 	}
 
-	// Scan the library
-	allLfs, err := sc.Scan(c.Request().Context())
-	if err != nil {
-		if errors.Is(err, scanner.ErrNoLocalFiles) {
-			return h.RespondWithData(c, []interface{}{})
+	// EXECUTE ASYNCHRONOUSLY to prevent HTTP Timeout & 504 errors on massive scans
+	go func() {
+		defer globalScanActive.Store(false)
+		defer scanLogger.Done()
+
+		allLfs, err := sc.Scan(context.Background())
+		if err != nil {
+			if !errors.Is(err, scanner.ErrNoLocalFiles) {
+				h.App.Logger.Error().Err(err).Msg("Failed background library scan")
+			}
+			return
 		}
 
-		return h.RespondWithError(c, err)
-	}
+		// Insert the local files
+		_, err = db.InsertLocalFiles(h.App.Database, allLfs)
+		if err != nil {
+			h.App.Logger.Error().Err(err).Msg("Failed to insert local files after scan")
+			return
+		}
 
-	// Insert the local files
-	lfs, err := db.InsertLocalFiles(h.App.Database, allLfs)
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
+		// Save the shelved local files
+		err = db.SaveShelvedLocalFiles(h.App.Database, sc.GetShelvedLocalFiles())
+		if err != nil {
+			h.App.Logger.Error().Err(err).Msg("Failed to save shelved files after scan")
+			return
+		}
 
-	// Save the shelved local files
-	err = db.SaveShelvedLocalFiles(h.App.Database, sc.GetShelvedLocalFiles())
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
+		// Save the scan summary
+		_ = db.InsertScanSummary(h.App.Database, scanSummaryLogger.GenerateSummary())
 
-	// Save the scan summary
-	_ = db.InsertScanSummary(h.App.Database, scanSummaryLogger.GenerateSummary())
-
-	go h.App.AutoDownloader.CleanUpDownloadedItems()
-
-	go func() {
-		_, _ = h.App.Metadata.PlatformRef.Get().RefreshAnimeCollection(context.Background())
+		// Background maintenance tasks
+		go h.App.AutoDownloader.CleanUpDownloadedItems()
+		go func() {
+			_, _ = h.App.Metadata.PlatformRef.Get().RefreshAnimeCollection(context.Background())
+		}()
 	}()
 
-	return h.RespondWithData(c, lfs)
+	// Respond immediately (202 Accepted logic). 
+	// Sending an empty array `[]` avoids React TypeScript schema mismatches on the Frontend.
+	return h.RespondWithData(c, make([]interface{}, 0))
 
 }
 
@@ -171,4 +191,40 @@ func (h *Handler) HandleGetScanStatus(c echo.Context) error {
 		"lastScanAt":  latest.CreatedAt,
 		"summary":     latest.ScanSummary,
 	})
+}
+// HandleGetUnlinkedFiles
+//
+//	@summary returns all files the scanner failed to identify.
+//	@desc These are files stored as GhostAssociations in the database.
+//	@route /api/v1/library/unlinked [GET]
+//	@returns []models.GhostAssociatedMedia
+func (h *Handler) HandleGetUnlinkedFiles(c echo.Context) error {
+	associations, err := h.App.Database.GetAllGhostAssociations()
+	if err != nil {
+		return h.RespondWithError(c, err)
+	}
+	return h.RespondWithData(c, associations)
+}
+
+// HandleResolveUnlinkedFile
+//
+//	@summary manually links an unrecognized file to a media ID.
+//	@desc Persists the user's choice as a Ghost Association so the next scan picks it up.
+//	@route /api/v1/library/unlinked/resolve [POST]
+func (h *Handler) HandleResolveUnlinkedFile(c echo.Context) error {
+	type body struct {
+		Path          string `json:"path"`
+		TargetMediaId int    `json:"targetMediaId"`
+	}
+	var b body
+	if err := c.Bind(&b); err != nil {
+		return h.RespondWithError(c, err)
+	}
+	if b.Path == "" || b.TargetMediaId == 0 {
+		return h.RespondWithError(c, errors.New("path and targetMediaId are required"))
+	}
+	if err := h.App.Database.ResolveGhostAssociation(b.Path, b.TargetMediaId); err != nil {
+		return h.RespondWithError(c, err)
+	}
+	return h.RespondWithData(c, map[string]any{"ok": true})
 }

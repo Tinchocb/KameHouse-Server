@@ -7,9 +7,11 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"kamehouse/internal/api/anizip"
+	"kamehouse/internal/api/torrentio"
 	"kamehouse/internal/database/db"
 	"github.com/rs/zerolog"
 )
@@ -65,28 +67,28 @@ func (r *UnifiedResolver) ResolveUnifiedMedia(ctx context.Context, mediaID strin
 
 	var (
 		sources []MediaSource
+		mu      sync.Mutex
+		wg      sync.WaitGroup
 	)
 
 	// Step 1: Local Files (Instantaneous via DB)
 	localFiles := r.getLocalSources(id, episode)
 	sources = append(sources, localFiles...)
 
-	// Step 2: External Streams (Deactivated)
-	/*
-		imdbID, kitsuID := r.translateMediaIDs(id)
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	// Step 2: External Streams
+	imdbID, kitsuID := r.translateMediaIDs(id)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 
-			if kitsuID > 0 {
-				extSources := r.getTorrentioSources(ctx, kitsuID, episode)
-				mu.Lock()
-				sources = append(sources, extSources...)
-				mu.Unlock()
-			}
-		}()
-		wg.Wait()
-	*/
+		if kitsuID > 0 || imdbID != "" {
+			extSources := r.getTorrentioSources(ctx, imdbID, kitsuID, episode)
+			mu.Lock()
+			sources = append(sources, extSources...)
+			mu.Unlock()
+		}
+	}()
+	wg.Wait()
 
 	// Step 3: Priority Sorting
 	sortSources(sources)
@@ -158,8 +160,62 @@ func (r *UnifiedResolver) getLocalSources(mediaID int, episode int) []MediaSourc
 
 // ── External Sources ─────────────────────────────────────────────────────────
 
-func (r *UnifiedResolver) getTorrentioSources(ctx context.Context, kitsuID int, episode int) []MediaSource {
-	return nil
+func (r *UnifiedResolver) getTorrentioSources(ctx context.Context, imdbID string, kitsuID int, episode int) []MediaSource {
+	identifier := ""
+	if imdbID != "" {
+		if !strings.HasPrefix(imdbID, "tt") {
+			identifier = "tt" + imdbID
+		} else {
+			identifier = imdbID
+		}
+	} else if kitsuID > 0 {
+		identifier = "kitsu:" + strconv.Itoa(kitsuID)
+	}
+
+	if identifier == "" {
+		return nil
+	}
+
+	settings, _ := r.db.GetTorrentstreamSettings()
+	url := torrentio.DefaultAddonURL
+	if settings != nil && settings.TorrentioUrl != "" {
+		url = settings.TorrentioUrl
+	}
+
+	provider := torrentio.NewProvider(url)
+
+	season := 1
+	// Torrentio requires a season for IMDB IDs.
+	// For Anime, season 1 is typically used unless mapped differently.
+
+	streams, fetchErr := provider.GetSourcesForEpisode(ctx, identifier, season, episode)
+	if fetchErr != nil {
+		r.logger.Warn().Err(fetchErr).Str("identifier", identifier).Msg("resolver: torrentio fetch failed")
+		return nil
+	}
+
+	var results []MediaSource
+	for _, s := range streams {
+		sType := SourceTypeTorrent
+		urlPath := s.MagnetURI
+		if s.IsDebrid || s.URL != "" {
+			sType = SourceTypeDebrid
+			urlPath = s.URL
+		}
+
+		results = append(results, MediaSource{
+			URLPath:    urlPath,
+			Type:       sType,
+			Quality:    s.Quality,
+			Resolution: inferResolution(s.Quality),
+			Provider:   s.Name,
+			Size:       0,
+			Seeders:    s.Seeders,
+			Rank:       2,
+		})
+	}
+
+	return results
 }
 
 // ── Sorting ──────────────────────────────────────────────────────────────────

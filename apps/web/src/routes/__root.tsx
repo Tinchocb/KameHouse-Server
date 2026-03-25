@@ -30,9 +30,9 @@ export const Route = createRootRouteWithContext<{
                     <AppSidebar />
                     <CommandPalette />
                     <OfflineStatus />
-                    <AppLayoutContent className="pt-20 md:pt-0 md:pl-20">
+                    <AppLayoutContent className="pt-20 md:pt-0 md:pl-24">
                         <AnimatePresence mode="wait">
-                            <PageTransition transitionKey={routerState.location.pathname} className="flex-1 max-w-screen-2xl mx-auto px-4 md:px-8 py-6 lg:py-10">
+                            <PageTransition transitionKey={routerState.location.pathname} className="flex-1 w-full">
                                 <Outlet />
                             </PageTransition>
                         </AnimatePresence>

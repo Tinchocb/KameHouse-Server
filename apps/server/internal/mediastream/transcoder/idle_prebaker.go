@@ -1,6 +1,7 @@
 package transcoder
 
 import (
+	"context"
 	"os/exec"
 	"runtime"
 	"strconv"
@@ -159,7 +160,9 @@ func getSystemCPUUsage() float64 {
 }
 
 func getWindowsCPUUsage() float64 {
-	cmd := exec.Command("wmic", "cpu", "get", "loadpercentage", "/value")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "wmic", "cpu", "get", "loadpercentage", "/value")
 	output, err := cmd.Output()
 	if err != nil {
 		return 50.0
@@ -180,7 +183,9 @@ func getWindowsCPUUsage() float64 {
 }
 
 func getLinuxCPUUsage() float64 {
-	cmd := exec.Command("sh", "-c", "top -bn1 | grep 'Cpu(s)' | awk '{print $2}'")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "sh", "-c", "top -bn1 | grep 'Cpu(s)' | awk '{print $2}'")
 	output, err := cmd.Output()
 	if err != nil {
 		return 50.0
@@ -194,7 +199,9 @@ func getLinuxCPUUsage() float64 {
 }
 
 func getDarwinCPUUsage() float64 {
-	cmd := exec.Command("sh", "-c", "ps -A -o %cpu | awk '{s+=$1} END {print s}'")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "sh", "-c", "ps -A -o %cpu | awk '{s+=$1} END {print s}'")
 	output, err := cmd.Output()
 	if err != nil {
 		return 50.0

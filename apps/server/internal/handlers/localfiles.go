@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models/dto"
@@ -331,6 +333,31 @@ func (h *Handler) HandleDeleteLocalFiles(c echo.Context) error {
 	b := new(body)
 	if err := c.Bind(b); err != nil {
 		return h.RespondWithError(c, err)
+	}
+
+	// Security: Only allow deletion of files that reside within registered library paths.
+	// Without this check, an attacker could delete arbitrary system files via the API.
+	libraryPaths, libErr := h.App.Database.GetAllLibraryPathsFromSettings()
+	if libErr != nil || len(libraryPaths) == 0 {
+		return h.RespondWithError(c, errors.New("cannot delete files: no library paths configured"))
+	}
+
+	for _, p := range b.Paths {
+		absPath, err := filepath.Abs(p)
+		if err != nil {
+			return h.RespondWithError(c, fmt.Errorf("invalid path: %s", p))
+		}
+		inLibrary := false
+		for _, libPath := range libraryPaths {
+			absLib, _ := filepath.Abs(libPath)
+			if strings.HasPrefix(absPath, absLib+string(os.PathSeparator)) || absPath == absLib {
+				inLibrary = true
+				break
+			}
+		}
+		if !inLibrary {
+			return h.RespondWithError(c, fmt.Errorf("path outside library boundaries: %s", p))
+		}
 	}
 
 	// Get all the local files

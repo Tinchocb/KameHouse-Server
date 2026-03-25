@@ -4,6 +4,8 @@ import { cn } from "@/components/ui/core/styling"
 import { useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import { HardDrive, Zap, Star, ArrowLeft, Calendar, Clock, CheckCircle2, Circle, ChevronRight, ChevronDown } from "lucide-react"
 // import { useProgressStore } from "@/lib/stores/progress.store" // Disabled as it might not exist
+import { VideoPlayer } from "@/components/video/player"
+import type { Mediastream_StreamType } from "@/api/generated/types"
 
 export const Route = createFileRoute("/series/$seriesId/$sagaId")({
     component: DetailPage,
@@ -18,7 +20,7 @@ interface StreamSource {
     codec: string
 }
 
-const dbzData: any[] = [] // Mock or should be imported. Setting to empty for build.
+import { DRAGON_BALL_SAGAS } from "@/lib/config/dragonball.config"
 
 interface Episode {
     id: string
@@ -371,12 +373,113 @@ function DetailPage() {
         unmarkWatched: (_id: string) => {},
     }
 
-    const series = dbzData.find((s: any) => s.id === seriesId)
-    const saga = series?.sagas.find((s: any) => s.id === sagaId)
+    const { data: libraryEntry } = useGetAnimeEntry(Number(seriesId))
+
+    // Match saga from our local mapping using TMDB ID or title fallback
+    let seriesSagas: any[] = []
+    const tmdbId = libraryEntry?.media?.tmdbId || 0
+    
+    if (tmdbId && DRAGON_BALL_SAGAS[tmdbId]) {
+        seriesSagas = DRAGON_BALL_SAGAS[tmdbId]
+    } else if (libraryEntry?.media) {
+        const title = libraryEntry.media.titleRomaji || libraryEntry.media.titleEnglish || libraryEntry.media.titleOriginal || ""
+        const searchTitle = title.toLowerCase().replace(/\s+/g, "")
+        
+        if (searchTitle.includes("dragonballz") || searchTitle === "dbz") {
+            seriesSagas = DRAGON_BALL_SAGAS[12971] // Z
+        } else if (searchTitle.includes("dragonballgt")) {
+            seriesSagas = DRAGON_BALL_SAGAS[888] // GT
+        } else if (searchTitle.includes("dragonballsuper")) {
+            seriesSagas = DRAGON_BALL_SAGAS[62715] // Super
+        } else if (searchTitle.includes("dragonballkai")) {
+            seriesSagas = DRAGON_BALL_SAGAS[61709] // Kai
+        } else if (searchTitle.includes("dragonballdaima")) {
+            seriesSagas = DRAGON_BALL_SAGAS[240411] // Daima
+        } else if (searchTitle === "dragonball") {
+            seriesSagas = DRAGON_BALL_SAGAS[862] // Original
+        }
+
+        // Always fallback to Original DB if we have a match for "dragon ball" but no specific suffix
+        if (!seriesSagas || seriesSagas.length === 0) {
+            const pureTitle = title.toLowerCase().replace(/\s+/g, "")
+            const isMovie = libraryEntry.media?.format === "MOVIE" || pureTitle.includes("movie") || pureTitle.includes("pelicula") || pureTitle.includes("aventura")
+            if (!isMovie && pureTitle.includes("dragonball")) {
+                seriesSagas = DRAGON_BALL_SAGAS[862]
+            }
+        }
+    }
+    
+    const rawSaga = seriesSagas.find((s) => s.id === sagaId)
+
+    // Build the frontend standard format 
+    const series = useMemo(() => {
+        if (!libraryEntry?.media) return null
+        return {
+            id: seriesId,
+            title: libraryEntry.media.titleRomaji || libraryEntry.media.titleEnglish || "Serie",
+            year: libraryEntry.media.year?.toString() || "",
+            episodesCount: libraryEntry.media.totalEpisodes || 0,
+        }
+    }, [libraryEntry, seriesId])
+
+    const saga = useMemo(() => {
+        if (!rawSaga) return null
+        
+        // Find episodes physically available from standard GET
+        const allEpisodes = libraryEntry?.episodes || []
+        
+        // Filter those belonging inside saga boundaries
+        const arcEpisodes = allEpisodes
+            .filter(ep => ep.episodeNumber >= rawSaga.startEp && ep.episodeNumber <= rawSaga.endEp)
+            .sort((a, b) => a.episodeNumber - b.episodeNumber)
+
+        // Map to expected UI layout
+        const mappedEpisodes: Episode[] = arcEpisodes.map(ep => ({
+            id: ep.absoluteEpisodeNumber?.toString() ?? ep.episodeNumber.toString(),
+            number: ep.episodeNumber,
+            title: ep.episodeTitle || ep.displayTitle || `Episodio ${ep.episodeNumber}`,
+            description: ep.episodeMetadata?.overview || ep.episodeMetadata?.summary || "Sin descripción disponible.",
+            duration: ep.episodeMetadata?.length ? `${ep.episodeMetadata.length} min` : "24 min"
+        }))
+
+        // Fake fallback episodes (for visuals if library isn't fully downloaded)
+        // If the library returns fewer episodes than the saga needs, we generate mock ones so the user 
+        // can still see Torrentio streams for them!
+        const guaranteedLength = rawSaga.endEp - rawSaga.startEp + 1
+        let finalEpisodes = mappedEpisodes
+        if (mappedEpisodes.length < guaranteedLength) {
+            const filler: Episode[] = []
+            for (let i = rawSaga.startEp; i <= rawSaga.endEp; i++) {
+                const exists = mappedEpisodes.find(m => m.number === i)
+                if (exists) filler.push(exists)
+                else filler.push({
+                    id: `mock-${i}`,
+                    number: i,
+                    title: `Episodio ${i}`,
+                    description: "Detalles no sincronizados localmente",
+                    duration: "24 min"
+                })
+            }
+            finalEpisodes = filler
+        }
+
+        return {
+            ...rawSaga,
+            episodes: finalEpisodes
+        }
+    }, [rawSaga, libraryEntry])
 
     const [currentIdx, setCurrentIdx] = useState(0)
+    const [isPlayerOpen, setIsPlayerOpen] = useState(false)
+    const [playTarget, setPlayTarget] = useState<{
+        path: string
+        streamType: Mediastream_StreamType | "online"
+        episodeLabel: string
+        episodeNumber: number
+        seriesId: number
+    } | null>(null)
 
-    const { data: libraryEntry } = useGetAnimeEntry(Number(seriesId))
+
     const downloadedEpisodes = useMemo(() => {
         const set = new Set<number>()
         libraryEntry?.episodes?.forEach((ep: any) => {
@@ -399,8 +502,9 @@ function DetailPage() {
                     label: "Archivo Local",
                     quality: "1080p",
                     info: "Reproducción directa desde disco",
-                    codec: "Nativo"
-                })
+                    codec: "Nativo",
+                    urlPath: `/api/v1/directstream/file?path=${encodeURIComponent(libEp.localFile.path)}`
+                } as any)
             }
             return srcs
         },
@@ -415,9 +519,23 @@ function DetailPage() {
         )
     }
 
-    const handlePlaySource = (src: StreamSource) => {
-        // TODO: trigger actual player with source URL
-        console.info("[KameHouse] Play", src)
+    const handlePlaySource = (src: any) => {
+        if (!currentEpisode) return
+        
+        let targetType: "direct" | "transcode" | "online" = "online"
+        if (src.type === "local") {
+            const isMp4 = src.urlPath?.toLowerCase().includes(".mp4")
+            targetType = isMp4 ? "direct" : "transcode"
+        }
+        
+        setPlayTarget({
+            path: src.urlPath || "",
+            streamType: targetType as Mediastream_StreamType | "online",
+            episodeLabel: currentEpisode.title,
+            episodeNumber: currentEpisode.number,
+            seriesId: Number(seriesId)
+        })
+        setIsPlayerOpen(true)
     }
 
     const handleMarkWatched = () => {
@@ -451,6 +569,21 @@ function DetailPage() {
                 onPlaySource={handlePlaySource}
                 downloadedEpisodes={downloadedEpisodes}
             />
+
+            {/* ── Video Player Modal ── */}
+            {isPlayerOpen && playTarget && (
+                <VideoPlayer
+                    streamUrl={playTarget.path}
+                    streamType={playTarget.streamType as Mediastream_StreamType}
+                    title={series.title}
+                    episodeLabel={playTarget.episodeLabel}
+                    mediaId={playTarget.seriesId}
+                    episodeNumber={playTarget.episodeNumber}
+                    isExternalStream={playTarget.streamType === "online"}
+                    marathonMode={false}
+                    onClose={() => setIsPlayerOpen(false)}
+                />
+            )}
         </div>
     )
 }

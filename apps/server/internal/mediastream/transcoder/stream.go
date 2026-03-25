@@ -49,7 +49,6 @@ type Stream struct {
 
 	logger   *zerolog.Logger
 	settings *Settings
-	killCh   chan struct{}
 	ctx      context.Context
 	cancel   context.CancelFunc
 }
@@ -95,7 +94,6 @@ func NewStream(
 	ret.heads = make([]Head, 0)
 	ret.settings = settings
 	ret.logger = logger
-	ret.killCh = make(chan struct{})
 	ret.ctx, ret.cancel = context.WithCancel(context.Background())
 
 	length, isDone := file.Keyframes.Length()
@@ -150,9 +148,6 @@ func (ts *Stream) GetIndex() (string, error) {
 
 // GetSegment returns the path to the segment and waits for it to be ready.
 func (ts *Stream) GetSegment(ctx context.Context, segment int32) (string, error) {
-	// DEVNOTE: Reset the kill channel
-	// This is needed because when the segment is needed again, this channel should be open
-	ts.killCh = make(chan struct{})
 	if debugStream {
 		streamLogger.Trace().Msgf("transcoder: Getting segment %d [GetSegment]", segment)
 		defer streamLogger.Trace().Msgf("transcoder: Retrieved segment %d [GetSegment]", segment)
@@ -191,9 +186,7 @@ func (ts *Stream) GetSegment(ctx context.Context, segment int32) (string, error)
 		}
 
 		select {
-		// DEVNOTE: This can cause issues if the segment is called again but was "killed" beforehand
-		// It's used to interrupt the waiting process but might not be needed since there's a timeout
-		case <-ts.killCh:
+		case <-ts.ctx.Done():
 			return "", fmt.Errorf("transcoder: Stream killed while waiting for segment %d", segment)
 		case <-ctx.Done():
 			return "", ctx.Err()
@@ -272,8 +265,7 @@ func (ts *Stream) Kill() {
 
 func (ts *Stream) IsKilled() bool {
 	select {
-	case <-ts.killCh:
-		// if the channel returned, it means it was closed
+	case <-ts.ctx.Done():
 		return true
 	default:
 		return false
@@ -285,16 +277,15 @@ func (ts *Stream) IsKilled() bool {
 func (ts *Stream) KillHead(encoderId int) {
 	//streamLogger.Trace().Int("eid", encoderId).Msgf("transcoder: Killing %s encoder head", ts.kind)
 	defer streamLogger.Trace().Int("eid", encoderId).Msgf("transcoder: Killed %s encoder head", ts.kind)
-	defer func() {
-		if r := recover(); r != nil {
-		}
-	}()
-	close(ts.killCh)
+
 	ts.cancel()
 	if ts.heads[encoderId] == DeletedHead || ts.heads[encoderId].command == nil {
 		return
 	}
-	ts.heads[encoderId].command.Process.Signal(os.Interrupt)
+	// os.Interrupt is not implemented on Windows and returns an error.
+	// We use Process.Kill() to forcefully ensure FFmpeg is reaped across all OS platforms
+	// if the stdin "q" command didn't shut it down gracefully.
+	_ = ts.heads[encoderId].command.Process.Kill()
 	//_, _ = ts.heads[encoderId].stdin.Write([]byte("q"))
 	//_ = ts.heads[encoderId].stdin.Close()
 
@@ -602,13 +593,10 @@ func (ts *Stream) run(start int32) error {
 
 	// Listen for kill signal
 	go func(stdin io.WriteCloser) {
-		select {
-		case <-ts.ctx.Done():
-			streamLogger.Trace().Int("eid", encoderId).Msgf("transcoder: Aborting ffmpeg process for %s", ts.kind)
-			_, _ = stdin.Write([]byte("q"))
-			_ = stdin.Close()
-			return
-		}
+		<-ts.ctx.Done()
+		streamLogger.Trace().Int("eid", encoderId).Msgf("transcoder: Aborting ffmpeg process for %s", ts.kind)
+		_, _ = stdin.Write([]byte("q"))
+		_ = stdin.Close()
 	}(stdin)
 
 	// Listen for process termination

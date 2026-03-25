@@ -95,7 +95,7 @@ func (h *Handler) FeaturesMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 				strings.HasPrefix(path, config.PathStartsWith) &&
 				!slices.ContainsFunc(config.ExcludePaths, func(i string) bool { return path == i }) {
 				if len(config.Methods) == 0 || strings.Contains(strings.Join(config.Methods, ","), strings.ToUpper(method)) {
-					return h.RespondWithError(c, ErrFeatureDisabled)
+					return h.RespondWithCodeError(c, 403, ErrFeatureDisabled)
 				}
 			}
 		}

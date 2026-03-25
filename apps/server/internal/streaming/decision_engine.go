@@ -125,8 +125,10 @@ func (o *StreamOrchestrator) HandleRequest(ctx context.Context, mediaId string, 
 	case DirectStream:
 		// Remux-only: container changes, streams are copied.
 		// Non-blocking: caller gets the m3u8 URL immediately; FFmpeg starts async.
+		// IMPORTANT: Use a detached context because the HTTP request context will
+		// cancel as soon as the response is sent, which would kill ffmpeg.
 		go func() {
-			if _, err := o.transcoder.StartDirectStreamSession(ctx, mediaId, targetFile.GetNormalizedPath(), decision.NeedsSubtitleBurn); err != nil {
+			if _, err := o.transcoder.StartDirectStreamSession(context.Background(), mediaId, targetFile.GetNormalizedPath(), decision.NeedsSubtitleBurn); err != nil {
 				o.logger.Error().Err(err).Str("mediaId", mediaId).Msg("streaming: DirectStream session failed")
 			}
 		}()
@@ -134,8 +136,9 @@ func (o *StreamOrchestrator) HandleRequest(ctx context.Context, mediaId string, 
 
 	default: // Transcode
 		// Full re-encode to HLS with HW accel when available.
+		// IMPORTANT: Use a detached context — see DirectStream comment above.
 		go func() {
-			if _, err := o.transcoder.StartSession(ctx, mediaId, targetFile.GetNormalizedPath()); err != nil {
+			if _, err := o.transcoder.StartSession(context.Background(), mediaId, targetFile.GetNormalizedPath()); err != nil {
 				o.logger.Error().Err(err).Str("mediaId", mediaId).Msg("streaming: Transcode session failed")
 			}
 		}()
@@ -277,8 +280,11 @@ func (e *SourcePriorityEngine) ResolveEpisodeSources(
 			return nil
 		}
 
-		// Fetch from Torrentio addon.
-		torrentioUrl := ""
+		// Fetch from Torrentio addon using user-configured URL if available.
+		torrentioUrl := torrentio.DefaultAddonURL
+		if settings, _ := e.database.GetTorrentstreamSettings(); settings != nil && settings.TorrentioUrl != "" {
+			torrentioUrl = settings.TorrentioUrl
+		}
 		provider := torrentio.NewProvider(torrentioUrl)
 		streams, fetchErr := provider.GetSourcesForEpisode(remoteCtx, imdbID, 1, episodeNum)
 		if fetchErr != nil {

@@ -10,7 +10,7 @@
  * - Exposes `prefetchEpisodeSources(queryClient, params)` for onMouseEnter prefetching.
  */
 
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useServerQuery } from "@/api/client/requests"
 import type { EpisodeSourcesParams, EpisodeSourcesResponse } from "@/api/types/unified.types"
 
 /** Stale window: 5 minutes — Torrentio index doesn't change more frequently. */
@@ -27,44 +27,20 @@ export const episodeSourcesKey = (mediaId: number, epNum: number) =>
     ["streaming/episode-sources", mediaId, epNum] as const
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Fetch function
-// ─────────────────────────────────────────────────────────────────────────────
-
-type ApiDataResponse<T> = { data: T }
-
-async function fetchEpisodeSources(params: EpisodeSourcesParams): Promise<EpisodeSourcesResponse> {
-    const url = `/api/v1/streaming/${params.mediaId}/episode/${params.epNum}/sources`
-    const res = await fetch(url)
-    if (!res.ok) {
-        throw new Error(`episode-sources: ${res.status} ${res.statusText} (media=${params.mediaId} ep=${params.epNum})`)
-    }
-    const json = (await res.json()) as ApiDataResponse<EpisodeSourcesResponse>
-    return json.data
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Hook
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Resolves all available playback sources for a specific episode.
- *
- * @param params  mediaId + epNum. Pass `null` to keep the query dormant.
- * @param enabled Additional gate — set to false to defer fetching until the
- *                user explicitly requests the sources (e.g. opens the player).
- *
- * @example
- * ```tsx
- * const { data: sources, isLoading } = useEpisodeSources({ mediaId: 42, epNum: 5 })
- * ```
  */
 export function useEpisodeSources(
     params: EpisodeSourcesParams | null,
     { enabled = true }: { enabled?: boolean } = {},
 ) {
-    return useQuery({
+    return useServerQuery<EpisodeSourcesResponse>({
+        endpoint: `/api/v1/streaming/${params?.mediaId}/episode/${params?.epNum}/sources`,
+        method: "GET",
         queryKey: params ? episodeSourcesKey(params.mediaId, params.epNum) : (["streaming/episode-sources", null] as const),
-        queryFn: () => fetchEpisodeSources(params!),
         enabled: enabled && !!params?.mediaId && !!params?.epNum,
         staleTime: EPISODE_SOURCES_STALE_MS,
         gcTime: EPISODE_SOURCES_GC_MS,
@@ -72,28 +48,18 @@ export function useEpisodeSources(
     })
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Prefetch helper — call on onMouseEnter so data is ready before the click
-// ─────────────────────────────────────────────────────────────────────────────
+import { buildSeaQuery } from "@/api/client/requests"
+import { useQueryClient } from "@tanstack/react-query"
 
-/**
- * Eagerly primes the React Query cache for the given episode.
- * Safe to call multiple times — TanStack Query deduplicates in-flight requests.
- *
- * @example
- * ```tsx
- * const queryClient = useQueryClient()
- * <button onMouseEnter={() => prefetchEpisodeSources(queryClient, { mediaId, epNum })}>
- *   Play
- * </button>
- * ```
- */
 export function usePrefetchEpisodeSources() {
     const queryClient = useQueryClient()
     return (params: EpisodeSourcesParams) => {
         void queryClient.prefetchQuery({
             queryKey: episodeSourcesKey(params.mediaId, params.epNum),
-            queryFn: () => fetchEpisodeSources(params),
+            queryFn: () => buildSeaQuery<EpisodeSourcesResponse>({
+                endpoint: `/api/v1/streaming/${params.mediaId}/episode/${params.epNum}/sources`,
+                method: "GET",
+            }),
             staleTime: EPISODE_SOURCES_STALE_MS,
         })
     }

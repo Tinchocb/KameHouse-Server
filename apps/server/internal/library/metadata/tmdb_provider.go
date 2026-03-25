@@ -17,7 +17,7 @@ type TMDBProvider struct {
 }
 
 // NewTMDBProvider creates a new TMDB metadata provider.
-// language is a BCP 47 language tag (e.g. "es-ES", "en-US"). If empty, defaults to "es-ES".
+// language is a BCP 47 language tag (e.g. "es-MX", "en-US"). If empty, defaults to "es-MX".
 func NewTMDBProvider(bearerToken string, language ...string) *TMDBProvider {
 	lang := ""
 	if len(language) > 0 {
@@ -231,6 +231,16 @@ func tmdbTVResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia {
 		bannerImage = &url
 	}
 
+	var description *string
+	if r.Overview != "" {
+		description = &r.Overview
+	}
+
+	var episodes *int
+	if r.NumberOfEpisodes > 0 {
+		episodes = &r.NumberOfEpisodes
+	}
+
 	return &dto.NormalizedMedia{
 		ID:               tmdbId,
 		TmdbId:           &tmdbId,
@@ -241,8 +251,10 @@ func tmdbTVResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia {
 		Format:           format,
 		Year:             year,
 		StartDate:        startDate,
+		Episodes:         episodes,
 		CoverImage:       coverImage,
 		BannerImage:      bannerImage,
+		Description:      description,
 	}
 }
 
@@ -295,6 +307,11 @@ func tmdbMovieResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia 
 		bannerImage = &url
 	}
 
+	var description *string
+	if r.Overview != "" {
+		description = &r.Overview
+	}
+
 	return &dto.NormalizedMedia{
 		ID:               tmdbId + 1000000, // Offset to avoid collisions with TV IDs
 		TmdbId:           &tmdbId,
@@ -306,6 +323,7 @@ func tmdbMovieResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia 
 		StartDate:        startDate,
 		CoverImage:       coverImage,
 		BannerImage:      bannerImage,
+		Description:      description,
 	}
 }
 

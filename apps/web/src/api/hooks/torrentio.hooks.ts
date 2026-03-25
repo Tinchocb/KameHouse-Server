@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { getServerBaseUrl } from "@/api/client/server-url"
+import { buildSeaQuery } from "@/api/client/requests"
 
 export interface TorrentioStreamResult {
     name: string
@@ -9,6 +9,8 @@ export interface TorrentioStreamResult {
     quality: string
     releaseGroup: string
     filename: string
+    seeders?: number
+    magnetUri?: string
 }
 
 export const torrentioKeys = {
@@ -22,15 +24,11 @@ export const torrentioKeys = {
 export function useGetTorrentioStreams(kitsuId: number | undefined, episode: number | undefined) {
     return useQuery({
         queryKey: torrentioKeys.streams(kitsuId!, episode!),
-        queryFn: async (): Promise<TorrentioStreamResult[]> => {
-            if (!kitsuId || !episode) throw new Error("Missing params")
-            const res = await fetch(`${getServerBaseUrl()}/api/v1/torrentio/streams?kitsuId=${kitsuId}&episode=${episode}`)
-            if (!res.ok) {
-                const text = await res.text()
-                throw new Error(`Failed to fetch torrentio streams: ${res.status} ${text}`)
-            }
-            return (await res.json()) as TorrentioStreamResult[]
-        },
+        queryFn: () => buildSeaQuery<TorrentioStreamResult[]>({
+            endpoint: "/api/v1/torrentio/streams",
+            method: "GET",
+            params: { kitsuId, episode } as any,
+        }) as Promise<TorrentioStreamResult[]>,
         enabled: !!kitsuId && !!episode,
         staleTime: 1000 * 60 * 5, // 5 minutes
     })

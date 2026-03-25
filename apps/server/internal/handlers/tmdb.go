@@ -8,7 +8,7 @@ import (
 	"kamehouse/internal/database/models/dto"
 	librarymetadata "kamehouse/internal/library/metadata"
 	"net/http"
-	"os"
+
 	"strconv"
 
 	"github.com/labstack/echo/v4"
@@ -25,6 +25,7 @@ func (h *Handler) HandleTMDBSearch(c echo.Context) error {
 	type body struct {
 		Query       string `json:"query"`
 		BearerToken string `json:"bearerToken"`
+		SearchType  string `json:"searchType"` // "tv" | "movie" | "multi" (default: "multi")
 	}
 
 	var b body
@@ -35,17 +36,59 @@ func (h *Handler) HandleTMDBSearch(c echo.Context) error {
 	if b.Query == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "query is required"})
 	}
-	if b.BearerToken == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "TMDB bearer token is required"})
+
+	client := tmdb.NewClient("0584d4437be4d13174085bc9b4435985", "es-MX")
+
+	searchType := b.SearchType
+	if searchType == "" {
+		searchType = "multi"
 	}
 
-	client := tmdb.NewClient(b.BearerToken) // uses default es-ES language
-	results, err := client.SearchTV(c.Request().Context(), b.Query)
-	if err != nil {
-		return h.RespondWithError(c, err)
+	// Collect results with media_type annotation
+	type annotated struct {
+		MediaType string `json:"media_type"`
+		ID        int    `json:"id"`
+		// Embed raw fields by marshalling
+		Data map[string]interface{} `json:"-"`
 	}
 
-	return h.RespondWithData(c, results)
+	var combined []map[string]interface{}
+
+	if searchType == "tv" || searchType == "multi" {
+		tvResults, err := client.SearchTV(c.Request().Context(), b.Query)
+		if err == nil {
+			for _, r := range tvResults {
+				m := map[string]interface{}{
+					"id":             r.ID,
+					"name":           r.Name,
+					"first_air_date": r.FirstAirDate,
+					"poster_path":    r.PosterPath,
+					"overview":       r.Overview,
+					"media_type":     "tv",
+				}
+				combined = append(combined, m)
+			}
+		}
+	}
+
+	if searchType == "movie" || searchType == "multi" {
+		movieResults, err := client.SearchMovie(c.Request().Context(), b.Query)
+		if err == nil {
+			for _, r := range movieResults {
+				m := map[string]interface{}{
+					"id":           r.ID,
+					"title":        r.Title,
+					"release_date": r.ReleaseDate,
+					"poster_path":  r.PosterPath,
+					"overview":     r.Overview,
+					"media_type":   "movie",
+				}
+				combined = append(combined, m)
+			}
+		}
+	}
+
+	return h.RespondWithData(c, combined)
 }
 
 // HandleTMDBGetDetails
@@ -56,7 +99,9 @@ func (h *Handler) HandleTMDBSearch(c echo.Context) error {
 //	@route /api/v1/tmdb/details [POST]
 func (h *Handler) HandleTMDBGetDetails(c echo.Context) error {
 	type body struct {
-		TVID        int    `json:"tvId"`
+		ID          int    `json:"id"`
+		TVID        int    `json:"tvId"` // Legacy
+		MediaType   string `json:"mediaType"`
 		BearerToken string `json:"bearerToken"`
 	}
 
@@ -65,23 +110,35 @@ func (h *Handler) HandleTMDBGetDetails(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	if b.TVID == 0 {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "tvId is required"})
-	}
-	if b.BearerToken == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "TMDB bearer token is required"})
+	id := b.ID
+	if id == 0 {
+		id = b.TVID
 	}
 
-	client := tmdb.NewClient(b.BearerToken) // uses default es-ES language
+	if id == 0 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "id is required"})
+	}
 
-	// Get alternative titles
-	altTitles, _ := client.GetTVAlternativeTitles(c.Request().Context(), b.TVID)
+	client := tmdb.NewClient("0584d4437be4d13174085bc9b4435985", "es-MX")
+
+	var altTitles []tmdb.AlternativeTitle
+	var err error
+	if b.MediaType == "movie" {
+		altTitles, err = client.GetMovieAlternativeTitles(c.Request().Context(), id)
+	} else {
+		altTitles, err = client.GetTVAlternativeTitles(c.Request().Context(), id)
+	}
+
+	if err != nil {
+		return h.RespondWithError(c, err)
+	}
 
 	return h.RespondWithData(c, map[string]interface{}{
-		"tvId":              b.TVID,
+		"id":                id,
 		"alternativeTitles": altTitles,
 	})
 }
+
 
 // HandleTMDBAssign
 //
@@ -108,15 +165,10 @@ func (h *Handler) HandleTMDBAssign(c echo.Context) error {
 	}
 
 	// 1. Fetch full details from TMDB
-	token := h.App.Settings.Library.TmdbApiKey
-	if token == "" {
-		token = os.Getenv("KAMEHOUSE_TMDB_TOKEN")
-	}
-	if token == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "TMDB API key not configured"})
-	}
+	token := "0584d4437be4d13174085bc9b4435985"
+	lang := "es-MX"
 
-	provider := librarymetadata.NewTMDBProvider(token, h.App.Settings.Library.TmdbLanguage)
+	provider := librarymetadata.NewTMDBProvider(token, lang)
 	
 	lookUpId := strconv.Itoa(b.TmdbId)
 	if b.MediaType == "movie" {

@@ -5,7 +5,7 @@ import type {
     Models_LibraryMedia,
 } from "@/api/generated/types"
 import { create } from "zustand"
-import { getServerBaseUrl } from "@/api/client/server-url"
+import { buildSeaQuery } from "@/api/client/requests"
 
 // ─── Intelligence types (mirrors Go backend) ─────────────────────────────────
 
@@ -43,28 +43,13 @@ export interface ContinueWatchingEntry {
     isNextEpisode: boolean
 }
 
-async function fetchCuratedHome(): Promise<CuratedHomeResponse> {
-    const base = getServerBaseUrl() || (typeof window !== "undefined" ? window.location.origin : "http://localhost")
-    const url = new URL("/api/v1/home/curated", base)
-    const res = await fetch(url.toString())
-    if (!res.ok) throw new Error("Failed to fetch curated home list")
-    const json = (await res.json()) as { data: CuratedHomeResponse }
-    return json.data
-}
-
-async function fetchContinueWatching(): Promise<ContinueWatchingEntry[]> {
-    const base = getServerBaseUrl() || (typeof window !== "undefined" ? window.location.origin : "http://localhost")
-    const url = new URL("/api/v1/home/continue-watching", base)
-    const res = await fetch(url.toString())
-    if (!res.ok) throw new Error("Failed to fetch continue watching list")
-    const json = (await res.json()) as { data: ContinueWatchingEntry[] }
-    return json.data
-}
-
 export function useHomeIntelligence(): UseQueryResult<CuratedHomeResponse, Error> {
     return useQuery({
         queryKey: ["home", "curated"],
-        queryFn: fetchCuratedHome,
+        queryFn: () => buildSeaQuery<CuratedHomeResponse>({
+            endpoint: "/api/v1/home/curated",
+            method: "GET",
+        }) as Promise<CuratedHomeResponse>,
         staleTime: 1000 * 60 * 5, // 5 min
     })
 }
@@ -72,7 +57,10 @@ export function useHomeIntelligence(): UseQueryResult<CuratedHomeResponse, Error
 export function useContinueWatching(): UseQueryResult<ContinueWatchingEntry[], Error> {
     return useQuery({
         queryKey: ["home", "continue-watching"],
-        queryFn: fetchContinueWatching,
+        queryFn: () => buildSeaQuery<ContinueWatchingEntry[]>({
+            endpoint: "/api/v1/home/continue-watching",
+            method: "GET",
+        }) as Promise<ContinueWatchingEntry[]>,
         staleTime: 1000 * 60 * 2, // 2 min
     })
 }

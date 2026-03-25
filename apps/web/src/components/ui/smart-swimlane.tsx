@@ -114,19 +114,17 @@ export const SmartSwimlane = React.memo(function SmartSwimlane({ lane, onNavigat
 
             return {
                 id: String(entry.mediaId),
-                title: media?.titleEnglish || media?.titleRomaji || "—",
+                title: media?.titleEnglish || media?.titleRomaji || media?.titleOriginal || "—",
                 subtitle: parts.join(" · "),
                 badge,
                 image: resolvedAspect === "poster" ? (media?.posterImage ?? "") : (backdropUrl ?? ""),
                 availabilityType: entry.availabilityType as SwimlaneItem["availabilityType"],
                 backdropUrl: backdropUrl ?? undefined,
+                description: media?.description,
                 intelligenceTag: intel?.tag,
                 year: media?.year,
                 rating: intel?.rating,
                 onClick: () => onNavigate(String(entry.mediaId)),
-                // Slot intelligence badge as an overlay via renderOverlay
-                // (MediaCard bubbles the group-hover, so we can't easily inject
-                // arbitrary children — instead we pass it as the badge label for now)
             }
         })
     }, [lane, onNavigate, resolvedAspect])

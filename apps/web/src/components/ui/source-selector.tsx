@@ -463,8 +463,21 @@ export function SourceSelector({
                 ? sources
                 : sources.filter((s) => s.type === activeFilter)
 
-        // Sort within each type: by quality rank, then by seeders desc
+        // Latam Check (Dragon Ball Priority)
+        const isLatam = (s: StreamSource) => {
+            const str = ((s.label || "") + " " + (s.audio || "")).toLowerCase()
+            return str.includes("latino") || str.includes("dual") || str.includes("castellano")
+        }
+
+        // Sort within each type: by LATAM priority first, then quality rank, then by seeders desc
         return [...base].sort((a, b) => {
+            if (a.type === "torrentio" && b.type === "torrentio") {
+                const aIsLatam = isLatam(a)
+                const bIsLatam = isLatam(b)
+                if (aIsLatam && !bIsLatam) return -1
+                if (!aIsLatam && bIsLatam) return 1
+            }
+
             const qA = qualityRank[a.quality] ?? 99
             const qB = qualityRank[b.quality] ?? 99
             if (qA !== qB) return qA - qB

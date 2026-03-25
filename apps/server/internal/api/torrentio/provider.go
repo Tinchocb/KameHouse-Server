@@ -92,7 +92,7 @@ func NewProvider(customUrl string) *Provider {
 	}
 	return &Provider{
 		addonURL: url,
-		client:   &http.Client{},
+		client:   &http.Client{Timeout: 15 * time.Second},
 		cache:    cache.NewCache[[]TorrentioSource](15 * time.Minute),
 	}
 }

@@ -415,12 +415,12 @@ export function filterAnimeCollectionEntries<T extends Anime_LibraryCollectionEn
     // Sort by unwatched episodes
     if (getParamValue(params.sorting) === "UNWATCHED_EPISODES") {
         arr = sortBy(arr,
-            n => !!n.libraryData?.mainFileCount ? n.libraryData?.unwatchedCount : (media_getUnwatchedCount(asUnifiedMedia(n.media)!,
+            n => !!n.libraryData?.mainFileCount ? n.libraryData?.unwatchedCount : (media_getUnwatchedCount(asUnifiedMedia(n.media) as any,
                 n.listData?.progress) || 99999))
     }
     if (getParamValue(params.sorting) === "UNWATCHED_EPISODES_DESC") {
         arr = sortBy(arr,
-            n => !!n.libraryData?.mainFileCount ? n.libraryData?.unwatchedCount : (media_getUnwatchedCount(asUnifiedMedia(n.media)!,
+            n => !!n.libraryData?.mainFileCount ? n.libraryData?.unwatchedCount : (media_getUnwatchedCount(asUnifiedMedia(n.media) as any,
                 n.listData?.progress) || 99999))
             .reverse()
     }
@@ -465,11 +465,11 @@ export function sortContinueWatchingEntries(
     // Sort by unwatched episodes
     if (sorting === "UNWATCHED_EPISODES")
         arr = sortBy(arr,
-            n => libraryEntries?.find(e => e.media?.id === n.baseAnime?.id)?.libraryData?.unwatchedCount ?? (media_getUnwatchedCount(asUnifiedMedia(n.baseAnime)!,
+            n => libraryEntries?.find(e => e.media?.id === n.baseAnime?.id)?.libraryData?.unwatchedCount ?? (media_getUnwatchedCount(asUnifiedMedia(n.baseAnime) as any,
                 libraryEntries?.find(e => e.media?.id === n.baseAnime?.id)?.listData?.progress) || 99999))
     if (sorting === "UNWATCHED_EPISODES_DESC")
         arr = sortBy(arr,
-            n => libraryEntries?.find(e => e.media?.id === n.baseAnime?.id)?.libraryData?.unwatchedCount ?? media_getUnwatchedCount(asUnifiedMedia(n.baseAnime)!,
+            n => libraryEntries?.find(e => e.media?.id === n.baseAnime?.id)?.libraryData?.unwatchedCount ?? media_getUnwatchedCount(asUnifiedMedia(n.baseAnime) as any,
                 libraryEntries?.find(e => e.media?.id === n.baseAnime?.id)?.listData?.progress))
             .reverse()
 

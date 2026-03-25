@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	json "github.com/goccy/go-json"
 	"github.com/labstack/echo/v4"
@@ -82,7 +83,7 @@ func (h *Handler) HandleGetAddonSubtitles(c echo.Context) error {
 		go func(url string, name string) {
 			defer wg.Done()
 
-			client := &http.Client{Timeout: 10 * http.DefaultClient.Timeout} // Added client initialization
+			client := &http.Client{Timeout: 15 * time.Second}
 			resp, err := client.Get(url)
 			if err != nil {
 				h.App.Logger.Debug().Str("addon", name).Err(err).Msg("addon subtitles: fetch failed")

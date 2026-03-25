@@ -6,6 +6,7 @@ import { ManualMatchModal } from "@/components/shared/manual-match-modal"
 import { Anime_Entry, Anime_Episode } from "@/api/generated/types"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { cn } from "@/components/ui/core/styling"
+import { sanitizeHtml } from "@/lib/helpers/sanitizer"
 
 export const MediaActionButtons = React.memo(({ 
     seriesId, 
@@ -102,7 +103,7 @@ export const EpisodeClientCard = React.memo(({
                 </div>
 
                 {episode.episodeMetadata?.summary && (
-                    <p className="text-xs text-zinc-500 line-clamp-2 leading-relaxed" dangerouslySetInnerHTML={{ __html: episode.episodeMetadata.summary }}></p>
+                    <p className="text-xs text-zinc-500 line-clamp-2 leading-relaxed" dangerouslySetInnerHTML={{ __html: sanitizeHtml(episode.episodeMetadata.summary) }}></p>
                 )}
             </div>
         </article>

@@ -251,11 +251,33 @@ func (m *Matcher) calculateBayesianScore(pm parser.ParsedMedia, media *dto.Norma
 	}
 
 	bestDice := 0.0
+	bestPrefixOverlap := 0.0
 	for _, title := range candidateTitles {
 		sim := calculateDice(pm.Title, title)
 		if sim > bestDice {
 			bestDice = sim
 		}
+		// Evidence 0: Prefix Overlap — if one string starts with the other (e.g. "Dragon Ball Z" is
+		// a prefix of "Dragon Ball Z: Los tres grandes Super Saiyans"), it's a strong signal,
+		// especially for movies where the filename has extra words.
+		lTitle := strings.ToLower(title)
+		lQuery := strings.ToLower(pm.Title)
+		if strings.HasPrefix(lQuery, lTitle) || strings.HasPrefix(lTitle, lQuery) {
+			// Calculate how much of the longer string is covered by the shorter
+			shorter := float64(min(len(lTitle), len(lQuery)))
+			longer := float64(max(len(lTitle), len(lQuery)))
+			if longer > 0 {
+				overlap := shorter / longer
+				if overlap > bestPrefixOverlap {
+					bestPrefixOverlap = overlap
+				}
+			}
+		}
+	}
+
+	// Apply prefix overlap boost before the rest of Evidence pipeline
+	if bestPrefixOverlap >= 0.50 {
+		prior = updateBayes(prior, 0.85*bestPrefixOverlap, 0.15)
 	}
 
 	// Update via Evidence 1 (If strings match perfectly, confidence spikes; if 0, confidence crashes)
@@ -268,7 +290,7 @@ func (m *Matcher) calculateBayesianScore(pm parser.ParsedMedia, media *dto.Norma
 
 	// Evidence 3: Special/OVA Detection (Fallback logic moved out of pm)
 	if pm.Season == 0 && pm.Episode == 0 {
-		if media.Format != nil && (string(*media.Format) == "OVA" || string(*media.Format) == "SPECIAL") {
+		if media.Format != nil && (string(*media.Format) == "OVA" || string(*media.Format) == "SPECIAL" || string(*media.Format) == "MOVIE") {
 			posterior = updateBayes(posterior, 0.95, 0.50)
 		} else {
 			posterior = updateBayes(posterior, 0.10, 0.80)
@@ -286,6 +308,13 @@ func (m *Matcher) calculateBayesianScore(pm parser.ParsedMedia, media *dto.Norma
 			// Small penalty for year mismatch — makes wrong candidates drop faster
 			posterior = updateBayes(posterior, 0.30, 0.60)
 		}
+	}
+
+	// Evidence 5: Movie Fallback Padding
+	// Movies naturally lack season/episode metadata and years are often missing,
+	// starving them of confidence. If it's a movie and the text matches at all, give a boost.
+	if media.Format != nil && string(*media.Format) == "MOVIE" && bestDice >= 0.45 {
+		posterior = updateBayes(posterior, 0.85, 0.15)
 	}
 
 	return posterior
@@ -317,6 +346,11 @@ func updateBayes(prior, p_e_given_h, p_e_given_not_h float64) float64 {
 	return numerator / denominator
 }
 
+var (
+	reTrailingTags = regexp.MustCompile(`\s*(\[.*?\]|\(.*?\))\s*$`)
+	reTrailingCRC  = regexp.MustCompile(`(?i)\s*\[[0-9A-F]{8}\]\s*$`)
+)
+
 // sanitizeSubGroupTags isolates things like [SubsPlease] or (1080p) from being mapped to titles
 func sanitizeSubGroupTags(input string) string {
 	// 1. Remove [ReleaseGroup] at the start
@@ -328,14 +362,12 @@ func sanitizeSubGroupTags(input string) string {
 	}
 
 	// 2. Remove trailing tags like [1080p], (TV), etc.
-	reTags := regexp.MustCompile(`\s*(\[.*?\]|\(.*?\))\s*$`)
-	for reTags.MatchString(input) {
-		input = reTags.ReplaceAllString(input, "")
+	for reTrailingTags.MatchString(input) {
+		input = reTrailingTags.ReplaceAllString(input, "")
 	}
 
 	// 3. Remove common CRC32 hashes at the end
-	reCRC := regexp.MustCompile(`(?i)\s*\[[0-9A-F]{8}\]\s*$`)
-	input = reCRC.ReplaceAllString(input, "")
+	input = reTrailingCRC.ReplaceAllString(input, "")
 
 	return strings.TrimSpace(input)
 }

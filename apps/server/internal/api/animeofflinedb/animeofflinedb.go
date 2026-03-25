@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/goccy/go-json"
 )
@@ -59,7 +60,8 @@ func FetchAndConvertDatabase(existingMediaIDs map[int]bool) ([]*dto.NormalizedMe
 	}
 	normalizedMediaCacheMu.RUnlock()
 
-	resp, err := http.Get(DatabaseURL)
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Get(DatabaseURL)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +128,7 @@ func FetchAndConvertDatabase(existingMediaIDs map[int]bool) ([]*dto.NormalizedMe
 
 // filterByExistingIDs filters cached media by existing IDs
 func filterByExistingIDs(media []*dto.NormalizedMedia, existingMediaIDs map[int]bool) []*dto.NormalizedMedia {
-	if existingMediaIDs == nil || len(existingMediaIDs) == 0 {
+	if len(existingMediaIDs) == 0 {
 		return media
 	}
 

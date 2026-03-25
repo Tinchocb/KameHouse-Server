@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"net/http"
@@ -80,8 +81,14 @@ func (h *Handler) HandleGetVideoThumbnail(c echo.Context) error {
 	}
 
 	// 4. Generate thumbnail via FFMpeg (Cold Cache)
-	seekTime := getSeekTimestamp(ffprobePath, videoPath)
-	cmd := exec.Command(
+	reqCtx := c.Request().Context()
+	seekTime := getSeekTimestamp(reqCtx, ffprobePath, videoPath)
+	
+	ctx, cancel := context.WithTimeout(reqCtx, 30*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(
+		ctx,
 		ffmpegPath,
 		"-ss", seekTime,
 		"-i", videoPath,
@@ -114,8 +121,12 @@ func (h *Handler) HandleGetVideoThumbnail(c echo.Context) error {
 
 // getSeekTimestamp returns the timestamp to seek to for thumbnail extraction.
 // Targets 5 minutes, or 25% of duration if the video is shorter than 5 minutes.
-func getSeekTimestamp(ffprobePath, videoPath string) string {
-	cmd := exec.Command(
+func getSeekTimestamp(parentCtx context.Context, ffprobePath, videoPath string) string {
+	ctx, cancel := context.WithTimeout(parentCtx, 15*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(
+		ctx,
 		ffprobePath,
 		"-v", "error",
 		"-show_entries", "format=duration",

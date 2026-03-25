@@ -225,6 +225,12 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		merged.Library.DisableTorrentStreaming = b.Library.DisableTorrentStreaming
 		merged.Library.DisableTorrentProvider = b.Library.DisableTorrentProvider
 
+		merged.Library.FanartApiKey = b.Library.FanartApiKey
+		merged.Library.OmdbApiKey = b.Library.OmdbApiKey
+		merged.Library.OpenSubsApiKey = b.Library.OpenSubsApiKey
+		merged.Library.AniDbClientId = b.Library.AniDbClientId
+		merged.Library.AniDbUsername = b.Library.AniDbUsername
+
 		// If a TMDB API key is provided and the primary provider is empty, set it to "tmdb"
 		if merged.Library.TmdbApiKey != "" && merged.Library.PrimaryMetadataProvider == "" {
 			merged.Library.PrimaryMetadataProvider = "tmdb"

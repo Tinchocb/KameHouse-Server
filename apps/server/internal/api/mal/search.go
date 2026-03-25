@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/goccy/go-json"
 	"github.com/samber/lo"
@@ -56,7 +57,8 @@ func SearchWithMAL(title string, slice int) ([]*SearchResultAnime, error) {
 
 	url := "https://myanimelist.net/search/prefix.json?type=anime&v=1&keyword=" + url.QueryEscape(title)
 
-	res, err := http.Get(url)
+	client := &http.Client{Timeout: 15 * time.Second}
+	res, err := client.Get(url)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +173,7 @@ func AdvancedSearchWithMAL(title string) (*SearchResultAnime, error) {
 	}
 
 	levSuggestion, found := lo.Find(suggestions, func(n *SearchResultAnime) bool {
-		return strings.ToLower(n.Name) == strings.ToLower(*levResult.Value)
+		return strings.EqualFold(n.Name, *levResult.Value)
 	})
 
 	if !found {

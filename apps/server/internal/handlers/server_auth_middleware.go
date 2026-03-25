@@ -20,7 +20,10 @@ func (h *Handler) OptionalAuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc
 		if path == "/api/v1/auth/login" || // for auth
 			path == "/api/v1/auth/logout" || // for auth
 			path == "/api/v1/status" || // for interface
-			path == "/events" || // for server events
+			path == "/api/v1/events" || // for server events
+			path == "/api/v1/ws" || // for server events (alias)
+			path == "/api/v1/proxy" || // for remote media images
+			strings.HasPrefix(path, "/api/v1/image") || // local covers requests
 			strings.HasPrefix(path, "/api/v1/directstream") || // ID & path based
 			strings.HasPrefix(path, "/api/v1/mediastream/att/") || // used by media players
 			strings.HasPrefix(path, "/api/v1/mediastream/direct") || // used by media players
@@ -56,6 +59,6 @@ func (h *Handler) OptionalAuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc
 			}
 		}
 
-		return h.RespondWithError(c, errors.New("UNAUTHENTICATED"))
+		return h.RespondWithCodeError(c, 401, errors.New("UNAUTHENTICATED"))
 	}
 }

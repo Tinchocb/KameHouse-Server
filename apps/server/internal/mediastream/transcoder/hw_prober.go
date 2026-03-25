@@ -1,6 +1,7 @@
 package transcoder
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"runtime"
@@ -123,7 +124,10 @@ func GetAutoHwAccelKind(ffmpegPath string, logger *zerolog.Logger) string {
 func queryEncoders(ffmpegPath string) map[string]bool {
 	result := make(map[string]bool)
 
-	cmd := exec.Command(ffmpegPath, "-encoders", "-hide_banner")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, ffmpegPath, "-encoders", "-hide_banner")
 	output, err := cmd.Output()
 	if err != nil {
 		return result

@@ -131,6 +131,8 @@ type LibrarySettings struct {
 	FanartApiKey                    string       `gorm:"column:fanart_api_key" json:"fanartApiKey"`
 	OmdbApiKey                      string       `gorm:"column:omdb_api_key" json:"omdbApiKey"`
 	OpenSubsApiKey                  string       `gorm:"column:opensubs_api_key" json:"openSubsApiKey"`
+	AniDbClientId                   string       `gorm:"column:anidb_client_id" json:"aniDbClientId"`
+	AniDbUsername                   string       `gorm:"column:anidb_username" json:"aniDbUsername"`
 }
 
 func (s *LibrarySettings) GetAllPaths() []string {

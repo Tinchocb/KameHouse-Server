@@ -1,6 +1,5 @@
 import { useServerMutation, useServerQuery } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
-import { Local_QueueState, Local_TrackedMediaItem } from "@/api/generated/types"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import {
@@ -11,7 +10,7 @@ import {
 } from "../generated/endpoint.types"
 
 export function useLocalGetTrackedMediaItems() {
-    return useServerQuery<Array<Local_TrackedMediaItem>>({
+    return useServerQuery<Array<any>>({
         endpoint: API_ENDPOINTS.LOCAL.LocalGetTrackedMediaItems.endpoint,
         method: API_ENDPOINTS.LOCAL.LocalGetTrackedMediaItems.methods[0],
         queryKey: [API_ENDPOINTS.LOCAL.LocalGetTrackedMediaItems.key],
@@ -64,7 +63,7 @@ export function useLocalSyncData() {
 }
 
 export function useLocalGetSyncQueueData() {
-    return useServerQuery<Local_QueueState>({
+    return useServerQuery<any>({
         endpoint: API_ENDPOINTS.LOCAL.LocalGetSyncQueueState.endpoint,
         method: API_ENDPOINTS.LOCAL.LocalGetSyncQueueState.methods[0],
         queryKey: [API_ENDPOINTS.LOCAL.LocalGetSyncQueueState.key],

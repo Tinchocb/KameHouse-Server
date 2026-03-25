@@ -52,13 +52,13 @@ export async function buildSeaQuery<T, D = void>(
     }: SeaQuery<D>): Promise<T | undefined> {
 
     const base = getServerBaseUrl() || (typeof window !== "undefined" ? window.location.origin : "http://localhost")
+    let url: URL
     try {
-        const url = new URL(endpoint, base)
+        url = new URL(endpoint, base)
     } catch (e) {
         console.error("FAILED URL:", endpoint, base)
         throw e
     }
-    const url = new URL(endpoint, base)
     if (params) {
         // Append query parameters
         Object.keys(params as Record<string, unknown>).forEach((key) => {
@@ -160,7 +160,7 @@ export function useServerMutation<R = void, V = void, C = unknown>(
     return useMutation<R | undefined, ApiError, V, C>({
         onError: (...args) => {
             const [error, variables, context] = args;
-            console.log("Mutation error", error)
+            console.debug("Mutation error", error)
             const errorMsg = _handleSeaError(error.data)
             if (errorMsg.includes("feature disabled")) {
                 toast.warning("This feature is disabled")
@@ -225,7 +225,7 @@ export function useServerQuery<R, V = void>(
                 window.location.href = "/public/auth"
                 return
             }
-            console.log("Server error", props.error)
+            console.debug("Server error", props.error)
             const errorMsg = _handleSeaError(props.error?.data)
             if (errorMsg.includes("feature disabled")) {
                 return
@@ -254,7 +254,7 @@ function _handleSeaError(data: unknown): string {
 
     try {
         const graphqlErr = JSON.parse(err) as { graphqlErrors?: Array<{ message?: string }> }
-        console.log("Platform error", graphqlErr)
+        console.debug("Platform error", graphqlErr)
         if (graphqlErr.graphqlErrors && graphqlErr.graphqlErrors.length > 0 && !!graphqlErr.graphqlErrors[0]?.message) {
             return "Platform error: " + graphqlErr.graphqlErrors[0]?.message
         }

@@ -13,56 +13,11 @@ import { Search, Filter, Loader2, FileVideo, ChevronRight, Zap, AlertTriangle, F
 import { cn } from "@/components/ui/core/styling"
 import { MatchDialog } from "./-match-dialog"
 import { Button } from "@/components/ui/button"
+import { MovieCardSkeleton } from "../movies"
+import { HeroSection } from "@/components/shared/hero-section"
 
 function getTitle(media: Models_LibraryMedia | null | undefined): string {
     return media?.titleEnglish || media?.titleRomaji || media?.titleOriginal || "Desconocido"
-}
-
-// ─── Speed lines SVG ────────────────────────────────────
-
-function SpeedLines({ opacity = 0.04 }: { opacity?: number }) {
-    return (
-        <svg
-            aria-hidden
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            style={{ opacity }}
-            viewBox="0 0 900 320"
-            preserveAspectRatio="xMidYMid slice"
-        >
-            {Array.from({ length: 32 }).map((_, i) => {
-                const angle = (i / 32) * 360
-                const rad = (angle * Math.PI) / 180
-                return (
-                    <line
-                        key={i}
-                        x1="450" y1="160"
-                        x2={450 + Math.cos(rad) * 1400}
-                        y2={160 + Math.sin(rad) * 1400}
-                        stroke="white"
-                        strokeWidth={i % 4 === 0 ? "1.5" : "0.6"}
-                    />
-                )
-            })}
-        </svg>
-    )
-}
-
-// ─── Halftone dot pattern ─────────────────────────────────────────────────────
-
-function HalftoneDots() {
-    return (
-        <svg
-            aria-hidden
-            className="absolute inset-0 w-full h-full opacity-[0.025] pointer-events-none"
-        >
-            <defs>
-                <pattern id="dots" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse">
-                    <circle cx="6" cy="6" r="1.5" fill="white" />
-                </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#dots)" />
-        </svg>
-    )
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -131,7 +86,7 @@ export function LibraryClientGrid() {
         <VirtualizedMediaGrid 
             entries={entries} 
             emptyMessage={emptyMessage} 
-            onMatch={(paths, query) => setMatchDialog({ isOpen: true, paths, query })}
+            onMatch={(paths: string[], query?: string) => setMatchDialog({ isOpen: true, paths, query })}
         />
     )
 
@@ -159,54 +114,36 @@ export function LibraryClientGrid() {
         <div className="flex-1 w-full min-h-screen bg-background text-zinc-200 font-sans selection:bg-primary/30 pb-32">
             <Tabs defaultValue="current">
                 {/* ── Hero ── */}
-                <div className="relative overflow-hidden pt-20 pb-16 px-6 md:px-14 border-b border-white/[0.03]">
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] via-transparent to-rose-600/[0.02] pointer-events-none" />
-                    <SpeedLines opacity={0.03} />
-                    <HalftoneDots />
-
-                    <div className="relative z-10 max-w-[1400px] mx-auto flex flex-col md:flex-row md:items-end justify-between gap-10">
-                        <div className="space-y-6">
-                            <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-4 duration-700">
-                                <div className="h-[2px] w-10 bg-primary shadow-[0_0_15px_rgba(249,115,22,0.5)]" />
-                                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/90">Gestión de Archivos</span>
-                            </div>
-                            
-                            <h1 className="font-bebas text-7xl md:text-9xl leading-[0.8] tracking-[0.02em] text-white animate-in fade-in slide-in-from-left-8 duration-1000">
-                                MI<br />
-                                <span className="text-transparent stroke-text opacity-30">BIBLIO</span>TECA
-                            </h1>
-
-                            <div className="flex flex-wrap items-center gap-10 mt-6 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
-                                <StatItem count={currentlyWatching.length} label="Viendo" active />
-                                <div className="hidden sm:block w-[1px] h-10 bg-white/5" />
-                                <StatItem count={planned.length} label="Planeado" />
-                                <div className="hidden sm:block w-[1px] h-10 bg-white/5" />
-                                <StatItem count={completed.length} label="Completado" />
-                                <div className="hidden sm:block w-[1px] h-10 bg-white/5" />
-                                <StatItem count={unmatchedGroups.length} label="Sin Match" />
-                            </div>
-                        </div>
-
-                        {/* Search Wrapper */}
-                        <div className="relative w-full md:w-80 group animate-in fade-in slide-in-from-right-4 duration-1000 delay-500">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-primary transition-colors" />
-                            <input
-                                className="w-full pl-12 pr-5 py-3.5 bg-white/[0.02] hover:bg-white/[0.04] focus:bg-white/[0.06] border border-white/5 focus:border-primary/40 rounded-xl text-sm font-bold tracking-wide outline-none transition-all duration-300 placeholder:text-zinc-700"
-                                type="text"
-                                value={searchQuery}
-                                onChange={e => setSearchQuery(e.target.value)}
-                                placeholder="LOCALIZAR TÍTULO..."
-                            />
-                            {/* Japanese Accent decoration */}
-                            <div className="absolute -bottom-1 left-4 right-4 h-[2px] bg-gradient-to-r from-transparent via-primary/40 to-transparent scale-x-0 group-focus-within:scale-x-100 transition-transform duration-500" />
-                        </div>
+                <HeroSection 
+                    title={<>MI<br /><span className="text-transparent stroke-text opacity-30">BIBLIO</span>TECA</>}
+                    decorationTag="Gestión de Archivos"
+                    verticalTag="BIBLIOTECA · COLECCIÓN · ARCHIVOS"
+                    className="border-b border-white/[0.03]"
+                >
+                    <div className="flex flex-wrap items-center gap-10 mt-6 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
+                        <StatItem count={currentlyWatching.length} label="Viendo" active />
+                        <div className="hidden sm:block w-[1px] h-10 bg-white/5" />
+                        <StatItem count={planned.length} label="Planeado" />
+                        <div className="hidden sm:block w-[1px] h-10 bg-white/5" />
+                        <StatItem count={completed.length} label="Completado" />
+                        <div className="hidden sm:block w-[1px] h-10 bg-white/5" />
+                        <StatItem count={unmatchedGroups.length} label="Sin Match" />
                     </div>
 
-                    {/* Vertical JP decoration */}
-                    <div className="absolute right-6 top-1/2 -translate-y-1/2 [writing-mode:vertical-rl] font-black text-[10px] tracking-[0.5em] text-zinc-800 uppercase pointer-events-none select-none">
-                        BIBLIOTECA · COLECCIÓN · ARCHIVOS
+                    {/* Search Wrapper */}
+                    <div className="relative w-full md:w-80 group animate-in fade-in slide-in-from-right-4 duration-1000 delay-500">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-primary transition-colors" />
+                        <input
+                            className="w-full pl-12 pr-5 py-3.5 bg-white/[0.02] hover:bg-white/[0.04] focus:bg-white/[0.06] border border-white/5 focus:border-primary/40 rounded-xl text-sm font-bold tracking-wide outline-none transition-all duration-300 placeholder:text-zinc-700"
+                            type="text"
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            placeholder="LOCALIZAR TÍTULO..."
+                        />
+                        {/* Japanese Accent decoration */}
+                        <div className="absolute -bottom-1 left-4 right-4 h-[2px] bg-gradient-to-r from-transparent via-primary/40 to-transparent scale-x-0 group-focus-within:scale-x-100 transition-transform duration-500" />
                     </div>
-                </div>
+                </HeroSection>
 
                 {/* ── Tab Navigation ── */}
                 <div className="sticky top-0 z-40 glass-panel-premium border-b border-white/[0.03] backdrop-blur-3xl">
@@ -373,7 +310,6 @@ const UnmatchedGroupCard = memo(function UnmatchedGroupCard({ group, onMatch }: 
             </div>
 
             <Button 
-                variant="outline"
                 className="w-full bg-white/[0.03] hover:bg-primary border border-white/5 hover:border-primary text-zinc-400 hover:text-white font-bebas tracking-[0.2em] gap-2 transition-all duration-300 active:scale-[0.98]"
                 onClick={() => onMatch(group.localFiles.map((f: any) => f.path), dirName)}
             >
@@ -409,11 +345,7 @@ const TabTrigger = memo(function TabTrigger({ value, label, count }: { value: st
 const LoadingGrid = () => (
     <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-x-6 gap-y-10">
         {Array.from({ length: 14 }).map((_, i) => (
-            <div key={i} className="space-y-3 animate-pulse">
-                <div className="aspect-[2/3] w-full bg-white/[0.03] rounded-lg border border-white/5" />
-                <div className="h-4 w-3/4 bg-white/[0.02] rounded" />
-                <div className="h-3 w-1/2 bg-white/[0.01] rounded" />
-            </div>
+            <MovieCardSkeleton key={i} />
         ))}
     </div>
 )

@@ -122,15 +122,44 @@ func (a *ScannerAgent) ScoreAndResolve(pm parser.ParsedMedia, originalPath strin
 func agentCalculateBayesianScore(pm parser.ParsedMedia, media *dto.NormalizedMedia) float64 {
 	prior := 0.50
 
-	// Evidence 1: Dice similarity across all synonyms
+	// Evidence 1: Dice similarity across all titles and synonyms
 	bestDice := 0.0
+	candidateTitles := make([]string, 0, len(media.Synonyms)+4)
+	if media.Title != nil {
+		if media.Title.Romaji != nil && *media.Title.Romaji != "" {
+			candidateTitles = append(candidateTitles, *media.Title.Romaji)
+		}
+		if media.Title.English != nil && *media.Title.English != "" {
+			candidateTitles = append(candidateTitles, *media.Title.English)
+		}
+		if media.Title.Native != nil && *media.Title.Native != "" {
+			candidateTitles = append(candidateTitles, *media.Title.Native)
+		}
+		if media.Title.UserPreferred != nil && *media.Title.UserPreferred != "" {
+			candidateTitles = append(candidateTitles, *media.Title.UserPreferred)
+		}
+	}
 	for _, alias := range media.Synonyms {
-		sim := calculateDice(pm.Title, *alias)
+		if alias != nil && *alias != "" {
+			candidateTitles = append(candidateTitles, *alias)
+		}
+	}
+	for _, title := range candidateTitles {
+		sim := calculateDice(pm.Title, title)
 		if sim > bestDice {
 			bestDice = sim
 		}
 	}
+
 	posterior := updateBayes(prior, bestDice, 0.20)
+
+	// DBZ OVERRIDE: Check if the parsed title guarantees a match to this specific media
+	if dbId, isDb := ResolveDragonBallID(pm.Title); isDb {
+		if media.TmdbId != nil && *media.TmdbId == dbId {
+			bestDice = 1.0
+			posterior = 1.0
+		}
+	}
 
 	// Evidence 2: Season matching
 	if pm.Season > 1 && media.Format != nil && string(*media.Format) == "TV" {
@@ -139,7 +168,7 @@ func agentCalculateBayesianScore(pm parser.ParsedMedia, media *dto.NormalizedMed
 
 	// Evidence 3: Special/OVA detection
 	if pm.Season == 0 && pm.Episode == 0 {
-		if media.Format != nil && (string(*media.Format) == "OVA" || string(*media.Format) == "SPECIAL") {
+		if media.Format != nil && (string(*media.Format) == "OVA" || string(*media.Format) == "SPECIAL" || string(*media.Format) == "MOVIE") {
 			posterior = updateBayes(posterior, 0.95, 0.50)
 		} else {
 			posterior = updateBayes(posterior, 0.10, 0.80)
@@ -154,6 +183,11 @@ func agentCalculateBayesianScore(pm parser.ParsedMedia, media *dto.NormalizedMed
 		} else {
 			posterior = updateBayes(posterior, 0.30, 0.60)
 		}
+	}
+
+	// Evidence 5: Movie Fallback Padding
+	if media.Format != nil && string(*media.Format) == "MOVIE" && bestDice >= 0.45 {
+		posterior = updateBayes(posterior, 0.85, 0.15)
 	}
 
 	return posterior

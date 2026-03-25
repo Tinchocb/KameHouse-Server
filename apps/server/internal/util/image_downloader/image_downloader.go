@@ -222,7 +222,8 @@ func (id *ImageDownloader) downloadImage(url string) {
 	imgID := uuid.NewString()
 
 	// Download the image
-	resp, err := http.Get(url)
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Get(url)
 	if err != nil {
 		id.logger.Error().Err(err).Msgf("image downloader: Failed to download image from URL %s", url)
 		return
@@ -262,8 +263,6 @@ func (id *ImageDownloader) downloadImage(url string) {
 	id.registryMu.Lock()
 	id.registry.addUrl(imgID, url, format)
 	id.registryMu.Unlock()
-
-	return
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

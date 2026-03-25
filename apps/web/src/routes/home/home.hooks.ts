@@ -1,8 +1,12 @@
 import * as React from "react"
 import type { UnifiedResolutionResponse } from "@/api/types/unified.types"
+import { buildSeaQuery } from "@/api/client/requests"
 
 /**
  * Hook for quick media playback resolution.
+ *
+ * Uses the `/api/v1/resolver/streams` endpoint (same backend handler as
+ * `useResolveStreams`) to resolve sources for the first episode.
  */
 export function useQuickPlay(onFallback: (mediaId: number) => void) {
     const [resolution, setResolution] = React.useState<UnifiedResolutionResponse | null>(null)
@@ -12,10 +16,16 @@ export function useQuickPlay(onFallback: (mediaId: number) => void) {
         async (mediaId: number) => {
             setIsResolving(true)
             try {
-                const res = await fetch(`/api/v1/resolve/${mediaId}?episode=1`)
-                if (!res.ok) throw new Error("No sources")
-                const json = (await res.json()) as { data: UnifiedResolutionResponse }
-                setResolution(json.data)
+                const data = await buildSeaQuery<UnifiedResolutionResponse>({
+                    endpoint: `/api/v1/resolver/streams`,
+                    method: "GET",
+                    params: { mediaId, episode: 1 } as any,
+                })
+                if (data) {
+                    setResolution(data)
+                } else {
+                    onFallback(mediaId)
+                }
             } catch {
                 onFallback(mediaId)
             } finally {
