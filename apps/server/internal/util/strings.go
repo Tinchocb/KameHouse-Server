@@ -35,12 +35,12 @@ func Decode(s string) string {
 	return string(decoded)
 }
 
-func GenerateCryptoID() string {
+func GenerateCryptoID() (string, error) {
 	bytes := make([]byte, 16)
 	if _, err := rand.Read(bytes); err != nil {
-		panic(err)
+		return "", err
 	}
-	return hex.EncodeToString(bytes)
+	return hex.EncodeToString(bytes), nil
 }
 
 func IsMostlyLatinString(str string) bool {
@@ -244,21 +244,19 @@ func Snakecase(str string) string {
 
 // randomStringWithAlphabet generates a cryptographically random string
 // with the specified length and characters set.
-//
-// It panics if for some reason rand.Int returns a non-nil error.
-func RandomStringWithAlphabet(length int, alphabet string) string {
+func RandomStringWithAlphabet(length int, alphabet string) (string, error) {
 	b := make([]byte, length)
 	max := big.NewInt(int64(len(alphabet)))
 
 	for i := range b {
 		n, err := rand.Int(rand.Reader, max)
 		if err != nil {
-			panic(err)
+			return "", err
 		}
 		b[i] = alphabet[n.Int64()]
 	}
 
-	return string(b)
+	return string(b), nil
 }
 
 func FileExt(str string) string {

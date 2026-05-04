@@ -1,6 +1,6 @@
 import { cn } from "@/components/ui/core/styling"
 import { Skeleton } from "@/components/ui/skeleton"
-import type { ContentTag } from "@/hooks/useHomeIntelligence"
+import type { ContentTag } from "@/hooks/use-home-intelligence"
 import { Flame, Info, Play, Sparkles, Star } from "lucide-react"
 import * as React from "react"
 import { useExtractColor } from "@/hooks/use-extract-color"
@@ -147,7 +147,7 @@ export function HeroBanner({
             }}
             onMouseMove={handleMouseMove}
             className={cn(
-                "relative flex min-h-[720px] w-full items-end overflow-hidden bg-black premium-noise premium-scanline",
+                "relative flex min-h-[720px] w-full items-end overflow-hidden bg-[#09090b]",
                 "h-[100dvh] max-h-[1100px]",
                 className,
             )}
@@ -189,11 +189,11 @@ export function HeroBanner({
                 style={{ background: "var(--extracted-bg-gradient)" }}
             />
 
-            <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#09090b] via-[#09090b]/60 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#09090b] via-transparent to-transparent opacity-80" />
             
             {/* The Perfect Fade to Black: seamless transition to the body bg */}
-            <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-background via-background/90 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-[#09090b] via-[#09090b]/90 to-transparent" />
 
             {/* ── Content ───────────────────────────────────────────────── */}
             <div className="relative z-10 mx-auto flex w-full max-w-[1680px] flex-col justify-end gap-6 px-6 pb-16 pt-36 md:px-10 lg:px-14 lg:pb-20 xl:flex-row xl:items-end xl:justify-between">
@@ -229,7 +229,7 @@ export function HeroBanner({
                             className="mb-6 max-h-28 max-w-[min(32rem,80vw)] object-contain object-left"
                         />
                     ) : (
-                        <h1 className="mb-6 max-w-4xl font-display font-black leading-[0.92] tracking-normal bg-clip-text text-transparent bg-gradient-to-br from-white via-zinc-200 to-zinc-600 drop-shadow-2xl md:text-7xl xl:text-[6.5rem] [font-size:clamp(3.5rem,10vw,7.5rem)] uppercase">
+                        <h1 className="mb-4 max-w-4xl font-bebas font-normal leading-[0.85] tracking-normal bg-clip-text text-transparent bg-gradient-to-br from-white via-zinc-100 to-zinc-400 drop-shadow-[0_10px_30px_rgba(0,0,0,0.8)] text-[4.5rem] md:text-[6.5rem] xl:text-[8rem] uppercase">
                             {activeItem.title}
                         </h1>
                     )}
@@ -243,12 +243,12 @@ export function HeroBanner({
                         <motion.button
                             whileHover={{ 
                                 scale: 1.05, 
-                                boxShadow: "0 0 30px rgba(249,115,22,0.6)",
-                                backgroundColor: "rgb(251, 146, 60)" 
+                                boxShadow: "0 0 30px rgba(255,107,0,0.6)",
+                                backgroundColor: "#ff8533" 
                             }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => activeItem.onPlay()}
-                            className="group/btn relative flex items-center justify-center gap-3 bg-primary text-white h-12 md:h-14 px-8 rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-[0_4px_20px_rgba(249,115,22,0.3)] overflow-hidden"
+                            className="group/btn relative flex items-center justify-center gap-3 bg-[#ff6b00] text-white h-12 md:h-14 px-8 rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-[0_4px_20px_rgba(255,107,0,0.4)] overflow-hidden border border-[#ff6b00]"
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:animate-[shine_1.5s_infinite_ease-in-out]" />
                             <Play className="w-5 h-5 fill-current relative z-10" />
@@ -297,7 +297,7 @@ export function HeroBanner({
                                 </div>
                                 <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
                                     <div
-                                        className="h-full rounded-full bg-primary shadow-[0_0_8px_rgba(249,115,22,0.5)]"
+                                        className="h-full rounded-full bg-[#ff6b00] shadow-[0_0_8px_rgba(255,107,0,0.5)]"
                                         style={{
                                             width: `${Math.min(100, Math.max(0, activeItem.progress))}%`,
                                         }}

@@ -1,5 +1,5 @@
 import { cn } from "@/components/ui/core/styling"
-import type { CardAspect } from "@/lib/home-catalog"
+import type { CardAspect } from "@/api/types/intelligence.types"
 import { Folder, Zap } from "lucide-react"
 import * as React from "react"
 import { DeferredImage } from "@/components/shared/deferred-image"
@@ -91,13 +91,13 @@ export const MediaCard = React.memo(function MediaCard({
             }}
             className={cn(
                 // Base — group for child hover triggers
-                "group/card relative shrink-0 cursor-pointer overflow-hidden rounded-md perspective-1000 premium-reflection",
+                "group/card relative shrink-0 cursor-pointer overflow-hidden rounded-2xl perspective-1000",
                 // Stremio-style subtle border — brightens on hover
                 "border border-white/5 hover:border-white/20",
                 // Flat lift: scale only, no translate — hardware-composited
                 "transition-all duration-500 cubic-bezier(0.16, 1, 0.3, 1) will-change-transform",
-                "hover:-translate-y-3 hover:scale-[1.05] hover:z-50",
-                "hover:shadow-[0_30px_60px_rgba(0,0,0,0.6),0_0_40px_rgba(249,115,22,0.15)]",
+                "hover:-translate-y-4 hover:scale-[1.05] hover:z-50",
+                "hover:shadow-[0_40px_80px_rgba(0,0,0,0.8),0_0_40px_rgba(255,107,0,0.25)]",
                 // Aria / focus ring
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40",
                 // Intrinsic sizing by aspect ratio
@@ -193,7 +193,7 @@ export const MediaCard = React.memo(function MediaCard({
             <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/0 opacity-0 transition-all duration-500 group-hover/card:bg-black/40 group-hover/card:opacity-100 group-hover/card:backdrop-blur-sm">
                 <div 
                     className={cn(
-                        "flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_0_30px_rgba(249,115,22,0.5)]",
+                        "flex h-14 w-14 items-center justify-center rounded-full bg-[#ff6b00] text-white shadow-[0_0_30px_rgba(255,107,0,0.6)]",
                         "translate-y-4 scale-90 opacity-0 transition-all duration-500 group-hover/card:translate-y-0 group-hover/card:scale-100 group-hover/card:opacity-100"
                     )}
                 >
@@ -226,7 +226,7 @@ export const MediaCard = React.memo(function MediaCard({
                     <div
                         className={cn(
                             "h-full",
-                            progressColor === "orange" ? "bg-orange-500" : "bg-white/60",
+                            progressColor === "orange" ? "bg-[#ff6b00] shadow-[0_0_10px_rgba(255,107,0,0.8)]" : "bg-white/60",
                         )}
                         style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
                     />
@@ -235,3 +235,4 @@ export const MediaCard = React.memo(function MediaCard({
         </motion.div>
     )
 }, MediaCardCompare)
+MediaCard.displayName = "MediaCard"

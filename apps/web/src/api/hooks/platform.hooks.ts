@@ -10,7 +10,7 @@ import { useQueryClient } from "@tanstack/react-query"
  */
 export function useRefreshCollection() {
     const queryClient = useQueryClient()
-    return useServerMutation<Platform_UnifiedCollection, any>({
+    return useServerMutation<Platform_UnifiedCollection>({
         endpoint: API_ENDPOINTS.PLATFORM.GetCollection.endpoint,
         method: API_ENDPOINTS.PLATFORM.GetCollection.methods[1], // POST
         mutationKey: [API_ENDPOINTS.PLATFORM.GetCollection.key],

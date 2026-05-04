@@ -3,10 +3,10 @@ package library_explorer
 import (
 	"fmt"
 	"kamehouse/internal/database/db"
+	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
 	"sync"
-
 	"github.com/rs/zerolog"
 )
 
@@ -52,7 +52,7 @@ func (l *LibraryExplorer) SetLibraryPaths(paths []string) {
 // Client functions
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// GetFileTree returns the file tree of the library (root level only for lazy loading)
+// GetFileTree returns the file tree of the library (built from DB or disk)
 func (l *LibraryExplorer) GetFileTree() (*FileTreeJSON, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -62,10 +62,15 @@ func (l *LibraryExplorer) GetFileTree() (*FileTreeJSON, error) {
 		return nil, err
 	}
 
-	// Hydrate the tree with local file data
-	localFileMap, err := l.hydrateLocalFileData(tree)
+	// Always get the latest local file map for the response
+	localFiles, _, err := db.GetLocalFiles(l.database)
 	if err != nil {
-		return nil, err
+		l.logger.Warn().Err(err).Msg("library explorer: Failed to get local files for tree response")
+	}
+
+	localFileMap := make(map[string]*dto.LocalFile)
+	for _, lf := range localFiles {
+		localFileMap[util.NormalizePath(lf.Path)] = lf
 	}
 
 	return &FileTreeJSON{

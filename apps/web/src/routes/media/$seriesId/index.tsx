@@ -1,16 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { useState, useMemo, useCallback, useRef } from "react"
+import { useState, useMemo, useCallback, useRef, useEffect } from "react"
 import { Virtuoso } from "react-virtuoso"
 import { useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
-import { useResolveStreams } from "@/api/hooks/useResolveStreams"
-import { useTorrentstreamStartStream } from "@/api/hooks/torrentstream.hooks"
 import { toast } from "sonner"
 
 
 import { LoadingOverlayWithLogo } from "@/components/shared/loading-overlay-with-logo"
-import { SourcePicker } from "@/components/shared/source-picker"
 import { VideoPlayer } from "@/components/video/player"
-import { type StreamSource } from "@/components/ui/stream-source-card"
 import {
     ArrowLeft,
     Star,
@@ -80,7 +76,7 @@ function ErrorBanner({ message, onBack }: { message: string; onBack: () => void 
 
 // ─── Main Page ────────────────────────────────────────────────────────
 export default function MediaDetailPage() {
-    const { seriesId } = Route.useParams() as any
+    const { seriesId } = Route.useParams()
     const navigate = useNavigate()
 
     const { data: entry, isLoading, error } = useGetAnimeEntry(seriesId)
@@ -97,87 +93,46 @@ export default function MediaDetailPage() {
     const [isPlayerOpen, setIsPlayerOpen] = useState(false)
     const [playTarget, setPlayTarget] = useState<{
         path: string
-        streamType: Mediastream_StreamType | "online"
-        onlineProvider?: string
+        streamType: Mediastream_StreamType
         episodeLabel: string
         episodeNumber: number
         seriesId: number
     } | null>(null)
 
-    // SourcePicker Modal & Resolution State
-    const [resolvingEp, setResolvingEp] = useState<Anime_Episode | null>(null)
-    const { data: resolutionData, isFetching: isResolving } = useResolveStreams(
-        resolvingEp ? { mediaId: Number(seriesId), episode: resolvingEp.episodeNumber } : null,
-        { enabled: !!resolvingEp }
-    )
-    
-    const startTorrentStream = useTorrentstreamStartStream()
 
     // Playback Logic
-    const handlePlayEpisode = useCallback(async (source: any) => {
-        if (!source || !resolvingEp) return
-
-        const isExternal = source.type !== "Local"
-        
-        let targetType: "direct" | "transcode" | "online" = isExternal ? "online" : "direct"
-        let streamPath = source.urlPath ?? "hybrid"
-        
-        if (isExternal && (source.type === "Torrent" || source.type === "Debrid")) {
-            // Initiate backend torrent proxy and transcoder
-            const clientId = `web-${Date.now()}`
-            
-            try {
-                // Must not use await inside a non-async function unless we convert it!
-                // Luckily we converted to async above.
-                toast.loading("Iniciando descarga P2P seguro...", { id: "p2p-toast" })
-                await startTorrentStream.mutateAsync({
-                    magnetLink: source.urlPath,
-                    mediaId: Number(seriesId),
-                    episodeNumber: resolvingEp.episodeNumber,
-                    aniDbEpisode: String(resolvingEp.episodeNumber),
-                    clientId: clientId,
-                } as any)
-                toast.success("Stream anclado al transcodificador", { id: "p2p-toast" })
-                
-                streamPath = `${window.location.origin}/api/v1/directstream/stream?clientId=${clientId}`
-                targetType = "transcode"
-            } catch (err) {
-                console.error("Failed to start torrent stream", err)
-                toast.error("Error al iniciar stream P2P", { id: "p2p-toast" })
-                return
-            }
-        } else if (!isExternal) {
-            const isMp4 = source.urlPath?.toLowerCase().includes(".mp4")
-            targetType = isMp4 ? "direct" : "transcode"
+    const handleEpisodeClick = useCallback((ep: Anime_Episode) => {
+        if (!ep.localFile?.path) {
+            toast.error("Este episodio no se encuentra localmente.")
+            return
         }
 
+        const isMp4 = ep.localFile.path.toLowerCase().includes(".mp4")
+        const targetType = isMp4 ? "direct" : "transcode"
+
         setPlayTarget({
-            path: streamPath,
-            streamType: targetType,
-            onlineProvider: source.provider,
-            episodeLabel: resolvingEp.displayTitle || resolvingEp.episodeTitle || `Ep. ${resolvingEp.episodeNumber}`,
-            episodeNumber: resolvingEp.episodeNumber,
+            path: ep.localFile.path,
+            streamType: targetType as Mediastream_StreamType,
+            episodeLabel: ep.displayTitle || ep.episodeTitle || `Ep. ${ep.episodeNumber}`,
+            episodeNumber: ep.episodeNumber,
             seriesId: Number(seriesId)
         })
-        setResolvingEp(null)
         setIsPlayerOpen(true)
-    }, [resolvingEp, seriesId])
-
-    const handleEpisodeClick = useCallback((ep: Anime_Episode) => {
-        setResolvingEp(ep)
-    }, [])
+    }, [seriesId])
 
     const handleNextEpisode = useCallback(() => {
         if (!entry || !entry.episodes || !playTarget) return
         const nextEp = entry.episodes.find(e => e.episodeNumber === playTarget.episodeNumber + 1)
         if (nextEp) {
+            if (marathonSettings.enabled && marathonSettings.autoPlayNext) {
+                setIsAutoPlayingNext(true)
+            }
             setResolvingEp(nextEp) 
-            // In marathons we should probably auto-play the best source instead of opening the picker, 
-            // but for safety we open the picker. Or we can auto-pick later.
         }
         else setIsPlayerOpen(false) // Series finished
-    }, [entry, playTarget])
+    }, [entry, playTarget, marathonSettings])
 
+    // Heurística de Auto-Play
 
     if (isLoading) return <LoadingOverlayWithLogo />
     if (error) return <ErrorBanner message={error instanceof Error ? error.message : "Error"} onBack={onBack} />
@@ -262,7 +217,7 @@ export default function MediaDetailPage() {
                             {media.score > 0 && (
                                 <span className="flex items-center gap-1.5 text-amber-400">
                                     <Star className="w-4 h-4 fill-amber-400" />
-                                    {(media.score / 10).toFixed(1)}
+                                    {(media.score > 10 ? media.score / 10 : media.score).toFixed(1)}
                                 </span>
                             )}
                             {media.year > 0 && <span>{media.year}</span>}
@@ -329,19 +284,22 @@ export default function MediaDetailPage() {
                                     {marathonSettings.enabled ? "Active" : "Disabled"}
                                 </button>
                             </div>
-                            {marathonSettings.enabled && (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 border-t border-white/5">
-                                    {[
+                            {marathonSettings.enabled && (() => {
+                                type MarathonSettingsOptions = "skipIntros" | "autoPlayNext" | "skipFillers";
+                                const options: { key: MarathonSettingsOptions; label: string; icon: React.ReactNode }[] = [
                                         { key: 'skipIntros', label: 'Skip Intros', icon: <SkipForward className="w-3.5 h-3.5" /> },
                                         { key: 'autoPlayNext', label: 'Auto-Play', icon: <Play className="w-3.5 h-3.5" /> },
                                         { key: 'skipFillers', label: 'Skip Fillers', icon: <CheckCircle2 className="w-3.5 h-3.5" /> }
-                                    ].map((opt) => (
+                                ];
+                                return (
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 border-t border-white/5">
+                                    {options.map((opt) => (
                                         <button
                                             key={opt.key}
-                                            onClick={() => setMarathonSettings(s => ({ ...s, [opt.key]: !(s as any)[opt.key] }))}
+                                            onClick={() => setMarathonSettings(s => ({ ...s, [opt.key]: !s[opt.key] }))}
                                             className={cn(
                                                 "flex flex-col items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-bold transition-all border",
-                                                (marathonSettings as any)[opt.key] 
+                                                marathonSettings[opt.key]
                                                     ? "bg-primary/10 border-primary/30 text-primary" 
                                                     : "bg-white/[0.02] border-white/5 text-zinc-500 hover:bg-white/[0.05] hover:text-zinc-300"
                                             )}
@@ -351,7 +309,8 @@ export default function MediaDetailPage() {
                                         </button>
                                     ))}
                                 </div>
-                            )}
+                                )
+                            })()}
                         </div>
                     </div>
 
@@ -423,7 +382,8 @@ export default function MediaDetailPage() {
                             totalCount={episodes.length}
                             itemContent={(index) => {
                                 const ep = episodes[index]
-                                const isEpic = (ep.episodeMetadata as any)?.Intel?.Tag === "EPIC"
+                                const epIntel = ep.episodeMetadata && 'Intel' in ep.episodeMetadata ? (ep.episodeMetadata as any).Intel : null;
+                                const isEpic = epIntel?.Tag === "EPIC";
                                 const isFiller = ep.episodeMetadata?.isFiller
                                 return (
                                     <div className="px-5 py-2">
@@ -500,10 +460,10 @@ export default function MediaDetailPage() {
                                                 </p>
                                                 
                                                 {/* Intelligence Tags */}
-                                                {(ep.episodeMetadata as any)?.Intel?.ArcName && (
+                                                {epIntel?.ArcName && (
                                                     <div className="flex items-center gap-2 mt-1">
                                                         <span className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-600 group-hover:text-zinc-500 transition-colors">
-                                                            {(ep.episodeMetadata as any).Intel.ArcName}
+                                                            {epIntel.ArcName}
                                                         </span>
                                                     </div>
                                                 )}
@@ -516,24 +476,6 @@ export default function MediaDetailPage() {
                 </motion.div>
             </main>
 
-            {/* ── Source Picker Modal ── */}
-            {resolvingEp && !isResolving && resolutionData && (
-                <SourcePicker 
-                    response={resolutionData}
-                    onSelect={handlePlayEpisode}
-                    onClose={() => setResolvingEp(null)}
-                />
-            )}
-            {resolvingEp && isResolving && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                    <div className="flex flex-col items-center gap-4 bg-zinc-900/80 px-8 py-6 rounded-2xl border border-white/10 shadow-2xl">
-                        <Zap className="w-10 h-10 text-primary animate-pulse drop-shadow-[0_0_15px_rgba(249,115,22,0.8)]" />
-                        <p className="text-sm font-bold uppercase tracking-widest text-zinc-300 animate-pulse">
-                            Buscando Fuentes...
-                        </p>
-                    </div>
-                </div>
-            )}
 
             {/* ── Video Player Modal ── */}
             {isPlayerOpen && playTarget && (
@@ -544,7 +486,7 @@ export default function MediaDetailPage() {
                     episodeLabel={playTarget.episodeLabel}
                     mediaId={Number(playTarget.seriesId)}
                     episodeNumber={playTarget.episodeNumber}
-                    isExternalStream={playTarget.streamType === "online"}
+                    isExternalStream={false}
                     marathonMode={marathonSettings.enabled && marathonSettings.autoPlayNext}
                     onNextEpisode={handleNextEpisode}
                     onClose={() => setIsPlayerOpen(false)}

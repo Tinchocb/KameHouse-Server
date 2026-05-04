@@ -9,6 +9,7 @@
 #   make dev-web      - Start web frontend dev server
 #   make vet          - Run go vet on all packages
 #   make test         - Run all Go tests (short mode)
+#   make race         - Run tests with race detector on concurrency-critical packages
 #   make lint         - Run golangci-lint
 #   make clean        - Remove build artifacts
 #   make tidy         - Run go mod tidy
@@ -43,7 +44,7 @@ endif
 # Primary Targets
 # ======================================================================
 
-.PHONY: build build-server build-web dev dev-web vet test lint clean tidy help
+.PHONY: build build-server build-web dev dev-web vet test race lint clean tidy help
 
 ## build: Full production build (web frontend + Go server)
 build: build-web build-server
@@ -105,6 +106,12 @@ lint:
 	@echo "🧹 Running linter..."
 	golangci-lint run ./internal/...
 	@echo "✅ Lint passed"
+
+## race: Run selected packages with the race detector (events, core, handlers)
+race:
+	@echo "🔬 Running race detector tests..."
+	$(GO) test -race -count=1 ./internal/events/... ./internal/core/... ./internal/handlers/...
+	@echo "✅ Race detector tests passed"
 
 # ======================================================================
 # Maintenance

@@ -1,13 +1,51 @@
-import { __DEV_SERVER_PORT, TESTONLY__DEV_SERVER_PORT2, TESTONLY__DEV_SERVER_PORT3 } from "@/lib/server/config"
+import { __DEV_SERVER_PORT } from "@/lib/server/config"
 import { __isDesktop__ } from "@/types/constants"
 
 function devOrProd(dev: string, prod: string): string {
     return import.meta.env.MODE === "development" ? dev : prod
 }
 
+/**
+ * WebSocket URL for `/api/v1/ws`, derived from the same rules as HTTP base URL.
+ */
+export function getApiWebSocketUrl(): string {
+    const base = getServerBaseUrl()
+    if (base.startsWith("http://")) return base.replace("http://", "ws://") + "/api/v1/ws"
+    if (base.startsWith("https://")) return base.replace("https://", "wss://") + "/api/v1/ws"
+    if (typeof window !== "undefined") {
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
+        return `${protocol}//${window.location.host}/api/v1/ws`
+    }
+    return `ws://127.0.0.1:${__DEV_SERVER_PORT}/api/v1/ws`
+}
+
 export function getServerBaseUrl(removeProtocol: boolean = false): string {
     if (__isDesktop__) {
-        let ret = devOrProd(`http://127.0.0.1:${__DEV_SERVER_PORT}`, "http://127.0.0.1:43211")
+        let ret: string
+        if (import.meta.env.MODE === "development") {
+            // Igual que en web: con la UI servida por Rsbuild (`npm run dev`), usar base vacía
+            // para que HTTP/WS vayan al mismo origen y el proxy en `/api` apunte al backend real
+            // (`KAMEHOUSE_DEV_API_PORT`, etc.). Evita desalinear desktop dev con un `__DEV_SERVER_PORT` fijo.
+            if (typeof window !== "undefined") {
+                const o = window.location?.origin ?? ""
+                if (o.startsWith("http://") || o.startsWith("https://")) {
+                    ret = ""
+                } else {
+                    ret = `http://127.0.0.1:${__DEV_SERVER_PORT}`
+                }
+            } else {
+                ret = `http://127.0.0.1:${__DEV_SERVER_PORT}`
+            }
+        } else if (typeof window !== "undefined") {
+            const o = window.location?.origin ?? ""
+            if (o.startsWith("http://") || o.startsWith("https://")) {
+                ret = o
+            } else {
+                ret = `http://127.0.0.1:${__DEV_SERVER_PORT}`
+            }
+        } else {
+            ret = `http://127.0.0.1:${__DEV_SERVER_PORT}`
+        }
         if (removeProtocol) {
             ret = ret.replace("http://", "").replace("https://", "")
         }
@@ -23,7 +61,7 @@ export function getServerBaseUrl(removeProtocol: boolean = false): string {
         return ""
     }
 
-    let ret = typeof window !== "undefined"
+    const ret = typeof window !== "undefined"
         ? (devOrProd("", "")) // Use relative implicitly for web
         : ""
     return ret

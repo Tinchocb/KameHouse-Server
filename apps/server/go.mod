@@ -25,9 +25,7 @@ require (
 	github.com/imroc/req/v3 v3.57.0
 	github.com/kr/pretty v0.3.1
 	github.com/labstack/echo/v4 v4.15.0
-	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/mileusna/useragent v1.3.5
-	github.com/neilotoole/streamcache v0.3.5
 	github.com/nssteinbrenner/anitogo v1.0.0
 	github.com/nwaples/rardecode/v2 v2.2.2
 	github.com/pkg/errors v0.9.1
@@ -37,7 +35,6 @@ require (
 	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
-	github.com/xfrr/goffmpeg v1.0.0
 	github.com/ziflex/lecho/v3 v3.9.0
 	go.felesatra.moe/anidb v1.2.2
 	golang.org/x/image v0.35.0
@@ -118,7 +115,6 @@ require (
 	github.com/multiformats/go-multihash v0.2.3 // indirect
 	github.com/multiformats/go-varint v0.0.6 // indirect
 	github.com/ncruces/go-strftime v1.0.0 // indirect
-	github.com/neilotoole/fifomu v0.1.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/pion/datachannel v1.5.9 // indirect
 	github.com/pion/dtls/v3 v3.0.3 // indirect

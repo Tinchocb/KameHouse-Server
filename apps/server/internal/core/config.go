@@ -64,9 +64,6 @@ type Config struct {
 		OpenSubsApiKey   string `mapstructure:"openSubsApiKey"`   // OpenSubtitles v1 REST — remote subtitle search (free key)
 		OpenSubsLanguages []string `mapstructure:"openSubsLanguages"` // Languages to search, e.g. ["es", "en"]
 	} `mapstructure:"metadata"`
-	Experimental struct {
-		MainServerTorrentStreaming bool `mapstructure:"mainServerTorrentStreaming"`
-	} `mapstructure:"experimental"`
 }
 
 type ConfigOptions struct {

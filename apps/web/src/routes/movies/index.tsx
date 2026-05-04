@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useState, useMemo, memo } from "react"
 import { FaPlay, FaSearch, FaFilter } from "react-icons/fa"
 import { EmptyState } from "@/components/shared/empty-state"
+import { GenrePill } from "@/components/shared/genre-pill"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { Anime_LibraryCollectionEntry } from "@/api/generated/types"
 import { Loader2, Clapperboard, Search, Filter } from "lucide-react"
@@ -65,7 +66,7 @@ function MoviesPage() {
  
 
             {/* ── Controls ── */}
-            <div className="sticky top-0 z-30 glass-panel-premium border-y border-white/[0.03] backdrop-blur-3xl">
+            <div className="sticky top-0 z-30 glass-panel border-y border-border-subtle backdrop-blur-3xl">
                 <div className="max-w-[1400px] mx-auto px-6 md:px-14 py-4 flex flex-wrap gap-6 items-center justify-between">
                     {/* Search */}
                     <div className="relative w-full sm:w-80 group">
@@ -81,12 +82,12 @@ function MoviesPage() {
 
                     {/* Genres */}
                     <div className="flex flex-nowrap sm:flex-wrap items-center gap-2 overflow-x-auto sm:overflow-x-visible no-scrollbar pb-2 sm:pb-0">
-                        <div className="flex items-center gap-2 mr-2 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/5">
+                        <div className="flex items-center gap-2 mr-2 px-3 py-1.5 rounded-lg bg-surface-2 border border-border-subtle">
                             <FaFilter className="text-[10px] text-zinc-500" />
                             <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Géneros</span>
                         </div>
                         
-                        <GenrePill label="TODO" active={activeGenre === null} onClick={() => setActiveGenre(null)} />
+                        <GenrePill label="TODOS" active={activeGenre === null} onClick={() => setActiveGenre(null)} />
                         {ALL_GENRES.slice(0, 12).map(g => (
                             <GenrePill
                                 key={g}
@@ -137,25 +138,7 @@ function MoviesPage() {
     )
 }
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
 
-const GenrePill = memo(function GenrePill({
-    label, active, onClick,
-}: { label: string; active: boolean; onClick: () => void }) {
-    return (
-        <button 
-            className={cn(
-                "px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest transition-all duration-300 border",
-                active 
-                    ? "bg-primary text-white border-primary shadow-[0_0_20px_rgba(249,115,22,0.3)] scale-105" 
-                    : "bg-white/[0.03] text-zinc-500 border-white/5 hover:border-primary/40 hover:text-primary"
-            )}
-            onClick={onClick}
-        >
-            {label}
-        </button>
-    )
-})
 
 const MovieCard = memo(function MovieCard({ entry }: { entry: Anime_LibraryCollectionEntry }) {
     const navigate = useNavigate()
@@ -170,7 +153,7 @@ const MovieCard = memo(function MovieCard({ entry }: { entry: Anime_LibraryColle
                 title={movie.titleEnglish || movie.titleRomaji || movie.titleOriginal || "Sin título"}
                 badge={movie.format === "MOVIE" ? "PELÍCULA" : undefined}
                 year={movie.year}
-                rating={movie.score ? movie.score / 10 : undefined}
+                rating={movie.score ? (movie.score > 10 ? movie.score / 10 : movie.score) : undefined}
                 aspect="poster"
                 onClick={() => navigate({ to: "/series/$seriesId", params: { seriesId: entry.mediaId.toString() } })}
                 className="w-full"

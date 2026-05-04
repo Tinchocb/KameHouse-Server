@@ -7,8 +7,9 @@ import { FiChevronDown, FiChevronRight, FiFile, FiSearch } from "react-icons/fi"
 import { MdVerified } from "react-icons/md"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { useGetLocalFilesInfinite } from "@/api/hooks/localfiles.hooks"
+import { Anime_LocalFile } from "@/api/generated/types"
 
-const filterFilePreviews = (filePreviews: any[], searchTerm: string): any[] => {
+const filterFilePreviews = (filePreviews: Anime_LocalFile[], searchTerm: string): Anime_LocalFile[] => {
     if (!searchTerm.trim()) {
         return filePreviews
     }
@@ -16,8 +17,7 @@ const filterFilePreviews = (filePreviews: any[], searchTerm: string): any[] => {
     const lowerSearchTerm = searchTerm.toLowerCase()
     return filePreviews.filter(filePreview => {
         const searchableText = [
-            filePreview.displayTitle,
-            filePreview.displayPath,
+            filePreview.name,
             filePreview.path,
         ].join(" ").toLowerCase()
 
@@ -29,16 +29,11 @@ export type FileTreeNode = {
     name: string
     type: "file" | "directory"
     path: string
-    filePreview?: {
-        displayTitle: string
-        displayPath: string
-        path: string
-        isLikely: boolean
-    }
+    filePreview?: Anime_LocalFile
     children?: FileTreeNode[]
 }
 
-export const buildFileTree = (filePreviews: any[]): FileTreeNode => {
+export const buildFileTree = (filePreviews: Anime_LocalFile[]): FileTreeNode => {
     const root: FileTreeNode = {
         name: "root",
         type: "directory",
@@ -99,13 +94,27 @@ function flattenTree(node: FileTreeNode, expandedPaths: Set<string>, level = 0):
 export type FileTreeSelectorProps = {
     selectedValue: string | number
     onFileSelect: (value: string | number) => void
-    getFileValue: (filePreview: any) => string | number
-    hasLikelyMatch: boolean
-    hasOneLikelyMatch: boolean
-    likelyMatchRef?: React.RefObject<HTMLDivElement>
+    getFileValue: (filePreview: Anime_LocalFile) => string | number
+    hasLikelyMatch?: boolean
+    hasOneLikelyMatch?: boolean
+    likelyMatchRef?: React.Ref<HTMLDivElement>
 }
 
 // 3. Render Optimization: Extract individual file/folder row into a memoized component
+interface FileTreeRowProps {
+    node: FlatNode
+    virtualRow: any // From tanstack virtual
+    isSelected: boolean
+    isLikelyMatch: boolean
+    isOpen: boolean
+    hasLikelyMatch?: boolean
+    hasOneLikelyMatch?: boolean
+    likelyMatchRef?: React.Ref<HTMLDivElement>
+    onFileSelect: (value: string | number) => void
+    getFileValue: (filePreview: Anime_LocalFile) => string | number
+    toggleOpen: (path: string) => void
+}
+
 const FileTreeRow = React.memo(({ 
     node, 
     virtualRow, 
@@ -118,7 +127,7 @@ const FileTreeRow = React.memo(({
     onFileSelect, 
     getFileValue, 
     toggleOpen 
-}: any) => {
+}: FileTreeRowProps) => {
     return (
         <div
             style={{
@@ -173,15 +182,9 @@ const FileTreeRow = React.memo(({
                     {node.type === "file" && node.filePreview ? (
                         <>
                             <p className="mb-0.5 line-clamp-1 font-medium text-sm">
-                                {node.filePreview.displayTitle}
+                                {node.filePreview.name || node.filePreview.path.split(/[\\/]/).pop()}
                             </p>
-                            {isLikelyMatch && (
-                                <p className="flex items-center text-xs">
-                                    <MdVerified className="text-[--green] mr-1 size-3" />
-                                    <span className="text-white">Likely match</span>
-                                </p>
-                            )}
-                            <p className="font-normal line-clamp-1 text-xs text-[--muted]">{node.filePreview.displayPath}</p>
+                            <p className="font-normal line-clamp-1 text-xs text-[--muted]">{node.filePreview.path}</p>
                         </>
                     ) : (
                         <span
@@ -198,13 +201,14 @@ const FileTreeRow = React.memo(({
         </div>
     )
 })
+FileTreeRow.displayName = "FileTreeRow"
 
 export const FileTreeSelector: React.FC<FileTreeSelectorProps> = ({
     selectedValue,
     onFileSelect,
     getFileValue,
-    hasLikelyMatch,
-    hasOneLikelyMatch,
+    hasLikelyMatch = false,
+    hasOneLikelyMatch = false,
     likelyMatchRef,
 }) => {
     const [searchTerm, setSearchTerm] = useState("")
@@ -299,8 +303,8 @@ export const FileTreeSelector: React.FC<FileTreeSelectorProps> = ({
                     >
                         {virtualItems.map((virtualRow) => {
                             const node = flatNodes[virtualRow.index]
-                            const isSelected = node.type === "file" && node.filePreview && selectedValue === getFileValue(node.filePreview)
-                            const isLikelyMatch = node.type === "file" && node.filePreview?.isLikely
+                            const isSelected = !!(node.type === "file" && node.filePreview && selectedValue === getFileValue(node.filePreview))
+                            const isLikelyMatch = false // Obsolete since Anime_LocalFile doesn't have isLikely Match
                             const isOpen = expandedPaths.has(node.path)
 
                             return (
@@ -335,10 +339,26 @@ export const FileTreeSelector: React.FC<FileTreeSelectorProps> = ({
 export type FileTreeMultiSelectorProps = {
     selectedIndices: number[]
     onSelectionChange: (indices: number[]) => void
-    getFileValue: (filePreview: any) => number
+    getFileValue: (filePreview: Anime_LocalFile) => number
 }
 
 // 3. Render Optimization: Memoize the multi-select row
+interface FileTreeMultiRowProps {
+    node: FlatNode
+    virtualRow: any
+    isOpen: boolean
+    isFileSelected: boolean
+    dirState: {
+        isSelected: boolean
+        isPartial: boolean
+        directoryFileIndices: number[]
+    }
+    getFileValue: (filePreview: Anime_LocalFile) => number
+    selectedIndices: number[]
+    onSelectionChange: (indices: number[]) => void
+    toggleOpen: (path: string) => void
+}
+
 const FileTreeMultiRow = React.memo(({
     node,
     virtualRow,
@@ -349,7 +369,7 @@ const FileTreeMultiRow = React.memo(({
     selectedIndices,
     onSelectionChange,
     toggleOpen
-}: any) => {
+}: FileTreeMultiRowProps) => {
     return (
         <div
             style={{
@@ -428,9 +448,9 @@ const FileTreeMultiRow = React.memo(({
                     {node.type === "file" && node.filePreview ? (
                         <>
                             <p className="mb-0.5 line-clamp-1 font-medium text-sm">
-                                {node.filePreview.displayTitle}
+                                {node.filePreview.name || node.filePreview.path.split(/[\\/]/).pop()}
                             </p>
-                            <p className="font-normal line-clamp-1 text-xs text-[--muted]">{node.filePreview.displayPath}</p>
+                            <p className="font-normal line-clamp-1 text-xs text-[--muted]">{node.filePreview.path}</p>
                         </>
                     ) : (
                         <span className="font-medium text-[--white] text-sm">
@@ -454,6 +474,7 @@ const FileTreeMultiRow = React.memo(({
         </div>
     )
 })
+FileTreeMultiRow.displayName = "FileTreeMultiRow"
 
 export const FileTreeMultiSelector: React.FC<FileTreeMultiSelectorProps> = ({
     selectedIndices,
@@ -577,7 +598,7 @@ export const FileTreeMultiSelector: React.FC<FileTreeMultiSelectorProps> = ({
                             const node = flatNodes[virtualRow.index]
                             const isOpen = expandedPaths.has(node.path)
 
-                            const isFileSelected = node.type === "file" && node.filePreview && selectedIndices.includes(getFileValue(node.filePreview))
+                            const isFileSelected = !!(node.type === "file" && node.filePreview && selectedIndices.includes(getFileValue(node.filePreview)))
                             const dirState = node.type === "directory" ? getDirectorySelectionState(node) : { isSelected: false, isPartial: false, directoryFileIndices: [] }
 
                             return (

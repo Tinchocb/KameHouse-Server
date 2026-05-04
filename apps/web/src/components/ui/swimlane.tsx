@@ -4,7 +4,7 @@ import { MediaStack } from "./media-stack"
 import { motion } from "framer-motion"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/components/ui/core/styling"
-import type { CardAspect } from "@/lib/home-catalog"
+import type { CardAspect } from "@/api/types/intelligence.types"
 import * as React from "react"
 
 export interface SwimlaneItem {
@@ -51,9 +51,9 @@ const SwimlaneInner = React.memo(function SwimlaneInner({
 
     return (
         <section className={cn("relative", className)}>
-            <div className="mb-5 flex items-center gap-3 px-6 md:px-10 lg:px-14">
-                <span className="h-6 w-1 rounded-full bg-primary" />
-                <h2 className="text-lg font-semibold uppercase tracking-[0.18em] text-zinc-200 md:text-xl">
+            <div className="mb-6 flex items-center gap-4 px-6 md:px-10 lg:px-14">
+                <span className="h-8 w-1.5 rounded-full bg-[#ff6b00] shadow-[0_0_15px_rgba(255,107,0,0.6)]" />
+                <h2 className="text-3xl font-bebas font-normal uppercase tracking-widest text-zinc-100 drop-shadow-md">
                     {title}
                 </h2>
             </div>
@@ -158,14 +158,14 @@ export function SwimlaneSkeleton({
 
     return (
         <section className={cn("relative", className)}>
-            <div className="mb-5 flex items-center gap-3 px-6 md:px-10 lg:px-14">
-                <span className="h-6 w-1 rounded-full bg-zinc-800" />
+            <div className="mb-6 flex items-center gap-4 px-6 md:px-10 lg:px-14">
+                <span className="h-8 w-1.5 rounded-full bg-zinc-800" />
                 {title ? (
-                    <h2 className="text-lg font-semibold uppercase tracking-[0.18em] text-zinc-200 md:text-xl">
+                    <h2 className="text-3xl font-bebas font-normal uppercase tracking-widest text-zinc-200">
                         {title}
                     </h2>
                 ) : (
-                    <Skeleton className="h-6 w-32" />
+                    <Skeleton className="h-8 w-40" />
                 )}
             </div>
 

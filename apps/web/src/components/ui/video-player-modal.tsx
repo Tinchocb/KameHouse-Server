@@ -18,13 +18,21 @@ import type { Mediastream_StreamType } from "@/api/generated/types"
 import { useUpdateContinuityWatchHistoryItem } from "@/api/hooks/continuity.hooks"
 import { useGetSettings } from "@/api/hooks/settings.hooks"
 
-import { usePlaybackTelemetry } from "@/hooks/usePlaybackTelemetry"
-import { useJassub } from "@/hooks/useJassub"
+import { usePlaybackTelemetry } from "@/hooks/use-playback-telemetry"
+import { useJassub } from "@/hooks/use-jassub"
 import { PlayerSettingsMenu } from "@/components/ui/PlayerSettingsMenu"
 import { TimelineHeatmap, type InsightNode } from "@/components/ui/timeline-heatmap"
 import type { AudioTrack, SubtitleTrack, StreamTrackInfo } from "@/components/ui/track-types"
 import type { EpisodeSource } from "@/api/types/unified.types"
 import { useAppStore } from "@/lib/store"
+import {
+    LoadingErrorOverlay,
+    CenterPlayFlash,
+    SkipIntroOverlay,
+    NextEpisodeOverlay
+} from "@/components/video/player-overlays"
+import { PlayerTopBar } from "@/components/video/player-topbar"
+import { PlayerBottomBar } from "@/components/video/player-bottombar"
 
 export interface VideoPlayerModalProps {
     streamUrl: string
@@ -101,6 +109,7 @@ const JassubOverlay = React.memo(({ videoRef, subtitleUrl, onLoading }: JassubOv
         />
     )
 })
+JassubOverlay.displayName = "JassubOverlay"
 
 export function VideoPlayerModal({
     streamUrl,
@@ -123,6 +132,7 @@ export function VideoPlayerModal({
     const videoRef = useRef<HTMLVideoElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
     const hlsRef = useRef<Hls | null>(null)
+    const { data: serverSettings } = useGetSettings()
 
     // Active stream URL state — seeded from prop, mutated by source switching.
     // Driving HLS from state (not the raw prop) lets us switch sources mid-playback.
@@ -222,7 +232,7 @@ export function VideoPlayerModal({
 
         const inIntro = time >= 0 && time < introEndRef.current
         const inOutro = time >= outroStartRef.current
-        const inPreOutro = time >= dur - 180 // "Next Episode" card shows at last 3 min
+        const inPreOutro = time >= dur - 15 // "Next Episode" card shows at last 15 seconds
 
         setShowSkipIntro((prev) => prev !== inIntro ? inIntro : prev)
         setShowNextEpisode((prev) => prev !== inPreOutro ? inPreOutro : prev)
@@ -231,12 +241,12 @@ export function VideoPlayerModal({
             setNextEpCountdown(Math.max(0, Math.ceil(dur - time)))
         }
 
-        // Marathon auto-trigger: jump to next episode when outro begins
-        if (marathonMode && inOutro && !autoTriggeredRef.current && onNextEpisode) {
+        // Marathon auto-trigger: jump to next episode when countdown finishes
+        if (marathonMode && inPreOutro && nextEpCountdown === 0 && !autoTriggeredRef.current && onNextEpisode) {
             autoTriggeredRef.current = true
             onNextEpisode()
         }
-    }, [marathonMode, onNextEpisode])
+    }, [marathonMode, onNextEpisode, nextEpCountdown])
 
     // ── Track selection state ──────────────────────────────────────────────────
     // Audio tracks — seeded from the trackInfo prop; HLS streams also auto-detect
@@ -263,9 +273,7 @@ export function VideoPlayerModal({
     // ── Telemetry (Watch Progress Background Sync) ─────────────────────────
     usePlaybackTelemetry(mediaId, episodeNumber, videoRef)
 
-    // Settings
-    const { data: settings } = useGetSettings()
-    const isPredictiveCacheEnabled = (settings?.mediaPlayer as any)?.predictiveCache ?? false
+    const isPredictiveCacheEnabled = Boolean(serverSettings?.library?.autoPlayNextEpisode)
 
     // Insights (X-Ray Heatmap)
     const [insights, setInsights] = useState<InsightNode[]>([])
@@ -274,7 +282,8 @@ export function VideoPlayerModal({
         let cancelled = false
         fetch(`/api/v1/videocore/insights/${mediaId}-${episodeNumber}?duration=${duration}`)
             .then((r) => r.ok ? r.json() : null)
-            .then((res: any) => {
+            .then((resUnknown: unknown) => {
+                const res = resUnknown as { data?: InsightNode[] } | null
                 if (cancelled || !res?.data) return
                 setInsights(res.data)
             })
@@ -661,13 +670,13 @@ export function VideoPlayerModal({
         else videoRef.current.play()
     }, [isPlaying])
 
-    const skipTime = (amount: number) => {
+    const skipTime = useCallback((amount: number) => {
         if (!videoRef.current) return
         let newTime = videoRef.current.currentTime + amount
         if (newTime < 0) newTime = 0
         if (newTime > duration) newTime = duration
         videoRef.current.currentTime = newTime
-    }
+    }, [duration])
 
     const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!videoRef.current) return
@@ -788,32 +797,13 @@ export function VideoPlayerModal({
             }}
         >
             {/* Loading / Error States */}
-            {status === "loading" && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-10 text-white">
-                    <Loader2 className="w-14 h-14 text-orange-500 animate-spin drop-shadow-[0_0_15px_rgba(249,115,22,0.8)]" />
-                    <p className="font-bold tracking-widest uppercase text-sm opacity-80 animate-pulse">
-                        {streamType === "transcode" ? "Preparando Transmisión" : "Estableciendo Conexión"}
-                    </p>
-                </div>
-            )}
-
-            {/* Buffering State (Mid-playback) */}
-            {isBuffering && status === "ready" && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center z-10 text-white pointer-events-none bg-black/10 backdrop-blur-[2px]">
-                    <Loader2 className="w-14 h-14 text-orange-500 animate-spin drop-shadow-[0_0_15px_rgba(249,115,22,0.8)]" />
-                </div>
-            )}
-
-            {status === "error" && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-10 px-6 text-center text-white bg-black/90">
-                    <AlertTriangle className="w-16 h-16 text-orange-500" />
-                    <h3 className="font-black text-2xl tracking-wide">Transmisión Caída</h3>
-                    <p className="text-gray-400 max-w-md">{errorMsg}</p>
-                    <button onClick={onClose} className="mt-4 px-8 py-3 rounded-md bg-orange-500 hover:bg-orange-600 font-bold transition-all shadow-[0_0_20px_rgba(249,115,22,0.4)]">
-                        Regresar
-                    </button>
-                </div>
-            )}
+            <LoadingErrorOverlay
+                status={status}
+                errorMsg={errorMsg}
+                streamType={streamType}
+                isBuffering={isBuffering}
+                onClose={onClose}
+            />
 
             {/* Video Element */}
             <video
@@ -831,7 +821,10 @@ export function VideoPlayerModal({
                 onPlaying={() => setIsBuffering(false)}
                 onEnded={() => {
                     const video = videoRef.current
-                    if (video) {} 
+                    if (video && onNextEpisode && !autoTriggeredRef.current && marathonMode) {
+                        autoTriggeredRef.current = true
+                        onNextEpisode()
+                    }
                 }}
                 onSeeked={() => {
                     const video = videoRef.current
@@ -851,105 +844,30 @@ export function VideoPlayerModal({
             )}
 
             {/* Center Play/Pause Flash (Stremio-style) */}
-            {centerFlash && (
-                <div
-                    key={centerFlash}
-                    className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
-                >
-                    <div className="flex items-center justify-center w-20 h-20 rounded-full bg-black/45 backdrop-blur-sm animate-[ping_0.5s_ease-out_forwards]">
-                        {centerFlash === "play"
-                            ? <svg viewBox="0 0 24 24" fill="currentColor" className="w-9 h-9 text-white ml-1"><path d="M8 5v14l11-7z"/></svg>
-                            : <svg viewBox="0 0 24 24" fill="currentColor" className="w-9 h-9 text-white"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                        }
-                    </div>
-                </div>
-            )}
+            <CenterPlayFlash flash={centerFlash} />
 
 
-            {/* ── Smart Overlay: Skip Intro ─────────────────────────────────────
-                 Appears during the intro window. 'S' key or click jumps to introEnd.
-                 bottom-20 keeps it above the control bar; z-30 above center-flash.     */}
-            <div className={cn(
-                "absolute bottom-24 left-8 md:left-10 z-30 transition-all duration-500 pointer-events-auto",
-                showSkipIntro ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
-            )}>
-                <button
-                    id="skip-intro-btn"
-                    aria-label="Saltar Introducción"
-                    onClick={(e) => {
-                        e.stopPropagation()
-                        if (videoRef.current) videoRef.current.currentTime = introEndRef.current
-                    }}
-                    className={cn(
-                        "flex items-center gap-2 px-5 py-2.5 rounded-lg",
-                        "bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/40",
-                        "backdrop-blur-md text-white text-sm font-semibold tracking-wide",
-                        "transition-all duration-200 shadow-[0_4px_24px_rgba(0,0,0,0.4)]",
-                        "active:scale-95"
-                    )}
-                >
-                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 opacity-80">
-                        <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/>
-                    </svg>
-                    Saltar Intro
-                    <span className="text-white/40 text-xs font-normal ml-1 hidden sm:inline">[S]</span>
-                </button>
-            </div>
+            {/* ── Smart Overlay: Skip Intro ───────────────────────────────────── */}
+            <SkipIntroOverlay
+                show={showSkipIntro}
+                onSkip={() => {
+                    if (videoRef.current) videoRef.current.currentTime = introEndRef.current
+                }}
+            />
 
-            {/* ── Smart Overlay: Next Episode card ─────────────────────────────
-                 Appears during the last 3 minutes. Shows countdown and next ep title.
-                 Auto-triggers onNextEpisode when marathon mode is ON.               */}
-            <div className={cn(
-                "absolute bottom-24 right-6 md:right-10 z-30 transition-all duration-500 pointer-events-auto",
-                showNextEpisode ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
-            )}>
-                <div className={cn(
-                    "flex flex-col gap-3 p-4 rounded-xl w-64",
-                    "bg-zinc-900/80 border border-white/10 backdrop-blur-xl",
-                    "shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
-                )}>
-                    <div className="flex items-center justify-between">
-                        <span className="text-zinc-400 text-xs font-semibold uppercase tracking-widest">Siguiente episodio</span>
-                        {marathonMode && (
-                            <span className="text-orange-400 text-xs font-bold tabular-nums">
-                                Auto en {Math.ceil(Math.max(0, nextEpCountdown - (outroStartRef.current === Infinity ? 120 : (duration - outroStartRef.current))))}s
-                            </span>
-                        )}
-                    </div>
-
-                    {nextEpisodeTitle && (
-                        <p className="text-white text-sm font-semibold leading-snug line-clamp-2">
-                            {nextEpisodeTitle}
-                        </p>
-                    )}
-
-                    {/* Marathon mode progress bar */}
-                    {marathonMode && duration > 0 && (
-                        <div className="w-full h-0.5 rounded-full bg-white/10 overflow-hidden">
-                            <div
-                                className="h-full rounded-full bg-orange-500 transition-all duration-1000"
-                                style={{ width: `${Math.min(100, Math.max(0, ((duration - nextEpCountdown) / (duration - (outroStartRef.current === Infinity ? duration - 120 : outroStartRef.current))) * 100))}%` }}
-                            />
-                        </div>
-                    )}
-
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation()
-                            autoTriggeredRef.current = true
-                            onNextEpisode?.()
-                        }}
-                        className={cn(
-                            "w-full py-2 rounded-lg text-sm font-bold tracking-wide",
-                            "bg-orange-500 hover:bg-orange-400 text-white",
-                            "transition-all duration-200 active:scale-95",
-                            "shadow-[0_0_16px_rgba(249,115,22,0.35)]"
-                        )}
-                    >
-                        Ir al siguiente →
-                    </button>
-                </div>
-            </div>
+            {/* ── Smart Overlay: Next Episode card ───────────────────────────── */}
+            <NextEpisodeOverlay
+                show={showNextEpisode}
+                marathonMode={marathonMode}
+                countdownSeconds={Math.max(0, nextEpCountdown)}
+                nextEpisodeTitle={nextEpisodeTitle}
+                duration={duration}
+                remainingProgress={Math.min(100, Math.max(0, ((15 - nextEpCountdown) / 15) * 100))}
+                onNext={() => {
+                    autoTriggeredRef.current = true
+                    onNextEpisode?.()
+                }}
+            />
 
             {/* UI Overlay — Cinematic VOD Style. Ref-driven visibility (no React state re-renders on mousemove). */}
             <div
@@ -957,29 +875,12 @@ export function VideoPlayerModal({
                 className="absolute inset-0 pointer-events-none z-[10] transition-opacity duration-300"
                 style={{ opacity: 1 }}
             >
-                {/* Top Bar — Gradient Mask */}
-                <div className={cn(
-                    "absolute top-0 inset-x-0 pt-6 pb-24 px-6 md:px-10 flex flex-col md:flex-row md:items-start justify-between pointer-events-auto bg-gradient-to-b from-black/70 to-transparent",
-                    "transition-all duration-300 ease-out",
-                    "opacity-100 translate-y-0"
-                )}>
-                    <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onClose(); }}
-                            aria-label="Cerrar reproductor"
-                            className="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 text-white/70 hover:text-white transition-colors group glass-layer rounded-full"
-                        >
-                            <FiX className="w-6 h-6 drop-shadow-md" />
-                        </button>
-                        
-                        <div className="flex flex-col drop-shadow-lg max-w-lg mt-2 md:mt-0">
-                            <span className="text-white font-black text-xl md:text-2xl leading-tight tracking-wide">{title || "Reproduciendo"}</span>
-                            {episodeLabel && (
-                                <span className="text-zinc-300 font-bold tracking-widest uppercase text-xs mt-1 md:mt-0.5">{episodeLabel}</span>
-                            )}
-                        </div>
-                    </div>
-                </div>
+                {/* Top Bar */}
+                <PlayerTopBar 
+                    title={title} 
+                    episodeLabel={episodeLabel} 
+                    onClose={onClose} 
+                />
 
                 {/* Center click area (to pause/play on video tap) — disabled in favour of onTouchStart on container */}
                 <div className="flex-1 pointer-events-auto cursor-pointer hidden md:block" onClick={(e) => { e.stopPropagation(); togglePlay(); }} />
@@ -1007,120 +908,33 @@ export function VideoPlayerModal({
                     </div>
                 )}
 
-                {/* Bottom Bar — Floating Dark Glass Pill */}
-                <div className={cn(
-                    "absolute bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-5xl flex flex-col gap-2 pointer-events-auto select-none",
-                    "bg-black/50 backdrop-blur-2xl border border-white/10 rounded-full px-6 py-4 shadow-2xl",
-                    "transition-all duration-300 ease-out",
-                    "opacity-100 translate-y-0"
-                )}>
-                    
-                    {/* Minimalist Expanding Progress Timeline */}
-                    <div className="relative w-full h-1 hover:h-1.5 transition-all bg-white/20 group cursor-pointer flex items-center rounded-full" onClick={(e) => { e.stopPropagation() }}>
-                        
-                        <TimelineHeatmap duration={duration} insights={insights} />
-
-                        <div
-                            ref={progressBarRef}
-                            className="h-full bg-orange-500 shadow-[0_0_12px_rgba(249,115,22,0.8)] transition-all ease-linear rounded-full rounded-r-none relative z-10"
-                            style={{ width: "0%" }}
-                        >
-                            {/* Hover Thumb Component */}
-                            <div
-                                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 md:w-4 md:h-4 bg-orange-500 rounded-full shadow-[0_0_10px_rgba(249,115,22,1)] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                            />
-                        </div>
-
-                        {/* Dragging input */}
-                        <input
-                            ref={progressInputRef}
-                            type="range"
-                            min={0}
-                            max={duration || 100}
-                            defaultValue={0}
-                            onChange={(e) => { e.stopPropagation(); handleSeek(e); }}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer touch-none"
-                            style={{ height: "40px", top: "50%", transform: "translateY(-50%)" }}
-                        />
-                    </div>
-
-                    {/* Bottom Controls Row */}
-                    <div className="flex items-center justify-between w-full mt-1">
-
-                        {/* Left Wing */}
-                        <div className="flex items-center gap-2 md:gap-4">
-                            <button
-                                onClick={(e) => { e.stopPropagation(); togglePlay(); }}
-                                aria-label={isPlaying ? "Pausar" : "Reproducir"}
-                                className="text-zinc-400 hover:text-white transition-colors flex items-center justify-center transform hover:scale-110 p-2">
-                                {isPlaying ? <FaPause className="w-5 h-5" /> : <FaPlay className="w-5 h-5 pl-0.5" />}
-                            </button>
-
-                            <button
-                                onClick={(e) => { e.stopPropagation(); skipTime(-10); }}
-                                aria-label="Retroceder 10 segundos"
-                                className="text-zinc-400 hover:text-white transition-colors flex items-center justify-center p-2 hidden sm:block">
-                                <FaBackward className="w-4 h-4" />
-                            </button>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); skipTime(10); }}
-                                aria-label="Adelantar 10 segundos"
-                                className="text-zinc-400 hover:text-white transition-colors flex items-center justify-center p-2 hidden sm:block">
-                                <FaForward className="w-4 h-4" />
-                            </button>
-
-                            {/* Volume Control */}
-                            <div className="hidden md:flex items-center gap-2 group ml-2">
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); toggleMute(); }}
-                                    aria-label={isMuted || volume === 0 ? "Activar sonido" : "Silenciar"}
-                                    className="text-zinc-400 hover:text-white transition-colors flex items-center justify-center p-2">
-                                    {isMuted || volume === 0 ? <FaVolumeMute className="w-4 h-4" /> : <FaVolumeUp className="w-4 h-4" />}
-                                </button>
-                                <div className="w-0 group-hover:w-20 transition-all duration-300 overflow-hidden relative h-1 flex items-center bg-white/20 rounded-full cursor-pointer" onClick={(e) => e.stopPropagation()}>
-                                    <div className="absolute left-0 h-full bg-white rounded-full" style={{ width: `${isMuted ? 0 : volume * 100}%` }} />
-                                    <input
-                                        type="range"
-                                        min={0} max={1} step={0.05}
-                                        value={isMuted ? 0 : volume}
-                                        onChange={(e) => { e.stopPropagation(); handleVolume(e); }}
-                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer touch-none"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Time indicator */}
-                            <div className="flex items-center gap-1.5 text-zinc-400 text-xs font-medium tabular-nums tracking-wide ml-2">
-                                <span ref={timeTextRef} className="text-white">00:00</span>
-                                <span className="opacity-50">/</span>
-                                <span>{formatTime(duration)}</span>
-                            </div>
-                        </div>
-
-                        {/* Right Wing: Settings, Fullscreen */}
-                        <div className="flex items-center gap-1 md:gap-2">
-                            <PlayerSettingsMenu
-                                audioTracks={audioTracks}
-                                activeAudioIndex={activeAudioIndex}
-                                onSelectAudio={handleSelectAudio}
-                                subtitleTracks={subtitleTracks}
-                                activeSubtitleIndex={activeSubtitleIndex}
-                                onSelectSubtitle={handleSelectSubtitle}
-                                isLoadingSubtitle={isJassubLoading}
-                                sources={episodeSources}
-                                currentSourceUrl={activeStreamUrl}
-                                onSourceChange={handleSourceSwitch}
-                            />
-
-                            <button
-                                onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
-                                aria-label={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
-                                className="text-zinc-400 hover:text-white transition-colors flex items-center justify-center p-2">
-                                {isFullscreen ? <FaCompress className="w-4 h-4" /> : <FaExpand className="w-4 h-4" />}
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <PlayerBottomBar
+                    duration={duration}
+                    insights={insights}
+                    progressBarRef={progressBarRef}
+                    progressInputRef={progressInputRef}
+                    handleSeek={handleSeek}
+                    isPlaying={isPlaying}
+                    togglePlay={togglePlay}
+                    skipTime={skipTime}
+                    isMuted={isMuted}
+                    toggleMute={toggleMute}
+                    volume={volume}
+                    handleVolume={handleVolume}
+                    timeTextRef={timeTextRef}
+                    audioTracks={audioTracks}
+                    activeAudioIndex={activeAudioIndex}
+                    onSelectAudio={handleSelectAudio}
+                    subtitleTracks={subtitleTracks}
+                    activeSubtitleIndex={activeSubtitleIndex}
+                    onSelectSubtitle={handleSelectSubtitle}
+                    isJassubLoading={isJassubLoading}
+                    episodeSources={episodeSources}
+                    activeStreamUrl={activeStreamUrl}
+                    handleSourceSwitch={handleSourceSwitch}
+                    isFullscreen={isFullscreen}
+                    toggleFullscreen={toggleFullscreen}
+                />
             </div>
         </div>
     )

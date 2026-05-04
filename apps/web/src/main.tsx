@@ -24,7 +24,10 @@ declare module "@tanstack/react-router" {
     }
 }
 
-if (import.meta.env.DEV) {
+// react-scan is available for profiling, but opt-in only via VITE_REACT_SCAN=true
+// to avoid mandatory internet access on every dev start.
+// To enable: VITE_REACT_SCAN=true npm run dev
+if (import.meta.env.DEV && import.meta.env.VITE_REACT_SCAN === "true") {
     const script = document.createElement("script")
     script.src = "https://unpkg.com/react-scan/dist/auto.global.js"
     script.crossOrigin = "anonymous"

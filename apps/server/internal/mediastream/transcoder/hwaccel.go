@@ -61,7 +61,7 @@ func GetHardwareAccelSettings(opts HwAccelOptions) HwAccelSettings {
 			// we could put :force_original_aspect_ratio=decrease:force_divisible_by=2 here but we already calculate a correct width and
 			// aspect ratio in our code so there is no need.
 			ScaleFilter:   "scale=%d:%d",
-			WithForcedIdr: true,
+			WithForcedIdr: false,
 		}
 	case "vaapi":
 		return HwAccelSettings{

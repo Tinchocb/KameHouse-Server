@@ -17,11 +17,9 @@ import {
     useHomeIntelligence,
     useIntelligenceStore,
     type IntelligentEntry,
-} from "@/hooks/useHomeIntelligence"
+} from "@/hooks/use-home-intelligence"
 import { DynamicBackdrop } from "@/components/shared/dynamic-backdrop"
 import { SmartSwimlane } from "@/components/ui/smart-swimlane"
-import { SourcePicker } from "@/components/shared/source-picker"
-import type { MediaSource } from "@/api/types/unified.types"
 
 // Local imports
 import { getTitle, getBackdrop } from "./home.helpers"
@@ -31,7 +29,6 @@ import {
     mapEpisodeToHeroItem 
 } from "./home.mappers"
 import { ErrorBanner, EmptyState, SectionLabel } from "./home.components"
-import { useQuickPlay } from "./home.hooks"
 
 export const Route = createFileRoute("/home/")({
     component: HomePage,
@@ -57,7 +54,6 @@ function HomePage() {
         [navigate],
     )
 
-    const { resolution, open: openSourcePicker, close: closeSourcePicker } = useQuickPlay(handleNavigate)
 
     const collection = data
     const lists = collection?.lists ?? []
@@ -123,7 +119,7 @@ function HomePage() {
                     description: m.description,
                     aspect: "poster",
                     year: m.year,
-                    rating: m.score ? m.score / 10 : undefined,
+                    rating: m.score ? (m.score > 10 ? m.score / 10 : m.score) : undefined,
                     onClick: () => handleNavigate(entry.mediaId),
                 }
             })
@@ -188,7 +184,7 @@ function HomePage() {
 
     if (error && !data) return <ErrorBanner message={error instanceof Error ? error.message : "Error de conexión."} />
 
-    if (!isCollectionLoading && allEntries.length === 0 && (!intelligenceData || (intelligenceData as any).swimlanes.length === 0)) {
+    if (!isCollectionLoading && allEntries.length === 0 && (!intelligenceData || intelligenceData.swimlanes.length === 0)) {
         return <EmptyState />
     }
 
@@ -198,31 +194,19 @@ function HomePage() {
 
             {/* ── Hero Experience ── */}
             {isIntelligenceLoading && heroItems.length === 0 ? (
-                <HeroBannerSkeleton className="-mt-[53px]" />
+                <HeroBannerSkeleton />
             ) : (
                 <HeroBanner
-                    className="-mt-[53px]"
                     items={heroItems.map((item) => ({
                         ...item,
-                        onPlay: () => {
-                            if (item.mediaId) openSourcePicker(item.mediaId)
-                            else item.onPlay()
-                        },
+                        onPlay: () => item.mediaId && handleNavigate(item.mediaId),
                     }))}
                 />
             )}
 
-            <SourcePicker
-                response={resolution}
-                onSelect={(source: MediaSource) => {
-                    closeSourcePicker()
-                    window.open(source.urlPath, "_blank")
-                }}
-                onClose={closeSourcePicker}
-            />
 
             {/* ── Content Sections ── */}
-            <div className="relative z-10 -mt-24 flex flex-col gap-12">
+            <div className="relative z-10 flex flex-col gap-12">
                 <AnimatePresence mode="wait">
                     {isLoading || isRefetching ? (
                         <motion.div 
@@ -286,7 +270,7 @@ function HomePage() {
                             </ErrorBoundary>
 
                             {/* 3. Curated Sagas / Intelligence */}
-                            {(intelligenceData as any)?.swimlanes.map((lane: any, index: number) => (
+                            {intelligenceData?.swimlanes.map((lane, index) => (
                                 <ErrorBoundary key={lane.id} className="px-6 md:px-10 lg:px-16 xl:px-24 2xl:px-32">
                                     <motion.div 
                                         initial={{ opacity: 0, y: 30 }}
@@ -318,19 +302,22 @@ function HomePage() {
                                         <SectionLabel icon={Globe2} label="Explorar colección completa" />
                                         <Swimlane
                                             title="Tu colección"
-                                            items={allEntries.slice(0, 40).map((entry) => ({
-                                                id: `coll-${entry.mediaId}`,
-                                                title: getTitle(entry.media!),
-                                                image: entry.media!.posterImage || getBackdrop(entry.media!),
-                                                subtitle: entry.media!.year ? String(entry.media!.year) : entry.media!.format,
-                                                badge: entry.media!.format,
-                                                availabilityType: entry.availabilityType as SwimlaneItem["availabilityType"],
-                                                backdropUrl: getBackdrop(entry.media!) || undefined,
-                                                description: entry.media!.description,
-                                                year: entry.media!.year,
-                                                rating: entry.media!.score ? entry.media!.score / 10 : undefined,
-                                                onClick: () => handleNavigate(entry.mediaId),
-                                            }))}
+                                            items={allEntries.slice(0, 40).filter(e => e.media).map((entry) => {
+                                                const m = entry.media!
+                                                return {
+                                                    id: `coll-${entry.mediaId}`,
+                                                    title: getTitle(m),
+                                                    image: m.posterImage || getBackdrop(m),
+                                                    subtitle: m.year ? String(m.year) : m.format,
+                                                    badge: m.format,
+                                                    availabilityType: entry.availabilityType as SwimlaneItem["availabilityType"],
+                                                    backdropUrl: getBackdrop(m) || undefined,
+                                                    description: m.description,
+                                                    year: m.year,
+                                                    rating: m.score ? (m.score > 10 ? m.score / 10 : m.score) : undefined,
+                                                    onClick: () => handleNavigate(entry.mediaId),
+                                                }
+                                            })}
                                             defaultAspect="poster"
                                         />
                                     </motion.div>

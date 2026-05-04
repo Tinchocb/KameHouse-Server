@@ -32,13 +32,16 @@ func (h *Handler) HandleGetContinueWatching(c echo.Context) error {
 		return h.JSON(c, 500, NewErrorResponse(errors.New("database not initialized")))
 	}
 
-	// Try to get userID from context (set by auth middleware)
-	// Default to 1 for backward compatibility or guest access if appropriate
-	userID := uint(1)
+	// Require an authenticated user_id — do NOT fall back to userID=1 (admin)
+	// to prevent guests from seeing the admin's private watch history.
+	userID := uint(0)
 	if val := c.Get("user_id"); val != nil {
 		if id, ok := val.(uint); ok {
 			userID = id
 		}
+	}
+	if userID == 0 {
+		return h.JSON(c, 200, NewDataResponse(make([]dto.ContinueWatchingItem, 0)))
 	}
 
 	svc := anime.NewIntelligenceService(h.App.Database, nil, h.App.Logger)

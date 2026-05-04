@@ -10,15 +10,11 @@ import (
 )
 
 // HandleResolveStreams resolves all available playback sources for a given
-// episode using the UnifiedResolver priority chain:
-//  1. Local file (instant)
-//  2. Torrentio streams (concurrent, ≤3s)
+// episode using the UnifiedResolver.
 //
 // @summary  Resolve all playback sources for an episode
-// @desc     Returns a prioritised list of ResolvedSource objects. Local files
-//
-//	are always listed first. Torrentio results (if kitsuId is provided)
-//	follow, sorted by quality (best first).
+// @desc     Returns a list of ResolvedSource objects. Only local files
+//	are supported in this architecture.
 //
 // @returns  []core.ResolvedSource
 // @route    /api/v1/resolver/streams [GET]

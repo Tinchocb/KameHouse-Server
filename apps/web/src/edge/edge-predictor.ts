@@ -110,8 +110,6 @@ async function triggerGoOrchestrator(backendUrl: string, mediaId: string, target
 
         if (!response.ok) {
             console.error(`[Edge Predictor] Backend failed to pre-warm ${mediaId} ep ${targetEpisode}: ${response.status}`);
-        } else {
-            console.log(`[Edge Predictor] Successfully queued pre-warming for ${mediaId} ep ${targetEpisode}`);
         }
 
     } catch (e) {

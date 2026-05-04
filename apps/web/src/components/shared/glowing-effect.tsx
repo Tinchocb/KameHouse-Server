@@ -1,4 +1,4 @@
-import { animate } from "motion/react"
+import { animate } from "framer-motion"
 import { memo, useCallback, useEffect, useRef } from "react"
 import { cn } from "../ui/core/styling"
 
@@ -76,7 +76,7 @@ const GlowingEffect = memo(
 
                     const currentAngle =
                         parseFloat(element.style.getPropertyValue("--start")) || 0
-                    let targetAngle =
+                    const targetAngle =
                         (180 * Math.atan2(mouseY - center[1], mouseX - center[0])) /
                         Math.PI +
                         90
@@ -87,7 +87,7 @@ const GlowingEffect = memo(
                     animate(currentAngle, newAngle, {
                         duration: movementDuration,
                         ease: [0.16, 1, 0.3, 1],
-                        onUpdate: (value) => {
+                        onUpdate: (value: number) => {
                             element.style.setProperty("--start", String(value))
                         },
                     })

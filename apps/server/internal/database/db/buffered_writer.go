@@ -21,6 +21,7 @@ type BufferedWriter struct {
 	maxBatch int
 	interval time.Duration
 	stopChan chan struct{}
+	OnError  func(error)
 }
 
 func NewBufferedWriter(db *gorm.DB, logger *zerolog.Logger, maxBatch int, flushInterval time.Duration) *BufferedWriter {
@@ -72,6 +73,9 @@ func (bw *BufferedWriter) Flush() {
 			for _, op := range batch {
 				if err := op(tx); err != nil {
 					bw.logger.Error().Err(err).Msg("db/buffered_writer: Operation failed during batch flush, skipping operation")
+					if bw.OnError != nil {
+						bw.OnError(err)
+					}
 					// We continue processing the other operations even if one fails
 				}
 			}

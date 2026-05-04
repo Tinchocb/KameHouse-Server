@@ -93,17 +93,27 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 
 	// 2. Parse titles from local files using pure robust name parser
 	// This prevents the bug where generic root library folders like "Series" or "Peliculas" break TMDB
+	libPaths := append([]string{}, opts.SeriesPaths...)
+	libPaths = append(libPaths, opts.MoviePaths...)
+
 	groups := lo.GroupBy(opts.LocalFiles, func(lf *dto.LocalFile) string {
 		pm := parser.Parse(lf.Name)
 		if pm.Title != "" {
 			return pm.Title
 		}
+
+		info := ParseFolderStructure(lf.Path, libPaths)
+		if info.SeriesName != "" {
+			return info.SeriesName
+		}
+
 		// Fallback to strict directory name
 		return filepath.Base(filepath.Dir(lf.Path))
 	})
 
 	for titleGroup, files := range groups {
-		if titleGroup == "" || strings.EqualFold(titleGroup, "Series") || strings.EqualFold(titleGroup, "Peliculas") {
+		lowerGroup := strings.ToLower(titleGroup)
+		if titleGroup == "" || lowerGroup == "series" || lowerGroup == "peliculas" || lowerGroup == "películas" || lowerGroup == "movies" || lowerGroup == "anime" || lowerGroup == "tv" || lowerGroup == "tv shows" || lowerGroup == "films" {
 			continue
 		}
 
@@ -145,22 +155,8 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 		var searchRes []*dto.NormalizedMedia
 		var err error
 
-		// PHASE 1: DBZ OVERRIDE - Bypass fuzzy TMDB matching for DBZ 100% accuracy
-		if dbId, isDb := ResolveDragonBallID(titleGroup); isDb {
-			if mf.ScanLogger != nil {
-				mf.ScanLogger.LogMediaFetcher(zerolog.InfoLevel).
-					Str("title", titleGroup).
-					Int("hardcoded_tmdb", dbId).
-					Msg("dragonball_resolver: Matched title natively")
-			}
-			exactMatch, detailErr := opts.TMDBProvider.GetMediaDetails(ctx, strconv.Itoa(dbId))
-			if detailErr == nil && exactMatch != nil {
-				searchRes = []*dto.NormalizedMedia{exactMatch}
-			} else {
-				err = detailErr
-			}
-		} else if anilistMatch, ok := findAniListExactMatch(mf.AllMedia, titleGroup); ok {
-			// PHASE 2: AniList Exact Match OVERRIDE - Bypass fuzzy TMDB if the user already has this in their AniList collection
+		if anilistMatch, ok := findAniListExactMatch(mf.AllMedia, titleGroup); ok {
+			// PHASE 1: AniList Exact Match OVERRIDE - Bypass fuzzy search if the user already has this in their AniList collection
 			if mf.ScanLogger != nil {
 				mf.ScanLogger.LogMediaFetcher(zerolog.InfoLevel).
 					Str("title", titleGroup).
@@ -169,22 +165,36 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 			}
 			searchRes = []*dto.NormalizedMedia{anilistMatch}
 		} else {
-			// FALLBACK: Normal generic fuzzy search for non-identified tags
-			if hint == "series" {
-				searchRes, err = opts.TMDBProvider.SearchTV(ctx, titleGroup)
-			} else if hint == "movie" {
-				searchRes, err = opts.TMDBProvider.SearchMovie(ctx, titleGroup)
-			} else {
-				searchRes, err = opts.TMDBProvider.SearchMedia(ctx, titleGroup)
+			// FALLBACK: Iterate over all providers (AniList -> TMDB -> AniDB)
+			for _, provider := range opts.MetadataProviders {
+				if hint == "series" {
+					if p, ok := provider.(*librarymetadata.TMDBProvider); ok {
+						searchRes, err = p.SearchTV(ctx, titleGroup)
+					} else {
+						searchRes, err = provider.SearchMedia(ctx, titleGroup)
+					}
+				} else if hint == "movie" {
+					if p, ok := provider.(*librarymetadata.TMDBProvider); ok {
+						searchRes, err = p.SearchMovie(ctx, titleGroup)
+					} else {
+						searchRes, err = provider.SearchMedia(ctx, titleGroup)
+					}
+				} else {
+					searchRes, err = provider.SearchMedia(ctx, titleGroup)
+				}
+				
+				if err == nil && len(searchRes) > 0 {
+					break // Found results, stop asking other providers
+				}
 			}
 		}
 
-		if err != nil && !errors.Is(err, librarymetadata.ErrNotFound) {
+		if len(searchRes) == 0 {
 			if mf.ScanLogger != nil {
 				mf.ScanLogger.LogMediaFetcher(zerolog.WarnLevel).
 					Str("title", titleGroup).
 					Err(err).
-					Msg("Failed to search TMDB for title group")
+					Msg("Failed to search all providers for title group")
 			}
 			continue
 		}

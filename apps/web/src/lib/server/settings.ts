@@ -42,7 +42,7 @@ export const settingsSchema = z.object({
         defaultTorrentClient: z.string().optional().default("none"),
         hideTorrentList: z.boolean().optional().default(false),
         tmdbApiKey: z.string().optional().default(""),
-        tmdbLanguage: z.string().optional().default("es"),
+        tmdbLanguage: z.string().optional().default("es-MX"),
         hideAudienceScore: z.boolean().optional().default(false),
         autoUpdateProgress: z.boolean().optional().default(false),
 
@@ -220,7 +220,7 @@ export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>): 
         disableDebridService: true,
         disableTorrentProvider: data.library.disableTorrentProvider,
         tmdbApiKey: data.library.tmdbApiKey,
-        tmdbLanguage: "en",
+        tmdbLanguage: "es-MX",
     },
     mediaPlayer: {
         host: data.mediaPlayer.host,

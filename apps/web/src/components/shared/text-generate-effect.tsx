@@ -1,5 +1,5 @@
 import { cn } from "@/components/ui/core/styling"
-import { motion, stagger, useAnimate } from "motion/react"
+import { motion, stagger, useAnimate } from "framer-motion"
 import React, { useEffect } from "react"
 
 export const TextGenerateEffect = ({
@@ -13,7 +13,7 @@ export const TextGenerateEffect = ({
     style?: any
 } & React.HTMLAttributes<HTMLDivElement>) => {
     const [scope, animate] = useAnimate()
-    let wordsArray = words.split(" ")
+    const wordsArray = words.split(" ")
 
     useEffect(() => {
         animate(

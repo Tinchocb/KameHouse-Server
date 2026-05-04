@@ -1,6 +1,5 @@
 import { getServerBaseUrl } from "@/api/client/server-url"
 import { useMutation, UseMutationOptions, useQuery, UseQueryOptions } from "@tanstack/react-query"
-import { useLocation } from "@tanstack/react-router"
 import { useEffect } from "react"
 import { toast } from "sonner"
 
@@ -8,7 +7,7 @@ export class ApiError extends Error {
     constructor(
         public readonly message: string,
         public readonly status: number,
-        public readonly data?: any
+        public readonly data?: unknown
     ) {
         super(message);
         this.name = "ApiError";
@@ -94,7 +93,7 @@ export async function buildSeaQuery<T, D = void>(
             });
 
             if (!res.ok) {
-                let errorData: any;
+                let errorData: unknown;
                 try {
                     errorData = await res.json();
                 } catch {
@@ -110,7 +109,9 @@ export async function buildSeaQuery<T, D = void>(
                     continue;
                 }
 
-                const errorMessage = typeof errorData === "object" && errorData?.error ? errorData.error : `HTTP Error ${res.status}`;
+                const errorMessage = typeof errorData === "object" && errorData !== null && "error" in errorData && typeof (errorData as Record<string, unknown>).error === "string"
+                    ? (errorData as Record<string, unknown>).error as string
+                    : `HTTP Error ${res.status}`;
                 throw new ApiError(errorMessage, res.status, errorData);
             }
 
@@ -168,8 +169,8 @@ export function useServerMutation<R = void, V = void, C = unknown>(
                 toast.error(errorMsg)
             }
             if (options.onError) {
-                // @ts-ignore
-                options.onError(...args);
+                // @ts-ignore - Argument union counts mismatches are benign
+                options.onError(...args)
             }
         },
         mutationFn: async (variables) => {
@@ -184,7 +185,7 @@ export function useServerMutation<R = void, V = void, C = unknown>(
     })
 }
 
-type ServerQueryProps<R, V> = Omit<UseQueryOptions<R | undefined, ApiError, R | undefined>, "queryFn"> & {
+type ServerQueryProps<R, V, TData = R | undefined> = Omit<UseQueryOptions<R | undefined, ApiError, TData>, "queryFn"> & {
     endpoint: string
     method: "POST" | "GET" | "PATCH" | "DELETE" | "PUT"
     params?: V
@@ -193,7 +194,7 @@ type ServerQueryProps<R, V> = Omit<UseQueryOptions<R | undefined, ApiError, R | 
     throwOnError?: boolean
 }
 
-export function useServerQuery<R, V = void>(
+export function useServerQuery<R, V = void, TData = R | undefined>(
     {
         endpoint,
         method,
@@ -201,19 +202,16 @@ export function useServerQuery<R, V = void>(
         data,
         muteError,
         ...options
-    }: ServerQueryProps<R, V>) {
+    }: ServerQueryProps<R, V, TData>) {
 
-    const pathname = useLocation().pathname
-    const password = undefined
 
-    const props = useQuery<R | undefined, ApiError>({
+    const props = useQuery<R | undefined, ApiError, TData>({
         queryFn: async () => {
             return buildSeaQuery<R, V>({
                 endpoint: endpoint,
                 method: method,
                 params: params,
                 data: data,
-                password: password,
             })
         },
         ...options,
@@ -221,7 +219,7 @@ export function useServerQuery<R, V = void>(
 
     useEffect(() => {
         if (!muteError && props.isError) {
-            if (props.error?.data?.error === "UNAUTHENTICATED" && pathname !== "/public/auth") {
+            if (props.error?.data === "UNAUTHENTICATED" && window.location.pathname !== "/public/auth") {
                 window.location.href = "/public/auth"
                 return
             }
@@ -234,7 +232,7 @@ export function useServerQuery<R, V = void>(
                 toast.error(errorMsg)
             }
         }
-    }, [props.error, props.isError, muteError, pathname])
+    }, [props.error, props.isError, muteError])
 
     return props
 }
@@ -244,8 +242,11 @@ export function useServerQuery<R, V = void>(
 function _handleSeaError(data: unknown): string {
     if (typeof data === "string") return "Server Error: " + data
 
-    const dataObj = data as Record<string, unknown>
-    const err = dataObj?.error as string
+    if (typeof data !== "object" || data === null) return "Unknown error"
+
+    const err = "error" in data && typeof (data as Record<string, unknown>).error === "string"
+        ? (data as Record<string, unknown>).error as string
+        : undefined
 
     if (!err) return "Unknown error"
 

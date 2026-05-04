@@ -54,6 +54,18 @@ func (vs *VideoStream) getTranscodeArgs(segments string) []string {
 		args = append(args,
 			"-c:v", "copy",
 		)
+		
+		// When copying H264/HEVC from MKV/MP4 to MPEG-TS, the bitstream must be converted to Annex B format.
+		// Otherwise, the resulting .ts segments will be missing mandatory start codes and HLS.js will play a black screen.
+		if vs.file.Info.Video != nil {
+			switch vs.file.Info.Video.Codec {
+			case "h264":
+				args = append(args, "-bsf:v", "h264_mp4toannexb")
+			case "hevc", "h265":
+				args = append(args, "-bsf:v", "hevc_mp4toannexb")
+			}
+		}
+
 		vs.logger.Debug().Msg("videostream: Transcoding to original quality")
 		return args
 	}

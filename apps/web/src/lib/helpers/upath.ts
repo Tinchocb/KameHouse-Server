@@ -72,7 +72,7 @@ interface UPath {
 
 // --- Helper Functions ---
 
-const isString = (val: any): val is string =>
+const isString = (val: unknown): val is string =>
     typeof val === "string" ||
     (!!val && typeof val === "object" && Object.prototype.toString.call(val) === "[object String]")
 
@@ -88,7 +88,7 @@ const isString = (val: any): val is string =>
  */
 const toUnix = (p: string): string => {
     if (!isString(p)) {
-        return p as any // Coerce non-strings to string-like if necessary, matching original flexibility
+        return p as unknown as string // Coerce non-strings to string-like if necessary, matching original flexibility
     }
     let unixPath = p.replace(/\\/g, "/")
 
@@ -175,7 +175,7 @@ const _isAbsolute = (p: string): boolean => {
 
 const _normalize = (p: string): string => {
     if (!isString(p)) {
-        return p as any
+        return p as unknown as string
     }
     p = toUnix(p)
 
@@ -566,7 +566,7 @@ const _format = (pathObject: FormatInputPathObject): string => {
     if (dir) {
         // If dir is provided, root is effectively ignored for the prefix logic.
         // Ensure dir is Unix style.
-        let unixDir = toUnix(dir)
+        const unixDir = toUnix(dir)
 
         // Node behavior: If dir ends with a slash, keep it, otherwise don't add one.
 
@@ -606,13 +606,13 @@ const _format = (pathObject: FormatInputPathObject): string => {
 // --- Initialize UPath Object ---
 
 // Create the internal object that will be the public API
-const upath_internal: any = {
+const upath_internal = {
     // Define VERSION (assuming VERSION is a global or module-scoped variable injected elsewhere)
     // If VERSION is not injected, this will default to 'NO-VERSION'
-    VERSION: typeof (globalThis as any).VERSION !== "undefined" ? (globalThis as any).VERSION : "NO-VERSION",
+    VERSION: typeof (globalThis as {VERSION?: string}).VERSION !== "undefined" ? (globalThis as {VERSION?: string}).VERSION! : "NO-VERSION",
     sep: "/", // Explicitly set to Unix style
     delimiter: ":", // Standard Posix delimiter
-}
+} as UPath
 
 // Assign the implemented core functions
 upath_internal.join = _join
@@ -834,14 +834,15 @@ const extraFunctions = {
 // Add extra functions to upath_internal, checking for name conflicts
 for (const name in extraFunctions) {
     if (Object.prototype.hasOwnProperty.call(extraFunctions, name)) {
-        const extraFn = (extraFunctions as any)[name]
+        const extraFn = (extraFunctions as Record<string, unknown>)[name]
+        const internalRec = upath_internal as unknown as Record<string, unknown>
 
-        if (upath_internal[name] !== undefined) {
+        if (internalRec[name] !== undefined) {
             // Throw an error if the name already exists on upath_internal
             throw new Error(`path.${name} already exists.`)
         } else {
             // Assign the extra function
-            upath_internal[name] = extraFn
+            internalRec[name] = extraFn
         }
     }
 }

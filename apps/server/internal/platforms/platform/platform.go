@@ -23,6 +23,13 @@ type Platform interface {
 	// GetAnimeDetails gets the anime details for the given media ID
 	GetAnimeDetails(context context.Context, mediaID int) (interface{}, error)
 
+	// GetMovie fetches a single movie by TMDB ID
+	GetMovie(context context.Context, mediaID int) (interface{}, error)
+	// SearchMedia performs a unified search across TV shows and movies
+	SearchMedia(context context.Context, query string, page *int) (*UnifiedMediaList, error)
+	// GetMediaCollection fetches all movies/shows belonging to a TMDB franchise collection
+	GetMediaCollection(context context.Context, collectionID int) (*UnifiedCollection, error)
+
 	// GetAnimeCollection gets the anime collection without custom lists
 	GetAnimeCollection(context context.Context, bypassCache bool) (interface{}, error)
 	// GetRawAnimeCollection gets the anime collection with custom lists

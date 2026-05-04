@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models/dto"
@@ -218,6 +219,16 @@ func (h *Handler) HandleUpdateLocalFileData(c echo.Context) error {
 	lf.Ignored = b.Ignored
 	lf.MediaId = b.MediaId
 
+	// If a mediaId is being assigned, also resolve and set LibraryMediaId
+	if b.MediaId > 0 {
+		if libMedia, err := db.GetLibraryMediaByTmdbId(h.App.Database, b.MediaId); err == nil && libMedia != nil {
+			lf.LibraryMediaId = libMedia.ID
+		}
+	} else if b.MediaId == 0 {
+		// Unmatching: clear LibraryMediaId too
+		lf.LibraryMediaId = 0
+	}
+
 	// Save the local files
 	retLfs, err := db.SaveLocalFiles(h.App.Database, lfsId, lfs)
 	if err != nil {
@@ -226,6 +237,7 @@ func (h *Handler) HandleUpdateLocalFileData(c echo.Context) error {
 
 	return h.RespondWithData(c, retLfs)
 }
+
 
 // HandleSuperUpdateLocalFiles
 //
@@ -292,6 +304,7 @@ func (h *Handler) HandleUpdateLocalFiles(c echo.Context) error {
 			lf.Locked = false
 		case "ignore":
 			lf.MediaId = 0
+			lf.LibraryMediaId = 0
 			lf.Ignored = true
 			lf.Locked = false
 		case "unignore":
@@ -299,13 +312,21 @@ func (h *Handler) HandleUpdateLocalFiles(c echo.Context) error {
 			lf.Locked = false
 		case "unmatch":
 			lf.MediaId = 0
+			lf.LibraryMediaId = 0
 			lf.Locked = false
 			lf.Ignored = false
 		case "match":
 			lf.MediaId = b.MediaId
 			lf.Locked = true
 			lf.Ignored = false
+			// Also resolve LibraryMediaId for complete state
+			if b.MediaId > 0 {
+				if libMedia, err := db.GetLibraryMediaByTmdbId(h.App.Database, b.MediaId); err == nil && libMedia != nil {
+					lf.LibraryMediaId = libMedia.ID
+				}
+			}
 		}
+
 	}
 
 	// Save the local files
@@ -367,30 +388,38 @@ func (h *Handler) HandleDeleteLocalFiles(c echo.Context) error {
 	}
 
 	// Delete the files
+	var successfulDeletions []string
+	var mu sync.Mutex
+
 	p := pool.New().WithErrors()
 	for _, path := range b.Paths {
 		path := path
 		p.Go(func() error {
 			err := os.Remove(path)
-			if err != nil {
-				return err
+			if err == nil || os.IsNotExist(err) {
+				mu.Lock()
+				successfulDeletions = append(successfulDeletions, path)
+				mu.Unlock()
+				return nil
 			}
-			return nil
+			return err
 		})
 	}
-	if err := p.Wait(); err != nil {
-		return h.RespondWithError(c, err)
-	}
+	waitErr := p.Wait()
 
 	// Remove the files from the list
 	lfs = lo.Filter(lfs, func(i *dto.LocalFile, _ int) bool {
-		return !lo.Contains(b.Paths, i.Path)
+		return !lo.Contains(successfulDeletions, i.Path)
 	})
 
 	// Save the local files
 	_, err = db.SaveLocalFiles(h.App.Database, lfsId, lfs)
 	if err != nil {
 		return h.RespondWithError(c, err)
+	}
+
+	if waitErr != nil {
+		return h.RespondWithError(c, waitErr)
 	}
 
 	return h.RespondWithData(c, true)

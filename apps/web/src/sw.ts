@@ -42,7 +42,6 @@ async function initOPFS() {
         }
         opfsRoot = await navigator.storage.getDirectory();
         await opfsRoot.getDirectoryHandle(OPFS_CHUNK_DIR_NAME, { create: true });
-        console.log("OPFS Segment Cache Layer Initialized");
     } catch (e) {
         console.error("Failed to initialize OPFS:", e);
     }

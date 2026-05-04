@@ -261,6 +261,20 @@ func (ts *Stream) Kill() {
 	for id := range ts.heads {
 		ts.KillHead(id)
 	}
+
+	// Close all channels to prevent memory leaks on sudden disconnections
+	ts.lockSegments()
+	for i := range ts.segments {
+		if ts.segments[i].channel != nil {
+			select {
+			case <-ts.segments[i].channel:
+				// Already closed
+			default:
+				close(ts.segments[i].channel)
+			}
+		}
+	}
+	ts.unlockSegments()
 }
 
 func (ts *Stream) IsKilled() bool {

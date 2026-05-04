@@ -7,7 +7,6 @@ import (
 
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/events"
-	"kamehouse/internal/library/autodownloader"
 	"kamehouse/internal/library/scanner"
 	"kamehouse/internal/library/summary"
 
@@ -34,7 +33,7 @@ type (
 		logger              *zerolog.Logger
 		wsEventManager      events.WSEventManagerInterface
 		db                  *db.Database                   // Database instance is required to update the local files.
-		autoDownloader      *autodownloader.AutoDownloader // AutoDownloader instance is required to refresh queue.
+		db                  *db.Database                   // Database instance is required to update the local files.
 		metadataProviderRef *util.Ref[metadata_provider.Provider]
 		logsDir             string
 		scanning            atomic.Bool
@@ -48,7 +47,8 @@ type (
 		Logger              *zerolog.Logger
 		WSEventManager      events.WSEventManagerInterface
 		Enabled             bool
-		AutoDownloader      *autodownloader.AutoDownloader
+		Database            *db.Database
+		PlatformRef         *util.Ref[platform.Platform]
 		WaitTime            time.Duration
 		MetadataProviderRef *util.Ref[metadata_provider.Provider]
 		LogsDir             string
@@ -75,7 +75,8 @@ func New(opts *NewAutoScannerOptions) *AutoScanner {
 		logger:              opts.Logger,
 		wsEventManager:      opts.WSEventManager,
 		db:                  opts.Database,
-		autoDownloader:      opts.AutoDownloader,
+		wsEventManager:      opts.WSEventManager,
+		db:                  opts.Database,
 		metadataProviderRef: opts.MetadataProviderRef,
 		logsDir:             opts.LogsDir,
 		onRefreshCollection: opts.OnRefreshCollection,
@@ -202,10 +203,7 @@ func (as *AutoScanner) TriggerScan() {
 		as.onRefreshCollection()
 	}
 
-	// Trigger autodownloader
-	if as.autoDownloader != nil {
-		as.autoDownloader.Run()
-	}
+
 
 	as.mu.Lock()
 	if as.missedAction {

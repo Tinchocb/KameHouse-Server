@@ -47,7 +47,7 @@ export const AppTopNav = React.forwardRef<HTMLElement, AppTopNavProps>((props, r
             className={cn(
                 "md:hidden fixed top-0 left-0 w-full z-40 transition-all duration-500 pointer-events-auto",
                 "h-20 flex flex-col justify-center",
-                "bg-background/60 backdrop-blur-2xl border-b border-white/[0.03] shadow-[0_8px_32px_rgba(0,0,0,0.4)]",
+                "bg-[#09090b]/80 backdrop-blur-xl border-b border-white/5 shadow-[0_8px_32px_rgba(0,0,0,0.7)]",
                 className
             )}
             {...rest}
@@ -94,7 +94,7 @@ export function AppBottomNav() {
         <nav
             className={cn(
                 "fixed inset-x-0 bottom-0 z-50 flex items-center justify-around sm:hidden",
-                "border-t border-white/[0.03] bg-background/60 backdrop-blur-2xl shadow-[0_-15px_40px_rgba(0,0,0,0.4)]",
+                "border-t border-white/5 bg-[#09090b]/90 backdrop-blur-xl shadow-[0_-15px_40px_rgba(0,0,0,0.7)]",
                 "h-[calc(4.8rem+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)]",
             )}
         >
@@ -110,9 +110,9 @@ export function AppBottomNav() {
                     }}
                     className="flex h-full w-full flex-col items-center justify-center gap-1.5 pb-2 transition-all duration-300 relative group"
                 >
-                    <div className="shrink-0 transition-transform group-active:scale-90 group-[.text-primary]:drop-shadow-[0_0_10px_rgba(249,115,22,0.4)]">{item.icon}</div>
-                    <span className="text-[9px] font-black tracking-[0.2em] uppercase transition-colors">{item.label}</span>
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-[2px] bg-primary scale-x-0 group-[.text-primary]:scale-x-100 transition-transform duration-500 rounded-full shadow-[0_0_15px_rgba(249,115,22,1)]" />
+                    <div className="shrink-0 transition-transform group-active:scale-90 group-[.text-primary]:drop-shadow-[0_0_15px_rgba(255,107,0,0.6)] group-[.text-primary]:text-[#ff6b00]">{item.icon}</div>
+                    <span className="text-[9px] font-black tracking-[0.2em] uppercase transition-colors group-[.text-primary]:text-[#ff6b00]">{item.label}</span>
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-[2px] bg-[#ff6b00] scale-x-0 group-[.text-primary]:scale-x-100 transition-transform duration-500 rounded-full shadow-[0_0_15px_rgba(255,107,0,1)]" />
                 </Link>
             ))}
         </nav>

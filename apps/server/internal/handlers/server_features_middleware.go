@@ -36,7 +36,6 @@ func (h *Handler) FeaturesMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			// settings
 			{"/api/v1/start", h.App.FeatureManager.IsDisabled(core.UpdateSettings), UpdateMethods, Empty},
 			{"/api/v1/settings", h.App.FeatureManager.IsDisabled(core.UpdateSettings), UpdateMethods, Empty},
-			{"/api/v1/torrentstream/settings", h.App.FeatureManager.IsDisabled(core.UpdateSettings), UpdateMethods, Empty},
 			{"/api/v1/mediastream/settings", h.App.FeatureManager.IsDisabled(core.UpdateSettings), UpdateMethods, Empty},
 			{"/api/v1/report", h.App.FeatureManager.IsDisabled(core.UpdateSettings), UpdateMethods, Empty},
 			{"/api/v1/theme", h.App.FeatureManager.IsDisabled(core.UpdateSettings), UpdateMethods, Empty},
@@ -54,13 +53,6 @@ func (h *Handler) FeaturesMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			// playback
 			{"/api/v1/playback-manager", h.App.FeatureManager.IsDisabled(core.WatchingLocalAnime), UpdateMethods, Empty},
 			{"/api/v1/media-player/start", h.App.FeatureManager.IsDisabled(core.WatchingLocalAnime), UpdateMethods, Empty},
-			// torrent client / auto downloader
-			{"/api/v1/torrent/search", h.App.FeatureManager.IsDisabled(core.ManageAutoDownloader), UpdateMethods, Empty},
-			{"/api/v1/torrent-client", h.App.FeatureManager.IsDisabled(core.ManageAutoDownloader), UpdateMethods, Empty},
-			{"/api/v1/download-torrent-file", h.App.FeatureManager.IsDisabled(core.ManageAutoDownloader), UpdateMethods, Empty},
-			{"/api/v1/auto-downloader", h.App.FeatureManager.IsDisabled(core.ManageAutoDownloader), UpdateMethods, Empty},
-			// onlinestream
-			{"/api/v1/onlinestream", h.App.FeatureManager.IsDisabled(core.OnlineStreaming), UpdateMethods, []string{"/api/v1/onlinestream/search", "/api/v1/onlinestream/manual-mapping", "/api/v1/onlinestream/get-mapping", "/api/v1/onlinestream/remove-mapping"}},
 
 			// open in explorer
 			{"/api/v1/open-in-explorer", h.App.FeatureManager.IsDisabled(core.OpenInExplorer), Empty, Empty},
@@ -77,11 +69,8 @@ func (h *Handler) FeaturesMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			{"/api/v1/log", h.App.FeatureManager.IsDisabled(core.ViewLogs), Empty, Empty},
 			{"/api/v1/logs", h.App.FeatureManager.IsDisabled(core.ViewLogs), Empty, Empty},
 			{"/api/v1/logs", h.App.FeatureManager.IsDisabled(core.UpdateSettings), []string{"DELETE"}, Empty},
-			// torrent stream
-			{"/api/v1/torrentstream", h.App.FeatureManager.IsDisabled(core.TorrentStreaming), UpdateMethods, []string{"/api/v1/torrentstream/settings"}},
 			// transcode
-			{"/api/v1/mediastream", h.App.FeatureManager.IsDisabled(core.Transcode), UpdateMethods, []string{"/api/v1/mediastream/settings"}},
-			{"/api/v1/directstream", h.App.FeatureManager.IsDisabled(core.WatchingLocalAnime), UpdateMethods, Empty},
+			{"/api/v1/mediastream", h.App.FeatureManager.IsDisabled(core.WatchingLocalAnime), UpdateMethods, []string{"/api/v1/mediastream/settings"}},
 			{"/api/v1/mediastream/file", h.App.FeatureManager.IsDisabled(core.WatchingLocalAnime), Empty, Empty},
 			{"/api/v1/mediastream", h.App.FeatureManager.IsDisabled(core.WatchingLocalAnime), Empty, Empty},
 			{"/api/v1/metadata-provider", h.App.FeatureManager.IsDisabled(core.ManageLocalAnimeLibrary), UpdateMethods, Empty},

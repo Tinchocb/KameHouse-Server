@@ -45,9 +45,6 @@ type StreamType string
 
 const (
 	StreamTypeLocalFile StreamType = "file"
-	StreamTypeTorrent   StreamType = "torrent"
-	StreamTypeDebrid    StreamType = "debrid"
-	StreamTypeOnline    StreamType = "online"
 )
 
 // Errors
@@ -57,56 +54,6 @@ var (
 	ErrUnsupported     = errors.New("streaming: provider does not support this media")
 	ErrServerSaturated = errors.New("streaming: maximum concurrent transcode sessions reached")
 )
-
-// Resolver manages multiple StreamProviders and resolves streams by priority.
-type Resolver struct {
-	providers []StreamProvider
-}
-
-// NewResolver creates a stream resolver with providers in priority order.
-// Providers are tried in order — the first one that supports the media wins.
-func NewResolver(providers ...StreamProvider) *Resolver {
-	return &Resolver{providers: providers}
-}
-
-// Resolve tries each provider in order until one successfully resolves the stream.
-func (r *Resolver) Resolve(ctx context.Context, req StreamRequest) (*StreamResult, error) {
-	for _, p := range r.providers {
-		if !p.SupportsMedia(req.MediaID) {
-			continue
-		}
-
-		result, err := p.ResolveStream(ctx, req)
-		if err != nil {
-			continue // Try next provider
-		}
-
-		return result, nil
-	}
-
-	return nil, ErrMediaNotFound
-}
-
-// ResolveAll returns results from all providers that support this media.
-// Useful for showing the user all available stream options.
-func (r *Resolver) ResolveAll(ctx context.Context, req StreamRequest) []*ProviderResult {
-	var results []*ProviderResult
-
-	for _, p := range r.providers {
-		if !p.SupportsMedia(req.MediaID) {
-			continue
-		}
-
-		result, err := p.ResolveStream(ctx, req)
-		results = append(results, &ProviderResult{
-			Provider: p.Name(),
-			Result:   result,
-			Error:    err,
-		})
-	}
-
-	return results
-}
 
 // ProviderResult wraps a stream result with its provider name and potential error.
 type ProviderResult struct {

@@ -24,7 +24,7 @@ export function MatchDialog({ isOpen, onClose, initialQuery, paths }: MatchDialo
     
     const { mutate: search, data: results, isPending: isSearching } = useTMDBSearch()
     
-    const { mutate: assign, isPending: isAssigning } = useServerMutation<any, any>({
+    const { mutate: assign, isPending: isAssigning } = useServerMutation<unknown, {tmdbId: number, paths: string[], mediaType: "movie" | "tv"}>({
         endpoint: "/api/v1/library/local-files/tmdb-assign",
         method: "POST",
         onSuccess: () => {
@@ -42,11 +42,11 @@ export function MatchDialog({ isOpen, onClose, initialQuery, paths }: MatchDialo
         }
     }
 
-    const handleAssign = (result: SearchResult | any) => {
+    const handleAssign = (result: SearchResult) => {
         assign({
             tmdbId: result.id,
             paths,
-            mediaType: result.media_type === "movie" ? "movie" : "tv"
+            mediaType: (result as SearchResult & { media_type?: string }).media_type === "movie" ? "movie" : "tv"
         })
     }
 
@@ -97,7 +97,7 @@ export function MatchDialog({ isOpen, onClose, initialQuery, paths }: MatchDialo
                         </div>
                     )}
 
-                    {results?.map((result: any) => (
+                    {results?.map((result: SearchResult) => (
                         <div 
                             key={result.id}
                             className="group relative flex gap-4 p-3 bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 rounded-xl transition-all duration-300"
@@ -115,7 +115,7 @@ export function MatchDialog({ isOpen, onClose, initialQuery, paths }: MatchDialo
                                 </h4>
                                 <div className="flex items-center gap-2 mt-1">
                                     <span className="text-xs px-2 py-0.5 bg-zinc-800 text-zinc-400 rounded uppercase font-black tracking-tighter">
-                                        {result.media_type === "tv" ? "SERIE TV" : "PELÍCULA"}
+                                        {(result as SearchResult & { media_type?: string }).media_type === "tv" ? "SERIE TV" : "PELÍCULA"}
                                     </span>
                                     {result.first_air_date && (
                                         <span className="text-xs text-zinc-500">

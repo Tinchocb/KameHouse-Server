@@ -1,7 +1,7 @@
 import * as React from "react"
 import { Swimlane, type SwimlaneItem } from "@/components/ui/swimlane"
-import type { CuratedSwimlane, ContentTag } from "@/hooks/useHomeIntelligence"
-import { useIntelligenceStore } from "@/hooks/useHomeIntelligence"
+import type { CuratedSwimlane, ContentTag } from "@/api/types/intelligence.types"
+import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
 import { cn } from "@/components/ui/core/styling"
 
 

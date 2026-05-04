@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -121,7 +122,7 @@ func (c *Client) GetTVSeason(ctx context.Context, tvID int, seasonNumber int) (T
 
 	params := url.Values{}
 	params.Set("language", c.language)
-	params.Set("api_key", c.bearerToken)
+
 
 	resp, err := executeWithRetry[TVSeasonDetails](ctx, c, fmt.Sprintf("/tv/%d/season/%d?%s", tvID, seasonNumber, params.Encode()))
 	if err != nil {
@@ -144,7 +145,7 @@ func (c *Client) SearchTV(ctx context.Context, query string) ([]SearchResult, er
 	params.Set("query", query)
 	params.Set("language", c.language)
 	params.Set("page", "1")
-	params.Set("api_key", c.bearerToken)
+
 
 	resp, err := executeWithRetry[SearchResponse](ctx, c, "/search/tv?"+params.Encode())
 	if err != nil {
@@ -195,7 +196,7 @@ func (c *Client) SearchMovie(ctx context.Context, query string) ([]SearchResult,
 	params.Set("query", query)
 	params.Set("language", c.language)
 	params.Set("page", "1")
-	params.Set("api_key", c.bearerToken)
+
 
 	resp, err := executeWithRetry[SearchResponse](ctx, c, "/search/movie?"+params.Encode())
 	if err != nil {
@@ -247,7 +248,7 @@ func (c *Client) DiscoverTV(ctx context.Context, page *int, sort *string, status
 
 	params := url.Values{}
 	params.Set("language", c.language)
-	params.Set("api_key", c.bearerToken)
+
 	params.Set("with_origin_country", "JP") // Default to Japanese origin for anime
 	params.Set("with_genres", "16")         // Default to Animation genre
 
@@ -297,7 +298,7 @@ func (c *Client) GetTVAlternativeTitles(ctx context.Context, tvID int) ([]Altern
 	}
 
 	params := url.Values{}
-	params.Set("api_key", c.bearerToken)
+
 
 	resp, err := executeWithRetry[AlternativeTitlesResponse](ctx, c, fmt.Sprintf("/tv/%d/alternative_titles?%s", tvID, params.Encode()))
 	if err != nil {
@@ -316,7 +317,7 @@ func (c *Client) GetMovieAlternativeTitles(ctx context.Context, movieID int) ([]
 	}
 
 	params := url.Values{}
-	params.Set("api_key", c.bearerToken)
+
 
 	resp, err := executeWithRetry[AlternativeTitlesResponse](ctx, c, fmt.Sprintf("/movie/%d/alternative_titles?%s", movieID, params.Encode()))
 	if err != nil {
@@ -390,7 +391,7 @@ func (c *Client) GetTVDetails(ctx context.Context, id string) (SearchResult, err
 
 	params := url.Values{}
 	params.Set("language", c.language)
-	params.Set("api_key", c.bearerToken)
+
 
 	resp, err := executeWithRetry[SearchResult](ctx, c, fmt.Sprintf("/tv/%s?%s", id, params.Encode()))
 	if err != nil {
@@ -410,11 +411,93 @@ func (c *Client) GetMovieDetails(ctx context.Context, id string) (SearchResult, 
 
 	params := url.Values{}
 	params.Set("language", c.language)
-	params.Set("api_key", c.bearerToken)
+
 
 	resp, err := executeWithRetry[SearchResult](ctx, c, fmt.Sprintf("/movie/%s?%s", id, params.Encode()))
 	if err != nil {
 		return SearchResult{}, fmt.Errorf("tmdb get movie details: %w", err)
+	}
+
+	c.cache.Store(cacheKey, *resp)
+	return *resp, nil
+}
+
+// MovieBelongsToCollection is the minimal collection stub embedded in MovieDetails.
+type MovieBelongsToCollection struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+// MovieDetails is the detailed response for a single movie from /movie/{id}.
+type MovieDetails struct {
+	ID                  int                       `json:"id"`
+	Title               string                    `json:"title"`
+	OriginalTitle       string                    `json:"original_title"`
+	Overview            string                    `json:"overview"`
+	ReleaseDate         string                    `json:"release_date"`
+	PosterPath          string                    `json:"poster_path"`
+	BackdropPath        string                    `json:"backdrop_path"`
+	GenreIDs            []int                     `json:"genre_ids"`
+	Genres              []struct{ ID int; Name string } `json:"genres"`
+	ImdbID              string                    `json:"imdb_id"`
+	BelongsToCollection *MovieBelongsToCollection `json:"belongs_to_collection"`
+}
+
+// CollectionPart is one movie within a TMDB franchise/saga collection.
+type CollectionPart struct {
+	ID           int    `json:"id"`
+	Title        string `json:"title"`
+	OriginalTitle string `json:"original_title"`
+	Overview     string `json:"overview"`
+	ReleaseDate  string `json:"release_date"`
+	PosterPath   string `json:"poster_path"`
+	BackdropPath string `json:"backdrop_path"`
+}
+
+// CollectionDetails is the response from /collection/{id}.
+type CollectionDetails struct {
+	ID           int              `json:"id"`
+	Name         string           `json:"name"`
+	Overview     string           `json:"overview"`
+	PosterPath   string           `json:"poster_path"`
+	BackdropPath string           `json:"backdrop_path"`
+	Parts        []CollectionPart `json:"parts"`
+}
+
+// GetMovieDetails fetches detailed info about a movie, including its franchise collection.
+func (c *Client) GetMovieDetailsV2(ctx context.Context, id int) (MovieDetails, error) {
+	cacheKey := fmt.Sprintf("movie_detail_v2:%d:%s", id, c.language)
+	if cached, ok := c.cache.Load(cacheKey); ok {
+		return cached.(MovieDetails), nil
+	}
+
+	params := url.Values{}
+	params.Set("language", c.language)
+
+
+	resp, err := executeWithRetry[MovieDetails](ctx, c, fmt.Sprintf("/movie/%d?%s", id, params.Encode()))
+	if err != nil {
+		return MovieDetails{}, fmt.Errorf("tmdb get movie details v2: %w", err)
+	}
+
+	c.cache.Store(cacheKey, *resp)
+	return *resp, nil
+}
+
+// GetCollection fetches a TMDB franchise/saga collection by its collection ID.
+func (c *Client) GetCollection(ctx context.Context, collectionID int) (CollectionDetails, error) {
+	cacheKey := fmt.Sprintf("collection:%d:%s", collectionID, c.language)
+	if cached, ok := c.cache.Load(cacheKey); ok {
+		return cached.(CollectionDetails), nil
+	}
+
+	params := url.Values{}
+	params.Set("language", c.language)
+
+
+	resp, err := executeWithRetry[CollectionDetails](ctx, c, fmt.Sprintf("/collection/%d?%s", collectionID, params.Encode()))
+	if err != nil {
+		return CollectionDetails{}, fmt.Errorf("tmdb get collection: %w", err)
 	}
 
 	c.cache.Store(cacheKey, *resp)
@@ -451,7 +534,7 @@ func (c *Client) FindByExternalID(ctx context.Context, externalID string, source
 	params := url.Values{}
 	params.Set("external_source", string(source))
 	params.Set("language", c.language)
-	params.Set("api_key", c.bearerToken)
+
 
 	resp, err := executeWithRetry[FindResponse](ctx, c, fmt.Sprintf("/find/%s?%s", externalID, params.Encode()))
 	if err != nil {
@@ -477,6 +560,19 @@ func executeWithRetry[T any](ctx context.Context, c *Client, endpoint string) (*
 		}
 
 		req.Header.Set("Accept", "application/json")
+		// Dynamically handle both v3 and v4 tokens
+		token := strings.Trim(c.bearerToken, " \t\r\n\"'")
+		if token != "" {
+			if len(token) > 50 {
+				// It's a v4 Read Access Token (JWT) -> use Bearer Auth
+				req.Header.Set("Authorization", "Bearer "+token)
+			} else {
+				// It's a v3 API Key -> inject into query string
+				q := req.URL.Query()
+				q.Add("api_key", token)
+				req.URL.RawQuery = q.Encode()
+			}
+		}
 
 		c.rateLimiter <- struct{}{}
 		resp, err := client.Do(req)

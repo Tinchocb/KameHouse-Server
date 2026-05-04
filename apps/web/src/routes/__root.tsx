@@ -8,7 +8,7 @@ import { AppLayout, AppLayoutContent } from "@/components/ui/app-layout/app-layo
 import { AppTopNav, AppBottomNav } from "@/components/ui/app-layout/app-topnav"
 import { AppSidebar } from "@/components/ui/app-layout/app-sidebar"
 import { CommandPalette } from "@/components/ui/search/command-palette"
-import { AnimatePresence } from "motion/react"
+import { AnimatePresence } from "framer-motion"
 import { useRouterState } from "@tanstack/react-router"
 import { PageTransition } from "@/components/shared/page-transition"
 import { WebsocketProvider } from "@/app/websocket-provider"

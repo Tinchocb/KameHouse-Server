@@ -176,6 +176,21 @@ export const Autocomplete = React.forwardRef<HTMLInputElement, AutocompleteProps
     const inputRef = React.useRef<HTMLInputElement>(null)
     const commandInputRef = React.useRef<HTMLInputElement>(null)
 
+    // Conditionally update the options type value ref when it is valid
+    const _updateOptionsTypeValueRef = React.useCallback((value: AutocompleteOption | undefined) => {
+        if (!!value?.value || value === undefined) {
+            optionsTypeValueRef.current = value
+        }
+    }, [])
+
+    // Called when an option is selected either by clicking on it or entering a valid value
+    const handleUpdateValue = React.useCallback((value: AutocompleteOption | undefined) => {
+        setValue(value)
+        onValueChange?.(value)
+        onTextChange?.(value?.label ?? "")
+        _updateOptionsTypeValueRef(value)
+    }, [_updateOptionsTypeValueRef, onValueChange, onTextChange])
+
     // Update the input value when the controlled value changes
     // Only when the default value is empty or when it is an updated value
     React.useEffect(() => {
@@ -186,7 +201,7 @@ export const Autocomplete = React.forwardRef<HTMLInputElement, AutocompleteProps
             _updateOptionsTypeValueRef(controlledValue)
         }
         isFirst.current = false
-    }, [controlledValue])
+    }, [controlledValue, defaultValue, _updateOptionsTypeValueRef])
 
     const handleOnOpenChange = React.useCallback((opening: boolean) => {
         // If the input is disabled or readonly, do not open the popover
@@ -231,14 +246,6 @@ export const Autocomplete = React.forwardRef<HTMLInputElement, AutocompleteProps
         isUpdating.current = false
     }, [deferredInputValue, autoFilter])
 
-    // Called when an option is selected either by clicking on it or entering a valid value
-    const handleUpdateValue = React.useCallback((value: AutocompleteOption | undefined) => {
-        setValue(value)
-        onValueChange?.(value)
-        onTextChange?.(value?.label ?? "")
-        _updateOptionsTypeValueRef(value)
-    }, [])
-
     // Focus the command input when arrow down is pressed
     const handleKeyDown = React.useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
         if (!open) {
@@ -249,13 +256,6 @@ export const Autocomplete = React.forwardRef<HTMLInputElement, AutocompleteProps
             commandInputRef.current?.focus()
         }
     }, [open])
-
-    // Conditionally update the options type value ref when it is valid
-    const _updateOptionsTypeValueRef = React.useCallback((value: AutocompleteOption | undefined) => {
-        if (!!value?.value || value === undefined) {
-            optionsTypeValueRef.current = value
-        }
-    }, [])
 
     // If the type is `options`, make sure the value is always a valid option
     // If the value entered doesn't match any option, fallback to the last valid option

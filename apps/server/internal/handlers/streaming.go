@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -76,7 +77,7 @@ func (h *Handler) HandleMasterPlaylist(c echo.Context) error {
 		args := builder.BuildForHLS(transcoder.PlaybackMethod(decision.Method), targetFile, outDir)
 		
 		pm := transcoder.NewFFmpegProcess(h.App.Logger)
-		if err := pm.StartTranscode(c.Request().Context(), args); err != nil {
+		if err := pm.StartTranscode(context.Background(), args); err != nil {
 			h.App.Logger.Error().Err(err).Msg("ffmpeg start failed")
 			return echo.NewHTTPError(500, "ffmpeg init failed")
 		}
@@ -132,30 +133,4 @@ func (h *Handler) StopStreamSession(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
-func (h *Handler) HandleGetEpisodeSources(c echo.Context) error {
-	mediaId, err := strconv.Atoi(c.Param("mediaId"))
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid parameters"})
-	}
 
-	epNum, err := strconv.Atoi(c.Param("epNum"))
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid parameters"})
-	}
-
-	engine := streaming.GetSourcePriorityEngine(h.App.Logger, h.App.Database)
-	response, err := engine.ResolveEpisodeSources(
-		c.Request().Context(),
-		mediaId,
-		epNum,
-	)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
-	}
-
-	if response == nil || len(response.Sources) == 0 {
-		return c.JSON(http.StatusNotFound, map[string]string{"error": "No sources available"})
-	}
-
-	return c.JSON(http.StatusOK, response)
-}

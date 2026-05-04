@@ -5,7 +5,7 @@ import type {
 } from "@/api/generated/types"
 import type { HeroBannerItem } from "@/components/ui/hero-banner"
 import type { SwimlaneItem } from "@/components/ui/swimlane"
-import type { IntelligentEntry } from "@/hooks/useHomeIntelligence"
+import type { IntelligentEntry } from "@/hooks/use-home-intelligence"
 import { getTitle, getProgress, getBackdrop } from "./home.helpers"
 
 /**
@@ -32,7 +32,7 @@ export function mapEpisodeToSwimlaneItem(
         progress: getProgress(media.id, watchHistory),
         aspect: "wide",
         year: media.year || undefined,
-        rating: media.score ? media.score / 10 : undefined,
+        rating: media.score ? (media.score > 10 ? media.score / 10 : media.score) : undefined,
         onClick: () => onNavigate(media.id),
         backdropUrl: episode.episodeMetadata?.image || getBackdrop(media),
     }

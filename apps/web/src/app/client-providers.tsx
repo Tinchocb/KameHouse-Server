@@ -5,7 +5,7 @@ import { CustomCSSProvider } from "@/components/shared/custom-css-provider"
 import { CustomThemeProvider } from "@/components/shared/custom-theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { ThemeProvider } from "next-themes"
+
 import React, { useEffect } from "react"
 import { CookiesProvider } from "react-cookie"
 import { toast } from "sonner"
@@ -49,7 +49,7 @@ export const queryClient = new QueryClient({
 export const ClientProviders: React.FC<ClientProvidersProps> = ({ children }) => {
 
     return (
-        <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme={"dark"}>
+        <>
             <CookiesProvider>
                 <QueryClientProvider client={queryClient}>
                     <WebsocketProvider>
@@ -64,7 +64,7 @@ export const ClientProviders: React.FC<ClientProvidersProps> = ({ children }) =>
                     {/*</React.Suspense>}*/}
                 </QueryClientProvider>
             </CookiesProvider>
-        </ThemeProvider>
+        </>
     )
 
 }

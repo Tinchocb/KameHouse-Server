@@ -22,6 +22,14 @@ type Database struct {
 	CurrMediaFillers mo.Option[map[int]*MediaFillerItem]
 	cleanupManager   *CleanupManager
 	bufferedWriter   *BufferedWriter
+	OnError          func(error)
+}
+
+func (db *Database) SetOnError(f func(error)) {
+	db.OnError = f
+	if db.bufferedWriter != nil {
+		db.bufferedWriter.OnError = f
+	}
 }
 
 func (db *Database) Gorm() *gorm.DB {
@@ -62,8 +70,10 @@ func NewDatabase(ctx context.Context, appDataDir, dbName string, logger *zerolog
 		return nil, fmt.Errorf("failed to obtain underlying sql.DB: %w", err)
 	}
 
-	sqlDB.SetMaxOpenConns(25)
-	sqlDB.SetMaxIdleConns(5)
+	// SQLite serializes writes via WAL journal. A small pool reduces SQLITE_BUSY
+	// contention while still allowing concurrent reads.
+	sqlDB.SetMaxOpenConns(4)
+	sqlDB.SetMaxIdleConns(2)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
 	// Block and verify connection availability using the startup context timeout
@@ -97,7 +107,12 @@ func (db *Database) EnqueueWrite(op DbWriteOperation) {
 	if db.bufferedWriter != nil {
 		db.bufferedWriter.Enqueue(op)
 	} else {
-		_ = op(db.gormdb)
+		if err := op(db.gormdb); err != nil {
+			db.Logger.Error().Err(err).Msg("db: EnqueueWrite fallback operation failed")
+			if db.OnError != nil {
+				db.OnError(err)
+			}
+		}
 	}
 }
 
@@ -122,9 +137,12 @@ func migrateTables(ctx context.Context, db *gorm.DB) error {
 	// Clean up duplicate tmdb_ids before auto-migration to allow UNIQUE constraint creation
 	db.Exec(`
 		DELETE FROM library_media
-		WHERE id NOT IN (
+		WHERE tmdb_id IS NOT NULL
+		  AND tmdb_id != 0
+		  AND id NOT IN (
 			SELECT MIN(id)
 			FROM library_media
+			WHERE tmdb_id IS NOT NULL AND tmdb_id != 0
 			GROUP BY tmdb_id
 		)
 	`)
@@ -160,6 +178,8 @@ func migrateTables(ctx context.Context, db *gorm.DB) error {
 		&models.MediaEntryListData{},
 		&models.WatchHistory{},
 		&models.UserMediaProgress{},
+		&models.ActiveDownload{},
+		&models.MediaCollection{},
 	)
 }
 

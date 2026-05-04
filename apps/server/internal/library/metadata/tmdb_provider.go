@@ -57,7 +57,7 @@ func (p *TMDBProvider) SearchMedia(ctx context.Context, query string) ([]*dto.No
 	tvResults, tvErr := p.client.SearchTV(ctx, query)
 	if tvErr == nil {
 		for _, r := range tvResults {
-			nm := tmdbTVResultToNormalizedMedia(r)
+			nm := TmdbTVResultToNormalizedMedia(r)
 			results = append(results, nm)
 		}
 	}
@@ -90,7 +90,7 @@ func (p *TMDBProvider) SearchTV(ctx context.Context, query string) ([]*dto.Norma
 	tvResults, err := p.client.SearchTV(ctx, query)
 	if err == nil {
 		for _, r := range tvResults {
-			nm := tmdbTVResultToNormalizedMedia(r)
+			nm := TmdbTVResultToNormalizedMedia(r)
 			results = append(results, nm)
 		}
 		if len(results) == 0 {
@@ -132,7 +132,7 @@ func (p *TMDBProvider) GetMediaDetails(ctx context.Context, id string) (*dto.Nor
 			// TV
 			tvRes, err := p.client.GetTVDetails(ctx, id)
 			if err == nil {
-				return tmdbTVResultToNormalizedMedia(tvRes), nil
+				return TmdbTVResultToNormalizedMedia(tvRes), nil
 			}
 		}
 		// If it's negative, it might be an old cached ID. Try to handle it by stripping the sign.
@@ -147,27 +147,33 @@ func (p *TMDBProvider) GetMediaDetails(ctx context.Context, id string) (*dto.Nor
 			} else {
 				tvRes, err := p.client.GetTVDetails(ctx, strconv.Itoa(posID))
 				if err == nil {
-					return tmdbTVResultToNormalizedMedia(tvRes), nil
+					return TmdbTVResultToNormalizedMedia(tvRes), nil
 				}
 			}
 		}
 	}
 
 	// Try TV first
-	tvRes, err := p.client.GetTVDetails(ctx, id)
-	if err == nil {
-		nm := tmdbTVResultToNormalizedMedia(tvRes)
+	tvRes, tvErr := p.client.GetTVDetails(ctx, id)
+	if tvErr == nil {
+		nm := TmdbTVResultToNormalizedMedia(tvRes)
 		return nm, nil
 	}
 
 	// Try Movie next
-	movieRes, err := p.client.GetMovieDetails(ctx, id)
-	if err == nil {
+	movieRes, movieErr := p.client.GetMovieDetails(ctx, id)
+	if movieErr == nil {
 		nm := tmdbMovieResultToNormalizedMedia(movieRes)
 		return nm, nil
 	}
 
-	return nil, ErrNotFound
+	// If neither worked, determine if it was an actual API error (like 401) or just 404
+	if strings.Contains(tvErr.Error(), "status code: 404") && strings.Contains(movieErr.Error(), "status code: 404") {
+		return nil, ErrNotFound
+	}
+
+	// Return the actual error to avoid swallowing 401 Unauthorized or network errors
+	return nil, fmt.Errorf("TMDB fetch failed. TV err: %v, Movie err: %v", tvErr, movieErr)
 }
 
 // GetClient returns the underlying TMDB client for direct API access.
@@ -175,8 +181,8 @@ func (p *TMDBProvider) GetClient() *tmdb.Client {
 	return p.client
 }
 
-// tmdbTVResultToNormalizedMedia converts a TMDB TV SearchResult to NormalizedMedia.
-func tmdbTVResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia {
+// TmdbTVResultToNormalizedMedia converts a TMDB TV SearchResult to NormalizedMedia.
+func TmdbTVResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia {
 	tmdbId := r.ID
 
 	// Build title

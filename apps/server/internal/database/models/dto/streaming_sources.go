@@ -8,27 +8,18 @@ type SourceType string
 const (
 	// SourceTypeLocal indicates a file served from the local filesystem.
 	SourceTypeLocal SourceType = "local"
-	// SourceTypeTorrentio indicates a stream resolved via the Torrentio/Stremio provider.
-	SourceTypeTorrentio SourceType = "torrentio"
 )
 
 // EpisodeSource is the canonical, transport-agnostic descriptor for a single
 // playable source. It is the immutable JSON contract between the backend
 // decision engine and frontend player components.
 type EpisodeSource struct {
-	Type     SourceType `json:"type"`               // "local" | "torrentio"
-	URL      string     `json:"url,omitempty"`      // Remote URL or direct-play HTTP path
+	Type     SourceType `json:"type"`               // "local"
+	URL      string     `json:"url,omitempty"`      // direct-play HTTP path
 	Path     string     `json:"path,omitempty"`     // Absolute filesystem path (local sources only)
 	Quality  string     `json:"quality"`            // e.g. "1080p", "4K", "unknown"
-	Priority int        `json:"priority"`           // PriorityLocal < PriorityDebrid < PriorityTorrent
+	Priority int        `json:"priority"`           // PriorityLocal
 	Title    string     `json:"title,omitempty"`    // Human-readable label shown in the UI badge
-
-	// Torrentio-specific fields (omitted for local sources)
-	MagnetURI    string `json:"magnetUri,omitempty"`    // Full magnet link or debrid HTTP URL
-	InfoHash     string `json:"infoHash,omitempty"`     // Torrent info hash
-	FileIdx      int    `json:"fileIdx,omitempty"`      // File index inside the torrent batch
-	Seeders      int    `json:"seeders,omitempty"`      // Active seeders count (-1 = unknown)
-	ReleaseGroup string `json:"releaseGroup,omitempty"` // e.g. "SubsPlease", "Erai-raws"
 }
 
 // EpisodeSourcesResponse is the top-level DTO returned by the episode sources endpoint.

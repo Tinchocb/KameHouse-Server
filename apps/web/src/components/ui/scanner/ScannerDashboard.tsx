@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useAppStore } from "@/lib/store"
 import { useWebSocket } from "@/hooks/use-websocket"
-import { getServerBaseUrl } from "@/api/client/server-url"
+import { getApiWebSocketUrl } from "@/api/client/server-url"
 import { WSEvents, type ScannerMessage } from "@/lib/server/ws-events"
 import { useScanLocalFiles } from "@/api/hooks/scan.hooks"
 import { useGetScanSummaries } from "@/api/hooks/scan_summary.hooks"
@@ -108,17 +108,7 @@ function useScannerDashboard() {
     const [lastFinish, setLastFinish] = useState<ScanEvent | null>(null)
     const [pruneCount, setPruneCount] = useState<number>(0)
 
-    const baseServerUrl = getServerBaseUrl()
-    const wsUrl = useMemo(() => {
-        const base = baseServerUrl
-        if (base === "") {
-            const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
-            return `${protocol}//${window.location.host}/api/v1/ws`
-        }
-        if (base.startsWith("http://")) return base.replace("http://", "ws://") + "/api/v1/ws"
-        if (base.startsWith("https://")) return base.replace("https://", "wss://") + "/api/v1/ws"
-        return "ws://127.0.0.1:43211/api/v1/ws"
-    }, [baseServerUrl])
+    const wsUrl = useMemo(() => getApiWebSocketUrl(), [])
 
     useWebSocket(wsUrl, (eventData) => {
         if (!eventData || typeof eventData !== "object" || eventData.type !== WSEvents.LIBRARY_SCAN) return
@@ -506,7 +496,7 @@ function EventFeed({ events }: { events: ScanEvent[] }) {
                 ref={listRef}
                 className="max-h-80 overflow-y-auto divide-y divide-white/[0.03]"
             >
-                {visibleEvents.map((evt: any) => (
+                {visibleEvents.map((evt: ScanEvent & { id?: string; timestamp: number }) => (
                     <motion.div
                         key={evt.id || `${evt.timestamp}`}
                         initial={{ opacity: 0, x: -8 }}
@@ -532,7 +522,7 @@ function EventFeed({ events }: { events: ScanEvent[] }) {
     )
 }
 
-function ScanHistory({ summaries }: { summaries: any[] }) {
+function ScanHistory({ summaries }: { summaries: Record<string, any>[] }) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {summaries.map((s, idx) => {

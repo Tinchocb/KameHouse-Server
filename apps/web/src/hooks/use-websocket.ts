@@ -1,6 +1,17 @@
 import { useEffect, useRef, useCallback } from "react";
 
 /**
+ * Mirrors the Go WSEventEnvelope struct from events/websocket.go.
+ * Provides type-safe access to real-time server events.
+ */
+export interface WSEventEnvelope {
+  event_id?: string
+  type: string
+  payload: unknown
+  timestamp: number
+}
+
+/**
  * useWebSocket - A robust, auto-reconnecting hook to listen for real-time server events via WebSockets.
  * 
  * @param url The WebSocket endpoint to connect to (e.g. `ws://localhost:43213/api/ws`)
@@ -8,7 +19,7 @@ import { useEffect, useRef, useCallback } from "react";
  */
 export function useWebSocket(
   url: string, 
-  onEventReceived?: (eventData: any) => void
+  onEventReceived?: (eventData: WSEventEnvelope) => void
 ) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -37,7 +48,7 @@ export function useWebSocket(
 
       ws.onmessage = (event) => {
         try {
-          const parsedData = JSON.parse(event.data);
+          const parsedData = JSON.parse(event.data) as WSEventEnvelope;
           if (onEventReceivedRef.current) {
             onEventReceivedRef.current(parsedData);
           }

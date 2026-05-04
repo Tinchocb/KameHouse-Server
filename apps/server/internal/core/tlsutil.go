@@ -16,7 +16,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func generateSelfSignedCert(certPath, keyPath string, logger *zerolog.Logger) error {
+func GenerateSelfSignedCert(certPath, keyPath string, logger *zerolog.Logger) error {
 	// Check if both files already exist
 	if _, err := os.Stat(certPath); !os.IsNotExist(err) {
 		if _, err := os.Stat(keyPath); !os.IsNotExist(err) {

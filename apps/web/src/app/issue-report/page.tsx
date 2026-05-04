@@ -540,11 +540,11 @@ function ReportViewer({ report }: { report: ExtendedReport }) {
         { key: "overview", label: "Overview", icon: BiInfoCircle },
         { key: "replay", label: "Session Replay", icon: BiPlay, show: hasReplay, accent: true },
         { key: "timeline", label: "Timeline", icon: BiNavigation },
-        { key: "network", label: `Network (${stats.networkCount})`, icon: LuNetwork as any },
-        { key: "console", label: `Console (${stats.consoleCount})`, icon: LuTerminal as any },
-        { key: "clicks", label: `Clicks (${stats.clickCount})`, icon: FiMousePointer as any },
+        { key: "network", label: `Network (${stats.networkCount})`, icon: LuNetwork },
+        { key: "console", label: `Console (${stats.consoleCount})`, icon: LuTerminal },
+        { key: "clicks", label: `Clicks (${stats.clickCount})`, icon: FiMousePointer },
         { key: "websocket", label: `WebSocket (${stats.websocketCount})`, icon: BiWifi, show: hasWsLogs },
-        { key: "server", label: "Server Logs", icon: HiServerStack as any },
+        { key: "server", label: "Server Logs", icon: HiServerStack },
         { key: "screenshots", label: `Screenshots (${stats.screenshotCount})`, icon: BiImage, show: hasScreenshots },
         { key: "scanlogs", label: "Scan Logs", icon: BiFile, show: hasScanLogs },
     ]
@@ -688,7 +688,7 @@ function OverviewPanel({ report, stats, events }: { report: ExtendedReport; stat
                     <div className="glass-panel-premium border-white/5 p-6 rounded-2xl">
                         <h3 className="font-bebas text-2xl tracking-widest text-zinc-500 mb-4">NOTAS DEL USUARIO</h3>
                         <p className="text-sm text-zinc-300 leading-relaxed font-medium italic">
-                            "{report.description}"
+                            &quot;{report.description}&quot;
                         </p>
                     </div>
                 )}
@@ -1001,7 +1001,7 @@ function TimelineEventRow({ event, isExpanded, toggleExpanded }: {
                 <div className="border-t border-white/5 bg-black/40 p-6 animate-in slide-in-from-top-2 duration-300">
                     {event.type === "screenshot" && event.raw.data ? (
                         <div className="space-y-4">
-                            {event.raw.caption && <p className="font-bebas tracking-widest text-zinc-500 uppercase">"{event.raw.caption}"</p>}
+                            {event.raw.caption && <p className="font-bebas tracking-widest text-zinc-500 uppercase">&quot;{event.raw.caption}&quot;</p>}
                             <div className="relative group">
                                 <img src={event.raw.data} alt="Screenshot" className="max-w-full max-h-[60vh] rounded-2xl border border-white/10 shadow-2xl relative z-10" />
                                 <div className="absolute inset-0 blur-2xl bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
@@ -1410,7 +1410,7 @@ function ScreenshotsPanel({ screenshots }: { screenshots: Screenshot[] }) {
                         className="max-w-full max-h-[60vh] rounded-lg mx-auto"
                     />
                     {screenshots[selectedIndex].caption && (
-                        <p className="text-sm text-gray-300 text-center mt-3 italic">"{screenshots[selectedIndex].caption}"</p>
+                        <p className="text-sm text-gray-300 text-center mt-3 italic">&quot;{screenshots[selectedIndex].caption}&quot;</p>
                     )}
                 </div>
             )}

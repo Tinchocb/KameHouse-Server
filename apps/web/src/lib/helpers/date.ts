@@ -24,17 +24,17 @@ export function formatSafe(value: Date, formatString: string, options?: FormatOp
         return format(value, formatString, options)
     }
     catch (e) {
-        let v = new Date()
+        const v = new Date()
         return format(v, formatString, options)
     }
 }
 
 export function normalizeDate(value: string) {
     try {
-        let arr = value.split(/[\-\+ :T]/)
-        let year = parseInt(arr[0])
-        let month = parseInt(arr[1]) - 1
-        let day = parseInt(arr[2])
+        const arr = value.split(/[\-\+ :T]/)
+        const year = parseInt(arr[0])
+        const month = parseInt(arr[1]) - 1
+        const day = parseInt(arr[2])
 
         return new Date(`${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}T00:00:00`)
     }

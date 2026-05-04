@@ -284,6 +284,18 @@ const config: Config = {
                     DEFAULT: "hsl(var(--card) / <alpha-value>)",
                     foreground: "hsl(var(--card-foreground) / <alpha-value>)",
                 },
+                surface: {
+                    1: "hsl(var(--surface-1) / <alpha-value>)",
+                    2: "hsl(var(--surface-2) / <alpha-value>)",
+                },
+                overlay: "hsl(var(--overlay) / <alpha-value>)",
+                "border-subtle": "hsl(var(--border-subtle) / <alpha-value>)",
+                "border-strong": "hsl(var(--border-strong) / <alpha-value>)",
+                text: {
+                    primary: "hsl(var(--text-primary) / <alpha-value>)",
+                    secondary: "hsl(var(--text-secondary) / <alpha-value>)",
+                    muted: "hsl(var(--text-muted) / <alpha-value>)",
+                },
                 brand: {
                     50: "rgb(255 243 230 / <alpha-value>)",
                     100: "rgb(255 230 199 / <alpha-value>)",

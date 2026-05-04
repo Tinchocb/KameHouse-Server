@@ -11,12 +11,15 @@
 import { createFileRoute } from '@tanstack/react-router'
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as DownloadsRouteImport } from './routes/downloads'
 import { Route as SplashscreenIndexRouteImport } from './routes/splashscreen/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as SeriesIndexRouteImport } from './routes/series/index'
 import { Route as MoviesIndexRouteImport } from './routes/movies/index'
 import { Route as LibraryIndexRouteImport } from './routes/library/index'
 import { Route as HomeIndexRouteImport } from './routes/home/index'
+import { Route as DownloadsIndexRouteImport } from './routes/downloads/index'
+import { Route as CollectionsIdRouteImport } from './routes/collections/$id'
 import { Route as SplashscreenCrashIndexRouteImport } from './routes/splashscreen/crash/index'
 import { Route as SeriesSeriesIdIndexRouteImport } from './routes/series/$seriesId/index'
 import { Route as PublicAuthIndexRouteImport } from './routes/public/auth/index'
@@ -27,6 +30,11 @@ const ScanLogViewerIndexLazyRouteImport = createFileRoute('/scan-log-viewer/')()
 const IssueReportIndexLazyRouteImport = createFileRoute('/issue-report/')()
 const DocsIndexLazyRouteImport = createFileRoute('/docs/')()
 
+const DownloadsRoute = DownloadsRouteImport.update({
+  id: '/downloads',
+  path: '/downloads',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ScanLogViewerIndexLazyRoute = ScanLogViewerIndexLazyRouteImport.update({
   id: '/scan-log-viewer/',
   path: '/scan-log-viewer/',
@@ -76,6 +84,16 @@ const HomeIndexRoute = HomeIndexRouteImport.update({
   path: '/home/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DownloadsIndexRoute = DownloadsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DownloadsRoute,
+} as any)
+const CollectionsIdRoute = CollectionsIdRouteImport.update({
+  id: '/collections/$id',
+  path: '/collections/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SplashscreenCrashIndexRoute = SplashscreenCrashIndexRouteImport.update({
   id: '/splashscreen/crash/',
   path: '/splashscreen/crash/',
@@ -103,6 +121,9 @@ const SeriesSeriesIdSagaIdRoute = SeriesSeriesIdSagaIdRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/downloads': typeof DownloadsRouteWithChildren
+  '/collections/$id': typeof CollectionsIdRoute
+  '/downloads/': typeof DownloadsIndexRoute
   '/home/': typeof HomeIndexRoute
   '/library/': typeof LibraryIndexRoute
   '/movies/': typeof MoviesIndexRoute
@@ -119,6 +140,8 @@ export interface FileRoutesByFullPath {
   '/splashscreen/crash/': typeof SplashscreenCrashIndexRoute
 }
 export interface FileRoutesByTo {
+  '/collections/$id': typeof CollectionsIdRoute
+  '/downloads': typeof DownloadsIndexRoute
   '/home': typeof HomeIndexRoute
   '/library': typeof LibraryIndexRoute
   '/movies': typeof MoviesIndexRoute
@@ -136,6 +159,9 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/downloads': typeof DownloadsRouteWithChildren
+  '/collections/$id': typeof CollectionsIdRoute
+  '/downloads/': typeof DownloadsIndexRoute
   '/home/': typeof HomeIndexRoute
   '/library/': typeof LibraryIndexRoute
   '/movies/': typeof MoviesIndexRoute
@@ -154,6 +180,9 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/downloads'
+    | '/collections/$id'
+    | '/downloads/'
     | '/home/'
     | '/library/'
     | '/movies/'
@@ -170,6 +199,8 @@ export interface FileRouteTypes {
     | '/splashscreen/crash/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/collections/$id'
+    | '/downloads'
     | '/home'
     | '/library'
     | '/movies'
@@ -186,6 +217,9 @@ export interface FileRouteTypes {
     | '/splashscreen/crash'
   id:
     | '__root__'
+    | '/downloads'
+    | '/collections/$id'
+    | '/downloads/'
     | '/home/'
     | '/library/'
     | '/movies/'
@@ -203,6 +237,8 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  DownloadsRoute: typeof DownloadsRouteWithChildren
+  CollectionsIdRoute: typeof CollectionsIdRoute
   HomeIndexRoute: typeof HomeIndexRoute
   LibraryIndexRoute: typeof LibraryIndexRoute
   MoviesIndexRoute: typeof MoviesIndexRoute
@@ -221,6 +257,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/downloads': {
+      id: '/downloads'
+      path: '/downloads'
+      fullPath: '/downloads'
+      preLoaderRoute: typeof DownloadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/scan-log-viewer/': {
       id: '/scan-log-viewer/'
       path: '/scan-log-viewer'
@@ -284,6 +327,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HomeIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/downloads/': {
+      id: '/downloads/'
+      path: '/'
+      fullPath: '/downloads/'
+      preLoaderRoute: typeof DownloadsIndexRouteImport
+      parentRoute: typeof DownloadsRoute
+    }
+    '/collections/$id': {
+      id: '/collections/$id'
+      path: '/collections/$id'
+      fullPath: '/collections/$id'
+      preLoaderRoute: typeof CollectionsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/splashscreen/crash/': {
       id: '/splashscreen/crash/'
       path: '/splashscreen/crash'
@@ -322,7 +379,21 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface DownloadsRouteChildren {
+  DownloadsIndexRoute: typeof DownloadsIndexRoute
+}
+
+const DownloadsRouteChildren: DownloadsRouteChildren = {
+  DownloadsIndexRoute: DownloadsIndexRoute,
+}
+
+const DownloadsRouteWithChildren = DownloadsRoute._addFileChildren(
+  DownloadsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
+  DownloadsRoute: DownloadsRouteWithChildren,
+  CollectionsIdRoute: CollectionsIdRoute,
   HomeIndexRoute: HomeIndexRoute,
   LibraryIndexRoute: LibraryIndexRoute,
   MoviesIndexRoute: MoviesIndexRoute,

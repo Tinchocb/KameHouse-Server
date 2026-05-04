@@ -5,11 +5,10 @@
  * Do NOT merge into api/generated/types.ts — that file is auto-generated.
  */
 
-export type SourceType = "Local" | "Torrent"
+export type SourceType = "Local"
 
 export interface SourceMetadata {
     bitrate?: number
-    seeders?: number
 }
 
 export interface MediaSource {
@@ -19,14 +18,13 @@ export interface MediaSource {
     resolution: number
     provider: string
     size: number
-    seeders: number
     rank: number
 }
 
 export interface UnifiedResolutionResponse {
     title: string
     id: string
-    availabilityType: "FULL_LOCAL" | "HYBRID" | "ONLY_ONLINE"
+    availabilityType: "FULL_LOCAL"
     sources: MediaSource[]
 }
 
@@ -42,23 +40,22 @@ export interface ResolveStreamsParams {
 
 /**
  * Mirrors `dto.SourceType` constants on the server.
- * - `"local"`     → file on disk, served via /api/v1/directstream/local
- * - `"torrentio"` → magnet URI resolved via Torrentio
+ * - `"local"`     → file on disk, served via local HLS pipeline
  */
-export type EpisodeSourceType = "local" | "torrentio"
+export type EpisodeSourceType = "local"
 
 export interface EpisodeSource {
     /** Discriminates between local and online sources. */
     type: EpisodeSourceType
-    /** For local: `/api/v1/directstream/local?id=<stableId>`. For torrentio: magnet URI. */
+    /** Path or ID used to request the stream from the mediastream repository. */
     url: string
     /** Physical filesystem path — only present for local sources. */
     path?: string
     /** Human-readable quality label, e.g. "1080p", "4K". */
     quality: string
-    /** Lower number = higher priority. Local = 1, Torrent = 2. */
+    /** Lower number = higher priority. Local = 1. */
     priority: number
-    /** Display title, e.g. release group name or "Local — Episode 5". */
+    /** Display title, e.g. "Local — Episode 5". */
     title: string
 }
 

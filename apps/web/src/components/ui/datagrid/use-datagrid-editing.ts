@@ -202,7 +202,7 @@ export function useDataGridEditing<T extends Record<string, any>>(props: Props<T
 
             // Optimistic update
             if (enableOptimisticUpdates && optimisticUpdatePrimaryKey) {
-                let clone = structuredClone(data)
+                const clone = structuredClone(data)
                 const index = clone.findIndex(p => {
                     if (!p[optimisticUpdatePrimaryKey] || !rowData[optimisticUpdatePrimaryKey]) return false
                     return p[optimisticUpdatePrimaryKey] === rowData[optimisticUpdatePrimaryKey]
@@ -239,7 +239,7 @@ export function useDataGridEditing<T extends Record<string, any>>(props: Props<T
             try {
                 const parsed = await schema.safeParseAsync(rowData)
                 if (parsed.success) {
-                    let finalData = structuredClone(rowData)
+                    const finalData = structuredClone(rowData)
                     Object.keys(parsed.data).map(key => {
                         // @ts-expect-error
                         finalData[key] = parsed.data[key]

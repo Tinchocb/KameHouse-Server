@@ -98,8 +98,8 @@ export function useDraggableScroll(
         const offsetX = ref.current.scrollLeft + dx
         const offsetY = ref.current.scrollTop + dy
 
-        ref.current.scrollLeft = offsetX // eslint-disable-line no-param-reassign
-        ref.current.scrollTop = offsetY // eslint-disable-line no-param-reassign
+        ref.current.scrollLeft = offsetX  
+        ref.current.scrollTop = offsetY  
         internalState.current.lastScrollX = offsetX
         internalState.current.lastScrollY = offsetY
     }
@@ -140,8 +140,8 @@ export function useDraggableScroll(
 
         (ref.current.childNodes as NodeListOf<HTMLOptionElement>).forEach(
             (child: HTMLElement) => {
-                child.style.transform = `translate3d(${displacementX}px, ${displacementY}px, 0px)` // eslint-disable-line no-param-reassign
-                child.style.transition = "transform 0ms" // eslint-disable-line no-param-reassign
+                child.style.transform = `translate3d(${displacementX}px, ${displacementY}px, 0px)`  
+                child.style.transition = "transform 0ms"  
             },
         )
     }
@@ -149,8 +149,8 @@ export function useDraggableScroll(
     const recoverChildStyle = () => {
         (ref.current.childNodes as NodeListOf<HTMLOptionElement>).forEach(
             (child: HTMLElement, i) => {
-                child.style.transform = transformStyleOfChildElements[i] // eslint-disable-line no-param-reassign
-                child.style.transition = transitionStyleOfChildElements[i] // eslint-disable-line no-param-reassign
+                child.style.transform = transformStyleOfChildElements[i]  
+                child.style.transition = transitionStyleOfChildElements[i]  
             },
         )
     }
@@ -212,8 +212,8 @@ export function useDraggableScroll(
 
             (ref.current.childNodes as NodeListOf<HTMLOptionElement>).forEach(
                 (child: HTMLElement) => {
-                    child.style.transform = `translate3d(0px, 0px, 0px)` // eslint-disable-line no-param-reassign
-                    child.style.transition = `transform ${transitionDurationInMilliseconds}ms` // eslint-disable-line no-param-reassign
+                    child.style.transform = `translate3d(0px, 0px, 0px)`  
+                    child.style.transition = `transform ${transitionDurationInMilliseconds}ms`  
                 },
             )
 
@@ -277,10 +277,10 @@ export function useDraggableScroll(
         internalState.current.lastMouseX = 0
         internalState.current.lastMouseY = 0
 
-        ref.current.style.cursor = cursorStyleOfWrapperElement; // eslint-disable-line no-param-reassign
+        ref.current.style.cursor = cursorStyleOfWrapperElement;  
         (ref.current.childNodes as NodeListOf<HTMLOptionElement>).forEach(
             (child: HTMLElement, i) => {
-                child.style.cursor = cursorStyleOfChildElements[i] // eslint-disable-line no-param-reassign
+                child.style.cursor = cursorStyleOfChildElements[i]  
             },
         )
 
@@ -308,10 +308,10 @@ export function useDraggableScroll(
         internalState.current.scrollSpeedY = dy / timing
         internalState.current.isDraggingY = true
 
-        ref.current.style.cursor = "grabbing"; // eslint-disable-line no-param-reassign
+        ref.current.style.cursor = "grabbing";  
         (ref.current.childNodes as NodeListOf<HTMLOptionElement>).forEach(
             (child: HTMLElement) => {
-                child.style.cursor = "grabbing" // eslint-disable-line no-param-reassign
+                child.style.cursor = "grabbing"  
             },
         )
 

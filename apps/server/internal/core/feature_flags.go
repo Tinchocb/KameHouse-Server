@@ -38,24 +38,8 @@ const (
 	// RefreshMetadata allows refreshing anime metadata from Platform and custom sources.
 	RefreshMetadata      FeatureKey = "RefreshMetadata"
 	WatchingLocalAnime   FeatureKey = "WatchingLocalAnime"
-	TorrentStreaming     FeatureKey = "TorrentStreaming"
-	OnlineStreaming      FeatureKey = "OnlineStreaming"
-	Transcode            FeatureKey = "Transcode"
-	// ViewAutoDownloader allows viewing the auto downloader page.
-	ViewAutoDownloader FeatureKey = "ViewAutoDownloader"
-	// ManageAutoDownloader allows performing actions in the auto downloader.
-	ManageAutoDownloader FeatureKey = "ManageAutoDownloader"
-	// ViewScanSummaries allows viewing the scan summaries.
-	ViewScanSummaries FeatureKey = "ViewScanSummaries"
-	ViewExtensions    FeatureKey = "ViewExtensions"
-	ManageExtensions  FeatureKey = "ManageExtensions"
-	ManageHomeScreen  FeatureKey = "ManageHomeScreen"
-	OpenInExplorer    FeatureKey = "OpenInExplorer"
-	PluginTray        FeatureKey = "PluginTray"
 	Proxy             FeatureKey = "Proxy"
 	PushRequests      FeatureKey = "PushRequests"
-	// v3.6+ Service toggle keys
-	TorrentProvider FeatureKey = "TorrentProvider"
 )
 
 func NewFeatureManager(logger *zerolog.Logger, flags KameHouseFlags) *FeatureManager {
@@ -73,10 +57,6 @@ func NewFeatureManager(logger *zerolog.Logger, flags KameHouseFlags) *FeatureMan
 			UpdateSettings,
 			RefreshMetadata,
 			WatchingLocalAnime,
-			TorrentStreaming,
-			OnlineStreaming,
-			ViewAutoDownloader,
-			ManageAutoDownloader,
 			ViewScanSummaries,
 			ViewExtensions,
 			ManageExtensions,
@@ -84,7 +64,6 @@ func NewFeatureManager(logger *zerolog.Logger, flags KameHouseFlags) *FeatureMan
 			OpenInExplorer,
 			PluginTray,
 			Proxy,
-			Transcode,
 			PushRequests,
 		}
 	}
@@ -132,8 +111,6 @@ func (m *FeatureManager) UpdateFromSettings(library *models.LibrarySettings) {
 
 	toggles := []toggle{
 		{library.DisableLocalScanning, []FeatureKey{ManageLocalAnimeLibrary, WatchingLocalAnime}},
-		{library.DisableTorrentStreaming, []FeatureKey{TorrentStreaming}},
-		{library.DisableTorrentProvider, []FeatureKey{TorrentProvider}},
 	}
 
 	for _, t := range toggles {
@@ -157,30 +134,11 @@ func (m *FeatureManager) UpdateFromSettings(library *models.LibrarySettings) {
 
 type (
 	FeatureFlags struct {
-		MainServerTorrentStreaming bool
 	}
 
-	ExperimentalFeatureFlags struct {
-	}
 )
 
 // NewFeatureFlags initializes the feature flags
 func NewFeatureFlags(cfg *Config, logger *zerolog.Logger) FeatureFlags {
-	ff := FeatureFlags{
-		MainServerTorrentStreaming: viper.GetBool("experimental.mainServerTorrentStreaming"),
-	}
-
-	checkExperimentalFeatureFlags(&ff, cfg, logger)
-
-	return ff
-}
-
-func checkExperimentalFeatureFlags(ff *FeatureFlags, cfg *Config, logger *zerolog.Logger) {
-	if ff.MainServerTorrentStreaming {
-		logger.Warn().Msg("app: [Feature flag] 'Main Server Torrent Streaming' experimental feature is enabled")
-	}
-}
-
-func (ff *FeatureFlags) IsMainServerTorrentStreamingEnabled() bool {
-	return ff.MainServerTorrentStreaming
+	return FeatureFlags{}
 }

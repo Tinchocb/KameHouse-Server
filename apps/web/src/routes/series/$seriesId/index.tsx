@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { HydrationBoundary, QueryClient, dehydrate } from "@tanstack/react-query"
+import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import React, { useMemo, useState, useEffect, useRef } from "react"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -10,17 +10,17 @@ import { Anime_Episode } from "@/api/generated/types"
 import { EmptyState } from "@/components/shared/empty-state"
 import { MediaActionButtons, EpisodeClientCard } from "./-series-interactivity-client"
 import { sanitizeHtml } from "@/lib/helpers/sanitizer"
-import { DRAGON_BALL_SAGAS } from "@/lib/config/dragonball.config"
+import { resolveSeriesSagas, type SagaDefinition } from "@/lib/config/dragonball.config"
 import { Link } from "@tanstack/react-router"
 
 export const Route = createFileRoute("/series/$seriesId/")({
-    loader: async ({ params: { seriesId } }) => {
-        const queryClient = new QueryClient()
-        await queryClient.prefetchQuery({
+    loader: async ({ params: { seriesId }, context }) => {
+        const qc = context.queryClient
+        await qc.prefetchQuery({
             queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, seriesId],
             queryFn: () => fetchAnimeEntry(seriesId),
         })
-        return { dehydrateState: dehydrate(queryClient) }
+        return { dehydrateState: dehydrate(qc) }
     },
     component: SeriesDetailPage,
 })
@@ -58,46 +58,12 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     const synopsis = entry.media.description || "Sin descripción disponible."
     const episodesCount = entry.media.totalEpisodes || entry.episodes?.length || 0
 
-    // Safely resolve the Dragon Ball Saga by TMDB ID first, or fallback to Title matching
-    let resolvedSagas: any[] = []
-    const tmdbId = entry.media?.tmdbId || 0
-    
-    if (tmdbId && DRAGON_BALL_SAGAS[tmdbId]) {
-        resolvedSagas = DRAGON_BALL_SAGAS[tmdbId]
-    } else {
-        // Fallback: match by title if tmdbId is 0 or missing from backend, stripping all spaces first
-        const searchTitle = title.toLowerCase().replace(/\s+/g, "")
-        if (searchTitle.includes("dragonballz") || searchTitle === "dbz") {
-            resolvedSagas = DRAGON_BALL_SAGAS[12971] // Z
-        } else if (searchTitle.includes("dragonballgt")) {
-            resolvedSagas = DRAGON_BALL_SAGAS[888] // GT
-        } else if (searchTitle.includes("dragonballsuper")) {
-            resolvedSagas = DRAGON_BALL_SAGAS[62715] // Super
-        } else if (searchTitle.includes("dragonballkai")) {
-            resolvedSagas = DRAGON_BALL_SAGAS[61709] // Kai
-        } else if (searchTitle.includes("dragonballdaima")) {
-            resolvedSagas = DRAGON_BALL_SAGAS[240411] // Daima
-        } else if (searchTitle === "dragonball") {
-            resolvedSagas = DRAGON_BALL_SAGAS[862] // Original
-        }
-    }
-
-    // Always fallback to Original DB if we have a match for "dragon ball" but no specific suffix, 
-    // unless it's explicitly a movie (which shouldn't have sagas). This acts as a final safety net.
-    if (!resolvedSagas || resolvedSagas.length === 0) {
-        const pureTitle = title.toLowerCase().replace(/\s+/g, "")
-        // Verify it isn't a known movie substring to avoid false positives on DB movies
-        const isMovie = entry.media?.format === "MOVIE" || pureTitle.includes("movie") || pureTitle.includes("pelicula") || pureTitle.includes("aventura")
-        if (!isMovie && pureTitle.includes("dragonball")) {
-            resolvedSagas = DRAGON_BALL_SAGAS[862]
-        }
-    }
-
+    const resolvedSagas = resolveSeriesSagas(entry.media)
     const hasSagas = resolvedSagas.length > 0
     const sagas = resolvedSagas
 
     return (
-        <div className="min-h-screen bg-background text-white pb-16">
+        <div className="min-h-screen bg-[#09090b] text-white pb-16">
             <HeroSection
                 seriesId={seriesId}
                 directoryPath={entry.libraryData?.sharedPath || ""}
@@ -110,25 +76,27 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                 episodesCount={episodesCount}
             />
 
-            {hasSagas ? (
-                <SagasSection seriesId={seriesId} sagas={sagas} />
-            ) : (
-                <EpisodesSection 
-                    seriesTitle={title} 
-                    fallbackThumb={heroBackdrop} 
-                    episodes={entry.episodes || []} 
-                />
-            )}
+            <div className="w-full">
+                {hasSagas ? (
+                    <SagasSection seriesId={seriesId} sagas={sagas} />
+                ) : (
+                    <EpisodesSection 
+                        seriesTitle={title} 
+                        fallbackThumb={heroBackdrop} 
+                        episodes={entry.episodes || []} 
+                    />
+                )}
+            </div>
         </div>
     )
 }
 
-function SagasSection({ seriesId, sagas }: { seriesId: string, sagas: any[] }) {
+function SagasSection({ seriesId, sagas }: { seriesId: string, sagas: SagaDefinition[] }) {
     return (
-        <section className="relative z-[1] -mt-10 px-6 sm:px-10 lg:px-16 pb-20">
+        <section className="relative z-[1] px-6 sm:px-10 pb-20">
             <div className="flex flex-col gap-8">
                 <div className="space-y-1 border-b border-white/5 pb-4">
-                    <h2 className="text-3xl font-black tracking-tight text-orange-500 uppercase tracking-widest drop-shadow-[0_0_15px_rgba(249,115,22,0.4)]">
+                    <h2 className="text-4xl font-bebas font-normal text-[#ff6b00] uppercase tracking-widest drop-shadow-[0_0_15px_rgba(255,107,0,0.6)]">
                         Crónicas y Sagas
                     </h2>
                     <p className="text-sm font-medium text-white/50">
@@ -142,7 +110,7 @@ function SagasSection({ seriesId, sagas }: { seriesId: string, sagas: any[] }) {
                             key={saga.id}
                             to={"/series/$seriesId/$sagaId"}
                             params={{ seriesId, sagaId: saga.id }}
-                            className="group relative flex h-64 flex-col justify-end overflow-hidden rounded-2xl p-6 transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_20px_40px_rgba(249,115,22,0.15)] focus:outline-none focus:ring-2 focus:ring-orange-500 ring-offset-2 ring-offset-background"
+                            className="group relative flex h-64 flex-col justify-end overflow-hidden rounded-2xl p-6 transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_30px_60px_rgba(0,0,0,0.8),0_0_30px_rgba(255,107,0,0.2)] focus:outline-none focus:ring-2 focus:ring-[#ff6b00] ring-offset-2 ring-offset-[#09090b]"
                         >
                             <div className="absolute inset-0">
                                 <img
@@ -150,12 +118,12 @@ function SagasSection({ seriesId, sagas }: { seriesId: string, sagas: any[] }) {
                                     alt={saga.title}
                                     className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                                 />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/80 to-transparent transition-opacity group-hover:opacity-90" />
-                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(249,115,22,0.15),transparent)] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-[#09090b]/95 via-[#09090b]/80 to-transparent transition-opacity group-hover:opacity-90" />
+                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(255,107,0,0.2),transparent)] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                             </div>
 
                             <div className="relative z-10 translate-y-2 transition-transform duration-300 group-hover:translate-y-0 text-left">
-                                <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-500 mb-2 drop-shadow-md">
+                                <p className="text-sm font-black uppercase tracking-[0.2em] text-[#ff6b00] mb-2 drop-shadow-[0_0_10px_rgba(255,107,0,0.5)]">
                                     Eps {saga.startEp} - {saga.endEp}
                                 </p>
                                 <h3 className="mb-2 text-2xl font-black text-white leading-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
@@ -185,64 +153,99 @@ interface HeroSectionProps {
     episodesCount: number
 }
 
-const HeroSection = React.memo(({ seriesId, directoryPath, backdropUrl, coverUrl, title, year, genres, synopsis, episodesCount }: HeroSectionProps) => {
-    return (
-        <section className="relative isolate overflow-hidden">
-            <div className="absolute inset-0">
-                <img
-                    src={backdropUrl}
-                    alt={title}
-                    className="h-full w-full object-cover blur-[2px] opacity-60 animate-ken-burns"
-                    loading="lazy"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-r from-background via-background/65 to-transparent" />
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.05),transparent_45%)]" />
-            </div>
+const HeroSection = React.memo(function HeroSection({
+    seriesId,
+    directoryPath,
+    backdropUrl,
+    coverUrl,
+    title,
+    year,
+    genres,
+    synopsis,
+    episodesCount,
+}: HeroSectionProps) {
+    const [synopsisExpanded, setSynopsisExpanded] = useState(false)
+    const cleanSynopsis = useMemo(() => sanitizeHtml(synopsis), [synopsis])
 
-            <div className="relative px-6 sm:px-10 lg:px-16 pt-24 pb-18 lg:pb-24">
-                <div className="mx-auto flex max-w-6xl flex-col gap-10 lg:flex-row lg:items-end">
-                    <div className="mx-auto w-40 sm:w-48 md:w-60 lg:mx-0">
-                        <img
-                            src={coverUrl}
-                            alt={`${title} cover`}
-                            loading="lazy"
-                            className="aspect-[2/3] w-full rounded-2xl border border-white/10 object-cover shadow-[0_20px_50px_rgba(0,0,0,0.5)] group/cover hover:scale-[1.02] transition-transform duration-500"
-                        />
+    return (
+        <section className="relative w-full min-h-[60vh] flex flex-col justify-end overflow-hidden">
+            {/* Backdrop */}
+            {backdropUrl && (
+                <div className="absolute inset-0 overflow-hidden">
+                    <img
+                        src={backdropUrl}
+                        alt={title}
+                        className="w-full h-full object-cover object-center animate-ken-burns"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#09090b] via-[#09090b]/80 to-[#09090b]/20" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#09090b]/80 via-transparent to-transparent" />
+                </div>
+            )}
+
+            {/* Content */}
+            <div className="relative z-10 flex flex-col lg:flex-row items-end gap-8 px-6 sm:px-10 pb-12 pt-32">
+                {/* Cover Poster */}
+                {coverUrl && (
+                    <div className="hidden lg:block shrink-0 w-40 xl:w-48 rounded-2xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.6)] ring-1 ring-white/10">
+                        <img src={coverUrl} alt={title} className="w-full aspect-[2/3] object-cover" />
+                    </div>
+                )}
+
+                {/* Meta */}
+                <div className="flex-1 flex flex-col gap-4 min-w-0">
+                    {/* Genres */}
+                    <div className="flex flex-wrap gap-2">
+                        {genres.slice(0, 4).map((g) => (
+                            <span
+                                key={g}
+                                className="px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider rounded-full bg-white/8 text-neutral-300 border border-white/10"
+                            >
+                                {g}
+                            </span>
+                        ))}
                     </div>
 
-                    <div className="flex flex-1 flex-col gap-5 pb-4">
-                        <div className="flex flex-wrap items-center gap-3 text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-white/80">
-                            {year && <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">{year}</span>}
-                            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">{episodesCount} episodios</span>
-                            <span className="rounded-full border border-orange-500/40 bg-orange-500/15 px-3 py-1 text-orange-200">1080p</span>
-                        </div>
+                    {/* Title */}
+                    <h1 className="text-5xl sm:text-6xl xl:text-[7rem] font-bebas font-normal leading-[0.85] tracking-normal text-white drop-shadow-[0_10px_30px_rgba(0,0,0,0.8)] uppercase">
+                        {title}
+                    </h1>
 
-                        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight drop-shadow-[0_10px_40px_rgba(0,0,0,0.65)]" dangerouslySetInnerHTML={{ __html: sanitizeHtml(title) }}></h1>
+                    {/* Stats */}
+                    <div className="flex flex-wrap items-center gap-3 text-sm text-white/50 font-medium">
+                        {year && <span>{year}</span>}
+                        {year && episodesCount > 0 && <span className="w-1 h-1 rounded-full bg-white/20" />}
+                        {episodesCount > 0 && <span>{episodesCount} episodios</span>}
+                    </div>
 
-                        <div className="flex flex-wrap gap-2">
-                            {genres.map((genre) => (
-                                <span
-                                    key={genre}
-                                    className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold tracking-wide text-white/80 backdrop-blur-sm"
-                                >
-                                    {genre}
-                                </span>
-                            ))}
-                        </div>
-
-                        <p className="max-w-4xl text-base sm:text-lg text-zinc-400 leading-relaxed line-clamp-4" dangerouslySetInnerHTML={{ __html: sanitizeHtml(synopsis) }}></p>
-
-                        <MediaActionButtons 
-                            seriesId={seriesId} 
-                            directoryPath={directoryPath} 
+                    {/* Synopsis */}
+                    <div className="max-w-2xl">
+                        <p
+                            className={cn(
+                                "text-sm text-white/60 leading-relaxed transition-all",
+                                synopsisExpanded ? "" : "line-clamp-3",
+                            )}
+                            dangerouslySetInnerHTML={{ __html: cleanSynopsis }}
                         />
+                        {synopsis.length > 180 && (
+                            <button
+                                onClick={() => setSynopsisExpanded((v) => !v)}
+                                className="mt-1 text-xs font-bold text-orange-400 hover:text-orange-300 transition-colors"
+                            >
+                                {synopsisExpanded ? "Ver menos" : "Ver más"}
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="mt-2">
+                        <MediaActionButtons seriesId={seriesId} directoryPath={directoryPath} />
                     </div>
                 </div>
             </div>
         </section>
     )
 })
+HeroSection.displayName = "HeroSection"
 
 interface EpisodesSectionProps {
     seriesTitle: string
@@ -250,110 +253,83 @@ interface EpisodesSectionProps {
     episodes: Anime_Episode[]
 }
 
-const EpisodesSection = React.memo(({ seriesTitle, fallbackThumb, episodes }: EpisodesSectionProps) => {
-    // Grouping logic: Season 0 for null/undefined
-    const groupedEpisodes = useMemo(() => {
-        const groups = episodes.reduce((acc, ep) => {
-            const season = ep.seasonNumber ?? 0
-            if (!acc[season]) acc[season] = []
-            acc[season].push(ep)
-            return acc
-        }, {} as Record<number, Anime_Episode[]>)
+const EpisodesSection = React.memo(function EpisodesSection({
+    seriesTitle,
+    fallbackThumb,
+    episodes,
+}: EpisodesSectionProps) {
+    const [activeTab, setActiveTab] = useState("all")
+
+    const tabs = useMemo(() => {
+        if (episodes.length <= 24) return null
+        const groups: { label: string; range: [number, number] }[] = []
+        for (let i = 0; i < episodes.length; i += 24) {
+            const from = episodes[i].episodeNumber
+            const to = episodes[Math.min(i + 23, episodes.length - 1)].episodeNumber
+            groups.push({ label: `${from} - ${to}`, range: [i, i + 24] })
+        }
         return groups
     }, [episodes])
 
-    // Numerical sorting of season keys
-    const seasonKeys = useMemo(() => 
-        Object.keys(groupedEpisodes)
-            .map(Number)
-            .sort((a, b) => a - b), 
-        [groupedEpisodes]
-    )
+    const visibleEpisodes = useMemo(() => {
+        if (!tabs) return episodes
+        const idx = tabs.findIndex((t) => t.label === activeTab)
+        if (idx < 0) return episodes
+        const [start, end] = tabs[idx].range
+        return episodes.slice(start, end)
+    }, [episodes, tabs, activeTab])
 
-    const [activeSeason, setActiveSeason] = useState<number>(() => seasonKeys[0] ?? 1)
-    const sectionRef = useRef<HTMLElement>(null)
-    
-    // Smooth scroll to section top on season change with offset
-    useEffect(() => {
-        if (activeSeason !== undefined && sectionRef.current) {
-            const offset = 100 
-            const bodyRect = document.body.getBoundingClientRect().top
-            const elementRect = sectionRef.current.getBoundingClientRect().top
-            const elementPosition = elementRect - bodyRect
-            const offsetPosition = elementPosition - offset
-
-            window.scrollTo({
-                top: offsetPosition,
-                behavior: "smooth",
-            })
-        }
-    }, [activeSeason])
-
-    // State synchronization
-    useEffect(() => {
-        if (seasonKeys.length > 0 && !seasonKeys.includes(activeSeason)) {
-            setActiveSeason(seasonKeys[0])
-        }
-    }, [seasonKeys, activeSeason])
-
-    if (!episodes || episodes.length === 0) return null
+    const tabValue = tabs ? (activeTab === "all" ? tabs[0]?.label ?? "all" : activeTab) : "all"
 
     return (
-        <section ref={sectionRef} className="relative z-[1] -mt-10 space-y-8 px-6 sm:px-10 lg:px-16 pb-20">
-            <Tabs 
-                value={activeSeason.toString()} 
-                onValueChange={(val) => setActiveSeason(parseInt(val))}
-                className="w-full"
-            >
-                <div className="flex flex-col gap-8">
-                    {/* Season Navigation Bar */}
-                    <div className="flex flex-col gap-3">
-                        <p className="text-[0.65rem] font-bold uppercase tracking-[0.3em] text-white/40 ml-1">Seleccionar Temporada</p>
-                        <ScrollArea orientation="horizontal" className="w-full">
-                            <TabsList className="justify-start gap-3 bg-transparent h-auto p-0 pb-3">
-                                {seasonKeys.map((s) => (
+        <section className="relative z-[1] px-6 sm:px-10 pb-20">
+            <div className="flex flex-col gap-6">
+                {/* Header */}
+                <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                    <h2 className="text-3xl font-bebas tracking-widest text-white/90">EPISODIOS</h2>
+                    {episodes.length > 0 && (
+                        <span className="text-sm text-white/30 font-medium">{episodes.length} en total</span>
+                    )}
+                </div>
+
+                {/* Tab pagination for large series */}
+                {tabs && (
+                    <Tabs value={tabValue} onValueChange={setActiveTab}>
+                        <ScrollArea>
+                            <TabsList className="mb-4 bg-white/5 rounded-xl h-9 px-1 gap-1 inline-flex flex-nowrap">
+                                {tabs.map((t) => (
                                     <TabsTrigger
-                                        key={s}
-                                        value={s.toString()}
-                                        className={cn(
-                                            "h-11 whitespace-nowrap rounded-full border border-white/5 bg-white/[0.03] px-6 text-xs font-bold uppercase tracking-widest text-zinc-400 transition-all backdrop-blur-md",
-                                            "hover:bg-white/[0.05] hover:text-zinc-200",
-                                            "data-[state=active]:border-primary/50 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-[0_0_20px_rgba(249,115,22,0.3)]"
-                                        )}
+                                        key={t.label}
+                                        value={t.label}
+                                        className="text-xs font-bold tracking-wide data-[state=active]:bg-orange-500 data-[state=active]:text-white rounded-lg px-3"
                                     >
-                                        {s === 0 ? "Especiales" : `Temporada ${s}`}
+                                        {t.label}
                                     </TabsTrigger>
                                 ))}
                             </TabsList>
                         </ScrollArea>
-                    </div>
+                    </Tabs>
+                )}
 
-                    {/* Episodes Display Area */}
-                    <div className="space-y-6">
-                        <div className="flex items-end justify-between border-b border-white/5 pb-4">
-                            <div className="space-y-1">
-                                <h2 className="text-3xl font-black tracking-tight">
-                                    {activeSeason === 0 ? "Episodios Especiales" : `Temporada ${activeSeason}`}
-                                </h2>
-                                <p className="text-sm font-medium text-white/50 lowercase">
-                                    <span className="text-white font-bold">{groupedEpisodes[activeSeason]?.length || 0}</span> episodios disponibles
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                            {groupedEpisodes[activeSeason]?.map((episode) => (
-                                <EpisodeClientCard
-                                    key={episode.episodeNumber}
-                                    episode={episode}
-                                    seriesTitle={seriesTitle}
-                                    fallbackThumb={fallbackThumb}
-                                />
-                            ))}
-                        </div>
+                {/* Episode grid */}
+                {visibleEpisodes.length === 0 ? (
+                    <div className="py-16 text-center text-white/30 text-sm">
+                        No hay episodios disponibles en la biblioteca.
                     </div>
-                </div>
-            </Tabs>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {visibleEpisodes.map((ep) => (
+                            <EpisodeClientCard
+                                key={ep.episodeNumber}
+                                episode={ep}
+                                seriesTitle={seriesTitle}
+                                fallbackThumb={fallbackThumb}
+                            />
+                        ))}
+                    </div>
+                )}
+            </div>
         </section>
     )
 })
+EpisodesSection.displayName = "EpisodesSection"

@@ -1,5 +1,5 @@
 import * as React from "react"
-import { useIntelligenceStore } from "@/hooks/useHomeIntelligence"
+import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
 
 /**
  * DynamicBackdrop — global fixed layer behind the entire home page.

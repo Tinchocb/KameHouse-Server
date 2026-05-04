@@ -3,7 +3,6 @@ package dto
 import (
 	"context"
 	"kamehouse/internal/library/filesystem"
-	"kamehouse/internal/library/scanner/video_analyzer"
 	"strconv"
 	"time"
 
@@ -274,45 +273,3 @@ func getFirstOrEmpty(slice []string) string {
 	return ""
 }
 
-// GetVideoInfo returns technical information about a video file using ffprobe
-func GetVideoInfo(ctx context.Context, filepath string, logger *zerolog.Logger) (*VideoFileInfo, error) {
-	analyzer := video_analyzer.New(logger)
-	info, err := analyzer.AnalyzeFile(ctx, filepath)
-	if err != nil {
-		return nil, err
-	}
-
-	return &VideoFileInfo{
-		Duration:       info.Duration,
-		Format:         info.Format,
-		Bitrate:        info.Bitrate,
-		VideoCodec:     info.VideoStream.Codec,
-		VideoWidth:     info.VideoStream.Width,
-		VideoHeight:    info.VideoStream.Height,
-		AudioLanguages: getAudioLanguages(info.AudioStreams),
-		SubtitleCount:  len(info.SubtitleStreams),
-	}, nil
-}
-
-func getAudioLanguages(streams []*video_analyzer.StreamInfo) []string {
-	languages := make([]string, 0, len(streams))
-	seen := make(map[string]bool)
-	for _, s := range streams {
-		if s.Language != "" && !seen[s.Language] {
-			seen[s.Language] = true
-			languages = append(languages, s.Language)
-		}
-	}
-	return languages
-}
-
-type VideoFileInfo struct {
-	Duration       time.Duration
-	Format         string
-	Bitrate        int64
-	VideoCodec     string
-	VideoWidth     int
-	VideoHeight    int
-	AudioLanguages []string
-	SubtitleCount  int
-}

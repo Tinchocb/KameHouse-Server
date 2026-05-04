@@ -5,6 +5,7 @@ import (
 	"kamehouse/internal/api/mal"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/labstack/echo/v4"
 )
@@ -33,6 +34,10 @@ var (
 	scrobbledEpisodes sync.Map
 )
 
+type scrobbleEntry struct {
+	timestamp time.Time
+}
+
 func scrobbleKey(mediaId, episode int) string {
 	return fmt.Sprintf("%d:%d", mediaId, episode)
 }
@@ -60,7 +65,13 @@ func (h *Handler) HandlePlaybackSync(c echo.Context) error {
 
 	// ─── 1. Update Continuity (watch position) ─────────────────────────
 	if b.Duration > 0 {
-		key := fmt.Sprintf("%d:%d:%f", b.MediaId, b.EpisodeNumber, b.Duration)
+		userID := uint(1)
+		if val := c.Get("user_id"); val != nil {
+			if id, ok := val.(uint); ok {
+				userID = id
+			}
+		}
+		key := fmt.Sprintf("%d:%d:%d:%f", userID, b.MediaId, b.EpisodeNumber, b.Duration)
 		h.App.ContinuityManager.TelemetryManager.UpdateProgress(key, int(b.CurrentTime))
 	}
 
@@ -68,10 +79,20 @@ func (h *Handler) HandlePlaybackSync(c echo.Context) error {
 	go func(payload PlaybackSyncPayload) {
 		// ─── 2. Auto-scrobble at 85% ───────────────────────────────────────
 		if payload.Progress >= 0.85 {
+			now := time.Now()
+
+			// Prune entries older than 4 hours to prevent memory leak
+			scrobbledEpisodes.Range(func(key, value interface{}) bool {
+				if now.Sub(value.(scrobbleEntry).timestamp) > 4*time.Hour {
+					scrobbledEpisodes.Delete(key)
+				}
+				return true
+			})
+
 			key := scrobbleKey(payload.MediaId, payload.EpisodeNumber)
 
 			// Only scrobble once per episode per session
-			if _, alreadyScrobbled := scrobbledEpisodes.LoadOrStore(key, true); !alreadyScrobbled {
+			if _, alreadyScrobbled := scrobbledEpisodes.LoadOrStore(key, scrobbleEntry{timestamp: now}); !alreadyScrobbled {
 				h.App.Logger.Info().
 					Int("mediaId", payload.MediaId).
 					Int("episode", payload.EpisodeNumber).

@@ -1,52 +1,10 @@
-import js from "@eslint/js"
 import reactPlugin from "eslint-plugin-react"
 import reactHooksPlugin from "eslint-plugin-react-hooks"
 import jsxA11y from "eslint-plugin-jsx-a11y"
-import tsPlugin from "@typescript-eslint/eslint-plugin"
-import tsParser from "@typescript-eslint/parser"
+import tseslint from "typescript-eslint"
+import globals from "globals"
 
-export default [
-    js.configs.recommended,
-    {
-        files: ["src/**/*.{ts,tsx}"],
-        plugins: {
-            react: reactPlugin,
-            "react-hooks": reactHooksPlugin,
-            "jsx-a11y": jsxA11y,
-            "@typescript-eslint": tsPlugin,
-        },
-        languageOptions: {
-            parser: tsParser,
-            parserOptions: {
-                ecmaVersion: "latest",
-                sourceType: "module",
-                ecmaFeatures: { jsx: true },
-            },
-        },
-        rules: {
-            // React
-            ...reactPlugin.configs.recommended.rules,
-            "react/react-in-jsx-scope": "off", // Not needed with React 17+
-            "react/prop-types": "off",          // TypeScript handles this
-
-            // React Hooks
-            ...reactHooksPlugin.configs.recommended.rules,
-
-            // Accessibility — enforce ARIA on interactive UI elements
-            "jsx-a11y/alt-text": "warn",
-            "jsx-a11y/aria-label-has-associated-control": "warn",
-            "jsx-a11y/interactive-supports-focus": "warn",
-            "jsx-a11y/click-events-have-key-events": "warn",
-            "jsx-a11y/no-static-element-interactions": "warn",
-
-            // TypeScript
-            "@typescript-eslint/no-explicit-any": "warn",
-            "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
-        },
-        settings: {
-            react: { version: "detect" },
-        },
-    },
+export default tseslint.config(
     {
         ignores: [
             "out/**",
@@ -56,4 +14,60 @@ export default [
             ".storybook/**",
         ],
     },
-]
+    // Avoid js.configs.recommended because it contains a typo in v9.10.0 (no-unassigned-vars)
+    ...tseslint.configs.recommended,
+    {
+        files: ["src/**/*.{ts,tsx}"],
+        plugins: {
+            react: reactPlugin,
+            "react-hooks": reactHooksPlugin,
+            "jsx-a11y": jsxA11y,
+        },
+        languageOptions: {
+            globals: {
+                ...globals.browser,
+                ...globals.es2021,
+            },
+            parserOptions: {
+                ecmaVersion: "latest",
+                sourceType: "module",
+                ecmaFeatures: { jsx: true },
+            },
+        },
+        settings: {
+            react: { version: "18.3" },
+        },
+        rules: {
+            // Manually selected core rules (since we're skipping js.configs.recommended)
+            "constructor-super": "error",
+            "no-const-assign": "error",
+            "no-dupe-args": "error",
+            "no-dupe-class-members": "error",
+            "no-dupe-keys": "error",
+            "no-func-assign": "error",
+            "no-import-assign": "error",
+            "no-obj-calls": "error",
+            "no-setter-return": "error",
+            "no-this-before-super": "error",
+            "no-undef": "off", // Handled by TS
+            "no-unreachable": "warn",
+            "no-unused-vars": "off", // Handled by @typescript-eslint
+
+            // React
+            ...reactPlugin.configs.recommended.rules,
+            "react/react-in-jsx-scope": "off",
+            "react/prop-types": "off",
+
+            // React Hooks
+            ...reactHooksPlugin.configs.recommended.rules,
+
+            // Accessibility
+            "jsx-a11y/alt-text": "warn",
+            "jsx-a11y/label-has-associated-control": "warn",
+
+            // TypeScript
+            "@typescript-eslint/no-explicit-any": "warn",
+            "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+        },
+    },
+)

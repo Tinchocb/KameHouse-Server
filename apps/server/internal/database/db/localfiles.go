@@ -5,18 +5,31 @@ import (
 
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
+	"sync"
 
 	"github.com/goccy/go-json"
 	"github.com/samber/mo"
 	"gorm.io/gorm"
 )
 
+var localFilesMutex sync.RWMutex
 var CurrLocalFilesDbId uint
 var CurrLocalFiles mo.Option[[]*dto.LocalFile]
 
 // GetLocalFiles will return the latest local files and the id of the entry.
 func GetLocalFiles(db *Database) ([]*dto.LocalFile, uint, error) {
 
+	localFilesMutex.RLock()
+	if CurrLocalFiles.IsPresent() {
+		defer localFilesMutex.RUnlock()
+		return CurrLocalFiles.MustGet(), CurrLocalFilesDbId, nil
+	}
+	localFilesMutex.RUnlock()
+
+	localFilesMutex.Lock()
+	defer localFilesMutex.Unlock()
+
+	// Double check after acquiring lock
 	if CurrLocalFiles.IsPresent() {
 		return CurrLocalFiles.MustGet(), CurrLocalFilesDbId, nil
 	}
@@ -68,8 +81,10 @@ func SaveLocalFiles(db *Database, lfsId uint, lfs []*dto.LocalFile) ([]*dto.Loca
 		return lfs, nil
 	}
 
+	localFilesMutex.Lock()
 	CurrLocalFiles = mo.Some(retLfs)
 	CurrLocalFilesDbId = ret.ID
+	localFilesMutex.Unlock()
 
 	return retLfs, nil
 }
@@ -92,8 +107,10 @@ func InsertLocalFiles(db *Database, lfs []*dto.LocalFile) ([]*dto.LocalFile, err
 		return nil, err
 	}
 
+	localFilesMutex.Lock()
 	CurrLocalFiles = mo.Some(lfs)
 	CurrLocalFilesDbId = ret.ID
+	localFilesMutex.Unlock()
 
 	return lfs, nil
 

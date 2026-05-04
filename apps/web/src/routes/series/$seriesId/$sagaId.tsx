@@ -1,26 +1,17 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback } from "react"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { cn } from "@/components/ui/core/styling"
 import { useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
-import { HardDrive, Zap, Star, ArrowLeft, Calendar, Clock, CheckCircle2, Circle, ChevronRight, ChevronDown } from "lucide-react"
-// import { useProgressStore } from "@/lib/stores/progress.store" // Disabled as it might not exist
+import { HardDrive, Star, ArrowLeft, Calendar, Clock, CheckCircle2, Circle, ChevronRight, ChevronDown } from "lucide-react"
 import { VideoPlayer } from "@/components/video/player"
-import type { Mediastream_StreamType } from "@/api/generated/types"
+import type { Mediastream_StreamType, Anime_Episode } from "@/api/generated/types"
+import { toast } from "sonner"
 
 export const Route = createFileRoute("/series/$seriesId/$sagaId")({
     component: DetailPage,
 })
 
-interface StreamSource {
-    id: string
-    type: string
-    label: string
-    quality: string
-    info: string
-    codec: string
-}
-
-import { DRAGON_BALL_SAGAS } from "@/lib/config/dragonball.config"
+import { resolveSeriesSagas } from "@/lib/config/dragonball.config"
 
 interface Episode {
     id: string
@@ -28,21 +19,6 @@ interface Episode {
     title: string
     description: string
     duration: string
-}
-
-function StreamSourceCard({ source, onPlay }: { source: StreamSource, onPlay: (s: StreamSource) => void }) {
-    return (
-        <button 
-            onClick={() => onPlay(source)}
-            className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 hover:border-orange-500/30 transition-colors group"
-        >
-            <div className="flex flex-col text-left">
-                <span className="text-sm font-bold text-white">{source.label}</span>
-                <span className="text-[10px] text-neutral-500 font-mono uppercase tracking-wider">{source.quality} • {source.codec}</span>
-            </div>
-            <Zap className="w-4 h-4 text-neutral-600 group-hover:text-orange-500 transition-colors" />
-        </button>
-    )
 }
 
 // ─── Star Rating ──────────────────────────────────────────────────────────────
@@ -75,12 +51,14 @@ interface LeftPanelProps {
     year: string
     episodesCount: number
     sagaTitle: string
+    genres: string[]
+    rating: number
+    durationPerEp: string
+    studios: string[]
     onBack: () => void
 }
 
-function LeftPanel({ posterUrl, title, synopsis, year, episodesCount, sagaTitle, onBack }: LeftPanelProps) {
-    // Mock rating – in production would come from TMDB/Platform
-    const rating = 8.6
+function LeftPanel({ posterUrl, title, synopsis, year, episodesCount, sagaTitle, genres, rating, durationPerEp, studios, onBack }: LeftPanelProps) {
 
     return (
         <aside className="w-full lg:w-[30%] lg:min-h-screen lg:sticky lg:top-0 lg:self-start bg-neutral-950 border-r border-white/5 flex flex-col">
@@ -130,7 +108,7 @@ function LeftPanel({ posterUrl, title, synopsis, year, episodesCount, sagaTitle,
                     <span className="w-1 h-1 rounded-full bg-neutral-700" />
                     <span className="flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5 text-neutral-600" />
-                        24 min / ep
+                        {durationPerEp}
                     </span>
                     <span className="w-1 h-1 rounded-full bg-neutral-700" />
                     <span>{episodesCount} episodios</span>
@@ -138,7 +116,7 @@ function LeftPanel({ posterUrl, title, synopsis, year, episodesCount, sagaTitle,
 
                 {/* Genre tags */}
                 <div className="flex flex-wrap gap-2">
-                    {["Acción", "Aventura", "Anime"].map((g) => (
+                    {genres.slice(0, 4).map((g) => (
                         <span
                             key={g}
                             className="px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider rounded-full bg-white/5 text-neutral-400 border border-white/5"
@@ -158,9 +136,11 @@ function LeftPanel({ posterUrl, title, synopsis, year, episodesCount, sagaTitle,
 
                 {/* Studio info */}
                 <div className="text-[11px] text-neutral-600 font-medium">
-                    <span className="text-neutral-500">Estudio: </span>Toei Animation
-                    <span className="mx-2 text-neutral-700">•</span>
-                    <span className="text-neutral-500">Red: </span>Fuji TV
+                    {studios.length > 0 && (
+                        <>
+                            <span className="text-neutral-500">Estudio: </span>{studios.join(", ")}
+                        </>
+                    )}
                 </div>
             </div>
         </aside>
@@ -235,8 +215,7 @@ interface RightPanelProps {
     isWatched: (id: string) => boolean
     onMarkWatched: () => void
     currentWatched: boolean
-    sources: StreamSource[]
-    onPlaySource: (src: StreamSource) => void
+    onPlayEpisode: (ep: Episode) => void
     downloadedEpisodes: Set<number>
 }
 
@@ -247,12 +226,12 @@ function RightPanel({
     isWatched,
     onMarkWatched,
     currentWatched,
-    sources,
-    onPlaySource,
+    onPlayEpisode,
     downloadedEpisodes
 }: RightPanelProps) {
     const current = episodes[currentIndex]!
     const [episodesOpen, setEpisodesOpen] = useState(true)
+    const isCurrentDownloaded = downloadedEpisodes.has(current.number)
 
     return (
         <main className="flex-1 flex flex-col bg-neutral-950 overflow-y-auto">
@@ -290,27 +269,24 @@ function RightPanel({
                 </div>
             </div>
 
-            {/* ── Stream Sources ───────────────────────────────── */}
+            {/* ── Play Button ───────────────────────────────── */}
             <section className="px-6 md:px-10 pt-6 pb-4">
-                <div className="flex items-center gap-3 mb-4">
-                    <span className="w-1 h-4 rounded-full bg-orange-500" />
-                    <h3 className="text-xs font-black uppercase tracking-[0.18em] text-neutral-300">
-                        Fuentes Disponibles
-                    </h3>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400 font-black border border-orange-500/20">
-                        {sources.length}
-                    </span>
-                </div>
-
-                <div className="flex flex-col gap-2">
-                    {sources.map((src) => (
-                        <StreamSourceCard
-                            key={src.id}
-                            source={src}
-                            onPlay={onPlaySource}
-                        />
-                    ))}
-                </div>
+                <button
+                    Reproducir Episodio {current.number}
+                </button>
+                    onClick={() => onPlayEpisode(current)}
+                    className={cn(
+                        "w-full flex items-center justify-center gap-3 py-4 rounded-xl font-black text-sm uppercase tracking-widest transition-all duration-200",
+                        "bg-orange-500 hover:bg-orange-400 text-white",
+                        "shadow-[0_4px_20px_rgba(249,115,22,0.3)] hover:shadow-[0_6px_30px_rgba(249,115,22,0.5)]",
+                        "active:scale-[0.98]",
+                        !isCurrentDownloaded && "opacity-50 cursor-not-allowed grayscale"
+                    )}
+                    disabled={!isCurrentDownloaded}
+                >
+                    <HardDrive className="w-5 h-5" />
+                    Reproducir Episodio {current.number}
+                </button>
             </section>
 
             {/* ── Episode selector ─────────────────────────────── */}
@@ -355,70 +331,38 @@ function RightPanel({
     )
 }
 
-// ─── Detail Page ──────────────────────────────────────────────────────────────
 
-interface ProgressStoreState {
-    isWatched: (id: string) => boolean;
-    markWatched: (id: string) => void;
-    unmarkWatched: (id: string) => void;
-}
+// ─── Detail Page ──────────────────────────────────────────────────────────────
 
 function DetailPage() {
     const { seriesId, sagaId } = Route.useParams()
     const navigate = useNavigate()
-    // const { isWatched, markWatched, unmarkWatched } = useProgressStore((s: any) => s)
     const { isWatched, markWatched, unmarkWatched } = {
         isWatched: (_id: string) => false,
         markWatched: (_id: string) => {},
         unmarkWatched: (_id: string) => {},
     }
 
-    const { data: libraryEntry } = useGetAnimeEntry(Number(seriesId))
+    const { data: libraryEntry } = useGetAnimeEntry(seriesId)
 
-    // Match saga from our local mapping using TMDB ID or title fallback
-    let seriesSagas: any[] = []
-    const tmdbId = libraryEntry?.media?.tmdbId || 0
-    
-    if (tmdbId && DRAGON_BALL_SAGAS[tmdbId]) {
-        seriesSagas = DRAGON_BALL_SAGAS[tmdbId]
-    } else if (libraryEntry?.media) {
-        const title = libraryEntry.media.titleRomaji || libraryEntry.media.titleEnglish || libraryEntry.media.titleOriginal || ""
-        const searchTitle = title.toLowerCase().replace(/\s+/g, "")
-        
-        if (searchTitle.includes("dragonballz") || searchTitle === "dbz") {
-            seriesSagas = DRAGON_BALL_SAGAS[12971] // Z
-        } else if (searchTitle.includes("dragonballgt")) {
-            seriesSagas = DRAGON_BALL_SAGAS[888] // GT
-        } else if (searchTitle.includes("dragonballsuper")) {
-            seriesSagas = DRAGON_BALL_SAGAS[62715] // Super
-        } else if (searchTitle.includes("dragonballkai")) {
-            seriesSagas = DRAGON_BALL_SAGAS[61709] // Kai
-        } else if (searchTitle.includes("dragonballdaima")) {
-            seriesSagas = DRAGON_BALL_SAGAS[240411] // Daima
-        } else if (searchTitle === "dragonball") {
-            seriesSagas = DRAGON_BALL_SAGAS[862] // Original
-        }
-
-        // Always fallback to Original DB if we have a match for "dragon ball" but no specific suffix
-        if (!seriesSagas || seriesSagas.length === 0) {
-            const pureTitle = title.toLowerCase().replace(/\s+/g, "")
-            const isMovie = libraryEntry.media?.format === "MOVIE" || pureTitle.includes("movie") || pureTitle.includes("pelicula") || pureTitle.includes("aventura")
-            if (!isMovie && pureTitle.includes("dragonball")) {
-                seriesSagas = DRAGON_BALL_SAGAS[862]
-            }
-        }
-    }
+    // Match saga from our local mapping using the shared resolver
+    const seriesSagas = resolveSeriesSagas(libraryEntry?.media)
     
     const rawSaga = seriesSagas.find((s) => s.id === sagaId)
 
     // Build the frontend standard format 
     const series = useMemo(() => {
         if (!libraryEntry?.media) return null
+        const media = libraryEntry.media
         return {
             id: seriesId,
-            title: libraryEntry.media.titleRomaji || libraryEntry.media.titleEnglish || "Serie",
-            year: libraryEntry.media.year?.toString() || "",
-            episodesCount: libraryEntry.media.totalEpisodes || 0,
+            title: media.titleRomaji || media.titleEnglish || "Serie",
+            year: media.year?.toString() || "",
+            episodesCount: media.totalEpisodes || 0,
+            genres: (media.genres as unknown as string[]) || ["Anime"],
+            rating: media.score || media.rating || 0,
+            durationPerEp: "24 min / ep",
+            studios: [] as string[],
         }
     }, [libraryEntry, seriesId])
 
@@ -442,7 +386,6 @@ function DetailPage() {
             duration: ep.episodeMetadata?.length ? `${ep.episodeMetadata.length} min` : "24 min"
         }))
 
-        // Fake fallback episodes (for visuals if library isn't fully downloaded)
         // If the library returns fewer episodes than the saga needs, we generate mock ones so the user 
         // can still see Torrentio streams for them!
         const guaranteedLength = rawSaga.endEp - rawSaga.startEp + 1
@@ -473,16 +416,15 @@ function DetailPage() {
     const [isPlayerOpen, setIsPlayerOpen] = useState(false)
     const [playTarget, setPlayTarget] = useState<{
         path: string
-        streamType: Mediastream_StreamType | "online"
+        streamType: Mediastream_StreamType
         episodeLabel: string
         episodeNumber: number
         seriesId: number
     } | null>(null)
 
-
     const downloadedEpisodes = useMemo(() => {
         const set = new Set<number>()
-        libraryEntry?.episodes?.forEach((ep: any) => {
+        libraryEntry?.episodes?.forEach(ep => {
             if (ep.isDownloaded) set.add(ep.episodeNumber)
         })
         return set
@@ -490,26 +432,26 @@ function DetailPage() {
 
     const currentEpisode = saga?.episodes[currentIdx]
 
-    const sources = useMemo(
-        () => {
-            const srcs: StreamSource[] = []
-            // If we have it in library, add local source
-            const libEp = libraryEntry?.episodes?.find((e: any) => e.episodeNumber === currentEpisode?.number)
-            if (libEp?.isDownloaded && libEp.localFile) {
-                srcs.push({
-                    id: "local-direct",
-                    type: "local",
-                    label: "Archivo Local",
-                    quality: "1080p",
-                    info: "Reproducción directa desde disco",
-                    codec: "Nativo",
-                    urlPath: `/api/v1/directstream/file?path=${encodeURIComponent(libEp.localFile.path)}`
-                } as any)
-            }
-            return srcs
-        },
-        [currentEpisode?.id, libraryEntry],
-    )
+    // When user clicks an episode → play if local
+    const handleEpisodePlay = useCallback((ep: Episode) => {
+        const fullEp = libraryEntry?.episodes?.find(e => e.episodeNumber === ep.number)
+        if (!fullEp?.localFile?.path) {
+            toast.error("Archivo local no disponible.")
+            return
+        }
+
+        const isMp4 = fullEp.localFile.path.toLowerCase().endsWith(".mp4")
+        const targetType = isMp4 ? "direct" : "transcode"
+
+        setPlayTarget({
+            path: fullEp.localFile.path,
+            streamType: targetType as Mediastream_StreamType,
+            episodeLabel: ep.title,
+            episodeNumber: ep.number,
+            seriesId: Number(seriesId)
+        })
+        setIsPlayerOpen(true)
+    }, [libraryEntry, seriesId])
 
     if (!series || !saga || saga.episodes.length === 0) {
         return (
@@ -517,25 +459,6 @@ function DetailPage() {
                 Contenido no encontrado
             </div>
         )
-    }
-
-    const handlePlaySource = (src: any) => {
-        if (!currentEpisode) return
-        
-        let targetType: "direct" | "transcode" | "online" = "online"
-        if (src.type === "local") {
-            const isMp4 = src.urlPath?.toLowerCase().includes(".mp4")
-            targetType = isMp4 ? "direct" : "transcode"
-        }
-        
-        setPlayTarget({
-            path: src.urlPath || "",
-            streamType: targetType as Mediastream_StreamType | "online",
-            episodeLabel: currentEpisode.title,
-            episodeNumber: currentEpisode.number,
-            seriesId: Number(seriesId)
-        })
-        setIsPlayerOpen(true)
     }
 
     const handleMarkWatched = () => {
@@ -554,10 +477,14 @@ function DetailPage() {
                 year={series.year}
                 episodesCount={series.episodesCount}
                 sagaTitle={saga.title}
+                genres={series.genres}
+                rating={series.rating}
+                durationPerEp={series.durationPerEp}
+                studios={series.studios}
                 onBack={() => navigate({ to: "/series/$seriesId", params: { seriesId: series.id } })}
             />
 
-            {/* ── Right: Episodes + Streams (70%) ── */}
+            {/* ── Right: Episodes (70%) ── */}
             <RightPanel
                 episodes={saga.episodes}
                 currentIndex={currentIdx}
@@ -565,21 +492,21 @@ function DetailPage() {
                 isWatched={isWatched}
                 onMarkWatched={handleMarkWatched}
                 currentWatched={currentEpisode ? isWatched(currentEpisode.id) : false}
-                sources={sources}
-                onPlaySource={handlePlaySource}
+                onPlayEpisode={handleEpisodePlay}
                 downloadedEpisodes={downloadedEpisodes}
             />
+
 
             {/* ── Video Player Modal ── */}
             {isPlayerOpen && playTarget && (
                 <VideoPlayer
                     streamUrl={playTarget.path}
-                    streamType={playTarget.streamType as Mediastream_StreamType}
+                    streamType={playTarget.streamType === "online" ? "direct" : playTarget.streamType as Mediastream_StreamType}
                     title={series.title}
                     episodeLabel={playTarget.episodeLabel}
                     mediaId={playTarget.seriesId}
                     episodeNumber={playTarget.episodeNumber}
-                    isExternalStream={playTarget.streamType === "online"}
+                    isExternalStream={false}
                     marathonMode={false}
                     onClose={() => setIsPlayerOpen(false)}
                 />
@@ -587,3 +514,4 @@ function DetailPage() {
         </div>
     )
 }
+

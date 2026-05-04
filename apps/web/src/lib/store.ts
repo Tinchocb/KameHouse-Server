@@ -70,8 +70,9 @@ export const useAppStore = create<UIState & PlayerState & ScannerState>()((...a)
 }))
 
 // --- Progress Store (Persisted) ---
+// Uses Record<string, true> instead of string[] for O(1) isWatched() lookups.
 interface ProgressState {
-    watchedEpisodes: string[] // Array of episode IDs
+    watchedEpisodes: Record<string, true>
     markWatched: (episodeId: string) => void
     unmarkWatched: (episodeId: string) => void
     isWatched: (episodeId: string) => boolean
@@ -80,21 +81,31 @@ interface ProgressState {
 export const useProgressStore = create<ProgressState>()(
     persist(
         (set, get) => ({
-            watchedEpisodes: [],
+            watchedEpisodes: {},
             markWatched: (episodeId) =>
                 set((state) => ({
-                    watchedEpisodes: state.watchedEpisodes.includes(episodeId)
-                        ? state.watchedEpisodes
-                        : [...state.watchedEpisodes, episodeId],
+                    watchedEpisodes: { ...state.watchedEpisodes, [episodeId]: true },
                 })),
             unmarkWatched: (episodeId) =>
-                set((state) => ({
-                    watchedEpisodes: state.watchedEpisodes.filter((id) => id !== episodeId),
-                })),
-            isWatched: (episodeId) => get().watchedEpisodes.includes(episodeId),
+                set((state) => {
+                    const next = { ...state.watchedEpisodes }
+                    delete next[episodeId]
+                    return { watchedEpisodes: next }
+                }),
+            isWatched: (episodeId) => episodeId in get().watchedEpisodes,
         }),
         {
-            name: "kamehouse-minimal-progress", // Key in localStorage
+            name: "kamehouse-minimal-progress",
+            // Migrate old string[] format from localStorage to Record<string, true>
+            merge: (persisted, current) => {
+                const p = persisted as Partial<ProgressState> & { watchedEpisodes?: unknown }
+                if (Array.isArray(p.watchedEpisodes)) {
+                    const migrated: Record<string, true> = {}
+                    for (const id of p.watchedEpisodes as string[]) migrated[id] = true
+                    return { ...current, watchedEpisodes: migrated }
+                }
+                return { ...current, ...p }
+            },
         }
     )
 )

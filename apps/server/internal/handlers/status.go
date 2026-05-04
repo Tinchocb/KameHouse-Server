@@ -38,7 +38,6 @@ type Status struct {
 	ThemeSettings         *models.Theme                 `json:"themeSettings"`
 	IsOffline             bool                          `json:"isOffline"`
 	MediastreamSettings   *models.MediastreamSettings   `json:"mediastreamSettings"`
-	TorrentstreamSettings *models.TorrentstreamSettings `json:"torrentstreamSettings"`
 	// PlatformClientID       string                        `json:"PlatformClientId"`
 	Updating              bool                          `json:"updating"`         // If true, a new screen will be displayed
 	IsDesktopSidecar      bool                          `json:"isDesktopSidecar"` // The server is running as a desktop sidecar
@@ -82,7 +81,11 @@ func (h *Handler) NewStatus(c echo.Context) *Status {
 	}
 
 	theme, _ = h.App.Database.GetThemeCopy()
-	theme.HomeItems = nil
+	if theme == nil {
+		theme = &models.Theme{}
+	} else {
+		theme.HomeItems = nil
+	}
 
 	status := &Status{
 		OS:                    runtime.GOOS,
@@ -95,9 +98,8 @@ func (h *Handler) NewStatus(c echo.Context) *Status {
 		Version:               h.App.Version,
 		VersionName:           constants.VersionName,
 		ThemeSettings:         theme,
-		IsOffline:             h.App.Config.Server.Offline,
+		IsOffline:             h.App.IsOffline(),
 		MediastreamSettings:   h.App.SecondarySettings.Mediastream,
-		TorrentstreamSettings: h.App.SecondarySettings.Torrentstream,
 		// PlatformClientID:       h.App.Config.Platform.ClientID,
 		Updating:              false,
 		IsDesktopSidecar:      h.App.IsDesktopSidecar,
@@ -115,7 +117,6 @@ func (h *Handler) NewStatus(c echo.Context) *Status {
 		status.User = user.NewSimulatedUser()
 		status.ThemeSettings = nil
 		status.MediastreamSettings = nil
-		status.TorrentstreamSettings = nil
 		status.Settings = &models.Settings{}
 		status.FeatureFlags = core.FeatureFlags{}
 	}
@@ -146,13 +147,12 @@ func (h *Handler) HandleGetLogContent(c echo.Context) error {
 	}
 
 	filename := c.Param("*")
-	if filepath.Base(filename) != filename {
-		h.App.Logger.Error().Msg("handlers: Invalid filename")
+
+	fp, err := util.SafeJoinPath(h.App.Config.Logs.Dir, filename)
+	if err != nil {
+		h.App.Logger.Error().Err(err).Msg("handlers: Invalid log filename")
 		return h.RespondWithError(c, fmt.Errorf("invalid filename"))
 	}
-
-	fp := filepath.Join(h.App.Config.Logs.Dir, filename)
-
 	if filepath.Ext(fp) != ".log" {
 		h.App.Logger.Error().Msg("handlers: Unsupported file extension")
 		return h.RespondWithError(c, fmt.Errorf("unsupported file extension"))
@@ -170,8 +170,8 @@ func (h *Handler) HandleGetLogContent(c echo.Context) error {
 	}
 
 	content := h.App.ReportRepository.Anonymize(report.AnonymizeOptions{
-		Content:        contentB,
-		Settings:       h.App.Settings,
+		Content:  contentB,
+		Settings: h.App.Settings,
 	})
 
 	return h.RespondWithData(c, content)
@@ -179,12 +179,6 @@ func (h *Handler) HandleGetLogContent(c echo.Context) error {
 
 var newestLogFilename = ""
 
-// HandleGetLogFilenames
-//
-//	@summary returns the log filenames.
-//	@desc This returns the filenames of all log files in the logs directory.
-//	@route /api/v1/logs/filenames [GET]
-//	@returns []string
 func (h *Handler) HandleGetLogFilenames(c echo.Context) error {
 	if h.App.Config == nil || h.App.Config.Logs.Dir == "" {
 		return h.RespondWithData(c, []string{})
@@ -192,26 +186,18 @@ func (h *Handler) HandleGetLogFilenames(c echo.Context) error {
 
 	var filenames []string
 	filepath.WalkDir(h.App.Config.Logs.Dir, func(path string, d fs.DirEntry, err error) error {
-		if d.IsDir() {
+		if d.IsDir() || filepath.Ext(path) != ".log" {
 			return nil
 		}
-
-		if filepath.Ext(path) != ".log" {
-			return nil
-		}
-
 		filenames = append(filenames, filepath.Base(path))
 		return nil
 	})
 
-	// Sort from newest to oldest & store the newest log filename
 	if len(filenames) > 0 {
-		slices.SortStableFunc(filenames, func(i, j string) int {
-			return strings.Compare(j, i)
-		})
-		for _, filename := range filenames {
-			if strings.HasPrefix(strings.ToLower(filename), "KameHouse-") {
-				newestLogFilename = filename
+		slices.SortStableFunc(filenames, func(i, j string) int { return strings.Compare(j, i) })
+		for _, f := range filenames {
+			if strings.HasPrefix(strings.ToLower(f), "kamehouse-") {
+				newestLogFilename = f
 				break
 			}
 		}
@@ -220,12 +206,6 @@ func (h *Handler) HandleGetLogFilenames(c echo.Context) error {
 	return h.RespondWithData(c, filenames)
 }
 
-// HandleDeleteLogs
-//
-//	@summary deletes certain log files.
-//	@desc This deletes the log files with the given filenames.
-//	@route /api/v1/logs [DELETE]
-//	@returns bool
 func (h *Handler) HandleDeleteLogs(c echo.Context) error {
 	type body struct {
 		Filenames []string `json:"filenames"`
@@ -240,18 +220,29 @@ func (h *Handler) HandleDeleteLogs(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
+	actualNewest := ""
+	var allLogs []string
+	filepath.WalkDir(h.App.Config.Logs.Dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || filepath.Ext(path) != ".log" {
+			return nil
+		}
+		if strings.HasPrefix(strings.ToLower(d.Name()), "kamehouse-") {
+			allLogs = append(allLogs, d.Name())
+		}
+		return nil
+	})
+	if len(allLogs) > 0 {
+		slices.SortStableFunc(allLogs, func(i, j string) int { return strings.Compare(j, i) })
+		actualNewest = allLogs[0]
+	}
+
 	err := filepath.WalkDir(h.App.Config.Logs.Dir, func(path string, d fs.DirEntry, err error) error {
-		if d.IsDir() {
+		if d.IsDir() || filepath.Ext(path) != ".log" {
 			return nil
 		}
-
-		if filepath.Ext(path) != ".log" {
-			return nil
-		}
-
 		for _, filename := range b.Filenames {
 			if util.NormalizePath(filepath.Base(path)) == util.NormalizePath(filename) {
-				if util.NormalizePath(newestLogFilename) == util.NormalizePath(filename) {
+				if actualNewest != "" && util.NormalizePath(actualNewest) == util.NormalizePath(filename) {
 					return fmt.Errorf("cannot delete the newest log file")
 				}
 				if err := os.Remove(path); err != nil {
@@ -265,115 +256,81 @@ func (h *Handler) HandleDeleteLogs(c echo.Context) error {
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
-
 	return h.RespondWithData(c, true)
 }
 
-// HandleGetLatestLogContent
-//
-//	@summary returns the content of the latest server log file.
-//	@desc This returns the content of the most recent KameHouse- log file after flushing logs.
-//	@route /api/v1/logs/latest [GET]
-//	@returns string
 func (h *Handler) HandleGetLatestLogContent(c echo.Context) error {
 	if h.App.Config == nil || h.App.Config.Logs.Dir == "" {
 		return h.RespondWithData(c, "")
 	}
-
-	// Flush logs first
 	if h.App.OnFlushLogs != nil {
 		h.App.OnFlushLogs()
-		// Small delay to ensure logs are written
 		time.Sleep(100 * time.Millisecond)
 	}
-
 	dirEntries, err := os.ReadDir(h.App.Config.Logs.Dir)
 	if err != nil {
-		h.App.Logger.Error().Err(err).Msg("handlers: Failed to read log directory")
 		return h.RespondWithError(c, err)
 	}
-
 	var logFiles []string
 	for _, entry := range dirEntries {
 		if entry.IsDir() {
 			continue
 		}
 		name := entry.Name()
-		if filepath.Ext(name) != ".log" || !strings.HasPrefix(strings.ToLower(name), "KameHouse-") {
+		if filepath.Ext(name) != ".log" || !strings.HasPrefix(strings.ToLower(name), "kamehouse-") {
 			continue
 		}
 		logFiles = append(logFiles, filepath.Join(h.App.Config.Logs.Dir, name))
 	}
-
 	if len(logFiles) == 0 {
-		h.App.Logger.Warn().Msg("handlers: No log files found")
 		return h.RespondWithData(c, "")
 	}
-
-	// Sort files in descending order based on filename
-	slices.SortFunc(logFiles, func(a, b string) int {
-		return strings.Compare(filepath.Base(b), filepath.Base(a))
-	})
-
-	latestLogFile := logFiles[0]
-
-	contentB, err := os.ReadFile(latestLogFile)
+	slices.SortFunc(logFiles, func(a, b string) int { return strings.Compare(filepath.Base(b), filepath.Base(a)) })
+	contentB, err := os.ReadFile(logFiles[0])
 	if err != nil {
-		h.App.Logger.Error().Err(err).Msg("handlers: Failed to read latest log file")
 		return h.RespondWithError(c, err)
 	}
-
 	content := h.App.ReportRepository.Anonymize(report.AnonymizeOptions{
-		Content:        contentB,
-		Settings:       h.App.Settings,
+		Content:  contentB,
+		Settings: h.App.Settings,
 	})
-
 	return h.RespondWithData(c, content)
 }
 
-// HandleGetAnnouncements
-//
-//	@summary returns the server announcements.
-//	@desc This returns the announcements for the server.
-//	@route /api/v1/announcements [POST]
-//	@returns []updater.Announcement
 func (h *Handler) HandleGetAnnouncements(c echo.Context) error {
 	return h.RespondWithData(c, nil)
 }
 
 type MemoryStatsResponse struct {
-	Alloc         uint64  `json:"alloc"`         // bytes allocated and not yet freed
-	TotalAlloc    uint64  `json:"totalAlloc"`    // bytes allocated (even if freed)
-	Sys           uint64  `json:"sys"`           // bytes obtained from system
-	Lookups       uint64  `json:"lookups"`       // number of pointer lookups
-	Mallocs       uint64  `json:"mallocs"`       // number of mallocs
-	Frees         uint64  `json:"frees"`         // number of frees
-	HeapAlloc     uint64  `json:"heapAlloc"`     // bytes allocated and not yet freed
-	HeapSys       uint64  `json:"heapSys"`       // bytes obtained from system
-	HeapIdle      uint64  `json:"heapIdle"`      // bytes in idle spans
-	HeapInuse     uint64  `json:"heapInuse"`     // bytes in non-idle span
-	HeapReleased  uint64  `json:"heapReleased"`  // bytes released to OS
-	HeapObjects   uint64  `json:"heapObjects"`   // total number of allocated objects
-	StackInuse    uint64  `json:"stackInuse"`    // bytes used by stack allocator
-	StackSys      uint64  `json:"stackSys"`      // bytes obtained from system for stack allocator
-	MSpanInuse    uint64  `json:"mSpanInuse"`    // bytes used by mspan structures
-	MSpanSys      uint64  `json:"mSpanSys"`      // bytes obtained from system for mspan structures
-	MCacheInuse   uint64  `json:"mCacheInuse"`   // bytes used by mcache structures
-	MCacheSys     uint64  `json:"mCacheSys"`     // bytes obtained from system for mcache structures
-	BuckHashSys   uint64  `json:"buckHashSys"`   // bytes used by the profiling bucket hash table
-	GCSys         uint64  `json:"gcSys"`         // bytes used for garbage collection system metadata
-	OtherSys      uint64  `json:"otherSys"`      // bytes used for other system allocations
-	NextGC        uint64  `json:"nextGC"`        // next collection will happen when HeapAlloc ≥ this amount
-	LastGC        uint64  `json:"lastGC"`        // time the last garbage collection finished
-	PauseTotalNs  uint64  `json:"pauseTotalNs"`  // cumulative nanoseconds in GC stop-the-world pauses
-	PauseNs       uint64  `json:"pauseNs"`       // nanoseconds in recent GC stop-the-world pause
-	NumGC         uint32  `json:"numGC"`         // number of completed GC cycles
-	NumForcedGC   uint32  `json:"numForcedGC"`   // number of GC cycles that were forced by the application calling the GC function
-	GCCPUFraction float64 `json:"gcCPUFraction"` // fraction of this program's available CPU time used by the GC since the program started
-	EnableGC      bool    `json:"enableGC"`      // boolean that indicates GC is enabled
-	DebugGC       bool    `json:"debugGC"`       // boolean that indicates GC debug mode is enabled
-	NumGoroutine  int     `json:"numGoroutine"`  // number of goroutines
+	Alloc         uint64  `json:"alloc"`
+	TotalAlloc    uint64  `json:"totalAlloc"`
+	Sys           uint64  `json:"sys"`
+	HeapAlloc     uint64  `json:"heapAlloc"`
+	HeapSys       uint64  `json:"heapSys"`
+	HeapIdle      uint64  `json:"heapIdle"`
+	HeapInuse     uint64  `json:"heapInuse"`
+	HeapObjects   uint64  `json:"heapObjects"`
+	NumGC         uint32  `json:"numGC"`
+	GCCPUFraction float64 `json:"gcCPUFraction"`
+	NumGoroutine  int     `json:"numGoroutine"`
 }
+
+func mapMemStats(m runtime.MemStats) MemoryStatsResponse {
+	return MemoryStatsResponse{
+		Alloc:         m.Alloc,
+		TotalAlloc:    m.TotalAlloc,
+		Sys:           m.Sys,
+		HeapAlloc:     m.HeapAlloc,
+		HeapSys:       m.HeapSys,
+		HeapIdle:      m.HeapIdle,
+		HeapInuse:     m.HeapInuse,
+		HeapObjects:   m.HeapObjects,
+		NumGC:         m.NumGC,
+		GCCPUFraction: m.GCCPUFraction,
+		NumGoroutine:  runtime.NumGoroutine(),
+	}
+}
+
 
 // HandleGetMemoryStats
 //
@@ -385,43 +342,7 @@ func (h *Handler) HandleGetMemoryStats(c echo.Context) error {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 
-	// Force garbage collection to get accurate memory stats
-	// runtime.GC()
-	runtime.ReadMemStats(&m)
-
-	response := MemoryStatsResponse{
-		Alloc:         m.Alloc,
-		TotalAlloc:    m.TotalAlloc,
-		Sys:           m.Sys,
-		Lookups:       m.Lookups,
-		Mallocs:       m.Mallocs,
-		Frees:         m.Frees,
-		HeapAlloc:     m.HeapAlloc,
-		HeapSys:       m.HeapSys,
-		HeapIdle:      m.HeapIdle,
-		HeapInuse:     m.HeapInuse,
-		HeapReleased:  m.HeapReleased,
-		HeapObjects:   m.HeapObjects,
-		StackInuse:    m.StackInuse,
-		StackSys:      m.StackSys,
-		MSpanInuse:    m.MSpanInuse,
-		MSpanSys:      m.MSpanSys,
-		MCacheInuse:   m.MCacheInuse,
-		MCacheSys:     m.MCacheSys,
-		BuckHashSys:   m.BuckHashSys,
-		GCSys:         m.GCSys,
-		OtherSys:      m.OtherSys,
-		NextGC:        m.NextGC,
-		LastGC:        m.LastGC,
-		PauseTotalNs:  m.PauseTotalNs,
-		PauseNs:       m.PauseNs[0], // Most recent pause
-		NumGC:         m.NumGC,
-		NumForcedGC:   m.NumForcedGC,
-		GCCPUFraction: m.GCCPUFraction,
-		EnableGC:      m.EnableGC,
-		DebugGC:       m.DebugGC,
-		NumGoroutine:  runtime.NumGoroutine(),
-	}
+	response := mapMemStats(m)
 
 	return h.RespondWithData(c, response)
 }
@@ -561,39 +482,7 @@ func (h *Handler) HandleForceGC(c echo.Context) error {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 
-	response := MemoryStatsResponse{
-		Alloc:         m.Alloc,
-		TotalAlloc:    m.TotalAlloc,
-		Sys:           m.Sys,
-		Lookups:       m.Lookups,
-		Mallocs:       m.Mallocs,
-		Frees:         m.Frees,
-		HeapAlloc:     m.HeapAlloc,
-		HeapSys:       m.HeapSys,
-		HeapIdle:      m.HeapIdle,
-		HeapInuse:     m.HeapInuse,
-		HeapReleased:  m.HeapReleased,
-		HeapObjects:   m.HeapObjects,
-		StackInuse:    m.StackInuse,
-		StackSys:      m.StackSys,
-		MSpanInuse:    m.MSpanInuse,
-		MSpanSys:      m.MSpanSys,
-		MCacheInuse:   m.MCacheInuse,
-		MCacheSys:     m.MCacheSys,
-		BuckHashSys:   m.BuckHashSys,
-		GCSys:         m.GCSys,
-		OtherSys:      m.OtherSys,
-		NextGC:        m.NextGC,
-		LastGC:        m.LastGC,
-		PauseTotalNs:  m.PauseTotalNs,
-		PauseNs:       m.PauseNs[0],
-		NumGC:         m.NumGC,
-		NumForcedGC:   m.NumForcedGC,
-		GCCPUFraction: m.GCCPUFraction,
-		EnableGC:      m.EnableGC,
-		DebugGC:       m.DebugGC,
-		NumGoroutine:  runtime.NumGoroutine(),
-	}
+	response := mapMemStats(m)
 
 	h.App.Logger.Info().Msgf("handlers: GC completed, heap size: %d bytes", response.HeapAlloc)
 

@@ -18,7 +18,7 @@ export function useTMDBSearch() {
  * Hook to get TMDB TV show details and alternative titles.
  */
 export function useTMDBGetDetails() {
-    return useServerMutation<{ tvId: number, alternativeTitles: any[] }, TMDBGetDetails_Variables>({
+    return useServerMutation<{ tvId: number; alternativeTitles: { iso_3166_1: string; title: string }[] }, TMDBGetDetails_Variables>({
         endpoint: API_ENDPOINTS.TMDB.TMDBGetDetails.endpoint,
         method: API_ENDPOINTS.TMDB.TMDBGetDetails.methods[0],
         mutationKey: [API_ENDPOINTS.TMDB.TMDBGetDetails.key],

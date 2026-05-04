@@ -1,6 +1,6 @@
 "use client"
 
-import { getServerBaseUrl } from "@/api/client/server-url"
+import { getApiWebSocketUrl } from "@/api/client/server-url"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { WebSocketMessage, WSEvents } from "@/lib/server/ws-events"
 import { useQueryClient } from "@tanstack/react-query"
@@ -11,16 +11,7 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
     const queryClient = useQueryClient()
 
     // Dynamically resolve WebSocket URL from the base URL
-    const wsUrl = useMemo(() => {
-        const base = getServerBaseUrl()
-        if (base.startsWith("http://")) return base.replace("http://", "ws://") + "/api/v1/ws"
-        if (base.startsWith("https://")) return base.replace("https://", "wss://") + "/api/v1/ws"
-        if (base === "" && typeof window !== "undefined") {
-            const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
-            return `${protocol}//${window.location.host}/api/v1/ws`
-        }
-        return "ws://127.0.0.1:43211/api/v1/ws"
-    }, [])
+    const wsUrl = useMemo(() => getApiWebSocketUrl(), [])
 
     const { lastJsonMessage, sendJsonMessage } = useWebSocket(wsUrl, {
         shouldReconnect: () => true,

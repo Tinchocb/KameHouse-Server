@@ -115,3 +115,17 @@ func (lp *OfflinePlatform) ListAnime(ctx context.Context, page *int, search *str
 func (lp *OfflinePlatform) ListRecentAnime(ctx context.Context, page *int, perPage *int, airingAtGreater *int, airingAtLesser *int, notYetAired *bool) (interface{}, error) {
 	return nil, ErrActionNotSupported
 }
+
+func (lp *OfflinePlatform) GetMovie(ctx context.Context, mediaID int) (interface{}, error) {
+	return nil, ErrActionNotSupported
+}
+
+func (lp *OfflinePlatform) SearchMedia(ctx context.Context, query string, page *int) (*platform.UnifiedMediaList, error) {
+	return nil, ErrActionNotSupported
+}
+
+func (lp *OfflinePlatform) GetMediaCollection(ctx context.Context, collectionID int) (*platform.UnifiedCollection, error) {
+	return nil, ErrActionNotSupported
+}
+
+var _ platform.Platform = (*OfflinePlatform)(nil)

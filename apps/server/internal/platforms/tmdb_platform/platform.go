@@ -42,7 +42,16 @@ func (p *Platform) GetAnime(ctx context.Context, mediaID int) (interface{}, erro
 	if err != nil {
 		return nil, err
 	}
-	return p.toUnifiedMedia(&res, platform.MediaFormatTv), nil
+	return p.toUnifiedMedia(&res, platform.MediaFormatTv, platform.MediaKindAnime), nil
+}
+
+// GetMovie fetches a single movie by TMDB ID. Detects saga membership via BelongsToCollection.
+func (p *Platform) GetMovie(ctx context.Context, mediaID int) (interface{}, error) {
+	res, err := p.tmdbClient.GetMovieDetailsV2(ctx, mediaID)
+	if err != nil {
+		return nil, err
+	}
+	return p.movieDetailsToUnifiedMedia(&res), nil
 }
 
 func (p *Platform) GetAnimeByMalID(ctx context.Context, malID int) (interface{}, error) {
@@ -59,6 +68,102 @@ func (p *Platform) GetAnimeDetails(ctx context.Context, mediaID int) (interface{
 
 func (p *Platform) GetCompleteAnime(ctx context.Context, mediaID int) (interface{}, error) {
 	return p.GetAnime(ctx, mediaID)
+}
+
+// SearchMedia performs a unified search across TV shows and movies, returning kind-tagged results.
+func (p *Platform) SearchMedia(ctx context.Context, query string, page *int) (*platform.UnifiedMediaList, error) {
+	out := &platform.UnifiedMediaList{}
+
+	// Search TV shows
+	tvResults, err := p.tmdbClient.SearchTV(ctx, query)
+	if err == nil {
+		for _, r := range tvResults {
+			out.Media = append(out.Media, p.toUnifiedMedia(&r, platform.MediaFormatTv, platform.MediaKindGeneral))
+		}
+	}
+
+	// Search movies
+	movieResults, err := p.tmdbClient.SearchMovie(ctx, query)
+	if err == nil {
+		for _, r := range movieResults {
+			out.Media = append(out.Media, p.toUnifiedMedia(&r, platform.MediaFormatMovie, platform.MediaKindGeneral))
+		}
+	}
+
+	return out, nil
+}
+
+// GetMediaCollection fetches all movies in a TMDB franchise/saga collection.
+func (p *Platform) GetMediaCollection(ctx context.Context, collectionID int) (*platform.UnifiedCollection, error) {
+	details, err := p.tmdbClient.GetCollection(ctx, collectionID)
+	if err != nil {
+		return nil, err
+	}
+
+	entries := make([]*platform.UnifiedCollectionEntry, 0, len(details.Parts))
+	for i, part := range details.Parts {
+		title := part.Title
+		if title == "" {
+			title = part.OriginalTitle
+		}
+		var poster, backdrop *string
+		if part.PosterPath != "" {
+			v := "https://image.tmdb.org/t/p/original" + part.PosterPath
+			poster = &v
+		}
+		if part.BackdropPath != "" {
+			v := "https://image.tmdb.org/t/p/original" + part.BackdropPath
+			backdrop = &v
+		}
+		collID := details.ID
+		collName := details.Name
+		overviewStr := part.Overview
+		m := &platform.UnifiedMedia{
+			ID:     part.ID,
+			Type:   "MOVIE",
+			Format: platform.MediaFormatMovie,
+			Kind:   platform.MediaKindGeneral,
+			Title: &platform.MediaTitle{
+				Romaji: &title,
+			},
+			CoverImage: &platform.MediaCoverImage{
+				ExtraLarge: poster,
+				Large:      poster,
+			},
+			BannerImage:    backdrop,
+			Overview:       &overviewStr,
+			CollectionID:   &collID,
+			CollectionName: &collName,
+			StartDate:      p.parseDate(part.ReleaseDate),
+		}
+		entries = append(entries, &platform.UnifiedCollectionEntry{
+			ID:    i + 1,
+			Media: m,
+		})
+	}
+
+	collName := details.Name
+	collOverview := details.Overview
+	collPosterPath := ""
+	collBackdropPath := ""
+	if details.PosterPath != "" {
+		collPosterPath = "https://image.tmdb.org/t/p/original" + details.PosterPath
+	}
+	if details.BackdropPath != "" {
+		collBackdropPath = "https://image.tmdb.org/t/p/original" + details.BackdropPath
+	}
+
+	return &platform.UnifiedCollection{
+		Lists: []*platform.UnifiedCollectionList{
+			{
+				Name:         collName,
+				Overview:     collOverview,
+				PosterPath:   collPosterPath,
+				BackdropPath: collBackdropPath,
+				Entries:      entries,
+			},
+		},
+	}, nil
 }
 
 func (p *Platform) GetAnimeCollection(ctx context.Context, bypassCache bool) (interface{}, error) {
@@ -130,7 +235,7 @@ func (p *Platform) ListAnime(ctx context.Context, page *int, search *string, per
 		Media: make([]*platform.UnifiedMedia, len(results)),
 	}
 	for i, r := range results {
-		out.Media[i] = p.toUnifiedMedia(&r, platform.MediaFormatTv)
+		out.Media[i] = p.toUnifiedMedia(&r, platform.MediaFormatTv, platform.MediaKindAnime)
 	}
 
 	return out, nil
@@ -153,7 +258,7 @@ func (p *Platform) ListRecentAnime(ctx context.Context, page *int, perPage *int,
 		Media: make([]*platform.UnifiedMedia, len(results)),
 	}
 	for i, r := range results {
-		out.Media[i] = p.toUnifiedMedia(&r, platform.MediaFormatTv)
+		out.Media[i] = p.toUnifiedMedia(&r, platform.MediaFormatTv, platform.MediaKindAnime)
 	}
 
 	return out, nil
@@ -198,7 +303,7 @@ func (p *Platform) DeleteEntry(ctx context.Context, mediaID int, entryID int) er
 func (p *Platform) ClearCache() {}
 func (p *Platform) Close()      {}
 
-func (p *Platform) toUnifiedMedia(res *tmdb.SearchResult, format platform.MediaFormat) *platform.UnifiedMedia {
+func (p *Platform) toUnifiedMedia(res *tmdb.SearchResult, format platform.MediaFormat, kind platform.MediaKind) *platform.UnifiedMedia {
 	title := &platform.MediaTitle{}
 	if res.Name != "" {
 		title.Romaji = &res.Name
@@ -214,24 +319,32 @@ func (p *Platform) toUnifiedMedia(res *tmdb.SearchResult, format platform.MediaF
 
 	var poster, backdrop *string
 	if res.PosterPath != "" {
-		p := "https://image.tmdb.org/t/p/original" + res.PosterPath
-		poster = &p
+		v := "https://image.tmdb.org/t/p/original" + res.PosterPath
+		poster = &v
 	}
 	if res.BackdropPath != "" {
-		b := "https://image.tmdb.org/t/p/original" + res.BackdropPath
-		backdrop = &b
+		v := "https://image.tmdb.org/t/p/original" + res.BackdropPath
+		backdrop = &v
+	}
+
+	var overviewPtr *string
+	if res.Overview != "" {
+		s := res.Overview
+		overviewPtr = &s
 	}
 
 	m := &platform.UnifiedMedia{
 		ID:     res.ID,
-		Type:   platform.MediaType("ANIME"), // We'll treat Animation as Anime
+		Type:   platform.MediaType("ANIME"),
 		Format: format,
+		Kind:   kind,
 		Title:  title,
 		CoverImage: &platform.MediaCoverImage{
 			ExtraLarge: poster,
 			Large:      poster,
 		},
 		BannerImage: backdrop,
+		Overview:    overviewPtr,
 	}
 
 	// Dates
@@ -241,6 +354,61 @@ func (p *Platform) toUnifiedMedia(res *tmdb.SearchResult, format platform.MediaF
 		m.StartDate = p.parseDate(res.ReleaseDate)
 	}
 
+	return m
+}
+
+// movieDetailsToUnifiedMedia converts a full MovieDetails (with saga info) into UnifiedMedia.
+func (p *Platform) movieDetailsToUnifiedMedia(res *tmdb.MovieDetails) *platform.UnifiedMedia {
+	title := res.Title
+	if title == "" {
+		title = res.OriginalTitle
+	}
+	var poster, backdrop *string
+	if res.PosterPath != "" {
+		v := "https://image.tmdb.org/t/p/original" + res.PosterPath
+		poster = &v
+	}
+	if res.BackdropPath != "" {
+		v := "https://image.tmdb.org/t/p/original" + res.BackdropPath
+		backdrop = &v
+	}
+	var overviewPtr *string
+	if res.Overview != "" {
+		overviewPtr = &res.Overview
+	}
+	var imdbPtr *string
+	if res.ImdbID != "" {
+		imdbPtr = &res.ImdbID
+	}
+	var collID *int
+	var collName *string
+	if res.BelongsToCollection != nil {
+		id := res.BelongsToCollection.ID
+		name := res.BelongsToCollection.Name
+		collID = &id
+		collName = &name
+	}
+
+	m := &platform.UnifiedMedia{
+		ID:     res.ID,
+		Type:   "MOVIE",
+		Format: platform.MediaFormatMovie,
+		Kind:   platform.MediaKindGeneral,
+		Title: &platform.MediaTitle{
+			Romaji: &title,
+			Native: &res.OriginalTitle,
+		},
+		CoverImage: &platform.MediaCoverImage{
+			ExtraLarge: poster,
+			Large:      poster,
+		},
+		BannerImage:    backdrop,
+		Overview:       overviewPtr,
+		IMDbID:         imdbPtr,
+		CollectionID:   collID,
+		CollectionName: collName,
+		StartDate:      p.parseDate(res.ReleaseDate),
+	}
 	return m
 }
 

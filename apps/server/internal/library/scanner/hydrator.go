@@ -153,7 +153,9 @@ func (fh *FileHydrator) hydrateGroupMetadata(
 						Str("filename", lf.Name).
 						Msg("Panic occurred, file un-matched")
 				}
-				fh.ScanSummaryLogger.LogPanic(lf, stackTrace)
+				if fh.ScanSummaryLogger != nil {
+					fh.ScanSummaryLogger.LogPanic(lf, stackTrace)
+				}
 			})
 
 			episode := -1

@@ -1,6 +1,6 @@
 import { PAGE_TRANSITION } from "@/components/shared/page-transition"
 import { cn } from "@/components/ui/core/styling"
-import { HTMLMotionProps, motion } from "motion/react"
+import { HTMLMotionProps, motion } from "framer-motion"
 import React from "react"
 
 type PageWrapperProps = {

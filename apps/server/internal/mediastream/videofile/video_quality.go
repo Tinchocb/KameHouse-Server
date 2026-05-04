@@ -33,8 +33,8 @@ func QualityFromString(str string) (Quality, error) {
 	return Original, errors.New("invalid quality string")
 }
 
-// AverageBitrate
-// I'm not entirely sure about the values for bit rates. Double-checking would be nice.
+// AverageBitrate returns the average bitrate for the quality level.
+// For Original quality, returns 0 — callers must handle Original separately.
 func (v Quality) AverageBitrate() uint32 {
 	switch v {
 	case P240:
@@ -53,12 +53,13 @@ func (v Quality) AverageBitrate() uint32 {
 		return 16_000_000
 	case P8k:
 		return 28_000_000
-	case Original:
-		panic("Original quality must be handled specially")
+	default:
+		return 0
 	}
-	panic("Invalid quality value")
 }
 
+// MaxBitrate returns the max bitrate for the quality level.
+// For Original quality, returns 0 — callers must handle Original separately.
 func (v Quality) MaxBitrate() uint32 {
 	switch v {
 	case P240:
@@ -77,12 +78,13 @@ func (v Quality) MaxBitrate() uint32 {
 		return 28_000_000
 	case P8k:
 		return 40_000_000
-	case Original:
-		panic("Original quality must be handled specially")
+	default:
+		return 0
 	}
-	panic("Invalid quality value")
 }
 
+// Height returns the pixel height for the quality level.
+// For Original quality, returns 0 — callers must handle Original separately.
 func (v Quality) Height() uint32 {
 	switch v {
 	case P240:
@@ -101,10 +103,9 @@ func (v Quality) Height() uint32 {
 		return 2160
 	case P8k:
 		return 4320
-	case Original:
-		panic("Original quality must be handled specially")
+	default:
+		return 0
 	}
-	panic("Invalid quality value")
 }
 
 func GetQualityFromHeight(height uint32) Quality {

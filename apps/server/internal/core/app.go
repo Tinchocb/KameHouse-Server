@@ -2,18 +2,13 @@ package core
 
 import (
 	"context"
-	"kamehouse/internal/api/mal"
 	"kamehouse/internal/api/tmdb"
-	"kamehouse/internal/api/torrentio"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/constants"
 	"kamehouse/internal/continuity"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
-	"kamehouse/internal/directstream"
 	"kamehouse/internal/events"
-	"kamehouse/internal/hook"
-	"kamehouse/internal/library/autodownloader"
 	"kamehouse/internal/library/autoscanner"
 	"kamehouse/internal/library/fillermanager"
 	"kamehouse/internal/library/metadata"
@@ -24,16 +19,11 @@ import (
 	"kamehouse/internal/platforms/offline_platform"
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/platforms/simulated_platform"
-	"kamehouse/internal/report"
-	"kamehouse/internal/streaming"
-	itorrent "kamehouse/internal/torrents/torrent"
-	"kamehouse/internal/torrentstream"
 	"kamehouse/internal/user"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/cache"
 	"kamehouse/internal/util/filecache"
 	"kamehouse/internal/videocore"
-	"log"
 	"os"
 	"runtime"
 	"sync"
@@ -48,7 +38,6 @@ type (
 		OfflinePlatformRef *util.Ref[platform.Platform]
 		PlatformRef        *util.Ref[platform.Platform]
 		ProviderRef        *util.Ref[metadata_provider.Provider]
-		MalScrobbler       *mal.MalScrobblerWorker
 
 		// Enrichers
 		FanArt      *metadata.FanArtEnricher
@@ -56,14 +45,31 @@ type (
 		OpenSubs    *metadata.OpenSubtitlesEnricher
 	}
 
-	KameHouse struct {
-		// Core
-		Config   *Config
-		Database *db.Database
-		Logger   *zerolog.Logger
+	CoreServices struct {
+		Config           *Config
+		Database         *db.Database
+		Logger           *zerolog.Logger
+		WSEventManager   *events.WSEventManager
+		FileCacher       *filecache.Cacher
+		ThumbnailCache   *cache.ThumbnailCache
+	}
 
-		// Torrent and debrid services
-		TorrentRepository       *itorrent.Repository
+	StreamingServices struct {
+		StreamOrchestrator    *streaming.StreamOrchestrator
+		MediastreamRepository *mediastream.Repository
+		VideoCore             *videocore.VideoCore
+	}
+
+	LibraryServices struct {
+		FillerManager   *fillermanager.FillerManager
+		AutoScanner     *autoscanner.AutoScanner
+		LibraryExplorer *library_explorer.LibraryExplorer
+	}
+
+	KameHouse struct {
+		CoreServices
+		StreamingServices
+		LibraryServices
 
 		// File system monitoring
 		Watcher *scanner.Watcher
@@ -71,53 +77,23 @@ type (
 		// Metadata Providers (Decoupled Foundation)
 		Metadata MetadataProviders
 
-		// Library
-		FillerManager  *fillermanager.FillerManager
-		AutoDownloader *autodownloader.AutoDownloader
-		AutoScanner    *autoscanner.AutoScanner
-
-		// Real-time communication
-		WSEventManager *events.WSEventManager
-
-		ExtensionRepository interface {
-			ListExtensionData() []interface{}
-		}
-		ExtensionBankRef interface{}
-
-		HookManager             hook.Manager
-		TorrentstreamRepository *torrentstream.Repository
-		TorrentioProvider       *torrentio.Provider
-
-		// Streaming
-		StreamOrchestrator    *streaming.StreamOrchestrator
-		DirectStreamManager   *directstream.Manager
-		MediastreamRepository *mediastream.Repository
-		// Phase 2: Base Providers
-		VideoCore *videocore.VideoCore
-
 		// Offline and local account
 		LocalManager local.Manager
-
-		// Utilities
-		FileCacher       *filecache.Cacher
-		ReportRepository *report.Repository
-		ThumbnailCache   *cache.ThumbnailCache
 
 		// Continuity and sync
 		ContinuityManager *continuity.Manager
 		TelemetryManager  *continuity.TelemetryManager
 
 		// Lifecycle management
-		Cleanups         []func()
-		OnFlushLogs      func()
+		Cleanups    []func()
+		OnFlushLogs func()
 
 		// Configuration and feature flags
 		FeatureFlags      FeatureFlags
 		FeatureManager    *FeatureManager
 		Settings          *models.Settings
 		SecondarySettings struct {
-			Mediastream   *models.MediastreamSettings
-			Torrentstream *models.TorrentstreamSettings
+			Mediastream *models.MediastreamSettings
 		}
 
 		// Metadata
@@ -135,7 +111,10 @@ type (
 		isOfflineRef       *util.Ref[bool]
 		ServerPasswordHash string
 
-		LibraryExplorer *library_explorer.LibraryExplorer
+		// Lifecycle: shutdownCtx is cancelled when the app is shutting down.
+		// Pass this context to long-running goroutines so they exit cleanly.
+		shutdownCtx    context.Context
+		shutdownCancel context.CancelFunc
 
 		// Show this version's tour on the frontend
 		// Hydrated by migrations.go when there's a version change
@@ -166,10 +145,6 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 	logger.Info().Msgf("app: Arch: %s", runtime.GOARCH)
 	logger.Info().Msgf("app: Processor count: %d", runtime.NumCPU())
 
-	// Initialize hook manager for plugin event system
-	hookManager := hook.NewHookManager(hook.NewHookManagerOptions{Logger: logger})
-	hook.SetGlobalHookManager(hookManager)
-
 	// Store current version to detect version changes
 	previousVersion := constants.Version
 
@@ -183,7 +158,7 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 	// Creates config directory if it doesn't exist
 	cfg, err := NewConfig(configOpts, logger)
 	if err != nil {
-		log.Fatalf("app: Failed to initialize config: %v", err)
+		logger.Fatal().Err(err).Msg("app: Failed to initialize config")
 	}
 
 	// Compute SHA-256 hash of the server password
@@ -196,7 +171,10 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 	_ = os.MkdirAll(cfg.Logs.Dir, 0755)
 
 	// Start background process to trim log files
-	go TrimLogEntries(cfg.Logs.Dir, logger)
+	go func() {
+		defer util.HandlePanicInModuleThen("core/TrimLogEntries", func() {})
+		TrimLogEntries(cfg.Logs.Dir, logger)
+	}()
 
 	logger.Info().Msgf("app: Data directory: %s", cfg.Data.AppDataDir)
 	logger.Info().Msgf("app: Working directory: %s", cfg.Data.WorkingDir)
@@ -209,7 +187,7 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 	// Initialize database connection
 	database, err := db.NewDatabase(context.Background(), cfg.Data.AppDataDir, cfg.Database.Name, logger)
 	if err != nil {
-		log.Fatalf("app: Failed to initialize database: %v", err)
+		logger.Fatal().Err(err).Msg("app: Failed to initialize database")
 	}
 
 	HandleNewDatabaseEntries(database, logger)
@@ -227,19 +205,21 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 	dispatcher := events.NewDispatcher()
 	wsEventManager := events.NewWSEventManager(logger, dispatcher)
 
+	database.SetOnError(func(err error) {
+		if wsEventManager != nil {
+			wsEventManager.SendEvent(events.ErrorToast, "DB Error: "+err.Error())
+		}
+	})
+
 	// Initialize Metadata Enrichers
-	var fanartEnricher *metadata.FanArtEnricher
-	fanartEnricher = metadata.NewFanArtEnricher(cfg.Metadata.FanArtApiKey)
+	fanartEnricher := metadata.NewFanArtEnricher(cfg.Metadata.FanArtApiKey)
+	omdbEnricher := metadata.NewOMDbEnricher(cfg.Metadata.OMDbApiKey)
 
-	var omdbEnricher *metadata.OMDbEnricher
-	omdbEnricher = metadata.NewOMDbEnricher(cfg.Metadata.OMDbApiKey)
-
-	var openSubsEnricher *metadata.OpenSubtitlesEnricher
 	openSubsLangs := cfg.Metadata.OpenSubsLanguages
 	if len(openSubsLangs) == 0 {
 		openSubsLangs = []string{"es", "en"}
 	}
-	openSubsEnricher = metadata.NewOpenSubtitlesEnricher(cfg.Metadata.OpenSubsApiKey, openSubsLangs...)
+	openSubsEnricher := metadata.NewOpenSubtitlesEnricher(cfg.Metadata.OpenSubsApiKey, openSubsLangs...)
 
 	// Exit if no WebSocket connections in desktop sidecar mode
 	if configOpts.Flags.IsDesktopSidecar {
@@ -248,7 +228,6 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 
 	// Initialize file cache system for media and metadata
 	fileCacher, err := filecache.NewCacher(cfg.Cache.Dir)
-	// torrentio.Resolve ...
 	if err != nil {
 		logger.Fatal().Err(err).Msgf("app: Failed to initialize file cacher")
 	}
@@ -319,7 +298,6 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 		Database:   database,
 	})
 
-
 	telemetryManager := continuity.NewTelemetryManager(continuityManager, logger, 5*time.Second)
 
 	videoCore := videocore.New(videocore.NewVideoCoreOptions{
@@ -328,12 +306,8 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 		MetadataProviderRef: metadataProviderRef,
 		ContinuityManager:   continuityManager,
 		PlatformRef:         activePlatformRef,
-		IsOfflineRef: isOfflineRef,
+		IsOfflineRef:        isOfflineRef,
 	})
-
-
-	// Initialize extension playground for testing extensions
-	// extensionPlaygroundRepository := extension_playground.NewPlaygroundRepository(logger, activePlatformRef, metadataProviderRef)
 
 	// Initialize Thumbnail Cache (LRU bounded to 1000 items to prevent OOM)
 	thumbnailCache, err := cache.NewThumbnailCache(1000)
@@ -341,12 +315,32 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 		logger.Fatal().Err(err).Msg("app: Failed to initialize thumbnail cache")
 	}
 
+	// Create a cancellable context for the app's lifecycle.
+	// Long-running goroutines should listen to this context.
+	shutdownCtx, shutdownCancel := context.WithCancel(context.Background())
+
 	// Create the main app instance with initialized components
 	app := &KameHouse{
-		Config:         cfg,
+		CoreServices: CoreServices{
+			Config:           cfg,
+			Database:         database,
+			Logger:           logger,
+			WSEventManager:   wsEventManager,
+			FileCacher:       fileCacher,
+			ThumbnailCache:   thumbnailCache,
+		},
+		StreamingServices: StreamingServices{
+			VideoCore:             videoCore,
+			StreamOrchestrator:    nil,
+			MediastreamRepository: nil,
+		},
+		LibraryServices: LibraryServices{
+			FillerManager:   nil,
+			AutoScanner:     nil,
+			LibraryExplorer: nil,
+		},
 		Flags:          configOpts.Flags,
 		FeatureManager: NewFeatureManager(logger, configOpts.Flags),
-		Database:       database,
 		Metadata: MetadataProviders{
 			TMDBClient:         tmdbClient,
 			PlatformRef:        activePlatformRef,
@@ -356,39 +350,21 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 			OMDb:               omdbEnricher,
 			OpenSubs:           openSubsEnricher,
 		},
-		WSEventManager: wsEventManager,
-		Logger:                        logger,
-		Version:            constants.Version,
-		FileCacher:         fileCacher,
-		ReportRepository:   report.NewRepository(logger),
-		ThumbnailCache:     thumbnailCache,
-		VideoCore:          videoCore,
-		ContinuityManager:  continuityManager,
-		TelemetryManager:   telemetryManager,
-		TorrentRepository:             nil, // Initialized in App.initModulesOnce
-		FillerManager:                 nil, // Initialized in App.initModulesOnce
-		AutoDownloader:                nil, // Initialized in App.initModulesOnce
-		AutoScanner:                   nil, // Initialized in App.initModulesOnce
-		StreamOrchestrator:            nil, // Initialized in App.initModulesOnce
-		MediastreamRepository:         nil, // Initialized in App.initModulesOnce
-		DirectStreamManager:           nil, // Initialized in App.initModulesOnce
-		LibraryExplorer:               nil, // Initialized in App.initModulesOnce
-		previousVersion:               previousVersion,
-		FeatureFlags:                  NewFeatureFlags(cfg, logger),
-		IsDesktopSidecar:              configOpts.Flags.IsDesktopSidecar,
+		Version:           constants.Version,
+		ContinuityManager: continuityManager,
+		TelemetryManager:  telemetryManager,
+		previousVersion:   previousVersion,
+		FeatureFlags:      NewFeatureFlags(cfg, logger),
+		IsDesktopSidecar:  configOpts.Flags.IsDesktopSidecar,
 		SecondarySettings: struct {
-			Mediastream   *models.MediastreamSettings
-			Torrentstream *models.TorrentstreamSettings
-		}{Mediastream: nil, Torrentstream: nil},
+			Mediastream *models.MediastreamSettings
+		}{Mediastream: nil},
 		moduleMu:           sync.Mutex{},
-		HookManager:        hookManager,
 		isOfflineRef:       isOfflineRef,
 		ServerPasswordHash: serverPasswordHash,
+		shutdownCtx:        shutdownCtx,
+		shutdownCancel:     shutdownCancel,
 	}
-
-
-	// Initialize MAL Scrobbler DLQ Queue
-	app.Metadata.MalScrobbler = mal.NewMalScrobblerWorker(database, logger)
 
 	// Initialize modules that only need to be initialized once
 	app.initModulesOnce()
@@ -401,9 +377,6 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 
 	// Initialize mediastream settings (for streaming media)
 	app.InitOrRefreshMediastreamSettings()
-
-	// Initialize torrentstream settings (for torrent streaming)
-	app.InitOrRefreshTorrentstreamSettings()
 
 	// Run one-time initialization actions
 	app.performActionsOnce()
@@ -424,8 +397,12 @@ func (a *KameHouse) AddCleanupFunction(f func()) {
 }
 
 func (a *KameHouse) Cleanup(ctx context.Context) {
+	// Signal all goroutines that are listening on shutdownCtx to exit.
+	a.shutdownCancel()
+
 	done := make(chan struct{})
 	go func() {
+		defer util.HandlePanicInModuleThen("core/app/Cleanup", func() {})
 		defer close(done)
 
 		a.Logger.Info().Msg("app: Running cleanup functions...")
@@ -466,7 +443,4 @@ func (a *KameHouse) GetAnimeCollection(bypassCache bool) (*platform.UnifiedColle
 }
 
 func (a *KameHouse) AddOnRefreshAnimeCollectionFunc(id string, f func()) {
-	// For now, this is a no-op or we can implement a simple registration if needed.
-	// In the old code it was used to clear caches.
 }
-

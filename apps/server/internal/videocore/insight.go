@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"kamehouse/internal/mkvparser"
+	"kamehouse/internal/util"
 	"kamehouse/internal/util/limiter"
 	"kamehouse/internal/util/result"
 	"regexp"
@@ -119,15 +120,16 @@ func (is *InSight) sendToPlayer() {
 
 func (is *InSight) Start() {
 	sub := is.vc.Subscribe("insight")
-	go func() {
+	go util.HandlePanicInModuleThen("videocore/insight/Start", func() {
 		for event := range sub.Events() {
 			switch e := event.(type) {
 			case *VideoLoadedEvent:
-				go func(ev *VideoLoadedEvent) {
-					if ev.State.PlaybackInfo != nil && ev.State.PlaybackInfo.Media != nil {
+				eCopy := e
+				go util.HandlePanicInModuleThen("videocore/insight/VideoLoadedEvent", func() {
+					if eCopy.State.PlaybackInfo != nil && eCopy.State.PlaybackInfo.Media != nil {
 						var malId int
 						// Try to extract MalID if it exists in the polymorphic media object
-						if m, ok := ev.State.PlaybackInfo.Media.(map[string]interface{}); ok {
+						if m, ok := eCopy.State.PlaybackInfo.Media.(map[string]interface{}); ok {
 							if id, ok := m["idMal"].(float64); ok {
 								malId = int(id)
 							}
@@ -138,7 +140,7 @@ func (is *InSight) Start() {
 							is.sendToPlayer()
 						}
 					}
-				}(e)
+				})
 			case *VideoSubtitleTrackEvent:
 				// todo
 				//go func(ev *VideoSubtitleTrackEvent) {
@@ -162,7 +164,7 @@ func (is *InSight) Start() {
 				is.Clear()
 			}
 		}
-	}()
+	})
 }
 
 func (is *InSight) startPolling() {
@@ -173,7 +175,7 @@ func (is *InSight) startPolling() {
 	is.cancelPolling = cancel
 	is.mu.Unlock()
 
-	go func() {
+	go util.HandlePanicInModuleThen("videocore/insight/startPolling", func() {
 		ticker := time.NewTicker(2 * time.Second)
 		defer ticker.Stop()
 
@@ -198,7 +200,7 @@ func (is *InSight) startPolling() {
 				}
 			}
 		}
-	}()
+	})
 }
 
 func (is *InSight) stopPolling() {

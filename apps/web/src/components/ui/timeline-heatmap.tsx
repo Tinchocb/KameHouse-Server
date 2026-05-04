@@ -34,3 +34,4 @@ export const TimelineHeatmap = React.memo(({ duration, insights, className }: Ti
         </div>
     )
 })
+TimelineHeatmap.displayName = "TimelineHeatmap"

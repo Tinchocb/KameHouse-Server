@@ -7,7 +7,6 @@ import (
 	"kamehouse/internal/constants"
 	"log"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -25,38 +24,13 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 	e.JSONSerializer = &CustomJSONSerializer{}
 	e.StdLogger = log.Default()
 
-	e.Use(middleware.Recover())
-
-	corsOrigins := app.Config.Server.CorsOrigins
-	if len(corsOrigins) == 0 {
-		if envOrigins := os.Getenv("KAMEHOUSE_DEV_CORS_ORIGINS"); envOrigins != "" {
-			corsOrigins = strings.Split(envOrigins, ",")
-		} else if os.Getenv("KAMEHOUSE_ENV") != "production" {
-			// Por defecto en desarrollo permitimos el puerto de Vite/UI (43210)
-			corsOrigins = []string{"http://localhost:43210", "http://127.0.0.1:43210"}
-		}
-	}
-
-	var validOrigins []string
-	for _, o := range corsOrigins {
-		if strings.TrimSpace(o) != "" {
-			validOrigins = append(validOrigins, strings.TrimSpace(o))
-		}
-	}
-
-	if len(validOrigins) > 0 {
-		app.Logger.Debug().Msgf("app: Enabling CORS for origins: %v", validOrigins)
-		e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-			AllowOrigins: validOrigins,
-			AllowMethods: []string{http.MethodGet, http.MethodHead, http.MethodPut, http.MethodPatch, http.MethodPost, http.MethodDelete},
-			AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
-		}))
-	}
+	// NOTE: Recover() and CORS middleware are registered in handlers.InitRoutes
+	// to avoid duplication and ensure the most complete CORS config is used.
 
 
 	distFS, err := fs.Sub(webFS, "web")
 	if err != nil {
-		log.Fatal(err)
+		app.Logger.Fatal().Err(err).Msg("app: Failed to extract embedded web filesystem")
 	}
 
 	if app.Config.Server.Tls.Enabled {
@@ -168,17 +142,17 @@ func RunEchoServer(app *App, e *echo.Echo) {
 			certFile := app.Config.Server.Tls.CertPath
 			keyFile := app.Config.Server.Tls.KeyPath
 
-			if err := generateSelfSignedCert(certFile, keyFile, app.Logger); err != nil {
-				log.Fatalf("app: Could not generate TLS certificates: %v", err)
+			if err := GenerateSelfSignedCert(certFile, keyFile, app.Logger); err != nil {
+				app.Logger.Fatal().Err(err).Msg("app: Could not generate TLS certificates")
 			}
 
 			app.Logger.Info().Msg("app: Starting server with TLS enabled")
 			if err := e.StartTLS(serverAddr, certFile, keyFile); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				log.Fatalf("app: Could not start TLS server: %v", err)
+				app.Logger.Fatal().Err(err).Msg("app: Could not start TLS server")
 			}
 		} else {
 			if err := e.StartServer(srv); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				log.Fatalf("app: Could not start server: %v", err)
+				app.Logger.Fatal().Err(err).Msg("app: Could not start server")
 			}
 		}
 	}()

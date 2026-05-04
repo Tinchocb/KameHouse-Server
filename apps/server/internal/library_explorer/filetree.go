@@ -68,9 +68,9 @@ type (
 func (l *LibraryExplorer) buildFileTree() (*FileTree, error) {
 	ret := &FileTree{}
 
-	l.logger.Debug().Msg("library explorer: Building complete file tree from media file paths")
+	l.logger.Debug().Msg("library explorer: Building complete file tree")
 
-	// The root node
+	// Create root node
 	ret.Root = &FileTreeNode{
 		Name:           "root",
 		Path:           ".",
@@ -80,7 +80,33 @@ func (l *LibraryExplorer) buildFileTree() (*FileTree, error) {
 		MediaIds:       make([]int, 0),
 	}
 
-	// Get all media file paths from all library directories
+	// 1. Try to get all media file paths from the database first (Super-fast)
+	localFiles, _, err := db.GetLocalFiles(l.database)
+	if err == nil && len(localFiles) > 0 {
+		l.logger.Debug().Int("count", len(localFiles)).Msg("library explorer: Building tree from database records")
+		
+		allMediaFiles := make([]string, 0, len(localFiles))
+		for _, lf := range localFiles {
+			if !lf.Ignored {
+				allMediaFiles = append(allMediaFiles, lf.Path)
+			}
+		}
+
+		// Build the tree from DB paths
+		l.buildTreeFromFilePaths(ret.Root, allMediaFiles)
+		
+		// Sort all children recursively
+		l.sortTreeChildren(ret.Root)
+
+		// Hydrate with the data we already have
+		l.hydrateLocalFileDataDirect(ret, localFiles)
+
+		return ret, nil
+	}
+
+	// 2. Fallback: Scan physical filesystem (Slow, only on first run or if DB is empty)
+	l.logger.Info().Msg("library explorer: Database empty or unavailable, performing physical filesystem scan")
+	
 	allMediaFiles := make([]string, 0)
 	var wg sync.WaitGroup
 	var mu sync.Mutex
@@ -105,13 +131,16 @@ func (l *LibraryExplorer) buildFileTree() (*FileTree, error) {
 
 	wg.Wait()
 
-	l.logger.Debug().Int("count", len(allMediaFiles)).Msg("library explorer: Found media files")
+	l.logger.Debug().Int("count", len(allMediaFiles)).Msg("library explorer: Found media files from scan")
 
 	// Build the tree from all file paths
 	l.buildTreeFromFilePaths(ret.Root, allMediaFiles)
 
 	// Sort all children recursively
 	l.sortTreeChildren(ret.Root)
+
+	// Hydrate the tree with local file data from DB (even if we scanned, we need the matching metadata)
+	_, _ = l.hydrateLocalFileData(ret)
 
 	return ret, nil
 }
@@ -310,6 +339,11 @@ func (l *LibraryExplorer) hydrateLocalFileData(tree *FileTree) (map[string]*dto.
 		return nil, nil // Don't fail the entire operation
 	}
 
+	return l.hydrateLocalFileDataDirect(tree, localFiles), nil
+}
+
+// hydrateLocalFileDataDirect hydrates the tree with already loaded local files
+func (l *LibraryExplorer) hydrateLocalFileDataDirect(tree *FileTree, localFiles []*dto.LocalFile) map[string]*dto.LocalFile {
 	// Create a map for quick LocalFile lookup by normalized path
 	localFileMap := make(map[string]*dto.LocalFile)
 	for _, lf := range localFiles {
@@ -320,7 +354,7 @@ func (l *LibraryExplorer) hydrateLocalFileData(tree *FileTree) (map[string]*dto.
 	// Recursively hydrate the tree
 	l.hydrateNode(tree.Root, localFileMap)
 
-	return localFileMap, nil
+	return localFileMap
 }
 
 // hydrateNode recursively hydrates a node and its children with local file data

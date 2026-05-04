@@ -4,27 +4,27 @@ import React from "react"
 export const logger = (prefix: string, silence?: boolean) => {
 
     return {
-        info: (...data: any[]) => {
+        info: (...data: unknown[]) => {
             if (silence) return
             console.log(chalk.blue(`[${prefix}]`) + " ", ...data)
         },
-        warning: (...data: any[]) => {
+        warning: (...data: unknown[]) => {
             if (silence) return
             console.log(chalk.yellow(`[${prefix}]`) + " ", ...data)
         },
-        warn: (...data: any[]) => {
+        warn: (...data: unknown[]) => {
             if (silence) return
             console.log(chalk.yellow(`[${prefix}]`) + " ", ...data)
         },
-        success: (...data: any[]) => {
+        success: (...data: unknown[]) => {
             if (silence) return
             console.log(chalk.green(`[${prefix}]`) + " ", ...data)
         },
-        error: (...data: any[]) => {
+        error: (...data: unknown[]) => {
             if (silence) return
             console.log(chalk.red(`[${prefix}]`) + " ", ...data)
         },
-        trace: (...data: any[]) => {
+        trace: (...data: unknown[]) => {
             if (silence || import.meta.env.MODE !== "development") return
             console.log(chalk.bgGray(`[${prefix}]`) + " ", ...data)
         },
@@ -34,13 +34,13 @@ export const logger = (prefix: string, silence?: boolean) => {
 
 export const useEffectDebugger = (
     effectHook: () => void | (() => void),
-    dependencies: any[],
+    dependencies: unknown[],
     dependencyNames: string[] = [],
 ) => {
     const previousDeps = React.useRef(dependencies)
 
     React.useEffect(() => {
-        const changedDeps = dependencies.reduce((accum, dependency, index) => {
+        const changedDeps = dependencies.reduce((accum: Record<string, unknown>, dependency, index) => {
             if (dependency !== previousDeps.current[index]) {
                 const keyName = dependencyNames[index] || `Dependency #${index}`
                 return {
@@ -52,7 +52,7 @@ export const useEffectDebugger = (
                 }
             }
             return accum
-        }, {})
+        }, {} as Record<string, unknown>)
 
         if (Object.keys(changedDeps).length) {
             console.log("[useEffectDebugger] Changed dependencies:", changedDeps)
@@ -64,6 +64,7 @@ export const useEffectDebugger = (
     }, dependencies) // Pass the original dependencies to useEffect
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function useLatestFunction<T extends (...args: any[]) => any>(callback: T): T {
     const callbackRef = React.useRef(callback)
 

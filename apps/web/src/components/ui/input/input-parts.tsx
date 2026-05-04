@@ -92,6 +92,7 @@ export const InputContainer = ({ className, children }: InputContainerProps) => 
         </div>
     )
 }
+InputContainer.displayName = "InputContainer"
 
 /* -------------------------------------------------------------------------------------------------
  * InputStyling
@@ -177,6 +178,7 @@ export const InputIcon = ({ icon, size = "md", side, props, className }: InputIc
 
     return null
 }
+InputIcon.displayName = "InputIcon"
 
 /* -------------------------------------------------------------------------------------------------
  * InputAddon
@@ -212,6 +214,7 @@ export const InputAddon = ({ addon, leftIcon, rightIcon, size = "md", side, prop
     return null
 
 }
+InputAddon.displayName = "InputAddon"
 
 /* -------------------------------------------------------------------------------------------------
  * Utils

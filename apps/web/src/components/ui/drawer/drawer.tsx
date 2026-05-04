@@ -21,7 +21,7 @@ function useDrawerBodyBehavior(id: string, open: boolean | undefined) {
             setOpenDrawers(prev => [...prev, id])
         } else {
             setOpenDrawers(prev => {
-                let next = prev.filter(i => i !== id)
+                const next = prev.filter(i => i !== id)
                 return next
             })
         }

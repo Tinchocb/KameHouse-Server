@@ -10,6 +10,14 @@ import { GenerateSW } from "workbox-webpack-plugin"
 
 const { publicVars } = loadEnv({ prefixes: ["SEA_"] })
 
+/** Puerto del API en desarrollo (proxy `/api` y `getServerBaseUrl` en desktop dev). */
+const devBackendPort =
+    process.env.KAMEHOUSE_DEV_API_PORT ||
+    process.env.KAMEHOUSE_PORT ||
+    process.env.SEA_PUBLIC_DEV_API_PORT ||
+    "43211"
+const devBackendTarget = `http://127.0.0.1:${devBackendPort}`
+
 export default defineConfig({
     plugins: [
         pluginReact(),
@@ -70,7 +78,10 @@ export default defineConfig({
         entry: {
             index: "./src/main.tsx",
         },
-        define: publicVars,
+        define: {
+            ...publicVars,
+            "import.meta.env.SEA_PUBLIC_DEV_API_PORT": JSON.stringify(devBackendPort),
+        },
     },
     resolve: {
         alias: {
@@ -86,7 +97,7 @@ export default defineConfig({
         },
         proxy: {
             '/api': {
-                target: 'http://127.0.0.1:43211',
+                target: devBackendTarget,
                 changeOrigin: true,
                 ws: true,
             },

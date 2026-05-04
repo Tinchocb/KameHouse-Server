@@ -1,11 +1,25 @@
 package platform
 
-import "sync"
+import (
+	"fmt"
+	"strconv"
+	"sync"
+)
 
 type MediaFormat string
 type MediaStatus string
 type MediaType string
 type MediaSeason string
+
+// MediaKind distinguishes the content category independently of MediaType.
+// Anime = Japanese animation (AniList-sourced or manually flagged)
+// General = western series, movies, documentaries, etc.
+type MediaKind string
+
+const (
+	MediaKindAnime   MediaKind = "ANIME"
+	MediaKindGeneral MediaKind = "GENERAL"
+)
 
 const (
 	MediaFormatTv      MediaFormat = "TV"
@@ -41,6 +55,25 @@ type FuzzyDate struct {
 	Day   *int `json:"day,omitempty"`
 }
 
+func (f *FuzzyDate) ToTMDBString() string {
+	if f == nil {
+		return ""
+	}
+	y, m, d := "", "01", "01"
+	if f.Year != nil {
+		y = strconv.Itoa(*f.Year)
+	} else {
+		return ""
+	}
+	if f.Month != nil {
+		m = fmt.Sprintf("%02d", *f.Month)
+	}
+	if f.Day != nil {
+		d = fmt.Sprintf("%02d", *f.Day)
+	}
+	return fmt.Sprintf("%s-%s-%s", y, m, d)
+}
+
 type NextAiringEpisode struct {
 	AiringAt        int `json:"airingAt"`
 	TimeUntilAiring int `json:"timeUntilAiring"`
@@ -64,6 +97,14 @@ type UnifiedMedia struct {
 	Genres            []string                `json:"genres,omitempty"`
 	NextAiringEpisode *NextAiringEpisode      `json:"nextAiringEpisode,omitempty"`
 	Relations         []*UnifiedMediaRelation `json:"relations,omitempty"`
+
+	// Extended fields for general (non-anime) media
+	Kind             MediaKind `json:"kind"` // "ANIME" or "GENERAL"
+	Overview         *string   `json:"overview,omitempty"`
+	IMDbID           *string   `json:"imdbId,omitempty"`
+	// BelongsToCollection holds the TMDB franchise/saga ID if the media belongs to one.
+	CollectionID   *int    `json:"collectionId,omitempty"`
+	CollectionName *string `json:"collectionName,omitempty"`
 }
 
 type MediaRelationType string
@@ -231,9 +272,13 @@ func (c *UnifiedCollection) GetAllMedia() []*UnifiedMedia {
 }
 
 type UnifiedCollectionList struct {
-	Name    string                    `json:"name"`
-	Status  MediaListStatus           `json:"status"`
-	Entries []*UnifiedCollectionEntry `json:"entries"`
+	Name         string                    `json:"name"`
+	Status       MediaListStatus           `json:"status"`
+	Entries      []*UnifiedCollectionEntry `json:"entries"`
+	// Collection-level metadata from TMDB /collection/{id}
+	Overview     string `json:"overview,omitempty"`
+	PosterPath   string `json:"posterPath,omitempty"`
+	BackdropPath string `json:"backdropPath,omitempty"`
 }
 
 type MediaListStatus string

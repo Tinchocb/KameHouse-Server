@@ -8,9 +8,10 @@ import {
     LocalSetHasLocalChanges_Variables,
     SetOfflineMode_Variables,
 } from "../generated/endpoint.types"
+import { LocPlatform_QueueState, LocPlatform_TrackedMediaItem } from "../generated/types"
 
 export function useLocalGetTrackedMediaItems() {
-    return useServerQuery<Array<any>>({
+    return useServerQuery<Array<LocPlatform_TrackedMediaItem>>({
         endpoint: API_ENDPOINTS.LOCAL.LocalGetTrackedMediaItems.endpoint,
         method: API_ENDPOINTS.LOCAL.LocalGetTrackedMediaItems.methods[0],
         queryKey: [API_ENDPOINTS.LOCAL.LocalGetTrackedMediaItems.key],
@@ -63,7 +64,7 @@ export function useLocalSyncData() {
 }
 
 export function useLocalGetSyncQueueData() {
-    return useServerQuery<any>({
+    return useServerQuery<LocPlatform_QueueState>({
         endpoint: API_ENDPOINTS.LOCAL.LocalGetSyncQueueState.endpoint,
         method: API_ENDPOINTS.LOCAL.LocalGetSyncQueueState.methods[0],
         queryKey: [API_ENDPOINTS.LOCAL.LocalGetSyncQueueState.key],
@@ -135,7 +136,7 @@ export function useLocalSyncSimulatedDataToPlatform() {
         method: API_ENDPOINTS.LOCAL.LocalSyncSimulatedDataToPlatform.methods[0],
         mutationKey: [API_ENDPOINTS.LOCAL.LocalSyncSimulatedDataToPlatform.key],
         onSuccess: async () => {
-            ({ queryKey: [API_ENDPOINTS.LOCAL.LocalGetLocalStorageSize] })
+            await qc.invalidateQueries({ queryKey: [API_ENDPOINTS.LOCAL.LocalGetLocalStorageSize.key] })
             toast.success("Updated Platform data")
         },
     })

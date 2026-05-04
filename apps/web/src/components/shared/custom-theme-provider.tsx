@@ -44,7 +44,7 @@ export function CustomThemeProvider(props: CustomColorProviderProps) {
     // e.g. #11040d -> dark pink-ish purple
     // #050a0d -> dark blue
     React.useEffect(() => {
-        let r = document.querySelector(":root") as any
+        const r = document.querySelector(":root") as any
 
         if (!ts.enableColorSettings) return
 
@@ -69,7 +69,7 @@ export function CustomThemeProvider(props: CustomColorProviderProps) {
     }, [ts.enableColorSettings, ts.backgroundColor])
 
     React.useEffect(() => {
-        let r = document.querySelector(":root") as any
+        const r = document.querySelector(":root") as any
 
         if (!ts.enableColorSettings) return
 

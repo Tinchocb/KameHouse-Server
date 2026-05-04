@@ -30,15 +30,16 @@ export const fetchLibraryCollection = async () => {
 }
 
 export function useGetLibraryCollection({ enabled }: { enabled?: boolean } = { enabled: true }) {
-    return useServerQuery<Anime_LibraryCollection>({
+    return useServerQuery<Anime_LibraryCollection, void, ExtendedLibraryCollection>({
         endpoint: API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.endpoint,
         method: API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.methods[0],
         queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key],
         enabled: enabled,
         refetchOnWindowFocus: false,
         staleTime: 1000 * 60 * 5,
-        // @ts-ignore - Bypassing strictly-typed wrapper to inject efficient memoized selector
-        select: (data: Anime_LibraryCollection): ExtendedLibraryCollection => ({
+        select: (data: Anime_LibraryCollection | undefined): ExtendedLibraryCollection => {
+            if (!data) return {} as ExtendedLibraryCollection;
+            return {
             ...data,
             lists: data.lists?.map(list => ({
                 ...list,
@@ -50,8 +51,9 @@ export function useGetLibraryCollection({ enabled }: { enabled?: boolean } = { e
                     }
                 }).sort((a, b) => (a.media?.titleRomaji || "").localeCompare(b.media?.titleRomaji || ""))
             }))
-        })
-    }) as any as ReturnType<typeof useServerQuery<Anime_LibraryCollection>> & { data: ExtendedLibraryCollection | undefined }
+            }
+        }
+    })
 }
 
 export function useAddUnknownMedia() {

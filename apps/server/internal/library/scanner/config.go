@@ -1,6 +1,17 @@
 package scanner
 
-import "kamehouse/internal/database/models/dto"
+import (
+	"encoding/json"
+	"kamehouse/internal/database/models/dto"
+)
+
+func ToConfig(c string) (*Config, error) {
+	var ret Config
+	if err := json.Unmarshal([]byte(c), &ret); err != nil {
+		return nil, err
+	}
+	return &ret, nil
+}
 
 type Config struct {
 	Matching  MatchingConfig  `json:"matching"`

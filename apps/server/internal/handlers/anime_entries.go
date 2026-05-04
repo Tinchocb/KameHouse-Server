@@ -3,17 +3,24 @@ package handlers
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 
+	"kamehouse/internal/api/tmdb"
 	"kamehouse/internal/database/db"
+	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/hook"
 	"kamehouse/internal/library/anime"
 	librarymetadata "kamehouse/internal/library/metadata"
-	"kamehouse/internal/library/scanner"
 
 	"kamehouse/internal/platforms/platform"
+	"kamehouse/internal/util"
 	"kamehouse/internal/util/result"
+	"net/http"
 	"os"
+	"os/exec"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -35,11 +42,13 @@ func getActiveProvider(h *Handler) librarymetadata.Provider {
 	}
 
 	if useTMDB {
+		if tmdbLanguage == "" || tmdbLanguage == "en" || tmdbLanguage == "es" {
+			tmdbLanguage = "es-MX"
+		}
 		if tmdbToken != "" {
 			return librarymetadata.NewTMDBProvider(tmdbToken, tmdbLanguage)
-		} else {
-			h.App.Logger.Warn().Msg("handlers: TMDB mode requested but TMDB token not set")
 		}
+		h.App.Logger.Warn().Msg("handlers: TMDB mode requested but TMDB token not set")
 	}
 
 	return nil
@@ -75,8 +84,183 @@ func (h *Handler) getAnimeEntry(c echo.Context, lfs []*dto.LocalFile, mId int) (
 		h.App.FillerManager.HydrateFillerData(fillerEvent.Entry)
 	}
 
+	// ── TMDB Episode Enrichment ──────────────────────────────────────────────────
+	// If the media has a TmdbId and episodes are missing synopsis/image,
+	// fetch TMDB season data and fill in the gaps (best-effort, never fails the request).
+	h.enrichEpisodesWithTMDB(c.Request().Context(), entry)
+
 	return entry, nil
 }
+
+// enrichEpisodesWithTMDB fetches episode-level metadata from TMDB and fills in
+// any fields that AniDB/Animap left empty (title, overview/summary, still image, runtime).
+// Supports multi-season series by fetching all available seasons in parallel.
+// This is purely additive — never overwrites existing non-empty values.
+func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry) {
+	if entry == nil || entry.Media == nil || entry.Media.TmdbId == 0 {
+		return
+	}
+	if len(entry.Episodes) == 0 {
+		return
+	}
+
+	// Build a TMDB provider using the same token discovery logic used elsewhere.
+	var tmdbToken string
+	var tmdbLanguage string
+	if settings, err := h.App.Database.GetSettings(); err == nil && settings != nil {
+		tmdbToken = settings.Library.TmdbApiKey
+		tmdbLanguage = settings.Library.TmdbLanguage
+	}
+	if tmdbToken == "" {
+		tmdbToken = os.Getenv("KAMEHOUSE_TMDB_TOKEN")
+	}
+	if tmdbToken == "" {
+		// No token configured – silently skip enrichment.
+		return
+	}
+	if tmdbLanguage == "" || tmdbLanguage == "en" || tmdbLanguage == "es" {
+		tmdbLanguage = "es-MX"
+	}
+
+	provider := librarymetadata.NewTMDBProvider(tmdbToken, tmdbLanguage)
+	tmdbId := entry.Media.TmdbId
+
+	// Determine the number of seasons we need to cover.
+	// Find the maximum episode number so we know which seasons to fetch.
+	maxEp := 0
+	for _, ep := range entry.Episodes {
+		if ep.EpisodeNumber > maxEp {
+			maxEp = ep.EpisodeNumber
+		}
+	}
+
+	// Fetch Season 1 first to discover the total number of seasons in the TMDB record.
+	// For most anime, Season 1 covers everything; for split-cour shows we need more.
+	s1, err := provider.GetTVSeason(ctx, tmdbId, 1)
+	if err != nil {
+		h.App.Logger.Debug().Err(err).Int("tmdbId", tmdbId).Msg("enrichEpisodesWithTMDB: could not fetch TMDB season 1")
+		return
+	}
+
+	// Estimate how many additional seasons we might need.
+	// Each season typically has ~12-25 episodes; rough heuristic is ceil(maxEp / len(s1.Episodes)).
+	numSeasonsNeeded := 1
+	if len(s1.Episodes) > 0 && maxEp > len(s1.Episodes) {
+		numSeasonsNeeded = (maxEp / len(s1.Episodes)) + 1
+		if numSeasonsNeeded > 8 {
+			numSeasonsNeeded = 8 // Reasonable upper bound
+		}
+	}
+
+	// Build cumulative episode map (seasonEpisodeNumber → TVEpisode) using
+	// absolute episode numbering: Season 1 ep 1..N, Season 2 ep N+1..N+M, etc.
+	epMap := make(map[int]tmdb.TVEpisode, maxEp+1)
+	offset := 0
+
+	addSeason := func(season tmdb.TVSeasonDetails) {
+		for _, te := range season.Episodes {
+			absNum := offset + te.EpisodeNumber
+			epMap[absNum] = te
+		}
+		offset += len(season.Episodes)
+	}
+	addSeason(s1)
+
+	// Fetch additional seasons concurrently.
+	if numSeasonsNeeded > 1 {
+		type seasonResult struct {
+			season tmdb.TVSeasonDetails
+			num    int
+			err    error
+		}
+		ch := make(chan seasonResult, numSeasonsNeeded-1)
+		for sn := 2; sn <= numSeasonsNeeded; sn++ {
+			go func(seasonNum int) {
+				s, e := provider.GetTVSeason(ctx, tmdbId, seasonNum)
+				ch <- seasonResult{season: s, num: seasonNum, err: e}
+			}(sn)
+		}
+
+		// Collect and sort by season number to ensure correct absolute numbering.
+		results := make([]seasonResult, 0, numSeasonsNeeded-1)
+		for i := 0; i < numSeasonsNeeded-1; i++ {
+			results = append(results, <-ch)
+		}
+		// Sort by season number ascending.
+		for i := 0; i < len(results)-1; i++ {
+			for j := i + 1; j < len(results); j++ {
+				if results[j].num < results[i].num {
+					results[i], results[j] = results[j], results[i]
+				}
+			}
+		}
+		for _, r := range results {
+			if r.err == nil {
+				addSeason(r.season)
+			}
+		}
+	}
+
+	const imgBase = "https://image.tmdb.org/t/p/w500"
+
+	// Use index-based loop to mutate the actual Episode structs (not copies).
+	for i := range entry.Episodes {
+		ep := entry.Episodes[i]
+		te, ok := epMap[ep.EpisodeNumber]
+		if !ok {
+			continue
+		}
+
+		if ep.EpisodeMetadata == nil {
+			entry.Episodes[i].EpisodeMetadata = &anime.EpisodeMetadata{}
+		}
+		md := entry.Episodes[i].EpisodeMetadata
+
+		// Fill title if missing — write back via index to avoid string copy issue.
+		if te.Name != "" {
+			if md.Title == "" {
+				md.Title = te.Name
+			}
+			if entry.Episodes[i].EpisodeTitle == "" {
+				entry.Episodes[i].EpisodeTitle = te.Name
+			}
+		}
+
+		// Fill synopsis if missing.
+		if md.Summary == "" && te.Overview != "" {
+			md.Summary = te.Overview
+		}
+		if md.Overview == "" && te.Overview != "" {
+			md.Overview = te.Overview
+		}
+
+		// Fill still image if missing.
+		if !md.HasImage && te.StillPath != "" {
+			md.Image = imgBase + te.StillPath
+			md.HasImage = true
+		}
+
+		// Fill runtime if missing.
+		if md.Length == 0 && te.Runtime > 0 {
+			md.Length = te.Runtime
+		}
+
+		// Fill air date if missing.
+		if md.AirDate == "" && te.AirDate != "" {
+			md.AirDate = te.AirDate
+		}
+	}
+
+	h.App.Logger.Debug().
+		Int("tmdbId", tmdbId).
+		Int("episodes", len(entry.Episodes)).
+		Int("seasons", numSeasonsNeeded).
+		Int("tmdbEpsMapped", len(epMap)).
+		Msg("enrichEpisodesWithTMDB: enrichment complete")
+}
+
+
+
 
 // HandleGetAnimeEntry
 //
@@ -113,14 +297,17 @@ var entriesSuggestionsCache = result.NewCache[string, []*platform.UnifiedMedia](
 // HandleGetAnimeEntrySuggestions
 //
 //	@summary returns anime suggestions for the given local files.
-//	@desc This is used when the user wants to manually match local files to an anime.
-//	@desc It returns a list of anime suggestions based on the titles of the local files.
+//	@desc Accepts either a directory path (dir) or explicit file paths (paths[]).
+//	@desc The frontend codegen contract sends dir; the legacy backend contract sends paths.
 //	@route /api/v1/library/anime-entry/suggestions [POST]
-//	@param paths - []string - true - "Paths of the local files"
+//	@param dir - string - false - "Directory of the local files (frontend contract)"
+//	@param paths - []string - false - "Explicit file paths (legacy contract)"
 //	@returns []*platform.UnifiedMedia
 func (h *Handler) HandleGetAnimeEntrySuggestions(c echo.Context) error {
 
 	type body struct {
+		// Frontend codegen sends dir (a directory path)
+		Dir   string   `json:"dir"`
 		Paths []string `json:"paths"`
 	}
 	b := new(body)
@@ -128,21 +315,29 @@ func (h *Handler) HandleGetAnimeEntrySuggestions(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	if len(b.Paths) == 0 {
-		return h.RespondWithError(c, errors.New("no paths provided"))
-	}
-
 	lfs, _, err := db.GetLocalFiles(h.App.Database)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
 
-	selectedLfs := lo.Filter(lfs, func(lf *dto.LocalFile, _ int) bool {
-		return lo.Contains(b.Paths, lf.Path)
-	})
+	var selectedLfs []*dto.LocalFile
+
+	if b.Dir != "" {
+		dir := strings.ReplaceAll(b.Dir, "\\", "/")
+		selectedLfs = lo.Filter(lfs, func(lf *dto.LocalFile, _ int) bool {
+			norm := strings.ReplaceAll(lf.Path, "\\", "/")
+			return strings.HasPrefix(norm, dir)
+		})
+	} else if len(b.Paths) > 0 {
+		selectedLfs = lo.Filter(lfs, func(lf *dto.LocalFile, _ int) bool {
+			return matchesAnyRequestedPath(lf.Path, b.Paths)
+		})
+	} else {
+		return h.RespondWithError(c, errors.New("provide either dir or paths"))
+	}
 
 	if len(selectedLfs) == 0 {
-		return h.RespondWithError(c, errors.New("no local files found for the given paths"))
+		return h.RespondWithError(c, errors.New("no local files found for the given location"))
 	}
 
 	title := selectedLfs[0].GetParsedTitle()
@@ -152,6 +347,10 @@ func (h *Handler) HandleGetAnimeEntrySuggestions(c echo.Context) error {
 	}
 
 	h.App.Logger.Info().Str("title", title).Msg("handlers: Fetching anime suggestions")
+
+	if h.App.Metadata.TMDBClient == nil {
+		return h.RespondWithError(c, errors.New("tmdb client is not configured"))
+	}
 
 	provider := librarymetadata.NewTMDBProviderWithClient(h.App.Metadata.TMDBClient)
 
@@ -284,54 +483,40 @@ func (h *Handler) HandleManualMatch(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	lfs, _, err := db.GetLocalFiles(h.App.Database)
+	lfs, lfsID, err := db.GetLocalFiles(h.App.Database)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
 
 	// Get the local files that are being matched
 	selectedLfs := lo.Filter(lfs, func(lf *dto.LocalFile, _ int) bool {
-		return lo.Contains(b.Paths, lf.Path)
+		return matchesAnyRequestedPath(lf.Path, b.Paths)
 	})
 	if len(selectedLfs) == 0 {
 		return h.RespondWithError(c, errors.New("no local files found for the given paths"))
 	}
 
-	// Create scan logger
-	scanLogger, err := scanner.NewScanLogger(h.App.Config.Logs.Dir)
+	libraryMediaID, err := h.ensureLibraryMediaForManualMatch(c.Request().Context(), b.MediaId, lfs)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
 
-	// Create a new scanner
-	scn := &scanner.Scanner{
-		DirPath:             "",
-		OtherDirPaths:       nil,
-		Enhanced:            false,
-		PlatformRef:         h.App.Metadata.PlatformRef,
-		Logger:              h.App.Logger,
-		WSEventManager:      h.App.WSEventManager,
-		ExistingLocalFiles:  lfs,
-		SkipLockedFiles:     true,
-		SkipIgnoredFiles:    true,
-		ScanLogger:          scanLogger,
-		Database:            h.App.Database,
-		MetadataProviderRef: h.App.Metadata.ProviderRef,
-		UseLegacyMatching:   false,
-		WithShelving:        false,
-		UseTMDB:             h.App.Settings.Library.ScannerProvider == "tmdb",
-		EventDispatcher:     h.App.WSEventManager.Dispatcher(),
+	for _, lf := range selectedLfs {
+		lf.MediaId = b.MediaId
+		lf.LibraryMediaId = libraryMediaID
+		lf.Locked = true
+		lf.Ignored = false
+		ensureManualMatchMetadata(lf)
 	}
 
-	// Run the scanner for the selected files
-	_, err = scn.Scan(c.Request().Context())
-
+	if lfsID == 0 {
+		_, err = db.InsertLocalFiles(h.App.Database, lfs)
+	} else {
+		_, err = db.SaveLocalFiles(h.App.Database, lfsID, lfs)
+	}
 	if err != nil {
-
 		return h.RespondWithError(c, err)
 	}
-
-
 
 	// Refresh the collection
 	_, _ = h.App.Metadata.PlatformRef.Get().RefreshAnimeCollection(context.Background())
@@ -350,14 +535,14 @@ func (h *Handler) HandleUnmatchFiles(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	lfs, _, err := db.GetLocalFiles(h.App.Database)
+	lfs, lfsID, err := db.GetLocalFiles(h.App.Database)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
 
 	// Get the local files that are being unmatched
 	selectedLfs := lo.Filter(lfs, func(lf *dto.LocalFile, _ int) bool {
-		return lo.Contains(b.Paths, lf.Path)
+		return matchesAnyRequestedPath(lf.Path, b.Paths)
 	})
 	if len(selectedLfs) == 0 {
 		return h.RespondWithError(c, errors.New("no local files found for the given paths"))
@@ -372,7 +557,7 @@ func (h *Handler) HandleUnmatchFiles(c echo.Context) error {
 	}
 
 	// Save local files
-	_, err = db.SaveLocalFiles(h.App.Database, 1, selectedLfs)
+	_, err = db.SaveLocalFiles(h.App.Database, lfsID, lfs)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
@@ -380,6 +565,139 @@ func (h *Handler) HandleUnmatchFiles(c echo.Context) error {
 
 
 	return h.RespondWithData(c, true)
+}
+
+func matchesAnyRequestedPath(localFilePath string, requestedPaths []string) bool {
+	localNormalized := util.NormalizePath(localFilePath)
+	for _, requestedPath := range requestedPaths {
+		requestedNormalized := strings.TrimSuffix(util.NormalizePath(requestedPath), "/")
+		if requestedNormalized == "" {
+			continue
+		}
+		if localNormalized == requestedNormalized {
+			return true
+		}
+		if strings.HasPrefix(localNormalized, requestedNormalized+"/") {
+			return true
+		}
+	}
+	return false
+}
+
+func ensureManualMatchMetadata(lf *dto.LocalFile) {
+	if lf.Metadata == nil {
+		lf.Metadata = &dto.LocalFileMetadata{}
+	}
+	if lf.Metadata.Type == "" {
+		lf.Metadata.Type = dto.LocalFileTypeMain
+	}
+	if lf.ParsedData == nil || lf.ParsedData.Episode == "" {
+		return
+	}
+	episode, err := strconv.Atoi(lf.ParsedData.Episode)
+	if err != nil {
+		return
+	}
+	if lf.Metadata.Episode == 0 {
+		lf.Metadata.Episode = episode
+	}
+	if lf.Metadata.AniDBEpisode == "" {
+		lf.Metadata.AniDBEpisode = fmt.Sprintf("%d", episode)
+	}
+}
+
+func (h *Handler) getLibraryMediaIDForMedia(mediaID int, lfs []*dto.LocalFile) uint {
+	for _, lf := range lfs {
+		if lf.MediaId == mediaID && lf.LibraryMediaId > 0 {
+			return lf.LibraryMediaId
+		}
+	}
+	return 0
+}
+
+func (h *Handler) ensureLibraryMediaForManualMatch(ctx context.Context, mediaID int, lfs []*dto.LocalFile) (uint, error) {
+	if existingID := h.getLibraryMediaIDForMedia(mediaID, lfs); existingID > 0 {
+		return existingID, nil
+	}
+
+	if h.App.Metadata.TMDBClient == nil {
+		return 0, errors.New("tmdb client is not configured")
+	}
+
+	provider := librarymetadata.NewTMDBProviderWithClient(h.App.Metadata.TMDBClient)
+	media, err := provider.GetMediaDetails(ctx, strconv.Itoa(mediaID))
+	if err != nil {
+		return 0, err
+	}
+	if media == nil {
+		return 0, errors.New("media details not found")
+	}
+
+	saved, err := db.InsertLibraryMedia(h.App.Database, normalizedMediaToLibraryMedia(media))
+	if err != nil {
+		return 0, err
+	}
+
+	return saved.ID, nil
+}
+
+func normalizedMediaToLibraryMedia(media *dto.NormalizedMedia) *models.LibraryMedia {
+	ret := &models.LibraryMedia{
+		Type:           "SHOW",
+		Format:         "TV",
+		MetadataStatus: "COMPLETE",
+	}
+
+	if media == nil {
+		return ret
+	}
+
+	if media.Format != nil {
+		ret.Format = string(*media.Format)
+		if ret.Format == "MOVIE" {
+			ret.Type = "MOVIE"
+		}
+	}
+	if media.TmdbId != nil {
+		ret.TmdbId = *media.TmdbId
+	}
+	if media.Title != nil {
+		if media.Title.Native != nil {
+			ret.TitleOriginal = *media.Title.Native
+		}
+		if media.Title.Romaji != nil {
+			ret.TitleRomaji = *media.Title.Romaji
+		}
+		if media.Title.English != nil {
+			ret.TitleEnglish = *media.Title.English
+		}
+		if ret.TitleEnglish == "" && media.Title.UserPreferred != nil {
+			ret.TitleEnglish = *media.Title.UserPreferred
+		}
+	}
+	if media.Description != nil {
+		ret.Description = *media.Description
+	}
+	if media.CoverImage != nil && media.CoverImage.Large != nil {
+		ret.PosterImage = *media.CoverImage.Large
+	}
+	if media.BannerImage != nil {
+		ret.BannerImage = *media.BannerImage
+	}
+	if media.Year != nil {
+		ret.Year = *media.Year
+	}
+	if media.Episodes != nil {
+		ret.TotalEpisodes = *media.Episodes
+	}
+	if media.Status != nil {
+		ret.Status = string(*media.Status)
+	}
+	if media.MetadataStatus != nil && *media.MetadataStatus != "" {
+		ret.MetadataStatus = *media.MetadataStatus
+	}
+
+	return ret
 }
 
 // HandleDeletePlatformEntry will delete the given media entry from Platform.
@@ -462,4 +780,120 @@ func (h *Handler) HandleGetUpcomingEpisodes(c echo.Context) error {
 	})
 
 	return h.RespondWithData(c, upcoming)
+}
+
+// --- Anime Entry Actions ---
+
+func (h *Handler) HandleAnimeEntryBulkAction(c echo.Context) error {
+	type body struct {
+		MediaId int    `json:"mediaId"`
+		Action  string `json:"action"`
+	}
+	var b body
+	if err := c.Bind(&b); err != nil {
+		return h.RespondWithError(c, err)
+	}
+	if b.MediaId == 0 {
+		return c.JSON(http.StatusBadRequest, NewErrorResponse(fmt.Errorf("mediaId is required")))
+	}
+
+	lfs, lfsId, err := db.GetLocalFiles(h.App.Database)
+	if err != nil {
+		return h.RespondWithError(c, err)
+	}
+
+	mediaFiles := lo.Filter(lfs, func(lf *dto.LocalFile, _ int) bool {
+		return lf.MediaId == b.MediaId
+	})
+	if len(mediaFiles) == 0 {
+		return h.RespondWithData(c, true) // no-op
+	}
+
+	paths := lo.Map(mediaFiles, func(lf *dto.LocalFile, _ int) string { return lf.Path })
+	for _, lf := range lfs {
+		if !lo.Contains(paths, lf.Path) {
+			continue
+		}
+		switch b.Action {
+		case "lock":
+			lf.Locked = true
+		case "unlock":
+			lf.Locked = false
+		case "ignore":
+			lf.Ignored = true
+			lf.Locked = false
+		case "unignore":
+			lf.Ignored = false
+		}
+	}
+
+	if _, err := db.SaveLocalFiles(h.App.Database, lfsId, lfs); err != nil {
+		return h.RespondWithError(c, err)
+	}
+	return h.RespondWithData(c, true)
+}
+
+func (h *Handler) HandleOpenAnimeEntryInExplorer(c echo.Context) error {
+	type body struct {
+		MediaId int `json:"mediaId"`
+	}
+	var b body
+	if err := c.Bind(&b); err != nil {
+		return h.RespondWithError(c, err)
+	}
+
+	lfs, _, err := db.GetLocalFiles(h.App.Database)
+	if err != nil {
+		return h.RespondWithError(c, err)
+	}
+
+	var targetPath string
+	for _, lf := range lfs {
+		if lf.MediaId == b.MediaId && lf.Path != "" {
+			targetPath = lf.Path
+			break
+		}
+	}
+
+	if targetPath == "" {
+		return c.JSON(http.StatusNotFound, NewErrorResponse(fmt.Errorf("no local files found for mediaId %d", b.MediaId)))
+	}
+
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("explorer", "/select,", targetPath)
+	case "darwin":
+		cmd = exec.Command("open", "-R", targetPath)
+	default:
+		cmd = exec.Command("xdg-open", targetPath)
+	}
+
+	if err := cmd.Start(); err != nil {
+		h.App.Logger.Warn().Err(err).Str("path", targetPath).Msg("handlers: Could not open file explorer")
+	}
+	return h.RespondWithData(c, true)
+}
+
+// HandleGetAnimeEntrySilenceStatus returns a stable no-op silence status.
+func (h *Handler) HandleGetAnimeEntrySilenceStatus(c echo.Context) error {
+	return h.RespondWithData(c, map[string]interface{}{
+		"mediaId":  c.Param("id"),
+		"silenced": false,
+	})
+}
+
+// HandleToggleAnimeEntrySilenceStatus toggles the silence flag (no-op until DB column exists).
+func (h *Handler) HandleToggleAnimeEntrySilenceStatus(c echo.Context) error {
+	type body struct {
+		MediaId int `json:"mediaId"`
+	}
+	var b body
+	if err := c.Bind(&b); err != nil {
+		return h.RespondWithError(c, err)
+	}
+	return h.RespondWithData(c, map[string]interface{}{
+		"mediaId":  b.MediaId,
+		"silenced": false, // Placeholder until silence column is added to DB
+	})
 }

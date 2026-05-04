@@ -3,7 +3,6 @@ package handlers
 import (
 	"errors"
 	"kamehouse/internal/database/models"
-	"kamehouse/internal/torrents/torrent"
 	"kamehouse/internal/util"
 	"os"
 	"path/filepath"
@@ -26,7 +25,6 @@ func (h *Handler) HandleGetSettings(c echo.Context) error {
 
 	// Attach separate-table sub-settings for the full settings view
 	settings.Mediastream, _ = h.App.Database.GetMediastreamSettings()
-	settings.Torrentstream, _ = h.App.Database.GetTorrentstreamSettings()
 	settings.Theme, _ = h.App.Database.GetTheme()
 
 	return h.RespondWithData(c, settings)
@@ -44,7 +42,6 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 	type body struct {
 		Library                models.LibrarySettings      `json:"library"`
 		MediaPlayer            models.MediaPlayerSettings  `json:"mediaPlayer"`
-		Torrent                models.TorrentSettings      `json:"torrent"`
 		Notifications          models.NotificationSettings `json:"notifications"`
 		EnableTranscode        bool                        `json:"enableTranscode"`
 	}
@@ -60,21 +57,15 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 	if b.Library.MoviePaths == nil {
 		b.Library.MoviePaths = []string{}
 	}
-	b.Library.IncludeOnlineStreamingInLibrary = b.Library.EnableOnlinestream
+	if b.Library.MoviePaths == nil {
+		b.Library.MoviePaths = []string{}
+	}
 
 	settings, err := h.App.Database.UpsertSettings(&models.Settings{
 		BaseModel:     models.BaseModel{ID: 1, UpdatedAt: time.Now()},
 		Library:       b.Library,
 		MediaPlayer:   b.MediaPlayer,
-		Torrent:       b.Torrent,
 		Notifications: b.Notifications,
-		AutoDownloader: models.AutoDownloaderSettings{
-			Provider:              b.Library.TorrentProvider,
-			Interval:              20,
-			Enabled:               false,
-			DownloadAutomatically: true,
-			EnableEnhancedQueries: true,
-		},
 	})
 	if err != nil {
 		return h.RespondWithError(c, err)
@@ -110,10 +101,8 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 	type body struct {
 		Library       *models.LibrarySettings       `json:"library"`
 		MediaPlayer   *models.MediaPlayerSettings   `json:"mediaPlayer"`
-		Torrent       *models.TorrentSettings       `json:"torrent"`
 		Notifications *models.NotificationSettings  `json:"notifications"`
 		Mediastream   *models.MediastreamSettings   `json:"mediastream"`
-		Torrentstream *models.TorrentstreamSettings `json:"torrentstream"`
 		Theme         *models.Theme                 `json:"theme"`
 	}
 
@@ -180,14 +169,6 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	// ── 3. Preserve AutoDownloader: always carry the stored state forward ─────
-	autoDownloader := prev.AutoDownloader
-	// If the provider is being cleared, disable the scheduler proactively
-	if b.Library != nil && b.Library.TorrentProvider == torrent.ProviderNone && autoDownloader.Enabled {
-		h.App.Logger.Debug().Msg("settings: disabling auto-downloader – torrent provider set to none")
-		autoDownloader.Enabled = false
-	}
-
 	merged := prev
 	merged.ID = 1
 	merged.UpdatedAt = time.Now()
@@ -197,33 +178,8 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		merged.Library.MoviePaths = b.Library.MoviePaths
 		
 		merged.Library.AutoUpdateProgress = b.Library.AutoUpdateProgress
-		merged.Library.TorrentProvider = b.Library.TorrentProvider
-		merged.Library.AutoSelectTorrentProvider = b.Library.AutoSelectTorrentProvider
-		merged.Library.AutoScan = b.Library.AutoScan
-		merged.Library.EnableOnlinestream = b.Library.EnableOnlinestream
-		merged.Library.IncludeOnlineStreamingInLibrary = b.Library.IncludeOnlineStreamingInLibrary
-		merged.Library.DisableAnimeCardTrailers = b.Library.DisableAnimeCardTrailers
-		merged.Library.DOHProvider = b.Library.DOHProvider
-		merged.Library.OpenTorrentClientOnStart = b.Library.OpenTorrentClientOnStart
-		merged.Library.OpenWebURLOnStart = b.Library.OpenWebURLOnStart
-		merged.Library.RefreshLibraryOnStart = b.Library.RefreshLibraryOnStart
-		merged.Library.AutoPlayNextEpisode = b.Library.AutoPlayNextEpisode
-		merged.Library.EnableWatchContinuity = b.Library.EnableWatchContinuity
-		merged.Library.AutoSyncOfflineLocalData = b.Library.AutoSyncOfflineLocalData
-		merged.Library.ScannerMatchingThreshold = b.Library.ScannerMatchingThreshold
-		merged.Library.ScannerMatchingAlgorithm = b.Library.ScannerMatchingAlgorithm
-		merged.Library.AutoSyncToLocalAccount = b.Library.AutoSyncToLocalAccount
-		merged.Library.AutoSaveCurrentMediaOffline = b.Library.AutoSaveCurrentMediaOffline
-		merged.Library.UseFallbackMetadataProvider = b.Library.UseFallbackMetadataProvider
-		merged.Library.TmdbApiKey = b.Library.TmdbApiKey
-		merged.Library.TmdbLanguage = b.Library.TmdbLanguage
-		merged.Library.ScannerUseLegacyMatching = b.Library.ScannerUseLegacyMatching
-		merged.Library.ScannerConfig = b.Library.ScannerConfig
-		merged.Library.ScannerStrictStructure = b.Library.ScannerStrictStructure
 		merged.Library.ScannerProvider = b.Library.ScannerProvider
 		merged.Library.DisableLocalScanning = b.Library.DisableLocalScanning
-		merged.Library.DisableTorrentStreaming = b.Library.DisableTorrentStreaming
-		merged.Library.DisableTorrentProvider = b.Library.DisableTorrentProvider
 
 		merged.Library.FanartApiKey = b.Library.FanartApiKey
 		merged.Library.OmdbApiKey = b.Library.OmdbApiKey
@@ -250,29 +206,15 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		}
 	}
 
-	// Partial updates for Torrent Settings
-	if b.Torrent != nil {
-		merged.Torrent.ShowBufferingStatus = b.Torrent.ShowBufferingStatus
-		merged.Torrent.ShowNetworkSpeed = b.Torrent.ShowNetworkSpeed
-	}
+
 
 	// Partial updates for Notification Settings
 	if b.Notifications != nil {
 		merged.Notifications.DisableNotifications = b.Notifications.DisableNotifications
-		merged.Notifications.DisableAutoDownloaderNotifications = b.Notifications.DisableAutoDownloaderNotifications
 		merged.Notifications.DisableAutoScannerNotifications = b.Notifications.DisableAutoScannerNotifications
 	}
 
-	merged.AutoDownloader = autoDownloader
 
-	// If the provider was updated, check if we need to disable auto-downloader
-	if b.Library != nil {
-		if b.Library.TorrentProvider == torrent.ProviderNone && autoDownloader.Enabled {
-			h.App.Logger.Debug().Msg("settings: disabling auto-downloader – torrent provider set to none")
-			autoDownloader.Enabled = false
-			merged.AutoDownloader.Enabled = false
-		}
-	}
 
 	// ── 5. Single upsert for the main embedded settings ───────────────────────
 	saved, err := h.App.Database.UpsertSettings(merged)
@@ -286,11 +228,7 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		b.Mediastream.UpdatedAt = time.Now()
 		_, _ = h.App.Database.UpsertMediastreamSettings(b.Mediastream)
 	}
-	if b.Torrentstream != nil {
-		b.Torrentstream.ID = 1
-		b.Torrentstream.UpdatedAt = time.Now()
-		_, _ = h.App.Database.UpsertTorrentstreamSettings(b.Torrentstream)
-	}
+
 	if b.Theme != nil {
 		b.Theme.ID = 1
 		// Preserve HomeItems – they are managed by a separate flow
@@ -307,63 +245,7 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 	return h.RespondWithData(c, h.NewStatus(c))
 }
 
-// HandleSaveAutoDownloaderSettings
-//
-//	@summary updates the auto-downloader settings.
-//	@route /api/v1/settings/auto-downloader [PATCH]
-//	@returns bool
-func (h *Handler) HandleSaveAutoDownloaderSettings(c echo.Context) error {
 
-	type body struct {
-		Provider              string `json:"provider"`
-		Interval              int    `json:"interval"`
-		Enabled               bool   `json:"enabled"`
-		DownloadAutomatically bool   `json:"downloadAutomatically"`
-		EnableEnhancedQueries bool   `json:"enableEnhancedQueries"`
-		EnableSeasonCheck     bool   `json:"enableSeasonCheck"`
-	}
-
-	var b body
-
-	if err := c.Bind(&b); err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	currSettings, err := h.App.Database.GetSettings()
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	// Validation
-	if b.Interval < 15 {
-		return h.RespondWithError(c, errors.New("interval must be at least 15 minutes"))
-	}
-
-	autoDownloaderSettings := &models.AutoDownloaderSettings{
-		Provider:              b.Provider,
-		Interval:              b.Interval,
-		Enabled:               b.Enabled,
-		DownloadAutomatically: b.DownloadAutomatically,
-		EnableEnhancedQueries: b.EnableEnhancedQueries,
-		EnableSeasonCheck:     b.EnableSeasonCheck,
-	}
-
-	currSettings.AutoDownloader = *autoDownloaderSettings
-	currSettings.BaseModel = models.BaseModel{
-		ID:        1,
-		UpdatedAt: time.Now(),
-	}
-
-	_, err = h.App.Database.UpsertSettings(currSettings)
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	// Update Auto Downloader settings
-	h.App.AutoDownloader.SetSettings(*autoDownloaderSettings)
-
-	return h.RespondWithData(c, true)
-}
 
 // HandleSaveMediaPlayerSettings
 //

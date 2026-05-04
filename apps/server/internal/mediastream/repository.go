@@ -4,7 +4,6 @@ import (
 	"errors"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/events"
-	"kamehouse/internal/mediastream/optimizer"
 	"kamehouse/internal/mediastream/transcoder"
 	"kamehouse/internal/mediastream/videofile"
 	"kamehouse/internal/util/filecache"
@@ -19,7 +18,6 @@ import (
 type (
 	Repository struct {
 		transcoder         mo.Option[*transcoder.Transcoder]
-		optimizer          *optimizer.Optimizer
 		settings           mo.Option[*models.MediastreamSettings]
 		playbackManager    *PlaybackManager
 		mediaInfoExtractor *videofile.MediaInfoExtractor
@@ -41,10 +39,6 @@ type (
 func NewRepository(opts *NewRepositoryOptions) *Repository {
 	ret := &Repository{
 		logger: opts.Logger,
-		optimizer: optimizer.NewOptimizer(&optimizer.NewOptimizerOptions{
-			Logger:         opts.Logger,
-			WSEventManager: opts.WSEventManager,
-		}),
 		settings:           mo.None[*models.MediastreamSettings](),
 		transcoder:         mo.None[*transcoder.Transcoder](),
 		wsEventManager:     opts.WSEventManager,
@@ -89,8 +83,6 @@ func (r *Repository) InitializeModules(settings *models.MediastreamSettings, cac
 	r.cacheDir = cacheDir
 	r.transcodeDir = transcodeDir
 
-	// Set the optimizer settings
-	r.optimizer.SetLibraryDir(settings.PreTranscodeLibraryDir)
 
 	// Initialize the transcoder
 	if ok := r.initializeTranscoder(r.settings); ok {
@@ -131,43 +123,6 @@ func (r *Repository) ClearTranscodeDir() {
 	r.playbackManager.mediaContainers.Clear()
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Optimize
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-type StartMediaOptimizationOptions struct {
-	Filepath          string
-	Quality           optimizer.Quality
-	AudioChannelIndex int
-}
-
-func (r *Repository) StartMediaOptimization(opts *StartMediaOptimizationOptions) (err error) {
-	if !r.IsInitialized() {
-		return errors.New("module not initialized")
-	}
-
-	mediaInfo, err := r.mediaInfoExtractor.GetInfo(r.settings.MustGet().FfmpegPath, opts.Filepath)
-	if err != nil {
-		return
-	}
-
-	err = r.optimizer.StartMediaOptimization(&optimizer.StartMediaOptimizationOptions{
-		Filepath:  opts.Filepath,
-		Quality:   opts.Quality,
-		MediaInfo: mediaInfo,
-	})
-	return
-}
-
-func (r *Repository) RequestOptimizedStream(filepath string) (ret *MediaContainer, err error) {
-	if !r.IsInitialized() {
-		return nil, errors.New("module not initialized")
-	}
-
-	ret, err = r.playbackManager.RequestPlayback(filepath, StreamTypeOptimized)
-
-	return
-}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Transcode

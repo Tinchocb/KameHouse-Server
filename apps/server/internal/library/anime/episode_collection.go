@@ -57,7 +57,7 @@ func NewEpisodeCollection(opts NewEpisodeCollectionOptions) (ec *EpisodeCollecti
 	}
 
 	if opts.Media == nil {
-		return nil, fmt.Errorf("cannont create episode collectiom, media is nil")
+		return nil, fmt.Errorf("cannot create episode collection, media is nil")
 	}
 
 	if opts.MetadataProviderRef.IsAbsent() {
@@ -131,7 +131,7 @@ func NewEpisodeCollection(opts NewEpisodeCollectionOptions) (ec *EpisodeCollecti
 	if info == nil || info.EpisodesToDownload == nil {
 		opts.Logger.Debug().Msg("torrentstream: no episodes found from AniDB, using internal provider")
 		mediaWrapper := opts.MetadataProviderRef.Get().GetAnimeMetadataWrapper(nil, nil)
-		for epIdx := range 0 /* TODO: Use actual episode count when available locally */ {
+		for epIdx := range opts.Media.TotalEpisodes {
 			episodeNumber := epIdx + 1
 
 			episodeMetadata := mediaWrapper.GetEpisodeMetadata(strconv.Itoa(episodeNumber))

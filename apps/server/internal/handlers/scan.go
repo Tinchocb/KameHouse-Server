@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sync/atomic"
+	"time"
 
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/library/scanner"
@@ -125,10 +126,19 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		defer globalScanActive.Store(false)
 		defer scanLogger.Done()
 
-		allLfs, err := sc.Scan(context.Background())
+		// Timeout safety: if any external API or DB call hangs indefinitely,
+		// globalScanActive would never be reset without this.
+		scanCtx, scanCancel := context.WithTimeout(context.Background(), 2*time.Hour)
+		defer scanCancel()
+
+		allLfs, err := sc.Scan(scanCtx)
 		if err != nil {
 			if !errors.Is(err, scanner.ErrNoLocalFiles) {
 				h.App.Logger.Error().Err(err).Msg("Failed background library scan")
+				// Notify the frontend so it can display an error to the user
+				h.App.WSEventManager.SendEvent("SCAN_ERROR", map[string]string{
+					"message": err.Error(),
+				})
 			}
 			return
 		}

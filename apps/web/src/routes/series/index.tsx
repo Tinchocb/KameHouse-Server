@@ -1,27 +1,31 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useState, useMemo, memo } from "react"
-import { FaSearch, FaFilter } from "react-icons/fa"
+import { FaSearch, FaFilter, FaStar, FaPlay, FaListOl } from "react-icons/fa"
 import { EmptyState } from "@/components/shared/empty-state"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { Anime_LibraryCollectionEntry } from "@/api/generated/types"
-import { Loader2, Tv } from "lucide-react"
+import { Tv } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
+import { GenrePill } from "@/components/shared/genre-pill"
+import { DeferredImage } from "@/components/shared/deferred-image"
+import { HeroSection } from "@/components/shared/hero-section"
 
 export const Route = createFileRoute("/series/")(
     { component: SeriesPage }
 )
 
+// ─── Cassette thickness in px ─────────────────────────────────────────────────
+const SPINE_W = 52
+const CASSETTE_W = 220  // cover width in px
+const CASSETTE_H = 330  // cover height in px
+const OVERLAP = 80      // how much cassettes overlap each other
+
 function SeriesPage() {
-    const navigate = useNavigate()
-    const [hoveredId, setHoveredId] = useState<string | null>(null)
     const [search, setSearch] = useState("")
     const [activeGenre, setActiveGenre] = useState<string | null>(null)
 
     const { data: collection, isLoading } = useGetLibraryCollection()
 
-    const accents = ["#f97316", "#3b82f6", "#a855f7", "#10b981", "#f43f5e"]
-
-    // ── All series (non-movie) ─────────────────────────────────────────────
     const allSeries = useMemo(() => {
         if (!collection?.lists) return []
         const raw = collection.lists
@@ -52,223 +56,27 @@ function SeriesPage() {
         })
     }, [allSeries, search, activeGenre])
 
-    // Limit fan-out cards to 8 most recent for UI performance
-    const displayCards = useMemo(() => filtered.slice(0, 40), [filtered])
-
     return (
-        <>
-            <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600&display=swap');
+        <div className="flex-1 w-full min-h-screen bg-[#09090b] text-white overflow-hidden font-sans selection:bg-primary/30">
 
-                .series-page {
-                    position: fixed;
-                    inset: 0;
-                    background: #0d0d0d;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: flex-start;
-                    padding: 0;
-                    overflow: hidden;
-                }
+            {/* ── Page Header ── */}
+            <HeroSection
+                title={<>CRÓNICAS<br /><span className="text-transparent stroke-text opacity-20">Z</span></>}
+                subtitle="El registro definitivo de los guerreros y las batallas que marcaron el destino del universo."
+                decorationTag="Archivo Maestro"
+                verticalTag="SAYAYIN · ANDROIDES · MAJIN BUU"
+                count={isLoading ? "..." : allSeries.length}
+                countLabel="Sagas"
+            />
 
-                .page-title {
-                    font-family: 'Bebas Neue', sans-serif;
-                    font-size: clamp(36px, 5vw, 64px);
-                    color: #fff;
-                    letter-spacing: 0.06em;
-                    line-height: 1;
-                    margin: 0;
-                }
-
-                /* ── Horizontal stack ── */
-                .card-stack {
-                    display: flex;
-                    flex-direction: row;
-                    align-items: stretch;
-                    width: 100%;
-                    max-width: none;
-                    flex: 1;
-                    min-height: 0;
-                    gap: 6px;
-                    padding: 0 4vw;
-                }
-
-                /* Each card */
-                .card {
-                    position: relative;
-                    overflow: hidden;
-                    cursor: pointer;
-                    border-radius: 14px;
-                    flex-shrink: 0;
-                    flex-grow: 1;
-                    transition:
-                        flex-grow 360ms cubic-bezier(0.4, 0, 0.2, 1),
-                        box-shadow 360ms cubic-bezier(0.4, 0, 0.2, 1);
-                }
-                .card.is-hovered   { flex-grow: 5; box-shadow: 0 24px 64px rgba(0,0,0,0.7); }
-                .card.is-collapsed { flex-grow: 0.35; }
-
-                /* BG image */
-                .card-bg {
-                    position: absolute;
-                    inset: 0;
-                    width: 100%;
-                    height: 100%;
-                    object-fit: cover;
-                    object-position: center 15%;
-                    transition: transform 600ms ease, filter 360ms ease;
-                }
-                .card.is-hovered   .card-bg { transform: scale(1.05); filter: brightness(0.4); }
-                .card:not(.is-hovered) .card-bg { transform: scale(1);    filter: brightness(0.22); }
-
-                /* Gradient scrim */
-                .card-scrim {
-                    position: absolute;
-                    inset: 0;
-                    background: linear-gradient(
-                        to top,
-                        rgba(0,0,0,0.95) 0%,
-                        rgba(0,0,0,0.4)  45%,
-                        rgba(0,0,0,0.1)  100%
-                    );
-                }
-
-                /* Accent line — bottom edge */
-                .card-accent-line {
-                    position: absolute;
-                    bottom: 0; left: 0; right: 0;
-                    height: 3px;
-                    transition: opacity 360ms;
-                }
-                .card.is-hovered .card-accent-line   { opacity: 1; }
-                .card:not(.is-hovered) .card-accent-line { opacity: 0; }
-
-                /* ── Collapsed title (vertical, centered) ── */
-                .card-title-vertical {
-                    position: absolute;
-                    inset: 0;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    transition: opacity 280ms;
-                }
-                .card.is-hovered   .card-title-vertical { opacity: 0; pointer-events: none; }
-                .card-title-vertical-text {
-                    font-family: 'Bebas Neue', sans-serif;
-                    font-size: clamp(18px, 2.2vw, 26px);
-                    color: rgba(255,255,255,0.75);
-                    letter-spacing: 0.12em;
-                    writing-mode: vertical-rl;
-                    text-orientation: mixed;
-                    transform: rotate(180deg);
-                    white-space: nowrap;
-                    text-shadow: 0 2px 12px rgba(0,0,0,0.8);
-                }
-
-                /* ── Expanded content (bottom) ── */
-                .card-content {
-                    position: absolute;
-                    inset: 0;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: flex-end;
-                    padding: 28px 30px;
-                    transition: opacity 300ms 90ms;
-                }
-                .card:not(.is-hovered) .card-content { opacity: 0; pointer-events: none; }
-                .card.is-hovered       .card-content { opacity: 1; }
-
-                .card-meta {
-                    font-family: 'Inter', sans-serif;
-                    font-size: 11px;
-                    font-weight: 600;
-                    letter-spacing: 0.2em;
-                    text-transform: uppercase;
-                    color: rgba(255,255,255,0.35);
-                    margin-bottom: 8px;
-                }
-
-                .card-title-expanded {
-                    font-family: 'Bebas Neue', sans-serif;
-                    font-size: clamp(36px, 4.5vw, 60px);
-                    color: #fff;
-                    letter-spacing: 0.04em;
-                    line-height: 1;
-                    margin: 0 0 12px;
-                }
-
-                .card-description {
-                    font-family: 'Inter', sans-serif;
-                    font-size: 13px;
-                    line-height: 1.7;
-                    color: rgba(255,255,255,0.55);
-                    max-width: 420px;
-                    display: -webkit-box;
-                    -webkit-line-clamp: 3;
-                    -webkit-box-orient: vertical;
-                    overflow: hidden;
-                    margin-bottom: 18px;
-                }
-
-                .card-cta {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 8px;
-                    font-family: 'Inter', sans-serif;
-                    font-size: 11px;
-                    font-weight: 600;
-                    letter-spacing: 0.14em;
-                    text-transform: uppercase;
-                    border-radius: 6px;
-                    padding: 9px 18px;
-                    border: 1.5px solid;
-                    background: transparent;
-                    cursor: pointer;
-                    transition: background 180ms, color 180ms;
-                    width: fit-content;
-                }
-                .stroke-text {
-                    -webkit-text-stroke: 1.5px white;
-                }
-
-                .series-controls {
-                    width: 100%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    flex-wrap: wrap;
-                    gap: 12px;
-                    padding: 20px 24px;
-                    border-bottom: 1px solid rgba(255,255,255,0.04);
-                    background: rgba(0,0,0,0.5);
-                    backdrop-filter: blur(20px);
-                    z-index: 20;
-                }
-            `}</style>
-
-            <div className="series-page">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] via-transparent to-rose-600/[0.02] pointer-events-none z-0" />
-
-                {/* ── Header ── */}
-                <div className="relative z-10 w-full max-w-none flex items-center justify-between pt-8 pb-6 px-[4vw]">
-                    <div>
-                        <h1 className="page-title">
-                            CRÓNICAS <span className="text-transparent stroke-text opacity-30">DB</span>
-                        </h1>
-                        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "rgba(255,255,255,0.3)", marginTop: "4px", letterSpacing: "0.1em" }}>
-                            {isLoading ? "Cargando..." : `${allSeries.length} series · ${filtered.length} mostradas`}
-                        </p>
-                    </div>
-                </div>
-
-                {/* ── Controls ── */}
-                <div className="series-controls relative z-10">
+            {/* ── Controls ── */}
+            <div className="sticky top-0 z-30 bg-[#09090b]/80 border-b border-white/[0.04] backdrop-blur-2xl">
+                <div className="px-8 md:px-16 py-3 flex flex-wrap gap-4 items-center">
                     {/* Search */}
-                    <div className="relative w-72 group">
-                        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-primary transition-colors text-xs" />
+                    <div className="relative group">
+                        <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-primary transition-colors text-xs" />
                         <input
-                            className="w-full pl-9 pr-4 py-2 bg-white/[0.03] border border-white/5 focus:border-primary/40 rounded-xl text-sm text-white outline-none transition-all duration-300 placeholder:text-zinc-600 hover:bg-white/[0.05] focus:bg-white/[0.08]"
+                            className="pl-10 pr-4 py-2 bg-white/[0.04] hover:bg-white/[0.06] focus:bg-white/[0.08] border border-white/[0.06] focus:border-primary/40 rounded-xl text-sm outline-none transition-all duration-300 placeholder:text-zinc-700 w-64"
                             type="text"
                             value={search}
                             onChange={e => setSearch(e.target.value)}
@@ -277,13 +85,13 @@ function SeriesPage() {
                     </div>
 
                     {/* Genres */}
-                    <div className="flex flex-wrap items-center gap-2">
-                        <div className="flex items-center gap-2 mr-1 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/5">
-                            <FaFilter className="text-[10px] text-zinc-500" />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Géneros</span>
+                    <div className="flex flex-nowrap items-center gap-2 overflow-x-auto no-scrollbar">
+                        <div className="flex items-center gap-1.5 mr-1 px-2.5 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.05]">
+                            <FaFilter className="text-[9px] text-zinc-600" />
+                            <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Género</span>
                         </div>
                         <GenrePill label="TODOS" active={activeGenre === null} onClick={() => setActiveGenre(null)} />
-                        {ALL_GENRES.slice(0, 10).map(g => (
+                        {ALL_GENRES.slice(0, 12).map(g => (
                             <GenrePill
                                 key={g}
                                 label={g.toUpperCase()}
@@ -293,165 +101,268 @@ function SeriesPage() {
                         ))}
                     </div>
                 </div>
+            </div>
 
-                {/* ── Content ── */}
-                <div className="relative z-10 flex-1 min-h-0 w-full flex flex-col items-center justify-center">
-                    {isLoading ? (
-                        <div className="flex flex-col items-center justify-center gap-4">
-                            <Loader2 className="w-10 h-10 text-primary animate-spin" />
-                            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", letterSpacing: "0.3em", color: "rgba(255,255,255,0.3)", textTransform: "uppercase" }}>
-                                Cargando biblioteca...
-                            </p>
-                        </div>
-                    ) : filtered.length === 0 ? (
+            {/* ── Cassette Shelf ── */}
+            <div className="relative w-full overflow-hidden">
+                {/* Shelf floor shadow */}
+                <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/60 to-transparent pointer-events-none z-10" />
+                {/* Shelf top light */}
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent pointer-events-none z-10" />
+
+                {isLoading ? (
+                    <ShelfSkeleton />
+                ) : filtered.length === 0 ? (
+                    <div className="px-16 py-24">
                         <EmptyState
-                            title="Sin series"
-                            message={
-                                allSeries.length === 0
-                                    ? "No se encontraron series en tu biblioteca. Ejecutá un escaneo en Ajustes → Buscador."
-                                    : "Ninguna serie coincide con tu búsqueda actual."
-                            }
+                            title="Sin coincidencias"
+                            message="No hemos encontrado series que coincidan con tu búsqueda actual."
                             illustration={<Tv className="w-20 h-20 text-zinc-800" />}
                         />
-                    ) : (
-                        <div className="card-stack pb-6">
-                            {displayCards.map((entry, idx) => (
-                                <SeriesCard
-                                    key={entry.mediaId}
-                                    entry={entry}
-                                    isHovered={hoveredId === String(entry.mediaId)}
-                                    isAnyHovered={hoveredId !== null}
-                                    accent={accents[idx % accents.length]}
-                                    onHover={() => setHoveredId(String(entry.mediaId))}
-                                    onLeave={() => setHoveredId(null)}
-                                    onNavigate={() => navigate({ to: "/series/$seriesId", params: { seriesId: String(entry.mediaId) } })}
-                                />
-                            ))}
+                    </div>
+                ) : (
+                    <div
+                        className="flex flex-nowrap items-end overflow-x-auto no-scrollbar py-20 px-16"
+                        style={{ perspective: "2400px" }}
+                    >
+                        {filtered.map((entry, idx) => (
+                            <CassetteItem
+                                key={entry.mediaId}
+                                entry={entry}
+                                idx={idx}
+                            />
+                        ))}
+                        {/* Right breathing room */}
+                        <div className="shrink-0 w-32" />
+                    </div>
+                )}
+            </div>
+
+            <style>{`
+                .no-scrollbar::-webkit-scrollbar { display: none; }
+                .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+                @keyframes cassette-in {
+                    from { opacity: 0; transform: rotateY(60deg) translateZ(-100px); }
+                    to   { opacity: 1; }
+                }
+            `}</style>
+        </div>
+    )
+}
+
+// ─── Individual Cassette ───────────────────────────────────────────────────────
+
+const CassetteItem = memo(function CassetteItem({
+    entry, idx
+}: { entry: Anime_LibraryCollectionEntry; idx: number }) {
+    const navigate = useNavigate()
+    const media = entry.media
+    if (!media) return null
+
+    const title = media.titleEnglish || media.titleRomaji || media.titleOriginal || "Sin título"
+    const score = media.score ? (media.score > 10 ? media.score / 10 : media.score).toFixed(1) : null
+    const genres = media.genres?.slice(0, 3) || []
+
+    // Pick a spine accent colour from genre
+    const spineAccent = genres[0]
+        ? genreColor(genres[0])
+        : "#ff6b00"
+
+    return (
+        <div
+            className={cn(
+                "group/item relative shrink-0 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:z-[9999]",
+                idx !== 0 && "ml-[-" + OVERLAP + "px]"
+            )}
+            style={{
+                marginLeft: idx !== 0 ? -OVERLAP : 0,
+                zIndex: idx,
+            }}
+        >
+            {/* ── 3D wrapper ── */}
+            <div
+                className="relative transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] [transform-style:preserve-3d]"
+                style={{
+                    width: CASSETTE_W + SPINE_W,
+                    height: CASSETTE_H,
+                    transform: "rotateY(35deg)",
+                }}
+                onMouseEnter={e => {
+                    const el = e.currentTarget as HTMLElement
+                    el.style.transform = "rotateY(0deg) translateZ(80px) translateY(-30px)"
+                    el.style.transitionDuration = "400ms"
+                }}
+                onMouseLeave={e => {
+                    const el = e.currentTarget as HTMLElement
+                    el.style.transform = "rotateY(35deg)"
+                    el.style.transitionDuration = "500ms"
+                }}
+            >
+                {/* ── Spine ─────────────────────────────────────────────── */}
+                <div
+                    className="absolute inset-y-0 left-0 flex flex-col justify-between overflow-hidden rounded-l-lg border-y border-l border-white/10"
+                    style={{
+                        width: SPINE_W,
+                        background: `linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%)`,
+                        borderRight: `2px solid ${spineAccent}22`,
+                    }}
+                >
+                    {/* Accent stripe */}
+                    <div className="absolute left-0 inset-y-0 w-1" style={{ background: spineAccent }} />
+                    {/* Score chip */}
+                    {score && (
+                        <div className="mt-3 ml-4 flex items-center gap-1">
+                            <FaStar className="text-[8px]" style={{ color: spineAccent }} />
+                            <span className="text-[9px] font-black tabular-nums" style={{ color: spineAccent }}>{score}</span>
+                        </div>
+                    )}
+                    {/* Title rotated */}
+                    <span
+                        className="flex-1 text-[10px] font-black text-zinc-400 tracking-widest whitespace-nowrap px-2 py-4"
+                        style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", textOverflow: "ellipsis", overflow: "hidden" }}
+                    >
+                        {title}
+                    </span>
+                    {/* Year */}
+                    {media.year && (
+                        <div className="mb-3 ml-3">
+                            <span className="text-[8px] font-black text-zinc-700 tracking-wider">{media.year}</span>
                         </div>
                     )}
                 </div>
 
-                {filtered.length > 8 && (
-                    <p style={{
-                        fontFamily: "'Inter', sans-serif",
-                        fontSize: "10px",
-                        letterSpacing: "0.3em",
-                        color: "rgba(255,255,255,0.18)",
-                        textTransform: "uppercase",
-                        paddingBottom: "16px",
-                        position: "relative",
-                        zIndex: 10,
-                    }}>
-                        Mostrando las primeras 40 series · {filtered.length} en total
-                    </p>
-                )}
-                {filtered.length <= 40 && filtered.length > 0 && (
-                    <p style={{
-                        fontFamily: "'Inter', sans-serif",
-                        fontSize: "10px",
-                        letterSpacing: "0.3em",
-                        color: "rgba(255,255,255,0.18)",
-                        textTransform: "uppercase",
-                        paddingBottom: "16px",
-                        position: "relative",
-                        zIndex: 10,
-                    }}>
-                        Pasá el mouse sobre una serie
-                    </p>
-                )}
-            </div>
-        </>
-    )
-}
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-const GenrePill = memo(function GenrePill({
-    label, active, onClick,
-}: { label: string; active: boolean; onClick: () => void }) {
-    return (
-        <button
-            className={cn(
-                "px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest transition-all duration-300 border",
-                active
-                    ? "bg-primary text-white border-primary shadow-[0_0_20px_rgba(249,115,22,0.3)] scale-105"
-                    : "bg-white/[0.03] text-zinc-500 border-white/5 hover:border-primary/40 hover:text-primary"
-            )}
-            onClick={onClick}
-        >
-            {label}
-        </button>
-    )
-})
-
-const SeriesCard = memo(function SeriesCard({
-    entry, isHovered, isAnyHovered, accent, onHover, onLeave, onNavigate,
-}: {
-    entry: Anime_LibraryCollectionEntry
-    isHovered: boolean
-    isAnyHovered: boolean
-    accent: string
-    onHover: () => void
-    onLeave: () => void
-    onNavigate: () => void
-}) {
-    const media = entry.media
-    if (!media) return null
-
-    const isCollapsed = isAnyHovered && !isHovered
-    const title = media.titleRomaji || media.titleEnglish || media.titleOriginal || "Sin título"
-    const image = media.bannerImage || media.posterImage || ""
-    const description = media.description?.replace(/<[^>]*>/g, "") || ""
-    const metaParts = [
-        media.year ? String(media.year) : null,
-        media.totalEpisodes ? `${media.totalEpisodes} ep.` : null,
-        media.format || null,
-    ].filter(Boolean)
-
-    return (
-        <div
-            className={`card ${isHovered ? "is-hovered" : ""} ${isCollapsed ? "is-collapsed" : ""}`}
-            onMouseEnter={onHover}
-            onMouseLeave={onLeave}
-            onClick={onNavigate}
-        >
-            {image ? (
-                <img className="card-bg" src={image} alt={title} />
-            ) : (
-                <div className="card-bg" style={{ background: `linear-gradient(135deg, rgba(15,15,15,1) 0%, rgba(30,30,30,1) 100%)` }} />
-            )}
-            <div className="card-scrim" />
-            <div className="card-accent-line" style={{ background: accent }} />
-
-            {/* Vertical title */}
-            <div className="card-title-vertical">
-                <span className="card-title-vertical-text">{title}</span>
-            </div>
-
-            {/* Expanded content */}
-            <div className="card-content">
-                <p className="card-meta">{metaParts.join(" · ")}</p>
-                <h2 className="card-title-expanded">{title}</h2>
-                <p className="card-description">{description}</p>
-                <button
-                    className="card-cta"
-                    style={{ borderColor: accent, color: accent }}
-                    onMouseEnter={e => {
-                        e.currentTarget.style.background = accent
-                        e.currentTarget.style.color = "#000"
-                    }}
-                    onMouseLeave={e => {
-                        e.currentTarget.style.background = "transparent"
-                        e.currentTarget.style.color = accent
-                    }}
-                    onClick={e => {
-                        e.stopPropagation()
-                        onNavigate()
-                    }}
+                {/* ── Cover ─────────────────────────────────────────────── */}
+                <div
+                    className="absolute inset-y-0 right-0 overflow-hidden rounded-r-xl border border-white/[0.08] cursor-pointer"
+                    style={{ left: SPINE_W }}
+                    onClick={() => navigate({ to: "/series/$seriesId", params: { seriesId: entry.mediaId.toString() } })}
                 >
-                    ▶ Ver serie
-                </button>
+                    {/* Poster */}
+                    <DeferredImage
+                        src={media.posterImage || ""}
+                        alt={title}
+                        className="w-full h-full object-cover"
+                    />
+
+                    {/* Dark gradient base */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+
+                    {/* ── Hover info overlay ─────────────────────────────── */}
+                    <div className="absolute inset-0 flex flex-col justify-end p-4 opacity-0 group-hover/item:opacity-100 transition-all duration-400 bg-gradient-to-t from-black/95 via-black/60 to-transparent">
+                        {/* Play CTA */}
+                        <button
+                            onClick={() => navigate({ to: "/series/$seriesId", params: { seriesId: entry.mediaId.toString() } })}
+                            className="mb-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest text-white transition-all duration-300 bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md shadow-xl"
+                        >
+                            <FaPlay className="text-[10px]" />
+                            Ver serie
+                        </button>
+
+                        {/* Title */}
+                        <h3 className="text-[14px] font-black text-white leading-tight mb-2 line-clamp-2">
+                            {title}
+                        </h3>
+
+                        {/* Meta row */}
+                        <div className="flex items-center gap-2 mb-3 flex-wrap">
+                            {score && (
+                                <span className="flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-white/10 text-amber-400">
+                                    <FaStar className="text-[8px]" /> {score}
+                                </span>
+                            )}
+                            {media.year && (
+                                <span className="text-[10px] font-bold text-zinc-400 px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/10">
+                                    {media.year}
+                                </span>
+                            )}
+                            {media.totalEpisodes && (
+                                <span className="flex items-center gap-1 text-[10px] font-bold text-zinc-400 px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/10">
+                                    <FaListOl className="text-[8px]" /> {media.totalEpisodes} eps
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Genres */}
+                        <div className="flex flex-wrap gap-1.5 mb-3">
+                            {genres.map(g => (
+                                <span
+                                    key={g}
+                                    className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border"
+                                    style={{ color: spineAccent, borderColor: `${spineAccent}40`, background: `${spineAccent}10` }}
+                                >
+                                    {g}
+                                </span>
+                            ))}
+                        </div>
+
+                        {/* Description */}
+                        {media.description && (
+                            <p className="text-[12px] text-zinc-300 leading-relaxed line-clamp-5 italic font-medium">
+                                "{media.description.replace(/<[^>]+>/g, "").trim()}"
+                            </p>
+                        )}
+                    </div>
+
+                    {/* ── Always visible bottom title strip ── */}
+                    <div className="absolute bottom-0 left-0 right-0 px-3 py-2.5 group-hover/item:opacity-0 transition-opacity duration-300">
+                        <p className="text-[11px] font-black text-white/90 line-clamp-1 drop-shadow-lg">
+                            {title}
+                        </p>
+                    </div>
+                </div>
+
+                {/* ── Glossy top edge reflection ── */}
+                <div
+                    className="absolute top-0 left-0 right-0 h-[1px] rounded-t-xl opacity-30"
+                    style={{ background: "linear-gradient(90deg, transparent, white, transparent)" }}
+                />
+                {/* ── Drop shadow beneath cassette ── */}
+                <div
+                    className="absolute -bottom-6 left-4 right-4 h-6 opacity-0 group-hover/item:opacity-100 transition-opacity duration-500 blur-xl rounded-full bg-white/20"
+                />
             </div>
         </div>
     )
 })
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function genreColor(genre: string): string {
+    const map: Record<string, string> = {
+        "Action":     "#3b82f6",
+        "Adventure":  "#f59e0b",
+        "Comedy":     "#22d3ee",
+        "Drama":      "#8b5cf6",
+        "Fantasy":    "#10b981",
+        "Horror":     "#ef4444",
+        "Mystery":    "#6366f1",
+        "Romance":    "#ec4899",
+        "Sci-Fi":     "#06b6d4",
+        "Thriller":   "#dc2626",
+        "Sports":     "#84cc16",
+        "Slice of Life": "#34d399",
+    }
+    return map[genre] ?? "#ffffff"
+}
+
+// ─── Loading skeleton ─────────────────────────────────────────────────────────
+
+function ShelfSkeleton() {
+    return (
+        <div className="flex flex-nowrap items-end py-20 px-16 gap-0 overflow-hidden">
+            {Array.from({ length: 10 }).map((_, i) => (
+                <div
+                    key={i}
+                    className="shrink-0 rounded-r-xl animate-pulse bg-white/[0.03] border border-white/5"
+                    style={{
+                        width: CASSETTE_W,
+                        height: CASSETTE_H + Math.random() * 20,
+                        marginLeft: i !== 0 ? -OVERLAP : 0,
+                    }}
+                />
+            ))}
+        </div>
+    )
+}
+
+export const SeriesCardSkeleton = ShelfSkeleton

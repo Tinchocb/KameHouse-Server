@@ -8,9 +8,7 @@ import {
 } from "@/api/generated/types"
 import sortBy from "lodash/sortBy"
 import { media_getUnwatchedCount } from "./media"
-function asUnifiedMedia(media: any): Platform_UnifiedMedia | null {
-    return media as Platform_UnifiedMedia
-}
+import { asUnifiedMedia } from "./type-guards"
 
 type BaseCollectionSorting =
     "START_DATE"
@@ -32,6 +30,10 @@ type CollectionSorting<T extends CollectionType> = BaseCollectionSorting | (T ex
     | "PROGRESS"
     | "AIRDATE"
     | "AIRDATE_DESC"
+    | "UNWATCHED_EPISODES"
+    | "UNWATCHED_EPISODES_DESC"
+    | "LAST_WATCHED"
+    | "LAST_WATCHED_DESC"
     : never)
 
 
@@ -130,12 +132,12 @@ export const DEFAULT_ANIME_COLLECTION_PARAMS: CollectionParams<"anime"> = {
 
 
 
-function getParamValue<T extends any>(value: T | ""): any {
+function getParamValue<T>(value: T | ""): Extract<T, string> | number | undefined {
     if (value === "") return undefined
     if (Array.isArray(value) && value.filter(Boolean).length === 0) return undefined
     if (typeof value === "string" && !isNaN(parseInt(value))) return Number(value)
     if (value === null) return undefined
-    return value
+    return value as Extract<T, string> | number | undefined
 }
 
 
@@ -157,7 +159,7 @@ export function filterEntriesByTitle<T extends { media?: Platform_UnifiedMedia }
     return arr
 }
 
-export function filterListEntries<T extends any[], V extends CollectionType>(
+export function filterListEntries<T extends { media?: Platform_UnifiedMedia | null | undefined, score?: number, startedAt?: {year?: number, month?: number, day?: number}, completedAt?: {year?: number, month?: number, day?: number}, progress?: number }[], V extends CollectionType>(
     type: V,
     entries: T | null | undefined,
     params: CollectionParams<V>,
@@ -167,19 +169,19 @@ export function filterListEntries<T extends any[], V extends CollectionType>(
     let arr = [...entries]
 
     // Filter by isAdult
-    if (!!arr && params.isAdult) arr = arr.filter(n => n.media?.isAdult)
+    if (!!arr && params.isAdult) arr = arr.filter(n => asUnifiedMedia(n.media)?.isAdult)
 
     // Filter by showAdultContent
-    if (!showAdultContent) arr = arr.filter(n => !n.media?.isAdult)
+    if (!showAdultContent) arr = arr.filter(n => !asUnifiedMedia(n.media)?.isAdult)
 
     // Filter by format
-    if (!!arr && !!params.format) arr = arr.filter(n => n.media?.format === params.format)
+    if (!!arr && !!params.format) arr = arr.filter(n => asUnifiedMedia(n.media)?.format === params.format)
 
     // Filter by season
-    if (!!arr && !!params.season) arr = arr.filter(n => n.media?.season === params.season)
+    if (!!arr && !!params.season) arr = arr.filter(n => asUnifiedMedia(n.media)?.season === params.season)
 
     // Filter by status
-    if (!!arr && !!params.status) arr = arr.filter(n => n.media?.status === params.status)
+    if (!!arr && !!params.status) arr = arr.filter(n => asUnifiedMedia(n.media)?.status === params.status)
 
     // Filter by year
     if (!!arr && !!params.year) arr = arr.filter(n => {
@@ -263,9 +265,9 @@ export function filterListEntries<T extends any[], V extends CollectionType>(
 
     // Sort by progress
     if (getParamValue(params.sorting) === "PROGRESS")
-        arr = sortBy(arr, n => (n as any)?.progress || 0)
+        arr = sortBy(arr, n => n?.progress || 0)
     if (getParamValue(params.sorting) === "PROGRESS_DESC")
-        arr = sortBy(arr, n => (n as any)?.progress || 0).reverse()
+        arr = sortBy(arr, n => n?.progress || 0).reverse()
 
     return arr
 }
@@ -304,7 +306,7 @@ export function filterCollectionEntries<T extends Anime_LibraryCollectionEntry[]
     if (!!arr && !!params.genre?.length) {
         arr = arr.filter(n => {
             const media = asUnifiedMedia(n.media)
-            return params.genre?.every(genre => (media as any)?.genres?.includes(genre))
+            return params.genre?.every(genre => media?.genres?.includes(genre))
         })
     }
 
@@ -339,20 +341,23 @@ export function filterCollectionEntries<T extends Anime_LibraryCollectionEntry[]
             if (typeof media?.startDate === 'string') {
                 return !!media.startDate && new Date(media.startDate).toString() !== 'Invalid Date'
             }
-            return media?.startDate && !!(media.startDate as any).year && !!(media.startDate as any).month
+            const dateObj = media?.startDate as { year?: number; month?: number } | undefined
+            return dateObj && !!dateObj.year && !!dateObj.month
         })
     }
     if (getParamValue(params.sorting) === "RELEASE_DATE")
         arr = sortBy(arr, n => {
             const media = asUnifiedMedia(n.media)
             if (typeof media?.startDate === 'string') return new Date(media.startDate)
-            return new Date((media?.startDate as any)?.year!, (media?.startDate as any)?.month! - 1)
+            const dateObj = media?.startDate as { year?: number; month?: number } | undefined
+            return new Date(dateObj?.year || 1970, (dateObj?.month || 1) - 1)
         })
     if (getParamValue(params.sorting) === "RELEASE_DATE_DESC")
         arr = sortBy(arr, n => {
             const media = asUnifiedMedia(n.media)
             if (typeof media?.startDate === 'string') return new Date(media.startDate)
-            return new Date((media?.startDate as any)?.year!, (media?.startDate as any)?.month! - 1)
+            const dateObj = media?.startDate as { year?: number; month?: number } | undefined
+            return new Date(dateObj?.year || 1970, (dateObj?.month || 1) - 1)
         }).reverse()
 
     // Sort by score
@@ -380,9 +385,9 @@ export function filterCollectionEntries<T extends Anime_LibraryCollectionEntry[]
 
     // Sort by progress
     if (getParamValue(params.sorting) === "PROGRESS")
-        arr = sortBy(arr, n => (n as any)?.progress || 0)
+        arr = sortBy(arr, n => n?.listData?.progress || 0)
     if (getParamValue(params.sorting) === "PROGRESS_DESC")
-        arr = sortBy(arr, n => (n as any)?.progress || 0).reverse()
+        arr = sortBy(arr, n => n?.listData?.progress || 0).reverse()
 
     return arr
 }
@@ -415,12 +420,12 @@ export function filterAnimeCollectionEntries<T extends Anime_LibraryCollectionEn
     // Sort by unwatched episodes
     if (getParamValue(params.sorting) === "UNWATCHED_EPISODES") {
         arr = sortBy(arr,
-            n => !!n.libraryData?.mainFileCount ? n.libraryData?.unwatchedCount : (media_getUnwatchedCount(asUnifiedMedia(n.media) as any,
+            n => !!n.libraryData?.mainFileCount ? n.libraryData?.unwatchedCount : (media_getUnwatchedCount(asUnifiedMedia(n.media),
                 n.listData?.progress) || 99999))
     }
     if (getParamValue(params.sorting) === "UNWATCHED_EPISODES_DESC") {
         arr = sortBy(arr,
-            n => !!n.libraryData?.mainFileCount ? n.libraryData?.unwatchedCount : (media_getUnwatchedCount(asUnifiedMedia(n.media) as any,
+            n => !!n.libraryData?.mainFileCount ? n.libraryData?.unwatchedCount : (media_getUnwatchedCount(asUnifiedMedia(n.media),
                 n.listData?.progress) || 99999))
             .reverse()
     }
@@ -465,11 +470,11 @@ export function sortContinueWatchingEntries(
     // Sort by unwatched episodes
     if (sorting === "UNWATCHED_EPISODES")
         arr = sortBy(arr,
-            n => libraryEntries?.find(e => e.media?.id === n.baseAnime?.id)?.libraryData?.unwatchedCount ?? (media_getUnwatchedCount(asUnifiedMedia(n.baseAnime) as any,
+            n => libraryEntries?.find(e => e.media?.id === n.baseAnime?.id)?.libraryData?.unwatchedCount ?? (media_getUnwatchedCount(asUnifiedMedia(n.baseAnime),
                 libraryEntries?.find(e => e.media?.id === n.baseAnime?.id)?.listData?.progress) || 99999))
     if (sorting === "UNWATCHED_EPISODES_DESC")
         arr = sortBy(arr,
-            n => libraryEntries?.find(e => e.media?.id === n.baseAnime?.id)?.libraryData?.unwatchedCount ?? media_getUnwatchedCount(asUnifiedMedia(n.baseAnime) as any,
+            n => libraryEntries?.find(e => e.media?.id === n.baseAnime?.id)?.libraryData?.unwatchedCount ?? media_getUnwatchedCount(asUnifiedMedia(n.baseAnime),
                 libraryEntries?.find(e => e.media?.id === n.baseAnime?.id)?.listData?.progress))
             .reverse()
 

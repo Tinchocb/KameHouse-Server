@@ -47,7 +47,7 @@ const settingsSchema = z.object({
         autoSaveCurrentMediaOffline: z.boolean().default(false),
         useFallbackMetadataProvider: z.boolean().default(false),
         tmdbApiKey: z.string().default(""),
-        tmdbLanguage: z.string().default(""),
+        tmdbLanguage: z.string().default("es-MX"),
         scannerUseLegacyMatching: z.boolean().default(false),
         scannerConfig: z.string().default(""),
         scannerStrictStructure: z.boolean().default(false),
@@ -55,6 +55,7 @@ const settingsSchema = z.object({
         disableLocalScanning: z.boolean().default(false),
         disableTorrentStreaming: z.boolean().default(false),
         disableTorrentProvider: z.boolean().default(false),
+        disableDebridService: z.boolean().default(false),
         primaryMetadataProvider: z.string().default("tmdb"),
         fanartApiKey: z.string().default(""),
         omdbApiKey: z.string().default(""),
@@ -99,9 +100,9 @@ const settingsSchema = z.object({
         preferredResolution: z.string().default(""),
         torrentioUrl: z.string().default(""),
     }).default({}),
-    torrent: z.any().default({}),
-    notifications: z.any().default({}),
-    Platform: z.any().default({}),
+    torrent: z.record(z.unknown()).default({}),
+    notifications: z.record(z.unknown()).default({}),
+    Platform: z.record(z.unknown()).default({}),
 })
 
 type SettingsFormValues = z.infer<typeof settingsSchema>
@@ -113,7 +114,6 @@ export const Route = createFileRoute("/settings/")({
 const NAV_ITEMS = [
     { id: "scanner", label: "Buscador", icon: LucideRadar },
     { id: "playback", label: "Reproducción", icon: LucidePlay },
-    { id: "streaming", label: "Streaming", icon: LucideCloud },
     { id: "appearance", label: "Apariencia", icon: LucidePalette },
 ]
 
@@ -122,8 +122,8 @@ function SettingsPage() {
     const { mutateAsync: saveSettings, isPending: isSaving } = useSaveSettings()
 
     const form = useForm<SettingsFormValues>({
-        // @ts-ignore - mismatch between inferred Zod schema and Settings payload
-        resolver: zodResolver(settingsSchema),
+        // mismatch between inferred Zod schema and Settings payload
+        resolver: zodResolver(settingsSchema) as any,
         defaultValues: serverSettings || {},
         mode: "onChange",
     })
@@ -139,7 +139,7 @@ function SettingsPage() {
         }
     }, [serverSettings, reset])
 
-    const onSubmit = async (data: SettingsFormValues) => {
+    const onSubmit: SubmitHandler<SettingsFormValues> = async (data) => {
         try {
             await saveSettings(data as unknown as SaveSettings_Variables)
             toast.success("Ajustes guardados con éxito", {
@@ -161,7 +161,7 @@ function SettingsPage() {
 
     return (
         <div className="flex h-full w-full bg-black/40 backdrop-blur-3xl overflow-hidden selection:bg-primary/30">
-            <header className="fixed top-0 left-0 right-0 h-16 border-b border-white/[0.03] bg-black/50 backdrop-blur-md z-40 flex items-center justify-between px-8">
+            <header className="fixed top-0 left-0 lg:left-24 right-0 h-16 border-b border-white/[0.03] bg-black/50 backdrop-blur-md z-40 flex items-center justify-between px-8">
                 <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center p-1.5 shadow-lg shadow-primary/20">
                         <LucideHardDrive className="text-white" size={18} />
@@ -207,7 +207,7 @@ function SettingsPage() {
                 </aside>
 
                 <main className="flex-1 h-full overflow-y-auto bg-black/10 scrollbar-hide py-8 px-8">
-                    <form onSubmit={handleSubmit(onSubmit as any)} className="w-full pb-48">
+                    <form onSubmit={handleSubmit(onSubmit)} className="w-full pb-48">
 
 
                         {/* ─── Contenido: Buscador ─── */}
@@ -270,22 +270,6 @@ function SettingsPage() {
                             </div>
                         </TabsContent>
 
-                        {/* ─── Contenido: Streaming ─── */}
-                        <TabsContent value="streaming" className="m-0 space-y-16 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-                            <header className="space-y-4">
-                                <h1 className="text-6xl font-black tracking-tighter text-white">Nube & <span className="text-primary italic">Streaming</span></h1>
-                                <p className="text-zinc-400 text-xl font-medium leading-relaxed">Conéctate al mundo exterior. Interconecta constelaciones de motores de streaming y bancos de metadatos.</p>
-                            </header>
-                            <Section label="Motores Externos">
-                                <Card>
-
-                                    <OsToggle control={form.control} name="torrentstream.enabled"
-                                        label="Habilitar Red Descentralizada"
-                                        desc="Permite el streaming directo de proveedores externos."
-                                        onSave={commitToggle} />
-                                </Card>
-                            </Section>
-                        </TabsContent>
 
                         {/* ─── Contenido: Apariencia ─── */}
                         <TabsContent value="appearance" className="m-0 space-y-16 animate-in fade-in slide-in-from-bottom-8 duration-1000">
@@ -326,7 +310,7 @@ function SettingsPage() {
                                 </button>
                                 <button
                                     disabled={isSaving}
-                                    onClick={handleSubmit(onSubmit as any)}
+                                    onClick={handleSubmit(onSubmit)}
                                     className={cn(
                                         "flex-1 flex items-center justify-center gap-4 px-10 py-6 rounded-full text-[13px] font-black uppercase tracking-widest transition-all duration-700 relative overflow-hidden group/save",
                                         "bg-gradient-to-r from-orange-600 to-primary text-white shadow-[0_0_30px_rgba(255,100,0,0.4)] hover:shadow-[0_0_50px_rgba(255,100,0,0.6)] hover:scale-[1.02] active:scale-95 disabled:opacity-50"
@@ -383,23 +367,16 @@ function Card({ children, className }: { children: React.ReactNode; className?: 
     )
 }
 
-function InputRow({ label, children, desc }: { label: string; children: React.ReactNode; desc?: string }) {
-    return (
-        <div className="px-8 py-10 border-b border-white/[0.03] last:border-0 hover:bg-white/[0.02] transition-all duration-500 group/row">
-            <div className="w-full space-y-6">
-                <div className="space-y-2">
-                    <p className="text-xs font-black uppercase tracking-[0.3em] text-zinc-500 group-hover/row:text-primary/80 transition-colors">{label}</p>
-                    {desc && <p className="text-sm text-zinc-400 leading-relaxed font-medium">{desc}</p>}
-                </div>
-                <div className="relative">
-                    {children}
-                </div>
-            </div>
-        </div>
-    )
+
+interface OsToggleProps {
+    control: import("react-hook-form").Control<SettingsFormValues>
+    name: import("react-hook-form").FieldPath<SettingsFormValues>
+    label: string
+    desc?: string
+    onSave?: () => void
 }
 
-function OsToggle({ control, name, label, desc, onSave }: any) {
+function OsToggle({ control, name, label, desc, onSave }: OsToggleProps) {
     return (
         <Controller
             control={control}

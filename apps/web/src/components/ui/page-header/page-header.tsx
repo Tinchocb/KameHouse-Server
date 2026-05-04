@@ -40,3 +40,4 @@ const PageHeaderBase = React.forwardRef<HTMLDivElement, PageHeaderProps>((props,
 PageHeaderBase.displayName = "PageHeader"
 
 export const PageHeader = React.memo(PageHeaderBase)
+PageHeader.displayName = "PageHeader"

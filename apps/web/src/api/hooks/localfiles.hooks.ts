@@ -40,8 +40,8 @@ export function useGetLocalFilesInfinite() {
                 }
             })
             if (!res.ok) throw new Error("Failed to fetch local files")
-            const json = await res.json() as any
-            return json.data as PaginatedLocalFiles
+            const json = await res.json() as { data: PaginatedLocalFiles }
+            return json.data
         },
         getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.nextPage : undefined,
         initialPageParam: 1,

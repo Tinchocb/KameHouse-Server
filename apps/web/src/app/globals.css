@@ -16,30 +16,8 @@
 @layer components {
     /* ── Reusable glassmorphism panel ─────────────────────────────────────── */
     .glass-panel {
-        @apply backdrop-blur-2xl bg-white/[0.04] border border-white/5 rounded-2xl;
-        box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2);
-    }
-
-    /* ── Premium glassmorphism panel ─────────────────────────────────────── */
-    .glass-panel-premium {
-        backdrop-filter: blur(28px) saturate(190%);
-        background: linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.07),
-            rgba(255, 255, 255, 0.02)
-        );
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        box-shadow: 
-            0 12px 40px rgba(0, 0, 0, 0.4),
-            inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    }
-
-    /* ── Premium focus ring ───────────────────────────────────────────────── */
-    .focus-ring-premium {
-        outline: none;
-        box-shadow: 
-            0 0 0 2px rgba(249,115,22,0.5),
-            0 0 0 4px rgba(0,0,0,0.8);
+        @apply backdrop-blur-2xl bg-surface-1/40 border border-border-subtle rounded-2xl;
+        box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.4);
     }
 
     /* ── Micro-interaction: card hover glow ────────────────────────────────── */
@@ -47,8 +25,8 @@
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
     .card-glow-hover:hover {
-        transform: scale(1.05) translateY(-4px);
-        box-shadow: 0 0 30px rgba(249,115,22,0.15);
+        transform: scale(1.02) translateY(-4px);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
     }
 
     /* ── Micro-interaction: button glow ───────────────────────────────────── */
@@ -56,11 +34,11 @@
         transition: all 0.2s ease-out;
     }
     .button-glow-hover:hover {
-        box-shadow: 0 0 20px rgba(249,115,22,0.4);
-        transform: scale(1.05);
+        box-shadow: 0 0 15px rgba(249,115,22,0.3);
+        transform: scale(1.02);
     }
     .button-glow-hover:active {
-        transform: scale(0.95);
+        transform: scale(0.98);
     }
 
     /* ── Cinema shimmer — hero text gradient accent ───────────────────────── */
@@ -110,120 +88,64 @@
     }
 
     .glass-layer {
-        @apply backdrop-blur-xl bg-background/30 border border-white/10;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-    }
-
-    /* ── Premium Cinematic Textures ───────────────────────────────────────── */
-    .premium-noise {
-        position: relative;
-    }
-    .premium-noise::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        z-index: 1;
-        pointer-events: none;
-        opacity: 0.03;
-        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-    }
-
-    .premium-scanline {
-        position: relative;
-    }
-    .premium-scanline::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        z-index: 1;
-        pointer-events: none;
-        background: linear-gradient(
-            to bottom,
-            transparent 50%,
-            rgba(0, 0, 0, 0.05) 51%,
-            transparent 51%
-        );
-        background-size: 100% 4px;
-        opacity: 0.2;
-    }
-
-    /* ── Reflection Effect ────────────────────────────────────────────────── */
-    .premium-reflection {
-        position: relative;
-        overflow: hidden;
-    }
-    .premium-reflection::after {
-        content: "";
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: linear-gradient(
-            45deg,
-            transparent 45%,
-            rgba(255, 255, 255, 0.08) 50%,
-            transparent 55%
-        );
-        transform: rotate(-45deg);
-        transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-        pointer-events: none;
-    }
-    .premium-reflection:hover::after {
-        transform: rotate(-45deg) translate(20%, 20%);
+        @apply backdrop-blur-xl bg-surface-1/50 border border-border-subtle;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
     }
 }
 
 @layer base {
     :root {
-        --background: 240 10% 4%;
-        --foreground: 0 0% 98%;
+        /* Core UI Scale */
+        --background: 0 0% 0%; /* Pure black for cinematic contrast */
+        --surface-1: 240 6% 10%; /* Elevated panels */
+        --surface-2: 240 5% 15%; /* Higher elevation */
+        --overlay: 0 0% 0%; /* For modals/dialogs with opacity */
 
-        --card: 240 10% 4%;
-        --card-foreground: 0 0% 98%;
+        /* Borders */
+        --border-subtle: 0 0% 100% / 0.05;
+        --border-strong: 0 0% 100% / 0.15;
 
-        --popover: 240 10% 4%;
-        --popover-foreground: 0 0% 98%;
+        /* Text */
+        --text-primary: 0 0% 100%;
+        --text-secondary: 0 0% 100% / 0.7;
+        --text-muted: 0 0% 100% / 0.4;
 
-        --primary: 24.6 95% 53.1%;
+        /* Brand & Accents */
+        --brand-orange: 24.6 95% 53.1%;
+        --brand-orange-hover: 24.6 95% 60%;
+        
+        /* Legacy compat vars */
+        --foreground: var(--text-primary);
+        --card: var(--surface-1);
+        --card-foreground: var(--text-primary);
+        --popover: var(--surface-1);
+        --popover-foreground: var(--text-primary);
+        --primary: var(--brand-orange);
         --primary-foreground: 0 0% 100%;
-
-        --secondary: 240 4% 16%;
-        --secondary-foreground: 0 0% 98%;
-
-        --muted: 240 4% 16%;
-        --muted-foreground: 240 5% 65%;
-
-        --accent: 240 4% 16%;
-        --accent-foreground: 0 0% 98%;
-
+        --secondary: var(--surface-2);
+        --secondary-foreground: var(--text-primary);
+        --muted: var(--surface-1);
+        --muted-foreground: var(--text-muted);
+        --accent: var(--surface-2);
+        --accent-foreground: var(--text-primary);
         --destructive: 0 63% 31%;
         --destructive-foreground: 0 0% 98%;
-
-        --border: 240 4% 16%;
-        --input: 240 4% 16%;
-        --ring: 24.6 95% 53.1%;
-
+        --border: var(--border-subtle);
+        --input: var(--border-subtle);
+        --ring: var(--brand-orange);
         --radius: 0.5rem;
 
-        /* ── Glow System ── */
-        --glow-primary: rgba(249, 115, 22, 0.4);
-        --glow-secondary: rgba(255, 255, 255, 0.1);
-        --glow-epic: rgba(251, 191, 36, 0.5);
-
-        /* ── Dynamic Extracted Colors (Stage 5) ── */
-        --extracted-vibrant: var(--primary);
-        --extracted-vibrant-dark: 240 10% 10%;
-        --extracted-vibrant-light: 240 10% 60%;
-        --extracted-muted: 240 4% 30%;
-        --extracted-bg-gradient: radial-gradient(circle at top left, rgba(249, 115, 22, 0.15), transparent 70%);
+        /* Dynamic Extracted Colors */
+        --extracted-vibrant: var(--brand-orange);
+        --extracted-vibrant-dark: 0 0% 10%;
+        --extracted-vibrant-light: 0 0% 50%;
+        --extracted-muted: 0 0% 30%;
+        --extracted-bg-gradient: radial-gradient(circle at top left, rgba(249, 115, 22, 0.10), transparent 50%);
     }
 
     body {
         @apply bg-background text-zinc-400 font-medium antialiased;
         overscroll-behavior-y: none;
-        -webkit-user-select: none;
-        user-select: none;
         -webkit-tap-highlight-color: transparent;
     }
 
@@ -241,33 +163,36 @@
 /*}*/
 
 h1 {
-    @apply scroll-m-20 font-black tracking-tight text-gray-100 font-display;
+    @apply scroll-m-20 font-black tracking-tight text-text-primary font-display;
     font-size: clamp(2.5rem, 6vw + 1rem, 5.5rem);
     line-height: 0.95;
     text-transform: uppercase;
 }
 
 h2 {
-    @apply scroll-m-20 font-extrabold tracking-tight first:mt-0 text-gray-100;
+    @apply scroll-m-20 font-extrabold tracking-tight first:mt-0 text-text-primary font-display;
     font-size: clamp(1.5rem, 3vw + 1rem, 3rem);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
 
 h3 {
-    @apply scroll-m-20 font-bold tracking-tight text-gray-200;
+    @apply scroll-m-20 font-bold tracking-tight text-text-secondary font-display;
     font-size: clamp(1.25rem, 2vw + 1rem, 2.25rem);
+    letter-spacing: 0.02em;
 }
 
 h4 {
-    @apply scroll-m-20 font-bold tracking-tight text-gray-200;
+    @apply scroll-m-20 font-bold tracking-tight text-text-secondary;
     font-size: clamp(1.1rem, 1.5vw + 1rem, 1.75rem);
 }
 
 h5 {
-    @apply scroll-m-20 text-lg font-semibold tracking-tight
+    @apply scroll-m-20 text-lg font-semibold tracking-tight text-text-secondary
 }
 
 h6 {
-    @apply scroll-m-20 text-base font-semibold tracking-tight
+    @apply scroll-m-20 text-base font-semibold tracking-tight text-text-secondary
 }
 
 ::-webkit-scrollbar {

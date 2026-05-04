@@ -12,6 +12,23 @@ import (
 	"github.com/nwaples/rardecode/v2"
 )
 
+// SafeJoinPath safely joins baseDir and filename, returning an error if the
+// resulting path would escape baseDir (path traversal prevention).
+// filename must be a plain filename — no sub-directory components.
+func SafeJoinPath(baseDir, filename string) (string, error) {
+	// Reject any path that contains a parent-directory reference.
+	if strings.Contains(filename, "..") {
+		return "", fmt.Errorf("invalid path: parent directory reference not allowed")
+	}
+	fullPath := filepath.Join(baseDir, filename)
+	// Double-check at the OS level that the resolved path is still inside baseDir.
+	cleanBase := filepath.Clean(baseDir)
+	if !strings.HasPrefix(filepath.Clean(fullPath), cleanBase+string(os.PathSeparator)) {
+		return "", fmt.Errorf("invalid path: resolved path escapes base directory")
+	}
+	return fullPath, nil
+}
+
 func DirSize(path string) (uint64, error) {
 	var size int64
 	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
@@ -276,13 +293,70 @@ func MoveToDestination(src, dest string) error {
 
 	destFolder := filepath.Join(dest, filepath.Base(src))
 
-	// Move the folder by renaming it
+	// Try standard rename first
 	err := os.Rename(src, destFolder)
-	if err != nil {
-		return fmt.Errorf("failed to move folder: %v", err)
+	if err == nil {
+		return nil
 	}
 
+	// Fallback to copy+delete for cross-device or if rename fails
+	err = CopyDirOrFile(src, destFolder)
+	if err != nil {
+		return fmt.Errorf("failed to cross-device move: %v", err)
+	}
+	_ = os.RemoveAll(src)
 	return nil
+}
+
+// CopyDirOrFile recursively copies a file or directory from src to dst.
+func CopyDirOrFile(src, dst string) error {
+	info, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	if info.IsDir() {
+		return copyDir(src, dst)
+	}
+	return copyFile(src, dst)
+}
+
+func copyDir(src, dst string) error {
+	if err := os.MkdirAll(dst, os.ModePerm); err != nil {
+		return err
+	}
+	entries, err := os.ReadDir(src)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		srcPath := filepath.Join(src, entry.Name())
+		dstPath := filepath.Join(dst, entry.Name())
+		if entry.IsDir() {
+			if err := copyDir(srcPath, dstPath); err != nil {
+				return err
+			}
+		} else {
+			if err := copyFile(srcPath, dstPath); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	_, err = io.Copy(out, in)
+	return err
 }
 
 // UnwrapAndMove moves the last subfolder containing the files to the destination.

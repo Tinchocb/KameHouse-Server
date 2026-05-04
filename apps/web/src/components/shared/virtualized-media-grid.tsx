@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect } from "react"
 import { useWindowVirtualizer } from "@tanstack/react-virtual"
-import { MediaCardInteractive } from "@/components/shared/MediaCardInteractive.client"
+import { MediaCardInteractive } from "@/components/shared/MediaCardInteractive"
 import { MediaStack } from "@/components/ui/media-stack"
 import { Anime_LibraryCollectionEntry, Models_LibraryMedia } from "@/api/generated/types"
 
@@ -29,7 +29,7 @@ const MemoizedCard = React.memo(({ entry, onMatch }: { entry: Anime_LibraryColle
     }
 
     const year = media.year ? String(media.year) : undefined
-    const rating = media.score ? media.score / 10 : undefined
+    const rating = media.score ? (media.score > 10 ? media.score / 10 : media.score) : undefined
 
     const menu = (
         <ContextMenuContent>

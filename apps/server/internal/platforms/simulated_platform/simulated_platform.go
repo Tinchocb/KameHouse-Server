@@ -62,6 +62,15 @@ func (p *SimulatedPlatform) GetAnimeDetails(ctx context.Context, mediaID int) (i
 func (p *SimulatedPlatform) GetAnimeWithRelations(ctx context.Context, mediaID int) (interface{}, error) {
 	return nil, nil
 }
+func (p *SimulatedPlatform) GetMovie(ctx context.Context, mediaID int) (interface{}, error) {
+	return nil, nil
+}
+func (p *SimulatedPlatform) SearchMedia(ctx context.Context, query string, page *int) (*platform.UnifiedMediaList, error) {
+	return &platform.UnifiedMediaList{}, nil
+}
+func (p *SimulatedPlatform) GetMediaCollection(ctx context.Context, collectionID int) (*platform.UnifiedCollection, error) {
+	return &platform.UnifiedCollection{}, nil
+}
 func (p *SimulatedPlatform) GetStudioDetails(ctx context.Context, studioID int) (interface{}, error) {
 	return nil, nil
 }

@@ -18,18 +18,7 @@ func TrimLogEntries(dir string, logger *zerolog.Logger) {
 		return
 	}
 
-	// Get the total size of all log entries
-	var totalSize int64
-	for _, file := range entries {
-		if file.IsDir() {
-			continue
-		}
-		info, err := file.Info()
-		if err != nil {
-			continue
-		}
-		totalSize += info.Size()
-	}
+
 
 	var files []os.FileInfo
 	for _, entry := range entries {

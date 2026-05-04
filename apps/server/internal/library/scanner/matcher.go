@@ -40,7 +40,7 @@ func NewMatcher(localFiles []*dto.LocalFile, mediaContainer *MediaContainer, log
 		MediaContainer: mediaContainer,
 		Logger:         logger,
 		Database:       db,
-		Threshold:      0.80, // Default threshold
+		Threshold:      0.70, // Optimized threshold for movies and Spanish titles
 	}
 }
 
@@ -99,7 +99,7 @@ func (m *Matcher) MatchBatch(ctx context.Context, batchPaths []string) error {
 // BayesianResolve calculates the probabilistic confidence that a file belongs to a specific media.
 func (m *Matcher) BayesianResolve(lf *dto.LocalFile) {
 	// 1. Initial Parse
-	pm := Normalize(lf.Path)
+	pm := parser.Parse(lf.Path)
 
 	// SHORT-CIRCUIT: Check hardcoded custom overrides before Bayesian scoring.
 	if overrideID, found := LookupCustomOverride(pm.Title); found {
@@ -176,8 +176,14 @@ func (m *Matcher) BayesianResolve(lf *dto.LocalFile) {
 
 		// Self-Healing Step 3: Check Folder Context
 		if bestConfidence < threshold && len(lf.ParsedFolderData) > 0 {
-			folderStr := filepath.Base(filepath.Dir(lf.Path))
-			pm.Title = Normalize(folderStr).Title
+			info := ParseFolderStructure(lf.Path, nil)
+			if info.SeriesName != "" {
+				pm.Title = info.SeriesName
+			} else {
+				folderStr := filepath.Base(filepath.Dir(lf.Path))
+				pm.Title = parser.Parse(folderStr).Title
+			}
+			
 			for _, media := range m.MediaContainer.NormalizedMedia {
 				conf := m.calculateBayesianScore(pm, media)
 				if conf*0.90 > bestConfidence {
@@ -283,6 +289,14 @@ func (m *Matcher) calculateBayesianScore(pm parser.ParsedMedia, media *dto.Norma
 	// Update via Evidence 1 (If strings match perfectly, confidence spikes; if 0, confidence crashes)
 	posterior := updateBayes(prior, bestDice, 0.20)
 
+	// DBZ OVERRIDE: Check if the parsed title guarantees a match to this specific media
+	if dbId, isDb := ResolveDragonBallID(pm.Title); isDb {
+		if media.TmdbId != nil && *media.TmdbId == dbId {
+			bestDice = 1.0
+			posterior = 1.0
+		}
+	}
+
 	// Evidence 2: Season Matching (Did the parser extract season 2, and does this media represent season 2?)
 	if pm.Season > 1 && media.Format != nil && string(*media.Format) == "TV" {
 		posterior = updateBayes(posterior, 0.90, 0.10)
@@ -373,55 +387,8 @@ func sanitizeSubGroupTags(input string) string {
 }
 
 // calculateDice implements the real Sørensen-Dice Coefficient using character bigrams.
-// This replaces the previous stub that returned 0.20 for non-substring matches.
+// It uses the efficient implementation from efficient_dice.go to minimize allocations.
 func calculateDice(s1, s2 string) float64 {
-	s1 = strings.ToLower(strings.TrimSpace(s1))
-	s2 = strings.ToLower(strings.TrimSpace(s2))
-
-	if len(s1) == 0 || len(s2) == 0 {
-		return 0.0
-	}
-	if s1 == s2 {
-		return 1.0
-	}
-
-	// Generate bigrams for s1
-	bigrams1 := makeBigrams(s1)
-	bigrams2 := makeBigrams(s2)
-
-	if len(bigrams1) == 0 || len(bigrams2) == 0 {
-		// Fallback for single-char strings
-		if strings.Contains(s1, s2) || strings.Contains(s2, s1) {
-			return 0.85
-		}
-		return 0.0
-	}
-
-	// Count intersection
-	intersection := 0
-	used := make(map[int]bool, len(bigrams2))
-	for _, b1 := range bigrams1 {
-		for j, b2 := range bigrams2 {
-			if !used[j] && b1 == b2 {
-				intersection++
-				used[j] = true
-				break
-			}
-		}
-	}
-
-	return (2.0 * float64(intersection)) / float64(len(bigrams1)+len(bigrams2))
+	return CompareStrings(s1, s2)
 }
 
-// makeBigrams splits a string into consecutive character pairs.
-func makeBigrams(s string) []string {
-	runes := []rune(s)
-	if len(runes) < 2 {
-		return nil
-	}
-	bigrams := make([]string, 0, len(runes)-1)
-	for i := 0; i < len(runes)-1; i++ {
-		bigrams = append(bigrams, string(runes[i:i+2]))
-	}
-	return bigrams
-}

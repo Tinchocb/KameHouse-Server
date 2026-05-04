@@ -11,9 +11,9 @@ declare global {
 
     interface AudioTrackList extends EventTarget {
         readonly length: number;
-        onchange: ((this: AudioTrackList, ev: Event) => any) | null;
-        onaddtrack: ((this: AudioTrackList, ev: TrackEvent) => any) | null;
-        onremovetrack: ((this: AudioTrackList, ev: TrackEvent) => any) | null;
+        onchange: ((this: AudioTrackList, ev: Event) => void) | null;
+        onaddtrack: ((this: AudioTrackList, ev: TrackEvent) => void) | null;
+        onremovetrack: ((this: AudioTrackList, ev: TrackEvent) => void) | null;
 
         [index: number]: AudioTrack;
 
@@ -48,15 +48,15 @@ declare global {
                 getPort: () => Promise<number>;
             },
             media?: {
-                setMetadata: (metadata: any) => Promise<boolean>
+                setMetadata: (metadata: Record<string, unknown>) => Promise<boolean>
                 clearSession: () => Promise<boolean>
                 stopAllMedia: () => Promise<boolean>
             }
-            on: (channel: string, callback: (...args: any[]) => void) => (() => void) | undefined;
+            on: (channel: string, callback: (...args: unknown[]) => void) => (() => void) | undefined;
             // Send events
-            emit: (channel: string, data?: any) => void;
+            emit: (channel: string, data?: unknown) => void;
             // General send method
-            send: (channel: string, ...args: any[]) => void;
+            send: (channel: string, ...args: unknown[]) => void;
             platform: NodeJS.Platform;
             shell: {
                 open: (url: string) => Promise<void>;
@@ -64,9 +64,9 @@ declare global {
             clipboard: {
                 writeText: (text: string) => Promise<void>;
             };
-            checkForUpdates: () => Promise<any>;
-            installUpdate: () => Promise<any>;
-            killServer: () => Promise<any>;
+            checkForUpdates: () => Promise<unknown>;
+            installUpdate: () => Promise<unknown>;
+            killServer: () => Promise<unknown>;
         };
 
         __isElectronDesktop__?: boolean;

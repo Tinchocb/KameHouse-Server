@@ -2,7 +2,7 @@ import { cva } from "class-variance-authority"
 import * as React from "react"
 import { useIsomorphicLayoutEffect, useUpdateEffect } from "../core/hooks"
 import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
-import { useDraggableScroll } from "./use-draggable-scroll"
+import { useDraggableScroll } from "@/hooks/use-draggable-scroll"
 
 /* -------------------------------------------------------------------------------------------------
  * Anatomy

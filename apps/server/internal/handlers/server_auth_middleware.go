@@ -24,13 +24,8 @@ func (h *Handler) OptionalAuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc
 			path == "/api/v1/ws" || // for server events (alias)
 			path == "/api/v1/proxy" || // for remote media images
 			strings.HasPrefix(path, "/api/v1/image") || // local covers requests
-			strings.HasPrefix(path, "/api/v1/directstream") || // ID & path based
-			strings.HasPrefix(path, "/api/v1/mediastream/att/") || // used by media players
-			strings.HasPrefix(path, "/api/v1/mediastream/direct") || // used by media players
-			strings.HasPrefix(path, "/api/v1/mediastream/transcode/") || // used by media players
-			strings.HasPrefix(path, "/api/v1/mediastream/subs/") || // path-based
-
-			strings.HasPrefix(path, "/api/v1/torrentstream/stream/") { // accessible by media players
+			strings.HasPrefix(path, "/api/v1/mediastream/transcode/") ||
+			strings.HasPrefix(path, "/api/v1/mediastream/subs/") { // used by media players
 
 			if path == "/api/v1/status" {
 				// allow status requests by anyone but mark as unauthenticated

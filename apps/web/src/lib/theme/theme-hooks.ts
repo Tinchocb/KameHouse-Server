@@ -138,8 +138,7 @@ export function useThemeSettings(): ThemeSettingsHook {
     }
 }
 
-function getThemeValue(key: string, settings: ThemeSettings | undefined | null): any {
-    // @ts-ignore
+function getThemeValue(key: keyof ThemeSettings, settings: ThemeSettings | undefined | null): any {
     const defaultValue = THEME_DEFAULT_VALUES[key]
 
     if (!settings) {

@@ -56,14 +56,8 @@ type Settings struct {
 	BaseModel
 	Library        LibrarySettings        `json:"library" gorm:"embedded;embeddedPrefix:library_"`
 	MediaPlayer    MediaPlayerSettings    `json:"mediaPlayer" gorm:"embedded;embeddedPrefix:media_player_"`
-	Torrent        TorrentSettings        `json:"torrent" gorm:"embedded;embeddedPrefix:torrent_"`
-	ListSync       ListSyncSettings       `json:"listSync" gorm:"embedded;embeddedPrefix:list_sync_"`
-	Notifications  NotificationSettings   `json:"notifications" gorm:"embedded;embeddedPrefix:notifications_"`
-	AutoDownloader AutoDownloaderSettings `json:"autoDownloader" gorm:"embedded;embeddedPrefix:auto_downloader_"`
-
 	// Separate tables
 	Mediastream   *MediastreamSettings   `json:"mediastream" gorm:"-"`
-	Torrentstream *TorrentstreamSettings `json:"torrentstream" gorm:"-"`
 	Theme         *Theme                 `json:"theme" gorm:"-"`
 	Updated       bool                    `gorm:"-" json:"updated"`
 }
@@ -74,40 +68,15 @@ type UserAnime struct {
 	Status  string
 }
 
-type TorrentstreamSettings struct {
-	BaseModel
-	Enabled             bool   `gorm:"column:enabled" json:"enabled"`
-	AutoSelect          bool   `gorm:"auto_select" json:"autoSelect"`
-	PreferredResolution string `gorm:"preferred_resolution" json:"preferredResolution"`
-	DisableIPV6         bool   `gorm:"disable_ipv6" json:"disableIPV6"`
-	DownloadDir         string `gorm:"download_dir" json:"downloadDir"`
-	AddToLibrary        bool   `gorm:"add_to_library" json:"addToLibrary"`
-	TorrentClientHost   string `gorm:"torrent_client_host" json:"torrentClientHost"`
-	TorrentClientPort   int    `gorm:"torrent_client_port" json:"torrentClientPort"`
-	StreamingServerHost string `gorm:"streaming_server_host" json:"streamingServerHost"`
-	StreamingServerPort int    `gorm:"streaming_server_port" json:"streamingServerPort"`
-	IncludeInLibrary    bool   `gorm:"include_in_library" json:"includeInLibrary"`
-	StreamUrlAddress    string `gorm:"stream_url_address" json:"streamUrlAddress"`
-	SlowSeeding         bool   `gorm:"slow_seeding" json:"slowSeeding"`
-	PreloadNextStream   bool   `gorm:"preload_next_stream" json:"preloadNextStream"`
-	TorrentioUrl        string `gorm:"torrentio_url" json:"torrentioUrl"`
-	CacheLimitGB        int    `gorm:"cache_limit_gb" json:"cacheLimitGB"`
-	CachePath           string `gorm:"cache_path" json:"cachePath"`
-}
+
 
 
 type LibrarySettings struct {
 	SeriesPaths                     LibraryPaths `gorm:"column:series_paths;type:text" json:"seriesPaths"`
 	MoviePaths                      LibraryPaths `gorm:"column:movie_paths;type:text" json:"moviePaths"`
 	AutoUpdateProgress              bool         `gorm:"column:auto_update_progress" json:"autoUpdateProgress"`
-	TorrentProvider                 string       `gorm:"column:torrent_provider" json:"torrentProvider"`
-	AutoSelectTorrentProvider       string       `gorm:"column:auto_select_torrent_provider" json:"autoSelectTorrentProvider"`
-	AutoScan                        bool         `gorm:"column:auto_scan" json:"autoScan"`
-	EnableOnlinestream              bool         `gorm:"column:enable_onlinestream" json:"enableOnlinestream"`
-	IncludeOnlineStreamingInLibrary bool         `gorm:"column:include_online_streaming_in_library" json:"includeOnlineStreamingInLibrary"`
 	DisableAnimeCardTrailers        bool         `gorm:"column:disable_anime_card_trailers" json:"disableAnimeCardTrailers"`
 	DOHProvider                     string       `gorm:"column:doh_provider" json:"dohProvider"`
-	OpenTorrentClientOnStart        bool         `gorm:"column:open_torrent_client_on_start" json:"openTorrentClientOnStart"`
 	OpenWebURLOnStart               bool         `gorm:"column:open_web_url_on_start" json:"openWebURLOnStart"`
 	RefreshLibraryOnStart           bool         `gorm:"column:refresh_library_on_start" json:"refreshLibraryOnStart"`
 	AutoPlayNextEpisode             bool         `gorm:"column:auto_play_next_episode" json:"autoPlayNextEpisode"`
@@ -125,8 +94,6 @@ type LibrarySettings struct {
 	ScannerConfig                   string       `gorm:"column:scanner_config" json:"scannerConfig"`
 	ScannerProvider                 string       `gorm:"column:scanner_provider" json:"scannerProvider"`
 	DisableLocalScanning            bool         `gorm:"column:disable_local_scanning" json:"disableLocalScanning"`
-	DisableTorrentStreaming         bool         `gorm:"column:disable_torrent_streaming" json:"disableTorrentStreaming"`
-	DisableTorrentProvider          bool         `gorm:"column:disable_torrent_provider" json:"disableTorrentProvider"`
 	ScannerUseLegacyMatching        bool         `gorm:"column:scanner_use_legacy_matching" json:"scannerUseLegacyMatching"`
 	FanartApiKey                    string       `gorm:"column:fanart_api_key" json:"fanartApiKey"`
 	OmdbApiKey                      string       `gorm:"column:omdb_api_key" json:"omdbApiKey"`
@@ -234,10 +201,7 @@ type MediaPlayerSettings struct {
 	VcTranslateTargetLanguage     string `gorm:"column:vc_translate_target_language" json:"vcTranslateTargetLanguage"`
 }
 
-type TorrentSettings struct {
-	ShowBufferingStatus bool `gorm:"column:show_buffering_status" json:"showBufferingStatus"`
-	ShowNetworkSpeed    bool `gorm:"column:show_network_speed" json:"showNetworkSpeed"`
-}
+
 
 type ListSyncSettings struct {
 	Automatic bool   `gorm:"column:automatic_sync" json:"automatic"`
@@ -247,7 +211,6 @@ type ListSyncSettings struct {
 
 type NotificationSettings struct {
 	DisableNotifications               bool `gorm:"column:disable_notifications" json:"disableNotifications"`
-	DisableAutoDownloaderNotifications bool `gorm:"column:disable_auto_downloader_notifications" json:"disableAutoDownloaderNotifications"`
 	DisableAutoScannerNotifications    bool `gorm:"column:disable_auto_scanner_notifications" json:"disableAutoScannerNotifications"`
 }
 
@@ -264,43 +227,7 @@ type ScanSummary struct {
 	Value []byte `gorm:"column:value" json:"value"`
 }
 
-type AutoDownloaderRule struct {
-	BaseModel
-	Value []byte `gorm:"column:value" json:"value"`
-}
 
-type AutoDownloaderProfile struct {
-	BaseModel
-	Value []byte `gorm:"column:value" json:"value"`
-}
-
-type AutoSelectProfile struct {
-	BaseModel
-	Value []byte `gorm:"column:value" json:"value"`
-}
-
-type AutoDownloaderItem struct {
-	BaseModel
-	MediaID     int       `gorm:"column:media_id" json:"mediaId"`
-	Episode     int       `gorm:"column:episode" json:"episode"`
-	Hash        string    `gorm:"column:hash" json:"hash"`
-	TorrentName string    `gorm:"column:torrent_name" json:"torrentName"`
-	Downloaded  bool      `gorm:"column:downloaded" json:"downloaded"`
-	RuleID      uint      `gorm:"column:rule_id" json:"ruleId"`
-	Score       int       `gorm:"column:score" json:"score"`
-	IsDelayed   bool      `gorm:"column:is_delayed" json:"isDelayed"`
-	DelayUntil  time.Time `gorm:"column:delay_until" json:"delayUntil"`
-	TorrentData []byte    `gorm:"column:torrent_data" json:"torrentData"`
-}
-
-type AutoDownloaderSettings struct {
-	Provider              string `gorm:"column:auto_downloader_provider" json:"provider"`
-	Interval              int    `gorm:"column:auto_downloader_interval" json:"interval"`
-	Enabled               bool   `gorm:"column:auto_downloader_enabled" json:"enabled"`
-	DownloadAutomatically bool   `gorm:"column:auto_downloader_download_automatically" json:"downloadAutomatically"`
-	EnableEnhancedQueries bool   `gorm:"column:enable_enhanced_queries" json:"enableEnhancedQueries"`
-	EnableSeasonCheck     bool   `gorm:"column:enable_season_check" json:"enableSeasonCheck"`
-}
 
 type Theme struct {
 	BaseModel
@@ -360,12 +287,7 @@ type SilencedMediaEntry struct {
 	BaseModel
 }
 
-type TorrentstreamHistory struct {
-	BaseModel
-	MediaId            int    `json:"mediaId"`
-	Torrent            []byte `json:"torrent"`
-	BatchEpisodeFiles []byte `json:"batchEpisodeFiles"`
-}
+
 
 type MediaFiller struct {
 	BaseModel
@@ -397,3 +319,22 @@ type UserMediaProgress struct {
 	Progress   int     `gorm:"column:progress" json:"progress"`
 	Score      float64 `gorm:"column:score" json:"score"`
 }
+
+
+
+// MediaCollection groups movies or shows that belong to the same TMDB franchise/saga.
+// It is populated automatically when a scanned movie has a non-nil BelongsToCollection
+// field in its TMDB metadata.
+type MediaCollection struct {
+	BaseModel
+	// TMDBCollectionID is the TMDB /collection/{id} identifier — the canonical key.
+	TMDBCollectionID int    `gorm:"column:tmdb_collection_id;uniqueIndex" json:"tmdbCollectionId"`
+	Name             string `gorm:"column:name" json:"name"`
+	Overview         string `gorm:"column:overview" json:"overview"`
+	PosterPath       string `gorm:"column:poster_path" json:"posterPath"`
+	BackdropPath     string `gorm:"column:backdrop_path" json:"backdropPath"`
+	// MemberIDs is a comma-separated list of TMDB media IDs belonging to this collection.
+	// Stored as plain text for SQLite compatibility; use IntSlice scanner.
+	MemberIDs IntSlice `gorm:"column:member_ids;type:text" json:"memberIds"`
+}
+

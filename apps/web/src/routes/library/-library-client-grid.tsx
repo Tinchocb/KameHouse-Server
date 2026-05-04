@@ -1,11 +1,11 @@
-"use client"
+
 
 import React, { useMemo, useState, memo } from "react"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { useGetLocalFilesInfinite } from "@/api/hooks/localfiles.hooks"
 import { MediaCard } from "@/components/ui/media-card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs/tabs"
-import { Anime_LocalFile, Models_LibraryMedia, Anime_LibraryCollectionEntry } from "@/api/generated/types"
+import { Anime_LocalFile, Models_LibraryMedia, Anime_LibraryCollectionEntry, Anime_UnmatchedGroup } from "@/api/generated/types"
 import { VirtualizedMediaGrid } from "@/components/shared/virtualized-media-grid"
 import { MediaGridSkeleton } from "@/components/shared/media-grid-skeleton"
 import { EmptyState } from "@/components/shared/empty-state"
@@ -50,8 +50,8 @@ export function LibraryClientGrid() {
         const items = localInfiniteData?.pages.flatMap(p => p.items) || []
         if (!searchQuery) return items
         return items.filter(f => {
-            const parseData: any = f.parsedInfo || (f as any).Parsed || (f as any).parsedData || {}
-            const title = parseData.title || parseData.Title || (f as any).name || ""
+            const parseData = (f.parsedInfo || (f as Record<string, unknown>).Parsed || (f as Record<string, unknown>).parsedData || {}) as Record<string, unknown>
+            const title = String(parseData.title || parseData.Title || f.path || "")
             return title.toLowerCase().includes(searchQuery.toLowerCase())
         })
     }, [localInfiniteData, searchQuery])
@@ -97,7 +97,7 @@ export function LibraryClientGrid() {
                 <div className="space-y-2">
                     <h2 className="font-bebas text-3xl tracking-widest text-primary">CONEXIÓN INTERRUMPIDA</h2>
                     <p className="text-sm text-zinc-500 max-w-sm mx-auto uppercase tracking-tighter">
-                        {(libErrorData as any)?.message || "No se pudo sincronizar la colección con el núcleo central."}
+                        {(libErrorData as Error)?.message || "No se pudo sincronizar la colección con el núcleo central."}
                     </p>
                 </div>
                 <button 
@@ -271,7 +271,7 @@ const StatItem = memo(function StatItem({ count, label, active }: { count: numbe
     )
 })
 
-const UnmatchedGroupCard = memo(function UnmatchedGroupCard({ group, onMatch }: { group: any; onMatch: (paths: string[], initialQuery?: string) => void }) {
+const UnmatchedGroupCard = memo(function UnmatchedGroupCard({ group, onMatch }: { group: Anime_UnmatchedGroup; onMatch: (paths: string[], initialQuery?: string) => void }) {
     const dirName = group.dir?.split(/[\\/]/).pop() || "Directorio desconocido"
     
     return (
@@ -293,17 +293,17 @@ const UnmatchedGroupCard = memo(function UnmatchedGroupCard({ group, onMatch }: 
             <div className="space-y-2 py-2 border-y border-white/[0.03]">
                 <div className="flex items-center gap-2 text-zinc-500">
                     <FolderOpen className="w-3 h-3 text-zinc-700" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">{group.localFiles.length} ARCHIVOS REZAGADOS</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest">{group.localFiles?.length || 0} ARCHIVOS REZAGADOS</span>
                 </div>
                 <div className="pl-5 space-y-1">
-                    {group.localFiles.slice(0, 3).map((f: any, i: number) => (
+                    {(group.localFiles || []).slice(0, 3).map((f, i) => (
                         <div key={i} className="text-[10px] text-zinc-600 truncate font-medium">
                             {f.path?.split(/[\\/]/).pop()}
                         </div>
                     ))}
-                    {group.localFiles.length > 3 && (
+                    {(group.localFiles?.length || 0) > 3 && (
                         <div className="text-[9px] text-zinc-700 font-black italic">
-                            + {group.localFiles.length - 3} MÁS...
+                            + {(group.localFiles?.length || 0) - 3} MÁS...
                         </div>
                     )}
                 </div>
@@ -311,7 +311,7 @@ const UnmatchedGroupCard = memo(function UnmatchedGroupCard({ group, onMatch }: 
 
             <Button 
                 className="w-full bg-white/[0.03] hover:bg-primary border border-white/5 hover:border-primary text-zinc-400 hover:text-white font-bebas tracking-[0.2em] gap-2 transition-all duration-300 active:scale-[0.98]"
-                onClick={() => onMatch(group.localFiles.map((f: any) => f.path), dirName)}
+                onClick={() => onMatch((group.localFiles || []).map(f => f.path || ""), dirName)}
             >
                 <Link className="w-4 h-4" />
                 VINCULAR MEDIA
@@ -351,8 +351,8 @@ const LoadingGrid = () => (
 )
 
 const LocalFileCard = memo(function LocalFileCard({ file }: { file: Anime_LocalFile }) {
-    const parseData: any = file.parsedInfo || (file as any).Parsed || (file as any).parsedData || {}
-    const title = parseData.title || parseData.Title || (file as any).name || "Archivo genérico"
+    const parseData = (file.parsedInfo || (file as Record<string, unknown>).Parsed || (file as Record<string, unknown>).parsedData || {}) as Record<string, unknown>
+    const title = String(parseData.title || parseData.Title || file.path || "Archivo genérico")
     
     return (
         <div className="flex flex-col gap-3 group">

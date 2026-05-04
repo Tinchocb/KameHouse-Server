@@ -7,7 +7,7 @@
  */
 
 import React, { useEffect, useState, useMemo } from "react"
-import { getServerBaseUrl } from "@/api/client/server-url"
+import { getApiWebSocketUrl } from "@/api/client/server-url"
 import useWebSocket from "react-use-websocket"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { queryClient } from "@/app/client-providers"
@@ -22,12 +22,7 @@ export function ScannerProgress() {
     const [isRateLimited, setIsRateLimited] = useState(false)
 
     // Reuse the exact same WS URL derivation as websocket-provider.tsx
-    const wsUrl = useMemo(() => {
-        const base = getServerBaseUrl()
-        if (base.startsWith("http://")) return base.replace("http://", "ws://") + "/api/v1/ws"
-        if (base.startsWith("https://")) return base.replace("https://", "wss://") + "/api/v1/ws"
-        return "ws://127.0.0.1:43211/api/v1/ws"
-    }, [])
+    const wsUrl = useMemo(() => getApiWebSocketUrl(), [])
 
     // Hook into the shared connection
     const { lastJsonMessage } = useWebSocket(wsUrl, {
@@ -105,9 +100,9 @@ export function ScannerProgress() {
             
             <div className="relative z-10 px-0.5">
                 <ProgressBar 
-                    progress={progress} 
+                    value={progress} 
                     className="h-2 bg-black/50" 
-                    color={isRateLimited ? "bg-yellow-500 animate-pulse" : "bg-orange-500"}
+                    indicatorClass={isRateLimited ? "bg-yellow-500 animate-pulse" : "bg-orange-500"}
                 />
             </div>
         </div>
