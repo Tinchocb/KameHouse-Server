@@ -8,7 +8,6 @@ import (
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
-	"kamehouse/internal/hook"
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/result"
@@ -87,21 +86,6 @@ func NewEpisodeCollection(opts NewEpisodeCollectionOptions) (ec *EpisodeCollecti
 		}
 	}
 
-	reqEvent := &AnimeEpisodeCollectionRequestedEvent{
-		Media:             opts.Media,
-		Metadata:          opts.AnimeMetadata,
-		EpisodeCollection: &EpisodeCollection{},
-	}
-	err = hook.GlobalHookManager.OnAnimeEpisodeCollectionRequested().Trigger(reqEvent)
-	if err != nil {
-		return nil, err
-	}
-	opts.Media = reqEvent.Media
-	opts.AnimeMetadata = reqEvent.Metadata
-
-	if reqEvent.DefaultPrevented {
-		return reqEvent.EpisodeCollection, nil
-	}
 
 	ec = &EpisodeCollection{
 		HasMappingError: false,
@@ -179,18 +163,9 @@ func NewEpisodeCollection(opts NewEpisodeCollectionOptions) (ec *EpisodeCollecti
 		return cmp.Compare(i.EpisodeNumber, j.EpisodeNumber)
 	})
 
-	event := &AnimeEpisodeCollectionEvent{
-		EpisodeCollection: ec,
-	}
-	err = hook.GlobalHookManager.OnAnimeEpisodeCollection().Trigger(event)
-	if err != nil {
-		return nil, err
-	}
-	ec = event.EpisodeCollection
-
 	episodeCollectionCache.SetT(int(opts.Media.ID), ec, time.Minute*10)
 
-	return
+	return ec, nil
 }
 
 /////////

@@ -52,8 +52,8 @@ const SwimlaneInner = React.memo(function SwimlaneInner({
     return (
         <section className={cn("relative", className)}>
             <div className="mb-6 flex items-center gap-4 px-6 md:px-10 lg:px-14">
-                <span className="h-8 w-1.5 rounded-full bg-[#ff6b00] shadow-[0_0_15px_rgba(255,107,0,0.6)]" />
-                <h2 className="text-3xl font-bebas font-normal uppercase tracking-widest text-zinc-100 drop-shadow-md">
+                <span className="h-8 w-1.5 bg-white" />
+                <h2 className="text-3xl font-bebas font-normal uppercase tracking-widest text-white">
                     {title}
                 </h2>
             </div>
@@ -159,22 +159,22 @@ export function SwimlaneSkeleton({
     return (
         <section className={cn("relative", className)}>
             <div className="mb-6 flex items-center gap-4 px-6 md:px-10 lg:px-14">
-                <span className="h-8 w-1.5 rounded-full bg-zinc-800" />
+                <span className="h-8 w-1.5 bg-zinc-800" />
                 {title ? (
                     <h2 className="text-3xl font-bebas font-normal uppercase tracking-widest text-zinc-200">
                         {title}
                     </h2>
                 ) : (
-                    <Skeleton className="h-8 w-40" />
+                    <Skeleton className="h-8 w-40 rounded-none" />
                 )}
             </div>
 
             <div className="flex gap-4 overflow-hidden px-6 pb-3 md:px-10 lg:px-14">
                 {Array.from({ length: itemCount }).map((_, i) => (
                     <div key={i} className={cn("flex-shrink-0", cardWidths[aspect])}>
-                        <Skeleton className={cn("mb-3 bg-white/[0.03] border border-white/5", cardAspects[aspect])} />
-                        <Skeleton className="mb-2 h-4 w-3/4 bg-white/[0.03]" />
-                        <Skeleton className="h-3 w-1/2 bg-white/[0.02]" />
+                        <Skeleton className={cn("mb-3 bg-white/[0.03] border border-white/5 rounded-none", cardAspects[aspect])} />
+                        <Skeleton className="mb-2 h-4 w-3/4 bg-white/[0.03] rounded-none" />
+                        <Skeleton className="h-3 w-1/2 bg-white/[0.02] rounded-none" />
                     </div>
                 ))}
             </div>

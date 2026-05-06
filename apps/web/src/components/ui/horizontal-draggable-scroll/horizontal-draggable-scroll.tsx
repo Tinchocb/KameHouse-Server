@@ -28,8 +28,8 @@ const HorizontalDraggableScrollAnatomy = defineStyleAnatomy({
     ], {
         variants: {
             side: {
-                left: "left-0 bg-gradient-to-r rounded-l-xl",
-                right: "right-0 bg-gradient-to-l rounded-r-xl",
+                left: "left-0 bg-gradient-to-r rounded-none",
+                right: "right-0 bg-gradient-to-l rounded-none",
             },
         },
     }),

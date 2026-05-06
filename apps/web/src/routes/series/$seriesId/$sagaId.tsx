@@ -32,12 +32,12 @@ function StarRating({ rating }: { rating: number }) {
                     className={cn(
                         "w-4 h-4",
                         n <= Math.round(rating / 2)
-                            ? "fill-orange-400 text-orange-400"
-                            : "fill-neutral-700 text-neutral-700",
+                            ? "fill-white text-white"
+                            : "fill-neutral-800 text-neutral-800",
                     )}
                 />
             ))}
-            <span className="text-neutral-400 text-xs ml-1 font-mono">{rating.toFixed(1)}</span>
+            <span className="text-neutral-500 text-xs ml-1 font-black">{rating.toFixed(1)}</span>
         </div>
     )
 }
@@ -61,38 +61,37 @@ interface LeftPanelProps {
 function LeftPanel({ posterUrl, title, synopsis, year, episodesCount, sagaTitle, genres, rating, durationPerEp, studios, onBack }: LeftPanelProps) {
 
     return (
-        <aside className="w-full lg:w-[30%] lg:min-h-screen lg:sticky lg:top-0 lg:self-start bg-neutral-950 border-r border-white/5 flex flex-col">
+        <aside className="w-full lg:w-[30%] lg:min-h-screen lg:sticky lg:top-0 lg:self-start bg-black border-r border-white/10 flex flex-col">
             {/* Back button */}
             <button
                 onClick={onBack}
-                className="flex items-center gap-2 px-6 pt-6 pb-4 text-neutral-500 hover:text-white transition-colors text-sm font-bold uppercase tracking-widest group"
+                className="flex items-center gap-2 px-8 pt-8 pb-4 text-zinc-500 hover:text-white transition-colors text-[10px] font-black uppercase tracking-[0.3em] group"
             >
                 <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                Volver
+                VOLVER
             </button>
 
             {/* Poster */}
-            <div className="px-6">
-                <div className="relative w-full aspect-[2/3] rounded-2xl overflow-hidden bg-neutral-900 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+            <div className="px-8 mt-4">
+                <div className="relative w-full aspect-[2/3] bg-black border border-white/20">
                     <img
                         src={posterUrl}
                         alt={title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover grayscale"
                     />
-                    {/* Subtle gradient overlay at bottom of poster */}
-                    <div className="absolute bottom-0 inset-x-0 h-1/3 bg-gradient-to-t from-black/60 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                 </div>
             </div>
 
             {/* Metadata */}
-            <div className="flex-1 px-6 pt-5 pb-8 flex flex-col gap-4">
+            <div className="flex-1 px-8 pt-8 pb-12 flex flex-col gap-6">
                 {/* Saga label */}
-                <span className="text-orange-500 text-xs font-black uppercase tracking-[0.2em]">
-                    {sagaTitle}
+                <span className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em]">
+                    SAGA: {sagaTitle}
                 </span>
 
                 {/* Title */}
-                <h1 className="text-white text-2xl md:text-3xl font-black leading-tight tracking-tight">
+                <h1 className="text-white text-4xl font-bebas leading-[0.9] tracking-widest uppercase">
                     {title}
                 </h1>
 
@@ -100,18 +99,16 @@ function LeftPanel({ posterUrl, title, synopsis, year, episodesCount, sagaTitle,
                 <StarRating rating={rating} />
 
                 {/* Quick stats row */}
-                <div className="flex flex-wrap items-center gap-3 text-neutral-400 text-xs font-medium">
-                    <span className="flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-neutral-600" />
+                <div className="flex flex-wrap items-center gap-4 text-zinc-500 text-[10px] font-black uppercase tracking-widest">
+                    <span className="flex items-center gap-2">
+                        <Calendar className="w-3.5 h-3.5" />
                         {year}
                     </span>
-                    <span className="w-1 h-1 rounded-full bg-neutral-700" />
-                    <span className="flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5 text-neutral-600" />
+                    <span className="flex items-center gap-2">
+                        <Clock className="w-3.5 h-3.5" />
                         {durationPerEp}
                     </span>
-                    <span className="w-1 h-1 rounded-full bg-neutral-700" />
-                    <span>{episodesCount} episodios</span>
+                    <span>{episodesCount} EPISODIOS</span>
                 </div>
 
                 {/* Genre tags */}
@@ -119,7 +116,7 @@ function LeftPanel({ posterUrl, title, synopsis, year, episodesCount, sagaTitle,
                     {genres.slice(0, 4).map((g) => (
                         <span
                             key={g}
-                            className="px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider rounded-full bg-white/5 text-neutral-400 border border-white/5"
+                            className="px-2.5 py-1 text-[9px] font-black uppercase tracking-widest bg-zinc-900 text-zinc-400 border border-white/5"
                         >
                             {g}
                         </span>
@@ -127,18 +124,18 @@ function LeftPanel({ posterUrl, title, synopsis, year, episodesCount, sagaTitle,
                 </div>
 
                 {/* Synopsis */}
-                <p className="text-neutral-400 text-sm leading-relaxed">
+                <p className="text-zinc-400 text-[13px] leading-relaxed font-bold uppercase tracking-wide">
                     {synopsis}
                 </p>
 
                 {/* Divider */}
-                <div className="h-px bg-white/5 mt-auto" />
+                <div className="h-px bg-white/10 mt-auto mb-6" />
 
                 {/* Studio info */}
-                <div className="text-[11px] text-neutral-600 font-medium">
+                <div className="text-[9px] text-zinc-600 font-black uppercase tracking-[0.2em]">
                     {studios.length > 0 && (
                         <>
-                            <span className="text-neutral-500">Estudio: </span>{studios.join(", ")}
+                            <span className="text-zinc-700">ESTUDIO: </span>{studios.join(", ")}
                         </>
                     )}
                 </div>
@@ -162,46 +159,41 @@ function EpisodeRow({ episode, isActive, isWatched, isDownloaded, onSelect }: Ep
         <button
             onClick={onSelect}
             className={cn(
-                "w-full flex items-center gap-4 px-4 py-3 rounded-xl text-left group",
-                "transition-all duration-150 border",
+                "w-full flex items-center gap-6 px-6 py-4 text-left group",
+                "transition-all duration-200 border-l-2",
                 isActive
-                    ? "bg-orange-500/10 border-orange-500/20 text-white"
-                    : "bg-transparent border-transparent hover:bg-white/4 hover:border-white/5 text-neutral-400 hover:text-white",
+                    ? "bg-white text-black border-white"
+                    : "bg-transparent border-transparent hover:bg-zinc-900 text-zinc-500 hover:text-white",
             )}
         >
             {/* Episode number */}
             <div className="flex flex-col items-center w-8 shrink-0">
                 <span
                     className={cn(
-                        "text-xs font-black font-mono",
-                        isActive ? "text-orange-400" : "text-neutral-600",
+                        "text-xs font-black tracking-widest",
+                        isActive ? "text-black" : "text-zinc-700 group-hover:text-zinc-400",
                     )}
                 >
-                    {episode.number}
+                    {episode.number.toString().padStart(2, '0')}
                 </span>
-                {isDownloaded && <HardDrive className="w-2.5 h-2.5 text-emerald-500 mt-0.5" />}
+                {isDownloaded && <HardDrive className={cn("w-3 h-3 mt-1", isActive ? "text-black/40" : "text-zinc-700")} />}
             </div>
 
             {/* Title */}
-            <span className="flex-1 text-sm font-medium truncate">
+            <span className="flex-1 text-[11px] font-black uppercase tracking-widest truncate">
                 {episode.title}
             </span>
 
             {/* Duration */}
-            <span className="text-xs font-mono text-neutral-600 shrink-0">
-                {episode.duration}
+            <span className={cn("text-[10px] font-black tracking-widest shrink-0", isActive ? "text-black/50" : "text-zinc-700")}>
+                {episode.duration.toUpperCase()}
             </span>
 
             {/* Watched indicator */}
             {isWatched
-                ? <CheckCircle2 className="w-4 h-4 text-emerald-500/60 shrink-0" />
-                : <Circle className="w-4 h-4 text-neutral-700 shrink-0 opacity-0 group-hover:opacity-100" />
+                ? <CheckCircle2 className={cn("w-4 h-4 shrink-0", isActive ? "text-black" : "text-zinc-500")} />
+                : <Circle className="w-4 h-4 text-zinc-800 shrink-0 opacity-0 group-hover:opacity-100" />
             }
-
-            {/* Active chevron */}
-            {isActive && (
-                <ChevronRight className="w-4 h-4 text-orange-400 shrink-0" />
-            )}
         </button>
     )
 }
@@ -234,18 +226,18 @@ function RightPanel({
     const isCurrentDownloaded = downloadedEpisodes.has(current.number)
 
     return (
-        <main className="flex-1 flex flex-col bg-neutral-950 overflow-y-auto">
+        <main className="flex-1 flex flex-col bg-black overflow-y-auto">
             {/* ── Current episode info ────────────────────────── */}
-            <div className="px-6 md:px-10 pt-8 pb-6 border-b border-white/5">
-                <div className="flex items-start justify-between gap-4">
-                    <div>
-                        <p className="text-orange-500 text-xs font-black uppercase tracking-[0.2em] mb-2">
-                            Episodio {current.number}
+            <div className="px-10 pt-12 pb-10 border-b border-white/10">
+                <div className="flex items-start justify-between gap-12">
+                    <div className="flex-1">
+                        <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em] mb-4">
+                            EPISODIO {current.number}
                         </p>
-                        <h2 className="text-white text-xl md:text-2xl font-black leading-snug">
+                        <h2 className="text-white text-4xl font-black leading-none uppercase tracking-tight mb-6">
                             {current.title}
                         </h2>
-                        <p className="text-neutral-400 text-sm mt-2 leading-relaxed max-w-2xl">
+                        <p className="text-zinc-400 text-[14px] leading-relaxed font-bold uppercase tracking-wide max-w-3xl">
                             {current.description}
                         </p>
                     </div>
@@ -254,58 +246,55 @@ function RightPanel({
                     <button
                         onClick={onMarkWatched}
                         className={cn(
-                            "shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider border transition-all duration-200",
+                            "shrink-0 flex items-center gap-3 px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] border transition-all duration-200",
                             currentWatched
-                                ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20"
-                                : "bg-white/5 border-white/5 text-neutral-400 hover:text-white hover:border-white/10",
+                                ? "bg-white border-white text-black"
+                                : "bg-black border-white/20 text-zinc-500 hover:text-white hover:border-white",
                         )}
                     >
                         {currentWatched
-                            ? <CheckCircle2 className="w-3.5 h-3.5" />
-                            : <Circle className="w-3.5 h-3.5" />
+                            ? <CheckCircle2 className="w-4 h-4" />
+                            : <Circle className="w-4 h-4" />
                         }
-                        {currentWatched ? "Visto" : "Marcar"}
+                        {currentWatched ? "VISTO" : "MARCAR"}
                     </button>
                 </div>
             </div>
 
             {/* ── Play Button ───────────────────────────────── */}
-            <section className="px-6 md:px-10 pt-6 pb-4">
+            <section className="px-10 pt-10 pb-6">
                 <button
-                    Reproducir Episodio {current.number}
-                </button>
                     onClick={() => onPlayEpisode(current)}
                     className={cn(
-                        "w-full flex items-center justify-center gap-3 py-4 rounded-xl font-black text-sm uppercase tracking-widest transition-all duration-200",
-                        "bg-orange-500 hover:bg-orange-400 text-white",
-                        "shadow-[0_4px_20px_rgba(249,115,22,0.3)] hover:shadow-[0_6px_30px_rgba(249,115,22,0.5)]",
-                        "active:scale-[0.98]",
-                        !isCurrentDownloaded && "opacity-50 cursor-not-allowed grayscale"
+                        "w-full flex items-center justify-center gap-4 py-6 font-black text-[13px] uppercase tracking-[0.3em] transition-all duration-300",
+                        "bg-white text-black hover:bg-zinc-200",
+                        !isCurrentDownloaded && "opacity-20 cursor-not-allowed grayscale"
                     )}
                     disabled={!isCurrentDownloaded}
                 >
                     <HardDrive className="w-5 h-5" />
-                    Reproducir Episodio {current.number}
+                    REPRODUCIR EPISODIO {current.number}
                 </button>
             </section>
 
             {/* ── Episode selector ─────────────────────────────── */}
-            <section className="px-6 md:px-10 pt-4 pb-10">
+            <section className="px-10 pt-6 pb-20">
                 {/* Collapsible header */}
                 <button
                     onClick={() => setEpisodesOpen((v) => !v)}
-                    className="w-full flex items-center gap-3 mb-3 group"
+                    className="w-full flex items-center gap-4 mb-6 group"
                 >
-                    <span className="w-1 h-4 rounded-full bg-white/10 group-hover:bg-orange-500 transition-colors" />
-                    <h3 className="text-xs font-black uppercase tracking-[0.18em] text-neutral-500 group-hover:text-neutral-300 transition-colors flex-1 text-left">
-                        Episodios de la Saga
+                    <div className="h-px bg-white/10 flex-1" />
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 group-hover:text-white transition-colors">
+                        EPISODIOS DE LA SAGA
                     </h3>
                     <ChevronDown
                         className={cn(
-                            "w-4 h-4 text-neutral-600 group-hover:text-neutral-400 transition-all duration-200",
+                            "w-4 h-4 text-zinc-700 group-hover:text-white transition-all duration-300",
                             episodesOpen ? "rotate-180" : "",
                         )}
                     />
+                    <div className="h-px bg-white/10 flex-1" />
                 </button>
 
                 {/* Episode list */}

@@ -90,46 +90,45 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         </div>
     )
 }
-
 function SagasSection({ seriesId, sagas }: { seriesId: string, sagas: SagaDefinition[] }) {
     return (
         <section className="relative z-[1] px-6 sm:px-10 pb-20">
             <div className="flex flex-col gap-8">
-                <div className="space-y-1 border-b border-white/5 pb-4">
-                    <h2 className="text-4xl font-bebas font-normal text-[#ff6b00] uppercase tracking-widest drop-shadow-[0_0_15px_rgba(255,107,0,0.6)]">
-                        Crónicas y Sagas
+                <div className="space-y-1 border-b border-white/10 pb-6">
+                    <h2 className="text-4xl font-bebas font-normal text-white uppercase tracking-widest">
+                        CRÓNICAS Y SAGAS
                     </h2>
-                    <p className="text-sm font-medium text-white/50">
+                    <p className="text-sm font-bold uppercase tracking-widest text-zinc-500">
                         Selecciona un arco argumental para explorar sus episodios
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
                     {sagas.map((saga) => (
                         <Link
                             key={saga.id}
                             to={"/series/$seriesId/$sagaId"}
                             params={{ seriesId, sagaId: saga.id }}
-                            className="group relative flex h-64 flex-col justify-end overflow-hidden rounded-2xl p-6 transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_30px_60px_rgba(0,0,0,0.8),0_0_30px_rgba(255,107,0,0.2)] focus:outline-none focus:ring-2 focus:ring-[#ff6b00] ring-offset-2 ring-offset-[#09090b]"
+                            className="group relative flex h-72 flex-col justify-end overflow-hidden rounded-none border border-white/10 p-8 transition-all duration-300 hover:border-white"
                         >
-                            <div className="absolute inset-0">
+                            <div className="absolute inset-0 grayscale group-hover:grayscale-0 transition-all duration-500">
                                 <img
                                     src={saga.image}
                                     alt={saga.title}
-                                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                                 />
-                                <div className="absolute inset-0 bg-gradient-to-t from-[#09090b]/95 via-[#09090b]/80 to-transparent transition-opacity group-hover:opacity-90" />
-                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(255,107,0,0.2),transparent)] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                <div className="absolute inset-0 bg-black/60 group-hover:bg-black/20 transition-all" />
+                                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black to-transparent" />
                             </div>
 
-                            <div className="relative z-10 translate-y-2 transition-transform duration-300 group-hover:translate-y-0 text-left">
-                                <p className="text-sm font-black uppercase tracking-[0.2em] text-[#ff6b00] mb-2 drop-shadow-[0_0_10px_rgba(255,107,0,0.5)]">
-                                    Eps {saga.startEp} - {saga.endEp}
+                            <div className="relative z-10 text-left">
+                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/50 mb-3 group-hover:text-white transition-colors">
+                                    EPS {saga.startEp} — {saga.endEp}
                                 </p>
-                                <h3 className="mb-2 text-2xl font-black text-white leading-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
+                                <h3 className="mb-3 text-3xl font-black text-white leading-tight uppercase tracking-tight">
                                     {saga.title}
                                 </h3>
-                                <p className="text-sm text-zinc-300 line-clamp-2 opacity-0 transition-all duration-300 group-hover:opacity-100 delay-100 drop-shadow-md">
+                                <p className="text-[13px] text-zinc-400 font-bold uppercase tracking-wide line-clamp-2 opacity-0 transition-all duration-300 group-hover:opacity-100">
                                     {saga.description}
                                 </p>
                             </div>
@@ -169,75 +168,73 @@ const HeroSection = React.memo(function HeroSection({
 
     return (
         <section className="relative w-full min-h-[60vh] flex flex-col justify-end overflow-hidden">
-            {/* Backdrop */}
+            {/* Backdrop (Grayscale & Solid) */}
             {backdropUrl && (
-                <div className="absolute inset-0 overflow-hidden">
+                <div className="absolute inset-0 overflow-hidden bg-black">
                     <img
                         src={backdropUrl}
                         alt={title}
-                        className="w-full h-full object-cover object-center animate-ken-burns"
+                        className="w-full h-full object-cover object-center opacity-30 grayscale"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#09090b] via-[#09090b]/80 to-[#09090b]/20" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-[#09090b]/80 via-transparent to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
                 </div>
             )}
 
             {/* Content */}
-            <div className="relative z-10 flex flex-col lg:flex-row items-end gap-8 px-6 sm:px-10 pb-12 pt-32">
-                {/* Cover Poster */}
+            <div className="relative z-10 flex flex-col lg:flex-row items-end gap-12 px-6 sm:px-12 pb-20 pt-40 max-w-[1800px] mx-auto w-full">
+                {/* Cover Poster (Flat Sharp) */}
                 {coverUrl && (
-                    <div className="hidden lg:block shrink-0 w-40 xl:w-48 rounded-2xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.6)] ring-1 ring-white/10">
-                        <img src={coverUrl} alt={title} className="w-full aspect-[2/3] object-cover" />
+                    <div className="hidden lg:block shrink-0 w-52 xl:w-60 bg-black border border-white/20 transition-all duration-300 hover:border-white">
+                        <img src={coverUrl} alt={title} className="w-full aspect-[2/3] object-cover grayscale" />
                     </div>
                 )}
 
-                {/* Meta */}
-                <div className="flex-1 flex flex-col gap-4 min-w-0">
-                    {/* Genres */}
-                    <div className="flex flex-wrap gap-2">
-                        {genres.slice(0, 4).map((g) => (
+                {/* Meta Information */}
+                <div className="flex-1 flex flex-col gap-8 min-w-0">
+                    {/* Tags */}
+                    <div className="flex flex-wrap gap-3">
+                        {genres.slice(0, 5).map((g) => (
                             <span
                                 key={g}
-                                className="px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider rounded-full bg-white/8 text-neutral-300 border border-white/10"
+                                className="px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] bg-white text-black border border-white"
                             >
                                 {g}
                             </span>
                         ))}
                     </div>
 
-                    {/* Title */}
-                    <h1 className="text-5xl sm:text-6xl xl:text-[7rem] font-bebas font-normal leading-[0.85] tracking-normal text-white drop-shadow-[0_10px_30px_rgba(0,0,0,0.8)] uppercase">
+                    {/* Main Title (Bebas Massive Solid) */}
+                    <h1 className="text-6xl sm:text-7xl xl:text-[9rem] font-bebas font-normal leading-[0.85] tracking-tight text-white uppercase drop-shadow-none">
                         {title}
                     </h1>
 
-                    {/* Stats */}
-                    <div className="flex flex-wrap items-center gap-3 text-sm text-white/50 font-medium">
+                    {/* Metadata Strip */}
+                    <div className="flex flex-wrap items-center gap-6 text-[10px] font-black uppercase tracking-[0.4em] text-white/50">
                         {year && <span>{year}</span>}
-                        {year && episodesCount > 0 && <span className="w-1 h-1 rounded-full bg-white/20" />}
-                        {episodesCount > 0 && <span>{episodesCount} episodios</span>}
+                        {episodesCount > 0 && <span>{episodesCount} EPISODIOS</span>}
                     </div>
 
-                    {/* Synopsis */}
-                    <div className="max-w-2xl">
-                        <p
+                    {/* Minimal Synopsis */}
+                    <div className="max-w-3xl relative">
+                        <div 
                             className={cn(
-                                "text-sm text-white/60 leading-relaxed transition-all",
+                                "text-[15px] text-zinc-400 leading-relaxed font-bold uppercase tracking-wide transition-all duration-300",
                                 synopsisExpanded ? "" : "line-clamp-3",
                             )}
                             dangerouslySetInnerHTML={{ __html: cleanSynopsis }}
                         />
-                        {synopsis.length > 180 && (
+                        {synopsis.length > 200 && (
                             <button
                                 onClick={() => setSynopsisExpanded((v) => !v)}
-                                className="mt-1 text-xs font-bold text-orange-400 hover:text-orange-300 transition-colors"
+                                className="mt-4 text-[10px] font-black uppercase tracking-[0.4em] text-white hover:underline underline-offset-8"
                             >
-                                {synopsisExpanded ? "Ver menos" : "Ver más"}
+                                {synopsisExpanded ? "[ LEER MENOS ]" : "[ LEER MÁS ]"}
                             </button>
                         )}
                     </div>
 
                     {/* Actions */}
-                    <div className="mt-2">
+                    <div className="mt-6">
                         <MediaActionButtons seriesId={seriesId} directoryPath={directoryPath} />
                     </div>
                 </div>
@@ -283,12 +280,12 @@ const EpisodesSection = React.memo(function EpisodesSection({
 
     return (
         <section className="relative z-[1] px-6 sm:px-10 pb-20">
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-8">
                 {/* Header */}
-                <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                    <h2 className="text-3xl font-bebas tracking-widest text-white/90">EPISODIOS</h2>
+                <div className="flex items-center justify-between border-b border-white/10 pb-6">
+                    <h2 className="text-4xl font-bebas tracking-widest text-white uppercase">EPISODIOS</h2>
                     {episodes.length > 0 && (
-                        <span className="text-sm text-white/30 font-medium">{episodes.length} en total</span>
+                        <span className="text-[10px] font-black tracking-[0.3em] text-white/30 uppercase">{episodes.length} TOTAL</span>
                     )}
                 </div>
 
@@ -296,12 +293,12 @@ const EpisodesSection = React.memo(function EpisodesSection({
                 {tabs && (
                     <Tabs value={tabValue} onValueChange={setActiveTab}>
                         <ScrollArea>
-                            <TabsList className="mb-4 bg-white/5 rounded-xl h-9 px-1 gap-1 inline-flex flex-nowrap">
+                            <TabsList className="mb-6 bg-black border border-white/10 h-11 px-1 gap-1 inline-flex flex-nowrap rounded-none">
                                 {tabs.map((t) => (
                                     <TabsTrigger
                                         key={t.label}
                                         value={t.label}
-                                        className="text-xs font-bold tracking-wide data-[state=active]:bg-orange-500 data-[state=active]:text-white rounded-lg px-3"
+                                        className="text-[10px] font-black uppercase tracking-widest text-zinc-500 data-[state=active]:bg-white data-[state=active]:text-black px-4 transition-all rounded-none"
                                     >
                                         {t.label}
                                     </TabsTrigger>

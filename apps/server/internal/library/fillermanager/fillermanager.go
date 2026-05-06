@@ -3,7 +3,6 @@ package fillermanager
 import (
 	"kamehouse/internal/api/filler"
 	"kamehouse/internal/database/db"
-	"kamehouse/internal/hook"
 	"kamehouse/internal/library/anime"
 	"kamehouse/internal/util"
 	"strconv"
@@ -213,14 +212,6 @@ func (fm *FillerManager) HydrateFillerData(e *anime.Entry) {
 		return
 	}
 
-	event := &HydrateFillerDataRequestedEvent{
-		Entry: e,
-	}
-	_ = hook.GlobalHookManager.OnHydrateFillerDataRequested().Trigger(event)
-	if event.DefaultPrevented {
-		return
-	}
-	e = event.Entry
 
 	// Check if the filler data has been fetched
 	if !fm.HasFillerFetched(int(e.Media.ID)) {
@@ -242,14 +233,6 @@ func (fm *FillerManager) HydrateEpisodeFillerData(mId int, episodes []*anime.Epi
 		return
 	}
 
-	event := &HydrateEpisodeFillerDataRequestedEvent{
-		Episodes: episodes,
-	}
-	_ = hook.GlobalHookManager.OnHydrateEpisodeFillerDataRequested().Trigger(event)
-	if event.DefaultPrevented {
-		return
-	}
-	episodes = event.Episodes
 
 	// Check if the filler data has been fetched
 	if !fm.HasFillerFetched(mId) {

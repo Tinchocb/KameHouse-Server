@@ -3,7 +3,6 @@ package metadata_provider
 import (
 	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/database/db"
-	"kamehouse/internal/hook"
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/filecache"
@@ -64,23 +63,6 @@ func (aw *AnimeWrapperImpl) GetEpisodeMetadata(ep string) (ret metadata.EpisodeM
 
 	defer util.HandlePanicInModuleThen("api/metadata/GetEpisodeMetadata", func() {})
 
-	reqEvent := &metadata.AnimeEpisodeMetadataRequestedEvent{}
-	reqEvent.MediaId = aw.baseAnime.ID
-	reqEvent.Episode = ep
-	reqEvent.EpisodeNumber = epNumber
-	reqEvent.EpisodeMetadata = &ret
-	_ = hook.GlobalHookManager.OnAnimeEpisodeMetadataRequested().Trigger(reqEvent)
-	ep = reqEvent.Episode
-	epNumber = reqEvent.EpisodeNumber
-
-	// Default prevented by hook, return the metadata
-	if reqEvent.DefaultPrevented {
-		if reqEvent.EpisodeMetadata == nil {
-			return ret
-		}
-		return *reqEvent.EpisodeMetadata
-	}
-
 	//
 	// Process
 	//
@@ -121,19 +103,6 @@ func (aw *AnimeWrapperImpl) GetEpisodeMetadata(ep string) (ret metadata.EpisodeM
 	if ret.Overview == "" && ret.Summary == "" {
 		ret.Overview = getDefaultOverview(aw.baseAnime, ep, epNumber)
 	}
-
-	// Event
-	event := &metadata.AnimeEpisodeMetadataEvent{
-		EpisodeMetadata: &ret,
-		Episode:         ep,
-		EpisodeNumber:   epNumber,
-		MediaId:         aw.baseAnime.ID,
-	}
-	_ = hook.GlobalHookManager.OnAnimeEpisodeMetadata().Trigger(event)
-	if event.EpisodeMetadata == nil {
-		return ret
-	}
-	ret = *event.EpisodeMetadata
 
 	return ret
 }

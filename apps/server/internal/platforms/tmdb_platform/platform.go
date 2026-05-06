@@ -54,9 +54,7 @@ func (p *Platform) GetMovie(ctx context.Context, mediaID int) (interface{}, erro
 	return p.movieDetailsToUnifiedMedia(&res), nil
 }
 
-func (p *Platform) GetAnimeByMalID(ctx context.Context, malID int) (interface{}, error) {
-	return nil, nil
-}
+
 
 func (p *Platform) GetAnimeWithRelations(ctx context.Context, mediaID int) (interface{}, error) {
 	return p.GetAnime(ctx, mediaID)

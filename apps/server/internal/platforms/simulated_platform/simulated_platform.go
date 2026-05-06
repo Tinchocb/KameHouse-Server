@@ -53,9 +53,7 @@ func (p *SimulatedPlatform) DeleteEntry(ctx context.Context, mediaId, entryId in
 func (p *SimulatedPlatform) GetAnime(ctx context.Context, mediaID int) (interface{}, error) {
 	return nil, nil
 }
-func (p *SimulatedPlatform) GetAnimeByMalID(ctx context.Context, malID int) (interface{}, error) {
-	return nil, nil
-}
+
 func (p *SimulatedPlatform) GetAnimeDetails(ctx context.Context, mediaID int) (interface{}, error) {
 	return nil, nil
 }

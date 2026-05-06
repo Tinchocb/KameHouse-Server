@@ -66,25 +66,25 @@ function MoviesPage() {
  
 
             {/* ── Controls ── */}
-            <div className="sticky top-0 z-30 glass-panel border-y border-border-subtle backdrop-blur-3xl">
+            <div className="sticky top-0 z-30 bg-black border-y border-white/10">
                 <div className="max-w-[1400px] mx-auto px-6 md:px-14 py-4 flex flex-wrap gap-6 items-center justify-between">
                     {/* Search */}
                     <div className="relative w-full sm:w-80 group">
-                        <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-primary transition-colors text-sm" />
+                        <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-white transition-colors text-sm" />
                         <input
-                            className="w-full pl-12 pr-4 py-2.5 bg-white/[0.03] hover:bg-white/[0.05] focus:bg-white/[0.08] border border-white/5 focus:border-primary/40 rounded-xl text-sm outline-none transition-all duration-300 placeholder:text-zinc-600"
+                            className="w-full pl-12 pr-4 py-2.5 bg-black hover:bg-zinc-900 border border-white/10 focus:border-white rounded-none text-sm outline-none transition-all duration-200 placeholder:text-zinc-600 uppercase tracking-widest"
                             type="text"
                             value={search}
                             onChange={e => setSearch(e.target.value)}
-                            placeholder="Buscar en la filmoteca..."
+                            placeholder="BUSCAR EN FILMOTECA..."
                         />
                     </div>
 
                     {/* Genres */}
                     <div className="flex flex-nowrap sm:flex-wrap items-center gap-2 overflow-x-auto sm:overflow-x-visible no-scrollbar pb-2 sm:pb-0">
-                        <div className="flex items-center gap-2 mr-2 px-3 py-1.5 rounded-lg bg-surface-2 border border-border-subtle">
+                        <div className="flex items-center gap-2 mr-2 px-3 py-1.5 bg-black border border-white/10">
                             <FaFilter className="text-[10px] text-zinc-500" />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Géneros</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Filtro</span>
                         </div>
                         
                         <GenrePill label="TODOS" active={activeGenre === null} onClick={() => setActiveGenre(null)} />
@@ -103,7 +103,7 @@ function MoviesPage() {
             {/* ── Grid ── */}
             <div className="max-w-[1400px] mx-auto px-6 md:px-14 pt-12">
                 {isLoading ? (
-                    <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-x-6 gap-y-10">
+                    <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-x-8 gap-y-12">
                         {Array.from({ length: 14 }).map((_, i) => (
                             <MovieCardSkeleton key={i} />
                         ))}
@@ -115,7 +115,7 @@ function MoviesPage() {
                         illustration={<Clapperboard className="w-20 h-20 text-zinc-800" />}
                     />
                 ) : (
-                    <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-x-6 gap-y-10 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+                    <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-x-8 gap-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         {filtered.map(entry => (
                             <MovieCard key={entry.mediaId} entry={entry} />
                         ))}
@@ -147,7 +147,7 @@ const MovieCard = memo(function MovieCard({ entry }: { entry: Anime_LibraryColle
     if (!movie) return null
 
     return (
-        <div className="flex flex-col gap-3 group">
+        <div className="flex flex-col gap-4 group">
             <MediaCard 
                 artwork={movie.posterImage || ""}
                 title={movie.titleEnglish || movie.titleRomaji || movie.titleOriginal || "Sin título"}
@@ -159,14 +159,14 @@ const MovieCard = memo(function MovieCard({ entry }: { entry: Anime_LibraryColle
                 className="w-full"
             />
             
-            <div className="px-1 space-y-1">
-                <h3 className="text-[13px] font-bold text-zinc-200 group-hover:text-primary transition-colors line-clamp-2 leading-tight">
+            <div className="px-1 space-y-2">
+                <h3 className="text-[13px] font-black text-white group-hover:text-zinc-400 transition-colors line-clamp-2 leading-tight uppercase tracking-tight">
                     {movie.titleEnglish || movie.titleRomaji || movie.titleOriginal || "Sin título"}
                 </h3>
-                <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black text-zinc-600 uppercase tracking-wider">{movie.genres?.[0] || "Anime"}</span>
+                <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em]">{movie.genres?.[0] || "Anime"}</span>
                     {movie.totalEpisodes && movie.totalEpisodes > 1 && (
-                        <span className="text-[10px] font-bold text-zinc-700 tabular-nums">{movie.totalEpisodes} eps</span>
+                        <span className="text-[10px] font-black text-zinc-700 tabular-nums uppercase tracking-widest">{movie.totalEpisodes} EPS</span>
                     )}
                 </div>
             </div>
@@ -176,13 +176,13 @@ const MovieCard = memo(function MovieCard({ entry }: { entry: Anime_LibraryColle
  
 export const MovieCardSkeleton = memo(function MovieCardSkeleton() {
     return (
-        <div className="flex flex-col gap-3 animate-pulse">
-            <div className="aspect-[2/3] w-full bg-white/[0.03] rounded-2xl border border-white/5 shadow-xl" />
-            <div className="px-1 space-y-2">
-                <div className="h-4 w-5/6 bg-white/[0.04] rounded-md" />
-                <div className="flex items-center gap-2">
-                    <div className="h-3 w-12 bg-white/[0.02] rounded" />
-                    <div className="h-3 w-8 bg-white/[0.01] rounded" />
+        <div className="flex flex-col gap-4 animate-pulse">
+            <div className="aspect-[2/3] w-full bg-zinc-900 border border-white/5 shadow-xl" />
+            <div className="px-1 space-y-3">
+                <div className="h-4 w-5/6 bg-zinc-900" />
+                <div className="flex items-center gap-3">
+                    <div className="h-3 w-16 bg-zinc-900" />
+                    <div className="h-3 w-8 bg-zinc-900" />
                 </div>
             </div>
         </div>

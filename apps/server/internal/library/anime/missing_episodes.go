@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
-	"kamehouse/internal/hook"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/limiter"
 	"sort"
@@ -33,30 +32,6 @@ type (
 func NewMissingEpisodes(opts *NewMissingEpisodesOptions) *MissingEpisodes {
 	missing := new(MissingEpisodes)
 
-	reqEvent := new(MissingEpisodesRequestedEvent)
-	reqEvent.Database = opts.Database
-	reqEvent.LocalFiles = opts.LocalFiles
-	reqEvent.SilencedMediaIds = opts.SilencedMediaIds
-	reqEvent.MissingEpisodes = missing
-	err := hook.GlobalHookManager.OnMissingEpisodesRequested().Trigger(reqEvent)
-	if err != nil {
-		return nil
-	}
-	opts.Database = reqEvent.Database                 // Override the db
-	opts.LocalFiles = reqEvent.LocalFiles             // Override the local files
-	opts.SilencedMediaIds = reqEvent.SilencedMediaIds // Override the silenced media IDs
-	missing = reqEvent.MissingEpisodes
-
-	// Default prevented by hook, return the missing episodes
-	if reqEvent.DefaultPrevented {
-		event := new(MissingEpisodesEvent)
-		event.MissingEpisodes = missing
-		err = hook.GlobalHookManager.OnMissingEpisodes().Trigger(event)
-		if err != nil {
-			return nil
-		}
-		return event.MissingEpisodes
-	}
 
 	groupedLfs := GroupLocalFilesByMediaID(opts.LocalFiles)
 
@@ -159,13 +134,5 @@ func NewMissingEpisodes(opts *NewMissingEpisodesOptions) *MissingEpisodes {
 		return lo.Contains(opts.SilencedMediaIds, int(item.BaseAnime.ID))
 	})
 
-	// Event
-	event := new(MissingEpisodesEvent)
-	event.MissingEpisodes = missing
-	err = hook.GlobalHookManager.OnMissingEpisodes().Trigger(event)
-	if err != nil {
-		return nil
-	}
-
-	return event.MissingEpisodes
+	return missing
 }

@@ -8,13 +8,11 @@ import (
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
-	"kamehouse/internal/hook"
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
 	"sort"
 	"strconv"
 	"strings"
-
 	"github.com/samber/lo"
 	"github.com/sourcegraph/conc/pool"
 )
@@ -78,33 +76,7 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 	entry := new(Entry)
 	entry.MediaId = opts.MediaId
 
-	reqEvent := new(AnimeEntryRequestedEvent)
-	reqEvent.MediaId = opts.MediaId
-	reqEvent.LocalFiles = opts.LocalFiles
-	reqEvent.Entry = entry
 
-	err := hook.GlobalHookManager.OnAnimeEntryRequested().Trigger(reqEvent)
-	if err != nil {
-		return nil, err
-	}
-	opts.MediaId = reqEvent.MediaId       // Override the media ID
-	opts.LocalFiles = reqEvent.LocalFiles // Override the local files
-	entry = reqEvent.Entry                // Override the entry
-
-	// Default prevented, return the modified entry
-	if reqEvent.DefaultPrevented {
-		event := new(AnimeEntryEvent)
-		event.Entry = reqEvent.Entry
-		err = hook.GlobalHookManager.OnAnimeEntry().Trigger(event)
-		if err != nil {
-			return nil, err
-		}
-
-		if event.Entry == nil {
-			return nil, errors.New("no entry was returned")
-		}
-		return event.Entry, nil
-	}
 
 	if opts.Database == nil || opts.PlatformRef.IsAbsent() {
 		return nil, errors.New("missing arguments when creating media entry")
@@ -117,13 +89,10 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 	// Fetch the media from local database
 	var fetchedMedia *models.LibraryMedia
 
-
-	// If not found, try looking it up by TMDB ID
-	if fetchedMedia == nil {
-		m, err := db.GetLibraryMediaByTmdbId(opts.Database, opts.MediaId)
-		if err == nil && m != nil {
-			fetchedMedia = m
-		}
+	// Try looking it up by TMDB ID
+	m, err := db.GetLibraryMediaByTmdbId(opts.Database, opts.MediaId)
+	if err == nil && m != nil {
+		fetchedMedia = m
 	}
 
 	// If direct lookup or TMDB lookup failed,
@@ -230,26 +199,18 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 			return nil, err
 		}
 
-		event := &AnimeEntryEvent{
-			Entry: &Entry{
-				MediaId:             simpleAnimeEntry.MediaId,
-				Media:               simpleAnimeEntry.Media,
-				EntryListData:       simpleAnimeEntry.EntryListData,
-				EntryLibraryData:    simpleAnimeEntry.EntryLibraryData,
-				EntryDownloadInfo:   nil,
-				Episodes:            simpleAnimeEntry.Episodes,
-				NextEpisode:         simpleAnimeEntry.NextEpisode,
-				LocalFiles:          simpleAnimeEntry.LocalFiles,
-				AnidbId:             0,
-				CurrentEpisodeCount: simpleAnimeEntry.CurrentEpisodeCount,
-			},
-		}
-		err = hook.GlobalHookManager.OnAnimeEntry().Trigger(event)
-		if err != nil {
-			return nil, err
-		}
-
-		return event.Entry, nil
+		return &Entry{
+			MediaId:             simpleAnimeEntry.MediaId,
+			Media:               simpleAnimeEntry.Media,
+			EntryListData:       simpleAnimeEntry.EntryListData,
+			EntryLibraryData:    simpleAnimeEntry.EntryLibraryData,
+			EntryDownloadInfo:   nil,
+			Episodes:            simpleAnimeEntry.Episodes,
+			NextEpisode:         simpleAnimeEntry.NextEpisode,
+			LocalFiles:          simpleAnimeEntry.LocalFiles,
+			AnidbId:             0,
+			CurrentEpisodeCount: simpleAnimeEntry.CurrentEpisodeCount,
+		}, nil
 		// +--------------- End
 
 	}
@@ -263,15 +224,7 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 	// Create episode entities
 	entry.hydrateEntryEpisodeData(listData, animeMetadata, opts.MetadataProviderRef, opts.LibraryEpisodes)
 
-	event := &AnimeEntryEvent{
-		Entry: entry,
-	}
-	err = hook.GlobalHookManager.OnAnimeEntry().Trigger(event)
-	if err != nil {
-		return nil, err
-	}
-
-	return event.Entry, nil
+	return entry, nil
 }
 
 //----------------------------------------------------------------------------------------------------------------------

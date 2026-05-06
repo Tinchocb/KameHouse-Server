@@ -6,7 +6,6 @@ import (
 
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/models/dto"
-	"kamehouse/internal/hook"
 	"kamehouse/internal/library/summary"
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
@@ -62,19 +61,6 @@ func (fh *FileHydrator) HydrateMetadata(ctx context.Context) {
 
 	fh.precompileRules()
 
-	// Invoke ScanHydrationStarted hook
-	event := &ScanHydrationStartedEvent{
-		LocalFiles: fh.LocalFiles,
-		AllMedia:   fh.AllMedia,
-	}
-	_ = hook.GlobalHookManager.OnScanHydrationStarted().Trigger(event)
-	fh.LocalFiles = event.LocalFiles
-	fh.AllMedia = event.AllMedia
-
-	// Default prevented, do not hydrate the metadata
-	if event.DefaultPrevented {
-		return
-	}
 
 	// Group local files by media ID
 	groups := lop.GroupBy(fh.LocalFiles, func(localFile *dto.LocalFile) int {
@@ -160,38 +146,6 @@ func (fh *FileHydrator) hydrateGroupMetadata(
 
 			episode := -1
 
-			// Invoke ScanLocalFileHydrationStarted hook
-			event := &ScanLocalFileHydrationStartedEvent{
-				LocalFile: lf,
-				Media:     media,
-			}
-			_ = hook.GlobalHookManager.OnScanLocalFileHydrationStarted().Trigger(event)
-			lf = event.LocalFile
-			media = event.Media
-
-			defer func() {
-				// Invoke ScanLocalFileHydrated hook
-				event := &ScanLocalFileHydratedEvent{
-					LocalFile: lf,
-					MediaId:   mId,
-					Episode:   episode,
-				}
-				_ = hook.GlobalHookManager.OnScanLocalFileHydrated().Trigger(event)
-				lf = event.LocalFile
-				mId = event.MediaId
-				episode = event.Episode
-			}()
-
-			// Handle hook override
-			if event.DefaultPrevented {
-				if fh.ScanLogger != nil {
-					fh.ScanLogger.LogFileHydrator(zerolog.DebugLevel).
-						Str("filename", lf.Name).
-						Msg("Default hydration skipped by hook")
-				}
-				fh.ScanSummaryLogger.LogDebug(lf, "Default hydration skipped by hook")
-				return
-			}
 
 			// Apply hydration rule to the file
 			if fh.applyHydrationRule(lf) {

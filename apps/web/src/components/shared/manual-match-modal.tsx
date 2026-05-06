@@ -43,16 +43,16 @@ export function ManualMatchModal({ isOpen, onClose, directoryPath, currentMediaI
             <div className="mt-4 space-y-4">
                     <input
                         type="text"
-                        placeholder="Search Platform..."
+                        placeholder="Search metadata..."
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        className="w-full rounded-lg bg-white/5 border border-white/10 px-4 py-3 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                        className="w-full rounded-none bg-black border border-white/10 px-4 py-3 text-sm focus:border-white focus:outline-none focus:ring-0"
                     />
 
                     <div className="max-h-96 flex flex-col gap-2 overflow-y-auto px-1 py-1">
                         {isLoading ? (
                             <div className="flex h-32 items-center justify-center">
-                                <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
+                                <Loader2 className="h-6 w-6 animate-spin text-white" />
                             </div>
                         ) : isSearchActive && results.length === 0 ? (
                             <div className="flex h-32 items-center justify-center text-white/50">
@@ -62,18 +62,18 @@ export function ManualMatchModal({ isOpen, onClose, directoryPath, currentMediaI
                             results?.map((result: any) => (
                                 <div
                                     key={result.id}
-                                    className="flex items-center justify-between rounded-lg border border-white/5 bg-white/5 p-3 transition hover:bg-white/10"
+                                    className="flex items-center justify-between rounded-none border border-white/5 bg-zinc-900/50 p-3 transition hover:bg-zinc-800"
                                 >
                                     <div className="flex items-center gap-4">
                                         <div
-                                            className="h-16 w-12 flex-shrink-0 cursor-pointer rounded bg-cover bg-center shadow-lg"
+                                            className="h-16 w-12 flex-shrink-0 cursor-pointer bg-cover bg-center"
                                             style={{ backgroundImage: `url(${result.coverImage?.large})` }}
                                         />
                                         <div className="flex flex-col">
-                                            <span className="text-sm font-bold text-white">
+                                            <span className="text-sm font-bold text-white uppercase tracking-tight">
                                                 {result.title?.userPreferred}
                                             </span>
-                                            <span className="text-xs text-white/60">
+                                            <span className="text-[10px] font-medium text-white/60 uppercase tracking-widest">
                                                 {result.startDate?.year || "Unknown Year"} • {result.format || "TV"}
                                             </span>
                                         </div>
@@ -81,7 +81,7 @@ export function ManualMatchModal({ isOpen, onClose, directoryPath, currentMediaI
                                     <button
                                         onClick={() => handleMatch(result.id)}
                                         disabled={isPending || !directoryPath}
-                                        className="rounded-full bg-orange-500 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-[0_5px_15px_rgba(249,115,22,0.3)] transition hover:bg-orange-600 disabled:opacity-50"
+                                        className="rounded-none bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-black transition hover:bg-zinc-200 disabled:opacity-50"
                                     >
                                         {isPending && selectedId === result.id ? (
                                             <Loader2 className="h-4 w-4 animate-spin" />

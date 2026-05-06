@@ -523,14 +523,7 @@ func (vc *VideoCore) ShowMessage(message string, milliseconds int) {
 	})
 }
 
-// SendInSightData sends InSight data for a playback session.
-func (vc *VideoCore) SendInSightData(data *InSightData) {
-	state, ok := vc.GetPlaybackState()
-	if !ok {
-		return
-	}
-	vc.sendPlayerEventTo(state.ClientId, string(ServerEventInSightData), data)
-}
+
 
 // Terminate sends a terminate command to the video player and clears the playback state.
 // The video player should stop on the client.

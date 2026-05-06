@@ -38,7 +38,7 @@ func (s Semaphore) Acquire(ctx context.Context) bool {
 func (s Semaphore) Release() { s <- struct{}{} }
 
 // FfmpegTranscoder manages HLS transcode and DirectStream remux sessions,
-// enforcing MaxTranscodeSessions via a shared semaphore.
+// enforcing 3 via a shared semaphore.
 type FfmpegTranscoder struct {
 	FfmpegPath string
 	OutDir     string
@@ -48,13 +48,13 @@ type FfmpegTranscoder struct {
 }
 
 // NewTranscoder creates an FfmpegTranscoder.
-// hwAccel may be nil (CPU-only). sem may be nil (uses MaxTranscodeSessions default).
+// hwAccel may be nil (CPU-only). sem may be nil (uses 3 default).
 func NewTranscoder(ffmpegPath string, sem Semaphore, logger *zerolog.Logger) *FfmpegTranscoder {
 	if ffmpegPath == "" {
 		ffmpegPath = "ffmpeg"
 	}
 	if sem == nil {
-		sem = NewSemaphore(MaxTranscodeSessions)
+		sem = NewSemaphore(3)
 	}
 	outDir := filepath.Join(os.TempDir(), "kamehouse_transcodes")
 	_ = os.MkdirAll(outDir, 0755)
@@ -236,3 +236,4 @@ func (t *FfmpegTranscoder) startFFmpegSession(ctx context.Context, mediaId, inpu
 	// Return the path even if not yet ready — HLS clients handle retries.
 	return masterPlaylist, nil
 }
+

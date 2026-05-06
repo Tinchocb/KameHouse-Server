@@ -2,7 +2,6 @@ package anime
 
 import (
 	"fmt"
-	"kamehouse/internal/hook"
 	"kamehouse/internal/platforms/platform"
 	"time"
 
@@ -60,13 +59,5 @@ func GetScheduleItems(animeSchedule *platform.UnifiedAiringSchedule, animeCollec
 		return fmt.Sprintf("%d-%d", item.MediaId, item.EpisodeNumber)
 	})
 
-	event := new(AnimeScheduleItemsEvent)
-	event.AnimeCollection = animeCollection
-	event.Items = ret
-	err := hook.GlobalHookManager.OnAnimeScheduleItems().Trigger(event)
-	if err != nil {
-		return nil
-	}
-
-	return event.Items
+	return ret
 }

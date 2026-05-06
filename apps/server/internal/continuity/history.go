@@ -5,7 +5,6 @@ import (
 
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models/dto"
-	"kamehouse/internal/hook"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/filecache"
 	"strconv"
@@ -183,10 +182,6 @@ func (m *Manager) UpdateWatchHistoryItem(opts *UpdateWatchHistoryItemOptions) (e
 		return fmt.Errorf("continuity: Failed to save watch history item: %w", err)
 	}
 
-	_ = hook.GlobalHookManager.OnWatchHistoryItemUpdated().Trigger(&WatchHistoryItemUpdatedEvent{
-		WatchHistoryItem: i,
-	})
-
 	// If the item was added, check if we need to remove the oldest item
 	if added {
 		_ = m.trimWatchHistoryItems()
@@ -248,17 +243,6 @@ func (m *Manager) GetExternalPlayerEpisodeWatchHistoryItem(path string, isStream
 
 	if isStream {
 
-		event := &WatchHistoryStreamEpisodeItemRequestedEvent{
-			WatchHistoryItem: &WatchHistoryItem{},
-		}
-
-		hook.GlobalHookManager.OnWatchHistoryStreamEpisodeItemRequested().Trigger(event)
-		if event.DefaultPrevented {
-			return &WatchHistoryItemResponse{
-				Item:  event.WatchHistoryItem,
-				Found: event.WatchHistoryItem != nil,
-			}
-		}
 
 		if episode == 0 || mediaId == 0 {
 			m.logger.Debug().
@@ -292,18 +276,6 @@ func (m *Manager) GetExternalPlayerEpisodeWatchHistoryItem(path string, isStream
 			return ret
 		}
 
-		event := &WatchHistoryLocalFileEpisodeItemRequestedEvent{
-			Path:             path,
-			LocalFiles:       lfs,
-			WatchHistoryItem: &WatchHistoryItem{},
-		}
-		hook.GlobalHookManager.OnWatchHistoryLocalFileEpisodeItemRequested().Trigger(event)
-		if event.DefaultPrevented {
-			return &WatchHistoryItemResponse{
-				Item:  event.WatchHistoryItem,
-				Found: event.WatchHistoryItem != nil,
-			}
-		}
 
 		var lf *dto.LocalFile
 		// Find the local file from the path
@@ -411,17 +383,6 @@ func (m *Manager) getWatchHistory(mediaId int) (ret *WatchHistoryItem, exists bo
 		exists = false
 	})
 
-	reqEvent := &WatchHistoryItemRequestedEvent{
-		MediaId:          mediaId,
-		WatchHistoryItem: ret,
-	}
-	hook.GlobalHookManager.OnWatchHistoryItemRequested().Trigger(reqEvent)
-	ret = reqEvent.WatchHistoryItem
-
-	if reqEvent.DefaultPrevented {
-		return reqEvent.WatchHistoryItem, reqEvent.WatchHistoryItem != nil
-	}
-
 	exists, _ = m.fileCacher.Get(*m.watchHistoryFileCacheBucket, strconv.Itoa(mediaId), &ret)
 
 	if exists && ret != nil && ret.Duration > 0 {
@@ -495,10 +456,5 @@ func (m *Manager) triggerPredictiveCache(mediaId int, currentEpisode int) {
 	m.logger.Info().Int("mediaId", mediaId).Int("episode", nextEpisode).Msg("continuity: Triggering predictive cache download for next episode")
 
 	// Emit hook to start the download
-	// Use hook_resolver, which is typically resolved during app setup.
-	// We need to wait for handling the hook event externally (like in server/app.go or torrent_search module)
-	_ = hook.GlobalHookManager.OnPredictiveCacheEpisodeRequested().Trigger(&PredictiveCacheEpisodeRequestedEvent{
-		MediaId:       mediaId,
-		EpisodeNumber: nextEpisode,
-	})
+
 }

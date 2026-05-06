@@ -42,7 +42,6 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 	type body struct {
 		Library                models.LibrarySettings      `json:"library"`
 		MediaPlayer            models.MediaPlayerSettings  `json:"mediaPlayer"`
-		Notifications          models.NotificationSettings `json:"notifications"`
 		EnableTranscode        bool                        `json:"enableTranscode"`
 	}
 
@@ -65,7 +64,6 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 		BaseModel:     models.BaseModel{ID: 1, UpdatedAt: time.Now()},
 		Library:       b.Library,
 		MediaPlayer:   b.MediaPlayer,
-		Notifications: b.Notifications,
 	})
 	if err != nil {
 		return h.RespondWithError(c, err)
@@ -101,7 +99,6 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 	type body struct {
 		Library       *models.LibrarySettings       `json:"library"`
 		MediaPlayer   *models.MediaPlayerSettings   `json:"mediaPlayer"`
-		Notifications *models.NotificationSettings  `json:"notifications"`
 		Mediastream   *models.MediastreamSettings   `json:"mediastream"`
 		Theme         *models.Theme                 `json:"theme"`
 	}
@@ -184,8 +181,6 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		merged.Library.FanartApiKey = b.Library.FanartApiKey
 		merged.Library.OmdbApiKey = b.Library.OmdbApiKey
 		merged.Library.OpenSubsApiKey = b.Library.OpenSubsApiKey
-		merged.Library.AniDbClientId = b.Library.AniDbClientId
-		merged.Library.AniDbUsername = b.Library.AniDbUsername
 
 		// If a TMDB API key is provided and the primary provider is empty, set it to "tmdb"
 		if merged.Library.TmdbApiKey != "" && merged.Library.PrimaryMetadataProvider == "" {
@@ -208,11 +203,7 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 
 
 
-	// Partial updates for Notification Settings
-	if b.Notifications != nil {
-		merged.Notifications.DisableNotifications = b.Notifications.DisableNotifications
-		merged.Notifications.DisableAutoScannerNotifications = b.Notifications.DisableAutoScannerNotifications
-	}
+	
 
 
 
@@ -288,3 +279,4 @@ func (h *Handler) HandleSaveMediaPlayerSettings(c echo.Context) error {
 
 	return h.RespondWithData(c, true)
 }
+

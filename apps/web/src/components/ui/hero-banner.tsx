@@ -3,7 +3,6 @@ import { Skeleton } from "@/components/ui/skeleton"
 import type { ContentTag } from "@/hooks/use-home-intelligence"
 import { Flame, Info, Play, Sparkles, Star } from "lucide-react"
 import * as React from "react"
-import { useExtractColor } from "@/hooks/use-extract-color"
 import { motion } from "framer-motion"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -61,11 +60,9 @@ function EpicChip({ tag }: { tag?: ContentTag }) {
     return (
         <span
             className={cn(
-                "inline-flex items-center gap-1 rounded-full border px-3 py-0.5",
+                "inline-flex items-center gap-1 border px-3 py-0.5",
                 "text-[0.65rem] font-black uppercase tracking-[0.22em]",
-                tag === "EPIC"
-                    ? "border-amber-400/50 bg-amber-500/15 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.25)]"
-                    : "border-blue-400/40 bg-blue-500/15 text-blue-300",
+                "border-white/20 bg-white/10 text-white shadow-[0_0_12px_rgba(255,255,255,0.1)]",
             )}
         >
             {tag === "EPIC" ? <Flame className="h-2.5 w-2.5" /> : <Sparkles className="h-2.5 w-2.5" />}
@@ -77,7 +74,7 @@ function EpicChip({ tag }: { tag?: ContentTag }) {
 function ArcChip({ arcName }: { arcName?: string }) {
     if (!arcName) return null
     return (
-        <span className="inline-flex items-center rounded-full border border-white/12 bg-white/6 px-3 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-zinc-300 backdrop-blur-md">
+        <span className="inline-flex items-center border border-white/12 bg-white/6 px-3 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-zinc-300">
             {arcName}
         </span>
     )
@@ -85,10 +82,8 @@ function ArcChip({ arcName }: { arcName?: string }) {
 
 function RatingRing({ rating }: { rating: number }) {
     if (rating < 7) return null
-    const colour =
-        rating >= 8.5 ? "text-amber-400" : rating >= 7.5 ? "text-orange-400" : "text-zinc-300"
     return (
-        <div className={cn("flex items-center gap-1 text-[0.7rem] font-bold", colour)}>
+        <div className="flex items-center gap-1 text-[0.7rem] font-bold text-white">
             <Star className="h-3 w-3 fill-current" />
             {rating.toFixed(1)}
         </div>
@@ -135,7 +130,6 @@ export function HeroBanner({
     if (items.length === 0) return null
 
     const activeItem = items[activeIndex] ?? items[0]
-    const { palette } = useExtractColor(activeItem?.backdropUrl)
 
     return (
         <section
@@ -147,7 +141,7 @@ export function HeroBanner({
             }}
             onMouseMove={handleMouseMove}
             className={cn(
-                "relative flex min-h-[720px] w-full items-end overflow-hidden bg-[#09090b]",
+                "relative flex min-h-[720px] w-full items-end overflow-hidden bg-black",
                 "h-[100dvh] max-h-[1100px]",
                 className,
             )}
@@ -173,7 +167,7 @@ export function HeroBanner({
                             alt=""
                             aria-hidden="true"
                             className={cn(
-                                "h-full w-full object-cover object-center",
+                                "h-full w-full object-cover object-center grayscale brightness-[0.4]",
                                 index === activeIndex && "animate-ken-burns"
                             )}
                         />
@@ -181,19 +175,13 @@ export function HeroBanner({
                 ))}
             </div>
 
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.06),transparent_45%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.03),transparent_45%)]" />
             
-            {/* Dynamic Content-Aware Glow (Stage 5) */}
-            <div 
-                className="absolute inset-0 opacity-40 transition-opacity duration-1000"
-                style={{ background: "var(--extracted-bg-gradient)" }}
-            />
-
-            <div className="absolute inset-0 bg-gradient-to-r from-[#09090b] via-[#09090b]/60 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#09090b] via-transparent to-transparent opacity-80" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
             
             {/* The Perfect Fade to Black: seamless transition to the body bg */}
-            <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-[#09090b] via-[#09090b]/90 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-black via-black/90 to-transparent" />
 
             {/* ── Content ───────────────────────────────────────────────── */}
             <div className="relative z-10 mx-auto flex w-full max-w-[1680px] flex-col justify-end gap-6 px-6 pb-16 pt-36 md:px-10 lg:px-14 lg:pb-20 xl:flex-row xl:items-end xl:justify-between">
@@ -226,10 +214,10 @@ export function HeroBanner({
                         <img
                             src={activeItem.logoUrl}
                             alt={activeItem.title}
-                            className="mb-6 max-h-28 max-w-[min(32rem,80vw)] object-contain object-left"
+                            className="mb-6 max-h-28 max-w-[min(32rem,80vw)] object-contain object-left grayscale brightness-200"
                         />
                     ) : (
-                        <h1 className="mb-4 max-w-4xl font-bebas font-normal leading-[0.85] tracking-normal bg-clip-text text-transparent bg-gradient-to-br from-white via-zinc-100 to-zinc-400 drop-shadow-[0_10px_30px_rgba(0,0,0,0.8)] text-[4.5rem] md:text-[6.5rem] xl:text-[8rem] uppercase">
+                        <h1 className="mb-4 max-w-4xl font-bebas font-normal leading-[0.85] tracking-normal text-white text-[4.5rem] md:text-[6.5rem] xl:text-[8rem] uppercase">
                             {activeItem.title}
                         </h1>
                     )}
@@ -242,28 +230,27 @@ export function HeroBanner({
                     <div className="mt-8 flex flex-wrap items-center gap-4">
                         <motion.button
                             whileHover={{ 
-                                scale: 1.05, 
-                                boxShadow: "0 0 30px rgba(255,107,0,0.6)",
-                                backgroundColor: "#ff8533" 
+                                scale: 1.02, 
+                                backgroundColor: "white",
+                                color: "black"
                             }}
-                            whileTap={{ scale: 0.95 }}
+                            whileTap={{ scale: 0.98 }}
                             onClick={() => activeItem.onPlay()}
-                            className="group/btn relative flex items-center justify-center gap-3 bg-[#ff6b00] text-white h-12 md:h-14 px-8 rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-[0_4px_20px_rgba(255,107,0,0.4)] overflow-hidden border border-[#ff6b00]"
+                            className="group/btn relative flex items-center justify-center gap-3 bg-white text-black h-12 md:h-14 px-8 rounded-none font-black text-sm uppercase tracking-widest transition-all shadow-xl overflow-hidden border border-white"
                         >
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:animate-[shine_1.5s_infinite_ease-in-out]" />
                             <Play className="w-5 h-5 fill-current relative z-10" />
                             <span className="relative z-10">Ver ahora</span>
                         </motion.button>
 
                         <motion.button
                             whileHover={{ 
-                                scale: 1.05, 
-                                backgroundColor: "rgba(255,255,255,0.15)",
-                                borderColor: "rgba(255,255,255,0.3)"
+                                scale: 1.02, 
+                                backgroundColor: "rgba(255,255,255,0.1)",
+                                borderColor: "white"
                             }}
-                            whileTap={{ scale: 0.95 }}
+                            whileTap={{ scale: 0.98 }}
                             onClick={() => activeItem.onMoreInfo()}
-                            className="flex items-center justify-center gap-3 bg-white/5 text-white h-12 md:h-14 px-8 rounded-2xl font-black text-sm uppercase tracking-widest transition-all border border-white/10 backdrop-blur-md"
+                            className="flex items-center justify-center gap-3 bg-black text-white h-12 md:h-14 px-8 rounded-none font-black text-sm uppercase tracking-widest transition-all border border-white/20"
                         >
                             <Info className="w-5 h-5" />
                             Detalles
@@ -273,20 +260,17 @@ export function HeroBanner({
 
                 {/* Right: glass poster (xl only) */}
                 <div className="hidden w-full max-w-sm xl:block">
-                    <div className="overflow-hidden rounded-[2rem] border border-white/12 bg-white/6 p-4 shadow-2xl backdrop-blur-xl">
+                    <div className="border border-white/12 bg-black/40 p-4 shadow-2xl backdrop-blur-xl">
                         {activeItem.posterUrl ? (
                             <div className="relative">
                                 <img
                                     src={activeItem.posterUrl}
                                     alt={activeItem.title}
-                                    className="aspect-[2/3] w-full rounded-[1.5rem] object-cover shadow-[0_18px_40px_rgba(0,0,0,0.4)]"
+                                    className="aspect-[2/3] w-full object-cover grayscale"
                                 />
-                                {activeItem.contentTag === "EPIC" && (
-                                    <div className="absolute inset-0 rounded-[1.5rem] ring-2 ring-amber-400/40 shadow-[inset_0_0_30px_rgba(245,158,11,0.15)]" />
-                                )}
                             </div>
                         ) : (
-                            <div className="aspect-[2/3] w-full rounded-[1.5rem] bg-zinc-900" />
+                            <div className="aspect-[2/3] w-full bg-zinc-900" />
                         )}
 
                         {activeItem.progress !== undefined && (
@@ -295,9 +279,9 @@ export function HeroBanner({
                                     <span>Continuar viendo</span>
                                     <span>{Math.round(activeItem.progress)}%</span>
                                 </div>
-                                <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                                <div className="h-1 bg-white/10">
                                     <div
-                                        className="h-full rounded-full bg-[#ff6b00] shadow-[0_0_8px_rgba(255,107,0,0.5)]"
+                                        className="h-full bg-white"
                                         style={{
                                             width: `${Math.min(100, Math.max(0, activeItem.progress))}%`,
                                         }}
@@ -320,7 +304,7 @@ export function HeroBanner({
                             aria-pressed={index === activeIndex}
                             onClick={() => setActiveIndex(index)}
                             className={cn(
-                                "h-1.5 rounded-full bg-white/20 transition-all duration-300 motion-reduce:transition-none",
+                                "h-1 bg-white/20 transition-all duration-300 motion-reduce:transition-none",
                                 index === activeIndex ? "w-10 bg-white" : "w-4 hover:bg-white/50",
                             )}
                         />
@@ -335,34 +319,34 @@ export function HeroBannerSkeleton({ className }: { className?: string }) {
     return (
         <section
             className={cn(
-                "relative h-[480px] w-full overflow-hidden bg-zinc-950 md:h-[580px] lg:h-[680px]",
+                "relative h-[480px] w-full overflow-hidden bg-black md:h-[580px] lg:h-[680px]",
                 className,
             )}
         >
             <div className="absolute inset-0 flex items-center px-6 md:px-10 lg:px-14">
                 <div className="z-10 w-full max-w-2xl">
                     <div className="flex flex-wrap items-center gap-3">
-                        <Skeleton className="h-6 w-24 rounded-full" />
-                        <Skeleton className="h-6 w-32 rounded-full" />
+                        <Skeleton className="h-6 w-24 rounded-none" />
+                        <Skeleton className="h-6 w-32 rounded-none" />
                     </div>
 
-                    <Skeleton className="mt-6 h-12 w-3/4 md:h-16 lg:h-20" />
+                    <Skeleton className="mt-6 h-12 w-3/4 md:h-16 lg:h-20 rounded-none" />
 
                     <div className="mt-4 flex flex-wrap items-center gap-4">
-                        <Skeleton className="h-4 w-16" />
-                        <Skeleton className="h-4 w-16" />
-                        <Skeleton className="h-4 w-16" />
+                        <Skeleton className="h-4 w-16 rounded-none" />
+                        <Skeleton className="h-4 w-16 rounded-none" />
+                        <Skeleton className="h-4 w-16 rounded-none" />
                     </div>
 
                     <div className="mt-6 space-y-2">
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-5/6" />
-                        <Skeleton className="h-4 w-4/6" />
+                        <Skeleton className="h-4 w-full rounded-none" />
+                        <Skeleton className="h-4 w-5/6 rounded-none" />
+                        <Skeleton className="h-4 w-4/6 rounded-none" />
                     </div>
 
                     <div className="mt-10 flex flex-wrap items-center gap-4">
-                        <Skeleton className="h-12 w-40 rounded-full" />
-                        <Skeleton className="h-12 w-40 rounded-full" />
+                        <Skeleton className="h-12 w-40 rounded-none" />
+                        <Skeleton className="h-12 w-40 rounded-none" />
                     </div>
                 </div>
             </div>

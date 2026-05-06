@@ -74,21 +74,21 @@ function SeriesPage() {
                 <div className="px-8 md:px-16 py-3 flex flex-wrap gap-4 items-center">
                     {/* Search */}
                     <div className="relative group">
-                        <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-primary transition-colors text-xs" />
+                        <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-white transition-colors text-xs" />
                         <input
-                            className="pl-10 pr-4 py-2 bg-white/[0.04] hover:bg-white/[0.06] focus:bg-white/[0.08] border border-white/[0.06] focus:border-primary/40 rounded-xl text-sm outline-none transition-all duration-300 placeholder:text-zinc-700 w-64"
+                            className="pl-10 pr-4 py-2 bg-black hover:bg-zinc-900 border border-white/10 focus:border-white rounded-none text-sm outline-none transition-all duration-200 placeholder:text-zinc-700 w-64"
                             type="text"
                             value={search}
                             onChange={e => setSearch(e.target.value)}
-                            placeholder="Buscar series..."
+                            placeholder="BUSCAR SERIES..."
                         />
                     </div>
 
                     {/* Genres */}
                     <div className="flex flex-nowrap items-center gap-2 overflow-x-auto no-scrollbar">
-                        <div className="flex items-center gap-1.5 mr-1 px-2.5 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.05]">
+                        <div className="flex items-center gap-1.5 mr-1 px-2.5 py-1.5 bg-black border border-white/10">
                             <FaFilter className="text-[9px] text-zinc-600" />
-                            <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Género</span>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Filtro</span>
                         </div>
                         <GenrePill label="TODOS" active={activeGenre === null} onClick={() => setActiveGenre(null)} />
                         {ALL_GENRES.slice(0, 12).map(g => (
@@ -106,9 +106,7 @@ function SeriesPage() {
             {/* ── Cassette Shelf ── */}
             <div className="relative w-full overflow-hidden">
                 {/* Shelf floor shadow */}
-                <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/60 to-transparent pointer-events-none z-10" />
-                {/* Shelf top light */}
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent pointer-events-none z-10" />
+                <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black to-transparent pointer-events-none z-10" />
 
                 {isLoading ? (
                     <ShelfSkeleton />
@@ -163,15 +161,12 @@ const CassetteItem = memo(function CassetteItem({
     const score = media.score ? (media.score > 10 ? media.score / 10 : media.score).toFixed(1) : null
     const genres = media.genres?.slice(0, 3) || []
 
-    // Pick a spine accent colour from genre
-    const spineAccent = genres[0]
-        ? genreColor(genres[0])
-        : "#ff6b00"
+    const spineAccent = "#ffffff"
 
     return (
         <div
             className={cn(
-                "group/item relative shrink-0 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:z-[9999]",
+                "group/item relative shrink-0 transition-all duration-500 ease-&lsqb;cubic-bezier(0.34,1.56,0.64,1)&rsqb; hover:z-[9999]",
                 idx !== 0 && "ml-[-" + OVERLAP + "px]"
             )}
             style={{
@@ -181,7 +176,7 @@ const CassetteItem = memo(function CassetteItem({
         >
             {/* ── 3D wrapper ── */}
             <div
-                className="relative transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] [transform-style:preserve-3d]"
+                className="relative transition-all duration-500 ease-&lsqb;cubic-bezier(0.34,1.56,0.64,1)&rsqb; [transform-style:preserve-3d]"
                 style={{
                     width: CASSETTE_W + SPINE_W,
                     height: CASSETTE_H,
@@ -200,25 +195,23 @@ const CassetteItem = memo(function CassetteItem({
             >
                 {/* ── Spine ─────────────────────────────────────────────── */}
                 <div
-                    className="absolute inset-y-0 left-0 flex flex-col justify-between overflow-hidden rounded-l-lg border-y border-l border-white/10"
+                    className="absolute inset-y-0 left-0 flex flex-col justify-between overflow-hidden border border-white/20 bg-black"
                     style={{
                         width: SPINE_W,
-                        background: `linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%)`,
-                        borderRight: `2px solid ${spineAccent}22`,
                     }}
                 >
                     {/* Accent stripe */}
-                    <div className="absolute left-0 inset-y-0 w-1" style={{ background: spineAccent }} />
+                    <div className="absolute left-0 inset-y-0 w-1 bg-white" />
                     {/* Score chip */}
                     {score && (
                         <div className="mt-3 ml-4 flex items-center gap-1">
-                            <FaStar className="text-[8px]" style={{ color: spineAccent }} />
-                            <span className="text-[9px] font-black tabular-nums" style={{ color: spineAccent }}>{score}</span>
+                            <FaStar className="text-[8px] text-white" />
+                            <span className="text-[9px] font-black tabular-nums text-white">{score}</span>
                         </div>
                     )}
                     {/* Title rotated */}
                     <span
-                        className="flex-1 text-[10px] font-black text-zinc-400 tracking-widest whitespace-nowrap px-2 py-4"
+                        className="flex-1 text-[10px] font-black text-zinc-400 tracking-widest whitespace-nowrap px-2 py-4 uppercase"
                         style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", textOverflow: "ellipsis", overflow: "hidden" }}
                     >
                         {title}
@@ -233,7 +226,7 @@ const CassetteItem = memo(function CassetteItem({
 
                 {/* ── Cover ─────────────────────────────────────────────── */}
                 <div
-                    className="absolute inset-y-0 right-0 overflow-hidden rounded-r-xl border border-white/[0.08] cursor-pointer"
+                    className="absolute inset-y-0 right-0 overflow-hidden border border-white/20 cursor-pointer bg-black"
                     style={{ left: SPINE_W }}
                     onClick={() => navigate({ to: "/series/$seriesId", params: { seriesId: entry.mediaId.toString() } })}
                 >
@@ -241,54 +234,53 @@ const CassetteItem = memo(function CassetteItem({
                     <DeferredImage
                         src={media.posterImage || ""}
                         alt={title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover grayscale group-hover/item:grayscale-0 transition-all duration-500"
                     />
 
                     {/* Dark gradient base */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
 
                     {/* ── Hover info overlay ─────────────────────────────── */}
-                    <div className="absolute inset-0 flex flex-col justify-end p-4 opacity-0 group-hover/item:opacity-100 transition-all duration-400 bg-gradient-to-t from-black/95 via-black/60 to-transparent">
+                    <div className="absolute inset-0 flex flex-col justify-end p-5 opacity-0 group-hover/item:opacity-100 transition-all duration-400 bg-black/90">
                         {/* Play CTA */}
                         <button
                             onClick={() => navigate({ to: "/series/$seriesId", params: { seriesId: entry.mediaId.toString() } })}
-                            className="mb-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest text-white transition-all duration-300 bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md shadow-xl"
+                            className="mb-6 w-full flex items-center justify-center gap-2 py-3 font-black text-[11px] uppercase tracking-[0.2em] text-black bg-white hover:bg-zinc-200 transition-all duration-200"
                         >
                             <FaPlay className="text-[10px]" />
-                            Ver serie
+                            Explorar serie
                         </button>
 
                         {/* Title */}
-                        <h3 className="text-[14px] font-black text-white leading-tight mb-2 line-clamp-2">
+                        <h3 className="text-[16px] font-black text-white leading-tight mb-3 uppercase tracking-tight line-clamp-2">
                             {title}
                         </h3>
 
                         {/* Meta row */}
-                        <div className="flex items-center gap-2 mb-3 flex-wrap">
+                        <div className="flex items-center gap-2 mb-4 flex-wrap">
                             {score && (
-                                <span className="flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-white/10 text-amber-400">
+                                <span className="flex items-center gap-1 text-[10px] font-black px-2 py-1 bg-white text-black">
                                     <FaStar className="text-[8px]" /> {score}
                                 </span>
                             )}
                             {media.year && (
-                                <span className="text-[10px] font-bold text-zinc-400 px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/10">
+                                <span className="text-[10px] font-black text-zinc-400 px-2 py-1 border border-white/20">
                                     {media.year}
                                 </span>
                             )}
                             {media.totalEpisodes && (
-                                <span className="flex items-center gap-1 text-[10px] font-bold text-zinc-400 px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/10">
-                                    <FaListOl className="text-[8px]" /> {media.totalEpisodes} eps
+                                <span className="flex items-center gap-1 text-[10px] font-black text-zinc-400 px-2 py-1 border border-white/20">
+                                    <FaListOl className="text-[8px]" /> {media.totalEpisodes} EPS
                                 </span>
                             )}
                         </div>
 
                         {/* Genres */}
-                        <div className="flex flex-wrap gap-1.5 mb-3">
+                        <div className="flex flex-wrap gap-1.5 mb-4">
                             {genres.map(g => (
                                 <span
                                     key={g}
-                                    className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border"
-                                    style={{ color: spineAccent, borderColor: `${spineAccent}40`, background: `${spineAccent}10` }}
+                                    className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 border border-white/20 text-white"
                                 >
                                     {g}
                                 </span>
@@ -297,28 +289,23 @@ const CassetteItem = memo(function CassetteItem({
 
                         {/* Description */}
                         {media.description && (
-                            <p className="text-[12px] text-zinc-300 leading-relaxed line-clamp-5 italic font-medium">
-                                "{media.description.replace(/<[^>]+>/g, "").trim()}"
+                            <p className="text-[12px] text-zinc-400 leading-relaxed line-clamp-4 font-medium">
+                                {media.description.replace(/<[^>]+>/g, "").trim()}
                             </p>
                         )}
                     </div>
 
                     {/* ── Always visible bottom title strip ── */}
-                    <div className="absolute bottom-0 left-0 right-0 px-3 py-2.5 group-hover/item:opacity-0 transition-opacity duration-300">
-                        <p className="text-[11px] font-black text-white/90 line-clamp-1 drop-shadow-lg">
+                    <div className="absolute bottom-0 left-0 right-0 px-3 py-3 group-hover/item:opacity-0 transition-opacity duration-300">
+                        <p className="text-[11px] font-black text-white uppercase tracking-wider line-clamp-1">
                             {title}
                         </p>
                     </div>
                 </div>
 
-                {/* ── Glossy top edge reflection ── */}
-                <div
-                    className="absolute top-0 left-0 right-0 h-[1px] rounded-t-xl opacity-30"
-                    style={{ background: "linear-gradient(90deg, transparent, white, transparent)" }}
-                />
                 {/* ── Drop shadow beneath cassette ── */}
                 <div
-                    className="absolute -bottom-6 left-4 right-4 h-6 opacity-0 group-hover/item:opacity-100 transition-opacity duration-500 blur-xl rounded-full bg-white/20"
+                    className="absolute -bottom-6 left-4 right-4 h-6 opacity-0 group-hover/item:opacity-100 transition-opacity duration-500 blur-xl bg-white/10"
                 />
             </div>
         </div>
@@ -365,4 +352,4 @@ function ShelfSkeleton() {
     )
 }
 
-export const SeriesCardSkeleton = ShelfSkeleton
+export const SeriesCardSkeleton = ShelfSkeleton;

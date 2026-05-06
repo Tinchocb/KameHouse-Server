@@ -9,30 +9,30 @@ import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
 export const InputAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-Input__root",
-        "flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+        "flex h-12 w-full rounded-none border border-white/10 bg-black px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus-visible:outline-none focus-visible:border-white disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200"
     ], {
         variants: {
             size: {
-                sm: "h-8 px-2 py-1 text-xs",
+                sm: "h-10 px-2 py-1 text-xs",
                 md: "",
-                lg: "h-12 px-4 py-3 text-base",
+                lg: "h-14 px-4 py-3 text-base",
             },
             intent: {
-                basic: "hover:border-primary/50",
-                filled: "bg-muted hover:bg-muted/80 border-transparent focus-within:bg-background focus-within:border-primary shadow-none",
+                basic: "hover:border-white/40",
+                filled: "bg-zinc-900 border-transparent focus-within:bg-black focus-within:border-white shadow-none",
                 unstyled: "bg-transparent hover:bg-transparent border-0 shadow-none focus-within:ring-0 rounded-none p-0 text-base",
             },
             hasError: {
                 false: null,
-                true: "border-destructive hover:border-destructive/80 focus-within:border-destructive focus-within:ring-destructive",
+                true: "border-red-600 hover:border-red-500 focus-within:border-red-500",
             },
             isDisabled: {
                 false: null,
-                true: "shadow-none pointer-events-none opacity-50 cursor-not-allowed bg-muted",
+                true: "shadow-none pointer-events-none opacity-50 cursor-not-allowed bg-zinc-900",
             },
             isReadonly: {
                 false: null,
-                true: "pointer-events-none cursor-not-allowed shadow-sm",
+                true: "pointer-events-none cursor-not-allowed shadow-none",
             },
             hasLeftAddon: { true: null, false: null },
             hasRightAddon: { true: null, false: null },
@@ -40,9 +40,9 @@ export const InputAnatomy = defineStyleAnatomy({
             hasRightIcon: { true: null, false: null },
         },
         compoundVariants: [
-            { hasLeftAddon: true, className: "border-l-transparent hover:border-l-transparent rounded-l-none" },
+            { hasLeftAddon: true, className: "border-l-transparent hover:border-l-transparent rounded-none" },
             /**/
-            { hasRightAddon: true, className: "border-r-transparent hover:border-r-transparent rounded-r-none" },
+            { hasRightAddon: true, className: "border-r-transparent hover:border-r-transparent rounded-none" },
             /**/
             { hasLeftAddon: false, hasLeftIcon: true, size: "sm", className: "pl-10" },
             { hasLeftAddon: false, hasLeftIcon: true, size: "md", className: "pl-10" },
@@ -116,7 +116,7 @@ export type InputStyling = Omit<VariantProps<typeof InputAnatomy.root>,
 export const InputAddonsAnatomy = defineStyleAnatomy({
     icon: cva([
         "UI-Input__addons--icon",
-        "pointer-events-none absolute inset-y-0 grid place-content-center text-muted-foreground",
+        "pointer-events-none absolute inset-y-0 grid place-content-center text-zinc-500",
         "!z-[1]",
     ], {
         variants: {
@@ -131,12 +131,12 @@ export const InputAddonsAnatomy = defineStyleAnatomy({
     }),
     addon: cva([
         "UI-Input__addons--addon",
-        "bg-muted inline-flex items-center flex-none px-3 border border-border text-foreground shadow-sm text-sm sm:text-md",
+        "bg-zinc-900 inline-flex items-center flex-none px-3 border border-white/10 text-white shadow-none text-sm sm:text-md",
     ], {
         variants: {
             size: { sm: "text-sm", md: "text-md", lg: "text-lg" },
-            isLeftAddon: { true: "rounded-l-xl border-r-0", false: null },
-            isRightAddon: { true: "rounded-r-xl border-l-0", false: null },
+            isLeftAddon: { true: "rounded-none border-r-0", false: null },
+            isRightAddon: { true: "rounded-none border-l-0", false: null },
             hasLeftIcon: { true: null, false: null },
             hasRightIcon: { true: null, false: null },
         },

@@ -105,39 +105,6 @@ func (db *Database) GetMediastreamSettings() (*models.MediastreamSettings, bool)
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var CurrTorrentstreamSettings *models.TorrentstreamSettings
 
-func (db *Database) UpsertTorrentstreamSettings(settings *models.TorrentstreamSettings) (*models.TorrentstreamSettings, error) {
-
-	err := db.gormdb.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		UpdateAll: true,
-	}).Create(settings).Error
-
-	if err != nil {
-		db.Logger.Error().Err(err).Msg("db: Failed to save torrent streaming settings in the database")
-		return nil, err
-	}
-
-	CurrTorrentstreamSettings = settings
-
-	db.Logger.Debug().Msg("db: Torrent streaming settings saved")
-	return settings, nil
-}
-
-func (db *Database) GetTorrentstreamSettings() (*models.TorrentstreamSettings, bool) {
-
-	if CurrTorrentstreamSettings != nil {
-		return CurrTorrentstreamSettings, true
-	}
-
-	var settings models.TorrentstreamSettings
-	err := db.gormdb.Where("id = ?", 1).First(&settings).Error
-
-	if err != nil {
-		return nil, false
-	}
-	return &settings, true
-}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

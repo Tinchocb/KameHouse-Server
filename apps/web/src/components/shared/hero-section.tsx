@@ -17,7 +17,7 @@ interface HeroSectionProps {
 export function HeroSection({
     title,
     subtitle,
-    decorationTag = "Colección Premium",
+    decorationTag = "COLECCIÓN PREMIUM",
     verticalTag = "BIBLIOTECA · COLECCIÓN · ARCHIVOS",
     count,
     countLabel = "Títulos",
@@ -26,43 +26,41 @@ export function HeroSection({
     maxWidth = "max-w-none"
 }: HeroSectionProps) {
     return (
-        <div className={cn("relative overflow-hidden pt-24 pb-14 px-6 md:px-14", className)}>
-            {/* Cinematic Glow & Decorations */}
-            <div className="absolute top-[-160px] left-[-80px] w-[640px] h-[520px] rounded-full bg-gradient-to-br from-primary to-rose-600 opacity-[0.08] blur-[120px] pointer-events-none" />
-            <SpeedLines opacity={0.03} />
+        <div className={cn("relative overflow-hidden pt-32 pb-20 px-6 md:px-14", className)}>
+            <SpeedLines opacity={0.02} />
             <HalftoneDots />
             
             {/* Vertical Decoration */}
-            <div className="absolute right-6 top-1/2 -translate-y-1/2 [writing-mode:vertical-rl] font-black text-[10px] tracking-[0.5em] text-zinc-800 uppercase pointer-events-none select-none">
+            <div className="absolute right-6 top-1/2 -translate-y-1/2 [writing-mode:vertical-rl] font-black text-[11px] tracking-[0.5em] text-zinc-900 uppercase pointer-events-none select-none">
                 {verticalTag}
             </div>
 
             <div className={cn("relative z-10 mx-auto", maxWidth)}>
                 <motion.div 
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.7 }}
-                    className="flex items-center gap-3 mb-4"
+                    className="flex items-center gap-4 mb-6"
                 >
-                    <div className="h-[2px] w-8 bg-primary shadow-[0_0_15px_rgba(249,115,22,0.5)]" />
-                    <p className="text-[11px] font-black uppercase tracking-[0.4em] text-primary/90">{decorationTag}</p>
+                    <div className="h-[2px] w-12 bg-white" />
+                    <p className="text-[11px] font-black uppercase tracking-[0.4em] text-zinc-500">{decorationTag}</p>
                 </motion.div>
                 
                 <motion.h1 
-                    initial={{ opacity: 0, x: -30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 1, delay: 0.1 }}
-                    className="font-bebas text-6xl md:text-8xl lg:text-9xl leading-[0.8] tracking-[0.02em] text-white"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, delay: 0.1 }}
+                    className="font-bebas text-7xl md:text-9xl lg:text-[11rem] leading-[0.8] tracking-[0.02em] text-white uppercase"
                 >
                     {title}
                 </motion.h1>
 
                 {subtitle && (
                     <motion.p 
-                        initial={{ opacity: 0, x: -40 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 1, delay: 0.2 }}
-                        className="font-bebas text-2xl md:text-4xl tracking-[0.05em] text-primary mt-2"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, delay: 0.2 }}
+                        className="font-bebas text-3xl md:text-5xl tracking-[0.1em] text-white mt-4 uppercase"
                     >
                         {subtitle}
                     </motion.p>
@@ -71,13 +69,13 @@ export function HeroSection({
                 <motion.div 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 1, delay: 0.4 }}
-                    className="mt-8"
+                    transition={{ duration: 0.8, delay: 0.4 }}
+                    className="mt-12"
                 >
                     {count !== undefined && (
-                        <div className="inline-block px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/5 backdrop-blur-md">
-                            <p className="text-[12px] font-bold text-zinc-400 tabular-nums">
-                                {count} <span className="text-[10px] font-black text-zinc-600 uppercase ml-1">{countLabel}</span>
+                        <div className="inline-block px-4 py-2 bg-black border border-white/20">
+                            <p className="text-[14px] font-black text-white tabular-nums uppercase tracking-widest">
+                                {count} <span className="text-[11px] font-black text-zinc-600 uppercase ml-2 tracking-widest">{countLabel}</span>
                             </p>
                         </div>
                     )}

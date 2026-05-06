@@ -1,10 +1,12 @@
-import { usePlatformListAnime, usePlatformListRecentAiringAnime } from "@/api/hooks/platform.hooks"
-import { useState } from "react"
+import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
+import { useState, useMemo } from "react"
 import { useDebounce } from "react-use"
 
 export function useGlobalSearch() {
     const [query, setQuery] = useState("")
     const [debouncedQuery, setDebouncedQuery] = useState("")
+
+    const { data: collection, isLoading } = useGetLibraryCollection()
 
     useDebounce(
         () => {
@@ -16,32 +18,34 @@ export function useGlobalSearch() {
 
     const isSearchActive = debouncedQuery.length > 2
 
-    const {
-        data: searchResults,
-        isLoading: isSearchLoading,
-    } = usePlatformListAnime(
-        {
-            search: debouncedQuery,
-            perPage: 10,
-        },
-        isSearchActive,
-    )
+    const allEntries = useMemo(() => {
+        if (!collection?.lists) return []
+        return collection.lists.flatMap(list => list.entries || [])
+    }, [collection])
 
-    const {
-        data: recentAnime,
-        isLoading: isRecentLoading,
-    } = usePlatformListRecentAiringAnime(
-        {
-            perPage: 10,
-        },
-        !isSearchActive,
-    )
+    const results = useMemo(() => {
+        if (!isSearchActive) {
+            // Return some "recent" or just first 10 if not searching
+            return allEntries.slice(0, 10).map(e => e.media)
+        }
+        
+        const q = debouncedQuery.toLowerCase()
+        return allEntries
+            .filter(entry => {
+                const media = entry.media
+                if (!media) return false
+                const title = `${media.titleRomaji || ""} ${media.titleEnglish || ""} ${media.titleOriginal || ""}`.toLowerCase()
+                return title.includes(q)
+            })
+            .map(e => e.media)
+            .slice(0, 10)
+    }, [allEntries, debouncedQuery, isSearchActive])
 
     return {
         query,
         setQuery,
-        results: isSearchActive ? searchResults?.media || [] : recentAnime?.media || [],
-        isLoading: isSearchActive ? isSearchLoading : isRecentLoading,
+        results,
+        isLoading,
         isSearchActive,
     }
 }

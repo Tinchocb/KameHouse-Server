@@ -68,7 +68,6 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 
 	urisToSkip := []string{
 		"/internal/metrics",
-		"/_next",
 		"/icons",
 		"/events",
 		"/api/v1/image-proxy",

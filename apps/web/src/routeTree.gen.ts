@@ -8,57 +8,14 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { createFileRoute } from '@tanstack/react-router'
-
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as DownloadsRouteImport } from './routes/downloads'
-import { Route as SplashscreenIndexRouteImport } from './routes/splashscreen/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as SeriesIndexRouteImport } from './routes/series/index'
 import { Route as MoviesIndexRouteImport } from './routes/movies/index'
-import { Route as LibraryIndexRouteImport } from './routes/library/index'
 import { Route as HomeIndexRouteImport } from './routes/home/index'
-import { Route as DownloadsIndexRouteImport } from './routes/downloads/index'
-import { Route as CollectionsIdRouteImport } from './routes/collections/$id'
-import { Route as SplashscreenCrashIndexRouteImport } from './routes/splashscreen/crash/index'
 import { Route as SeriesSeriesIdIndexRouteImport } from './routes/series/$seriesId/index'
-import { Route as PublicAuthIndexRouteImport } from './routes/public/auth/index'
-import { Route as MediaSeriesIdIndexRouteImport } from './routes/media/$seriesId/index'
 import { Route as SeriesSeriesIdSagaIdRouteImport } from './routes/series/$seriesId/$sagaId'
 
-const ScanLogViewerIndexLazyRouteImport = createFileRoute('/scan-log-viewer/')()
-const IssueReportIndexLazyRouteImport = createFileRoute('/issue-report/')()
-const DocsIndexLazyRouteImport = createFileRoute('/docs/')()
-
-const DownloadsRoute = DownloadsRouteImport.update({
-  id: '/downloads',
-  path: '/downloads',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ScanLogViewerIndexLazyRoute = ScanLogViewerIndexLazyRouteImport.update({
-  id: '/scan-log-viewer/',
-  path: '/scan-log-viewer/',
-  getParentRoute: () => rootRouteImport,
-} as any).lazy(() =>
-  import('./routes/scan-log-viewer/index.lazy').then((d) => d.Route),
-)
-const IssueReportIndexLazyRoute = IssueReportIndexLazyRouteImport.update({
-  id: '/issue-report/',
-  path: '/issue-report/',
-  getParentRoute: () => rootRouteImport,
-} as any).lazy(() =>
-  import('./routes/issue-report/index.lazy').then((d) => d.Route),
-)
-const DocsIndexLazyRoute = DocsIndexLazyRouteImport.update({
-  id: '/docs/',
-  path: '/docs/',
-  getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import('./routes/docs/index.lazy').then((d) => d.Route))
-const SplashscreenIndexRoute = SplashscreenIndexRouteImport.update({
-  id: '/splashscreen/',
-  path: '/splashscreen/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
   id: '/settings/',
   path: '/settings/',
@@ -74,44 +31,14 @@ const MoviesIndexRoute = MoviesIndexRouteImport.update({
   path: '/movies/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LibraryIndexRoute = LibraryIndexRouteImport.update({
-  id: '/library/',
-  path: '/library/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const HomeIndexRoute = HomeIndexRouteImport.update({
   id: '/home/',
   path: '/home/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DownloadsIndexRoute = DownloadsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => DownloadsRoute,
-} as any)
-const CollectionsIdRoute = CollectionsIdRouteImport.update({
-  id: '/collections/$id',
-  path: '/collections/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SplashscreenCrashIndexRoute = SplashscreenCrashIndexRouteImport.update({
-  id: '/splashscreen/crash/',
-  path: '/splashscreen/crash/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SeriesSeriesIdIndexRoute = SeriesSeriesIdIndexRouteImport.update({
   id: '/series/$seriesId/',
   path: '/series/$seriesId/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PublicAuthIndexRoute = PublicAuthIndexRouteImport.update({
-  id: '/public/auth/',
-  path: '/public/auth/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MediaSeriesIdIndexRoute = MediaSeriesIdIndexRouteImport.update({
-  id: '/media/$seriesId/',
-  path: '/media/$seriesId/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SeriesSeriesIdSagaIdRoute = SeriesSeriesIdSagaIdRouteImport.update({
@@ -121,177 +48,68 @@ const SeriesSeriesIdSagaIdRoute = SeriesSeriesIdSagaIdRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/downloads': typeof DownloadsRouteWithChildren
-  '/collections/$id': typeof CollectionsIdRoute
-  '/downloads/': typeof DownloadsIndexRoute
   '/home/': typeof HomeIndexRoute
-  '/library/': typeof LibraryIndexRoute
   '/movies/': typeof MoviesIndexRoute
   '/series/': typeof SeriesIndexRoute
   '/settings/': typeof SettingsIndexRoute
-  '/splashscreen/': typeof SplashscreenIndexRoute
-  '/docs/': typeof DocsIndexLazyRoute
-  '/issue-report/': typeof IssueReportIndexLazyRoute
-  '/scan-log-viewer/': typeof ScanLogViewerIndexLazyRoute
   '/series/$seriesId/$sagaId': typeof SeriesSeriesIdSagaIdRoute
-  '/media/$seriesId/': typeof MediaSeriesIdIndexRoute
-  '/public/auth/': typeof PublicAuthIndexRoute
   '/series/$seriesId/': typeof SeriesSeriesIdIndexRoute
-  '/splashscreen/crash/': typeof SplashscreenCrashIndexRoute
 }
 export interface FileRoutesByTo {
-  '/collections/$id': typeof CollectionsIdRoute
-  '/downloads': typeof DownloadsIndexRoute
   '/home': typeof HomeIndexRoute
-  '/library': typeof LibraryIndexRoute
   '/movies': typeof MoviesIndexRoute
   '/series': typeof SeriesIndexRoute
   '/settings': typeof SettingsIndexRoute
-  '/splashscreen': typeof SplashscreenIndexRoute
-  '/docs': typeof DocsIndexLazyRoute
-  '/issue-report': typeof IssueReportIndexLazyRoute
-  '/scan-log-viewer': typeof ScanLogViewerIndexLazyRoute
   '/series/$seriesId/$sagaId': typeof SeriesSeriesIdSagaIdRoute
-  '/media/$seriesId': typeof MediaSeriesIdIndexRoute
-  '/public/auth': typeof PublicAuthIndexRoute
   '/series/$seriesId': typeof SeriesSeriesIdIndexRoute
-  '/splashscreen/crash': typeof SplashscreenCrashIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/downloads': typeof DownloadsRouteWithChildren
-  '/collections/$id': typeof CollectionsIdRoute
-  '/downloads/': typeof DownloadsIndexRoute
   '/home/': typeof HomeIndexRoute
-  '/library/': typeof LibraryIndexRoute
   '/movies/': typeof MoviesIndexRoute
   '/series/': typeof SeriesIndexRoute
   '/settings/': typeof SettingsIndexRoute
-  '/splashscreen/': typeof SplashscreenIndexRoute
-  '/docs/': typeof DocsIndexLazyRoute
-  '/issue-report/': typeof IssueReportIndexLazyRoute
-  '/scan-log-viewer/': typeof ScanLogViewerIndexLazyRoute
   '/series/$seriesId/$sagaId': typeof SeriesSeriesIdSagaIdRoute
-  '/media/$seriesId/': typeof MediaSeriesIdIndexRoute
-  '/public/auth/': typeof PublicAuthIndexRoute
   '/series/$seriesId/': typeof SeriesSeriesIdIndexRoute
-  '/splashscreen/crash/': typeof SplashscreenCrashIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/downloads'
-    | '/collections/$id'
-    | '/downloads/'
     | '/home/'
-    | '/library/'
     | '/movies/'
     | '/series/'
     | '/settings/'
-    | '/splashscreen/'
-    | '/docs/'
-    | '/issue-report/'
-    | '/scan-log-viewer/'
     | '/series/$seriesId/$sagaId'
-    | '/media/$seriesId/'
-    | '/public/auth/'
     | '/series/$seriesId/'
-    | '/splashscreen/crash/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/collections/$id'
-    | '/downloads'
     | '/home'
-    | '/library'
     | '/movies'
     | '/series'
     | '/settings'
-    | '/splashscreen'
-    | '/docs'
-    | '/issue-report'
-    | '/scan-log-viewer'
     | '/series/$seriesId/$sagaId'
-    | '/media/$seriesId'
-    | '/public/auth'
     | '/series/$seriesId'
-    | '/splashscreen/crash'
   id:
     | '__root__'
-    | '/downloads'
-    | '/collections/$id'
-    | '/downloads/'
     | '/home/'
-    | '/library/'
     | '/movies/'
     | '/series/'
     | '/settings/'
-    | '/splashscreen/'
-    | '/docs/'
-    | '/issue-report/'
-    | '/scan-log-viewer/'
     | '/series/$seriesId/$sagaId'
-    | '/media/$seriesId/'
-    | '/public/auth/'
     | '/series/$seriesId/'
-    | '/splashscreen/crash/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  DownloadsRoute: typeof DownloadsRouteWithChildren
-  CollectionsIdRoute: typeof CollectionsIdRoute
   HomeIndexRoute: typeof HomeIndexRoute
-  LibraryIndexRoute: typeof LibraryIndexRoute
   MoviesIndexRoute: typeof MoviesIndexRoute
   SeriesIndexRoute: typeof SeriesIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
-  SplashscreenIndexRoute: typeof SplashscreenIndexRoute
-  DocsIndexLazyRoute: typeof DocsIndexLazyRoute
-  IssueReportIndexLazyRoute: typeof IssueReportIndexLazyRoute
-  ScanLogViewerIndexLazyRoute: typeof ScanLogViewerIndexLazyRoute
   SeriesSeriesIdSagaIdRoute: typeof SeriesSeriesIdSagaIdRoute
-  MediaSeriesIdIndexRoute: typeof MediaSeriesIdIndexRoute
-  PublicAuthIndexRoute: typeof PublicAuthIndexRoute
   SeriesSeriesIdIndexRoute: typeof SeriesSeriesIdIndexRoute
-  SplashscreenCrashIndexRoute: typeof SplashscreenCrashIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/downloads': {
-      id: '/downloads'
-      path: '/downloads'
-      fullPath: '/downloads'
-      preLoaderRoute: typeof DownloadsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/scan-log-viewer/': {
-      id: '/scan-log-viewer/'
-      path: '/scan-log-viewer'
-      fullPath: '/scan-log-viewer/'
-      preLoaderRoute: typeof ScanLogViewerIndexLazyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/issue-report/': {
-      id: '/issue-report/'
-      path: '/issue-report'
-      fullPath: '/issue-report/'
-      preLoaderRoute: typeof IssueReportIndexLazyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/docs/': {
-      id: '/docs/'
-      path: '/docs'
-      fullPath: '/docs/'
-      preLoaderRoute: typeof DocsIndexLazyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/splashscreen/': {
-      id: '/splashscreen/'
-      path: '/splashscreen'
-      fullPath: '/splashscreen/'
-      preLoaderRoute: typeof SplashscreenIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/settings/': {
       id: '/settings/'
       path: '/settings'
@@ -313,13 +131,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MoviesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/library/': {
-      id: '/library/'
-      path: '/library'
-      fullPath: '/library/'
-      preLoaderRoute: typeof LibraryIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/home/': {
       id: '/home/'
       path: '/home'
@@ -327,46 +138,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HomeIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/downloads/': {
-      id: '/downloads/'
-      path: '/'
-      fullPath: '/downloads/'
-      preLoaderRoute: typeof DownloadsIndexRouteImport
-      parentRoute: typeof DownloadsRoute
-    }
-    '/collections/$id': {
-      id: '/collections/$id'
-      path: '/collections/$id'
-      fullPath: '/collections/$id'
-      preLoaderRoute: typeof CollectionsIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/splashscreen/crash/': {
-      id: '/splashscreen/crash/'
-      path: '/splashscreen/crash'
-      fullPath: '/splashscreen/crash/'
-      preLoaderRoute: typeof SplashscreenCrashIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/series/$seriesId/': {
       id: '/series/$seriesId/'
       path: '/series/$seriesId'
       fullPath: '/series/$seriesId/'
       preLoaderRoute: typeof SeriesSeriesIdIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/public/auth/': {
-      id: '/public/auth/'
-      path: '/public/auth'
-      fullPath: '/public/auth/'
-      preLoaderRoute: typeof PublicAuthIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/media/$seriesId/': {
-      id: '/media/$seriesId/'
-      path: '/media/$seriesId'
-      fullPath: '/media/$seriesId/'
-      preLoaderRoute: typeof MediaSeriesIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/series/$seriesId/$sagaId': {
@@ -379,35 +155,13 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface DownloadsRouteChildren {
-  DownloadsIndexRoute: typeof DownloadsIndexRoute
-}
-
-const DownloadsRouteChildren: DownloadsRouteChildren = {
-  DownloadsIndexRoute: DownloadsIndexRoute,
-}
-
-const DownloadsRouteWithChildren = DownloadsRoute._addFileChildren(
-  DownloadsRouteChildren,
-)
-
 const rootRouteChildren: RootRouteChildren = {
-  DownloadsRoute: DownloadsRouteWithChildren,
-  CollectionsIdRoute: CollectionsIdRoute,
   HomeIndexRoute: HomeIndexRoute,
-  LibraryIndexRoute: LibraryIndexRoute,
   MoviesIndexRoute: MoviesIndexRoute,
   SeriesIndexRoute: SeriesIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
-  SplashscreenIndexRoute: SplashscreenIndexRoute,
-  DocsIndexLazyRoute: DocsIndexLazyRoute,
-  IssueReportIndexLazyRoute: IssueReportIndexLazyRoute,
-  ScanLogViewerIndexLazyRoute: ScanLogViewerIndexLazyRoute,
   SeriesSeriesIdSagaIdRoute: SeriesSeriesIdSagaIdRoute,
-  MediaSeriesIdIndexRoute: MediaSeriesIdIndexRoute,
-  PublicAuthIndexRoute: PublicAuthIndexRoute,
   SeriesSeriesIdIndexRoute: SeriesSeriesIdIndexRoute,
-  SplashscreenCrashIndexRoute: SplashscreenCrashIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

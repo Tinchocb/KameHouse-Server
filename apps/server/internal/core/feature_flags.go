@@ -4,7 +4,6 @@ import (
 	"kamehouse/internal/database/models"
 
 	"github.com/rs/zerolog"
-	"github.com/spf13/viper"
 )
 
 type (
@@ -57,12 +56,6 @@ func NewFeatureManager(logger *zerolog.Logger, flags KameHouseFlags) *FeatureMan
 			UpdateSettings,
 			RefreshMetadata,
 			WatchingLocalAnime,
-			ViewScanSummaries,
-			ViewExtensions,
-			ManageExtensions,
-			ManageHomeScreen,
-			OpenInExplorer,
-			PluginTray,
 			Proxy,
 			PushRequests,
 		}

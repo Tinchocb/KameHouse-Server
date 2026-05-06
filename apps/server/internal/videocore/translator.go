@@ -43,11 +43,12 @@ type TranslatorService struct {
 
 func NewTranslatorService(vc *VideoCore, apiKey string, provider string, targetLang string) *TranslatorService {
 	var t Translator
-	if provider == "openai" {
+	switch provider {
+	case "openai":
 		t = &OpenAITranslator{Token: apiKey, logger: vc.logger}
-	} else if provider == "deepl" {
+	case "deepl":
 		t = &DeepLTranslator{Token: apiKey, logger: vc.logger}
-	} else {
+	default:
 		t = NewFreeGoogleTranslator(vc.logger)
 	}
 

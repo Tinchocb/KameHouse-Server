@@ -37,7 +37,7 @@ func (h *Handler) HandleTMDBSearch(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "query is required"})
 	}
 
-	client := tmdb.NewClient("0584d4437be4d13174085bc9b4435985", "es-MX")
+	client := h.App.Metadata.TMDBClient
 
 	searchType := b.SearchType
 	if searchType == "" {
@@ -45,13 +45,6 @@ func (h *Handler) HandleTMDBSearch(c echo.Context) error {
 	}
 
 	// Collect results with media_type annotation
-	type annotated struct {
-		MediaType string `json:"media_type"`
-		ID        int    `json:"id"`
-		// Embed raw fields by marshalling
-		Data map[string]interface{} `json:"-"`
-	}
-
 	var combined []map[string]interface{}
 
 	if searchType == "tv" || searchType == "multi" {
@@ -80,7 +73,7 @@ func (h *Handler) HandleTMDBSearch(c echo.Context) error {
 					"title":        r.Title,
 					"release_date": r.ReleaseDate,
 					"poster_path":  r.PosterPath,
-					"overview":     r.Overview,
+					"overview":       r.Overview,
 					"media_type":   "movie",
 				}
 				combined = append(combined, m)
@@ -119,7 +112,7 @@ func (h *Handler) HandleTMDBGetDetails(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "id is required"})
 	}
 
-	client := tmdb.NewClient("0584d4437be4d13174085bc9b4435985", "es-MX")
+	client := h.App.Metadata.TMDBClient
 
 	var altTitles []tmdb.AlternativeTitle
 	var err error
@@ -138,7 +131,6 @@ func (h *Handler) HandleTMDBGetDetails(c echo.Context) error {
 		"alternativeTitles": altTitles,
 	})
 }
-
 
 // HandleTMDBAssign
 //
@@ -165,8 +157,11 @@ func (h *Handler) HandleTMDBAssign(c echo.Context) error {
 	}
 
 	// 1. Fetch full details from TMDB
-	token := "0584d4437be4d13174085bc9b4435985"
-	lang := "es-MX"
+	token := h.App.Config.Metadata.TMDBApiKey
+	lang := h.App.Config.Metadata.TMDBLanguage
+	if lang == "" {
+		lang = "es-MX"
+	}
 
 	provider := librarymetadata.NewTMDBProvider(token, lang)
 	

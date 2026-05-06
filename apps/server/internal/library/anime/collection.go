@@ -6,7 +6,6 @@ import (
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
-	"kamehouse/internal/hook"
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
 	"path/filepath"
@@ -100,30 +99,6 @@ func NewLibraryCollection(ctx context.Context, opts *NewLibraryCollectionOptions
 	defer util.HandlePanicInModuleWithError("entities/collection/NewLibraryCollection", &err)
 	lc = new(LibraryCollection)
 
-	reqEvent := &AnimeLibraryCollectionRequestedEvent{
-		Database:          opts.Database,
-		LocalFiles:        opts.LocalFiles,
-		LibraryCollection: lc,
-	}
-	err = hook.GlobalHookManager.OnAnimeLibraryCollectionRequested().Trigger(reqEvent)
-	if err != nil {
-		return nil, err
-	}
-	opts.Database = reqEvent.Database     // Override the database
-	opts.LocalFiles = reqEvent.LocalFiles // Override the local files
-	lc = reqEvent.LibraryCollection       // Override the library collection
-
-	if reqEvent.DefaultPrevented {
-		event := &AnimeLibraryCollectionEvent{
-			LibraryCollection: lc,
-		}
-		err = hook.GlobalHookManager.OnAnimeLibraryCollection().Trigger(event)
-		if err != nil {
-			return nil, err
-		}
-
-		return event.LibraryCollection, nil
-	}
 
 	// Create lists using local SQLite DB
 	lc.hydrateCollectionLists(opts)
@@ -153,12 +128,6 @@ func NewLibraryCollection(ctx context.Context, opts *NewLibraryCollectionOptions
 
 	lc.hydrateUnmatchedGroups()
 
-	// Event
-	event := &AnimeLibraryCollectionEvent{
-		LibraryCollection: lc,
-	}
-	_ = hook.GlobalHookManager.OnAnimeLibraryCollection().Trigger(event)
-	lc = event.LibraryCollection
 
 	return
 }
@@ -350,11 +319,12 @@ func (lc *LibraryCollection) hydrateStats(lfs []*LocalFile) {
 		for _, entry := range list.Entries {
 			stats.TotalEntries++
 			if entry.Media.Format != "" {
-				if entry.Media.Format == "MOVIE" {
+				switch entry.Media.Format {
+				case "MOVIE":
 					stats.TotalMovies++
-				} else if entry.Media.Format == "SPECIAL" || entry.Media.Format == "OVA" {
+				case "SPECIAL", "OVA":
 					stats.TotalSpecials++
-				} else {
+				default:
 					stats.TotalShows++
 				}
 			}

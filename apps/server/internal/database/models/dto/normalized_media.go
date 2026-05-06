@@ -6,7 +6,6 @@ import (
 
 type NormalizedMedia struct {
 	ID               int
-	IdMal            *int
 	TmdbId           *int
 	TvdbId           *int
 	ExplicitProvider string
@@ -89,7 +88,6 @@ func SetNormalizedMediaFetched(m *NormalizedMedia, fetched bool) {
 // The media is marked as not fetched (fetched=false) since it lacks some TMDB-specific data.
 func NewNormalizedMediaFromOfflineDB(
 	id int,
-	idMal *int,
 	tmdbId *int,
 	tvdbId *int,
 	title *NormalizedMediaTitle,
@@ -104,7 +102,6 @@ func NewNormalizedMediaFromOfflineDB(
 ) *NormalizedMedia {
 	return &NormalizedMedia{
 		ID:         id,
-		IdMal:      idMal,
 		TmdbId:     tmdbId,
 		TvdbId:     tvdbId,
 		Title:      title,

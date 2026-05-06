@@ -7,7 +7,6 @@ import (
 
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models/dto"
-	"kamehouse/internal/torrentstream"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/result"
 	"time"
@@ -54,14 +53,6 @@ func (h *Handler) HandleGetLibraryCollection(c echo.Context) error {
 	}
 
 	_ = originalAnimeCollection
-	if (h.App.SecondarySettings.Torrentstream != nil && h.App.SecondarySettings.Torrentstream.Enabled && h.App.SecondarySettings.Torrentstream.IncludeInLibrary) ||
-		(h.App.Settings.GetLibrary() != nil && h.App.Settings.GetLibrary().EnableOnlinestream && h.App.Settings.GetLibrary().IncludeOnlineStreamingInLibrary) {
-		h.App.TorrentstreamRepository.HydrateStreamCollection(&torrentstream.HydrateStreamCollectionOptions{
-			Database:            h.App.Database,
-			LibraryCollection:   libraryCollection,
-			MetadataProviderRef: h.App.Metadata.ProviderRef,
-		})
-	}
 
 	// Hydrate total library size
 	if libraryCollection != nil && libraryCollection.Stats != nil {

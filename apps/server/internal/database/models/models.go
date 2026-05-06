@@ -45,13 +45,6 @@ type ShelvedLocalFiles struct {
 	Value []byte `gorm:"column:value" json:"value"`
 }
 
-type AnimapCache struct {
-	BaseModel
-	Provider string `gorm:"column:provider;uniqueIndex:idx_provider_id" json:"provider"`
-	MediaID  int    `gorm:"column:media_id;uniqueIndex:idx_provider_id" json:"mediaId"`
-	Data     []byte `gorm:"column:data" json:"data"`
-}
-
 type Settings struct {
 	BaseModel
 	Library        LibrarySettings        `json:"library" gorm:"embedded;embeddedPrefix:library_"`
@@ -98,8 +91,6 @@ type LibrarySettings struct {
 	FanartApiKey                    string       `gorm:"column:fanart_api_key" json:"fanartApiKey"`
 	OmdbApiKey                      string       `gorm:"column:omdb_api_key" json:"omdbApiKey"`
 	OpenSubsApiKey                  string       `gorm:"column:opensubs_api_key" json:"openSubsApiKey"`
-	AniDbClientId                   string       `gorm:"column:anidb_client_id" json:"aniDbClientId"`
-	AniDbUsername                   string       `gorm:"column:anidb_username" json:"aniDbUsername"`
 }
 
 func (s *LibrarySettings) GetAllPaths() []string {
@@ -214,13 +205,7 @@ type NotificationSettings struct {
 	DisableAutoScannerNotifications    bool `gorm:"column:disable_auto_scanner_notifications" json:"disableAutoScannerNotifications"`
 }
 
-type Mal struct {
-	BaseModel
-	Username       string    `gorm:"column:username" json:"username"`
-	AccessToken    string    `gorm:"column:access_token" json:"accessToken"`
-	RefreshToken   string    `gorm:"column:refresh_token" json:"refreshToken"`
-	TokenExpiresAt time.Time `gorm:"column:token_expires_at" json:"tokenExpiresAt"`
-}
+
 
 type ScanSummary struct {
 	BaseModel
@@ -300,16 +285,7 @@ type MediaFiller struct {
 
 
 
-type PluginData struct {
-	BaseModel
-}
 
-type CustomSourceCollection struct {
-	BaseModel
-}
-type CustomSourceIdentifier struct {
-	BaseModel
-}
 
 type UserMediaProgress struct {
 	BaseModel

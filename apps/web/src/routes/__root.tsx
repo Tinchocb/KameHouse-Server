@@ -12,7 +12,6 @@ import { AnimatePresence } from "framer-motion"
 import { useRouterState } from "@tanstack/react-router"
 import { PageTransition } from "@/components/shared/page-transition"
 import { WebsocketProvider } from "@/app/websocket-provider"
-import { OfflineStatus } from "@/components/shared/offline-status"
 
 export const Route = createRootRouteWithContext<{
     queryClient: QueryClient
@@ -20,17 +19,12 @@ export const Route = createRootRouteWithContext<{
     component: () => {
         const routerState = useRouterState()
         return (
-            /*
-             * Root shell
-             * AppLayoutContent uses h-dvh and top padding to avoid the fixed AppTopNav.
-             */
             <AppLayout>
                 <WebsocketProvider>
                     <AppTopNav />
                     <AppSidebar />
                     <CommandPalette />
-                    <OfflineStatus />
-                    <AppLayoutContent className="pt-20 md:pt-0 md:pl-24">
+                    <AppLayoutContent className="pt-16 md:pl-24">
                         <AnimatePresence mode="wait">
                             <PageTransition transitionKey={routerState.location.pathname} className="flex-1 w-full">
                                 <Outlet />

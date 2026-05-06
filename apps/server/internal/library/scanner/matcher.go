@@ -4,12 +4,12 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"strconv"
 	"time"
 
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
-	"kamehouse/internal/hook"
 	"kamehouse/internal/library/parser"
 	"kamehouse/internal/util/parallel"
 	"context"
@@ -49,17 +49,7 @@ func (m *Matcher) MatchLocalFilesWithMedia() error {
 	m.Logger.Info().Msg("AgentMatcher: Initiating Bayesian Identity Resolution...")
 	start := time.Now()
 
-	// Trigger Pre-Match Hooks
-	event := &ScanMatchingStartedEvent{
-		LocalFiles:      m.LocalFiles,
-		NormalizedMedia: m.MediaContainer.NormalizedMedia,
-	}
-	hook.GlobalHookManager.OnScanMatchingStarted().Trigger(event)
-
-	if event.IsDefaultPrevented() {
-		m.LocalFiles = event.LocalFiles
-		return nil
-	}
+	
 
 	// Use generic parallel processing module
 	parallel.EachTask(m.LocalFiles, func(lf *dto.LocalFile, _ int) {
@@ -68,9 +58,7 @@ func (m *Matcher) MatchLocalFilesWithMedia() error {
 
 	m.Logger.Info().Msgf("AgentMatcher: Completed Bayesian Pass on %d files in %v", len(m.LocalFiles), time.Since(start))
 
-	// Trigger Post-Match Hooks
-	completedEvent := &ScanMatchingCompletedEvent{LocalFiles: m.LocalFiles}
-	hook.GlobalHookManager.OnScanMatchingCompleted().Trigger(completedEvent)
+	
 
 	return nil
 }
@@ -219,14 +207,7 @@ verdict:
 		}
 	}
 
-	// Hook Integration
-	matchedEvent := &ScanLocalFileMatchedEvent{
-		Match:     bestMatch,
-		Found:     bestMatch != nil && bestConfidence >= threshold,
-		LocalFile: lf,
-		Score:     bestConfidence,
-	}
-	hook.GlobalHookManager.OnScanLocalFileMatched().Trigger(matchedEvent)
+	
 }
 
 // calculateBayesianScore implements a naive Bayes estimation for identity correlation.
@@ -338,7 +319,7 @@ func (m *Matcher) calculateBayesianScore(pm parser.ParsedMedia, media *dto.Norma
 // Uses the package-level reYear to avoid recompiling the pattern on every call.
 func extractYear(s string) int {
 	if loc := reYear.FindStringSubmatch(s); len(loc) > 1 {
-		return parseFallbackInt(loc[1], 0)
+		if v, err := strconv.Atoi(loc[1]); err == nil { return v }; return 0
 	}
 	return 0
 }
@@ -391,4 +372,9 @@ func sanitizeSubGroupTags(input string) string {
 func calculateDice(s1, s2 string) float64 {
 	return CompareStrings(s1, s2)
 }
+
+
+
+
+
 

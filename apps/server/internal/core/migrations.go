@@ -2,9 +2,7 @@ package core
 
 import (
 	"kamehouse/internal/constants"
-	"kamehouse/internal/database/models"
 	"kamehouse/internal/util"
-
 
 	"github.com/Masterminds/semver/v3"
 )
@@ -68,29 +66,8 @@ func (a *App) runMigrations() {
 
 		//-----------------------------------------------------------------------------------------
 
-		// DEVNOTE: 3.0.4 refactored custom source IDs and fixed a bug with extension identifiers
-		// -> Delete the custom source collections
-		c5, _ := semver.NewConstraint("< 3.0.4, >= 3.0.0")
-		if c5.Check(previousVersion) {
-			a.Logger.Debug().Msg("app: Executing version migration task (deleting custom source collections)")
-			err := a.Database.Gorm().Where("1 = 1").Delete(&models.CustomSourceCollection{}).Error
-			if err != nil {
-				a.Logger.Error().Err(err).Msg("app: MIGRATION FAILED")
-			}
-			done = true
-		}
-
 		//-----------------------------------------------------------------------------------------
 
-		//c6, _ := semver.NewConstraint("< 3.4.0")
-		//if c5.Check(previousVersion) {
-		//	a.Logger.Debug().Msg("app: Executing version migration task (deleting custom source collections)")
-		//	err := a.Database.Gorm().Where("1 = 1").Delete(&models.CustomSourceCollection{}).Error
-		//	if err != nil {
-		//		a.Logger.Error().Err(err).Msg("app: MIGRATION FAILED")
-		//	}
-		//	done = true
-		//}
 	}
 	//}()
 

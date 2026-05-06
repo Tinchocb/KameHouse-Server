@@ -6,7 +6,6 @@ import (
 	"kamehouse/internal/constants"
 	"kamehouse/internal/core"
 	"kamehouse/internal/database/models"
-	"kamehouse/internal/report"
 	"kamehouse/internal/user"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/result"
@@ -169,10 +168,7 @@ func (h *Handler) HandleGetLogContent(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	content := h.App.ReportRepository.Anonymize(report.AnonymizeOptions{
-		Content:  contentB,
-		Settings: h.App.Settings,
-	})
+	content := string(contentB)
 
 	return h.RespondWithData(c, content)
 }
@@ -290,10 +286,7 @@ func (h *Handler) HandleGetLatestLogContent(c echo.Context) error {
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
-	content := h.App.ReportRepository.Anonymize(report.AnonymizeOptions{
-		Content:  contentB,
-		Settings: h.App.Settings,
-	})
+	content := string(contentB)
 	return h.RespondWithData(c, content)
 }
 

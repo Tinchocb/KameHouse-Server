@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
@@ -22,13 +21,17 @@ func (h *Handler) getAnimeEpisodeCollection(c echo.Context, mId int) (*anime.Epi
 		return h.getTMDBEpisodeCollection(mId)
 	}
 
-	completeAnime, animeMetadata, err := h.App.TorrentstreamRepository.GetMediaInfo(c.Request().Context(), mId)
+	completeAnime, err := h.App.Metadata.PlatformRef.Get().GetAnime(c.Request().Context(), mId)
+	if err != nil {
+		return nil, err
+	}
+	animeMetadata, err := h.App.Metadata.ProviderRef.Get().GetAnimeMetadata(mId)
 	if err != nil {
 		return nil, err
 	}
 
 	ec, err := anime.NewEpisodeCollection(anime.NewEpisodeCollectionOptions{
-		AnimeMetadata:       animeMetadata.(*metadata.AnimeMetadata),
+		AnimeMetadata:       animeMetadata,
 		Media:               completeAnime.(interface{ ToBaseAnime() *models.LibraryMedia }).ToBaseAnime(),
 		MetadataProviderRef: h.App.Metadata.ProviderRef,
 		Logger:              h.App.Logger,
@@ -129,3 +132,6 @@ func (h *Handler) HandleGetAnimeEpisodeCollection(c echo.Context) error {
 
 	return h.RespondWithData(c, ec)
 }
+
+
+

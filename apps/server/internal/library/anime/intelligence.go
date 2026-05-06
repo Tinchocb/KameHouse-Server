@@ -243,12 +243,9 @@ func (s *IntelligenceService) computeIntelligence(mediaID, episodeNum int, base 
 
 	// ── Special type promotion ────────────────────────────────────────
 	if base != nil && intel.Tag == TagCanon {
-		if ep := base; ep != nil {
-			// EpisodeMetadata comes from AniDB; no format field here.
-			// Special files are detected by the parent Episode.Type field;
-			// we honour whatever the caller already flagged in base.IsFiller.
-			_ = ep
-		}
+		// EpisodeMetadata comes from AniDB; no format field here.
+		// Special files are detected by the parent Episode.Type field;
+		// we honour whatever the caller already flagged in base.IsFiller.
 	}
 
 	// ── Arc grouping ─────────────────────────────────────────────────

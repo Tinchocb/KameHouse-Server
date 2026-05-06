@@ -161,7 +161,6 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		_ = db.InsertScanSummary(h.App.Database, scanSummaryLogger.GenerateSummary())
 
 		// Background maintenance tasks
-		go h.App.AutoDownloader.CleanUpDownloadedItems()
 		go func() {
 			_, _ = h.App.Metadata.PlatformRef.Get().RefreshAnimeCollection(context.Background())
 		}()
@@ -238,3 +237,4 @@ func (h *Handler) HandleResolveUnlinkedFile(c echo.Context) error {
 	}
 	return h.RespondWithData(c, map[string]any{"ok": true})
 }
+

@@ -2,7 +2,7 @@ package handlers
 
 import "github.com/labstack/echo/v4"
 
-// RegisterSettingsRoutes registers settings, auth, auto-downloader, MAL, updates, and system routes.
+// RegisterSettingsRoutes registers settings, auth, auto-downloader, updates, and system routes.
 func (h *Handler) RegisterSettingsRoutes(v1 *echo.Group) {
 	// Auth
 	v1.POST("/auth/login", h.HandleLogin)

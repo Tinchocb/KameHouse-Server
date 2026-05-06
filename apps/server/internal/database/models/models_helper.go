@@ -12,12 +12,7 @@ func (s *Settings) GetMediaPlayer() *MediaPlayerSettings {
 	return &s.MediaPlayer
 }
 
-func (s *Settings) GetTorrent() *TorrentSettings {
-	if s == nil {
-		return &TorrentSettings{}
-	}
-	return &s.Torrent
-}
+
 
 func (s *Settings) GetLibrary() *LibrarySettings {
 	if s == nil {
@@ -26,26 +21,7 @@ func (s *Settings) GetLibrary() *LibrarySettings {
 	return &s.Library
 }
 
-func (s *Settings) GetListSync() *ListSyncSettings {
-	if s == nil {
-		return &ListSyncSettings{}
-	}
-	return &s.ListSync
-}
 
-func (s *Settings) GetAutoDownloader() *AutoDownloaderSettings {
-	if s == nil {
-		return &AutoDownloaderSettings{}
-	}
-	return &s.AutoDownloader
-}
-
-func (s *Settings) GetNotifications() *NotificationSettings {
-	if s == nil {
-		return &NotificationSettings{}
-	}
-	return &s.Notifications
-}
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"fmt"
-	"kamehouse/internal/api/mal"
 	"net/http"
 	"sync"
 	"time"
@@ -21,7 +20,6 @@ type PlaybackSyncPayload struct {
 	CurrentTime   float64 `json:"currentTime"`     // seconds
 	Duration      float64 `json:"duration"`        // seconds
 	TotalEpisodes int     `json:"totalEpisodes"`   // total episodes in the series (0 if unknown)
-	MalId         int     `json:"malId,omitempty"` // optional MAL ID for cross-scrobble
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -50,7 +48,7 @@ func scrobbleKey(mediaId, episode int) string {
 //
 //	@summary receives playback telemetry from the frontend.
 //	@desc    Updates continuity watch history and, when progress >= 85%,
-//	         automatically scrobbles the episode as watched to Platform/MAL.
+//	         automatically scrobbles the episode as watched to Platform.
 //	@route /api/v1/playback/sync [POST]
 //	@returns bool
 func (h *Handler) HandlePlaybackSync(c echo.Context) error {
@@ -98,15 +96,6 @@ func (h *Handler) HandlePlaybackSync(c echo.Context) error {
 					Int("episode", payload.EpisodeNumber).
 					Float64("progress", payload.Progress).
 					Msg("playback sync: auto-scrobbling episode (>= 85%)")
-
-				// Dispatch to the MAL Dead Letter Queue Scrobbler Worker
-				if payload.MalId > 0 && h.App.Metadata.MalScrobbler != nil {
-					h.App.Metadata.MalScrobbler.Dispatch(&mal.ScrobbleTarget{
-						MalMediaID:    payload.MalId,
-						EpisodeNumber: payload.EpisodeNumber,
-						Status:        "watching",
-					})
-				}
 			}
 		}
 	}(b)

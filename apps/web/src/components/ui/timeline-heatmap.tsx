@@ -24,8 +24,8 @@ export const TimelineHeatmap = React.memo(({ duration, insights, className }: Ti
                     <div
                         key={i}
                         className={cn(
-                            "flex-1 mx-[1px] rounded-t-sm transition-all duration-300",
-                            isPeak ? "bg-yellow-500/90" : "bg-white/40"
+                            "flex-1 mx-[1px] transition-all duration-300",
+                            isPeak ? "bg-white" : "bg-white/20"
                         )}
                         style={{ height: `${height}%` }}
                     />

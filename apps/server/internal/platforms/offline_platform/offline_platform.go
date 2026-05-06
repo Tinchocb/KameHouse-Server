@@ -64,9 +64,7 @@ func (lp *OfflinePlatform) GetAnime(ctx context.Context, mediaID int) (interface
 	return nil, ErrMediaNotFound
 }
 
-func (lp *OfflinePlatform) GetAnimeByMalID(ctx context.Context, malID int) (interface{}, error) {
-	return nil, ErrMediaNotFound
-}
+
 
 func (lp *OfflinePlatform) GetAnimeDetails(ctx context.Context, mediaID int) (interface{}, error) {
 	return nil, nil

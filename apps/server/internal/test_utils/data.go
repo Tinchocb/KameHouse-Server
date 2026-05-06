@@ -33,14 +33,11 @@ type (
 	}
 
 	FlagsConfig struct {
-		EnableMalTests           bool `mapstructure:"enable_mal_tests"`
-		EnableMalMutationTests   bool `mapstructure:"enable_mal_mutation_tests"`
 		EnableTorrentClientTests bool `mapstructure:"enable_torrent_client_tests"`
 		EnableTorrentstreamTests bool `mapstructure:"enable_torrentstream_tests"`
 	}
 
 	ProviderConfig struct {
-		MalJwt string `mapstructure:"mal_jwt"`
 		QbittorrentHost      string `mapstructure:"qbittorrent_host"`
 		QbittorrentPort      int    `mapstructure:"qbittorrent_port"`
 		QbittorrentUsername  string `mapstructure:"qbittorrent_username"`
@@ -77,34 +74,7 @@ type (
 )
 
 
-func MyAnimeList() FlagFunc {
-	return func() bool {
-		f := ConfigData.Flags.EnableMalTests
-		if !f {
-			fmt.Println("skipping mal tests")
-			return false
-		}
-		if ConfigData.Provider.MalJwt == "" {
-			fmt.Println("skipping mal tests, no mal jwt")
-			return false
-		}
-		return true
-	}
-}
-func MyAnimeListMutation() FlagFunc {
-	return func() bool {
-		f := ConfigData.Flags.EnableMalMutationTests
-		if !f {
-			fmt.Println("skipping mal mutation tests")
-			return false
-		}
-		if ConfigData.Provider.MalJwt == "" {
-			fmt.Println("skipping mal mutation tests, no mal jwt")
-			return false
-		}
-		return true
-	}
-}
+
 func TorrentClient() FlagFunc {
 	return func() bool {
 		return ConfigData.Flags.EnableTorrentClientTests

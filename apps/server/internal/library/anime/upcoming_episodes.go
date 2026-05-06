@@ -3,7 +3,6 @@ package anime
 import (
 	"context"
 	"kamehouse/internal/api/metadata_provider"
-	"kamehouse/internal/hook"
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/limiter"
@@ -38,26 +37,6 @@ type (
 func NewUpcomingEpisodes(opts *NewUpcomingEpisodesOptions) *UpcomingEpisodes {
 	upcoming := new(UpcomingEpisodes)
 
-	reqEvent := new(UpcomingEpisodesRequestedEvent)
-	reqEvent.AnimeCollection = opts.AnimeCollection
-	reqEvent.UpcomingEpisodes = upcoming
-	err := hook.GlobalHookManager.OnUpcomingEpisodesRequested().Trigger(reqEvent)
-	if err != nil {
-		return nil
-	}
-	opts.AnimeCollection = reqEvent.AnimeCollection
-	upcoming = reqEvent.UpcomingEpisodes
-
-	// Default prevented by hook, return the upcoming episodes
-	if reqEvent.DefaultPrevented {
-		event := new(UpcomingEpisodesEvent)
-		event.UpcomingEpisodes = upcoming
-		err = hook.GlobalHookManager.OnUpcomingEpisodes().Trigger(event)
-		if err != nil {
-			return nil
-		}
-		return event.UpcomingEpisodes
-	}
 
 	// Get all media with next airing episodes
 	allMedia := opts.AnimeCollection.GetAllAnime()
@@ -135,12 +114,5 @@ func NewUpcomingEpisodes(opts *NewUpcomingEpisodesOptions) *UpcomingEpisodes {
 
 	upcoming.Episodes = upcomingEps
 
-	event := new(UpcomingEpisodesEvent)
-	event.UpcomingEpisodes = upcoming
-	err = hook.GlobalHookManager.OnUpcomingEpisodes().Trigger(event)
-	if err != nil {
-		return nil
-	}
-
-	return event.UpcomingEpisodes
+	return upcoming
 }

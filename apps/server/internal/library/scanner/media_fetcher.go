@@ -167,19 +167,20 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 		} else {
 			// FALLBACK: Iterate over all providers (AniList -> TMDB -> AniDB)
 			for _, provider := range opts.MetadataProviders {
-				if hint == "series" {
+				switch hint {
+				case "series":
 					if p, ok := provider.(*librarymetadata.TMDBProvider); ok {
 						searchRes, err = p.SearchTV(ctx, titleGroup)
 					} else {
 						searchRes, err = provider.SearchMedia(ctx, titleGroup)
 					}
-				} else if hint == "movie" {
+				case "movie":
 					if p, ok := provider.(*librarymetadata.TMDBProvider); ok {
 						searchRes, err = p.SearchMovie(ctx, titleGroup)
 					} else {
 						searchRes, err = provider.SearchMedia(ctx, titleGroup)
 					}
-				} else {
+				default:
 					searchRes, err = provider.SearchMedia(ctx, titleGroup)
 				}
 				

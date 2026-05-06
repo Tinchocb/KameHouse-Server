@@ -1,7 +1,7 @@
-import { SeaLink } from "@/components/shared/sea-link"
+import { Link } from "@tanstack/react-router"
 import { cva } from "class-variance-authority"
 import * as React from "react"
-import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
+import { cn, defineStyleAnatomy, type ComponentAnatomy } from "../core/styling"
 
 /* -------------------------------------------------------------------------------------------------
  * Anatomy
@@ -39,7 +39,7 @@ export type StaticTabsItem = {
     addon?: React.ReactNode,
 }
 
-export type StaticTabsProps = React.ComponentPropsWithRef<"nav"> &
+export type StaticTabsProps = React.ComponentPropsWithRef<"nav"> & 
     ComponentAnatomy<typeof StaticTabsAnatomy> & {
     items: StaticTabsItem[]
 }
@@ -63,9 +63,9 @@ export const StaticTabs = React.forwardRef<HTMLElement, StaticTabsProps>((props,
             {...rest}
         >
             {items.map((tab) => !!tab.href ? (
-                <SeaLink
+                <Link
                     key={tab.name}
-                    href={tab.href ?? "#"}
+                    to={tab.href ?? "#"}
                     className={cn(
                         StaticTabsAnatomy.trigger(),
                         triggerClass,
@@ -83,7 +83,7 @@ export const StaticTabs = React.forwardRef<HTMLElement, StaticTabsProps>((props,
                     />}
                     <span>{tab.name}</span>
                     {tab.addon}
-                </SeaLink>
+                </Link>
             ) : (
                 <div
                     key={tab.name}

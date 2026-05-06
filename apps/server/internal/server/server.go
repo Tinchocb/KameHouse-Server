@@ -3,8 +3,6 @@ package server
 import (
 	"embed"
 	"fmt"
-	"kamehouse/internal/core"
-	"kamehouse/internal/cron"
 	"kamehouse/internal/handlers"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/crashlog"
@@ -14,6 +12,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"kamehouse/internal/core"
 )
 
 func startApp(embeddedLogo []byte) (*core.App, core.KameHouseFlags) {
@@ -87,9 +86,6 @@ appLoop:
 
 			// Run the server
 			core.RunEchoServer(app, echoApp)
-
-			// Run the jobs in the background
-			cron.RunJobs(app)
 
 			select {}
 		}

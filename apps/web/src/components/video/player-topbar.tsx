@@ -11,23 +11,23 @@ interface PlayerTopBarProps {
 export function PlayerTopBar({ title, episodeLabel, onClose }: PlayerTopBarProps) {
     return (
         <div className={cn(
-            "absolute top-0 inset-x-0 pt-6 pb-24 px-6 md:px-10 flex flex-col md:flex-row md:items-start justify-between pointer-events-auto bg-gradient-to-b from-black/70 to-transparent",
+            "absolute top-0 inset-x-0 p-8 flex items-start justify-between pointer-events-auto bg-black border-b border-white/10",
             "transition-all duration-300 ease-out",
             "opacity-100 translate-y-0"
         )}>
-            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+            <div className="flex gap-6 items-center">
                 <button
                     onClick={(e) => { e.stopPropagation(); onClose(); }}
                     aria-label="Cerrar reproductor"
-                    className="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 text-white/70 hover:text-white transition-colors group glass-layer rounded-full"
+                    className="flex items-center justify-center w-12 h-12 bg-white text-black border border-white hover:bg-zinc-200 transition-colors"
                 >
-                    <FiX className="w-6 h-6 drop-shadow-md" />
+                    <FiX className="w-6 h-6" />
                 </button>
                 
-                <div className="flex flex-col drop-shadow-lg max-w-lg mt-2 md:mt-0">
-                    <span className="text-white font-black text-xl md:text-2xl leading-tight tracking-wide">{title || "Reproduciendo"}</span>
+                <div className="flex flex-col">
+                    <span className="text-white font-black text-2xl uppercase tracking-tight leading-none">{title || "Reproduciendo"}</span>
                     {episodeLabel && (
-                        <span className="text-zinc-300 font-bold tracking-widest uppercase text-xs mt-1 md:mt-0.5">{episodeLabel}</span>
+                        <span className="text-zinc-500 font-black tracking-[0.3em] uppercase text-[10px] mt-2">{episodeLabel}</span>
                     )}
                 </div>
             </div>

@@ -25,15 +25,14 @@ export function EmptyState({
     return (
         <div className={cn(
             "flex flex-col items-center justify-center text-center",
-            "glass-panel bg-white/[0.02] border-white/5 px-8 py-16 md:py-24",
-            "shadow-[0_20px_80px_rgba(0,0,0,0.4)] backdrop-blur-3xl rounded-[2.5rem]",
+            "bg-black border border-white/10 px-12 py-20 md:py-32",
             "max-w-2xl mx-auto",
             className,
         )}>
             {illustration ? (
                 <div className="mb-8 opacity-80">{illustration}</div>
             ) : (
-                <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-3xl bg-white/[0.03] border border-white/5 text-primary shadow-[0_0_30px_rgba(249,115,22,0.1)]">
+                <div className="mb-8 flex h-20 w-20 items-center justify-center bg-white/[0.03] border border-white/5 text-white">
                     {icon ?? <Ghost className="h-10 w-10 animate-pulse-slow" />}
                 </div>
             )}

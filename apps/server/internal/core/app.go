@@ -55,7 +55,6 @@ type (
 	}
 
 	StreamingServices struct {
-		StreamOrchestrator    *streaming.StreamOrchestrator
 		MediastreamRepository *mediastream.Repository
 		VideoCore             *videocore.VideoCore
 	}
@@ -243,7 +242,7 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 	activeMetadataProvider := metadataProvider
 
 	activePlatformRef := util.NewRef[platform.Platform](nil)
-	metadataProviderRef := util.NewRef[metadata_provider.Provider](activeMetadataProvider)
+	metadataProviderRef := util.NewRef(activeMetadataProvider)
 
 	// Initialize sync manager for offline/online synchronization
 	localManager, err := local.NewManager(&local.NewManagerOptions{
@@ -286,7 +285,7 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 	}
 
 	isOfflineRef := util.NewRef(cfg.Server.Offline)
-	offlinePlatformRef := util.NewRef[platform.Platform](offlinePlatform)
+	offlinePlatformRef := util.NewRef(platform.Platform(offlinePlatform))
 
 	// +---------------------+
 	// | Phase 2: Base       |
@@ -331,7 +330,6 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 		},
 		StreamingServices: StreamingServices{
 			VideoCore:             videoCore,
-			StreamOrchestrator:    nil,
 			MediastreamRepository: nil,
 		},
 		LibraryServices: LibraryServices{

@@ -7,10 +7,10 @@ export const GenrePill = memo(function GenrePill({
     return (
         <button
             className={cn(
-                "px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest transition-all duration-300 border",
+                "px-4 py-1.5 rounded-none text-[10px] font-black tracking-widest transition-all duration-200 border uppercase",
                 active
-                    ? "bg-primary text-white border-primary shadow-[0_0_20px_rgba(249,115,22,0.3)] scale-105"
-                    : "bg-white/[0.03] text-zinc-500 border-white/5 hover:border-primary/40 hover:text-primary"
+                    ? "bg-white text-black border-white"
+                    : "bg-black text-zinc-500 border-zinc-800 hover:border-white hover:text-white"
             )}
             onClick={onClick}
         >

@@ -85,7 +85,7 @@ func FindLatestLocalFileFromGroup(lfs []*dto.LocalFile) (*dto.LocalFile, bool) {
 	if !IsLocalFileGroupValidEntry(lfs) {
 		return nil, false
 	}
-	if lfs == nil || len(lfs) == 0 {
+	if len(lfs) == 0 {
 		return nil, false
 	}
 	// Get the episode with the highest progress number

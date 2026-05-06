@@ -60,8 +60,6 @@ const settingsSchema = z.object({
         fanartApiKey: z.string().default(""),
         omdbApiKey: z.string().default(""),
         openSubsApiKey: z.string().default(""),
-        aniDbClientId: z.string().default(""),
-        aniDbUsername: z.string().default(""),
     }).default({}),
     mediaPlayer: z.object({
         defaultPlayer: z.string().default(""),
@@ -163,10 +161,10 @@ function SettingsPage() {
         <div className="flex h-full w-full bg-black/40 backdrop-blur-3xl overflow-hidden selection:bg-primary/30">
             <header className="fixed top-0 left-0 lg:left-24 right-0 h-16 border-b border-white/[0.03] bg-black/50 backdrop-blur-md z-40 flex items-center justify-between px-8">
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center p-1.5 shadow-lg shadow-primary/20">
-                        <LucideHardDrive className="text-white" size={18} />
+                    <div className="w-8 h-8 rounded-none bg-white flex items-center justify-center p-1.5 shadow-lg">
+                        <LucideHardDrive className="text-black" size={18} />
                     </div>
-                    <span className="text-sm font-black tracking-widest uppercase text-white/90">KameHouse <span className="text-primary/80">Settings</span></span>
+                    <span className="text-sm font-black tracking-widest uppercase text-white/90">KameHouse <span className="text-zinc-500">Settings</span></span>
                 </div>
             </header>
 
@@ -182,12 +180,12 @@ function SettingsPage() {
                                     key={item.id}
                                     value={item.id}
                                     className={cn(
-                                        "relative flex items-center justify-start gap-5 px-5 py-4 rounded-3xl text-[15px] font-black text-zinc-500",
+                                        "relative flex items-center justify-start gap-5 px-5 py-4 rounded-none text-[15px] font-black text-zinc-500",
                                         "transition-all duration-500 group/nav outline-none hover:bg-white/[0.03] hover:text-zinc-300",
-                                        "data-[state=active]:bg-white/[0.04] data-[state=active]:text-white data-[state=active]:shadow-[0_8px_30px_-5px_rgba(0,0,0,0.5)] data-[state=active]:border-white/[0.05] border border-transparent"
+                                        "data-[state=active]:bg-white/[0.04] data-[state=active]:text-white data-[state=active]:border-white/10 border border-transparent"
                                     )}
                                 >
-                                    <item.icon size={22} className="shrink-0 transition-transform duration-500 group-hover/nav:scale-110 group-hover/nav:text-primary data-[state=active]:text-primary" />
+                                    <item.icon size={22} className="shrink-0 transition-transform duration-500 group-hover/nav:scale-110 group-hover/nav:text-white data-[state=active]:text-white" />
                                     <span className="relative z-10 tracking-tight">{item.label}</span>
                                     <TabsTriggerActiveIndicator />
                                 </TabsTrigger>
@@ -197,9 +195,9 @@ function SettingsPage() {
 
                     <div className="pt-8 space-y-5 border-t border-white/[0.03] mt-auto relative z-10">
                         <p className="text-xs font-black uppercase tracking-[0.3em] text-zinc-600 px-4">Suscripción</p>
-                        <div className="glass-panel-premium mx-1 p-6 rounded-[2.5rem] bg-gradient-to-br from-white/[0.03] to-transparent border border-white/[0.05] relative overflow-hidden group/premium shadow-2xl">
+                        <div className="glass-panel-premium mx-1 p-6 rounded-none bg-white/[0.02] border border-white/5 relative overflow-hidden group/premium">
                             <div className="absolute top-0 right-0 p-3 opacity-20 group-hover/premium:opacity-40 transition-all duration-700 ease-spring group-hover/premium:scale-110 group-hover/premium:rotate-12">
-                                <LucideCrown size={48} className="text-primary" />
+                                <LucideCrown size={48} className="text-white" />
                             </div>
                             <p className="text-[9px] text-zinc-600 mt-2 uppercase tracking-[0.1em] font-black">KameHouse v3.5.0</p>
                         </div>
@@ -214,7 +212,7 @@ function SettingsPage() {
                         <TabsContent value="scanner" className="m-0 space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-1000">
                             <div className="space-y-10">
                                 <header className="space-y-4">
-                                    <h1 className="text-6xl font-black tracking-tighter text-white">Buscador <span className="text-primary italic">& Metadatos</span></h1>
+                                    <h1 className="text-6xl font-black tracking-tighter text-white">Buscador <span className="text-zinc-500">Metadatos</span></h1>
                                     <p className="text-zinc-400 text-xl font-medium leading-relaxed">Conecta tu biblioteca a la inteligencia de metadatos global. Lanza el escaneo e indexa de forma inteligente. Los proveedores están pre-configurados en el núcleo.</p>
                                 </header>
 
@@ -224,9 +222,9 @@ function SettingsPage() {
                             <ScannerDashboard />
 
                             {/* ─── Archivos sin vincular ─── */}
-                            <div className="space-y-5 pt-4">
+                             <div className="space-y-5 pt-4">
                                 <div className="flex items-center gap-4 px-2">
-                                    <div className="h-px w-12 bg-gradient-to-r from-amber-500/60 to-transparent" />
+                                    <div className="h-px w-12 bg-white/20" />
                                     <p className="text-sm font-black uppercase tracking-[0.4em] text-zinc-400">Vinculación Manual</p>
                                 </div>
                                 <UnlinkedFilesPanel />
@@ -236,8 +234,8 @@ function SettingsPage() {
 
                         {/* ─── Contenido: Reproducción ─── */}
                         <TabsContent value="playback" className="m-0 space-y-16 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-                             <header className="space-y-4">
-                                <h1 className="text-6xl font-black tracking-tighter text-white">Experiencia <span className="text-primary italic">Inmersiva</span></h1>
+                              <header className="space-y-4">
+                                <h1 className="text-6xl font-black tracking-tighter text-white">Experiencia <span className="text-zinc-500">Inmersiva</span></h1>
                                 <p className="text-zinc-400 text-xl font-medium leading-relaxed">Controla cada píxel. Optimiza la calidad y activa la continuidad de visionado espacial entre tus ecosistemas.</p>
                             </header>
 
@@ -273,17 +271,17 @@ function SettingsPage() {
 
                         {/* ─── Contenido: Apariencia ─── */}
                         <TabsContent value="appearance" className="m-0 space-y-16 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-                             <header className="space-y-4">
-                                <h1 className="text-6xl font-black tracking-tighter text-white">Vibe & <span className="text-primary italic">Estética</span></h1>
+                              <header className="space-y-4">
+                                <h1 className="text-6xl font-black tracking-tighter text-white">Vibe & <span className="text-zinc-500">Estética</span></h1>
                                 <p className="text-zinc-400 text-xl font-medium leading-relaxed">Define la atmósfera de tu KameHouse. Sincroniza topologías, auras volumétricas y cinemáticas.</p>
                             </header>
                             <Section label="Interfaz Premium">
-                                <Card className="p-20 flex flex-col items-center justify-center text-center space-y-8">
-                                    <div className="w-32 h-32 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 shadow-[0_0_50px_rgba(255,100,0,0.2)]">
-                                        <LucidePalette className="text-primary" size={64} />
+                                 <Card className="p-20 flex flex-col items-center justify-center text-center space-y-8">
+                                    <div className="w-32 h-32 rounded-none bg-white/5 flex items-center justify-center border border-white/10">
+                                        <LucidePalette className="text-white" size={64} />
                                     </div>
                                     <h3 className="text-4xl font-black text-white tracking-tight">Motor de Diseño Antigravity v2</h3>
-                                    <p className="text-zinc-400 text-lg leading-relaxed font-medium">Estás usando el motor de diseño espacial con soporte nativo para glassmorphism volumétrico y micro-animaciones fluidas. Los esquemas reactivos se sincronizan armónicamente con tu entorno.</p>
+                                    <p className="text-zinc-400 text-lg leading-relaxed font-medium">Estás usando el motor de diseño espacial con soporte nativo para estética brutalista y micro-animaciones fluidas. Los esquemas reactivos se sincronizan armónicamente con tu entorno.</p>
                                 </Card>
                             </Section>
                         </TabsContent>
@@ -293,18 +291,17 @@ function SettingsPage() {
                 {/* ─── Save Bar Premium (Bottom Right) ─── */}
                 <AnimatePresence>
                     {hasChanges && (
-                        <motion.div
+                         <motion.div
                             initial={{ opacity: 0, y: 60, scale: 0.9 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 120, scale: 0.9 }}
                             transition={{ type: "spring", stiffness: 400, damping: 30 }}
                             className="fixed bottom-16 right-16 z-50 overflow-hidden"
                         >
-                            <div className="glass-panel-premium bg-black/60 backdrop-blur-[50px] border border-white/10 p-3 rounded-[3rem] shadow-[0_30px_80px_-12px_rgba(0,0,0,0.9),0_0_40px_rgba(255,100,0,0.15)] flex items-center gap-2 min-w-[500px]">
+                            <div className="bg-black/80 backdrop-blur-[50px] border border-white/20 p-3 rounded-none shadow-2xl flex items-center gap-2 min-w-[500px]">
                                 <button
                                     onClick={() => reset()}
-                                    className="px-10 py-6 rounded-full text-[13px] font-black uppercase tracking-widest text-zinc-400 hover:text-white hover:bg-white/5 transition-all"
-                                    type="button"
+                                    className="px-10 py-6 rounded-none text-[13px] font-black uppercase tracking-wide"
                                 >
                                     Descartar
                                 </button>
@@ -312,8 +309,8 @@ function SettingsPage() {
                                     disabled={isSaving}
                                     onClick={handleSubmit(onSubmit)}
                                     className={cn(
-                                        "flex-1 flex items-center justify-center gap-4 px-10 py-6 rounded-full text-[13px] font-black uppercase tracking-widest transition-all duration-700 relative overflow-hidden group/save",
-                                        "bg-gradient-to-r from-orange-600 to-primary text-white shadow-[0_0_30px_rgba(255,100,0,0.4)] hover:shadow-[0_0_50px_rgba(255,100,0,0.6)] hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+                                        "flex-1 flex items-center justify-center gap-4 px-10 py-6 rounded-none text-[13px] font-black uppercase tracking-widest transition-all duration-700 relative overflow-hidden group/save",
+                                        "bg-white text-black hover:bg-zinc-200 active:scale-95 disabled:opacity-50"
                                     )}
                                     type="button"
                                 >
@@ -332,9 +329,9 @@ function SettingsPage() {
 
 function TabsTriggerActiveIndicator() {
     return (
-        <motion.div 
+         <motion.div 
             layoutId="active-nav-bg"
-            className="absolute inset-0 bg-white/[0.04] rounded-3xl -z-10 shadow-sm border border-white/[0.03]"
+            className="absolute inset-0 bg-white/10 rounded-none -z-10 border border-white/20"
             transition={{ type: "spring", stiffness: 350, damping: 35 }}
         />
     )
@@ -344,8 +341,8 @@ function Section({ label, children, right }: { label: string; children: React.Re
     return (
         <div className="space-y-8">
             <div className="flex items-center justify-between px-2">
-                <div className="flex items-center gap-4">
-                    <div className="h-px w-12 bg-gradient-to-r from-primary/60 to-transparent" />
+                 <div className="flex items-center gap-4">
+                    <div className="h-px w-12 bg-white/20" />
                     <p className="text-sm font-black uppercase tracking-[0.4em] text-zinc-400">{label}</p>
                 </div>
                 {right}
@@ -357,9 +354,9 @@ function Section({ label, children, right }: { label: string; children: React.Re
 
 function Card({ children, className }: { children: React.ReactNode; className?: string }) {
     return (
-        <div className={cn(
-            "glass-panel overflow-hidden bg-white/[0.015] border-white-[0.04] rounded-[2.5rem]",
-            "shadow-[0_30px_60px_-20px_rgba(0,0,0,0.6)] transition-all duration-700 hover:bg-white/[0.02] hover:border-white/10 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.8)]",
+         <div className={cn(
+            "overflow-hidden bg-white/[0.02] border border-white/5 rounded-none",
+            "transition-all duration-700 hover:bg-white/[0.04] hover:border-white/10",
             className
         )}>
             {children}

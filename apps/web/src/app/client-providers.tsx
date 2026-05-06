@@ -1,8 +1,6 @@
 import { ApiError } from "@/api/client/requests"
 import { WebsocketProvider } from "@/app/websocket-provider"
 import { PwaRegistry } from "@/components/pwa-registry"
-import { CustomCSSProvider } from "@/components/shared/custom-css-provider"
-import { CustomThemeProvider } from "@/components/shared/custom-theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 
@@ -54,12 +52,9 @@ export const ClientProviders: React.FC<ClientProvidersProps> = ({ children }) =>
                 <QueryClientProvider client={queryClient}>
                     <WebsocketProvider>
                         {children}
-                        <CustomThemeProvider />
                         <Toaster />
                         <PwaRegistry />
                     </WebsocketProvider>
-                    <CustomCSSProvider />
-                    {/*{import.meta.env.MODE === "development" && <React.Suspense fallback={null}>*/}
                     {/*    <ReactQueryDevtools />*/}
                     {/*</React.Suspense>}*/}
                 </QueryClientProvider>

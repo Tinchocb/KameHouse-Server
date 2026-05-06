@@ -1,15 +1,14 @@
-import { BulmaError } from "@/components/shared/bulma-error"
 import { useQueryClient } from "@tanstack/react-query"
 import { useLocation, useRouter } from "@tanstack/react-router"
 import React from "react"
+import { ErrorBoundary as ReactErrorBoundary, ErrorBoundaryProps as ReactErrorBoundaryProps } from "react-error-boundary"
 
 interface AppErrorBoundaryProps {
     error: any
-    reset?: () => void
     resetErrorBoundary?: () => void
 }
 
-export function AppErrorBoundary({ error, reset, resetErrorBoundary }: AppErrorBoundaryProps) {
+export function AppErrorBoundary({ error, resetErrorBoundary }: AppErrorBoundaryProps) {
     const router = useRouter()
     const queryClient = useQueryClient()
     const location = useLocation()
@@ -18,17 +17,11 @@ export function AppErrorBoundary({ error, reset, resetErrorBoundary }: AppErrorB
         if (resetErrorBoundary) {
             resetErrorBoundary()
         }
-        if (reset) {
-            reset()
-        }
-    }, [location.pathname])
+    }, [location.pathname, resetErrorBoundary])
 
     const handleReset = () => {
         if (resetErrorBoundary) {
             resetErrorBoundary()
-        }
-        if (reset) {
-            reset()
         }
         
         // Detect chunk loading errors (Failed to fetch dynamically imported module)
@@ -50,22 +43,41 @@ export function AppErrorBoundary({ error, reset, resetErrorBoundary }: AppErrorB
                              error?.message?.toLowerCase().includes("import");
 
     return (
-        <BulmaError
-            title={isChunkLoadError ? "Actualización disponible" : "Error en el cliente"}
-            reset={handleReset}
-        >
-            <p className="text-[#a1a1aa] mb-2 leading-relaxed text-sm">
+        <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center bg-black border border-zinc-800">
+            <h2 className="text-2xl font-bebas tracking-widest text-white mb-4 uppercase">
+                {isChunkLoadError ? "Actualización disponible" : "Error en el cliente"}
+            </h2>
+            <p className="text-zinc-400 mb-6 leading-relaxed text-sm max-w-md">
                 {isChunkLoadError 
                     ? "La aplicación ha sido actualizada. Haz click para recargar y obtener la última versión." 
                     : "Ha ocurrido un error inesperado en la interfaz que impidió cargar el módulo."}
             </p>
             {!isChunkLoadError && (
-                <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-md text-left overflow-hidden">
-                    <p className="text-red-400 font-mono text-xs truncate max-w-sm">
+                <div className="mb-8 p-4 bg-zinc-900 border border-zinc-800 text-left overflow-hidden w-full max-w-md">
+                    <p className="text-red-500 font-mono text-xs break-all">
                         {(error as Error)?.message || "Unknown Error"}
                     </p>
                 </div>
             )}
-        </BulmaError>
+            <button
+                onClick={handleReset}
+                className="px-8 py-3 bg-white text-black font-black text-xs uppercase tracking-[0.2em] hover:bg-zinc-200 transition-colors"
+            >
+                {isChunkLoadError ? "RECARGAR AHORA" : "REINTENTAR ACCESO"}
+            </button>
+        </div>
+    )
+}
+
+export function ErrorBoundary({ children, ...props }: Omit<ReactErrorBoundaryProps, "FallbackComponent"> & { className?: string }) {
+    return (
+        <div className={props.className}>
+            <ReactErrorBoundary
+                FallbackComponent={AppErrorBoundary}
+                {...props}
+            >
+                {children}
+            </ReactErrorBoundary>
+        </div>
     )
 }

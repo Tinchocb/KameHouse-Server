@@ -25,7 +25,7 @@ export function MediaStack({ stackCount = 3, className, ...props }: MediaStackPr
             {stackItems.map((idx) => (
                 <motion.div
                     key={idx}
-                    className="absolute inset-0 rounded-md bg-zinc-900 border-r-2 border-zinc-700 shadow-2xl overflow-hidden"
+                    className="absolute inset-0 bg-black border border-white/20 shadow-2xl overflow-hidden"
                     initial={false}
                     animate={{
                         x: 0,
@@ -50,8 +50,8 @@ export function MediaStack({ stackCount = 3, className, ...props }: MediaStackPr
                     }}
                 >
                     {/* Retro "marker" label style on the edge/spine */}
-                    <div className="absolute top-2 left-1 bottom-2 w-5 bg-zinc-100/90 rounded-sm flex items-center justify-center overflow-hidden">
-                        <span className="rotate-90 whitespace-nowrap text-[8px] font-mono font-black text-zinc-800 tracking-tighter opacity-70">
+                    <div className="absolute top-2 left-1 bottom-2 w-5 bg-white flex items-center justify-center overflow-hidden">
+                        <span className="rotate-90 whitespace-nowrap text-[8px] font-mono font-black text-black tracking-tighter">
                             VOL. {idx + 1}
                         </span>
                     </div>
@@ -63,7 +63,7 @@ export function MediaStack({ stackCount = 3, className, ...props }: MediaStackPr
                 className="relative z-20"
                 whileHover={{
                     x: -2,
-                    y: -6,
+                    y: -4,
                     rotateZ: -0.5,
                     transition: { type: "spring", stiffness: 300, damping: 25 }
                 }}
@@ -72,7 +72,7 @@ export function MediaStack({ stackCount = 3, className, ...props }: MediaStackPr
                 
                 {/* Visual indicator that it's a stack (ribbon or similar) */}
                 <div className="absolute -top-1 -right-1 z-30 flex items-center justify-center">
-                    <div className="bg-primary text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-lg border border-white/20">
+                    <div className="bg-white text-black text-[9px] font-black px-1.5 py-0.5 shadow-lg border border-white/20">
                         SERIE
                     </div>
                 </div>

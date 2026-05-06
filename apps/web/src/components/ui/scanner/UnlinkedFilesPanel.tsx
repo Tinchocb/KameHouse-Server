@@ -108,7 +108,7 @@ function FileCard({ file }: { file: GhostFile }) {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97 }}
-            className="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02] hover:bg-white/[0.04] transition-all duration-300"
+            className="border border-white/10 rounded-none overflow-hidden bg-white/[0.02] hover:bg-white/[0.05] transition-all duration-300"
         >
             {/* ─── Header row ─── */}
             <button
@@ -131,8 +131,8 @@ function FileCard({ file }: { file: GhostFile }) {
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                     <span className={cn(
-                        "text-xs font-black rounded-full px-2 py-0.5",
-                        confidence >= 70 ? "bg-amber-500/20 text-amber-400" : "bg-red-500/20 text-red-400"
+                        "text-xs font-black px-2 py-0.5 border",
+                        confidence >= 70 ? "border-white/20 text-white" : "border-zinc-700 text-zinc-500"
                     )}>
                         {confidence}%
                     </span>
@@ -159,7 +159,7 @@ function FileCard({ file }: { file: GhostFile }) {
                                     value={searchQuery}
                                     onChange={e => handleSearch(e.target.value)}
                                     placeholder="Buscar en TMDB..."
-                                    className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl pl-9 pr-4 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-primary/50 focus:bg-white/[0.07]"
+                                    className="w-full bg-white/[0.05] border border-white/10 rounded-none pl-9 pr-4 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-white/40 focus:bg-white/[0.08]"
                                 />
                                 {isFetching && (
                                     <LucideLoader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 animate-spin" />
@@ -175,13 +175,13 @@ function FileCard({ file }: { file: GhostFile }) {
                                             type="button"
                                             disabled={resolve.isPending}
                                             onClick={() => handleLink(r)}
-                                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/[0.03] hover:bg-primary/10 border border-transparent hover:border-primary/20 transition-all text-left group"
+                                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-none bg-white/[0.03] hover:bg-white/10 border border-transparent hover:border-white/20 transition-all text-left group"
                                         >
                                             {r.poster_path ? (
                                                 <img
                                                     src={`https://image.tmdb.org/t/p/w92${r.poster_path}`}
                                                     alt=""
-                                                    className="w-8 h-12 rounded object-cover shrink-0"
+                                                    className="w-8 h-12 rounded-none object-cover shrink-0"
                                                 />
                                             ) : (
                                                 <div className="w-8 h-12 rounded bg-white/[0.05] shrink-0" />
@@ -194,7 +194,7 @@ function FileCard({ file }: { file: GhostFile }) {
                                                     {r.media_type === "movie" ? "🎬 Película" : "📺 Serie"} · {(r.release_date ?? r.first_air_date ?? "").slice(0, 4)} · ID: {r.id}
                                                 </p>
                                             </div>
-                                            <LucideLink size={14} className="text-zinc-600 group-hover:text-primary shrink-0" />
+                                            <LucideLink size={14} className="text-zinc-600 group-hover:text-white shrink-0" />
                                         </button>
                                     ))}
                                 </div>
@@ -220,9 +220,9 @@ export function UnlinkedFilesPanel() {
     if (isLoading) return null
 
     if (unresolved.length === 0) return (
-        <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
-            <LucideCheck size={16} className="text-emerald-400 shrink-0" />
-            <p className="text-sm text-emerald-300 font-medium">Todos los archivos han sido identificados correctamente.</p>
+        <div className="flex items-center gap-3 px-5 py-4 rounded-none bg-white/5 border border-white/10">
+            <LucideCheck size={16} className="text-white shrink-0" />
+            <p className="text-sm text-zinc-300 font-medium">Todos los archivos han sido identificados correctamente.</p>
         </div>
     )
 
@@ -231,12 +231,12 @@ export function UnlinkedFilesPanel() {
             {/* ─── Header ─── */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                        <LucideAlertTriangle size={16} className="text-amber-400" />
+                    <div className="p-2 rounded-none bg-white/5 border border-white/10">
+                        <LucideAlertTriangle size={16} className="text-white" />
                     </div>
                     <div>
                         <p className="text-sm font-black text-zinc-200">Archivos sin identificar</p>
-                        <p className="text-xs text-zinc-500">{unresolved.length} archivo{unresolved.length !== 1 ? "s" : ""} requieren vinculación manual</p>
+                        <p className="text-xs text-zinc-600">{unresolved.length} archivo{unresolved.length !== 1 ? "s" : ""} requieren vinculación manual</p>
                     </div>
                 </div>
                 <button

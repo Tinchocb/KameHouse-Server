@@ -33,7 +33,6 @@ type (
 		logger              *zerolog.Logger
 		wsEventManager      events.WSEventManagerInterface
 		db                  *db.Database                   // Database instance is required to update the local files.
-		db                  *db.Database                   // Database instance is required to update the local files.
 		metadataProviderRef *util.Ref[metadata_provider.Provider]
 		logsDir             string
 		scanning            atomic.Bool
@@ -47,8 +46,6 @@ type (
 		Logger              *zerolog.Logger
 		WSEventManager      events.WSEventManagerInterface
 		Enabled             bool
-		Database            *db.Database
-		PlatformRef         *util.Ref[platform.Platform]
 		WaitTime            time.Duration
 		MetadataProviderRef *util.Ref[metadata_provider.Provider]
 		LogsDir             string
@@ -73,8 +70,6 @@ func New(opts *NewAutoScannerOptions) *AutoScanner {
 		enabled:             opts.Enabled,
 		platformRef:         opts.PlatformRef,
 		logger:              opts.Logger,
-		wsEventManager:      opts.WSEventManager,
-		db:                  opts.Database,
 		wsEventManager:      opts.WSEventManager,
 		db:                  opts.Database,
 		metadataProviderRef: opts.MetadataProviderRef,

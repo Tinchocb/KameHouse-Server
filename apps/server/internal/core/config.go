@@ -59,6 +59,7 @@ type Config struct {
 	} `mapstructure:"extensions"`
 	Metadata struct {
 		TMDBApiKey       string `mapstructure:"tmdbApiKey"`
+		TMDBLanguage     string `mapstructure:"tmdbLanguage"`
 		FanArtApiKey     string `mapstructure:"fanartApiKey"`     // FanArt.tv — logos, clearart, thumbs (free key from fanart.tv/get-an-api-key)
 		OMDbApiKey       string `mapstructure:"omdbApiKey"`       // OMDb — ratings, runtime, director (free key, 1k req/day)
 		OpenSubsApiKey   string `mapstructure:"openSubsApiKey"`   // OpenSubtitles v1 REST — remote subtitle search (free key)
@@ -188,6 +189,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("offline.assetDir", "$KAMEHOUSE_DATA_DIR/offline/assets")
 	v.SetDefault("extensions.dir", "$KAMEHOUSE_DATA_DIR/extensions")
 	v.SetDefault("metadata.tmdbApiKey", "")
+	v.SetDefault("metadata.tmdbLanguage", "es-MX")
 	v.SetDefault("metadata.fanartApiKey", "")
 	v.SetDefault("metadata.omdbApiKey", "")
 	v.SetDefault("metadata.openSubsApiKey", "")
@@ -373,6 +375,7 @@ dir = "$KAMEHOUSE_DATA_DIR/extensions"
 
 [metadata]
 tmdbApiKey = ""
+tmdbLanguage = "es-MX"
 fanartApiKey = ""
 omdbApiKey = ""
 openSubsApiKey = ""

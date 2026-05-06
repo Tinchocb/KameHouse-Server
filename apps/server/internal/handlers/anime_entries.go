@@ -10,7 +10,6 @@ import (
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
-	"kamehouse/internal/hook"
 	"kamehouse/internal/library/anime"
 	librarymetadata "kamehouse/internal/library/metadata"
 
@@ -72,17 +71,7 @@ func (h *Handler) getAnimeEntry(c echo.Context, lfs []*dto.LocalFile, mId int) (
 		return nil, err
 	}
 
-	fillerEvent := new(anime.AnimeEntryFillerHydrationEvent)
-	fillerEvent.Entry = entry
-	err = hook.GlobalHookManager.OnAnimeEntryFillerHydration().Trigger(fillerEvent)
-	if err != nil {
-		return nil, h.RespondWithError(c, err)
-	}
-	entry = fillerEvent.Entry
-
-	if !fillerEvent.DefaultPrevented {
-		h.App.FillerManager.HydrateFillerData(fillerEvent.Entry)
-	}
+	h.App.FillerManager.HydrateFillerData(entry)
 
 	// ── TMDB Episode Enrichment ──────────────────────────────────────────────────
 	// If the media has a TmdbId and episodes are missing synopsis/image,

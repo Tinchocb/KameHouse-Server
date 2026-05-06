@@ -3,11 +3,7 @@ package streaming
 import (
 	"context"
 	"fmt"
-	"sort"
 	"strconv"
-	"strings"
-	"sync"
-	"time"
 
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models/dto"
@@ -48,7 +44,7 @@ func NewStreamOrchestrator(database *db.Database, logger *zerolog.Logger, cache 
 	// Probe HW accel once at process startup (result is cached in sync.Once).
 	hwProbe := msTranscoder.ProbeHardwareAccel(ffmpegPath, logger)
 
-	sem := NewSemaphore(MaxTranscodeSessions)
+	sem := NewSemaphore(3)
 	trans := NewTranscoder(ffmpegPath, sem, logger)
 
 	// Wire best HW accel into the transcoder (nil = CPU libx264 fallback).
@@ -155,5 +151,6 @@ func (o *StreamOrchestrator) Orchestrate(ctx context.Context, mediaId int, clien
 	}
 	return o.HandleRequest(ctx, strconv.Itoa(mediaId), profile)
 }
+
 
 

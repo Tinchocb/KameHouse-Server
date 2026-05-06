@@ -7,7 +7,6 @@ import (
 
 const (
 	TMDBPlatform Platform = "tmdb"
-	MalPlatform     Platform = "mal"
 )
 
 type (
@@ -30,7 +29,6 @@ type (
 	AnimeMappings struct {
 		AnimeplanetId string `json:"animeplanetId,omitempty"`
 		KitsuId       int    `json:"kitsuId,omitempty"`
-		MalId         int    `json:"malId,omitempty"`
 		Type          string `json:"type,omitempty"`
 
 		AnisearchId   int    `json:"anisearchId,omitempty"`

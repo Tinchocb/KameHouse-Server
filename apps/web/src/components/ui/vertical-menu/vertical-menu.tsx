@@ -1,4 +1,4 @@
-import { SeaLink } from "@/components/shared/sea-link"
+import { Link } from "@tanstack/react-router"
 import { cva, VariantProps } from "class-variance-authority"
 import * as React from "react"
 import { useContext } from "react"
@@ -39,7 +39,7 @@ export const VerticalMenuAnatomy = defineStyleAnatomy({
     }),
     itemContent: cva([
         "UI-VerticalMenu__itemContent",
-        "w-full flex items-center relative",
+        "w-full flex items-center relative transition-[padding,width] ease-&lsqb;cubic-bezier(0.34,1.56,0.64,1)&rsqb; duration-300",
     ], {
         variants: {
             size: {
@@ -267,9 +267,9 @@ export const VerticalMenu = React.forwardRef<HTMLDivElement, VerticalMenuProps>(
                         <React.Fragment key={item.name + idx}>
                             {!item.subContent ?
                                 item.href ? (
-                                    <SeaLink href={item.href} {...itemProps(item)} data-vertical-menu-item-link={item.name}>
+                                    <Link to={item.href} {...itemProps(item)} data-vertical-menu-item-link={item.name}>
                                         <ItemContent {...item} />
-                                    </SeaLink>
+                                    </Link>
                                 ) : (
                                     <button {...itemProps(item)} data-vertical-menu-item-button={item.name}>
                                         <ItemContent {...item} />

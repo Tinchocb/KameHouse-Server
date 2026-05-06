@@ -27,13 +27,11 @@ func (h *Handler) RegisterStreamingRoutes(v1 *echo.Group) {
 	// Video Thumbnail
 	v1.GET("/video-thumbnail", h.HandleGetVideoThumbnail)
 
-	// Addons
-	v1.GET("/addons/subtitles/:type/:id", h.HandleGetAddonSubtitles)
 
 	// VideoCore insights
-	v1.GET("/videocore/insight/character/:malId", h.HandleVideoCoreInSightGetCharacterDetails)
 	v1.GET("/videocore/insights/:episodeId", h.HandleGetVideoInsights)
 
 	// Playback telemetry
 	v1.POST("/playback/sync", h.HandlePlaybackSync)
 }
+

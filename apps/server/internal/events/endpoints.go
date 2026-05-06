@@ -8,7 +8,6 @@ const (
 
 	ClearFileCacheMediastreamVideoFilesEndpoint        = "FILECACHE-clear-file-cache-mediastream-video-files"
 	CustomSourceListAnimeEndpoint                      = "CUSTOM-SOURCE-custom-source-list-anime"
-	CustomSourceListAnimeEndpoint                      = "CUSTOM-SOURCE-custom-source-list-anime"
 	DeleteLocalFilesEndpoint                           = "LOCALFILES-delete-local-files"
 	DeleteLogsEndpoint                                 = "STATUS-delete-logs"
 
@@ -27,23 +26,19 @@ const (
 	GetAnnouncementsEndpoint                           = "STATUS-get-announcements"
 	GetCPUProfileEndpoint                              = "STATUS-get-c-p-u-profile"
 	GetContinuityWatchHistoryEndpoint                  = "CONTINUITY-get-continuity-watch-history"
-	GetContinuityWatchHistoryEndpoint                  = "CONTINUITY-get-continuity-watch-history"
 	GetContinuityWatchHistoryItemEndpoint              = "CONTINUITY-get-continuity-watch-history-item"
 	GetDocsEndpoint                                    = "DOCS-get-docs"
-	GetFileCacheMediastreamVideoFilesTotalSizeEndpoint = "FILECACHE-get-file-cache-mediastream-video-files-total-size"
 	GetFileCacheMediastreamVideoFilesTotalSizeEndpoint = "FILECACHE-get-file-cache-mediastream-video-files-total-size"
 	GetFileCacheTotalSizeEndpoint                      = "FILECACHE-get-file-cache-total-size"
 	GetGoRoutineProfileEndpoint                        = "STATUS-get-go-routine-profile"
 	GetHomeItemsEndpoint                               = "STATUS-get-home-items"
 	GetLatestLogContentEndpoint                        = "STATUS-get-latest-log-content"
 	GetLibraryCollectionEndpoint                       = "ANIME-COLLECTION-get-library-collection"
-	GetLibraryCollectionEndpoint                       = "ANIME-COLLECTION-get-library-collection"
 	GetLibraryExplorerFileTreeEndpoint                 = "LIBRARY-EXPLORER-get-library-explorer-file-tree"
 	GetLocalFilesEndpoint                              = "LOCALFILES-get-local-files"
 
 	GetLogFilenamesEndpoint                            = "STATUS-get-log-filenames"
 
-	GetMediaMetadataParentEndpoint                     = "METADATA-get-media-metadata-parent"
 	GetMediaMetadataParentEndpoint                     = "METADATA-get-media-metadata-parent"
 	GetMediastreamSettingsEndpoint                     = "MEDIASTREAM-get-mediastream-settings"
 	GetMemoryProfileEndpoint                           = "STATUS-get-memory-profile"
@@ -57,7 +52,6 @@ const (
 	GetUpcomingEpisodesEndpoint                        = "ANIME-ENTRIES-get-upcoming-episodes"
 	GetVideoThumbnailEndpoint                          = "THUMBNAIL-get-video-thumbnail"
 	GettingStartedEndpoint                             = "SETTINGS-getting-started"
-	ImportLocalFilesEndpoint                           = "LOCALFILES-import-local-files"
 	ImportLocalFilesEndpoint                           = "LOCALFILES-import-local-files"
 
 	LoadLibraryExplorerDirectoryChildrenEndpoint       = "LIBRARY-EXPLORER-load-library-explorer-directory-children"
@@ -92,7 +86,6 @@ const (
 
 	RefreshLibraryExplorerFileTreeEndpoint             = "LIBRARY-EXPLORER-refresh-library-explorer-file-tree"
 	RemoveEmptyDirectoriesEndpoint                     = "LOCALFILES-remove-empty-directories"
-	RemoveEmptyDirectoriesEndpoint                     = "LOCALFILES-remove-empty-directories"
 	RemoveFileCacheBucketEndpoint                      = "FILECACHE-remove-file-cache-bucket"
 	RemoveFillerDataEndpoint                           = "METADATA-remove-filler-data"
 
@@ -100,13 +93,11 @@ const (
 	RequestMediastreamMediaContainerEndpoint           = "MEDIASTREAM-request-mediastream-media-container"
 
 	SaveMediaMetadataParentEndpoint                    = "METADATA-save-media-metadata-parent"
-	SaveMediaMetadataParentEndpoint                    = "METADATA-save-media-metadata-parent"
 	SaveMediaPlayerSettingsEndpoint                    = "SETTINGS-save-media-player-settings"
 	SaveMediastreamSettingsEndpoint                    = "MEDIASTREAM-save-mediastream-settings"
 	SaveSettingsEndpoint                               = "SETTINGS-save-settings"
 	ScanLocalFilesEndpoint                             = "SCAN-scan-local-files"
 	SetOfflineModeEndpoint                             = "LOCAL-set-offline-mode"
-	StartDefaultMediaPlayerEndpoint                    = "MEDIAPLAYER-start-default-media-player"
 	StartDefaultMediaPlayerEndpoint                    = "MEDIAPLAYER-start-default-media-player"
 
 	SuperUpdateLocalFilesEndpoint                      = "LOCALFILES-super-update-local-files"
@@ -122,15 +113,12 @@ const (
 	TorrentstreamStartStreamEndpoint                   = "TORRENTSTREAM-torrentstream-start-stream"
 	TorrentstreamStopStreamEndpoint                    = "TORRENTSTREAM-torrentstream-stop-stream"
 	UpdateAnimeEntryProgressEndpoint                   = "ANIME-ENTRIES-update-anime-entry-progress"
-	UpdateAnimeEntryProgressEndpoint                   = "ANIME-ENTRIES-update-anime-entry-progress"
 	UpdateAnimeEntryRepeatEndpoint                     = "ANIME-ENTRIES-update-anime-entry-repeat"
 	UpdateContinuityWatchHistoryItemEndpoint           = "CONTINUITY-update-continuity-watch-history-item"
-	UpdateHomeItemsEndpoint                            = "STATUS-update-home-items"
 	UpdateHomeItemsEndpoint                            = "STATUS-update-home-items"
 	UpdateLocalFileDataEndpoint                        = "LOCALFILES-update-local-file-data"
 	UpdateLocalFilesEndpoint                           = "LOCALFILES-update-local-files"
 
 
 	UpdateThemeEndpoint                                = "THEME-update-theme"
-	VideoCoreInSightGetCharacterDetailsEndpoint        = "VIDEOCORE-video-core-in-sight-get-character-details"
 )

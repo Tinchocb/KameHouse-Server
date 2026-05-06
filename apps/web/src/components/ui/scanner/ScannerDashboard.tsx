@@ -1,11 +1,7 @@
 import React, { useCallback, useMemo, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { useAppStore } from "@/lib/store"
-import { useWebSocket } from "@/hooks/use-websocket"
-import { getApiWebSocketUrl } from "@/api/client/server-url"
-import { WSEvents, type ScannerMessage } from "@/lib/server/ws-events"
-import { useScanLocalFiles } from "@/api/hooks/scan.hooks"
-import { useGetScanSummaries } from "@/api/hooks/scan_summary.hooks"
+import { type ScannerMessage } from "@/lib/server/ws-events"
+import { useScanLocalFiles, useGetScanSummaries } from "@/api/hooks/scan.hooks"
 import { cn } from "@/components/ui/core/styling"
 import {
     LucideActivity, LucideCheck, LucideChevronRight,
@@ -14,8 +10,6 @@ import {
     LucideRadar, LucideRefreshCw, LucideScissors,
     LucideSearch, LucideShield, LucideZap,
 } from "lucide-react"
-import { useQueryClient } from "@tanstack/react-query"
-import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { useRef } from "react"
 
 // ─── Pipeline stages ─────────────────────────────────────────────────────────
@@ -55,8 +49,8 @@ const PIPELINE_STAGES: PipelineStage[] = [
         shortLabel: "Bayesian",
         description: "Motor Bayesiano con scoring Dice-coefficient",
         icon: <LucideShield size={18} />,
-        color: "text-primary",
-        glowColor: "rgba(249,115,22,0.4)",
+        color: "text-white",
+        glowColor: "rgba(255,255,255,0.1)",
     },
     {
         id: "probe",
@@ -87,71 +81,12 @@ const PIPELINE_STAGES: PipelineStage[] = [
     },
 ]
 
-// ─── Hook ─────────────────────────────────────────────────────────────────────
-
-interface ScanEvent {
-    status: ScannerMessage["status"]
-    current?: number
-    total?: number
-    file?: string
-    removed?: number
-    total_processed?: number
-    duration_seconds?: number
-    timestamp: number
-}
-
-function useScannerDashboard() {
-    const queryClient = useQueryClient()
-    const { isScanning, scanProgress, currentScanningFile } = useAppStore()
-    const [events, setEvents] = useState<(ScanEvent & { id: string })[]>([])
-    const [activeStageIdx, setActiveStageIdx] = useState<number>(-1)
-    const [lastFinish, setLastFinish] = useState<ScanEvent | null>(null)
-    const [pruneCount, setPruneCount] = useState<number>(0)
-
-    const wsUrl = useMemo(() => getApiWebSocketUrl(), [])
-
-    useWebSocket(wsUrl, (eventData) => {
-        if (!eventData || typeof eventData !== "object" || eventData.type !== WSEvents.LIBRARY_SCAN) return
-        const data = eventData.payload as ScannerMessage
-        const evt: ScanEvent & { id: string } = {
-            ...data,
-            timestamp: Date.now(),
-            id: Math.random().toString(36).substring(2, 9) + Date.now()
-        }
-
-        setEvents(prev => [evt, ...prev].slice(0, 200))
-
-        switch (data.status) {
-            case "START":
-                setActiveStageIdx(0)
-                setPruneCount(0)
-                setLastFinish(null)
-                break
-            case "PROCESSING":
-                setActiveStageIdx(2) // Bayesian resolve is when files flow
-                break
-            case "PRUNED":
-                setActiveStageIdx(5) // Prune stage
-                setPruneCount(data.removed ?? 0)
-                break
-            case "FINISH":
-                setActiveStageIdx(-1)
-                setLastFinish(evt)
-                queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key] })
-                queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key] })
-                queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetMissingEpisodes.key] })
-                queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.LIBRARY_EXPLORER.GetLibraryExplorerFileTree.key] })
-                break
-        }
-    })
-
-    return { isScanning, scanProgress, scanningFile: currentScanningFile, events, activeStageIdx, lastFinish, pruneCount }
-}
+import { useScannerEvents, type ScanEvent } from "@/hooks/use-scanner-events"
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ScannerDashboard() {
-    const { isScanning, scanProgress, scanningFile, events, activeStageIdx, lastFinish, pruneCount } = useScannerDashboard()
+    const { isScanning, scanProgress, scanningFile, events, activeStageIdx, lastFinish, pruneCount } = useScannerEvents()
     const { mutate: scan, isPending: scanPending } = useScanLocalFiles()
     const { data: summaries } = useGetScanSummaries()
 
@@ -205,11 +140,11 @@ export function ScannerDashboard() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -20, scale: 0.97 }}
                         transition={{ type: "spring", stiffness: 300, damping: 28 }}
-                        className="relative overflow-hidden rounded-[2.5rem] border border-primary/20 bg-primary/5 p-10 shadow-[0_0_80px_rgba(249,115,22,0.12)]"
+                        className="relative overflow-hidden rounded-none border border-white/20 bg-white/5 p-10"
                     >
-                        <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden">
-                            <div className="absolute inset-0 animate-[spin_4s_linear_infinite] opacity-20"
-                                style={{ background: "conic-gradient(from 0deg, transparent 60%, rgba(249,115,22,0.8) 80%, transparent 100%)" }} />
+                        <div className="absolute inset-0 rounded-none overflow-hidden">
+                            <div className="absolute inset-0 animate-[spin_4s_linear_infinite] opacity-10"
+                                style={{ background: "conic-gradient(from 0deg, transparent 60%, rgba(255,255,255,0.5) 80%, transparent 100%)" }} />
                         </div>
 
                         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
@@ -217,15 +152,15 @@ export function ScannerDashboard() {
 
                             <div className="flex-1 min-w-0 space-y-3">
                                 <div className="flex items-center gap-4">
-                                    <LucideFlame className="w-6 h-6 text-primary animate-pulse" />
+                                    <LucideFlame className="w-6 h-6 text-white animate-pulse" />
                                     <span className="font-black text-white text-2xl tracking-tight">Escaneando Biblioteca</span>
                                 </div>
                                 <p className="text-sm font-mono text-zinc-400 truncate" title={scanningFile}>
                                     {scanningFile || "Preparando pipeline..."}
                                 </p>
-                                <div className="w-full bg-black/40 rounded-full h-2 overflow-hidden mt-3">
+                                <div className="w-full bg-white/10 rounded-none h-1 overflow-hidden mt-3">
                                     <motion.div
-                                        className="h-full bg-primary rounded-full shadow-[0_0_16px_rgba(249,115,22,0.6)]"
+                                        className="h-full bg-white rounded-none"
                                         style={{ width: `${scanProgress}%` }}
                                         transition={{ type: "spring", stiffness: 80 }}
                                     />
@@ -233,8 +168,8 @@ export function ScannerDashboard() {
                             </div>
 
                             <div className="text-right shrink-0">
-                                <span className="font-bebas text-7xl text-primary leading-none">{Math.round(scanProgress)}</span>
-                                <span className="font-bebas text-3xl text-primary/60">%</span>
+                                <span className="font-bebas text-7xl text-white leading-none">{Math.round(scanProgress)}</span>
+                                <span className="font-bebas text-3xl text-zinc-500">%</span>
                             </div>
                         </div>
                     </motion.div>
@@ -248,7 +183,7 @@ export function ScannerDashboard() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0 }}
-                        className="flex items-center gap-6 px-8 py-6 rounded-3xl border border-emerald-500/20 bg-emerald-500/5"
+                        className="flex items-center gap-6 px-8 py-6 rounded-none border border-white/20 bg-white/5"
                     >
                         <LucideCheck className="w-6 h-6 text-emerald-400 shrink-0" />
                         <div className="flex-1 min-w-0">
@@ -289,27 +224,27 @@ export function ScannerDashboard() {
                     <ScanActionCard
                         label="FastScan"
                         desc="Detecta solo archivos nuevos o modificados (CRC32). Ideal para uso diario."
-                        icon={<LucideZap size={24} className="text-primary" />}
+                        icon={<LucideZap size={24} className="text-white" />}
                         onClick={startFastScan}
                         disabled={isScanning || scanPending}
                         loading={isScanning}
-                        accentColor="primary"
+                        accentColor="white"
                     />
                     <ScanActionCard
                         label="DeepScan"
                         desc="Vuelve a procesar todos los archivos. Fuerza re-identificación completa."
-                        icon={<LucideRefreshCw size={24} className="text-violet-400" />}
+                        icon={<LucideRefreshCw size={24} className="text-zinc-400" />}
                         onClick={startDeepScan}
                         disabled={isScanning || scanPending}
                         loading={false}
-                        accentColor="violet"
+                        accentColor="zinc"
                     />
                     <ScanActionCard
                         label="Analizador de Logs"
                         desc="Sube un log de escaneo y analiza el resultado con el visor de trazas."
-                        icon={<LucideFilter size={24} className="text-sky-400" />}
+                        icon={<LucideFilter size={24} className="text-zinc-500" />}
                         href="/scan-log-viewer"
-                        accentColor="sky"
+                        accentColor="zinc"
                     />
                 </div>
             </section>
@@ -338,7 +273,7 @@ export function ScannerDashboard() {
 function SectionHeader({ label, icon }: { label: string; icon: React.ReactNode }) {
     return (
         <div className="flex items-center gap-4">
-            <div className="h-px w-12 bg-gradient-to-r from-primary/60 to-transparent" />
+            <div className="h-px w-12 bg-white/20" />
             <span className="text-sm font-black uppercase tracking-[0.4em] text-zinc-400 flex items-center gap-3">
                 {icon}
                 {label}
@@ -360,11 +295,11 @@ function PipelineStageCard({ stage, isActive, isDone }: {
             } : {}}
             transition={isActive ? { duration: 1.5, repeat: Infinity } : {}}
             className={cn(
-                "relative p-7 rounded-[2rem] border transition-all duration-700 overflow-hidden group",
+                "relative p-7 rounded-none border transition-all duration-700 overflow-hidden group",
                 isActive
-                    ? "border-white/20 bg-white/[0.06]"
+                    ? "border-white/40 bg-white/10"
                     : isDone
-                        ? "border-white/10 bg-white/[0.02]"
+                        ? "border-white/20 bg-white/5"
                         : "border-white/5 bg-black/20"
             )}
         >
@@ -423,9 +358,8 @@ function ScanActionCard({
     accentColor: "primary" | "violet" | "sky"
 }) {
     const colors: Record<string, { border: string; bg: string; glow: string; text: string }> = {
-        primary: { border: "border-primary/20", bg: "hover:bg-primary/10", glow: "hover:shadow-[0_0_40px_rgba(249,115,22,0.15)]", text: "text-primary" },
-        violet: { border: "border-violet-500/20", bg: "hover:bg-violet-500/10", glow: "hover:shadow-[0_0_40px_rgba(139,92,246,0.15)]", text: "text-violet-400" },
-        sky: { border: "border-sky-500/20", bg: "hover:bg-sky-500/10", glow: "hover:shadow-[0_0_40px_rgba(14,165,233,0.15)]", text: "text-sky-400" },
+        white: { border: "border-white/20", bg: "hover:bg-white/10", glow: "", text: "text-white" },
+        zinc: { border: "border-white/10", bg: "hover:bg-white/5", glow: "", text: "text-zinc-400" },
     }
     const c = colors[accentColor]
 
@@ -436,9 +370,9 @@ function ScanActionCard({
         <Wrapper
             {...(wrapperProps as any)}
             className={cn(
-                "group relative block p-8 rounded-[2.5rem] border bg-white/[0.02] transition-all duration-500 text-left",
-                c.border, c.bg, c.glow,
-                disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                "group relative block p-8 rounded-none border bg-white/[0.02] transition-all duration-500 text-left",
+                c.border, c.bg,
+                disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-white/10 active:scale-[0.98]"
             )}
         >
             <div className="space-y-5">
@@ -491,7 +425,7 @@ function EventFeed({ events }: { events: ScanEvent[] }) {
         .slice(0, 50)
 
     return (
-        <div className="glass-panel rounded-[2rem] overflow-hidden border-white/5 bg-black/20">
+        <div className="rounded-none overflow-hidden border border-white/5 bg-black/20">
             <div
                 ref={listRef}
                 className="max-h-80 overflow-y-auto divide-y divide-white/[0.03]"
@@ -503,11 +437,11 @@ function EventFeed({ events }: { events: ScanEvent[] }) {
                         animate={{ opacity: 1, x: 0 }}
                         className="flex items-center gap-5 px-8 py-4"
                     >
-                        <div className={cn("w-2 h-2 rounded-full shrink-0", {
-                            "bg-blue-400": evt.status === "START",
-                            "bg-zinc-500": evt.status === "PROCESSING",
-                            "bg-rose-400": evt.status === "PRUNED",
-                            "bg-emerald-400": evt.status === "FINISH",
+                        <div className={cn("w-2 h-2 rounded-none shrink-0", {
+                            "bg-white": evt.status === "START",
+                            "bg-zinc-600": evt.status === "PROCESSING",
+                            "bg-zinc-400": evt.status === "PRUNED",
+                            "bg-white": evt.status === "FINISH",
                         })} />
                         <span className={cn("text-sm font-mono truncate flex-1", getEventColor(evt.status))}>
                             {getEventLabel(evt)}
@@ -546,18 +480,18 @@ function ScanHistory({ summaries }: { summaries: Record<string, any>[] }) {
                 }) : "—"
 
                 return (
-                    <div key={idx} className="p-7 rounded-[2rem] border border-white/5 bg-white/[0.02] hover:bg-white/[0.03] hover:border-white/10 transition-all space-y-4 group">
-                        <div className="flex items-center gap-3 text-xs font-black uppercase tracking-widest text-zinc-600">
+                    <div key={idx} className="p-7 rounded-none border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/20 transition-all space-y-4 group">
+                        <div className="flex items-center gap-3 text-xs font-black uppercase tracking-widest text-zinc-500">
                             <LucideHistory size={14} />
                             {createdAt}
                         </div>
                         <div className="flex items-baseline gap-3">
                             <span className="font-bebas text-5xl text-white">{files}</span>
-                            <span className="text-sm text-zinc-500">archivos</span>
+                            <span className="text-sm text-zinc-600">archivos</span>
                         </div>
                         <div className="flex items-center gap-4 text-sm text-zinc-500">
-                            <span className="text-emerald-400 font-bold">{matched} match</span>
-                            {unmatched.length > 0 && <span className="text-rose-400">· {unmatched.length} sin match</span>}
+                            <span className="text-white font-bold">{matched} match</span>
+                            {unmatched.length > 0 && <span className="text-zinc-400 border border-white/10 px-2 py-0.5 text-[10px]">· {unmatched.length} sin match</span>}
                         </div>
                     </div>
                 )
@@ -578,16 +512,13 @@ function ProgressRing({ progress, size, stroke }: { progress: number; size: numb
                 stroke="rgba(255,255,255,0.05)" strokeWidth={stroke} fill="none" />
             <motion.circle
                 cx={center} cy={center} r={radius}
-                stroke="rgb(249,115,22)"
+                stroke="white"
                 strokeWidth={stroke}
                 fill="none"
-                strokeLinecap="round"
+                strokeLinecap="square"
                 strokeDasharray={circumference}
                 animate={{ strokeDashoffset: offset }}
                 transition={{ type: "spring", stiffness: 60, damping: 15 }}
-                style={{
-                    filter: "drop-shadow(0 0 8px rgba(249,115,22,0.6))",
-                }}
             />
             <text
                 x={center} y={center}

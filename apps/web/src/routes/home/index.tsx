@@ -7,7 +7,7 @@ import type {
 } from "@/api/generated/types"
 import { HeroBanner, type HeroBannerItem, HeroBannerSkeleton } from "@/components/ui/hero-banner"
 import { Swimlane, type SwimlaneItem, SwimlaneSkeleton } from "@/components/ui/swimlane"
-import { ErrorBoundary } from "@/components/shared/error-boundary"
+import { ErrorBoundary } from "@/components/shared/app-error-boundary"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Sparkles, Zap, Globe2, Clapperboard } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"

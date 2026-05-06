@@ -17,16 +17,14 @@ export const TabsAnatomy = defineStyleAnatomy({
     ]),
     trigger: cva([
         "UI-Tabs__trigger appearance-none shadow-none",
-        "inline-flex h-full items-center justify-center whitespace-nowrap px-3 py-1.5 text-sm text-[--muted] font-medium ring-offset-[--background]",
-        "transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        "disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex h-full items-center justify-center whitespace-nowrap px-4 py-1.5 text-[10px] font-black uppercase tracking-widest text-zinc-500",
+        "transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50",
         "border-transparent border-b-2 -mb-px",
-        "data-[state=active]:border-[--brand] data-[state=active]:text-[--foreground]",
+        "data-[state=active]:border-white data-[state=active]:text-white",
     ]),
     content: cva([
         "UI-Tabs__content",
-        "ring-offset-[--background]",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--ring] focus-visible:ring-offset-2",
+        "focus-visible:outline-none",
     ]),
 })
 

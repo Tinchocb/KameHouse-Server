@@ -8,9 +8,9 @@ import { motion } from "framer-motion"
 // ─── Intelligence tag colours ─────────────────────────────────────────────────
 
 const TAG_STYLES: Record<string, string> = {
-    EPIC:    "text-amber-400",
+    EPIC:    "text-white",
     FILLER:  "text-zinc-500",
-    SPECIAL: "text-blue-400",
+    SPECIAL: "text-zinc-300",
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -26,7 +26,7 @@ export interface MediaCardProps {
     /** Enforce strict aspect ratio */
     aspect?: CardAspect
     progress?: number
-    progressColor?: "white" | "orange"
+    progressColor?: "white" | "zinc"
     /** Intelligence ContentTag — rendered as a tiny bottom label */
     intelligenceTag?: string
     /** Quick metadata for the hover ribbon */
@@ -66,7 +66,7 @@ export const MediaCard = React.memo(function MediaCard({
     availabilityType,
     aspect = "poster",
     progress,
-    progressColor = "orange",
+    progressColor = "white",
     intelligenceTag,
     year,
     rating,
@@ -85,149 +85,98 @@ export const MediaCard = React.memo(function MediaCard({
             onKeyDown={(e) => e.key === "Enter" && onClick?.()}
             layoutId={layoutId}
             whileHover={{ 
-                rotateY: 5, 
-                rotateX: -2,
-                transition: { duration: 0.4, ease: "easeOut" }
+                scale: 1.02,
+                transition: { duration: 0.2, ease: "easeOut" }
             }}
             className={cn(
-                // Base — group for child hover triggers
-                "group/card relative shrink-0 cursor-pointer overflow-hidden rounded-2xl perspective-1000",
-                // Stremio-style subtle border — brightens on hover
-                "border border-white/5 hover:border-white/20",
-                // Flat lift: scale only, no translate — hardware-composited
-                "transition-all duration-500 cubic-bezier(0.16, 1, 0.3, 1) will-change-transform",
-                "hover:-translate-y-4 hover:scale-[1.05] hover:z-50",
-                "hover:shadow-[0_40px_80px_rgba(0,0,0,0.8),0_0_40px_rgba(255,107,0,0.25)]",
-                // Aria / focus ring
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40",
-                // Intrinsic sizing by aspect ratio
+                // Base
+                "group/card relative shrink-0 cursor-pointer overflow-hidden rounded-none border border-zinc-800 transition-all duration-200",
+                "bg-black hover:border-zinc-500 hover:z-50",
+                // Intrinsic sizing
                 isPoster
-                    ? "aspect-[2/3] w-[140px] md:w-[170px] lg:w-[200px]"
-                    : "aspect-[16/9] w-[240px] md:w-[300px] lg:w-[340px]",
+                    ? "aspect-[2/3] w-[145px] md:w-[175px] lg:w-[210px]"
+                    : "aspect-[16/9] w-[250px] md:w-[320px] lg:w-[360px]",
                 className,
             )}
-            style={{
-                aspectRatio: isPoster ? '2 / 3' : '16 / 9',
-            }}
         >
-            {/* ── Poster / Backdrop image (Deferred) ────────────────────── */}
+            {/* ── Artwork (Deferred) ────────────────────── */}
             <DeferredImage
                 src={artwork}
                 alt={title}
-                className="absolute inset-0 h-full w-full select-none object-cover transition-transform duration-700 group-hover/card:scale-110 group-hover/card:brightness-110"
+                className="absolute inset-0 h-full w-full select-none object-cover grayscale transition-all duration-500 group-hover/card:grayscale-0 group-hover/card:scale-105"
             />
 
-            {/* ── Spotlight Shine Effect (Hover) ────────────────────────── */}
-            <div className="absolute inset-0 z-10 opacity-0 group-hover/card:opacity-100 transition-opacity duration-700 pointer-events-none">
-                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent -translate-x-full group-hover/card:animate-[shine_1s_ease-in-out_forwards]" />
-            </div>
-
-            {/* ── Top-right: source icon (Folder / Zap) ─────────────────── */}
+            {/* ── Top-right: Source Icon ─────────────────── */}
             {availabilityType && (
-                <div className="absolute right-1.5 top-1.5 z-20">
-                    <span
-                        title={
-                            availabilityType === "FULL_LOCAL"
-                                ? "Local"
-                                : availabilityType === "HYBRID"
-                                  ? "Híbrido"
-                                  : "Solo Online"
-                        }
-                        className="flex items-center justify-center rounded bg-black/60 p-1 backdrop-blur-sm border border-white/8"
-                    >
+                <div className="absolute right-0 top-0 z-20">
+                    <span className="flex h-8 w-8 items-center justify-center bg-black border-l border-b border-white/20">
                         {availabilityType === "ONLY_ONLINE" ? (
-                            <Zap className="h-2.5 w-2.5 text-white/70" />
+                            <Zap className="h-4 w-4 text-white" />
                         ) : (
-                            <Folder className="h-2.5 w-2.5 text-white/70" />
+                            <Folder className="h-4 w-4 text-white" />
                         )}
                     </span>
                 </div>
             )}
 
-            {/* ── Top-left: format badge (hidden on hover) ──────────────── */}
+            {/* ── Top-left: Format Badge ──────────────── */}
             {badge && (
-                <div className="absolute left-1.5 top-1.5 z-20 transition-opacity duration-300 group-hover/card:opacity-0">
-                    <span className="rounded bg-black/60 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-white/60 backdrop-blur-sm border border-white/8">
+                <div className="absolute left-0 top-0 z-20">
+                    <span className="bg-white px-2 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-black border-r border-b border-white/20">
                         {badge}
                     </span>
                 </div>
             )}
 
-            {/* ── Bottom gradient + text ─────────────────────────────────── */}
+            {/* ── Bottom Gradient ─────────────────────────────────── */}
             <div
                 className={cn(
                     "absolute inset-x-0 bottom-0 z-10",
-                    isPoster ? "h-[45%]" : "h-[55%]",
-                    "bg-gradient-to-t from-black/90 via-black/50 to-transparent",
+                    isPoster ? "h-[40%]" : "h-[50%]",
+                    "bg-gradient-to-t from-black to-transparent opacity-80",
                 )}
             />
 
-            {/* ── Title + intelligence tag ───────────────────────────────── */}
-            <div className="absolute inset-x-0 bottom-0 z-20 px-2.5 pb-2.5 pt-6">
-                <p className="line-clamp-1 text-[0.72rem] font-medium leading-tight text-white/90 drop-shadow">
+            {/* ── Info Container ───────────────────────────────── */}
+            <div className="absolute inset-x-0 bottom-0 z-20 p-3">
+                <p className="line-clamp-1 text-[0.8rem] font-black leading-tight text-white uppercase tracking-wider">
                     {title}
                 </p>
 
-                <div className="mt-0.5 flex items-center justify-between gap-1">
+                <div className="mt-1 flex items-center justify-between gap-1">
                     {subtitle && (
-                        <p className="truncate text-[0.62rem] text-zinc-500">{subtitle}</p>
-                    )}
-                    {intelligenceTag && TAG_STYLES[intelligenceTag] && (
-                        <span
-                            className={cn(
-                                "shrink-0 text-[0.58rem] font-bold uppercase tracking-widest",
-                                TAG_STYLES[intelligenceTag],
-                            )}
-                        >
-                            {intelligenceTag === "EPIC"
-                                ? "ÉPICO"
-                                : intelligenceTag === "FILLER"
-                                  ? "RELLENO"
-                                  : "ESPECIAL"}
-                        </span>
+                        <p className="truncate text-[0.65rem] font-bold text-white/50 uppercase tracking-widest">{subtitle}</p>
                     )}
                 </div>
             </div>
 
-            {/* ── Play button overlay (appears on hover) ────────────────── */}
-            <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/0 opacity-0 transition-all duration-500 group-hover/card:bg-black/40 group-hover/card:opacity-100 group-hover/card:backdrop-blur-sm">
-                <div 
-                    className={cn(
-                        "flex h-14 w-14 items-center justify-center rounded-full bg-[#ff6b00] text-white shadow-[0_0_30px_rgba(255,107,0,0.6)]",
-                        "translate-y-4 scale-90 opacity-0 transition-all duration-500 group-hover/card:translate-y-0 group-hover/card:scale-100 group-hover/card:opacity-100"
-                    )}
-                >
-                    <svg viewBox="0 0 24 24" className="ml-1 h-7 w-7 fill-current" xmlns="http://www.w3.org/2000/svg">
+            {/* ── Hover Overlay ────────────────── */}
+            <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/60 opacity-0 transition-opacity duration-200 group-hover/card:opacity-100">
+                {/* Play Icon */}
+                <div className="flex h-12 w-12 items-center justify-center border-2 border-white text-white bg-black">
+                    <svg viewBox="0 0 24 24" className="ml-1 h-6 w-6 fill-current" xmlns="http://www.w3.org/2000/svg">
                         <path d="M8 5v14l11-7z" />
                     </svg>
                 </div>
-            </div>
 
-            {/* ── Quick metadata ribbon (appears on hover) ──────────────── */}
-            {(year || rating || badge) && (
-                <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-40 translate-y-3 opacity-0 transition-all duration-300 group-hover/card:translate-y-0 group-hover/card:opacity-100">
-                    <div className="flex items-center justify-between gap-2 bg-black/80 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.15em] text-white/90 backdrop-blur-md">
-                        <div className="flex items-center gap-2">
-                            {year && <span className="rounded-full border border-white/10 px-2 py-0.5">{year}</span>}
-                            {badge && <span className="rounded-full border border-white/10 px-2 py-0.5">{badge}</span>}
-                        </div>
+                {/* Metadata Strip */}
+                {(year || rating) && (
+                    <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2">
+                        {year && <span className="text-[9px] font-black text-white uppercase tracking-widest">{year}</span>}
                         {rating !== undefined && (
-                            <span className="rounded-full bg-orange-500/20 px-2 py-0.5 text-orange-200">
+                            <span className="text-[9px] font-black text-white uppercase tracking-widest border border-white/40 px-2 py-0.5">
                                 {rating.toFixed(1)} ★
                             </span>
                         )}
                     </div>
-                </div>
-            )}
+                )}
+            </div>
 
-            {/* ── Progress bar ──────────────────────────────────────────── */}
+            {/* ── Progress Bar ──────────────────────────────────────────── */}
             {progress !== undefined && (
-                <div className="absolute inset-x-0 bottom-0 z-50 h-[3px] bg-white/10">
+                <div className="absolute inset-x-0 bottom-0 z-50 h-[2px] bg-white/10">
                     <div
-                        className={cn(
-                            "h-full",
-                            progressColor === "orange" ? "bg-[#ff6b00] shadow-[0_0_10px_rgba(255,107,0,0.8)]" : "bg-white/60",
-                        )}
+                        className="h-full bg-white transition-all duration-500"
                         style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
                     />
                 </div>

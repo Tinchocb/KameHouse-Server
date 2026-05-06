@@ -1,9 +1,7 @@
-import { GradientBackground } from "@/components/shared/gradient-background"
-import { TextGenerateEffect } from "@/components/shared/text-generate-effect"
 import { Button } from "@/components/ui/button"
 import { LoadingOverlay } from "@/components/ui/loading-spinner"
 import { __isDesktop__ } from "@/types/constants"
-import { SeaImage } from "@/components/shared/sea-image"
+import { DeferredImage } from "@/components/shared/deferred-image"
 import React, { useEffect, useState } from "react"
 import { RiSettings3Line, RiRefreshLine } from "react-icons/ri"
 
@@ -20,52 +18,52 @@ export function LoadingOverlayWithLogo({ refetch, title }: { refetch?: () => voi
     }, [])
 
     return (
-        <LoadingOverlay showSpinner={false}>
-            {/* Cinematic Background Decoration */}
-            <div className="absolute inset-0 pointer-events-none opacity-[0.05]">
+        <LoadingOverlay showSpinner={false} className="bg-black">
+            {/* Cinematic Background Decoration - Monochromatic */}
+            <div className="absolute inset-0 pointer-events-none opacity-[0.03]">
                 <svg className="w-full h-full" viewBox="0 0 900 320" preserveAspectRatio="xMidYMid slice">
-                    {Array.from({ length: 40 }).map((_, i) => (
+                    {Array.from({ length: 60 }).map((_, i) => (
                         <line
                             key={i}
                             x1="450" y1="160"
-                            x2={450 + Math.cos((i / 40) * Math.PI * 2) * 1200}
-                            y2={160 + Math.sin((i / 40) * Math.PI * 2) * 1200}
+                            x2={450 + Math.cos((i / 60) * Math.PI * 2) * 1200}
+                            y2={160 + Math.sin((i / 60) * Math.PI * 2) * 1200}
                             stroke="white"
-                            strokeWidth={i % 5 === 0 ? "2" : "0.5"}
+                            strokeWidth="0.5"
                         />
                     ))}
                 </svg>
             </div>
             
-            <SeaImage
-            src="/kamehouse-logo.png"
-            alt="Loading..."
-            priority
-            width={100}
-            height={100}
-            className="animate-pulse z-[1] rounded-2xl"
-        />
-        <GradientBackground />
+            <DeferredImage
+                src="/kamehouse-logo.png"
+                alt="Loading..."
+                priority
+                className="w-24 h-24 animate-pulse z-[1] grayscale brightness-200"
+            />
+
 
         {timedOut ? (
-            <div className="flex flex-col items-center gap-4 mt-4 z-[1] animate-in fade-in duration-500">
-                <p className="text-[--muted] text-sm text-center max-w-xs">
-                    No se pudo conectar al servidor.<br />
-                    Verificá que el servidor esté corriendo.
+            <div className="flex flex-col items-center gap-4 mt-6 z-[1] animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <p className="text-zinc-500 text-xs font-medium uppercase tracking-widest text-center max-w-xs">
+                    Error de conexión<br />
+                    <span className="opacity-50 mt-1 block">El servidor no responde</span>
                 </p>
-                <div className="flex gap-3">
+                <div className="flex gap-4">
                     <Button
                         onClick={() => window.location.reload()}
-                        intent="gray-outline"
+                        intent="gray"
                         size="sm"
+                        className="rounded-none border-zinc-800"
                         leftIcon={<RiRefreshLine />}
                     >
                         Reintentar
                     </Button>
                     <Button
                         onClick={() => { window.location.href = "/settings" }}
-                        intent="primary-subtle"
+                        intent="white"
                         size="sm"
+                        className="rounded-none"
                         leftIcon={<RiSettings3Line />}
                     >
                         Configuración
@@ -73,17 +71,22 @@ export function LoadingOverlayWithLogo({ refetch, title }: { refetch?: () => voi
                 </div>
             </div>
         ) : (
-            <TextGenerateEffect className="text-lg mt-2 text-[--muted] animate-pulse z-[1]" words={title ?? "K a m e H o u s e"} />
+            <div className="mt-6 flex flex-col items-center gap-2 z-[1]">
+                <h1 className="text-white text-3xl font-bebas tracking-[0.2em] uppercase animate-pulse">
+                    {title ?? "KameHouse"}
+                </h1>
+                <div className="h-[1px] w-12 bg-white/20 animate-scale-x" />
+            </div>
         )}
 
         {(__isDesktop__ && !!refetch) && (
             <Button
                 onClick={() => window.location.reload()}
-                className="mt-4 z-[1]"
-                intent="gray-outline"
+                className="mt-8 z-[1] rounded-none border-zinc-800"
+                intent="gray"
                 size="sm"
                 leftIcon={<RiRefreshLine />}
-            >Recargar</Button>
+            >Recargar página</Button>
         )}
     </LoadingOverlay>
     )

@@ -16,9 +16,6 @@ type Platform interface {
 	DeleteEntry(context context.Context, mediaID int, entryID int) error
 	// GetAnime gets the anime for the given media ID
 	GetAnime(context context.Context, mediaID int) (interface{}, error)
-	// GetAnimeByMalID gets the anime by MAL ID
-	GetAnimeByMalID(context context.Context, malID int) (interface{}, error)
-	// GetAnimeWithRelations gets the anime with relations for the given media ID
 	GetAnimeWithRelations(context context.Context, mediaID int) (interface{}, error)
 	// GetAnimeDetails gets the anime details for the given media ID
 	GetAnimeDetails(context context.Context, mediaID int) (interface{}, error)

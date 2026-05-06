@@ -152,22 +152,13 @@ func migrateTables(ctx context.Context, db *gorm.DB) error {
 		&models.ShelvedLocalFiles{},
 		&models.Settings{},
 		&models.Account{},
-		&models.Mal{},
 		&models.ScanSummary{},
-		&models.AnimapCache{},
-		&models.AutoSelectProfile{},
-		&models.AutoDownloaderRule{},
-		&models.AutoDownloaderProfile{},
-		&models.AutoDownloaderItem{},
+
 		&models.SilencedMediaEntry{},
 		&models.Theme{},
-		&models.TorrentstreamSettings{},
-		&models.TorrentstreamHistory{},
+
 		&models.MediastreamSettings{},
 		&models.MediaFiller{},
-		&models.PluginData{},
-		&models.CustomSourceCollection{},
-		&models.CustomSourceIdentifier{},
 		&models.MediaMetadataParent{},
 		&models.GhostAssociatedMedia{},
 		&models.LibraryMedia{},
@@ -178,7 +169,7 @@ func migrateTables(ctx context.Context, db *gorm.DB) error {
 		&models.MediaEntryListData{},
 		&models.WatchHistory{},
 		&models.UserMediaProgress{},
-		&models.ActiveDownload{},
+
 		&models.MediaCollection{},
 	)
 }

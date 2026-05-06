@@ -9,7 +9,7 @@ import { cn, defineStyleAnatomy } from "../core/styling"
 export const CardAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-Card__root",
-        "bg-card text-card-foreground border border-border rounded-xl shadow-sm transition-all duration-300 hover:shadow-2xl hover:-translate-y-1",
+        "bg-black text-white border border-white/10 rounded-none shadow-none transition-all duration-200 hover:border-white/40 hover:-translate-y-0.5",
     ]),
     header: cva([
         "UI-Card__header",

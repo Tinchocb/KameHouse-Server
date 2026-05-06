@@ -164,7 +164,6 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                     <IconButton
                         onClick={() => data?.basePath && setInput(data?.basePath)}
                         intent="gray-basic"
-                        rounded
                         size="sm"
                         icon={<FiChevronLeft />}
                         disabled={(!data?.basePath?.length || data?.basePath?.length === 1)}
@@ -196,7 +195,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                                 className="py-1 flex items-center gap-2 text-sm px-3 rounded-[--radius-md] border flex-none cursor-pointer bg-gray-900 hover:bg-gray-800"
                                 onClick={() => setInput(folder.Path)}
                             >
-                                <FiFolder className="w-4 h-4 text-[--brand]" />
+                                <FiFolder className="w-4 h-4 text-white/60" />
                                 <span className="break-normal">{folder.Name}</span>
                             </div>
                         ))}
@@ -213,7 +212,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                                 className="flex items-center gap-2 py-2 px-3 cursor-pointer hover:bg-gray-800"
                                 onClick={() => setInput(folder.Path)}
                             >
-                                <FiFolder className="w-4 h-4 text-[--brand]" />
+                                <FiFolder className="w-4 h-4 text-white/60" />
                                 <span className="break-normal">{folder.Name}</span>
                             </div>
                         ))}

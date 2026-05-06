@@ -1,7 +1,6 @@
 package core
 
 import (
-	"context"
 	"os"
 	"strings"
 
@@ -13,7 +12,6 @@ import (
 	"kamehouse/internal/library/fillermanager"
 	"kamehouse/internal/library_explorer"
 	"kamehouse/internal/mediastream"
-	"kamehouse/internal/streaming"
 	"kamehouse/internal/api/tmdb"
 	"kamehouse/internal/platforms/tmdb_platform"
 	"kamehouse/internal/util"
@@ -38,14 +36,7 @@ func (a *App) initModulesOnce() {
 	// |    Media Stream     |
 	// +---------------------+
 
-	a.StreamOrchestrator = streaming.NewStreamOrchestrator(
-		a.Database,
-		a.Logger,
-		a.FileCacher,
-		&streaming.StreamingOptions{
-			FfmpegPath: "ffmpeg",
-		},
-	)
+
 
 	a.MediastreamRepository = mediastream.NewRepository(&mediastream.NewRepositoryOptions{
 		Logger:         a.Logger,
@@ -226,3 +217,4 @@ func (a *App) performActionsOnce() {
 		}
 	}()
 }
+

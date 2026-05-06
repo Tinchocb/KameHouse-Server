@@ -2,7 +2,6 @@ package scanner
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"kamehouse/internal/api/metadata_provider"
@@ -11,7 +10,6 @@ import (
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/events"
-	"kamehouse/internal/hook"
 	"kamehouse/internal/library/anime"
 	"kamehouse/internal/library/filesystem"
 	librarymetadata "kamehouse/internal/library/metadata"
@@ -143,33 +141,6 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		}()
 	}
 
-	// Invoke ScanStarted hook
-	event := &ScanStartedEvent{
-		LibraryPath:       scn.DirPath,
-		OtherLibraryPaths: scn.OtherDirPaths,
-		Enhanced:          scn.Enhanced,
-		SkipLocked:        scn.SkipLockedFiles,
-		SkipIgnored:       scn.SkipIgnoredFiles,
-		LocalFiles:        scn.ExistingLocalFiles,
-	}
-	_ = hook.GlobalHookManager.OnScanStarted().Trigger(event)
-	scn.DirPath = event.LibraryPath
-	scn.OtherDirPaths = event.OtherLibraryPaths
-	scn.Enhanced = event.Enhanced
-	scn.SkipLockedFiles = event.SkipLocked
-	scn.SkipIgnoredFiles = event.SkipIgnored
-
-	// Default prevented, return the local files
-	if event.DefaultPrevented {
-		// Invoke ScanCompleted hook
-		completedEvent := &ScanCompletedEvent{
-			LocalFiles: event.LocalFiles,
-			Duration:   int(time.Since(startTime).Milliseconds()),
-		}
-		_ = hook.GlobalHookManager.OnScanCompleted().Trigger(completedEvent)
-
-		return completedEvent.LocalFiles, nil
-	}
 
 	// +---------------------+
 	// |     File paths      |
@@ -235,12 +206,6 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 			Msg("Retrieved file paths from all directories")
 	}
 
-	// Invoke ScanFilePathsRetrieved hook
-	fpEvent := &ScanFilePathsRetrievedEvent{
-		FilePaths: paths,
-	}
-	_ = hook.GlobalHookManager.OnScanFilePathsRetrieved().Trigger(fpEvent)
-	paths = fpEvent.FilePaths
 
 	// +---------------------+
 	// |    Local files      |
@@ -351,12 +316,6 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		}
 	}
 
-	// Invoke ScanLocalFilesParsed hook
-	parsedEvent := &ScanLocalFilesParsedEvent{
-		LocalFiles: localFiles,
-	}
-	_ = hook.GlobalHookManager.OnScanLocalFilesParsed().Trigger(parsedEvent)
-	localFiles = parsedEvent.LocalFiles
 
 	if scn.ScanLogger != nil {
 		scn.ScanLogger.logger.Debug().
@@ -416,15 +375,6 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		scn.WSEventManager.SendEvent(events.EventScanProgress, 100)
 		scn.WSEventManager.SendEvent(events.EventScanStatus, "Scan completed")
 
-		// Invoke ScanCompleted hook
-		completedEvent := &ScanCompletedEvent{
-			LocalFiles: localFiles,
-			Duration:   int(time.Since(startTime).Milliseconds()),
-		}
-		if err := hook.GlobalHookManager.OnScanCompleted().Trigger(completedEvent); err != nil {
-			scn.Logger.Warn().Err(err).Msg("scanner: OnScanCompleted hook failed")
-		}
-		localFiles = completedEvent.LocalFiles
 
 		if scn.EventDispatcher != nil {
 			scn.EventDispatcher.Publish(events.Event{
@@ -582,6 +532,22 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		providers = append(providers, librarymetadata.NewAniDBProvider("", scn.Logger))
 	}
 
+	// +---------------------+
+	// |  Episode Metadata   |
+	// | Provider (TMDB)     |
+	// +---------------------+
+	// If MetadataProviderRef is unset (or uses the empty stub), replace it with the
+	// TMDB-backed implementation so episodes get real titles/thumbnails/overviews.
+	if tmdbClient != nil && (scn.MetadataProviderRef == nil || scn.MetadataProviderRef.IsAbsent()) {
+		realProvider := metadata_provider.NewProvider(&metadata_provider.NewProviderImplOptions{
+			Database:   scn.Database,
+			Logger:     scn.Logger,
+			TMDBClient: tmdbClient,
+		})
+		scn.MetadataProviderRef = util.NewRef[metadata_provider.Provider](realProvider)
+		scn.Logger.Info().Msg("scanner: TMDB episode metadata provider initialized")
+	}
+
 	mf, err := NewMediaFetcher(ctx, &MediaFetcherOptions{
 		PlatformRef:                scn.PlatformRef,
 		MetadataProviderRef:        scn.MetadataProviderRef,
@@ -695,7 +661,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 
 			// P1: FanArt.tv — HD logos, clearart, thumbs
 			if scn.FanArtEnricher != nil {
-				nfoPath := findNfoForFile(lf.Path, libraryPaths)
+				nfoPath := ""
 				tvdbID := ""
 				if nfoPath != "" {
 					if nfo, err := ParseNfoFile(nfoPath); err == nil && nfo != nil {
@@ -711,7 +677,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 
 			// P2: OMDb — ratings, runtime, director, awards
 			if scn.OMDbEnricher != nil {
-				nfoPath := findNfoForFile(lf.Path, libraryPaths)
+				nfoPath := ""
 				imdbID := ""
 				if nfoPath != "" {
 					if nfo, err := ParseNfoFile(nfoPath); err == nil && nfo != nil {
@@ -760,9 +726,9 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		}
 	}
 
-	// In TMDB mode, create LibraryMedia DB records and add media to collection.
+	// Always create LibraryMedia DB records and add media to collection.
 	// LibraryMedia DB creation is separate from platform ref check since it only needs the DB.
-	if scn.UseTMDB {
+	if true {
 		// Collect all unique media IDs from matched local files
 		allMatchedIds := make(map[int]struct{})
 		for _, lf := range localFiles {
@@ -1068,9 +1034,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 				}
 
 				memberSlice := make(models.IntSlice, len(memberIDs))
-				for i, mid := range memberIDs {
-					memberSlice[i] = mid
-				}
+				copy(memberSlice, memberIDs)
 
 				coll := &models.MediaCollection{
 					TMDBCollectionID: collID,
@@ -1148,12 +1112,8 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	}
 
 	// Invoke ScanCompleted hook
-	completedEvent := &ScanCompletedEvent{
-		LocalFiles: localFiles,
-		Duration:   int(time.Since(startTime).Milliseconds()),
-	}
-	hook.GlobalHookManager.OnScanCompleted().Trigger(completedEvent)
-	localFiles = completedEvent.LocalFiles
+	
+	
 
 	runtime.GC()
 	debug.FreeOSMemory()
@@ -1238,12 +1198,7 @@ func (scn *Scanner) addRemainingShelvedFiles(skippedLfs map[string]*dto.LocalFil
 	}
 }
 
-func ToConfig(c string) (*Config, error) {
-	var ret Config
-	err := json.Unmarshal([]byte(c), &ret)
-	if err != nil {
-		return nil, err
-	}
 
-	return &ret, nil
-}
+
+
+

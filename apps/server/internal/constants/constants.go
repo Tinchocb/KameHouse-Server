@@ -10,7 +10,6 @@ const (
 	VersionName          = "Hakumei"
 	GcTime               = time.Minute * 30
 	ConfigFileName       = "config.toml"
-	MalClientId          = "51cb4294feb400f3ddc66a30f9b9a00f"
 
 	TmdbApiUrl           = "https://api.themoviedb.org/3"
 	TmdbImageBaseUrl     = "https://image.tmdb.org/t/p/original"
@@ -23,6 +22,6 @@ const (
 	KameHouseRoomsVersion  = "1.0.0"
 )
 
-var DefaultExtensionMarketplaceURL = util.Decode("aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tLzVyYWhpbS9zZWFuaW1lLWV4dGVuc2lvbnMvcmVmcy9oZWFkcy9tYWluL21hcmtldHBsYWNlLmpzb24=")
-var AnnouncementURL = util.Decode("aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tLzVyYWhpbS9oaWJpa2UvcmVmcy9oZWFkcy9tYWluL3B1YmxpYy9hbm5vdW5jZW1lbnRzLmpzb24=")
+var DefaultExtensionMarketplaceURL = util.Decode("aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL2thbWVoLW91c2Uva2FtZWhvdXNlLWV4dGVuc2lvbnMvbWFpbi9tYXJrZXRwbGFjZS5qc29u")
+var AnnouncementURL = util.Decode("aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL2thbWVoLW91c2Uva2FtZWhvdXNlL21haW4vcHVibGljL2Fubm91bmNlbWVudHMuanNvbg==")
 var InternalMetadataURL = util.Decode("aHR0cHM6Ly9hbmltZS5jbGFwLmluZw==")

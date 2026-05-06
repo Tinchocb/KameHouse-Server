@@ -1,14 +1,12 @@
 package dto
 
 import (
-	"context"
 	"kamehouse/internal/library/filesystem"
 	"strconv"
 	"time"
 
 	"github.com/5rahim/habari"
 	"github.com/nssteinbrenner/anitogo"
-	"github.com/rs/zerolog"
 )
 
 const (

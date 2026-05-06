@@ -6,7 +6,6 @@ import (
 	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/models"
-	"kamehouse/internal/hook"
 	"kamehouse/internal/util"
 	"strconv"
 
@@ -48,29 +47,7 @@ type (
 // based on the options provided.
 func NewEntryDownloadInfo(opts *NewEntryDownloadInfoOptions) (*EntryDownloadInfo, error) {
 
-	reqEvent := &AnimeEntryDownloadInfoRequestedEvent{
-		LocalFiles:        opts.LocalFiles,
-		AnimeMetadata:     opts.AnimeMetadata,
-		Media:             opts.Media,
-		Progress:          opts.Progress,
-		Status:            opts.Status,
-		EntryDownloadInfo: &EntryDownloadInfo{},
-	}
 
-	err := hook.GlobalHookManager.OnAnimeEntryDownloadInfoRequested().Trigger(reqEvent)
-	if err != nil {
-		return nil, err
-	}
-
-	if reqEvent.DefaultPrevented {
-		return reqEvent.EntryDownloadInfo, nil
-	}
-
-	opts.LocalFiles = reqEvent.LocalFiles
-	opts.AnimeMetadata = reqEvent.AnimeMetadata
-	opts.Media = reqEvent.Media
-	opts.Progress = reqEvent.Progress
-	opts.Status = reqEvent.Status
 
 	if opts.Media.Status == "NOT_YET_RELEASED" {
 		return &EntryDownloadInfo{}, nil
@@ -255,15 +232,7 @@ func NewEntryDownloadInfo(opts *NewEntryDownloadInfoOptions) (*EntryDownloadInfo
 		AbsoluteOffset:        opts.AnimeMetadata.GetOffset(),
 	}
 
-	event := &AnimeEntryDownloadInfoEvent{
-		EntryDownloadInfo: downloadInfo,
-	}
-	err = hook.GlobalHookManager.OnAnimeEntryDownloadInfo().Trigger(event)
-	if err != nil {
-		return nil, err
-	}
-
-	return event.EntryDownloadInfo, nil
+	return downloadInfo, nil
 }
 
 type episodeSliceItem struct {
@@ -336,9 +305,7 @@ func (s *episodeSlice) filterNew(filter func(*episodeSliceItem, int) bool) *epis
 
 func (s *episodeSlice) copy() *episodeSlice {
 	s2 := make(episodeSlice, len(*s), cap(*s))
-	for i, item := range *s {
-		s2[i] = item
-	}
+	copy(s2, *s)
 	return &s2
 }
 
