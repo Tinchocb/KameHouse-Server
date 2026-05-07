@@ -72,7 +72,9 @@ export function useLatestFunction<T extends (...args: any[]) => any>(callback: T
         callbackRef.current = callback
     }, [callback])
 
-    return React.useCallback(((...args: Parameters<T>): ReturnType<T> => {
+    const cb = React.useCallback((...args: Parameters<T>): ReturnType<T> => {
         return callbackRef.current(...args)
-    }) as T, [])
+    }, [])
+
+    return cb as unknown as T
 }

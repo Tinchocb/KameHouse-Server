@@ -58,29 +58,17 @@ export const BadgeAnatomy = defineStyleAnatomy({
  * Badge
  * -----------------------------------------------------------------------------------------------*/
 
-export type BadgeProps = React.ComponentPropsWithRef<"span"> &
-    VariantProps<typeof BadgeAnatomy.root> &
-    ComponentAnatomy<typeof BadgeAnatomy> & {
-    /**
-     * If true, a close button will be rendered.
-     */
-    isClosable?: boolean,
-    /**
-     * Callback invoked when the close button is clicked.
-     */
-    onClose?: () => void,
-    /**
-     * The left icon element.
-     */
+export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
+    intent?: "gray" | "primary" | "success" | "warning" | "alert" | "basic" | "white" | "gray-solid" | "zinc-solid" | "white-solid" | "unstyled"
+    size?: "sm" | "md" | "lg" | "xl"
+    tag?: boolean
+    isClosable?: boolean
+    onClose?: () => void
     leftIcon?: React.ReactElement
-    /**
-     * The right icon element.
-     */
     rightIcon?: React.ReactElement
-    /**
-     * The spacing between the icon and the badge content.
-     */
     iconSpacing?: React.CSSProperties["marginRight"]
+    closeButtonClass?: string
+    iconClass?: string
 }
 
 export const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>((props, ref) => {

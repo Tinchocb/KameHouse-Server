@@ -437,7 +437,7 @@ func (s *IntelligenceService) buildLocalLibraryLane() *CuratedSwimlane {
 	var media []*models.LibraryMedia
 	if err := s.db.Gorm().
 		Order("updated_at DESC").
-		Limit(20).
+		Limit(40).
 		Find(&media).Error; err != nil || len(media) == 0 {
 		return nil
 	}
@@ -462,7 +462,7 @@ func (s *IntelligenceService) buildEpicMomentsLane() *CuratedSwimlane {
 	if err := s.db.Gorm().
 		Where("score >= ?", epicScoreThreshold).
 		Order("score DESC").
-		Limit(20).
+		Limit(40).
 		Find(&media).Error; err != nil || len(media) == 0 {
 		return nil
 	}
@@ -488,7 +488,7 @@ func (s *IntelligenceService) buildEssentialCinemaLane() *CuratedSwimlane {
 	if err := s.db.Gorm().
 		Where("format IN ? AND score >= ?", []string{"MOVIE", "OVA", "SPECIAL"}, 75).
 		Order("score DESC").
-		Limit(15).
+		Limit(30).
 		Find(&media).Error; err != nil || len(media) == 0 {
 		return nil
 	}
@@ -512,7 +512,7 @@ func (s *IntelligenceService) buildTrendingLane() *CuratedSwimlane {
 	var media []*models.LibraryMedia
 	if err := s.db.Gorm().
 		Order("created_at DESC").
-		Limit(20).
+		Limit(40).
 		Find(&media).Error; err != nil || len(media) == 0 {
 		return nil
 	}

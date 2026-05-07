@@ -141,7 +141,7 @@ export const CommandInput = React.forwardRef<HTMLInputElement, CommandInputProps
     } = React.useContext(__CommandAnatomyContext)
 
     return (
-        <div className={cn(CommandAnatomy.inputContainer(), _inputContainerClass, inputContainerClass)} cmdk-input-wrapper="">
+        <div className={cn(CommandAnatomy.inputContainer(), _inputContainerClass, inputContainerClass)} {...{ "cmdk-input-wrapper": "" }}>
             <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="24"

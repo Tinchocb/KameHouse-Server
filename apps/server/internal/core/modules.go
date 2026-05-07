@@ -2,7 +2,9 @@ package core
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"kamehouse/internal/continuity"
 	"kamehouse/internal/database/db"
@@ -44,9 +46,21 @@ func (a *App) initModulesOnce() {
 		FileCacher:     a.FileCacher,
 	})
 
-	a.AddCleanupFunction(func() {
+a.AddCleanupFunction(func() {
 		a.MediastreamRepository.OnCleanup()
 	})
+
+	// +---------------------+
+	// | Transcode Cleanup   |
+	// +---------------------+
+	// Clean up old transcode directories periodically
+	go func() {
+		ticker := time.NewTicker(10 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			cleanupTranscodeDirs(a.Logger)
+		}
+	}()
 
 
 
@@ -216,5 +230,47 @@ func (a *App) performActionsOnce() {
 			}()
 		}
 	}()
+}
+
+
+
+// cleanupTranscodeDirs removes transcode directories older than 1 hour.
+func cleanupTranscodeDirs(logger *zerolog.Logger) {
+	transcodeBaseDir := filepath.Join(os.TempDir(), "kamehouse", "transcodes")
+
+	entries, err := os.ReadDir(transcodeBaseDir)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			logger.Warn().Err(err).Msg("app: failed to read transcode directory")
+		}
+		return
+	}
+
+	cutoff := time.Now().Add(-1 * time.Hour)
+	removed := 0
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+
+		if info.ModTime().Before(cutoff) {
+			fullPath := filepath.Join(transcodeBaseDir, entry.Name())
+			if err := os.RemoveAll(fullPath); err != nil {
+				logger.Warn().Err(err).Str("path", fullPath).Msg("app: failed to remove old transcode directory")
+			} else {
+				removed++
+			}
+		}
+	}
+
+	if removed > 0 {
+		logger.Info().Int("count", removed).Msg("app: cleaned up old transcode directories")
+	}
 }
 

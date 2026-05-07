@@ -17,6 +17,7 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
     { to: "/home", label: "Inicio", icon: <FaHome className="w-5 h-5" /> },
     { to: "/series", label: "Series", icon: <FaTv className="w-5 h-5" /> },
     { to: "/movies", label: "Películas", icon: <FaFilm className="w-5 h-5" /> },
+    { to: "/collections", label: "Sagas", icon: <FaLayerGroup className="w-5 h-5" /> },
     { to: "/settings", label: "Configuración", icon: <FaCog className="w-5 h-5" /> },
 ]
 
@@ -27,15 +28,15 @@ export function AppSidebar() {
     return (
         <>
             {/* Desktop Fixed Sidebar */}
-            <aside className="hidden md:flex flex-col fixed inset-y-0 left-0 w-24 border-r border-white/10 bg-black z-50">
+            <aside className="hidden md:flex flex-col fixed inset-y-0 left-0 w-24 border-r border-white/5 bg-[#070a14]/40 backdrop-blur-md z-50">
                 <SidebarContent setSidebarOpen={setSidebarOpen} />
             </aside>
 
             {/* Mobile Drawer */}
             <Vaul open={sidebarOpen} onOpenChange={setSidebarOpen} direction="left">
                 <VaulContent
-                    className="md:hidden fixed inset-y-0 left-0 z-50 flex h-full w-[280px] flex-col border-r border-white/10 bg-black shadow-2xl"
-                    overlayClass="bg-black/80"
+                    className="md:hidden fixed inset-y-0 left-0 z-50 flex h-full w-[280px] flex-col border-r border-white/5 bg-[#070a14]/60 backdrop-blur-xl shadow-2xl"
+                    overlayClass="bg-black/40 backdrop-blur-sm"
                 >
                     <SidebarContent setSidebarOpen={setSidebarOpen} />
                 </VaulContent>
@@ -49,10 +50,10 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
     const setActiveTheme = useAppStore(state => state.setActiveTheme)
 
     return (
-        <div className="flex flex-col h-full py-10 px-4 md:px-0 w-full items-center bg-black">
+        <div className="flex flex-col h-full py-10 px-4 md:px-0 w-full items-center bg-transparent">
             {/* Header / Logo */}
             <div className="mb-14 px-2 flex justify-center">
-                <img src="/kamehouse-logo.png" alt="KameHouse" className="h-10 w-10 shrink-0 object-contain grayscale brightness-200" />
+                <img src="/kamehouse-logo.png" alt="KameHouse" className="h-10 w-10 shrink-0 object-contain hover:scale-110 transition-transform duration-300 cursor-pointer" />
             </div>
 
             {/* Navigation */}
@@ -64,13 +65,13 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                         title={item.label}
                         onClick={() => setSidebarOpen(false)}
                         activeProps={{
-                            className: "bg-white text-black border-white shadow-none",
+                            className: "bg-brand-orange text-white border-brand-orange shadow-[0_0_15px_rgba(255,110,58,0.4)]",
                         }}
                         inactiveProps={{
-                            className: "text-zinc-600 hover:bg-zinc-900 hover:text-white border-white/10",
+                            className: "text-zinc-500 hover:bg-white/5 hover:text-brand-orange border-white/5 hover:border-brand-orange/20",
                         }}
                         className={cn(
-                            "flex items-center justify-center md:w-12 w-full h-12 rounded-none border transition-all duration-200 group px-4 md:px-0",
+                            "flex items-center justify-center md:w-12 w-full h-12 rounded-xl border transition-all duration-300 group px-4 md:px-0",
                             "active:scale-95 font-bold"
                         )}
                     >
@@ -89,7 +90,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                         setActiveTheme(activeTheme === "dark" ? "light" : "dark")
                     }}
                     title="Cambiar Tema"
-                    className="flex items-center justify-center w-11 h-11 border border-white/10 text-zinc-600 hover:bg-white hover:text-black transition-all duration-200"
+                    className="flex items-center justify-center w-11 h-11 rounded-xl border border-white/5 text-zinc-500 hover:bg-white/5 hover:text-brand-orange hover:border-brand-orange/20 transition-all duration-300"
                 >
                     <FaMoon className="w-5 h-5" />
                 </button>

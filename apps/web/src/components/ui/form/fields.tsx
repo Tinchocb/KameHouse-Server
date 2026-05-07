@@ -38,7 +38,7 @@ export type FieldProps = React.ComponentPropsWithRef<"div">
  * @description This wrapper makes it easier to work with custom form components by controlling their state.
  */
 export function withControlledInput<T extends FieldBaseProps>(InputComponent: React.FC<T>) {
-    return forwardRef<FieldProps, T>(
+    const ControlledComponent = forwardRef<FieldProps, T>(
         (inputProps, ref) => {
             const { control, formState } = useFormContext()
             const { shape } = useFormSchema()
@@ -48,7 +48,7 @@ export function withControlledInput<T extends FieldBaseProps>(InputComponent: Re
                 return !!get(shape, inputProps.name) &&
                     !get(shape, inputProps.name)?.isOptional() &&
                     !get(shape, inputProps.name)?.isNullable()
-            }, [shape])
+            }, [shape, inputProps.name])
 
             return (
                 <Controller
@@ -62,16 +62,18 @@ export function withControlledInput<T extends FieldBaseProps>(InputComponent: Re
                             onBlur={callAllHandlers(inputProps.onBlur, field.onBlur)}
                             {...inputProps as any}
                             error={getFormError(field.name, formState)?.message}
-                            ref={useMergeRefs(ref, _ref)}
+                            ref={mergeRefs(ref, _ref)}
                         />
                     )}
                 />
             )
         },
     )
+    ControlledComponent.displayName = `WithControlledInput(${InputComponent.displayName || InputComponent.name || "Component"})`
+    return ControlledComponent
 }
 
-const TextInputField = React.memo(withControlledInput(forwardRef<HTMLInputElement, FieldComponent<TextInputProps>>(
+const TextInputFieldInner = forwardRef<HTMLInputElement, FieldComponent<TextInputProps>>(
     (props, ref) => {
         return <TextInput
             {...props}
@@ -79,9 +81,11 @@ const TextInputField = React.memo(withControlledInput(forwardRef<HTMLInputElemen
             ref={ref}
         />
     },
-)))
+)
+TextInputFieldInner.displayName = "TextInputField"
+const TextInputField = React.memo(withControlledInput(TextInputFieldInner))
 
-const TextareaField = React.memo(withControlledInput(forwardRef<HTMLTextAreaElement, FieldComponent<TextareaProps>>(
+const TextareaFieldInner = forwardRef<HTMLTextAreaElement, FieldComponent<TextareaProps>>(
     (props, ref) => {
         return <Textarea
             {...props}
@@ -89,9 +93,11 @@ const TextareaField = React.memo(withControlledInput(forwardRef<HTMLTextAreaElem
             ref={ref}
         />
     },
-)))
+)
+TextareaFieldInner.displayName = "TextareaField"
+const TextareaField = React.memo(withControlledInput(TextareaFieldInner))
 
-const NativeSelectField = React.memo(withControlledInput(forwardRef<HTMLSelectElement, FieldComponent<NativeSelectProps>>(
+const NativeSelectFieldInner = forwardRef<HTMLSelectElement, FieldComponent<NativeSelectProps>>(
     (props, ref) => {
         const context = useFormContext()
         const controller = useController({ name: props.name })
@@ -101,16 +107,18 @@ const NativeSelectField = React.memo(withControlledInput(forwardRef<HTMLSelectEl
             if (!get(context.formState.defaultValues, props.name) && !controller.field.value && !props.placeholder) {
                 controller.field.onChange(props.options?.[0]?.value)
             }
-        }, [])
+        }, [context.formState.defaultValues, props.name, controller.field, props.placeholder, props.options])
 
         return <NativeSelect
             {...props}
             ref={ref}
         />
     },
-)))
+)
+NativeSelectFieldInner.displayName = "NativeSelectField"
+const NativeSelectField = React.memo(withControlledInput(NativeSelectFieldInner))
 
-const SelectField = React.memo(withControlledInput(forwardRef<HTMLButtonElement, FieldComponent<SelectProps>>(
+const SelectFieldInner = forwardRef<HTMLButtonElement, FieldComponent<SelectProps>>(
     ({ onChange, ...props }, ref) => {
         return <Select
             {...props}
@@ -118,9 +126,11 @@ const SelectField = React.memo(withControlledInput(forwardRef<HTMLButtonElement,
             ref={ref}
         />
     },
-)))
+)
+SelectFieldInner.displayName = "SelectField"
+const SelectField = React.memo(withControlledInput(SelectFieldInner))
 
-const NumberField = React.memo(withControlledInput(forwardRef<HTMLInputElement, FieldComponent<NumberInputProps>>(
+const NumberFieldInner = forwardRef<HTMLInputElement, FieldComponent<NumberInputProps>>(
     ({ onChange, ...props }, ref) => {
         return <NumberInput
             {...props}
@@ -128,10 +138,12 @@ const NumberField = React.memo(withControlledInput(forwardRef<HTMLInputElement, 
             ref={ref}
         />
     },
-)))
+)
+NumberFieldInner.displayName = "NumberField"
+const NumberField = React.memo(withControlledInput(NumberFieldInner))
 
 
-const ComboboxField = React.memo(withControlledInput(forwardRef<HTMLButtonElement, FieldComponent<ComboboxProps>>(
+const ComboboxFieldInner = forwardRef<HTMLButtonElement, FieldComponent<ComboboxProps>>(
     ({ onChange, ...props }, ref) => {
         return <Combobox
             {...props}
@@ -139,9 +151,11 @@ const ComboboxField = React.memo(withControlledInput(forwardRef<HTMLButtonElemen
             ref={ref}
         />
     },
-)))
+)
+ComboboxFieldInner.displayName = "ComboboxField"
+const ComboboxField = React.memo(withControlledInput(ComboboxFieldInner))
 
-const SwitchField = React.memo(withControlledInput(forwardRef<HTMLButtonElement, FieldComponent<SwitchProps>>(
+const SwitchFieldInner = forwardRef<HTMLButtonElement, FieldComponent<SwitchProps>>(
     ({ onChange, ...props }, ref) => {
         return <Switch
             {...props}
@@ -149,9 +163,11 @@ const SwitchField = React.memo(withControlledInput(forwardRef<HTMLButtonElement,
             ref={ref}
         />
     },
-)))
+)
+SwitchFieldInner.displayName = "SwitchField"
+const SwitchField = React.memo(withControlledInput(SwitchFieldInner))
 
-const CheckboxField = React.memo(withControlledInput(forwardRef<HTMLButtonElement, FieldComponent<CheckboxProps>>(
+const CheckboxFieldInner = forwardRef<HTMLButtonElement, FieldComponent<CheckboxProps>>(
     ({ onChange, ...props }, ref) => {
         return <Checkbox
             {...props}
@@ -159,9 +175,11 @@ const CheckboxField = React.memo(withControlledInput(forwardRef<HTMLButtonElemen
             ref={ref}
         />
     },
-)))
+)
+CheckboxFieldInner.displayName = "CheckboxField"
+const CheckboxField = React.memo(withControlledInput(CheckboxFieldInner))
 
-const CheckboxGroupField = React.memo(withControlledInput(forwardRef<HTMLInputElement, FieldComponent<CheckboxGroupProps>>(
+const CheckboxGroupFieldInner = forwardRef<HTMLInputElement, FieldComponent<CheckboxGroupProps>>(
     ({ onChange, ...props }, ref) => {
         return <CheckboxGroup
             {...props}
@@ -169,10 +187,12 @@ const CheckboxGroupField = React.memo(withControlledInput(forwardRef<HTMLInputEl
             ref={ref}
         />
     },
-)))
+)
+CheckboxGroupFieldInner.displayName = "CheckboxGroupField"
+const CheckboxGroupField = React.memo(withControlledInput(CheckboxGroupFieldInner))
 
 
-const RadioGroupField = React.memo(withControlledInput(forwardRef<HTMLButtonElement, FieldComponent<RadioGroupProps>>(
+const RadioGroupFieldInner = forwardRef<HTMLButtonElement, FieldComponent<RadioGroupProps>>(
     ({ onChange, ...props }, ref) => {
         return <RadioGroup
             {...props}
@@ -180,10 +200,12 @@ const RadioGroupField = React.memo(withControlledInput(forwardRef<HTMLButtonElem
             ref={ref}
         />
     },
-)))
+)
+RadioGroupFieldInner.displayName = "RadioGroupField"
+const RadioGroupField = React.memo(withControlledInput(RadioGroupFieldInner))
 
 
-const RadioCardsField = React.memo(withControlledInput(forwardRef<HTMLButtonElement, FieldComponent<RadioGroupProps>>(
+const RadioCardsFieldInner = forwardRef<HTMLButtonElement, FieldComponent<RadioGroupProps>>(
     ({ onChange, itemContainerClass, itemClass, ...props }, ref) => {
         return <RadioGroup
             itemContainerClass={cn(
@@ -208,21 +230,24 @@ const RadioCardsField = React.memo(withControlledInput(forwardRef<HTMLButtonElem
             ref={ref}
         />
     },
-)))
+)
+RadioCardsFieldInner.displayName = "RadioCardsField"
+
+const RadioCardsField = React.memo(withControlledInput(RadioCardsFieldInner))
 
 
 type DirectorySelectorFieldProps = Omit<DirectorySelectorProps, "onSelect" | "value"> & { value?: string }
 
-const DirectorySelectorField = React.memo(withControlledInput(forwardRef<HTMLInputElement, FieldComponent<DirectorySelectorFieldProps>>(
+const DirectorySelectorFieldInner = forwardRef<HTMLInputElement, FieldComponent<DirectorySelectorFieldProps>>(
     ({ value, onChange, shouldExist, ...props }, ref) => {
         const context = useFormContext()
         const controller = useController({ name: props.name })
 
-        const defaultValue = useMemo(() => get(context.formState.defaultValues, props.name) ?? "", [])
+        const defaultValue = useMemo(() => get(context.formState.defaultValues, props.name) ?? "", [context.formState.defaultValues, props.name])
 
         React.useEffect(() => {
             controller.field.onChange(defaultValue)
-        }, [])
+        }, [defaultValue, controller.field])
 
         return <DirectorySelector
             shouldExist={shouldExist}
@@ -233,26 +258,29 @@ const DirectorySelectorField = React.memo(withControlledInput(forwardRef<HTMLInp
             ref={ref}
         />
     },
-)))
+)
+DirectorySelectorFieldInner.displayName = "DirectorySelectorField"
+
+const DirectorySelectorField = React.memo(withControlledInput(DirectorySelectorFieldInner))
 
 type MultiDirectorySelectorFieldProps = Omit<DirectorySelectorProps, "onSelect" | "value"> & { value?: string[] }
 
-const MultiDirectorySelectorField = React.memo(withControlledInput(forwardRef<HTMLInputElement, FieldComponent<MultiDirectorySelectorFieldProps>>(
+const MultiDirectorySelectorFieldInner = forwardRef<HTMLInputElement, FieldComponent<MultiDirectorySelectorFieldProps>>(
     ({ value, onChange, shouldExist, label, help, ...props }, ref) => {
         const context = useFormContext()
         const controller = useController({ name: props.name })
 
         const [paths, setPaths] = React.useState<string[]>([])
 
-        const defaultValue = useMemo(() => get(context.formState.defaultValues, props.name) ?? [], [])
+        const defaultValue = useMemo(() => get(context.formState.defaultValues, props.name) ?? [], [context.formState.defaultValues, props.name])
         React.useEffect(() => {
             setPaths(defaultValue)
-        }, [])
+        }, [defaultValue])
 
 
         React.useEffect(() => {
             controller.field.onChange(paths.filter(p => p))
-        }, [paths])
+        }, [paths, controller.field])
 
         return <div className="space-y-2">
             <div>
@@ -281,7 +309,7 @@ const MultiDirectorySelectorField = React.memo(withControlledInput(forwardRef<HT
                     </div>
                     <IconButton
                         size="sm"
-                        intent="alert-subtle"
+                        intent="alert-outline"
                         icon={<BiTrash />}
                         onClick={() => setPaths(prev => prev.filter((_, index) => index !== i))}
                     />
@@ -295,7 +323,10 @@ const MultiDirectorySelectorField = React.memo(withControlledInput(forwardRef<HT
             />
         </div>
     },
-)))
+)
+MultiDirectorySelectorFieldInner.displayName = "MultiDirectorySelectorField"
+
+const MultiDirectorySelectorField = React.memo(withControlledInput(MultiDirectorySelectorFieldInner))
 
 export const Field = createPolymorphicComponent<"div", FieldProps, {
     Text: typeof TextInputField,
@@ -369,10 +400,11 @@ export function mergeRefs<T>(...refs: (ReactRef<T> | null | undefined)[]) {
 }
 
 export function useMergeRefs<T>(...refs: (ReactRef<T> | null | undefined)[]) {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     return useMemo(() => mergeRefs(...refs), refs)
 }
 
-type Args<T extends Function> = T extends (...args: infer R) => any ? R : never
+type Args<T extends (...args: any[]) => any> = T extends (...args: infer R) => any ? R : never
 
 function callAllHandlers<T extends (event: any) => void>(
     ...fns: (T | undefined)[]

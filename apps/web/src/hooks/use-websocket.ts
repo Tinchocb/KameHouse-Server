@@ -8,7 +8,7 @@ export function useWebSocket(url: string, onMessage: (data: any) => void) {
             try {
                 const parsed = JSON.parse(event.data)
                 onMessage(parsed)
-            } catch (e) {
+            } catch {
                 // Ignore parsing errors
             }
         }

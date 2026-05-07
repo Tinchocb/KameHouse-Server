@@ -142,11 +142,11 @@ function getParamValue<T>(value: T | ""): Extract<T, string> | number | undefine
 
 
 export function filterEntriesByTitle<T extends { media?: Platform_UnifiedMedia }[] | null | undefined>(arr: T, input: string): T {
-    // @ts-expect-error
+    // @ts-expect-error - allow filtering on potential null/undefined arr
     if (!arr) return []
     if (arr.length > 0 && input.length > 0) {
         const _input = input.toLowerCase().trim().replace(/\s+/g, " ")
-        // @ts-expect-error
+        // @ts-expect-error - filter type check on generic array
         return arr.filter(entry => {
             const media = entry.media
             return (
@@ -234,12 +234,14 @@ export function filterListEntries<T extends { media?: Platform_UnifiedMedia | nu
     if (getParamValue(params.sorting) === "RELEASE_DATE")
         arr = sortBy(arr, n => {
             const media = asUnifiedMedia(n?.media)
-            return new Date(media?.startDate?.year!, media?.startDate?.month! - 1)
+            const startDate = media!.startDate!
+            return new Date(startDate.year!, startDate.month! - 1)
         })
     if (getParamValue(params.sorting) === "RELEASE_DATE_DESC")
         arr = sortBy(arr, n => {
             const media = asUnifiedMedia(n?.media)
-            return new Date(media?.startDate?.year!, media?.startDate?.month! - 1)
+            const startDate = media!.startDate!
+            return new Date(startDate.year!, startDate.month! - 1)
         }).reverse()
 
     // Sort by score
@@ -259,9 +261,15 @@ export function filterListEntries<T extends { media?: Platform_UnifiedMedia | nu
         arr = arr?.filter(n => n.completedAt && !!n.completedAt.year && !!n.completedAt.month && !!n.completedAt.day)
     }
     if (getParamValue(params.sorting) === "END_DATE")
-        arr = sortBy(arr, n => new Date(n?.completedAt?.year!, n?.completedAt?.month! - 1, n?.completedAt?.day))
+        arr = sortBy(arr, n => {
+            const comp = n.completedAt!
+            return new Date(comp.year!, comp.month! - 1, comp.day)
+        })
     if (getParamValue(params.sorting) === "END_DATE_DESC")
-        arr = sortBy(arr, n => new Date(n?.completedAt?.year!, n?.completedAt?.month! - 1, n?.completedAt?.day)).reverse()
+        arr = sortBy(arr, n => {
+            const comp = n.completedAt!
+            return new Date(comp.year!, comp.month! - 1, comp.day)
+        }).reverse()
 
     // Sort by progress
     if (getParamValue(params.sorting) === "PROGRESS")
@@ -379,9 +387,9 @@ export function filterCollectionEntries<T extends Anime_LibraryCollectionEntry[]
         arr = arr?.filter(n => !!n.listData?.completedAt)
     }
     if (getParamValue(params.sorting) === "END_DATE")
-        arr = sortBy(arr, n => new Date(n?.listData?.completedAt!))
+        arr = sortBy(arr, n => new Date(n.listData!.completedAt!))
     if (getParamValue(params.sorting) === "END_DATE_DESC")
-        arr = sortBy(arr, n => new Date(n?.listData?.completedAt!)).reverse()
+        arr = sortBy(arr, n => new Date(n.listData!.completedAt!)).reverse()
 
     // Sort by progress
     if (getParamValue(params.sorting) === "PROGRESS")
@@ -432,10 +440,10 @@ export function filterAnimeCollectionEntries<T extends Anime_LibraryCollectionEn
 
     // Sort by last watched
     if (getParamValue(params.sorting) === "LAST_WATCHED") {
-        arr = sortBy(arr, n => watchHistory?.[n.media?.id!]?.timeUpdated || new Date(9999, 1, 1).toISOString())
+        arr = sortBy(arr, n => watchHistory?.[n.media?.id ?? 0]?.timeUpdated || new Date(9999, 1, 1).toISOString())
     }
     if (getParamValue(params.sorting) === "LAST_WATCHED_DESC") {
-        arr = sortBy(arr, n => watchHistory?.[n.media?.id!]?.timeUpdated || new Date(1000, 1, 1).toISOString()).reverse()
+        arr = sortBy(arr, n => watchHistory?.[n.media?.id ?? 0]?.timeUpdated || new Date(1000, 1, 1).toISOString()).reverse()
     }
 
     return arr
@@ -494,9 +502,9 @@ export function sortContinueWatchingEntries(
 
     // Sort by last watched
     if (sorting === "LAST_WATCHED")
-        arr = sortBy(arr, n => watchHistory?.[n.baseAnime?.id!]?.timeUpdated || new Date(9999, 1, 1).toISOString())
+        arr = sortBy(arr, n => watchHistory?.[n.baseAnime?.id ?? 0]?.timeUpdated || new Date(9999, 1, 1).toISOString())
     if (sorting === "LAST_WATCHED_DESC")
-        arr = sortBy(arr, n => watchHistory?.[n.baseAnime?.id!]?.timeUpdated || new Date(1000, 1, 1).toISOString())
+        arr = sortBy(arr, n => watchHistory?.[n.baseAnime?.id ?? 0]?.timeUpdated || new Date(1000, 1, 1).toISOString())
             .reverse()
 
     return arr

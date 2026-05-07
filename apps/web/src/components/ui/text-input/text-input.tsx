@@ -11,9 +11,6 @@ import { BiHide, BiShow } from "react-icons/bi"
 export type TextInputProps = Omit<React.ComponentPropsWithRef<"input">, "size"> &
     InputStyling &
     BasicFieldOptions & {
-    /**
-     * Callback invoked when the value changes. Returns the string value.
-     */
     onValueChange?: (value: string) => void
 }
 
@@ -53,10 +50,10 @@ export const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>((pro
     const isPasswordInput = type === "password"
     const actualType = isPasswordInput ? (showPassword ? "text" : "password") : type
 
-    const handleOnChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleOnChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         onValueChange?.(e.target.value)
         onChange?.(e)
-    }, [])
+    }
 
     const togglePasswordVisibility = React.useCallback(() => {
         setShowPassword(prev => !prev)

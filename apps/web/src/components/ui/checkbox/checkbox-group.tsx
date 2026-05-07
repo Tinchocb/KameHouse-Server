@@ -76,7 +76,7 @@ export const CheckboxGroup = React.forwardRef<HTMLInputElement, CheckboxGroupPro
 
     const [value, setValue] = React.useState<string[]>(controlledValue ?? defaultValue)
 
-    const handleUpdateValue = React.useCallback((v: string) => {
+    const handleUpdateValue = (v: string) => {
         return (checked: boolean | "indeterminate") => {
             setValue(p => {
                 const newArr = checked === true
@@ -88,7 +88,7 @@ export const CheckboxGroup = React.forwardRef<HTMLInputElement, CheckboxGroupPro
                 return newArr
             })
         }
-    }, [])
+    }
 
     React.useEffect(() => {
         if (controlledValue !== undefined) {

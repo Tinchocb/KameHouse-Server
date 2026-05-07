@@ -47,7 +47,7 @@ export const Primary: Story = {
 export const Glowing: Story = {
     args: {
         children: "Glowing Action",
-        intent: "primary-glow",
+        intent: "primary",
     },
 }
 

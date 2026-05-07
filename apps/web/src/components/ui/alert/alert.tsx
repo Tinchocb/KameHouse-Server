@@ -75,23 +75,9 @@ export const AlertAnatomy = defineStyleAnatomy({
 export type AlertProps = React.ComponentPropsWithRef<"div"> &
     VariantProps<typeof AlertAnatomy.root> &
     ComponentAnatomy<typeof AlertAnatomy> & {
-    /**
-     * The title of the alert
-     */
     title?: string,
-    /**
-     * The description text or content of the alert
-     */
     description?: React.ReactNode
-    /**
-     * Replace the default icon with a custom icon
-     *
-     * - `iconClass` does not apply to custom icons
-     */
     icon?: React.ReactNode
-    /**
-     * If true, a close button will be rendered
-     */
     isClosable?: boolean
     /**
      * Callback invoked when the close button is clicked

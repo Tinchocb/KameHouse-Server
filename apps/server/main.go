@@ -145,23 +145,36 @@ func run(ctx context.Context) error {
 
 func resolveBindableAddress(host string, port int) (string, int, error) {
 	addr := fmt.Sprintf("%s:%d", host, port)
-	l, err := net.Listen("tcp", addr)
-	if err == nil {
-		_ = l.Close()
-		return host, port, nil
+
+	// Retry binding to the requested port a few times (helps clear TIME_WAIT from rapid restarts in dev)
+	maxRetries := 5
+	for i := 0; i < maxRetries; i++ {
+		l, err := net.Listen("tcp", addr)
+		if err == nil {
+			_ = l.Close()
+			return host, port, nil
+		}
+
+		errText := err.Error()
+		isBusy := strings.Contains(errText, "address already in use") || strings.Contains(errText, "Only one usage")
+		if !isBusy {
+			return "", 0, err
+		}
+
+		if i < maxRetries-1 {
+			log.Printf("Port %d is busy (possibly TIME_WAIT). Retrying in 1s... (Attempt %d/%d)", port, i+1, maxRetries)
+			time.Sleep(1 * time.Second)
+		}
 	}
 
-	errText := err.Error()
-	if strings.Contains(errText, "address already in use") || strings.Contains(errText, "Only one usage") {
-		l2, err2 := net.Listen("tcp", fmt.Sprintf("%s:%d", host, 0))
-		if err2 != nil {
-			return "", 0, err2
-		}
-		ephemeralPort := l2.Addr().(*net.TCPAddr).Port
-		_ = l2.Close()
-		return host, ephemeralPort, nil
+	// If still busy, fall back to ephemeral port (port 0)
+	l2, err2 := net.Listen("tcp", fmt.Sprintf("%s:%d", host, 0))
+	if err2 != nil {
+		return "", 0, err2
 	}
-	return "", 0, err
+	ephemeralPort := l2.Addr().(*net.TCPAddr).Port
+	_ = l2.Close()
+	return host, ephemeralPort, nil
 }
 
 // loadEnvFile searches for a .env file starting from the CWD and

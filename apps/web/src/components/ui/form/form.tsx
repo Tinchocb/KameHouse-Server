@@ -152,7 +152,7 @@ type MaybeRenderProp<P> =
     | React.ReactNode
     | ((props: P) => React.ReactNode)
 
-const isFunction = <T extends Function = Function>(value: any): value is T => typeof value === "function"
+const isFunction = <T extends (...args: any[]) => any = (...args: any[]) => any>(value: any): value is T => typeof value === "function"
 
 function runIfFn<T, U>(
     valueOrFn: T | ((...fnArgs: U[]) => T),

@@ -43,46 +43,48 @@ export function useDraggableScroll(
         lastScrollY: 0,
     })
 
-    let isScrollableAlongX = false
-    let isScrollableAlongY = false
-    let maxHorizontalScroll = 0
-    let maxVerticalScroll = 0
-    let cursorStyleOfWrapperElement: string
-    let cursorStyleOfChildElements: string[]
-    let transformStyleOfChildElements: string[]
-    let transitionStyleOfChildElements: string[]
+    const layoutState = useRef({
+        isScrollableAlongX: false,
+        isScrollableAlongY: false,
+        maxHorizontalScroll: 0,
+        maxVerticalScroll: 0,
+        cursorStyleOfWrapperElement: "",
+        cursorStyleOfChildElements: [] as string[],
+        transformStyleOfChildElements: [] as string[],
+        transitionStyleOfChildElements: [] as string[],
+    })
 
     const timing = (1 / 60) * 1000 // period of most monitors (60fps)
 
     useIsomorphicLayoutEffect(() => {
-        if (isMounted) {
-            isScrollableAlongX =
+        if (isMounted && ref.current) {
+            layoutState.current.isScrollableAlongX =
                 window.getComputedStyle(ref.current).overflowX === "scroll"
-            isScrollableAlongY =
+            layoutState.current.isScrollableAlongY =
                 window.getComputedStyle(ref.current).overflowY === "scroll"
 
-            maxHorizontalScroll = ref.current.scrollWidth - ref.current.clientWidth
-            maxVerticalScroll = ref.current.scrollHeight - ref.current.clientHeight
+            layoutState.current.maxHorizontalScroll = ref.current.scrollWidth - ref.current.clientWidth
+            layoutState.current.maxVerticalScroll = ref.current.scrollHeight - ref.current.clientHeight
 
-            cursorStyleOfWrapperElement = window.getComputedStyle(ref.current).cursor
+            layoutState.current.cursorStyleOfWrapperElement = window.getComputedStyle(ref.current).cursor
 
-            cursorStyleOfChildElements = []
-            transformStyleOfChildElements = []
-            transitionStyleOfChildElements = [];
+            layoutState.current.cursorStyleOfChildElements = []
+            layoutState.current.transformStyleOfChildElements = []
+            layoutState.current.transitionStyleOfChildElements = [];
 
             (ref.current.childNodes as NodeListOf<HTMLOptionElement>).forEach(
                 (child: HTMLElement) => {
-                    cursorStyleOfChildElements.push(
+                    layoutState.current.cursorStyleOfChildElements.push(
                         window.getComputedStyle(child).cursor,
                     )
 
-                    transformStyleOfChildElements.push(
+                    layoutState.current.transformStyleOfChildElements.push(
                         window.getComputedStyle(child).transform === "none"
                             ? ""
                             : window.getComputedStyle(child).transform,
                     )
 
-                    transitionStyleOfChildElements.push(
+                    layoutState.current.transitionStyleOfChildElements.push(
                         window.getComputedStyle(child).transition === "none"
                             ? ""
                             : window.getComputedStyle(child).transition,
@@ -113,7 +115,7 @@ export function useDraggableScroll(
         let displacementX = 0
         let displacementY = 0
 
-        if (isScrollableAlongX && isScrollableAlongY) {
+        if (layoutState.current.isScrollableAlongX && layoutState.current.isScrollableAlongY) {
             displacementX =
                 0.3 *
                 clientWidth *
@@ -124,13 +126,13 @@ export function useDraggableScroll(
                 clientHeight *
                 Math.sign(dy) *
                 Math.log10(1.0 + (0.5 * Math.abs(dy)) / clientHeight)
-        } else if (isScrollableAlongX) {
+        } else if (layoutState.current.isScrollableAlongX) {
             displacementX =
                 0.3 *
                 clientWidth *
                 Math.sign(dx) *
                 Math.log10(1.0 + (0.5 * Math.abs(dx)) / clientWidth)
-        } else if (isScrollableAlongY) {
+        } else if (layoutState.current.isScrollableAlongY) {
             displacementY =
                 0.3 *
                 clientHeight *
@@ -149,26 +151,26 @@ export function useDraggableScroll(
     const recoverChildStyle = () => {
         (ref.current.childNodes as NodeListOf<HTMLOptionElement>).forEach(
             (child: HTMLElement, i) => {
-                child.style.transform = transformStyleOfChildElements[i]  
-                child.style.transition = transitionStyleOfChildElements[i]  
+                child.style.transform = layoutState.current.transformStyleOfChildElements[i]  
+                child.style.transition = layoutState.current.transitionStyleOfChildElements[i]  
             },
         )
     }
 
-    let rubberBandAnimationTimer: NodeJS.Timeout
-    let keepMovingX: NodeJS.Timer
-    let keepMovingY: NodeJS.Timer
+    const rubberBandAnimationTimer = useRef<NodeJS.Timeout | null>(null)
+    const keepMovingX = useRef<NodeJS.Timer | null>(null)
+    const keepMovingY = useRef<NodeJS.Timer | null>(null)
 
     const callbackMomentum = () => {
         const minimumSpeedToTriggerMomentum = 0.05
 
-        keepMovingX = setInterval(() => {
+        keepMovingX.current = setInterval(() => {
             const lastScrollSpeedX = internalState.current.scrollSpeedX
             const newScrollSpeedX = lastScrollSpeedX * decayRate
             internalState.current.scrollSpeedX = newScrollSpeedX
 
             const isAtLeft = ref.current.scrollLeft <= 0
-            const isAtRight = ref.current.scrollLeft >= maxHorizontalScroll
+            const isAtRight = ref.current.scrollLeft >= layoutState.current.maxHorizontalScroll
             const hasReachedHorizontalEdges = isAtLeft || isAtRight
 
             runScroll()
@@ -179,17 +181,20 @@ export function useDraggableScroll(
                 hasReachedHorizontalEdges
             ) {
                 internalState.current.scrollSpeedX = 0
-                clearInterval(keepMovingX as any)
+                if (keepMovingX.current) {
+                    clearInterval(keepMovingX.current as any)
+                    keepMovingX.current = null
+                }
             }
         }, timing)
 
-        keepMovingY = setInterval(() => {
+        keepMovingY.current = setInterval(() => {
             const lastScrollSpeedY = internalState.current.scrollSpeedY
             const newScrollSpeedY = lastScrollSpeedY * decayRate
             internalState.current.scrollSpeedY = newScrollSpeedY
 
             const isAtTop = ref.current.scrollTop <= 0
-            const isAtBottom = ref.current.scrollTop >= maxVerticalScroll
+            const isAtBottom = ref.current.scrollTop >= layoutState.current.maxVerticalScroll
             const hasReachedVerticalEdges = isAtTop || isAtBottom
 
             runScroll()
@@ -200,7 +205,10 @@ export function useDraggableScroll(
                 hasReachedVerticalEdges
             ) {
                 internalState.current.scrollSpeedY = 0
-                clearInterval(keepMovingY as any)
+                if (keepMovingY.current) {
+                    clearInterval(keepMovingY.current as any)
+                    keepMovingY.current = null
+                }
             }
         }, timing)
 
@@ -217,7 +225,7 @@ export function useDraggableScroll(
                 },
             )
 
-            rubberBandAnimationTimer = setTimeout(
+            rubberBandAnimationTimer.current = setTimeout(
                 recoverChildStyle,
                 transitionDurationInMilliseconds,
             )
@@ -227,7 +235,6 @@ export function useDraggableScroll(
     const preventClick = (e: Event) => {
         e.preventDefault()
         e.stopImmediatePropagation()
-        // e.stopPropagation();
     }
 
     const getIsMousePressActive = (buttonsCode: number) => {
@@ -277,10 +284,10 @@ export function useDraggableScroll(
         internalState.current.lastMouseX = 0
         internalState.current.lastMouseY = 0
 
-        ref.current.style.cursor = cursorStyleOfWrapperElement;  
+        ref.current.style.cursor = layoutState.current.cursorStyleOfWrapperElement;  
         (ref.current.childNodes as NodeListOf<HTMLOptionElement>).forEach(
             (child: HTMLElement, i) => {
-                child.style.cursor = cursorStyleOfChildElements[i]  
+                child.style.cursor = layoutState.current.cursorStyleOfChildElements[i]  
             },
         )
 
@@ -315,12 +322,12 @@ export function useDraggableScroll(
             },
         )
 
-        const isAtLeft = ref.current.scrollLeft <= 0 && isScrollableAlongX
+        const isAtLeft = ref.current.scrollLeft <= 0 && layoutState.current.isScrollableAlongX
         const isAtRight =
-            ref.current.scrollLeft >= maxHorizontalScroll && isScrollableAlongX
-        const isAtTop = ref.current.scrollTop <= 0 && isScrollableAlongY
+            ref.current.scrollLeft >= layoutState.current.maxHorizontalScroll && layoutState.current.isScrollableAlongX
+        const isAtTop = ref.current.scrollTop <= 0 && layoutState.current.isScrollableAlongY
         const isAtBottom =
-            ref.current.scrollTop >= maxVerticalScroll && isScrollableAlongY
+            ref.current.scrollTop >= layoutState.current.maxVerticalScroll && layoutState.current.isScrollableAlongY
         const isAtAnEdge = isAtLeft || isAtRight || isAtTop || isAtBottom
 
         if (isAtAnEdge && applyRubberBandEffect) {
@@ -331,8 +338,8 @@ export function useDraggableScroll(
     }
 
     const handleResize = () => {
-        maxHorizontalScroll = ref.current.scrollWidth - ref.current.clientWidth
-        maxVerticalScroll = ref.current.scrollHeight - ref.current.clientHeight
+        layoutState.current.maxHorizontalScroll = ref.current.scrollWidth - ref.current.clientWidth
+        layoutState.current.maxVerticalScroll = ref.current.scrollHeight - ref.current.clientHeight
     }
 
     useEffect(() => {
@@ -346,9 +353,9 @@ export function useDraggableScroll(
             window.removeEventListener("mousemove", onMouseMove)
             window.removeEventListener("resize", handleResize)
 
-            clearInterval(keepMovingX as any)
-            clearInterval(keepMovingY as any)
-            clearTimeout(rubberBandAnimationTimer)
+            if (keepMovingX.current) clearInterval(keepMovingX.current as any)
+            if (keepMovingY.current) clearInterval(keepMovingY.current as any)
+            if (rubberBandAnimationTimer.current) clearTimeout(rubberBandAnimationTimer.current)
         }
     }, [isMounted])
 

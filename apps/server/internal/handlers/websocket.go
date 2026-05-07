@@ -11,13 +11,26 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-var (
-	upgrader = websocket.Upgrader{
-		CheckOrigin: func(r *http.Request) bool {
+// allowedOrigins stores the allowed origins for WebSocket connections.
+// This should be kept in sync with the CORS allowed origins in routes.go.
+var allowedWSOrigins = map[string]bool{
+	"http://localhost:43210":   true,
+	"http://127.0.0.1:43210":   true,
+	"http://localhost":         true,
+	"http://127.0.0.1":       true,
+}
+
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			// No origin header - same-origin request, allow it
 			return true
-		},
-	}
-)
+		}
+		// Only allow explicitly whitelisted origins
+		return allowedWSOrigins[origin]
+	},
+}
 
 // webSocketEventHandler creates a new websocket handler for real-time event communication.
 // The route is registered BEFORE the auth middleware group so the HTTP→WS upgrade

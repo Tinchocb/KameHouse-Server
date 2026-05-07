@@ -1,7 +1,4 @@
 import React, { useState } from "react"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import axios from "axios"
-import { getServerBaseUrl } from "@/api/client/server-url"
 import { toast } from "sonner"
 import { motion, AnimatePresence } from "framer-motion"
 import {
@@ -10,8 +7,8 @@ import {
     LucideLoader2, LucideX, LucideFileVideo,
 } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
-
-// ── Types ─────────────────────────────────────────────────────────────────────
+import { useGetUnlinkedFiles, useResolveUnlinkedFile } from "@/api/hooks/unlinked.hooks"
+import { useTMDBSearch, TMDBResult } from "@/api/hooks/tmdb.hooks"
 
 interface GhostFile {
     id: number
@@ -23,56 +20,29 @@ interface GhostFile {
     ghostMatchCount: number
 }
 
-interface TMDBResult {
-    id: number
-    title?: string
-    name?: string
-    release_date?: string
-    first_air_date?: string
-    poster_path?: string | null
-    media_type?: "movie" | "tv"
+function useUnlinkedFilesData() {
+    const query = useGetUnlinkedFiles()
+    return {
+        ...query,
+        data: query.data as GhostFile[] | undefined,
+    }
 }
 
-// ── Hooks ─────────────────────────────────────────────────────────────────────
-
-function useUnlinkedFiles() {
-    return useQuery<GhostFile[]>({
-        queryKey: ["unlinked-files"],
-        queryFn: async () => {
-            const res = await axios.get(`${getServerBaseUrl()}/api/v1/library/unlinked`)
-            return res.data?.data ?? []
+function useResolveUnlinkedFileAction() {
+    const mutation = useResolveUnlinkedFile()
+    return {
+        ...mutation,
+        mutate: (variables: { path: string; targetMediaId: number }) => {
+            mutation.mutate(variables, {
+                onSuccess: () => {
+                    toast.success("Archivo vinculado correctamente. Se aplicará en el próximo escaneo.")
+                },
+                onError: () => {
+                    toast.error("Error al vincular el archivo")
+                },
+            })
         },
-        refetchOnWindowFocus: false,
-    })
-}
-
-function useResolveUnlinkedFile() {
-    const qc = useQueryClient()
-    return useMutation({
-        mutationFn: async ({ path, targetMediaId }: { path: string; targetMediaId: number }) => {
-            await axios.post(`${getServerBaseUrl()}/api/v1/library/unlinked/resolve`, { path, targetMediaId })
-        },
-        onSuccess: () => {
-            qc.invalidateQueries({ queryKey: ["unlinked-files"] })
-            toast.success("Archivo vinculado correctamente. Se aplicará en el próximo escaneo.")
-        },
-        onError: () => {
-            toast.error("Error al vincular el archivo")
-        },
-    })
-}
-
-function useTMDBSearch(query: string) {
-    return useQuery<TMDBResult[]>({
-        queryKey: ["tmdb-multi-search", query],
-        queryFn: async () => {
-            if (!query.trim()) return []
-            const res = await axios.post(`${getServerBaseUrl()}/api/v1/tmdb/search`, { query, page: 1 })
-            return res.data?.data ?? []
-        },
-        enabled: query.trim().length >= 2,
-        staleTime: 30_000,
-    })
+    }
 }
 
 // ── Components ────────────────────────────────────────────────────────────────
@@ -83,7 +53,7 @@ function FileCard({ file }: { file: GhostFile }) {
     const [debouncedQuery, setDebouncedQuery] = useState("")
     const debounceRef = React.useRef<ReturnType<typeof setTimeout>>()
     const { data: results = [], isFetching } = useTMDBSearch(debouncedQuery)
-    const resolve = useResolveUnlinkedFile()
+    const resolve = useResolveUnlinkedFileAction()
 
     const filename = file.path.split(/[\\/]/).pop() ?? file.path
     const confidence = Math.round(file.algorithmScore * 100)
@@ -95,9 +65,8 @@ function FileCard({ file }: { file: GhostFile }) {
     }
 
     const handleLink = (result: TMDBResult) => {
-        resolve.mutate({ path: file.path, targetMediaId: result.id }, {
-            onSuccess: () => setExpanded(false),
-        })
+        resolve.mutate({ path: file.path, targetMediaId: result.id })
+        setExpanded(false)
     }
 
     if (file.userResolved) return null
@@ -214,7 +183,7 @@ function FileCard({ file }: { file: GhostFile }) {
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export function UnlinkedFilesPanel() {
-    const { data: files = [], isLoading, refetch } = useUnlinkedFiles()
+    const { data: files = [], isLoading, refetch } = useUnlinkedFilesData()
     const unresolved = files.filter(f => !f.userResolved)
 
     if (isLoading) return null

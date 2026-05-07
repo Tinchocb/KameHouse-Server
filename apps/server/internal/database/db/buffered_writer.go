@@ -21,6 +21,7 @@ type BufferedWriter struct {
 	maxBatch int
 	interval time.Duration
 	stopChan chan struct{}
+	doneChan chan struct{}
 	OnError  func(error)
 }
 
@@ -32,6 +33,7 @@ func NewBufferedWriter(db *gorm.DB, logger *zerolog.Logger, maxBatch int, flushI
 		maxBatch: maxBatch,
 		interval: flushInterval,
 		stopChan: make(chan struct{}),
+		doneChan: make(chan struct{}),
 	}
 
 	go bw.committerDaemon()
@@ -100,12 +102,15 @@ func (bw *BufferedWriter) committerDaemon() {
 		case <-bw.stopChan:
 			// Flush any remaining items before shutting down
 			bw.Flush()
+			close(bw.doneChan)
 			return
 		}
 	}
 }
 
-// flush pending operations.
+// Shutdown gracefully stops the buffered writer and waits for the daemon to finish flushing.
 func (bw *BufferedWriter) Shutdown() {
 	close(bw.stopChan)
+	// Wait for the daemon to finish its final flush
+	<-bw.doneChan
 }

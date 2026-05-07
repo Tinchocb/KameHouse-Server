@@ -231,13 +231,21 @@ interface EpisodeGridProps {
 function EpisodeGrid({ episodes, saga, onPlay }: EpisodeGridProps) {
     const listRef = React.useRef<HTMLUListElement>(null)
 
+    const [scrollMargin, setScrollMargin] = React.useState(0)
+
+    React.useLayoutEffect(() => {
+        if (listRef.current) {
+            setScrollMargin(listRef.current.offsetTop)
+        }
+    }, [])
+
     const virtualizer = useWindowVirtualizer({
         count: episodes.length,
         // Estimated row height: lg thumbnail height (146px) + padding. 
         // Auto-corrects via measureElement.
         estimateSize: () => 148,
         overscan: 5,
-        scrollMargin: listRef.current?.offsetTop ?? 0,
+        scrollMargin,
     })
 
     const items = virtualizer.getVirtualItems()
@@ -309,7 +317,7 @@ function EpisodeCardContent({ episode, saga, onPlay }: EpisodeCardProps) {
         if (sourcesData) {
             return {
                 hasLocal: sourcesData.sources.some((s) => s.type === "local"),
-                hasStream: sourcesData.sources.some((s) => s.type === "torrentio"),
+                hasStream: sourcesData.sources.some((s) => (s.type as string) === "torrentio"),
             }
         }
         return { hasLocal: !!episode.hasLocalFile, hasStream: !episode.hasLocalFile && episode.hasLocalFile !== undefined }

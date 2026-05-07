@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -68,7 +67,10 @@ func (h *Handler) HandleMasterPlaylist(c echo.Context) error {
 
 	// 3. Setup Transcode/DirectStream directories
 	outDir := filepath.Join(os.TempDir(), "kamehouse", "transcodes", idStr)
-	os.MkdirAll(outDir, 0755)
+	if err := os.MkdirAll(outDir, 0755); err != nil {
+		h.App.Logger.Error().Err(err).Msg("failed to create transcode directory")
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to create transcode directory")
+	}
 	playlistPath := filepath.Join(outDir, "index.m3u8")
 
 	// 4. Start FFmpeg if playlist doesn't exist
@@ -77,7 +79,7 @@ func (h *Handler) HandleMasterPlaylist(c echo.Context) error {
 		args := builder.BuildForHLS(transcoder.PlaybackMethod(decision.Method), targetFile, outDir)
 		
 		pm := transcoder.NewFFmpegProcess(h.App.Logger)
-		if err := pm.StartTranscode(context.Background(), args); err != nil {
+		if err := pm.StartTranscode(c.Request().Context(), args); err != nil {
 			h.App.Logger.Error().Err(err).Msg("ffmpeg start failed")
 			return echo.NewHTTPError(500, "ffmpeg init failed")
 		}
@@ -127,7 +129,9 @@ func (h *Handler) StopStreamSession(c echo.Context) error {
 	// Note: Active transcoding processes attached to client Context will be killed automatically
 	// when the client terminates the HTTP connection requesting the master playlist or segments stream.
 	dir := filepath.Join(os.TempDir(), "kamehouse", "transcodes", id)
-	os.RemoveAll(dir)
+	if err := os.RemoveAll(dir); err != nil {
+		h.App.Logger.Warn().Err(err).Str("mediaId", id).Msg("failed to clean up stream session directory")
+	}
 	
 	h.App.Logger.Info().Str("mediaId", id).Msg("stream session cleaned up")
 	return c.NoContent(http.StatusOK)

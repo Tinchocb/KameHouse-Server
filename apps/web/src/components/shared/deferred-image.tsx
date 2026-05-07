@@ -50,7 +50,9 @@ export function DeferredImage(props: DeferredImageProps) {
 
     useEffect(() => {
         if (priority) {
-            setIsIntersecting(true);
+            Promise.resolve().then(() => {
+                setIsIntersecting(true);
+            });
             return;
         }
 

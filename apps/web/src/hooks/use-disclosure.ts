@@ -21,7 +21,11 @@ export function useDisclosure(
     }
 
     const toggle = () => {
-        opened ? close() : open()
+        if (opened) {
+            close()
+        } else {
+            open()
+        }
     }
 
     return { isOpen: opened, open, close, toggle } as const
@@ -51,7 +55,11 @@ export function useBoolean(
     }
 
     const toggle = () => {
-        opened ? close() : open()
+        if (opened) {
+            close()
+        } else {
+            open()
+        }
     }
 
     return { active: opened, on: open, off: close, toggle, set: setOpened } as const

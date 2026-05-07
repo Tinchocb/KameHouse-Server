@@ -69,33 +69,12 @@ export type ComboboxProps = Omit<React.ComponentPropsWithRef<"button">, "size" |
     BasicFieldOptions &
     InputStyling &
     ComponentAnatomy<typeof ComboboxAnatomy> & {
-    /**
-     * The selected values
-     */
     value?: string[]
-    /**
-     * Callback fired when the selected values change
-     */
     onValueChange?: (value: string[]) => void
-    /**
-     * Callback fired when the search input changes
-     */
     onTextChange?: (value: string) => void
-    /**
-     * Additional props for the command component
-     */
     commandProps?: CommandProps
-    /**
-     * The options to display in the dropdown
-     */
     options: ComboboxOption[]
-    /**
-     * The message to display when there are no options
-     */
     emptyMessage: React.ReactNode
-    /**
-     * The placeholder text
-     */
     placeholder?: string
     /**
      * Allow multiple values to be selected
@@ -162,10 +141,10 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>((prop
     const [internalValue, setInternalValue] = React.useState(defaultValue ?? [])
     const value = isControlled ? controlledValue! : internalValue
 
-    const updateValue = React.useCallback((next: string[]) => {
+    const updateValue = (next: string[]) => {
         if (!isControlled) setInternalValue(next)
         onValueChange?.(next)
-    }, [isControlled, onValueChange])
+    }
 
     const buttonRef = React.useRef<HTMLButtonElement>(null)
     const [open, setOpen] = React.useState(false)

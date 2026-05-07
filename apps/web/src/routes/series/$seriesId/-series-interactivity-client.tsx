@@ -1,7 +1,7 @@
 import React from "react"
 import { FaPlay } from "react-icons/fa"
 import { ManualMatchModal } from "@/components/shared/manual-match-modal"
-import { Anime_Episode } from "@/api/generated/types"
+import { Anime_Episode, Anime_LocalFile } from "@/api/generated/types"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { cn } from "@/components/ui/core/styling"
 import { sanitizeHtml } from "@/lib/helpers/sanitizer"
@@ -65,12 +65,16 @@ interface EpisodeClientCardProps {
     episode: Anime_Episode
     seriesTitle: string
     fallbackThumb: string
+    localFile?: Anime_LocalFile
+    onPlay?: (localFile: Anime_LocalFile, episode: Anime_Episode) => void
 }
 
 const EpisodeClientCard = React.memo(function EpisodeClientCard({
     episode,
     seriesTitle,
     fallbackThumb,
+    localFile,
+    onPlay,
 }: EpisodeClientCardProps) {
     const thumb = episode.episodeMetadata?.image || fallbackThumb
     const metaTitle = episode.episodeMetadata?.title || ""
@@ -80,14 +84,34 @@ const EpisodeClientCard = React.memo(function EpisodeClientCard({
     const cleanOverview = overview ? sanitizeHtml(overview) : ""
     const airDate = episode.episodeMetadata?.airDate
     const duration = episode.episodeMetadata?.length
+    const hasLocalFile = !!localFile
+
+    const handleClick = () => {
+        if (hasLocalFile && localFile && onPlay) {
+            onPlay(localFile, episode)
+        }
+    }
+
+    const getQualityBadge = (name: string) => {
+        const n = name.toLowerCase()
+        if (n.includes("2160p") || n.includes("4k")) return "4K"
+        if (n.includes("1080p")) return "1080p"
+        if (n.includes("720p")) return "720p"
+        if (n.includes("480p")) return "480p"
+        return null
+    }
+
+    const quality = localFile ? getQualityBadge(localFile.name) : null
 
     return (
         <div
             className={cn(
                 "group relative flex flex-col rounded-none overflow-hidden bg-black border border-white/10",
                 "hover:border-white transition-all duration-200",
-                !episode.isDownloaded && "opacity-40 grayscale hover:opacity-100",
+                !hasLocalFile && "opacity-40 grayscale hover:opacity-100",
+                hasLocalFile && "cursor-pointer",
             )}
+            onClick={handleClick}
         >
             {/* Thumbnail Area */}
             <div className="relative w-full aspect-video overflow-hidden bg-zinc-900 border-b border-white/10">
@@ -110,6 +134,18 @@ const EpisodeClientCard = React.memo(function EpisodeClientCard({
                         EP {episode.episodeNumber}
                     </span>
                 </div>
+                {hasLocalFile && (
+                    <div className="absolute top-0 right-0 flex gap-1">
+                        {quality && (
+                            <span className="px-2 py-1 bg-blue-600 text-[8px] font-black text-white tracking-widest uppercase">
+                                {quality}
+                            </span>
+                        )}
+                        <span className="px-2 py-1 bg-green-600 text-[8px] font-black text-white tracking-widest uppercase">
+                            LOCAL
+                        </span>
+                    </div>
+                )}
             </div>
 
             {/* Content Area */}
@@ -121,6 +157,13 @@ const EpisodeClientCard = React.memo(function EpisodeClientCard({
                 )}>
                     {epTitle}
                 </h4>
+
+                {/* Local File Info */}
+                {hasLocalFile && localFile && (
+                    <p className="text-[9px] font-bold text-green-500 tracking-wider truncate" title={localFile.path}>
+                        📁 {localFile.name}
+                    </p>
+                )}
 
                 {/* Overview (Stark Grey) */}
                 {cleanOverview && (

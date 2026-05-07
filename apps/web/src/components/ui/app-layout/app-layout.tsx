@@ -211,7 +211,11 @@ AppLayoutContent.displayName = "AppLayoutContent"
  * -----------------------------------------------------------------------------------------------*/
 
 export type AppLayoutGridProps = React.ComponentPropsWithRef<"section"> &
-    VariantProps<typeof AppLayoutGridAnatomy.root>
+    VariantProps<typeof AppLayoutGridAnatomy.root> & {
+        breakBelow?: "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl"
+        cols?: number
+        spacing?: "xs" | "sm" | "md" | "lg" | "xl"
+    }
 
 export const AppLayoutGrid = React.forwardRef<HTMLElement, AppLayoutGridProps>((props, ref) => {
 
@@ -271,7 +275,9 @@ AppLayoutFooter.displayName = "AppLayoutFooter"
  * -----------------------------------------------------------------------------------------------*/
 
 export type AppLayoutStackProps = React.ComponentPropsWithRef<"div"> &
-    VariantProps<typeof AppLayoutStackAnatomy.root>
+    VariantProps<typeof AppLayoutStackAnatomy.root> & {
+        spacing?: "xs" | "sm" | "md" | "lg" | "xl"
+    }
 
 export const AppLayoutStack = React.forwardRef<HTMLDivElement, AppLayoutStackProps>((props, ref) => {
 

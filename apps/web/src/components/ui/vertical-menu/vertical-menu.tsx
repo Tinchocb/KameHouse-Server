@@ -148,21 +148,12 @@ export type VerticalMenuItem = {
 export type VerticalMenuProps = React.ComponentPropsWithRef<"div"> &
     ComponentAnatomy<typeof VerticalMenuAnatomy> &
     VariantProps<typeof VerticalMenuAnatomy.itemContent> & {
-        /**
-         * The items to render.
-         */
+        size?: "xs" | "sm" | "md" | "lg" | "xl"
+        collapsed?: boolean
+        isSidebar?: boolean
         items: VerticalMenuItem[]
-        /**
-         * Props passed to each item tooltip that is shown when the menu is collapsed.
-         */
         itemTooltipProps?: Omit<TooltipProps, "trigger">
-        /**
-         * Callback fired when any item is clicked.
-         */
         onAnyItemClick?: React.MouseEventHandler<HTMLElement>
-        /**
-         * Callback fired when a link item is clicked.
-         */
         onLinkItemClick?: React.MouseEventHandler<HTMLElement>
     }
 
@@ -221,7 +212,7 @@ export const VerticalMenu = React.forwardRef<HTMLDivElement, VerticalMenuProps>(
         )
     }, [collapsed, itemTooltipProps])
 
-    const ItemContent = React.useCallback((item: VerticalMenuItem) => (
+    const renderItemContent = (item: VerticalMenuItem) => (
         <ItemContentWrapper name={item.name}>
             <div
                 data-vertical-menu-item-id={item.id}
@@ -246,7 +237,7 @@ export const VerticalMenu = React.forwardRef<HTMLDivElement, VerticalMenuProps>(
                 {item.addon}
             </div>
         </ItemContentWrapper>
-    ), [collapsed, size, itemContentClass, itemIconClass, isSidebar])
+    )
 
     return (
         <nav
@@ -268,11 +259,11 @@ export const VerticalMenu = React.forwardRef<HTMLDivElement, VerticalMenuProps>(
                             {!item.subContent ?
                                 item.href ? (
                                     <Link to={item.href} {...itemProps(item)} data-vertical-menu-item-link={item.name}>
-                                        <ItemContent {...item} />
+                                        {renderItemContent(item)}
                                     </Link>
                                 ) : (
                                     <button {...itemProps(item)} data-vertical-menu-item-button={item.name}>
-                                        <ItemContent {...item} />
+                                        {renderItemContent(item)}
                                     </button>
                                 ) : (
                                     <Disclosure
@@ -294,7 +285,7 @@ export const VerticalMenu = React.forwardRef<HTMLDivElement, VerticalMenuProps>(
                                                     data-current={item.isCurrent}
                                                     onClick={item.onClick}
                                                 >
-                                                    <ItemContent {...item} />
+                                                    {renderItemContent(item)}
                                                     <svg
                                                         xmlns="http://www.w3.org/2000/svg"
                                                         width="24"

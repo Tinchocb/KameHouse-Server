@@ -952,6 +952,26 @@ export const API_ENDPOINTS = {
             methods: ["DELETE"],
             endpoint: "/api/v1/library/empty-directories",
         },
+        /**
+         *  @description
+         *  Route returns all unlinked files.
+         *  Unlinked files are local files that are not matched to any media entry.
+         */
+        GetUnlinkedFiles: {
+            key: "LOCALFILES-get-unlinked-files",
+            methods: ["GET"],
+            endpoint: "/api/v1/library/unlinked",
+        },
+        /**
+         *  @description
+         *  Route resolves an unlinked file to a specific media ID.
+         *  This matches an unlinked local file to a media entry.
+         */
+        ResolveUnlinkedFile: {
+            key: "LOCALFILES-resolve-unlinked-file",
+            methods: ["POST"],
+            endpoint: "/api/v1/library/unlinked/resolve",
+        },
     },
     MAL: {
         /**

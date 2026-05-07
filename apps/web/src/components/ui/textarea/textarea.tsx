@@ -33,9 +33,6 @@ export const TextareaAnatomy = defineStyleAnatomy({
 export type TextareaProps = Omit<React.ComponentPropsWithRef<"textarea">, "size"> &
     InputStyling &
     BasicFieldOptions & {
-    /**
-     * Callback invoked when the value changes. Returns the string value.
-     */
     onValueChange?: (value: string) => void
 }
 
@@ -70,10 +67,10 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>((pr
         rightIcon: props1.rightIcon,
     })
 
-    const handleOnChange = React.useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const handleOnChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         onValueChange?.(e.target.value)
         onChange?.(e)
-    }, [])
+    }
 
     return (
         <BasicField {...basicFieldProps}>

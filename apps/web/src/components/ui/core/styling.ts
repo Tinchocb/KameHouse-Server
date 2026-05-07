@@ -22,7 +22,7 @@ export const scrollStyles = {
     custom: "[&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-800 hover:[&::-webkit-scrollbar-thumb]:bg-zinc-700",
 }
 
-export function defineStyleAnatomy<T extends string>(parts: Record<T, any>) {
+export function defineStyleAnatomy<T extends Record<string, any>>(parts: T): T {
     return parts
 }
 

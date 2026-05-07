@@ -6,6 +6,8 @@ import { HardDrive, Star, ArrowLeft, Calendar, Clock, CheckCircle2, Circle, Chev
 import { VideoPlayer } from "@/components/video/player"
 import type { Mediastream_StreamType, Anime_Episode } from "@/api/generated/types"
 import { toast } from "sonner"
+import { PageHeader } from "@/components/ui/page-header"
+import { ProgressBar } from "@/components/ui/progress-bar"
 
 export const Route = createFileRoute("/series/$seriesId/$sagaId")({
     component: DetailPage,
@@ -61,7 +63,7 @@ interface LeftPanelProps {
 function LeftPanel({ posterUrl, title, synopsis, year, episodesCount, sagaTitle, genres, rating, durationPerEp, studios, onBack }: LeftPanelProps) {
 
     return (
-        <aside className="w-full lg:w-[30%] lg:min-h-screen lg:sticky lg:top-0 lg:self-start bg-black border-r border-white/10 flex flex-col">
+        <aside className="w-full lg:w-[30%] lg:min-h-screen lg:sticky lg:top-0 lg:self-start bg-[#070a14]/40 backdrop-blur-md border-r border-white/5 flex flex-col">
             {/* Back button */}
             <button
                 onClick={onBack}
@@ -73,11 +75,11 @@ function LeftPanel({ posterUrl, title, synopsis, year, episodesCount, sagaTitle,
 
             {/* Poster */}
             <div className="px-8 mt-4">
-                <div className="relative w-full aspect-[2/3] bg-black border border-white/20">
+                <div className="relative w-full aspect-[2/3] bg-zinc-950 border border-white/5 rounded-2xl overflow-hidden shadow-2xl">
                     <img
                         src={posterUrl}
                         alt={title}
-                        className="w-full h-full object-cover grayscale"
+                        className="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                 </div>
@@ -116,7 +118,7 @@ function LeftPanel({ posterUrl, title, synopsis, year, episodesCount, sagaTitle,
                     {genres.slice(0, 4).map((g) => (
                         <span
                             key={g}
-                            className="px-2.5 py-1 text-[9px] font-black uppercase tracking-widest bg-zinc-900 text-zinc-400 border border-white/5"
+                            className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-brand-orange/10 text-brand-orange border border-brand-orange/20"
                         >
                             {g}
                         </span>
@@ -151,19 +153,21 @@ interface EpisodeRowProps {
     isActive: boolean
     isWatched: boolean
     isDownloaded: boolean
+    progress?: number // 0-100, progreso del episodio
     onSelect: () => void
 }
 
-function EpisodeRow({ episode, isActive, isWatched, isDownloaded, onSelect }: EpisodeRowProps) {
+function EpisodeRow({ episode, isActive, isWatched, isDownloaded, progress, onSelect }: EpisodeRowProps) {
     return (
         <button
             onClick={onSelect}
             className={cn(
-                "w-full flex items-center gap-6 px-6 py-4 text-left group",
-                "transition-all duration-200 border-l-2",
+                "w-full flex items-center gap-6 px-6 py-4 text-left group relative",
+                "transition-all duration-300 rounded-xl",
                 isActive
-                    ? "bg-white text-black border-white"
-                    : "bg-transparent border-transparent hover:bg-zinc-900 text-zinc-500 hover:text-white",
+                    ? "bg-brand-orange text-white border-brand-orange shadow-[0_0_15px_rgba(255,110,58,0.4)]"
+                    : "bg-transparent border-transparent hover:bg-white/5 text-zinc-500 hover:text-white",
+                isWatched && "opacity-60",
             )}
         >
             {/* Episode number */}
@@ -171,12 +175,12 @@ function EpisodeRow({ episode, isActive, isWatched, isDownloaded, onSelect }: Ep
                 <span
                     className={cn(
                         "text-xs font-black tracking-widest",
-                        isActive ? "text-black" : "text-zinc-700 group-hover:text-zinc-400",
+                        isActive ? "text-white" : "text-zinc-700 group-hover:text-zinc-400",
                     )}
                 >
                     {episode.number.toString().padStart(2, '0')}
                 </span>
-                {isDownloaded && <HardDrive className={cn("w-3 h-3 mt-1", isActive ? "text-black/40" : "text-zinc-700")} />}
+                {isDownloaded && <HardDrive className={cn("w-3 h-3 mt-1", isActive ? "text-white/65" : "text-zinc-700")} />}
             </div>
 
             {/* Title */}
@@ -184,14 +188,25 @@ function EpisodeRow({ episode, isActive, isWatched, isDownloaded, onSelect }: Ep
                 {episode.title}
             </span>
 
+            {/* Progress bar (cuando está a medias) */}
+            {progress !== undefined && progress > 0 && progress < 100 && !isWatched && (
+                <div className="w-20 shrink-0">
+                    <ProgressBar 
+                        value={progress} 
+                        className="bg-zinc-900"
+                        indicatorClass="bg-brand-orange"
+                    />
+                </div>
+            )}
+
             {/* Duration */}
-            <span className={cn("text-[10px] font-black tracking-widest shrink-0", isActive ? "text-black/50" : "text-zinc-700")}>
+            <span className={cn("text-[10px] font-black tracking-widest shrink-0", isActive ? "text-white/75" : "text-zinc-700")}>
                 {episode.duration.toUpperCase()}
             </span>
 
             {/* Watched indicator */}
             {isWatched
-                ? <CheckCircle2 className={cn("w-4 h-4 shrink-0", isActive ? "text-black" : "text-zinc-500")} />
+                ? <CheckCircle2 className={cn("w-4 h-4 shrink-0", isActive ? "text-white" : "text-green-500")} />
                 : <Circle className="w-4 h-4 text-zinc-800 shrink-0 opacity-0 group-hover:opacity-100" />
             }
         </button>
@@ -199,6 +214,8 @@ function EpisodeRow({ episode, isActive, isWatched, isDownloaded, onSelect }: Ep
 }
 
 // ─── Right Panel ──────────────────────────────────────────────────────────────
+
+import type { Anime_Entry } from "@/api/generated/types"
 
 interface RightPanelProps {
     episodes: Episode[]
@@ -209,6 +226,7 @@ interface RightPanelProps {
     currentWatched: boolean
     onPlayEpisode: (ep: Episode) => void
     downloadedEpisodes: Set<number>
+    libraryEntry?: any | null
 }
 
 function RightPanel({
@@ -219,14 +237,15 @@ function RightPanel({
     onMarkWatched,
     currentWatched,
     onPlayEpisode,
-    downloadedEpisodes
+    downloadedEpisodes,
+    libraryEntry,
 }: RightPanelProps) {
     const current = episodes[currentIndex]!
     const [episodesOpen, setEpisodesOpen] = useState(true)
     const isCurrentDownloaded = downloadedEpisodes.has(current.number)
 
     return (
-        <main className="flex-1 flex flex-col bg-black overflow-y-auto">
+        <main className="flex-1 flex flex-col bg-transparent overflow-y-auto">
             {/* ── Current episode info ────────────────────────── */}
             <div className="px-10 pt-12 pb-10 border-b border-white/10">
                 <div className="flex items-start justify-between gap-12">
@@ -246,10 +265,10 @@ function RightPanel({
                     <button
                         onClick={onMarkWatched}
                         className={cn(
-                            "shrink-0 flex items-center gap-3 px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] border transition-all duration-200",
+                            "shrink-0 flex items-center gap-3 px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] border transition-all duration-300 rounded-xl",
                             currentWatched
-                                ? "bg-white border-white text-black"
-                                : "bg-black border-white/20 text-zinc-500 hover:text-white hover:border-white",
+                                ? "bg-brand-orange border-brand-orange text-white shadow-[0_0_15px_rgba(255,110,58,0.4)]"
+                                : "bg-[#0a0e1a]/40 border-white/10 text-zinc-400 hover:text-brand-orange hover:border-brand-orange/30",
                         )}
                     >
                         {currentWatched
@@ -266,9 +285,10 @@ function RightPanel({
                 <button
                     onClick={() => onPlayEpisode(current)}
                     className={cn(
-                        "w-full flex items-center justify-center gap-4 py-6 font-black text-[13px] uppercase tracking-[0.3em] transition-all duration-300",
-                        "bg-white text-black hover:bg-zinc-200",
-                        !isCurrentDownloaded && "opacity-20 cursor-not-allowed grayscale"
+                        "w-full flex items-center justify-center gap-4 py-6 font-black text-[13px] uppercase tracking-[0.3em] transition-all duration-300 rounded-2xl shadow-[0_0_20px_rgba(255,110,58,0.3)] border",
+                        isCurrentDownloaded
+                            ? "bg-brand-orange border-brand-orange text-white hover:bg-brand-orange-hover hover:shadow-[0_0_30px_rgba(255,110,58,0.55)]"
+                            : "bg-white/5 border-white/5 text-zinc-600 cursor-not-allowed"
                     )}
                     disabled={!isCurrentDownloaded}
                 >
@@ -304,16 +324,20 @@ function RightPanel({
                         episodesOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0",
                     )}
                 >
-                    {episodes.map((ep, idx) => (
-                        <EpisodeRow
-                            key={ep.id}
-                            episode={ep}
-                            isActive={idx === currentIndex}
-                            isWatched={isWatched(ep.id)}
-                            isDownloaded={downloadedEpisodes.has(ep.number)}
-                            onSelect={() => onSelectEpisode(idx)}
-                        />
-                    ))}
+                    {episodes.map((ep, idx) => {
+                        const episodeProgress = libraryEntry?.episodes?.[idx]?.watched /* 0-100 de progreso */
+                        return (
+                            <EpisodeRow
+                                key={ep.id}
+                                episode={ep}
+                                isActive={idx === currentIndex}
+                                isWatched={isWatched(ep.id)}
+                                isDownloaded={downloadedEpisodes.has(ep.number)}
+                                progress={episodeProgress}
+                                onSelect={() => onSelectEpisode(idx)}
+                            />
+                        )
+                    })}
                 </div>
             </section>
         </main>
@@ -444,7 +468,7 @@ function DetailPage() {
 
     if (!series || !saga || saga.episodes.length === 0) {
         return (
-            <div className="min-h-screen flex items-center justify-center text-white bg-neutral-950">
+            <div className="min-h-screen flex items-center justify-center text-white bg-background">
                 Contenido no encontrado
             </div>
         )
@@ -457,7 +481,7 @@ function DetailPage() {
     }
 
     return (
-        <div className="flex flex-col lg:flex-row min-h-screen bg-neutral-950">
+        <div className="flex flex-col lg:flex-row min-h-screen bg-background">
             {/* ── Left: Poster + Metadata (30%) ── */}
             <LeftPanel
                 posterUrl={saga.image}
@@ -483,6 +507,7 @@ function DetailPage() {
                 currentWatched={currentEpisode ? isWatched(currentEpisode.id) : false}
                 onPlayEpisode={handleEpisodePlay}
                 downloadedEpisodes={downloadedEpisodes}
+                libraryEntry={libraryEntry}
             />
 
 
@@ -490,7 +515,7 @@ function DetailPage() {
             {isPlayerOpen && playTarget && (
                 <VideoPlayer
                     streamUrl={playTarget.path}
-                    streamType={playTarget.streamType === "online" ? "direct" : playTarget.streamType as Mediastream_StreamType}
+                    streamType={playTarget.streamType as "local" | "online" | "direct" | undefined}
                     title={series.title}
                     episodeLabel={playTarget.episodeLabel}
                     mediaId={playTarget.seriesId}

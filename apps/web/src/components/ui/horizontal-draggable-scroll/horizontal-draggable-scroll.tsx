@@ -115,7 +115,7 @@ export const HorizontalDraggableScroll = React.forwardRef<HTMLDivElement, Horizo
 
     useUpdateEffect(() => {
         if (!isScrolledToLeft && isScrolledToRight) {
-            onSlideEnd && onSlideEnd()
+            onSlideEnd?.()
             const t = setTimeout(() => {
                 const div = ref.current
                 if (div) {
@@ -206,3 +206,5 @@ export const HorizontalDraggableScroll = React.forwardRef<HTMLDivElement, Horizo
         </div>
     )
 })
+
+HorizontalDraggableScroll.displayName = "HorizontalDraggableScroll"

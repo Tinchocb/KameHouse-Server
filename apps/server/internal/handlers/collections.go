@@ -126,3 +126,13 @@ func (h *Handler) HandleGetCollection(c echo.Context) error {
 
 	return c.JSON(200, NewDataResponse(res))
 }
+
+// HandleListCollections returns all persisted franchise collections.
+func (h *Handler) HandleListCollections(c echo.Context) error {
+	colls, err := db.ListMediaCollections(h.App.CoreServices.Database)
+	if err != nil {
+		return c.JSON(500, NewErrorResponse(err))
+	}
+	return c.JSON(200, NewDataResponse(colls))
+}
+

@@ -60,9 +60,9 @@ function EpicChip({ tag }: { tag?: ContentTag }) {
     return (
         <span
             className={cn(
-                "inline-flex items-center gap-1 border px-3 py-0.5",
-                "text-[0.65rem] font-black uppercase tracking-[0.22em]",
-                "border-white/20 bg-white/10 text-white shadow-[0_0_12px_rgba(255,255,255,0.1)]",
+                "inline-flex items-center gap-1 border rounded-md px-3 py-0.5",
+                "text-[0.65rem] font-bold uppercase tracking-[0.22em]",
+                "border-brand-orange/30 bg-brand-orange/15 text-brand-orange shadow-[0_0_12px_rgba(255,110,58,0.25)]",
             )}
         >
             {tag === "EPIC" ? <Flame className="h-2.5 w-2.5" /> : <Sparkles className="h-2.5 w-2.5" />}
@@ -74,7 +74,7 @@ function EpicChip({ tag }: { tag?: ContentTag }) {
 function ArcChip({ arcName }: { arcName?: string }) {
     if (!arcName) return null
     return (
-        <span className="inline-flex items-center border border-white/12 bg-white/6 px-3 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-zinc-300">
+        <span className="inline-flex items-center border border-white/5 bg-white/5 rounded-md px-3 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-zinc-300">
             {arcName}
         </span>
     )
@@ -83,7 +83,7 @@ function ArcChip({ arcName }: { arcName?: string }) {
 function RatingRing({ rating }: { rating: number }) {
     if (rating < 7) return null
     return (
-        <div className="flex items-center gap-1 text-[0.7rem] font-bold text-white">
+        <div className="flex items-center gap-1 text-[0.7rem] font-bold text-brand-orange">
             <Star className="h-3 w-3 fill-current" />
             {rating.toFixed(1)}
         </div>
@@ -141,7 +141,7 @@ export function HeroBanner({
             }}
             onMouseMove={handleMouseMove}
             className={cn(
-                "relative flex min-h-[720px] w-full items-end overflow-hidden bg-black",
+                "relative flex min-h-[720px] w-full items-end overflow-hidden bg-background",
                 "h-[100dvh] max-h-[1100px]",
                 className,
             )}
@@ -167,7 +167,7 @@ export function HeroBanner({
                             alt=""
                             aria-hidden="true"
                             className={cn(
-                                "h-full w-full object-cover object-center grayscale brightness-[0.4]",
+                                "h-full w-full object-cover object-center brightness-[0.4] saturate-[0.85]",
                                 index === activeIndex && "animate-ken-burns"
                             )}
                         />
@@ -177,11 +177,11 @@ export function HeroBanner({
 
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.03),transparent_45%)]" />
             
-            <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
+            <div className="absolute inset-0 bg-gradient-to-r from-background via-background/60 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-80" />
             
             {/* The Perfect Fade to Black: seamless transition to the body bg */}
-            <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-black via-black/90 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-background via-background/90 to-transparent" />
 
             {/* ── Content ───────────────────────────────────────────────── */}
             <div className="relative z-10 mx-auto flex w-full max-w-[1680px] flex-col justify-end gap-6 px-6 pb-16 pt-36 md:px-10 lg:px-14 lg:pb-20 xl:flex-row xl:items-end xl:justify-between">
@@ -214,7 +214,7 @@ export function HeroBanner({
                         <img
                             src={activeItem.logoUrl}
                             alt={activeItem.title}
-                            className="mb-6 max-h-28 max-w-[min(32rem,80vw)] object-contain object-left grayscale brightness-200"
+                            className="mb-6 max-h-28 max-w-[min(32rem,80vw)] object-contain object-left hover:scale-[1.02] transition-transform duration-300 cursor-pointer"
                         />
                     ) : (
                         <h1 className="mb-4 max-w-4xl font-bebas font-normal leading-[0.85] tracking-normal text-white text-[4.5rem] md:text-[6.5rem] xl:text-[8rem] uppercase">
@@ -231,12 +231,12 @@ export function HeroBanner({
                         <motion.button
                             whileHover={{ 
                                 scale: 1.02, 
-                                backgroundColor: "white",
-                                color: "black"
+                                backgroundColor: "var(--brand-orange-hover)",
+                                boxShadow: "0 0 25px rgba(255,110,58,0.5)"
                             }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => activeItem.onPlay()}
-                            className="group/btn relative flex items-center justify-center gap-3 bg-white text-black h-12 md:h-14 px-8 rounded-none font-black text-sm uppercase tracking-widest transition-all shadow-xl overflow-hidden border border-white"
+                            className="group/btn relative flex items-center justify-center gap-3 bg-brand-orange text-white h-12 md:h-14 px-8 rounded-xl font-bold text-sm uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(255,110,58,0.3)] overflow-hidden border border-brand-orange"
                         >
                             <Play className="w-5 h-5 fill-current relative z-10" />
                             <span className="relative z-10">Ver ahora</span>
@@ -245,12 +245,10 @@ export function HeroBanner({
                         <motion.button
                             whileHover={{ 
                                 scale: 1.02, 
-                                backgroundColor: "rgba(255,255,255,0.1)",
-                                borderColor: "white"
                             }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => activeItem.onMoreInfo()}
-                            className="flex items-center justify-center gap-3 bg-black text-white h-12 md:h-14 px-8 rounded-none font-black text-sm uppercase tracking-widest transition-all border border-white/20"
+                            className="flex items-center justify-center gap-3 bg-[#0a0e1a]/60 backdrop-blur-md text-white h-12 md:h-14 px-8 rounded-xl font-bold text-sm uppercase tracking-widest transition-all border border-white/10 hover:border-brand-orange/30 hover:shadow-[0_0_15px_rgba(255,110,58,0.15)]"
                         >
                             <Info className="w-5 h-5" />
                             Detalles
@@ -260,17 +258,17 @@ export function HeroBanner({
 
                 {/* Right: glass poster (xl only) */}
                 <div className="hidden w-full max-w-sm xl:block">
-                    <div className="border border-white/12 bg-black/40 p-4 shadow-2xl backdrop-blur-xl">
+                    <div className="border border-white/5 bg-[#0a0e1a]/40 p-4 rounded-2xl shadow-2xl backdrop-blur-md">
                         {activeItem.posterUrl ? (
                             <div className="relative">
                                 <img
                                     src={activeItem.posterUrl}
                                     alt={activeItem.title}
-                                    className="aspect-[2/3] w-full object-cover grayscale"
+                                    className="aspect-[2/3] w-full object-cover rounded-xl transition-all duration-500 hover:scale-[1.02]"
                                 />
                             </div>
                         ) : (
-                            <div className="aspect-[2/3] w-full bg-zinc-900" />
+                            <div className="aspect-[2/3] w-full bg-zinc-900 rounded-xl" />
                         )}
 
                         {activeItem.progress !== undefined && (
@@ -279,9 +277,9 @@ export function HeroBanner({
                                     <span>Continuar viendo</span>
                                     <span>{Math.round(activeItem.progress)}%</span>
                                 </div>
-                                <div className="h-1 bg-white/10">
+                                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
                                     <div
-                                        className="h-full bg-white"
+                                        className="h-full bg-gradient-to-r from-brand-orange to-amber-500 shadow-[0_0_8px_rgba(255,110,58,0.5)]"
                                         style={{
                                             width: `${Math.min(100, Math.max(0, activeItem.progress))}%`,
                                         }}
@@ -304,8 +302,8 @@ export function HeroBanner({
                             aria-pressed={index === activeIndex}
                             onClick={() => setActiveIndex(index)}
                             className={cn(
-                                "h-1 bg-white/20 transition-all duration-300 motion-reduce:transition-none",
-                                index === activeIndex ? "w-10 bg-white" : "w-4 hover:bg-white/50",
+                                "h-1.5 rounded-full bg-white/20 transition-all duration-300 motion-reduce:transition-none",
+                                index === activeIndex ? "w-10 bg-brand-orange shadow-[0_0_10px_rgba(255,110,58,0.5)]" : "w-4 hover:bg-white/50",
                             )}
                         />
                     ))}
@@ -319,34 +317,34 @@ export function HeroBannerSkeleton({ className }: { className?: string }) {
     return (
         <section
             className={cn(
-                "relative h-[480px] w-full overflow-hidden bg-black md:h-[580px] lg:h-[680px]",
+                "relative h-[480px] w-full overflow-hidden bg-background md:h-[580px] lg:h-[680px]",
                 className,
             )}
         >
             <div className="absolute inset-0 flex items-center px-6 md:px-10 lg:px-14">
                 <div className="z-10 w-full max-w-2xl">
                     <div className="flex flex-wrap items-center gap-3">
-                        <Skeleton className="h-6 w-24 rounded-none" />
-                        <Skeleton className="h-6 w-32 rounded-none" />
+                        <Skeleton className="h-6 w-24 rounded-md" />
+                        <Skeleton className="h-6 w-32 rounded-md" />
                     </div>
 
-                    <Skeleton className="mt-6 h-12 w-3/4 md:h-16 lg:h-20 rounded-none" />
+                    <Skeleton className="mt-6 h-12 w-3/4 md:h-16 lg:h-20 rounded-xl" />
 
                     <div className="mt-4 flex flex-wrap items-center gap-4">
-                        <Skeleton className="h-4 w-16 rounded-none" />
-                        <Skeleton className="h-4 w-16 rounded-none" />
-                        <Skeleton className="h-4 w-16 rounded-none" />
+                        <Skeleton className="h-4 w-16 rounded-md" />
+                        <Skeleton className="h-4 w-16 rounded-md" />
+                        <Skeleton className="h-4 w-16 rounded-md" />
                     </div>
 
                     <div className="mt-6 space-y-2">
-                        <Skeleton className="h-4 w-full rounded-none" />
-                        <Skeleton className="h-4 w-5/6 rounded-none" />
-                        <Skeleton className="h-4 w-4/6 rounded-none" />
+                        <Skeleton className="h-4 w-full rounded-md" />
+                        <Skeleton className="h-4 w-5/6 rounded-md" />
+                        <Skeleton className="h-4 w-4/6 rounded-md" />
                     </div>
 
                     <div className="mt-10 flex flex-wrap items-center gap-4">
-                        <Skeleton className="h-12 w-40 rounded-none" />
-                        <Skeleton className="h-12 w-40 rounded-none" />
+                        <Skeleton className="h-12 w-40 rounded-xl" />
+                        <Skeleton className="h-12 w-40 rounded-xl" />
                     </div>
                 </div>
             </div>

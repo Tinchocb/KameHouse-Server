@@ -169,7 +169,6 @@ export function useServerMutation<R = void, V = void, C = unknown>(
                 toast.error(errorMsg)
             }
             if (options.onError) {
-                // @ts-ignore - Argument union counts mismatches are benign
                 options.onError(...args)
             }
         },

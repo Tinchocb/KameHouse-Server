@@ -2,6 +2,8 @@ import { cn } from "@/components/ui/core/styling"
 import type { CardAspect } from "@/api/types/intelligence.types"
 import { Folder, Zap } from "lucide-react"
 import * as React from "react"
+import { useGSAP } from "@gsap/react"
+import gsap from "gsap"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { motion } from "framer-motion"
 
@@ -75,45 +77,145 @@ export const MediaCard = React.memo(function MediaCard({
     layoutId,
 }: MediaCardProps) {
     const isPoster = aspect === "poster"
+    const cardRef = React.useRef<HTMLDivElement>(null)
+    const shineRef = React.useRef<HTMLDivElement>(null)
+    const progressRef = React.useRef<HTMLDivElement>(null)
+    const hasEnteredRef = React.useRef(false)
+
+    // 3D Tilt effect with mouse position tracking
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!cardRef.current) return
+
+        const rect = cardRef.current.getBoundingClientRect()
+        const x = e.clientX - rect.left
+        const y = e.clientY - rect.top
+
+        const centerX = rect.width / 2
+        const centerY = rect.height / 2
+
+        const rotateX = ((y - centerY) / centerY) * -8
+        const rotateY = ((x - centerX) / centerX) * 8
+
+        gsap.to(cardRef.current, {
+            rotationX: rotateX,
+            rotationY: rotateY,
+            duration: 0.3,
+            ease: "power2.out",
+            overwrite: "auto",
+        })
+    }
+
+    const handleMouseLeave = () => {
+        if (!cardRef.current) return
+        gsap.to(cardRef.current, {
+            rotationX: 0,
+            rotationY: 0,
+            duration: 0.6,
+            ease: "elastic.out(1, 0.5)",
+            overwrite: "auto",
+        })
+    }
+
+    // Shine sweep effect on first enter
+    useGSAP(() => {
+        if (!shineRef.current) return
+
+        const handleMouseEnter = () => {
+            if (hasEnteredRef.current) return
+            hasEnteredRef.current = true
+
+            gsap.fromTo(
+                shineRef.current,
+                { left: "-100%", opacity: 0.6 },
+                {
+                    left: "200%",
+                    opacity: 0,
+                    duration: 0.8,
+                    ease: "power2.inOut",
+                }
+            )
+        }
+
+        const card = cardRef.current
+        if (card) {
+            card.addEventListener("mouseenter", handleMouseEnter)
+            return () => card.removeEventListener("mouseenter", handleMouseEnter)
+        }
+    }, { scope: cardRef })
+
+    // Progress bar pulse effect
+    useGSAP(() => {
+        if (!progressRef.current || progress === undefined) return
+
+        const handleFocus = () => {
+            gsap.to(progressRef.current, {
+                boxShadow: "0 0 12px rgba(255,110,58,0.8), 0 0 4px rgba(255,165,0,0.6)",
+                duration: 0.4,
+                yoyo: true,
+                repeat: -1,
+            })
+        }
+
+        const card = cardRef.current
+        if (card) {
+            card.addEventListener("mouseenter", handleFocus)
+            return () => card.removeEventListener("mouseenter", handleFocus)
+        }
+    }, [progress])
 
     return (
         <motion.div
+            ref={cardRef}
             role="button"
             tabIndex={0}
             aria-label={title}
             onClick={onClick}
             onKeyDown={(e) => e.key === "Enter" && onClick?.()}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
             layoutId={layoutId}
-            whileHover={{ 
+            whileHover={{
                 scale: 1.02,
                 transition: { duration: 0.2, ease: "easeOut" }
             }}
             className={cn(
                 // Base
-                "group/card relative shrink-0 cursor-pointer overflow-hidden rounded-none border border-zinc-800 transition-all duration-200",
-                "bg-black hover:border-zinc-500 hover:z-50",
+                "group/card relative shrink-0 cursor-pointer overflow-hidden rounded-xl border border-white/5 transition-all duration-300",
+                "bg-zinc-900/40 hover:border-brand-orange/30 hover:z-50 hover:shadow-[0_0_20px_rgba(255,110,58,0.15)]",
                 // Intrinsic sizing
                 isPoster
                     ? "aspect-[2/3] w-[145px] md:w-[175px] lg:w-[210px]"
                     : "aspect-[16/9] w-[250px] md:w-[320px] lg:w-[360px]",
                 className,
             )}
+            style={{
+                transformStyle: "preserve-3d",
+                perspective: "1000px",
+            }}
         >
+            {/* ── Shine Sweep Effect ─────────────────────── */}
+            <div
+                ref={shineRef}
+                className="absolute inset-0 z-40 pointer-events-none overflow-hidden"
+            >
+                <div className="absolute top-0 left-0 w-[50%] h-full bg-gradient-to-r from-transparent via-white/30 to-transparent transform -skew-x-12" />
+            </div>
+
             {/* ── Artwork (Deferred) ────────────────────── */}
             <DeferredImage
                 src={artwork}
                 alt={title}
-                className="absolute inset-0 h-full w-full select-none object-cover grayscale transition-all duration-500 group-hover/card:grayscale-0 group-hover/card:scale-105"
+                className="absolute inset-0 h-full w-full select-none object-cover transition-all duration-500 group-hover/card:scale-105"
             />
 
             {/* ── Top-right: Source Icon ─────────────────── */}
             {availabilityType && (
                 <div className="absolute right-0 top-0 z-20">
-                    <span className="flex h-8 w-8 items-center justify-center bg-black border-l border-b border-white/20">
+                    <span className="flex h-7 w-7 items-center justify-center bg-black/60 backdrop-blur-md rounded-bl-lg border-l border-b border-white/10 text-brand-orange">
                         {availabilityType === "ONLY_ONLINE" ? (
-                            <Zap className="h-4 w-4 text-white" />
+                            <Zap className="h-3.5 w-3.5" />
                         ) : (
-                            <Folder className="h-4 w-4 text-white" />
+                            <Folder className="h-3.5 w-3.5" />
                         )}
                     </span>
                 </div>
@@ -122,7 +224,7 @@ export const MediaCard = React.memo(function MediaCard({
             {/* ── Top-left: Format Badge ──────────────── */}
             {badge && (
                 <div className="absolute left-0 top-0 z-20">
-                    <span className="bg-white px-2 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-black border-r border-b border-white/20">
+                    <span className="bg-brand-orange/15 backdrop-blur-md px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-brand-orange rounded-br-lg border-r border-b border-white/10">
                         {badge}
                     </span>
                 </div>
@@ -133,27 +235,27 @@ export const MediaCard = React.memo(function MediaCard({
                 className={cn(
                     "absolute inset-x-0 bottom-0 z-10",
                     isPoster ? "h-[40%]" : "h-[50%]",
-                    "bg-gradient-to-t from-black to-transparent opacity-80",
+                    "bg-gradient-to-t from-black via-black/80 to-transparent opacity-90",
                 )}
             />
 
             {/* ── Info Container ───────────────────────────────── */}
             <div className="absolute inset-x-0 bottom-0 z-20 p-3">
-                <p className="line-clamp-1 text-[0.8rem] font-black leading-tight text-white uppercase tracking-wider">
+                <p className="line-clamp-1 text-[0.8rem] font-bold leading-tight text-white uppercase tracking-wider group-hover/card:text-brand-orange transition-colors">
                     {title}
                 </p>
 
                 <div className="mt-1 flex items-center justify-between gap-1">
                     {subtitle && (
-                        <p className="truncate text-[0.65rem] font-bold text-white/50 uppercase tracking-widest">{subtitle}</p>
+                        <p className="truncate text-[0.65rem] font-semibold text-white/50 uppercase tracking-widest">{subtitle}</p>
                     )}
                 </div>
             </div>
 
             {/* ── Hover Overlay ────────────────── */}
-            <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/60 opacity-0 transition-opacity duration-200 group-hover/card:opacity-100">
+            <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] opacity-0 transition-opacity duration-300 group-hover/card:opacity-100">
                 {/* Play Icon */}
-                <div className="flex h-12 w-12 items-center justify-center border-2 border-white text-white bg-black">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-brand-orange text-brand-orange bg-black/60 backdrop-blur-md shadow-[0_0_15px_rgba(255,110,58,0.3)] transition-all duration-300 group-hover/card:scale-110">
                     <svg viewBox="0 0 24 24" className="ml-1 h-6 w-6 fill-current" xmlns="http://www.w3.org/2000/svg">
                         <path d="M8 5v14l11-7z" />
                     </svg>
@@ -162,9 +264,9 @@ export const MediaCard = React.memo(function MediaCard({
                 {/* Metadata Strip */}
                 {(year || rating) && (
                     <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2">
-                        {year && <span className="text-[9px] font-black text-white uppercase tracking-widest">{year}</span>}
+                        {year && <span className="text-[9px] font-black text-white/80 uppercase tracking-widest">{year}</span>}
                         {rating !== undefined && (
-                            <span className="text-[9px] font-black text-white uppercase tracking-widest border border-white/40 px-2 py-0.5">
+                            <span className="text-[9px] font-black text-brand-orange uppercase tracking-widest bg-brand-orange/10 backdrop-blur-md border border-brand-orange/20 px-2 py-0.5 rounded">
                                 {rating.toFixed(1)} ★
                             </span>
                         )}
@@ -174,9 +276,10 @@ export const MediaCard = React.memo(function MediaCard({
 
             {/* ── Progress Bar ──────────────────────────────────────────── */}
             {progress !== undefined && (
-                <div className="absolute inset-x-0 bottom-0 z-50 h-[2px] bg-white/10">
+                <div className="absolute inset-x-0 bottom-0 z-50 h-[2.5px] bg-white/10">
                     <div
-                        className="h-full bg-white transition-all duration-500"
+                        ref={progressRef}
+                        className="h-full bg-gradient-to-r from-brand-orange to-amber-500 transition-all duration-500 shadow-[0_0_8px_rgba(255,110,58,0.5)]"
                         style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
                     />
                 </div>

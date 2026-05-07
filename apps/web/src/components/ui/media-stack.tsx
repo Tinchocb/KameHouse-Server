@@ -25,7 +25,7 @@ export function MediaStack({ stackCount = 3, className, ...props }: MediaStackPr
             {stackItems.map((idx) => (
                 <motion.div
                     key={idx}
-                    className="absolute inset-0 bg-black border border-white/20 shadow-2xl overflow-hidden"
+                    className="absolute inset-0 bg-zinc-950 border border-white/5 rounded-xl shadow-2xl overflow-hidden"
                     initial={false}
                     animate={{
                         x: 0,
@@ -50,8 +50,8 @@ export function MediaStack({ stackCount = 3, className, ...props }: MediaStackPr
                     }}
                 >
                     {/* Retro "marker" label style on the edge/spine */}
-                    <div className="absolute top-2 left-1 bottom-2 w-5 bg-white flex items-center justify-center overflow-hidden">
-                        <span className="rotate-90 whitespace-nowrap text-[8px] font-mono font-black text-black tracking-tighter">
+                    <div className="absolute top-2 left-1 bottom-2 w-5 bg-brand-orange/15 rounded-md flex items-center justify-center overflow-hidden border border-brand-orange/20">
+                        <span className="rotate-90 whitespace-nowrap text-[8px] font-mono font-black text-brand-orange tracking-tighter">
                             VOL. {idx + 1}
                         </span>
                     </div>
@@ -72,7 +72,7 @@ export function MediaStack({ stackCount = 3, className, ...props }: MediaStackPr
                 
                 {/* Visual indicator that it's a stack (ribbon or similar) */}
                 <div className="absolute -top-1 -right-1 z-30 flex items-center justify-center">
-                    <div className="bg-white text-black text-[9px] font-black px-1.5 py-0.5 shadow-lg border border-white/20">
+                    <div className="bg-brand-orange text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-[0_0_10px_rgba(255,110,58,0.45)] border border-brand-orange/30">
                         SERIE
                     </div>
                 </div>

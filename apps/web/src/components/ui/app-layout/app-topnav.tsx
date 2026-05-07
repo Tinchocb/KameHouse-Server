@@ -9,12 +9,9 @@ interface TopNavProps {
 }
 
 export const AppTopNav = ({ title }: TopNavProps) => {
-    const { showSidebar, setSidebarOpen } = useAppStore()
+    const { setSidebarOpen } = useAppStore()
     const location = useLocation()
     const [isSearchFocused, setIsSearchFocused] = useState(false)
-
-    // Don't render topnav if it's explicitly disabled in store or context
-    if (!showSidebar) return null
 
     return (
         <header className="fixed top-0 left-0 right-0 z-[40] bg-black border-b border-zinc-800">

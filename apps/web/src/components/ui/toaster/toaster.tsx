@@ -92,7 +92,7 @@ export const Toaster = ({ position = "top-center", ...props }: ToasterProps) => 
             },
         },
         ...props,
-    } as ToasterProps), [])
+    } as ToasterProps), [position, props])
 
     return (
         <>

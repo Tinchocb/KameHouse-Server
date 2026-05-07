@@ -1,17 +1,20 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
-import React, { useMemo, useState, useEffect, useRef } from "react"
+import React, { useMemo, useState, useCallback } from "react"
+import { FileVideo } from "lucide-react"
+import { toast } from "sonner"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/components/ui/core/styling"
 import { fetchAnimeEntry, useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
-import { Anime_Episode } from "@/api/generated/types"
+import { Anime_Episode, Anime_LocalFile, Mediastream_StreamType } from "@/api/generated/types"
 import { EmptyState } from "@/components/shared/empty-state"
+import { VideoPlayer } from "@/components/video/player"
 import { MediaActionButtons, EpisodeClientCard } from "./-series-interactivity-client"
 import { sanitizeHtml } from "@/lib/helpers/sanitizer"
 import { resolveSeriesSagas, type SagaDefinition } from "@/lib/config/dragonball.config"
-import { Link } from "@tanstack/react-router"
+import { VhsShelfAccordion, type VhsTapeItem } from "@/components/shared/vhs-shelf-accordion"
 
 export const Route = createFileRoute("/series/$seriesId/")({
     loader: async ({ params: { seriesId }, context }) => {
@@ -39,6 +42,30 @@ function SeriesDetailPage() {
 function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     const { data: entry } = useGetAnimeEntry(seriesId)
 
+    const [playTarget, setPlayTarget] = useState<{
+        path: string
+        streamType: Mediastream_StreamType
+        episodeLabel: string
+        episodeNumber: number
+        malId?: number | null
+    } | null>(null)
+
+    const handlePlayEpisode = useCallback((localFile: Anime_LocalFile, episode: Anime_Episode) => {
+        if (!localFile.path) {
+            toast.error("Archivo local no disponible.")
+            return
+        }
+        const isMp4 = localFile.path.toLowerCase().endsWith(".mp4")
+        const targetType = isMp4 ? "direct" : "transcode"
+        setPlayTarget({
+            path: localFile.path,
+            streamType: targetType as Mediastream_StreamType,
+            episodeLabel: episode.episodeTitle || episode.displayTitle || `Episodio ${episode.episodeNumber}`,
+            episodeNumber: episode.episodeNumber,
+            malId: (entry?.media as any)?.idMal ?? null,
+        })
+    }, [entry?.media])
+
     if (!entry || !entry.media) {
         return (
             <div className="min-h-screen bg-background text-white flex items-center justify-center px-6">
@@ -61,6 +88,11 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     const resolvedSagas = resolveSeriesSagas(entry.media)
     const hasSagas = resolvedSagas.length > 0
     const sagas = resolvedSagas
+    const isMovie = entry.media?.format === "MOVIE" || entry.media?.format === "OVA" || entry.media?.format === "SPECIAL"
+    const hasLocalFiles = (entry.localFiles || []).length > 0
+    const hasNoEpisodes = !entry.episodes || entry.episodes.length === 0
+    const localEpisodesCount = entry.localFiles?.length ?? 0
+    const totalEpisodesCount = entry.media.totalEpisodes || entry.episodes?.length || 0
 
     return (
         <div className="min-h-screen bg-[#09090b] text-white pb-16">
@@ -74,23 +106,63 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                 genres={genres}
                 synopsis={synopsis}
                 episodesCount={episodesCount}
+                localEpisodesCount={localEpisodesCount}
+                totalEpisodesCount={totalEpisodesCount}
             />
 
             <div className="w-full">
                 {hasSagas ? (
                     <SagasSection seriesId={seriesId} sagas={sagas} />
+                ) : hasNoEpisodes && hasLocalFiles ? (
+                    <LocalFilesSection 
+                        localFiles={entry.localFiles || []}
+                        title={title}
+                        onPlay={(lf) => handlePlayEpisode(lf, {} as Anime_Episode)}
+                    />
                 ) : (
                     <EpisodesSection 
                         seriesTitle={title} 
                         fallbackThumb={heroBackdrop} 
-                        episodes={entry.episodes || []} 
+                        episodes={entry.episodes || []}
+                        localFiles={entry.localFiles || []}
+                        onPlay={handlePlayEpisode}
                     />
                 )}
             </div>
+
+            {playTarget && (
+                <VideoPlayer
+                    streamUrl={playTarget.path}
+                    streamType={playTarget.streamType as any}
+                    episodeLabel={playTarget.episodeLabel}
+                    episodeNumber={playTarget.episodeNumber}
+                    mediaId={Number(seriesId)}
+                    malId={playTarget.malId}
+                    onClose={() => setPlayTarget(null)}
+                />
+            )}
         </div>
     )
 }
 function SagasSection({ seriesId, sagas }: { seriesId: string, sagas: SagaDefinition[] }) {
+    const navigate = useNavigate()
+
+    const vhsTapeSagas = useMemo<VhsTapeItem[]>(() => {
+        return sagas.map((s) => {
+            return {
+                id: s.id,
+                title: s.title,
+                subtitle: `EPS ${s.startEp} - ${s.endEp}`,
+                description: s.description,
+                posterUrl: s.image,
+                bannerUrl: s.image,
+                episodesCount: s.endEp - s.startEp + 1,
+                tmdbId: Number(seriesId), // Inherit main series theme for color sync!
+                format: "ARC",
+            }
+        })
+    }, [sagas, seriesId])
+
     return (
         <section className="relative z-[1] px-6 sm:px-10 pb-20">
             <div className="flex flex-col gap-8">
@@ -103,37 +175,15 @@ function SagasSection({ seriesId, sagas }: { seriesId: string, sagas: SagaDefini
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-                    {sagas.map((saga) => (
-                        <Link
-                            key={saga.id}
-                            to={"/series/$seriesId/$sagaId"}
-                            params={{ seriesId, sagaId: saga.id }}
-                            className="group relative flex h-72 flex-col justify-end overflow-hidden rounded-none border border-white/10 p-8 transition-all duration-300 hover:border-white"
-                        >
-                            <div className="absolute inset-0 grayscale group-hover:grayscale-0 transition-all duration-500">
-                                <img
-                                    src={saga.image}
-                                    alt={saga.title}
-                                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                                />
-                                <div className="absolute inset-0 bg-black/60 group-hover:bg-black/20 transition-all" />
-                                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black to-transparent" />
-                            </div>
-
-                            <div className="relative z-10 text-left">
-                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/50 mb-3 group-hover:text-white transition-colors">
-                                    EPS {saga.startEp} — {saga.endEp}
-                                </p>
-                                <h3 className="mb-3 text-3xl font-black text-white leading-tight uppercase tracking-tight">
-                                    {saga.title}
-                                </h3>
-                                <p className="text-[13px] text-zinc-400 font-bold uppercase tracking-wide line-clamp-2 opacity-0 transition-all duration-300 group-hover:opacity-100">
-                                    {saga.description}
-                                </p>
-                            </div>
-                        </Link>
-                    ))}
+                <div className="pt-2">
+                    <VhsShelfAccordion
+                        items={vhsTapeSagas}
+                        type="sagas"
+                        onItemClick={(item) => navigate({ 
+                            to: "/series/$seriesId/$sagaId", 
+                            params: { seriesId, sagaId: item.id.toString() } 
+                        })}
+                    />
                 </div>
             </div>
         </section>
@@ -150,6 +200,8 @@ interface HeroSectionProps {
     genres: string[]
     synopsis: string
     episodesCount: number
+    localEpisodesCount?: number
+    totalEpisodesCount?: number
 }
 
 const HeroSection = React.memo(function HeroSection({
@@ -162,12 +214,33 @@ const HeroSection = React.memo(function HeroSection({
     genres,
     synopsis,
     episodesCount,
+    localEpisodesCount,
+    totalEpisodesCount,
 }: HeroSectionProps) {
     const [synopsisExpanded, setSynopsisExpanded] = useState(false)
     const cleanSynopsis = useMemo(() => sanitizeHtml(synopsis), [synopsis])
 
     return (
         <section className="relative w-full min-h-[60vh] flex flex-col justify-end overflow-hidden">
+            {/* Cinematic Ambient Halo - extracted from poster/cover colors */}
+            {coverUrl && (
+                <div className="absolute inset-0 overflow-hidden bg-zinc-950">
+                    {/* Primary large ambient glow */}
+                    <div
+                        className="absolute left-1/2 top-[20%] -translate-x-1/2 w-[600px] h-[600px] rounded-full blur-[120px] opacity-40"
+                        style={{
+                            backgroundImage: `url(${coverUrl})`,
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
+                            filter: "blur(120px) saturate(150%) brightness(0.8)",
+                            transform: "translateX(-50%) scale(1.2)",
+                        }}
+                    />
+                    {/* Secondary subtle edge glow */}
+                    <div className="absolute inset-0 bg-gradient-radial-from-cover opacity-30" />
+                </div>
+            )}
+
             {/* Backdrop (Grayscale & Solid) */}
             {backdropUrl && (
                 <div className="absolute inset-0 overflow-hidden bg-black">
@@ -211,7 +284,13 @@ const HeroSection = React.memo(function HeroSection({
                     {/* Metadata Strip */}
                     <div className="flex flex-wrap items-center gap-6 text-[10px] font-black uppercase tracking-[0.4em] text-white/50">
                         {year && <span>{year}</span>}
-                        {episodesCount > 0 && <span>{episodesCount} EPISODIOS</span>}
+                        {(totalEpisodesCount ?? 0) > 0 && localEpisodesCount !== undefined && localEpisodesCount > 0 ? (
+                            <span className={localEpisodesCount >= (totalEpisodesCount ?? 0) ? "text-green-500" : "text-brand-orange"}>
+                                {localEpisodesCount}/{totalEpisodesCount} EPISODIOS
+                            </span>
+                        ) : episodesCount > 0 ? (
+                            <span>{episodesCount} EPISODIOS</span>
+                        ) : null}
                     </div>
 
                     {/* Minimal Synopsis */}
@@ -248,12 +327,16 @@ interface EpisodesSectionProps {
     seriesTitle: string
     fallbackThumb: string
     episodes: Anime_Episode[]
+    localFiles: Anime_LocalFile[]
+    onPlay?: (localFile: Anime_LocalFile, episode: Anime_Episode) => void
 }
 
 const EpisodesSection = React.memo(function EpisodesSection({
     seriesTitle,
     fallbackThumb,
     episodes,
+    localFiles,
+    onPlay,
 }: EpisodesSectionProps) {
     const [activeTab, setActiveTab] = useState("all")
 
@@ -275,6 +358,18 @@ const EpisodesSection = React.memo(function EpisodesSection({
         const [start, end] = tabs[idx].range
         return episodes.slice(start, end)
     }, [episodes, tabs, activeTab])
+
+    const localFilesByEpisode = useMemo(() => {
+        const map: Record<number, Anime_LocalFile> = {}
+        localFiles.forEach((lf) => {
+            if (lf.metadata?.episode) {
+                map[lf.metadata.episode] = lf
+            }
+        })
+        return map
+    }, [localFiles])
+
+    const getLocalFile = (epNum: number) => localFilesByEpisode[epNum]
 
     const tabValue = tabs ? (activeTab === "all" ? tabs[0]?.label ?? "all" : activeTab) : "all"
 
@@ -321,6 +416,8 @@ const EpisodesSection = React.memo(function EpisodesSection({
                                 episode={ep}
                                 seriesTitle={seriesTitle}
                                 fallbackThumb={fallbackThumb}
+                                localFile={getLocalFile(ep.episodeNumber)}
+                                onPlay={onPlay}
                             />
                         ))}
                     </div>
@@ -330,3 +427,63 @@ const EpisodesSection = React.memo(function EpisodesSection({
     )
 })
 EpisodesSection.displayName = "EpisodesSection"
+
+// ─── Local Files Section (for Movies) ───────────────────────────────────────
+
+interface LocalFilesSectionProps {
+    localFiles: Anime_LocalFile[]
+    title: string
+    onPlay?: (localFile: Anime_LocalFile) => void
+}
+
+const LocalFilesSection = React.memo(function LocalFilesSection({
+    localFiles,
+    title,
+    onPlay,
+}: LocalFilesSectionProps) {
+    const handleClick = (lf: Anime_LocalFile) => {
+        if (onPlay) onPlay(lf)
+    }
+
+    return (
+        <section className="relative z-[1] px-6 sm:px-10 pb-20">
+            <div className="flex flex-col gap-8">
+                <div className="flex items-center justify-between border-b border-white/10 pb-6">
+                    <h2 className="text-4xl font-bebas tracking-widest text-white uppercase">ARCHIVOS LOCALES</h2>
+                    <span className="text-[10px] font-black tracking-[0.3em] text-white/30 uppercase">
+                        {localFiles.length} ARCHIVO{localFiles.length !== 1 ? "S" : ""}
+                    </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {localFiles.map((lf, idx) => (
+                        <div
+                            key={lf.path || idx}
+                            className="group relative flex flex-col rounded-none overflow-hidden bg-black border border-white/10 hover:border-green-500 transition-all duration-200 cursor-pointer"
+                            onClick={() => handleClick(lf)}
+                        >
+                            <div className="relative w-full aspect-video overflow-hidden bg-zinc-900 border-b border-white/10">
+                                <div className="absolute inset-0 flex items-center justify-center bg-zinc-900">
+                                    <FileVideo className="w-12 h-12 text-zinc-600 group-hover:text-green-500 transition-colors" />
+                                </div>
+                                <div className="absolute top-0 left-0">
+                                    <span className="px-3 py-1 bg-green-600 text-[10px] font-black text-white tracking-widest uppercase">
+                                        LOCAL
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="flex flex-col gap-2 p-5 flex-1 bg-black">
+                                <h4 className="text-xs font-black leading-tight tracking-[0.2em] line-clamp-2 uppercase text-white">
+                                    {title}
+                                </h4>
+                                <p className="text-[9px] font-bold text-green-500 tracking-wider truncate" title={lf.path}>
+                                    📁 {lf.name}
+                                </p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+    )
+})

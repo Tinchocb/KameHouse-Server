@@ -140,10 +140,20 @@ func (lc *LibraryCollection) hydrateCollectionLists(
 	localFiles := opts.LocalFiles
 	dbInfo := opts.Database
 
+	// DEBUG: Log local files count
+	if len(localFiles) == 0 {
+		opts.Database.Logger.Warn().Msg("anime/collection: No local files found in database!")
+	}
+
 	// Group local files by media id
 	groupedLfs := GroupLocalFilesByMediaID(localFiles)
 	// Get slice of media ids from local files
 	mIds := GetMediaIdsFromLocalFiles(localFiles)
+
+	// DEBUG: Log media IDs count
+	if len(mIds) == 0 {
+		opts.Database.Logger.Warn().Msg("anime/collection: No media IDs found from local files!")
+	}
 
 	// Build a mapping from MediaId → LibraryMediaId using local files.
 	// This is needed because for TMDB media, the DB primary key
@@ -214,6 +224,13 @@ func (lc *LibraryCollection) hydrateCollectionLists(
 	}
 
 	statusGroups := make(map[string][]*LibraryCollectionEntry)
+
+	// DEBUG: Log found media count
+	if len(mediaMap) == 0 {
+		opts.Database.Logger.Warn().Int("mIdsCount", len(mIds)).Msg("anime/collection: No media found in database for media IDs!")
+	} else {
+		opts.Database.Logger.Debug().Int("mediaCount", len(mediaMap)).Int("mIdsCount", len(mIds)).Msg("anime/collection: Found media in database")
+	}
 
 	for _, id := range mIds {
 		if id == 0 {

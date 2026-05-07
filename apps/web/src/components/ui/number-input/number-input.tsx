@@ -79,25 +79,10 @@ export type NumberInputProps = Omit<React.ComponentPropsWithoutRef<"input">, "va
     Omit<VariantProps<typeof NumberInputAnatomy.root>, "size" | "intent"> &
     BasicFieldOptions &
     InputStyling & {
-    /**
-     * The value of the input
-     */
     value?: number | string
-    /**
-     * The callback to handle value changes
-     */
     onValueChange?: (value: number, valueAsString: string) => void
-    /**
-     * Default value when uncontrolled
-     */
     defaultValue?: number | string
-    /**
-     * The minimum value of the input
-     */
     min?: number
-    /**
-     * The maximum value of the input
-     */
     max?: number
     /**
      * The amount to increment or decrement the value by

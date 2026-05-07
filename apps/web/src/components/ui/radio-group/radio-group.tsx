@@ -84,21 +84,10 @@ export type RadioGroupOption = { value: string, label?: React.ReactNode, disable
 export type RadioGroupProps = BasicFieldOptions &
     ComponentAnatomy<typeof RadioGroupAnatomy> &
     VariantProps<typeof RadioGroupAnatomy.item> & {
-    /**
-     * Selected value
-     */
+    size?: "xs" | "sm" | "md" | "lg" | "xl"
     value?: string | undefined
-    /**
-     * Default value when uncontrolled
-     */
     defaultValue?: string | undefined
-    /**
-     * Callback fired when the selected value changes
-     */
     onValueChange?: (value: string) => void
-    /**
-     * Radio options
-     */
     options: RadioGroupOption[]
     /**
      * Replaces the default check icon
@@ -144,10 +133,10 @@ export const RadioGroup = React.forwardRef<HTMLButtonElement, RadioGroupProps>((
 
     const [_value, _setValue] = React.useState<string | undefined>(controlledValue ?? defaultValue)
 
-    const handleOnValueChange = React.useCallback((value: string) => {
+    const handleOnValueChange = (value: string) => {
         _setValue(value)
         onValueChange?.(value)
-    }, [])
+    }
 
     React.useEffect(() => {
         if (!defaultValue || !isFirst.current) {

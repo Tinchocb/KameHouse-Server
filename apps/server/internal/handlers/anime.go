@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
@@ -21,7 +22,7 @@ func (h *Handler) getAnimeEpisodeCollection(c echo.Context, mId int) (*anime.Epi
 		return h.getTMDBEpisodeCollection(mId)
 	}
 
-	completeAnime, err := h.App.Metadata.PlatformRef.Get().GetAnime(c.Request().Context(), mId)
+completeAnime, err := h.App.Metadata.PlatformRef.Get().GetAnime(c.Request().Context(), mId)
 	if err != nil {
 		return nil, err
 	}
@@ -30,9 +31,14 @@ func (h *Handler) getAnimeEpisodeCollection(c echo.Context, mId int) (*anime.Epi
 		return nil, err
 	}
 
+	baseAnime, ok := completeAnime.(interface{ ToBaseAnime() *models.LibraryMedia })
+	if !ok {
+		return nil, fmt.Errorf("anime type does not implement ToBaseAnime")
+	}
+
 	ec, err := anime.NewEpisodeCollection(anime.NewEpisodeCollectionOptions{
 		AnimeMetadata:       animeMetadata,
-		Media:               completeAnime.(interface{ ToBaseAnime() *models.LibraryMedia }).ToBaseAnime(),
+		Media:               baseAnime.ToBaseAnime(),
 		MetadataProviderRef: h.App.Metadata.ProviderRef,
 		Logger:              h.App.Logger,
 	})

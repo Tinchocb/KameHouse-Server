@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo } from "react"
+import { useState, useCallback, useRef, useMemo, useEffect } from "react"
 import { useWebSocket } from "@/hooks/use-websocket"
 import { getApiWebSocketUrl } from "@/api/client/server-url"
 import { useAppStore } from "@/lib/store"
@@ -39,6 +39,14 @@ export function useScannerEvents() {
         scanningFile?: string
     }>({})
     const flushTimeout = useRef<NodeJS.Timeout | null>(null)
+
+    useEffect(() => {
+        return () => {
+            if (flushTimeout.current) {
+                clearTimeout(flushTimeout.current)
+            }
+        }
+    }, [])
     
     const flushUpdates = useCallback(() => {
         // Flush events array

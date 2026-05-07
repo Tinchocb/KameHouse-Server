@@ -10,13 +10,7 @@ import { extractInputPartProps, InputAddon, InputAnatomy, InputContainer, InputI
 export type NativeSelectProps = Omit<React.ComponentPropsWithRef<"select">, "size"> &
     InputStyling &
     BasicFieldOptions & {
-    /**
-     * The options to display
-     */
     options: { value: string | number, label?: string }[] | undefined
-    /**
-     * The placeholder text
-     */
     placeholder?: string
 }
 
@@ -44,7 +38,7 @@ export const NativeSelect = React.forwardRef<HTMLSelectElement, NativeSelectProp
     }] = extractInputPartProps<NativeSelectProps>({
         ...props1,
         size: props1.size ?? "md",
-        intent: props1.intent ?? "basic",
+        intent: (props1.intent ?? "basic") as any,
         leftAddon: props1.leftAddon,
         leftIcon: props1.leftIcon,
         rightAddon: props1.rightAddon,

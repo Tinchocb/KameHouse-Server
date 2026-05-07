@@ -355,7 +355,7 @@ function ScanActionCard({
     disabled?: boolean
     loading?: boolean
     href?: string
-    accentColor: "primary" | "violet" | "sky"
+    accentColor: "white" | "zinc"
 }) {
     const colors: Record<string, { border: string; bg: string; glow: string; text: string }> = {
         white: { border: "border-white/20", bg: "hover:bg-white/10", glow: "", text: "text-white" },
@@ -438,10 +438,9 @@ function EventFeed({ events }: { events: ScanEvent[] }) {
                         className="flex items-center gap-5 px-8 py-4"
                     >
                         <div className={cn("w-2 h-2 rounded-none shrink-0", {
-                            "bg-white": evt.status === "START",
+                            "bg-white": evt.status === "START" || evt.status === "FINISH",
                             "bg-zinc-600": evt.status === "PROCESSING",
                             "bg-zinc-400": evt.status === "PRUNED",
-                            "bg-white": evt.status === "FINISH",
                         })} />
                         <span className={cn("text-sm font-mono truncate flex-1", getEventColor(evt.status))}>
                             {getEventLabel(evt)}

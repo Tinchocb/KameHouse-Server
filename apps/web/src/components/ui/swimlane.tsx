@@ -52,20 +52,20 @@ const SwimlaneInner = React.memo(function SwimlaneInner({
     return (
         <section className={cn("relative", className)}>
             <div className="mb-6 flex items-center gap-4 px-6 md:px-10 lg:px-14">
-                <span className="h-8 w-1.5 bg-white" />
+                <span className="h-8 w-1.5 bg-brand-orange shadow-[0_0_8px_rgba(255,110,58,0.6)] rounded-full" />
                 <h2 className="text-3xl font-bebas font-normal uppercase tracking-widest text-white">
                     {title}
                 </h2>
             </div>
 
             <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 z-30 hidden w-20 bg-gradient-to-r from-black to-transparent md:block" />
-                <div className="pointer-events-none absolute inset-y-0 right-0 z-30 hidden w-20 bg-gradient-to-l from-black to-transparent md:block" />
+                <div className="pointer-events-none absolute inset-y-0 left-0 z-30 hidden w-20 bg-gradient-to-r from-background to-transparent md:block" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 z-30 hidden w-20 bg-gradient-to-l from-background to-transparent md:block" />
 
                 <HorizontalDraggableScroll
                     className="px-0"
                     containerClass="gap-4 px-6 pb-3 md:px-10 lg:px-14 snap-x snap-mandatory"
-                    chevronOverlayClass="from-black/95 to-transparent"
+                    chevronOverlayClass="from-background/95 to-transparent"
                     scrollAmount={420}
                     safeDisplacement={18}
                     applyRubberBandEffect
@@ -159,22 +159,22 @@ export function SwimlaneSkeleton({
     return (
         <section className={cn("relative", className)}>
             <div className="mb-6 flex items-center gap-4 px-6 md:px-10 lg:px-14">
-                <span className="h-8 w-1.5 bg-zinc-800" />
+                <span className="h-8 w-1.5 bg-brand-orange/40 rounded-full" />
                 {title ? (
                     <h2 className="text-3xl font-bebas font-normal uppercase tracking-widest text-zinc-200">
                         {title}
                     </h2>
                 ) : (
-                    <Skeleton className="h-8 w-40 rounded-none" />
+                    <Skeleton className="h-8 w-40 rounded-lg" />
                 )}
             </div>
 
             <div className="flex gap-4 overflow-hidden px-6 pb-3 md:px-10 lg:px-14">
                 {Array.from({ length: itemCount }).map((_, i) => (
                     <div key={i} className={cn("flex-shrink-0", cardWidths[aspect])}>
-                        <Skeleton className={cn("mb-3 bg-white/[0.03] border border-white/5 rounded-none", cardAspects[aspect])} />
-                        <Skeleton className="mb-2 h-4 w-3/4 bg-white/[0.03] rounded-none" />
-                        <Skeleton className="h-3 w-1/2 bg-white/[0.02] rounded-none" />
+                        <Skeleton className={cn("mb-3 bg-white/[0.02] border border-white/5 rounded-xl", cardAspects[aspect])} />
+                        <Skeleton className="mb-2 h-4 w-3/4 bg-white/[0.02] rounded-md" />
+                        <Skeleton className="h-3 w-1/2 bg-white/[0.015] rounded-md" />
                     </div>
                 ))}
             </div>

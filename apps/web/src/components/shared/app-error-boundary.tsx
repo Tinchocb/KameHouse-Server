@@ -69,9 +69,16 @@ export function AppErrorBoundary({ error, resetErrorBoundary }: AppErrorBoundary
     )
 }
 
-export function ErrorBoundary({ children, ...props }: Omit<ReactErrorBoundaryProps, "FallbackComponent"> & { className?: string }) {
+interface ErrorBoundaryWrapperProps {
+    children: React.ReactNode
+    className?: string
+    onReset?: (...args: any[]) => void
+    resetKeys?: any[]
+}
+
+export function ErrorBoundary({ children, className, ...props }: ErrorBoundaryWrapperProps) {
     return (
-        <div className={props.className}>
+        <div className={className}>
             <ReactErrorBoundary
                 FallbackComponent={AppErrorBoundary}
                 {...props}

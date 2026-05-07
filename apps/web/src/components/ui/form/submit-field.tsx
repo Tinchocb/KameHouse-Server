@@ -79,3 +79,5 @@ export const SubmitField = React.forwardRef<HTMLButtonElement, SubmitFieldProps>
     )
 
 })
+
+SubmitField.displayName = "SubmitField"

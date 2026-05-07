@@ -13,6 +13,8 @@ import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as SeriesIndexRouteImport } from './routes/series/index'
 import { Route as MoviesIndexRouteImport } from './routes/movies/index'
 import { Route as HomeIndexRouteImport } from './routes/home/index'
+import { Route as CollectionsIndexRouteImport } from './routes/collections/index'
+import { Route as CollectionsIdRouteImport } from './routes/collections/$id'
 import { Route as SeriesSeriesIdIndexRouteImport } from './routes/series/$seriesId/index'
 import { Route as SeriesSeriesIdSagaIdRouteImport } from './routes/series/$seriesId/$sagaId'
 
@@ -36,6 +38,16 @@ const HomeIndexRoute = HomeIndexRouteImport.update({
   path: '/home/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CollectionsIndexRoute = CollectionsIndexRouteImport.update({
+  id: '/collections/',
+  path: '/collections/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CollectionsIdRoute = CollectionsIdRouteImport.update({
+  id: '/collections/$id',
+  path: '/collections/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SeriesSeriesIdIndexRoute = SeriesSeriesIdIndexRouteImport.update({
   id: '/series/$seriesId/',
   path: '/series/$seriesId/',
@@ -48,6 +60,8 @@ const SeriesSeriesIdSagaIdRoute = SeriesSeriesIdSagaIdRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/collections/$id': typeof CollectionsIdRoute
+  '/collections/': typeof CollectionsIndexRoute
   '/home/': typeof HomeIndexRoute
   '/movies/': typeof MoviesIndexRoute
   '/series/': typeof SeriesIndexRoute
@@ -56,6 +70,8 @@ export interface FileRoutesByFullPath {
   '/series/$seriesId/': typeof SeriesSeriesIdIndexRoute
 }
 export interface FileRoutesByTo {
+  '/collections/$id': typeof CollectionsIdRoute
+  '/collections': typeof CollectionsIndexRoute
   '/home': typeof HomeIndexRoute
   '/movies': typeof MoviesIndexRoute
   '/series': typeof SeriesIndexRoute
@@ -65,6 +81,8 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/collections/$id': typeof CollectionsIdRoute
+  '/collections/': typeof CollectionsIndexRoute
   '/home/': typeof HomeIndexRoute
   '/movies/': typeof MoviesIndexRoute
   '/series/': typeof SeriesIndexRoute
@@ -75,6 +93,8 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/collections/$id'
+    | '/collections/'
     | '/home/'
     | '/movies/'
     | '/series/'
@@ -83,6 +103,8 @@ export interface FileRouteTypes {
     | '/series/$seriesId/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/collections/$id'
+    | '/collections'
     | '/home'
     | '/movies'
     | '/series'
@@ -91,6 +113,8 @@ export interface FileRouteTypes {
     | '/series/$seriesId'
   id:
     | '__root__'
+    | '/collections/$id'
+    | '/collections/'
     | '/home/'
     | '/movies/'
     | '/series/'
@@ -100,6 +124,8 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  CollectionsIdRoute: typeof CollectionsIdRoute
+  CollectionsIndexRoute: typeof CollectionsIndexRoute
   HomeIndexRoute: typeof HomeIndexRoute
   MoviesIndexRoute: typeof MoviesIndexRoute
   SeriesIndexRoute: typeof SeriesIndexRoute
@@ -138,6 +164,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HomeIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/collections/': {
+      id: '/collections/'
+      path: '/collections'
+      fullPath: '/collections/'
+      preLoaderRoute: typeof CollectionsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/collections/$id': {
+      id: '/collections/$id'
+      path: '/collections/$id'
+      fullPath: '/collections/$id'
+      preLoaderRoute: typeof CollectionsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/series/$seriesId/': {
       id: '/series/$seriesId/'
       path: '/series/$seriesId'
@@ -156,6 +196,8 @@ declare module '@tanstack/react-router' {
 }
 
 const rootRouteChildren: RootRouteChildren = {
+  CollectionsIdRoute: CollectionsIdRoute,
+  CollectionsIndexRoute: CollectionsIndexRoute,
   HomeIndexRoute: HomeIndexRoute,
   MoviesIndexRoute: MoviesIndexRoute,
   SeriesIndexRoute: SeriesIndexRoute,

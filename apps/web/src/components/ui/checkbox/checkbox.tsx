@@ -79,21 +79,10 @@ export type CheckboxProps =
     ComponentAnatomy<typeof CheckboxAnatomy> &
     Omit<React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>,
         "value" | "checked" | "disabled" | "required" | "onCheckedChange" | "defaultValue"> & {
-    /**
-     * If true, no error message will be shown when the field is invalid.
-     */
     hideError?: boolean
-    /**
-     * The size of the checkbox.
-     */
+    size?: "xs" | "sm" | "md" | "lg" | "xl"
     value?: boolean | "indeterminate"
-    /**
-     * Default value when uncontrolled
-     */
     defaultValue?: boolean | "indeterminate"
-    /**
-     * Callback fired when the value changes
-     */
     onValueChange?: (value: boolean | "indeterminate") => void
     /**
      * Ref to the input element
@@ -131,7 +120,7 @@ export const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>((prop
     const handleOnValueChange = React.useCallback((value: boolean) => {
         _setValue(value)
         onValueChange?.(value)
-    }, [])
+    }, [onValueChange])
 
     React.useEffect(() => {
         if (!defaultValue || !isFirst.current) {

@@ -99,7 +99,7 @@ export const DangerZone = React.forwardRef<HTMLDivElement, DangerZoneProps>((pro
                     </p>
                     <Button
                         size="sm"
-                        intent="alert-subtle"
+                        intent="alert-outline"
                         className="mt-2"
                         leftIcon={<span className="w-4">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
@@ -125,8 +125,8 @@ export const DangerZone = React.forwardRef<HTMLDivElement, DangerZoneProps>((pro
                     <Button
                         intent="alert" size="sm" onClick={() => {
                         setIsOpen(false)
-                        showLoadingOverlayOnDelete && setBlockScreen(true)
-                        onDelete && onDelete()
+                        if (showLoadingOverlayOnDelete) setBlockScreen(true)
+                        onDelete?.()
                     }}
                     >{locales["dangerZone"]["delete"][locale]}</Button>
                     <Button
@@ -140,3 +140,5 @@ export const DangerZone = React.forwardRef<HTMLDivElement, DangerZoneProps>((pro
     )
 
 })
+
+DangerZone.displayName = "DangerZone"

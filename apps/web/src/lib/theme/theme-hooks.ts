@@ -210,5 +210,5 @@ function getThemeValue(key: keyof ThemeSettings, settings: ThemeSettings | undef
 
 export function useIsMobile(): { isMobile: boolean } {
     const { width } = useWindowSize()
-    return { isMobile: React.useMemo(() => width < 1024, [width < 1024]) }
+    return { isMobile: React.useMemo(() => width < 1024, [width]) }
 }

@@ -56,17 +56,8 @@ export type SelectProps = InputStyling &
     BasicFieldOptions &
     Omit<React.ComponentPropsWithoutRef<"button">, "value" | "defaultValue"> &
     ComponentAnatomy<typeof SelectAnatomy> & {
-    /**
-     * The options to display in the dropdown
-     */
     options: SelectOption[] | undefined
-    /**
-     * The placeholder text
-     */
     placeholder?: string
-    /**
-     * Direction of the text
-     */
     dir?: "ltr" | "rtl"
     /**
      * The selected value
@@ -141,7 +132,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>((props, r
 
     const [_value, _setValue] = React.useState<string | undefined>(controlledValue ?? defaultValue)
 
-    const handleOnValueChange = React.useCallback((value: string) => {
+    const handleOnValueChange = (value: string) => {
         if (value === "__placeholder__") {
             _setValue("")
             onValueChange?.("")
@@ -149,7 +140,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>((props, r
         }
         _setValue(value)
         onValueChange?.(value)
-    }, [])
+    }
 
     React.useEffect(() => {
         if (!defaultValue || !isFirst.current) {

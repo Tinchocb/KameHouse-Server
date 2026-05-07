@@ -80,21 +80,11 @@ export type SwitchProps = BasicFieldOptions &
     VariantProps<typeof SwitchAnatomy.container> &
     Omit<React.ComponentPropsWithoutRef<typeof SwitchPrimitive.Root>,
         "value" | "checked" | "disabled" | "required" | "defaultValue" | "defaultChecked" | "onCheckedChange"> & {
-    /**
-     * Whether the switch is checked
-     */
+    size?: "xs" | "sm" | "md" | "lg" | "xl"
+    side?: "left" | "right"
     value?: boolean
-    /**
-     * Callback fired when the value changes
-     */
     onValueChange?: (value: boolean) => void
-    /**
-     * Default value when uncontrolled
-     */
     defaultValue?: boolean
-    /**
-     * Ref to the input element
-     */
     inputRef?: React.Ref<HTMLInputElement>
     className?: string
     moreHelp?: React.ReactNode
@@ -123,10 +113,10 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>((props, r
 
     const [_value, _setValue] = React.useState<boolean | undefined>(controlledValue ?? defaultValue ?? false)
 
-    const handleOnValueChange = React.useCallback((value: boolean) => {
+    const handleOnValueChange = (value: boolean) => {
         _setValue(value)
         onValueChange?.(value)
-    }, [])
+    }
 
     React.useEffect(() => {
         if (!defaultValue || !isFirst.current) {

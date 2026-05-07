@@ -33,6 +33,8 @@ export const ButtonAnatomy = defineStyleAnatomy({
 
                 "white": "text-black bg-white hover:bg-zinc-200 active:bg-zinc-300",
                 "white-outline": "text-white border border-white bg-transparent hover:bg-white/10",
+                "primary-glow": "bg-white text-black hover:bg-zinc-200 shadow-[0_0_20px_rgba(255,255,255,0.3)]",
+                "alert-subtle": "bg-red-900/30 text-red-400 border border-red-800 hover:bg-red-900/50",
             },
             rounded: {
                 true: "rounded-none",
@@ -68,14 +70,16 @@ export const ButtonAnatomy = defineStyleAnatomy({
 
 
 export type ButtonProps = React.ComponentPropsWithoutRef<"button"> &
-    VariantProps<typeof ButtonAnatomy.root> &
-    ComponentAnatomy<typeof ButtonAnatomy> & {
+    VariantProps<typeof ButtonAnatomy.root> & {
         loading?: boolean,
         leftIcon?: React.ReactNode
         rightIcon?: React.ReactNode
         iconSpacing?: React.CSSProperties["marginInline"]
         hideTextOnSmallScreen?: boolean
+        iconClass?: string
     }
+
+type ButtonVariantProps = VariantProps<typeof ButtonAnatomy.root>
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, ref) => {
 

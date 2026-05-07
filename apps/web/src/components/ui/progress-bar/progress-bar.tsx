@@ -45,10 +45,13 @@ export const ProgressBarAnatomy = defineStyleAnatomy({
  * ProgressBar
  * -----------------------------------------------------------------------------------------------*/
 
-export type ProgressBarProps = React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root>
-    & ComponentAnatomy<typeof ProgressBarAnatomy>
-    & VariantProps<typeof ProgressBarAnatomy.root>
-    & VariantProps<typeof ProgressBarAnatomy.indicator>
+export type ProgressBarProps = React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root> &
+    ComponentAnatomy<typeof ProgressBarAnatomy> &
+    VariantProps<typeof ProgressBarAnatomy.root> &
+    VariantProps<typeof ProgressBarAnatomy.indicator> & {
+        size?: "xs" | "sm" | "md" | "lg" | "xl"
+        isIndeterminate?: boolean
+    }
 
 export const ProgressBar = React.forwardRef<HTMLDivElement, ProgressBarProps>((props, ref) => {
     const {
