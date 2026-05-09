@@ -17,7 +17,6 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
     { to: "/home", label: "Inicio", icon: <FaHome className="w-5 h-5" /> },
     { to: "/series", label: "Series", icon: <FaTv className="w-5 h-5" /> },
     { to: "/movies", label: "Películas", icon: <FaFilm className="w-5 h-5" /> },
-    { to: "/collections", label: "Sagas", icon: <FaLayerGroup className="w-5 h-5" /> },
     { to: "/settings", label: "Configuración", icon: <FaCog className="w-5 h-5" /> },
 ]
 

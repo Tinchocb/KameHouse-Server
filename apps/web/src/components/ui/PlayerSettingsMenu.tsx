@@ -72,6 +72,16 @@ export interface PlayerSettingsMenuProps {
 
     /** Extra classes for the gear button. */
     className?: string
+
+    /**
+     * External control to open the panel — triggered by the subtitle button.
+     * When set to `true` the panel opens; when `false` or undefined the internal
+     * toggle state is used instead.
+     */
+    open?: boolean
+
+    /** Called when the panel visibility changes from external control. */
+    onOpenChange?: (open: boolean) => void
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -170,8 +180,21 @@ export function PlayerSettingsMenu({
     onSourceChange,
     isLoadingSubtitle = false,
     className,
+    open,
+    onOpenChange,
 }: PlayerSettingsMenuProps) {
-    const [isOpen, setIsOpen] = React.useState(false)
+    const [internalOpen, setInternalOpen] = React.useState(false)
+    const isControlled = open !== undefined
+    const isOpen = isControlled ? open : internalOpen
+
+    const setIsOpen = (v: boolean) => {
+        if (isControlled) {
+            onOpenChange?.(v)
+        } else {
+            setInternalOpen(v)
+        }
+    }
+
     const panelRef = React.useRef<HTMLDivElement>(null)
     const buttonRef = React.useRef<HTMLButtonElement>(null)
 
@@ -217,7 +240,7 @@ export function PlayerSettingsMenu({
                 type="button"
                 aria-label="Configuración de pistas"
                 aria-expanded={isOpen}
-                onClick={(e) => { e.stopPropagation(); setIsOpen((v) => !v) }}
+                onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen) }}
                 className={cn(
                     "relative flex items-center justify-center w-12 h-12",
                     "text-zinc-500 hover:text-white border border-white/10 hover:border-white/40 bg-black",

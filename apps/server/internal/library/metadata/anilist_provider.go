@@ -44,6 +44,7 @@ const anilistMediaQuery = `
 	synonyms
 	format
 	status
+	season
 	episodes
 	description
 	startDate {
@@ -55,6 +56,29 @@ const anilistMediaQuery = `
 		extraLarge
 	}
 	bannerImage
+	relations {
+		edges {
+			relationType
+			node {
+				id
+				type
+				format
+				status
+				episodes
+				season
+				title {
+					romaji
+					english
+					native
+					userPreferred
+				}
+				synonyms
+			}
+		}
+	}
+	nextAiringEpisode {
+		episode
+	}
 `
 
 type anilistResponse struct {
@@ -80,6 +104,7 @@ type anilistMedia struct {
 	Synonyms    []string `json:"synonyms"`
 	Format      string   `json:"format"`
 	Status      string   `json:"status"`
+	Season      string   `json:"season"`
 	Episodes    int      `json:"episodes"`
 	Description string   `json:"description"`
 	StartDate   struct {
@@ -91,6 +116,15 @@ type anilistMedia struct {
 		ExtraLarge string `json:"extraLarge"`
 	} `json:"coverImage"`
 	BannerImage string `json:"bannerImage"`
+	Relations   *struct {
+		Edges []struct {
+			RelationType string       `json:"relationType"`
+			Node         anilistMedia `json:"node"`
+		} `json:"edges"`
+	} `json:"relations"`
+	NextAiringEpisode *struct {
+		Episode int `json:"episode"`
+	} `json:"nextAiringEpisode"`
 }
 
 func (p *AniListProvider) SearchMedia(ctx context.Context, query string) ([]*dto.NormalizedMedia, error) {
@@ -267,18 +301,66 @@ func (p *AniListProvider) toNormalizedMedia(m anilistMedia) *dto.NormalizedMedia
 		description = &m.Description
 	}
 
-	return &dto.NormalizedMedia{
-		ID:               m.ID,
-		ExplicitProvider: "anilist",
-		ExplicitID:       strconv.Itoa(m.ID),
-		Title:            title,
-		Synonyms:         synonyms,
-		Format:           format,
-		Year:             year,
-		StartDate:        startDate,
-		Episodes:         episodes,
-		CoverImage:       coverImage,
-		BannerImage:      bannerImage,
-		Description:      description,
+	var season *dto.MediaSeason
+	if m.Season != "" {
+		s := dto.MediaSeason(m.Season)
+		season = &s
 	}
+
+	var nextAiring *dto.NormalizedMediaNextAiringEpisode
+	if m.NextAiringEpisode != nil {
+		nextAiring = &dto.NormalizedMediaNextAiringEpisode{
+			Episode: m.NextAiringEpisode.Episode,
+		}
+	}
+
+	var relations []*dto.NormalizedMediaRelation
+	if m.Relations != nil {
+		for _, edge := range m.Relations.Edges {
+			// Avoid infinite recursion by not populating relations of relations
+			nodeMedia := p.toNormalizedMediaShallow(edge.Node)
+			relations = append(relations, &dto.NormalizedMediaRelation{
+				RelationType: edge.RelationType,
+				Media:        nodeMedia,
+			})
+		}
+	}
+
+	return &dto.NormalizedMedia{
+		ID:                m.ID,
+		ExplicitProvider:  "anilist",
+		ExplicitID:        strconv.Itoa(m.ID),
+		Title:             title,
+		Synonyms:          synonyms,
+		Format:            format,
+		Status:            (*dto.MediaStatus)(&m.Status),
+		Season:            season,
+		Year:              year,
+		StartDate:         startDate,
+		Episodes:          episodes,
+		CoverImage:        coverImage,
+		BannerImage:       bannerImage,
+		Description:       description,
+		NextAiringEpisode: nextAiring,
+		Relations:         relations,
+	}
+}
+
+// toNormalizedMediaShallow converts anilistMedia without resolving its relations, avoiding infinite loops.
+func (p *AniListProvider) toNormalizedMediaShallow(m anilistMedia) *dto.NormalizedMedia {
+	nm := p.toNormalizedMedia(anilistMedia{
+		ID:          m.ID,
+		Title:       m.Title,
+		Synonyms:    m.Synonyms,
+		Format:      m.Format,
+		Status:      m.Status,
+		Season:      m.Season,
+		Episodes:    m.Episodes,
+		Description: m.Description,
+		StartDate:   m.StartDate,
+		CoverImage:  m.CoverImage,
+		BannerImage: m.BannerImage,
+		// Omit relations and nextAiringEpisode
+	})
+	return nm
 }

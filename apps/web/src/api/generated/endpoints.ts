@@ -153,6 +153,11 @@ export const API_ENDPOINTS = {
             methods: ["POST"],
             endpoint: "/api/v1/library/anime-entry/manual-match",
         },
+        AnimeEntryUnmatch: {
+            key: "ANIME-ENTRIES-anime-entry-unmatch",
+            methods: ["POST"],
+            endpoint: "/api/v1/library/anime-entry/unmatch",
+        },
         /**
          *  @description
          *  Route returns a list of episodes missing from the user's library collection

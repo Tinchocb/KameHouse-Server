@@ -1,10 +1,10 @@
 package scanner
 
 import (
-	"path/filepath"
+	"context"
 	"regexp"
-	"strings"
 	"strconv"
+	"strings"
 	"time"
 
 	"kamehouse/internal/database/db"
@@ -12,7 +12,6 @@ import (
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/library/parser"
 	"kamehouse/internal/util/parallel"
-	"context"
 
 	"github.com/rs/zerolog"
 )
@@ -32,15 +31,17 @@ type Matcher struct { // Keep struct name 'Matcher' for backwards compatibility
 	Threshold         float64
 	MatchingAlgorithm string
 	StrictStructure   bool
+	AnilistResolver   *AnilistResolver
 }
 
 func NewMatcher(localFiles []*dto.LocalFile, mediaContainer *MediaContainer, logger *zerolog.Logger, db *db.Database) *Matcher {
 	return &Matcher{
-		LocalFiles:     localFiles,
-		MediaContainer: mediaContainer,
-		Logger:         logger,
-		Database:       db,
-		Threshold:      0.70, // Optimized threshold for movies and Spanish titles
+		LocalFiles:      localFiles,
+		MediaContainer:  mediaContainer,
+		Logger:          logger,
+		Database:        db,
+		Threshold:       0.70, // Optimized threshold for movies and Spanish titles
+		AnilistResolver: NewAnilistResolver(),
 	}
 }
 
@@ -49,16 +50,12 @@ func (m *Matcher) MatchLocalFilesWithMedia() error {
 	m.Logger.Info().Msg("AgentMatcher: Initiating Bayesian Identity Resolution...")
 	start := time.Now()
 
-	
-
 	// Use generic parallel processing module
 	parallel.EachTask(m.LocalFiles, func(lf *dto.LocalFile, _ int) {
 		m.BayesianResolve(lf)
 	})
 
 	m.Logger.Info().Msgf("AgentMatcher: Completed Bayesian Pass on %d files in %v", len(m.LocalFiles), time.Since(start))
-
-	
 
 	return nil
 }
@@ -70,6 +67,7 @@ func (m *Matcher) MatchBatch(ctx context.Context, batchPaths []string) error {
 	localFiles := make([]*dto.LocalFile, len(batchPaths))
 	for i, path := range batchPaths {
 		localFiles[i] = dto.NewLocalFileS(path, nil)
+		ingestLocalFileEmbeddedMetadata(ctx, localFiles[i], m.Logger)
 	}
 
 	parallel.EachTask(localFiles, func(lf *dto.LocalFile, _ int) {
@@ -87,13 +85,13 @@ func (m *Matcher) MatchBatch(ctx context.Context, batchPaths []string) error {
 // BayesianResolve calculates the probabilistic confidence that a file belongs to a specific media.
 func (m *Matcher) BayesianResolve(lf *dto.LocalFile) {
 	// 1. Initial Parse
-	pm := parser.Parse(lf.Path)
+	pm := parsedMediaFromLocalFile(lf)
 
 	// SHORT-CIRCUIT: Check hardcoded custom overrides before Bayesian scoring.
 	if overrideID, found := LookupCustomOverride(pm.Title); found {
 		lf.MediaId = overrideID
-		lf.Metadata.Episode = pm.Episode
-		if pm.Title != "" && pm.Season == 1 && pm.Episode == 1 {
+		lf.Metadata.Episodes = pm.Episodes
+		if pm.Title != "" && pm.Season == 1 && len(pm.Episodes) == 1 && pm.Episodes[0] == 1 {
 			// This is a naive attempt; in production IsSpecial is determined by parser correctly
 			// but we fallback safely here.
 			lf.Metadata.Type = dto.LocalFileTypeMain
@@ -150,33 +148,34 @@ func (m *Matcher) BayesianResolve(lf *dto.LocalFile) {
 		}
 
 		// Self-Healing Step 2: Strip bracket tags entirely and re-score
-		healedTitle := sanitizeSubGroupTags(pm.Title)
+		healedTitle := parser.SanitizeSubGroupTags(pm.Title)
 		if healedTitle != pm.Title {
 			pm.Title = healedTitle
-			for _, media := range m.MediaContainer.NormalizedMedia {
-				conf := m.calculateBayesianScore(pm, media)
-				if conf > bestConfidence {
-					bestConfidence = conf
-					bestMatch = media
+			if m.MediaContainer != nil {
+				for _, media := range m.MediaContainer.NormalizedMedia {
+					conf := m.calculateBayesianScore(pm, media)
+					if conf > bestConfidence {
+						bestConfidence = conf
+						bestMatch = media
+					}
 				}
 			}
 		}
 
-		// Self-Healing Step 3: Check Folder Context
-		if bestConfidence < threshold && len(lf.ParsedFolderData) > 0 {
-			info := ParseFolderStructure(lf.Path, nil)
-			if info.SeriesName != "" {
-				pm.Title = info.SeriesName
-			} else {
-				folderStr := filepath.Base(filepath.Dir(lf.Path))
-				pm.Title = parser.Parse(folderStr).Title
-			}
-			
-			for _, media := range m.MediaContainer.NormalizedMedia {
-				conf := m.calculateBayesianScore(pm, media)
-				if conf*0.90 > bestConfidence {
-					bestConfidence = conf * 0.90
-					bestMatch = media
+		// Self-Healing Step 3: Folder context is weak evidence only.
+		// Generic/random folders such as "Nueva Carpeta" are ignored completely.
+		if bestConfidence < threshold && m.MediaContainer != nil && lf.EmbeddedMetadata == nil {
+			folderTitle := meaningfulImmediateFolderTitle(lf.Path)
+			if folderTitle != "" {
+				folderPM := pm
+				folderPM.Title = folderTitle
+
+				for _, media := range m.MediaContainer.NormalizedMedia {
+					conf := m.calculateBayesianScore(folderPM, media) * 0.20
+					if conf > bestConfidence {
+						bestConfidence = conf
+						bestMatch = media
+					}
 				}
 			}
 		}
@@ -185,9 +184,25 @@ func (m *Matcher) BayesianResolve(lf *dto.LocalFile) {
 verdict:
 	// 3. Verdict
 	if bestMatch != nil && bestConfidence >= threshold {
+		// --- ANILIST ABSOLUTE RESOLVER INTEGRATION ---
+		if bestMatch.ExplicitProvider == "anilist" && len(pm.Episodes) == 1 {
+			// Determine if this might be an absolute episode number
+			absEp := pm.Episodes[0]
+			// We only resolve if the episode is reasonably high or if we know we want strict absolute mapping
+			resolvedMedia, relativeEp, err := m.AnilistResolver.ResolveAbsoluteMapping(context.Background(), bestMatch.ID, absEp)
+			if err == nil {
+				bestMatch = resolvedMedia
+				pm.Episodes = []int{relativeEp}
+				m.Logger.Debug().Msgf("AgentMatcher: AnilistResolver mapped Absolute Ep %d -> Media %d, Relative Ep %d", absEp, resolvedMedia.ID, relativeEp)
+			} else {
+				m.Logger.Debug().Err(err).Msgf("AgentMatcher: AnilistResolver failed to map absolute episode %d", absEp)
+			}
+		}
+		// ---------------------------------------------
+
 		lf.MediaId = bestMatch.ID
 
-		lf.Metadata.Episode = pm.Episode
+		lf.Metadata.Episodes = pm.Episodes
 		lf.Metadata.Type = dto.LocalFileTypeMain
 
 		m.Logger.Debug().Msgf("AgentMatcher: Matched '%s' -> %d [Confd: %.2f]", lf.Name, bestMatch.ID, bestConfidence)
@@ -207,7 +222,6 @@ verdict:
 		}
 	}
 
-	
 }
 
 // calculateBayesianScore implements a naive Bayes estimation for identity correlation.
@@ -284,7 +298,9 @@ func (m *Matcher) calculateBayesianScore(pm parser.ParsedMedia, media *dto.Norma
 	}
 
 	// Evidence 3: Special/OVA Detection (Fallback logic moved out of pm)
-	if pm.Season == 0 && pm.Episode == 0 {
+	// Check for empty or single-episode with value 0
+	isSpecialCase := len(pm.Episodes) == 0 || (len(pm.Episodes) == 1 && pm.Episodes[0] == 0)
+	if pm.Season == 0 && isSpecialCase {
 		if media.Format != nil && (string(*media.Format) == "OVA" || string(*media.Format) == "SPECIAL" || string(*media.Format) == "MOVIE") {
 			posterior = updateBayes(posterior, 0.95, 0.50)
 		} else {
@@ -319,7 +335,10 @@ func (m *Matcher) calculateBayesianScore(pm parser.ParsedMedia, media *dto.Norma
 // Uses the package-level reYear to avoid recompiling the pattern on every call.
 func extractYear(s string) int {
 	if loc := reYear.FindStringSubmatch(s); len(loc) > 1 {
-		if v, err := strconv.Atoi(loc[1]); err == nil { return v }; return 0
+		if v, err := strconv.Atoi(loc[1]); err == nil {
+			return v
+		}
+		return 0
 	}
 	return 0
 }
@@ -341,40 +360,8 @@ func updateBayes(prior, p_e_given_h, p_e_given_not_h float64) float64 {
 	return numerator / denominator
 }
 
-var (
-	reTrailingTags = regexp.MustCompile(`\s*(\[.*?\]|\(.*?\))\s*$`)
-	reTrailingCRC  = regexp.MustCompile(`(?i)\s*\[[0-9A-F]{8}\]\s*$`)
-)
-
-// sanitizeSubGroupTags isolates things like [SubsPlease] or (1080p) from being mapped to titles
-func sanitizeSubGroupTags(input string) string {
-	// 1. Remove [ReleaseGroup] at the start
-	if strings.HasPrefix(input, "[") {
-		closingIdx := strings.Index(input, "]")
-		if closingIdx > 0 && closingIdx < len(input)-1 {
-			input = strings.TrimSpace(input[closingIdx+1:])
-		}
-	}
-
-	// 2. Remove trailing tags like [1080p], (TV), etc.
-	for reTrailingTags.MatchString(input) {
-		input = reTrailingTags.ReplaceAllString(input, "")
-	}
-
-	// 3. Remove common CRC32 hashes at the end
-	input = reTrailingCRC.ReplaceAllString(input, "")
-
-	return strings.TrimSpace(input)
-}
-
 // calculateDice implements the real Sørensen-Dice Coefficient using character bigrams.
 // It uses the efficient implementation from efficient_dice.go to minimize allocations.
 func calculateDice(s1, s2 string) float64 {
 	return CompareStrings(s1, s2)
 }
-
-
-
-
-
-

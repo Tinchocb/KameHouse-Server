@@ -25,13 +25,31 @@ func (f *LocalFile) IsParsedEpisodeValid() bool {
 	return len(f.ParsedData.Episode) > 0
 }
 
-// GetEpisodeNumber returns the metadata episode number.
+// GetEpisodeNumber returns the first episode number from the metadata episodes array.
 // This requires the LocalFile to be hydrated.
 func (f *LocalFile) GetEpisodeNumber() int {
 	if f.Metadata == nil {
 		return -1
 	}
-	return f.Metadata.Episode
+	// Fallback to legacy Episode field for backwards compatibility
+	if len(f.Metadata.Episodes) == 0 && f.Metadata.Episode > 0 {
+		return f.Metadata.Episode
+	}
+	if len(f.Metadata.Episodes) == 0 {
+		return -1
+	}
+	return f.Metadata.Episodes[0]
+}
+
+// GetEpisodeNumbers returns all episode numbers from the metadata.
+func (f *LocalFile) GetEpisodeNumbers() []int {
+	if f.Metadata == nil {
+		return nil
+	}
+	if len(f.Metadata.Episodes) == 0 && f.Metadata.Episode > 0 {
+		return []int{f.Metadata.Episode}
+	}
+	return f.Metadata.Episodes
 }
 
 func (f *LocalFile) GetParsedEpisodeTitle() string {

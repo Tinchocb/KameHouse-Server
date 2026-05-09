@@ -22,13 +22,26 @@ func (e *Entry) FindNextEpisode() (*Episode, bool) {
 	if !ok {
 		return nil, false
 	}
+
+	currentProgress := e.GetCurrentProgress()
+	
+	// Try finding by absolute number first for cross-season continuity
 	ep, ok := lo.Find(eps, func(ep *Episode) bool {
-		return ep.GetProgressNumber() == e.GetCurrentProgress()+1
+		return ep.AbsoluteEpisodeNumber == currentProgress+1
 	})
-	if !ok {
-		return nil, false
+	if ok {
+		return ep, true
 	}
-	return ep, true
+
+	// Fallback to progress number
+	ep, ok = lo.Find(eps, func(ep *Episode) bool {
+		return ep.GetProgressNumber() == currentProgress+1
+	})
+	if ok {
+		return ep, true
+	}
+
+	return nil, false
 }
 
 // FindLatestEpisode returns the *main* episode with the highest episode number.
@@ -100,7 +113,7 @@ func (e *Entry) FindMainEpisodes() ([]*Episode, bool) {
 			eps = append(eps, ep)
 		}
 	}
-	return e.Episodes, true
+	return eps, true
 }
 
 // FindLocalFiles returns the local files.

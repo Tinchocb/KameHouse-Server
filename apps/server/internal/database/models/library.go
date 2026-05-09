@@ -35,6 +35,14 @@ type LibraryMedia struct {
 	Genres        []byte `gorm:"column:genres;type:text" json:"genres"` // JSON array of strings
 	Tags          []byte `gorm:"column:tags;type:text" json:"tags"`     // JSON array of objects
 	TotalEpisodes int    `gorm:"column:total_episodes" json:"totalEpisodes"`
+
+	AudioTracks    []byte `gorm:"column:audio_tracks;type:text" json:"audioTracks"`       // JSON array of strings
+	SubtitleTracks []byte `gorm:"column:subtitle_tracks;type:text" json:"subtitleTracks"` // JSON array of strings
+
+	// FanArt.tv enrichment
+	LogoImage     string `gorm:"column:logo_image" json:"logoImage"`
+	ThumbImage    string `gorm:"column:thumb_image" json:"thumbImage"`
+	ClearArtImage string `gorm:"column:clear_art_image" json:"clearArtImage"`
 }
 
 // IsMovieOrSingleEpisode returns true if the media is a movie or a single episode special
@@ -124,6 +132,13 @@ type LibraryEpisode struct {
 
 	AirDate        time.Time `gorm:"column:air_date" json:"airDate"`
 	RuntimeMinutes int       `gorm:"column:runtime_minutes" json:"runtimeMinutes"`
+
+	// Saga/Story Arc association
+	SagaName string `gorm:"column:saga_name" json:"sagaName"`
+	SagaId   string `gorm:"column:saga_id" json:"sagaId"`
+
+	AudioTracks    []byte `gorm:"column:audio_tracks;type:text" json:"audioTracks"`       // JSON array of strings
+	SubtitleTracks []byte `gorm:"column:subtitle_tracks;type:text" json:"subtitleTracks"` // JSON array of strings
 }
 
 // LibrarySeason represents a season (or saga) of a LibraryMedia.

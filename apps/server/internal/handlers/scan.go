@@ -29,6 +29,7 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		EnhanceWithOfflineDatabase bool `json:"enhanceWithOfflineDatabase"`
 		SkipLockedFiles            bool `json:"skipLockedFiles"`
 		SkipIgnoredFiles           bool `json:"skipIgnoredFiles"`
+		FullScan                   bool `json:"fullScan"`
 	}
 
 	var b body
@@ -55,6 +56,22 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 	existingLfs, _, err := db.GetLocalFiles(h.App.Database)
 	if err != nil {
 		return h.RespondWithError(c, err)
+	}
+
+	// +---------------------+
+	// |  Automatic Cleanup  |
+	// +---------------------+
+	// Unmatch any file that has a MediaId but no longer belongs to a valid LibraryMedia
+	// This forces the scanner to re-evaluate it against TMDB
+	for _, lf := range existingLfs {
+		if lf.MediaId > 0 && lf.LibraryMediaId == 0 {
+			h.App.Logger.Warn().Str("file", lf.Name).Msg("scan: found orphaned file, unmatching automatically")
+			lf.MediaId = 0
+			lf.ParsedData = nil
+			lf.ParsedFolderData = nil
+			lf.Metadata = nil
+			lf.Locked = false
+		}
 	}
 
 	// Get the latest shelved local files
@@ -119,6 +136,7 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		FanArtEnricher:             h.App.Metadata.FanArt,
 		OMDbEnricher:               h.App.Metadata.OMDb,
 		OpenSubsEnricher:           h.App.Metadata.OpenSubs,
+		FullScan:                   b.FullScan,
 	}
 
 	// EXECUTE ASYNCHRONOUSLY to prevent HTTP Timeout & 504 errors on massive scans

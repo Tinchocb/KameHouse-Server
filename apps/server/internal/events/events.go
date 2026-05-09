@@ -55,6 +55,8 @@ const (
 
 	MediastreamShutdownStream = "mediastream-shutdown-stream"
 
+	PlaybackHeartbeatProgress = "playback-heartbeat-progress" // 5-second WS heartbeat for real-time progress sync
+
 	ExtensionsReloaded    = "extensions-reloaded"
 	ExtensionUpdatesFound = "extension-updates-found"
 	PluginUnloaded        = "plugin-unloaded"

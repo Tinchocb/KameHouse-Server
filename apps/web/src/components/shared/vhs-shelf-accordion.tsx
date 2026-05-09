@@ -167,7 +167,7 @@ export const VhsShelfAccordion = memo(function VhsShelfAccordion({
         <div className={cn("w-full flex flex-col gap-4", className)}>
             {/* VHS Tape Shelf Base Container */}
             <div 
-                className="relative flex flex-row items-stretch overflow-x-auto no-scrollbar py-6 px-1 w-full h-[520px] rounded-2xl bg-zinc-950/70 border border-white/5 shadow-[inset_0_10px_30px_rgba(0,0,0,0.9),0_20px_40px_rgba(0,0,0,0.6)]"
+                className="relative flex flex-row items-stretch overflow-x-auto no-scrollbar py-6 px-1 w-full h-[650px] rounded-2xl bg-zinc-950/70 border border-white/5 shadow-[inset_0_10px_30px_rgba(0,0,0,0.9),0_20px_40px_rgba(0,0,0,0.6)]"
                 style={{ perspective: "1800px" }}
             >
                 {/* Wood Shelf Bottom Indicator */}
@@ -199,7 +199,7 @@ export const VhsShelfAccordion = memo(function VhsShelfAccordion({
                                         : "shadow-[5px_5px_15px_rgba(0,0,0,0.6)] border border-black/30 hover:shadow-[10px_10px_20px_rgba(0,0,0,0.7)]"
                                 )}
                                 animate={{ 
-                                    width: isExpanded ? 460 : 76,
+                                    width: isExpanded ? 600 : 140,
                                     rotateY: isExpanded ? 0 : 4,
                                     scale: isExpanded ? 1.01 : 0.98,
                                 }}
@@ -224,43 +224,36 @@ export const VhsShelfAccordion = memo(function VhsShelfAccordion({
                             >
                                 {/* ── VHS TAPE SPINE (LOMO) ── */}
                                 <div 
-                                    className={cn(
-                                        "w-[76px] shrink-0 flex flex-col justify-between py-3 border-r border-black/25 relative overflow-hidden",
-                                        theme.spineBg
-                                    )}
+                                    className="w-[140px] shrink-0 flex flex-col justify-between py-3 border-r border-black/50 relative overflow-hidden bg-zinc-900"
                                 >
-                                    {/* Spine Shiny Gloss Reflection Overlay */}
-                                    <div className="absolute inset-y-0 left-0 w-0.5 bg-gradient-to-b from-white/30 via-white/10 to-transparent pointer-events-none" />
-                                    <div className="absolute inset-y-0 right-0 w-1 bg-black/10 pointer-events-none" />
+                                    {/* Spine Background Full Poster */}
+                                    <div className="absolute inset-0 z-0">
+                                        <DeferredImage
+                                            src={item.posterUrl || ""}
+                                            alt=""
+                                            className="w-full h-full object-cover object-center filter brightness-[0.6] contrast-125 grayscale-[30%] group-hover:brightness-[0.9] transition-all duration-500"
+                                            showSkeleton={false}
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
+                                    </div>
 
-                                    {/* Spine Header: Poster Square / New Badge */}
-                                    <div className="flex flex-col items-center gap-1.5 px-2 relative z-10">
+                                    {/* Spine Shiny Gloss Reflection Overlay */}
+                                    <div className="absolute inset-y-0 left-0 w-0.5 bg-gradient-to-b from-white/30 via-white/10 to-transparent pointer-events-none z-10" />
+                                    <div className="absolute inset-y-0 right-0 w-1 bg-black/10 pointer-events-none z-10" />
+
+                                    {/* Spine Header: New Badge */}
+                                    <div className="flex flex-col items-center gap-1.5 px-2 relative z-10 min-h-[46px]">
                                         {/* Golden/Yellow "NEW" Ribbon diagonal */}
                                         {item.year && Number(item.year) >= 2024 && (
-                                            <div className="absolute -top-1 -right-1 bg-[#eed429] text-zinc-950 text-[6px] font-black uppercase py-0.5 px-1.5 rotate-12 shadow-md border border-zinc-950/10 scale-90">
+                                            <div className="absolute top-1 right-1 bg-[#eed429] text-zinc-950 text-[6px] font-black uppercase py-0.5 px-1.5 rotate-12 shadow-md border border-zinc-950/10 scale-110">
                                                 NEW
                                             </div>
                                         )}
-
-                                        {/* Mini character poster square */}
-                                        <div className="w-[46px] h-[46px] rounded-lg border border-black/20 overflow-hidden bg-black/40 shadow-inner">
-                                            <DeferredImage
-                                                src={item.posterUrl || ""}
-                                                alt={titleText}
-                                                className="w-full h-full object-cover grayscale brightness-90 group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500 ease-out"
-                                                showSkeleton={false}
-                                            />
-                                        </div>
                                     </div>
 
                                     {/* Spine Center: Vertical Title */}
                                     <div className="flex-1 flex items-center justify-center py-4 relative z-10">
-                                        <h3 
-                                            className={cn(
-                                                "font-bebas text-[17px] tracking-[0.1em] text-center leading-none uppercase max-h-[220px] select-none pointer-events-none [writing-mode:vertical-rl] rotate-180",
-                                                theme.spineTitleColor
-                                            )}
-                                        >
+                                        <h3 className="font-bebas text-[28px] tracking-[0.1em] text-center leading-none uppercase max-h-[300px] text-white drop-shadow-[0_4px_4px_rgba(0,0,0,1)] select-none pointer-events-none [writing-mode:vertical-rl] rotate-180">
                                             {titleText}
                                         </h3>
                                     </div>
@@ -314,27 +307,26 @@ export const VhsShelfAccordion = memo(function VhsShelfAccordion({
                                     {isExpanded && (
                                         <motion.div
                                             initial={{ opacity: 0, x: -20, width: 0 }}
-                                            animate={{ opacity: 1, x: 0, width: 384 }}
+                                            animate={{ opacity: 1, x: 0, width: 460 }}
                                             exit={{ opacity: 0, x: -10, width: 0 }}
                                             transition={{ duration: 0.35, ease: "easeOut" }}
-                                            className="h-full w-[384px] shrink-0 bg-[#06080e] relative flex flex-col justify-end"
+                                            className="h-full w-[460px] shrink-0 bg-[#06080e] relative flex flex-col justify-end overflow-hidden"
                                         >
-                                            {/* Beautiful Full Poster Background */}
-                                            <div className="absolute inset-0 z-0">
+                                            {/* Banner in the upper section fading into dark background */}
+                                            <div className="absolute top-0 left-0 right-0 h-[60%] z-0">
                                                 <DeferredImage
-                                                    src={item.posterUrl || ""}
+                                                    src={item.bannerUrl || item.posterUrl || ""}
                                                     alt={item.title}
-                                                    className="w-full h-full object-cover filter brightness-[0.4] contrast-[1.05]"
+                                                    className="w-full h-full object-cover filter brightness-[0.6]"
                                                     showSkeleton={true}
                                                 />
                                                 {/* Retro Sleeve Vignette / Gradient Map */}
-                                                <div className="absolute inset-0 bg-gradient-to-t from-[#020306] via-[#020306]/70 to-[#020306]/20" />
-                                                <div className="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-black/80 to-transparent" />
-                                                <div className="absolute top-0 right-0 p-4 w-1/2 h-1/2 bg-gradient-to-bl from-white/[0.04] to-transparent pointer-events-none" />
+                                                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#06080e]/60 to-[#06080e]" />
+                                                <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-black/90 to-transparent" />
                                             </div>
 
                                             {/* Details & Contents Card (Glassmorphic Interface Overlay) */}
-                                            <div className="relative z-10 p-5 flex flex-col gap-3 justify-end h-full">
+                                            <div className="relative z-10 p-6 flex flex-col gap-4 justify-end h-full">
                                                 {/* Header Badges */}
                                                 <div className="flex flex-wrap items-center gap-2">
                                                     {scoreStr && (

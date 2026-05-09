@@ -8,7 +8,6 @@ import (
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/library/anime"
 	librarymetadata "kamehouse/internal/library/metadata"
-	"kamehouse/internal/library/parser"
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
 	"path/filepath"
@@ -40,8 +39,8 @@ type MediaFetcherOptions struct {
 	OptionalAnimeCollection interface{}
 	// TMDB mode
 	TMDBProvider *librarymetadata.TMDBProvider
-	SeriesPaths []string
-	MoviePaths  []string
+	SeriesPaths  []string
+	MoviePaths   []string
 }
 
 // NewMediaFetcher creates a MediaFetcher using TMDB + folder structure
@@ -97,18 +96,18 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 	libPaths = append(libPaths, opts.MoviePaths...)
 
 	groups := lo.GroupBy(opts.LocalFiles, func(lf *dto.LocalFile) string {
-		pm := parser.Parse(lf.Name)
+		pm := parsedMediaFromLocalFile(lf)
 		if pm.Title != "" {
 			return pm.Title
 		}
 
 		info := ParseFolderStructure(lf.Path, libPaths)
-		if info.SeriesName != "" {
+		if isMeaningfulFolderTitle(info.SeriesName) {
 			return info.SeriesName
 		}
 
-		// Fallback to strict directory name
-		return filepath.Base(filepath.Dir(lf.Path))
+		// Folder context is only a last resort and must be semantically useful.
+		return meaningfulImmediateFolderTitle(lf.Path)
 	})
 
 	for titleGroup, files := range groups {
@@ -125,7 +124,9 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 
 			// Check if file is in series paths or movie paths
 			for _, rp := range opts.SeriesPaths {
-				if rp == "" { continue }
+				if rp == "" {
+					continue
+				}
 				nrp := filepath.ToSlash(filepath.Clean(rp))
 				// Ensure trailing slash to prevent partial matches (e.g. /movies vs /movies_old)
 				if !strings.HasSuffix(nrp, "/") {
@@ -138,7 +139,9 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 			}
 			if hint == "" {
 				for _, rp := range opts.MoviePaths {
-					if rp == "" { continue }
+					if rp == "" {
+						continue
+					}
 					nrp := filepath.ToSlash(filepath.Clean(rp))
 					if !strings.HasSuffix(nrp, "/") {
 						nrp += "/"
@@ -183,7 +186,7 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 				default:
 					searchRes, err = provider.SearchMedia(ctx, titleGroup)
 				}
-				
+
 				if err == nil && len(searchRes) > 0 {
 					break // Found results, stop asking other providers
 				}
@@ -209,7 +212,6 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 			// The matcher phase will verify each file strictly afterwards.
 		}
 	}
-
 
 	return mf, nil
 }

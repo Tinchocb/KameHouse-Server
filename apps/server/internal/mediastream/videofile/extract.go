@@ -42,6 +42,12 @@ func ExtractAttachment(ffmpegPath string, path string, hash string, mediaInfo *M
 		}
 	}
 
+	// If there are no fonts and no subtitles, there is nothing to extract
+	if len(mediaInfo.Fonts) == 0 && len(mediaInfo.Subtitles) == 0 {
+		logger.Debug().Str("hash", hash).Msgf("videofile: No attachments or subtitles to extract")
+		return nil
+	}
+
 	// Instantiate a new crash logger
 	crashLogger := crashlog.GlobalCrashLogger.InitArea("ffmpeg")
 	defer crashLogger.Close()
@@ -49,13 +55,19 @@ func ExtractAttachment(ffmpegPath string, path string, hash string, mediaInfo *M
 	crashLogger.LogInfof("Extracting attachments from %s", path)
 
 	// DEVNOTE: All paths fed into this command should be absolute
+	args := []string{}
+	
+	// Only dump attachments if fonts exist
+	if len(mediaInfo.Fonts) > 0 {
+		args = append(args, "-dump_attachment:t", "")
+	}
+	
+	args = append(args, "-y", "-i", path)
+
 	cmd := util.NewCmdCtx(
 		context.Background(),
 		ffmpegPath,
-		"-dump_attachment:t", "",
-		// override old attachments
-		"-y",
-		"-i", path,
+		args...
 	)
 	// The working directory for the command is the attachment directory
 	cmd.Dir = attachmentPath
@@ -69,6 +81,12 @@ func ExtractAttachment(ffmpegPath string, path string, hash string, mediaInfo *M
 				fmt.Sprintf("%s/%d.%s", subsPath, sub.Index, *ext),
 			)
 		}
+	}
+
+	// If we are only extracting fonts (no subtitles), we still need to provide an output format for ffmpeg to not complain
+	if len(mediaInfo.Subtitles) == 0 {
+		// Just copy video/audio to a null muxer to satisfy ffmpeg output requirement
+		cmd.Args = append(cmd.Args, "-f", "null", "-")
 	}
 
 	cmd.Stdout = crashLogger.Stdout()

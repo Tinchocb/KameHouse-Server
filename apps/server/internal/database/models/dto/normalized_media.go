@@ -23,6 +23,7 @@ type NormalizedMedia struct {
 	NextAiringEpisode *NormalizedMediaNextAiringEpisode
 	MetadataStatus    *string // "COMPLETE", "MISSING", "LOCAL"
 	Description       *string
+	Relations         []*NormalizedMediaRelation
 	// Whether it was fetched from TMDB
 	fetched bool
 
@@ -65,6 +66,11 @@ type NormalizedMediaNextAiringEpisode struct {
 	AiringAt        int
 	TimeUntilAiring int
 	Episode         int
+}
+
+type NormalizedMediaRelation struct {
+	RelationType string
+	Media        *NormalizedMedia
 }
 
 type NormalizedMediaCache struct {

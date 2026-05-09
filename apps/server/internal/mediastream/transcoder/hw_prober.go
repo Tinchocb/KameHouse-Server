@@ -64,11 +64,20 @@ func ProbeHardwareAccel(ffmpegPath string, logger *zerolog.Logger) *HwProbeResul
 			osFilter string // empty = all platforms
 		}{
 			{"nvidia", "h264_nvenc", "h264_cuvid", 100, ""},
+			{"nvidia", "hevc_nvenc", "hevc_cuvid", 99, ""},
 			{"qsv", "h264_qsv", "h264_qsv", 90, ""},
-			{"vaapi", "h264_vaapi", "", 80, "linux"},
+			{"qsv", "hevc_qsv", "hevc_qsv", 89, ""},
 			{"videotoolbox", "h264_videotoolbox", "", 85, "darwin"},
+			{"videotoolbox", "hevc_videotoolbox", "", 84, "darwin"},
+			{"vaapi", "h264_vaapi", "", 80, "linux"},
+			{"vaapi", "hevc_vaapi", "", 79, "linux"},
 			{"amf", "h264_amf", "", 70, "windows"},
+			{"amf", "hevc_amf", "", 69, "windows"},
+			{"vulkan", "h264_amf", "", 60, "windows"},
 		}
+
+		// Track best per-vendor to prefer newer encoders over older ones
+		seen := make(map[string]bool)
 
 		for _, c := range candidates {
 			// Skip if platform doesn't match
@@ -77,6 +86,12 @@ func ProbeHardwareAccel(ffmpegPath string, logger *zerolog.Logger) *HwProbeResul
 			}
 
 			if encoders[c.encoder] {
+				// Deduplicate by name: keep the highest-priority encoder per vendor
+				if seen[c.name] {
+					continue
+				}
+				seen[c.name] = true
+
 				cap := HwAccelCapability{
 					Name:     c.name,
 					Encoder:  c.encoder,

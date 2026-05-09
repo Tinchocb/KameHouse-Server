@@ -56,35 +56,42 @@ export function CommandPalette() {
                             className="text-[10px] font-black tracking-[0.2em] text-zinc-600 px-2 pt-4 pb-2"
                         >
                             <div className="grid gap-2 mt-2">
-                                {results?.map((result: any) => (
-                                    <CommandItem 
-                                        key={result.id} 
-                                        value={result.title?.userPreferred || ""} 
-                                        onSelect={() => setOpen(false)}
-                                        className="rounded-xl border border-transparent hover:border-white/5 hover:bg-white/[0.03] transition-all duration-300 p-0 overflow-hidden"
-                                    >
-                                        <Link to="/series/$seriesId" params={{ seriesId: result.id.toString() }} className="flex w-full items-center gap-4 p-2">
-                                            <div
-                                                className="h-16 w-12 flex-shrink-0 rounded-lg bg-cover bg-center shadow-lg border border-white/5 group-hover:scale-105 transition-transform"
-                                                style={{ backgroundImage: `url(${result.coverImage?.large})` }}
-                                            />
-                                            <div className="flex flex-col overflow-hidden text-left py-1">
-                                                <span className="truncate text-[15px] font-bold text-zinc-200 group-hover:text-primary transition-colors" title={result.title?.userPreferred || ""}>
-                                                    {result.title?.userPreferred}
-                                                </span>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <span className="text-[10px] font-black uppercase tracking-tighter text-zinc-500">
-                                                        {result.startDate?.year || "N/A"}
-                                                    </span>
-                                                    <span className="w-1 h-1 rounded-full bg-zinc-800" />
-                                                    <span className="text-[10px] font-bold text-zinc-600 uppercase">
-                                                        {result.format || "TV"}
-                                                    </span>
+                                {results?.map((result: any) => {
+                                    const media = result.media
+                                    const title = media?.titleRomaji || media?.titleEnglish || `Desconocido (${result.mediaId})`
+                                    
+                                    return (
+                                        <CommandItem 
+                                            key={result.mediaId} 
+                                            value={title} 
+                                            onSelect={() => setOpen(false)}
+                                            className="rounded-xl border border-transparent hover:border-white/5 hover:bg-white/[0.03] transition-all duration-300 p-0 overflow-hidden"
+                                        >
+                                            <Link to="/series/$seriesId" params={{ seriesId: result.mediaId.toString() }} className="flex w-full items-center gap-4 p-2">
+                                                <div
+                                                    className="h-16 w-12 flex-shrink-0 rounded-lg bg-cover bg-center shadow-lg border border-white/5 group-hover:scale-105 transition-transform bg-zinc-900 flex items-center justify-center overflow-hidden"
+                                                    style={media?.coverImage?.large ? { backgroundImage: `url(${media.coverImage.large})` } : {}}
+                                                >
+                                                    {!media?.coverImage?.large && <span className="text-[8px] font-black opacity-20 uppercase">NO COVER</span>}
                                                 </div>
-                                            </div>
-                                        </Link>
-                                    </CommandItem>
-                                ))}
+                                                <div className="flex flex-col overflow-hidden text-left py-1">
+                                                    <span className="truncate text-[15px] font-bold text-zinc-200 group-hover:text-primary transition-colors" title={title}>
+                                                        {title}
+                                                    </span>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <span className="text-[10px] font-black uppercase tracking-tighter text-zinc-500">
+                                                            {media?.year || "N/A"}
+                                                        </span>
+                                                        <span className="w-1 h-1 rounded-full bg-zinc-800" />
+                                                        <span className="text-[10px] font-bold text-zinc-600 uppercase">
+                                                            {media?.format || "LOCAL"}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </Link>
+                                        </CommandItem>
+                                    )
+                                })}
                             </div>
                         </CommandGroup>
                     </>

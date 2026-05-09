@@ -26,18 +26,19 @@ export function useGlobalSearch() {
     const results = useMemo(() => {
         if (!isSearchActive) {
             // Return some "recent" or just first 10 if not searching
-            return allEntries.slice(0, 10).map(e => e.media)
+            return allEntries.slice(0, 10)
         }
         
         const q = debouncedQuery.toLowerCase()
         return allEntries
             .filter(entry => {
                 const media = entry.media
-                if (!media) return false
-                const title = `${media.titleRomaji || ""} ${media.titleEnglish || ""} ${media.titleOriginal || ""}`.toLowerCase()
+                const title = media 
+                    ? `${media.titleRomaji || ""} ${media.titleEnglish || ""} ${media.titleOriginal || ""}`.toLowerCase()
+                    : `desconocido ${entry.mediaId}`
+                
                 return title.includes(q)
             })
-            .map(e => e.media)
             .slice(0, 10)
     }, [allEntries, debouncedQuery, isSearchActive])
 

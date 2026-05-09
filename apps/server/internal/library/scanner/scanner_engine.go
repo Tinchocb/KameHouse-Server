@@ -2,8 +2,10 @@ package scanner
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/api/tmdb"
 	"kamehouse/internal/database/db"
@@ -74,6 +76,7 @@ type Scanner struct {
 	FanArtEnricher   *librarymetadata.FanArtEnricher
 	OMDbEnricher     *librarymetadata.OMDbEnricher
 	OpenSubsEnricher *librarymetadata.OpenSubtitlesEnricher
+	FullScan         bool
 }
 
 // Scan will scan the directory and return a list of dto.LocalFile.
@@ -124,11 +127,20 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	telemetry.Send(events.EventScanProgress, 10)
 	telemetry.Send(events.EventScanStatus, "Retrieving local files...")
 
+	// Get last scan time from settings
+	var lastScanAt time.Time
+	if !scn.FullScan && scn.Database != nil {
+		if s, err := scn.Database.GetSettings(); err == nil && s != nil {
+			lastScanAt = s.Library.LastScanAt
+		}
+	}
+
 	startTime := time.Now()
 
 	if scn.ScanLogger != nil {
 		scn.ScanLogger.logger.Info().
 			Time("startTime", startTime).
+			Time("lastScanAt", lastScanAt).
 			Msg("Scanning started")
 
 		defer func() {
@@ -138,6 +150,14 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 				Str("duration", now.Sub(startTime).String()).
 				Int("localFilesCount", len(lfs)).
 				Msg("Ended")
+
+			// Update last scan time
+			if scn.Database != nil {
+				if s, err := scn.Database.GetSettings(); err == nil && s != nil {
+					s.Library.LastScanAt = startTime
+					_, _ = scn.Database.UpsertSettings(s)
+				}
+			}
 		}()
 	}
 
@@ -167,7 +187,38 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	for i, dirPath := range libraryPaths {
 		i, dirPath := i, dirPath // capture
 		dirPool.Submit(func(_ context.Context) {
-			retrievedPaths, err := filesystem.GetMediaFilePathsFromDirS(dirPath)
+			// Delta Scanning: Recursive folder check
+			var retrievedPaths []string
+			var err error
+
+			if !lastScanAt.IsZero() {
+				// Use custom walker to skip unmodified folders
+				err = filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
+					if err != nil {
+						return nil // Skip errors
+					}
+					if d.IsDir() {
+						info, err := d.Info()
+						if err == nil && info.ModTime().Before(lastScanAt) {
+							// Check if any file from this folder is missing from scn.ExistingLocalFiles
+							// If all files exist and folder hasn't changed, skip subtree
+							// However, for simplicity and safety, we only skip if it's a subfolder
+							if path != dirPath {
+								return filepath.SkipDir
+							}
+						}
+						return nil
+					}
+					ext := strings.ToLower(filepath.Ext(path))
+					if util.IsValidMediaFile(path) && util.IsValidVideoExtension(ext) {
+						retrievedPaths = append(retrievedPaths, path)
+					}
+					return nil
+				})
+			} else {
+				retrievedPaths, err = filesystem.GetMediaFilePathsFromDirS(dirPath)
+			}
+
 			if err != nil {
 				scn.Logger.Error().Msgf("scanner: An error occurred while retrieving local files from directory: %s", err)
 				return
@@ -525,7 +576,6 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 
 	providers := scn.MetadataProviders
 	if len(providers) == 0 {
-		providers = append(providers, librarymetadata.NewAniListProvider())
 		if tmdbProvider != nil {
 			providers = append(providers, tmdbProvider)
 		}
@@ -544,7 +594,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 			Logger:     scn.Logger,
 			TMDBClient: tmdbClient,
 		})
-		scn.MetadataProviderRef = util.NewRef[metadata_provider.Provider](realProvider)
+		scn.MetadataProviderRef = util.NewRef(realProvider)
 		scn.Logger.Info().Msg("scanner: TMDB episode metadata provider initialized")
 	}
 
@@ -842,6 +892,15 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 					if nm.MetadataStatus != nil {
 						newMedia.MetadataStatus = *nm.MetadataStatus
 					}
+					if nm.LogoImage != nil {
+						newMedia.LogoImage = *nm.LogoImage
+					}
+					if nm.ThumbImage != nil {
+						newMedia.ThumbImage = *nm.ThumbImage
+					}
+					if nm.ClearArtImage != nil {
+						newMedia.ClearArtImage = *nm.ClearArtImage
+					}
 				}
 
 				// Fallback title: use file-derived title instead of generic "TMDB Media XXXXX"
@@ -938,6 +997,9 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 						}
 						_ = db.UpsertLibrarySeason(scn.Database, libSeason)
 
+						sagas := scn.resolveSagasForMediaSync(ctx, positiveTmdbId)
+						absoluteEpisodeStart := 1
+
 						for _, ep := range seasonDetails.Episodes {
 							epImage := ""
 							if ep.StillPath != "" {
@@ -953,6 +1015,51 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 								Image:          epImage,
 								RuntimeMinutes: ep.Runtime,
 							}
+
+							// Extraer idiomas de pistas desde los archivos locales emparejados
+							var audioLangs []string
+							var subtitleLangs []string
+							for _, lf := range localFiles {
+								// Asumimos que MediaId corresponde a positiveTmdbId
+								if lf.MediaId == positiveTmdbId && lf.Metadata != nil && lf.Metadata.Episode == ep.EpisodeNumber && lf.GetSeasonNumber() == ep.SeasonNumber {
+									if lf.TechnicalInfo != nil {
+										for _, a := range lf.TechnicalInfo.AudioStreams {
+											if a.Language != "" {
+												audioLangs = append(audioLangs, a.Language)
+											}
+										}
+										for _, s := range lf.TechnicalInfo.SubtitleStreams {
+											if s.Language != "" {
+												subtitleLangs = append(subtitleLangs, s.Language)
+											}
+										}
+									}
+								}
+							}
+
+							// Eliminar duplicados simples (si los hubiera)
+							audioLangs = lo.Uniq(audioLangs)
+							subtitleLangs = lo.Uniq(subtitleLangs)
+
+							if len(audioLangs) > 0 {
+								if b, err := json.Marshal(audioLangs); err == nil {
+									libEp.AudioTracks = b
+								}
+							}
+							if len(subtitleLangs) > 0 {
+								if b, err := json.Marshal(subtitleLangs); err == nil {
+									libEp.SubtitleTracks = b
+								}
+							}
+
+							if len(sagas) > 0 && seasonNum > 0 {
+								absoluteEpisodeNum := absoluteEpisodeStart + ep.EpisodeNumber - 1
+								sagaName, sagaID := findSagaForEpisodeNumber(sagas, absoluteEpisodeNum)
+								libEp.SagaName = sagaName
+								libEp.SagaId = sagaID
+							}
+							absoluteEpisodeStart += len(seasonDetails.Episodes)
+
 							if seasonNum == 0 {
 								libEp.Type = "SPECIAL"
 							}
@@ -1196,6 +1303,51 @@ func (scn *Scanner) addRemainingShelvedFiles(skippedLfs map[string]*dto.LocalFil
 			}
 		}
 	}
+}
+
+type sagaResolution struct {
+	id      string
+	name    string
+	startEp int
+	endEp   int
+}
+
+func (scn *Scanner) resolveSagasForMediaSync(ctx context.Context, tvID int) []sagaResolution {
+	if scn.TMDBClient == nil {
+		return nil
+	}
+
+	tmdbGroups, err := scn.TMDBClient.GetEpisodeGroups(ctx, tvID)
+	if err != nil || len(tmdbGroups) == 0 {
+		return nil
+	}
+
+	sagas := make([]sagaResolution, 0, len(tmdbGroups))
+	accumulated := 0
+
+	for _, g := range tmdbGroups {
+		startEp := accumulated + 1
+		endEp := accumulated + g.Episodes
+		accumulated += g.Episodes
+
+		sagas = append(sagas, sagaResolution{
+			id:      g.ID,
+			name:    g.Name,
+			startEp: startEp,
+			endEp:   endEp,
+		})
+	}
+
+	return sagas
+}
+
+func findSagaForEpisodeNumber(sagas []sagaResolution, episodeNumber int) (sagaName, sagaID string) {
+	for _, saga := range sagas {
+		if episodeNumber >= saga.startEp && episodeNumber <= saga.endEp {
+			return saga.name, saga.id
+		}
+	}
+	return "", ""
 }
 
 

@@ -1,6 +1,5 @@
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { useGetContinuityWatchHistory } from "@/api/hooks/continuity.hooks"
-import { useGetMediaCollections } from "@/api/hooks/collections.hooks"
 import type {
     Anime_Episode,
     Anime_LibraryCollectionEntry,
@@ -22,7 +21,7 @@ import {
 import { DynamicBackdrop } from "@/components/shared/dynamic-backdrop"
 import { SmartSwimlane } from "@/components/ui/smart-swimlane"
 
-import { getTitle, getBackdrop, getProgress, DRAGON_BALL_IDS } from "./home.helpers"
+import { getTitle, getBackdrop, getProgress } from "./home.helpers"
 import { 
     mapEpisodeToSwimlaneItem, 
     mapEntryToHeroItem, 
@@ -34,35 +33,6 @@ export const Route = createFileRoute("/home/")({
     component: HomePage,
 })
 
-// ─── Dragon Ball Media Types ────────────────────────────────────────────────
-
-const DB_SERIES_IDS: Record<string, number> = {
-    DRAGON_BALL: 529,
-    DRAGON_BALL_Z: 813,
-    DRAGON_BALL_GT: 568,
-    DRAGON_BALL_KAI: 30694,
-    DRAGON_BALL_SUPER: 6033,
-    DRAGON_BALL_DAIMA: 107,
-}
-
-const DB_MOVIE_IDS = [
-    5644,  // DBZ Movie 1
-    5645,  // DBZ Movie 2
-    5646,  // DBZ Movie 3
-    5647,  // DBZ Movie 4
-    5648,  // DBZ Movie 5
-    5649,  // DBZ Movie 6
-    5650,  // DBZ Movie 7
-    5651,  // DBZ Movie 8
-    5652,  // DBZ Movie 9
-    5653,  // DBZ Movie 10
-    5654,  // DBZ Movie 11
-    5655,  // DBZ Movie 12
-    6027,  // DBZ Movie 13
-    3390,  // DB Super Broly
-    5054,  // DB Super: Super Hero
-]
-
 // ─── HomePage ────────────────────────────────────────────────────────────────────
 
 function HomePage() {
@@ -71,10 +41,9 @@ function HomePage() {
     const { data: watchHistory, isLoading: isContinuityLoading } = useGetContinuityWatchHistory()
     const { data: intelligenceData, isLoading: isIntelligenceLoading } = useHomeIntelligence()
     const { data: cwData, isLoading: isCwLoading } = useContinueWatching()
-    const { data: collections, isLoading: isCollectionsLoading } = useGetMediaCollections()
     const { setBackdropUrl } = useIntelligenceStore()
 
-    const isLoading = isCollectionLoading || isIntelligenceLoading || isCwLoading || isCollectionsLoading
+    const isLoading = isCollectionLoading || isIntelligenceLoading || isCwLoading
     const isRefetching = false
 
     const handleNavigate = React.useCallback(
@@ -92,7 +61,21 @@ function HomePage() {
         const map = new Map<number, Anime_LibraryCollectionEntry>()
         for (const list of lists) {
             for (const entry of list.entries ?? []) {
-                if (entry.media) map.set(entry.mediaId, entry)
+                const entryToStore = { ...entry }
+                if (!entryToStore.media) {
+                    entryToStore.media = {
+                        id: entryToStore.mediaId,
+                        title: { 
+                            userPreferred: `Desconocido (${entryToStore.mediaId})`, 
+                            romaji: `Desconocido (${entryToStore.mediaId})`,
+                            english: null,
+                            native: null
+                        },
+                        format: "TV",
+                        description: "Archivo local sin identificar",
+                    } as unknown as Models_LibraryMedia
+                }
+                map.set(entryToStore.mediaId, entryToStore)
             }
         }
         return map
@@ -125,14 +108,14 @@ function HomePage() {
         [cwData, entriesByMediaId, handleNavigate, watchHistory],
     )
 
-    // ── Series de Dragon Ball ────────────────────────────────────────────────
+    // ── Series ──────────────────────────────────────────────────────────────
     const dbSeriesItems = React.useMemo((): SwimlaneItem[] => {
         return allEntries
-            .filter((entry) => DRAGON_BALL_IDS.has(entry.mediaId))
+            .filter((entry) => entry.media?.format === "TV")
             .sort((a, b) => {
-                const idxA = Object.values(DB_SERIES_IDS).indexOf(a.mediaId)
-                const idxB = Object.values(DB_SERIES_IDS).indexOf(b.mediaId)
-                return idxA - idxB
+                const aDate = a.media?.createdAt ? new Date(a.media.createdAt).getTime() : 0
+                const bDate = b.media?.createdAt ? new Date(b.media.createdAt).getTime() : 0
+                return bDate - aDate
             })
             .map((entry): SwimlaneItem | null => {
                 if (!entry.media) return null
@@ -188,31 +171,7 @@ function HomePage() {
             .filter((x): x is SwimlaneItem => x !== null)
     }, [allEntries, handleNavigate])
 
-    // ── Sagas Destacadas (Collections) ────────────────────────────────
-    const sagasItems = React.useMemo((): SwimlaneItem[] => {
-        return (collections || [])
-            .filter((coll) => {
-                const name = coll.name.toLowerCase()
-                return name.includes("saiyajin") || name.includes("freezer") || 
-                       name.includes("cell") || name.includes("buu") || 
-                       name.includes("torneo") || name.includes("universo") ||
-                       name.includes("batalla") || name.includes("diosa")
-            })
-            .map((coll): SwimlaneItem => {
-                return {
-                    id: `saga-${coll.id}`,
-                    title: coll.name,
-                    image: coll.posterPath || coll.backdropPath,
-                    subtitle: `${coll.memberIds?.length || 0} Entregas`,
-                    badge: "SAGA",
-                    availabilityType: "FULL_LOCAL",
-                    backdropUrl: coll.backdropPath || undefined,
-                    description: coll.overview,
-                    aspect: "poster",
-                    onClick: () => navigate({ to: "/collections/$id", params: { id: String(coll.tmdbCollectionId) } }),
-                }
-            })
-    }, [collections, navigate])
+    // ── Sagas Destacadas (Eliminado por unificación en series) ──
 
     // ── Añadido Recientemente ────────────────────────────────────────────────
     const recentItems = React.useMemo((): SwimlaneItem[] => {
@@ -383,7 +342,7 @@ function HomePage() {
                                     >
                                         <SectionLabel icon={Tv} label="Series" />
                                         <Swimlane
-                                            title="Series de Dragon Ball"
+                                            title="Series"
                                             items={dbSeriesItems}
                                             defaultAspect="poster"
                                             onHover={setBackdropUrl}
@@ -392,25 +351,7 @@ function HomePage() {
                                 )}
                             </ErrorBoundary>
 
-                            {/* 3. Sagas Destacadas */}
-                            <ErrorBoundary className="px-6 md:px-10 lg:px-16 xl:px-24 2xl:px-32">
-                                {sagasItems.length > 0 && (
-                                    <motion.div 
-                                        initial={{ opacity: 0, y: 30 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.25 }}
-                                        className="space-y-4"
-                                    >
-                                        <SectionLabel icon={Layers} label="Sagas Destacadas" />
-                                        <Swimlane
-                                            title="Sagas de Dragon Ball"
-                                            items={sagasItems}
-                                            defaultAspect="poster"
-                                            onHover={setBackdropUrl}
-                                        />
-                                    </motion.div>
-                                )}
-                            </ErrorBoundary>
+                            {/* 3. Sagas Destacadas (Removido) */}
 
                             {/* 4. Películas y Especiales */}
                             <ErrorBoundary className="px-6 md:px-10 lg:px-16 xl:px-24 2xl:px-32">

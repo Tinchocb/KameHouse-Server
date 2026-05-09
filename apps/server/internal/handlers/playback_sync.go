@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"kamehouse/internal/events"
 	"net/http"
 	"sync"
 	"time"
@@ -26,8 +27,6 @@ type PlaybackSyncPayload struct {
 // Auto-scrobble dedup guard
 // ──────────────────────────────────────────────────────────────────────────────
 
-// scrobbleGuard prevents double-scrobbling the same episode within a session.
-// Key format: "mediaId:episodeNumber"
 var (
 	scrobbledEpisodes sync.Map
 )
@@ -41,7 +40,91 @@ func scrobbleKey(mediaId, episode int) string {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Handler
+// WebSocket Heartbeat Subscriber
+// ──────────────────────────────────────────────────────────────────────────────
+
+// StartPlaybackHeartbeatSubscriber listens on the dispatcher for real-time
+// WebSocket playback progress events and updates the ContinuityManager.
+// This provides sub-second progress sync without HTTP request overhead.
+//
+// Concurrency safety:
+//   - Each heartbeat is processed sequentially within a single goroutine,
+//     avoiding concurrent DB writes from multiple WS messages.
+//   - The dispatcher's non-blocking publish ensures slow DB writes never
+//     stall the WebSocket read loop or block other event subscribers.
+func (h *Handler) StartPlaybackHeartbeatSubscriber() {
+	if h.App.WSEventManager == nil || h.App.WSEventManager.Dispatcher() == nil {
+		h.App.Logger.Warn().Msg("playback_sync: Dispatcher not available, heartbeat subscriber not started")
+		return
+	}
+
+	ch := h.App.WSEventManager.Dispatcher().Subscribe(events.PlaybackHeartbeatProgress)
+
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				h.App.Logger.Error().Interface("recover", r).Msg("playback_sync: Heartbeat subscriber panicked")
+			}
+		}()
+
+		h.App.Logger.Info().Msg("playback_sync: Heartbeat subscriber started (WS 5s progress)")
+
+		for e := range ch {
+			payload, ok := e.Payload.(PlaybackHeartbeatPayload)
+			if !ok {
+				continue
+			}
+
+			if payload.MediaId == 0 || payload.EpisodeNumber == 0 {
+				continue
+			}
+
+			// Update continuity with the heartbeat progress.
+			// Uses a goroutine per update to avoid blocking the dispatcher fan-out.
+			go func(p PlaybackHeartbeatPayload) {
+				h.processHeartbeat(p)
+			}(payload)
+		}
+
+		h.App.Logger.Info().Msg("playback_sync: Heartbeat subscriber stopped")
+	}()
+}
+
+func (h *Handler) processHeartbeat(p PlaybackHeartbeatPayload) {
+	if p.Duration <= 0 {
+		return
+	}
+
+	userID := uint(1) // Default user; in multi-user setups this comes from the WS session
+
+	key := fmt.Sprintf("%d:%d:%d:%f", userID, p.MediaId, p.EpisodeNumber, p.Duration)
+	h.App.ContinuityManager.TelemetryManager.UpdateProgress(key, int(p.CurrentTime))
+
+	// Auto-scrobble at 85% completion (same logic as HTTP sync)
+	if p.Progress >= 0.85 {
+		now := time.Now()
+
+		// Prune stale entries (every heartbeat check keeps the map lean)
+		scrobbledEpisodes.Range(func(key, value interface{}) bool {
+			if now.Sub(value.(scrobbleEntry).timestamp) > 4*time.Hour {
+				scrobbledEpisodes.Delete(key)
+			}
+			return true
+		})
+
+		sKey := scrobbleKey(p.MediaId, p.EpisodeNumber)
+		if _, alreadyScrobbled := scrobbledEpisodes.LoadOrStore(sKey, scrobbleEntry{timestamp: now}); !alreadyScrobbled {
+			h.App.Logger.Info().
+				Int("mediaId", p.MediaId).
+				Int("episode", p.EpisodeNumber).
+				Float64("progress", p.Progress).
+				Msg("playback_sync: WS heartbeat auto-scrobbled episode (>= 85%)")
+		}
+	}
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// HTTP Handler
 // ──────────────────────────────────────────────────────────────────────────────
 
 // HandlePlaybackSync

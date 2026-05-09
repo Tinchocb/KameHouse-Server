@@ -6,8 +6,8 @@ import (
 
 func TestParse(t *testing.T) {
 	tests := []struct {
-		filename     string
-		expected     ParsedMedia
+		filename string
+		expected ParsedMedia
 	}{
 		{
 			filename: "[Erai-raws] Jujutsu Kaisen - 01 [1080p][F9A5D6E3].mkv",
@@ -69,12 +69,42 @@ func TestParse(t *testing.T) {
 				ReleaseGroup: "PuyaSubs!",
 			},
 		},
+		{
+			filename: "Nueva Carpeta/[Erai-raws] Dragon Ball Daima - 01 (1080p).mkv",
+			expected: ParsedMedia{
+				Title:        "Dragon Ball Daima",
+				Season:       1,
+				Episode:      1,
+				Resolution:   "1080P",
+				ReleaseGroup: "Erai-raws",
+			},
+		},
+		{
+			filename: "[Erai-raws] Dragon Ball Daima - 01 (1080p HEVC x265).mkv",
+			expected: ParsedMedia{
+				Title:        "Dragon Ball Daima",
+				Season:       1,
+				Episode:      1,
+				Resolution:   "1080P",
+				ReleaseGroup: "Erai-raws",
+			},
+		},
+		{
+			filename: "Dragon.Ball.Daima.S01E01.1080p.WEB-DL.HEVC.x265.mkv",
+			expected: ParsedMedia{
+				Title:        "Dragon Ball Daima",
+				Season:       1,
+				Episode:      1,
+				Resolution:   "1080P",
+				ReleaseGroup: "",
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.filename, func(t *testing.T) {
 			got := Parse(tt.filename)
-			
+
 			if got.Title != tt.expected.Title {
 				t.Errorf("expected Title %q, got %q", tt.expected.Title, got.Title)
 			}

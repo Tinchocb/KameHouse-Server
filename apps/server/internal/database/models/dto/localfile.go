@@ -20,16 +20,25 @@ type (
 	// LocalFile represents a media file on the local filesystem.
 	// It is used to store information about and state of the file, such as its path, name, and parsed data.
 	LocalFile struct {
-		Path             string                 `json:"path"`
-		Name             string                 `json:"name"`
-		ParsedData       *LocalFileParsedData   `json:"parsedInfo"`
-		ParsedFolderData []*LocalFileParsedData `json:"parsedFolderInfo"`
-		Metadata         *LocalFileMetadata     `json:"metadata"`
-		TechnicalInfo    *FileTechnicalInfo     `json:"technicalInfo,omitempty"`
-		Locked           bool                   `json:"locked"`
-		Ignored          bool                   `json:"ignored"` // Unused for now
-		LibraryMediaId   uint                   `json:"libraryMediaId"`
-		MediaId          int                    `json:"mediaId"`
+		Path             string                     `json:"path"`
+		Name             string                     `json:"name"`
+		FileHash         string                     `json:"fileHash,omitempty"`
+		ParsedData       *LocalFileParsedData       `json:"parsedInfo"`
+		ParsedFolderData []*LocalFileParsedData     `json:"parsedFolderInfo"`
+		EmbeddedMetadata *LocalFileEmbeddedMetadata `json:"embeddedMetadata,omitempty"`
+		Metadata         *LocalFileMetadata         `json:"metadata"`
+		TechnicalInfo    *FileTechnicalInfo         `json:"technicalInfo,omitempty"`
+		Locked           bool                       `json:"locked"`
+		Ignored          bool                       `json:"ignored"` // Unused for now
+		LibraryMediaId   uint                       `json:"libraryMediaId"`
+		MediaId          int                        `json:"mediaId"`
+	}
+
+	LocalFileEmbeddedMetadata struct {
+		Title   string `json:"title,omitempty"`
+		Season  *int   `json:"season,omitempty"`
+		Episode *int   `json:"episode,omitempty"`
+		Source  string `json:"source,omitempty"`
 	}
 
 	// FileTechnicalInfo holds FFprobe technical specifications of a video file.
@@ -39,8 +48,8 @@ type (
 		Bitrate            int64                `json:"bitrate,omitempty"`
 		Format             string               `json:"format,omitempty"`
 		VideoStream        *VideoStreamInfo     `json:"videoStream,omitempty"`
-		AudioStreams        []*AudioStreamInfo   `json:"audioStreams,omitempty"`
-		SubtitleStreams     []*AudioStreamInfo   `json:"subtitleStreams,omitempty"` // Reusing Audio structure since they share basic properties
+		AudioStreams       []*AudioStreamInfo   `json:"audioStreams,omitempty"`
+		SubtitleStreams    []*AudioStreamInfo   `json:"subtitleStreams,omitempty"`    // Reusing Audio structure since they share basic properties
 		ExternalSubtitles  []*ExternalSubtitle  `json:"externalSubtitles,omitempty"`  // External .srt/.ass files (Jellyfin-style)
 		ExternalAudioFiles []*ExternalAudioFile `json:"externalAudioFiles,omitempty"` // External .dts/.ac3 files
 		RemoteSubtitles    []*RemoteSubtitle    `json:"remoteSubtitles,omitempty"`    // Available remote subtitles (e.g. OpenSubtitles)
@@ -62,12 +71,12 @@ type (
 	// RemoteSubtitle represents a subtitle available for download from a remote provider (e.g. OpenSubtitles).
 	// It is NOT automatically downloaded — the client can request a download separately.
 	RemoteSubtitle struct {
-		ProviderID   string `json:"providerId"`             // e.g. "opensubtitles"
-		FileID       int    `json:"fileId"`                 // OpenSubtitles file_id for download
-		Language     string `json:"language,omitempty"`     // ISO 639-1 code
-		Format       string `json:"format,omitempty"`       // "srt", "ass", etc.
-		DownloadCount int   `json:"downloadCount,omitempty"` // Popularity signal
-		Release      string `json:"release,omitempty"`      // Release name or episode title
+		ProviderID    string `json:"providerId"`              // e.g. "opensubtitles"
+		FileID        int    `json:"fileId"`                  // OpenSubtitles file_id for download
+		Language      string `json:"language,omitempty"`      // ISO 639-1 code
+		Format        string `json:"format,omitempty"`        // "srt", "ass", etc.
+		DownloadCount int    `json:"downloadCount,omitempty"` // Popularity signal
+		Release       string `json:"release,omitempty"`       // Release name or episode title
 	}
 
 	// ExternalAudioFile represents an external audio track found alongside a video file.
@@ -98,9 +107,12 @@ type (
 
 	// LocalFileMetadata holds metadata related to a media episode.
 	LocalFileMetadata struct {
-		Episode      int           `json:"episode"`
-		AniDBEpisode string        `json:"aniDBEpisode"`
+		Episodes     []int        `json:"episodes"` // Multi-episode support for files like "01-03"
+		AniDBEpisode string      `json:"aniDBEpisode"`
 		Type         LocalFileType `json:"type"`
+
+		// Deprecated: Use Episodes instead. Kept for backwards compatibility.
+		Episode int `json:"episode"`
 	}
 
 	// LocalFileParsedData holds parsed data from a media file's name.
@@ -159,7 +171,7 @@ func newLocalFile(opath string, info *filesystem.SeparatedFilePath) *LocalFile {
 		ParsedData:       parsedInfo,
 		ParsedFolderData: parsedFolderInfo,
 		Metadata: &LocalFileMetadata{
-			Episode:      0,
+			Episodes:      nil,
 			AniDBEpisode: "",
 			Type:         "",
 		},
@@ -270,4 +282,3 @@ func getFirstOrEmpty(slice []string) string {
 	}
 	return ""
 }
-

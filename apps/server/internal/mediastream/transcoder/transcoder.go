@@ -273,10 +273,12 @@ const (
 
 // FFmpegBuilder uses the Builder pattern to generate FFmpeg CLI arguments.
 type FFmpegBuilder struct {
-	global []string
-	video  []string
-	audio  []string
-	output []string
+	global  []string
+	video   []string
+	audio   []string
+	subs    []string
+	output  []string
+	hwAccel *HwAccelSettings
 }
 
 // NewFFmpegBuilder initializes an empty builder.
@@ -285,17 +287,32 @@ func NewFFmpegBuilder() *FFmpegBuilder {
 		global: make([]string, 0, 8),
 		video:  make([]string, 0, 8),
 		audio:  make([]string, 0, 8),
+		subs:   make([]string, 0, 4),
 		output: make([]string, 0, 16),
 	}
 }
 
-// WithHardwareAccel hooks into NVENC/VAAPI/QSV profiles.
-// TODO: Implement mapping to -hwaccel cuda/vaapi etc.
-func (b *FFmpegBuilder) WithHardwareAccel(profile string) *FFmpegBuilder {
+// WithHardwareAccel attaches a detected HW accelerator profile to the builder.
+// When set, the builder emits NVENC/VAAPI/QSY/VideoToolbox encoder flags
+// instead of software libx264, avoiding CPU bottlenecks on supported hardware.
+func (b *FFmpegBuilder) WithHardwareAccel(hw *HwAccelSettings) *FFmpegBuilder {
+	b.hwAccel = hw
+	return b
+}
+
+// WithSubtitles instructs FFmpeg to burn ASS/SSA subtitles into the video stream.
+// This is used as a fallback when Jassub is not available on the client;
+// normally ASS subtitles are rendered on the frontend via WebAssembly.
+func (b *FFmpegBuilder) WithSubtitles(assPath string) *FFmpegBuilder {
+	b.subs = append(b.subs,
+		"-vf", fmt.Sprintf("ass=%s", assPath),
+	)
 	return b
 }
 
 // BuildForHLS assembles the final argument slice optimized for HLS streaming.
+// When hwAccel is set, the builder uses hardware-accelerated encoding;
+// otherwise it falls back to libx264 software encoding.
 func (b *FFmpegBuilder) BuildForHLS(decision PlaybackMethod, inputFile, outputDir string) []string {
 	b.global = append(b.global, "-y", "-i", inputFile)
 
@@ -303,8 +320,37 @@ func (b *FFmpegBuilder) BuildForHLS(decision PlaybackMethod, inputFile, outputDi
 		b.video = append(b.video, "-c:v", "copy")
 		b.audio = append(b.audio, "-c:a", "copy")
 	} else {
-		b.video = append(b.video, "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-maxrate", "5M", "-bufsize", "10M")
-		b.audio = append(b.audio, "-c:a", "aac")
+		if b.hwAccel != nil && b.hwAccel.Name != "disabled" && len(b.hwAccel.EncodeFlags) > 0 {
+			b.global = append(b.global, b.hwAccel.DecodeFlags...)
+			b.video = append(b.video, b.hwAccel.EncodeFlags...)
+			if b.hwAccel.ScaleFilter != "" {
+				b.video = append(b.video,
+					"-vf", fmt.Sprintf(b.hwAccel.ScaleFilter, 1920, 1080),
+				)
+			}
+			b.video = append(b.video,
+				"-sc_threshold", "0",
+				"-force_key_frames", "expr:gte(t,n_forced*3)",
+				"-strict", "-2",
+			)
+		} else {
+			b.video = append(b.video,
+				"-c:v", "libx264",
+				"-preset", "fast",
+				"-crf", "23",
+				"-maxrate", "5M",
+				"-bufsize", "10M",
+				"-sc_threshold", "0",
+				"-pix_fmt", "yuv420p",
+				"-force_key_frames", "expr:gte(t,n_forced*3)",
+			)
+		}
+		b.video = append(b.video, b.subs...)
+		b.audio = append(b.audio,
+			"-c:a", "aac",
+			"-ac", "2",
+			"-b:a", "128k",
+		)
 	}
 
 	b.output = append(b.output,

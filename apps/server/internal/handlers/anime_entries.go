@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"sort"
 	"strconv"
 	"time"
 
@@ -93,7 +94,9 @@ func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry
 		return
 	}
 
-	// Build a TMDB provider using the same token discovery logic used elsewhere.
+	h.App.Logger.Debug().Int("tmdbId", entry.Media.TmdbId).Msg("enrichEpisodesWithTMDB: starting enrichment")
+
+	// Build a TMDB provider
 	var tmdbToken string
 	var tmdbLanguage string
 	if settings, err := h.App.Database.GetSettings(); err == nil && settings != nil {
@@ -104,7 +107,6 @@ func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry
 		tmdbToken = os.Getenv("KAMEHOUSE_TMDB_TOKEN")
 	}
 	if tmdbToken == "" {
-		// No token configured – silently skip enrichment.
 		return
 	}
 	if tmdbLanguage == "" || tmdbLanguage == "en" || tmdbLanguage == "es" {
@@ -115,35 +117,33 @@ func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry
 	tmdbId := entry.Media.TmdbId
 
 	// Determine the number of seasons we need to cover.
-	// Find the maximum episode number so we know which seasons to fetch.
 	maxEp := 0
 	for _, ep := range entry.Episodes {
-		if ep.EpisodeNumber > maxEp {
+		if ep != nil && ep.EpisodeNumber > maxEp {
 			maxEp = ep.EpisodeNumber
 		}
 	}
 
-	// Fetch Season 1 first to discover the total number of seasons in the TMDB record.
-	// For most anime, Season 1 covers everything; for split-cour shows we need more.
-	s1, err := provider.GetTVSeason(ctx, tmdbId, 1)
-	if err != nil {
-		h.App.Logger.Debug().Err(err).Int("tmdbId", tmdbId).Msg("enrichEpisodesWithTMDB: could not fetch TMDB season 1")
+	if maxEp == 0 {
 		return
 	}
 
-	// Estimate how many additional seasons we might need.
-	// Each season typically has ~12-25 episodes; rough heuristic is ceil(maxEp / len(s1.Episodes)).
+	// Fetch Season 1 baseline
+	s1, err := provider.GetTVSeason(ctx, tmdbId, 1)
+	if err != nil {
+		h.App.Logger.Warn().Err(err).Int("tmdbId", tmdbId).Msg("enrichEpisodesWithTMDB: could not fetch TMDB season 1")
+		return
+	}
+
 	numSeasonsNeeded := 1
 	if len(s1.Episodes) > 0 && maxEp > len(s1.Episodes) {
 		numSeasonsNeeded = (maxEp / len(s1.Episodes)) + 1
-		if numSeasonsNeeded > 8 {
-			numSeasonsNeeded = 8 // Reasonable upper bound
+		if numSeasonsNeeded > 15 {
+			numSeasonsNeeded = 15
 		}
 	}
 
-	// Build cumulative episode map (seasonEpisodeNumber → TVEpisode) using
-	// absolute episode numbering: Season 1 ep 1..N, Season 2 ep N+1..N+M, etc.
-	epMap := make(map[int]tmdb.TVEpisode, maxEp+1)
+	epMap := make(map[int]tmdb.TVEpisode)
 	offset := 0
 
 	addSeason := func(season tmdb.TVSeasonDetails) {
@@ -155,7 +155,6 @@ func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry
 	}
 	addSeason(s1)
 
-	// Fetch additional seasons concurrently.
 	if numSeasonsNeeded > 1 {
 		type seasonResult struct {
 			season tmdb.TVSeasonDetails
@@ -170,19 +169,13 @@ func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry
 			}(sn)
 		}
 
-		// Collect and sort by season number to ensure correct absolute numbering.
 		results := make([]seasonResult, 0, numSeasonsNeeded-1)
 		for i := 0; i < numSeasonsNeeded-1; i++ {
 			results = append(results, <-ch)
 		}
-		// Sort by season number ascending.
-		for i := 0; i < len(results)-1; i++ {
-			for j := i + 1; j < len(results); j++ {
-				if results[j].num < results[i].num {
-					results[i], results[j] = results[j], results[i]
-				}
-			}
-		}
+		sort.Slice(results, func(i, j int) bool {
+			return results[i].num < results[j].num
+		})
 		for _, r := range results {
 			if r.err == nil {
 				addSeason(r.season)
@@ -192,9 +185,11 @@ func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry
 
 	const imgBase = "https://image.tmdb.org/t/p/w500"
 
-	// Use index-based loop to mutate the actual Episode structs (not copies).
 	for i := range entry.Episodes {
 		ep := entry.Episodes[i]
+		if ep == nil {
+			continue
+		}
 		te, ok := epMap[ep.EpisodeNumber]
 		if !ok {
 			continue
@@ -205,7 +200,6 @@ func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry
 		}
 		md := entry.Episodes[i].EpisodeMetadata
 
-		// Fill title if missing — write back via index to avoid string copy issue.
 		if te.Name != "" {
 			if md.Title == "" {
 				md.Title = te.Name
@@ -215,7 +209,6 @@ func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry
 			}
 		}
 
-		// Fill synopsis if missing.
 		if md.Summary == "" && te.Overview != "" {
 			md.Summary = te.Overview
 		}
@@ -223,18 +216,15 @@ func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry
 			md.Overview = te.Overview
 		}
 
-		// Fill still image if missing.
 		if !md.HasImage && te.StillPath != "" {
 			md.Image = imgBase + te.StillPath
 			md.HasImage = true
 		}
 
-		// Fill runtime if missing.
 		if md.Length == 0 && te.Runtime > 0 {
 			md.Length = te.Runtime
 		}
 
-		// Fill air date if missing.
 		if md.AirDate == "" && te.AirDate != "" {
 			md.AirDate = te.AirDate
 		}
@@ -242,10 +232,8 @@ func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry
 
 	h.App.Logger.Debug().
 		Int("tmdbId", tmdbId).
-		Int("episodes", len(entry.Episodes)).
-		Int("seasons", numSeasonsNeeded).
-		Int("tmdbEpsMapped", len(epMap)).
-		Msg("enrichEpisodesWithTMDB: enrichment complete")
+		Int("mapped", len(epMap)).
+		Msg("enrichEpisodesWithTMDB: complete")
 }
 
 

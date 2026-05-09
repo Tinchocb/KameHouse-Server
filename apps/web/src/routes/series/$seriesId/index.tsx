@@ -3,7 +3,7 @@ import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import React, { useMemo, useState, useCallback } from "react"
 import { FileVideo } from "lucide-react"
 import { toast } from "sonner"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/components/ui/core/styling"
 import { fetchAnimeEntry, useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
@@ -11,10 +11,11 @@ import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { Anime_Episode, Anime_LocalFile, Mediastream_StreamType } from "@/api/generated/types"
 import { EmptyState } from "@/components/shared/empty-state"
 import { VideoPlayer } from "@/components/video/player"
-import { MediaActionButtons, EpisodeClientCard } from "./-series-interactivity-client"
+import { MediaActionButtons, EpisodeListItem } from "./-series-interactivity-client"
 import { sanitizeHtml } from "@/lib/helpers/sanitizer"
 import { resolveSeriesSagas, type SagaDefinition } from "@/lib/config/dragonball.config"
-import { VhsShelfAccordion, type VhsTapeItem } from "@/components/shared/vhs-shelf-accordion"
+import { CassetteCard } from "@/components/shared/cassette-card"
+import { RelationsTab, CharactersTab, TechnicalMetadataTab } from "./-series-bento-tabs"
 
 export const Route = createFileRoute("/series/$seriesId/")({
     loader: async ({ params: { seriesId }, context }) => {
@@ -100,34 +101,74 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                 seriesId={seriesId}
                 directoryPath={entry.libraryData?.sharedPath || ""}
                 backdropUrl={heroBackdrop}
-                coverUrl={coverImage}
-                title={title}
-                year={year}
-                genres={genres}
-                synopsis={synopsis}
-                episodesCount={episodesCount}
-                localEpisodesCount={localEpisodesCount}
-                totalEpisodesCount={totalEpisodesCount}
+                entry={entry}
             />
 
-            <div className="w-full">
-                {hasSagas ? (
-                    <SagasSection seriesId={seriesId} sagas={sagas} />
-                ) : hasNoEpisodes && hasLocalFiles ? (
-                    <LocalFilesSection 
-                        localFiles={entry.localFiles || []}
-                        title={title}
-                        onPlay={(lf) => handlePlayEpisode(lf, {} as Anime_Episode)}
-                    />
-                ) : (
-                    <EpisodesSection 
-                        seriesTitle={title} 
-                        fallbackThumb={heroBackdrop} 
-                        episodes={entry.episodes || []}
-                        localFiles={entry.localFiles || []}
-                        onPlay={handlePlayEpisode}
-                    />
-                )}
+            <div className="w-full max-w-[1800px] mx-auto px-6 sm:px-12 mt-8">
+                <Tabs defaultValue="episodes" className="w-full">
+                    <TabsList className="bg-transparent border-b border-white/10 w-full justify-start rounded-none p-0 h-auto gap-8">
+                        <TabsTrigger 
+                            value="episodes" 
+                            className="bg-transparent p-0 pb-4 text-xs font-black tracking-[0.2em] uppercase data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-b-2 border-white rounded-none opacity-50 data-[state=active]:opacity-100"
+                        >
+                            Episodios
+                        </TabsTrigger>
+                        {hasSagas && (
+                            <TabsTrigger 
+                                value="relations" 
+                                className="bg-transparent p-0 pb-4 text-xs font-black tracking-[0.2em] uppercase data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-b-2 border-white rounded-none opacity-50 data-[state=active]:opacity-100"
+                            >
+                                Sagas & Relaciones
+                            </TabsTrigger>
+                        )}
+                        <TabsTrigger 
+                            value="characters" 
+                            className="bg-transparent p-0 pb-4 text-xs font-black tracking-[0.2em] uppercase data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-b-2 border-white rounded-none opacity-50 data-[state=active]:opacity-100"
+                        >
+                            Personajes
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="technical" 
+                            className="bg-transparent p-0 pb-4 text-xs font-black tracking-[0.2em] uppercase data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:border-b-2 border-white rounded-none opacity-50 data-[state=active]:opacity-100"
+                        >
+                            Técnica
+                        </TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="episodes" className="mt-8 outline-none">
+                        {hasNoEpisodes && hasLocalFiles ? (
+                            <LocalFilesSection 
+                                localFiles={entry.localFiles || []}
+                                title={title}
+                                onPlay={(lf) => handlePlayEpisode(lf, {} as Anime_Episode)}
+                            />
+                        ) : (
+                            <SagaEpisodesSection 
+                                seriesTitle={title} 
+                                fallbackThumb={heroBackdrop} 
+                                episodes={entry.episodes || []}
+                                localFiles={entry.localFiles || []}
+                                sagas={sagas}
+                                onPlay={handlePlayEpisode}
+                                currentlyPlayingEpNumber={playTarget?.episodeNumber}
+                            />
+                        )}
+                    </TabsContent>
+                    
+                    {hasSagas && (
+                        <TabsContent value="relations" className="mt-8 outline-none min-h-[400px]">
+                            <RelationsTab media={entry.media} />
+                        </TabsContent>
+                    )}
+
+                    <TabsContent value="characters" className="mt-8 outline-none min-h-[400px]">
+                        <CharactersTab characters={entry.media?.characters?.edges || []} />
+                    </TabsContent>
+
+                    <TabsContent value="technical" className="mt-8 outline-none min-h-[400px]">
+                        <TechnicalMetadataTab localFiles={entry.localFiles || []} />
+                    </TabsContent>
+                </Tabs>
             </div>
 
             {playTarget && (
@@ -144,99 +185,47 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         </div>
     )
 }
-function SagasSection({ seriesId, sagas }: { seriesId: string, sagas: SagaDefinition[] }) {
-    const navigate = useNavigate()
-
-    const vhsTapeSagas = useMemo<VhsTapeItem[]>(() => {
-        return sagas.map((s) => {
-            return {
-                id: s.id,
-                title: s.title,
-                subtitle: `EPS ${s.startEp} - ${s.endEp}`,
-                description: s.description,
-                posterUrl: s.image,
-                bannerUrl: s.image,
-                episodesCount: s.endEp - s.startEp + 1,
-                tmdbId: Number(seriesId), // Inherit main series theme for color sync!
-                format: "ARC",
-            }
-        })
-    }, [sagas, seriesId])
-
-    return (
-        <section className="relative z-[1] px-6 sm:px-10 pb-20">
-            <div className="flex flex-col gap-8">
-                <div className="space-y-1 border-b border-white/10 pb-6">
-                    <h2 className="text-4xl font-bebas font-normal text-white uppercase tracking-widest">
-                        CRÓNICAS Y SAGAS
-                    </h2>
-                    <p className="text-sm font-bold uppercase tracking-widest text-zinc-500">
-                        Selecciona un arco argumental para explorar sus episodios
-                    </p>
-                </div>
-
-                <div className="pt-2">
-                    <VhsShelfAccordion
-                        items={vhsTapeSagas}
-                        type="sagas"
-                        onItemClick={(item) => navigate({ 
-                            to: "/series/$seriesId/$sagaId", 
-                            params: { seriesId, sagaId: item.id.toString() } 
-                        })}
-                    />
-                </div>
-            </div>
-        </section>
-    )
-}
-
 interface HeroSectionProps {
     seriesId: string
     directoryPath: string
     backdropUrl: string
-    coverUrl: string
-    title: string
-    year: string
-    genres: string[]
-    synopsis: string
-    episodesCount: number
-    localEpisodesCount?: number
-    totalEpisodesCount?: number
+    entry: any // Anime_LibraryCollectionEntry
 }
 
 const HeroSection = React.memo(function HeroSection({
     seriesId,
     directoryPath,
     backdropUrl,
-    coverUrl,
-    title,
-    year,
-    genres,
-    synopsis,
-    episodesCount,
-    localEpisodesCount,
-    totalEpisodesCount,
+    entry,
 }: HeroSectionProps) {
     const [synopsisExpanded, setSynopsisExpanded] = useState(false)
+    const media = entry.media
+    const synopsis = media.description || "Sin descripción disponible."
     const cleanSynopsis = useMemo(() => sanitizeHtml(synopsis), [synopsis])
+    
+    const title = media.titleRomaji || media.titleEnglish || "Título Desconocido"
+    const year = media.year?.toString() || ""
+    const genres = media.genres || []
+    
+    const episodesCount = media.totalEpisodes || entry.episodes?.length || 0
+    const localEpisodesCount = entry.localFiles?.length ?? 0
+    const totalEpisodesCount = media.totalEpisodes || entry.episodes?.length || 0
 
     return (
         <section className="relative w-full min-h-[60vh] flex flex-col justify-end overflow-hidden">
-            {/* Cinematic Ambient Halo - extracted from poster/cover colors */}
-            {coverUrl && (
+            {/* Cinematic Ambient Halo */}
+            {media.posterImage && (
                 <div className="absolute inset-0 overflow-hidden bg-zinc-950">
-                    {/* Primary large ambient glow */}
                     <div
                         className="absolute left-1/2 top-[20%] -translate-x-1/2 w-[600px] h-[600px] rounded-full blur-[120px] opacity-40"
                         style={{
-                            backgroundImage: `url(${coverUrl})`,
+                            backgroundImage: `url(${media.posterImage})`,
                             backgroundSize: "cover",
                             backgroundPosition: "center",
                             filter: "blur(120px) saturate(150%) brightness(0.8)",
                             transform: "translateX(-50%) scale(1.2)",
                         }}
                     />
-                    {/* Secondary subtle edge glow */}
                     <div className="absolute inset-0 bg-gradient-radial-from-cover opacity-30" />
                 </div>
             )}
@@ -255,18 +244,16 @@ const HeroSection = React.memo(function HeroSection({
 
             {/* Content */}
             <div className="relative z-10 flex flex-col lg:flex-row items-end gap-12 px-6 sm:px-12 pb-20 pt-40 max-w-[1800px] mx-auto w-full">
-                {/* Cover Poster (Flat Sharp) */}
-                {coverUrl && (
-                    <div className="hidden lg:block shrink-0 w-52 xl:w-60 bg-black border border-white/20 transition-all duration-300 hover:border-white">
-                        <img src={coverUrl} alt={title} className="w-full aspect-[2/3] object-cover grayscale" />
-                    </div>
-                )}
+                {/* Cover Poster (Super-Size Cassette) */}
+                <div className="hidden lg:block shrink-0 w-[300px] transition-all duration-300">
+                    <CassetteCard entry={entry} size="hero" />
+                </div>
 
                 {/* Meta Information */}
                 <div className="flex-1 flex flex-col gap-8 min-w-0">
                     {/* Tags */}
                     <div className="flex flex-wrap gap-3">
-                        {genres.slice(0, 5).map((g) => (
+                        {genres.slice(0, 5).map((g: string) => (
                             <span
                                 key={g}
                                 className="px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] bg-white text-black border border-white"
@@ -276,10 +263,20 @@ const HeroSection = React.memo(function HeroSection({
                         ))}
                     </div>
 
-                    {/* Main Title (Bebas Massive Solid) */}
-                    <h1 className="text-6xl sm:text-7xl xl:text-[9rem] font-bebas font-normal leading-[0.85] tracking-tight text-white uppercase drop-shadow-none">
-                        {title}
-                    </h1>
+                    {/* Main Title (Logo or Bebas) */}
+                    {(media as any).logoImage ? (
+                        <div className="relative h-24 sm:h-32 xl:h-48 mb-4 animate-in fade-in slide-in-from-left-8 duration-1000">
+                            <img 
+                                src={(media as any).logoImage} 
+                                alt={title} 
+                                className="h-full w-auto object-contain object-left drop-shadow-[0_0_30px_rgba(0,0,0,0.5)] brightness-110" 
+                            />
+                        </div>
+                    ) : (
+                        <h1 className="text-6xl sm:text-7xl xl:text-[9rem] font-bebas font-normal leading-[0.85] tracking-tight text-white uppercase drop-shadow-none">
+                            {title}
+                        </h1>
+                    )}
 
                     {/* Metadata Strip */}
                     <div className="flex flex-wrap items-center gap-6 text-[10px] font-black uppercase tracking-[0.4em] text-white/50">
@@ -323,41 +320,56 @@ const HeroSection = React.memo(function HeroSection({
 })
 HeroSection.displayName = "HeroSection"
 
-interface EpisodesSectionProps {
+interface SagaEpisodesSectionProps {
     seriesTitle: string
     fallbackThumb: string
     episodes: Anime_Episode[]
     localFiles: Anime_LocalFile[]
+    sagas: SagaDefinition[]
     onPlay?: (localFile: Anime_LocalFile, episode: Anime_Episode) => void
+    currentlyPlayingEpNumber?: number
 }
 
-const EpisodesSection = React.memo(function EpisodesSection({
+const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
     seriesTitle,
     fallbackThumb,
     episodes,
     localFiles,
+    sagas,
     onPlay,
-}: EpisodesSectionProps) {
-    const [activeTab, setActiveTab] = useState("all")
-
-    const tabs = useMemo(() => {
-        if (episodes.length <= 24) return null
-        const groups: { label: string; range: [number, number] }[] = []
-        for (let i = 0; i < episodes.length; i += 24) {
-            const from = episodes[i].episodeNumber
-            const to = episodes[Math.min(i + 23, episodes.length - 1)].episodeNumber
-            groups.push({ label: `${from} - ${to}`, range: [i, i + 24] })
+    currentlyPlayingEpNumber
+}: SagaEpisodesSectionProps) {
+    // Generate sagas or chunks of 20
+    const generatedSagas = useMemo(() => {
+        if (sagas && sagas.length > 0) return sagas.map(s => ({ ...s, isGenerated: false }))
+        
+        if (episodes.length === 0) return []
+        
+        const chunks = []
+        for (let i = 0; i < episodes.length; i += 20) {
+            const startEp = episodes[i].episodeNumber
+            const endEp = episodes[Math.min(i + 19, episodes.length - 1)].episodeNumber
+            chunks.push({
+                id: `chunk-${i}`,
+                title: `Episodios ${startEp} - ${endEp}`,
+                startEp,
+                endEp,
+                description: "",
+                image: fallbackThumb,
+                isGenerated: true
+            })
         }
-        return groups
-    }, [episodes])
+        return chunks
+    }, [sagas, episodes, fallbackThumb])
+
+    const [activeSagaId, setActiveSagaId] = useState<string>(generatedSagas[0]?.id?.toString() || "")
 
     const visibleEpisodes = useMemo(() => {
-        if (!tabs) return episodes
-        const idx = tabs.findIndex((t) => t.label === activeTab)
-        if (idx < 0) return episodes
-        const [start, end] = tabs[idx].range
-        return episodes.slice(start, end)
-    }, [episodes, tabs, activeTab])
+        if (generatedSagas.length === 0) return episodes
+        const saga = generatedSagas.find(s => s.id.toString() === activeSagaId)
+        if (!saga) return episodes
+        return episodes.filter(ep => ep.episodeNumber >= saga.startEp && ep.episodeNumber <= saga.endEp)
+    }, [episodes, generatedSagas, activeSagaId])
 
     const localFilesByEpisode = useMemo(() => {
         const map: Record<number, Anime_LocalFile> = {}
@@ -371,62 +383,60 @@ const EpisodesSection = React.memo(function EpisodesSection({
 
     const getLocalFile = (epNum: number) => localFilesByEpisode[epNum]
 
-    const tabValue = tabs ? (activeTab === "all" ? tabs[0]?.label ?? "all" : activeTab) : "all"
-
     return (
-        <section className="relative z-[1] px-6 sm:px-10 pb-20">
-            <div className="flex flex-col gap-8">
-                {/* Header */}
-                <div className="flex items-center justify-between border-b border-white/10 pb-6">
-                    <h2 className="text-4xl font-bebas tracking-widest text-white uppercase">EPISODIOS</h2>
-                    {episodes.length > 0 && (
-                        <span className="text-[10px] font-black tracking-[0.3em] text-white/30 uppercase">{episodes.length} TOTAL</span>
-                    )}
-                </div>
-
-                {/* Tab pagination for large series */}
-                {tabs && (
-                    <Tabs value={tabValue} onValueChange={setActiveTab}>
-                        <ScrollArea>
-                            <TabsList className="mb-6 bg-black border border-white/10 h-11 px-1 gap-1 inline-flex flex-nowrap rounded-none">
-                                {tabs.map((t) => (
-                                    <TabsTrigger
-                                        key={t.label}
-                                        value={t.label}
-                                        className="text-[10px] font-black uppercase tracking-widest text-zinc-500 data-[state=active]:bg-white data-[state=active]:text-black px-4 transition-all rounded-none"
+        <section className="relative z-[1] px-6 sm:px-12 pb-20 max-w-[1800px] mx-auto">
+            <div className="flex flex-col gap-10">
+                {/* Tabs Selector for Sagas */}
+                {generatedSagas.length > 1 && (
+                    <div className="sticky top-16 z-30 bg-[#09090b]/80 backdrop-blur-xl py-6 border-b border-white/5">
+                         <div className="flex flex-wrap gap-2">
+                            {generatedSagas.map(saga => {
+                                const isActive = activeSagaId === saga.id.toString()
+                                return (
+                                    <button
+                                        key={saga.id}
+                                        onClick={() => setActiveSagaId(saga.id.toString())}
+                                        className={cn(
+                                            "px-6 py-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300",
+                                            isActive 
+                                                ? "bg-white text-black shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)]" 
+                                                : "bg-white/5 text-white/40 hover:text-white hover:bg-white/10"
+                                        )}
                                     >
-                                        {t.label}
-                                    </TabsTrigger>
-                                ))}
-                            </TabsList>
-                        </ScrollArea>
-                    </Tabs>
+                                        {saga.title}
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    </div>
                 )}
 
-                {/* Episode grid */}
-                {visibleEpisodes.length === 0 ? (
-                    <div className="py-16 text-center text-white/30 text-sm">
-                        No hay episodios disponibles en la biblioteca.
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {visibleEpisodes.map((ep) => (
-                            <EpisodeClientCard
+                {/* Episode List */}
+                <div className="grid grid-cols-1 gap-4">
+                    {visibleEpisodes.length === 0 ? (
+                        <div className="py-24 text-center">
+                            <p className="text-zinc-600 font-bebas text-4xl tracking-widest">SIN EPISODIOS DISPONIBLES</p>
+                            <p className="text-zinc-700 text-xs font-black uppercase tracking-[0.3em] mt-2">INTENTA ACTUALIZAR LA BIBLIOTECA</p>
+                        </div>
+                    ) : (
+                        visibleEpisodes.map((ep) => (
+                            <EpisodeListItem
                                 key={ep.episodeNumber}
                                 episode={ep}
                                 seriesTitle={seriesTitle}
                                 fallbackThumb={fallbackThumb}
                                 localFile={getLocalFile(ep.episodeNumber)}
                                 onPlay={onPlay}
+                                isCurrentlyPlaying={currentlyPlayingEpNumber === ep.episodeNumber}
                             />
-                        ))}
-                    </div>
-                )}
+                        ))
+                    )}
+                </div>
             </div>
         </section>
     )
 })
-EpisodesSection.displayName = "EpisodesSection"
+SagaEpisodesSection.displayName = "SagaEpisodesSection"
 
 // ─── Local Files Section (for Movies) ───────────────────────────────────────
 

@@ -57,68 +57,81 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// Resolve the real TMDB ID from the database.
-	// The LibraryMedia.TmdbId stores the real TMDB ID (positive integer).
+	// Resolve the real TMDB ID and type from the database.
 	tmdbId := id
+	isMovie := false
 	if p.db != nil {
-		if m, err := db.GetLibraryMediaByTmdbId(p.db, id); err == nil && m != nil && m.TmdbId > 0 {
-			tmdbId = m.TmdbId
-		}
-	}
-
-	// Fetch the TV show details to determine how many seasons exist.
-	tvDetails, err := p.client.GetTVDetails(ctx, strconv.Itoa(tmdbId))
-	if err != nil {
-		return nil, fmt.Errorf("tmdb_provider: GetTVDetails(%d): %w", tmdbId, err)
-	}
-
-	// TMDB returns NumberOfSeasons via the full TV details endpoint.
-	// The SearchResult type is used here; it has the ID field.
-	// We need the actual season count — fetch proper details.
-	tvFull, tvErr := p.client.GetTVSeason(ctx, tvDetails.ID, 1) // probe season 1 to get structure
-	_ = tvFull
-	_ = tvErr
-
-	// Build the episode index map: key = "1", "2", ..., "S1", "S2", ...
-	episodes := make(map[string]*apiMetadata.EpisodeMetadata)
-	totalEpisodes := 0
-	totalSpecials := 0
-
-	// Fetch seasons 0 (specials) through N
-	// Season 0 in TMDB is the specials/OVA season
-	maxSeasons := 5 // reasonable default; we'll stop early if empty
-	if tvDetails.NumberOfEpisodes > 0 {
-		// Estimate season count from episode total
-		maxSeasons = (tvDetails.NumberOfEpisodes / 12) + 2
-		if maxSeasons > 20 {
-			maxSeasons = 20
-		}
-	}
-
-	for seasonNum := 0; seasonNum <= maxSeasons; seasonNum++ {
-		seasonDetails, err := p.client.GetTVSeason(ctx, tmdbId, seasonNum)
-		if err != nil || len(seasonDetails.Episodes) == 0 {
-			if seasonNum > 1 {
-				// Stop fetching if we get two consecutive empty/error seasons past S1
-				break
+		if m, err := db.GetLibraryMediaByTmdbId(p.db, id); err == nil && m != nil {
+			if m.TmdbId > 0 {
+				tmdbId = m.TmdbId
 			}
-			continue
+			isMovie = m.Format == "MOVIE"
+		}
+	}
+
+	var episodes map[string]*apiMetadata.EpisodeMetadata
+	var totalEpisodes, totalSpecials int
+	var titles map[string]string
+
+	if isMovie {
+		// --- MOVIE PATH ---
+		movieDetails, err := p.client.GetMovieDetails(ctx, strconv.Itoa(tmdbId))
+		if err != nil {
+			return nil, fmt.Errorf("tmdb_provider: GetMovieDetails(%d): %w", tmdbId, err)
 		}
 
-		for _, ep := range seasonDetails.Episodes {
-			epMeta := tmdbEpisodeToMeta(ep, seasonNum)
+		titles = buildTitleMap(movieDetails)
+		totalEpisodes = 1
+		episodes = map[string]*apiMetadata.EpisodeMetadata{
+			"1": {
+				Title:    movieDetails.Title,
+				Overview: movieDetails.Overview,
+				Image:    "https://image.tmdb.org/t/p/original" + movieDetails.BackdropPath,
+				AirDate:  movieDetails.ReleaseDate,
+				Runtime:  0, // Movie details SearchResult doesn't have runtime
+			},
+		}
+	} else {
+		// --- TV SHOW PATH ---
+		// Fetch the TV show details to determine how many seasons exist.
+		tvDetails, err := p.client.GetTVDetails(ctx, strconv.Itoa(tmdbId))
+		if err != nil {
+			return nil, fmt.Errorf("tmdb_provider: GetTVDetails(%d): %w", tmdbId, err)
+		}
 
-			var key string
-			if seasonNum == 0 {
-				// Season 0 = Specials in TMDB → map as "S1", "S2", ...
-				key = fmt.Sprintf("S%d", ep.EpisodeNumber)
-				totalSpecials++
-			} else {
-				key = strconv.Itoa(ep.EpisodeNumber)
-				totalEpisodes++
+		titles = buildTitleMap(tvDetails)
+		episodes = make(map[string]*apiMetadata.EpisodeMetadata)
+
+		// Fetch seasons 0 (specials) through N
+		maxSeasons := 5
+		if tvDetails.NumberOfEpisodes > 0 {
+			maxSeasons = (tvDetails.NumberOfEpisodes / 12) + 2
+			if maxSeasons > 20 {
+				maxSeasons = 20
+			}
+		}
+
+		for seasonNum := 0; seasonNum <= maxSeasons; seasonNum++ {
+			seasonDetails, err := p.client.GetTVSeason(ctx, tmdbId, seasonNum)
+			if err != nil || len(seasonDetails.Episodes) == 0 {
+				if seasonNum > 1 {
+					break
+				}
+				continue
 			}
 
-			episodes[key] = epMeta
+			for _, ep := range seasonDetails.Episodes {
+				epMeta := tmdbEpisodeToMeta(ep, seasonNum)
+				var key string
+				if seasonNum == 0 {
+					key = fmt.Sprintf("S%d", ep.EpisodeNumber)
+					totalSpecials++
+				} else {
+					key = strconv.Itoa(ep.EpisodeNumber)
+					totalEpisodes++
+				}
+				episodes[key] = epMeta
+			}
 		}
 	}
 
@@ -127,7 +140,7 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 	}
 
 	result := &apiMetadata.AnimeMetadata{
-		Titles:       buildTitleMap(tvDetails),
+		Titles:       titles,
 		Episodes:     episodes,
 		EpisodeCount: totalEpisodes,
 		SpecialCount: totalSpecials,

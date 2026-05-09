@@ -133,6 +133,7 @@ func (mp *MetadataParser) parseMetadataOnce(ctx context.Context) {
 		demuxer, err := matroska.NewDemuxer(mp.reader,
 			matroska.IDSegmentInfo,
 			matroska.IDSegment,
+			matroska.IDTags,
 			matroska.IDTracks,
 			matroska.IDChapters,
 			matroska.IDAttachments,
@@ -167,6 +168,7 @@ func (mp *MetadataParser) GetMetadata(ctx context.Context) *Metadata {
 			Tracks:         make([]*TrackInfo, 0),
 			Chapters:       make([]*ChapterInfo, 0),
 			Attachments:    make([]*AttachmentInfo, 0),
+			Tags:           make(map[string][]string),
 		}
 
 		// Get file info
@@ -186,6 +188,8 @@ func (mp *MetadataParser) GetMetadata(ctx context.Context) *Metadata {
 			// Duration in matroska-go is in nanoseconds, convert to seconds
 			result.Duration = float64(fileInfo.Duration) / 1e9
 		}
+
+		result.Tags = flattenMatroskaTags(mp.demuxer.GetTags())
 
 		// Get tracks
 		numTracks, err := mp.demuxer.GetNumTracks()
@@ -434,6 +438,30 @@ func (mp *MetadataParser) generateMimeCodec(metadata *Metadata) string {
 	}
 
 	return ret
+}
+
+func flattenMatroskaTags(tags []*matroska.Tag) map[string][]string {
+	ret := make(map[string][]string)
+	for _, tag := range tags {
+		if tag == nil {
+			continue
+		}
+		for _, simpleTag := range tag.SimpleTags {
+			name := normalizeMatroskaTagName(simpleTag.Name)
+			value := strings.TrimSpace(simpleTag.Value)
+			if name == "" || value == "" {
+				continue
+			}
+			ret[name] = append(ret[name], value)
+		}
+	}
+	return ret
+}
+
+func normalizeMatroskaTagName(name string) string {
+	name = strings.TrimSpace(strings.ToUpper(name))
+	name = strings.NewReplacer(" ", "_", "-", "_").Replace(name)
+	return name
 }
 
 // ExtractSubtitles extracts subtitles from a streaming source by reading it as a continuous flow.

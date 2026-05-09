@@ -12,6 +12,7 @@ import type { Anime_LibraryCollectionEntry } from "@/api/generated/types"
 import { VhsShelfAccordion, type VhsTapeItem } from "@/components/shared/vhs-shelf-accordion"
 import { ContinueWatchingCarousel } from "@/components/shared/continue-watching-carousel"
 import { AnimePosterCard } from "@/components/shared/anime-poster-card"
+import { CassetteCard } from "@/components/shared/cassette-card"
 
 export const Route = createFileRoute("/series/")({
     component: SeriesPage,
@@ -50,12 +51,14 @@ function SeriesPage() {
     const filtered = useMemo(() => {
         return allSeries.filter(s => {
             const media = s.media
-            if (!media) return false
-            const matchesGenre = activeGenre ? media.genres?.includes(activeGenre) : true
-            const title = media.titleRomaji || media.titleEnglish || media.titleOriginal || ""
+            const title = media 
+                ? (media.titleRomaji || media.titleEnglish || media.titleOriginal || "")
+                : `Desconocido (${s.mediaId})`
+            
+            const matchesGenre = activeGenre && media ? media.genres?.includes(activeGenre) : !activeGenre
             const matchesSearch = search
                 ? title.toLowerCase().includes(search.toLowerCase()) ||
-                  (media.description || "").toLowerCase().includes(search.toLowerCase())
+                  (media?.description || "").toLowerCase().includes(search.toLowerCase())
                 : true
             return matchesGenre && matchesSearch
         })
@@ -203,23 +206,14 @@ function SeriesPage() {
                         />
                     </div>
                 ) : (
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-3 pt-4">
-                        {filtered.map((entry) => {
-                            const m = entry.media
-                            if (!m) return null
-                            const title = m.titleEnglish || m.titleRomaji || m.titleOriginal || "Sin título"
-                            return (
-                                <AnimePosterCard
-                                    key={entry.mediaId}
-                                    mediaId={entry.mediaId}
-                                    title={title}
-                                    posterUrl={m.posterImage || ""}
-                                    subtitle={m.genres?.[0] ?? m.format ?? undefined}
-                                    totalEpisodes={m.totalEpisodes ?? undefined}
-                                    onClick={() => navigate({ to: "/series/$seriesId", params: { seriesId: entry.mediaId.toString() } })}
-                                />
-                            )
-                        })}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8 pt-6">
+                        {filtered.map((entry) => (
+                            <CassetteCard
+                                key={entry.mediaId}
+                                entry={entry}
+                                onClick={() => navigate({ to: "/series/$seriesId", params: { seriesId: entry.mediaId.toString() } })}
+                            />
+                        ))}
                     </div>
                 )}
             </div>
@@ -232,204 +226,7 @@ function SeriesPage() {
     )
 }
 
-// ─── Cassette Card Component (3D Expanding Cassette Showstopper) ────────────────────────────────────────────────────────
-
-const CassetteCard = memo(function CassetteCard({
-    entry,
-    onClick,
-}: {
-    entry: Anime_LibraryCollectionEntry
-    onClick: () => void
-}) {
-    const media = entry.media
-    if (!media) return null
-
-    const title = media.titleEnglish || media.titleRomaji || media.titleOriginal || "Sin título"
-    const score = media.score 
-        ? (media.score > 10 ? media.score / 10 : media.score).toFixed(1)
-        : null
-
-    // SVG Reel for the realistic cassette tape
-    const CassetteReel = () => (
-        <motion.svg
-            variants={{
-                idle: { rotate: 0 },
-                hover: { rotate: 360, transition: { repeat: Infinity, duration: 3, ease: "linear" } }
-            }}
-            className="w-8 h-8 text-zinc-700/80 fill-zinc-900/60"
-            viewBox="0 0 100 100"
-        >
-            <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="8" fill="transparent" />
-            <path d="M 50 15 L 50 85 M 15 50 L 85 50 M 25 25 L 75 75 M 25 75 L 75 25" stroke="currentColor" strokeWidth="6" />
-            <circle cx="50" cy="50" r="16" fill="#03060f" stroke="currentColor" strokeWidth="4" />
-        </motion.svg>
-    )
-
-    return (
-        <motion.div 
-            className="group relative cursor-pointer"
-            initial="idle"
-            whileHover="hover"
-            animate="idle"
-            style={{ transformStyle: "preserve-3d" }}
-            onClick={onClick}
-        >
-            {/* ── 1. The Slidable Plastic Cassette Tape Body (Slides Up on Hover) ── */}
-            <motion.div
-                className="absolute inset-x-2 bg-gradient-to-b from-[#0e1220] to-[#04060b] border border-white/10 rounded-xl p-3 flex flex-col justify-between shadow-[0_4px_30px_rgba(0,0,0,0.8)]"
-                style={{
-                    aspectRatio: "1 / 1.7",
-                    zIndex: 5,
-                    transformOrigin: "bottom center"
-                }}
-                variants={{
-                    idle: { y: 0, scale: 0.95, opacity: 0.5 },
-                    hover: { 
-                        y: "-45%", 
-                        scale: 1, 
-                        opacity: 1,
-                        transition: { type: "spring", stiffness: 180, damping: 18 } 
-                    }
-                }}
-            >
-                {/* Cassette Top notches & brand label */}
-                <div className="flex justify-between items-center px-1 border-b border-white/5 pb-2">
-                    <span className="text-[7px] font-mono font-black text-brand-orange/60 tracking-widest uppercase">
-                        KAMEHOUSE TAPE
-                    </span>
-                    <span className="text-[7px] font-mono text-zinc-500 font-bold tracking-tight">
-                        SIDE A
-                    </span>
-                </div>
-
-                {/* Cassette Mechanical Reels Center section */}
-                <div className="relative py-2 px-1 bg-[#020408]/80 border border-white/5 rounded-lg flex items-center justify-around">
-                    {/* Tape spool window background */}
-                    <div className="absolute inset-y-1.5 inset-x-8 bg-amber-950/20 rounded-md border border-amber-950/40 flex items-center justify-center">
-                        {/* Fake magnetic tape roll */}
-                        <div className="w-10 h-0.5 bg-brand-orange/40 rounded shadow-[0_0_10px_rgba(255,110,58,0.3)] animate-pulse" />
-                    </div>
-
-                    <CassetteReel />
-                    <CassetteReel />
-                </div>
-
-                {/* Bottom recording specifications info */}
-                <div className="flex flex-col gap-1.5 px-1 pt-1 text-[8px] font-mono text-zinc-400">
-                    <div className="flex justify-between items-center">
-                        <span className="text-zinc-600">VOLUMEN:</span>
-                        <span className="font-bold text-white uppercase tracking-tight line-clamp-1 max-w-[70px]">
-                            {title}
-                        </span>
-                    </div>
-                    {media.totalEpisodes && (
-                        <div className="flex justify-between items-center text-brand-orange">
-                            <span>EPISODES:</span>
-                            <span className="font-bold tabular-nums">
-                                {media.totalEpisodes}
-                            </span>
-                        </div>
-                    )}
-                </div>
-            </motion.div>
-
-            {/* ── 2. The Translucent Protective Sleeve/Case (Main Front Area) ── */}
-            <motion.div
-                className="relative z-10 w-full overflow-hidden bg-[#0d111d]/45 border border-white/5 rounded-2xl shadow-xl flex flex-col justify-end"
-                style={{
-                    aspectRatio: "1 / 1.7",
-                    boxShadow: "0 10px 40px rgba(0,0,0,0.4), inset 0 0 30px rgba(255,255,255,0.02)",
-                    backdropFilter: "blur(12px)"
-                }}
-                variants={{
-                    idle: { rotateY: 0, rotateX: 0, scale: 1 },
-                    hover: { 
-                        rotateY: -8, 
-                        rotateX: 4, 
-                        scale: 1.02, 
-                        borderColor: "rgba(255,110,58,0.25)",
-                        boxShadow: "10px 20px 40px rgba(0,0,0,0.6), inset 0 0 40px rgba(255,110,58,0.05)",
-                        transition: { duration: 0.3 } 
-                    }
-                }}
-            >
-                {/* Spine representation (left-aligned stripe inside case) */}
-                <div
-                    className="absolute inset-y-0 left-0 z-20 overflow-hidden border-r border-white/5 bg-[#03060f]/60 backdrop-blur-md flex flex-col justify-between py-4"
-                    style={{ width: SPINE_WIDTH }}
-                >
-                    {/* Glossy edge gradient */}
-                    <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-white/30 to-transparent" />
-
-                    {/* Spine score indicator */}
-                    {score ? (
-                        <div className="flex flex-col items-center gap-1">
-                            <FaStar className="text-[7px] text-brand-orange drop-shadow-[0_0_5px_rgba(255,110,58,0.5)]" />
-                            <span className="text-[8px] font-black text-brand-orange tracking-tighter tabular-nums">{score}</span>
-                        </div>
-                    ) : <div />}
-
-                    {/* Spine vertically stacked labels */}
-                    <div className="flex flex-col items-center gap-2">
-                        {media.year && (
-                            <span className="text-[7px] font-mono font-black text-zinc-500 uppercase tracking-widest rotate-90 my-2 whitespace-nowrap">
-                                {media.year}
-                            </span>
-                        )}
-                        <span className="text-[7px] font-mono font-bold text-zinc-600 rotate-90 py-1 uppercase whitespace-nowrap">
-                            {media.format || "TV"}
-                        </span>
-                    </div>
-                </div>
-
-                {/* Cover Art Poster (inside case) */}
-                <div 
-                    className="absolute inset-y-0 right-0 overflow-hidden rounded-r-2xl"
-                    style={{ left: SPINE_WIDTH }}
-                >
-                    <DeferredImage
-                        src={media.posterImage || ""}
-                        alt={title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    />
-
-                    {/* Premium glass reflection gloss overlay */}
-                    <div 
-                        className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.04] to-white/[0.08] pointer-events-none transition-all duration-300" 
-                    />
-                    
-                    {/* Shadow overlay at bottom for text visibility */}
-                    <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-[#020408]/90 via-[#020408]/50 to-transparent" />
-                </div>
-
-                {/* ── Outer text information overlay (always readable) ── */}
-                <div className="relative z-20 p-3 pl-14 w-full">
-                    {/* Badge */}
-                    <div className="mb-1">
-                        <span className="text-[7px] font-black uppercase tracking-[0.2em] text-brand-orange bg-brand-orange/10 px-1.5 py-0.5 rounded-md border border-brand-orange/10 backdrop-blur-md">
-                            {media.genres?.[0] || "SERIE"}
-                        </span>
-                    </div>
-
-                    {/* Title */}
-                    <h3 className="text-[11px] font-black text-white uppercase tracking-tight leading-snug line-clamp-2 drop-shadow-md group-hover:text-brand-orange transition-colors duration-300">
-                        {title}
-                    </h3>
-                </div>
-
-                {/* Interactive Play icon hovering at the top of the case on hover */}
-                <div className="absolute top-3 right-3 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <div className="w-7 h-7 rounded-full bg-brand-orange text-white flex items-center justify-center shadow-lg shadow-brand-orange/40 hover:scale-110 active:scale-95 transition-all">
-                        <Play className="w-3.5 h-3.5 fill-current text-white translate-x-0.5" />
-                    </div>
-                </div>
-            </motion.div>
-
-            {/* ── 3. Subtle Floating Shadow base underneath ── */}
-            <div className="absolute -bottom-6 inset-x-4 h-6 opacity-40 blur-lg bg-[#000000] rounded-full scale-95 group-hover:scale-105 group-hover:opacity-60 transition-all duration-300 pointer-events-none" />
-        </motion.div>
-    )
-})
+// ─── Cassette Card Component movido a @/components/shared/cassette-card.tsx ───
 
 // ─── Skeleton Loader ────────────────────────────────────────────────────────────
 

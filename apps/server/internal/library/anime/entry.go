@@ -86,32 +86,54 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 	// |   Local Database    |
 	// +---------------------+
 
-	// Fetch the media from local database
 	var fetchedMedia *models.LibraryMedia
+	var err error
 
-	// Try looking it up by TMDB ID
-	m, err := db.GetLibraryMediaByTmdbId(opts.Database, opts.MediaId)
-	if err == nil && m != nil {
-		fetchedMedia = m
-	}
-
-	// If direct lookup or TMDB lookup failed,
-	// find the LibraryMediaId from local files
-	if fetchedMedia == nil {
-		for _, lf := range opts.LocalFiles {
-			if lf.MediaId == opts.MediaId && lf.LibraryMediaId > 0 {
-				m, err := db.GetLibraryMediaByID(opts.Database, lf.LibraryMediaId)
-				if err == nil && m != nil {
-					fetchedMedia = m
-					break
-				}
+	// 1. Try to find the LibraryMediaId from local files first.
+	// This is the most reliable way because LocalFiles explicitly stores the primary key 
+	// for TMDB associations (where the NormalizedMedia.ID is different from the DB primary key).
+	for _, lf := range opts.LocalFiles {
+		if lf.MediaId == opts.MediaId && lf.LibraryMediaId > 0 {
+			m, err := db.GetLibraryMediaByID(opts.Database, lf.LibraryMediaId)
+			if err == nil && m != nil {
+				fetchedMedia = m
+				break
 			}
 		}
 	}
 
+	// 2. If no local file provides a mapping, try to lookup by TMDB ID directly.
 	if fetchedMedia == nil {
-		return nil, errors.New("could not find library media in database")
+		m, err := db.GetLibraryMediaByTmdbId(opts.Database, opts.MediaId)
+		if err == nil && m != nil {
+			fetchedMedia = m
+		} else if opts.MediaId > 1_000_000 {
+			// Movies from TMDB have a 1,000,000 offset applied to their MediaId to avoid collisions
+			m, err := db.GetLibraryMediaByTmdbId(opts.Database, opts.MediaId-1_000_000)
+			if err == nil && m != nil {
+				fetchedMedia = m
+			}
+		}
 	}
+
+	// 3. Fallback: If still nil, it means the LocalFile points to a MediaId that does not exist 
+	// in the LibraryMedia table (e.g., leftover from AniList or unlinked).
+	// We create a "Dummy" entry to prevent the frontend from crashing, allowing the user to 
+	// view the page and use "Unmatch" or "Identify".
+	if fetchedMedia == nil {
+		opts.Database.Logger.Warn().Int("mediaId", opts.MediaId).Msg("anime/entry: MediaId not found in LibraryMedia, creating dummy entry for frontend fallback")
+		fetchedMedia = &models.LibraryMedia{
+			BaseModel:     models.BaseModel{ID: 0},
+			TmdbId:        opts.MediaId,
+			Type:          "SHOW",
+			Format:        "TV",
+			TitleEnglish:  fmt.Sprintf("Unknown Media (%d)", opts.MediaId),
+			TitleRomaji:   fmt.Sprintf("Unknown Media (%d)", opts.MediaId),
+			TitleOriginal: fmt.Sprintf("Unknown Media (%d)", opts.MediaId),
+			Description:   "This media is not properly linked in the database. Please Rematch or Unmatch the files.",
+		}
+	}
+
 	entry.Media = fetchedMedia
 
 	// Fetch the seasons for this media, if any

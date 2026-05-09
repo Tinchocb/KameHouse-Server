@@ -96,7 +96,11 @@ function MoviesPage() {
         if (search) {
             const searchLower = search.toLowerCase()
             result = result.filter((entry) => {
-                const title = entry.media?.titleRomaji || entry.media?.titleEnglish || entry.media?.titleOriginal || ""
+                const media = entry.media
+                const title = media 
+                    ? (media.titleRomaji || media.titleEnglish || media.titleOriginal || "")
+                    : `Desconocido (${entry.mediaId})`
+                
                 return title.toLowerCase().includes(searchLower)
             })
         }

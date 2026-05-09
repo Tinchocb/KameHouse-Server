@@ -43,6 +43,8 @@ export interface PlayerBottomBarProps {
 
     isFullscreen: boolean
     toggleFullscreen: () => void
+    settingsOpen?: boolean
+    onToggleSettings?: () => void
 }
 
 export function PlayerBottomBar({
@@ -53,7 +55,8 @@ export function PlayerBottomBar({
     audioTracks, activeAudioIndex, onSelectAudio,
     subtitleTracks, activeSubtitleIndex, onSelectSubtitle,
     isJassubLoading, episodeSources, activeStreamUrl, handleSourceSwitch,
-    isFullscreen, toggleFullscreen
+    isFullscreen, toggleFullscreen,
+    settingsOpen, onToggleSettings
 }: PlayerBottomBarProps) {
     return (
         <div className={cn(
@@ -158,7 +161,7 @@ export function PlayerBottomBar({
                     </button>
                     
                     <button
-                        onClick={(e) => { e.stopPropagation(); /* TODO: quick subtitle toggle */ }}
+                        onClick={(e) => { e.stopPropagation(); onToggleSettings?.() }}
                         aria-label="Subtítulos"
                         className="text-zinc-400 hover:text-white transition-all flex items-center justify-center relative">
                         <Subtitles className="w-5 h-5" />
@@ -178,6 +181,7 @@ export function PlayerBottomBar({
                         sources={episodeSources}
                         currentSourceUrl={activeStreamUrl}
                         onSourceChange={handleSourceSwitch}
+                        open={settingsOpen}
                         className="!w-auto !h-auto !bg-transparent !border-none !text-zinc-400 hover:!text-white flex items-center justify-center p-0"
                     />
 

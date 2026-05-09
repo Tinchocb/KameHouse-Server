@@ -256,6 +256,17 @@ export type AnimeEntryManualMatch_Variables = {
 /**
  * - Filepath: internal/handlers/anime_entries.go
  * - Filename: anime_entries.go
+ * - Endpoint: /api/v1/library/anime-entry/unmatch
+ * @description
+ * Route un-matches local files.
+ */
+export type AnimeEntryUnmatch_Variables = {
+    paths: Array<string>
+}
+
+/**
+ * - Filepath: internal/handlers/anime_entries.go
+ * - Filename: anime_entries.go
  * - Endpoint: /api/v1/library/anime-entry/silence/{id}
  * @description
  * Route returns the silence status of a media entry.

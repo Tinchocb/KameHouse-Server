@@ -36,6 +36,10 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 		allowedOrigins = []string{
 			"http://localhost:43210",
 			"http://127.0.0.1:43210",
+			"http://localhost:5173",
+			"http://127.0.0.1:5173",
+			"http://localhost:3000",
+			"http://127.0.0.1:3000",
 			"http://localhost",
 			"http://127.0.0.1",
 		}
@@ -141,6 +145,11 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	h := &Handler{
 		App: app,
 	}
+
+	// Start the WebSocket playback heartbeat subscriber for real-time progress sync.
+	// This must happen before route registration to ensure the subscriber goroutine
+	// is ready before any client connects.
+	h.StartPlaybackHeartbeatSubscriber()
 
 	v1 := e.Group("/api/v1")
 	v1.GET("/events", h.webSocketEventHandler)

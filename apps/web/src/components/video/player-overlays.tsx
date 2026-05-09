@@ -1,5 +1,5 @@
 import React from "react"
-import { Loader2, AlertTriangle } from "lucide-react"
+import { Loader2, AlertTriangle, Play } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 
 export function LoadingErrorOverlay({
@@ -69,10 +69,16 @@ export function CenterPlayFlash({ flash }: { flash: "play" | "pause" | null }) {
 
 export function SkipIntroOverlay({
     show,
-    onSkip
+    onSkip,
+    skipLabel = "SALTAR INTRO",
+    remainingSeconds,
+    shortcutKey = "S",
 }: {
     show: boolean
     onSkip: () => void
+    skipLabel?: string
+    remainingSeconds?: number
+    shortcutKey?: string
 }) {
     return (
         <div className={cn(
@@ -88,17 +94,35 @@ export function SkipIntroOverlay({
                 }}
                 className={cn(
                     "flex items-center gap-3 px-6 py-3",
-                    "bg-white text-black border border-white hover:bg-zinc-200",
+                    "bg-white/10 backdrop-blur-xl text-white border border-white/20",
+                    "hover:bg-white hover:text-black hover:border-white",
                     "text-[10px] font-black uppercase tracking-[0.3em]",
                     "transition-all duration-200",
-                    "active:scale-95"
+                    "active:scale-95",
+                    "group"
                 )}
             >
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                {/* Skip icon */}
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 transition-colors group-hover:text-black">
                     <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/>
                 </svg>
-                SALTAR INTRO
-                <span className="text-black/40 text-[9px] font-black ml-2 hidden sm:inline">[S]</span>
+
+                <span className="transition-colors group-hover:text-black">{skipLabel}</span>
+
+                {/* Remaining seconds badge */}
+                {remainingSeconds !== undefined && remainingSeconds > 0 && (
+                    <span className={cn(
+                        "text-[9px] font-mono tabular-nums tracking-widest",
+                        "bg-white/10 px-2 py-0.5 rounded-sm",
+                        "transition-colors group-hover:bg-black/10 group-hover:text-black"
+                    )}>
+                        {remainingSeconds}s
+                    </span>
+                )}
+
+                <span className="text-white/30 text-[9px] font-black ml-1 hidden sm:inline transition-colors group-hover:text-black/40">
+                    [{shortcutKey}]
+                </span>
             </button>
         </div>
     )
@@ -109,6 +133,8 @@ export function NextEpisodeOverlay({
     marathonMode,
     countdownSeconds,
     nextEpisodeTitle,
+    nextEpisodeImage,
+    nextEpisodeNumber,
     onNext,
     duration,
     remainingProgress
@@ -117,6 +143,8 @@ export function NextEpisodeOverlay({
     marathonMode: boolean
     countdownSeconds: number
     nextEpisodeTitle?: string
+    nextEpisodeImage?: string
+    nextEpisodeNumber?: number
     onNext: () => void
     duration: number
     remainingProgress: number // 0 to 100
@@ -124,50 +152,79 @@ export function NextEpisodeOverlay({
     return (
         <div className={cn(
             "absolute bottom-32 right-8 md:right-12 z-30 transition-all duration-300 pointer-events-auto",
-            show ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
+            show ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8 pointer-events-none"
         )}>
             <div className={cn(
-                "flex flex-col gap-5 p-8 w-72 bg-black border border-white/20",
-                "shadow-2xl"
+                "flex flex-col gap-4 w-72 bg-black/90 backdrop-blur-md border border-white/10",
+                "shadow-2xl overflow-hidden"
             )}>
-                <div className="flex items-center justify-between">
-                    <span className="text-zinc-600 text-[9px] font-black uppercase tracking-[0.3em]">SIGUIENTE</span>
-                    {marathonMode && (
-                        <span className="text-white text-[10px] font-black tabular-nums tracking-widest">
-                            AUTO: {countdownSeconds}S
-                        </span>
-                    )}
-                </div>
-
-                {nextEpisodeTitle && (
-                    <p className="text-white text-sm font-black leading-tight uppercase tracking-tight line-clamp-2">
-                        {nextEpisodeTitle}
-                    </p>
-                )}
-
-                {/* Marathon mode progress bar */}
-                {marathonMode && duration > 0 && (
-                    <div className="w-full h-1 bg-white/5 overflow-hidden">
-                        <div
-                            className="h-full bg-white transition-all duration-1000"
-                            style={{ width: `${remainingProgress}%` }}
+                {/* Thumbnail */}
+                {nextEpisodeImage && (
+                    <div className="relative w-full aspect-video bg-zinc-900 overflow-hidden">
+                        <img
+                            src={nextEpisodeImage}
+                            alt=""
+                            className="w-full h-full object-cover"
+                            loading="lazy"
                         />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                        {marathonMode && (
+                            <div className="absolute top-3 right-3 bg-black/70 text-[9px] font-black uppercase tracking-widest text-white px-2 py-1">
+                                AUTO: {countdownSeconds}S
+                            </div>
+                        )}
+                        {/* Play icon overlay hint */}
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Play className="w-10 h-10 text-white/80 fill-white/80" />
+                        </div>
                     </div>
                 )}
 
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation()
-                        onNext()
-                    }}
-                    className={cn(
-                        "w-full py-4 text-[10px] font-black uppercase tracking-[0.3em]",
-                        "bg-white text-black hover:bg-zinc-200",
-                        "transition-all duration-200 active:scale-95"
+                <div className="flex flex-col gap-3 px-5 pb-5 pt-2">
+                    {/* Label */}
+                    <div className="flex items-center justify-between">
+                        <span className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.3em]">
+                            {nextEpisodeNumber ? `EPISODIO ${nextEpisodeNumber}` : "SIGUIENTE"}
+                        </span>
+                        {!nextEpisodeImage && marathonMode && (
+                            <span className="text-white text-[10px] font-black tabular-nums tracking-widest">
+                                AUTO: {countdownSeconds}S
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Title */}
+                    {nextEpisodeTitle && (
+                        <p className="text-white text-sm font-black leading-tight uppercase tracking-tight line-clamp-2">
+                            {nextEpisodeTitle}
+                        </p>
                     )}
-                >
-                    SIGUIENTE →
-                </button>
+
+                    {/* Marathon progress bar */}
+                    {marathonMode && (
+                        <div className="w-full h-1 bg-white/5 overflow-hidden">
+                            <div
+                                className="h-full bg-white transition-all duration-1000 ease-linear"
+                                style={{ width: `${remainingProgress}%` }}
+                            />
+                        </div>
+                    )}
+
+                    {/* Button */}
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            onNext()
+                        }}
+                        className={cn(
+                            "w-full py-3 text-[10px] font-black uppercase tracking-[0.3em]",
+                            "bg-white text-black hover:bg-zinc-200",
+                            "transition-all duration-200 active:scale-95"
+                        )}
+                    >
+                        SIGUIENTE →
+                    </button>
+                </div>
             </div>
         </div>
     )

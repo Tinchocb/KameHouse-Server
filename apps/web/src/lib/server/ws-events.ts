@@ -39,6 +39,7 @@ export const enum WSEvents {
     MEDIA_STREAM_STATE = "media_stream_state",
     BUFFERING_STATUS = "buffering_status",
     NETWORK_SPEED = "network_speed",
+    PLAYBACK_HEARTBEAT_PROGRESS = "playback-heartbeat-progress",
     CHECK_FOR_UPDATES = "check-for-updates",
     CHECK_FOR_ANNOUNCEMENTS = "check-for-announcements",
     INVALIDATE_QUERIES = "invalidate-queries",
