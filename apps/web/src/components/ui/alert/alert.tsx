@@ -105,7 +105,7 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>((props, ref) =
         ...rest
     } = props
 
-    let Icon: any = null
+    let Icon: React.ReactNode = null
 
     if (intent === "info-basic" || intent === "info") {
         Icon = <svg

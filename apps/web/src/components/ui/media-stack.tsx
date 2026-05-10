@@ -70,9 +70,8 @@ export function MediaStack({ stackCount = 3, className, ...props }: MediaStackPr
             >
                 <MediaCard {...props} />
                 
-                {/* Visual indicator that it's a stack (ribbon or similar) */}
                 <div className="absolute -top-1 -right-1 z-30 flex items-center justify-center">
-                    <div className="bg-brand-orange text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-[0_0_10px_rgba(255,110,58,0.45)] border border-brand-orange/30">
+                    <div className="bg-brand-orange text-white text-[9px] font-black px-2 py-0.5 rounded-full border border-brand-orange/50 shadow-md shadow-black/20">
                         SERIE
                     </div>
                 </div>

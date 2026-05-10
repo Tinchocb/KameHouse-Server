@@ -14,5 +14,5 @@ export function mergeRefs<T = any>(
     }
 }
 
-export const isEmpty = (obj: any) => [Object, Array].includes((obj || {}).constructor) && !Object.entries((obj || {})).length
+export const isEmpty = (obj: unknown) => [Object, Array].includes(((obj as any) || {}).constructor) && !Object.entries(((obj as any) || {})).length
 

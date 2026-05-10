@@ -7,14 +7,6 @@ import gsap from "gsap"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { motion } from "framer-motion"
 
-// ─── Intelligence tag colours ─────────────────────────────────────────────────
-
-const TAG_STYLES: Record<string, string> = {
-    EPIC:    "text-white",
-    FILLER:  "text-zinc-500",
-    SPECIAL: "text-zinc-300",
-}
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface MediaCardProps {
@@ -68,8 +60,8 @@ export const MediaCard = React.memo(function MediaCard({
     availabilityType,
     aspect = "poster",
     progress,
-    progressColor = "white",
-    intelligenceTag,
+    progressColor: _progressColor = "white",
+    intelligenceTag: _intelligenceTag,
     year,
     rating,
     onClick,
@@ -79,7 +71,6 @@ export const MediaCard = React.memo(function MediaCard({
     const isPoster = aspect === "poster"
     const cardRef = React.useRef<HTMLDivElement>(null)
     const shineRef = React.useRef<HTMLDivElement>(null)
-    const progressRef = React.useRef<HTMLDivElement>(null)
     const hasEnteredRef = React.useRef(false)
 
     // 3D Tilt effect with mouse position tracking
@@ -143,25 +134,7 @@ export const MediaCard = React.memo(function MediaCard({
         }
     }, { scope: cardRef })
 
-    // Progress bar pulse effect
-    useGSAP(() => {
-        if (!progressRef.current || progress === undefined) return
-
-        const handleFocus = () => {
-            gsap.to(progressRef.current, {
-                boxShadow: "0 0 12px rgba(255,110,58,0.8), 0 0 4px rgba(255,165,0,0.6)",
-                duration: 0.4,
-                yoyo: true,
-                repeat: -1,
-            })
-        }
-
-        const card = cardRef.current
-        if (card) {
-            card.addEventListener("mouseenter", handleFocus)
-            return () => card.removeEventListener("mouseenter", handleFocus)
-        }
-    }, [progress])
+    // Progress bar expands height slightly on card hover via CSS, removing the need for shadow pulsing JS logic
 
     return (
         <motion.div
@@ -181,7 +154,7 @@ export const MediaCard = React.memo(function MediaCard({
             className={cn(
                 // Base
                 "group/card relative shrink-0 cursor-pointer overflow-hidden rounded-xl border border-white/5 transition-all duration-300",
-                "bg-zinc-900/40 hover:border-brand-orange/30 hover:z-50 hover:shadow-[0_0_20px_rgba(255,110,58,0.15)]",
+                "bg-zinc-900/40 hover:border-brand-orange/50 hover:z-50",
                 // Intrinsic sizing
                 isPoster
                     ? "aspect-[2/3] w-[145px] md:w-[175px] lg:w-[210px]"
@@ -255,7 +228,7 @@ export const MediaCard = React.memo(function MediaCard({
             {/* ── Hover Overlay ────────────────── */}
             <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] opacity-0 transition-opacity duration-300 group-hover/card:opacity-100">
                 {/* Play Icon */}
-                <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-brand-orange text-brand-orange bg-black/60 backdrop-blur-md shadow-[0_0_15px_rgba(255,110,58,0.3)] transition-all duration-300 group-hover/card:scale-110">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/20 text-white bg-black/60 backdrop-blur-md transition-all duration-300 group-hover/card:scale-110 group-hover/card:border-brand-orange group-hover/card:text-brand-orange">
                     <svg viewBox="0 0 24 24" className="ml-1 h-6 w-6 fill-current" xmlns="http://www.w3.org/2000/svg">
                         <path d="M8 5v14l11-7z" />
                     </svg>
@@ -276,10 +249,9 @@ export const MediaCard = React.memo(function MediaCard({
 
             {/* ── Progress Bar ──────────────────────────────────────────── */}
             {progress !== undefined && (
-                <div className="absolute inset-x-0 bottom-0 z-50 h-[2.5px] bg-white/10">
+                <div className="absolute inset-x-0 bottom-0 z-50 h-[2.5px] bg-white/10 group-hover/card:h-[4px] transition-all duration-200">
                     <div
-                        ref={progressRef}
-                        className="h-full bg-gradient-to-r from-brand-orange to-amber-500 transition-all duration-500 shadow-[0_0_8px_rgba(255,110,58,0.5)]"
+                        className="h-full bg-gradient-to-r from-brand-orange to-amber-500"
                         style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
                     />
                 </div>

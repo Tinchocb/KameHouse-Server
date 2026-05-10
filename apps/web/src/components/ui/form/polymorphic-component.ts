@@ -3,7 +3,7 @@ import * as React from "react"
 
 type ExtendedProps<Props = {}, OverrideProps = {}> = OverrideProps &
     Omit<Props, keyof OverrideProps>;
-type ElementType = keyof JSX.IntrinsicElements | React.JSXElementConstructor<any>;
+type ElementType = keyof JSX.IntrinsicElements | React.JSXElementConstructor<unknown>;
 type PropsOf<C extends ElementType> = JSX.LibraryManagedAttributes<C,
     React.ComponentPropsWithoutRef<C>>;
 type ComponentProp<C> = {
@@ -19,14 +19,14 @@ export type PolymorphicComponentProps<C, Props = {}> = C extends React.ElementTy
 
 export function createPolymorphicComponent<ComponentDefaultType,
     Props,
-    StaticComponents = Record<string, never>>(component: any) {
+    StaticComponents = Record<string, never>>(component: unknown) {
     type ComponentProps<C> = PolymorphicComponentProps<C, Props>;
 
     type _PolymorphicComponent = <C = ComponentDefaultType>(
         props: ComponentProps<C>,
     ) => React.ReactElement;
 
-    type ComponentProperties = Omit<React.FunctionComponent<ComponentProps<any>>, never>;
+    type ComponentProperties = Omit<React.FunctionComponent<ComponentProps<unknown>>, never>;
 
     type PolymorphicComponent = _PolymorphicComponent & ComponentProperties & StaticComponents;
 

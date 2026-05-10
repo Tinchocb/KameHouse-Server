@@ -4,6 +4,8 @@ import { Play, Star, Calendar, Tv, Layers, ChevronRight } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 import { DeferredImage } from "@/components/shared/deferred-image"
 
+import { sanitizeHtml } from "@/lib/helpers/sanitizer"
+
 // ─── Types & Schema ────────────────────────────────────────────────────────────
 
 export interface VhsTapeItem {
@@ -365,7 +367,7 @@ export const VhsShelfAccordion = memo(function VhsShelfAccordion({
                                                 {item.description && (
                                                     <p 
                                                         className="text-[11px] text-zinc-300 font-medium leading-relaxed uppercase tracking-wide line-clamp-3 bg-black/25 p-2 rounded-lg border border-white/5 backdrop-blur-sm"
-                                                        dangerouslySetInnerHTML={{ __html: item.description }}
+                                                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.description) }}
                                                     />
                                                 )}
 

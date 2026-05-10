@@ -1,14 +1,14 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
-import React, { useMemo, useState, useCallback } from "react"
+import React, { useMemo, useState, useCallback, useEffect } from "react"
 import { FileVideo } from "lucide-react"
 import { toast } from "sonner"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { ScrollArea } from "@/components/ui/scroll-area"
+
 import { cn } from "@/components/ui/core/styling"
 import { fetchAnimeEntry, useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
-import { Anime_Episode, Anime_LocalFile, Mediastream_StreamType } from "@/api/generated/types"
+import { Anime_Episode, Anime_LocalFile, Mediastream_StreamType, Anime_Entry } from "@/api/generated/types"
 import { EmptyState } from "@/components/shared/empty-state"
 import { VideoPlayer } from "@/components/video/player"
 import { MediaActionButtons, EpisodeListItem } from "./-series-interactivity-client"
@@ -63,7 +63,7 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
             streamType: targetType as Mediastream_StreamType,
             episodeLabel: episode.episodeTitle || episode.displayTitle || `Episodio ${episode.episodeNumber}`,
             episodeNumber: episode.episodeNumber,
-            malId: (entry?.media as any)?.idMal ?? null,
+            malId: entry?.media?.idMal ?? null,
         })
     }, [entry?.media])
 
@@ -79,21 +79,13 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     }
 
     const heroBackdrop = entry.media.bannerImage || entry.media.posterImage || ""
-    const coverImage = entry.media.posterImage || ""
-    const genres = entry.media.genres || ["Anime"]
     const title = entry.media.titleRomaji || entry.media.titleEnglish || "Título Desconocido"
-    const year = entry.media.year?.toString() || ""
-    const synopsis = entry.media.description || "Sin descripción disponible."
-    const episodesCount = entry.media.totalEpisodes || entry.episodes?.length || 0
 
     const resolvedSagas = resolveSeriesSagas(entry.media)
     const hasSagas = resolvedSagas.length > 0
     const sagas = resolvedSagas
-    const isMovie = entry.media?.format === "MOVIE" || entry.media?.format === "OVA" || entry.media?.format === "SPECIAL"
     const hasLocalFiles = (entry.localFiles || []).length > 0
     const hasNoEpisodes = !entry.episodes || entry.episodes.length === 0
-    const localEpisodesCount = entry.localFiles?.length ?? 0
-    const totalEpisodesCount = entry.media.totalEpisodes || entry.episodes?.length || 0
 
     return (
         <div className="min-h-screen bg-[#09090b] text-white pb-16">
@@ -156,25 +148,25 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                     </TabsContent>
                     
                     {hasSagas && (
-                        <TabsContent value="relations" className="mt-8 outline-none min-h-[400px]">
-                            <RelationsTab media={entry.media} />
-                        </TabsContent>
-                    )}
-
-                    <TabsContent value="characters" className="mt-8 outline-none min-h-[400px]">
-                        <CharactersTab characters={entry.media?.characters?.edges || []} />
+                    <TabsContent value="relations" className="mt-8 outline-none min-h-[400px]">
+                        <RelationsTab media={entry.media} />
                     </TabsContent>
+                )}
 
-                    <TabsContent value="technical" className="mt-8 outline-none min-h-[400px]">
-                        <TechnicalMetadataTab localFiles={entry.localFiles || []} />
-                    </TabsContent>
+                <TabsContent value="characters" className="mt-8 outline-none min-h-[400px]">
+                    <CharactersTab characters={entry.media?.characters?.edges || []} />
+                </TabsContent>
+
+                <TabsContent value="technical" className="mt-8 outline-none min-h-[400px]">
+                    <TechnicalMetadataTab localFiles={entry.localFiles || []} />
+                </TabsContent>
                 </Tabs>
             </div>
 
             {playTarget && (
                 <VideoPlayer
                     streamUrl={playTarget.path}
-                    streamType={playTarget.streamType as any}
+                    streamType={playTarget.streamType as "local" | "online" | "direct"}
                     episodeLabel={playTarget.episodeLabel}
                     episodeNumber={playTarget.episodeNumber}
                     mediaId={Number(seriesId)}
@@ -189,7 +181,7 @@ interface HeroSectionProps {
     seriesId: string
     directoryPath: string
     backdropUrl: string
-    entry: any // Anime_LibraryCollectionEntry
+    entry: Anime_Entry
 }
 
 const HeroSection = React.memo(function HeroSection({
@@ -199,7 +191,7 @@ const HeroSection = React.memo(function HeroSection({
     entry,
 }: HeroSectionProps) {
     const [synopsisExpanded, setSynopsisExpanded] = useState(false)
-    const media = entry.media
+    const media = entry.media!
     const synopsis = media.description || "Sin descripción disponible."
     const cleanSynopsis = useMemo(() => sanitizeHtml(synopsis), [synopsis])
     
@@ -264,10 +256,10 @@ const HeroSection = React.memo(function HeroSection({
                     </div>
 
                     {/* Main Title (Logo or Bebas) */}
-                    {(media as any).logoImage ? (
+                    {media.logoImage ? (
                         <div className="relative h-24 sm:h-32 xl:h-48 mb-4 animate-in fade-in slide-in-from-left-8 duration-1000">
                             <img 
-                                src={(media as any).logoImage} 
+                                src={media.logoImage} 
                                 alt={title} 
                                 className="h-full w-auto object-contain object-left drop-shadow-[0_0_30px_rgba(0,0,0,0.5)] brightness-110" 
                             />
@@ -363,13 +355,30 @@ const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
     }, [sagas, episodes, fallbackThumb])
 
     const [activeSagaId, setActiveSagaId] = useState<string>(generatedSagas[0]?.id?.toString() || "")
+    const [activeSubSagaId, setActiveSubSagaId] = useState<string>("all")
+
+    useEffect(() => {
+        setActiveSubSagaId("all")
+    }, [activeSagaId])
+
+    const activeMainSaga = useMemo(() => {
+        return generatedSagas.find(s => s.id.toString() === activeSagaId)
+    }, [generatedSagas, activeSagaId])
 
     const visibleEpisodes = useMemo(() => {
         if (generatedSagas.length === 0) return episodes
         const saga = generatedSagas.find(s => s.id.toString() === activeSagaId)
         if (!saga) return episodes
+        
+        if (activeSubSagaId !== "all" && saga.subSagas) {
+            const subSaga = saga.subSagas.find((ss: any) => ss.id === activeSubSagaId)
+            if (subSaga) {
+                return episodes.filter(ep => ep.episodeNumber >= subSaga.startEp && ep.episodeNumber <= subSaga.endEp)
+            }
+        }
+        
         return episodes.filter(ep => ep.episodeNumber >= saga.startEp && ep.episodeNumber <= saga.endEp)
-    }, [episodes, generatedSagas, activeSagaId])
+    }, [episodes, generatedSagas, activeSagaId, activeSubSagaId])
 
     const localFilesByEpisode = useMemo(() => {
         const map: Record<number, Anime_LocalFile> = {}
@@ -384,12 +393,12 @@ const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
     const getLocalFile = (epNum: number) => localFilesByEpisode[epNum]
 
     return (
-        <section className="relative z-[1] px-6 sm:px-12 pb-20 max-w-[1800px] mx-auto">
-            <div className="flex flex-col gap-10">
+        <section className="relative z-[1] pb-20 max-w-[1800px] mx-auto">
+            <div className="flex flex-col gap-8">
                 {/* Tabs Selector for Sagas */}
                 {generatedSagas.length > 1 && (
-                    <div className="sticky top-16 z-30 bg-[#09090b]/80 backdrop-blur-xl py-6 border-b border-white/5">
-                         <div className="flex flex-wrap gap-2">
+                    <div className="sticky top-16 z-30 bg-[#09090b]/80 backdrop-blur-xl border-b border-white/5 divide-y divide-white/5">
+                         <div className="flex flex-wrap gap-2 px-6 sm:px-12 py-6">
                             {generatedSagas.map(saga => {
                                 const isActive = activeSagaId === saga.id.toString()
                                 return (
@@ -408,11 +417,46 @@ const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
                                 )
                             })}
                         </div>
+
+                        {/* SubSagas Secondary Pill Bar */}
+                        {activeMainSaga?.subSagas && activeMainSaga.subSagas.length > 0 && (
+                            <div className="flex flex-wrap gap-2 items-center px-6 sm:px-12 py-4 bg-white/[0.01]">
+                                <span className="text-[9px] font-black tracking-[0.2em] uppercase text-zinc-500 mr-2">SUB-SAGAS:</span>
+                                <button
+                                    onClick={() => setActiveSubSagaId("all")}
+                                    className={cn(
+                                        "px-4 py-1.5 text-[9px] font-black uppercase tracking-[0.15em] border transition-all duration-300 rounded-none",
+                                        activeSubSagaId === "all"
+                                            ? "bg-white text-black border-white"
+                                            : "bg-transparent text-zinc-400 border-white/10 hover:text-white hover:border-white/30"
+                                    )}
+                                >
+                                    Ver Todo
+                                </button>
+                                {activeMainSaga.subSagas.map((sub) => {
+                                    const isSubActive = activeSubSagaId === sub.id
+                                    return (
+                                        <button
+                                            key={sub.id}
+                                            onClick={() => setActiveSubSagaId(sub.id)}
+                                            className={cn(
+                                                "px-4 py-1.5 text-[9px] font-black uppercase tracking-[0.15em] border transition-all duration-300 rounded-none",
+                                                isSubActive
+                                                    ? "bg-white text-black border-white"
+                                                    : "bg-transparent text-zinc-400 border-white/10 hover:text-white hover:border-white/30"
+                                            )}
+                                        >
+                                            {sub.title}
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        )}
                     </div>
                 )}
 
-                {/* Episode List */}
-                <div className="grid grid-cols-1 gap-4">
+                {/* Episode List Container */}
+                <div className="px-6 sm:px-12">
                     {visibleEpisodes.length === 0 ? (
                         <div className="py-24 text-center">
                             <p className="text-zinc-600 font-bebas text-4xl tracking-widest">SIN EPISODIOS DISPONIBLES</p>
@@ -423,7 +467,6 @@ const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
                             <EpisodeListItem
                                 key={ep.episodeNumber}
                                 episode={ep}
-                                seriesTitle={seriesTitle}
                                 fallbackThumb={fallbackThumb}
                                 localFile={getLocalFile(ep.episodeNumber)}
                                 onPlay={onPlay}

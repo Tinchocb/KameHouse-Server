@@ -140,6 +140,7 @@ export const ContextMenuTrigger = React.forwardRef<HTMLDivElement, ContextMenuTr
 
     return <ContextMenuPrimitive.Trigger ref={ref} className={cn(triggerClass, className)} {...rest} />
 })
+ContextMenuTrigger.displayName = "ContextMenuTrigger"
 
 
 /* -------------------------------------------------------------------------------------------------
@@ -163,6 +164,7 @@ export const ContextMenuContent = React.forwardRef<HTMLDivElement, ContextMenuCo
         </ContextMenuPrimitive.Portal>
     )
 })
+ContextMenuContent.displayName = "ContextMenuContent"
 
 /* -------------------------------------------------------------------------------------------------
  * ContextMenuGroup

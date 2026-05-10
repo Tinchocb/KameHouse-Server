@@ -133,7 +133,7 @@ export const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
         controlsContainerClass,
         chevronIconClass,
         className,
-        children,
+        children: _children,
         /**/
         size,
         intent,
@@ -141,7 +141,7 @@ export const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
         leftIcon,
         rightAddon,
         rightIcon,
-        placeholder,
+        placeholder: _placeholder,
         onValueChange,
         hideControls,
         value: controlledValue,

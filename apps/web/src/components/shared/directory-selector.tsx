@@ -21,7 +21,12 @@ export type DirectorySelectorProps = {
     onSelect: (path: string) => void
     shouldExist?: boolean
     value: string
-    libraryPathSelectionProps?: any
+    libraryPathSelectionProps?: {
+        showLibrarySelector?: boolean
+        selectedLibrary?: string
+        libraryOptions?: { label: string; value: string }[] | any[]
+        handleLibraryPathSelect: (path: string) => void
+    }
 } & Omit<TextInputProps, "onSelect" | "value">
 
 export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, DirectorySelectorProps>(function (props: DirectorySelectorProps, ref) {
@@ -63,13 +68,13 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
         if (value !== input) {
             setInput(value)
         }
-    }, [value])
+    }, [value, input, setInput])
 
     React.useEffect(() => {
         if (value !== currentState.current) {
             setInput(value)
         }
-    }, [value])
+    }, [value, setInput])
 
     React.useEffect(() => {
         currentState.current = input
@@ -86,7 +91,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
         // if (!isLoading && data && shouldExist && !data.exists && input.length > 0) {
         //     onSelect("")
         // }
-    }, [debouncedInput, data])
+    }, [debouncedInput, data, onSelect])
 
     const checkDirectoryExists = React.useCallback(() => {
         if (!isLoading && data && shouldExist && !data.exists && input.length > 0) {
@@ -94,7 +99,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                 setInputRaw("")
             })
         }
-    }, [isLoading, data, input, shouldExist, prevState.current])
+    }, [isLoading, data, input, shouldExist])
 
     const [librarySelectionOpen, setLibrarySelectionOpen] = React.useState(false)
 

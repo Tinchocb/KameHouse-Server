@@ -1,5 +1,6 @@
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useGlobalSearch } from "@/hooks/use-global-search"
+import { ExtendedMediaEntry } from "@/api/hooks/anime_collection.hooks"
 import { Link } from "@tanstack/react-router"
 import { Loader2 } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -56,7 +57,7 @@ export function CommandPalette() {
                             className="text-[10px] font-black tracking-[0.2em] text-zinc-600 px-2 pt-4 pb-2"
                         >
                             <div className="grid gap-2 mt-2">
-                                {results?.map((result: any) => {
+                                {results?.map((result: ExtendedMediaEntry) => {
                                     const media = result.media
                                     const title = media?.titleRomaji || media?.titleEnglish || `Desconocido (${result.mediaId})`
                                     
@@ -70,9 +71,9 @@ export function CommandPalette() {
                                             <Link to="/series/$seriesId" params={{ seriesId: result.mediaId.toString() }} className="flex w-full items-center gap-4 p-2">
                                                 <div
                                                     className="h-16 w-12 flex-shrink-0 rounded-lg bg-cover bg-center shadow-lg border border-white/5 group-hover:scale-105 transition-transform bg-zinc-900 flex items-center justify-center overflow-hidden"
-                                                    style={media?.coverImage?.large ? { backgroundImage: `url(${media.coverImage.large})` } : {}}
+                                                    style={media?.posterImage ? { backgroundImage: `url(${media.posterImage})` } : {}}
                                                 >
-                                                    {!media?.coverImage?.large && <span className="text-[8px] font-black opacity-20 uppercase">NO COVER</span>}
+                                                    {!media?.posterImage && <span className="text-[8px] font-black opacity-20 uppercase">NO COVER</span>}
                                                 </div>
                                                 <div className="flex flex-col overflow-hidden text-left py-1">
                                                     <span className="truncate text-[15px] font-bold text-zinc-200 group-hover:text-primary transition-colors" title={title}>

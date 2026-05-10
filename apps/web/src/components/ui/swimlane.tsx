@@ -52,7 +52,7 @@ const SwimlaneInner = React.memo(function SwimlaneInner({
     return (
         <section className={cn("relative", className)}>
             <div className="mb-6 flex items-center gap-4 px-6 md:px-10 lg:px-14">
-                <span className="h-8 w-1.5 bg-brand-orange shadow-[0_0_8px_rgba(255,110,58,0.6)] rounded-full" />
+                <span className="h-7 w-1 bg-brand-orange rounded-full" />
                 <h2 className="text-3xl font-bebas font-normal uppercase tracking-widest text-white">
                     {title}
                 </h2>

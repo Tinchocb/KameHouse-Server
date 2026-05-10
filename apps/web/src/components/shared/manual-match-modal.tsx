@@ -67,23 +67,23 @@ export function ManualMatchModal({ isOpen, onClose, directoryPath, currentMediaI
                                     <div className="flex items-center gap-4">
                                         <div
                                             className="h-16 w-12 flex-shrink-0 cursor-pointer bg-cover bg-center"
-                                            style={{ backgroundImage: `url(${result.coverImage?.large})` }}
+                                            style={{ backgroundImage: `url(${result.media?.coverImage?.large})` }}
                                         />
                                         <div className="flex flex-col">
                                             <span className="text-sm font-bold text-white uppercase tracking-tight">
-                                                {result.title?.userPreferred}
+                                                {result.media?.title?.userPreferred}
                                             </span>
                                             <span className="text-[10px] font-medium text-white/60 uppercase tracking-widest">
-                                                {result.startDate?.year || "Unknown Year"} • {result.format || "TV"}
+                                                {result.media?.startDate?.year || "Unknown Year"} • {result.media?.format || "TV"}
                                             </span>
                                         </div>
                                     </div>
                                     <button
-                                        onClick={() => handleMatch(result.id)}
+                                        onClick={() => handleMatch(result.mediaId)}
                                         disabled={isPending || !directoryPath}
                                         className="rounded-none bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-black transition hover:bg-zinc-200 disabled:opacity-50"
                                     >
-                                        {isPending && selectedId === result.id ? (
+                                        {isPending && selectedId === result.mediaId ? (
                                             <Loader2 className="h-4 w-4 animate-spin" />
                                         ) : (
                                             "Match"

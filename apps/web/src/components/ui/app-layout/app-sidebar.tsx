@@ -23,6 +23,9 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
 export function AppSidebar() {
     const sidebarOpen = useAppStore(state => state.sidebarOpen)
     const setSidebarOpen = useAppStore(state => state.setSidebarOpen)
+    const isFullscreen = useAppStore(state => state.isFullscreen)
+
+    if (isFullscreen) return null
 
     return (
         <>

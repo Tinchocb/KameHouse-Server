@@ -80,7 +80,7 @@ export const HorizontalDraggableScroll = React.forwardRef<HTMLDivElement, Horizo
         onSlideEnd,
         className,
         containerClass,
-        scrollContainerClass,
+        scrollContainerClass: _scrollContainerClass,
         chevronIconClass,
         chevronOverlayClass,
         decayRate = 0.95,
@@ -158,7 +158,7 @@ export const HorizontalDraggableScroll = React.forwardRef<HTMLDivElement, Horizo
     }, [])
 
     return (
-        <div ref={forwadedRef} className={cn(HorizontalDraggableScrollAnatomy.root(), className)}>
+        <div ref={forwadedRef} className={cn(HorizontalDraggableScrollAnatomy.root(), className)} {...rest}>
             <div
                 onClick={slideLeft}
                 className={cn(HorizontalDraggableScrollAnatomy.chevronOverlay({ side: "left" }), chevronOverlayClass)}

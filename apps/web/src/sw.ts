@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 declare const self: ServiceWorkerGlobalScope;
 
-import { registerRoute, NavigationRoute } from 'workbox-routing';
+import { registerRoute } from 'workbox-routing';
 import { NetworkFirst, CacheFirst } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
@@ -42,8 +42,8 @@ async function initOPFS() {
         }
         opfsRoot = await navigator.storage.getDirectory();
         await opfsRoot.getDirectoryHandle(OPFS_CHUNK_DIR_NAME, { create: true });
-    } catch (e) {
-        console.error("Failed to initialize OPFS:", e);
+    } catch {
+        console.error("Failed to initialize OPFS");
     }
 }
 
@@ -80,7 +80,7 @@ registerRoute(
                         'Cache-Control': 'public, max-age=31536000',
                     }
                 });
-            } catch (e) {
+            } catch {
                 // Not found in OPFS, fetch from network and stream it into OPFS while reading
                 const networkResponse = await fetch(request);
                 if (!networkResponse.ok || !networkResponse.body) return networkResponse;
@@ -104,8 +104,8 @@ registerRoute(
                 return responseToBrowser;
             }
 
-        } catch (e) {
-            console.error("OPFS Access Error:", e);
+        } catch {
+            console.error("OPFS Access Error");
             return fetch(request);
         }
     }

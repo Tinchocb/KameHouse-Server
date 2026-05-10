@@ -2,11 +2,11 @@ import { useState, useMemo, useCallback } from "react"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { cn } from "@/components/ui/core/styling"
 import { useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
-import { HardDrive, Star, ArrowLeft, Calendar, Clock, CheckCircle2, Circle, ChevronRight, ChevronDown } from "lucide-react"
+import { HardDrive, Star, ArrowLeft, Calendar, Clock, CheckCircle2, Circle, ChevronDown } from "lucide-react"
 import { VideoPlayer } from "@/components/video/player"
-import type { Mediastream_StreamType, Anime_Episode } from "@/api/generated/types"
+import type { Mediastream_StreamType } from "@/api/generated/types"
 import { toast } from "sonner"
-import { PageHeader } from "@/components/ui/page-header"
+
 import { ProgressBar } from "@/components/ui/progress-bar"
 
 export const Route = createFileRoute("/series/$seriesId/$sagaId")({
@@ -226,7 +226,7 @@ interface RightPanelProps {
     currentWatched: boolean
     onPlayEpisode: (ep: Episode) => void
     downloadedEpisodes: Set<number>
-    libraryEntry?: any | null
+    libraryEntry?: Anime_Entry | null
 }
 
 function RightPanel({
@@ -333,7 +333,7 @@ function RightPanel({
                                 isActive={idx === currentIndex}
                                 isWatched={isWatched(ep.id)}
                                 isDownloaded={downloadedEpisodes.has(ep.number)}
-                                progress={episodeProgress}
+                                progress={episodeProgress ? 100 : undefined}
                                 onSelect={() => onSelectEpisode(idx)}
                             />
                         )
@@ -372,7 +372,7 @@ function DetailPage() {
             title: media.titleRomaji || media.titleEnglish || "Serie",
             year: media.year?.toString() || "",
             episodesCount: media.totalEpisodes || 0,
-            genres: (media.genres as unknown as string[]) || ["Anime"],
+            genres: media.genres || ["Anime"],
             rating: media.score || media.rating || 0,
             durationPerEp: "24 min / ep",
             studios: [] as string[],

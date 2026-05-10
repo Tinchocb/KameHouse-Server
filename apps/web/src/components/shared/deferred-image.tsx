@@ -15,7 +15,6 @@ interface DeferredImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageEleme
     showSkeleton?: boolean;
 }
 
-const BLUR_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3Crect fill='%231a1a1b'/%3E%3C/svg%3E"
 const NO_COVER = "/no-cover.png"
 
 export function DeferredImage(props: DeferredImageProps) {
@@ -56,12 +55,14 @@ export function DeferredImage(props: DeferredImageProps) {
             return;
         }
 
+        const currentElement = containerRef.current;
+
         const observer = new IntersectionObserver(
             ([entry]) => {
                 if (entry.isIntersecting) {
                     setIsIntersecting(true);
-                    if (containerRef.current) {
-                        observer.unobserve(containerRef.current);
+                    if (currentElement) {
+                        observer.unobserve(currentElement);
                     }
                 }
             },
@@ -71,13 +72,13 @@ export function DeferredImage(props: DeferredImageProps) {
             }
         );
 
-        if (containerRef.current) {
-            observer.observe(containerRef.current);
+        if (currentElement) {
+            observer.observe(currentElement);
         }
 
         return () => {
-            if (containerRef.current) {
-                observer.unobserve(containerRef.current);
+            if (currentElement) {
+                observer.unobserve(currentElement);
             }
         };
     }, [rootMargin, threshold, priority]);
@@ -127,6 +128,7 @@ export function DeferredImage(props: DeferredImageProps) {
                         "h-full w-full object-cover will-change-[filter,transform,opacity]",
                         !isLoaded && "invisible"
                     )}
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     {...(restProps as any)}
                 />
             )}

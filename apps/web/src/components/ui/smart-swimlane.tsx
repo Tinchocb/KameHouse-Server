@@ -45,39 +45,6 @@ function laneBadge(laneType: string): string {
     }
 }
 
-// ─── IntelligenceBadge component ──────────────────────────────────────────────
-
-function IntelligenceBadge({
-    tag,
-    arcName,
-}: {
-    tag?: ContentTag
-    arcName?: string
-}) {
-    const badge = tag && tag !== "CANON" ? tagBadge(tag) : null
-
-    if (!badge && !arcName) return null
-
-    return (
-        <div className="absolute bottom-10 left-2 right-2 z-30 flex flex-wrap gap-1 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-            {badge && (
-                <span
-                    className={cn(
-                        "rounded px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest border backdrop-blur-sm",
-                        badge.className,
-                    )}
-                >
-                    {badge.label}
-                </span>
-            )}
-            {arcName && (
-                <span className="rounded border border-white/10 bg-black/60 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider text-zinc-300 backdrop-blur-sm">
-                    {arcName}
-                </span>
-            )}
-        </div>
-    )
-}
 
 // ─── SmartSwimlane ────────────────────────────────────────────────────────────
 

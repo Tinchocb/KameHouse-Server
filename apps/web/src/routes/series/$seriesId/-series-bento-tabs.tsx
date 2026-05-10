@@ -1,10 +1,10 @@
 import React from "react"
-import { Anime_LibraryCollectionEntry, Anime_LocalFile, NormalizedMedia } from "@/api/generated/types"
-import { FileVideo, MonitorPlay, Users, Database } from "lucide-react"
+import { Models_LibraryMedia, Anime_LocalFile } from "@/api/generated/types"
+import { MonitorPlay, Database } from "lucide-react"
 
 // ─── RELATIONS TAB ─────────────────────────────────────────────────────────────
 
-export const RelationsTab = React.memo(function RelationsTab({ media }: { media?: NormalizedMedia }) {
+export const RelationsTab = React.memo(function RelationsTab({ media }: { media?: Models_LibraryMedia }) {
     if (!media || !media.relations || media.relations.length === 0) {
         return (
             <div className="py-24 text-center">
@@ -36,7 +36,7 @@ export const RelationsTab = React.memo(function RelationsTab({ media }: { media?
 
 // ─── CHARACTERS TAB ────────────────────────────────────────────────────────────
 
-export const CharactersTab = React.memo(function CharactersTab({ characters }: { characters: any[] }) {
+export const CharactersTab = React.memo(function CharactersTab({ characters }: { characters: NonNullable<Models_LibraryMedia["characters"]>["edges"] }) {
     if (!characters || characters.length === 0) {
         return (
             <div className="py-24 text-center">

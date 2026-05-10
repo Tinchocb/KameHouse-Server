@@ -76,3 +76,11 @@ export interface EpisodeSourcesParams {
     mediaId: number
     epNum: number
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Technical Information Aliases
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type TechnicalInfo = NonNullable<import("@/api/generated/types").Anime_LocalFile["technicalInfo"]>
+export type ExtendedLocalFile = import("@/api/generated/types").Anime_LocalFile
+export type NormalizedMedia = import("@/api/generated/types").Models_LibraryMedia

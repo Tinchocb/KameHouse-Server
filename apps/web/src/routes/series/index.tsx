@@ -1,17 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { useState, useMemo, memo } from "react"
-import { Search, Filter, Tv, Play, Star, List, Sparkles, LayoutGrid, Library } from "lucide-react"
-import { FaStar } from "react-icons/fa"
-import { motion, AnimatePresence } from "framer-motion"
+import { useState, useMemo } from "react"
+import { Search, Filter, Tv, LayoutGrid, Library } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 import { PageHeader } from "@/components/ui/page-header"
 import { EmptyState } from "@/components/shared/empty-state"
-import { DeferredImage } from "@/components/shared/deferred-image"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
-import type { Anime_LibraryCollectionEntry } from "@/api/generated/types"
 import { VhsShelfAccordion, type VhsTapeItem } from "@/components/shared/vhs-shelf-accordion"
 import { ContinueWatchingCarousel } from "@/components/shared/continue-watching-carousel"
-import { AnimePosterCard } from "@/components/shared/anime-poster-card"
 import { CassetteCard } from "@/components/shared/cassette-card"
 
 export const Route = createFileRoute("/series/")({
@@ -20,7 +15,6 @@ export const Route = createFileRoute("/series/")({
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
-const SPINE_WIDTH = 40
 
 // ─── SeriesPage Component ─────────────────────────────────────────────────
 

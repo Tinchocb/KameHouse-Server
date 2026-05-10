@@ -33,7 +33,6 @@ export type LoadingSpinnerProps = React.ComponentPropsWithRef<"div"> & Component
 export const LoadingSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>((props, ref) => {
 
     const {
-        children,
         className,
         containerClass,
         iconClass,
@@ -47,6 +46,7 @@ export const LoadingSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerPro
             className={cn(
                 LoadingSpinnerAnatomy.container(),
                 containerClass,
+                className,
             )}
             {...rest}
             ref={ref}
@@ -69,9 +69,9 @@ interface SpinnerProps extends React.ComponentPropsWithRef<"svg"> {
     children?: React.ReactNode
 }
 
-export const Spinner = React.forwardRef<SVGSVGElement, SpinnerProps>((props, ref) => {
+export const Spinner = React.forwardRef<SVGSVGElement, SpinnerProps>((props, _ref) => {
 
-    const { children, className, ...rest } = props
+    const { className } = props
 
     return (
         <ImSpinner2

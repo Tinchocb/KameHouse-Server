@@ -11,18 +11,19 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         const [
             partProps,
             { inputContainerProps, leftAddonProps, rightAddonProps, leftIconProps, rightIconProps },
-        ] = extractInputPartProps(props as any)
+        ] = extractInputPartProps(props as unknown as Record<string, unknown>)
 
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const {
             size,
             intent,
             hasError,
-            leftAddon,
-            leftIcon,
-            rightAddon,
-            rightIcon,
+            leftAddon: _leftAddon,
+            leftIcon: _leftIcon,
+            rightAddon: _rightAddon,
+            rightIcon: _rightIcon,
             ...rest
-        } = partProps as any
+        } = partProps as Record<string, unknown>
 
         return (
             <div className={cn("relative flex w-full items-center", inputContainerProps.className)}>
@@ -36,9 +37,9 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
                     type={type}
                     className={cn(
                         InputAnatomy.root({
-                            size: size,
-                            intent: intent,
-                            hasError: hasError,
+                            size: size as InputStyling["size"],
+                            intent: intent as InputStyling["intent"],
+                            hasError: hasError as boolean,
                             isDisabled: props.disabled,
                             hasLeftIcon: !!leftIconProps.icon,
                             hasRightIcon: !!rightIconProps.icon,
@@ -48,7 +49,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
                         className,
                     )}
                     ref={ref}
-                    {...(rest as any)}
+                    {...(rest as React.InputHTMLAttributes<HTMLInputElement>)}
                 />
                 {rightIconProps.icon && (
                     <div className="absolute right-3 flex items-center pointer-events-none">

@@ -1,5 +1,5 @@
 import * as React from "react"
-import type { UnifiedResolutionResponse } from "@/api/types/unified.types"
+import type { UnifiedResolutionResponse, ResolveStreamsParams } from "@/api/types/unified.types"
 import { buildSeaQuery } from "@/api/client/requests"
 
 /**
@@ -16,10 +16,10 @@ export function useQuickPlay(onFallback: (mediaId: number) => void) {
         async (mediaId: number) => {
             setIsResolving(true)
             try {
-                const data = await buildSeaQuery<UnifiedResolutionResponse>({
+                const data = await buildSeaQuery<UnifiedResolutionResponse, ResolveStreamsParams>({
                     endpoint: `/api/v1/resolver/streams`,
                     method: "GET",
-                    params: { mediaId, episode: 1 } as any,
+                    params: { mediaId, episode: 1 },
                 })
                 if (data) {
                     setResolution(data)

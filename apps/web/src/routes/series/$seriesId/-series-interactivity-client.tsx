@@ -1,7 +1,7 @@
 import React from "react"
 import { FaPlay } from "react-icons/fa"
 import { ManualMatchModal } from "@/components/shared/manual-match-modal"
-import { useAnimeEntryManualMatch, useAnimeEntryUnmatch } from "@/api/hooks/anime_entries.hooks"
+import { useAnimeEntryUnmatch } from "@/api/hooks/anime_entries.hooks"
 import { Anime_Episode, Anime_LocalFile } from "@/api/generated/types"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { cn } from "@/components/ui/core/styling"
@@ -87,7 +87,6 @@ MediaActionButtons.displayName = "MediaActionButtons"
 
 interface EpisodeListItemProps {
     episode: Anime_Episode
-    seriesTitle: string
     fallbackThumb: string
     localFile?: Anime_LocalFile
     onPlay?: (localFile: Anime_LocalFile, episode: Anime_Episode) => void
@@ -96,7 +95,6 @@ interface EpisodeListItemProps {
 
 const EpisodeListItem = React.memo(function EpisodeListItem({
     episode,
-    seriesTitle,
     fallbackThumb,
     localFile,
     onPlay,
@@ -176,7 +174,7 @@ const EpisodeListItem = React.memo(function EpisodeListItem({
                                 DISPONIBLE LOCAL
                             </span>
                         )}
-                        {episode.episodeMetadata?.runtime && <span>{episode.episodeMetadata.runtime} MIN</span>}
+                        {episode.episodeMetadata?.length && <span>{episode.episodeMetadata.length} MIN</span>}
                         {episode.episodeMetadata?.airDate && <span>{episode.episodeMetadata.airDate}</span>}
                     </div>
                 </div>

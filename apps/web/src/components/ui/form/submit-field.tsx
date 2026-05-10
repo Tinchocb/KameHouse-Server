@@ -47,7 +47,7 @@ export const SubmitField = React.forwardRef<HTMLButtonElement, SubmitFieldProps>
         disableOnSuccess = role === "create",
         disableIfInvalid = false,
         showLoadingOverlayOnSuccess = false,
-        showLoadingOverlayOnCreate = true,
+        showLoadingOverlayOnCreate: _showLoadingOverlayOnCreate = true,
         loadingOverlay,
         ...rest
     } = props

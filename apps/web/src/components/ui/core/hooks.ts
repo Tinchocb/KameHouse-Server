@@ -66,5 +66,6 @@ export function useUpdateEffect(effect: React.EffectCallback, deps?: React.Depen
         } else {
             return effect()
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, deps)
 }

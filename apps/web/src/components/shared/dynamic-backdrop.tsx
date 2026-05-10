@@ -59,7 +59,7 @@ export function DynamicBackdrop() {
 
     // Orchestrate a smooth cross-fade without Framer Motion (pure CSS opacity)
     React.useEffect(() => {
-        if (currentBackdropUrl === displayedUrl) return
+        if (!currentBackdropUrl || currentBackdropUrl === displayedUrl) return
 
         if (!displayedUrl) {
             // First image — just show it
@@ -78,7 +78,7 @@ export function DynamicBackdrop() {
         }, 520) // slightly longer than the CSS transition (500ms)
 
         return () => clearTimeout(timer)
-    }, [currentBackdropUrl]) // eslint-disable-line react-hooks/exhaustive-deps
+    }, [currentBackdropUrl, displayedUrl])
 
     return (
         <div

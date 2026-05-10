@@ -143,7 +143,7 @@ export const RadioGroup = React.forwardRef<HTMLButtonElement, RadioGroupProps>((
             _setValue(controlledValue)
         }
         isFirst.current = false
-    }, [controlledValue])
+    }, [controlledValue, defaultValue])
 
     return (
         <BasicField{...basicFieldProps}>

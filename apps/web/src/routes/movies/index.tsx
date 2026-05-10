@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useState, useMemo, memo } from "react"
-import { Clapperboard, Search, SortDesc, SlidersHorizontal } from "lucide-react"
-import { cn } from "@/components/ui/core/styling"
+import { Clapperboard, Search, SlidersHorizontal } from "lucide-react"
 import { MediaCard } from "@/components/ui/media-card"
 import { PageHeader } from "@/components/ui/page-header"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"

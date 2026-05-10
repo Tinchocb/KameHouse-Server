@@ -158,8 +158,8 @@ export function useDraggableScroll(
     }
 
     const rubberBandAnimationTimer = useRef<NodeJS.Timeout | null>(null)
-    const keepMovingX = useRef<NodeJS.Timer | null>(null)
-    const keepMovingY = useRef<NodeJS.Timer | null>(null)
+    const keepMovingX = useRef<NodeJS.Timeout | null>(null)
+    const keepMovingY = useRef<NodeJS.Timeout | null>(null)
 
     const callbackMomentum = () => {
         const minimumSpeedToTriggerMomentum = 0.05
@@ -182,7 +182,7 @@ export function useDraggableScroll(
             ) {
                 internalState.current.scrollSpeedX = 0
                 if (keepMovingX.current) {
-                    clearInterval(keepMovingX.current as any)
+                    clearInterval(keepMovingX.current)
                     keepMovingX.current = null
                 }
             }
@@ -206,7 +206,7 @@ export function useDraggableScroll(
             ) {
                 internalState.current.scrollSpeedY = 0
                 if (keepMovingY.current) {
-                    clearInterval(keepMovingY.current as any)
+                    clearInterval(keepMovingY.current)
                     keepMovingY.current = null
                 }
             }
@@ -353,10 +353,11 @@ export function useDraggableScroll(
             window.removeEventListener("mousemove", onMouseMove)
             window.removeEventListener("resize", handleResize)
 
-            if (keepMovingX.current) clearInterval(keepMovingX.current as any)
-            if (keepMovingY.current) clearInterval(keepMovingY.current as any)
+            if (keepMovingX.current) clearInterval(keepMovingX.current)
+            if (keepMovingY.current) clearInterval(keepMovingY.current)
             if (rubberBandAnimationTimer.current) clearTimeout(rubberBandAnimationTimer.current)
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isMounted])
 
     return {

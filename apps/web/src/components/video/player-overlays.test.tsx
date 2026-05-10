@@ -7,19 +7,19 @@ describe("Player Overlays", () => {
     describe("LoadingErrorOverlay", () => {
         it("renders loading state", () => {
             render(<LoadingErrorOverlay status="loading" errorMsg="" streamType="transcode" isBuffering={false} onClose={() => {}} />)
-            expect(screen.getByText("Preparando Transmisión")).toBeInTheDocument()
+            expect(screen.getByText(/PREPARANDO TRANSMISIÓN/i)).toBeInTheDocument()
         })
 
         it("renders error state with generic message", () => {
             render(<LoadingErrorOverlay status="error" errorMsg="Stream no encontrado" streamType="transcode" isBuffering={false} onClose={() => {}} />)
-            expect(screen.getByText("Transmisión Caída")).toBeInTheDocument()
+            expect(screen.getByText(/TRANSMISIÓN CAÍDA/i)).toBeInTheDocument()
             expect(screen.getByText("Stream no encontrado")).toBeInTheDocument()
         })
 
         it("calls onClose when returning from error", () => {
             const spy = vi.fn()
             render(<LoadingErrorOverlay status="error" errorMsg="x" streamType="x" isBuffering={false} onClose={spy} />)
-            fireEvent.click(screen.getByText("Regresar"))
+            fireEvent.click(screen.getByText(/REGRESAR/i))
             expect(spy).toHaveBeenCalledTimes(1)
         })
     })

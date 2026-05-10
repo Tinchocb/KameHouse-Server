@@ -88,7 +88,7 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 				Overview: movieDetails.Overview,
 				Image:    "https://image.tmdb.org/t/p/original" + movieDetails.BackdropPath,
 				AirDate:  movieDetails.ReleaseDate,
-				Runtime:  0, // Movie details SearchResult doesn't have runtime
+				Length:   0, // Movie details SearchResult doesn't have runtime
 			},
 		}
 	} else {

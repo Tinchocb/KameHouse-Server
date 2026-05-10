@@ -23,8 +23,8 @@ export const useFormSchema = (): { shape: z.ZodRawShape, schema: z.ZodObject<z.Z
     return React.useContext(__FormSchemaContext)!
 }
 
-export type SubmitHandler<T> = (data: T, event?: React.BaseSyntheticEvent) => any
-export type SubmitErrorHandler<TFieldValues extends FieldValues> = (errors: FieldErrors<TFieldValues>, event?: React.BaseSyntheticEvent) => any
+export type SubmitHandler<T> = (data: T, event?: React.BaseSyntheticEvent) => void | Promise<void>
+export type SubmitErrorHandler<TFieldValues extends FieldValues> = (errors: FieldErrors<TFieldValues>, event?: React.BaseSyntheticEvent) => void | Promise<void>
 
 /* -------------------------------------------------------------------------------------------------
  * Form
@@ -48,7 +48,7 @@ export type FormProps<Schema extends z.ZodObject<z.ZodRawShape> = z.ZodObject<z.
     /**
      * Callback invoked when there are validation errors.
      */
-    onError?: SubmitErrorHandler<any>
+    onError?: SubmitErrorHandler<NoInfer<z.infer<Schema>>>
     /**
      * Ref to the form element.
      */
@@ -94,8 +94,8 @@ export const Form = <Schema extends z.ZodObject<z.ZodRawShape>>(props: FormProps
         return {
             ...getZodDefaults(schema),
             ..._defaultValues,
-        } as any
-    }, [])
+        } as unknown as UseFormProps<NoInfer<z.infer<Schema>>>["defaultValues"]
+    }, [schema, _defaultValues])
 
     const form = {
         mode,
@@ -114,11 +114,12 @@ export const Form = <Schema extends z.ZodObject<z.ZodRawShape>>(props: FormProps
     const methods = useForm(form)
     const { handleSubmit } = methods
 
-    React.useImperativeHandle(mRef, () => methods, [mRef, methods])
+    React.useImperativeHandle(mRef, () => methods, [methods])
 
     React.useEffect(() => {
         let subscription: ReturnType<typeof methods.watch> | undefined
         if (onChange) {
+            // eslint-disable-next-line react-hooks/incompatible-library
             subscription = methods.watch(onChange)
         }
         return () => subscription?.unsubscribe()
@@ -152,11 +153,11 @@ type MaybeRenderProp<P> =
     | React.ReactNode
     | ((props: P) => React.ReactNode)
 
-const isFunction = <T extends (...args: any[]) => any = (...args: any[]) => any>(value: any): value is T => typeof value === "function"
+const isFunction = <T extends (...args: unknown[]) => unknown = (...args: unknown[]) => unknown>(value: unknown): value is T => typeof value === "function"
 
 function runIfFn<T, U>(
     valueOrFn: T | ((...fnArgs: U[]) => T),
     ...args: U[]
 ): T {
-    return isFunction(valueOrFn) ? valueOrFn(...args) : valueOrFn
+    return isFunction(valueOrFn) ? (valueOrFn as any)(...args) : (valueOrFn as any)
 }

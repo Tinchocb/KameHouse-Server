@@ -62,7 +62,7 @@ function EpicChip({ tag }: { tag?: ContentTag }) {
             className={cn(
                 "inline-flex items-center gap-1 border rounded-md px-3 py-0.5",
                 "text-[0.65rem] font-bold uppercase tracking-[0.22em]",
-                "border-brand-orange/30 bg-brand-orange/15 text-brand-orange shadow-[0_0_12px_rgba(255,110,58,0.25)]",
+                "border-brand-orange/30 bg-brand-orange/15 text-brand-orange",
             )}
         >
             {tag === "EPIC" ? <Flame className="h-2.5 w-2.5" /> : <Sparkles className="h-2.5 w-2.5" />}
@@ -232,11 +232,10 @@ export function HeroBanner({
                             whileHover={{ 
                                 scale: 1.02, 
                                 backgroundColor: "var(--brand-orange-hover)",
-                                boxShadow: "0 0 25px rgba(255,110,58,0.5)"
                             }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => activeItem.onPlay()}
-                            className="group/btn relative flex items-center justify-center gap-3 bg-brand-orange text-white h-12 md:h-14 px-8 rounded-xl font-bold text-sm uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(255,110,58,0.3)] overflow-hidden border border-brand-orange"
+                            className="group/btn relative flex items-center justify-center gap-3 bg-brand-orange text-white h-12 md:h-14 px-8 rounded-xl font-bold text-sm uppercase tracking-widest transition-all shadow-md shadow-black/20 hover:brightness-105 overflow-hidden border border-brand-orange"
                         >
                             <Play className="w-5 h-5 fill-current relative z-10" />
                             <span className="relative z-10">Ver ahora</span>
@@ -245,10 +244,12 @@ export function HeroBanner({
                         <motion.button
                             whileHover={{ 
                                 scale: 1.02, 
+                                backgroundColor: "rgba(255,255,255,0.05)",
+                                borderColor: "rgba(255,255,255,0.2)",
                             }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => activeItem.onMoreInfo()}
-                            className="flex items-center justify-center gap-3 bg-[#0a0e1a]/60 backdrop-blur-md text-white h-12 md:h-14 px-8 rounded-xl font-bold text-sm uppercase tracking-widest transition-all border border-white/10 hover:border-brand-orange/30 hover:shadow-[0_0_15px_rgba(255,110,58,0.15)]"
+                            className="flex items-center justify-center gap-3 bg-[#0a0e1a]/60 backdrop-blur-md text-white h-12 md:h-14 px-8 rounded-xl font-bold text-sm uppercase tracking-widest transition-all border border-white/10"
                         >
                             <Info className="w-5 h-5" />
                             Detalles
@@ -279,7 +280,7 @@ export function HeroBanner({
                                 </div>
                                 <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
                                     <div
-                                        className="h-full bg-gradient-to-r from-brand-orange to-amber-500 shadow-[0_0_8px_rgba(255,110,58,0.5)]"
+                                        className="h-full bg-gradient-to-r from-brand-orange to-amber-500"
                                         style={{
                                             width: `${Math.min(100, Math.max(0, activeItem.progress))}%`,
                                         }}
@@ -303,7 +304,7 @@ export function HeroBanner({
                             onClick={() => setActiveIndex(index)}
                             className={cn(
                                 "h-1.5 rounded-full bg-white/20 transition-all duration-300 motion-reduce:transition-none",
-                                index === activeIndex ? "w-10 bg-brand-orange shadow-[0_0_10px_rgba(255,110,58,0.5)]" : "w-4 hover:bg-white/50",
+                                index === activeIndex ? "w-10 bg-brand-orange" : "w-4 hover:bg-white/50",
                             )}
                         />
                     ))}

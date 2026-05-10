@@ -123,7 +123,7 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>((props, r
             _setValue(controlledValue)
         }
         isFirst.current = false
-    }, [controlledValue])
+    }, [controlledValue, defaultValue])
 
     return (
         <BasicField

@@ -1289,6 +1289,7 @@ export type Anime_Episode = {
      * e.g, "Shibuya Incident - Gate, Open"
      */
     episodeTitle: string
+    titleSpanish?: string
     episodeNumber: number
     seasonNumber?: number
     /**
@@ -1322,6 +1323,7 @@ export type Anime_Episode = {
      */
     metadataIssue?: string
     baseAnime?: Models_LibraryMedia
+    watched?: boolean
 }
 
 /**
@@ -1436,6 +1438,21 @@ export type Anime_LocalFile = {
     ignored: boolean
     libraryMediaId: number
     mediaId: number
+    technicalInfo?: {
+        format: string
+        size: number
+        videoStream?: {
+            width: number
+            height: number
+            codec: string
+            colorSpace?: string
+            frameRate?: string
+        }
+        audioStreams?: Array<{
+            language?: string
+            codec: string
+        }>
+    }
 }
 
 /**
@@ -3273,6 +3290,9 @@ export type Models_LibraryMedia = {
     titleOriginal: string
     titleRomaji: string
     titleEnglish: string
+    titleSpanish?: string
+    runtime?: number
+    watched?: boolean
     /**
      * JSON array of strings
      */
@@ -3286,8 +3306,28 @@ export type Models_LibraryMedia = {
      * Path or URL
      */
     bannerImage: string
+    coverImage?: {
+        large: string
+        medium: string
+        color?: string
+    }
 
     tmdbId: number
+    idMal?: number
+    logoImage?: string
+    characters?: {
+        edges: Array<{
+            role: string
+            node: {
+                name: string
+                image: string
+            }
+        }>
+    }
+    relations?: Array<{
+        relationType: string
+        node: Models_LibraryMedia
+    }>
     seasonNumber: number
     startDate?: string
     endDate?: string
@@ -3358,7 +3398,6 @@ export type Models_LibrarySettings = {
     refreshLibraryOnStart: boolean
     autoPlayNextEpisode: boolean
     enableWatchContinuity: boolean
-
     autoSyncOfflineLocalData: boolean
     scannerMatchingThreshold: number
     scannerMatchingAlgorithm: string
@@ -3378,7 +3417,10 @@ export type Models_LibrarySettings = {
     disableTorrentStreaming: boolean
     disableDebridService: boolean
     disableTorrentProvider: boolean
-
+    primaryMetadataProvider: string
+    fanartApiKey: string
+    omdbApiKey: string
+    openSubsApiKey: string
 }
 
 /**

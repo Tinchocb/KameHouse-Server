@@ -61,6 +61,7 @@ export const useEffectDebugger = (
         previousDeps.current = dependencies
 
         return effectHook()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, dependencies) // Pass the original dependencies to useEffect
 }
 

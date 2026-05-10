@@ -4,7 +4,7 @@ import React from "react"
 import { ErrorBoundary as ReactErrorBoundary, ErrorBoundaryProps as ReactErrorBoundaryProps } from "react-error-boundary"
 
 interface AppErrorBoundaryProps {
-    error: any
+    error: unknown
     resetErrorBoundary?: () => void
 }
 
@@ -25,9 +25,10 @@ export function AppErrorBoundary({ error, resetErrorBoundary }: AppErrorBoundary
         }
         
         // Detect chunk loading errors (Failed to fetch dynamically imported module)
-        const isChunkLoadError = error?.message?.toLowerCase().includes("failed to fetch dynamically imported module") || 
-                                 error?.name === "ChunkLoadError" ||
-                                 error?.message?.toLowerCase().includes("import");
+        const err = error as Error | undefined;
+        const isChunkLoadError = err?.message?.toLowerCase().includes("failed to fetch dynamically imported module") || 
+                                 err?.name === "ChunkLoadError" ||
+                                 err?.message?.toLowerCase().includes("import");
         
         if (isChunkLoadError) {
             window.location.reload();
@@ -38,9 +39,10 @@ export function AppErrorBoundary({ error, resetErrorBoundary }: AppErrorBoundary
         queryClient.invalidateQueries()
     }
 
-    const isChunkLoadError = error?.message?.toLowerCase().includes("failed to fetch dynamically imported module") || 
-                             error?.name === "ChunkLoadError" ||
-                             error?.message?.toLowerCase().includes("import");
+    const err = error as Error | undefined;
+    const isChunkLoadError = err?.message?.toLowerCase().includes("failed to fetch dynamically imported module") || 
+                             err?.name === "ChunkLoadError" ||
+                             err?.message?.toLowerCase().includes("import");
 
     return (
         <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center bg-black border border-zinc-800">
@@ -72,8 +74,8 @@ export function AppErrorBoundary({ error, resetErrorBoundary }: AppErrorBoundary
 interface ErrorBoundaryWrapperProps {
     children: React.ReactNode
     className?: string
-    onReset?: (...args: any[]) => void
-    resetKeys?: any[]
+    onReset?: (...args: unknown[]) => void
+    resetKeys?: unknown[]
 }
 
 export function ErrorBoundary({ children, className, ...props }: ErrorBoundaryWrapperProps) {

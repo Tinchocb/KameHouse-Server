@@ -123,7 +123,7 @@ func getSubtitleTrackType(codecID string) string {
 }
 
 // parseMetadataOnce performs the actual parsing of the file stream.
-func (mp *MetadataParser) parseMetadataOnce(ctx context.Context) {
+func (mp *MetadataParser) parseMetadataOnce(_ context.Context) {
 	mp.parseOnce.Do(func() {
 		mp.logger.Debug().Msg("mkvparser: Starting metadata parsing")
 

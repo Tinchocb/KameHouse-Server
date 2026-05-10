@@ -147,7 +147,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>((props, r
             _setValue(controlledValue)
         }
         isFirst.current = false
-    }, [controlledValue])
+    }, [controlledValue, defaultValue])
 
     return (
         <BasicField {...basicFieldProps}>

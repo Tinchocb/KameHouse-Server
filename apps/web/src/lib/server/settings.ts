@@ -62,9 +62,6 @@ export const settingsSchema = z.object({
         richPresenceShowPlatformMediaButton: z.boolean().optional().default(false),
         richPresenceShowPlatformProfileButton: z.boolean().optional().default(false),
         richPresenceUseMediaTitleStatus: z.boolean().optional().default(true),
-        disableNotifications: z.boolean().optional().default(false),
-        disableAutoDownloaderNotifications: z.boolean().optional().default(false),
-        disableAutoScannerNotifications: z.boolean().optional().default(false),
 
         autoPlayNextEpisode: z.boolean().optional().default(false),
         showActiveTorrentCount: z.boolean().optional().default(false),
@@ -91,6 +88,10 @@ export const settingsSchema = z.object({
         disableLocalScanning: z.boolean().optional().default(false),
         disableTorrentStreaming: z.boolean().optional().default(false),
         disableTorrentProvider: z.boolean().optional().default(false),
+        primaryMetadataProvider: z.string().optional().default("tmdb"),
+        fanartApiKey: z.string().optional().default(""),
+        omdbApiKey: z.string().optional().default(""),
+        openSubsApiKey: z.string().optional().default(""),
     }),
     mediaPlayer: z.object({
         host: z.string(),
@@ -181,6 +182,11 @@ export const settingsSchema = z.object({
         themeUnpinnedMenuItems: z.array(z.string()).default([]),
         themeEnableBlurringEffects: z.boolean().default(true),
     }),
+    notifications: z.object({
+        disableNotifications: z.boolean().default(false),
+        disableAutoDownloaderNotifications: z.boolean().default(false),
+        disableAutoScannerNotifications: z.boolean().default(false),
+    }),
 })
 
 export const gettingStartedSchema = _gettingStartedSchema.extend(settingsSchema.shape)
@@ -221,6 +227,10 @@ export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>): 
         disableTorrentProvider: data.library.disableTorrentProvider,
         tmdbApiKey: data.library.tmdbApiKey,
         tmdbLanguage: "es-MX",
+        primaryMetadataProvider: data.library.primaryMetadataProvider || "tmdb",
+        fanartApiKey: data.library.fanartApiKey || "",
+        omdbApiKey: data.library.omdbApiKey || "",
+        openSubsApiKey: data.library.openSubsApiKey || "",
     },
     mediaPlayer: {
         host: data.mediaPlayer.host,
@@ -254,9 +264,9 @@ export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>): 
     enableTorrentStreaming: data.enableTorrentStreaming,
     enableTranscode: data.enableTranscode,
     notifications: {
-        disableNotifications: false,
-        disableAutoDownloaderNotifications: false,
-        disableAutoScannerNotifications: false,
+        disableNotifications: data.notifications.disableNotifications,
+        disableAutoDownloaderNotifications: data.notifications.disableAutoDownloaderNotifications,
+        disableAutoScannerNotifications: data.notifications.disableAutoScannerNotifications,
     },
     debridProvider: "none",
     debridApiKey: "",
@@ -295,6 +305,6 @@ export function getDefaultMpvSocket(os: string) {
     }
 }
 
-export function getDefaultIinaSocket(os: string) {
+export function getDefaultIinaSocket(_os: string) {
     return "/tmp/iina_socket"
 }

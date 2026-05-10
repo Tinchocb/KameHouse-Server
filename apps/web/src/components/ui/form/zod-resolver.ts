@@ -25,7 +25,7 @@ const getType = (field: z.ZodTypeAny) => {
     }
 }
 
-const getArrayOption = (field: any, name: string) => {
+const getArrayOption = (field: z.ZodTypeAny | any, name: string) => {
     return field._def[name]?.value
 }
 
@@ -97,7 +97,7 @@ export const zodParseMeta = (meta: string) => {
     try {
         return JSON.parse(meta)
     }
-    catch (e) {
+    catch (_e) {
         return meta
     }
 }
@@ -133,12 +133,12 @@ export function getZodDescriptions<Schema extends z.AnyZodObject>(schema: Schema
  * @param key
  */
 export function getZodParsedDescription<T extends {
-    [p: string]: any
+    [p: string]: unknown
 }>(schema: z.AnyZodObject, key: string): T | undefined {
     const obj = getZodDescriptions(schema)
-    const parsedDescription: any = (typeof obj[key as keyof typeof obj] === "string" || obj[key as keyof typeof obj] instanceof String) ? JSON.parse(
+    const parsedDescription: unknown = (typeof obj[key as keyof typeof obj] === "string" || obj[key as keyof typeof obj] instanceof String) ? JSON.parse(
         obj[key as keyof typeof obj]) : undefined
-    if (parsedDescription.constructor == Object) {
+    if (parsedDescription && typeof parsedDescription === "object" && parsedDescription.constructor === Object) {
         return parsedDescription as T
     }
     return undefined

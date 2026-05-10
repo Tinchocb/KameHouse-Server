@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import {
     LucideLink, LucideSearch, LucideAlertTriangle,
     LucideCheck, LucideChevronDown, LucideChevronUp,
-    LucideLoader2, LucideX, LucideFileVideo,
+    LucideLoader2, LucideFileVideo,
 } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 import { useGetUnlinkedFiles, useResolveUnlinkedFile } from "@/api/hooks/unlinked.hooks"

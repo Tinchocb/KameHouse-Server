@@ -8,6 +8,14 @@ export const DRAGON_BALL_SERIES = {
     HEROES: 80629,
 }
 
+export type SubSagaDefinition = {
+    id: string
+    title: string
+    description?: string
+    startEp: number
+    endEp: number
+}
+
 export type SagaDefinition = {
     id: string
     title: string
@@ -15,6 +23,7 @@ export type SagaDefinition = {
     startEp: number
     endEp: number
     image: string
+    subSagas?: SubSagaDefinition[]
 }
 
 export const DRAGON_BALL_SAGAS: Record<number, SagaDefinition[]> = {
@@ -25,7 +34,12 @@ export const DRAGON_BALL_SAGAS: Record<number, SagaDefinition[]> = {
             description: "La llegada de Raditz revela el verdadero origen extraterrestre de Goku. Los guerreros Z deben prepararse para la invasión de dos Saiyajins increíblemente poderosos: Nappa y Vegeta.",
             startEp: 1,
             endEp: 35,
-            image: "https://image.tmdb.org/t/p/w1280/ydf1CeiBLfdxiyNTpskM0802TKl.jpg"
+            image: "https://image.tmdb.org/t/p/w1280/ydf1CeiBLfdxiyNTpskM0802TKl.jpg",
+            subSagas: [
+                { id: "raditz", title: "Llegada de Raditz", startEp: 1, endEp: 6 },
+                { id: "entrenamiento", title: "Entrenamiento Especial", startEp: 7, endEp: 20 },
+                { id: "vegeta-nappa", title: "Batalla contra Vegeta y Nappa", startEp: 21, endEp: 35 }
+            ]
         },
         {
             id: "freezer",
@@ -33,7 +47,12 @@ export const DRAGON_BALL_SAGAS: Record<number, SagaDefinition[]> = {
             description: "Gohan, Krilin y Bulma viajan al planeta Namek para reunir las Esferas del Dragón originales y revivir a sus amigos, pero se topan con el tirano galáctico Freezer.",
             startEp: 36,
             endEp: 107,
-            image: "https://image.tmdb.org/t/p/w1280/v7J7q0yMAPbocBgiv39hpAMEcRf.jpg"
+            image: "https://image.tmdb.org/t/p/w1280/v7J7q0yMAPbocBgiv39hpAMEcRf.jpg",
+            subSagas: [
+                { id: "viaje-namek", title: "Viaje a Namek", startEp: 36, endEp: 67 },
+                { id: "fuerzas-ginyu", title: "Fuerzas Especiales Ginyu", startEp: 68, endEp: 74 },
+                { id: "batalla-freezer", title: "Batalla Final contra Freezer", startEp: 75, endEp: 107 }
+            ]
         },
         {
             id: "garlic-jr",
@@ -49,7 +68,13 @@ export const DRAGON_BALL_SAGAS: Record<number, SagaDefinition[]> = {
             description: "Un misterioso joven del futuro advierte sobre la llegada de unos androides asesinos creados por la Patrulla Roja y la aparición accidental de la bio-arma perfecta: Cell.",
             startEp: 118,
             endEp: 194,
-            image: "https://image.tmdb.org/t/p/w1280/zOz6DeXeOhKRVGUuiK3WufLXQIB.jpg"
+            image: "https://image.tmdb.org/t/p/w1280/zOz6DeXeOhKRVGUuiK3WufLXQIB.jpg",
+            subSagas: [
+                { id: "androides", title: "Trunks del Futuro y los Androides", startEp: 118, endEp: 139 },
+                { id: "cell-imperfecto", title: "Aparición de Cell Imperfecto", startEp: 140, endEp: 152 },
+                { id: "cell-semiperfecto", title: "Evolución a Cell Semiperfecto", startEp: 153, endEp: 165 },
+                { id: "juegos-cell", title: "Los Juegos de Cell", startEp: 166, endEp: 194 }
+            ]
         },
         {
             id: "torneo-otro-mundo",
@@ -65,7 +90,14 @@ export const DRAGON_BALL_SAGAS: Record<number, SagaDefinition[]> = {
             description: "Siete años después del juego de Cell, el malvado mago Babidi busca despertar al monstruo más temible que jamás haya existido en el universo: Majin Buu.",
             startEp: 200,
             endEp: 291,
-            image: "https://image.tmdb.org/t/p/w1280/aGEPZs4UYGULNdCmaMU05LNCO6W.jpg"
+            image: "https://image.tmdb.org/t/p/w1280/aGEPZs4UYGULNdCmaMU05LNCO6W.jpg",
+            subSagas: [
+                { id: "gran-saiyaman", title: "El Gran Saiyaman", startEp: 200, endEp: 219 },
+                { id: "torneo-artes", title: "El 25° Torneo de Artes Marciales", startEp: 220, endEp: 231 },
+                { id: "despertar-buu", title: "El Despertar de Majin Buu", startEp: 232, endEp: 253 },
+                { id: "super-buu", title: "La Amenaza de Super Buu", startEp: 254, endEp: 275 },
+                { id: "kid-buu", title: "Batalla Final (Kid Buu)", startEp: 276, endEp: 291 }
+            ]
         }
     ],
     [DRAGON_BALL_SERIES.SUPER]: [
@@ -107,7 +139,12 @@ export const DRAGON_BALL_SAGAS: Record<number, SagaDefinition[]> = {
             description: "Zeno-Sama organiza el Torneo del Poder donde 8 universos batallarán. El universo perdedor será aniquilado inmediatamente.",
             startEp: 77,
             endEp: 131,
-            image: "https://image.tmdb.org/t/p/w1280/o9A5w6L3V7H8Q4U2B5N6Q1P3O9I.jpg"
+            image: "https://image.tmdb.org/t/p/w1280/o9A5w6L3V7H8Q4U2B5N6Q1P3O9I.jpg",
+            subSagas: [
+                { id: "exhibicion", title: "Torneo de Exhibición de Todo", startEp: 77, endEp: 81 },
+                { id: "reclutamiento", title: "Búsqueda de los 10 Miembros", startEp: 82, endEp: 96 },
+                { id: "torneo-poder", title: "El Torneo de la Fuerza", startEp: 97, endEp: 131 }
+            ]
         }
     ],
     [DRAGON_BALL_SERIES.ORIGINAL]: [
@@ -133,7 +170,13 @@ export const DRAGON_BALL_SAGAS: Record<number, SagaDefinition[]> = {
             description: "Goku inicia la búsqueda de la esfera de 4 estrellas de su abuelo Gohan. En su camino se topa con el ejército de la Patrulla Roja, una organización criminal con tecnología avanzada que también busca las esferas para dominar el mundo.",
             startEp: 29,
             endEp: 68,
-            image: "https://image.tmdb.org/t/p/w1280/kFDi8xAQAMXsBPdpAEUUCLNnSln.jpg"
+            image: "https://image.tmdb.org/t/p/w1280/kFDi8xAQAMXsBPdpAEUUCLNnSln.jpg",
+            subSagas: [
+                { id: "coronel-silver", title: "Búsqueda y Coronel Silver", startEp: 29, endEp: 33 },
+                { id: "torre-fuerza", title: "La Torre de la Fuerza (General White)", startEp: 34, endEp: 45 },
+                { id: "general-blue", title: "Combate Submarino (General Blue)", startEp: 46, endEp: 57 },
+                { id: "tao-pai-pai", title: "Asesino Tao Pai Pai y Karin", startEp: 58, endEp: 68 }
+            ]
         },
         {
             id: "uranai-baba",
@@ -222,7 +265,7 @@ export const DRAGON_BALL_SAGAS: Record<number, SagaDefinition[]> = {
         {
             id: "kai-cell",
             title: "Saga Androides y Cell (Kai)",
-            description: "Los androides de la Patrulla Roja y la amenaza de Cell en versión remasterizada sin relleno. Gohan alcanzará un poder que superará a su padre.",
+            description: "Los androides de la Patrulla Roja y la amenaza de Cell en version remasterizada sin relleno. Gohan alcanzará un poder que superará a su padre.",
             startEp: 55,
             endEp: 98,
             image: "https://image.tmdb.org/t/p/w1280/zOz6DeXeOhKRVGUuiK3WufLXQIB.jpg"
@@ -275,6 +318,15 @@ export function resolveSeriesSagas(media: MediaForSagaResolution | null | undefi
     if (!media) return []
 
     const tmdbId = media.tmdbId || 0
+    const title = media.titleRomaji || media.titleEnglish || media.titleOriginal || ""
+    const searchTitle = title.toLowerCase().replace(/\s+/g, "")
+
+    const isMovie = media.format === "MOVIE"
+        || searchTitle.includes("movie")
+        || searchTitle.includes("pelicula")
+        || searchTitle.includes("aventura")
+
+    if (isMovie) return []
 
     // 1. Try exact match by TMDB ID
     if (tmdbId && DRAGON_BALL_SAGAS[tmdbId]) {
@@ -282,9 +334,6 @@ export function resolveSeriesSagas(media: MediaForSagaResolution | null | undefi
     }
 
     // 2. Fallback: match by title substring
-    const title = media.titleRomaji || media.titleEnglish || media.titleOriginal || ""
-    const searchTitle = title.toLowerCase().replace(/\s+/g, "")
-
     let resolved: SagaDefinition[] = []
 
     if (searchTitle.includes("dragonballz") || searchTitle === "dbz") {
@@ -302,15 +351,9 @@ export function resolveSeriesSagas(media: MediaForSagaResolution | null | undefi
     }
 
     // 3. Final safety net: if it contains "dragonball" but no specific suffix,
-    //    and it isn't a movie, default to Original DB.
+    //    default to Original DB.
     if ((!resolved || resolved.length === 0) && searchTitle.includes("dragonball")) {
-        const isMovie = media.format === "MOVIE"
-            || searchTitle.includes("movie")
-            || searchTitle.includes("pelicula")
-            || searchTitle.includes("aventura")
-        if (!isMovie) {
-            resolved = DRAGON_BALL_SAGAS[DRAGON_BALL_SERIES.ORIGINAL]
-        }
+        resolved = DRAGON_BALL_SAGAS[DRAGON_BALL_SERIES.ORIGINAL]
     }
 
     return resolved || []

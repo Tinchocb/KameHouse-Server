@@ -187,13 +187,13 @@ export function PlayerSettingsMenu({
     const isControlled = open !== undefined
     const isOpen = isControlled ? open : internalOpen
 
-    const setIsOpen = (v: boolean) => {
+    const setIsOpen = React.useCallback((v: boolean) => {
         if (isControlled) {
             onOpenChange?.(v)
         } else {
             setInternalOpen(v)
         }
-    }
+    }, [isControlled, onOpenChange])
 
     const panelRef = React.useRef<HTMLDivElement>(null)
     const buttonRef = React.useRef<HTMLButtonElement>(null)
@@ -213,7 +213,7 @@ export function PlayerSettingsMenu({
         }
         document.addEventListener("pointerdown", onPointerDown)
         return () => document.removeEventListener("pointerdown", onPointerDown)
-    }, [isOpen])
+    }, [isOpen, setIsOpen])
 
     // ── Keyboard: close on Escape ─────────────────────────────────────────────
     React.useEffect(() => {
@@ -223,7 +223,7 @@ export function PlayerSettingsMenu({
         }
         document.addEventListener("keydown", onKey, { capture: true })
         return () => document.removeEventListener("keydown", onKey, { capture: true })
-    }, [isOpen])
+    }, [isOpen, setIsOpen])
 
     const hasAudio = audioTracks.length > 0
     const hasSubs = subtitleTracks.length > 0

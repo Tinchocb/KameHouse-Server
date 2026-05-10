@@ -13,6 +13,22 @@ interface CassetteCardProps {
     size?: "normal" | "hero"
 }
 
+// SVG Reel for the realistic cassette tape
+const CassetteReel = () => (
+    <motion.svg
+        variants={{
+            idle: { rotate: 0 },
+            hover: { rotate: 360, transition: { repeat: Infinity, duration: 3, ease: "linear" } }
+        }}
+        className="w-full h-full max-w-[32px] max-h-[32px] text-zinc-700/80 fill-zinc-900/60"
+        viewBox="0 0 100 100"
+    >
+        <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="8" fill="transparent" />
+        <path d="M 50 15 L 50 85 M 15 50 L 85 50 M 25 25 L 75 75 M 25 75 L 75 25" stroke="currentColor" strokeWidth="6" />
+        <circle cx="50" cy="50" r="16" fill="#03060f" stroke="currentColor" strokeWidth="4" />
+    </motion.svg>
+)
+
 export const CassetteCard = memo(function CassetteCard({
     entry,
     onClick,
@@ -28,22 +44,6 @@ export const CassetteCard = memo(function CassetteCard({
         : null
 
     const SPINE_WIDTH = size === "hero" ? 56 : 40
-
-    // SVG Reel for the realistic cassette tape
-    const CassetteReel = () => (
-        <motion.svg
-            variants={{
-                idle: { rotate: 0 },
-                hover: { rotate: 360, transition: { repeat: Infinity, duration: 3, ease: "linear" } }
-            }}
-            className="w-full h-full max-w-[32px] max-h-[32px] text-zinc-700/80 fill-zinc-900/60"
-            viewBox="0 0 100 100"
-        >
-            <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="8" fill="transparent" />
-            <path d="M 50 15 L 50 85 M 15 50 L 85 50 M 25 25 L 75 75 M 25 75 L 75 25" stroke="currentColor" strokeWidth="6" />
-            <circle cx="50" cy="50" r="16" fill="#03060f" stroke="currentColor" strokeWidth="4" />
-        </motion.svg>
-    )
 
     return (
         <motion.div 

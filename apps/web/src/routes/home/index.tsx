@@ -9,22 +9,20 @@ import { HeroBanner, type HeroBannerItem, HeroBannerSkeleton } from "@/component
 import { Swimlane, type SwimlaneItem, SwimlaneSkeleton } from "@/components/ui/swimlane"
 import { ErrorBoundary } from "@/components/shared/app-error-boundary"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { Sparkles, Zap, Globe2, Clapperboard, Layers, Tv, Film, Star } from "lucide-react"
+import { Sparkles, Zap, Globe2, Tv, Film } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import * as React from "react"
 import {
     useContinueWatching,
     useHomeIntelligence,
     useIntelligenceStore,
-    type IntelligentEntry,
 } from "@/hooks/use-home-intelligence"
 import { DynamicBackdrop } from "@/components/shared/dynamic-backdrop"
 import { SmartSwimlane } from "@/components/ui/smart-swimlane"
 
-import { getTitle, getBackdrop, getProgress } from "./home.helpers"
+import { getTitle, getBackdrop } from "./home.helpers"
 import { 
     mapEpisodeToSwimlaneItem, 
-    mapEntryToHeroItem, 
     mapEpisodeToHeroItem 
 } from "./home.mappers"
 import { ErrorBanner, EmptyState, SectionLabel } from "./home.components"
@@ -38,7 +36,7 @@ export const Route = createFileRoute("/home/")({
 function HomePage() {
     const navigate = useNavigate()
     const { data, isLoading: isCollectionLoading, error } = useGetLibraryCollection()
-    const { data: watchHistory, isLoading: isContinuityLoading } = useGetContinuityWatchHistory()
+    const { data: watchHistory } = useGetContinuityWatchHistory()
     const { data: intelligenceData, isLoading: isIntelligenceLoading } = useHomeIntelligence()
     const { data: cwData, isLoading: isCwLoading } = useContinueWatching()
     const { setBackdropUrl } = useIntelligenceStore()
@@ -54,8 +52,8 @@ function HomePage() {
     )
 
     const collection = data
-    const lists = collection?.lists ?? []
-    const continueWatchingEpisodes = collection?.continueWatchingList ?? []
+    const lists = React.useMemo(() => collection?.lists ?? [], [collection?.lists])
+    const continueWatchingEpisodes = React.useMemo(() => collection?.continueWatchingList ?? [], [collection?.continueWatchingList])
 
     const entriesByMediaId = React.useMemo(() => {
         const map = new Map<number, Anime_LibraryCollectionEntry>()

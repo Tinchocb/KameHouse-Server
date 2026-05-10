@@ -1,12 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useState, useMemo, memo } from "react"
-import { FaSearch, FaFilter, FaStar, FaPlay, FaListOl, FaLayerGroup } from "react-icons/fa"
+import { FaSearch, FaPlay, FaListOl, FaLayerGroup } from "react-icons/fa"
 import { EmptyState } from "@/components/shared/empty-state"
 import { useGetMediaCollections } from "@/api/hooks/collections.hooks"
 import { cn } from "@/components/ui/core/styling"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { HeroSection } from "@/components/shared/hero-section"
-import { motion } from "framer-motion"
 
 export const Route = createFileRoute("/collections/")({
     component: CollectionsPage,

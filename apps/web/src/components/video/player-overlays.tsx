@@ -136,7 +136,7 @@ export function NextEpisodeOverlay({
     nextEpisodeImage,
     nextEpisodeNumber,
     onNext,
-    duration,
+    duration: _duration,
     remainingProgress
 }: {
     show: boolean

@@ -88,5 +88,9 @@ export type WebSocketMessage =
     | { type: WSEvents.AUTO_SCAN_STARTED; payload: null }
     | { type: WSEvents.AUTO_SCAN_COMPLETED; payload: null }
     | { type: WSEvents.LIBRARY_SCAN; payload: ScannerMessage }
-    | { type: Omit<string, WSEvents>; payload: unknown } // Catch-all for unmapped events
+    | { type: WSEvents.NATIVE_PLAYER; payload: any }
+    | { type: WSEvents.SUCCESS_TOAST; payload: string }
+    | { type: WSEvents.ERROR_TOAST; payload: string }
+    | { type: WSEvents.INFO_TOAST; payload: string }
+    | { type: WSEvents.WARNING_TOAST; payload: string }
 

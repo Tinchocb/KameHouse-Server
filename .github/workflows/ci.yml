@@ -1,0 +1,64 @@
+name: KameHouse CI
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  backend:
+    name: Backend CI (Go)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: kamehouse/apps/server
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Verify Go dependencies
+        run: go mod verify
+
+      - name: Build Backend Packages
+        run: go build -v ./...
+
+      - name: Run Backend Unit Tests (Short Mode)
+        run: go test -v -short ./...
+
+  frontend:
+    name: Frontend CI (React + TypeScript)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: kamehouse/apps/web
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: kamehouse/apps/web/package-lock.json
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+
+      - name: Run ESLint Checks
+        run: npm run lint
+
+      - name: Run TypeScript Compiler Check (Strict Type-Safety)
+        run: npm run typecheck
+
+      - name: Run Frontend Tests (Vitest)
+        run: npm run test:run

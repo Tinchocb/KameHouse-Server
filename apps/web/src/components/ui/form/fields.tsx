@@ -23,8 +23,8 @@ import { SubmitField } from "./submit-field"
  */
 export type FieldBaseProps = Omit<BasicFieldOptions, "name"> & {
     name: string
-    onChange?: any
-    onBlur?: any
+    onChange?: (...event: unknown[]) => void
+    onBlur?: (...event: unknown[]) => void
     required?: boolean
 }
 
@@ -41,14 +41,8 @@ export function withControlledInput<T extends FieldBaseProps>(InputComponent: Re
     const ControlledComponent = forwardRef<FieldProps, T>(
         (inputProps, ref) => {
             const { control, formState } = useFormContext()
-            const { shape } = useFormSchema()
-
-            /* Get the `required` status from the Schema */
-            const required = useMemo(() => {
-                return !!get(shape, inputProps.name) &&
-                    !get(shape, inputProps.name)?.isOptional() &&
-                    !get(shape, inputProps.name)?.isNullable()
-            }, [shape, inputProps.name])
+            // eslint-disable-next-line react-hooks/rules-of-hooks
+            useFormSchema()
 
             return (
                 <Controller
@@ -58,9 +52,9 @@ export function withControlledInput<T extends FieldBaseProps>(InputComponent: Re
                     render={({ field: { ref: _ref, ...field } }) => (
                         <InputComponent
                             value={field.value}
-                            onChange={callAllHandlers(inputProps.onChange, field.onChange)}
-                            onBlur={callAllHandlers(inputProps.onBlur, field.onBlur)}
-                            {...inputProps as any}
+                            onChange={callAllHandlers(inputProps.onChange, field.onChange) as any}
+                            onBlur={callAllHandlers(inputProps.onBlur, field.onBlur) as any}
+                            {...(inputProps as any)}
                             error={getFormError(field.name, formState)?.message}
                             ref={mergeRefs(ref, _ref)}
                         />
@@ -239,7 +233,7 @@ const RadioCardsField = React.memo(withControlledInput(RadioCardsFieldInner))
 type DirectorySelectorFieldProps = Omit<DirectorySelectorProps, "onSelect" | "value"> & { value?: string }
 
 const DirectorySelectorFieldInner = forwardRef<HTMLInputElement, FieldComponent<DirectorySelectorFieldProps>>(
-    ({ value, onChange, shouldExist, ...props }, ref) => {
+    ({ value, onChange: _onChange, shouldExist, ...props }, ref) => {
         const context = useFormContext()
         const controller = useController({ name: props.name })
 
@@ -266,7 +260,7 @@ const DirectorySelectorField = React.memo(withControlledInput(DirectorySelectorF
 type MultiDirectorySelectorFieldProps = Omit<DirectorySelectorProps, "onSelect" | "value"> & { value?: string[] }
 
 const MultiDirectorySelectorFieldInner = forwardRef<HTMLInputElement, FieldComponent<MultiDirectorySelectorFieldProps>>(
-    ({ value, onChange, shouldExist, label, help, ...props }, ref) => {
+    ({ value: _value, onChange: _onChange, shouldExist, label, help, ...props }, ref) => {
         const context = useFormContext()
         const controller = useController({ name: props.name })
 
@@ -366,13 +360,13 @@ Field.displayName = "Field"
  * Utils
  * -----------------------------------------------------------------------------------------------*/
 
-export const getFormError = (name: string, formState: FormState<{ [x: string]: any }>) => {
+export const getFormError = (name: string, formState: FormState<Record<string, unknown>>) => {
     return get(formState.errors, name)
 }
 
 export type ReactRef<T> = React.RefCallback<T> | React.MutableRefObject<T>
 
-export function assignRef<T = any>(
+export function assignRef<T = unknown>(
     ref: ReactRef<T> | null | undefined,
     value: T,
 ) {
@@ -386,7 +380,7 @@ export function assignRef<T = any>(
     try {
         ref.current = value
     }
-    catch (error) {
+    catch {
         throw new Error(`Cannot assign value '${value}' to ref '${ref}'`)
     }
 }
@@ -404,15 +398,13 @@ export function useMergeRefs<T>(...refs: (ReactRef<T> | null | undefined)[]) {
     return useMemo(() => mergeRefs(...refs), refs)
 }
 
-type Args<T extends (...args: any[]) => any> = T extends (...args: infer R) => any ? R : never
-
-function callAllHandlers<T extends (event: any) => void>(
+function callAllHandlers<T extends (...args: unknown[]) => unknown>(
     ...fns: (T | undefined)[]
 ) {
-    return function func(event: Args<T>[0]) {
+    return function func(...args: Parameters<T>) {
         fns.some((fn) => {
-            fn?.(event)
-            return event?.defaultPrevented
+            fn?.(...args)
+            return (args[0] as any)?.defaultPrevented
         })
     }
 }
