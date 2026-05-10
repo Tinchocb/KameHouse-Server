@@ -19,6 +19,9 @@ import {
 } from "@/hooks/use-home-intelligence"
 import { DynamicBackdrop } from "@/components/shared/dynamic-backdrop"
 import { SmartSwimlane } from "@/components/ui/smart-swimlane"
+import { BentoRecentlyAdded, type BentoItem } from "@/components/ui/bento-recently-added"
+import { useGSAP } from "@gsap/react"
+import gsap from "gsap"
 
 import { getTitle, getBackdrop } from "./home.helpers"
 import { 
@@ -169,36 +172,29 @@ function HomePage() {
             .filter((x): x is SwimlaneItem => x !== null)
     }, [allEntries, handleNavigate])
 
-    // ── Sagas Destacadas (Eliminado por unificación en series) ──
-
-    // ── Añadido Recientemente ────────────────────────────────────────────────
-    const recentItems = React.useMemo((): SwimlaneItem[] => {
+    // ── Añadido Recientemente (Bento Grid) ────────────────────────────────────────────────
+    const recentBentoItems = React.useMemo((): BentoItem[] => {
         return [...allEntries]
             .sort((a, b) => {
                 const aDate = a.media?.createdAt ? new Date(a.media.createdAt).getTime() : 0
                 const bDate = b.media?.createdAt ? new Date(b.media.createdAt).getTime() : 0
                 return bDate - aDate
             })
-            .slice(0, 20)
-            .map((entry): SwimlaneItem | null => {
+            .slice(0, 6)
+            .map((entry): BentoItem | null => {
                 if (!entry.media) return null
                 const m = entry.media
                 return {
                     id: `recent-${entry.mediaId}`,
                     title: getTitle(m),
-                    image: m.posterImage || getBackdrop(m),
-                    subtitle: m.year ? String(m.year) : m.format,
-                    badge: m.format,
-                    availabilityType: entry.availabilityType as SwimlaneItem["availabilityType"],
-                    backdropUrl: getBackdrop(m) || undefined,
-                    description: m.description,
-                    aspect: "poster",
+                    image: getBackdrop(m) || m.posterImage || "",
                     year: m.year,
                     rating: m.score ? (m.score > 10 ? m.score / 10 : m.score) : undefined,
+                    description: m.description,
                     onClick: () => handleNavigate(entry.mediaId),
                 }
             })
-            .filter((x): x is SwimlaneItem => x !== null)
+            .filter((x): x is BentoItem => x !== null)
     }, [allEntries, handleNavigate])
 
     // ── Hero: Prioridad 1 = Continuar, Prioridad 2 = Sugerencia aleatoria ─────────────
@@ -215,10 +211,10 @@ function HomePage() {
             if (items.length >= 3) break
         }
 
-        if (items.length === 0 && recentItems.length > 0) {
-            const charSum = recentItems.reduce((acc, item) => acc + (item.title.charCodeAt(0) || 0), 0)
-            const idx = charSum % Math.min(5, recentItems.length)
-            const randomEntry = recentItems[idx]
+        if (items.length === 0 && recentBentoItems.length > 0) {
+            const charSum = recentBentoItems.reduce((acc, item) => acc + (item.title.charCodeAt(0) || 0), 0)
+            const idx = charSum % Math.min(5, recentBentoItems.length)
+            const randomEntry = recentBentoItems[idx]
             if (randomEntry) {
                 const mediaId = Number(randomEntry.id.replace("recent-", ""))
                 seen.add(mediaId)
@@ -226,8 +222,8 @@ function HomePage() {
                     id: `hero-suggestion-${mediaId}`,
                     title: randomEntry.title,
                     synopsis: randomEntry.description || "",
-                    backdropUrl: randomEntry.backdropUrl || randomEntry.image,
-                    posterUrl: randomEntry.image,
+                    backdropUrl: randomEntry.image, // Using image (backdrop) from Bento
+                    posterUrl: entriesByMediaId.get(mediaId)?.media?.posterImage,
                     year: randomEntry.year,
                     rating: randomEntry.rating,
                     mediaId: mediaId,
@@ -238,7 +234,25 @@ function HomePage() {
         }
 
         return items
-    }, [continueWatchingEpisodes, handleNavigate, resolveEpisodeMedia, watchHistory, recentItems])
+    }, [continueWatchingEpisodes, handleNavigate, resolveEpisodeMedia, watchHistory, recentBentoItems, entriesByMediaId])
+
+    const containerRef = React.useRef<HTMLDivElement>(null)
+
+    useGSAP(() => {
+        if (isLoading) return
+
+        const sections = gsap.utils.toArray(".home-section")
+        if (sections.length > 0) {
+            gsap.from(sections, {
+                y: 40,
+                opacity: 0,
+                duration: 0.8,
+                stagger: 0.15,
+                ease: "power3.out",
+                clearProps: "all"
+            })
+        }
+    }, { scope: containerRef, dependencies: [isLoading] })
 
     if (error && !data) return <ErrorBanner message={error instanceof Error ? error.message : "Error de conexión."} />
 
@@ -247,7 +261,7 @@ function HomePage() {
     }
 
     return (
-        <div className="min-h-screen bg-background flex flex-col gap-8 w-full overflow-x-hidden pb-20">
+        <div ref={containerRef} className="min-h-screen bg-background flex flex-col gap-8 w-full overflow-x-hidden pb-20">
             <DynamicBackdrop />
 
             {/* ── Hero ── */}
@@ -279,13 +293,7 @@ function HomePage() {
                             <SwimlaneSkeleton title="Películas" aspect="poster" />
                         </motion.div>
                     ) : (
-                        <motion.div
-                            key="content"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 0.8, ease: "easeOut" }}
-                            className="space-y-8"
-                        >
+                        <div key="content" className="space-y-8">
                             {/* 0. Secciones inteligentes */}
                             {intelligenceData?.swimlanes?.length ? (
                                 <div className="space-y-8">
@@ -294,16 +302,12 @@ function HomePage() {
                                             key={lane.id}
                                             className="px-6 md:px-10 lg:px-16 xl:px-24 2xl:px-32"
                                         >
-                                            <motion.div
-                                                initial={{ opacity: 0, y: 24 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-                                            >
+                                            <div className="home-section">
                                                 <SmartSwimlane
                                                     lane={lane}
                                                     onNavigate={(mediaId) => handleNavigate(Number(mediaId))}
                                                 />
-                                            </motion.div>
+                                            </div>
                                         </ErrorBoundary>
                                     ))}
                                 </div>
@@ -312,12 +316,7 @@ function HomePage() {
                             {/* 1. Seguir Viendo */}
                             <ErrorBoundary className="px-6 md:px-10 lg:px-16 xl:px-24 2xl:px-32">
                                 {continueWatchingItems.length > 0 && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 30 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
-                                        className="space-y-4"
-                                    >
+                                    <div className="home-section space-y-4">
                                         <SectionLabel icon={Zap} label="Seguir Viendo" />
                                         <Swimlane
                                             title="Continuar Viendo"
@@ -325,19 +324,14 @@ function HomePage() {
                                             defaultAspect="wide"
                                             onHover={setBackdropUrl}
                                         />
-                                    </motion.div>
+                                    </div>
                                 )}
                             </ErrorBoundary>
 
                             {/* 2. Series de Dragon Ball */}
                             <ErrorBoundary className="px-6 md:px-10 lg:px-16 xl:px-24 2xl:px-32">
                                 {dbSeriesItems.length > 0 && (
-                                    <motion.div 
-                                        initial={{ opacity: 0, y: 30 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-                                        className="space-y-4"
-                                    >
+                                    <div className="home-section space-y-4">
                                         <SectionLabel icon={Tv} label="Series" />
                                         <Swimlane
                                             title="Series"
@@ -345,21 +339,14 @@ function HomePage() {
                                             defaultAspect="poster"
                                             onHover={setBackdropUrl}
                                         />
-                                    </motion.div>
+                                    </div>
                                 )}
                             </ErrorBoundary>
 
-                            {/* 3. Sagas Destacadas (Removido) */}
-
-                            {/* 4. Películas y Especiales */}
+                            {/* 3. Películas y Especiales */}
                             <ErrorBoundary className="px-6 md:px-10 lg:px-16 xl:px-24 2xl:px-32">
                                 {moviesAndSpecialsItems.length > 0 && (
-                                    <motion.div 
-                                        initial={{ opacity: 0, y: 30 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.3 }}
-                                        className="space-y-4"
-                                    >
+                                    <div className="home-section space-y-4">
                                         <SectionLabel icon={Film} label="Películas y Especiales" />
                                         <Swimlane
                                             title="Películas y OVAs"
@@ -367,39 +354,26 @@ function HomePage() {
                                             defaultAspect="poster"
                                             onHover={setBackdropUrl}
                                         />
-                                    </motion.div>
+                                    </div>
                                 )}
                             </ErrorBoundary>
 
-                            {/* 5. Añadido Recientemente */}
-                            <ErrorBoundary className="px-6 md:px-10 lg:px-16 xl:px-24 2xl:px-32">
-                                {recentItems.length > 0 && (
-                                    <motion.div 
-                                        initial={{ opacity: 0, y: 30 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.35 }}
-                                        className="space-y-4"
-                                    >
+                            {/* 4. Añadido Recientemente (Bento Grid) */}
+                            <ErrorBoundary className="px-0">
+                                {recentBentoItems.length > 0 && (
+                                    <div className="home-section space-y-8">
                                         <SectionLabel icon={Sparkles} label="Añadido Recientemente" />
-                                        <Swimlane
-                                            title="Añadido Recientemente"
-                                            items={recentItems}
-                                            defaultAspect="poster"
-                                            onHover={setBackdropUrl}
+                                        <BentoRecentlyAdded 
+                                            items={recentBentoItems} 
                                         />
-                                    </motion.div>
+                                    </div>
                                 )}
                             </ErrorBoundary>
 
                             {/* Colección completa (fallback) */}
                             <ErrorBoundary className="px-6 md:px-10 lg:px-16 xl:px-24 2xl:px-32">
                                 {!isCollectionLoading && allEntries.length > 0 && (
-                                    <motion.div 
-                                        initial={{ opacity: 0 }}
-                                        whileInView={{ opacity: 1 }}
-                                        viewport={{ once: true }}
-                                        className="space-y-4 opacity-80 hover:opacity-100 transition-opacity pb-20"
-                                    >
+                                    <div className="home-section space-y-4 opacity-80 hover:opacity-100 transition-opacity pb-20">
                                         <SectionLabel icon={Globe2} label="Biblioteca Completa" />
                                         <Swimlane
                                             title="Tu colección"
@@ -421,10 +395,10 @@ function HomePage() {
                                             })}
                                             defaultAspect="poster"
                                         />
-                                    </motion.div>
+                                    </div>
                                 )}
                             </ErrorBoundary>
-                        </motion.div>
+                        </div>
                     )}
                 </AnimatePresence>
             </div>

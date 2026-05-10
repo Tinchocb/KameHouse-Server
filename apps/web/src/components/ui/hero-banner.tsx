@@ -177,8 +177,8 @@ export function HeroBanner({
 
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.03),transparent_45%)]" />
             
-            <div className="absolute inset-0 bg-gradient-to-r from-background via-background/60 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-80" />
+            <div className="absolute inset-0 bg-gradient-to-r from-background via-background/40 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-90" />
             
             {/* The Perfect Fade to Black: seamless transition to the body bg */}
             <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-background via-background/90 to-transparent" />
@@ -230,26 +230,28 @@ export function HeroBanner({
                     <div className="mt-8 flex flex-wrap items-center gap-4">
                         <motion.button
                             whileHover={{ 
-                                scale: 1.02, 
+                                scale: 1.05, 
                                 backgroundColor: "var(--brand-orange-hover)",
+                                boxShadow: "0 0 30px rgba(var(--primary-rgb), 0.4)"
                             }}
-                            whileTap={{ scale: 0.98 }}
+                            whileTap={{ scale: 0.95 }}
                             onClick={() => activeItem.onPlay()}
-                            className="group/btn relative flex items-center justify-center gap-3 bg-brand-orange text-white h-12 md:h-14 px-8 rounded-xl font-bold text-sm uppercase tracking-widest transition-all shadow-md shadow-black/20 hover:brightness-105 overflow-hidden border border-brand-orange"
+                            className="group/btn relative flex items-center justify-center gap-3 bg-brand-orange text-white h-12 md:h-14 px-8 rounded-2xl font-black text-sm uppercase tracking-[0.2em] transition-all shadow-xl shadow-primary/20 overflow-hidden border border-white/10"
                         >
-                            <Play className="w-5 h-5 fill-current relative z-10" />
+                            <Play className="w-5 h-5 fill-current relative z-10 transition-transform group-hover/btn:scale-110" />
                             <span className="relative z-10">Ver ahora</span>
+                            <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity" />
                         </motion.button>
 
                         <motion.button
                             whileHover={{ 
-                                scale: 1.02, 
-                                backgroundColor: "rgba(255,255,255,0.05)",
-                                borderColor: "rgba(255,255,255,0.2)",
+                                scale: 1.05, 
+                                backgroundColor: "rgba(255,255,255,0.08)",
+                                borderColor: "rgba(255,255,255,0.3)",
                             }}
-                            whileTap={{ scale: 0.98 }}
+                            whileTap={{ scale: 0.95 }}
                             onClick={() => activeItem.onMoreInfo()}
-                            className="flex items-center justify-center gap-3 bg-[#0a0e1a]/60 backdrop-blur-md text-white h-12 md:h-14 px-8 rounded-xl font-bold text-sm uppercase tracking-widest transition-all border border-white/10"
+                            className="flex items-center justify-center gap-3 bg-white/5 backdrop-blur-2xl text-white h-12 md:h-14 px-8 rounded-2xl font-black text-sm uppercase tracking-[0.2em] transition-all border border-white/10 hover:shadow-2xl"
                         >
                             <Info className="w-5 h-5" />
                             Detalles

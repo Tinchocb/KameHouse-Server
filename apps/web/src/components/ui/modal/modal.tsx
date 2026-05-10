@@ -139,23 +139,24 @@ export function Modal(props: ModalProps) {
                         onInteractOutside={onInteractOutside}
                         aria-describedby={description ? undefined : "modal-hidden-desc"}
                     >
-                        {!title && !description ? (
+                        {/* Always render a hidden description when no visible description is provided,
+                            so aria-describedby="modal-hidden-desc" always resolves. */}
+                        {!description && (
                             <VisuallyHidden>
-                                <DialogPrimitive.Title>Dialog</DialogPrimitive.Title>
-                                <DialogPrimitive.Description>Dialog content</DialogPrimitive.Description>
+                                <DialogPrimitive.Description id="modal-hidden-desc">Dialog content</DialogPrimitive.Description>
                             </VisuallyHidden>
-                        ) : (
+                        )}
+
+                        {(title || description) && (
                             <div className={cn(ModalAnatomy.header(), headerClass)}>
-                                <DialogPrimitive.Title className={cn(ModalAnatomy.title(), titleClass)}>
-                                    {title}
-                                </DialogPrimitive.Title>
-                                {description ? (
+                                {title && (
+                                    <DialogPrimitive.Title className={cn(ModalAnatomy.title(), titleClass)}>
+                                        {title}
+                                    </DialogPrimitive.Title>
+                                )}
+                                {description && (
                                     <DialogPrimitive.Description className={cn(ModalAnatomy.description(), descriptionClass)}>
                                         {description}
-                                    </DialogPrimitive.Description>
-                                ) : (
-                                    <DialogPrimitive.Description id="modal-hidden-desc" asChild>
-                                        <VisuallyHidden>Contenido del modal</VisuallyHidden>
                                     </DialogPrimitive.Description>
                                 )}
                             </div>

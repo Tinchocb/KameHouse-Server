@@ -181,6 +181,15 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	mu := sync.Mutex{}
 	logMu := sync.Mutex{}
 
+	// Track existing folders in database to ensure we don't skip new ones even if they have old ModTime
+	existingFolders := make(map[string]struct{})
+	for _, lf := range scn.ExistingLocalFiles {
+		if lf == nil {
+			continue
+		}
+		existingFolders[util.NormalizePath(filepath.Dir(lf.Path))] = struct{}{}
+	}
+
 	// Bounded WorkerPool for directory-level file collection.
 	// 1 goroutine-per-directory was unbounded on large setups; cap at NumCPU.
 	dirPool := NewWorkerPool(ctx, len(libraryPaths))
@@ -198,8 +207,11 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 						return nil // Skip errors
 					}
 					if d.IsDir() {
+						normPath := util.NormalizePath(path)
+						_, isKnown := existingFolders[normPath]
+
 						info, err := d.Info()
-						if err == nil && info.ModTime().Before(lastScanAt) {
+						if err == nil && isKnown && info.ModTime().Before(lastScanAt) {
 							// Check if any file from this folder is missing from scn.ExistingLocalFiles
 							// If all files exist and folder hasn't changed, skip subtree
 							// However, for simplicity and safety, we only skip if it's a subfolder

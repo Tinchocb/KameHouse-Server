@@ -61,7 +61,7 @@ export function ManualMatchModal({ isOpen, onClose, directoryPath, currentMediaI
                         ) : (
                             results?.map((result: any) => (
                                 <div
-                                    key={result.id}
+                                    key={result.mediaId || result.id}
                                     className="flex items-center justify-between rounded-none border border-white/5 bg-zinc-900/50 p-3 transition hover:bg-zinc-800"
                                 >
                                     <div className="flex items-center gap-4">

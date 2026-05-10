@@ -83,113 +83,174 @@ const MediaActionButtons = React.memo(function MediaActionButtons({
 })
 MediaActionButtons.displayName = "MediaActionButtons"
 
-// ─── EpisodeListItem ────────────────────────────────────────────────────────
+// ─── EpisodeCard (Grid Version) ──────────────────────────────────────────────
 
-interface EpisodeListItemProps {
+interface EpisodeCardProps {
     episode: Anime_Episode
     fallbackThumb: string
     localFile?: Anime_LocalFile
     onPlay?: (localFile: Anime_LocalFile, episode: Anime_Episode) => void
+    onToggleWatched?: (episode: Anime_Episode) => void
     isCurrentlyPlaying?: boolean
 }
 
-const EpisodeListItem = React.memo(function EpisodeListItem({
+const EpisodeCard = React.memo(function EpisodeCard({
     episode,
     fallbackThumb,
     localFile,
     onPlay,
+    onToggleWatched,
     isCurrentlyPlaying
-}: EpisodeListItemProps) {
+}: EpisodeCardProps) {
     const thumb = episode.episodeMetadata?.image || fallbackThumb
     const epTitle = episode.titleSpanish || episode.episodeMetadata?.title || episode.episodeTitle || episode.displayTitle || `Episodio ${episode.episodeNumber}`
-    const overview = episode.episodeMetadata?.overview || episode.episodeMetadata?.summary || ""
-    const cleanOverview = overview ? sanitizeHtml(overview) : ""
     const hasLocalFile = !!localFile
+    const isWatched = episode.watched
+    
+    // Technical Info
+    const technical = localFile?.technicalInfo
+    const resolution = technical?.videoStream ? `${technical.videoStream.width}x${technical.videoStream.height}` : null
+    const codec = technical?.videoStream?.codec?.toUpperCase()
+    const fileSize = technical?.size ? `${(technical.size / (1024 * 1024 * 1024)).toFixed(2)} GB` : null
+    const duration = episode.episodeMetadata?.length ? `${episode.episodeMetadata.length} MIN` : null
 
-    const handleClick = () => {
+    const handlePlay = (e: React.MouseEvent) => {
+        e.stopPropagation()
         if (hasLocalFile && localFile && onPlay) {
             onPlay(localFile, episode)
         }
     }
 
+    const handleToggleWatched = (e: React.MouseEvent) => {
+        e.stopPropagation()
+        if (onToggleWatched) onToggleWatched(episode)
+    }
+
+    // Dynamic gradient fallback for thumb
+    const baseColor = `hsl(${episode.episodeNumber * 137.5 % 360}, 50%, 20%)`
+
     return (
         <div
-            onClick={handleClick}
+            onClick={handlePlay}
             className={cn(
-                "group relative flex flex-col md:flex-row gap-6 p-4 border transition-all duration-500 bg-black/40 backdrop-blur-sm overflow-hidden",
+                "group relative flex flex-col bg-[#0d0d14] border transition-all duration-500 overflow-hidden rounded-xl",
                 isCurrentlyPlaying 
-                    ? "border-brand-orange bg-brand-orange/5 shadow-[0_0_40px_rgba(255,110,58,0.2)]" 
-                    : "border-white/5 hover:border-white/20 hover:bg-white/[0.03]",
-                !hasLocalFile && "opacity-40 grayscale hover:opacity-80",
-                hasLocalFile && "cursor-pointer",
+                    ? "border-brand-orange ring-1 ring-brand-orange/50 shadow-[0_0_30px_rgba(255,110,58,0.15)]" 
+                    : "border-white/5 hover:border-white/20 hover:bg-white/[0.02]",
+                !hasLocalFile && "opacity-60",
+                hasLocalFile ? "cursor-pointer" : "cursor-default"
             )}
         >
-            {/* VHS Thumbnail Area (16:9) */}
-            <div className="relative aspect-video w-full md:w-80 shrink-0 border border-white/10 overflow-hidden bg-zinc-900 shadow-2xl">
-                {/* Scanlines Filter */}
-                <div className="absolute inset-0 z-10 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%] opacity-40 group-hover:opacity-20 transition-opacity" />
-                
+            {/* Thumbnail Area (16:9) */}
+            <div className="relative aspect-video w-full overflow-hidden bg-zinc-900/50">
                 <DeferredImage
                     src={thumb}
                     alt={epTitle}
-                    className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110"
+                    className={cn(
+                        "w-full h-full object-cover transition-all duration-700 group-hover:scale-110",
+                        isWatched && "opacity-40 grayscale-[0.5]"
+                    )}
+                    showSkeleton={false}
+                    fallback={
+                        <div 
+                            className="w-full h-full opacity-30 blur-2xl"
+                            style={{ background: `radial-gradient(circle at 50% 30%, ${baseColor}, transparent 80%)` }}
+                        />
+                    }
                 />
+
+                {/* Overlays */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-60" />
                 
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
-                
-                {/* Orange Sticker (Top Left) */}
-                <div className="absolute top-4 left-4 z-20 shadow-[6px_6px_0px_0px_rgba(0,0,0,0.6)] transform -rotate-3 group-hover:rotate-0 transition-transform duration-500">
-                    <span className="px-3 py-1 bg-brand-orange text-xs font-black text-white tracking-[0.2em] uppercase border border-orange-400">
+                {/* Watched Checkmark Overlay */}
+                {isWatched && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-brand-orange/10 backdrop-blur-[2px] transition-all duration-500">
+                        <div className="w-12 h-12 rounded-full bg-brand-orange/90 text-white flex items-center justify-center shadow-xl transform scale-100 group-hover:scale-110 transition-transform">
+                            <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                            </svg>
+                        </div>
+                    </div>
+                )}
+
+                {/* Status Badges */}
+                <div className="absolute top-3 left-3 flex flex-col gap-2 z-20">
+                    {hasLocalFile ? (
+                        <span className="px-2 py-0.5 bg-green-500/20 backdrop-blur-md text-[8px] font-black text-green-500 tracking-widest uppercase border border-green-500/20 rounded-md">
+                            LOCAL
+                        </span>
+                    ) : (
+                        <span className="px-2 py-0.5 bg-red-500/20 backdrop-blur-md text-[8px] font-black text-red-500 tracking-widest uppercase border border-red-500/20 rounded-md">
+                            FALTA
+                        </span>
+                    )}
+                </div>
+
+                <div className="absolute top-3 right-3 z-20">
+                    <span className="px-2 py-0.5 bg-black/60 backdrop-blur-md text-[10px] font-bebas text-white tracking-widest border border-white/10 rounded-md">
                         EP {episode.episodeNumber}
                     </span>
                 </div>
 
-                {/* Play Overlay */}
-                <div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity z-30">
-                    <div className="w-14 h-14 bg-white text-black flex items-center justify-center shadow-2xl scale-75 group-hover:scale-100 transition-all duration-500">
-                        <FaPlay className="w-5 h-5 ml-1" />
+                {/* Hover Actions Area */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 z-30 bg-black/40 backdrop-blur-[2px]">
+                    <div className="flex items-center gap-4">
+                        {hasLocalFile && (
+                            <button 
+                                onClick={handlePlay}
+                                className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-transform active:scale-95"
+                            >
+                                <FaPlay className="w-4 h-4 ml-1" />
+                            </button>
+                        )}
+                        <button 
+                            onClick={handleToggleWatched}
+                            title={isWatched ? "Marcar como no visto" : "Marcar como visto"}
+                            className={cn(
+                                "w-10 h-10 rounded-full flex items-center justify-center border transition-all hover:scale-110 active:scale-95",
+                                isWatched 
+                                    ? "bg-brand-orange border-brand-orange text-white" 
+                                    : "bg-black/60 border-white/20 text-white hover:bg-white hover:text-black hover:border-white"
+                            )}
+                        >
+                            <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
 
-                {/* Watched Progress Line */}
+                {/* Progress Bar (if in progress) - Using a mock progress for now as per user request */}
                 {isCurrentlyPlaying && (
-                    <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-brand-orange z-40" />
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 z-40 overflow-hidden">
+                        <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: "45%" }} 
+                            className="h-full bg-brand-orange" 
+                        />
+                    </div>
                 )}
             </div>
 
-            {/* Content Area */}
-            <div className="flex-1 flex flex-col justify-center space-y-4">
-                <div className="space-y-1">
-                    <h4 className={cn(
-                        "text-3xl font-bebas leading-none tracking-widest uppercase",
-                        isCurrentlyPlaying ? "text-brand-orange" : "text-white"
-                    )}>
-                        {epTitle}
-                    </h4>
-                    
-                    <div className="flex flex-wrap items-center gap-4 text-[10px] font-black uppercase tracking-[0.3em] text-white/30">
-                        {hasLocalFile && (
-                            <span className="text-green-500 flex items-center gap-2">
-                                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                DISPONIBLE LOCAL
-                            </span>
-                        )}
-                        {episode.episodeMetadata?.length && <span>{episode.episodeMetadata.length} MIN</span>}
-                        {episode.episodeMetadata?.airDate && <span>{episode.episodeMetadata.airDate}</span>}
-                    </div>
+            {/* Info Area */}
+            <div className="p-4 flex flex-col gap-2">
+                <h4 className={cn(
+                    "text-lg font-bebas leading-tight tracking-widest uppercase line-clamp-1 transition-colors duration-300",
+                    isCurrentlyPlaying ? "text-brand-orange" : "text-white group-hover:text-brand-orange"
+                )}>
+                    {epTitle}
+                </h4>
+                
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[9px] font-black uppercase tracking-[0.2em] text-white/40">
+                    {duration && <span className="text-white/60">{duration}</span>}
+                    {resolution && <span>{resolution}</span>}
+                    {codec && <span className="px-1.5 py-0.5 bg-white/5 rounded border border-white/5">{codec}</span>}
+                    {fileSize && <span>{fileSize}</span>}
                 </div>
-
-                {/* Overview (3 lines max) */}
-                {cleanOverview && (
-                    <div
-                        className="text-[14px] text-zinc-400 leading-relaxed line-clamp-3 font-medium tracking-wide uppercase"
-                        dangerouslySetInnerHTML={{ __html: cleanOverview }}
-                    />
-                )}
             </div>
         </div>
     )
 })
-EpisodeListItem.displayName = "EpisodeListItem"
+EpisodeCard.displayName = "EpisodeCard"
 
-export { MediaActionButtons, EpisodeListItem }
+export { MediaActionButtons, EpisodeCard }

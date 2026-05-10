@@ -1,6 +1,6 @@
 import { useAppStore } from "@/lib/store"
 import { Link } from "@tanstack/react-router"
-import { FaSearch, FaUser, FaBars } from "react-icons/fa"
+import { FaBars } from "react-icons/fa"
 import { useState } from "react"
 import { useLocation } from "@tanstack/react-router"
 
@@ -11,7 +11,6 @@ interface TopNavProps {
 export const AppTopNav = ({ title }: TopNavProps) => {
     const { setSidebarOpen } = useAppStore()
     const location = useLocation()
-    const [isSearchFocused, setIsSearchFocused] = useState(false)
 
     return (
         <header className="fixed top-0 left-0 right-0 z-[40] bg-black border-b border-zinc-800">
@@ -33,22 +32,8 @@ export const AppTopNav = ({ title }: TopNavProps) => {
                     )}
                 </div>
 
-                {/* Right side: Search + Profile */}
+                {/* Right side: Empty (Search and Profile removed as requested) */}
                 <div className="flex items-center gap-4">
-                    <div className={`relative flex items-center transition-all duration-300 ${isSearchFocused ? 'w-64' : 'w-48'}`}>
-                        <FaSearch className="absolute left-3 text-zinc-500 w-3 h-3" />
-                        <input
-                            type="text"
-                            placeholder="Buscar..."
-                            onFocus={() => setIsSearchFocused(true)}
-                            onBlur={() => setIsSearchFocused(false)}
-                            className="w-full bg-zinc-900 border border-zinc-800 rounded-none py-1.5 pl-10 pr-4 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-700 transition-all"
-                        />
-                    </div>
-
-                    <button className="w-9 h-9 flex items-center justify-center border border-zinc-800 text-zinc-400 hover:bg-white hover:text-black transition-colors">
-                        <FaUser className="w-4 h-4" />
-                    </button>
                 </div>
             </div>
         </header>

@@ -72,28 +72,6 @@ export async function buildSeaQuery<T, D = void>(
         });
     }
 
-    // #region agent log
-    fetch("http://127.0.0.1:7388/ingest/59444eed-3244-4eff-9af9-1a415cd6fe6d", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "72d13e" },
-        body: JSON.stringify({
-            sessionId: "72d13e",
-            runId: "pre-fix",
-            hypothesisId: "H1,H4",
-            location: "requests.ts:buildSeaQuery:url",
-            message: "API request URL resolved",
-            data: {
-                endpoint: endpoint.slice(0, 160),
-                base,
-                finalUrl: url.toString().slice(0, 300),
-                mode: import.meta.env.MODE,
-                pageOrigin: typeof window !== "undefined" ? window.location.origin : "no-window",
-                pageHost: typeof window !== "undefined" ? window.location.host : "",
-            },
-            timestamp: Date.now(),
-        }),
-    }).catch(() => {});
-    // #endregion
 
     const headers: Record<string, string> = {
         "Content-Type": "application/json",
@@ -115,26 +93,6 @@ export async function buildSeaQuery<T, D = void>(
                 body: data !== undefined ? JSON.stringify(data) : undefined,
             });
 
-            // #region agent log
-            fetch("http://127.0.0.1:7388/ingest/59444eed-3244-4eff-9af9-1a415cd6fe6d", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "72d13e" },
-                body: JSON.stringify({
-                    sessionId: "72d13e",
-                    runId: "pre-fix",
-                    hypothesisId: "H2,H3",
-                    location: "requests.ts:buildSeaQuery:response",
-                    message: "API fetch response",
-                    data: {
-                        ok: res.ok,
-                        status: res.status,
-                        attempt,
-                        path: url.pathname.slice(0, 120),
-                    },
-                    timestamp: Date.now(),
-                }),
-            }).catch(() => {});
-            // #endregion
 
             if (!res.ok) {
                 let errorData: unknown;
@@ -172,24 +130,6 @@ export async function buildSeaQuery<T, D = void>(
             return json.data as T;
 
         } catch (error) {
-            // #region agent log
-            const errName = error instanceof Error ? error.name : "non-Error"
-            const errMsg = error instanceof Error ? error.message.slice(0, 200) : String(error).slice(0, 200)
-            const isTypeErr = error instanceof TypeError
-            fetch("http://127.0.0.1:7388/ingest/59444eed-3244-4eff-9af9-1a415cd6fe6d", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "72d13e" },
-                body: JSON.stringify({
-                    sessionId: "72d13e",
-                    runId: "pre-fix",
-                    hypothesisId: "H2",
-                    location: "requests.ts:buildSeaQuery:catch",
-                    message: "API fetch threw",
-                    data: { errName, errMsg, isTypeErr, attempt, path: url.pathname.slice(0, 120) },
-                    timestamp: Date.now(),
-                }),
-            }).catch(() => {});
-            // #endregion
             // Network errors or already thrown ApiError
             if (error instanceof TypeError && attempt < maxRetries) { // fetch throws TypeError on network failure
                 attempt++;

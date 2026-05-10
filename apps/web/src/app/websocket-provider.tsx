@@ -20,27 +20,6 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
     // Dynamically resolve WebSocket URL from the base URL
     const wsUrl = useMemo(() => getApiWebSocketUrl(), [])
 
-    useEffect(() => {
-        // #region agent log
-        fetch("http://127.0.0.1:7388/ingest/59444eed-3244-4eff-9af9-1a415cd6fe6d", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "72d13e" },
-            body: JSON.stringify({
-                sessionId: "72d13e",
-                runId: "pre-fix",
-                hypothesisId: "H5",
-                location: "websocket-provider.tsx:wsUrl",
-                message: "WebSocket URL resolved",
-                data: {
-                    wsUrl,
-                    pageOrigin: typeof window !== "undefined" ? window.location.origin : "",
-                    pageHost: typeof window !== "undefined" ? window.location.host : "",
-                },
-                timestamp: Date.now(),
-            }),
-        }).catch(() => {});
-        // #endregion
-    }, [wsUrl])
 
     const { lastJsonMessage, sendJsonMessage } = useWebSocket(wsUrl, {
         shouldReconnect: () => true,
@@ -48,41 +27,12 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
         reconnectInterval: 3000,
         share: true, // Allow multiple hooks to share this connection
         onOpen: () => {
-            // #region agent log
-            fetch("http://127.0.0.1:7388/ingest/59444eed-3244-4eff-9af9-1a415cd6fe6d", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "72d13e" },
-                body: JSON.stringify({
-                    sessionId: "72d13e",
-                    runId: "pre-fix",
-                    hypothesisId: "H5",
-                    location: "websocket-provider.tsx:onOpen",
-                    message: "WebSocket opened",
-                    data: { wsUrl },
-                    timestamp: Date.now(),
-                }),
-            }).catch(() => {});
-            // #endregion
         },
         onError: (event) => {
-            // #region agent log
             const t = event?.target
             const readyState =
                 t && typeof WebSocket !== "undefined" && t instanceof WebSocket ? t.readyState : -1
-            fetch("http://127.0.0.1:7388/ingest/59444eed-3244-4eff-9af9-1a415cd6fe6d", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "72d13e" },
-                body: JSON.stringify({
-                    sessionId: "72d13e",
-                    runId: "pre-fix",
-                    hypothesisId: "H5",
-                    location: "websocket-provider.tsx:onError",
-                    message: "WebSocket error event",
-                    data: { wsUrl, readyState, eventType: event?.type ?? "unknown" },
-                    timestamp: Date.now(),
-                }),
-            }).catch(() => {});
-            // #endregion
+            console.warn("[WS] Error", { wsUrl, readyState, eventType: event?.type ?? "unknown" })
         },
     })
 

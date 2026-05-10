@@ -203,34 +203,52 @@ const HeroSection = React.memo(function HeroSection({
     const localEpisodesCount = entry.localFiles?.length ?? 0
     const totalEpisodesCount = media.totalEpisodes || entry.episodes?.length || 0
 
+    // Dynamic gradient fallback if no backdrop
+    const stringToColor = (str: string) => {
+        let hash = 0
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash)
+        }
+        const h = Math.abs(hash % 360)
+        return `hsl(${h}, 60%, 15%)`
+    }
+    const accentColor = stringToColor(title)
+
     return (
-        <section className="relative w-full min-h-[60vh] flex flex-col justify-end overflow-hidden">
-            {/* Cinematic Ambient Halo */}
-            {media.posterImage && (
-                <div className="absolute inset-0 overflow-hidden bg-zinc-950">
+        <section className="relative w-full min-h-[80vh] flex flex-col justify-end overflow-hidden">
+            {/* Cinematic Ambient Halo / Gradient Fallback */}
+            <div className="absolute inset-0 overflow-hidden bg-[#09090b]">
+                {media.posterImage ? (
                     <div
-                        className="absolute left-1/2 top-[20%] -translate-x-1/2 w-[600px] h-[600px] rounded-full blur-[120px] opacity-40"
+                        className="absolute left-1/2 top-[20%] -translate-x-1/2 w-[1000px] h-[1000px] rounded-full blur-[180px] opacity-50"
                         style={{
                             backgroundImage: `url(${media.posterImage})`,
                             backgroundSize: "cover",
                             backgroundPosition: "center",
-                            filter: "blur(120px) saturate(150%) brightness(0.8)",
-                            transform: "translateX(-50%) scale(1.2)",
+                            filter: "blur(180px) saturate(200%) brightness(0.7)",
+                            transform: "translateX(-50%) scale(1.6)",
                         }}
                     />
-                    <div className="absolute inset-0 bg-gradient-radial-from-cover opacity-30" />
-                </div>
-            )}
+                ) : (
+                    <div 
+                        className="absolute inset-0 opacity-40 blur-[150px]"
+                        style={{ 
+                            background: `radial-gradient(circle at 50% 30%, ${accentColor}, transparent 80%)` 
+                        }}
+                    />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#09090b] via-[#09090b]/60 to-transparent" />
+            </div>
 
-            {/* Backdrop (Grayscale & Solid) */}
+            {/* Backdrop (Cinematic Overlay) */}
             {backdropUrl && (
-                <div className="absolute inset-0 overflow-hidden bg-black">
+                <div className="absolute inset-0 overflow-hidden">
                     <img
                         src={backdropUrl}
                         alt={title}
-                        className="w-full h-full object-cover object-center opacity-30 grayscale"
+                        className="w-full h-full object-cover object-center opacity-30 grayscale mix-blend-screen"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#09090b] via-transparent to-transparent" />
                 </div>
             )}
 
@@ -257,15 +275,15 @@ const HeroSection = React.memo(function HeroSection({
 
                     {/* Main Title (Logo or Bebas) */}
                     {media.logoImage ? (
-                        <div className="relative h-24 sm:h-32 xl:h-48 mb-4 animate-in fade-in slide-in-from-left-8 duration-1000">
+                        <div className="relative h-32 sm:h-40 xl:h-64 mb-6 animate-in fade-in slide-in-from-left-8 duration-1000">
                             <img 
                                 src={media.logoImage} 
                                 alt={title} 
-                                className="h-full w-auto object-contain object-left drop-shadow-[0_0_30px_rgba(0,0,0,0.5)] brightness-110" 
+                                className="h-full w-auto object-contain object-left drop-shadow-[0_0_60px_rgba(0,0,0,0.9)] brightness-110" 
                             />
                         </div>
                     ) : (
-                        <h1 className="text-6xl sm:text-7xl xl:text-[9rem] font-bebas font-normal leading-[0.85] tracking-tight text-white uppercase drop-shadow-none">
+                        <h1 className="text-[clamp(4rem,10vw,11rem)] font-bebas font-normal leading-[0.8] tracking-tighter text-white uppercase drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
                             {title}
                         </h1>
                     )}
@@ -286,8 +304,8 @@ const HeroSection = React.memo(function HeroSection({
                     <div className="max-w-3xl relative">
                         <div 
                             className={cn(
-                                "text-[15px] text-zinc-400 leading-relaxed font-bold uppercase tracking-wide transition-all duration-300",
-                                synopsisExpanded ? "" : "line-clamp-3",
+                                "text-[16px] text-zinc-300 leading-relaxed font-medium uppercase tracking-widest transition-all duration-300 bg-white/[0.03] p-8 rounded-2xl border border-white/10 backdrop-blur-3xl shadow-inner",
+                                synopsisExpanded ? "" : "line-clamp-4",
                             )}
                             dangerouslySetInnerHTML={{ __html: cleanSynopsis }}
                         />
@@ -455,24 +473,39 @@ const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
                     </div>
                 )}
 
-                {/* Episode List Container */}
-                <div className="px-6 sm:px-12">
+                {/* Episode List Header & Grid */}
+                <div className="px-6 sm:px-12 flex flex-col gap-10">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/5 pb-8">
+                        <div className="flex flex-col gap-2">
+                            <h2 className="text-5xl font-bebas tracking-[0.2em] text-white uppercase leading-none">
+                                EPISODIOS
+                            </h2>
+                            <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">
+                                <span>{visibleEpisodes.length} TOTAL</span>
+                                <span className="w-1 h-1 rounded-full bg-zinc-800" />
+                                <span className="text-brand-orange">{visibleEpisodes.filter(e => e.watched).length} VISTOS</span>
+                            </div>
+                        </div>
+                    </div>
+
                     {visibleEpisodes.length === 0 ? (
                         <div className="py-24 text-center">
                             <p className="text-zinc-600 font-bebas text-4xl tracking-widest">SIN EPISODIOS DISPONIBLES</p>
                             <p className="text-zinc-700 text-xs font-black uppercase tracking-[0.3em] mt-2">INTENTA ACTUALIZAR LA BIBLIOTECA</p>
                         </div>
                     ) : (
-                        visibleEpisodes.map((ep) => (
-                            <EpisodeListItem
-                                key={ep.episodeNumber}
-                                episode={ep}
-                                fallbackThumb={fallbackThumb}
-                                localFile={getLocalFile(ep.episodeNumber)}
-                                onPlay={onPlay}
-                                isCurrentlyPlaying={currentlyPlayingEpNumber === ep.episodeNumber}
-                            />
-                        ))
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 xl:gap-8">
+                            {visibleEpisodes.map((ep) => (
+                                <EpisodeCard
+                                    key={ep.episodeNumber}
+                                    episode={ep}
+                                    fallbackThumb={fallbackThumb}
+                                    localFile={getLocalFile(ep.episodeNumber)}
+                                    onPlay={onPlay}
+                                    isCurrentlyPlaying={currentlyPlayingEpNumber === ep.episodeNumber}
+                                />
+                            ))}
+                        </div>
                     )}
                 </div>
             </div>

@@ -179,12 +179,13 @@ function SettingsPage() {
         }
     }
 
-    const handleScan = (_full: boolean) => {
+    const handleScan = (full: boolean) => {
         scanFiles({
             enhanced: true,
             enhanceWithOfflineDatabase: true,
             skipLockedFiles: false,
             skipIgnoredFiles: true,
+            fullScan: full,
         })
     }
 

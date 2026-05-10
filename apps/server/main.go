@@ -56,9 +56,11 @@ func run(ctx context.Context) error {
 		hostStr = "127.0.0.1"
 	}
 
+	isDev := os.Getenv("KAMEHOUSE_ENV") != "production"
+	
 	// Initialize robust arguments required by NewKameHouse inside KameHouse.
 	configOpts := &core.ConfigOptions{
-		Flags:        core.KameHouseFlags{Port: portStrVal, Host: hostStr, IsDesktopSidecar: true},
+		Flags:        core.KameHouseFlags{Port: portStrVal, Host: hostStr, IsDesktopSidecar: !isDev},
 		EmbeddedLogo: embeddedLogo,
 	}
 

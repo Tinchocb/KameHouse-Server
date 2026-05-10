@@ -12,16 +12,24 @@ import { AnimatePresence } from "framer-motion"
 import { useRouterState } from "@tanstack/react-router"
 import { PageTransition } from "@/components/shared/page-transition"
 import { WebsocketProvider } from "@/app/websocket-provider"
+import { FaBars } from "react-icons/fa"
 
 function RootComponent() {
     const routerState = useRouterState()
     return (
         <AppLayout>
             <WebsocketProvider>
-                <AppTopNav />
                 <AppSidebar />
                 <CommandPalette />
-                <AppLayoutContent className="pt-16 md:pl-24">
+                <AppLayoutContent className="md:pl-24">
+                    {/* Mobile Menu Trigger */}
+                    <button 
+                        onClick={() => useAppStore.getState().setSidebarOpen(true)}
+                        className="md:hidden fixed top-6 left-6 z-[60] p-3 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 text-white/70 hover:text-white transition-all active:scale-90"
+                    >
+                        <FaBars className="w-5 h-5" />
+                    </button>
+
                     <AnimatePresence mode="wait">
                         <PageTransition transitionKey={routerState.location.pathname} className="flex-1 w-full">
                             <Outlet />

@@ -308,97 +308,118 @@ export const VhsShelfAccordion = memo(function VhsShelfAccordion({
                                 <AnimatePresence>
                                     {isExpanded && (
                                         <motion.div
-                                            initial={{ opacity: 0, x: -20, width: 0 }}
+                                            initial={{ opacity: 0, x: -40, width: 0 }}
                                             animate={{ opacity: 1, x: 0, width: 460 }}
-                                            exit={{ opacity: 0, x: -10, width: 0 }}
-                                            transition={{ duration: 0.35, ease: "easeOut" }}
-                                            className="h-full w-[460px] shrink-0 bg-[#06080e] relative flex flex-col justify-end overflow-hidden"
+                                            exit={{ opacity: 0, x: -20, width: 0 }}
+                                            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                                            className="h-full w-[460px] shrink-0 bg-[#06080e] relative flex flex-col justify-end overflow-hidden border-l border-white/5 shadow-[20px_0_60px_rgba(0,0,0,0.8)]"
                                         >
-                                            {/* Banner in the upper section fading into dark background */}
-                                            <div className="absolute top-0 left-0 right-0 h-[60%] z-0">
+                                            {/* Advanced Dynamic Background (Poster Blur) */}
+                                            <div className="absolute inset-0 z-0">
                                                 <DeferredImage
                                                     src={item.bannerUrl || item.posterUrl || ""}
-                                                    alt={item.title}
-                                                    className="w-full h-full object-cover filter brightness-[0.6]"
-                                                    showSkeleton={true}
+                                                    alt=""
+                                                    className="w-full h-full object-cover filter blur-[80px] opacity-40 scale-150 transition-all duration-1000"
+                                                    showSkeleton={false}
                                                 />
-                                                {/* Retro Sleeve Vignette / Gradient Map */}
-                                                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#06080e]/60 to-[#06080e]" />
-                                                <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-black/90 to-transparent" />
+                                                <div className="absolute inset-0 bg-gradient-to-tr from-[#06080e] via-[#06080e]/95 to-transparent" />
+                                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(255,110,58,0.08),transparent_70%)]" />
                                             </div>
 
-                                            {/* Details & Contents Card (Glassmorphic Interface Overlay) */}
-                                            <div className="relative z-10 p-6 flex flex-col gap-4 justify-end h-full">
-                                                {/* Header Badges */}
-                                                <div className="flex flex-wrap items-center gap-2">
+                                            {/* Mechanical Detail: Magnetic Tape Reel Representation */}
+                                            <div className="absolute top-12 -right-24 w-64 h-64 opacity-[0.03] pointer-events-none rotate-12">
+                                                <svg viewBox="0 0 100 100" className="w-full h-full fill-white">
+                                                    <circle cx="50" cy="50" r="45" stroke="white" strokeWidth="1" fill="transparent" />
+                                                    <circle cx="50" cy="50" r="15" fill="white" />
+                                                    <path d="M 50 5 L 50 95 M 5 50 L 95 50" stroke="white" strokeWidth="0.5" />
+                                                </svg>
+                                            </div>
+
+                                            {/* Content Area with Sophisticated Glassmorphism */}
+                                            <div className="relative z-10 p-8 flex flex-col gap-6 justify-end h-full">
+                                                
+                                                {/* Mini Poster Preview (Mechanical Slide-in) */}
+                                                <motion.div 
+                                                    initial={{ y: 20, opacity: 0 }}
+                                                    animate={{ y: 0, opacity: 1 }}
+                                                    transition={{ delay: 0.2 }}
+                                                    className="w-24 aspect-[2/3] rounded-lg border border-white/10 shadow-2xl overflow-hidden mb-2"
+                                                >
+                                                    <DeferredImage src={item.posterUrl || ""} alt="" className="w-full h-full object-cover" />
+                                                </motion.div>
+
+                                                {/* Header Badges with premium styling */}
+                                                <div className="flex flex-wrap items-center gap-2.5">
                                                     {scoreStr && (
-                                                        <div className="flex items-center gap-1 bg-amber-500 text-zinc-950 font-black text-[9px] px-2 py-0.5 rounded-full shadow-lg">
-                                                            <Star className="w-2.5 h-2.5 fill-current" />
-                                                            <span>{scoreStr}</span>
+                                                        <div className="flex items-center gap-1.5 bg-brand-orange/10 text-brand-orange font-black text-[10px] px-3 py-1 rounded-lg border border-brand-orange/20 backdrop-blur-3xl shadow-[0_0_20px_rgba(255,110,58,0.1)]">
+                                                            <Star className="w-3 h-3 fill-current" />
+                                                            <span className="tracking-widest">{scoreStr}</span>
                                                         </div>
                                                     )}
                                                     {item.year && (
-                                                        <div className="flex items-center gap-1 bg-white/10 text-white font-black text-[9px] px-2 py-0.5 rounded-full border border-white/5 backdrop-blur-md">
-                                                            <Calendar className="w-2.5 h-2.5" />
-                                                            <span>{item.year}</span>
+                                                        <div className="flex items-center gap-1.5 bg-white/5 text-zinc-300 font-black text-[10px] px-3 py-1 rounded-lg border border-white/5 backdrop-blur-3xl">
+                                                            <Calendar className="w-3 h-3" />
+                                                            <span className="tracking-widest">{item.year}</span>
                                                         </div>
                                                     )}
                                                     {item.format && (
-                                                        <div className="flex items-center gap-1 bg-white/10 text-white font-black text-[9px] px-2 py-0.5 rounded-full border border-white/5 backdrop-blur-md">
-                                                            <Tv className="w-2.5 h-2.5" />
-                                                            <span>{item.format}</span>
+                                                        <div className="flex items-center gap-1.5 bg-white/5 text-zinc-300 font-black text-[10px] px-3 py-1 rounded-lg border border-white/5 backdrop-blur-3xl">
+                                                            <Tv className="w-3 h-3" />
+                                                            <span className="tracking-widest">{item.format}</span>
                                                         </div>
                                                     )}
                                                 </div>
 
-                                                {/* Big Title (Premium Retro Typography) */}
-                                                <div className="space-y-1">
-                                                    <h2 className="font-bebas text-3xl leading-none text-white tracking-wide uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                                                {/* Title & Metadata */}
+                                                <div className="space-y-2">
+                                                    <h2 className="font-bebas text-5xl leading-[0.85] text-white tracking-wide uppercase drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]">
                                                         {item.title}
                                                     </h2>
-                                                    {item.subtitle && (
-                                                        <p className="text-[10px] font-black uppercase text-brand-orange tracking-widest font-mono">
-                                                            {item.subtitle}
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="h-[1px] w-8 bg-brand-orange/40" />
+                                                        <p className="text-[11px] font-black uppercase text-brand-orange/80 tracking-[0.3em] font-mono">
+                                                            {subtitleText}
                                                         </p>
-                                                    )}
+                                                    </div>
                                                 </div>
 
-                                                {/* Micro Synopsis / Tape Synopsis */}
+                                                {/* Description with high-end glass container */}
                                                 {item.description && (
                                                     <p 
-                                                        className="text-[11px] text-zinc-300 font-medium leading-relaxed uppercase tracking-wide line-clamp-3 bg-black/25 p-2 rounded-lg border border-white/5 backdrop-blur-sm"
+                                                        className="text-[12px] text-zinc-400 font-medium leading-relaxed uppercase tracking-wider line-clamp-3 bg-white/[0.02] p-4 rounded-xl border border-white/[0.05] backdrop-blur-2xl shadow-inner"
                                                         dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.description) }}
                                                     />
                                                 )}
 
-                                                {/* Specs strip */}
-                                                <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-wider text-zinc-400 font-mono border-t border-white/5 pt-2.5 mt-1">
-                                                    {item.episodesCount !== undefined && (
-                                                        <span className="flex items-center gap-1 text-white">
-                                                            <Layers className="w-3 h-3 text-zinc-500" />
-                                                            {item.episodesCount} CAPÍTULOS
-                                                        </span>
-                                                    )}
+                                                {/* Technical Specs Stripe */}
+                                                <div className="flex items-center gap-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 font-mono border-t border-white/10 pt-4 mt-2">
+                                                    <span className="flex items-center gap-2 text-zinc-300">
+                                                        <Layers className="w-3.5 h-3.5 text-brand-orange/50" />
+                                                        {item.episodesCount && item.episodesCount > 0 ? `${item.episodesCount} EPISODES` : "TV SERIES"}
+                                                    </span>
                                                     {item.runtime && (
-                                                        <span className="flex items-center gap-1">
-                                                            DURACIÓN: <strong className="text-zinc-200">{item.runtime}</strong>
+                                                        <span className="flex items-center gap-2">
+                                                            RUN: <strong className="text-white">{item.runtime}</strong>
                                                         </span>
                                                     )}
                                                 </div>
 
-                                                {/* Action Button: VER SERIE / IR A LA SAGA */}
+                                                {/* Premium Action Button */}
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation()
                                                         onItemClick(item)
                                                     }}
-                                                    className="group/btn w-full mt-2.5 py-2 px-4 bg-brand-orange text-white hover:bg-white hover:text-black font-bebas text-sm tracking-wider uppercase flex items-center justify-center gap-2 border border-brand-orange hover:border-white rounded-lg shadow-[0_4px_15px_rgba(255,110,58,0.25)] hover:shadow-[0_4px_20px_rgba(255,255,255,0.2)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+                                                    className="group/btn w-full mt-4 h-14 bg-white text-black hover:bg-brand-orange hover:text-white font-black text-xs tracking-[0.25em] uppercase flex items-center justify-center gap-4 rounded-2xl shadow-2xl transition-all duration-500 hover:scale-[1.02] active:scale-[0.98]"
                                                 >
-                                                    <Play className="w-3.5 h-3.5 fill-current group-hover/btn:scale-110 transition-transform duration-300" />
-                                                    <span>{type === "series" ? "REPRODUCIR / VER SERIE" : "SINTONIZAR ARCO"}</span>
-                                                    <ChevronRight className="w-4 h-4 ml-auto group-hover/btn:translate-x-1 transition-transform" />
+                                                    <Play className="w-4 h-4 fill-current group-hover/btn:scale-110 transition-transform duration-500" />
+                                                    <span>{type === "series" ? "INICIAR REPRODUCCIÓN" : "SINTONIZAR ARCO"}</span>
+                                                    <ChevronRight className="w-5 h-5 ml-auto opacity-40 group-hover/btn:opacity-100 group-hover/btn:translate-x-1 transition-all" />
                                                 </button>
                                             </div>
+
+                                            {/* Edge gloss/plastic texture */}
+                                            <div className="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-black/20 to-transparent pointer-events-none" />
                                         </motion.div>
                                     )}
                                 </AnimatePresence>

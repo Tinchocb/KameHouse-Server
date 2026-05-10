@@ -13,6 +13,7 @@ interface DeferredImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageEleme
     priority?: boolean;
     aspectRatio?: string;
     showSkeleton?: boolean;
+    fallback?: React.ReactNode;
 }
 
 const NO_COVER = "/no-cover.png"
@@ -27,6 +28,7 @@ export function DeferredImage(props: DeferredImageProps) {
         threshold = 0,
         priority = false,
         showSkeleton = true,
+        fallback,
         onError,
         onLoad,
         ...restProps
@@ -135,15 +137,21 @@ export function DeferredImage(props: DeferredImageProps) {
 
             {hasError && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 text-zinc-600">
-                    <ImageOff className="mb-2 h-8 w-8 opacity-20" />
-                    <img
-                        src={NO_COVER}
-                        alt={alt}
-                        className="absolute inset-0 h-full w-full object-cover opacity-10"
-                    />
-                    <span className="px-4 text-center text-[10px] font-medium uppercase tracking-wider opacity-40">
-                        {alt || "Imagen no disponible"}
-                    </span>
+                    {fallback ? (
+                        fallback
+                    ) : (
+                        <>
+                            <ImageOff className="mb-2 h-8 w-8 opacity-20" />
+                            <img
+                                src={NO_COVER}
+                                alt={alt}
+                                className="absolute inset-0 h-full w-full object-cover opacity-10"
+                            />
+                            <span className="px-4 text-center text-[10px] font-medium uppercase tracking-wider opacity-40">
+                                {alt || "Imagen no disponible"}
+                            </span>
+                        </>
+                    )}
                 </div>
             )}
 

@@ -47,11 +47,11 @@ function useResolveUnlinkedFileAction() {
 
 // ── Components ────────────────────────────────────────────────────────────────
 
-function FileCard({ file }: { file: GhostFile }) {
+const FileCard = React.forwardRef<HTMLDivElement, { file: GhostFile }>(function FileCard({ file }, ref) {
     const [expanded, setExpanded] = useState(false)
     const [searchQuery, setSearchQuery] = useState("")
     const [debouncedQuery, setDebouncedQuery] = useState("")
-    const debounceRef = React.useRef<ReturnType<typeof setTimeout>>()
+    const debounceRef = React.useRef<any>()
     const { data: results = [], isFetching } = useTMDBSearch(debouncedQuery)
     const resolve = useResolveUnlinkedFileAction()
 
@@ -73,6 +73,7 @@ function FileCard({ file }: { file: GhostFile }) {
 
     return (
         <motion.div
+            ref={ref}
             layout
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -178,7 +179,7 @@ function FileCard({ file }: { file: GhostFile }) {
             </AnimatePresence>
         </motion.div>
     )
-}
+})
 
 // ── Main export ───────────────────────────────────────────────────────────────
 

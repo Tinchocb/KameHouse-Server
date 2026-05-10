@@ -57,9 +57,12 @@ func ExtractAttachment(ffmpegPath string, path string, hash string, mediaInfo *M
 	// DEVNOTE: All paths fed into this command should be absolute
 	args := []string{}
 	
-	// Only dump attachments if fonts exist
+	// Only dump attachments if fonts exist.
+	// -dump_attachment:t requires a path argument; passing an empty string causes
+	// FFmpeg to exit with EINVAL (0xffffffea) on Windows. We use the attachment
+	// directory path so fonts land in the correct location.
 	if len(mediaInfo.Fonts) > 0 {
-		args = append(args, "-dump_attachment:t", "")
+		args = append(args, "-dump_attachment:t", attachmentPath+"/")
 	}
 	
 	args = append(args, "-y", "-i", path)

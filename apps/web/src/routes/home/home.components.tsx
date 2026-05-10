@@ -49,11 +49,14 @@ export function EmptyState() {
 export function SectionLabel({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
     return (
         <div className="px-6 md:px-10 lg:px-14">
-            <div className="group/label inline-flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.03] px-4 py-2.5 text-[0.7rem] font-bold uppercase tracking-[0.25em] text-zinc-100 backdrop-blur-2xl transition-all hover:bg-white/[0.06] hover:border-white/10 hover:shadow-[0_0_20px_rgba(255,255,255,0.02)]">
-                <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10 text-primary transition-transform group-hover/label:scale-110 group-hover/label:rotate-3">
-                    <Icon className="h-3.5 w-3.5" />
+            <div className="group/label inline-flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-1.5 pr-6 text-[0.75rem] font-black uppercase tracking-[0.2em] text-zinc-100 backdrop-blur-3xl transition-all hover:bg-white/[0.05] hover:border-white/20 hover:shadow-[0_0_30px_rgba(255,255,255,0.03)]">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary transition-all group-hover/label:bg-primary group-hover/label:text-white group-hover/label:rotate-6 group-hover/label:shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)]">
+                    <Icon className="h-4 w-4" />
                 </div>
-                {label}
+                <span className="relative">
+                    {label}
+                    <span className="absolute -bottom-1 left-0 h-[1px] w-0 bg-primary transition-all duration-500 group-hover/label:w-full" />
+                </span>
             </div>
         </div>
     )

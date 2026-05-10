@@ -156,7 +156,7 @@ func (m *WSEventManager) ExitIfNoConnsAsDesktopSidecar() {
 
 		// Track connection loss time
 		var connectionLostTime time.Time
-		exitTimeout := 10 * time.Second
+		exitTimeout := 60 * time.Second
 
 		for range ticker.C {
 			// Check WebSocket connection status (protected read)
