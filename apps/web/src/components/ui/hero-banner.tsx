@@ -116,7 +116,7 @@ export function HeroBanner({
     }, [prefersReducedMotion])
 
     React.useEffect(() => {
-        setActiveIndex(initialIndex)
+        setTimeout(() => setActiveIndex(initialIndex), 0)
     }, [initialIndex])
 
     React.useEffect(() => {

@@ -94,6 +94,7 @@ func (r *Repository) InitializeModules(settings *models.MediastreamSettings, cac
 // CacheWasCleared should be called when the cache directory is manually cleared.
 func (r *Repository) CacheWasCleared() {
 	r.playbackManager.mediaContainers.Clear()
+	r.playbackManager.clientMediaContainers.Clear()
 }
 
 func (r *Repository) ClearTranscodeDir() {
@@ -121,6 +122,7 @@ func (r *Repository) ClearTranscodeDir() {
 	r.logger.Debug().Msg("mediastream: Transcode directory cleared")
 
 	r.playbackManager.mediaContainers.Clear()
+	r.playbackManager.clientMediaContainers.Clear()
 }
 
 
@@ -142,12 +144,13 @@ func (r *Repository) RequestTranscodeStream(filepath string, clientId string) (r
 		return nil, errors.New("module not initialized")
 	}
 
-	// Reinitialize the transcoder for each new transcode request
-	if ok := r.initializeTranscoder(r.settings); !ok {
-		return nil, errors.New("real-time transcoder not initialized, check your settings")
+	if !r.transcoder.IsPresent() {
+		if ok := r.initializeTranscoder(r.settings); !ok {
+			return nil, errors.New("real-time transcoder not initialized, check your settings")
+		}
 	}
 
-	ret, err = r.playbackManager.RequestPlayback(filepath, StreamTypeTranscode)
+	ret, err = r.playbackManager.RequestPlayback(filepath, StreamTypeTranscode, clientId)
 
 	return
 }
@@ -178,7 +181,7 @@ func (r *Repository) RequestDirectPlay(filepath string, clientId string) (ret *M
 		return nil, errors.New("module not initialized")
 	}
 
-	ret, err = r.playbackManager.RequestPlayback(filepath, StreamTypeDirect)
+	ret, err = r.playbackManager.RequestPlayback(filepath, StreamTypeDirect, clientId)
 
 	return
 }

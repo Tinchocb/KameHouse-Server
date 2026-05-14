@@ -86,12 +86,23 @@ export function usePlayerCore(props: PlayerCoreProps) {
     const setGlobalFullscreen = useAppStore(state => state.setFullscreen)
     const autoSkipIntroPref = useAppStore(state => state.autoSkipIntro)
     const setAutoSkipIntro = useAppStore(state => state.setAutoSkipIntro)
+    const autoSkipOutroPref = useAppStore(state => state.autoSkipOutro)
+    const setAutoSkipOutro = useAppStore(state => state.setAutoSkipOutro)
     const playbackRatePref = useAppStore(state => state.playbackRate)
     const setPlaybackRatePref = useAppStore(state => state.setPlaybackRate)
     const preferredAudioLang = useAppStore(state => state.preferredAudioLang)
     const setPreferredAudioLang = useAppStore(state => state.setPreferredAudioLang)
     const preferredSubtitleLang = useAppStore(state => state.preferredSubtitleLang)
     const setPreferredSubtitleLang = useAppStore(state => state.setPreferredSubtitleLang)
+    const showHeatmapPref = useAppStore(state => state.showHeatmap)
+    const setShowHeatmapPref = useAppStore(state => state.setShowHeatmap)
+    const aspectRatioPref = useAppStore(state => state.aspectRatio)
+    const setAspectRatioPref = useAppStore(state => state.setAspectRatio)
+    const subtitleSizePref = useAppStore(state => state.subtitleSize)
+    const setSubtitleSizePref = useAppStore(state => state.setSubtitleSize)
+    const loopEnabledPref = useAppStore(state => state.loopEnabled)
+    const setLoopEnabledPref = useAppStore(state => state.setLoopEnabled)
+    const autoDisableSubtitlesWhenDubbed = useAppStore(state => state.autoDisableSubtitlesWhenDubbed)
 
     const [showStats, setShowStats] = useState(false)
     const [statsData, setStatsData] = useState<any>(null)
@@ -171,11 +182,13 @@ export function usePlayerCore(props: PlayerCoreProps) {
         if (!video) return
 
         // Handle Resume Logic
-        if (historyData?.found && historyData.item?.episodeNumber === episodeNumber) {
+        if (historyData?.found && historyData.item && historyData.item.episodeNumber === episodeNumber) {
             const time = historyData.item.currentTime
             if (time > 10) { // Only resume if more than 10 seconds in
-                setResumeTime(time)
-                setShowResume(true)
+                setTimeout(() => {
+                    setResumeTime(time)
+                    setShowResume(true)
+                }, 0)
                 // Auto-hide resume after 10 seconds
                 setTimeout(() => setShowResume(false), 10000)
             }
@@ -381,23 +394,60 @@ export function usePlayerCore(props: PlayerCoreProps) {
     }, [activeSubtitleIndex, subtitleTracks])
 
     // Auto-select preferred tracks
+    const onSelectAudio = (track: AudioTrack) => {
+        if (hlsRef.current) {
+            hlsRef.current.audioTrack = track.index
+            setActiveAudioIndex(track.index)
+        }
+        if (track.language) {
+            setPreferredAudioLang(track.language)
+        }
+    }
+
+    const onSelectSubtitle = (track: SubtitleTrack | null) => {
+        if (track === null) {
+            setActiveSubtitleIndex(null)
+            if (hlsRef.current) {
+                hlsRef.current.subtitleTrack = -1
+            }
+            // Optional: maybe don't clear preference if they just want to turn it off once
+        } else {
+            if (hlsRef.current) {
+                hlsRef.current.subtitleTrack = track.index
+            }
+            setActiveSubtitleIndex(track.index)
+            if (track.language) {
+                setPreferredSubtitleLang(track.language)
+            }
+        }
+    }
+
     useEffect(() => {
         if (audioTracks.length > 0) {
             const preferred = audioTracks.find(t => t.language === preferredAudioLang)
             if (preferred && activeAudioIndex !== preferred.index) {
-                onSelectAudio(preferred)
+                setTimeout(() => onSelectAudio(preferred), 0)
             }
         }
     }, [audioTracks, preferredAudioLang])
 
     useEffect(() => {
         if (subtitleTracks.length > 0) {
-            const preferred = subtitleTracks.find(t => t.language === preferredSubtitleLang)
-            if (preferred && activeSubtitleIndex !== preferred.index) {
-                onSelectSubtitle(preferred)
+            const currentAudio = audioTracks.find(t => t.index === activeAudioIndex)
+            const isDubbed = currentAudio && ["spa", "spa-lat", "es", "eng"].includes(currentAudio.language)
+
+            if (autoDisableSubtitlesWhenDubbed && isDubbed) {
+                if (activeSubtitleIndex !== null) {
+                    setTimeout(() => onSelectSubtitle(null), 0)
+                }
+            } else {
+                const preferred = subtitleTracks.find(t => t.language === preferredSubtitleLang)
+                if (preferred && activeSubtitleIndex !== preferred.index) {
+                    setTimeout(() => onSelectSubtitle(preferred), 0)
+                }
             }
         }
-    }, [subtitleTracks, preferredSubtitleLang])
+    }, [subtitleTracks, audioTracks, activeAudioIndex, preferredSubtitleLang, autoDisableSubtitlesWhenDubbed])
 
     useEffect(() => {
         const video = videoRef.current
@@ -507,35 +557,6 @@ export function usePlayerCore(props: PlayerCoreProps) {
         setIsMuted(nextMute)
     }
 
-
-    const onSelectAudio = (track: AudioTrack) => {
-        if (hlsRef.current) {
-            hlsRef.current.audioTrack = track.index
-            setActiveAudioIndex(track.index)
-        }
-        if (track.language) {
-            setPreferredAudioLang(track.language)
-        }
-    }
-
-    const onSelectSubtitle = (track: SubtitleTrack | null) => {
-        if (track === null) {
-            setActiveSubtitleIndex(null)
-            if (hlsRef.current) {
-                hlsRef.current.subtitleTrack = -1
-            }
-            // Optional: maybe don't clear preference if they just want to turn it off once
-        } else {
-            if (hlsRef.current) {
-                hlsRef.current.subtitleTrack = track.index
-            }
-            setActiveSubtitleIndex(track.index)
-            if (track.language) {
-                setPreferredSubtitleLang(track.language)
-            }
-        }
-    }
-
     const toggleFullscreen = () => {
         const container = containerRef.current
         if (!container) return
@@ -586,6 +607,13 @@ export function usePlayerCore(props: PlayerCoreProps) {
         video.playbackRate = rate
         setPlaybackRatePref(rate)
     }
+
+    useEffect(() => {
+        const video = videoRef.current
+        if (video) {
+            video.loop = loopEnabledPref
+        }
+    }, [loopEnabledPref, status])
 
     useEffect(() => {
         const video = videoRef.current
@@ -686,6 +714,10 @@ export function usePlayerCore(props: PlayerCoreProps) {
                         onNextEpisode?.()
                     }
                     break
+                case "o":
+                    e.preventDefault()
+                    setIsSettingsOpen(prev => !prev)
+                    break
                 case "i":
                     e.preventDefault()
                     togglePip()
@@ -761,15 +793,26 @@ export function usePlayerCore(props: PlayerCoreProps) {
                 setSkipRemainingSeconds(Math.ceil(endTime - curr))
                 setSkipLabel("SALTAR INTRO")
             }
-        } else if (skipTimes?.ed) {
+        }
+
+        if (skipTimes?.ed) {
             const { startTime, endTime } = skipTimes.ed
             const inEdWindow = curr >= startTime && curr < endTime
-            if (inEdWindow !== showSkipIntro) setShowSkipIntro(inEdWindow)
-            if (inEdWindow) {
-                setSkipRemainingSeconds(Math.ceil(endTime - curr))
-                setSkipLabel("SALTAR CRÉDITOS")
+            if (autoSkipOutroPref && inEdWindow) {
+                video.currentTime = endTime
+                return
             }
-        } else {
+            // Show skip outro button only if NOT already showing skip intro
+            if (!skipTimes?.op || curr >= skipTimes.op.endTime) {
+                if (inEdWindow !== showSkipIntro) setShowSkipIntro(inEdWindow)
+                if (inEdWindow) {
+                    setSkipRemainingSeconds(Math.ceil(endTime - curr))
+                    setSkipLabel("SALTAR OUTRO")
+                }
+            }
+        }
+
+        if (!skipTimes?.op && !skipTimes?.ed) {
             const fallback = curr >= 30 && curr <= 120
             if (fallback !== showSkipIntro) setShowSkipIntro(fallback)
             if (fallback) {
@@ -834,18 +877,23 @@ export function usePlayerCore(props: PlayerCoreProps) {
     }, [])
 
     return {
-        refs: {
-            videoRef,
-            containerRef,
-            canvasRef,
-            progressBarRef,
-            progressInputRef,
-            timeTextRef,
+        domElements: {
+            videoElement: videoRef,
+            containerElement: containerRef,
+            canvasElement: canvasRef,
+            progressBarElement: progressBarRef,
+            progressInputElement: progressInputRef,
+            timeTextElement: timeTextRef,
         },
         state: {
             isPlaying, duration, volume, isMuted, isFullscreen, controlsVisible, status, errorMsg, isBuffering, flash, showSkipIntro, skipRemainingSeconds, skipLabel, showNextEpisode, countdownSeconds, marathonMode, audioTracks, activeAudioIndex, subtitleTracks, activeSubtitleIndex, isJassubLoading, isJassubActive, isSettingsOpen, remainingProgress,
             autoSkipIntro: autoSkipIntroPref,
+            autoSkipOutro: autoSkipOutroPref,
             playbackRate: playbackRatePref,
+            showHeatmap: showHeatmapPref,
+            aspectRatio: aspectRatioPref,
+            subtitleSize: subtitleSizePref,
+            loopEnabled: loopEnabledPref,
             showStats,
             statsData,
             hlsLevels,
@@ -856,8 +904,14 @@ export function usePlayerCore(props: PlayerCoreProps) {
         },
         actions: {
             setIsPlaying, setDuration, setIsBuffering, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, skipTime, skipOpening, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, toggleFullscreen, handleSkipIntro, handleTimeUpdate,
-            takeScreenshot, togglePip, changePlaybackRate, setShowStats, setAutoSkipIntro,
+            takeScreenshot, togglePip, changePlaybackRate, setShowStats, setAutoSkipIntro, setAutoSkipOutro,
             setHlsLevel: handleSetHlsLevel,
+            setShowHeatmap: setShowHeatmapPref,
+            setAspectRatio: setAspectRatioPref,
+            setSubtitleSize: setSubtitleSizePref,
+            setLoopEnabled: setLoopEnabledPref,
+            handleResume,
+            setShowResume,
         }
     }
 }

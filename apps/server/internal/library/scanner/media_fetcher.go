@@ -272,6 +272,35 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 	}
 
 	_ = eg.Wait()
+
+	// ── Synopsis Fallback Enrichment via AniList ──────────────────────────
+	anilistFallback := librarymetadata.NewAniListProvider()
+	for _, m := range mf.AllMedia {
+		if m != nil && (m.Description == nil || *m.Description == "") && m.Title != nil {
+			var query string
+			if m.Title.Romaji != nil && *m.Title.Romaji != "" {
+				query = *m.Title.Romaji
+			} else if m.Title.English != nil && *m.Title.English != "" {
+				query = *m.Title.English
+			} else if m.Title.UserPreferred != nil && *m.Title.UserPreferred != "" {
+				query = *m.Title.UserPreferred
+			}
+
+			if query != "" {
+				if opts.Logger != nil {
+					opts.Logger.Debug().Str("title", query).Msg("scanner: Description missing, querying AniList fallback provider")
+				}
+				res, err := anilistFallback.SearchMedia(ctx, query)
+				if err == nil && len(res) > 0 && res[0].Description != nil && *res[0].Description != "" {
+					m.Description = res[0].Description
+					if opts.Logger != nil {
+						opts.Logger.Info().Str("title", query).Msg("scanner: Successfully enriched missing description from AniList")
+					}
+				}
+			}
+		}
+	}
+
 	return mf, nil
 }
 

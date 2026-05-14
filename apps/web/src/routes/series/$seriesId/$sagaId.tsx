@@ -446,7 +446,7 @@ function DetailPage() {
     const currentEpisode = saga?.episodes[currentIdx]
 
     // When user clicks an episode → play if local
-    const handleEpisodePlay = useCallback((ep: Episode) => {
+    const handleEpisodePlay = (ep: Episode) => {
         const fullEp = libraryEntry?.episodes?.find(e => e.episodeNumber === ep.number)
         if (!fullEp?.localFile?.path) {
             toast.error("Archivo local no disponible.")
@@ -464,7 +464,7 @@ function DetailPage() {
             seriesId: Number(seriesId)
         })
         setIsPlayerOpen(true)
-    }, [libraryEntry, seriesId])
+    }
 
     if (!series || !saga || saga.episodes.length === 0) {
         return (

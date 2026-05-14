@@ -171,16 +171,42 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
                 break
             }
 
-            case WSEvents.SCAN_STATUS:
-                if (msg.payload === "finished") {
+            case WSEvents.SCAN_STATUS: {
+                const statusStr = msg.payload as string
+                let newStageIdx = stateUpdateRef.current.activeStageIdx ?? useAppStore.getState().activeStageIdx
+                if (statusStr.toLowerCase().includes("walk") || statusStr.toLowerCase().includes("escanear") || statusStr.toLowerCase().includes("scanning")) newStageIdx = 0
+                else if (statusStr.toLowerCase().includes("parse") || statusStr.toLowerCase().includes("parsing")) newStageIdx = 1
+                else if (statusStr.toLowerCase().includes("resolve") || statusStr.toLowerCase().includes("fetching") || statusStr.toLowerCase().includes("metadata") || statusStr.toLowerCase().includes("mejorar")) newStageIdx = 2
+                else if (statusStr.toLowerCase().includes("probe") || statusStr.toLowerCase().includes("probing")) newStageIdx = 3
+                else if (statusStr.toLowerCase().includes("persist") || statusStr.toLowerCase().includes("saving")) newStageIdx = 4
+                else if (statusStr.toLowerCase().includes("prune") || statusStr.toLowerCase().includes("cleaning")) newStageIdx = 5
+
+                const evt: ScanEvent = {
+                    status: statusStr.toLowerCase().includes("completed") || statusStr.toLowerCase().includes("finished") ? "FINISH" : "PROCESSING",
+                    file: statusStr,
+                    timestamp: Date.now(),
+                    id: `status-${Math.random().toString(36).substring(2, 9)}`
+                }
+                eventQueue.current.unshift(evt)
+
+                if (statusStr.toLowerCase().includes("completed") || statusStr.toLowerCase().includes("finished")) {
                     stateUpdateRef.current = {
                         ...stateUpdateRef.current,
                         isScanning: false,
-                        scanProgress: 100
+                        scanProgress: 100,
+                        activeStageIdx: -1
                     }
-                    if (!flushTimeout.current) flushTimeout.current = setTimeout(flushUpdates, 500)
+                } else {
+                    stateUpdateRef.current = {
+                        ...stateUpdateRef.current,
+                        isScanning: true,
+                        activeStageIdx: newStageIdx,
+                        currentScanningFile: statusStr
+                    }
                 }
+                if (!flushTimeout.current) flushTimeout.current = setTimeout(flushUpdates, 500)
                 break
+            }
                 
             default:
                 break

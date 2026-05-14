@@ -84,15 +84,15 @@ export function Card({ children, className }: { children: React.ReactNode; class
     )
 }
 
-export interface OsToggleProps {
-    control: Control<FieldValues>
-    name: Path<FieldValues>
+export interface OsToggleProps<T extends FieldValues> {
+    control: Control<T>
+    name: Path<T>
     label: string
     desc?: string
     onSave?: () => void
 }
 
-export function OsToggle({ control, name, label, desc, onSave }: OsToggleProps) {
+export function OsToggle<T extends FieldValues>({ control, name, label, desc, onSave }: OsToggleProps<T>) {
     return (
         <Controller
             control={control}
@@ -117,7 +117,7 @@ export function OsToggle({ control, name, label, desc, onSave }: OsToggleProps) 
     )
 }
 
-export function PathList({ control, name, label, placeholder }: { control: Control<FieldValues>, name: Path<FieldValues>, label: string, placeholder?: string }) {
+export function PathList<T extends FieldValues>({ control, name, label, placeholder }: { control: Control<T>, name: Path<T>, label: string, placeholder?: string }) {
     const [inputValue, setInputValue] = React.useState("")
 
     return (

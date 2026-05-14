@@ -186,7 +186,7 @@ const FileCard = React.forwardRef<HTMLDivElement, { file: GhostFile }>(function 
                             {debouncedQuery && !isFetching && results.length === 0 && (
                                 <div className="py-12 text-center space-y-3">
                                     <LucideSearch size={32} className="text-zinc-800 mx-auto" />
-                                    <p className="text-sm text-zinc-600">No se encontraron resultados para "{debouncedQuery}"</p>
+                                    <p className="text-sm text-zinc-600">No se encontraron resultados para &quot;{debouncedQuery}&quot;</p>
                                 </div>
                             )}
                         </div>

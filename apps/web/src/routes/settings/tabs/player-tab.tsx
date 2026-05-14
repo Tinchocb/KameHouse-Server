@@ -2,8 +2,9 @@ import React from "react"
 import { TabsContent } from "@/components/ui/tabs/tabs"
 import { Section, Card, OsToggle } from "../components"
 import { type Control } from "react-hook-form"
+import { type SettingsFormValues } from "../index"
 
-export function PlayerTab({ control }: { control: Control<any> }) {
+export function PlayerTab({ control }: { control: Control<SettingsFormValues> }) {
     return (
         <TabsContent value="player" className="m-0 space-y-16 animate-in fade-in slide-in-from-bottom-8 duration-1000">
             <header className="space-y-4">

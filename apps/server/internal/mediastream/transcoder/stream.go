@@ -119,7 +119,7 @@ func NewStream(
 	}
 }
 
-func (ts *Stream) GetIndex() (string, error) {
+func (ts *Stream) GetIndex(clientId string) (string, error) {
 	// playlist type is event since we can append to the list if Keyframe.IsDone is false.
 	// start time offset makes the stream start at 0s instead of ~3segments from the end (requires version 6 of hls)
 	index := `#EXTM3U
@@ -134,13 +134,13 @@ func (ts *Stream) GetIndex() (string, error) {
 
 	for segment := int32(0); segment < length-1; segment++ {
 		index += fmt.Sprintf("#EXTINF:%.6f\n", ts.file.Keyframes.Get(segment+1)-ts.file.Keyframes.Get(segment))
-		index += fmt.Sprintf("segment-%d.ts\n", segment)
+		index += fmt.Sprintf("segment-%d.ts?clientId=%s\n", segment, clientId)
 	}
 	// do not forget to add the last segment between the last keyframe and the end of the file
 	// if the keyframes extraction is not done, do not bother to add it, it will be retrived on the next index retrival
 	if isDone {
 		index += fmt.Sprintf("#EXTINF:%.6f\n", float64(ts.file.Info.Duration)-ts.file.Keyframes.Get(length-1))
-		index += fmt.Sprintf("segment-%d.ts\n", length-1)
+		index += fmt.Sprintf("segment-%d.ts?clientId=%s\n", length-1, clientId)
 		index += `#EXT-X-ENDLIST`
 	}
 	return index, nil

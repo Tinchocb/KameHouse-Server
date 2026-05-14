@@ -11,6 +11,8 @@ type LocalFile struct {
 	Path           string `gorm:"column:path;uniqueIndex;collate:nocase" json:"path"`
 	Name           string `gorm:"column:name" json:"name"`
 	FileHash       string `gorm:"column:file_hash" json:"fileHash"`
+	FileSize       int64  `gorm:"column:file_size" json:"fileSize"`
+	FileModTime    int64  `gorm:"column:file_mod_time" json:"fileModTime"` // Stored as Unix timestamp for simplicity
 	Locked         bool   `gorm:"column:locked" json:"locked"`
 	Ignored        bool   `gorm:"column:ignored" json:"ignored"`
 	LibraryMediaId uint   `gorm:"column:library_media_id;index" json:"libraryMediaId"`

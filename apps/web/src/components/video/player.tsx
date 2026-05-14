@@ -61,7 +61,7 @@ interface OrchestratorProps extends VideoPlayerProps {
 
 function VideoPlayerOrchestrator(props: OrchestratorProps) {
     const [streamType, setStreamType] = React.useState<string>(props.streamType || "direct")
-    const clientId = React.useMemo(() => Math.random().toString(36).substring(2, 11), [])
+    const [clientId] = React.useState(() => Math.random().toString(36).substring(2, 11))
     
     const isLocal = !props.isExternalStream && Boolean(props.streamUrl) && streamType !== "online"
 

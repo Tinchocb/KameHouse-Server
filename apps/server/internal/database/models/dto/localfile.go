@@ -25,6 +25,8 @@ type (
 		Path             string                     `json:"path"`
 		Name             string                     `json:"name"`
 		FileHash         string                     `json:"fileHash,omitempty"`
+		FileSize         int64                      `json:"fileSize,omitempty"`
+		FileModTime      int64                      `json:"fileModTime,omitempty"`
 		ParsedData       *LocalFileParsedData       `json:"parsedInfo"`
 		ParsedFolderData []*LocalFileParsedData     `json:"parsedFolderInfo"`
 		EmbeddedMetadata *LocalFileEmbeddedMetadata `json:"embeddedMetadata,omitempty"`
@@ -196,6 +198,8 @@ func NewLocalFileFromModel(m *models.LocalFile) *LocalFile {
 		Path:           m.Path,
 		Name:           m.Name,
 		FileHash:       m.FileHash,
+		FileSize:       m.FileSize,
+		FileModTime:    m.FileModTime,
 		Locked:         m.Locked,
 		Ignored:        m.Ignored,
 		LibraryMediaId: m.LibraryMediaId,

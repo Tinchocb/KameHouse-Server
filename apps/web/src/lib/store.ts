@@ -72,12 +72,24 @@ export interface PlayerState {
     setFullscreen: (fullscreen: boolean) => void
     autoSkipIntro: boolean
     setAutoSkipIntro: (auto: boolean) => void
+    autoSkipOutro: boolean
+    setAutoSkipOutro: (auto: boolean) => void
     playbackRate: number
     setPlaybackRate: (rate: number) => void
     preferredAudioLang: string
     setPreferredAudioLang: (lang: string) => void
     preferredSubtitleLang: string
     setPreferredSubtitleLang: (lang: string) => void
+    showHeatmap: boolean
+    setShowHeatmap: (show: boolean) => void
+    aspectRatio: "contain" | "fill" | "cover" | "16/9"
+    setAspectRatio: (ratio: "contain" | "fill" | "cover" | "16/9") => void
+    subtitleSize: number
+    setSubtitleSize: (size: number) => void
+    loopEnabled: boolean
+    setLoopEnabled: (enabled: boolean) => void
+    autoDisableSubtitlesWhenDubbed: boolean
+    setAutoDisableSubtitlesWhenDubbed: (auto: boolean) => void
 }
 
 export const createPlayerSlice: StateCreator<UIState & PlayerState, [], [], PlayerState> = (set) => ({
@@ -86,17 +98,29 @@ export const createPlayerSlice: StateCreator<UIState & PlayerState, [], [], Play
     currentQuality: "1080p",
     isFullscreen: false,
     autoSkipIntro: false,
+    autoSkipOutro: false,
     playbackRate: 1,
     setPlayerVolume: (volume) => set({ playerVolume: volume }),
     setVideoQualities: (qualities) => set({ videoQualities: qualities }),
     setCurrentQuality: (quality) => set({ currentQuality: quality }),
     setFullscreen: (fullscreen) => set({ isFullscreen: fullscreen }),
     setAutoSkipIntro: (autoSkipIntro) => set({ autoSkipIntro }),
+    setAutoSkipOutro: (autoSkipOutro) => set({ autoSkipOutro }),
     setPlaybackRate: (playbackRate) => set({ playbackRate }),
     preferredAudioLang: "jpn",
     setPreferredAudioLang: (preferredAudioLang) => set({ preferredAudioLang }),
     preferredSubtitleLang: "spa",
     setPreferredSubtitleLang: (preferredSubtitleLang) => set({ preferredSubtitleLang }),
+    showHeatmap: true,
+    setShowHeatmap: (showHeatmap) => set({ showHeatmap }),
+    aspectRatio: "contain",
+    setAspectRatio: (aspectRatio) => set({ aspectRatio }),
+    subtitleSize: 100,
+    setSubtitleSize: (subtitleSize) => set({ subtitleSize }),
+    loopEnabled: false,
+    setLoopEnabled: (loopEnabled) => set({ loopEnabled }),
+    autoDisableSubtitlesWhenDubbed: true,
+    setAutoDisableSubtitlesWhenDubbed: (autoDisableSubtitlesWhenDubbed) => set({ autoDisableSubtitlesWhenDubbed }),
 })
 
 // --- Combined Store ---

@@ -42,7 +42,7 @@ export interface ResolveStreamsParams {
  * Mirrors `dto.SourceType` constants on the server.
  * - `"local"`     → file on disk, served via local HLS pipeline
  */
-export type EpisodeSourceType = "local"
+export type EpisodeSourceType = "local" | "direct" | "transcode" | "optimized" | "online"
 
 export interface EpisodeSource {
     /** Discriminates between local and online sources. */

@@ -1,7 +1,6 @@
 package mediastream
 
 import (
-	"context"
 	"errors"
 	"kamehouse/internal/events"
 	"kamehouse/internal/mediastream/transcoder"
@@ -9,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
-	"github.com/samber/mo"
 )
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -30,9 +28,12 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientId string) e
 
 	path := c.Param("*")
 
-	mediaContainer, found := r.playbackManager.currentMediaContainer.Get()
+	mediaContainer, found := r.playbackManager.clientMediaContainers.Get(clientId)
 	if !found {
-		return errors.New("no file has been loaded")
+		mediaContainer, found = r.playbackManager.currentMediaContainer.Get()
+		if !found {
+			return errors.New("no file has been loaded")
+		}
 	}
 
 	if path == "master.m3u8" {
@@ -70,15 +71,15 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientId string) e
 	if strings.HasSuffix(path, "index.m3u8") && strings.Contains(path, "audio") {
 		split := strings.Split(path, "/")
 		if len(split) != 3 {
-			return errors.New("invalid index.m3u8 path")
+			return errors.New("invalid audio index.m3u8 path")
 		}
 
-		audio, err := strconv.ParseInt(split[1], 10, 32)
+		audioIndex, err := strconv.ParseInt(split[1], 10, 32)
 		if err != nil {
 			return err
 		}
 
-		ret, err := r.transcoder.MustGet().GetAudioIndex(mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, int32(audio), clientId)
+		ret, err := r.transcoder.MustGet().GetAudioIndex(mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, int32(audioIndex), clientId)
 		if err != nil {
 			return err
 		}
@@ -87,11 +88,11 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientId string) e
 	}
 
 	// Video segment
-	// /:quality/segments-:chunk.ts
+	// /:quality/segment-:segment.ts
 	if strings.HasSuffix(path, ".ts") && !strings.Contains(path, "audio") {
 		split := strings.Split(path, "/")
 		if len(split) != 2 {
-			return errors.New("invalid segments-:chunk.ts path")
+			return errors.New("invalid video segment path")
 		}
 
 		quality, err := transcoder.QualityFromString(split[0])
@@ -106,9 +107,6 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientId string) e
 
 		ret, err := r.transcoder.MustGet().GetVideoSegment(c.Request().Context(), mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, quality, segment, clientId)
 		if err != nil {
-			if errors.Is(err, context.Canceled) {
-				return nil
-			}
 			return err
 		}
 
@@ -116,14 +114,14 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientId string) e
 	}
 
 	// Audio segment
-	// /audio/:audio/segments-:chunk.ts
+	// /audio/:audio/segment-:segment.ts
 	if strings.HasSuffix(path, ".ts") && strings.Contains(path, "audio") {
 		split := strings.Split(path, "/")
 		if len(split) != 3 {
-			return errors.New("invalid segments-:chunk.ts path")
+			return errors.New("invalid audio segment path")
 		}
 
-		audio, err := strconv.ParseInt(split[1], 10, 32)
+		audioIndex, err := strconv.ParseInt(split[1], 10, 32)
 		if err != nil {
 			return err
 		}
@@ -133,11 +131,8 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientId string) e
 			return err
 		}
 
-		ret, err := r.transcoder.MustGet().GetAudioSegment(c.Request().Context(), mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, int32(audio), segment, clientId)
+		ret, err := r.transcoder.MustGet().GetAudioSegment(c.Request().Context(), mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, int32(audioIndex), segment, clientId)
 		if err != nil {
-			if errors.Is(err, context.Canceled) {
-				return nil
-			}
 			return err
 		}
 
@@ -163,19 +158,8 @@ func (r *Repository) ShutdownTranscodeStream(clientId string) {
 
 	r.logger.Warn().Str("client_id", clientId).Msg("mediastream: Received shutdown transcode stream request")
 
-	if !r.playbackManager.currentMediaContainer.IsPresent() {
-		return
-	}
-
-	// Kill playback
-	r.playbackManager.KillPlayback()
-
-	// Destroy the current transcoder
-	r.transcoder.MustGet().Destroy()
-
-	// Load a new transcoder
-	r.transcoder = mo.None[*transcoder.Transcoder]()
-	r.initializeTranscoder(r.settings)
+	r.playbackManager.clientMediaContainers.Delete(clientId)
+	r.transcoder.MustGet().RemoveClient(clientId)
 
 	// Send event
 	r.wsEventManager.SendEvent(events.MediastreamShutdownStream, nil)

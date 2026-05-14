@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/refs */
 import React from "react"
 import { cn } from "@/components/ui/core/styling"
 import { PlayerTopBar } from "./player-topbar"
@@ -33,13 +34,14 @@ export function PlayerUI({
     playableUrl,
     streamType,
     episodeSources,
+    onSourceSwitch,
     core,
 }: any) {
-    const { refs, state, actions } = core
+    const { domElements, state, actions } = core
 
     return (
         <div
-            ref={refs.containerRef}
+            ref={domElements.containerElement}
             onMouseMove={actions.triggerControlsVisibility}
             onMouseLeave={() => actions.setControlsVisible(false)}
             className={cn(
@@ -48,23 +50,25 @@ export function PlayerUI({
             )}
         >
             <video
-                ref={refs.videoRef}
+                ref={domElements.videoElement}
                 onClick={actions.togglePlay}
                 onPlay={() => actions.setIsPlaying(true)}
                 onPause={() => actions.setIsPlaying(false)}
-                onDurationChange={() => actions.setDuration(refs.videoRef.current?.duration || 0)}
+                onDurationChange={(e) => actions.setDuration(e.currentTarget.duration)}
                 onTimeUpdate={actions.handleTimeUpdate}
                 onWaiting={() => actions.setIsBuffering(true)}
                 onPlaying={() => actions.setIsBuffering(false)}
-                className={cn(
-                    "w-full h-full object-contain bg-black z-0",
-                    state.isJassubActive ? "opacity-100" : ""
-                )}
+                className="w-full h-full bg-black z-0"
+                style={{
+                    objectFit: state.aspectRatio === "16/9" ? "contain" : 
+                               state.aspectRatio === "fill" ? "fill" : 
+                               state.aspectRatio === "cover" ? "cover" : "contain"
+                }}
                 playsInline
             />
 
             <canvas
-                ref={refs.canvasRef}
+                ref={domElements.canvasElement}
                 className={cn(
                     "absolute inset-0 w-full h-full pointer-events-none z-[1]",
                     state.isJassubActive ? "block" : "hidden"
@@ -141,8 +145,8 @@ export function PlayerUI({
                 <PlayerBottomBar
                     duration={state.duration}
                     insights={[]}
-                    progressBarRef={refs.progressBarRef}
-                    progressInputRef={refs.progressInputRef}
+                    progressBarRef={domElements.progressBarElement}
+                    progressInputRef={domElements.progressInputElement}
                     handleSeek={actions.handleSeek}
                     isPlaying={state.isPlaying}
                     togglePlay={actions.togglePlay}
@@ -151,7 +155,7 @@ export function PlayerUI({
                     toggleMute={actions.toggleMute}
                     volume={state.volume}
                     handleVolume={actions.handleVolume}
-                    timeTextRef={refs.timeTextRef}
+                    timeTextRef={domElements.timeTextElement}
                     audioTracks={state.audioTracks}
                     activeAudioIndex={state.activeAudioIndex}
                     onSelectAudio={actions.onSelectAudio}
@@ -159,21 +163,35 @@ export function PlayerUI({
                     activeSubtitleIndex={state.activeSubtitleIndex}
                     onSelectSubtitle={actions.onSelectSubtitle}
                     isJassubLoading={state.isJassubLoading}
-                    episodeSources={episodeSources}
+                    episodeSources={episodeSources || []}
                     activeStreamUrl={playableUrl}
-                    handleSourceSwitch={() => {}}
+                    handleSourceSwitch={onSourceSwitch || (() => {})}
                     isFullscreen={state.isFullscreen}
                     toggleFullscreen={actions.toggleFullscreen}
                     settingsOpen={state.isSettingsOpen}
-                    onToggleSettings={(open?: boolean) => actions.setIsSettingsOpen(open !== undefined ? open : (v: boolean) => !v)}
-                    
+                    onToggleSettings={(open?: boolean) => actions.setIsSettingsOpen(open !== undefined ? open : !state.isSettingsOpen)}
                     onTakeScreenshot={actions.takeScreenshot}
                     onTogglePip={actions.togglePip}
                     playbackRate={state.playbackRate}
                     onPlaybackRateChange={actions.changePlaybackRate}
                     autoSkipIntro={state.autoSkipIntro}
                     onAutoSkipIntroChange={actions.setAutoSkipIntro}
+                    autoSkipOutro={state.autoSkipOutro}
+                    onAutoSkipOutroChange={actions.setAutoSkipOutro}
                     onNextEpisode={onNextEpisode || (() => {})}
+                    hlsLevels={state.hlsLevels}
+                    activeHlsLevel={state.activeHlsLevel}
+                    onHlsLevelChange={actions.setHlsLevel}
+                    showHeatmap={state.showHeatmap}
+                    onShowHeatmapChange={actions.setShowHeatmap}
+                    aspectRatio={state.aspectRatio}
+                    onAspectRatioChange={actions.setAspectRatio}
+                    subtitleSize={state.subtitleSize}
+                    onSubtitleSizeChange={actions.setSubtitleSize}
+                    loopEnabled={state.loopEnabled}
+                    onLoopEnabledChange={actions.setLoopEnabled}
+                    autoDisableSubtitlesWhenDubbed={state.autoDisableSubtitlesWhenDubbed}
+                    onAutoDisableSubtitlesWhenDubbedChange={actions.setAutoDisableSubtitlesWhenDubbed}
                 />
             </div>
         </div>

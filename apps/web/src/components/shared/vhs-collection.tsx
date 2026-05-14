@@ -199,6 +199,7 @@ const VhsTapeCard = memo(({
         </div>
     )
 })
+VhsTapeCard.displayName = "VhsTapeCard"
 
 export const VhsCollection = memo(({ 
     items, 
@@ -235,3 +236,4 @@ export const VhsCollection = memo(({
         </div>
     )
 })
+VhsCollection.displayName = "VhsCollection"

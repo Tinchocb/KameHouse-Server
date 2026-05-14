@@ -268,7 +268,7 @@ const MultiDirectorySelectorFieldInner = forwardRef<HTMLInputElement, FieldCompo
 
         const defaultValue = useMemo(() => get(context.formState.defaultValues, props.name) ?? [], [context.formState.defaultValues, props.name])
         React.useEffect(() => {
-            setPaths(defaultValue)
+            setTimeout(() => setPaths(defaultValue), 0)
         }, [defaultValue])
 
 
@@ -394,8 +394,7 @@ export function mergeRefs<T>(...refs: (ReactRef<T> | null | undefined)[]) {
 }
 
 export function useMergeRefs<T>(...refs: (ReactRef<T> | null | undefined)[]) {
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    return useMemo(() => mergeRefs(...refs), refs)
+    return useMemo(() => mergeRefs(...refs), [refs])
 }
 
 function callAllHandlers<T extends (...args: unknown[]) => unknown>(

@@ -72,7 +72,7 @@ type Scanner struct {
 	FanArtEnricher   *librarymetadata.FanArtEnricher
 	OMDbEnricher     *librarymetadata.OMDbEnricher
 	OpenSubsEnricher *librarymetadata.OpenSubtitlesEnricher
-	FullScan         bool
+	ScanMode         string
 	TargetPaths      []string
 	FFprobePath      string
 }
@@ -123,20 +123,12 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	telemetry.Send(events.EventScanProgress, 10)
 	telemetry.Send(events.EventScanStatus, "Retrieving local files...")
 
-	// Get last scan time from settings
-	var lastScanAt time.Time
-	if !scn.FullScan && scn.Database != nil {
-		if s, err := scn.Database.GetSettings(); err == nil && s != nil {
-			lastScanAt = s.Library.LastScanAt
-		}
-	}
-
 	startTime := time.Now()
 
 	if scn.ScanLogger != nil {
 		scn.ScanLogger.logger.Info().
 			Time("startTime", startTime).
-			Time("lastScanAt", lastScanAt).
+			Str("scanMode", scn.ScanMode).
 			Msg("Scanning started")
 
 		defer func() {
@@ -157,114 +149,122 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		}()
 	}
 
-	// +---------------------+
-	// |     File paths      |
-	// +---------------------+
-
-	paths, libraryPaths, _ := scn.discoverFilePaths(ctx, lastScanAt)
-
-	if scn.ScanLogger != nil {
-		scn.ScanLogger.logger.Info().
-			Any("count", len(paths)).
-			Msg("Retrieved file paths from all directories")
-	}
-
-	// +---------------------+
-	// |    Local files      |
-	// +---------------------+
-
-	// Get skipped files depending on options
+	var localFiles []*dto.LocalFile
 	skippedLfs := make(map[string]*dto.LocalFile)
-	if scn.ExistingLocalFiles != nil {
-		// Retrieve skipped files from existing local files
-		for _, lf := range scn.ExistingLocalFiles {
-			if lf == nil {
-				continue
-			}
+	var libraryPaths []string
 
-			// 1. Explicit skip (locked/ignored)
-			if (scn.SkipLockedFiles && lf.IsLocked()) || (scn.SkipIgnoredFiles && lf.IsIgnored()) {
-				skippedLfs[lf.GetNormalizedPath()] = lf
-				continue
-			}
+	if scn.ScanMode == "metadata" {
+		scn.Logger.Info().Msg("scanner: Running in metadata improvement mode. Skipping file matching and probing.")
+		telemetry.Send(events.EventScanStatus, "Loading existing library files...")
+		localFiles = append([]*dto.LocalFile(nil), scn.ExistingLocalFiles...)
+		libraryPaths = append([]string{scn.DirPath}, scn.OtherDirPaths...)
+	} else {
+		// +---------------------+
+		// |     File paths      |
+		// +---------------------+
 
-			// 2. Delta scan optimization: skip files in unchanged directories
-			// If a directory hasn't changed since the last scan, we can safely skip its files
-			// and keep them in the database.
-			if !lastScanAt.IsZero() {
-				dir := filepath.Dir(lf.Path)
-				if info, err := os.Stat(dir); err == nil && info.IsDir() {
-					if info.ModTime().Before(lastScanAt) {
-						skippedLfs[lf.GetNormalizedPath()] = lf
-						continue
+		var paths []string
+		paths, libraryPaths, _ = scn.discoverFilePaths(ctx, time.Time{})
+
+		if scn.ScanLogger != nil {
+			scn.ScanLogger.logger.Info().
+				Any("count", len(paths)).
+				Msg("Retrieved file paths from all directories")
+		}
+
+		// +---------------------+
+		// |    Local files      |
+		// +---------------------+
+
+		// Get skipped files depending on options
+		if scn.ExistingLocalFiles != nil {
+			// Retrieve skipped files from existing local files
+			for _, lf := range scn.ExistingLocalFiles {
+				if lf == nil {
+					continue
+				}
+
+				// 1. Explicit skip (locked/ignored)
+				if (scn.SkipLockedFiles && lf.IsLocked()) || (scn.SkipIgnoredFiles && lf.IsIgnored()) {
+					skippedLfs[lf.GetNormalizedPath()] = lf
+					continue
+				}
+
+				// 2. File Map optimization (Fast Scan)
+				if scn.ScanMode != "deep" {
+					if stat, err := os.Stat(lf.Path); err == nil {
+						if stat.Size() == lf.FileSize && stat.ModTime().Unix() == lf.FileModTime {
+							skippedLfs[lf.GetNormalizedPath()] = lf
+							continue
+						}
 					}
 				}
 			}
 		}
-	}
 
-	telemetry.Send(events.EventScanProgress, 20)
-	telemetry.Send(events.EventScanStatus, "Verifying shelved files...")
+		telemetry.Send(events.EventScanProgress, 20)
+		telemetry.Send(events.EventScanStatus, "Verifying shelved files...")
 
-	// +---------------------+
-	// |    Shelved files    |
-	// +---------------------+
+		// +---------------------+
+		// |    Shelved files    |
+		// +---------------------+
 
-	scn.Logger.Debug().Int("count", len(scn.ExistingShelvedFiles)).Msg("scanner: Verifying shelved files")
+		scn.Logger.Debug().Int("count", len(scn.ExistingShelvedFiles)).Msg("scanner: Verifying shelved files")
 
-	// Unshelve shelved files \/
-	// Check for shelved files that are now present
-	// If a shelved file is found, it is added to the skipped files list (so it's not rescanned)
-	for _, shelvedLf := range scn.ExistingShelvedFiles {
-		if filesystem.FileExists(shelvedLf.Path) {
-			skippedLfs[shelvedLf.GetNormalizedPath()] = shelvedLf
+		// Unshelve shelved files \/
+		// Check for shelved files that are now present
+		// If a shelved file is found, it is added to the skipped files list (so it's not rescanned)
+		for _, shelvedLf := range scn.ExistingShelvedFiles {
+			if filesystem.FileExists(shelvedLf.Path) {
+				skippedLfs[shelvedLf.GetNormalizedPath()] = shelvedLf
+			}
 		}
-	}
 
-	telemetry.Send(events.EventScanProgress, 30)
-	telemetry.Send(events.EventScanStatus, "Scanning local files...")
-	telemetry.Send(events.EventScanProgressDetailed, map[string]interface{}{
-		"stage":     "file-retrieval",
-		"fileCount": len(paths),
-		"skipped":   len(skippedLfs),
-		"message":   fmt.Sprintf("Found %d files (%d skipped)", len(paths), len(skippedLfs)),
-	})
+		telemetry.Send(events.EventScanProgress, 30)
+		telemetry.Send(events.EventScanStatus, "Scanning local files...")
+		telemetry.Send(events.EventScanProgressDetailed, map[string]interface{}{
+			"stage":     "file-retrieval",
+			"fileCount": len(paths),
+			"skipped":   len(skippedLfs),
+			"message":   fmt.Sprintf("Found %d files (%d skipped)", len(paths), len(skippedLfs)),
+		})
 
-	localFiles := scn.createLocalFiles(ctx, paths, libraryPaths, skippedLfs)
+		localFiles = scn.createLocalFiles(ctx, paths, libraryPaths, skippedLfs)
 
-	if scn.ScanLogger != nil {
-		scn.ScanLogger.logger.Debug().
-			Any("count", len(localFiles)).
-			Msg("Local files to be scanned")
-		scn.ScanLogger.logger.Debug().
-			Any("count", len(skippedLfs)).
-			Msg("Skipped files")
-
-		scn.ScanLogger.logger.Debug().
-			Msg("===========================================================================================================")
-	}
-
-	for _, lf := range localFiles {
 		if scn.ScanLogger != nil {
-			scn.ScanLogger.logger.Trace().
-				Str("path", lf.Path).
-				Str("filename", lf.Name).
-				Interface("parsedData", lf.ParsedData).
-				Interface("parsedFolderData", lf.ParsedFolderData).
-				Msg("Parsed local file")
+			scn.ScanLogger.logger.Debug().
+				Any("count", len(localFiles)).
+				Msg("Local files to be scanned")
+			scn.ScanLogger.logger.Debug().
+				Any("count", len(skippedLfs)).
+				Msg("Skipped files")
+
+			scn.ScanLogger.logger.Debug().
+				Msg("===========================================================================================================")
 		}
-	}
 
-	if scn.ScanLogger != nil {
-		scn.ScanLogger.logger.Debug().
-			Msg("===========================================================================================================")
-	}
+		for _, lf := range localFiles {
+			if scn.ScanLogger != nil {
+				scn.ScanLogger.logger.Trace().
+					Str("path", lf.Path).
+					Str("filename", lf.Name).
+					Interface("parsedData", lf.ParsedData).
+					Interface("parsedFolderData", lf.ParsedFolderData).
+					Msg("Parsed local file")
+			}
+		}
 
-	// ── Probing Phase (Technical Info) ────────────────────────────────────────
-	if len(localFiles) > 0 {
-		telemetry.Send(events.EventScanStatus, "Extracting file information...")
-		prober := NewFileProber(scn.FFprobePath, scn.Logger)
-		prober.ProbeFiles(ctx, localFiles)
+		if scn.ScanLogger != nil {
+			scn.ScanLogger.logger.Debug().
+				Msg("===========================================================================================================")
+		}
+
+		// ── Probing Phase (Technical Info) ────────────────────────────────────────
+		if len(localFiles) > 0 {
+			telemetry.Send(events.EventScanStatus, "Extracting file information...")
+			prober := NewFileProber(scn.FFprobePath, scn.Logger)
+			prober.ProbeFiles(ctx, localFiles)
+		}
 	}
 
 	// DEVNOTE: Removed library path checking because it causes some issues with symlinks
@@ -325,114 +325,116 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	// |    NFO Support      |
 	// +---------------------+
 
-	scn.Logger.Debug().Msg("scanner: Looking for local NFO metadata files")
-	// Track NFO folders already processed to avoid creating duplicate LibraryMedia
-	var nfoFolderMap sync.Map // folder path -> LibraryMedia ID (uint)
+	if scn.ScanMode != "metadata" {
+		scn.Logger.Debug().Msg("scanner: Looking for local NFO metadata files")
+		// Track NFO folders already processed to avoid creating duplicate LibraryMedia
+		var nfoFolderMap sync.Map // folder path -> LibraryMedia ID (uint)
 
-	// Bounded worker pool for NFO resolution
-	maxWorkers := runtime.NumCPU()
-	if maxWorkers < 4 {
-		maxWorkers = 4
-	}
-	if maxWorkers > 16 {
-		maxWorkers = 16
-	}
+		// Bounded worker pool for NFO resolution
+		maxWorkers := runtime.NumCPU()
+		if maxWorkers < 4 {
+			maxWorkers = 4
+		}
+		if maxWorkers > 16 {
+			maxWorkers = 16
+		}
 
-	var nfoDbMu sync.Mutex
+		var nfoDbMu sync.Mutex
 
-	nfoJobs := make(chan *dto.LocalFile, len(localFiles))
-	for _, lf := range localFiles {
-		nfoJobs <- lf
-	}
-	close(nfoJobs)
+		nfoJobs := make(chan *dto.LocalFile, len(localFiles))
+		for _, lf := range localFiles {
+			nfoJobs <- lf
+		}
+		close(nfoJobs)
 
-	var nfoWg sync.WaitGroup
-	for i := 0; i < maxWorkers; i++ {
-		nfoWg.Add(1)
-		go func() {
-			defer nfoWg.Done()
-			for lf := range nfoJobs {
-				if lf == nil || lf.LibraryMediaId != 0 || lf.MediaId != 0 {
-					continue
-				}
+		var nfoWg sync.WaitGroup
+		for i := 0; i < maxWorkers; i++ {
+			nfoWg.Add(1)
+			go func() {
+				defer nfoWg.Done()
+				for lf := range nfoJobs {
+					if lf == nil || lf.LibraryMediaId != 0 || lf.MediaId != 0 {
+						continue
+					}
 
-				lfDir := filepath.Dir(lf.Path)
+					lfDir := filepath.Dir(lf.Path)
 
-				// 1. Check folder-level cache
-				if libMediaId, exists := nfoFolderMap.Load(lfDir); exists {
-					lf.LibraryMediaId = libMediaId.(uint)
-					continue
-				}
+					// 1. Check folder-level cache
+					if libMediaId, exists := nfoFolderMap.Load(lfDir); exists {
+						lf.LibraryMediaId = libMediaId.(uint)
+						continue
+					}
 
-				// 2. Typical Kodi NFO paths
-				nfoPaths := []string{
-					util.ReplaceExtension(lf.Path, ".nfo"), // [filename].nfo (Per-file NFO takes priority)
-					filepath.Join(lfDir, "tvshow.nfo"),
-					filepath.Join(lfDir, "anime.nfo"),
-					filepath.Join(lfDir, "movie.nfo"),
-				}
+					// 2. Typical Kodi NFO paths
+					nfoPaths := []string{
+						util.ReplaceExtension(lf.Path, ".nfo"), // [filename].nfo (Per-file NFO takes priority)
+						filepath.Join(lfDir, "tvshow.nfo"),
+						filepath.Join(lfDir, "anime.nfo"),
+						filepath.Join(lfDir, "movie.nfo"),
+					}
 
-				for _, nfoPath := range nfoPaths {
-					if filesystem.FileExists(nfoPath) {
-						nfo, err := ParseNfoFile(nfoPath)
-						if err == nil && nfo != nil {
-							// For per-file NFO ([filename].nfo), we don't cache it for the folder
-							isPerFileNfo := strings.HasSuffix(strings.ToLower(nfoPath), ".nfo") && !strings.HasSuffix(strings.ToLower(nfoPath), "tvshow.nfo") && !strings.HasSuffix(strings.ToLower(nfoPath), "anime.nfo") && !strings.HasSuffix(strings.ToLower(nfoPath), "movie.nfo")
+					for _, nfoPath := range nfoPaths {
+						if filesystem.FileExists(nfoPath) {
+							nfo, err := ParseNfoFile(nfoPath)
+							if err == nil && nfo != nil {
+								// For per-file NFO ([filename].nfo), we don't cache it for the folder
+								isPerFileNfo := strings.HasSuffix(strings.ToLower(nfoPath), ".nfo") && !strings.HasSuffix(strings.ToLower(nfoPath), "tvshow.nfo") && !strings.HasSuffix(strings.ToLower(nfoPath), "anime.nfo") && !strings.HasSuffix(strings.ToLower(nfoPath), "movie.nfo")
 
-							// If it's a folder-level NFO, check cache again (double-checked locking pattern)
-							if !isPerFileNfo {
-								if libMediaId, exists := nfoFolderMap.Load(lfDir); exists {
-									lf.LibraryMediaId = libMediaId.(uint)
-									break
+								// If it's a folder-level NFO, check cache again (double-checked locking pattern)
+								if !isPerFileNfo {
+									if libMediaId, exists := nfoFolderMap.Load(lfDir); exists {
+										lf.LibraryMediaId = libMediaId.(uint)
+										break
+									}
 								}
-							}
 
-							// Determine format
-							format := "TV"
-							if nfo.XMLName.Local == "movie" {
-								format = "MOVIE"
-							}
+								// Determine format
+								format := "TV"
+								if nfo.XMLName.Local == "movie" {
+									format = "MOVIE"
+								}
 
-							newMedia := &models.LibraryMedia{
-								Type:          "ANIME",
-								Format:        format,
-								TitleOriginal: nfo.OriginalTitle,
-								TitleRomaji:   nfo.Title,
-								TitleEnglish:  nfo.Title,
-								Description:   nfo.Plot,
-								Rating:        nfo.Rating,
-								Year:          nfo.Year,
-							}
+								newMedia := &models.LibraryMedia{
+									Type:          "ANIME",
+									Format:        format,
+									TitleOriginal: nfo.OriginalTitle,
+									TitleRomaji:   nfo.Title,
+									TitleEnglish:  nfo.Title,
+									Description:   nfo.Plot,
+									Rating:        nfo.Rating,
+									Year:          nfo.Year,
+								}
 
-							if scn.Database != nil {
-								nfoDbMu.Lock()
-								saved, err := db.InsertLibraryMedia(scn.Database, newMedia)
-								nfoDbMu.Unlock()
-								
-								if err == nil && saved != nil {
-									lf.LibraryMediaId = saved.ID
-									if !isPerFileNfo {
-										nfoFolderMap.Store(lfDir, saved.ID)
+								if scn.Database != nil {
+									nfoDbMu.Lock()
+									saved, err := db.InsertLibraryMedia(scn.Database, newMedia)
+									nfoDbMu.Unlock()
+									
+									if err == nil && saved != nil {
+										lf.LibraryMediaId = saved.ID
+										if !isPerFileNfo {
+											nfoFolderMap.Store(lfDir, saved.ID)
+										}
+
+										if tmdbID := nfo.GetTmdbID(); tmdbID > 0 {
+											lf.MediaId = tmdbID
+										}
+
+										scn.Logger.Info().
+											Str("filename", lf.Name).
+											Uint("libraryMediaId", saved.ID).
+											Msg("scanner: Created LibraryMedia via local NFO")
+										break
 									}
-
-									if tmdbID := nfo.GetTmdbID(); tmdbID > 0 {
-										lf.MediaId = tmdbID
-									}
-
-									scn.Logger.Info().
-										Str("filename", lf.Name).
-										Uint("libraryMediaId", saved.ID).
-										Msg("scanner: Created LibraryMedia via local NFO")
-									break
 								}
 							}
 						}
 					}
 				}
-			}
-		}()
+			}()
+		}
+		nfoWg.Wait()
 	}
-	nfoWg.Wait()
 
 	// +---------------------+
 	// |    MediaFetcher     |
@@ -544,27 +546,29 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	// |      Matcher        |
 	// +---------------------+
 
-	// Create a new matcher
-	matcher := &Matcher{
-		LocalFiles:        localFiles,
-		MediaContainer:    mc,
-		Logger:            scn.Logger,
-		Database:          scn.Database,
-		Threshold:         scn.MatchingThreshold,
-		MatchingAlgorithm: scn.MatchingAlgorithm,
-		StrictStructure:   scn.StrictStructure,
-	}
-
-	telemetry.Send(events.EventScanProgress, 60)
-
-	err = matcher.MatchLocalFilesWithMedia()
-	if err != nil {
-		if errors.Is(err, ErrNoLocalFiles) {
-			scn.Logger.Debug().Msg("scanner: Scan completed")
-			telemetry.Send(events.EventScanProgress, 100)
-			telemetry.Send(events.EventScanStatus, "Scan completed")
+	if scn.ScanMode != "metadata" {
+		// Create a new matcher
+		matcher := &Matcher{
+			LocalFiles:        localFiles,
+			MediaContainer:    mc,
+			Logger:            scn.Logger,
+			Database:          scn.Database,
+			Threshold:         scn.MatchingThreshold,
+			MatchingAlgorithm: scn.MatchingAlgorithm,
+			StrictStructure:   scn.StrictStructure,
 		}
-		return nil, err
+
+		telemetry.Send(events.EventScanProgress, 60)
+
+		err = matcher.MatchLocalFilesWithMedia()
+		if err != nil {
+			if errors.Is(err, ErrNoLocalFiles) {
+				scn.Logger.Debug().Msg("scanner: Scan completed")
+				telemetry.Send(events.EventScanProgress, 100)
+				telemetry.Send(events.EventScanStatus, "Scan completed")
+			}
+			return nil, err
+		}
 	}
 
 	telemetry.Send(events.EventScanProgress, 70)
@@ -930,10 +934,15 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 			Msg("Scan completed")
 	}
 
-	// Invoke ScanCompleted hook
-
-	// Save updated local files to database
-	// scn.persistLocalFiles(localFiles) // Removed: handled by caller
+	if scn.EventDispatcher != nil {
+		scn.EventDispatcher.Publish(events.Event{
+			Topic: "library.scan",
+			Payload: map[string]any{
+				"status":          "FINISH",
+				"total_processed": len(localFiles),
+			},
+		})
+	}
 
 	return localFiles, nil
 }

@@ -23,6 +23,7 @@ type Tracker struct {
 	lastUsage     map[string]time.Time
 	transcoder    *Transcoder
 	deletedStream chan string
+	removeClientChan chan string
 	logger        *zerolog.Logger
 	killCh        chan struct{} // Close channel to stop tracker
 }
@@ -35,6 +36,7 @@ func NewTracker(t *Transcoder) *Tracker {
 		transcoder:    t,
 		logger:        t.logger,
 		deletedStream: make(chan string, 1000),
+		removeClientChan: make(chan string, 1000),
 		killCh:        make(chan struct{}),
 	}
 	go ret.start()
@@ -43,6 +45,10 @@ func NewTracker(t *Transcoder) *Tracker {
 
 func (t *Tracker) Stop() {
 	close(t.killCh)
+}
+
+func (t *Tracker) RemoveClient(clientId string) {
+	t.removeClientChan <- clientId
 }
 
 func Abs(x int32) int32 {
@@ -120,6 +126,13 @@ func (t *Tracker) start() {
 			}
 		case path := <-t.deletedStream:
 			t.DestroyStreamIfOld(path)
+		case client := <-t.removeClientChan:
+			info, ok := t.clients[client]
+			if ok {
+				delete(t.clients, client)
+				delete(t.visitDate, client)
+				t.KillStreamIfDead(info.path)
+			}
 		}
 	}
 }

@@ -3,7 +3,7 @@
  *
  * Shared TypeScript types for audio/subtitle track metadata.
  *
- * ─── Backend contract ────────────────────────────────────────────────────────
+ * â”€â”€â”€ Backend contract â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
  *
  * The backend should expose a dedicated endpoint (or include this in the stream
  * start response) that returns the available tracks extracted from the MKV
@@ -18,12 +18,12 @@
  * {
  *   "audioTracks": [
  *     { "index": 0, "language": "jpn", "title": "Japanese",          "codec": "FLAC",     "channels": 2, "default": true  },
- *     { "index": 1, "language": "spa", "title": "Español Latino",    "codec": "AAC",      "channels": 2, "default": false }
+ *     { "index": 1, "language": "spa", "title": "EspaÃ±ol Latino",    "codec": "AAC",      "channels": 2, "default": false }
  *   ],
  *   "subtitleTracks": [
- *     { "index": 0, "language": "spa", "title": "Español",           "codec": "ASS",      "forced": false, "default": true  },
+ *     { "index": 0, "language": "spa", "title": "EspaÃ±ol",           "codec": "ASS",      "forced": false, "default": true  },
  *     { "index": 1, "language": "eng", "title": "English (Honorifics)","codec": "ASS",    "forced": false, "default": false },
- *     { "index": 2, "language": "spa", "title": "Español (Forzado)", "codec": "ASS",      "forced": true,  "default": false }
+ *     { "index": 2, "language": "spa", "title": "EspaÃ±ol (Forzado)", "codec": "ASS",      "forced": true,  "default": false }
  *   ]
  * }
  * ```
@@ -32,10 +32,10 @@
  * into the HLS manifest as `#EXT-X-MEDIA` tags; HLS.js surfaces these via
  * `Hls.Events.AUDIO_TRACKS_UPDATED`.  Both paths converge to the same
  * `AudioTrack` shape below so the UI layer is agnostic.
- * ─────────────────────────────────────────────────────────────────────────────
+ * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
  */
 
-// ── Audio ─────────────────────────────────────────────────────────────────────
+// â”€â”€ Audio â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Represents a single audio track inside an MKV file.
@@ -53,7 +53,7 @@ export interface AudioTrack {
     index: number
     /** BCP-47 / ISO 639-2 language code, e.g. "jpn", "spa", "eng". */
     language: string
-    /** Human-readable label as embedded in the MKV — fall back to `language` if absent. */
+    /** Human-readable label as embedded in the MKV â€” fall back to `language` if absent. */
     title: string
     /** Codec string, e.g. "FLAC", "AAC", "AC3", "OPUS". */
     codec?: string
@@ -63,7 +63,7 @@ export interface AudioTrack {
     default?: boolean
 }
 
-// ── Subtitles ─────────────────────────────────────────────────────────────────
+// â”€â”€ Subtitles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Codec-agnostic subtitle track descriptor.
@@ -101,7 +101,7 @@ export interface SubtitleTrack {
     default?: boolean
 }
 
-// ── Aggregate container ───────────────────────────────────────────────────────
+// â”€â”€ Aggregate container â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Track metadata bundle returned by the backend for the active stream.
@@ -111,7 +111,7 @@ export interface StreamTrackInfo {
     subtitleTracks: SubtitleTrack[]
 }
 
-// ── UI Props ──────────────────────────────────────────────────────────────────
+// â”€â”€ UI Props â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Props for the PlayerSettingsMenu component.
@@ -129,7 +129,7 @@ export interface PlayerSettingsMenuProps {
 
     sources?: import("@/api/types/unified.types").EpisodeSource[]
     currentSourceUrl?: string
-    onSourceChange?: (source: any) => void
+    onSourceChange?: (source: import("@/api/types/unified.types").EpisodeSource) => void
 
     hlsLevels?: { index: number; label: string; height: number }[]
     activeHlsLevel?: number
@@ -141,8 +141,23 @@ export interface PlayerSettingsMenuProps {
     autoSkipIntro?: boolean
     onAutoSkipIntroChange?: (auto: boolean) => void
 
+    autoSkipOutro?: boolean
+    onAutoSkipOutroChange?: (auto: boolean) => void
+
     showHeatmap?: boolean
     onShowHeatmapChange?: (show: boolean) => void
+
+    aspectRatio?: "contain" | "fill" | "cover" | "16/9"
+    onAspectRatioChange?: (ratio: "contain" | "fill" | "cover" | "16/9") => void
+
+    subtitleSize?: number
+    onSubtitleSizeChange?: (size: number) => void
+
+    loopEnabled?: boolean
+    onLoopEnabledChange?: (enabled: boolean) => void
+
+    autoDisableSubtitlesWhenDubbed?: boolean
+    onAutoDisableSubtitlesWhenDubbedChange?: (auto: boolean) => void
 
     open?: boolean
     onOpenChange?: (open: boolean) => void

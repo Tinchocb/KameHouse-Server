@@ -63,13 +63,15 @@ export function DynamicBackdrop() {
 
         if (!displayedUrl) {
             // First image — just show it
-            setDisplayedUrl(currentBackdropUrl)
+            setTimeout(() => setDisplayedUrl(currentBackdropUrl), 0)
             return
         }
 
         // Cross-fade: load next into a hidden layer, then swap
-        setNextUrl(currentBackdropUrl)
-        setIsCrossFading(true)
+        setTimeout(() => {
+            setNextUrl(currentBackdropUrl)
+            setIsCrossFading(true)
+        }, 0)
 
         const timer = setTimeout(() => {
             setDisplayedUrl(currentBackdropUrl)

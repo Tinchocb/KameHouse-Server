@@ -35,7 +35,7 @@ export function QualitySettings({
                                 "text-[9px] font-bold mt-1.5 uppercase opacity-60",
                                 isActive ? "text-white" : "text-zinc-500"
                             )}>
-                                {source.provider || "Local"}
+                                {source.type === 'local' ? "Local" : "Provider"}
                             </span>
                         </div>
                         {isActive && <Check className="w-3.5 h-3.5" />}

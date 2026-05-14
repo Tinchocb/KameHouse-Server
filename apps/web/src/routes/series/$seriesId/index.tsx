@@ -1,14 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
-import React, { useMemo, useState, useCallback, useEffect } from "react"
-import { FileVideo, FolderOpen, Play } from "lucide-react"
+import React, { useMemo, useState } from "react"
+import { FolderOpen, Play } from "lucide-react"
 import { toast } from "sonner"
 import { FaPlay } from "react-icons/fa"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 
 import { cn } from "@/components/ui/core/styling"
 import { getHighResImage } from "@/lib/helpers/images"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { fetchAnimeEntry, useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { Anime_Episode, Anime_LocalFile, Mediastream_StreamType, Anime_Entry } from "@/api/generated/types"
@@ -54,13 +53,7 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         malId?: number | null
     } | null>(null)
 
-    // Move computations that depend on entry into useMemo and guard them
-    const sagas = useMemo(() => {
-        if (!entry?.media) return []
-        return resolveSeriesSagas(entry.media)
-    }, [entry?.media])
-
-    const hasLocalFiles = useMemo(() => (entry?.localFiles || []).length > 0, [entry?.localFiles])
+    const sagas = useMemo(() => entry?.media ? resolveSeriesSagas(entry.media) : [], [entry])
     
     const computedEpisodes = useMemo(() => {
         if (!entry) return []
@@ -105,7 +98,7 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         return [];
     }, [entry, sagas]);
 
-    const handlePlayEpisode = useCallback((localFile: Anime_LocalFile, episode: Anime_Episode) => {
+    const handlePlayEpisode = (localFile: Anime_LocalFile, episode: Anime_Episode) => {
         if (!localFile.path) {
             toast.error("Archivo local no disponible.")
             return
@@ -119,9 +112,9 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
             episodeNumber: episode.episodeNumber,
             malId: entry?.media?.idMal ?? null,
         })
-    }, [entry?.media])
+    }
 
-    const handlePlayLocalFile = useCallback((localFile: Anime_LocalFile) => {
+    const handlePlayLocalFile = (localFile: Anime_LocalFile) => {
         if (!localFile.path) {
             toast.error("Archivo no disponible.")
             return
@@ -136,16 +129,16 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
             episodeNumber: Number(epNum),
             malId: entry?.media?.tmdbId ?? null,
         })
-    }, [entry?.media])
+    }
     
-    const handlePlayDefault = useCallback(() => {
+    const handlePlayDefault = () => {
         if (!computedEpisodes || computedEpisodes.length === 0) return
         
         // Find first unwatched episode or first episode
         const targetEp = computedEpisodes.find(ep => !ep.watched) || computedEpisodes[0]
         const lf = (entry?.localFiles || []).find(f => 
-            f.metadata?.episode === targetEp.episodeNumber || 
-            f.parsedInfo?.episode === targetEp.episodeNumber
+            Number(f.metadata?.episode) === targetEp.episodeNumber || 
+            Number(f.parsedInfo?.episode) === targetEp.episodeNumber
         )
         
         if (lf) {
@@ -156,7 +149,7 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         } else {
             toast.info("No hay archivos locales disponibles para reproducir.")
         }
-    }, [computedEpisodes, entry?.localFiles, handlePlayEpisode, handlePlayLocalFile])
+    }
 
     if (isLoading) {
         return (
@@ -348,7 +341,7 @@ const HeroSection = React.memo(function HeroSection({
                         entry={entry} 
                         className="w-full hover:scale-105 transition-transform duration-500" 
                         onClick={onPlay} 
-                        posterUrlOverride={getHighResImage(entry.media.posterImage)} 
+                        posterUrlOverride={getHighResImage(media.posterImage)} 
                     />
                 </div>
 
@@ -506,10 +499,6 @@ const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
 
     const [activeSagaId, setActiveSagaId] = useState<string>(generatedSagas[0]?.id?.toString() || "")
     const [activeSubSagaId, setActiveSubSagaId] = useState<string>("all")
-
-    useEffect(() => {
-        setActiveSubSagaId("all")
-    }, [activeSagaId])
 
     const activeMainSaga = useMemo(() => {
         return generatedSagas.find(s => s.id.toString() === activeSagaId)

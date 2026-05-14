@@ -142,7 +142,11 @@ func (t *Transcoder) GetMaster(path string, hash string, mediaInfo *videofile.Me
 		audio:   -1,
 		head:    -1,
 	}
-	return stream.GetMaster(), nil
+	return stream.GetMaster(client), nil
+}
+
+func (t *Transcoder) RemoveClient(clientId string) {
+	t.tracker.RemoveClient(clientId)
 }
 
 func (t *Transcoder) GetVideoIndex(
@@ -170,7 +174,7 @@ func (t *Transcoder) GetVideoIndex(
 		audio:   -1,
 		head:    -1,
 	}
-	return stream.GetVideoIndex(quality)
+	return stream.GetVideoIndex(quality, client)
 }
 
 func (t *Transcoder) GetAudioIndex(
@@ -197,7 +201,7 @@ func (t *Transcoder) GetAudioIndex(
 		audio:  audio,
 		head:   -1,
 	}
-	return stream.GetAudioIndex(audio)
+	return stream.GetAudioIndex(audio, client)
 }
 
 func (t *Transcoder) GetVideoSegment(

@@ -3,6 +3,7 @@ package scanner
 import (
 	"context"
 	"io/fs"
+	"os"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/events"
 	"kamehouse/internal/library/filesystem"
@@ -52,20 +53,12 @@ func (scn *Scanner) discoverFilePaths(ctx context.Context, lastScanAt time.Time)
 			var retrievedPaths []string
 			var err error
 
-			if !lastScanAt.IsZero() {
+			if true { // Always walk directories to find modified files accurately
 				err = filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
 					if err != nil {
 						return nil
 					}
 					if d.IsDir() {
-						normPath := util.NormalizePath(path)
-						_, isKnown := existingFolders[normPath]
-						info, err := d.Info()
-						if err == nil && isKnown && info.ModTime().Before(lastScanAt) {
-							if path != dirPath {
-								return filepath.SkipDir
-							}
-						}
 						return nil
 					}
 					ext := strings.ToLower(filepath.Ext(path))
@@ -134,6 +127,12 @@ func (scn *Scanner) createLocalFiles(ctx context.Context, paths []string, librar
 					continue
 				}
 				lf := dto.NewLocalFileS(path, libraryPaths)
+				
+				if stat, err := os.Stat(path); err == nil {
+					lf.FileSize = stat.Size()
+					lf.FileModTime = stat.ModTime().Unix()
+				}
+				
 				results <- lf
 			}
 		}()

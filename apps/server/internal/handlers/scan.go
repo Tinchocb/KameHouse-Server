@@ -25,16 +25,19 @@ var globalScanActive atomic.Bool
 func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 
 	type body struct {
-		Enhanced                   bool `json:"enhanced"`
-		EnhanceWithOfflineDatabase bool `json:"enhanceWithOfflineDatabase"`
-		SkipLockedFiles            bool `json:"skipLockedFiles"`
-		SkipIgnoredFiles           bool `json:"skipIgnoredFiles"`
-		FullScan                   bool `json:"fullScan"`
+		Mode             string `json:"mode"` // "metadata", "fast", "deep"
+		SkipLockedFiles  bool   `json:"skipLockedFiles"`
+		SkipIgnoredFiles bool   `json:"skipIgnoredFiles"`
 	}
 
 	var b body
 	if err := c.Bind(&b); err != nil {
 		return h.RespondWithError(c, err)
+	}
+	
+	// Default to fast mode if not provided
+	if b.Mode == "" {
+		b.Mode = "fast"
 	}
 
 	if h.App.Settings == nil {
@@ -58,8 +61,8 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	// For full scans: clear lastScanAt so the walker traverses all directories
-	if b.FullScan && h.App.Database != nil {
+	// For deep scans: clear lastScanAt so the walker traverses all directories
+	if b.Mode == "deep" && h.App.Database != nil {
 		if s, err := h.App.Database.GetSettings(); err == nil && s != nil {
 			s.Library.LastScanAt = time.Time{}
 			// CRITICAL: Reset all media IDs in local_files to force the matcher to re-run
@@ -110,8 +113,9 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		OtherDirPaths:              additionalLibraryPaths,
 		SeriesPaths:                h.App.Settings.GetLibrary().SeriesPaths,
 		MoviePaths:                 h.App.Settings.GetLibrary().MoviePaths,
-		Enhanced:                   b.Enhanced,
-		EnhanceWithOfflineDatabase: b.EnhanceWithOfflineDatabase,
+		Enhanced:                   true,
+		EnhanceWithOfflineDatabase: true,
+		ScanMode:                   b.Mode, // Pass the mode
 		PlatformRef:                h.App.Metadata.PlatformRef,
 		Logger:                     h.App.Logger,
 		WSEventManager:             h.App.WSEventManager,
@@ -136,7 +140,6 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		FanArtEnricher:             h.App.Metadata.FanArt,
 		OMDbEnricher:               h.App.Metadata.OMDb,
 		OpenSubsEnricher:           h.App.Metadata.OpenSubs,
-		FullScan:                   b.FullScan,
 		FFprobePath:                ffprobePath,
 	}
 

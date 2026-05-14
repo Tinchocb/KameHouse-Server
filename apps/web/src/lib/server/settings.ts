@@ -252,10 +252,7 @@ export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>): 
         vcTranslateProvider: "",
         vcTranslateTargetLanguage: "",
     },
-    torrent: {
-        // showBufferingStatus: data.torrent.showBufferingStatus || false, // Deprecated in backend schema
-        // showNetworkSpeed: data.torrent.showNetworkSpeed || false, // Deprecated in backend schema
-    } as Record<string, never>,
+    torrent: {} as any,
     Platform: {
         hideAudienceScore: false,
 

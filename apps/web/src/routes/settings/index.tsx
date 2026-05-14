@@ -127,7 +127,7 @@ const settingsSchema = z.object({
     }).default({}),
 })
 
-type SettingsFormValues = z.infer<typeof settingsSchema>
+export type SettingsFormValues = z.infer<typeof settingsSchema>
 
 export const Route = createFileRoute("/settings/")({
     component: SettingsPage,

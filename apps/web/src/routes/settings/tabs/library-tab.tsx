@@ -6,8 +6,9 @@ import { Section, Card, PathList } from "../components"
 import { type Control } from "react-hook-form"
 import { cn } from "@/components/ui/core/styling"
 import { LucideRefreshCw } from "lucide-react"
+import { type SettingsFormValues } from "../index"
 
-export function LibraryTab({ isScanning, control }: { isScanning: boolean; handleScan: (full: boolean) => void; control: Control<any> }) {
+export function LibraryTab({ isScanning, control }: { isScanning: boolean; handleScan: (full: boolean) => void; control: Control<SettingsFormValues> }) {
     return (
         <TabsContent value="library" className="m-0 space-y-16 animate-in fade-in slide-in-from-bottom-8 duration-1000">
 

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { IoSettingsSharp } from "react-icons/io5"
 import { FaVolumeUp } from "react-icons/fa"
 import { MdSubtitles } from "react-icons/md"
-import { Loader2, Zap, Gauge, FastForward, Check } from "lucide-react"
+import { Loader2, Zap, Gauge, Check, Monitor } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 
 import type { PlayerSettingsMenuProps } from "./track-types"
@@ -13,7 +13,14 @@ import { SubtitleSettings } from "./player-settings/SubtitleSettings"
 import { QualitySettings } from "./player-settings/QualitySettings"
 import { PlaybackSettings } from "./player-settings/PlaybackSettings"
 
-type SettingsView = "main" | "audio" | "subtitles" | "quality" | "playback"
+type SettingsView = "main" | "audio" | "subtitles" | "quality" | "playback" | "image"
+
+const ASPECT_RATIO_LABELS: Record<string, string> = {
+    contain: "Ajustado",
+    fill: "Rellenar",
+    cover: "Recortar",
+    "16/9": "16:9 forzado",
+}
 
 export function PlayerSettingsMenu({
     audioTracks,
@@ -33,13 +40,25 @@ export function PlayerSettingsMenu({
     onPlaybackRateChange,
     autoSkipIntro = false,
     onAutoSkipIntroChange,
+    autoSkipOutro = false,
+    onAutoSkipOutroChange,
+    showHeatmap = true,
+    onShowHeatmapChange,
     hlsLevels = [],
     activeHlsLevel = -1,
     onHlsLevelChange,
+    aspectRatio = "contain",
+    onAspectRatioChange,
+    subtitleSize = 100,
+    onSubtitleSizeChange,
+    loopEnabled = false,
+    onLoopEnabledChange,
+    autoDisableSubtitlesWhenDubbed = true,
+    onAutoDisableSubtitlesWhenDubbedChange,
 }: PlayerSettingsMenuProps) {
     const [internalOpen, setInternalOpen] = React.useState(false)
     const [view, setView] = React.useState<SettingsView>("main")
-    
+
     const isControlled = open !== undefined
     const isOpen = isControlled ? open : internalOpen
 
@@ -50,7 +69,6 @@ export function PlayerSettingsMenu({
             setInternalOpen(v)
         }
         if (!v) {
-            // Reset view to main when closing
             setTimeout(() => setView("main"), 200)
         }
     }, [isControlled, onOpenChange])
@@ -58,7 +76,6 @@ export function PlayerSettingsMenu({
     const panelRef = React.useRef<HTMLDivElement>(null)
     const buttonRef = React.useRef<HTMLButtonElement>(null)
 
-    // Click outside to close
     React.useEffect(() => {
         if (!isOpen) return
         const onPointerDown = (e: PointerEvent) => {
@@ -75,7 +92,6 @@ export function PlayerSettingsMenu({
         return () => document.removeEventListener("pointerdown", onPointerDown)
     }, [isOpen, setIsOpen])
 
-    // Keyboard: Escape to close
     React.useEffect(() => {
         if (!isOpen) return
         const onKey = (e: KeyboardEvent) => {
@@ -89,19 +105,24 @@ export function PlayerSettingsMenu({
     }, [isOpen, setIsOpen])
 
     const langLabel = (lang: string) => lang.toUpperCase().slice(0, 3)
-    
+
     const activeAudio = audioTracks.find(t => t.index === activeAudioIndex)
-    const activeSubtitle = activeSubtitleIndex !== null 
+    const activeSubtitle = activeSubtitleIndex !== null
         ? subtitleTracks.find(t => t.index === activeSubtitleIndex)
         : null
-    
-    const hlsQuality = activeHlsLevel === -1 
-        ? "Auto" 
+
+    const hlsQuality = activeHlsLevel === -1
+        ? "Auto"
         : hlsLevels.find(l => l.index === activeHlsLevel)?.label || "Auto"
-        
-    const activeQuality = hlsLevels.length > 0 
-        ? hlsQuality 
+
+    const activeQuality = hlsLevels.length > 0
+        ? hlsQuality
         : (sources.find(s => s.url === currentSourceUrl)?.quality || "Original")
+
+    const autoSkipLabel = [
+        autoSkipIntro ? "Intro" : null,
+        autoSkipOutro ? "Outro" : null,
+    ].filter(Boolean).join("+") || "Apagado"
 
     return (
         <div className={cn("relative", className)}>
@@ -109,103 +130,117 @@ export function PlayerSettingsMenu({
                 ref={buttonRef}
                 type="button"
                 onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen) }}
+                aria-label="Configuración [O]"
+                title="Configuración [O]"
                 className={cn(
-                    "relative flex items-center justify-center w-12 h-12",
-                    "text-zinc-500 hover:text-white border border-white/10 hover:border-white/40 bg-black/40 backdrop-blur-md",
-                    "transition-all duration-200 rounded-full",
-                    isOpen && "text-white rotate-90 border-white bg-white/10"
+                    "relative flex items-center justify-center w-9 h-9",
+                    "text-zinc-400 hover:text-white",
+                    "transition-all duration-200",
+                    isOpen && "text-white"
                 )}
             >
-                <IoSettingsSharp className="w-6 h-6" />
+                <IoSettingsSharp className={cn("w-4 h-4 transition-transform duration-300", isOpen && "rotate-90")} />
                 {isLoadingSubtitle && (
-                    <span className="absolute -top-1 -right-1">
-                        <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
+                    <span className="absolute -top-0.5 -right-0.5">
+                        <Loader2 className="w-3 h-3 text-white animate-spin" />
                     </span>
                 )}
             </button>
 
-            <AnimatePresence>
-                {isOpen && (
-                    <div 
-                        ref={panelRef}
-                        className="absolute bottom-16 right-0 z-50 pointer-events-auto"
-                    >
+            <div ref={panelRef} className="absolute bottom-16 right-0 z-50 pointer-events-auto">
+                <AnimatePresence>
+                    {isOpen && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                            transition={{ duration: 0.15, ease: "easeOut" }}
+                        >
+                        {/* ── MAIN MENU ───────────────────────────────── */}
                         {view === "main" && (
                             <SettingsLayout title="Configuración" onClose={() => setIsOpen(false)}>
-                                <MenuButton 
+                                <MenuButton
                                     icon={<FaVolumeUp className="w-4 h-4" />}
                                     label="Audio"
                                     value={activeAudio ? (activeAudio.title || langLabel(activeAudio.language)) : "Desconocido"}
                                     onClick={() => setView("audio")}
                                 />
-                                <MenuButton 
+                                <MenuButton
                                     icon={<MdSubtitles className="w-4 h-4" />}
                                     label="Subtítulos"
                                     value={activeSubtitle ? (activeSubtitle.title || langLabel(activeSubtitle.language)) : "Desactivado"}
                                     onClick={() => setView("subtitles")}
                                 />
-                                { (sources.length > 0 || hlsLevels.length > 0) && (
-                                    <MenuButton 
+                                {(sources.length > 0 || hlsLevels.length > 0) && (
+                                    <MenuButton
                                         icon={<Zap className="w-4 h-4" />}
                                         label="Calidad / Fuente"
                                         value={activeQuality}
                                         onClick={() => setView("quality")}
                                     />
                                 )}
-                                <MenuButton 
+                                <MenuButton
+                                    icon={<Monitor className="w-4 h-4" />}
+                                    label="Imagen"
+                                    value={ASPECT_RATIO_LABELS[aspectRatio] || "Ajustado"}
+                                    onClick={() => setView("image")}
+                                />
+                                <MenuButton
                                     icon={<Gauge className="w-4 h-4" />}
-                                    label="Velocidad y Ajustes"
-                                    value={`${playbackRate}x`}
+                                    label="Reproducción"
+                                    value={`${playbackRate}x · Skip ${autoSkipLabel}`}
                                     onClick={() => setView("playback")}
                                 />
                             </SettingsLayout>
                         )}
 
+                        {/* ── AUDIO ──────────────────────────────────── */}
                         {view === "audio" && (
-                            <SettingsLayout 
-                                title="Audio" 
-                                onBack={() => setView("main")} 
+                            <SettingsLayout
+                                title="Audio"
+                                onBack={() => setView("main")}
                                 onClose={() => setIsOpen(false)}
                             >
-                                <AudioSettings 
-                                    audioTracks={audioTracks} 
-                                    activeAudioIndex={activeAudioIndex} 
-                                    onSelectAudio={onSelectAudio} 
+                                <AudioSettings
+                                    audioTracks={audioTracks}
+                                    activeAudioIndex={activeAudioIndex}
+                                    onSelectAudio={onSelectAudio}
                                 />
                             </SettingsLayout>
                         )}
 
+                        {/* ── SUBTÍTULOS ─────────────────────────────── */}
                         {view === "subtitles" && (
-                            <SettingsLayout 
-                                title="Subtítulos" 
-                                onBack={() => setView("main")} 
+                            <SettingsLayout
+                                title="Subtítulos"
+                                onBack={() => setView("main")}
                                 onClose={() => setIsOpen(false)}
                             >
-                                <SubtitleSettings 
-                                    subtitleTracks={subtitleTracks} 
-                                    activeSubtitleIndex={activeSubtitleIndex} 
+                                <SubtitleSettings
+                                    subtitleTracks={subtitleTracks}
+                                    activeSubtitleIndex={activeSubtitleIndex}
                                     onSelectSubtitle={(track) => {
                                         onSelectSubtitle(track)
                                         setIsOpen(false)
-                                    }} 
+                                    }}
+                                    subtitleSize={subtitleSize}
+                                    onSubtitleSizeChange={onSubtitleSizeChange}
                                 />
                             </SettingsLayout>
                         )}
 
+                        {/* ── CALIDAD / FUENTE ───────────────────────── */}
                         {view === "quality" && (
-                            <SettingsLayout 
-                                title="Calidad / Fuente" 
-                                onBack={() => setView("main")} 
+                            <SettingsLayout
+                                title="Calidad / Fuente"
+                                onBack={() => setView("main")}
                                 onClose={() => setIsOpen(false)}
                             >
                                 {hlsLevels.length > 0 && (
                                     <div className="flex flex-col border-b border-white/5 pb-2 mb-2">
                                         <div className="px-4 py-2 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Resolución HLS</div>
                                         <button
-                                            onClick={() => {
-                                                onHlsLevelChange?.(-1)
-                                                setIsOpen(false)
-                                            }}
+                                            onClick={() => { onHlsLevelChange?.(-1); setIsOpen(false) }}
                                             className={cn(
                                                 "flex items-center justify-between px-4 py-3 transition-all",
                                                 activeHlsLevel === -1 ? "bg-white/10 text-white" : "text-zinc-400 hover:bg-white/5 hover:text-white"
@@ -217,10 +252,7 @@ export function PlayerSettingsMenu({
                                         {hlsLevels.map((level) => (
                                             <button
                                                 key={level.index}
-                                                onClick={() => {
-                                                    onHlsLevelChange?.(level.index)
-                                                    setIsOpen(false)
-                                                }}
+                                                onClick={() => { onHlsLevelChange?.(level.index); setIsOpen(false) }}
                                                 className={cn(
                                                     "flex items-center justify-between px-4 py-3 transition-all",
                                                     activeHlsLevel === level.index ? "bg-white/10 text-white" : "text-zinc-400 hover:bg-white/5 hover:text-white"
@@ -232,43 +264,83 @@ export function PlayerSettingsMenu({
                                         ))}
                                     </div>
                                 )}
-                                
+
                                 {sources.length > 0 && (
                                     <>
-                                        {hlsLevels.length > 0 && <div className="px-4 py-2 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Fuentes / Servidores</div>}
-                                        <QualitySettings 
-                                            sources={sources} 
-                                            currentSourceUrl={currentSourceUrl} 
+                                        {hlsLevels.length > 0 && <div className="px-4 py-2 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Fuentes</div>}
+                                        <QualitySettings
+                                            sources={sources}
+                                            currentSourceUrl={currentSourceUrl}
                                             onSourceChange={(source) => {
                                                 onSourceChange?.(source)
                                                 setIsOpen(false)
-                                            }} 
+                                            }}
                                         />
                                     </>
                                 )}
                             </SettingsLayout>
                         )}
 
+                        {/* ── IMAGEN ─────────────────────────────────── */}
+                        {view === "image" && (
+                            <SettingsLayout
+                                title="Imagen"
+                                onBack={() => setView("main")}
+                                onClose={() => setIsOpen(false)}
+                            >
+                                <div className="px-4 py-2 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Relación de aspecto</div>
+                                {(["contain", "fill", "cover", "16/9"] as const).map((ratio) => (
+                                    <button
+                                        key={ratio}
+                                        onClick={() => onAspectRatioChange?.(ratio)}
+                                        className={cn(
+                                            "flex items-center justify-between w-full px-4 py-3 transition-all",
+                                            aspectRatio === ratio ? "bg-white/10 text-white" : "text-zinc-400 hover:bg-white/5 hover:text-white"
+                                        )}
+                                    >
+                                        <div className="flex flex-col items-start">
+                                            <span className="text-xs font-bold">{ASPECT_RATIO_LABELS[ratio]}</span>
+                                            <span className="text-[9px] text-zinc-600 mt-0.5">
+                                                {ratio === "contain" && "Barras negras · conserva proporción"}
+                                                {ratio === "fill" && "Estira para llenar · puede distorsionar"}
+                                                {ratio === "cover" && "Rellena y recorta bordes"}
+                                                {ratio === "16/9" && "Fuerza 16:9 con contain"}
+                                            </span>
+                                        </div>
+                                        {aspectRatio === ratio && <Check className="w-3.5 h-3.5 shrink-0" />}
+                                    </button>
+                                ))}
+                            </SettingsLayout>
+                        )}
+
+                        {/* ── REPRODUCCIÓN ───────────────────────────── */}
                         {view === "playback" && (
-                            <SettingsLayout 
-                                title="Velocidad y Ajustes" 
-                                onBack={() => setView("main")} 
+                            <SettingsLayout
+                                title="Reproducción"
+                                onBack={() => setView("main")}
                                 onClose={() => setIsOpen(false)}
                             >
                                 <PlaybackSettings
-                                    playbackRate={playbackPreference.playbackRate}
-                                    onPlaybackRateChange={playbackPreference.onPlaybackRateChange}
-                                    autoSkipIntro={playbackPreference.autoSkipIntro}
-                                    onAutoSkipIntroChange={playbackPreference.onAutoSkipIntroChange}
-                                    showHeatmap={playbackPreference.showHeatmap}
-                                    onShowHeatmapChange={playbackPreference.onShowHeatmapChange}
+                                    playbackRate={playbackRate}
+                                    onPlaybackRateChange={onPlaybackRateChange ?? (() => {})}
+                                    autoSkipIntro={autoSkipIntro}
+                                    onAutoSkipIntroChange={onAutoSkipIntroChange ?? (() => {})}
+                                    autoSkipOutro={autoSkipOutro}
+                                    onAutoSkipOutroChange={onAutoSkipOutroChange ?? (() => {})}
+                                    showHeatmap={showHeatmap}
+                                    onShowHeatmapChange={onShowHeatmapChange ?? (() => {})}
+                                    loopEnabled={loopEnabled}
+                                    onLoopEnabledChange={onLoopEnabledChange ?? (() => {})}
+                                    autoDisableSubtitlesWhenDubbed={autoDisableSubtitlesWhenDubbed}
+                                    onAutoDisableSubtitlesWhenDubbedChange={onAutoDisableSubtitlesWhenDubbedChange ?? (() => {})}
                                     showSeparator={false}
                                 />
                             </SettingsLayout>
                         )}
-                    </div>
+                    </motion.div>
                 )}
-            </AnimatePresence>
+                </AnimatePresence>
+            </div>
         </div>
     )
 }

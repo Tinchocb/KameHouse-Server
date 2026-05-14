@@ -1,4 +1,5 @@
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
+import { useGetUnlinkedFiles } from "@/api/hooks/unlinked.hooks"
 import { useState, useMemo } from "react"
 import { useDebounce } from "react-use"
 
@@ -6,7 +7,10 @@ export function useGlobalSearch() {
     const [query, setQuery] = useState("")
     const [debouncedQuery, setDebouncedQuery] = useState("")
 
-    const { data: collection, isLoading } = useGetLibraryCollection()
+    const { data: collection, isLoading: isLoadingCol } = useGetLibraryCollection()
+    const { data: unlinkedFiles, isLoading: isLoadingUnlinked } = useGetUnlinkedFiles()
+
+    const isLoading = isLoadingCol || isLoadingUnlinked
 
     useDebounce(
         () => {
@@ -23,14 +27,34 @@ export function useGlobalSearch() {
         return collection.lists.flatMap(list => list.entries || [])
     }, [collection])
 
+    const syntheticUnlinked = useMemo(() => {
+        if (!unlinkedFiles) return []
+        return unlinkedFiles.filter(f => !f.userResolved).map(file => {
+            const filename = file.path.split(/[\\/]/).pop() ?? file.path
+            return {
+                mediaId: `unlinked-${file.id}`,
+                isUnlinked: true,
+                path: file.path,
+                media: {
+                    titleRomaji: filename,
+                    titleEnglish: filename,
+                    titleOriginal: filename,
+                    year: "LOCAL",
+                    format: "ARCHIVO HUÉRFANO",
+                    posterImage: "",
+                }
+            }
+        })
+    }, [unlinkedFiles])
+
     const results = useMemo(() => {
+        const combined: any[] = [...allEntries, ...syntheticUnlinked]
         if (!isSearchActive) {
-            // Return some "recent" or just first 10 if not searching
-            return allEntries.slice(0, 10)
+            return combined.slice(0, 10)
         }
         
         const q = debouncedQuery.toLowerCase()
-        return allEntries
+        return combined
             .filter(entry => {
                 const media = entry.media
                 const title = media 
@@ -40,7 +64,7 @@ export function useGlobalSearch() {
                 return title.includes(q)
             })
             .slice(0, 10)
-    }, [allEntries, debouncedQuery, isSearchActive])
+    }, [allEntries, syntheticUnlinked, debouncedQuery, isSearchActive])
 
     return {
         query,
@@ -50,3 +74,4 @@ export function useGlobalSearch() {
         isSearchActive,
     }
 }
+

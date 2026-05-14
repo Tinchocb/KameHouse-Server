@@ -24,6 +24,7 @@ type (
 		currentMediaContainer mo.Option[*MediaContainer] // The current media being played.
 		repository            *Repository
 		mediaContainers       *result.Map[string, *MediaContainer] // Temporary cache for the media containers.
+		clientMediaContainers *result.Map[string, *MediaContainer]
 	}
 
 	PlaybackState struct {
@@ -43,9 +44,10 @@ type (
 
 func NewPlaybackManager(repository *Repository) *PlaybackManager {
 	return &PlaybackManager{
-		logger:          repository.logger,
-		repository:      repository,
-		mediaContainers: result.NewMap[string, *MediaContainer](),
+		logger:                repository.logger,
+		repository:            repository,
+		mediaContainers:       result.NewMap[string, *MediaContainer](),
+		clientMediaContainers: result.NewMap[string, *MediaContainer](),
 	}
 }
 
@@ -58,7 +60,7 @@ func (p *PlaybackManager) KillPlayback() {
 }
 
 // RequestPlayback is called by the frontend to stream a media file
-func (p *PlaybackManager) RequestPlayback(filepath string, streamType StreamType) (ret *MediaContainer, err error) {
+func (p *PlaybackManager) RequestPlayback(filepath string, streamType StreamType, clientId string) (ret *MediaContainer, err error) {
 
 	p.logger.Debug().Str("filepath", filepath).Any("type", streamType).Msg("mediastream: Requesting playback")
 
@@ -72,6 +74,10 @@ func (p *PlaybackManager) RequestPlayback(filepath string, streamType StreamType
 
 	// Set the current media container.
 	p.currentMediaContainer = mo.Some(ret)
+	if clientId != "" {
+		p.clientMediaContainers.Set(clientId, ret)
+	}
+	p.clientMediaContainers.Set("1", ret)
 
 	p.logger.Info().Str("filepath", filepath).Msg("mediastream: Ready to play media")
 

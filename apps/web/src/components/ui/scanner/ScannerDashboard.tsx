@@ -6,7 +6,7 @@ import {
     LucideActivity, LucideCheck,
     LucideFlame, LucideHistory, LucidePlay,
     LucideRadar, LucideRefreshCw,
-    LucideFilter, LucideZap,
+    LucideFilter, LucideZap, LucideSparkles,
 } from "lucide-react"
 
 import { cn } from "@/components/ui/core/styling"
@@ -18,12 +18,16 @@ export function ScannerDashboard() {
     const { mutate: scan, isPending: scanPending } = useScanLocalFiles()
     const { data: summaries } = useGetScanSummaries()
 
+    const startMetadataImprovement = useCallback(() => {
+        scan({ enhanced: true, enhanceWithOfflineDatabase: true, skipLockedFiles: false, skipIgnoredFiles: false, fullScan: false, mode: "metadata" })
+    }, [scan])
+
     const startFastScan = useCallback(() => {
-        scan({ enhanced: false, enhanceWithOfflineDatabase: false, skipLockedFiles: false, skipIgnoredFiles: false, fullScan: false })
+        scan({ enhanced: false, enhanceWithOfflineDatabase: false, skipLockedFiles: false, skipIgnoredFiles: false, fullScan: false, mode: "fast" })
     }, [scan])
 
     const startDeepScan = useCallback(() => {
-        scan({ enhanced: true, enhanceWithOfflineDatabase: true, skipLockedFiles: false, skipIgnoredFiles: false, fullScan: true })
+        scan({ enhanced: true, enhanceWithOfflineDatabase: true, skipLockedFiles: false, skipIgnoredFiles: false, fullScan: true, mode: "deep" })
     }, [scan])
 
     const recentSummaries = useMemo(() => (summaries ?? []).slice().reverse().slice(0, 8), [summaries])
@@ -152,6 +156,15 @@ export function ScannerDashboard() {
 
                 {/* 2. ACTIONS (Sidebar) */}
                 <div className="col-span-12 lg:col-span-4 grid grid-cols-1 gap-6">
+                    <ScanActionCard
+                        label="Mejorar Metadatos"
+                        desc="Enriquecer sinopsis y portadas."
+                        icon={<LucideSparkles size={28} className="text-white" />}
+                        onClick={startMetadataImprovement}
+                        disabled={isScanning || scanPending}
+                        loading={isScanning && activeStageIdx < 5}
+                        accentColor="white"
+                    />
                     <ScanActionCard
                         label="Delta Scan"
                         desc="Incremental update for new files."

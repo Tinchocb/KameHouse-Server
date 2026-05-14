@@ -78,7 +78,7 @@ func (fs *FileStream) Destroy() {
 }
 
 // GetMaster generates the master playlist.
-func (fs *FileStream) GetMaster() string {
+func (fs *FileStream) GetMaster(client string) string {
 	master := "#EXTM3U\n"
 	if fs.Info.Video != nil {
 		var transmuxQuality Quality
@@ -99,7 +99,7 @@ func (fs *FileStream) GetMaster() string {
 			}
 			master += "AUDIO=\"audio\","
 			master += "CLOSED-CAPTIONS=NONE\n"
-			master += fmt.Sprintf("./%s/index.m3u8\n", Original)
+			master += fmt.Sprintf("./%s/index.m3u8?clientId=%s\n", Original, client)
 		}
 		aspectRatio := float32(fs.Info.Video.Width) / float32(fs.Info.Video.Height)
 		// codec is the prefix + the level, the level is not part of the codec we want to compare for the same_codec check bellow
@@ -118,22 +118,9 @@ func (fs *FileStream) GetMaster() string {
 				master += fmt.Sprintf("CODECS=\"%s\",", transmuxCodec)
 				master += "AUDIO=\"audio\","
 				master += "CLOSED-CAPTIONS=NONE\n"
-				master += fmt.Sprintf("./%s/index.m3u8\n", quality)
+				master += fmt.Sprintf("./%s/index.m3u8?clientId=%s\n", quality, client)
 			}
 		}
-
-		//for _, quality := range Qualities {
-		//	if quality.Height() < fs.Info.Video.Quality.Height() && quality.AverageBitrate() < fs.Info.Video.Bitrate {
-		//		master += "#EXT-X-STREAM-INF:"
-		//		master += fmt.Sprintf("AVERAGE-BANDWIDTH=%d,", quality.AverageBitrate())
-		//		master += fmt.Sprintf("BANDWIDTH=%d,", quality.MaxBitrate())
-		//		master += fmt.Sprintf("RESOLUTION=%dx%d,", int(aspectRatio*float32(quality.Height())+0.5), quality.Height())
-		//		master += "CODECS=\"avc1.640028\","
-		//		master += "AUDIO=\"audio\","
-		//		master += "CLOSED-CAPTIONS=NONE\n"
-		//		master += fmt.Sprintf("./%s/index.m3u8\n", quality)
-		//	}
-		//}
 	}
 	for _, audio := range fs.Info.Audios {
 		master += "#EXT-X-MEDIA:TYPE=AUDIO,"
@@ -152,15 +139,15 @@ func (fs *FileStream) GetMaster() string {
 			master += "DEFAULT=YES,"
 		}
 		master += "CHANNELS=\"2\","
-		master += fmt.Sprintf("URI=\"./audio/%d/index.m3u8\"\n", audio.Index)
+		master += fmt.Sprintf("URI=\"./audio/%d/index.m3u8?clientId=%s\"\n", audio.Index, client)
 	}
 	return master
 }
 
 // GetVideoIndex gets the index of a video stream of a specific quality.
-func (fs *FileStream) GetVideoIndex(quality Quality) (string, error) {
+func (fs *FileStream) GetVideoIndex(quality Quality, client string) (string, error) {
 	stream := fs.getVideoStream(quality)
-	return stream.GetIndex()
+	return stream.GetIndex(client)
 }
 
 // getVideoStream gets a video stream of a specific quality.
@@ -171,12 +158,6 @@ func (fs *FileStream) getVideoStream(quality Quality) *VideoStream {
 	})
 	return stream
 }
-
-// GetVideoSegment gets a segment of a video stream of a specific quality.
-//func (fs *FileStream) GetVideoSegment(quality Quality, segment int32) (string, error) {
-//	stream := fs.getVideoStream(quality)
-//	return stream.GetSegment(segment)
-//}
 
 // GetVideoSegment gets a segment of a video stream of a specific quality.
 func (fs *FileStream) GetVideoSegment(ctx context.Context, quality Quality, segment int32) (string, error) {
@@ -212,9 +193,9 @@ func (fs *FileStream) GetVideoSegment(ctx context.Context, quality Quality, segm
 }
 
 // GetAudioIndex gets the index of an audio stream of a specific index.
-func (fs *FileStream) GetAudioIndex(audio int32) (string, error) {
+func (fs *FileStream) GetAudioIndex(audio int32, client string) (string, error) {
 	stream := fs.getAudioStream(audio)
-	return stream.GetIndex()
+	return stream.GetIndex(client)
 }
 
 // GetAudioSegment gets a segment of an audio stream of a specific index.
