@@ -1,0 +1,85 @@
+import * as React from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { ChevronLeft, X } from "lucide-react"
+import { cn } from "@/components/ui/core/styling"
+
+interface SettingsLayoutProps {
+    title: string
+    onBack?: () => void
+    onClose: () => void
+    children: React.ReactNode
+}
+
+export function SettingsLayout({ title, onBack, onClose, children }: SettingsLayoutProps) {
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.98 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="w-80 bg-black/95 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden flex flex-col"
+        >
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-white/5">
+                <div className="flex items-center gap-2">
+                    {onBack && (
+                        <button
+                            onClick={onBack}
+                            className="p-1 hover:bg-white/10 rounded-full transition-colors text-zinc-400 hover:text-white"
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                        </button>
+                    )}
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">
+                        {title}
+                    </span>
+                </div>
+                <button
+                    onClick={onClose}
+                    className="p-1 hover:bg-white/10 rounded-full transition-colors text-zinc-500 hover:text-white"
+                >
+                    <X className="w-4 h-4" />
+                </button>
+            </div>
+
+            {/* Content */}
+            <div className="max-h-[60vh] overflow-y-auto scrollbar-none py-2">
+                {children}
+            </div>
+        </motion.div>
+    )
+}
+
+interface MenuButtonProps {
+    icon: React.ReactNode
+    label: string
+    value?: string
+    onClick: () => void
+    rightElement?: React.ReactNode
+}
+
+export function MenuButton({ icon, label, value, onClick, rightElement }: MenuButtonProps) {
+    return (
+        <button
+            onClick={onClick}
+            className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors group text-left"
+        >
+            <div className="flex items-center gap-3">
+                <div className="text-zinc-500 group-hover:text-white transition-colors">
+                    {icon}
+                </div>
+                <div className="flex flex-col">
+                    <span className="text-xs font-bold text-zinc-300 group-hover:text-white transition-colors">
+                        {label}
+                    </span>
+                    {value && (
+                        <span className="text-[10px] font-medium text-zinc-500 group-hover:text-zinc-400">
+                            {value}
+                        </span>
+                    )}
+                </div>
+            </div>
+            {rightElement || <ChevronLeft className="w-4 h-4 rotate-180 text-zinc-600 group-hover:text-zinc-400 transition-colors" />}
+        </button>
+    )
+}

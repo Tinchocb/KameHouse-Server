@@ -37,7 +37,7 @@ func (r *AnilistResolver) ResolveAbsoluteMapping(ctx context.Context, baseMediaI
 	if baseMedia.Episodes != nil && absoluteEpisode <= *baseMedia.Episodes {
 		return baseMedia, absoluteEpisode, nil
 	}
-	
+
 	// If it's currently airing and we don't have an episode limit, but the next airing episode is > absoluteEpisode, it's this media
 	if baseMedia.Episodes == nil && baseMedia.NextAiringEpisode != nil && absoluteEpisode <= baseMedia.NextAiringEpisode.Episode {
 		return baseMedia, absoluteEpisode, nil
@@ -48,15 +48,15 @@ func (r *AnilistResolver) ResolveAbsoluteMapping(ctx context.Context, baseMediaI
 	// We'll build a chain of sequels starting from the base.
 	// Note: Building a perfect absolute mapper from AniList relations is complex because of OVAs/Spin-offs.
 	// We'll focus on main SEQUELs that are TV or TV_SHORT formats.
-	
+
 	currentMedia := baseMedia
 	accumulatedEpisodes := 0
 
 	// Walk backwards to find the true prequel (start of the series)
 	startMedia := r.findRootPrequel(ctx, baseMedia)
-	
+
 	currentMedia = startMedia
-	
+
 	for currentMedia != nil {
 		// Calculate bounds for current media
 		episodesInCurrent := 0
@@ -71,7 +71,7 @@ func (r *AnilistResolver) ResolveAbsoluteMapping(ctx context.Context, baseMediaI
 		}
 
 		// Check if the absolute episode falls within this season
-		if absoluteEpisode <= accumulatedEpisodes + episodesInCurrent {
+		if absoluteEpisode <= accumulatedEpisodes+episodesInCurrent {
 			relativeEpisode := absoluteEpisode - accumulatedEpisodes
 			return currentMedia, relativeEpisode, nil
 		}
@@ -82,7 +82,7 @@ func (r *AnilistResolver) ResolveAbsoluteMapping(ctx context.Context, baseMediaI
 		currentMedia = r.findNextSequel(ctx, currentMedia)
 	}
 
-	// If we exhausted all sequels and still didn't find it, it might be an ongoing series 
+	// If we exhausted all sequels and still didn't find it, it might be an ongoing series
 	// where the latest season hasn't updated its episode count yet.
 	// We return the last known media in the chain.
 	return baseMedia, absoluteEpisode, fmt.Errorf("absolute episode out of bounds")
@@ -107,7 +107,7 @@ func (r *AnilistResolver) findRootPrequel(ctx context.Context, media *dto.Normal
 	for {
 		visited[current.ID] = true
 		var prequelNode *dto.NormalizedMediaRelation
-		
+
 		for _, rel := range current.Relations {
 			if rel.RelationType == "PREQUEL" {
 				if rel.Media != nil && (rel.Media.Format == nil || *rel.Media.Format == dto.MediaFormatTV || *rel.Media.Format == dto.MediaFormatTVShort) {

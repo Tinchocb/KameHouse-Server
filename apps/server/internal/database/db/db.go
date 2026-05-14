@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 	gormlogger "gorm.io/gorm/logger"
 
 	"kamehouse/internal/database/models"
+	"kamehouse/internal/database/models/dto"
 )
 
 type Database struct {
@@ -134,7 +136,7 @@ func (db *Database) Close() error {
 
 // migrateTables strictly ensures that schema migration executes within standard timeout.
 func migrateTables(ctx context.Context, db *gorm.DB) error {
-	// Clean up duplicate tmdb_ids before auto-migration to allow UNIQUE constraint creation
+	// Trim duplicates from LibraryMedia (TMDB IDs should be unique PER TYPE)
 	db.Exec(`
 		DELETE FROM library_media
 		WHERE tmdb_id IS NOT NULL
@@ -143,12 +145,13 @@ func migrateTables(ctx context.Context, db *gorm.DB) error {
 			SELECT MIN(id)
 			FROM library_media
 			WHERE tmdb_id IS NOT NULL AND tmdb_id != 0
-			GROUP BY tmdb_id
+			GROUP BY tmdb_id, type
 		)
 	`)
 
-	return db.WithContext(ctx).AutoMigrate(
+	if err := db.WithContext(ctx).AutoMigrate(
 		&models.LocalFiles{},
+		&models.LocalFile{},
 		&models.ShelvedLocalFiles{},
 		&models.Settings{},
 		&models.Account{},
@@ -171,10 +174,92 @@ func migrateTables(ctx context.Context, db *gorm.DB) error {
 		&models.UserMediaProgress{},
 
 		&models.MediaCollection{},
-	)
+		&models.MetadataCache{},
+	); err != nil {
+		return err
+	}
+
+	// Manual Migration: Update LibraryMedia unique index to handle collisions between movies and shows
+	if db.Migrator().HasIndex(&models.LibraryMedia{}, "idx_library_media_tmdb_id") {
+		_ = db.Migrator().DropIndex(&models.LibraryMedia{}, "idx_library_media_tmdb_id")
+		// Re-run automigrate to ensure the new index is created
+		_ = db.AutoMigrate(&models.LibraryMedia{})
+	}
+
+	// Data Migration: LocalFiles (blob) -> LocalFile (relational)
+	var count int64
+	db.Model(&models.LocalFiles{}).Count(&count)
+	var relationalCount int64
+	db.Model(&models.LocalFile{}).Count(&relationalCount)
+
+	if relationalCount == 0 && count > 0 {
+		var legacy models.LocalFiles
+		if err := db.Last(&legacy).Error; err == nil {
+			var lfs []*dto.LocalFile
+			if err := json.Unmarshal(legacy.Value, &lfs); err == nil && len(lfs) > 0 {
+				// We can't use db.UpsertLocalFileRelationalBatch here because of package cycles or internal access
+				// But we can just use a local migration loop
+				dbFiles := make([]*models.LocalFile, len(lfs))
+				for i, f := range lfs {
+					dbf := &models.LocalFile{
+						Path:           f.Path,
+						Name:           f.Name,
+						FileHash:       f.FileHash,
+						Locked:         f.Locked,
+						Ignored:        f.Ignored,
+						LibraryMediaId: f.LibraryMediaId,
+						MediaId:        f.MediaId,
+					}
+					if f.ParsedData != nil {
+						dbf.ParsedData, _ = json.Marshal(f.ParsedData)
+					}
+					if f.ParsedFolderData != nil {
+						dbf.ParsedFolderData, _ = json.Marshal(f.ParsedFolderData)
+					}
+					if f.Metadata != nil {
+						dbf.Metadata, _ = json.Marshal(f.Metadata)
+					}
+					if f.TechnicalInfo != nil {
+						dbf.TechnicalInfo, _ = json.Marshal(f.TechnicalInfo)
+					}
+					dbFiles[i] = dbf
+				}
+				_ = db.CreateInBatches(dbFiles, 100).Error
+			}
+		}
+	}
+
+	return nil
 }
 
 // RunDatabaseCleanup runs all database cleanup operations
 func (db *Database) RunDatabaseCleanup() {
 	db.cleanupManager.RunAllCleanupOperations()
+}
+
+// ResetLocalFilesMediaIds resets all media IDs and library media IDs in the local files database.
+// This forces the scanner to re-match all files on the next scan.
+func (db *Database) ResetLocalFilesMediaIds() error {
+	lfs, id, err := GetLocalFiles(db)
+	if err != nil {
+		db.Logger.Error().Err(err).Msg("db: Failed to get local files for reset")
+		return err
+	}
+
+	for _, lf := range lfs {
+		lf.MediaId = 0
+		lf.LibraryMediaId = 0
+	}
+
+	_, err = SaveLocalFiles(db, id, lfs)
+	if err != nil {
+		db.Logger.Error().Err(err).Msg("db: Failed to save reset local files")
+		return err
+	}
+
+	// Also clear ghost associations to prevent the system from "remembering" bad matches
+	_ = db.Gorm().Exec("DELETE FROM ghost_associated_media").Error
+
+	db.Logger.Info().Msg("db: All local file media associations and ghost associations have been reset")
+	return nil
 }

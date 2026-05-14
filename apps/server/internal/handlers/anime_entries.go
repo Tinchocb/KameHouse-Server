@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -46,7 +47,7 @@ func getActiveProvider(h *Handler) librarymetadata.Provider {
 			tmdbLanguage = "es-MX"
 		}
 		if tmdbToken != "" {
-			return librarymetadata.NewTMDBProvider(tmdbToken, tmdbLanguage)
+			return librarymetadata.NewTMDBProvider(tmdbToken, h.App.Database, tmdbLanguage)
 		}
 		h.App.Logger.Warn().Msg("handlers: TMDB mode requested but TMDB token not set")
 	}
@@ -113,7 +114,7 @@ func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry
 		tmdbLanguage = "es-MX"
 	}
 
-	provider := librarymetadata.NewTMDBProvider(tmdbToken, tmdbLanguage)
+	provider := librarymetadata.NewTMDBProvider(tmdbToken, h.App.Database, tmdbLanguage)
 	tmdbId := entry.Media.TmdbId
 
 	// Determine the number of seasons we need to cover.
@@ -125,6 +126,29 @@ func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry
 	}
 
 	if maxEp == 0 {
+		return
+	}
+
+	// If it's a movie, handle differently
+	if entry.Media.Format == string(platform.MediaFormatMovie) {
+		// Movies don't have seasons, we just map the movie details to all episodes (usually just 1)
+		movie, err := provider.GetMediaDetails(ctx, strconv.Itoa(tmdbId+1000000))
+		if err == nil && movie != nil {
+			for i := range entry.Episodes {
+				if entry.Episodes[i].EpisodeMetadata == nil {
+					entry.Episodes[i].EpisodeMetadata = &anime.EpisodeMetadata{}
+				}
+				md := entry.Episodes[i].EpisodeMetadata
+				if md.Summary == "" && movie.Description != nil {
+					md.Summary = *movie.Description
+					md.Overview = *movie.Description
+				}
+				if !md.HasImage && movie.CoverImage != nil && movie.CoverImage.Large != nil {
+					md.Image = *movie.CoverImage.Large
+					md.HasImage = true
+				}
+			}
+		}
 		return
 	}
 
@@ -329,7 +353,7 @@ func (h *Handler) HandleGetAnimeEntrySuggestions(c echo.Context) error {
 		return h.RespondWithError(c, errors.New("tmdb client is not configured"))
 	}
 
-	provider := librarymetadata.NewTMDBProviderWithClient(h.App.Metadata.TMDBClient)
+	provider := librarymetadata.NewTMDBProviderWithClient(h.App.Metadata.TMDBClient, h.App.Database)
 
 	res, err := provider.SearchMedia(c.Request().Context(), title)
 	if err != nil {
@@ -415,6 +439,8 @@ func (h *Handler) HandleUpdateAnimeEntryProgress(c echo.Context) error {
 	}
 
 	_, _ = h.App.Metadata.PlatformRef.Get().RefreshAnimeCollection(context.Background())
+	ClearLibraryCollectionCache()
+
 
 	return h.RespondWithData(c, true)
 }
@@ -444,6 +470,8 @@ func (h *Handler) HandleUpdateAnimeEntryRepeat(c echo.Context) error {
 	}
 
 	_, _ = h.App.Metadata.PlatformRef.Get().RefreshAnimeCollection(context.Background())
+	ClearLibraryCollectionCache()
+
 
 	return h.RespondWithData(c, true)
 }
@@ -473,6 +501,12 @@ func (h *Handler) HandleManualMatch(c echo.Context) error {
 		return h.RespondWithError(c, errors.New("no local files found for the given paths"))
 	}
 
+	// Clear metadata cache to ensure fresh data
+	_ = db.DeleteMetadataCache(h.App.Database, "jikan-anime-episodes", strconv.Itoa(b.MediaId))
+	_ = db.DeleteMetadataCache(h.App.Database, "tmdb-tv-details", strconv.Itoa(b.MediaId))
+	_ = db.DeleteMetadataCache(h.App.Database, "tmdb-movie-details", strconv.Itoa(b.MediaId))
+	h.App.Metadata.ProviderRef.Get().ClearCache()
+
 	libraryMediaID, err := h.ensureLibraryMediaForManualMatch(c.Request().Context(), b.MediaId, lfs)
 	if err != nil {
 		return h.RespondWithError(c, err)
@@ -497,6 +531,7 @@ func (h *Handler) HandleManualMatch(c echo.Context) error {
 
 	// Refresh the collection
 	_, _ = h.App.Metadata.PlatformRef.Get().RefreshAnimeCollection(context.Background())
+	ClearLibraryCollectionCache()
 
 	return h.RespondWithData(c, true)
 }
@@ -538,6 +573,8 @@ func (h *Handler) HandleUnmatchFiles(c echo.Context) error {
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
+
+	ClearLibraryCollectionCache()
 
 
 
@@ -601,7 +638,7 @@ func (h *Handler) ensureLibraryMediaForManualMatch(ctx context.Context, mediaID 
 		return 0, errors.New("tmdb client is not configured")
 	}
 
-	provider := librarymetadata.NewTMDBProviderWithClient(h.App.Metadata.TMDBClient)
+	provider := librarymetadata.NewTMDBProviderWithClient(h.App.Metadata.TMDBClient, h.App.Database)
 	media, err := provider.GetMediaDetails(ctx, strconv.Itoa(mediaID))
 	if err != nil {
 		return 0, err
@@ -648,12 +685,23 @@ func normalizedMediaToLibraryMedia(media *dto.NormalizedMedia) *models.LibraryMe
 		if media.Title.English != nil {
 			ret.TitleEnglish = *media.Title.English
 		}
+		if media.Title.Spanish != nil {
+			ret.TitleSpanish = *media.Title.Spanish
+		}
 		if ret.TitleEnglish == "" && media.Title.UserPreferred != nil {
 			ret.TitleEnglish = *media.Title.UserPreferred
 		}
 	}
 	if media.Description != nil {
 		ret.Description = *media.Description
+	}
+	if media.Score != nil {
+		ret.Score = *media.Score
+	}
+	if len(media.Genres) > 0 {
+		if b, err := json.Marshal(media.Genres); err == nil {
+			ret.Genres = b
+		}
 	}
 	if media.CoverImage != nil && media.CoverImage.Large != nil {
 		ret.PosterImage = *media.CoverImage.Large

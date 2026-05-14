@@ -34,12 +34,31 @@ func (as *AudioStream) getFlags() Flags {
 }
 
 func (as *AudioStream) getTranscodeArgs(segments string) []string {
+	channels := "2"
+	bitrate := "128k"
+
+	if as.file != nil && as.file.Info != nil {
+		for _, audio := range as.file.Info.Audios {
+			if audio.Index == uint32(as.index) {
+				if audio.Channels >= 6 {
+					channels = "2" // Downmix to stereo
+					bitrate = "256k" // Higher bitrate for downmixed 5.1
+				} else if audio.Channels > 2 {
+					channels = "2"
+					bitrate = "192k"
+				} else if audio.Channels == 2 {
+					channels = "2"
+					bitrate = "192k"
+				}
+				break
+			}
+		}
+	}
+
 	return []string{
 		"-map", fmt.Sprintf("0:a:%d", as.index),
 		"-c:a", "aac",
-		// TODO: Support 5.1 audio streams.
-		"-ac", "2",
-		// TODO: Support multi audio qualities.
-		"-b:a", "128k",
+		"-ac", channels,
+		"-b:a", bitrate,
 	}
 }

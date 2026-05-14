@@ -315,3 +315,13 @@ type MediaCollection struct {
 	MemberIDs IntSlice `gorm:"column:member_ids;type:text" json:"memberIds"`
 }
 
+// MetadataCache stores raw JSON responses from metadata providers (TMDB, AniList, etc.)
+// to avoid redundant API calls across different scan sessions.
+type MetadataCache struct {
+	BaseModel
+	Provider  string    `gorm:"column:provider;uniqueIndex:idx_provider_key" json:"provider"`
+	Key       string    `gorm:"column:key;uniqueIndex:idx_provider_key" json:"key"`
+	Value     []byte    `gorm:"column:value" json:"value"`
+	ExpiresAt time.Time `gorm:"column:expires_at" json:"expiresAt"`
+}
+

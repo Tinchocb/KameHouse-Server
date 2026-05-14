@@ -285,6 +285,10 @@ func getWorkingDir(useBinaryPath bool) (string, error) {
 	if useBinaryPath {
 		if exe, err := os.Executable(); err == nil {
 			if p, err := filepath.EvalSymlinks(exe); err == nil {
+				// Detect if we are running via 'go run' (which puts the executable in a temp go-build dir)
+				if strings.Contains(p, "go-build") || strings.Contains(p, "T:") {
+					return wd, nil
+				}
 				return filepath.Dir(p), nil
 			}
 		}

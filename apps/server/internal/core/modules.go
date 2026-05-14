@@ -226,7 +226,7 @@ func (a *App) performActionsOnce() {
 		if a.Settings.GetLibrary().RefreshLibraryOnStart {
 			go func() {
 				a.Logger.Debug().Msg("app: Refreshing library")
-				a.AutoScanner.TriggerScan()
+				a.AutoScanner.TriggerScan(nil)
 			}()
 		}
 	}()

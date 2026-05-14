@@ -110,3 +110,41 @@ export interface StreamTrackInfo {
     audioTracks: AudioTrack[]
     subtitleTracks: SubtitleTrack[]
 }
+
+// ── UI Props ──────────────────────────────────────────────────────────────────
+
+/**
+ * Props for the PlayerSettingsMenu component.
+ * Centralizes all playback, audio, and subtitle settings.
+ */
+export interface PlayerSettingsMenuProps {
+    audioTracks: AudioTrack[]
+    activeAudioIndex: number
+    onSelectAudio: (track: AudioTrack) => void
+    
+    subtitleTracks: SubtitleTrack[]
+    activeSubtitleIndex: number | null
+    onSelectSubtitle: (track: SubtitleTrack | null) => void
+    isLoadingSubtitle?: boolean
+
+    sources?: import("@/api/types/unified.types").EpisodeSource[]
+    currentSourceUrl?: string
+    onSourceChange?: (source: any) => void
+
+    hlsLevels?: { index: number; label: string; height: number }[]
+    activeHlsLevel?: number
+    onHlsLevelChange?: (level: number) => void
+
+    playbackRate?: number
+    onPlaybackRateChange?: (rate: number) => void
+
+    autoSkipIntro?: boolean
+    onAutoSkipIntroChange?: (auto: boolean) => void
+
+    showHeatmap?: boolean
+    onShowHeatmapChange?: (show: boolean) => void
+
+    open?: boolean
+    onOpenChange?: (open: boolean) => void
+    className?: string
+}

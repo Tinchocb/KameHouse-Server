@@ -49,7 +49,9 @@ func (t *scanTelemetry) Run(ctx context.Context) {
 			if !ok {
 				return // channel closed, drain complete
 			}
-			t.ws.SendEvent(ev.name, ev.payload)
+			if t.ws != nil {
+				t.ws.SendEvent(ev.name, ev.payload)
+			}
 		case <-ctx.Done():
 			// Drain remaining events before exiting so the frontend
 			// receives the final progress/status messages.
@@ -59,7 +61,9 @@ func (t *scanTelemetry) Run(ctx context.Context) {
 					if !ok {
 						return
 					}
-					t.ws.SendEvent(ev.name, ev.payload)
+					if t.ws != nil {
+						t.ws.SendEvent(ev.name, ev.payload)
+					}
 				default:
 					return
 				}

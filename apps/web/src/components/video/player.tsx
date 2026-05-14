@@ -39,16 +39,100 @@ function PlayerLoadingScreen() {
 export function VideoPlayer(props: VideoPlayerProps) {
     const isLocal = !props.isExternalStream && Boolean(props.streamUrl) && props.streamType !== "online"
 
+    if (isLocal) {
+        return <VideoPlayerOrchestrator {...props} />
+    }
+
+    return (
+        <VideoPlayerOrchestrator
+            {...props}
+            playableUrl={props.streamUrl}
+        />
+    )
+}
+
+interface OrchestratorProps extends VideoPlayerProps {
+    playableUrl?: string
+    backendTracks?: {
+        audioTracks: AudioTrack[]
+        subtitleTracks: SubtitleTrack[]
+    }
+}
+
+function VideoPlayerOrchestrator(props: OrchestratorProps) {
+    const [streamType, setStreamType] = React.useState<string>(props.streamType || "direct")
+    const clientId = React.useMemo(() => Math.random().toString(36).substring(2, 11), [])
+    
+    const isLocal = !props.isExternalStream && Boolean(props.streamUrl) && streamType !== "online"
+
     const { data, isLoading, error } = useRequestMediastreamMediaContainer({
         path: props.streamUrl,
-        streamType: props.streamType as Mediastream_StreamType,
+        streamType: streamType as Mediastream_StreamType,
+        clientId: clientId,
     }, isLocal)
 
-    if (isLocal) {
-        if (isLoading) {
-            return <PlayerLoadingScreen />
-        }
+    const playableUrl = useMemo(() => {
+        if (!isLocal) return props.playableUrl || props.streamUrl
+        return data?.streamUrl || ""
+    }, [isLocal, props.playableUrl, props.streamUrl, data?.streamUrl])
 
+    const backendTracks = useMemo(() => {
+        if (!data?.mediaInfo) return undefined
+        return {
+            audioTracks: data.mediaInfo.audios?.map((a: any, i: number) => ({
+                index: a.index ?? i,
+                language: a.language ?? "und",
+                title: a.title || a.language || `Audio ${i + 1}`,
+                codec: a.codec,
+                channels: a.channels,
+                default: a.default
+            })) || [],
+            subtitleTracks: data.mediaInfo.subtitles?.map((s: any, i: number) => ({
+                index: s.index ?? i,
+                language: s.language ?? "und",
+                title: s.title || s.language || `Subtitle ${i + 1}`,
+                codec: s.codec,
+                default: s.default,
+                forced: s.forced,
+                url: `/api/v1/mediastream/subtitles?path=${encodeURIComponent(props.streamUrl)}&trackIndex=${s.index ?? i}&clientId=${clientId}`
+            })) || []
+        }
+    }, [data, props.streamUrl, clientId])
+
+    const core = usePlayerCore({
+        ...props,
+        playableUrl,
+        backendTracks,
+        clientId,
+    })
+
+    const episodeSources = useMemo<EpisodeSource[]>(() => [
+        {
+            title: "Original",
+            quality: "Original",
+            url: props.streamUrl,
+            type: "direct",
+            path: props.streamUrl,
+            priority: 1,
+        },
+        {
+            title: "Transcodificado",
+            quality: "Auto",
+            url: props.streamUrl,
+            type: "transcode",
+            path: props.streamUrl,
+            priority: 2,
+        }
+    ], [props.streamUrl])
+
+    const handleSourceSwitch = (source: EpisodeSource) => {
+        if (source.type) {
+            setStreamType(source.type)
+        }
+    }
+
+    if (isLocal) {
+        if (isLoading) return <PlayerLoadingScreen />
         if (error || !data || !data.streamUrl) {
             return (
                 <div className="fixed inset-0 z-[10000] bg-black w-screen h-screen flex flex-col items-center justify-center gap-6 px-6 text-center text-white">
@@ -66,63 +150,7 @@ export function VideoPlayer(props: VideoPlayerProps) {
                 </div>
             )
         }
-
-        return (
-            <VideoPlayerOrchestrator
-                {...props}
-                playableUrl={data.streamUrl}
-                backendTracks={{
-                    audioTracks: data.mediaInfo?.audios?.map((a: { index?: number; language?: string; title?: string; codec?: string; channels?: number; default?: boolean }, i: number) => ({
-                        index: a.index ?? i,
-                        language: a.language ?? "und",
-                        title: a.title || a.language || `Audio ${i + 1}`,
-                        codec: a.codec,
-                        channels: a.channels,
-                        default: a.default
-                    })) || [],
-                    subtitleTracks: data.mediaInfo?.subtitles?.map((s: { index?: number; language?: string; title?: string; codec?: string; default?: boolean; forced?: boolean }, i: number) => ({
-                        index: s.index ?? i,
-                        language: s.language ?? "und",
-                        title: s.title || s.language || `Subtitle ${i + 1}`,
-                        codec: s.codec,
-                        default: s.default,
-                        forced: s.forced,
-                        url: `/api/v1/mediastream/subtitles?path=${encodeURIComponent(props.streamUrl)}&trackIndex=${s.index ?? i}`
-                    })) || []
-                }}
-            />
-        )
     }
-
-    return (
-        <VideoPlayerOrchestrator
-            {...props}
-            playableUrl={props.streamUrl}
-        />
-    )
-}
-
-interface OrchestratorProps extends VideoPlayerProps {
-    playableUrl: string
-    backendTracks?: {
-        audioTracks: AudioTrack[]
-        subtitleTracks: SubtitleTrack[]
-    }
-}
-
-function VideoPlayerOrchestrator(props: OrchestratorProps) {
-    const core = usePlayerCore(props)
-
-    const episodeSources = useMemo<EpisodeSource[]>(() => [
-        {
-            title: "Original",
-            quality: "1085p",
-            url: props.playableUrl,
-            type: "local",
-            path: props.playableUrl,
-            priority: 1,
-        }
-    ], [props.playableUrl])
 
     return (
         <PlayerUI
@@ -130,10 +158,12 @@ function VideoPlayerOrchestrator(props: OrchestratorProps) {
             episodeLabel={props.episodeLabel}
             onClose={props.onClose}
             onNextEpisode={props.onNextEpisode}
-            playableUrl={props.playableUrl}
-            streamType={props.streamType}
+            playableUrl={playableUrl}
+            streamType={streamType as any}
             episodeSources={episodeSources}
+            onSourceSwitch={handleSourceSwitch}
             core={core}
+            clientId={clientId}
         />
     )
 }

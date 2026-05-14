@@ -50,21 +50,23 @@ const SwimlaneInner = React.memo(function SwimlaneInner({
     }
 
     return (
-        <section className={cn("relative", className)}>
-            <div className="mb-6 flex items-center gap-4 px-6 md:px-10 lg:px-14">
-                <span className="h-7 w-1 bg-brand-orange rounded-full" />
-                <h2 className="text-3xl font-bebas font-normal uppercase tracking-widest text-white">
-                    {title}
-                </h2>
+        <section className={cn("relative py-6", className)}>
+            <div className="mb-10 flex items-center justify-between px-6 md:px-10 lg:px-14">
+                <div className="flex items-center gap-6">
+                    <span className="h-12 w-2 bg-brand-orange rounded-full shadow-[0_0_20px_rgba(255,110,58,0.6)]" />
+                    <h2>
+                        {title}
+                    </h2>
+                </div>
             </div>
 
             <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 z-30 hidden w-20 bg-gradient-to-r from-background to-transparent md:block" />
-                <div className="pointer-events-none absolute inset-y-0 right-0 z-30 hidden w-20 bg-gradient-to-l from-background to-transparent md:block" />
+                <div className="pointer-events-none absolute inset-y-0 left-0 z-30 hidden w-32 bg-gradient-to-r from-background to-transparent md:block" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 z-30 hidden w-32 bg-gradient-to-l from-background to-transparent md:block" />
 
                 <HorizontalDraggableScroll
                     className="px-0"
-                    containerClass="gap-4 px-6 pb-3 md:px-10 lg:px-14 snap-x snap-mandatory"
+                    containerClass="gap-6 px-6 pb-6 md:px-10 lg:px-14 snap-x snap-mandatory"
                     chevronOverlayClass="from-background/95 to-transparent"
                     scrollAmount={420}
                     safeDisplacement={18}

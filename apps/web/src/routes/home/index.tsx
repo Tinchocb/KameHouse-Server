@@ -146,11 +146,7 @@ function HomePage() {
                 const format = entry.media?.format
                 return format === "MOVIE" || format === "OVA" || format === "SPECIAL"
             })
-            .sort((a, b) => {
-                const aDate = a.media?.createdAt ? new Date(a.media.createdAt).getTime() : 0
-                const bDate = b.media?.createdAt ? new Date(b.media.createdAt).getTime() : 0
-                return bDate - aDate
-            })
+            .sort((a, b) => (b.media?.year || 0) - (a.media?.year || 0))
             .map((entry): SwimlaneItem | null => {
                 if (!entry.media) return null
                 const m = entry.media

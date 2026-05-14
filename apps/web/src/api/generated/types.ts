@@ -1322,6 +1322,8 @@ export type Anime_Episode = {
      * Alerts the user that there is a discrepancy between Platform and AniDB
      */
     metadataIssue?: string
+    sagaName?: string
+    sagaId?: string
     baseAnime?: Models_LibraryMedia
     watched?: boolean
 }

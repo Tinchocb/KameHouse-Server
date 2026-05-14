@@ -14,9 +14,15 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+var libraryCollectionCache = result.NewCache[string, *anime.LibraryCollection]()
+
+func ClearLibraryCollectionCache() {
+	libraryCollectionCache.Clear()
+}
+
 // HandleGetLibraryCollection
 //
-//	@summary returns the main local anime collection.
+//	@summary returns the main local anime anime collection.
 //	@desc This creates a new LibraryCollection struct and returns it.
 //	@desc This is used to get the main anime collection of the user.
 //	@desc It uses the cached platform anime collection for the GET method.
@@ -24,6 +30,11 @@ import (
 //	@route /api/v1/library/collection [GET,POST]
 //	@returns anime.LibraryCollection
 func (h *Handler) HandleGetLibraryCollection(c echo.Context) error {
+
+	// Use cache if available
+	if ret, ok := libraryCollectionCache.Get("main"); ok {
+		return h.RespondWithData(c, ret)
+	}
 
 	animeCollection, err := h.App.GetAnimeCollection(false)
 	if err != nil {
@@ -58,6 +69,8 @@ func (h *Handler) HandleGetLibraryCollection(c echo.Context) error {
 	if libraryCollection != nil && libraryCollection.Stats != nil {
 		libraryCollection.Stats.TotalSize = util.Bytes(h.App.TotalLibrarySize)
 	}
+
+	libraryCollectionCache.SetT("main", libraryCollection, 5*time.Minute)
 
 	return h.RespondWithData(c, libraryCollection)
 }
@@ -130,6 +143,7 @@ func (h *Handler) HandleAddUnknownMedia(c echo.Context) error {
 		return h.RespondWithError(c, errors.New("error: Platform responded with an error, wait one minute before refreshing"))
 	}
 
+	// Clear cache to force refresh on next request
+	ClearLibraryCollectionCache()
 	return h.RespondWithData(c, animeCollection)
-
 }

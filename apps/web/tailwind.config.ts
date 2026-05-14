@@ -296,6 +296,7 @@ const config: Config = {
                     secondary: "hsl(var(--text-secondary) / <alpha-value>)",
                     muted: "hsl(var(--text-muted) / <alpha-value>)",
                 },
+                "brand-orange": "hsl(var(--brand-orange) / <alpha-value>)",
                 brand: {
                     50: "#ffffff",
                     100: "#f4f4f5",

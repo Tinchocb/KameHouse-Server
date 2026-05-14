@@ -57,6 +57,7 @@ func (h *Handler) HandleTMDBSearch(c echo.Context) error {
 					"first_air_date": r.FirstAirDate,
 					"poster_path":    r.PosterPath,
 					"overview":       r.Overview,
+					"vote_average":   r.VoteAverage,
 					"media_type":     "tv",
 				}
 				combined = append(combined, m)
@@ -74,6 +75,7 @@ func (h *Handler) HandleTMDBSearch(c echo.Context) error {
 					"release_date": r.ReleaseDate,
 					"poster_path":  r.PosterPath,
 					"overview":       r.Overview,
+					"vote_average":   r.VoteAverage,
 					"media_type":   "movie",
 				}
 				combined = append(combined, m)
@@ -163,7 +165,7 @@ func (h *Handler) HandleTMDBAssign(c echo.Context) error {
 		lang = "es-MX"
 	}
 
-	provider := librarymetadata.NewTMDBProvider(token, lang)
+	provider := librarymetadata.NewTMDBProvider(token, h.App.Database, lang)
 	
 	lookUpId := strconv.Itoa(b.TmdbId)
 	if b.MediaType == "movie" {
@@ -173,6 +175,28 @@ func (h *Handler) HandleTMDBAssign(c echo.Context) error {
 	nm, err := provider.GetMediaDetails(c.Request().Context(), lookUpId)
 	if err != nil {
 		return h.RespondWithError(c, err)
+	}
+
+	// 1.5. Enrich with FanArt.tv (logos, clearart)
+	if h.App.Metadata.FanArt != nil {
+		isMovie := b.MediaType == "movie"
+		if isMovie {
+			_ = h.App.Metadata.FanArt.EnrichMovie(c.Request().Context(), nm, b.TmdbId)
+		} else {
+			tvdbID := ""
+			if nm.TvdbId != nil {
+				tvdbID = strconv.Itoa(*nm.TvdbId)
+			}
+			if tvdbID == "" && h.App.Metadata.TMDBClient != nil {
+				extIds, err := h.App.Metadata.TMDBClient.GetTVExternalIDs(c.Request().Context(), b.TmdbId)
+				if err == nil && extIds.TvdbID != "" {
+					tvdbID = extIds.TvdbID
+				}
+			}
+			if tvdbID != "" {
+				_ = h.App.Metadata.FanArt.EnrichTV(c.Request().Context(), nm, tvdbID)
+			}
+		}
 	}
 
 	// 2. Map NormalizedMedia to LibraryMedia
@@ -194,6 +218,15 @@ func (h *Handler) HandleTMDBAssign(c echo.Context) error {
 	}
 	if nm.BannerImage != nil {
 		libMedia.BannerImage = *nm.BannerImage
+	}
+	if nm.LogoImage != nil {
+		libMedia.LogoImage = *nm.LogoImage
+	}
+	if nm.ThumbImage != nil {
+		libMedia.ThumbImage = *nm.ThumbImage
+	}
+	if nm.ClearArtImage != nil {
+		libMedia.ClearArtImage = *nm.ClearArtImage
 	}
 
 	// 3. Upsert LibraryMedia

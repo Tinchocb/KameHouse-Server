@@ -55,5 +55,6 @@ func NewNormalizedMedia(m *platform.UnifiedMedia) *dto.NormalizedMedia {
 		BannerImage:       m.BannerImage,
 		CoverImage:        coverImage,
 		NextAiringEpisode: nextAiringEpisode,
+		Runtime:           m.Runtime,
 	}
 }

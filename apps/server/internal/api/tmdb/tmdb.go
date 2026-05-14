@@ -54,6 +54,7 @@ type SearchResult struct {
 	PosterPath       string   `json:"poster_path"`
 	BackdropPath     string   `json:"backdrop_path"`
 	NumberOfEpisodes int      `json:"number_of_episodes"`
+	VoteAverage      float64  `json:"vote_average"`
 }
 
 // SearchResponse is the paginated response from TMDb search.
@@ -77,6 +78,12 @@ type AlternativeTitlesResponse struct {
 	Results []AlternativeTitle `json:"results"`
 }
 
+// Genre represents a TMDB genre.
+type Genre struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
 // TVDetails represents detailed info about a TV show.
 type TVDetails struct {
 	ID               int      `json:"id"`
@@ -88,7 +95,13 @@ type TVDetails struct {
 	OriginCountry    []string `json:"origin_country"`
 	NumberOfSeasons  int      `json:"number_of_seasons"`
 	NumberOfEpisodes int      `json:"number_of_episodes"`
+	PosterPath       string   `json:"poster_path"`
+	BackdropPath     string   `json:"backdrop_path"`
+	VoteAverage      float64  `json:"vote_average"`
+	Genres           []Genre  `json:"genres"`
+	EpisodeRunTime   []int    `json:"episode_run_time"`
 }
+
 
 // TVEpisode represents a single episode within a TMDb TV season.
 type TVEpisode struct {
@@ -168,25 +181,41 @@ func (c *Client) GetTVSeason(ctx context.Context, tvID int, seasonNumber int) (T
 // It filters results to animation genre (16) and Japanese origin when possible.
 func (c *Client) SearchTV(ctx context.Context, query string) ([]SearchResult, error) {
 	// Check cache
-	if cached, ok := c.cache.Load("tv:" + query); ok {
+	/*if cached, ok := c.cache.Load("tv:" + query); ok {
 		return cached.([]SearchResult), nil
-	}
+	}*/
 
 	params := url.Values{}
 	params.Set("query", query)
 	params.Set("language", c.language)
-	params.Set("page", "1")
+	var allResults []SearchResult
+	for p := 1; p <= 5; p++ {
+		params.Set("page", fmt.Sprintf("%d", p))
+		fullURL := fmt.Sprintf("%s/search/tv?%s", baseURL, params.Encode())
+		req, _ := http.NewRequestWithContext(ctx, "GET", fullURL, nil)
+		req.Header.Set("Authorization", "Bearer "+c.bearerToken)
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
 
-
-	resp, err := executeWithRetry[SearchResponse](ctx, c, "/search/tv?"+params.Encode())
-	if err != nil {
-		return nil, fmt.Errorf("tmdb search tv: %w", err)
+		var searchResponse struct {
+			Results []SearchResult `json:"results"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&searchResponse); err != nil {
+			return nil, err
+		}
+		allResults = append(allResults, searchResponse.Results...)
+		if len(searchResponse.Results) < 20 {
+			break
+		}
 	}
 
-	// Filter for animation genre (16) to prioritize anime
-	animationResults := make([]SearchResult, 0)
-	otherResults := make([]SearchResult, 0)
-	for _, r := range resp.Results {
+	var animationResults []SearchResult
+	var otherResults []SearchResult
+	for _, r := range allResults {
 		isAnimation := false
 		for _, g := range r.GenreIDs {
 			if g == 16 { // Animation genre
@@ -201,15 +230,12 @@ func (c *Client) SearchTV(ctx context.Context, query string) ([]SearchResult, er
 		}
 	}
 
-	// Prefer animation results, fallback to all results
-	results := animationResults
-	if len(results) == 0 {
-		results = otherResults
-	}
+	// Rank animation results first, but keep others
+	results := append(animationResults, otherResults...)
 
-	// Limit to top 5 results
-	if len(results) > 5 {
-		results = results[:5]
+	// Limit to top 100 results
+	if len(results) > 100 {
+		results = results[:100]
 	}
 
 	c.cache.Store("tv:"+query, results)
@@ -219,40 +245,64 @@ func (c *Client) SearchTV(ctx context.Context, query string) ([]SearchResult, er
 // SearchMovie searches for anime movies on TMDb.
 func (c *Client) SearchMovie(ctx context.Context, query string) ([]SearchResult, error) {
 	// Check cache
-	if cached, ok := c.cache.Load("movie:" + query); ok {
+	/*if cached, ok := c.cache.Load("movie:" + query); ok {
 		return cached.([]SearchResult), nil
-	}
+	}*/
 
 	params := url.Values{}
 	params.Set("query", query)
 	params.Set("language", c.language)
-	params.Set("page", "1")
 
+	var allResults []SearchResult
+	for p := 1; p <= 5; p++ {
+		params.Set("page", fmt.Sprintf("%d", p))
+		fullURL := fmt.Sprintf("%s/search/movie?%s", baseURL, params.Encode())
+		req, _ := http.NewRequestWithContext(ctx, "GET", fullURL, nil)
+		req.Header.Set("Authorization", "Bearer "+c.bearerToken)
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
 
-	resp, err := executeWithRetry[SearchResponse](ctx, c, "/search/movie?"+params.Encode())
-	if err != nil {
-		return nil, fmt.Errorf("tmdb search movie: %w", err)
-	}
-
-	// Filter for animation genre (16)
-	animationResults := make([]SearchResult, 0)
-	for _, r := range resp.Results {
-		for _, g := range r.GenreIDs {
-			if g == 16 {
-				animationResults = append(animationResults, r)
-				break
-			}
+		var searchResponse struct {
+			Results []SearchResult `json:"results"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&searchResponse); err != nil {
+			return nil, err
+		}
+		allResults = append(allResults, searchResponse.Results...)
+		if len(searchResponse.Results) < 20 {
+			break
 		}
 	}
 
-	// Prefer animation results, fallback to all results
-	results := animationResults
-	if len(results) == 0 {
-		results = resp.Results
+	var animationResults []SearchResult
+	var otherResults []SearchResult
+	for _, r := range allResults {
+		isAnimation := false
+		for _, g := range r.GenreIDs {
+			if g == 16 { // Animation genre
+				isAnimation = true
+				break
+			}
+		}
+		if isAnimation {
+			animationResults = append(animationResults, r)
+		} else {
+			otherResults = append(otherResults, r)
+		}
 	}
-	if len(results) > 5 {
-		results = results[:5]
+
+	// Rank animation results first, but keep others
+	results := append(animationResults, otherResults...)
+
+	// Limit to top 100 results
+	if len(results) > 100 {
+		results = results[:100]
 	}
+
 
 	c.cache.Store("movie:"+query, results)
 	return results, nil
@@ -413,53 +463,68 @@ func (c *Client) GetAllTitlesForResult(ctx context.Context, result SearchResult)
 
 // doRequest was removed. EdgeHTTPClient handles all request logic natively securely.
 
-// GetTVDetails fetches a specific TV show by ID and returns it as a SearchResult for mapping.
-func (c *Client) GetTVDetails(ctx context.Context, id string) (SearchResult, error) {
-	cacheKey := fmt.Sprintf("tv_detail:%s:%s", id, c.language)
+// GetTVDetails fetches a specific TV show by ID with full details.
+func (c *Client) GetTVDetails(ctx context.Context, id string) (*TVDetails, error) {
+	cacheKey := fmt.Sprintf("tv_detail_full:%s:%s", id, c.language)
 	if cached, ok := c.cache.Load(cacheKey); ok {
-		return cached.(SearchResult), nil
+		return cached.(*TVDetails), nil
 	}
 
 	params := url.Values{}
 	params.Set("language", c.language)
 
-
-	resp, err := executeWithRetry[SearchResult](ctx, c, fmt.Sprintf("/tv/%s?%s", id, params.Encode()))
+	resp, err := executeWithRetry[TVDetails](ctx, c, fmt.Sprintf("/tv/%s?%s", id, params.Encode()))
 	if err != nil {
-		return SearchResult{}, fmt.Errorf("tmdb get tv details: %w", err)
+		return nil, fmt.Errorf("tmdb get tv details: %w", err)
 	}
 
 	if strings.HasPrefix(c.language, "es") && (resp.Overview == "" || resp.Name == "") {
 		fallbackParams := url.Values{}
 		fallbackParams.Set("language", "en-US")
-		if fallbackResp, err := executeWithRetry[SearchResult](ctx, c, fmt.Sprintf("/tv/%s?%s", id, fallbackParams.Encode())); err == nil {
-			if resp.Overview == "" { resp.Overview = fallbackResp.Overview }
-			if resp.Name == "" { resp.Name = fallbackResp.Name }
+		if fallbackResp, err := executeWithRetry[TVDetails](ctx, c, fmt.Sprintf("/tv/%s?%s", id, fallbackParams.Encode())); err == nil {
+			if resp.Overview == "" {
+				resp.Overview = fallbackResp.Overview
+			}
+			if resp.Name == "" {
+				resp.Name = fallbackResp.Name
+			}
 		}
 	}
 
-	c.cache.Store(cacheKey, *resp)
-	return *resp, nil
+	c.cache.Store(cacheKey, resp)
+	return resp, nil
 }
 
-// GetMovieDetails fetches a specific Movie by ID and returns it as a SearchResult for mapping.
-func (c *Client) GetMovieDetails(ctx context.Context, id string) (SearchResult, error) {
-	cacheKey := fmt.Sprintf("movie_detail:%s:%s", id, c.language)
+// GetMovieDetails fetches a specific Movie by ID with full details.
+func (c *Client) GetMovieDetails(ctx context.Context, id string) (*MovieDetails, error) {
+	cacheKey := fmt.Sprintf("movie_detail_full:%s:%s", id, c.language)
 	if cached, ok := c.cache.Load(cacheKey); ok {
-		return cached.(SearchResult), nil
+		return cached.(*MovieDetails), nil
 	}
 
 	params := url.Values{}
 	params.Set("language", c.language)
 
-
-	resp, err := executeWithRetry[SearchResult](ctx, c, fmt.Sprintf("/movie/%s?%s", id, params.Encode()))
+	resp, err := executeWithRetry[MovieDetails](ctx, c, fmt.Sprintf("/movie/%s?%s", id, params.Encode()))
 	if err != nil {
-		return SearchResult{}, fmt.Errorf("tmdb get movie details: %w", err)
+		return nil, fmt.Errorf("tmdb get movie details: %w", err)
 	}
 
-	c.cache.Store(cacheKey, *resp)
-	return *resp, nil
+	if strings.HasPrefix(c.language, "es") && (resp.Overview == "" || resp.Title == "") {
+		fallbackParams := url.Values{}
+		fallbackParams.Set("language", "en-US")
+		if fallbackResp, err := executeWithRetry[MovieDetails](ctx, c, fmt.Sprintf("/movie/%s?%s", id, fallbackParams.Encode())); err == nil {
+			if resp.Overview == "" {
+				resp.Overview = fallbackResp.Overview
+			}
+			if resp.Title == "" {
+				resp.Title = fallbackResp.Title
+			}
+		}
+	}
+
+	c.cache.Store(cacheKey, resp)
+	return resp, nil
 }
 
 // EpisodeGroup represents a story arc (saga) within a TV show.
@@ -497,6 +562,28 @@ func (c *Client) GetEpisodeGroups(ctx context.Context, tvID int) ([]EpisodeGroup
 
 	c.cache.Store(cacheKey, resp.Groups)
 	return resp.Groups, nil
+}
+
+// ExternalIDs represents the external IDs associated with a media (TV/Movie).
+type ExternalIDs struct {
+	TvdbID string `json:"tvdb_id"`
+	ImdbID string `json:"imdb_id"`
+}
+
+// GetTVExternalIDs fetches the external IDs (TVDB, IMDb, etc.) for a TV show.
+func (c *Client) GetTVExternalIDs(ctx context.Context, tvID int) (*ExternalIDs, error) {
+	cacheKey := fmt.Sprintf("tv_external_ids:%d", tvID)
+	if cached, ok := c.cache.Load(cacheKey); ok {
+		return cached.(*ExternalIDs), nil
+	}
+
+	resp, err := executeWithRetry[ExternalIDs](ctx, c, fmt.Sprintf("/tv/%d/external_ids", tvID))
+	if err != nil {
+		return nil, fmt.Errorf("tmdb get tv external ids: %w", err)
+	}
+
+	c.cache.Store(cacheKey, resp)
+	return resp, nil
 }
 
 // AbsoluteToStandardMapping maps an absolute episode number to TMDB's standard (Season, Episode) format.
@@ -567,13 +654,16 @@ type MovieDetails struct {
 	ID                  int                       `json:"id"`
 	Title               string                    `json:"title"`
 	OriginalTitle       string                    `json:"original_title"`
+	OriginalLanguage    string                    `json:"original_language"`
 	Overview            string                    `json:"overview"`
 	ReleaseDate         string                    `json:"release_date"`
 	PosterPath          string                    `json:"poster_path"`
 	BackdropPath        string                    `json:"backdrop_path"`
+	VoteAverage         float64                   `json:"vote_average"`
+	Genres              []Genre                   `json:"genres"`
 	GenreIDs            []int                     `json:"genre_ids"`
-	Genres              []struct{ ID int; Name string } `json:"genres"`
 	ImdbID              string                    `json:"imdb_id"`
+	Runtime             int                       `json:"runtime"`
 	BelongsToCollection *MovieBelongsToCollection `json:"belongs_to_collection"`
 }
 

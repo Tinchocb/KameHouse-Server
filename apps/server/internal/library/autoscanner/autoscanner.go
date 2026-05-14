@@ -4,6 +4,8 @@ import (
 	"context"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
+	"os"
+	"path/filepath"
 
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/events"
@@ -39,6 +41,7 @@ type (
 		onRefreshCollection func()
 		animeCollection     *platform.UnifiedCollection
 		eventDispatcher     events.Dispatcher
+		pendingPaths        []string
 	}
 	NewAutoScannerOptions struct {
 		Database            *db.Database
@@ -84,7 +87,7 @@ func (as *AutoScanner) SetAnimeCollection(ac *platform.UnifiedCollection) {
 }
 
 // Notify is used to notify the AutoScanner that a file action has occurred.
-func (as *AutoScanner) Notify() {
+func (as *AutoScanner) Notify(path string) {
 	if as == nil {
 		return
 	}
@@ -96,8 +99,21 @@ func (as *AutoScanner) Notify() {
 	as.mu.Lock()
 	defer as.mu.Unlock()
 
-	// If we are already waiting for a scan, we don't need to do anything.
+	// Add path to pending (only if it's a directory or parent directory)
+	if path != "" {
+		dir := path
+		if info, err := os.Stat(path); err == nil && !info.IsDir() {
+			dir = filepath.Dir(path)
+		}
+		as.pendingPaths = append(as.pendingPaths, dir)
+	}
+
+	// If we are already waiting for a scan, just notify the channel to reset the timer.
 	if as.waiting {
+		select {
+		case as.fileActionCh <- struct{}{}:
+		default:
+		}
 		return
 	}
 
@@ -117,8 +133,10 @@ func (as *AutoScanner) Notify() {
 			case <-timer.C:
 				as.mu.Lock()
 				as.waiting = false
+				targets := as.pendingPaths
+				as.pendingPaths = nil
 				as.mu.Unlock()
-				as.TriggerScan()
+				as.TriggerScan(targets)
 				return
 			case <-as.fileActionCh:
 				if !timer.Stop() {
@@ -130,7 +148,7 @@ func (as *AutoScanner) Notify() {
 	}()
 }
 
-func (as *AutoScanner) TriggerScan() {
+func (as *AutoScanner) TriggerScan(targets []string) {
 	if as == nil || !as.enabled {
 		return
 	}
@@ -151,6 +169,12 @@ func (as *AutoScanner) TriggerScan() {
 		return
 	}
 	as.settings = settings.Library
+
+	mSettings, ok := as.db.GetMediastreamSettings()
+	ffprobePath := "ffprobe"
+	if ok && mSettings.FfprobePath != "" {
+		ffprobePath = mSettings.FfprobePath
+	}
 
 	libraryPaths := as.settings.GetAllPaths()
 	var libraryPath string
@@ -181,11 +205,25 @@ func (as *AutoScanner) TriggerScan() {
 		ConfigAsString:        as.settings.ScannerConfig,
 		ScanSummaryLogger:     summary.NewScanSummaryLogger(),
 		WithShelving:          true,
+		TargetPaths:           targets,
+		FFprobePath:           ffprobePath,
 	}
 
-	_, err = scn.Scan(context.Background())
+	allLfs, err := scn.Scan(context.Background())
 	if err != nil {
 		as.logger.Error().Err(err).Msg("autoscanner: Failed to scan library")
+		return
+	}
+
+	// Insert the local files
+	if len(targets) > 0 {
+		_, err = db.InsertPartialLocalFiles(as.db, allLfs, targets)
+	} else {
+		_, err = db.InsertLocalFiles(as.db, allLfs)
+	}
+
+	if err != nil {
+		as.logger.Error().Err(err).Msg("autoscanner: Failed to insert local files")
 		return
 	}
 
@@ -204,7 +242,7 @@ func (as *AutoScanner) TriggerScan() {
 	if as.missedAction {
 		as.missedAction = false
 		as.mu.Unlock()
-		as.Notify()
+		as.Notify("")
 	} else {
 		as.mu.Unlock()
 	}

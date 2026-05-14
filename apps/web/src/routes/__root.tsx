@@ -13,6 +13,7 @@ import { useRouterState } from "@tanstack/react-router"
 import { PageTransition } from "@/components/shared/page-transition"
 import { WebsocketProvider } from "@/app/websocket-provider"
 import { FaBars } from "react-icons/fa"
+import { useAppStore } from "@/lib/store"
 
 function RootComponent() {
     const routerState = useRouterState()

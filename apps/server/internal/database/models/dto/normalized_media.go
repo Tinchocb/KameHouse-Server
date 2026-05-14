@@ -35,17 +35,22 @@ type NormalizedMedia struct {
 	// OMDb enrichment (filled in Stage 4 if OMDb API key is configured)
 	ImdbRating *string // "8.4"
 	ImdbVotes  *string // "1,234,567"
-	Runtime    *string // "148 min"
+	Runtime    *int    // minutes
 	Director   *string
 	Awards     *string
 	Rated      *string // "PG-13"
 	RTRating   *string // Rotten Tomatoes rating e.g. "94%"
+
+	// TMDB enrichment
+	Score  *float64  // Normalized score (0-100)
+	Genres []*string // e.g. ["Action", "Adventure"]
 }
 
 type NormalizedMediaTitle struct {
 	Romaji        *string
 	English       *string
 	Native        *string
+	Spanish       *string
 	UserPreferred *string
 }
 

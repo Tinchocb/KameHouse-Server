@@ -38,6 +38,8 @@ type (
 		ThetvdbId     int    `json:"thetvdbId,omitempty"`
 		ImdbId        string `json:"imdbId,omitempty"`
 		ThemoviedbId  string `json:"themoviedbId,omitempty"`
+		AnilistId     int    `json:"anilistId,omitempty"`
+		MyanimelistId int    `json:"myanimelistId,omitempty"`
 	}
 
 	EpisodeMetadata struct {
@@ -54,7 +56,10 @@ type (
 		SeasonNumber          int    `json:"seasonNumber"`
 		AbsoluteEpisodeNumber int    `json:"absoluteEpisodeNumber"`
 		AnidbEid              int    `json:"anidbEid"`
-		HasImage              bool   `json:"hasImage"` // Indicates if the episode has a real image
+		HasImage              bool   `json:"hasImage"`             // Indicates if the episode has a real image
+		IsFiller              bool   `json:"isFiller,omitempty"`   // Indicates if this is a filler episode
+		SagaId                string `json:"sagaId,omitempty"`
+		SagaName              string `json:"sagaName,omitempty"`
 	}
 )
 

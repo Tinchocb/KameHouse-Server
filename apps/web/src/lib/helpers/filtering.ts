@@ -196,7 +196,7 @@ export function filterListEntries<T extends { media?: Platform_UnifiedMedia | nu
     if (!!arr && !!params.genre?.length) {
         arr = arr.filter(n => {
             const media = asUnifiedMedia(n.media)
-            return params.genre?.every(genre => (media as any)?.genres?.includes(genre))
+            return params.genre?.every(genre => media?.genres?.includes(genre))
         })
     }
 

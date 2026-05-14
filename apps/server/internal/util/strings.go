@@ -267,6 +267,11 @@ func FileExt(str string) string {
 	return str[lastDotIndex:]
 }
 
+func ReplaceExtension(path, newExt string) string {
+	ext := filepath.Ext(path)
+	return strings.TrimSuffix(path, ext) + newExt
+}
+
 func HashSHA256Hex(s string) string {
 	h := sha256.New()
 	h.Write([]byte(s))

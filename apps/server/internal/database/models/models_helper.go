@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"kamehouse/internal/platforms/platform"
 	"time"
 )
@@ -56,6 +57,9 @@ func ToLibraryMedia(m *platform.UnifiedMedia) *LibraryMedia {
 		if m.Title.English != nil {
 			lm.TitleEnglish = *m.Title.English
 		}
+		if m.Title.Spanish != nil {
+			lm.TitleSpanish = *m.Title.Spanish
+		}
 		if m.Title.Native != nil {
 			lm.TitleOriginal = *m.Title.Native
 		}
@@ -77,6 +81,20 @@ func ToLibraryMedia(m *platform.UnifiedMedia) *LibraryMedia {
 			0, 0, 0, 0, time.UTC,
 		)
 		lm.Year = loValue(m.StartDate.Year, 0)
+	}
+	if m.Runtime != nil {
+		lm.Runtime = *m.Runtime
+	}
+	if m.Description != nil {
+		lm.Description = *m.Description
+	}
+	if m.Score != nil {
+		lm.Score = *m.Score
+	}
+	if len(m.Genres) > 0 {
+		if b, err := json.Marshal(m.Genres); err == nil {
+			lm.Genres = b
+		}
 	}
 	return lm
 }

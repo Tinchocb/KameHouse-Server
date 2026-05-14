@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models/dto"
 	librarymetadata "kamehouse/internal/library/metadata"
 	"kamehouse/internal/util/limiter"
@@ -35,13 +36,16 @@ import (
 // external metadata lookups during a single scanner pass.
 type metadataFetchCache struct {
 	sf    singleflight.Group
-	cache sync.Map // key: normalised title → *dto.NormalizedMedia
+	cache sync.Map     // key: normalised title → *dto.NormalizedMedia
+	db    *db.Database // Persistent storage
 }
 
 // newMetadataFetchCache returns a zero-value, ready-to-use cache.
 // Allocate one per Scan() invocation; discard after the scan completes.
-func newMetadataFetchCache() *metadataFetchCache {
-	return &metadataFetchCache{}
+func newMetadataFetchCache(database *db.Database) *metadataFetchCache {
+	return &metadataFetchCache{
+		db: database,
+	}
 }
 
 // cacheKey normalises a title string into a stable lookup key.
@@ -74,8 +78,12 @@ func (c *metadataFetchCache) FetchOnce(
 	title string,
 	providers []librarymetadata.Provider,
 	limiter *limiter.Limiter,
+	hint string,
 ) (*dto.NormalizedMedia, error) {
 	key := cacheKey(title)
+	if hint != "" {
+		key = key + ":" + hint
+	}
 
 	// Fast-path: already resolved by a previous worker.
 	if cached, ok := c.cache.Load(key); ok {
@@ -88,6 +96,17 @@ func (c *metadataFetchCache) FetchOnce(
 		// this goroutine was waiting for the group lock.
 		if cached, ok := c.cache.Load(key); ok {
 			return cached.(*dto.NormalizedMedia), nil
+		}
+
+		// ── Persistent Cache lookup ───────────────────────────────────────────
+		if c.db != nil {
+			var cachedResult dto.NormalizedMedia
+			found, err := db.GetMetadataCache(c.db, "scanner", key, &cachedResult)
+			if err == nil && found {
+				log.Debug().Str("title", title).Msg("metadata cache: persistent hit")
+				c.cache.Store(key, &cachedResult)
+				return &cachedResult, nil
+			}
 		}
 
 		var result *dto.NormalizedMedia
@@ -114,7 +133,20 @@ func (c *metadataFetchCache) FetchOnce(
 						return err
 					}
 				}
-				searchRes, err = provider.SearchMedia(ctx, title)
+
+				if tmdb, ok := provider.(*librarymetadata.TMDBProvider); ok && hint != "" {
+					switch hint {
+					case "series":
+						searchRes, err = tmdb.SearchTV(ctx, title)
+					case "movie":
+						searchRes, err = tmdb.SearchMovie(ctx, title)
+					default:
+						searchRes, err = provider.SearchMedia(ctx, title)
+					}
+				} else {
+					searchRes, err = provider.SearchMedia(ctx, title)
+				}
+
 				if err != nil && errors.Is(err, librarymetadata.ErrNotFound) {
 					return nil
 				}
@@ -152,6 +184,12 @@ func (c *metadataFetchCache) FetchOnce(
 		// Store in sync.Map before returning from singleflight so waiting
 		// goroutines skip the provider round-trip on their next request.
 		c.cache.Store(key, result)
+
+		// ── Persistent Cache store ────────────────────────────────────────────
+		if c.db != nil {
+			_ = db.UpsertMetadataCache(c.db, "scanner", key, result, 7*24*time.Hour) // 1 week TTL
+		}
+
 		return result, nil
 	})
 

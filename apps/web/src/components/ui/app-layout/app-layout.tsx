@@ -26,7 +26,7 @@ export const AppLayoutHeaderAnatomy = defineStyleAnatomy({
 export const AppLayoutContentAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-AppLayoutContent__root",
-        "flex-1 overflow-y-auto relative w-full",
+        "flex-1 flex flex-col overflow-y-auto relative w-full",
     ]),
 })
 

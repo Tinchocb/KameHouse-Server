@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"context"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -87,20 +88,39 @@ func (m *Matcher) BayesianResolve(lf *dto.LocalFile) {
 	// 1. Initial Parse
 	pm := parsedMediaFromLocalFile(lf)
 
-	// SHORT-CIRCUIT: Check hardcoded custom overrides before Bayesian scoring.
-	if overrideID, found := LookupCustomOverride(pm.Title); found {
-		lf.MediaId = overrideID
-		lf.Metadata.Episodes = pm.Episodes
-		if pm.Title != "" && pm.Season == 1 && len(pm.Episodes) == 1 && pm.Episodes[0] == 1 {
-			// This is a naive attempt; in production IsSpecial is determined by parser correctly
-			// but we fallback safely here.
-			lf.Metadata.Type = dto.LocalFileTypeMain
-		} else {
-			lf.Metadata.Type = dto.LocalFileTypeMain
+	// SHORT-CIRCUIT 0: Dragon Ball Resolver Priority
+	// This is the absolute truth for Dragon Ball files to prevent mismatched fuzzy search results.
+	// We combine parent directory and filename because some files have generic names (e.g., "01.mkv")
+	// while the folder contains the series name (e.g., "Dragon Ball GT").
+	parentDir := filepath.Base(filepath.Dir(lf.Path))
+	combinedName := parentDir + " " + lf.Name
+
+	if dbId, isMovie, isDb := ResolveDragonBallID(combinedName); isDb {
+		targetId := dbId
+		if isMovie {
+			targetId += 1000000
 		}
-		m.Logger.Info().Msgf("AgentMatcher: Custom override matched '%s' -> %d [short-circuit]", lf.Name, overrideID)
+		lf.MediaId = targetId
+		lf.Metadata.Episodes = pm.Episodes
+		lf.Metadata.Type = dto.LocalFileTypeMain
+
+		inContainer := false
+		for _, media := range m.MediaContainer.NormalizedMedia {
+			if media.ID == targetId {
+				inContainer = true
+				break
+			}
+		}
+
+		if inContainer {
+			m.Logger.Info().Msgf("AgentMatcher: DragonBallResolver matched '%s' -> %d [priority]", combinedName, targetId)
+		} else {
+			m.Logger.Warn().Msgf("AgentMatcher: DragonBallResolver matched '%s' -> %d but media not in container. Forcing match.", combinedName, targetId)
+		}
 		return
 	}
+
+	// SHORT-CIRCUIT 1: Check hardcoded custom overrides before Bayesian scoring.
 
 	bestConfidence := 0.0
 	var bestMatch *dto.NormalizedMedia
@@ -108,11 +128,16 @@ func (m *Matcher) BayesianResolve(lf *dto.LocalFile) {
 	// Evaluate against all media (The API catalog)
 	if m.MediaContainer != nil {
 		for _, media := range m.MediaContainer.NormalizedMedia {
-			confidence := m.calculateBayesianScore(pm, media)
+			confidence, matchedTitle := m.calculateBayesianScore(pm, media)
 
 			if confidence > bestConfidence {
 				bestConfidence = confidence
 				bestMatch = media
+				m.Logger.Trace().
+					Str("file", lf.Name).
+					Str("match", matchedTitle).
+					Float64("conf", confidence).
+					Msg("AgentMatcher: New best match candidate")
 			}
 		}
 	}
@@ -153,7 +178,7 @@ func (m *Matcher) BayesianResolve(lf *dto.LocalFile) {
 			pm.Title = healedTitle
 			if m.MediaContainer != nil {
 				for _, media := range m.MediaContainer.NormalizedMedia {
-					conf := m.calculateBayesianScore(pm, media)
+					conf, _ := m.calculateBayesianScore(pm, media)
 					if conf > bestConfidence {
 						bestConfidence = conf
 						bestMatch = media
@@ -171,7 +196,8 @@ func (m *Matcher) BayesianResolve(lf *dto.LocalFile) {
 				folderPM.Title = folderTitle
 
 				for _, media := range m.MediaContainer.NormalizedMedia {
-					conf := m.calculateBayesianScore(folderPM, media) * 0.20
+					conf, _ := m.calculateBayesianScore(folderPM, media)
+					conf = conf * 0.20
 					if conf > bestConfidence {
 						bestConfidence = conf
 						bestMatch = media
@@ -225,8 +251,9 @@ verdict:
 }
 
 // calculateBayesianScore implements a naive Bayes estimation for identity correlation.
-func (m *Matcher) calculateBayesianScore(pm parser.ParsedMedia, media *dto.NormalizedMedia) float64 {
+func (m *Matcher) calculateBayesianScore(pm parser.ParsedMedia, media *dto.NormalizedMedia) (float64, string) {
 	prior := 0.50 // Base probability that ANY file matches ANY media
+	bestMatchedTitle := ""
 
 	// Evidence 1: Sorensen-Dice Textual Similarity (Is the string morphologically similar?)
 	// Build all candidate title strings from both primary titles and synonyms
@@ -257,6 +284,7 @@ func (m *Matcher) calculateBayesianScore(pm parser.ParsedMedia, media *dto.Norma
 		sim := calculateDice(pm.Title, title)
 		if sim > bestDice {
 			bestDice = sim
+			bestMatchedTitle = title
 		}
 		// Evidence 0: Prefix Overlap — if one string starts with the other (e.g. "Dragon Ball Z" is
 		// a prefix of "Dragon Ball Z: Los tres grandes Super Saiyans"), it's a strong signal,
@@ -285,8 +313,15 @@ func (m *Matcher) calculateBayesianScore(pm parser.ParsedMedia, media *dto.Norma
 	posterior := updateBayes(prior, bestDice, 0.20)
 
 	// DBZ OVERRIDE: Check if the parsed title guarantees a match to this specific media
-	if dbId, isDb := ResolveDragonBallID(pm.Title); isDb {
-		if media.TmdbId != nil && *media.TmdbId == dbId {
+	if dbId, _, isDb := ResolveDragonBallID(pm.Title); isDb {
+		// Movie IDs have a +1,000,000 offset in the resolver; strip it to get the real TMDB ID
+		realDbId := dbId
+		if dbId >= 1_000_000 {
+			realDbId = dbId - 1_000_000
+		}
+		tmdbMatch := media.TmdbId != nil && (*media.TmdbId == realDbId || *media.TmdbId == dbId)
+		idMatch := media.ID == dbId
+		if tmdbMatch || idMatch {
 			bestDice = 1.0
 			posterior = 1.0
 		}
@@ -328,7 +363,7 @@ func (m *Matcher) calculateBayesianScore(pm parser.ParsedMedia, media *dto.Norma
 		posterior = updateBayes(posterior, 0.85, 0.15)
 	}
 
-	return posterior
+	return posterior, bestMatchedTitle
 }
 
 // extractYear extracts a 4-digit year from strings like "Dragon Ball Z (1993)" or "- 1993.mkv".

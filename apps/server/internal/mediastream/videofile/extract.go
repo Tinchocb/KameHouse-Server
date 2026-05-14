@@ -55,17 +55,17 @@ func ExtractAttachment(ffmpegPath string, path string, hash string, mediaInfo *M
 	crashLogger.LogInfof("Extracting attachments from %s", path)
 
 	// DEVNOTE: All paths fed into this command should be absolute
-	args := []string{}
-	
-	// Only dump attachments if fonts exist.
-	// -dump_attachment:t requires a path argument; passing an empty string causes
-	// FFmpeg to exit with EINVAL (0xffffffea) on Windows. We use the attachment
-	// directory path so fonts land in the correct location.
-	if len(mediaInfo.Fonts) > 0 {
-		args = append(args, "-dump_attachment:t", attachmentPath+"/")
+	args := []string{"-y"}
+
+	// Fonts are dumped individually to avoid empty string / directory path issues on Windows.
+	for i, fontName := range mediaInfo.Fonts {
+		if fontName == "" {
+			fontName = fmt.Sprintf("font_%d.ttf", i)
+		}
+		args = append(args, fmt.Sprintf("-dump_attachment:t:%d", i), filepath.Join(attachmentPath, fontName))
 	}
 	
-	args = append(args, "-y", "-i", path)
+	args = append(args, "-i", path)
 
 	cmd := util.NewCmdCtx(
 		context.Background(),

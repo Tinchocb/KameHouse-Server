@@ -2,6 +2,7 @@ package metadata
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"kamehouse/internal/api/omdb"
@@ -65,7 +66,11 @@ func (e *OMDbEnricher) applyToMedia(media *dto.NormalizedMedia, info *omdb.Movie
 		media.ImdbVotes = &info.ImdbVotes
 	}
 	if info.Runtime != "" && info.Runtime != "N/A" {
-		media.Runtime = &info.Runtime
+		// OMDb returns "148 min". Extract the number.
+		var r int
+		if _, err := fmt.Sscanf(info.Runtime, "%d", &r); err == nil && r > 0 {
+			media.Runtime = &r
+		}
 	}
 	if info.Director != "" && info.Director != "N/A" {
 		media.Director = &info.Director

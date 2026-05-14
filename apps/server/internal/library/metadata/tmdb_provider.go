@@ -8,30 +8,35 @@ import (
 	"strings"
 
 	"kamehouse/internal/api/tmdb"
+	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models/dto"
+	"time"
 )
 
 // TMDBProvider implements the Provider interface using TMDB as the metadata source.
 type TMDBProvider struct {
 	client *tmdb.Client
+	db     *db.Database
 }
 
 // NewTMDBProvider creates a new TMDB metadata provider.
 // language is a BCP 47 language tag (e.g. "es-MX", "en-US"). If empty, defaults to "es-MX".
-func NewTMDBProvider(bearerToken string, language ...string) *TMDBProvider {
+func NewTMDBProvider(bearerToken string, database *db.Database, language ...string) *TMDBProvider {
 	lang := ""
 	if len(language) > 0 {
 		lang = language[0]
 	}
 	return &TMDBProvider{
 		client: tmdb.NewClient(bearerToken, lang),
+		db:     database,
 	}
 }
 
 // NewTMDBProviderWithClient creates a TMDB metadata provider using an existing tmdb.Client.
-func NewTMDBProviderWithClient(client *tmdb.Client) *TMDBProvider {
+func NewTMDBProviderWithClient(client *tmdb.Client, database *db.Database) *TMDBProvider {
 	return &TMDBProvider{
 		client: client,
+		db:     database,
 	}
 }
 
@@ -119,6 +124,15 @@ func (p *TMDBProvider) SearchMovie(ctx context.Context, query string) ([]*dto.No
 
 // GetMediaDetails fetches full details for a specific TMDB media.
 func (p *TMDBProvider) GetMediaDetails(ctx context.Context, id string) (*dto.NormalizedMedia, error) {
+	// 1. Check persistent cache
+	if p.db != nil {
+		var cached dto.NormalizedMedia
+		found, err := db.GetMetadataCache(p.db, "tmdb-media-details", id, &cached)
+		if err == nil && found {
+			return &cached, nil
+		}
+	}
+
 	// If it's a number, try to determine if it's TV or Movie based on offset
 	if numID, err := strconv.Atoi(id); err == nil {
 		if numID >= 1000000 {
@@ -126,13 +140,21 @@ func (p *TMDBProvider) GetMediaDetails(ctx context.Context, id string) (*dto.Nor
 			realID := numID - 1000000
 			movieRes, err := p.client.GetMovieDetails(ctx, strconv.Itoa(realID))
 			if err == nil {
-				return tmdbMovieResultToNormalizedMedia(movieRes), nil
+				res := tmdbMovieDetailsToNormalizedMedia(movieRes)
+				if p.db != nil {
+					_ = db.UpsertMetadataCache(p.db, "tmdb-media-details", id, res, 7*24*time.Hour)
+				}
+				return res, nil
 			}
 		} else if numID > 0 {
 			// TV
 			tvRes, err := p.client.GetTVDetails(ctx, id)
 			if err == nil {
-				return TmdbTVResultToNormalizedMedia(tvRes), nil
+				res := TmdbTVDetailsToNormalizedMedia(tvRes)
+				if p.db != nil {
+					_ = db.UpsertMetadataCache(p.db, "tmdb-media-details", id, res, 7*24*time.Hour)
+				}
+				return res, nil
 			}
 		}
 		// If it's negative, it might be an old cached ID. Try to handle it by stripping the sign.
@@ -142,12 +164,12 @@ func (p *TMDBProvider) GetMediaDetails(ctx context.Context, id string) (*dto.Nor
 				realID := posID - 1000000
 				movieRes, err := p.client.GetMovieDetails(ctx, strconv.Itoa(realID))
 				if err == nil {
-					return tmdbMovieResultToNormalizedMedia(movieRes), nil
+					return tmdbMovieDetailsToNormalizedMedia(movieRes), nil
 				}
 			} else {
 				tvRes, err := p.client.GetTVDetails(ctx, strconv.Itoa(posID))
 				if err == nil {
-					return TmdbTVResultToNormalizedMedia(tvRes), nil
+					return TmdbTVDetailsToNormalizedMedia(tvRes), nil
 				}
 			}
 		}
@@ -156,14 +178,14 @@ func (p *TMDBProvider) GetMediaDetails(ctx context.Context, id string) (*dto.Nor
 	// Try TV first
 	tvRes, tvErr := p.client.GetTVDetails(ctx, id)
 	if tvErr == nil {
-		nm := TmdbTVResultToNormalizedMedia(tvRes)
+		nm := TmdbTVDetailsToNormalizedMedia(tvRes)
 		return nm, nil
 	}
 
 	// Try Movie next
 	movieRes, movieErr := p.client.GetMovieDetails(ctx, id)
 	if movieErr == nil {
-		nm := tmdbMovieResultToNormalizedMedia(movieRes)
+		nm := tmdbMovieDetailsToNormalizedMedia(movieRes)
 		return nm, nil
 	}
 
@@ -184,8 +206,76 @@ func (p *TMDBProvider) GetClient() *tmdb.Client {
 // TmdbTVResultToNormalizedMedia converts a TMDB TV SearchResult to NormalizedMedia.
 func TmdbTVResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia {
 	tmdbId := r.ID
+	title := &dto.NormalizedMediaTitle{}
+	if r.Name != "" {
+		title.English = &r.Name
+		title.Spanish = &r.Name
+		title.UserPreferred = &r.Name
+	}
+	if r.OriginalName != "" && r.OriginalName != r.Name {
+		title.Romaji = &r.OriginalName
+		if r.OriginalLanguage == "ja" {
+			title.Native = &r.OriginalName
+		}
+	}
 
-	// Build title
+	var year *int
+	if r.FirstAirDate != "" && len(r.FirstAirDate) >= 4 {
+		y := 0
+		fmt.Sscanf(r.FirstAirDate[:4], "%d", &y)
+		if y > 0 { year = &y }
+	}
+
+	var startDate *dto.NormalizedMediaDate
+	if r.FirstAirDate != "" { startDate = parseTMDBDate(r.FirstAirDate) }
+
+	tvFormat := dto.MediaFormatTV
+	format := &tvFormat
+
+	var coverImage *dto.NormalizedMediaCoverImage
+	if r.PosterPath != "" {
+		url := "https://image.tmdb.org/t/p/w780" + r.PosterPath
+		coverImage = &dto.NormalizedMediaCoverImage{Large: &url, ExtraLarge: &url}
+	}
+
+	var bannerImage *string
+	if r.BackdropPath != "" {
+		url := "https://image.tmdb.org/t/p/original" + r.BackdropPath
+		bannerImage = &url
+	}
+
+	var description *string
+	if r.Overview != "" { description = &r.Overview }
+
+	var episodes *int
+	if r.NumberOfEpisodes > 0 { episodes = &r.NumberOfEpisodes }
+
+	var score *float64
+	if r.VoteAverage > 0 {
+		s := r.VoteAverage * 10
+		score = &s
+	}
+
+	return &dto.NormalizedMedia{
+		ID:               tmdbId,
+		TmdbId:           &tmdbId,
+		ExplicitProvider: "tmdb",
+		ExplicitID:       strconv.Itoa(tmdbId),
+		Title:            title,
+		Format:           format,
+		Year:             year,
+		StartDate:        startDate,
+		Episodes:         episodes,
+		CoverImage:       coverImage,
+		BannerImage:      bannerImage,
+		Description:      description,
+		Score:            score,
+	}
+}
+
+// TmdbTVDetailsToNormalizedMedia converts full TMDB TVDetails to NormalizedMedia.
+func TmdbTVDetailsToNormalizedMedia(r *tmdb.TVDetails) *dto.NormalizedMedia {
+	tmdbId := r.ID
 	title := &dto.NormalizedMediaTitle{}
 	if r.Name != "" {
 		title.English = &r.Name
@@ -198,53 +288,47 @@ func TmdbTVResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia {
 		}
 	}
 
-	// Parse year from first_air_date
 	var year *int
 	if r.FirstAirDate != "" && len(r.FirstAirDate) >= 4 {
 		y := 0
 		fmt.Sscanf(r.FirstAirDate[:4], "%d", &y)
-		if y > 0 {
-			year = &y
-		}
+		if y > 0 { year = &y }
 	}
 
-	// Parse start date
 	var startDate *dto.NormalizedMediaDate
-	if r.FirstAirDate != "" {
-		startDate = parseTMDBDate(r.FirstAirDate)
-	}
+	if r.FirstAirDate != "" { startDate = parseTMDBDate(r.FirstAirDate) }
 
-	// Determine format
 	tvFormat := dto.MediaFormatTV
 	format := &tvFormat
 
-	// Build synonyms from alternative names
-	var synonyms []*string
-
-	// Build images
 	var coverImage *dto.NormalizedMediaCoverImage
 	if r.PosterPath != "" {
-		url := "https://image.tmdb.org/t/p/w500" + r.PosterPath
-		coverImage = &dto.NormalizedMediaCoverImage{
-			Large:      &url,
-			ExtraLarge: &url,
-		}
+		url := "https://image.tmdb.org/t/p/w780" + r.PosterPath
+		coverImage = &dto.NormalizedMediaCoverImage{Large: &url, ExtraLarge: &url}
 	}
 
 	var bannerImage *string
 	if r.BackdropPath != "" {
-		url := "https://image.tmdb.org/t/p/w1280" + r.BackdropPath
+		url := "https://image.tmdb.org/t/p/original" + r.BackdropPath
 		bannerImage = &url
 	}
 
 	var description *string
-	if r.Overview != "" {
-		description = &r.Overview
-	}
+	if r.Overview != "" { description = &r.Overview }
 
 	var episodes *int
-	if r.NumberOfEpisodes > 0 {
-		episodes = &r.NumberOfEpisodes
+	if r.NumberOfEpisodes > 0 { episodes = &r.NumberOfEpisodes }
+
+	var score *float64
+	if r.VoteAverage > 0 {
+		s := r.VoteAverage * 10
+		score = &s
+	}
+
+	var genres []*string
+	for _, g := range r.Genres {
+		name := g.Name
+		genres = append(genres, &name)
 	}
 
 	return &dto.NormalizedMedia{
@@ -253,7 +337,6 @@ func TmdbTVResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia {
 		ExplicitProvider: "tmdb",
 		ExplicitID:       strconv.Itoa(tmdbId),
 		Title:            title,
-		Synonyms:         synonyms,
 		Format:           format,
 		Year:             year,
 		StartDate:        startDate,
@@ -261,16 +344,24 @@ func TmdbTVResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia {
 		CoverImage:       coverImage,
 		BannerImage:      bannerImage,
 		Description:      description,
+		Score:            score,
+		Genres:           genres,
+		Runtime: func() *int {
+			if len(r.EpisodeRunTime) > 0 {
+				return &r.EpisodeRunTime[0]
+			}
+			return nil
+		}(),
 	}
 }
 
 // tmdbMovieResultToNormalizedMedia converts a TMDB Movie SearchResult to NormalizedMedia.
 func tmdbMovieResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia {
 	tmdbId := r.ID
-
 	title := &dto.NormalizedMediaTitle{}
 	if r.Title != "" {
 		title.English = &r.Title
+		title.Spanish = &r.Title
 		title.UserPreferred = &r.Title
 	}
 	if r.OriginalTitle != "" && r.OriginalTitle != r.Title {
@@ -284,42 +375,38 @@ func tmdbMovieResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia 
 	if r.ReleaseDate != "" && len(r.ReleaseDate) >= 4 {
 		y := 0
 		fmt.Sscanf(r.ReleaseDate[:4], "%d", &y)
-		if y > 0 {
-			year = &y
-		}
+		if y > 0 { year = &y }
 	}
 
 	var startDate *dto.NormalizedMediaDate
-	if r.ReleaseDate != "" {
-		startDate = parseTMDBDate(r.ReleaseDate)
-	}
+	if r.ReleaseDate != "" { startDate = parseTMDBDate(r.ReleaseDate) }
 
 	movieFormat := dto.MediaFormatMovie
 	format := &movieFormat
 
-	// Build images
 	var coverImage *dto.NormalizedMediaCoverImage
 	if r.PosterPath != "" {
-		url := "https://image.tmdb.org/t/p/w500" + r.PosterPath
-		coverImage = &dto.NormalizedMediaCoverImage{
-			Large:      &url,
-			ExtraLarge: &url,
-		}
+		url := "https://image.tmdb.org/t/p/w780" + r.PosterPath
+		coverImage = &dto.NormalizedMediaCoverImage{Large: &url, ExtraLarge: &url}
 	}
 
 	var bannerImage *string
 	if r.BackdropPath != "" {
-		url := "https://image.tmdb.org/t/p/w1280" + r.BackdropPath
+		url := "https://image.tmdb.org/t/p/original" + r.BackdropPath
 		bannerImage = &url
 	}
 
 	var description *string
-	if r.Overview != "" {
-		description = &r.Overview
+	if r.Overview != "" { description = &r.Overview }
+
+	var score *float64
+	if r.VoteAverage > 0 {
+		s := r.VoteAverage * 10
+		score = &s
 	}
 
 	return &dto.NormalizedMedia{
-		ID:               tmdbId + 1000000, // Offset to avoid collisions with TV IDs
+		ID:               tmdbId + 1000000,
 		TmdbId:           &tmdbId,
 		ExplicitProvider: "tmdb",
 		ExplicitID:       strconv.Itoa(tmdbId),
@@ -330,6 +417,86 @@ func tmdbMovieResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia 
 		CoverImage:       coverImage,
 		BannerImage:      bannerImage,
 		Description:      description,
+		Score:            score,
+	}
+}
+
+// tmdbMovieDetailsToNormalizedMedia converts full TMDB MovieDetails to NormalizedMedia.
+func tmdbMovieDetailsToNormalizedMedia(r *tmdb.MovieDetails) *dto.NormalizedMedia {
+	tmdbId := r.ID
+	title := &dto.NormalizedMediaTitle{}
+	if r.Title != "" {
+		title.English = &r.Title
+		title.Spanish = &r.Title
+		title.UserPreferred = &r.Title
+	}
+	if r.OriginalTitle != "" && r.OriginalTitle != r.Title {
+		title.Romaji = &r.OriginalTitle
+		if r.OriginalLanguage == "ja" {
+			title.Native = &r.OriginalTitle
+		}
+	}
+
+	var year *int
+	if r.ReleaseDate != "" && len(r.ReleaseDate) >= 4 {
+		y := 0
+		fmt.Sscanf(r.ReleaseDate[:4], "%d", &y)
+		if y > 0 { year = &y }
+	}
+
+	var startDate *dto.NormalizedMediaDate
+	if r.ReleaseDate != "" { startDate = parseTMDBDate(r.ReleaseDate) }
+
+	movieFormat := dto.MediaFormatMovie
+	format := &movieFormat
+
+	var coverImage *dto.NormalizedMediaCoverImage
+	if r.PosterPath != "" {
+		url := "https://image.tmdb.org/t/p/w780" + r.PosterPath
+		coverImage = &dto.NormalizedMediaCoverImage{Large: &url, ExtraLarge: &url}
+	}
+
+	var bannerImage *string
+	if r.BackdropPath != "" {
+		url := "https://image.tmdb.org/t/p/original" + r.BackdropPath
+		bannerImage = &url
+	}
+
+	var description *string
+	if r.Overview != "" { description = &r.Overview }
+
+	var score *float64
+	if r.VoteAverage > 0 {
+		s := r.VoteAverage * 10
+		score = &s
+	}
+
+	var genres []*string
+	for _, g := range r.Genres {
+		name := g.Name
+		genres = append(genres, &name)
+	}
+
+	return &dto.NormalizedMedia{
+		ID:               tmdbId + 1000000,
+		TmdbId:           &tmdbId,
+		ExplicitProvider: "tmdb",
+		ExplicitID:       strconv.Itoa(tmdbId),
+		Title:            title,
+		Format:           format,
+		Year:             year,
+		StartDate:        startDate,
+		CoverImage:       coverImage,
+		BannerImage:      bannerImage,
+		Description:      description,
+		Score:            score,
+		Genres:           genres,
+		Runtime: func() *int {
+			if r.Runtime > 0 {
+				return &r.Runtime
+			}
+			return nil
+		}(),
 	}
 }
 

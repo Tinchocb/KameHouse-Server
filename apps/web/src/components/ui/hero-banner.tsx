@@ -26,6 +26,8 @@ export interface HeroBannerItem {
     rating?: number
     /** Original numeric media ID — used for Quick Play resolution. */
     mediaId?: number
+    /** Optional trailer URL for background video (MP4/H264) */
+    trailerUrl?: string
     onPlay: () => void
     onMoreInfo: () => void
 }
@@ -148,7 +150,8 @@ export function HeroBanner({
         >
             {/* ── Backdrop images ────────────────────────────────────────── */}
             <div 
-                className="absolute inset-x-[-20px] inset-y-[-20px]"
+                className="absolute inset-x-[-20px] inset-y-[-20px] cursor-pointer"
+                onClick={() => activeItem.onPlay()}
                 style={{
                     transform: `translate3d(${mousePos.x}px, ${mousePos.y}px, 0)`,
                     transition: isPaused ? "none" : "transform 0.2s ease-out",
@@ -162,26 +165,37 @@ export function HeroBanner({
                             index === activeIndex ? "opacity-100 z-10" : "opacity-0 z-0",
                         )}
                     >
-                        <img
-                            src={item.backdropUrl}
-                            alt=""
-                            aria-hidden="true"
-                            className={cn(
-                                "h-full w-full object-cover object-center brightness-[0.4] saturate-[0.85]",
-                                index === activeIndex && "animate-ken-burns"
-                            )}
-                        />
+                        {item.trailerUrl && index === activeIndex ? (
+                            <video
+                                src={item.trailerUrl}
+                                autoPlay
+                                muted
+                                loop
+                                playsInline
+                                className="h-full w-full object-cover object-center brightness-[0.4] saturate-[1.1] scale-105"
+                            />
+                        ) : (
+                            <img
+                                src={item.backdropUrl}
+                                alt=""
+                                aria-hidden="true"
+                                className={cn(
+                                    "h-full w-full object-cover object-center brightness-[0.4] saturate-[0.85]",
+                                    index === activeIndex && "animate-ken-burns"
+                                )}
+                            />
+                        )}
                     </div>
                 ))}
             </div>
 
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.03),transparent_45%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.03),transparent_45%)] pointer-events-none" />
             
-            <div className="absolute inset-0 bg-gradient-to-r from-background via-background/40 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-90" />
+            <div className="absolute inset-0 bg-gradient-to-r from-background via-background/40 to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-90 pointer-events-none" />
             
             {/* The Perfect Fade to Black: seamless transition to the body bg */}
-            <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-background via-background/90 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-background via-background/90 to-transparent pointer-events-none" />
 
             {/* ── Content ───────────────────────────────────────────────── */}
             <div className="relative z-10 mx-auto flex w-full max-w-[1680px] flex-col justify-end gap-6 px-6 pb-16 pt-36 md:px-10 lg:px-14 lg:pb-20 xl:flex-row xl:items-end xl:justify-between">
@@ -210,64 +224,72 @@ export function HeroBanner({
                     </div>
 
                     {/* Title or logo */}
-                    {activeItem.logoUrl ? (
-                        <img
-                            src={activeItem.logoUrl}
-                            alt={activeItem.title}
-                            className="mb-6 max-h-28 max-w-[min(32rem,80vw)] object-contain object-left hover:scale-[1.02] transition-transform duration-300 cursor-pointer"
-                        />
-                    ) : (
-                        <h1 className="mb-4 max-w-4xl font-bebas font-normal leading-[0.85] tracking-normal text-white text-[4.5rem] md:text-[6.5rem] xl:text-[8rem] uppercase">
-                            {activeItem.title}
-                        </h1>
-                    )}
+                    <div 
+                        className="cursor-pointer group/title mb-6 md:mb-8"
+                        onClick={() => activeItem.onPlay()}
+                    >
+                        {activeItem.logoUrl ? (
+                            <img
+                                src={activeItem.logoUrl}
+                                alt={activeItem.title}
+                                className="max-h-32 md:max-h-40 max-w-[min(36rem,85vw)] object-contain object-left group-hover/title:scale-[1.02] transition-transform duration-500 drop-shadow-[0_0_30px_rgba(0,0,0,0.5)]"
+                            />
+                        ) : (
+                            <h1 className="max-w-4xl font-bebas font-normal leading-[0.85] tracking-tight text-white text-[5rem] md:text-[7rem] xl:text-[9rem] uppercase drop-shadow-[0_0_30px_rgba(0,0,0,0.5)] group-hover/title:text-brand-orange transition-colors">
+                                {activeItem.title}
+                            </h1>
+                        )}
+                    </div>
 
-                    <p className="line-clamp-3 max-w-2xl text-base leading-7 text-zinc-300 md:text-lg">
+                    <p className="line-clamp-3 max-w-2xl text-lg leading-relaxed text-zinc-200/90 md:text-xl drop-shadow-md">
                         {activeItem.synopsis || "Sinopsis no disponible."}
                     </p>
 
                     {/* CTAs */}
-                    <div className="mt-8 flex flex-wrap items-center gap-4">
+                    <div className="mt-10 flex flex-wrap items-center gap-5">
                         <motion.button
                             whileHover={{ 
                                 scale: 1.05, 
                                 backgroundColor: "var(--brand-orange-hover)",
-                                boxShadow: "0 0 30px rgba(var(--primary-rgb), 0.4)"
+                                boxShadow: "0 0 40px rgba(var(--primary-rgb), 0.5)"
                             }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => activeItem.onPlay()}
-                            className="group/btn relative flex items-center justify-center gap-3 bg-brand-orange text-white h-12 md:h-14 px-8 rounded-2xl font-black text-sm uppercase tracking-[0.2em] transition-all shadow-xl shadow-primary/20 overflow-hidden border border-white/10"
+                            className="group/btn relative flex items-center justify-center gap-4 bg-brand-orange text-white h-14 md:h-16 px-10 rounded-2xl font-black text-base uppercase tracking-[0.25em] transition-all shadow-2xl shadow-primary/30 overflow-hidden border border-white/20"
                         >
-                            <Play className="w-5 h-5 fill-current relative z-10 transition-transform group-hover/btn:scale-110" />
+                            <Play className="w-6 h-6 fill-current relative z-10 transition-transform group-hover/btn:scale-110" />
                             <span className="relative z-10">Ver ahora</span>
-                            <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity" />
+                            <div className="absolute inset-0 bg-gradient-to-tr from-white/30 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity" />
                         </motion.button>
 
                         <motion.button
                             whileHover={{ 
                                 scale: 1.05, 
-                                backgroundColor: "rgba(255,255,255,0.08)",
-                                borderColor: "rgba(255,255,255,0.3)",
+                                backgroundColor: "rgba(255,255,255,0.12)",
+                                borderColor: "rgba(255,255,255,0.4)",
                             }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => activeItem.onMoreInfo()}
-                            className="flex items-center justify-center gap-3 bg-white/5 backdrop-blur-2xl text-white h-12 md:h-14 px-8 rounded-2xl font-black text-sm uppercase tracking-[0.2em] transition-all border border-white/10 hover:shadow-2xl"
+                            className="flex items-center justify-center gap-4 bg-white/5 backdrop-blur-3xl text-white h-14 md:h-16 px-10 rounded-2xl font-black text-base uppercase tracking-[0.25em] transition-all border border-white/20 hover:shadow-[0_0_40px_rgba(255,255,255,0.1)]"
                         >
-                            <Info className="w-5 h-5" />
+                            <Info className="w-6 h-6" />
                             Detalles
                         </motion.button>
                     </div>
                 </div>
 
                 {/* Right: glass poster (xl only) */}
-                <div className="hidden w-full max-w-sm xl:block">
-                    <div className="border border-white/5 bg-[#0a0e1a]/40 p-4 rounded-2xl shadow-2xl backdrop-blur-md">
+                <div 
+                    className="hidden w-full max-w-sm xl:block cursor-pointer group/poster"
+                    onClick={() => activeItem.onPlay()}
+                >
+                    <div className="border border-white/10 bg-white/5 p-5 rounded-3xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-3xl ring-1 ring-white/10 transition-all group-hover/poster:border-brand-orange/40 group-hover/poster:bg-white/10">
                         {activeItem.posterUrl ? (
                             <div className="relative">
                                 <img
                                     src={activeItem.posterUrl}
                                     alt={activeItem.title}
-                                    className="aspect-[2/3] w-full object-cover rounded-xl transition-all duration-500 hover:scale-[1.02]"
+                                    className="aspect-[2/3] w-full object-cover rounded-xl transition-all duration-500 group-hover/poster:scale-[1.02]"
                                 />
                             </div>
                         ) : (

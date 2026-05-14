@@ -81,55 +81,61 @@ export function PipelineStageCard({ stage, isActive, isDone }: {
 }) {
     return (
         <motion.div
+            whileHover={{ y: -4, scale: 1.02 }}
             animate={isActive ? {
-                boxShadow: [`0 0 0 rgba(249,115,22,0)`, `0 0 40px ${stage.glowColor}`, `0 0 0 rgba(249,115,22,0)`],
+                boxShadow: [`0 0 0 rgba(255,110,58,0)`, `0 0 40px ${stage.glowColor}`, `0 0 0 rgba(255,110,58,0)`],
             } : {}}
-            transition={isActive ? { duration: 1.5, repeat: Infinity } : {}}
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
             className={cn(
-                "relative p-7 rounded-none border transition-all duration-700 overflow-hidden group",
+                "relative p-6 rounded-none border transition-all duration-500 overflow-hidden group",
                 isActive
-                    ? "border-white/40 bg-white/10"
+                    ? "border-primary/40 bg-primary/5 shadow-2xl shadow-primary/20"
                     : isDone
-                        ? "border-white/20 bg-white/5"
-                        : "border-white/5 bg-black/20"
+                        ? "border-emerald-500/20 bg-emerald-500/5"
+                        : "border-white/5 bg-white/[0.02] hover:border-white/20"
             )}
         >
-            {(isActive || isDone) && (
-                <div
-                    className="absolute -right-4 -bottom-4 w-28 h-28 rounded-full blur-[50px] transition-opacity duration-700"
-                    style={{ backgroundColor: stage.glowColor, opacity: isDone ? 0.2 : 0.5 }}
-                />
-            )}
+            {/* Ambient Background Gradient */}
+            <div 
+                className={cn(
+                    "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-1000",
+                    "bg-[radial-gradient(circle_at_50%_-20%,rgba(255,255,255,0.05),transparent_70%)]"
+                )}
+            />
 
             <div className="relative space-y-4">
                 <div className={cn(
-                    "w-12 h-12 rounded-2xl flex items-center justify-center border transition-all duration-500",
+                    "w-12 h-12 rounded-none flex items-center justify-center border transition-all duration-500",
                     isActive
-                        ? `${stage.color} border-white/20 bg-white/10 scale-110`
+                        ? "text-primary border-primary/40 bg-primary/10 shadow-[0_0_20px_rgba(255,110,58,0.3)]"
                         : isDone
-                            ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/10"
-                            : `${stage.color} border-white/10 bg-white/5 opacity-40 group-hover:opacity-70`
+                            ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10"
+                            : "text-zinc-600 border-white/5 bg-white/[0.02]"
                 )}>
-                    {isDone && !isActive ? <LucideCheck size={20} /> : stage.icon}
+                    {isDone && !isActive ? <LucideCheck size={20} strokeWidth={3} /> : stage.icon}
                 </div>
 
                 <div>
                     <p className={cn(
-                        "text-xs font-black uppercase tracking-widest transition-colors duration-500",
-                        isActive ? stage.color : isDone ? "text-zinc-400" : "text-zinc-600"
+                        "text-[10px] font-black uppercase tracking-[0.2em] transition-colors duration-500",
+                        isActive ? "text-primary" : isDone ? "text-emerald-500/60" : "text-zinc-600"
                     )}>
                         {stage.shortLabel}
                     </p>
-                    <p className="text-sm font-semibold text-white/70 mt-1 leading-tight">{stage.label}</p>
+                    <p className="text-sm font-bold text-white mt-0.5 tracking-tight">{stage.label}</p>
                 </div>
 
                 {isActive && (
-                    <motion.div
-                        className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
-                        style={{ backgroundColor: stage.color }}
-                        initial={{ scaleX: 0, transformOrigin: "left" }}
-                        animate={{ scaleX: [0, 1, 0], transition: { duration: 2, repeat: Infinity } }}
-                    />
+                    <div className="absolute -bottom-6 -left-6 right-0 h-1">
+                        <motion.div 
+                            className="h-full bg-primary"
+                            animate={{ 
+                                x: ["-100%", "200%"],
+                                opacity: [0, 1, 0]
+                            }}
+                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                        />
+                    </div>
                 )}
             </div>
         </motion.div>
@@ -143,29 +149,33 @@ export function ProgressRing({ progress, size, stroke }: { progress: number; siz
     const center = size / 2
 
     return (
-        <svg width={size} height={size} className="shrink-0 -rotate-90">
-            <circle cx={center} cy={center} r={radius}
-                stroke="rgba(255,255,255,0.05)" strokeWidth={stroke} fill="none" />
-            <motion.circle
-                cx={center} cy={center} r={radius}
-                stroke="white"
-                strokeWidth={stroke}
-                fill="none"
-                strokeLinecap="square"
-                strokeDasharray={circumference}
-                animate={{ strokeDashoffset: offset }}
-                transition={{ type: "spring", stiffness: 60, damping: 15 }}
-            />
-            <text
-                x={center} y={center}
-                className="fill-white font-bold"
-                textAnchor="middle" dominantBaseline="central"
-                fontSize="14" fontWeight="900"
-                transform={`rotate(90, ${center}, ${center})`}
-                style={{ fontFamily: "inherit" }}
-            >
-                {Math.round(progress)}%
-            </text>
-        </svg>
+        <div className="relative" style={{ width: size, height: size }}>
+            <svg width={size} height={size} className="shrink-0 -rotate-90">
+                {/* Background Shadow Ring */}
+                <circle cx={center} cy={center} r={radius}
+                    stroke="rgba(0,0,0,0.5)" strokeWidth={stroke + 2} fill="none" />
+                
+                {/* Track */}
+                <circle cx={center} cy={center} r={radius}
+                    stroke="rgba(255,255,255,0.03)" strokeWidth={stroke} fill="none" />
+                
+                {/* Progress */}
+                <motion.circle
+                    cx={center} cy={center} r={radius}
+                    stroke="#ff6e3a"
+                    strokeWidth={stroke}
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeDasharray={circumference}
+                    animate={{ strokeDashoffset: offset }}
+                    transition={{ type: "spring", stiffness: 40, damping: 15 }}
+                    style={{ filter: "drop-shadow(0 0 8px rgba(255,110,58,0.5))" }}
+                />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="font-bebas text-3xl text-white leading-none">{Math.round(progress)}</span>
+                <span className="text-[10px] font-black text-zinc-500 uppercase tracking-tighter">%</span>
+            </div>
+        </div>
     )
 }

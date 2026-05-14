@@ -78,7 +78,7 @@ const FileCard = React.forwardRef<HTMLDivElement, { file: GhostFile }>(function 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97 }}
-            className="border border-white/10 rounded-none overflow-hidden bg-white/[0.02] hover:bg-white/[0.05] transition-all duration-300"
+            className="border border-white/5 rounded-none overflow-hidden bg-white/[0.01] hover:bg-white/[0.03] transition-all duration-500 group"
         >
             {/* ─── Header row ─── */}
             <button
@@ -86,27 +86,33 @@ const FileCard = React.forwardRef<HTMLDivElement, { file: GhostFile }>(function 
                 onClick={() => {
                     setExpanded(e => !e)
                     if (!expanded && !debouncedQuery) {
-                        // Seed the search with the detected title
                         const base = filename.replace(/\.[^.]+$/, "").split(/\s+\(?\d{4}\)?/)[0]
                         setSearchQuery(base)
                         setDebouncedQuery(base)
                     }
                 }}
-                className="w-full flex items-center gap-4 px-5 py-4 text-left"
+                className="w-full flex items-center gap-6 px-8 py-6 text-left"
             >
-                <LucideFileVideo size={18} className="text-zinc-500 shrink-0" />
-                <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-zinc-200 truncate">{filename}</p>
-                    <p className="text-xs text-zinc-600 truncate">{file.path}</p>
+                <div className="w-12 h-12 bg-white/5 border border-white/10 flex items-center justify-center shrink-0 group-hover:bg-white/10 transition-colors">
+                    <LucideFileVideo size={20} className="text-zinc-500 group-hover:text-white transition-colors" />
                 </div>
-                <div className="flex items-center gap-3 shrink-0">
-                    <span className={cn(
-                        "text-xs font-black px-2 py-0.5 border",
-                        confidence >= 70 ? "border-white/20 text-white" : "border-zinc-700 text-zinc-500"
-                    )}>
-                        {confidence}%
-                    </span>
-                    {expanded ? <LucideChevronUp size={14} className="text-zinc-500" /> : <LucideChevronDown size={14} className="text-zinc-500" />}
+                <div className="flex-1 min-w-0 space-y-1">
+                    <p className="text-base font-bold text-zinc-200 truncate group-hover:text-white transition-colors">{filename}</p>
+                    <p className="text-xs font-mono text-zinc-600 truncate">{file.path}</p>
+                </div>
+                <div className="flex items-center gap-6 shrink-0">
+                    <div className="flex flex-col items-end">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600 mb-1">Confianza</span>
+                        <span className={cn(
+                            "text-sm font-black px-3 py-1 border font-mono",
+                            confidence >= 70 ? "border-primary/40 bg-primary/5 text-primary" : "border-white/10 text-zinc-500"
+                        )}>
+                            {confidence}%
+                        </span>
+                    </div>
+                    <div className="w-10 h-10 flex items-center justify-center border border-white/5 group-hover:border-white/20 transition-all">
+                        {expanded ? <LucideChevronUp size={18} className="text-zinc-500" /> : <LucideChevronDown size={18} className="text-zinc-500" />}
+                    </div>
                 </div>
             </button>
 
@@ -117,61 +123,71 @@ const FileCard = React.forwardRef<HTMLDivElement, { file: GhostFile }>(function 
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.25 }}
-                        className="overflow-hidden border-t border-white/[0.05]"
+                        transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+                        className="overflow-hidden border-t border-white/[0.05] bg-black/20"
                     >
-                        <div className="p-4 space-y-3">
+                        <div className="p-8 space-y-6">
                             {/* Search input */}
                             <div className="relative">
-                                <LucideSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                                <LucideSearch size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500" />
                                 <input
                                     type="text"
                                     value={searchQuery}
                                     onChange={e => handleSearch(e.target.value)}
-                                    placeholder="Buscar en TMDB..."
-                                    className="w-full bg-white/[0.05] border border-white/10 rounded-none pl-9 pr-4 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-white/40 focus:bg-white/[0.08]"
+                                    placeholder="Buscar en TMDB (Película o Serie)..."
+                                    className="w-full bg-white/[0.03] border border-white/10 rounded-none pl-14 pr-6 py-4 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-white/30 focus:bg-white/[0.05] transition-all"
                                 />
                                 {isFetching && (
-                                    <LucideLoader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 animate-spin" />
+                                    <LucideLoader2 size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-500 animate-spin" />
                                 )}
                             </div>
 
                             {/* Results */}
                             {results.length > 0 && (
-                                <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                                    {results.slice(0, 8).map(r => (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                                    {results.slice(0, 10).map(r => (
                                         <button
                                             key={r.id}
                                             type="button"
                                             disabled={resolve.isPending}
                                             onClick={() => handleLink(r)}
-                                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-none bg-white/[0.03] hover:bg-white/10 border border-transparent hover:border-white/20 transition-all text-left group"
+                                            className="w-full flex items-center gap-4 px-4 py-3 rounded-none bg-white/[0.02] hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all text-left group/result"
                                         >
-                                            {r.poster_path ? (
-                                                <img
-                                                    src={`https://image.tmdb.org/t/p/w92${r.poster_path}`}
-                                                    alt=""
-                                                    className="w-8 h-12 rounded-none object-cover shrink-0"
-                                                />
-                                            ) : (
-                                                <div className="w-8 h-12 rounded bg-white/[0.05] shrink-0" />
-                                            )}
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-semibold text-zinc-200 truncate group-hover:text-white">
+                                            <div className="relative shrink-0 overflow-hidden">
+                                                {r.poster_path ? (
+                                                    <img
+                                                        src={`https://image.tmdb.org/t/p/w92${r.poster_path}`}
+                                                        alt=""
+                                                        className="w-12 h-18 rounded-none object-cover transition-transform duration-700 group-hover/result:scale-110"
+                                                    />
+                                                ) : (
+                                                    <div className="w-12 h-18 rounded-none bg-white/5 flex items-center justify-center">
+                                                        <LucideFileVideo size={16} className="text-zinc-700" />
+                                                    </div>
+                                                )}
+                                                <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover/result:opacity-100 transition-opacity" />
+                                            </div>
+                                            <div className="flex-1 min-w-0 space-y-1">
+                                                <p className="text-sm font-bold text-zinc-200 truncate group-hover/result:text-white">
                                                     {r.title ?? r.name}
                                                 </p>
-                                                <p className="text-xs text-zinc-600">
-                                                    {r.media_type === "movie" ? "🎬 Película" : "📺 Serie"} · {(r.release_date ?? r.first_air_date ?? "").slice(0, 4)} · ID: {r.id}
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-600">
+                                                    {r.media_type === "movie" ? "🎬 Movie" : "📺 TV Show"} · {(r.release_date ?? r.first_air_date ?? "").slice(0, 4)}
                                                 </p>
                                             </div>
-                                            <LucideLink size={14} className="text-zinc-600 group-hover:text-white shrink-0" />
+                                            <div className="w-8 h-8 rounded-none border border-white/5 flex items-center justify-center opacity-0 group-hover/result:opacity-100 transition-all">
+                                                <LucideLink size={14} className="text-white" />
+                                            </div>
                                         </button>
                                     ))}
                                 </div>
                             )}
 
                             {debouncedQuery && !isFetching && results.length === 0 && (
-                                <p className="text-xs text-zinc-600 text-center py-3">No se encontraron resultados</p>
+                                <div className="py-12 text-center space-y-3">
+                                    <LucideSearch size={32} className="text-zinc-800 mx-auto" />
+                                    <p className="text-sm text-zinc-600">No se encontraron resultados para "{debouncedQuery}"</p>
+                                </div>
                             )}
                         </div>
                     </motion.div>
@@ -181,8 +197,6 @@ const FileCard = React.forwardRef<HTMLDivElement, { file: GhostFile }>(function 
     )
 })
 
-// ── Main export ───────────────────────────────────────────────────────────────
-
 export function UnlinkedFilesPanel() {
     const { data: files = [], isLoading, refetch } = useUnlinkedFilesData()
     const unresolved = files.filter(f => !f.userResolved)
@@ -190,42 +204,47 @@ export function UnlinkedFilesPanel() {
     if (isLoading) return null
 
     if (unresolved.length === 0) return (
-        <div className="flex items-center gap-3 px-5 py-4 rounded-none bg-white/5 border border-white/10">
-            <LucideCheck size={16} className="text-white shrink-0" />
-            <p className="text-sm text-zinc-300 font-medium">Todos los archivos han sido identificados correctamente.</p>
+        <div className="flex items-center gap-6 px-8 py-8 rounded-none bg-white/[0.02] border border-white/5">
+            <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0">
+                <LucideCheck size={24} />
+            </div>
+            <div className="space-y-1">
+                <p className="text-lg font-bold text-white">Librería Impecable</p>
+                <p className="text-sm text-zinc-500 font-medium">Todos los archivos han sido identificados y vinculados correctamente.</p>
+            </div>
         </div>
     )
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-8">
             {/* ─── Header ─── */}
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-none bg-white/5 border border-white/10">
-                        <LucideAlertTriangle size={16} className="text-white" />
+                <div className="flex items-center gap-6">
+                    <div className="w-14 h-14 bg-white/5 border border-white/10 flex items-center justify-center text-white shrink-0">
+                        <LucideAlertTriangle size={24} />
                     </div>
                     <div>
-                        <p className="text-sm font-black text-zinc-200">Archivos sin identificar</p>
-                        <p className="text-xs text-zinc-600">{unresolved.length} archivo{unresolved.length !== 1 ? "s" : ""} requieren vinculación manual</p>
+                        <p className="text-2xl font-black text-white tracking-tighter uppercase font-bebas">FALTA VINCULACIÓN</p>
+                        <p className="text-zinc-500 text-sm font-medium">
+                            <span className="text-white font-bold">{unresolved.length}</span> archivo{unresolved.length !== 1 ? "s" : ""} requieren atención manual
+                        </p>
                     </div>
                 </div>
                 <button
                     type="button"
                     onClick={() => refetch()}
-                    className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors px-3 py-1.5 rounded-lg hover:bg-white/[0.04]"
+                    className="bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-black uppercase tracking-widest text-zinc-400 hover:text-white px-6 py-3 transition-all"
                 >
-                    Actualizar
+                    Refrescar Lista
                 </button>
             </div>
 
-            <p className="text-xs text-zinc-600 leading-relaxed">
-                Abrí cada archivo, buscá en TMDB y tocá el resultado correcto para vincularlo. El vínculo se aplicará en el próximo escaneo.
-            </p>
-
             {/* ─── File list ─── */}
-            <AnimatePresence mode="popLayout">
-                {unresolved.map(f => <FileCard key={f.path} file={f} />)}
-            </AnimatePresence>
+            <div className="grid grid-cols-1 gap-4">
+                <AnimatePresence mode="popLayout">
+                    {unresolved.map(f => <FileCard key={f.path} file={f} />)}
+                </AnimatePresence>
+            </div>
         </div>
     )
 }

@@ -179,9 +179,17 @@ func (lc *LibraryCollection) hydrateCollectionLists(
 		var listData *models.MediaEntryListData
 		var lookupId uint
 
-		// First, try looking up by MediaId directly (works for positive IDs
-		// where the DB primary key == external ID)
-		if id > 0 {
+		// 1. First, try looking up by MediaId directly.
+		// If id >= 1_000_000, it's a TMDB movie ID with offset.
+		// We should look it up by the tmdb_id column.
+		if id >= 1_000_000 {
+			m, err := db.GetLibraryMediaByTmdbId(dbInfo, id-1_000_000)
+			if err == nil && m != nil {
+				media = m
+				lookupId = m.ID
+			}
+		} else if id > 0 {
+			// Try as a direct primary key (common for AniList or existing entries)
 			m, err := db.GetLibraryMediaByID(dbInfo, uint(id))
 			if err == nil && m != nil {
 				media = m
@@ -189,8 +197,8 @@ func (lc *LibraryCollection) hydrateCollectionLists(
 			}
 		}
 
-		// If not found by MediaId, try using the LibraryMediaId from local files
-		// (needed for TMDB media)
+		// 2. If not found by direct lookup, try using the LibraryMediaId association 
+		// from local files (the "explicit" link created by the scanner)
 		if media == nil {
 			if libMediaId, ok := mediaIdToLibraryMediaId[id]; ok && libMediaId > 0 {
 				m, err := db.GetLibraryMediaByID(dbInfo, libMediaId)
@@ -201,8 +209,20 @@ func (lc *LibraryCollection) hydrateCollectionLists(
 			}
 		}
 
+		// 3. Fallback: If it's a positive ID but not >= 1M, it might STILL be a TMDB TV show ID
+		// stored in the tmdb_id column instead of being the primary key.
+		if media == nil && id > 0 && id < 1_000_000 {
+			m, err := db.GetLibraryMediaByTmdbId(dbInfo, id)
+			if err == nil && m != nil {
+				media = m
+				lookupId = m.ID
+			}
+		}
+
 		if media != nil {
 			mediaMap[id] = media
+		} else {
+			opts.Database.Logger.Debug().Int("mediaId", id).Msg("anime/collection: Failed to hydrate media entry")
 		}
 
 		// Look up list data using the same ID that successfully found the media

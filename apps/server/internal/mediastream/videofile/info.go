@@ -220,6 +220,7 @@ func FfprobeGetInfo(ffprobePath, path, hash string) (*MediaInfo, error) {
 			MimeCodec: streamToMimeCodec(stream),
 			IsDefault: stream.Disposition.Default != 0,
 			IsForced:  stream.Disposition.Forced != 0,
+			Channels:  uint32(stream.Channels),
 		}
 	})
 

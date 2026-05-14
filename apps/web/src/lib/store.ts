@@ -70,6 +70,14 @@ export interface PlayerState {
     setVideoQualities: (qualities: string[]) => void
     setCurrentQuality: (quality: string) => void
     setFullscreen: (fullscreen: boolean) => void
+    autoSkipIntro: boolean
+    setAutoSkipIntro: (auto: boolean) => void
+    playbackRate: number
+    setPlaybackRate: (rate: number) => void
+    preferredAudioLang: string
+    setPreferredAudioLang: (lang: string) => void
+    preferredSubtitleLang: string
+    setPreferredSubtitleLang: (lang: string) => void
 }
 
 export const createPlayerSlice: StateCreator<UIState & PlayerState, [], [], PlayerState> = (set) => ({
@@ -77,10 +85,18 @@ export const createPlayerSlice: StateCreator<UIState & PlayerState, [], [], Play
     videoQualities: ["1080p"],
     currentQuality: "1080p",
     isFullscreen: false,
+    autoSkipIntro: false,
+    playbackRate: 1,
     setPlayerVolume: (volume) => set({ playerVolume: volume }),
     setVideoQualities: (qualities) => set({ videoQualities: qualities }),
     setCurrentQuality: (quality) => set({ currentQuality: quality }),
     setFullscreen: (fullscreen) => set({ isFullscreen: fullscreen }),
+    setAutoSkipIntro: (autoSkipIntro) => set({ autoSkipIntro }),
+    setPlaybackRate: (playbackRate) => set({ playbackRate }),
+    preferredAudioLang: "jpn",
+    setPreferredAudioLang: (preferredAudioLang) => set({ preferredAudioLang }),
+    preferredSubtitleLang: "spa",
+    setPreferredSubtitleLang: (preferredSubtitleLang) => set({ preferredSubtitleLang }),
 })
 
 // --- Combined Store ---

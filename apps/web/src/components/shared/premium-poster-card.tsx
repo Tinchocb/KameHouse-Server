@@ -3,6 +3,7 @@ import { motion } from "framer-motion"
 import { Play, Star, Info, Calendar } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 import { DeferredImage } from "./deferred-image"
+import { getHighResImage } from "@/lib/helpers/images"
 import { useGSAP } from "@gsap/react"
 import gsap from "gsap"
 
@@ -85,8 +86,16 @@ export const PremiumPosterCard = React.memo(({
         <div 
             ref={cardRef}
             onClick={onClick}
+            role={onClick ? "button" : undefined}
+            tabIndex={onClick ? 0 : undefined}
+            onKeyDown={(e) => {
+                if (onClick && (e.key === "Enter" || e.key === " ")) {
+                    e.preventDefault();
+                    onClick();
+                }
+            }}
             className={cn(
-                "group relative aspect-[2/3] w-full cursor-pointer rounded-2xl bg-zinc-900 transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]",
+                "group relative aspect-[2/3] w-full cursor-pointer rounded-2xl bg-zinc-900 transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] focus-visible:ring-4 focus-visible:ring-brand-orange focus-visible:ring-offset-4 focus-visible:ring-offset-background",
                 "perspective-1000",
                 className
             )}
@@ -95,7 +104,7 @@ export const PremiumPosterCard = React.memo(({
             {/* ── Background & Poster ── */}
             <div className="absolute inset-0 overflow-hidden rounded-2xl border border-white/5 bg-zinc-900">
                 <DeferredImage
-                    src={posterUrl}
+                    src={getHighResImage(posterUrl)}
                     alt={title}
                     className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />
@@ -125,40 +134,40 @@ export const PremiumPosterCard = React.memo(({
                 </div>
 
                 {/* ── Hover Content ── */}
-                <div className="absolute inset-x-0 bottom-0 flex flex-col gap-2 p-4 translate-y-4 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
-                    <div className="flex flex-wrap gap-1.5">
+                <div className="absolute inset-x-0 bottom-0 flex flex-col gap-2.5 p-5 translate-y-4 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
+                    <div className="flex flex-wrap gap-2">
                         {genres?.slice(0, 2).map(g => (
-                            <span key={g} className="text-[9px] font-bold uppercase tracking-wider text-brand-orange/90 bg-brand-orange/5 px-1.5 py-0.5 rounded border border-brand-orange/10">
+                            <span key={g} className="text-[10px] font-black uppercase tracking-[0.15em] text-brand-orange bg-brand-orange/10 px-2 py-0.5 rounded border border-brand-orange/20 backdrop-blur-md">
                                 {g}
                             </span>
                         ))}
                     </div>
                     
-                    <h3 className="text-sm font-black uppercase leading-tight tracking-tight text-white line-clamp-2">
+                    <h3 className="text-[18px] sm:text-[22px] font-black uppercase leading-[1.1] tracking-tight text-white line-clamp-2 font-display drop-shadow-2xl">
                         {title}
                     </h3>
                     
-                    <div className="flex items-center justify-between pt-1">
-                        <div className="flex items-center gap-3">
-                            <button className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-black transition-transform hover:scale-110">
-                                <Play className="h-4 w-4 fill-current" />
+                    <div className="flex items-center justify-between pt-2">
+                        <div className="flex items-center gap-4">
+                            <button className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-orange text-white transition-all hover:scale-110 shadow-lg shadow-brand-orange/30">
+                                <Play className="h-5 w-5 fill-current" />
                             </button>
-                            <button className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md transition-transform hover:bg-white/20">
-                                <Info className="h-4 w-4" />
+                            <button className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-xl transition-all hover:bg-white/20 border border-white/10">
+                                <Info className="h-5 w-5" />
                             </button>
                         </div>
                         {year && (
-                            <div className="flex items-center gap-1 text-white/60">
-                                <Calendar className="h-3 w-3" />
-                                <span className="text-[10px] font-bold">{year}</span>
+                            <div className="flex items-center gap-1.5 text-white/50">
+                                <Calendar className="h-3.5 w-3.5" />
+                                <span className="text-[12px] font-black tracking-widest">{year}</span>
                             </div>
                         )}
                     </div>
                 </div>
 
                 {/* ── Default Content (Static) ── */}
-                <div className="absolute inset-x-0 bottom-0 p-4 transition-opacity duration-500 group-hover:opacity-0">
-                    <h3 className="text-xs font-black uppercase tracking-tight text-white line-clamp-1 drop-shadow-md">
+                <div className="absolute inset-x-0 bottom-0 p-5 transition-opacity duration-500 group-hover:opacity-0 bg-gradient-to-t from-black/80 to-transparent">
+                    <h3 className="text-[16px] font-black uppercase tracking-tight text-white line-clamp-1 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] font-display">
                         {title}
                     </h3>
                 </div>

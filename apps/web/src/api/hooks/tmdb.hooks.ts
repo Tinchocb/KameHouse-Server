@@ -10,6 +10,7 @@ export interface TMDBResult {
     poster_path?: string | null
     overview?: string
     media_type?: "movie" | "tv"
+    vote_average?: number
 }
 
 interface TMDBSearchVariables {
@@ -21,7 +22,7 @@ export function useTMDBSearch(query: string, searchType: "tv" | "movie" | "multi
     return useServerQuery<TMDBResult[], TMDBSearchVariables, TMDBResult[]>({
         endpoint: API_ENDPOINTS.TMDB.TMDBSearch.endpoint,
         method: API_ENDPOINTS.TMDB.TMDBSearch.methods[0],
-        params: {
+        data: {
             query,
             searchType,
         },

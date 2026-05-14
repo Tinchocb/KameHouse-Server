@@ -1,12 +1,15 @@
 package models
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // LibraryMedia represents a local TV show, Anime, or Movie.
 // It is decoupled from third-party platforms and uses its own primary key.
 type LibraryMedia struct {
 	BaseModel
-	Type   string `gorm:"column:type" json:"type"`     // e.g., "ANIME", "SHOW", "MOVIE"
+	Type   string `gorm:"column:type;uniqueIndex:idx_tmdb_id_type" json:"type"`     // e.g., "ANIME", "SHOW", "MOVIE"
 	Format         string `gorm:"column:format" json:"format"` // e.g., "TV", "TV_SHORT", "MOVIE", "OVA", "SPECIAL"
 	Status         string `gorm:"column:status" json:"status"`
 	MetadataStatus string `gorm:"column:metadata_status;default:'COMPLETE'" json:"metadataStatus"` // "COMPLETE", "MISSING", "LOCAL"
@@ -15,13 +18,14 @@ type LibraryMedia struct {
 	TitleOriginal string `gorm:"column:title_original" json:"titleOriginal"`
 	TitleRomaji   string `gorm:"column:title_romaji" json:"titleRomaji"`
 	TitleEnglish  string `gorm:"column:title_english" json:"titleEnglish"`
-	Synonyms      []byte `gorm:"column:synonyms;type:text" json:"synonyms"` // JSON array of strings
+	TitleSpanish  string `gorm:"column:title_spanish" json:"titleSpanish"`
+	Synonyms      json.RawMessage `gorm:"column:synonyms;type:text" json:"synonyms"` // JSON array of strings
 
 	Description string `gorm:"column:description;type:text" json:"description"`
 	PosterImage string `gorm:"column:poster_image" json:"posterImage"` // Path or URL
 	BannerImage string `gorm:"column:banner_image" json:"bannerImage"` // Path or URL
 
-	TmdbId         int    `gorm:"column:tmdb_id;uniqueIndex" json:"tmdbId"`
+	TmdbId         int    `gorm:"column:tmdb_id;uniqueIndex:idx_tmdb_id_type" json:"tmdbId"`
 
 	SeasonNumber int       `gorm:"column:season_number" json:"seasonNumber"`
 	StartDate    time.Time `gorm:"column:start_date" json:"startDate"`
@@ -32,12 +36,13 @@ type LibraryMedia struct {
 	Rating float64 `gorm:"column:rating" json:"rating"`
 	IsNsfw bool    `gorm:"column:is_nsfw" json:"isNsfw"`
 
-	Genres        []byte `gorm:"column:genres;type:text" json:"genres"` // JSON array of strings
-	Tags          []byte `gorm:"column:tags;type:text" json:"tags"`     // JSON array of objects
+	Genres        json.RawMessage `gorm:"column:genres;type:text" json:"genres"` // JSON array of strings
+	Tags          json.RawMessage `gorm:"column:tags;type:text" json:"tags"`     // JSON array of objects
 	TotalEpisodes int    `gorm:"column:total_episodes" json:"totalEpisodes"`
+	Runtime       int    `gorm:"column:runtime" json:"runtime"`
 
-	AudioTracks    []byte `gorm:"column:audio_tracks;type:text" json:"audioTracks"`       // JSON array of strings
-	SubtitleTracks []byte `gorm:"column:subtitle_tracks;type:text" json:"subtitleTracks"` // JSON array of strings
+	AudioTracks    json.RawMessage `gorm:"column:audio_tracks;type:text" json:"audioTracks"`       // JSON array of strings
+	SubtitleTracks json.RawMessage `gorm:"column:subtitle_tracks;type:text" json:"subtitleTracks"` // JSON array of strings
 
 	// FanArt.tv enrichment
 	LogoImage     string `gorm:"column:logo_image" json:"logoImage"`
@@ -137,8 +142,8 @@ type LibraryEpisode struct {
 	SagaName string `gorm:"column:saga_name" json:"sagaName"`
 	SagaId   string `gorm:"column:saga_id" json:"sagaId"`
 
-	AudioTracks    []byte `gorm:"column:audio_tracks;type:text" json:"audioTracks"`       // JSON array of strings
-	SubtitleTracks []byte `gorm:"column:subtitle_tracks;type:text" json:"subtitleTracks"` // JSON array of strings
+	AudioTracks    json.RawMessage `gorm:"column:audio_tracks;type:text" json:"audioTracks"`       // JSON array of strings
+	SubtitleTracks json.RawMessage `gorm:"column:subtitle_tracks;type:text" json:"subtitleTracks"` // JSON array of strings
 }
 
 // LibrarySeason represents a season (or saga) of a LibraryMedia.

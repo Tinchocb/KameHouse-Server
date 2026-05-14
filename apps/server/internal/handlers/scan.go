@@ -58,19 +58,13 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	// +---------------------+
-	// |  Automatic Cleanup  |
-	// +---------------------+
-	// Unmatch any file that has a MediaId but no longer belongs to a valid LibraryMedia
-	// This forces the scanner to re-evaluate it against TMDB
-	for _, lf := range existingLfs {
-		if lf.MediaId > 0 && lf.LibraryMediaId == 0 {
-			h.App.Logger.Warn().Str("file", lf.Name).Msg("scan: found orphaned file, unmatching automatically")
-			lf.MediaId = 0
-			lf.ParsedData = nil
-			lf.ParsedFolderData = nil
-			lf.Metadata = nil
-			lf.Locked = false
+	// For full scans: clear lastScanAt so the walker traverses all directories
+	if b.FullScan && h.App.Database != nil {
+		if s, err := h.App.Database.GetSettings(); err == nil && s != nil {
+			s.Library.LastScanAt = time.Time{}
+			// CRITICAL: Reset all media IDs in local_files to force the matcher to re-run
+			_ = h.App.Database.ResetLocalFilesMediaIds()
+			_, _ = h.App.Database.UpsertSettings(s)
 		}
 	}
 
@@ -78,6 +72,12 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 	existingShelvedLfs, err := db.GetShelvedLocalFiles(h.App.Database)
 	if err != nil {
 		return h.RespondWithError(c, err)
+	}
+
+	mSettings, ok := h.App.Database.GetMediastreamSettings()
+	ffprobePath := "ffprobe"
+	if ok && mSettings.FfprobePath != "" {
+		ffprobePath = mSettings.FfprobePath
 	}
 
 	// +---------------------+
@@ -137,6 +137,7 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		OMDbEnricher:               h.App.Metadata.OMDb,
 		OpenSubsEnricher:           h.App.Metadata.OpenSubs,
 		FullScan:                   b.FullScan,
+		FFprobePath:                ffprobePath,
 	}
 
 	// EXECUTE ASYNCHRONOUSLY to prevent HTTP Timeout & 504 errors on massive scans
@@ -180,6 +181,7 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 
 		// Background maintenance tasks
 		go func() {
+			ClearLibraryCollectionCache()
 			_, _ = h.App.Metadata.PlatformRef.Get().RefreshAnimeCollection(context.Background())
 		}()
 	}()
@@ -217,6 +219,7 @@ func (h *Handler) HandleGetScanStatus(c echo.Context) error {
 		"status":      "done",
 		"lastScanAt":  latest.CreatedAt,
 		"summary":     latest.ScanSummary,
+		"engine":      "Antigravity-v2",
 	})
 }
 // HandleGetUnlinkedFiles

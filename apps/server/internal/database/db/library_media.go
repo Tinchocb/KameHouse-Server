@@ -3,7 +3,6 @@ package db
 import (
 	"kamehouse/internal/database/models"
 
-	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -41,20 +40,10 @@ func GetMediaEntryListData(d *Database, libraryMediaId uint) (*models.MediaEntry
 // InsertLibraryMedia creates or updates a LibraryMedia record in the database.
 // If a record with the same TMDB ID exists, it updates it; otherwise it creates a new one.
 func InsertLibraryMedia(d *Database, media *models.LibraryMedia) (*models.LibraryMedia, error) {
-	if media.TmdbId != 0 {
-		var existing models.LibraryMedia
-		err := d.Gorm().Where("tmdb_id = ?", media.TmdbId).First(&existing).Error
-		if err == nil {
-			// Update existing record
-			media.ID = existing.ID
-			err = d.Gorm().Save(media).Error
-			if err != nil {
-				return nil, err
-			}
-			return media, nil
-		}
-	}
-	err := d.Gorm().Create(media).Error
+	err := d.Gorm().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "tmdb_id"}},
+		UpdateAll: true,
+	}).Create(media).Error
 	if err != nil {
 		return nil, err
 	}
@@ -117,10 +106,8 @@ func UpsertLibraryMediaBatch(d *Database, media []*models.LibraryMedia, batchSiz
 		return nil
 	}
 
-	return d.Gorm().Transaction(func(tx *gorm.DB) error {
-		return tx.Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "tmdb_id"}}, // Unique constraint
-			UpdateAll: true,
-		}).CreateInBatches(media, batchSize).Error
-	})
+	return d.Gorm().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "tmdb_id"}, {Name: "type"}}, // Unique composite constraint
+		UpdateAll: true,
+	}).CreateInBatches(media, batchSize).Error
 }

@@ -45,6 +45,10 @@ var noiseWords = map[string]struct{}{
 	"extras": {}, "ending": {}, "opening": {}, "preview": {},
 	"special": {}, "specials": {}, "sp": {}, "finale": {},
 	"season": {}, "uncensored": {}, "censored": {}, "bluray": {},
+	// spanish particles/common words
+	"el": {}, "la": {}, "los": {}, "las": {}, "un": {}, "una": {}, "unos": {}, "unas": {},
+	"del": {}, "en": {}, "con": {}, "por": {}, "para": {}, "al": {},
+	"y": {}, "o": {}, "que": {}, "su": {}, "sus": {},
 }
 
 var ordinalToNumber = map[string]int{

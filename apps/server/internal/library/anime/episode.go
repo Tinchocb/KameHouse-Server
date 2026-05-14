@@ -26,6 +26,8 @@ type (
 		FileMetadata          *LocalFileMetadata   `json:"fileMetadata"`              // (episode, aniDBEpisode, type...)
 		IsInvalid             bool                 `json:"isInvalid"`                 // No AniDB data
 		MetadataIssue         string               `json:"metadataIssue,omitempty"`   // Alerts the user that there is a discrepancy between platform and metadata provider
+		SagaName              string               `json:"sagaName,omitempty"`
+		SagaId                string               `json:"sagaId,omitempty"`
 		BaseAnime             *models.LibraryMedia `json:"baseAnime,omitempty"`
 	}
 
@@ -270,6 +272,8 @@ func NewEpisode(opts *NewEpisodeOptions) *Episode {
 		if !dbEp.AirDate.IsZero() {
 			entryEp.EpisodeMetadata.AirDate = dbEp.AirDate.Format("2006-01-02")
 		}
+		entryEp.SagaName = dbEp.SagaName
+		entryEp.SagaId = dbEp.SagaId
 	}
 
 	// If for some reason the episode is not hydrated, set it as invalid
@@ -307,7 +311,7 @@ func NewEpisodeMetadata(
 	md.Overview = epMetadata.Overview
 	md.HasImage = epMetadata.HasImage
 	md.Title = epMetadata.Title
-	md.IsFiller = false // Default to false
+	md.IsFiller = epMetadata.IsFiller
 
 	return md
 }
@@ -413,6 +417,8 @@ func NewSimpleEpisode(opts *NewSimpleEpisodeOptions) *Episode {
 		if !dbEp.AirDate.IsZero() {
 			entryEp.EpisodeMetadata.AirDate = dbEp.AirDate.Format("2006-01-02")
 		}
+		entryEp.SagaName = dbEp.SagaName
+		entryEp.SagaId = dbEp.SagaId
 	}
 
 	if !hydrated {

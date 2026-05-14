@@ -42,7 +42,7 @@ func (p *Platform) GetAnime(ctx context.Context, mediaID int) (interface{}, erro
 	if err != nil {
 		return nil, err
 	}
-	return p.toUnifiedMedia(&res, platform.MediaFormatTv, platform.MediaKindAnime), nil
+	return p.tvDetailsToUnifiedMedia(res, platform.MediaKindAnime), nil
 }
 
 // GetMovie fetches a single movie by TMDB ID. Detects saga membership via BelongsToCollection.
@@ -352,6 +352,45 @@ func (p *Platform) toUnifiedMedia(res *tmdb.SearchResult, format platform.MediaF
 		m.StartDate = p.parseDate(res.ReleaseDate)
 	}
 
+	return m
+}
+
+// tvDetailsToUnifiedMedia converts a full TVDetails into UnifiedMedia.
+func (p *Platform) tvDetailsToUnifiedMedia(res *tmdb.TVDetails, kind platform.MediaKind) *platform.UnifiedMedia {
+	name := res.Name
+	if name == "" {
+		name = res.OriginalName
+	}
+	var poster, backdrop *string
+	if res.PosterPath != "" {
+		v := "https://image.tmdb.org/t/p/original" + res.PosterPath
+		poster = &v
+	}
+	if res.BackdropPath != "" {
+		v := "https://image.tmdb.org/t/p/original" + res.BackdropPath
+		backdrop = &v
+	}
+	var overviewPtr *string
+	if res.Overview != "" {
+		overviewPtr = &res.Overview
+	}
+	m := &platform.UnifiedMedia{
+		ID:     res.ID,
+		Type:   platform.MediaType("ANIME"),
+		Format: platform.MediaFormatTv,
+		Kind:   kind,
+		Title: &platform.MediaTitle{
+			Romaji: &name,
+			Native: &res.OriginalName,
+		},
+		CoverImage: &platform.MediaCoverImage{
+			ExtraLarge: poster,
+			Large:      poster,
+		},
+		BannerImage: backdrop,
+		Overview:    overviewPtr,
+		StartDate:   p.parseDate(res.FirstAirDate),
+	}
 	return m
 }
 

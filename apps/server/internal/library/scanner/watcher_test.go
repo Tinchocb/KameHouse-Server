@@ -53,7 +53,7 @@ func TestWatcher_DynamicDirRegistration(t *testing.T) {
 
 	// Track if onFileAction was called
 	actionCalled := make(chan struct{}, 10)
-	w.StartWatching(func() {
+	w.StartWatching(func(path string) {
 		actionCalled <- struct{}{}
 	})
 

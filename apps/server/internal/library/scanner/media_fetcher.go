@@ -5,18 +5,23 @@ import (
 	"errors"
 
 	"kamehouse/internal/api/metadata_provider"
+	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/library/anime"
 	librarymetadata "kamehouse/internal/library/metadata"
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
+	"kamehouse/internal/util/limiter"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/rs/zerolog"
 	"github.com/samber/lo"
+	"golang.org/x/sync/errgroup"
 )
 
 // MediaFetcher holds all media that will be used for the comparison process
@@ -41,6 +46,7 @@ type MediaFetcherOptions struct {
 	TMDBProvider *librarymetadata.TMDBProvider
 	SeriesPaths  []string
 	MoviePaths   []string
+	Database     *db.Database
 }
 
 // NewMediaFetcher creates a MediaFetcher using TMDB + folder structure
@@ -110,35 +116,86 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 		return meaningfulImmediateFolderTitle(lf.Path)
 	})
 
-	for titleGroup, files := range groups {
-		lowerGroup := strings.ToLower(titleGroup)
-		if titleGroup == "" || lowerGroup == "series" || lowerGroup == "peliculas" || lowerGroup == "películas" || lowerGroup == "movies" || lowerGroup == "anime" || lowerGroup == "tv" || lowerGroup == "tv shows" || lowerGroup == "films" {
-			continue
-		}
+	var mu sync.Mutex
+	eg, egCtx := errgroup.WithContext(ctx)
+	eg.SetLimit(runtime.NumCPU() * 2)
+	tmdbLimiter := limiter.NewTmdbLimiter()
 
-		// Determine type hint based on file paths
-		var hint string
-		if len(files) > 0 {
-			// Normalize path to avoid Windows '\' vs Unix '/' mismatches
-			nfp := filepath.ToSlash(filepath.Clean(files[0].Path))
+	// 3. Initialize Metadata Cache (Persistent)
+	metaCache := newMetadataFetchCache(opts.Database)
 
-			// Check if file is in series paths or movie paths
-			for _, rp := range opts.SeriesPaths {
-				if rp == "" {
-					continue
-				}
-				nrp := filepath.ToSlash(filepath.Clean(rp))
-				// Ensure trailing slash to prevent partial matches (e.g. /movies vs /movies_old)
-				if !strings.HasSuffix(nrp, "/") {
-					nrp += "/"
-				}
-				if strings.HasPrefix(nfp, nrp) {
-					hint = "series"
-					break
+	// Pre-inject all Dragon Ball movie IDs from the resolver
+	if opts.TMDBProvider != nil && (len(opts.MoviePaths) > 0 || len(opts.SeriesPaths) > 0) {
+		priorityIds := make(map[int]bool)
+		for _, lf := range opts.LocalFiles {
+			parentDir := filepath.Base(filepath.Dir(lf.Path))
+			combinedName := parentDir + " " + lf.Name
+			if dbId, isMovie, isDb := ResolveDragonBallID(combinedName); isDb {
+				if isMovie {
+					priorityIds[dbId+1000000] = true
+				} else {
+					priorityIds[dbId] = true
 				}
 			}
-			if hint == "" {
-				for _, rp := range opts.MoviePaths {
+			info := ParseFolderStructure(lf.Path, opts.MoviePaths)
+			if dbId, isMovie, isDb := ResolveDragonBallID(info.SeriesName); isDb {
+				if isMovie {
+					priorityIds[dbId+1000000] = true
+				} else {
+					priorityIds[dbId] = true
+				}
+			}
+		}
+
+		if len(priorityIds) > 0 {
+			for dbId := range priorityIds {
+				id := dbId
+				eg.Go(func() error {
+					mu.Lock()
+					exists := lo.SomeBy(mf.AllMedia, func(m *dto.NormalizedMedia) bool { return m.ID == id })
+					mu.Unlock()
+					if exists {
+						return nil
+					}
+
+					_ = tmdbLimiter.Wait(egCtx)
+					result, err := opts.TMDBProvider.GetMediaDetails(egCtx, strconv.Itoa(id))
+
+					mu.Lock()
+					defer mu.Unlock()
+					if err != nil || result == nil {
+						mf.AllMedia = append(mf.AllMedia, &dto.NormalizedMedia{
+							ID: id,
+							Title: &dto.NormalizedMediaTitle{
+								UserPreferred: lo.ToPtr("Dragon Ball Match (Pending Metadata)"),
+							},
+						})
+					} else {
+						mf.AllMedia = append(mf.AllMedia, result)
+					}
+					return nil
+				})
+			}
+		}
+	}
+
+	for title, files := range groups {
+		titleGroup := title
+		groupFiles := files
+		eg.Go(func() error {
+			if titleGroup == "" {
+				return nil
+			}
+			lowerGroup := strings.ToLower(titleGroup)
+			if lowerGroup == "series" || lowerGroup == "peliculas" || lowerGroup == "películas" || lowerGroup == "movies" || lowerGroup == "anime" || lowerGroup == "tv" || lowerGroup == "tv shows" || lowerGroup == "films" {
+				return nil
+			}
+
+			// Determine type hint based on file paths
+			var hint string
+			if len(groupFiles) > 0 {
+				nfp := filepath.ToSlash(filepath.Clean(groupFiles[0].Path))
+				for _, rp := range opts.SeriesPaths {
 					if rp == "" {
 						continue
 					}
@@ -147,72 +204,74 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 						nrp += "/"
 					}
 					if strings.HasPrefix(nfp, nrp) {
-						hint = "movie"
+						hint = "series"
 						break
 					}
 				}
-			}
-		}
-
-		// Search TMDB for this robust title group
-		var searchRes []*dto.NormalizedMedia
-		var err error
-
-		if anilistMatch, ok := findAniListExactMatch(mf.AllMedia, titleGroup); ok {
-			// PHASE 1: AniList Exact Match OVERRIDE - Bypass fuzzy search if the user already has this in their AniList collection
-			if mf.ScanLogger != nil {
-				mf.ScanLogger.LogMediaFetcher(zerolog.InfoLevel).
-					Str("title", titleGroup).
-					Int("anilist_id", anilistMatch.ID).
-					Msg("anilist_resolver: Matched title strictly with offline AniList collection")
-			}
-			searchRes = []*dto.NormalizedMedia{anilistMatch}
-		} else {
-			// FALLBACK: Iterate over all providers (AniList -> TMDB -> AniDB)
-			for _, provider := range opts.MetadataProviders {
-				switch hint {
-				case "series":
-					if p, ok := provider.(*librarymetadata.TMDBProvider); ok {
-						searchRes, err = p.SearchTV(ctx, titleGroup)
-					} else {
-						searchRes, err = provider.SearchMedia(ctx, titleGroup)
+				if hint == "" {
+					for _, rp := range opts.MoviePaths {
+						if rp == "" {
+							continue
+						}
+						nrp := filepath.ToSlash(filepath.Clean(rp))
+						if !strings.HasSuffix(nrp, "/") {
+							nrp += "/"
+						}
+						if strings.HasPrefix(nfp, nrp) {
+							hint = "movie"
+							break
+						}
 					}
-				case "movie":
-					if p, ok := provider.(*librarymetadata.TMDBProvider); ok {
-						searchRes, err = p.SearchMovie(ctx, titleGroup)
-					} else {
-						searchRes, err = provider.SearchMedia(ctx, titleGroup)
-					}
-				default:
-					searchRes, err = provider.SearchMedia(ctx, titleGroup)
 				}
-
-				if err == nil && len(searchRes) > 0 {
-					break // Found results, stop asking other providers
+				if hint == "" {
+					info := ParseFolderStructure(groupFiles[0].Path, libPaths)
+					if info.IsMovie {
+						hint = "movie"
+					}
 				}
 			}
-		}
 
-		if len(searchRes) == 0 {
-			if mf.ScanLogger != nil {
-				mf.ScanLogger.LogMediaFetcher(zerolog.WarnLevel).
-					Str("title", titleGroup).
-					Err(err).
-					Msg("Failed to search all providers for title group")
+			mu.Lock()
+			anilistMatch, ok := findAniListExactMatch(mf.AllMedia, titleGroup)
+			mu.Unlock()
+
+			if ok {
+				if mf.ScanLogger != nil {
+					mf.ScanLogger.LogMediaFetcher(zerolog.InfoLevel).
+						Str("title", titleGroup).
+						Int("anilist_id", anilistMatch.ID).
+						Msg("anilist_resolver: Matched title strictly with offline AniList collection")
+				}
+				mu.Lock()
+				mf.AllMedia = append(mf.AllMedia, anilistMatch)
+				mu.Unlock()
+				return nil
 			}
-			continue
-		}
 
-		if len(searchRes) > 0 {
-			// Take the best match
-			bestMatch := searchRes[0]
-			mf.AllMedia = append(mf.AllMedia, bestMatch)
-			mf.UnknownMediaIds = append(mf.UnknownMediaIds, bestMatch.ID)
+			// ── Persistent Cache + Provider Fetch ────────────────────────────────
+			result, err := metaCache.FetchOnce(egCtx, titleGroup, opts.MetadataProviders, tmdbLimiter, hint)
+			if err != nil {
+				if mf.ScanLogger != nil {
+					mf.ScanLogger.LogMediaFetcher(zerolog.WarnLevel).
+						Str("title", titleGroup).
+						Err(err).
+						Msg("Failed to fetch metadata for title group")
+				}
+				return nil
+			}
 
-			// The matcher phase will verify each file strictly afterwards.
-		}
+			if result != nil {
+				mu.Lock()
+				mf.AllMedia = append(mf.AllMedia, result)
+				mf.UnknownMediaIds = append(mf.UnknownMediaIds, result.ID)
+				mu.Unlock()
+			}
+
+			return nil
+		})
 	}
 
+	_ = eg.Wait()
 	return mf, nil
 }
 

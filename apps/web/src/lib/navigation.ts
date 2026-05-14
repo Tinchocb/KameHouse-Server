@@ -4,7 +4,7 @@ import { useMemo } from "react"
 function parseHref(href: string) {
     // if href is empty or just "?", split handles it.
     const [pathname, searchString] = href.split("?")
-    const searchParams: Record<string, any> = {}
+    const searchParams: Record<string, string | number> = {}
 
     if (searchString) {
         const urlSearchParams = new URLSearchParams(searchString)

@@ -6,6 +6,7 @@ import { useGSAP } from "@gsap/react"
 import gsap from "gsap"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { motion } from "framer-motion"
+import { getHighResImage } from "@/lib/helpers/images"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -58,6 +59,7 @@ export const MediaCard = React.memo(function MediaCard({
     subtitle,
     badge,
     availabilityType,
+    description,
     aspect = "poster",
     progress,
     progressColor: _progressColor = "white",
@@ -153,12 +155,14 @@ export const MediaCard = React.memo(function MediaCard({
             }}
             className={cn(
                 // Base
-                "group/card relative shrink-0 cursor-pointer overflow-hidden rounded-xl border border-white/5 transition-all duration-300",
-                "bg-zinc-900/40 hover:border-brand-orange/50 hover:z-50",
+                "group/card relative shrink-0 cursor-pointer overflow-hidden rounded-2xl border border-white/10 transition-all duration-500",
+                "bg-zinc-900/20 hover:border-brand-orange/40 hover:z-50",
+                "shadow-lg hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]",
+                "hover:ring-2 hover:ring-brand-orange/30",
                 // Intrinsic sizing
                 isPoster
-                    ? "aspect-[2/3] w-[145px] md:w-[175px] lg:w-[210px]"
-                    : "aspect-[16/9] w-[250px] md:w-[320px] lg:w-[360px]",
+                    ? "aspect-[2/3] w-[150px] md:w-[185px] lg:w-[220px]"
+                    : "aspect-[16/9] w-[260px] md:w-[340px] lg:w-[400px]",
                 className,
             )}
             style={{
@@ -176,7 +180,7 @@ export const MediaCard = React.memo(function MediaCard({
 
             {/* ── Artwork (Deferred) ────────────────────── */}
             <DeferredImage
-                src={artwork}
+                src={getHighResImage(artwork)}
                 alt={title}
                 className="absolute inset-0 h-full w-full select-none object-cover transition-all duration-500 group-hover/card:scale-105"
             />
@@ -207,44 +211,57 @@ export const MediaCard = React.memo(function MediaCard({
             <div
                 className={cn(
                     "absolute inset-x-0 bottom-0 z-10",
-                    isPoster ? "h-[40%]" : "h-[50%]",
-                    "bg-gradient-to-t from-black via-black/80 to-transparent opacity-90",
+                    isPoster ? "h-[50%]" : "h-[60%]",
+                    "bg-gradient-to-t from-black via-black/80 to-transparent transition-opacity duration-500 group-hover/card:opacity-0",
                 )}
             />
 
-            {/* ── Info Container ───────────────────────────────── */}
-            <div className="absolute inset-x-0 bottom-0 z-20 p-3">
-                <p className="line-clamp-1 text-[0.8rem] font-bold leading-tight text-white uppercase tracking-wider group-hover/card:text-brand-orange transition-colors">
+            {/* ── Info Container (Rest State) ─────────────────────── */}
+            <div className="absolute inset-x-0 bottom-0 z-20 p-5 transition-transform duration-500 group-hover/card:translate-y-full">
+                <p className="line-clamp-1 text-[16px] font-black leading-tight text-white uppercase tracking-tight font-display drop-shadow-lg">
                     {title}
                 </p>
 
-                <div className="mt-1 flex items-center justify-between gap-1">
+                <div className="mt-1.5 flex items-center justify-between gap-1">
                     {subtitle && (
-                        <p className="truncate text-[0.65rem] font-semibold text-white/50 uppercase tracking-widest">{subtitle}</p>
+                        <p className="truncate text-[10px] font-black text-white/50 uppercase tracking-[0.15em]">{subtitle}</p>
                     )}
                 </div>
             </div>
 
-            {/* ── Hover Overlay ────────────────── */}
-            <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] opacity-0 transition-opacity duration-300 group-hover/card:opacity-100">
-                {/* Play Icon */}
-                <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/20 text-white bg-black/60 backdrop-blur-md transition-all duration-300 group-hover/card:scale-110 group-hover/card:border-brand-orange group-hover/card:text-brand-orange">
-                    <svg viewBox="0 0 24 24" className="ml-1 h-6 w-6 fill-current" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M8 5v14l11-7z" />
-                    </svg>
-                </div>
+            {/* ── Hover Overlay (Active State) ────────────────── */}
+            <div className="absolute inset-0 z-30 flex flex-col justify-end bg-gradient-to-t from-black via-black/40 to-transparent p-5 opacity-0 transition-all duration-500 group-hover/card:opacity-100">
+                <div className="flex flex-col gap-3 translate-y-4 transition-transform duration-500 group-hover/card:translate-y-0">
+                    <div className="flex items-center gap-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/20 text-white bg-brand-orange backdrop-blur-md transition-all duration-300 hover:scale-110 shadow-lg shadow-brand-orange/30">
+                            <svg viewBox="0 0 24 24" className="ml-1 h-6 w-6 fill-current" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M8 5v14l11-7z" />
+                            </svg>
+                        </div>
+                        <p className="line-clamp-2 text-[20px] font-black leading-[1.1] text-white uppercase tracking-tight font-display drop-shadow-2xl">
+                            {title}
+                        </p>
+                    </div>
 
-                {/* Metadata Strip */}
-                {(year || rating) && (
-                    <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2">
-                        {year && <span className="text-[9px] font-black text-white/80 uppercase tracking-widest">{year}</span>}
+                    {description && (
+                        <p className="line-clamp-3 text-[12px] leading-relaxed text-white/70 font-medium">
+                            {description}
+                        </p>
+                    )}
+
+                    {/* Metadata Strip */}
+                    <div className="flex items-center justify-between gap-2 border-t border-white/10 pt-3 mt-1">
+                        <div className="flex gap-3">
+                            {year && <span className="text-[11px] font-black text-white/80 uppercase tracking-widest">{year}</span>}
+                            {badge && <span className="text-[11px] font-black text-brand-orange/90 uppercase tracking-widest">{badge}</span>}
+                        </div>
                         {rating !== undefined && (
-                            <span className="text-[9px] font-black text-brand-orange uppercase tracking-widest bg-brand-orange/10 backdrop-blur-md border border-brand-orange/20 px-2 py-0.5 rounded">
+                            <span className="text-[11px] font-black text-brand-orange uppercase tracking-widest bg-brand-orange/15 border border-brand-orange/20 px-2.5 py-1 rounded-md shadow-inner">
                                 {rating.toFixed(1)} ★
                             </span>
                         )}
                     </div>
-                )}
+                </div>
             </div>
 
             {/* ── Progress Bar ──────────────────────────────────────────── */}

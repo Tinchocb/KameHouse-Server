@@ -75,13 +75,13 @@ func (w *Watcher) InitLibraryFileWatcher(opts *WatchLibraryFilesOptions) error {
 }
 
 func (w *Watcher) StartWatching(
-	onFileAction func(),
+	onFileAction func(path string),
 ) {
 	// Start a goroutine to handle file system events
 	go func() {
-		triggerAction := func() {
-			w.Logger.Debug().Msg("watcher: Debounce timer triggered, calling onFileAction")
-			onFileAction()
+		triggerAction := func(path string) {
+			w.Logger.Debug().Str("path", path).Msg("watcher: Debounce timer triggered, calling onFileAction")
+			onFileAction(path)
 		}
 
 		validExtensions := map[string]bool{
@@ -105,8 +105,8 @@ func (w *Watcher) StartWatching(
 				}
 
 				// 2. Ignore temporary files or known bad extensions
-				if strings.Contains(event.Name, ".part") || strings.Contains(event.Name, ".tmp") || 
-					strings.Contains(event.Name, ".DS_Store") || strings.Contains(event.Name, ".!qB") || 
+				if strings.Contains(event.Name, ".part") || strings.Contains(event.Name, ".tmp") ||
+					strings.Contains(event.Name, ".DS_Store") || strings.Contains(event.Name, ".!qB") ||
 					strings.Contains(event.Name, ".crdownload") || strings.Contains(event.Name, ".utxt") {
 					continue
 				}
@@ -143,19 +143,25 @@ func (w *Watcher) StartWatching(
 						w.Logger.Debug().Msgf("watcher: Media file created/modified: %s", event.Name)
 						w.WSEventManager.SendEvent(events.LibraryWatcherFileAdded, event.Name)
 						// 5. Debounce the library scan action
-						w.Debouncer.Add(event.Name, 5*time.Second, triggerAction)
+						w.Debouncer.Add(event.Name, 5*time.Second, func() {
+							triggerAction(event.Name)
+						})
 					}
 				}
 
 				if event.Op&fsnotify.Write == fsnotify.Write {
 					w.Logger.Debug().Msgf("watcher: Media file modified: %s", event.Name)
-					w.Debouncer.Add(event.Name, 5*time.Second, triggerAction)
+					w.Debouncer.Add(event.Name, 5*time.Second, func() {
+						triggerAction(event.Name)
+					})
 				}
 
 				if event.Op&fsnotify.Remove == fsnotify.Remove {
 					w.Logger.Debug().Msgf("watcher: File/Directory removed: %s", event.Name)
 					w.WSEventManager.SendEvent(events.LibraryWatcherFileRemoved, event.Name)
-					w.Debouncer.Add(event.Name, 5*time.Second, triggerAction)
+					w.Debouncer.Add(event.Name, 5*time.Second, func() {
+						triggerAction(event.Name)
+					})
 				}
 
 			case err, ok := <-w.Watcher.Errors:

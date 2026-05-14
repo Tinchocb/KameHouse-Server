@@ -139,29 +139,39 @@ export function PathList({ control, name, label, placeholder }: { control: Contr
                 }
 
                 return (
-                    <div className="p-8 border-b border-white/[0.03] last:border-0 hover:bg-white/[0.01] transition-all duration-500 space-y-6">
-                        <div className="space-y-2">
-                            <p className="text-xl font-bold text-zinc-100 tracking-tight">{label}</p>
-                            <p className="text-base text-zinc-500 font-medium">Directorios locales escaneados para esta sección.</p>
+                    <div className="p-10 border-b border-white/[0.03] last:border-0 hover:bg-white/[0.01] transition-all duration-700 space-y-10 group/pathlist">
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 bg-white/5 border border-white/10 flex items-center justify-center">
+                                    <LucideFolder size={18} className="text-zinc-500 group-hover/pathlist:text-white transition-colors" />
+                                </div>
+                                <p className="text-3xl font-bebas tracking-widest text-white uppercase">{label}</p>
+                            </div>
+                            <p className="text-sm text-zinc-500 font-medium leading-relaxed max-w-xl">
+                                Directorios locales vinculados a este motor de búsqueda. El escáner analizará estos directorios de forma recursiva.
+                            </p>
                         </div>
 
                         {/* List of paths */}
                         <div className="space-y-3">
                             {paths.length === 0 ? (
-                                <p className="text-zinc-600 text-sm italic px-2">No se han configurado directorios.</p>
+                                <div className="border border-dashed border-white/10 p-10 text-center space-y-2">
+                                    <p className="text-zinc-600 text-sm font-medium italic">No se han configurado directorios.</p>
+                                    <p className="text-zinc-700 text-xs uppercase tracking-widest">Utilizá el campo de abajo para agregar uno</p>
+                                </div>
                             ) : (
                                 paths.map((path: string, idx: number) => (
-                                    <div key={idx} className="flex items-center justify-between bg-white/[0.02] border border-white/5 px-6 py-4 rounded-none hover:bg-white/[0.04] transition-all group/path">
-                                        <div className="flex items-center gap-4 min-w-0">
-                                            <LucideFolder size={18} className="text-zinc-500 shrink-0 group-hover/path:text-white transition-colors" />
-                                            <span className="font-mono text-sm text-zinc-300 truncate group-hover/path:text-zinc-100 transition-colors">{path}</span>
+                                    <div key={idx} className="flex items-center justify-between bg-white/[0.01] border border-white/5 px-8 py-6 rounded-none hover:bg-white/[0.04] hover:border-white/20 transition-all group/pathitem">
+                                        <div className="flex items-center gap-6 min-w-0">
+                                            <div className="w-2 h-2 bg-primary/40 group-hover/pathitem:bg-primary transition-colors" />
+                                            <span className="font-mono text-sm text-zinc-400 truncate group-hover/pathitem:text-white transition-colors tracking-tight">{path}</span>
                                         </div>
                                         <button
                                             type="button"
                                             onClick={() => handleRemove(idx)}
-                                            className="text-zinc-600 hover:text-red-400 p-2 hover:bg-red-500/10 rounded-none transition-all ml-4 shrink-0"
+                                            className="text-zinc-700 hover:text-white p-3 hover:bg-red-500/20 border border-transparent hover:border-red-500/20 transition-all ml-4 shrink-0"
                                         >
-                                            <LucideTrash2 size={16} />
+                                            <LucideTrash2 size={18} />
                                         </button>
                                     </div>
                                 ))
@@ -169,7 +179,7 @@ export function PathList({ control, name, label, placeholder }: { control: Contr
                         </div>
 
                         {/* Input to add path */}
-                        <div className="flex gap-3">
+                        <div className="flex gap-4 p-2 bg-white/5 border border-white/10 group-focus-within/pathlist:border-white/20 transition-all">
                             <input
                                 type="text"
                                 value={inputValue}
@@ -181,15 +191,15 @@ export function PathList({ control, name, label, placeholder }: { control: Contr
                                     }
                                 }}
                                 placeholder={placeholder || "Ej. C:\\Media\\Peliculas"}
-                                className="flex-1 bg-white/[0.02] border border-white/10 px-6 py-4 rounded-none text-white placeholder-zinc-600 text-sm font-mono focus:outline-none focus:border-white/30 hover:border-white/20 transition-all"
+                                className="flex-1 bg-transparent px-6 py-4 text-white placeholder-zinc-700 text-sm font-mono focus:outline-none transition-all"
                             />
                             <button
                                 type="button"
                                 onClick={handleAdd}
-                                className="bg-white text-black hover:bg-zinc-200 px-8 font-black uppercase text-xs tracking-widest transition-all shrink-0 flex items-center gap-2"
+                                className="bg-white text-black hover:bg-zinc-200 px-10 font-black uppercase text-[10px] tracking-[0.2em] transition-all shrink-0 flex items-center gap-3"
                             >
-                                <LucidePlus size={16} />
-                                Agregar
+                                <LucidePlus size={18} />
+                                AGREGAR RUTA
                             </button>
                         </div>
                     </div>

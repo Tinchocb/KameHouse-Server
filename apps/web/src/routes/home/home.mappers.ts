@@ -63,6 +63,7 @@ export function mapEntryToHeroItem(
         contentTag: intel?.tag,
         rating: intel?.rating,
         mediaId: media.id,
+        trailerUrl: (media as any).trailer?.site === "youtube" ? undefined : ((media as any).trailer?.id as string | undefined),
         onPlay: () => onNavigate(media.id),
         onMoreInfo: () => onNavigate(media.id),
     }
@@ -91,6 +92,7 @@ export function mapEpisodeToHeroItem(
         episodeCount: media.totalEpisodes || undefined,
         progress: getProgress(media.id, watchHistory),
         mediaId: media.id,
+        trailerUrl: (media as any).trailer?.site === "youtube" ? undefined : ((media as any).trailer?.id as string | undefined),
         onPlay: () => onNavigate(media.id),
         onMoreInfo: () => onNavigate(media.id),
     }

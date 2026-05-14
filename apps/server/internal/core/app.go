@@ -27,7 +27,6 @@ import (
 	"os"
 	"runtime"
 	"sync"
-	"time"
 
 	"github.com/rs/zerolog"
 )
@@ -297,8 +296,6 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 		Database:   database,
 	})
 
-	telemetryManager := continuity.NewTelemetryManager(continuityManager, logger, 5*time.Second)
-
 	videoCore := videocore.New(videocore.NewVideoCoreOptions{
 		WsEventManager:      wsEventManager,
 		Logger:              logger,
@@ -350,7 +347,7 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 		},
 		Version:           constants.Version,
 		ContinuityManager: continuityManager,
-		TelemetryManager:  telemetryManager,
+		TelemetryManager:  continuityManager.TelemetryManager,
 		previousVersion:   previousVersion,
 		FeatureFlags:      NewFeatureFlags(cfg, logger),
 		IsDesktopSidecar:  configOpts.Flags.IsDesktopSidecar,

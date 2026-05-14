@@ -46,19 +46,44 @@ func NewTMDBProviderImpl(client *tmdb.Client, database *db.Database, logger *zer
 // GetAnimeMetadata fetches full episode metadata for a media identified by its
 // internal media ID (which maps to a TMDB TV show ID stored in LibraryMedia).
 func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata, error) {
-	// Check in-memory cache first
+	// 1. Check in-memory cache first
 	p.mu.Lock()
 	if entry, ok := p.cache[id]; ok && time.Now().Before(entry.expiresAt) {
 		p.mu.Unlock()
+		if entry.data == nil {
+			return nil, fmt.Errorf("tmdb_provider: cached metadata for ID %d is nil", id)
+		}
 		return entry.data, nil
 	}
 	p.mu.Unlock()
+
+	// Resolve the real TMDB ID and type from the database.
+	tmdbId := id
+	
+	// 2. Check Database Persistent Cache
+	if p.db != nil {
+		var cachedData apiMetadata.AnimeMetadata
+		found, err := db.GetMetadataCache(p.db, "tmdb-anime-episodes", strconv.Itoa(tmdbId), &cachedData)
+		if err == nil && found {
+			// Store in memory cache too for subsequent lookups in this session
+			p.mu.Lock()
+			p.cache[id] = &tmdbCachedEntry{
+				data:      &cachedData,
+				expiresAt: time.Now().Add(tmdbMetadataTTL),
+			}
+			p.mu.Unlock()
+			
+			// Always re-apply enrichments to cached data to ensure local logic changes are reflected
+			p.applyEnrichments(tmdbId, &cachedData)
+			
+			return &cachedData, nil
+		}
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	// Resolve the real TMDB ID and type from the database.
-	tmdbId := id
 	isMovie := false
 	if p.db != nil {
 		if m, err := db.GetLibraryMediaByTmdbId(p.db, id); err == nil && m != nil {
@@ -80,7 +105,7 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 			return nil, fmt.Errorf("tmdb_provider: GetMovieDetails(%d): %w", tmdbId, err)
 		}
 
-		titles = buildTitleMap(movieDetails)
+		titles = buildTitleMapFromMovie(movieDetails)
 		totalEpisodes = 1
 		episodes = map[string]*apiMetadata.EpisodeMetadata{
 			"1": {
@@ -99,10 +124,10 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 			return nil, fmt.Errorf("tmdb_provider: GetTVDetails(%d): %w", tmdbId, err)
 		}
 
-		titles = buildTitleMap(tvDetails)
+		titles = buildTitleMapFromTV(tvDetails)
 		episodes = make(map[string]*apiMetadata.EpisodeMetadata)
 
-		// Fetch seasons 0 (specials) through N
+		// Fetch seasons 0 (specials) through N, tracking absolute episode counter
 		maxSeasons := 5
 		if tvDetails.NumberOfEpisodes > 0 {
 			maxSeasons = (tvDetails.NumberOfEpisodes / 12) + 2
@@ -111,6 +136,7 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 			}
 		}
 
+		absEpCounter := 0 // running counter across seasons for the flat episode key
 		for seasonNum := 0; seasonNum <= maxSeasons; seasonNum++ {
 			seasonDetails, err := p.client.GetTVSeason(ctx, tmdbId, seasonNum)
 			if err != nil || len(seasonDetails.Episodes) == 0 {
@@ -124,10 +150,15 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 				epMeta := tmdbEpisodeToMeta(ep, seasonNum)
 				var key string
 				if seasonNum == 0 {
+					// Specials: use "S{n}" key so they don't collide with main episodes
 					key = fmt.Sprintf("S%d", ep.EpisodeNumber)
 					totalSpecials++
 				} else {
-					key = strconv.Itoa(ep.EpisodeNumber)
+					// Main episodes: use a flat absolute counter as the string key
+					absEpCounter++
+					key = strconv.Itoa(absEpCounter)
+					epMeta.Episode = key // keep Episode field in sync with map key
+					epMeta.AbsoluteEpisodeNumber = absEpCounter
 					totalEpisodes++
 				}
 				episodes[key] = epMeta
@@ -147,6 +178,9 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 		Mappings:     &apiMetadata.AnimeMappings{},
 	}
 
+	// Apply Latin Spanish title overrides for Dragon Ball
+	p.applyEnrichments(tmdbId, result)
+
 	// Store in cache
 	p.mu.Lock()
 	p.cache[id] = &tmdbCachedEntry{
@@ -154,6 +188,11 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 		expiresAt: time.Now().Add(tmdbMetadataTTL),
 	}
 	p.mu.Unlock()
+
+	// 3. Save to Database Persistent Cache
+	if p.db != nil {
+		_ = db.UpsertMetadataCache(p.db, "tmdb-anime-episodes", strconv.Itoa(id), result, 7*24*time.Hour) // 1 week TTL
+	}
 
 	if p.logger != nil {
 		p.logger.Debug().
@@ -167,11 +206,10 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 	return result, nil
 }
 
-// GetAnimeMetadataWrapper returns an AnimeMetadataWrapper for the given metadata.
-// Delegates to ProviderImpl which already constructs AnimeWrapperImpl correctly.
+// GetAnimeMetadataWrapper returns a SimpleAnimeMetadataWrapper backed by the
+// provided AnimeMetadata. This allows episode lookup by flat episode number key.
 func (p *TMDBProviderImpl) GetAnimeMetadataWrapper(baseAnime *platform.UnifiedMedia, animeMetadata *apiMetadata.AnimeMetadata) AnimeMetadataWrapper {
-	stub := &ProviderImpl{}
-	return stub.GetAnimeMetadataWrapper(baseAnime, animeMetadata)
+	return NewSimpleAnimeMetadataWrapper(animeMetadata)
 }
 
 func (p *TMDBProviderImpl) SetUseFallbackProvider(v bool) {}
@@ -191,15 +229,14 @@ func tmdbEpisodeToMeta(ep tmdb.TVEpisode, seasonNumber int) *apiMetadata.Episode
 	image := ""
 	hasImage := false
 	if ep.StillPath != "" {
-		image = "https://image.tmdb.org/t/p/w500" + ep.StillPath
+		image = "https://image.tmdb.org/t/p/w780" + ep.StillPath
 		hasImage = true
 	}
 
 	epStr := strconv.Itoa(ep.EpisodeNumber)
-	if seasonNumber == 0 {
-		epStr = "S" + epStr
-	}
-
+	// We store the original TMDB episode number as the string representation for identification
+	// but we'll use season-aware logic for enrichment matching.
+	
 	return &apiMetadata.EpisodeMetadata{
 		EpisodeNumber:         ep.EpisodeNumber,
 		SeasonNumber:          seasonNumber,
@@ -216,8 +253,8 @@ func tmdbEpisodeToMeta(ep tmdb.TVEpisode, seasonNumber int) *apiMetadata.Episode
 	}
 }
 
-// buildTitleMap extracts title variants from a TMDB SearchResult.
-func buildTitleMap(r tmdb.SearchResult) map[string]string {
+// buildTitleMapFromTV extracts title variants from a TMDB TVDetails.
+func buildTitleMapFromTV(r *tmdb.TVDetails) map[string]string {
 	titles := make(map[string]string)
 	if r.Name != "" {
 		titles["en"] = r.Name
@@ -230,4 +267,32 @@ func buildTitleMap(r tmdb.SearchResult) map[string]string {
 		}
 	}
 	return titles
+}
+
+// buildTitleMapFromMovie extracts title variants from a TMDB MovieDetails.
+func buildTitleMapFromMovie(r *tmdb.MovieDetails) map[string]string {
+	titles := make(map[string]string)
+	if r.Title != "" {
+		titles["en"] = r.Title
+	}
+	if r.OriginalTitle != "" && r.OriginalTitle != r.Title {
+		if r.OriginalLanguage == "ja" {
+			titles["ja"] = r.OriginalTitle
+		} else {
+			titles["ro"] = r.OriginalTitle
+		}
+	}
+	return titles
+}
+
+// applyEnrichments runs the Dragon Ball specific metadata pipeline.
+func (p *TMDBProviderImpl) applyEnrichments(tmdbId int, metadata *apiMetadata.AnimeMetadata) {
+	// Apply Latin Spanish title overrides for Dragon Ball
+	EnrichWithLatinTitles(tmdbId, metadata)
+	// Apply Saga metadata for Dragon Ball
+	EnrichWithSagas(tmdbId, metadata)
+	// Apply Filler episode marking for Dragon Ball
+	EnrichWithFiller(tmdbId, metadata)
+	// Apply canonical series titles for Dragon Ball
+	EnrichWithSeriesTitles(tmdbId, metadata)
 }

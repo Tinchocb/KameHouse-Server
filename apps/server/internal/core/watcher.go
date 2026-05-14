@@ -51,9 +51,9 @@ func (a *App) initLibraryWatcher(paths []string) {
 
 	// Start watching
 	a.Watcher.StartWatching(
-		func() {
+		func(path string) {
 			// Notify the auto scanner when a file action occurs
-			a.AutoScanner.Notify()
+			a.AutoScanner.Notify(path)
 		})
 
 }

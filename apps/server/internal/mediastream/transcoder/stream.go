@@ -175,7 +175,7 @@ func (ts *Stream) GetSegment(ctx context.Context, segment int32) (string, error)
 
 	if !ready {
 		// Only start a new encode if there is too big a distance between the current encoder and the segment.
-		if distance > 60 || !isScheduled {
+		if distance > 180 || !isScheduled {
 			streamLogger.Trace().Msgf("transcoder: New encoder for segment %d", segment)
 			err := ts.run(segment)
 			if err != nil {
@@ -225,8 +225,8 @@ func (ts *Stream) prepareNextSegments(segment int32) {
 			continue
 		}
 		// only start encode for segments not planned (getMinEncoderDistance returns Inf for them)
-		// or if they are 60s away (assume 5s per segments)
-		if ts.getMinEncoderDistance(i) < 60+(5*float64(i-segment)) {
+		// or if they are 180s away (assume 5s per segments)
+		if ts.getMinEncoderDistance(i) < 180+(5*float64(i-segment)) {
 			continue
 		}
 		streamLogger.Trace().Msgf("transcoder: Creating new encoder head for future segment %d", i)
@@ -342,9 +342,9 @@ func (ts *Stream) run(start int32) error {
 	//	return nil
 	//}
 	ts.logger.Trace().Msgf("transcoder: Running %s encoder head from %d", ts.kind, start)
-	// Start the transcoder up to the 100th segment (or less)
+	// Start the transcoder up to the end
 	length, isDone := ts.file.Keyframes.Length()
-	end := min(start+100, length)
+	end := length
 	// if keyframes analysis is not finished, always have a 1-segment padding
 	// for the extra segment needed for precise split (look comment before -to flag)
 	if !isDone {
@@ -455,9 +455,8 @@ func (ts *Stream) run(start int32) error {
 	}
 	args = append(args,
 		"-i", ts.file.Path,
-		// this makes behaviors consistent between soft and hardware decodes.
-		// this also means that after a -ss 50, the output video will start at 50s
-		"-start_at_zero",
+		// ensure output starts at 0 even with negative timestamps
+		"-avoid_negative_ts", "make_zero",
 		// for hls streams, -copyts is mandatory
 		"-copyts",
 		// this makes output file start at 0s instead of a random delay + the -ss value
@@ -476,12 +475,11 @@ func (ts *Stream) run(start int32) error {
 		// when segments are short (can make the video repeat itself)
 		"-segment_time_delta", "0.05",
 		"-segment_format", "mpegts",
-		"-segment_times", toSegmentStr(lop.Map(segments, func(seg float64, _ int) float64 {
-			// segment_times want durations, not timestamps so we must substract the -ss param
-			// since we give a greater value to -ss to prevent wrong seeks but -segment_times
-			// needs precise segments, we use the keyframe we want to seek to as a reference.
-			return seg - ts.file.Keyframes.Get(startSeg)
-		})),
+		"-segment_times", strings.Join(lo.Map(segments, func(seg float64, _ int) string {
+			// segment_times want absolute timestamps when -copyts is used.
+			// we no longer subtract startSeg to avoid "time smaller than last time" errors.
+			return fmt.Sprintf("%.6f", seg)
+		}), ","),
 		"-segment_list_type", "flat",
 		"-segment_list", "pipe:1",
 		"-segment_start_number", fmt.Sprint(start),

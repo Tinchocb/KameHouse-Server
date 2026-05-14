@@ -61,7 +61,6 @@ func (fh *FileHydrator) HydrateMetadata(ctx context.Context) {
 
 	fh.precompileRules()
 
-
 	// Group local files by media ID
 	groups := lop.GroupBy(fh.LocalFiles, func(localFile *dto.LocalFile) int {
 		return localFile.MediaId
@@ -125,8 +124,6 @@ func (fh *FileHydrator) hydrateGroupMetadata(
 		return
 	}
 
-
-
 	// Process each local file in the group sequentially
 	for _, lf := range lfs {
 
@@ -145,7 +142,6 @@ func (fh *FileHydrator) hydrateGroupMetadata(
 			})
 
 			episode := -1
-
 
 			// Apply hydration rule to the file
 			if fh.applyHydrationRule(lf) {
@@ -486,7 +482,7 @@ func (fh *FileHydrator) tryPartRelativeNormalization(
 	rateLimiter.Wait(context.Background())
 
 	animeMetadata, err := fh.MetadataProviderRef.Get().GetAnimeMetadata(mediaId)
-	if err != nil {
+	if err != nil || animeMetadata == nil {
 		return 0, false
 	}
 
@@ -529,8 +525,6 @@ func (fh *FileHydrator) tryPartRelativeNormalization(
 
 	return relativeEp, true
 }
-
-
 
 func (fh *FileHydrator) precompileRules() {
 	defer util.HandlePanicInModuleThenS("scanner/matcher/precompileRules", func(stackTrace string) {

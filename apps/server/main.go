@@ -164,12 +164,13 @@ func resolveBindableAddress(host string, port int) (string, int, error) {
 		}
 
 		if i < maxRetries-1 {
-			log.Printf("Port %d is busy (possibly TIME_WAIT). Retrying in 1s... (Attempt %d/%d)", port, i+1, maxRetries)
+			log.Printf("Port %d is busy (another instance may be running). Retrying in 1s... (Attempt %d/%d)", port, i+1, maxRetries)
 			time.Sleep(1 * time.Second)
 		}
 	}
 
-	// If still busy, fall back to ephemeral port (port 0)
+	// If still busy, log a final warning before falling back to ephemeral port (port 0)
+	log.Printf("WARNING: Port %d is still busy after %d attempts. Falling back to an ephemeral port.", port, maxRetries)
 	l2, err2 := net.Listen("tcp", fmt.Sprintf("%s:%d", host, 0))
 	if err2 != nil {
 		return "", 0, err2

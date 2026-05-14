@@ -4,7 +4,7 @@ import type { Models_LibraryMedia, Continuity_WatchHistory } from "@/api/generat
  * Returns the best title for a media object.
  */
 export function getTitle(media: Models_LibraryMedia): string {
-    return media.titleEnglish || media.titleRomaji || media.titleOriginal || "Sin título"
+    return media.titleSpanish || media.titleEnglish || media.titleRomaji || "Sin título"
 }
 
 /**

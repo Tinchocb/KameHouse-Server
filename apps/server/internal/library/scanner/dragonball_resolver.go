@@ -1,187 +1,287 @@
 package scanner
 
 import (
+	"regexp"
+	"strconv"
 	"strings"
 )
 
-// ResolveDragonBallID evaluates a parsed title/directory name and returns the exact 
-// TMDB ID for the Dragon Ball franchise if it matches known patterns.
-// Movies have a 1,000,000 offset added so TMDBProvider correctly routes them to the /movie API.
-func ResolveDragonBallID(title string) (int, bool) {
+var (
+	epRegex = regexp.MustCompile(`(?i)s\d+e\d+|e\d+|cap\d+|episodio\s*\d+`)
+)
+
+// ResolveDragonBallID evaluates a parsed title/directory name and returns the exact
+// TMDB ID and whether it's a movie or a series.
+func ResolveDragonBallID(title string) (int, bool, bool) {
 	t := strings.ToLower(title)
-	t = strings.ReplaceAll(t, "-", " ")
-	t = strings.ReplaceAll(t, "_", " ")
-	t = strings.ReplaceAll(t, ".", " ")
-	t = strings.ReplaceAll(t, "[", " ")
-	t = strings.ReplaceAll(t, "]", " ")
-	t = strings.ReplaceAll(t, "(", " ")
-	t = strings.ReplaceAll(t, ")", " ")
-	t = strings.ReplaceAll(t, "¡", " ")
-	t = strings.ReplaceAll(t, "!", " ")
-	t = strings.ReplaceAll(t, "¿", " ")
-	t = strings.ReplaceAll(t, "?", " ")
-	t = strings.ReplaceAll(t, ",", " ")
-	t = strings.ReplaceAll(t, ":", " ")
 
-	// Helper to check for whole words in a string
+	// Helper to normalize strings
+	normalize := func(s string) string {
+		s = strings.ReplaceAll(s, "-", " ")
+		s = strings.ReplaceAll(s, "_", " ")
+		s = strings.ReplaceAll(s, ".", " ")
+		s = strings.ReplaceAll(s, "[", " ")
+		s = strings.ReplaceAll(s, "]", " ")
+		s = strings.ReplaceAll(s, "(", " ")
+		s = strings.ReplaceAll(s, ")", " ")
+		s = strings.ReplaceAll(s, "á", "a")
+		s = strings.ReplaceAll(s, "é", "e")
+		s = strings.ReplaceAll(s, "í", "i")
+		s = strings.ReplaceAll(s, "ó", "o")
+		s = strings.ReplaceAll(s, "ú", "u")
+		s = strings.ReplaceAll(s, "ñ", "n")
+		// Remove all non-alphanumeric except spaces
+		reg := regexp.MustCompile(`[^a-z0-9\s]+`)
+		s = reg.ReplaceAllString(s, " ")
+		return " " + strings.Join(strings.Fields(s), " ") + " "
+	}
+
+	ct := normalize(t)
+
 	hasWord := func(word string) bool {
-		return strings.Contains(" "+t+" ", " "+word+" ")
+		return strings.Contains(ct, " "+word+" ")
 	}
 
-	// ── Movies ──
+	resId := 0
+	isMovie := false
+	found := false
 
-	// Dragon Ball Super: Broly (503314) -> 1503314
-	if hasWord("broly") && hasWord("super") {
-		return 1503314, true
-	}
+	// ── 1. EPISODE DETECTION ──
+	isEpisode := epRegex.MatchString(t)
 
-	// Dragon Ball Super: Super Hero (610150) -> 1610150
-	if hasWord("super") && hasWord("hero") {
-		return 1610150, true
-	}
-
-	// Battle of Gods (126963)
-	if hasWord("dioses") || hasWord("gods") || hasWord("kami") {
-		return 1126963, true
-	}
-
-	// Resurrection F (315011)
-	if hasWord("resurreccion") || hasWord("resurrection") {
-		return 1315011, true
-	}
-
-	// Broly - Legendary Super Saiyan / El poder invencible (39116)
-	if hasWord("broly") || hasWord("invencible") {
-		if hasWord("second") || hasWord("regreso") || hasWord("legendario") {
-			return 1039118, true // Broly Second Coming / El regreso del guerrero legendario
+	// ── 2. MOVIE DETECTION (High Priority) ──
+	// IDs here are native TMDB movie IDs. The provider adds 1,000,000 offset internally.
+	if !isEpisode || hasWord("movie") || hasWord("pelicula") {
+		isMovie = true
+		// Battle of Gods (TMDB: 126963)
+		if hasWord("dioses") || hasWord("gods") {
+			resId = 126963
+			found = true
 		}
-		if hasWord("bio") || hasWord("clonacion") || hasWord("combate") {
-			return 1039119, true // Bio-Broly / El combate final
+		// Resurrection F (TMDB: 303857)
+		if !found && (hasWord("resurreccion") || hasWord("resurrection")) {
+			resId = 303857
+			found = true
 		}
-		return 1039116, true // Broly 1
+		// Super Broly (TMDB: 503314)
+		if !found && hasWord("broly") && hasWord("super") && !hasWord("hero") && !hasWord("legendario") && !hasWord("legendary") {
+			resId = 503314
+			found = true
+		}
+		// Super Hero (TMDB: 610150)
+		if !found && hasWord("super") && hasWord("hero") {
+			resId = 610150
+			found = true
+		}
+		// Broly - Second Coming (TMDB: 44251)
+		// Bio-Broly (TMDB: 39106)
+		// Broly - The Legendary Super Saiyan (TMDB: 34433)
+		if !found && hasWord("broly") {
+			if hasWord("regreso") || hasWord("second") {
+				resId = 44251 // Broly - Second Coming
+				found = true
+			} else if hasWord("bio") || hasWord("combate") {
+				resId = 39106 // Bio-Broly
+				found = true
+			} else if hasWord("legendario") || hasWord("legendary") {
+				resId = 34433 // Broly - The Legendary Super Saiyan
+				found = true
+			} else {
+				resId = 34433 // Generic Broly fallback
+				found = true
+			}
+		}
+		// Fusion Reborn (TMDB: 39107)
+		if !found && (hasWord("fusion") || hasWord("janemba")) {
+			resId = 39107
+			found = true
+		}
+		// Wrath of the Dragon / El Ataque del Dragón (TMDB: 39108)
+		if !found && (hasWord("tapion") || hasWord("ataque")) {
+			resId = 39108
+			found = true
+		}
+		// Cooler's Revenge (TMDB: 24752) / Return of Cooler (TMDB: 39103)
+		if !found && hasWord("cooler") {
+			if hasWord("regreso") || hasWord("return") || hasWord("choque") {
+				resId = 39103 // Return of Cooler
+				found = true
+			} else {
+				resId = 24752 // Cooler's Revenge
+				found = true
+			}
+		}
+		// Bojack Unbound (TMDB: 39105)
+		if !found && (hasWord("bojack") || hasWord("galactico") || hasWord("unbound")) {
+			resId = 39105
+			found = true
+		}
+		// Super Android 13 (TMDB: 39104)
+		if !found && hasWord("13") && (hasWord("android") || hasWord("androide")) {
+			resId = 39104
+			found = true
+		}
+		// History of Trunks (TMDB: 39324)
+		if !found && hasWord("trunks") && (hasWord("futuro") || hasWord("future")) {
+			resId = 39324
+			found = true
+		}
+		// Bardock - Father of Goku / Episodio de Bardock / La Batalla de Freezer Contra el Padre de Goku (TMDB: 39323)
+		if !found && (hasWord("bardock") || (hasWord("padre") && hasWord("goku") && hasWord("freezer"))) {
+			resId = 39323
+			found = true
+		}
+		// Tree of Might / Árbol del Poder (TMDB: 39101)
+		if !found && (hasWord("arbol") || hasWord("turles")) {
+			resId = 39101
+			found = true
+		}
+		// The World's Strongest (TMDB: 39100)
+		if !found && hasWord("fuerte") && (hasWord("hombre") || hasWord("mundo")) {
+			resId = 39100
+			found = true
+		}
+		// Lord Slug (TMDB: 39102)
+		if !found && hasWord("slug") {
+			resId = 39102
+			found = true
+		}
+		// Dead Zone (TMDB: 28609)
+		if !found && (hasWord("dead") || hasWord("zone") || hasWord("devuelveme")) {
+			resId = 28609
+			found = true
+		}
+		// 100 años después - GT Special (TMDB: 18095)
+		if !found && (hasWord("100") && (hasWord("anos") || hasWord("despues"))) {
+			resId = 18095
+			found = true
+		}
+		// Yo! Son Goku and His Friends Return!! (TMDB: 101037)
+		if !found && ((hasWord("hola") && hasWord("goku")) || hasWord("regresan") || hasWord("return")) {
+			resId = 101037
+			found = true
+		}
+		// Goku's Traffic Safety / Seguridad Vial (TMDB: 39322)
+		if !found && (hasWord("vial") || hasWord("seguridad") || hasWord("safety")) {
+			resId = 39322
+			found = true
+		}
+		// Clásicas Dragon Ball (original series)
+		// La Leyenda de Shenlong (TMDB: 39144)
+		if !found && hasWord("leyenda") && (hasWord("shenlong") || hasWord("shenron")) {
+			resId = 39144
+			found = true
+			// La Princesa Durmiente (TMDB: 39145)
+		} else if !found && hasWord("princesa") && hasWord("durmiente") {
+			resId = 39145
+			found = true
+			// Una Aventura Mística (TMDB: 116776)
+		} else if !found && (hasWord("aventura") && hasWord("mistica")) {
+			resId = 116776
+			found = true
+		} else if !found && (hasWord("camino") && (hasWord("fuerte") || hasWord("power"))) {
+			resId = 39148
+			found = true
+		}
+
+		// ── MOVIE NUMBER DETECTION (Fallback) ──
+		if !found {
+			// Extract number from title if it looks like a movie number
+			// e.g. "Dragon Ball Z - 10" or "Movie 10"
+			numRegex := regexp.MustCompile(`\b(movie|pelicula|film)?\s*(\d{1,2})\b`)
+			if m := numRegex.FindStringSubmatch(t); m != nil {
+				num, _ := strconv.Atoi(m[2])
+				isZ := hasWord("z") || hasWord("dbz")
+				isDB := (hasWord("db") || hasWord("dragon ball")) && !isZ && !hasWord("super") && !hasWord("gt")
+
+				if isZ {
+					switch num {
+					case 1:
+						resId = 28609 // Dead Zone
+						found = true
+					case 2:
+						resId = 39100 // World's Strongest
+						found = true
+					case 3:
+						resId = 39101 // Tree of Might
+						found = true
+					case 4:
+						resId = 39102 // Lord Slug
+						found = true
+					case 5:
+						resId = 24752 // Cooler's Revenge
+						found = true
+					case 6:
+						resId = 39103 // Return of Cooler
+						found = true
+					case 7:
+						resId = 39104 // Super Android 13
+						found = true
+					case 8:
+						resId = 34433 // Broly Legendary
+						found = true
+					case 9:
+						resId = 39105 // Bojack Unbound
+						found = true
+					case 10:
+						resId = 44251 // Broly Second Coming
+						found = true
+					case 11:
+						resId = 39106 // Bio-Broly
+						found = true
+					case 12:
+						resId = 39107 // Fusion Reborn
+						found = true
+					case 13:
+						resId = 39108 // Wrath of the Dragon
+						found = true
+					}
+				} else if isDB {
+					switch num {
+					case 1:
+						resId = 39144 // Leyenda Shenlong
+						found = true
+					case 2:
+						resId = 39145 // Princesa Durmiente
+						found = true
+					case 3:
+						resId = 116776 // Aventura Mistica
+						found = true
+					case 4:
+						resId = 39148 // Camino mas fuerte
+						found = true
+					}
+				}
+			}
+		}
 	}
 
-	// Fusion Reborn / La fusión de Goku y Vegeta (39120)
-	if hasWord("fusion") || hasWord("janemba") || hasWord("fusión") {
-		return 1039120, true
+	// ── 3. SERIES DETECTION (Priority: Daima/GT) ──
+	if !found {
+		isMovie = false
+		if strings.Contains(ct, " daima ") {
+			resId = 236994
+			found = true
+		} else if strings.Contains(ct, " gt ") {
+			resId = 12697 // Dragon Ball GT (Verified)
+			found = true
+		} else if hasWord("kai") {
+			resId = 61709
+			found = true
+		} else if strings.Contains(ct, " dragon ball super ") || hasWord("dbs") {
+			resId = 62715
+			found = true
+		} else if hasWord("dbz") || strings.Contains(ct, " dragon ball z ") || (hasWord("z") && !hasWord("super")) {
+			resId = 12971
+			found = true
+		} else if hasWord("heroes") {
+			resId = 80629
+			found = true
+		} else if hasWord("db") || strings.Contains(ct, " dragon ball ") {
+			resId = 12609
+			found = true
+		}
 	}
 
-	// Wrath of the Dragon / Tapion (39121)
-	if hasWord("tapion") || hasWord("puño") || hasWord("wrath") || hasWord("ataque del dragon") {
-		return 1039121, true
-	}
-
-	// Cooler's Revenge / Los rivales más poderosos (39113)
-	if hasWord("cooler") || hasWord("rivales") {
-		return 1039113, true
-	}
-
-	// Return of Cooler / Los guerreros más poderosos (39114)
-	if (hasWord("cooler") && (hasWord("return") || hasWord("regreso") || hasWord("choque"))) || hasWord("guerreros") && hasWord("poderosos") {
-		return 1039114, true
-	}
-
-	// Bojack / La galaxia corre peligro (39117)
-	if hasWord("bojack") || hasWord("galaxia") || hasWord("peligro") {
-		return 1039117, true
-	}
-
-	// Tree of Might / La superbatalla (39111)
-	if hasWord("tree") || hasWord("arbol") || hasWord("turles") || hasWord("batalla decisiva") || hasWord("superbatalla") {
-		return 1039111, true
-	}
-
-	// World's Strongest / El hombre más fuerte de este mundo (39110)
-	if hasWord("mundo") || hasWord("strongest") || hasWord("fuerte") {
-		return 1039110, true
-	}
-
-	// Lord Slug / El Goku Super Saiyajin (39112)
-	if hasWord("slug") || (hasWord("goku") && hasWord("saiyajin")) {
-		return 1039112, true
-	}
-
-	// Dead Zone / ¡Devuélveme a mi Gohan! / Devuélvanme a mi Gohan (39109)
-	if hasWord("devuelveme") || hasWord("devuelvanme") || (hasWord("dead") && hasWord("zone")) || hasWord("garlic") {
-		return 1039109, true
-	}
-
-	// Android 13 / La pelea de los tres Saiyajins (39115)
-	if hasWord("13") || hasWord("android") || hasWord("extrema") || hasWord("tres") {
-		return 1039115, true
-	}
-
-	// History of Trunks / Los dos guerreros del futuro (39148)
-	if hasWord("trunks") || hasWord("futuro") {
-		return 1039148, true
-	}
-
-	// Bardock - The Father of Goku / La batalla de Freezer contra el padre de Goku (39147)
-	if hasWord("padre") || hasWord("freezer") {
-		return 1039147, true
-	}
-
-	// Episode of Bardock (95539)
-	if hasWord("episodio") || hasWord("episode") || hasWord("bardock") {
-		return 1095539, true
-	}
-
-	// Sleeping Princess in Devil's Castle / La princesa durmiente en el castillo embrujado (33500)
-	if hasWord("princesa") || hasWord("durmiente") || hasWord("castillo") {
-		return 1033500, true
-	}
-
-	// Mystical Adventure / Una aventura mística (33513)
-	if hasWord("aventura") || hasWord("mistica") || hasWord("mística") {
-		return 1033513, true
-	}
-
-	// Yo! Son Goku and His Friends Return!! / ¡Hey! Goku y sus amigos regresan (63636)
-	if hasWord("amigos") || hasWord("hey") || hasWord("regresan") {
-		return 1063636, true
-	}
-
-	// A Hero's Legacy / 100 años después (39149)
-	if hasWord("100") || hasWord("años") || hasWord("después") || hasWord("legacy") {
-		return 1039149, true
-	}
-
-	// ── Series ──
-
-	// 1. Dragon Ball Daima (240411)
-	if hasWord("daima") || strings.Contains(t, "dragon ball daima") {
-		return 240411, true
-	}
-
-	// 2. Dragon Ball Super (62715)
-	if hasWord("super") || hasWord("dbs") || strings.Contains(t, "dragon ball super") {
-		return 62715, true
-	}
-
-	// 3. Dragon Ball Kai (61709)
-	if hasWord("kai") || strings.Contains(t, "dragon ball kai") || hasWord("dbk") {
-		return 61709, true
-	}
-
-	// 4. Dragon Ball GT (888)
-	if hasWord("gt") || strings.Contains(t, "dragon ball gt") || hasWord("dbgt") {
-		return 888, true
-	}
-
-	// 5. Dragon Ball Heroes (80629)
-	if hasWord("heroes") || hasWord("dbh") || hasWord("sdbh") {
-		return 80629, true
-	}
-
-	// 6. Dragon Ball Z (12971)
-	if hasWord("z") || hasWord("dbz") || strings.Contains(t, "dragon ball z") || strings.Contains(t, "dragonball z") {
-		return 12971, true
-	}
-
-	// 7. Original Dragon Ball (12609)
-	if hasWord("db") || strings.Contains(t, "dragon ball") || strings.Contains(t, "dragonball") {
-		return 12609, true
-	}
-
-	return 0, false
+	return resId, isMovie, found
 }

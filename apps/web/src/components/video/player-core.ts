@@ -5,7 +5,10 @@ import { useAniSkipTimes } from "@/api/hooks/aniskip.hooks"
 import { useAnimeTracking } from "@/api/hooks/useAnimeTracking"
 import { useWebSocket } from "@/hooks/use-websocket"
 import { getApiWebSocketUrl } from "@/api/client/server-url"
+import { useMediastreamShutdownTranscodeStream } from "@/api/hooks/mediastream.hooks"
 import { useAppStore } from "@/lib/store"
+import { usePlayerProgressSync } from "@/api/hooks/usePlayerProgressSync"
+import { useGetContinuityWatchHistoryItem } from "@/api/hooks/continuity.hooks"
 import type { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
 
 export interface PlayerCoreProps {
@@ -21,6 +24,7 @@ export interface PlayerCoreProps {
     mediaId?: number
     episodeNumber?: number
     malId?: number | null
+    clientId?: string
     onClose: () => void
 }
 
@@ -36,6 +40,7 @@ export function usePlayerCore(props: PlayerCoreProps) {
         mediaId,
         episodeNumber,
         malId,
+        clientId,
     } = props
 
     const videoRef = useRef<HTMLVideoElement>(null)
@@ -49,6 +54,7 @@ export function usePlayerCore(props: PlayerCoreProps) {
     const timeTextRef = useRef<HTMLSpanElement>(null)
 
     const [isPlaying, setIsPlaying] = useState(false)
+    const [currentTime, setCurrentTime] = useState(0)
     const [duration, setDuration] = useState(0)
     const [volume, setVolume] = useState(1)
     const [isMuted, setIsMuted] = useState(false)
@@ -72,10 +78,23 @@ export function usePlayerCore(props: PlayerCoreProps) {
     const [activeSubtitleIndex, setActiveSubtitleIndex] = useState<number | null>(null)
     const [isJassubLoading, setIsJassubLoading] = useState(false)
     const [isJassubActive, setIsJassubActive] = useState(false)
+    const [hlsLevels, setHlsLevels] = useState<{ index: number; label: string; height: number }[]>([])
+    const [activeHlsLevel, setActiveHlsLevel] = useState<number>(-1) // -1 = auto
 
     const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
     const setGlobalFullscreen = useAppStore(state => state.setFullscreen)
+    const autoSkipIntroPref = useAppStore(state => state.autoSkipIntro)
+    const setAutoSkipIntro = useAppStore(state => state.setAutoSkipIntro)
+    const playbackRatePref = useAppStore(state => state.playbackRate)
+    const setPlaybackRatePref = useAppStore(state => state.setPlaybackRate)
+    const preferredAudioLang = useAppStore(state => state.preferredAudioLang)
+    const setPreferredAudioLang = useAppStore(state => state.setPreferredAudioLang)
+    const preferredSubtitleLang = useAppStore(state => state.preferredSubtitleLang)
+    const setPreferredSubtitleLang = useAppStore(state => state.setPreferredSubtitleLang)
+
+    const [showStats, setShowStats] = useState(false)
+    const [statsData, setStatsData] = useState<any>(null)
 
     const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const nextEpisodeTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -108,12 +127,33 @@ export function usePlayerCore(props: PlayerCoreProps) {
         enabled: !!(malId && episodeNumber),
     })
 
+    const { mutate: shutdownTranscode } = useMediastreamShutdownTranscodeStream()
+
     const { onProgress: onTrackingProgress, reset: resetTracking } = useAnimeTracking({
         mediaId,
         episodeNumber,
         filepath: playableUrl,
         enabled: !!(mediaId && episodeNumber),
     })
+
+    const { onProgress: onSyncProgress } = usePlayerProgressSync({
+        mediaId,
+        episodeNumber,
+        filepath: playableUrl,
+        enabled: !!(mediaId && episodeNumber),
+    })
+
+    const { data: historyData } = useGetContinuityWatchHistoryItem(mediaId || 0)
+    const [showResume, setShowResume] = useState(false)
+    const [resumeTime, setResumeTime] = useState(0)
+
+    useEffect(() => {
+        return () => {
+            if (clientId) {
+                shutdownTranscode({ clientId })
+            }
+        }
+    }, [clientId, shutdownTranscode])
 
     useEffect(() => {
         resetTracking()
@@ -129,6 +169,17 @@ export function usePlayerCore(props: PlayerCoreProps) {
     useEffect(() => {
         const video = videoRef.current
         if (!video) return
+
+        // Handle Resume Logic
+        if (historyData?.found && historyData.item?.episodeNumber === episodeNumber) {
+            const time = historyData.item.currentTime
+            if (time > 10) { // Only resume if more than 10 seconds in
+                setResumeTime(time)
+                setShowResume(true)
+                // Auto-hide resume after 10 seconds
+                setTimeout(() => setShowResume(false), 10000)
+            }
+        }
 
         Promise.resolve().then(() => {
             setStatus("loading")
@@ -168,9 +219,16 @@ export function usePlayerCore(props: PlayerCoreProps) {
             hls.loadSource(playableUrl)
             hls.attachMedia(video)
 
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
                 setStatus("ready")
                 setIsBuffering(false)
+
+                const levels = data.levels.map((level, index) => ({
+                    index,
+                    label: level.name || `${level.height}p`,
+                    height: level.height
+                }))
+                setHlsLevels(levels)
 
                 if (initialProgressSeconds > 0) {
                     video.currentTime = initialProgressSeconds
@@ -322,6 +380,25 @@ export function usePlayerCore(props: PlayerCoreProps) {
         }
     }, [activeSubtitleIndex, subtitleTracks])
 
+    // Auto-select preferred tracks
+    useEffect(() => {
+        if (audioTracks.length > 0) {
+            const preferred = audioTracks.find(t => t.language === preferredAudioLang)
+            if (preferred && activeAudioIndex !== preferred.index) {
+                onSelectAudio(preferred)
+            }
+        }
+    }, [audioTracks, preferredAudioLang])
+
+    useEffect(() => {
+        if (subtitleTracks.length > 0) {
+            const preferred = subtitleTracks.find(t => t.language === preferredSubtitleLang)
+            if (preferred && activeSubtitleIndex !== preferred.index) {
+                onSelectSubtitle(preferred)
+            }
+        }
+    }, [subtitleTracks, preferredSubtitleLang])
+
     useEffect(() => {
         const video = videoRef.current
         if (!video || !jassubRef.current) return
@@ -390,6 +467,14 @@ export function usePlayerCore(props: PlayerCoreProps) {
         triggerControlsVisibility()
     }
 
+    const handleResume = () => {
+        const video = videoRef.current
+        if (!video) return
+        video.currentTime = resumeTime
+        setShowResume(false)
+        video.play()
+    }
+
     const skipTime = (amount: number) => {
         const video = videoRef.current
         if (!video) return
@@ -422,10 +507,14 @@ export function usePlayerCore(props: PlayerCoreProps) {
         setIsMuted(nextMute)
     }
 
+
     const onSelectAudio = (track: AudioTrack) => {
         if (hlsRef.current) {
             hlsRef.current.audioTrack = track.index
             setActiveAudioIndex(track.index)
+        }
+        if (track.language) {
+            setPreferredAudioLang(track.language)
         }
     }
 
@@ -435,11 +524,15 @@ export function usePlayerCore(props: PlayerCoreProps) {
             if (hlsRef.current) {
                 hlsRef.current.subtitleTrack = -1
             }
+            // Optional: maybe don't clear preference if they just want to turn it off once
         } else {
             if (hlsRef.current) {
                 hlsRef.current.subtitleTrack = track.index
             }
             setActiveSubtitleIndex(track.index)
+            if (track.language) {
+                setPreferredSubtitleLang(track.language)
+            }
         }
     }
 
@@ -456,6 +549,50 @@ export function usePlayerCore(props: PlayerCoreProps) {
                 .then(() => setIsFullscreen(false))
         }
     }
+
+    const takeScreenshot = useCallback(() => {
+        const video = videoRef.current
+        if (!video) return
+        const canvas = document.createElement("canvas")
+        canvas.width = video.videoWidth
+        canvas.height = video.videoHeight
+        const ctx = canvas.getContext("2d")
+        if (!ctx) return
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+        const dataUrl = canvas.toDataURL("image/png")
+        const link = document.createElement("a")
+        link.download = `kamehouse-cap-${mediaId || "video"}-${Date.now()}.png`
+        link.href = dataUrl
+        link.click()
+    }, [mediaId])
+
+    const togglePip = useCallback(async () => {
+        const video = videoRef.current
+        if (!video || !document.pictureInPictureEnabled) return
+        try {
+            if (document.pictureInPictureElement) {
+                await document.exitPictureInPicture()
+            } else {
+                await video.requestPictureInPicture()
+            }
+        } catch (err) {
+            console.error("PIP failed:", err)
+        }
+    }, [])
+
+    const changePlaybackRate = (rate: number) => {
+        const video = videoRef.current
+        if (!video) return
+        video.playbackRate = rate
+        setPlaybackRatePref(rate)
+    }
+
+    useEffect(() => {
+        const video = videoRef.current
+        if (video && playbackRatePref !== 1) {
+            video.playbackRate = playbackRatePref
+        }
+    }, [status]) // Reset/Apply rate when video is ready
 
     useEffect(() => {
         const handleFullscreenChange = () => {
@@ -546,8 +683,20 @@ export function usePlayerCore(props: PlayerCoreProps) {
                 case "n":
                     if (showNextEpisode && onNextEpisode) {
                         e.preventDefault()
-                        onNextEpisode()
+                        onNextEpisode?.()
                     }
+                    break
+                case "i":
+                    e.preventDefault()
+                    togglePip()
+                    break
+                case "g":
+                    e.preventDefault()
+                    takeScreenshot()
+                    break
+                case "v":
+                    e.preventDefault()
+                    setShowStats(prev => !prev)
                     break
                 case "escape":
                     if (isFullscreen) {
@@ -566,9 +715,12 @@ export function usePlayerCore(props: PlayerCoreProps) {
     const handleTimeUpdate = () => {
         const video = videoRef.current
         if (!video) return
-
+        
         const curr = video.currentTime
         const total = video.duration
+        
+        setCurrentTime(curr)
+        setDuration(total)
 
         if (progressBarRef.current) {
             const percent = total > 0 ? (curr / total) * 100 : 0
@@ -589,6 +741,7 @@ export function usePlayerCore(props: PlayerCoreProps) {
         }
 
         onTrackingProgress(curr, total)
+        onSyncProgress(curr, total)
 
         const now = Date.now()
         if (now - lastSentHeartbeatRef.current >= 5000) {
@@ -599,6 +752,10 @@ export function usePlayerCore(props: PlayerCoreProps) {
         if (skipTimes?.op) {
             const { startTime, endTime } = skipTimes.op
             const inOpWindow = curr >= startTime && curr < endTime
+            if (autoSkipIntroPref && inOpWindow) {
+                video.currentTime = endTime
+                return
+            }
             if (inOpWindow !== showSkipIntro) setShowSkipIntro(inOpWindow)
             if (inOpWindow) {
                 setSkipRemainingSeconds(Math.ceil(endTime - curr))
@@ -636,6 +793,19 @@ export function usePlayerCore(props: PlayerCoreProps) {
         } else {
             if (showNextEpisode) setShowNextEpisode(false)
         }
+
+        // Stats for Nerds calculation
+        if (showStats && now - lastSentHeartbeatRef.current >= 1000) {
+            setStatsData({
+                currentTime: curr.toFixed(2),
+                duration: total.toFixed(2),
+                buffer: video.buffered.length > 0 ? (video.buffered.end(video.buffered.length - 1) - curr).toFixed(2) : 0,
+                resolution: `${video.videoWidth}x${video.videoHeight}`,
+                playbackRate: video.playbackRate,
+                volume: Math.round(video.volume * 100),
+                source: playableUrl.substring(0, 50) + "...",
+            })
+        }
     }
 
     useEffect(() => {
@@ -656,6 +826,13 @@ export function usePlayerCore(props: PlayerCoreProps) {
         return (countdownSeconds / 15) * 100
     }, [countdownSeconds])
 
+    const handleSetHlsLevel = useCallback((levelIndex: number) => {
+        if (hlsRef.current) {
+            hlsRef.current.currentLevel = levelIndex
+            setActiveHlsLevel(levelIndex)
+        }
+    }, [])
+
     return {
         refs: {
             videoRef,
@@ -666,10 +843,21 @@ export function usePlayerCore(props: PlayerCoreProps) {
             timeTextRef,
         },
         state: {
-            isPlaying, duration, volume, isMuted, isFullscreen, controlsVisible, status, errorMsg, isBuffering, flash, showSkipIntro, skipRemainingSeconds, skipLabel, showNextEpisode, countdownSeconds, marathonMode, audioTracks, activeAudioIndex, subtitleTracks, activeSubtitleIndex, isJassubLoading, isJassubActive, isSettingsOpen, remainingProgress
+            isPlaying, duration, volume, isMuted, isFullscreen, controlsVisible, status, errorMsg, isBuffering, flash, showSkipIntro, skipRemainingSeconds, skipLabel, showNextEpisode, countdownSeconds, marathonMode, audioTracks, activeAudioIndex, subtitleTracks, activeSubtitleIndex, isJassubLoading, isJassubActive, isSettingsOpen, remainingProgress,
+            autoSkipIntro: autoSkipIntroPref,
+            playbackRate: playbackRatePref,
+            showStats,
+            statsData,
+            hlsLevels,
+            activeHlsLevel,
+            currentTime,
+            showResume,
+            resumeTime,
         },
         actions: {
-            setIsPlaying, setDuration, setIsBuffering, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, skipTime, skipOpening, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, toggleFullscreen, handleSkipIntro, handleTimeUpdate
+            setIsPlaying, setDuration, setIsBuffering, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, skipTime, skipOpening, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, toggleFullscreen, handleSkipIntro, handleTimeUpdate,
+            takeScreenshot, togglePip, changePlaybackRate, setShowStats, setAutoSkipIntro,
+            setHlsLevel: handleSetHlsLevel,
         }
     }
 }

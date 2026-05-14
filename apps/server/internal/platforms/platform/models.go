@@ -39,6 +39,7 @@ const (
 type MediaTitle struct {
 	Romaji  *string `json:"romaji,omitempty"`
 	English *string `json:"english,omitempty"`
+	Spanish *string `json:"spanish,omitempty"`
 	Native  *string `json:"native,omitempty"`
 }
 
@@ -89,6 +90,7 @@ type UnifiedMedia struct {
 	Episodes          *int                    `json:"episodes,omitempty"`
 	CoverImage        *MediaCoverImage        `json:"coverImage,omitempty"`
 	BannerImage       *string                 `json:"bannerImage,omitempty"`
+	Overview          *string                 `json:"overview,omitempty"`
 	StartDate         *FuzzyDate              `json:"startDate,omitempty"`
 	EndDate           *FuzzyDate              `json:"endDate,omitempty"`
 	Season            *MediaSeason            `json:"season,omitempty"`
@@ -100,11 +102,13 @@ type UnifiedMedia struct {
 
 	// Extended fields for general (non-anime) media
 	Kind             MediaKind `json:"kind"` // "ANIME" or "GENERAL"
-	Overview         *string   `json:"overview,omitempty"`
+	Description      *string   `json:"description,omitempty"`
+	Score            *float64  `json:"score,omitempty"`
 	IMDbID           *string   `json:"imdbId,omitempty"`
 	// BelongsToCollection holds the TMDB franchise/saga ID if the media belongs to one.
 	CollectionID   *int    `json:"collectionId,omitempty"`
 	CollectionName *string `json:"collectionName,omitempty"`
+	Runtime        *int    `json:"runtime,omitempty"`
 }
 
 type MediaRelationType string

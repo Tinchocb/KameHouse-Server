@@ -255,7 +255,7 @@ export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>): 
     torrent: {
         // showBufferingStatus: data.torrent.showBufferingStatus || false, // Deprecated in backend schema
         // showNetworkSpeed: data.torrent.showNetworkSpeed || false, // Deprecated in backend schema
-    } as any,
+    } as Record<string, never>,
     Platform: {
         hideAudienceScore: false,
 

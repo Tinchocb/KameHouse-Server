@@ -23,7 +23,7 @@ DEST_WEB_DIR   := web
 DATA_DIR       ?= ./test_data_dir
 SERVER_PORT    ?= 43000
 GO             := go
-NPM            := npm
+NPM            := pnpm
 
 # Platform detection
 ifeq ($(OS),Windows_NT)

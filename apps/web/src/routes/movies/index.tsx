@@ -8,6 +8,10 @@ import { NativeSelect } from "@/components/ui/native-select"
 import { EmptyState } from "@/components/shared/empty-state"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import type { Anime_LibraryCollectionEntry } from "@/api/generated/types"
+import { cn } from "@/components/ui/core/styling"
+import { Play } from "lucide-react"
+import { DeferredImage } from "@/components/shared/deferred-image"
+import { getHighResImage } from "@/lib/helpers/images"
 
 export const Route = createFileRoute("/movies/")({
     component: MoviesPage,
@@ -15,7 +19,7 @@ export const Route = createFileRoute("/movies/")({
 
 // ─── Constants & Data ────────────────────────────────────────────────────────
 
-type EraTab = "all" | "classic" | "z" | "super" | "specials"
+type EraTab = "all" | "classic" | "z" | "super" | "gt" | "specials"
 
 type SortOption = "year_asc" | "year_desc" | "recently_add" | "alpha"
 
@@ -23,9 +27,19 @@ const ERA_TABS: { value: EraTab; label: string }[] = [
     { value: "all", label: "Todas" },
     { value: "classic", label: "Dragon Ball" },
     { value: "z", label: "Dragon Ball Z" },
+    { value: "gt", label: "Dragon Ball GT" },
     { value: "super", label: "Dragon Ball Super" },
     { value: "specials", label: "Especiales y OVAs" },
 ]
+
+const SAGA_CONFIG: Record<EraTab, { name: string; color: string }> = {
+    all: { name: "Todas", color: "#ff6b00" },
+    super: { name: "Dragon Ball Super", color: "#9b59b6" },
+    z: { name: "Dragon Ball Z", color: "#e74c3c" },
+    gt: { name: "Dragon Ball GT", color: "#3498db" },
+    classic: { name: "Dragon Ball", color: "#e07030" },
+    specials: { name: "Especiales y OVAs", color: "#1abc9c" }
+}
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
     { value: "year_asc", label: "Año (Más antiguo)" },
@@ -52,28 +66,47 @@ const WATCH_ORDER_MAP: Record<number, string> = {
 
 function getEntryEra(entry: Anime_LibraryCollectionEntry): EraTab {
     const media = entry.media
-    if (!media) return "all"
+    if (!media) return "specials"
 
-    const title = (media.titleRomaji || media.titleEnglish || "").toLowerCase()
-    const format = media.format
+    // Check all title variants including Spanish
+    const allTitles = [
+        media.titleRomaji,
+        media.titleEnglish,
+        media.titleOriginal,
+        media.titleSpanish,
+    ].filter(Boolean).join(" ").toLowerCase()
 
-    if (format === "OVA" || format === "SPECIAL") {
-        return "specials"
-    }
+    // Super must come first (contains "super" and "dragon ball")
+    if (allTitles.includes("super")) return "super"
 
-    if (title.includes("super")) {
-        return "super"
-    }
+    // GT detection
+    if (allTitles.includes(" gt") || allTitles.includes("gt ")) return "gt"
 
-    if (title.includes("z") || title.includes("kai") || title.includes("改造")) {
-        return "z"
-    }
+    // DBZ detection — look for " z" as word boundary, common Spanish keywords
+    const isZ = allTitles.includes(" z ") || allTitles.includes(" z:") || 
+                 allTitles.includes("kai") || allTitles.includes("改") ||
+                 // Spanish-specific DBZ movie keywords
+                 allTitles.includes("freezer") || allTitles.includes("frieza") ||
+                 allTitles.includes("cooler") || allTitles.includes("androide") ||
+                 allTitles.includes("android") || allTitles.includes("bojack") ||
+                 allTitles.includes("janemba") || allTitles.includes("tapion") ||
+                 allTitles.includes("bardock") || allTitles.includes("trunks") ||
+                 allTitles.includes("broly") || allTitles.includes("slug") ||
+                 allTitles.includes("turles") || allTitles.includes("dead zone") ||
+                 allTitles.includes("fusion") || allTitles.includes("bio-broly") ||
+                 allTitles.includes("gohan") || allTitles.includes("vegeta") ||
+                 // Year clue: all Z movies are 1989–2013
+                 (media.year != null && media.year >= 1989 && media.year <= 2013 && 
+                  allTitles.includes("dragon ball"))
+    if (isZ) return "z"
 
-    if (title.includes("dragon ball") && !title.includes("z") && !title.includes("super")) {
-        return "classic"
-    }
+    // Classic Dragon Ball (1986-1988 movies, El Camino 1996)
+    if (allTitles.includes("dragon ball")) return "classic"
 
-    return "all"
+    // True OVAs/Specials (format from API + no DB keyword) go to specials
+    if (media.format === "OVA" || media.format === "SPECIAL") return "specials"
+
+    return "specials"
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -81,16 +114,26 @@ function getEntryEra(entry: Anime_LibraryCollectionEntry): EraTab {
 function MoviesPage() {
     const [search, setSearch] = useState("")
     const [activeEra, setActiveEra] = useState<EraTab>("all")
-    const [sortBy, setSortBy] = useState<SortOption>("recently_add")
+    const [sortBy, setSortBy] = useState<SortOption>("year_asc")
+    const [hoveredMovieId, setHoveredMovieId] = useState<number | null>(null)
 
     const navigate = useNavigate()
     const { data: collection, isLoading } = useGetLibraryCollection()
 
     const allMovies = useMemo(() => {
         if (!collection?.lists) return []
-        const rawMovies = collection.lists
-            .flatMap((list) => list.entries || [])
-            .filter((entry) => entry.media?.format === "MOVIE" || entry.media?.format === "OVA" || entry.media?.format === "SPECIAL")
+
+        const allEntries = collection.lists.flatMap((list) => list.entries || [])
+
+        const rawMovies = allEntries.filter((entry) => {
+            const format = entry.media?.format
+            const type = (entry.media as any)?.type as string | undefined
+            return (
+                format === "MOVIE" || format === "OVA" || format === "SPECIAL" ||
+                type?.toUpperCase() === "MOVIE" ||
+                (entry.mediaId && entry.mediaId >= 1000000)
+            )
+        })
 
         const unique = new Map<number, Anime_LibraryCollectionEntry>()
         rawMovies.forEach((m) => {
@@ -152,6 +195,26 @@ function MoviesPage() {
 
     return (
         <div className="flex-1 w-full min-h-screen bg-background text-white overflow-y-auto pb-32 font-sans selection:bg-brand-orange/30">
+            {/* Reactive Backdrop */}
+            <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+                {sortedMovies.map((entry) => (
+                    <div
+                        key={entry.mediaId}
+                        className={cn(
+                            "absolute inset-0 transition-opacity duration-1000 ease-in-out bg-cover bg-center",
+                            hoveredMovieId === entry.mediaId ? "opacity-20 scale-105" : "opacity-0 scale-100"
+                        )}
+                        style={{ 
+                            backgroundImage: `url(${getHighResImage(entry.media?.bannerImage || entry.media?.posterImage)})`,
+                            filter: "blur(40px) saturate(1.5)"
+                        }}
+                    />
+                ))}
+                <div className="absolute inset-0 bg-background/60 backdrop-blur-[20px]" />
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/40" />
+            </div>
+
+            <div className="relative z-10">
             <PageHeader
                 title={
                     <div className="flex flex-col gap-1">
@@ -226,12 +289,19 @@ function MoviesPage() {
                 </div>
             </div>
 
-            {/* Grid display of Movie Cards */}
+            {/* Saga-grouped Content */}
             <div className="max-w-[1600px] mx-auto px-6 md:px-14 pt-4">
                 {isLoading ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                        {Array.from({ length: 10 }).map((_, i) => (
-                            <MovieCardSkeleton key={i} />
+                    <div className="space-y-12">
+                        {[1, 2, 3].map(i => (
+                            <div key={i} className="space-y-4">
+                                <div className="h-6 w-48 bg-zinc-900 rounded animate-pulse" />
+                                <div className="flex gap-4 overflow-hidden">
+                                    {[1, 2, 3, 4, 5, 6].map(j => (
+                                        <div key={j} className="w-[120px] aspect-[2/3] bg-zinc-900 rounded-lg animate-pulse shrink-0" />
+                                    ))}
+                                </div>
+                            </div>
                         ))}
                     </div>
                 ) : sortedMovies.length === 0 ? (
@@ -245,42 +315,39 @@ function MoviesPage() {
                         {ERA_TABS.filter(t => t.value !== "all").map(era => {
                             const eraMovies = sortedMovies.filter(m => getEntryEra(m) === era.value)
                             if (eraMovies.length === 0 && activeEra !== "all") return null
+                            if (activeEra !== "all" && activeEra !== era.value) return null
                             if (eraMovies.length === 0) return null
 
-                            const localCount = eraMovies.filter(m => (m.libraryData?.mainFileCount || 0) > 0).length
-                            const watchedCount = eraMovies.filter(m => m.media?.watched).length
+                            const config = SAGA_CONFIG[era.value as EraTab]
 
                             return (
-                                <section key={era.value} className="flex flex-col gap-6">
-                                    <div className="flex items-end justify-between border-b border-white/5 pb-4">
-                                        <div className="flex flex-col gap-1">
-                                            <h2 className="font-bebas text-4xl tracking-widest text-white uppercase leading-none">
-                                                {era.label}
-                                            </h2>
-                                            <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
-                                                <span>{eraMovies.length} Películas</span>
-                                                <span className="w-1 h-1 rounded-full bg-zinc-800" />
-                                                <span className="text-brand-orange">{watchedCount} Vistas</span>
-                                                <span className="w-1 h-1 rounded-full bg-zinc-800" />
-                                                <span className="text-green-500/60">{localCount} Locales</span>
-                                            </div>
-                                        </div>
+                                <div key={era.value} className="space-y-6">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-1 h-5 rounded-full" style={{ backgroundColor: config.color }} />
+                                        <h2 className="text-xs font-black uppercase tracking-[0.2em] text-white/70">
+                                            {config.name}
+                                        </h2>
+                                        <span className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
+                                            {eraMovies.length} Títulos
+                                        </span>
                                     </div>
 
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                                    <div className="flex gap-5 overflow-x-auto pb-6 no-scrollbar snap-x">
                                         {eraMovies.map((entry) => (
                                             <MoviePosterCard
                                                 key={entry.mediaId}
                                                 entry={entry}
+                                                color={config.color}
                                                 onClick={() => handleMovieClick(entry.mediaId)}
                                             />
                                         ))}
                                     </div>
-                                </section>
+                                </div>
                             )
                         })}
                     </div>
                 )}
+            </div>
             </div>
         </div>
     )
@@ -290,111 +357,88 @@ function MoviesPage() {
 
 const MoviePosterCard = memo(function MoviePosterCard({
     entry,
+    color,
     onClick,
 }: {
     entry: Anime_LibraryCollectionEntry
+    color?: string
     onClick: () => void
 }) {
     const movie = entry.media
     if (!movie) return null
 
-    const title = movie.titleEnglish || movie.titleRomaji || movie.titleOriginal || "Sin título"
+    const title = movie.titleSpanish || movie.titleEnglish || movie.titleRomaji || "Sin título"
     const hasLocalFiles = (entry.libraryData?.mainFileCount || 0) > 0
     const isWatched = movie.watched || (entry.listData?.progress || 0) >= (movie.totalEpisodes || 0)
-    const watchAfter = WATCH_ORDER_MAP[movie.id] || WATCH_ORDER_MAP[entry.mediaId]
 
     return (
-        <div className="flex flex-col gap-3 group">
-            {/* Poster Container (2:3) */}
-            <div 
-                className={cn(
-                    "relative aspect-[2/3] w-full overflow-hidden rounded-xl border transition-all duration-500",
-                    "border-white/5 group-hover:border-brand-orange/40 group-hover:shadow-[0_0_30px_rgba(255,110,58,0.15)]",
-                    !hasLocalFiles && "opacity-60"
-                )}
-                onClick={onClick}
-            >
-                <DeferredImage
-                    src={movie.posterImage || ""}
-                    alt={title}
-                    className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110"
-                    showSkeleton={false}
-                />
-
-                {/* Overlays */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80" />
-                
-                {/* Visual State Badges (Top) */}
-                <div className="absolute top-3 left-3 flex flex-col gap-2 z-20">
-                    {hasLocalFiles ? (
-                        <span className="px-2 py-0.5 bg-green-500/20 backdrop-blur-md text-[8px] font-black text-green-500 tracking-widest uppercase border border-green-500/20 rounded">
-                            LOCAL
-                        </span>
-                    ) : (
-                        <span className="px-2 py-0.5 bg-red-500/20 backdrop-blur-md text-[8px] font-black text-red-500 tracking-widest uppercase border border-red-500/20 rounded">
-                            FALTA
-                        </span>
-                    )}
-                </div>
-
-                <div className="absolute top-3 right-3 z-20">
-                    <div className={cn(
-                        "w-6 h-6 rounded-full flex items-center justify-center backdrop-blur-md border",
-                        isWatched ? "bg-green-500 border-green-400 text-white" : "bg-black/40 border-white/10 text-white/40"
-                    )}>
-                        {isWatched ? (
-                            <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-                            </svg>
-                        ) : (
-                            <span className="font-bold text-xs">-</span>
-                        )}
-                    </div>
-                </div>
-
-                {/* Watch Order Badge (Bottom) */}
-                {watchAfter && (
-                    <div className="absolute bottom-3 left-0 right-0 px-3 z-20">
-                        <div className="bg-brand-orange/90 backdrop-blur-md px-2 py-1 rounded text-center border border-white/10 shadow-xl">
-                            <span className="text-[8px] font-black text-white uppercase tracking-widest">
-                                {watchAfter}
-                            </span>
-                        </div>
-                    </div>
-                )}
-
-                {/* Hover Reveal Area */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-6 opacity-0 group-hover:opacity-100 transition-all duration-300 z-30 bg-black/60 backdrop-blur-[2px]">
-                    <div className="text-center space-y-4">
-                        <p className="text-[10px] text-zinc-300 font-medium leading-relaxed line-clamp-4 uppercase tracking-wide">
-                            {movie.description?.replace(/<[^>]*>?/gm, '') || "Sin sinopsis disponible."}
-                        </p>
-                        <button 
-                            disabled={!hasLocalFiles}
-                            className={cn(
-                                "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 shadow-2xl",
-                                hasLocalFiles 
-                                    ? "bg-white text-black hover:scale-110 hover:bg-brand-orange hover:text-white" 
-                                    : "bg-white/10 text-white/20 cursor-not-allowed"
-                            )}
-                        >
-                            <svg className="w-5 h-5 fill-current ml-1" viewBox="0 0 24 24">
-                                <path d="M8 5v14l11-7z" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Bottom Info */}
-            <div className="flex flex-col gap-1 px-0.5">
-                <h3 className="text-[13px] font-bebas text-white tracking-[0.05em] group-hover:text-brand-orange transition-colors duration-300 uppercase truncate">
-                    {title}
-                </h3>
-                <div className="flex items-center gap-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500">
+        <div className="group relative shrink-0 w-[120px] snap-start">
+            {/* Tooltip on Hover */}
+            <div className="absolute bottom-[calc(100%+12px)] left-1/2 -translate-x-1/2 w-[220px] p-4 bg-[#12151c]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 z-50">
+                <h4 className="text-xs font-black uppercase text-white mb-1 line-clamp-2 leading-tight tracking-wide">{title}</h4>
+                <div className="flex items-center gap-2 text-[9px] font-bold text-zinc-500 uppercase tracking-widest mb-3">
                     <span>{movie.year}</span>
                     <span className="w-1 h-1 rounded-full bg-zinc-800" />
                     <span>{movie.runtime || "???"} MIN</span>
+                </div>
+                <button 
+                    onClick={(e) => { e.stopPropagation(); onClick(); }}
+                    className="w-full py-2 bg-brand-orange hover:bg-brand-orange/80 text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 pointer-events-auto"
+                >
+                    <Play className="w-3 h-3 fill-current" />
+                    Ver ahora
+                </button>
+                <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-[#12151c]/95" />
+            </div>
+
+            <div 
+                className="flex flex-col gap-3 cursor-pointer"
+                onClick={onClick}
+            >
+                {/* Poster Container */}
+                <div 
+                    className={cn(
+                        "relative aspect-[2/3] w-full overflow-hidden rounded-xl border transition-all duration-300",
+                        "border-white/5 group-hover:border-brand-orange/40 group-hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)]",
+                        !hasLocalFiles && "grayscale opacity-50"
+                    )}
+                    style={{ backgroundColor: `${color}10` }}
+                >
+                    <DeferredImage
+                        src={getHighResImage(movie.posterImage || "")}
+                        alt={title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        showSkeleton={false}
+                    />
+
+                    {/* Badge LOC */}
+                    {hasLocalFiles && (
+                        <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded-sm bg-black/60 backdrop-blur-md border border-white/10 text-[7px] font-black text-white/70 uppercase tracking-widest">
+                            LOC
+                        </div>
+                    )}
+
+                    {/* Watched Badge */}
+                    {isWatched && (
+                        <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center text-white shadow-lg">
+                            <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
+                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                            </svg>
+                        </div>
+                    )}
+
+                    {/* Hover Tint */}
+                    <div className="absolute inset-0 bg-brand-orange/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                </div>
+
+                {/* Info */}
+                <div className="flex flex-col gap-1 min-w-0">
+                    <h3 className="text-[10px] font-bold text-white/90 uppercase tracking-wide truncate group-hover:text-brand-orange transition-colors">
+                        {title}
+                    </h3>
+                    <div className="text-[9px] font-medium text-zinc-500 tabular-nums">
+                        {movie.year} · {movie.runtime || "???"}m
+                    </div>
                 </div>
             </div>
         </div>

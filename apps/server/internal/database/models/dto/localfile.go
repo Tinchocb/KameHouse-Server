@@ -1,6 +1,8 @@
 package dto
 
 import (
+	"encoding/json"
+	"kamehouse/internal/database/models"
 	"kamehouse/internal/library/filesystem"
 	"strconv"
 	"time"
@@ -182,6 +184,42 @@ func newLocalFile(opath string, info *filesystem.SeparatedFilePath) *LocalFile {
 	}
 
 	return localFile
+}
+
+// NewLocalFileFromModel converts a database model to a DTO.
+func NewLocalFileFromModel(m *models.LocalFile) *LocalFile {
+	if m == nil {
+		return nil
+	}
+
+	lf := &LocalFile{
+		Path:           m.Path,
+		Name:           m.Name,
+		FileHash:       m.FileHash,
+		Locked:         m.Locked,
+		Ignored:        m.Ignored,
+		LibraryMediaId: m.LibraryMediaId,
+		MediaId:        m.MediaId,
+	}
+
+	// Unmarshal JSON fields
+	if len(m.ParsedData) > 0 {
+		_ = json.Unmarshal(m.ParsedData, &lf.ParsedData)
+	}
+	if len(m.ParsedFolderData) > 0 {
+		_ = json.Unmarshal(m.ParsedFolderData, &lf.ParsedFolderData)
+	}
+	if len(m.EmbeddedMetadata) > 0 {
+		_ = json.Unmarshal(m.EmbeddedMetadata, &lf.EmbeddedMetadata)
+	}
+	if len(m.Metadata) > 0 {
+		_ = json.Unmarshal(m.Metadata, &lf.Metadata)
+	}
+	if len(m.TechnicalInfo) > 0 {
+		_ = json.Unmarshal(m.TechnicalInfo, &lf.TechnicalInfo)
+	}
+
+	return lf
 }
 
 // NewLocalFileParsedData Converts habari.Metadata into LocalFileParsedData, which is more suitable.

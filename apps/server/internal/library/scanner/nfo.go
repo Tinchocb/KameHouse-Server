@@ -10,7 +10,7 @@ import (
 // NfoUniqueID represents a Kodi/Jellyfin <uniqueid type="tmdb">12345</uniqueid> element.
 // Multiple providers can appear in the same NFO file.
 type NfoUniqueID struct {
-	Type    string `xml:"type,attr"`           // e.g. "tmdb", "imdb", "tvdb"
+	Type    string `xml:"type,attr"` // e.g. "tmdb", "imdb", "tvdb"
 	Default bool   `xml:"default,attr,omitempty"`
 	Value   string `xml:",chardata"` // The actual provider ID
 }
@@ -19,13 +19,13 @@ type NfoUniqueID struct {
 // Supports tvshow, movie, anime, and episodedetails roots.
 type NfoFile struct {
 	XMLName       xml.Name      `xml:"tvshow"`
-	UniqueIDs     []NfoUniqueID `xml:"uniqueid"`    // Jellyfin/Kodi-style: <uniqueid type="tmdb">603</uniqueid>
-	ID            int           `xml:"id"`           // Fallback / TMDB ID usually
-	TmdbId        int           `xml:"tmdbid"`       // TMDB ID
-	TvdbId        int           `xml:"tvdbid"`       // TVDB ID
-	ImdbId        string        `xml:"imdbid"`       // IMDB ID
-	Season        int           `xml:"season"`       // Season number (episodedetails)
-	Episode       int           `xml:"episode"`      // Episode number (episodedetails)
+	UniqueIDs     []NfoUniqueID `xml:"uniqueid"` // Jellyfin/Kodi-style: <uniqueid type="tmdb">603</uniqueid>
+	ID            int           `xml:"id"`       // Fallback / TMDB ID usually
+	TmdbId        int           `xml:"tmdbid"`   // TMDB ID
+	TvdbId        int           `xml:"tvdbid"`   // TVDB ID
+	ImdbId        string        `xml:"imdbid"`   // IMDB ID
+	Season        int           `xml:"season"`   // Season number (episodedetails)
+	Episode       int           `xml:"episode"`  // Episode number (episodedetails)
 	Title         string        `xml:"title"`
 	OriginalTitle string        `xml:"originaltitle"` // In anime, this is often Romaji or Kanji
 	SortTitle     string        `xml:"sorttitle"`

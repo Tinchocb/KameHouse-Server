@@ -1,5 +1,5 @@
 import React from "react"
-import { Play, Pause, ChevronLeft, ChevronRight, Volume2, VolumeX, Maximize, Minimize, ChevronUp, Subtitles } from "lucide-react"
+import { Play, Pause, ChevronLeft, ChevronRight, Volume2, VolumeX, Maximize, Minimize, ChevronUp, Subtitles, Camera, PictureInPicture, Monitor } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 import { TimelineHeatmap, type InsightNode } from "@/components/ui/timeline-heatmap"
 import { PlayerSettingsMenu } from "@/components/ui/PlayerSettingsMenu"
@@ -44,7 +44,21 @@ export interface PlayerBottomBarProps {
     isFullscreen: boolean
     toggleFullscreen: () => void
     settingsOpen?: boolean
-    onToggleSettings?: () => void
+    onToggleSettings?: (open?: boolean) => void
+
+    // New Seanime features
+    onTakeScreenshot?: () => void
+    onTogglePip?: () => void
+    playbackRate?: number
+    onPlaybackRateChange?: (rate: number) => void
+    autoSkipIntro?: boolean
+    onAutoSkipIntroChange?: (enabled: boolean) => void
+
+    onNextEpisode?: () => void
+    
+    hlsLevels?: any[]
+    activeHlsLevel?: number
+    onHlsLevelChange?: (level: number) => void
 }
 
 export function PlayerBottomBar({
@@ -56,8 +70,24 @@ export function PlayerBottomBar({
     subtitleTracks, activeSubtitleIndex, onSelectSubtitle,
     isJassubLoading, episodeSources, activeStreamUrl, handleSourceSwitch,
     isFullscreen, toggleFullscreen,
-    settingsOpen, onToggleSettings
+    settingsOpen, onToggleSettings,
+    onTakeScreenshot, onTogglePip,
+    playbackRate, onPlaybackRateChange,
+    autoSkipIntro, onAutoSkipIntroChange,
+    onNextEpisode,
+    hlsLevels, activeHlsLevel, onHlsLevelChange
 }: PlayerBottomBarProps) {
+    const [showHeatmap, setShowHeatmap] = React.useState(true)
+    
+    // Mock Heatmap Data (replace with real data later)
+    const heatmapData = React.useMemo(() => {
+        return Array.from({ length: 60 }, (_, i) => {
+            const base = Math.sin(i * 0.2) * 0.5 + 0.5
+            const noise = Math.random() * 0.2
+            return Math.min(1, Math.max(0, base + noise))
+        })
+    }, [])
+
     return (
         <div className={cn(
             "absolute bottom-0 inset-x-0 w-full flex flex-col pointer-events-auto select-none",
@@ -67,30 +97,22 @@ export function PlayerBottomBar({
         )}>
             
             {/* Sleek Progress Timeline */}
-            <div className="relative w-full h-1 bg-white/20 group cursor-pointer flex items-center hover:h-1.5 transition-all duration-200" onClick={(e) => { e.stopPropagation() }}>
-                
-                <TimelineHeatmap duration={duration} insights={insights} />
-
-                <div
-                    ref={progressBarRef}
-                    className="h-full bg-white relative z-10"
-                    style={{ width: "0%" }}
-                >
-                    {/* Hover Thumb Component (Circular dot) */}
-                    <div
-                        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+            <div className="relative group/progress h-6 flex items-center mb-1">
+                {showHeatmap && (
+                    <TimelineHeatmap 
+                        duration={duration} 
+                        data={heatmapData} 
+                        className="absolute bottom-0 inset-x-0 w-full h-8 opacity-40 pointer-events-none mb-1 group-hover/progress:h-12 transition-all duration-300"
                     />
-                </div>
-
-                {/* Dragging input */}
+                )}
                 <input
                     ref={progressInputRef}
                     type="range"
                     min={0}
-                    max={duration || 100}
-                    defaultValue={0}
-                    onChange={(e) => { e.stopPropagation(); handleSeek(e); }}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer touch-none z-20"
+                    max={duration || 0}
+                    step="any"
+                    onChange={handleSeek}
+                    className="absolute inset-0 w-full h-1.5 bg-white/10 appearance-none cursor-pointer group-hover/progress:h-2.5 transition-all z-10"
                 />
             </div>
 
@@ -155,7 +177,22 @@ export function PlayerBottomBar({
                 <div className="flex items-center gap-5">
                     
                     <button
-                        aria-label="Siguiente Episodio (Próximamente)"
+                        onClick={(e) => { e.stopPropagation(); onTakeScreenshot?.(); }}
+                        aria-label="Captura de pantalla (G)"
+                        className="text-zinc-400 hover:text-white transition-all flex items-center justify-center">
+                        <Camera className="w-5 h-5" />
+                    </button>
+
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onTogglePip?.(); }}
+                        aria-label="Picture in Picture (I)"
+                        className="text-zinc-400 hover:text-white transition-all flex items-center justify-center">
+                        <PictureInPicture className="w-5 h-5" />
+                    </button>
+
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onNextEpisode?.(); }}
+                        aria-label="Siguiente Episodio (N)"
                         className="text-zinc-400 hover:text-white transition-all flex items-center justify-center">
                         <ChevronUp className="w-5 h-5" />
                     </button>
@@ -182,6 +219,14 @@ export function PlayerBottomBar({
                         currentSourceUrl={activeStreamUrl}
                         onSourceChange={handleSourceSwitch}
                         open={settingsOpen}
+                        onOpenChange={onToggleSettings}
+                        playbackRate={playbackRate}
+                        onPlaybackRateChange={onPlaybackRateChange}
+                        autoSkipIntro={autoSkipIntro}
+                        onAutoSkipIntroChange={onAutoSkipIntroChange}
+                        hlsLevels={state.hlsLevels}
+                        activeHlsLevel={state.activeHlsLevel}
+                        onHlsLevelChange={actions.setHlsLevel}
                         className="!w-auto !h-auto !bg-transparent !border-none !text-zinc-400 hover:!text-white flex items-center justify-center p-0"
                     />
 

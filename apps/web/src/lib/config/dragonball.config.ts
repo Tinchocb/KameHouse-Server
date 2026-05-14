@@ -1,7 +1,9 @@
+import dbTitles from './db_titles.json'
+
 export const DRAGON_BALL_SERIES = {
-    ORIGINAL: 862,
+    ORIGINAL: 12609,
     Z: 12971,
-    GT: 888,
+    GT: 12697,
     KAI: 61709,
     SUPER: 62715,
     DAIMA: 240411,
@@ -357,4 +359,30 @@ export function resolveSeriesSagas(media: MediaForSagaResolution | null | undefi
     }
 
     return resolved || []
+}
+
+/**
+ * Gets the localized Latin Spanish title for a Dragon Ball episode.
+ */
+export function getDragonBallSpanishTitle(tmdbId: number | undefined | null, episodeNum: number): string | null {
+    if (!tmdbId) return null;
+    
+    let seriesKey: keyof typeof dbTitles | null = null;
+    
+    switch (tmdbId) {
+        case DRAGON_BALL_SERIES.ORIGINAL: seriesKey = "original"; break;
+        case DRAGON_BALL_SERIES.Z: seriesKey = "z"; break;
+        case DRAGON_BALL_SERIES.GT: seriesKey = "gt"; break;
+        case DRAGON_BALL_SERIES.KAI: seriesKey = "kai"; break;
+        case DRAGON_BALL_SERIES.SUPER: seriesKey = "super"; break;
+        case DRAGON_BALL_SERIES.DAIMA: seriesKey = "daima"; break;
+    }
+    
+    if (!seriesKey) return null;
+    
+    const titlesArray = dbTitles[seriesKey] as { num: number; title: string }[] | undefined;
+    if (!titlesArray || !Array.isArray(titlesArray)) return null;
+    
+    const ep = titlesArray.find((t) => t.num === episodeNum);
+    return ep ? ep.title : null;
 }
