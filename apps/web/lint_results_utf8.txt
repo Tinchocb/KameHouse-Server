@@ -1,0 +1,249 @@
+﻿
+> kamehouse-web@0.2.0 lint
+> eslint src/
+
+
+D:\Proyectos personales\KameHouse\apps\web\src\api\client\requests.ts
+  165:27  warning  'variables' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  165:38  warning  'context' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  265:12  warning  'e' is defined but never used                   @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\app\client-providers.tsx
+  7:17  warning  'useEffect' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\shared\app-error-boundary.tsx
+  4:69  warning  'ReactErrorBoundaryProps' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\shared\directory-selector.tsx
+  27:63  warning  Unexpected any. Specify a different type    @typescript-eslint/no-explicit-any
+  61:30  warning  'error' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\shared\manual-match-modal.tsx
+   4:20  warning  'useMemo' is defined but never used                                               @typescript-eslint/no-unused-vars
+  15:68  warning  'currentMediaId' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  34:18  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  73:69  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\shared\premium-poster-card.tsx
+   2:10  warning  'motion' is defined but never used                                    @typescript-eslint/no-unused-vars
+  23:5   warning  'id' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\shared\vhs-collection.tsx
+   2:18  warning  'AnimatePresence' is defined but never used           @typescript-eslint/no-unused-vars
+  32:7   warning  'COLLAPSED_WIDTH' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  33:7   warning  'EXPANDED_WIDTH' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  34:7   warning  'GAP' is assigned a value but never used              @typescript-eslint/no-unused-vars
+  78:11  warning  'stripeColor' is assigned a value but never used      @typescript-eslint/no-unused-vars
+  80:11  warning  'progTxt' is assigned a value but never used          @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\shared\vhs-shelf-accordion.tsx
+  112:41  warning  'index' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\alert\alert.tsx
+  95:9  warning  'isClosable' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\app-layout\app-sidebar.tsx
+  7:10  warning  'FaBook' is defined but never used        @typescript-eslint/no-unused-vars
+  7:55  warning  'FaDownload' is defined but never used    @typescript-eslint/no-unused-vars
+  7:67  warning  'FaLayerGroup' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\app-layout\app-topnav.tsx
+   4:10  warning  'useState' is defined but never used           @typescript-eslint/no-unused-vars
+  13:11  warning  'location' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\badge\badge.tsx
+  1:15  warning  'VariantProps' is defined but never used      @typescript-eslint/no-unused-vars
+  3:14  warning  'ComponentAnatomy' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\basic-field\basic-field.tsx
+  138:9  warning  'readonly' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\button\button.stories.tsx
+  3:24  warning  'Loader2' is defined but never used  @typescript-eslint/no-unused-vars
+  3:33  warning  'Play' is defined but never used     @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\button\button.tsx
+   3:14  warning  'ComponentAnatomy' is defined but never used    @typescript-eslint/no-unused-vars
+  82:6   warning  'ButtonVariantProps' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\context-menu\context-menu.tsx
+   83:87  warning  'ref' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+   86:9   warning  'trigger' is assigned a value but never used                           @typescript-eslint/no-unused-vars
+   88:9   warning  'onOpenChange' is assigned a value but never used                      @typescript-eslint/no-unused-vars
+  219:9   warning  'defaultOpen' is assigned a value but never used                       @typescript-eslint/no-unused-vars
+  220:9   warning  'open' is assigned a value but never used                              @typescript-eslint/no-unused-vars
+  221:9   warning  'onOpenChange' is assigned a value but never used                      @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\core\styling.ts
+  25:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  29:55  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\dropdown-menu\dropdown-menu.tsx
+  192:9  warning  'defaultOpen' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  193:9  warning  'open' is assigned a value but never used          @typescript-eslint/no-unused-vars
+  194:9  warning  'onOpenChange' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\episode\EpisodeListItem.tsx
+  5:21  warning  'Layers' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\form\danger-zone.tsx
+  64:9  warning  'children' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\form\fields.tsx
+   44:13  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/rules-of-hooks')
+   55:95  warning  Unexpected any. Specify a different type                                                       @typescript-eslint/no-explicit-any
+   56:89  warning  Unexpected any. Specify a different type                                                       @typescript-eslint/no-explicit-any
+   57:48  warning  Unexpected any. Specify a different type                                                       @typescript-eslint/no-explicit-any
+  406:32  warning  Unexpected any. Specify a different type                                                       @typescript-eslint/no-explicit-any
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\form\form.tsx
+  162:50  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  162:80  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\form\submit-field.tsx
+  50:37  warning  '_showLoadingOverlayOnCreate' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\form\zod-resolver.ts
+   28:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   41:38  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  100:12  warning  '_e' is defined but never used            @typescript-eslint/no-unused-vars
+  124:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\horizontal-draggable-scroll\horizontal-draggable-scroll.tsx
+  83:31  warning  '_scrollContainerClass' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\input\index.tsx
+  16:9   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-unused-vars')
+  21:24  warning  '_leftAddon' is assigned a value but never used                                                       @typescript-eslint/no-unused-vars
+  22:23  warning  '_leftIcon' is assigned a value but never used                                                        @typescript-eslint/no-unused-vars
+  23:25  warning  '_rightAddon' is assigned a value but never used                                                      @typescript-eslint/no-unused-vars
+  24:24  warning  '_rightIcon' is assigned a value but never used                                                       @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\native-select\native-select.tsx
+  41:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\number-input\number-input.tsx
+  136:19  warning  '_children' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  144:22  warning  '_placeholder' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\player-settings\SettingsLayout.tsx
+  2:18  warning  'AnimatePresence' is defined but never used  @typescript-eslint/no-unused-vars
+  4:10  warning  'cn' is defined but never used               @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\scanner\ScannerDashboard.tsx
+   7:33  warning  'LucidePlay' is defined but never used    @typescript-eslint/no-unused-vars
+  13:46  warning  'ProgressRing' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\scanner\UnlinkedFilesPanel.tsx
+  54:38  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\scanner\scanner-results.tsx
+  82:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  90:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\search\command-palette.tsx
+  62:60  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\smart-swimlane.tsx
+  5:10  warning  'cn' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\tabs\static-tabs.tsx
+  50:19  warning  '_children' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\vertical-menu\vertical-menu.tsx
+  163:19  warning  '_children' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\ui\video\TimelineHeatmap.tsx
+  1:17  warning  'useMemo' is defined but never used                                         @typescript-eslint/no-unused-vars
+  9:35  warning  'duration' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\video\player-bottombar.tsx
+  89:25  warning  'progressBarRef' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\video\player-core.ts
+   75:20  warning  Unexpected any. Specify a different type                                                                               @typescript-eslint/no-explicit-any
+  136:30  warning  Unexpected any. Specify a different type                                                                               @typescript-eslint/no-explicit-any
+  197:48  warning  Unexpected any. Specify a different type                                                                               @typescript-eslint/no-explicit-any
+  834:8   warning  React Hook useEffect has an unnecessary dependency: 'handleKeyDown'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\video\player-ui.tsx
+  253:55  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Proyectos personales\KameHouse\apps\web\src\components\video\player.tsx
+  162:39  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Proyectos personales\KameHouse\apps\web\src\hooks\use-global-search.ts
+  51:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Proyectos personales\KameHouse\apps\web\src\lib\helpers\date.ts
+   8:12  warning  '_e' is defined but never used  @typescript-eslint/no-unused-vars
+  17:12  warning  '_e' is defined but never used  @typescript-eslint/no-unused-vars
+  26:12  warning  '_e' is defined but never used  @typescript-eslint/no-unused-vars
+  41:12  warning  '_e' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\lib\helpers\filtering.test.ts
+  3:10  warning  'Platform_MediaFormat' is defined but never used  @typescript-eslint/no-unused-vars
+  3:32  warning  'Platform_MediaStatus' is defined but never used  @typescript-eslint/no-unused-vars
+  3:79  warning  'Platform_MediaSort' is defined but never used    @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\lib\helpers\upath.ts
+  478:9  warning  Unreachable code  no-unreachable
+
+D:\Proyectos personales\KameHouse\apps\web\src\lib\server\settings.ts
+  255:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Proyectos personales\KameHouse\apps\web\src\lib\theme\theme-hooks.ts
+    2:7   warning  'useServerStatus' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  141:10  warning  'getThemeValue' is defined but never used             @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\routes\__root.tsx
+  8:10  warning  'AppTopNav' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\routes\home\home.mappers.ts
+  66:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  66:89  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  95:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  95:89  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Proyectos personales\KameHouse\apps\web\src\routes\home\home.sections.tsx
+  12:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Proyectos personales\KameHouse\apps\web\src\routes\movies\index.tsx
+    4:10  warning  'MediaCard' is defined but never used                   @typescript-eslint/no-unused-vars
+   52:7   warning  'WATCH_ORDER_MAP' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  118:28  warning  'setHoveredMovieId' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  130:42  warning  Unexpected any. Specify a different type                @typescript-eslint/no-explicit-any
+  451:7   warning  'MovieCardSkeleton' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\routes\series\$seriesId\$sagaId.tsx
+  1:29  warning  'useCallback' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\routes\series\$seriesId\-series-interactivity-client.tsx
+   11:10  warning  'FolderOpen' is defined but never used                                                  @typescript-eslint/no-unused-vars
+  112:5   warning  'seriesTitle' is assigned a value but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  131:11  warning  'fileSize' is assigned a value but never used                                           @typescript-eslint/no-unused-vars
+  135:11  warning  'airDate' is assigned a value but never used                                            @typescript-eslint/no-unused-vars
+
+D:\Proyectos personales\KameHouse\apps\web\src\routes\series\$seriesId\index.tsx
+  282:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  540:53  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  544:35  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  551:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Proyectos personales\KameHouse\apps\web\src\routes\series\index.tsx
+   3:10  warning  'Search' is defined but never used                    @typescript-eslint/no-unused-vars
+   3:18  warning  'Filter' is defined but never used                    @typescript-eslint/no-unused-vars
+   3:30  warning  'LayoutGrid' is defined but never used                @typescript-eslint/no-unused-vars
+   3:42  warning  'Library' is defined but never used                   @typescript-eslint/no-unused-vars
+   3:51  warning  'SortAsc' is defined but never used                   @typescript-eslint/no-unused-vars
+   3:60  warning  'LayoutList' is defined but never used                @typescript-eslint/no-unused-vars
+   4:10  warning  'cn' is defined but never used                        @typescript-eslint/no-unused-vars
+   5:10  warning  'PageHeader' is defined but never used                @typescript-eslint/no-unused-vars
+   9:10  warning  'ContinueWatchingCarousel' is defined but never used  @typescript-eslint/no-unused-vars
+  20:20  warning  'setSearch' is assigned a value but never used        @typescript-eslint/no-unused-vars
+  68:62  warning  Unexpected any. Specify a different type              @typescript-eslint/no-explicit-any
+  68:94  warning  Unexpected any. Specify a different type              @typescript-eslint/no-explicit-any
+
+Ô£û 131 problems (0 errors, 131 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+

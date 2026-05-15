@@ -24,6 +24,8 @@ export interface EpisodeIntelligence {
     arcName: string
     /** Categorization tag (e.g. EPIC, FILLER) */
     tag: ContentTag
+    /** Thematic or emotional vibes */
+    vibes?: string[]
 }
 
 /** 

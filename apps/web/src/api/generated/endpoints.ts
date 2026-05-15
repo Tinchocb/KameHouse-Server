@@ -1807,6 +1807,11 @@ export const API_ENDPOINTS = {
         },
     },
     VIDEOCORE: {
+        GetVideoInsights: {
+            key: "VIDEOCORE-get-video-insights",
+            methods: ["GET"],
+            endpoint: "/api/v1/videocore/insights/{episodeId}",
+        },
         VideoCoreInSightGetCharacterDetails: {
             key: "VIDEOCORE-video-core-in-sight-get-character-details",
             methods: ["GET"],

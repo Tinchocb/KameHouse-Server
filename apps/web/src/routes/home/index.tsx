@@ -6,10 +6,8 @@ import type {
     Models_LibraryMedia,
 } from "@/api/generated/types"
 import { HeroBanner, type HeroBannerItem, HeroBannerSkeleton } from "@/components/ui/hero-banner"
-import { Swimlane, type SwimlaneItem, SwimlaneSkeleton } from "@/components/ui/swimlane"
-import { ErrorBoundary } from "@/components/shared/app-error-boundary"
+import { type SwimlaneItem, SwimlaneSkeleton } from "@/components/ui/swimlane"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { Sparkles, Zap, Globe2, Tv, Film } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import * as React from "react"
 import {
@@ -18,17 +16,27 @@ import {
     useIntelligenceStore,
 } from "@/hooks/use-home-intelligence"
 import { DynamicBackdrop } from "@/components/shared/dynamic-backdrop"
-import { SmartSwimlane } from "@/components/ui/smart-swimlane"
-import { BentoRecentlyAdded, type BentoItem } from "@/components/ui/bento-recently-added"
+import type { BentoItem } from "@/components/ui/bento-recently-added"
 import { useGSAP } from "@gsap/react"
 import gsap from "gsap"
 
 import { getTitle, getBackdrop } from "./home.helpers"
 import { 
     mapEpisodeToSwimlaneItem, 
-    mapEpisodeToHeroItem 
+    mapEpisodeToHeroItem,
+    mapLibraryEntryToSwimlaneItem
 } from "./home.mappers"
-import { ErrorBanner, EmptyState, SectionLabel } from "./home.components"
+import { ErrorBanner, EmptyState } from "./home.components"
+import {
+    HomeIntelligentSections,
+    HomeContinueWatchingSection,
+    HomeSeriesSection,
+    HomeMoviesSection,
+    HomeRecentBentoSection,
+    HomeFullLibrarySection,
+    HomeVibeFilteredSection
+} from "./-home.sections"
+import { VibePicker } from "./vibe-picker"
 
 export const Route = createFileRoute("/home/")({
     component: HomePage,
@@ -43,6 +51,7 @@ function HomePage() {
     const { data: intelligenceData, isLoading: isIntelligenceLoading } = useHomeIntelligence()
     const { data: cwData, isLoading: isCwLoading } = useContinueWatching()
     const { setBackdropUrl } = useIntelligenceStore()
+    const [selectedVibe, setSelectedVibe] = React.useState<string | null>(null)
 
     const isLoading = isCollectionLoading || isIntelligenceLoading || isCwLoading
     const isRefetching = false
@@ -92,6 +101,13 @@ function HomePage() {
                 : undefined),
         [entriesByMediaId],
     )
+
+    const filteredVibeItems = React.useMemo(() => {
+        if (!selectedVibe) return []
+        return allEntries
+            .filter(entry => entry.vibes?.includes(selectedVibe))
+            .map(entry => mapLibraryEntryToSwimlaneItem(entry, handleNavigate))
+    }, [selectedVibe, allEntries, handleNavigate])
 
     // ── Continue Watching ─────────────────────────────────────────────────────
     const continueWatchingItems = React.useMemo(
@@ -187,10 +203,34 @@ function HomePage() {
                     year: m.year,
                     rating: m.score ? (m.score > 10 ? m.score / 10 : m.score) : undefined,
                     description: m.description,
+                    vibes: entry.vibes,
                     onClick: () => handleNavigate(entry.mediaId),
                 }
             })
             .filter((x): x is BentoItem => x !== null)
+    }, [allEntries, handleNavigate])
+
+    // ── Full Library Items (Fallback) ───────────────────────────────────────────────────
+    const fullLibraryItems = React.useMemo((): SwimlaneItem[] => {
+        return allEntries
+            .slice(0, 40)
+            .filter((e) => e.media)
+            .map((entry): SwimlaneItem => {
+                const m = entry.media!
+                return {
+                    id: `coll-${entry.mediaId}`,
+                    title: getTitle(m),
+                    image: m.posterImage || getBackdrop(m),
+                    subtitle: m.year ? String(m.year) : m.format,
+                    badge: m.format,
+                    availabilityType: entry.availabilityType as SwimlaneItem["availabilityType"],
+                    backdropUrl: getBackdrop(m) || undefined,
+                    description: m.description,
+                    year: m.year,
+                    rating: m.score ? (m.score > 10 ? m.score / 10 : m.score) : undefined,
+                    onClick: () => handleNavigate(entry.mediaId),
+                }
+            })
     }, [allEntries, handleNavigate])
 
     // ── Hero: Prioridad 1 = Continuar, Prioridad 2 = Sugerencia aleatoria ─────────────
@@ -240,11 +280,11 @@ function HomePage() {
         const sections = gsap.utils.toArray(".home-section")
         if (sections.length > 0) {
             gsap.from(sections, {
-                y: 40,
+                y: 60,
                 opacity: 0,
-                duration: 0.8,
-                stagger: 0.15,
-                ease: "power3.out",
+                duration: 1.2,
+                stagger: 0.2,
+                ease: "power4.out",
                 clearProps: "all"
             })
         }
@@ -257,7 +297,7 @@ function HomePage() {
     }
 
     return (
-        <div ref={containerRef} className="min-h-screen bg-background flex flex-col gap-8 w-full overflow-x-hidden pb-20">
+        <div ref={containerRef} className="min-h-[100dvh] bg-zinc-950 flex flex-col gap-20 w-full overflow-x-hidden pb-32">
             <DynamicBackdrop />
 
             {/* ── Hero ── */}
@@ -273,7 +313,24 @@ function HomePage() {
             )}
 
             {/* ── Content Sections ── */}
-            <div className="relative z-10 flex flex-col gap-12">
+            <div className="relative z-10 flex flex-col gap-20">
+                <VibePicker 
+                    selectedVibe={selectedVibe}
+                    onSelect={(vibe) => setSelectedVibe(vibe === selectedVibe ? null : vibe)} 
+                    className="-mt-10" 
+                />
+
+                <AnimatePresence mode="wait">
+                    {selectedVibe && (
+                        <HomeVibeFilteredSection 
+                            key={`vibe-${selectedVibe}`}
+                            vibe={selectedVibe} 
+                            items={filteredVibeItems} 
+                            onHover={setBackdropUrl}
+                        />
+                    )}
+                </AnimatePresence>
+
                 <AnimatePresence mode="wait">
                     {isLoading || isRefetching ? (
                         <motion.div 
@@ -289,111 +346,28 @@ function HomePage() {
                             <SwimlaneSkeleton title="Películas" aspect="poster" />
                         </motion.div>
                     ) : (
-                        <div key="content" className="space-y-8">
-                            {/* 0. Secciones inteligentes */}
-                            {intelligenceData?.swimlanes?.length ? (
-                                <div className="space-y-8">
-                                    {intelligenceData.swimlanes.map((lane) => (
-                                        <ErrorBoundary
-                                            key={lane.id}
-                                            className="px-6 md:px-10 lg:px-16 xl:px-24 2xl:px-32"
-                                        >
-                                            <div className="home-section">
-                                                <SmartSwimlane
-                                                    lane={lane}
-                                                    onNavigate={(mediaId) => handleNavigate(Number(mediaId))}
-                                                />
-                                            </div>
-                                        </ErrorBoundary>
-                                    ))}
-                                </div>
-                            ) : null}
-
-                            {/* 1. Seguir Viendo */}
-                            <ErrorBoundary className="px-6 md:px-10 lg:px-16 xl:px-24 2xl:px-32">
-                                {continueWatchingItems.length > 0 && (
-                                    <div className="home-section space-y-4">
-                                        <SectionLabel icon={Zap} label="Seguir Viendo" />
-                                        <Swimlane
-                                            title="Continuar Viendo"
-                                            items={continueWatchingItems}
-                                            defaultAspect="wide"
-                                            onHover={setBackdropUrl}
-                                        />
-                                    </div>
-                                )}
-                            </ErrorBoundary>
-
-                            {/* 2. Series de Dragon Ball */}
-                            <ErrorBoundary className="px-6 md:px-10 lg:px-16 xl:px-24 2xl:px-32">
-                                {dbSeriesItems.length > 0 && (
-                                    <div className="home-section space-y-4">
-                                        <SectionLabel icon={Tv} label="Series" />
-                                        <Swimlane
-                                            title="Series"
-                                            items={dbSeriesItems}
-                                            defaultAspect="poster"
-                                            onHover={setBackdropUrl}
-                                        />
-                                    </div>
-                                )}
-                            </ErrorBoundary>
-
-                            {/* 3. Películas y Especiales */}
-                            <ErrorBoundary className="px-6 md:px-10 lg:px-16 xl:px-24 2xl:px-32">
-                                {moviesAndSpecialsItems.length > 0 && (
-                                    <div className="home-section space-y-4">
-                                        <SectionLabel icon={Film} label="Películas y Especiales" />
-                                        <Swimlane
-                                            title="Películas y OVAs"
-                                            items={moviesAndSpecialsItems}
-                                            defaultAspect="poster"
-                                            onHover={setBackdropUrl}
-                                        />
-                                    </div>
-                                )}
-                            </ErrorBoundary>
-
-                            {/* 4. Añadido Recientemente (Bento Grid) */}
-                            <ErrorBoundary className="px-0">
-                                {recentBentoItems.length > 0 && (
-                                    <div className="home-section space-y-8">
-                                        <SectionLabel icon={Sparkles} label="Añadido Recientemente" />
-                                        <BentoRecentlyAdded 
-                                            items={recentBentoItems} 
-                                        />
-                                    </div>
-                                )}
-                            </ErrorBoundary>
-
-                            {/* Colección completa (fallback) */}
-                            <ErrorBoundary className="px-6 md:px-10 lg:px-16 xl:px-24 2xl:px-32">
-                                {!isCollectionLoading && allEntries.length > 0 && (
-                                    <div className="home-section space-y-4 opacity-80 hover:opacity-100 transition-opacity pb-20">
-                                        <SectionLabel icon={Globe2} label="Biblioteca Completa" />
-                                        <Swimlane
-                                            title="Tu colección"
-                                            items={allEntries.slice(0, 40).filter(e => e.media).map((entry) => {
-                                                const m = entry.media!
-                                                return {
-                                                    id: `coll-${entry.mediaId}`,
-                                                    title: getTitle(m),
-                                                    image: m.posterImage || getBackdrop(m),
-                                                    subtitle: m.year ? String(m.year) : m.format,
-                                                    badge: m.format,
-                                                    availabilityType: entry.availabilityType as SwimlaneItem["availabilityType"],
-                                                    backdropUrl: getBackdrop(m) || undefined,
-                                                    description: m.description,
-                                                    year: m.year,
-                                                    rating: m.score ? (m.score > 10 ? m.score / 10 : m.score) : undefined,
-                                                    onClick: () => handleNavigate(entry.mediaId),
-                                                }
-                                            })}
-                                            defaultAspect="poster"
-                                        />
-                                    </div>
-                                )}
-                            </ErrorBoundary>
+                        <div key="content" className="space-y-24">
+                            <HomeContinueWatchingSection
+                                items={continueWatchingItems}
+                                onHover={setBackdropUrl}
+                            />
+                            <HomeIntelligentSections
+                                swimlanes={intelligenceData?.swimlanes}
+                                onNavigate={handleNavigate}
+                            />
+                            <HomeSeriesSection
+                                items={dbSeriesItems}
+                                onHover={setBackdropUrl}
+                            />
+                            <HomeRecentBentoSection items={recentBentoItems} />
+                            <HomeMoviesSection
+                                items={moviesAndSpecialsItems}
+                                onHover={setBackdropUrl}
+                            />
+                            <HomeFullLibrarySection
+                                items={fullLibraryItems}
+                                isLoading={isCollectionLoading}
+                            />
                         </div>
                     )}
                 </AnimatePresence>

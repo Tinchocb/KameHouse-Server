@@ -1,5 +1,5 @@
 import { useState, memo } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { Play } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 import { DeferredImage } from "@/components/shared/deferred-image"
@@ -29,10 +29,6 @@ interface VhsCollectionProps {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const COLLAPSED_WIDTH = 200
-const EXPANDED_WIDTH = 1200
-const GAP = 4
-
 // Helper to generate a consistent color from string
 const stringToColor = (str: string) => {
     let hash = 0
@@ -54,15 +50,6 @@ const getSeriesColor = (title: string) => {
     return stringToColor(title)
 }
 
-const stringToStripeColor = (str: string) => {
-    let hash = 0
-    for (let i = 0; i < str.length; i++) {
-        hash = str.charCodeAt(i) + ((hash << 5) - hash)
-    }
-    const h = Math.abs((hash + 40) % 360)
-    return `hsl(${h}, 70%, 60%)`
-}
-
 const VhsTapeCard = memo(({ 
     item, 
     isSelected, 
@@ -75,9 +62,7 @@ const VhsTapeCard = memo(({
     onPlayClick: () => void
 }) => {
     const baseColor = item.color || getSeriesColor(item.title)
-    const stripeColor = item.color || stringToStripeColor(item.title)
     const progress = item.episodesCount ? (item.watchedCount || 0) / item.episodesCount * 100 : 0
-    const progTxt = item.status === "Completado" ? "Completada" : item.status === "En progreso" ? `Ep ${item.watchedCount} de ${item.episodesCount}` : "Sin comenzar"
 
     return (
         <div 

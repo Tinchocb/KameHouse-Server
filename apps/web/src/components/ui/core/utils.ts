@@ -1,6 +1,6 @@
 import type * as React from "react"
 
-export function mergeRefs<T = any>(
+export function mergeRefs<T>(
     refs: Array<React.MutableRefObject<T> | React.LegacyRef<T> | undefined | null>,
 ): React.RefCallback<T> {
     return (value) => {
@@ -14,5 +14,10 @@ export function mergeRefs<T = any>(
     }
 }
 
-export const isEmpty = (obj: unknown) => [Object, Array].includes(((obj as any) || {}).constructor) && !Object.entries(((obj as any) || {})).length
+export const isEmpty = (obj: unknown): boolean => {
+    if (obj === null || obj === undefined) return true
+    if (Array.isArray(obj)) return obj.length === 0
+    if (typeof obj === 'object') return Object.keys(obj).length === 0
+    return false
+}
 

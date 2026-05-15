@@ -50,8 +50,8 @@ export function MediaStack({ stackCount = 3, className, ...props }: MediaStackPr
                     }}
                 >
                     {/* Retro "marker" label style on the edge/spine */}
-                    <div className="absolute top-2 left-1 bottom-2 w-5 bg-brand-orange/15 rounded-md flex items-center justify-center overflow-hidden border border-brand-orange/20">
-                        <span className="rotate-90 whitespace-nowrap text-[8px] font-mono font-black text-brand-orange tracking-tighter">
+                    <div className="absolute top-2 left-1 bottom-2 w-5 bg-primary/10 rounded-md flex items-center justify-center overflow-hidden border border-primary/20">
+                        <span className="rotate-90 whitespace-nowrap text-[8px] font-mono font-black text-primary tracking-tighter">
                             VOL. {idx + 1}
                         </span>
                     </div>
@@ -71,7 +71,7 @@ export function MediaStack({ stackCount = 3, className, ...props }: MediaStackPr
                 <MediaCard {...props} />
                 
                 <div className="absolute -top-1 -right-1 z-30 flex items-center justify-center">
-                    <div className="bg-brand-orange text-white text-[9px] font-black px-2 py-0.5 rounded-full border border-brand-orange/50 shadow-md shadow-black/20">
+                    <div className="bg-primary text-white text-[9px] font-black px-2 py-0.5 rounded-full border border-white/20 shadow-lg shadow-primary/20">
                         SERIE
                     </div>
                 </div>

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo } from "react"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { cn } from "@/components/ui/core/styling"
 import { useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
@@ -6,6 +6,7 @@ import { HardDrive, Star, ArrowLeft, Calendar, Clock, CheckCircle2, Circle, Chev
 import { VideoPlayer } from "@/components/video/player"
 import type { Mediastream_StreamType } from "@/api/generated/types"
 import { toast } from "sonner"
+import { useAppStore } from "@/lib/store"
 
 import { ProgressBar } from "@/components/ui/progress-bar"
 
@@ -466,6 +467,36 @@ function DetailPage() {
         setIsPlayerOpen(true)
     }
 
+    const marathonModeStore = useAppStore(s => s.marathonMode)
+
+    const handleNextEpisode = () => {
+        if (!saga || currentIdx >= saga.episodes.length - 1) {
+            toast.info("Has terminado la saga.")
+            setIsPlayerOpen(false)
+            return
+        }
+        const nextIdx = currentIdx + 1
+        setCurrentIdx(nextIdx)
+        const nextEp = saga.episodes[nextIdx]
+        const fullEp = libraryEntry?.episodes?.find(e => e.episodeNumber === nextEp.number)
+        if (!fullEp?.localFile?.path) {
+            toast.error("Siguiente episodio no disponible localmente.")
+            setIsPlayerOpen(false)
+            return
+        }
+
+        const isMp4 = fullEp.localFile.path.toLowerCase().endsWith(".mp4")
+        const targetType = isMp4 ? "direct" : "transcode"
+
+        setPlayTarget({
+            path: fullEp.localFile.path,
+            streamType: targetType as Mediastream_StreamType,
+            episodeLabel: nextEp.title,
+            episodeNumber: nextEp.number,
+            seriesId: Number(seriesId)
+        })
+    }
+
     if (!series || !saga || saga.episodes.length === 0) {
         return (
             <div className="min-h-screen flex items-center justify-center text-white bg-background">
@@ -521,7 +552,9 @@ function DetailPage() {
                     mediaId={playTarget.seriesId}
                     episodeNumber={playTarget.episodeNumber}
                     isExternalStream={false}
-                    marathonMode={false}
+                    marathonMode={marathonModeStore}
+                    onNextEpisode={handleNextEpisode}
+                    hasNextEpisode={currentIdx < (saga?.episodes.length ?? 0) - 1}
                     onClose={() => setIsPlayerOpen(false)}
                 />
             )}

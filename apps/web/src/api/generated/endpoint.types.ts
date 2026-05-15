@@ -1758,6 +1758,17 @@ export type GetTorrentstreamBatchHistory_Variables = {
 /**
  * - Filepath: internal/handlers/videocore.go
  * - Filename: videocore.go
+ * - Endpoint: /api/v1/videocore/insights/{episodeId}
+ * @description
+ * Route returns the video insights.
+ */
+export type GetVideoInsights_Variables = {
+    episodeId: number
+}
+
+/**
+ * - Filepath: internal/handlers/videocore.go
+ * - Filename: videocore.go
  * - Endpoint: /api/v1/videocore/insight/character/{malId}
  * @description
  * Route returns the character details.

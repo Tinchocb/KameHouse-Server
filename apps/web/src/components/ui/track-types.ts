@@ -159,6 +159,12 @@ export interface PlayerSettingsMenuProps {
     autoDisableSubtitlesWhenDubbed?: boolean
     onAutoDisableSubtitlesWhenDubbedChange?: (auto: boolean) => void
 
+    ambilightEnabled?: boolean
+    onAmbilightChange?: (enabled: boolean) => void
+
+    marathonMode?: boolean
+    onMarathonModeChange?: (enabled: boolean) => void
+
     open?: boolean
     onOpenChange?: (open: boolean) => void
     className?: string

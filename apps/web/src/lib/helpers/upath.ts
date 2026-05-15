@@ -466,17 +466,7 @@ const _relative = (from: string, to: string): string => {
     // Node.js relative('/a', '/a') -> '', relative('/a/b', '/a') -> '..', relative('/a', '/a/b') -> 'b'
     // The logic above already handles these. If relativeParts is empty, from === to.
 
-    if (relativeParts.length === 0) {
-        // This should only happen if from === to, which is handled at the beginning.
-        // As a fallback, return '.' if they weren't strictly equal but resulted in no relative path (e.g., different trailing slashes resolving the
-        // same)
-        return "." // This is different from Node.js relative which returns '' for identical resolved paths.
-        // Let's stick to the Node.js behavior and rely on from === to check.
-        // If from === to, return ''. Otherwise, relativeParts should not be empty unless one is ancestor of other resolving to empty relative part.
-        // E.g. relative('/a', '/a') -> '', relative('/a/', '/a') -> ''
-        // Let's remove the '.' fallback and trust the resolved paths logic.
-        return "" // Should not be reached if from !== to and relativeParts is empty.
-    }
+
 
 
     return relativeParts.join("/")

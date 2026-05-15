@@ -64,7 +64,7 @@ function EpicChip({ tag }: { tag?: ContentTag }) {
             className={cn(
                 "inline-flex items-center gap-1 border rounded-md px-3 py-0.5",
                 "text-[0.65rem] font-bold uppercase tracking-[0.22em]",
-                "border-brand-orange/30 bg-brand-orange/15 text-brand-orange",
+                "border-primary/30 bg-primary/10 text-primary",
             )}
         >
             {tag === "EPIC" ? <Flame className="h-2.5 w-2.5" /> : <Sparkles className="h-2.5 w-2.5" />}
@@ -85,7 +85,7 @@ function ArcChip({ arcName }: { arcName?: string }) {
 function RatingRing({ rating }: { rating: number }) {
     if (rating < 7) return null
     return (
-        <div className="flex items-center gap-1 text-[0.7rem] font-bold text-brand-orange">
+        <div className="flex items-center gap-1 text-[0.7rem] font-bold text-primary">
             <Star className="h-3 w-3 fill-current" />
             {rating.toFixed(1)}
         </div>
@@ -161,8 +161,8 @@ export function HeroBanner({
                     <div
                         key={item.id}
                         className={cn(
-                            "absolute inset-0 transition-opacity duration-1000 ease-in-out",
-                            index === activeIndex ? "opacity-100 z-10" : "opacity-0 z-0",
+                            "absolute inset-0 transition-all duration-1000 ease-in-out",
+                            index === activeIndex ? "opacity-100 z-10 scale-100" : "opacity-0 z-0 scale-110",
                         )}
                     >
                         {item.trailerUrl && index === activeIndex ? (
@@ -189,13 +189,42 @@ export function HeroBanner({
                 ))}
             </div>
 
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.03),transparent_45%)] pointer-events-none" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.02),transparent_60%)] pointer-events-none" />
             
-            <div className="absolute inset-0 bg-gradient-to-r from-background via-background/40 to-transparent pointer-events-none" />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-90 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/20 to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent opacity-90 pointer-events-none" />
             
             {/* The Perfect Fade to Black: seamless transition to the body bg */}
-            <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-background via-background/90 to-transparent pointer-events-none" />
+            <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-zinc-950 via-zinc-950/90 to-transparent pointer-events-none" />
+
+            {/* ── Progress Indicators ───────────────────────────────────────── */}
+            <div className="absolute bottom-12 right-6 md:right-10 lg:right-16 z-50 flex gap-3 items-center">
+                {items.map((_, idx) => (
+                    <button
+                        key={idx}
+                        onClick={() => {
+                            setActiveIndex(idx)
+                            setIsAutoPlaying(false)
+                        }}
+                        className={cn(
+                            "group relative h-1 rounded-full transition-all duration-700 overflow-hidden",
+                            activeIndex === idx ? "w-12 bg-white/10" : "w-3 bg-white/20 hover:bg-white/40"
+                        )}
+                    >
+                        {activeIndex === idx && isAutoPlaying && (
+                            <motion.div 
+                                initial={{ width: 0 }}
+                                animate={{ width: "100%" }}
+                                transition={{ duration: autoRotateMs / 1000, ease: "linear" }}
+                                className="absolute inset-0 bg-primary"
+                            />
+                        )}
+                        {activeIndex === idx && !isAutoPlaying && (
+                            <div className="absolute inset-0 bg-primary" />
+                        )}
+                    </button>
+                ))}
+            </div>
 
             {/* ── Content ───────────────────────────────────────────────── */}
             <div className="relative z-10 mx-auto flex w-full max-w-[1680px] flex-col justify-end gap-6 px-6 pb-16 pt-36 md:px-10 lg:px-14 lg:pb-20 xl:flex-row xl:items-end xl:justify-between">
@@ -232,10 +261,10 @@ export function HeroBanner({
                             <img
                                 src={activeItem.logoUrl}
                                 alt={activeItem.title}
-                                className="max-h-32 md:max-h-40 max-w-[min(36rem,85vw)] object-contain object-left group-hover/title:scale-[1.02] transition-transform duration-500 drop-shadow-[0_0_30px_rgba(0,0,0,0.5)]"
+                                className="max-h-32 md:max-h-40 max-w-[min(36rem,85vw)] object-contain object-left group-hover/title:scale-[1.02] transition-transform duration-500"
                             />
                         ) : (
-                            <h1 className="max-w-4xl font-bebas font-normal leading-[0.85] tracking-tight text-white text-[5rem] md:text-[7rem] xl:text-[9rem] uppercase drop-shadow-[0_0_30px_rgba(0,0,0,0.5)] group-hover/title:text-brand-orange transition-colors">
+                            <h1 className="max-w-4xl font-bebas font-normal leading-[0.8] tracking-tight text-white text-[5rem] md:text-[8rem] xl:text-[11rem] uppercase group-hover/title:text-primary transition-all duration-500">
                                 {activeItem.title}
                             </h1>
                         )}
@@ -246,34 +275,27 @@ export function HeroBanner({
                     </p>
 
                     {/* CTAs */}
-                    <div className="mt-10 flex flex-wrap items-center gap-5">
+                    <div className="mt-12 flex flex-wrap items-center gap-6">
                         <motion.button
-                            whileHover={{ 
-                                scale: 1.05, 
-                                backgroundColor: "var(--brand-orange-hover)",
-                                boxShadow: "0 0 40px rgba(var(--primary-rgb), 0.5)"
-                            }}
+                            whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => activeItem.onPlay()}
-                            className="group/btn relative flex items-center justify-center gap-4 bg-brand-orange text-white h-14 md:h-16 px-10 rounded-2xl font-black text-base uppercase tracking-[0.25em] transition-all shadow-2xl shadow-primary/30 overflow-hidden border border-white/20"
+                            className="group/btn relative flex items-center justify-center gap-4 bg-primary text-white h-16 md:h-20 px-12 rounded-[28px] font-bebas text-2xl uppercase tracking-[0.12em] transition-all shadow-[0_20px_40px_-12px_rgba(var(--primary-rgb),0.5)] overflow-hidden border border-white/10"
                         >
                             <Play className="w-6 h-6 fill-current relative z-10 transition-transform group-hover/btn:scale-110" />
-                            <span className="relative z-10">Ver ahora</span>
-                            <div className="absolute inset-0 bg-gradient-to-tr from-white/30 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity" />
+                            <span className="relative z-10">REPRODUCIR</span>
+                            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-500" />
                         </motion.button>
 
                         <motion.button
-                            whileHover={{ 
-                                scale: 1.05, 
-                                backgroundColor: "rgba(255,255,255,0.12)",
-                                borderColor: "rgba(255,255,255,0.4)",
-                            }}
+                            whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => activeItem.onMoreInfo()}
-                            className="flex items-center justify-center gap-4 bg-white/5 backdrop-blur-3xl text-white h-14 md:h-16 px-10 rounded-2xl font-black text-base uppercase tracking-[0.25em] transition-all border border-white/20 hover:shadow-[0_0_40px_rgba(255,255,255,0.1)]"
+                            className="group/btn relative flex items-center justify-center gap-4 bg-zinc-950/40 backdrop-blur-3xl text-zinc-300 h-16 md:h-20 px-12 rounded-[28px] font-bebas text-2xl uppercase tracking-[0.12em] transition-all border border-white/10 hover:border-white/20 hover:text-white"
                         >
-                            <Info className="w-6 h-6" />
-                            Detalles
+                            <Info className="w-6 h-6 relative z-10" />
+                            <span className="relative z-10">DETALLES</span>
+                            <div className="absolute inset-0 bg-white/5 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
                         </motion.button>
                     </div>
                 </div>
@@ -283,7 +305,7 @@ export function HeroBanner({
                     className="hidden w-full max-w-sm xl:block cursor-pointer group/poster"
                     onClick={() => activeItem.onPlay()}
                 >
-                    <div className="border border-white/10 bg-white/5 p-5 rounded-3xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-3xl ring-1 ring-white/10 transition-all group-hover/poster:border-brand-orange/40 group-hover/poster:bg-white/10">
+                    <div className="border border-white/5 bg-zinc-900/20 p-6 rounded-[40px] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)] backdrop-blur-3xl ring-1 ring-white/10 transition-all duration-700 group-hover/poster:border-primary/40 group-hover/poster:bg-zinc-900/40">
                         {activeItem.posterUrl ? (
                             <div className="relative">
                                 <img

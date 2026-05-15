@@ -160,7 +160,6 @@ export type VerticalMenuProps = React.ComponentPropsWithRef<"div"> &
 export const VerticalMenu = React.forwardRef<HTMLDivElement, VerticalMenuProps>((props, ref) => {
 
     const {
-        children: _children,
         size = "md",
         collapsed: _collapsed1,
         onAnyItemClick,

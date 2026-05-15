@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useState, useMemo, memo } from "react"
-import { Clapperboard, Search, SlidersHorizontal } from "lucide-react"
-import { MediaCard } from "@/components/ui/media-card"
+import { Clapperboard, SlidersHorizontal } from "lucide-react"
 import { PageHeader } from "@/components/ui/page-header"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { NativeSelect } from "@/components/ui/native-select"
@@ -48,21 +47,6 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
     { value: "alpha", label: "Alfabético" },
 ]
 
-// Hardcoded watch order for Dragon Ball (example)
-const WATCH_ORDER_MAP: Record<number, string> = {
-    // DB Movies
-    227: "Ver después del ep. 153", // Curse of the Blood Rubies
-    // DBZ Movies
-    845: "Ver después del ep. 35", // Dead Zone
-    894: "Ver después del ep. 54", // World's Strongest
-    895: "Ver después del ep. 81", // Tree of Might
-    896: "Ver después del ep. 117", // Lord Slug
-    984: "Ver después del ep. 124", // Cooler's Revenge
-    1151: "Ver después del ep. 147", // Return of Cooler
-    1163: "Ver después del ep. 175", // Super Android 13
-    1164: "Ver después del ep. 191", // Broly Second Coming
-    // Add more as needed
-}
 
 function getEntryEra(entry: Anime_LibraryCollectionEntry): EraTab {
     const media = entry.media
@@ -112,10 +96,8 @@ function getEntryEra(entry: Anime_LibraryCollectionEntry): EraTab {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 function MoviesPage() {
-    const [search, setSearch] = useState("")
     const [activeEra, setActiveEra] = useState<EraTab>("all")
     const [sortBy, setSortBy] = useState<SortOption>("year_asc")
-    const [hoveredMovieId, setHoveredMovieId] = useState<number | null>(null)
 
     const navigate = useNavigate()
     const { data: collection, isLoading } = useGetLibraryCollection()
@@ -127,7 +109,7 @@ function MoviesPage() {
 
         const rawMovies = allEntries.filter((entry) => {
             const format = entry.media?.format
-            const type = (entry.media as any)?.type as string | undefined
+            const type = entry.media?.type
             return (
                 format === "MOVIE" || format === "OVA" || format === "SPECIAL" ||
                 type?.toUpperCase() === "MOVIE" ||
@@ -149,20 +131,8 @@ function MoviesPage() {
             result = result.filter((entry) => getEntryEra(entry) === activeEra)
         }
 
-        if (search) {
-            const searchLower = search.toLowerCase()
-            result = result.filter((entry) => {
-                const media = entry.media
-                const title = media 
-                    ? (media.titleRomaji || media.titleEnglish || media.titleOriginal || "")
-                    : `Desconocido (${entry.mediaId})`
-                
-                return title.toLowerCase().includes(searchLower)
-            })
-        }
-
         return result
-    }, [allMovies, activeEra, search])
+    }, [allMovies, activeEra])
 
     const sortedMovies = useMemo(() => {
         const movies = [...filteredMovies]
@@ -195,25 +165,6 @@ function MoviesPage() {
 
     return (
         <div className="flex-1 w-full min-h-screen bg-background text-white overflow-y-auto pb-32 font-sans selection:bg-brand-orange/30">
-            {/* Reactive Backdrop */}
-            <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-                {sortedMovies.map((entry) => (
-                    <div
-                        key={entry.mediaId}
-                        className={cn(
-                            "absolute inset-0 transition-opacity duration-1000 ease-in-out bg-cover bg-center",
-                            hoveredMovieId === entry.mediaId ? "opacity-20 scale-105" : "opacity-0 scale-100"
-                        )}
-                        style={{ 
-                            backgroundImage: `url(${getHighResImage(entry.media?.bannerImage || entry.media?.posterImage)})`,
-                            filter: "blur(40px) saturate(1.5)"
-                        }}
-                    />
-                ))}
-                <div className="absolute inset-0 bg-background/60 backdrop-blur-[20px]" />
-                <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/40" />
-            </div>
-
             <div className="relative z-10">
             <PageHeader
                 title={
@@ -263,17 +214,7 @@ function MoviesPage() {
             </Tabs>
 
             {/* Controls Toolbar (Search and Sort Option) */}
-            <div className="max-w-[1600px] mx-auto px-6 md:px-14 py-8 flex flex-wrap gap-4 items-center justify-between">
-                <div className="relative w-full sm:w-80 group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-brand-orange transition-colors duration-300 text-sm" />
-                    <input
-                        className="w-full pl-12 pr-4 py-2.5 bg-[#0a0e1a]/60 backdrop-blur-md border border-white/5 focus:border-brand-orange/50 rounded-xl text-sm outline-none transition-all duration-300 placeholder:text-zinc-600 uppercase tracking-widest focus:shadow-[0_0_20px_rgba(255,110,58,0.15)] focus:bg-[#0a0e1a]/80"
-                        type="text"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="BUSCAR EN FILMOTECA..."
-                    />
-                </div>
+            <div className="max-w-[1600px] mx-auto px-6 md:px-14 py-8 flex flex-wrap gap-4 items-center justify-end">
 
                 <div className="flex items-center gap-3 w-full sm:w-auto">
                     <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/5 rounded-full backdrop-blur-md text-[9px] font-black uppercase tracking-widest text-zinc-400">
@@ -447,15 +388,3 @@ const MoviePosterCard = memo(function MoviePosterCard({
 MoviePosterCard.displayName = "MoviePosterCard"
 
 // ─── Skeleton ──────────────────────────────────────────────────────────────
-
-const MovieCardSkeleton = memo(function MovieCardSkeleton() {
-    return (
-        <div className="flex flex-col gap-3 animate-pulse">
-            <div className="aspect-[2/3] w-full bg-zinc-900/60 rounded-xl border border-white/5" />
-            <div className="space-y-2">
-                <div className="h-4 w-5/6 bg-zinc-900/60 rounded" />
-                <div className="h-3 w-1/2 bg-zinc-900/60 rounded" />
-            </div>
-        </div>
-    )
-})

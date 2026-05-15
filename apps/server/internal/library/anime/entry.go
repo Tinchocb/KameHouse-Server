@@ -32,6 +32,8 @@ type (
 		AnidbId             int                     `json:"anidbId"`
 		CurrentEpisodeCount int                     `json:"currentEpisodeCount"`
 		Seasons             []*models.LibrarySeason `json:"seasons,omitempty"`
+		Vibes               []string                `json:"vibes,omitempty"`
+		IntelligenceSvc     *IntelligenceService    `json:"-"`
 	}
 
 	// EntryListData holds the details of the platform entry (TMDb/MAL/etc).
@@ -55,6 +57,7 @@ type (
 		MetadataProviderRef *util.Ref[metadata_provider.Provider]
 		IsSimulated         bool // If the account is simulated
 		LibraryEpisodes     map[string]*models.LibraryEpisode
+		IntelligenceSvc     *IntelligenceService
 	}
 )
 
@@ -75,6 +78,7 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 	// Create new Entry
 	entry := new(Entry)
 	entry.MediaId = opts.MediaId
+	entry.IntelligenceSvc = opts.IntelligenceSvc
 
 
 
@@ -135,6 +139,9 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 	}
 
 	entry.Media = fetchedMedia
+	if opts.IntelligenceSvc != nil {
+		entry.Vibes = opts.IntelligenceSvc.DeriveSeriesVibes(fetchedMedia)
+	}
 
 	// Fetch the seasons for this media, if any
 	var dbSeasons []models.LibrarySeason
@@ -216,6 +223,7 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 			PlatformRef:         opts.PlatformRef,
 			MetadataProviderRef: opts.MetadataProviderRef,
 			LibraryEpisodes:     opts.LibraryEpisodes,
+			IntelligenceSvc:     opts.IntelligenceSvc,
 		})
 		if err != nil {
 			return nil, err
@@ -378,6 +386,7 @@ func (e *Entry) hydrateEntryEpisodeData(
 				IsDownloaded:         isDownloaded,
 				MetadataProvider:     metadataProviderRef.Get(),
 				LibraryEpisode:       libEp,
+				IntelligenceSvc:      e.IntelligenceSvc,
 			})
 
 			if len(lfs) > 1 {

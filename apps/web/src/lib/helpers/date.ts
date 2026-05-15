@@ -5,7 +5,7 @@ export function formatDistanceToNowSafe(value: string, options: FormatDistanceTo
     try {
         return formatDistanceToNow(value, options)
     }
-    catch (_e) {
+    catch {
         return "N/A"
     }
 }
@@ -14,7 +14,7 @@ export function newDateSafe(value: string) {
     try {
         return new Date(value)
     }
-    catch (_e) {
+    catch {
         return new Date()
     }
 }
@@ -23,7 +23,7 @@ export function formatSafe(value: Date, formatString: string, options?: FormatOp
     try {
         return format(value, formatString, options)
     }
-    catch (_e) {
+    catch {
         const v = new Date()
         return format(v, formatString, options)
     }
@@ -38,7 +38,7 @@ export function normalizeDate(value: string) {
 
         return new Date(`${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}T00:00:00`)
     }
-    catch (_e) {
+    catch {
         return new Date(value)
     }
 }

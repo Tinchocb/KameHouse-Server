@@ -51,23 +51,22 @@ const SwimlaneInner = React.memo(function SwimlaneInner({
 
     return (
         <section className={cn("relative py-6", className)}>
-            <div className="mb-10 flex items-center justify-between px-6 md:px-10 lg:px-14">
-                <div className="flex items-center gap-6">
-                    <span className="h-12 w-2 bg-brand-orange rounded-full shadow-[0_0_20px_rgba(255,110,58,0.6)]" />
-                    <h2>
+            {title && (
+                <div className="mb-8 flex items-center gap-4 px-6 md:px-10 lg:px-16 xl:px-24 2xl:px-32">
+                    <h2 className="text-3xl font-bebas font-normal uppercase tracking-[0.15em] text-white/90">
                         {title}
                     </h2>
                 </div>
-            </div>
+            )}
 
             <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 z-30 hidden w-32 bg-gradient-to-r from-background to-transparent md:block" />
-                <div className="pointer-events-none absolute inset-y-0 right-0 z-30 hidden w-32 bg-gradient-to-l from-background to-transparent md:block" />
+                <div className="pointer-events-none absolute inset-y-0 left-0 z-30 hidden w-48 bg-gradient-to-r from-zinc-950 via-zinc-950/20 to-transparent md:block" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 z-30 hidden w-48 bg-gradient-to-l from-zinc-950 via-zinc-950/20 to-transparent md:block" />
 
                 <HorizontalDraggableScroll
                     className="px-0"
-                    containerClass="gap-6 px-6 pb-6 md:px-10 lg:px-14 snap-x snap-mandatory"
-                    chevronOverlayClass="from-background/95 to-transparent"
+                    containerClass="gap-6 px-6 pb-6 md:px-10 lg:px-16 xl:px-20 2xl:px-24"
+                    chevronOverlayClass="from-zinc-950/95 to-transparent"
                     scrollAmount={420}
                     safeDisplacement={18}
                     applyRubberBandEffect
@@ -163,7 +162,7 @@ export function SwimlaneSkeleton({
             <div className="mb-6 flex items-center gap-4 px-6 md:px-10 lg:px-14">
                 <span className="h-8 w-1.5 bg-brand-orange/40 rounded-full" />
                 {title ? (
-                    <h2 className="text-3xl font-bebas font-normal uppercase tracking-widest text-zinc-200">
+                    <h2 className="text-3xl font-bebas font-normal uppercase tracking-[0.15em] text-zinc-600">
                         {title}
                     </h2>
                 ) : (

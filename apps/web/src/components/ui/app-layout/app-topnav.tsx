@@ -10,30 +10,27 @@ interface TopNavProps {
 
 export const AppTopNav = ({ title }: TopNavProps) => {
     const { setSidebarOpen } = useAppStore()
-    const location = useLocation()
+    const isFullscreen = useAppStore(state => state.isFullscreen)
+
+    if (isFullscreen) return null
 
     return (
-        <header className="fixed top-0 left-0 right-0 z-[40] bg-black border-b border-zinc-800">
-            <div className="flex items-center justify-between h-16 px-4 md:px-8">
-                {/* Left side: Mobile Toggle + Context Title */}
-                <div className="flex items-center gap-4">
+        <header className="fixed top-0 left-0 right-0 z-[40] bg-zinc-950/60 backdrop-blur-2xl border-b border-white/[0.03]">
+            <div className="flex items-center justify-between h-20 px-6 md:px-10">
+                <div className="flex items-center gap-6">
                     <button 
                         onClick={() => setSidebarOpen(true)}
-                        className="md:hidden p-2 text-zinc-400 hover:text-white transition-colors"
+                        className="md:hidden p-3 rounded-xl bg-white/5 text-white/50 hover:text-white transition-all active:scale-90"
                         aria-label="Abrir menú"
                     >
                         <FaBars className="w-5 h-5" />
                     </button>
 
                     {title && (
-                        <h1 className="text-xl font-bebas tracking-wider text-white uppercase hidden md:block">
+                        <h1 className="text-2xl font-bebas tracking-[0.1em] text-white uppercase hidden md:block">
                             {title}
                         </h1>
                     )}
-                </div>
-
-                {/* Right side: Empty (Search and Profile removed as requested) */}
-                <div className="flex items-center gap-4">
                 </div>
             </div>
         </header>
@@ -41,16 +38,36 @@ export const AppTopNav = ({ title }: TopNavProps) => {
 }
 
 export const AppBottomNav = () => {
+    const isFullscreen = useAppStore(state => state.isFullscreen)
+
+    if (isFullscreen) return null
+
     return (
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-black border-t border-zinc-800 z-[40] flex items-center justify-around px-6">
-            <Link to="/home" className="text-zinc-500 hover:text-white transition-colors">
-                <span className="text-[10px] font-black uppercase tracking-widest">Inicio</span>
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-20 bg-zinc-950/80 backdrop-blur-3xl border-t border-white/[0.05] z-[40] flex items-center justify-around px-8 safe-area-pb">
+            <Link 
+                to="/home" 
+                activeProps={{ className: "text-brand-orange scale-110" }}
+                inactiveProps={{ className: "text-zinc-600" }}
+                className="flex flex-col items-center gap-1.5 transition-all duration-300"
+            >
+                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Inicio</span>
+                <div className="w-1 h-1 rounded-full bg-current opacity-0 group-[.active]:opacity-100 transition-opacity" />
             </Link>
-            <Link to="/series" className="text-zinc-500 hover:text-white transition-colors">
-                <span className="text-[10px] font-black uppercase tracking-widest">Series</span>
+            <Link 
+                to="/series" 
+                activeProps={{ className: "text-brand-orange scale-110" }}
+                inactiveProps={{ className: "text-zinc-600" }}
+                className="flex flex-col items-center gap-1.5 transition-all duration-300"
+            >
+                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Series</span>
             </Link>
-            <Link to="/movies" className="text-zinc-500 hover:text-white transition-colors">
-                <span className="text-[10px] font-black uppercase tracking-widest">Películas</span>
+            <Link 
+                to="/movies" 
+                activeProps={{ className: "text-brand-orange scale-110" }}
+                inactiveProps={{ className: "text-zinc-600" }}
+                className="flex flex-col items-center gap-1.5 transition-all duration-300"
+            >
+                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Películas</span>
             </Link>
         </nav>
     )

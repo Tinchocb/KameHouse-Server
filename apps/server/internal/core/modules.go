@@ -10,6 +10,7 @@ import (
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
+	"kamehouse/internal/library/anime"
 	"kamehouse/internal/library/autoscanner"
 	"kamehouse/internal/library/fillermanager"
 	"kamehouse/internal/library_explorer"
@@ -84,9 +85,14 @@ a.AddCleanupFunction(func() {
 	// |   Anime Library     |
 	// +---------------------+
 	a.LibraryExplorer = library_explorer.NewLibraryExplorer(library_explorer.NewLibraryExplorerOptions{
-		Logger:      a.Logger,
-		Database:    a.Database,
+		Logger:   a.Logger,
+		Database: a.Database,
 	})
+
+	// +---------------------+
+	// |    Intelligence     |
+	// +---------------------+
+	a.IntelligenceService = anime.NewIntelligenceService(a.Database, a.FillerManager, a.Logger)
 
 }
 

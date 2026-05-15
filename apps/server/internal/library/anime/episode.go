@@ -29,6 +29,7 @@ type (
 		SagaName              string               `json:"sagaName,omitempty"`
 		SagaId                string               `json:"sagaId,omitempty"`
 		BaseAnime             *models.LibraryMedia `json:"baseAnime,omitempty"`
+		Intelligence          *EpisodeIntelligence `json:"intelligence,omitempty"`
 	}
 
 	// EpisodeMetadata represents the metadata of an Episode.
@@ -59,8 +60,8 @@ type (
 		// When this is -1, it means that a re-mapping of AniDB Episode is needed
 		ProgressOffset   int
 		IsDownloaded     bool
-		MetadataProvider metadata_provider.Provider // optional
 		LibraryEpisode   *models.LibraryEpisode     // optional
+		IntelligenceSvc  *IntelligenceService       // optional
 	}
 
 	// NewSimpleEpisodeOptions hold data used to create a new Episode.
@@ -71,6 +72,7 @@ type (
 		IsDownloaded    bool
 		MetadataWrapper metadata_provider.AnimeMetadataWrapper
 		LibraryEpisode  *models.LibraryEpisode
+		IntelligenceSvc *IntelligenceService
 	}
 )
 
@@ -286,6 +288,11 @@ func NewEpisode(opts *NewEpisodeOptions) *Episode {
 		return entryEp
 	}
 
+	// Compute Intelligence
+	if opts.IntelligenceSvc != nil {
+		entryEp.Intelligence = opts.IntelligenceSvc.computeIntelligence(int(opts.Media.ID), entryEp.EpisodeNumber, entryEp.EpisodeMetadata)
+	}
+
 	return entryEp
 }
 
@@ -432,5 +439,11 @@ func NewSimpleEpisode(opts *NewSimpleEpisodeOptions) *Episode {
 	}
 
 	entryEp.MetadataIssue = "no_anidb_data"
+
+	// Compute Intelligence
+	if opts.IntelligenceSvc != nil {
+		entryEp.Intelligence = opts.IntelligenceSvc.computeIntelligence(int(opts.Media.ID), entryEp.EpisodeNumber, entryEp.EpisodeMetadata)
+	}
+
 	return entryEp
 }

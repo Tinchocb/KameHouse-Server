@@ -12,7 +12,7 @@ interface EpisodeThumbnailProps {
     title: string
 }
 
-export function EpisodeThumbnail({ url, episodeNumber, title }: EpisodeThumbnailProps) {
+export const EpisodeThumbnail = React.memo(function EpisodeThumbnail({ url, episodeNumber, title }: EpisodeThumbnailProps) {
     const [broken, setBroken] = React.useState(false)
     const showFallback = !url || broken
 
@@ -70,14 +70,14 @@ export function EpisodeThumbnail({ url, episodeNumber, title }: EpisodeThumbnail
             </div>
         </div>
     )
-}
+})
 
 interface SourceBadgeProps {
     hasLocal: boolean
     hasStream: boolean
 }
 
-export function SourceBadge({ hasLocal, hasStream }: SourceBadgeProps) {
+export const SourceBadge = React.memo(function SourceBadge({ hasLocal, hasStream }: SourceBadgeProps) {
     if (!hasLocal && !hasStream) return null
 
     if (hasLocal && hasStream) {
@@ -104,7 +104,7 @@ export function SourceBadge({ hasLocal, hasStream }: SourceBadgeProps) {
             <span>STREAM</span>
         </div>
     )
-}
+})
 
 export interface EpisodeCardProps {
     episode: Episode
@@ -112,7 +112,7 @@ export interface EpisodeCardProps {
     onPlay?: (episode: Episode, saga: Saga) => void
 }
 
-export function EpisodeCardContent({ episode, saga, onPlay }: EpisodeCardProps) {
+export const EpisodeCardContent = React.memo(function EpisodeCardContent({ episode, saga, onPlay }: EpisodeCardProps) {
     const { isEpic, isFiller } = episode
     const prefetch = usePrefetchEpisodeSources()
 
@@ -223,4 +223,4 @@ export function EpisodeCardContent({ episode, saga, onPlay }: EpisodeCardProps) 
             </div>
         </div>
     )
-}
+})

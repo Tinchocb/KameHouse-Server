@@ -55,6 +55,10 @@ export function PlayerSettingsMenu({
     onLoopEnabledChange,
     autoDisableSubtitlesWhenDubbed = true,
     onAutoDisableSubtitlesWhenDubbedChange,
+    ambilightEnabled = true,
+    onAmbilightChange,
+    marathonMode = true,
+    onMarathonModeChange,
 }: PlayerSettingsMenuProps) {
     const [internalOpen, setInternalOpen] = React.useState(false)
     const [view, setView] = React.useState<SettingsView>("main")
@@ -333,6 +337,10 @@ export function PlayerSettingsMenu({
                                     onLoopEnabledChange={onLoopEnabledChange ?? (() => {})}
                                     autoDisableSubtitlesWhenDubbed={autoDisableSubtitlesWhenDubbed}
                                     onAutoDisableSubtitlesWhenDubbedChange={onAutoDisableSubtitlesWhenDubbedChange ?? (() => {})}
+                                    ambilightEnabled={ambilightEnabled}
+                                    onAmbilightChange={onAmbilightChange ?? (() => {})}
+                                    marathonMode={marathonMode}
+                                    onMarathonModeChange={onMarathonModeChange ?? (() => {})}
                                     showSeparator={false}
                                 />
                             </SettingsLayout>

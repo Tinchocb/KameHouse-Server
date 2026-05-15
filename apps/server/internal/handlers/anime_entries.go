@@ -68,6 +68,7 @@ func (h *Handler) getAnimeEntry(c echo.Context, lfs []*dto.LocalFile, mId int) (
 		PlatformRef:         h.App.Metadata.PlatformRef,
 		MetadataProviderRef: h.App.Metadata.ProviderRef,
 		IsSimulated:         h.App.GetUser() != nil && h.App.GetUser().IsSimulated,
+		IntelligenceSvc:     h.App.IntelligenceService,
 	})
 	if err != nil {
 		return nil, err

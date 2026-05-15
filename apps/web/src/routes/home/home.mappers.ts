@@ -1,5 +1,5 @@
-import type {
     Anime_Episode,
+    Anime_LibraryCollectionEntry,
     Continuity_WatchHistory,
     Models_LibraryMedia,
 } from "@/api/generated/types"
@@ -63,7 +63,7 @@ export function mapEntryToHeroItem(
         contentTag: intel?.tag,
         rating: intel?.rating,
         mediaId: media.id,
-        trailerUrl: (media as any).trailer?.site === "youtube" ? undefined : ((media as any).trailer?.id as string | undefined),
+        trailerUrl: (media as Models_LibraryMedia & { trailer?: { site: string; id: string } }).trailer?.site === "youtube" ? undefined : ((media as Models_LibraryMedia & { trailer?: { site: string; id: string } }).trailer?.id),
         onPlay: () => onNavigate(media.id),
         onMoreInfo: () => onNavigate(media.id),
     }
@@ -92,8 +92,31 @@ export function mapEpisodeToHeroItem(
         episodeCount: media.totalEpisodes || undefined,
         progress: getProgress(media.id, watchHistory),
         mediaId: media.id,
-        trailerUrl: (media as any).trailer?.site === "youtube" ? undefined : ((media as any).trailer?.id as string | undefined),
+        trailerUrl: (media as Models_LibraryMedia & { trailer?: { site: string; id: string } }).trailer?.site === "youtube" ? undefined : ((media as Models_LibraryMedia & { trailer?: { site: string; id: string } }).trailer?.id),
         onPlay: () => onNavigate(media.id),
         onMoreInfo: () => onNavigate(media.id),
+    }
+}
+/**
+ * Maps a library collection entry to a SwimlaneItem.
+ */
+export function mapLibraryEntryToSwimlaneItem(
+    entry: Anime_LibraryCollectionEntry,
+    onNavigate: (mediaId: number) => void,
+): SwimlaneItem {
+    const media = entry.media!
+    return {
+        id: `lib-entry-${media.id}`,
+        title: getTitle(media),
+        image: media.posterImage || "",
+        subtitle: `${media.year || ""} · ${media.format || ""}`,
+        badge: media.format,
+        availabilityType: entry.availabilityType as any,
+        description: media.description,
+        aspect: "poster",
+        year: media.year || undefined,
+        rating: media.score ? (media.score > 10 ? media.score / 10 : media.score) : undefined,
+        onClick: () => onNavigate(media.id),
+        backdropUrl: getBackdrop(media),
     }
 }

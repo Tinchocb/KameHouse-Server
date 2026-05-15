@@ -1,5 +1,4 @@
 import * as React from "react"
-import { motion } from "framer-motion"
 import { Play, Star, Info, Calendar } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 import { DeferredImage } from "./deferred-image"
@@ -20,7 +19,6 @@ interface PremiumPosterCardProps {
 }
 
 export const PremiumPosterCard = React.memo(({
-    id,
     title,
     posterUrl,
     rating,

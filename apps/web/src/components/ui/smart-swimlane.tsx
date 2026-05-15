@@ -2,7 +2,6 @@ import * as React from "react"
 import { Swimlane, type SwimlaneItem } from "@/components/ui/swimlane"
 import type { CuratedSwimlane, ContentTag } from "@/api/types/intelligence.types"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
-import { cn } from "@/components/ui/core/styling"
 
 
 // ─── Intelligence badge helpers ───────────────────────────────────────────────
@@ -55,6 +54,15 @@ export interface SmartSwimlaneProps {
     aspect?: "poster" | "wide"
 }
 
+import { Sparkles, Play, Award, Library } from "lucide-react"
+import { SectionLabel } from "@/routes/home/home.components"
+
+const LANE_ICONS: Record<string, any> = {
+    epic_moments: Play,
+    essential_cinema: Award,
+    local_library: Library,
+}
+
 export const SmartSwimlane = React.memo(function SmartSwimlane({ lane, onNavigate, aspect }: SmartSwimlaneProps) {
     const { setBackdropUrl } = useIntelligenceStore()
 
@@ -76,6 +84,9 @@ export const SmartSwimlane = React.memo(function SmartSwimlane({ lane, onNavigat
             if (media?.year) parts.push(String(media.year))
             if (media?.format) parts.push(media.format)
             if (intel?.arcName) parts.push(intel.arcName)
+            if (intel?.vibes?.length) {
+                parts.push(intel.vibes.join(" · "))
+            }
 
             const backdropUrl = media?.bannerImage || media?.posterImage
 
@@ -98,14 +109,18 @@ export const SmartSwimlane = React.memo(function SmartSwimlane({ lane, onNavigat
 
     if (items.length === 0) return null
 
+    const Icon = LANE_ICONS[lane.type] ?? Sparkles
+
     return (
-        <Swimlane
-            title={lane.title}
-            items={items}
-            defaultAspect={resolvedAspect}
-            onHover={setBackdropUrl}
-            className="mb-8"
-        />
+        <div className="space-y-4">
+            <SectionLabel icon={Icon} label={lane.title} />
+            <Swimlane
+                title=""
+                items={items}
+                defaultAspect={resolvedAspect}
+                onHover={setBackdropUrl}
+            />
+        </div>
     )
 })
 SmartSwimlane.displayName = "SmartSwimlane"

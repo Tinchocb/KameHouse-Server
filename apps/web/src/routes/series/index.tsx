@@ -1,12 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useState, useMemo, useRef } from "react"
-import { Search, Filter, Tv, LayoutGrid, Library, SortAsc, LayoutList } from "lucide-react"
-import { cn } from "@/components/ui/core/styling"
-import { PageHeader } from "@/components/ui/page-header"
+import { Tv } from "lucide-react"
 import { EmptyState } from "@/components/shared/empty-state"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { VhsCollection, type VhsCollectionItem } from "@/components/shared/vhs-collection"
-import { ContinueWatchingCarousel } from "@/components/shared/continue-watching-carousel"
 import { PremiumPosterCard } from "@/components/shared/premium-poster-card"
 import { motion, AnimatePresence } from "framer-motion"
 import { useGSAP } from "@gsap/react"
@@ -17,7 +14,6 @@ export const Route = createFileRoute("/series/")({
 })
 
 function SeriesPage() {
-    const [search, setSearch] = useState("")
     const [viewMode] = useState<"grid" | "shelf">("shelf")
     
     const navigate = useNavigate()
@@ -44,20 +40,7 @@ function SeriesPage() {
     }, [collection])
 
 
-    const filtered = useMemo(() => {
-        return allSeries.filter(s => {
-            const media = s.media
-            const title = media 
-                ? (media.titleRomaji || media.titleEnglish || media.titleOriginal || "")
-                : `Desconocido (${s.mediaId})`
-            
-            const matchesSearch = search
-                ? title.toLowerCase().includes(search.toLowerCase()) ||
-                  (media?.description || "").toLowerCase().includes(search.toLowerCase())
-                : true
-            return matchesSearch
-        })
-    }, [allSeries, search])
+    const filtered = allSeries
 
     const vhsTapeItems = useMemo<VhsCollectionItem[]>(() => {
         return filtered.map((s) => {
@@ -65,7 +48,7 @@ function SeriesPage() {
             const title = media?.titleEnglish || media?.titleRomaji || media?.titleOriginal || "Sin título"
             
             // Hardcoded fallbacks for Dragon Ball series if metadata fails
-            let epsCount = media?.totalEpisodes || (media as any)?.episodeCount || (media as any)?.episodes || s.libraryData?.mainFileCount || 0
+            let epsCount = media?.totalEpisodes || s.libraryData?.mainFileCount || 0
             if (epsCount === 0) {
                 const t = title.toLowerCase()
                 if (t.includes("dragon ball super")) epsCount = 131

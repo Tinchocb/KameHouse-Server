@@ -4,13 +4,13 @@ import { useScannerEvents } from "@/hooks/use-scanner-events"
 import { useScanLocalFiles, useGetScanSummaries } from "@/api/hooks/scan.hooks"
 import {
     LucideActivity, LucideCheck,
-    LucideFlame, LucideHistory, LucidePlay,
+    LucideFlame, LucideHistory,
     LucideRadar, LucideRefreshCw,
     LucideFilter, LucideZap, LucideSparkles,
 } from "lucide-react"
 
 import { cn } from "@/components/ui/core/styling"
-import { PIPELINE_STAGES, PipelineStageCard, ProgressRing } from "./scanner-progress"
+import { PIPELINE_STAGES, PipelineStageCard } from "./scanner-progress"
 import { SectionHeader, ScanActionCard, EventFeed, ScanHistory } from "./scanner-results"
 
 export function ScannerDashboard() {

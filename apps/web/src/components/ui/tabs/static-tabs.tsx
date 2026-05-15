@@ -47,7 +47,6 @@ export type StaticTabsProps = React.ComponentPropsWithRef<"nav"> &
 export const StaticTabs = React.forwardRef<HTMLElement, StaticTabsProps>((props, ref) => {
 
     const {
-        children: _children,
         className,
         triggerClass,
         iconClass,

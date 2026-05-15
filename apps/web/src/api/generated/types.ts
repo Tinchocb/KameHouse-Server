@@ -1221,6 +1221,7 @@ export type Anime_Entry = {
     anidbId: number
     currentEpisodeCount: number
     seasons?: Array<Models_LibrarySeason>
+    vibes?: string[]
 }
 
 /**
@@ -1326,6 +1327,17 @@ export type Anime_Episode = {
     sagaId?: string
     baseAnime?: Models_LibraryMedia
     watched?: boolean
+    intelligence?: Anime_EpisodeIntelligence
+}
+
+export type Anime_ContentTag = "FILLER" | "EPIC" | "CANON" | "SPECIAL"
+
+export type Anime_EpisodeIntelligence = {
+    rating: number
+    isFiller: boolean
+    arcName: string
+    tag: Anime_ContentTag
+    vibes: string[]
 }
 
 /**

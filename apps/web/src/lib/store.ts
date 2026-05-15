@@ -90,6 +90,10 @@ export interface PlayerState {
     setLoopEnabled: (enabled: boolean) => void
     autoDisableSubtitlesWhenDubbed: boolean
     setAutoDisableSubtitlesWhenDubbed: (auto: boolean) => void
+    ambilightEnabled: boolean
+    setAmbilightEnabled: (enabled: boolean) => void
+    marathonMode: boolean
+    setMarathonMode: (enabled: boolean) => void
 }
 
 export const createPlayerSlice: StateCreator<UIState & PlayerState, [], [], PlayerState> = (set) => ({
@@ -121,6 +125,10 @@ export const createPlayerSlice: StateCreator<UIState & PlayerState, [], [], Play
     setLoopEnabled: (loopEnabled) => set({ loopEnabled }),
     autoDisableSubtitlesWhenDubbed: true,
     setAutoDisableSubtitlesWhenDubbed: (autoDisableSubtitlesWhenDubbed) => set({ autoDisableSubtitlesWhenDubbed }),
+    ambilightEnabled: true,
+    setAmbilightEnabled: (ambilightEnabled) => set({ ambilightEnabled }),
+    marathonMode: true,
+    setMarathonMode: (marathonMode) => set({ marathonMode }),
 })
 
 // --- Combined Store ---

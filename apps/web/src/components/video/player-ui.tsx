@@ -1,43 +1,103 @@
 /* eslint-disable react-hooks/refs */
-import React from "react"
+import React, { useEffect, useRef } from "react"
+import gsap from "gsap"
+import { useGSAP } from "@gsap/react"
 import { cn } from "@/components/ui/core/styling"
 import { PlayerTopBar } from "./player-topbar"
 import { PlayerBottomBar } from "./player-bottombar"
 import { LoadingErrorOverlay, CenterPlayFlash, SkipIntroOverlay, NextEpisodeOverlay, ResumeOverlay } from "./player-overlays"
 import type { EpisodeSource } from "@/api/types/unified.types"
+import { useGetVideoInsights } from "@/api/hooks/videocore.hooks"
+import type { PlayerCore, PlayerStats } from "./player-core"
 
-function StatsOverlay({ show, data }: { show: boolean, data: any }) {
+function StatsOverlay({ show, data }: { show: boolean, data: PlayerStats }) {
     if (!show || !data) return null
     return (
-        <div className="absolute top-20 left-10 z-50 bg-black/95 backdrop-blur-xl p-6 rounded-none border border-white/20 text-[10px] font-mono uppercase tracking-widest text-zinc-400 space-y-2 pointer-events-none shadow-2xl">
-            <h4 className="text-white font-bold border-b border-white/10 pb-2 mb-4 flex items-center gap-2">
-                <div className="w-2 h-2 bg-brand-orange animate-pulse" />
-                STATS FOR NERDS
+        <div className="absolute top-24 left-10 z-[100] bg-zinc-950/80 backdrop-blur-2xl p-6 rounded-2xl border border-white/10 text-[10px] font-mono uppercase tracking-[0.2em] text-zinc-500 space-y-3 pointer-events-none shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)] min-w-[320px]">
+            <h4 className="text-white font-black border-b border-white/5 pb-3 mb-4 flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-brand-orange animate-pulse" />
+                    DEEP INSIGHTS
+                </span>
+                <span className="text-[9px] opacity-40 font-mono tracking-tighter">V2.4.0</span>
             </h4>
-            <div className="flex justify-between gap-16"><span>Current Time:</span> <span className="text-white">{data.currentTime} / {data.duration}</span></div>
-            <div className="flex justify-between gap-16"><span>Buffer Health:</span> <span className="text-white">{data.buffer}s</span></div>
-            <div className="flex justify-between gap-16"><span>Resolution:</span> <span className="text-white">{data.resolution}</span></div>
-            <div className="flex justify-between gap-16"><span>Playback Rate:</span> <span className="text-white">{data.playbackRate}x</span></div>
-            <div className="flex justify-between gap-16"><span>Volume Level:</span> <span className="text-white">{data.volume}%</span></div>
-            <div className="pt-2 opacity-40 max-w-[240px] truncate font-sans lowercase tracking-normal italic border-t border-white/5 mt-2">
+            <div className="space-y-2">
+                <div className="flex justify-between items-center"><span className="opacity-50">Timeline</span> <span className="text-white font-bold">{data.currentTime} <span className="text-zinc-700">/</span> {data.duration}</span></div>
+                <div className="flex justify-between items-center"><span className="opacity-50">Buffer Status</span> <span className="text-green-500 font-bold">{data.buffer}s</span></div>
+                <div className="flex justify-between items-center"><span className="opacity-50">Output</span> <span className="text-white font-bold">{data.resolution}</span></div>
+                <div className="flex justify-between items-center"><span className="opacity-50">Rate</span> <span className="text-white font-bold">{data.playbackRate}x</span></div>
+                <div className="flex justify-between items-center"><span className="opacity-50">Volume</span> <span className="text-white font-bold">{data.volume}%</span></div>
+            </div>
+            <div className="pt-3 opacity-20 max-w-full truncate font-sans lowercase tracking-normal italic border-t border-white/5 mt-4 text-[9px]">
                 {data.source}
             </div>
         </div>
     )
 }
 
-export function PlayerUI({
-    title,
-    episodeLabel,
-    onClose,
-    onNextEpisode,
-    playableUrl,
-    streamType,
-    episodeSources,
-    onSourceSwitch,
-    core,
-}: any) {
-    const { domElements, state, actions } = core
+export interface PlayerUIProps {
+    title?: string
+    episodeLabel?: string
+    onClose: () => void
+    onNextEpisode?: () => void
+    playableUrl: string
+    streamType: "local" | "online" | "direct" | "transcode" | "optimized"
+    episodeSources: EpisodeSource[]
+    onSourceSwitch: (source: EpisodeSource) => void
+    core: PlayerCore
+    clientId: string
+    mediaId?: number
+    episodeNumber?: number
+}
+
+export function PlayerUI(props: PlayerUIProps) {
+    const {
+        title, episodeLabel, onClose, onNextEpisode, playableUrl,
+        streamType, episodeSources, onSourceSwitch, core,
+        mediaId, episodeNumber
+    } = props
+
+    const {
+        domElements,
+        state,
+        actions
+    } = core
+
+    const ambilightCanvasRef = useRef<HTMLCanvasElement>(null)
+
+    // Fetch video insights (heatmap)
+    const { data: insightsData } = useGetVideoInsights({
+        episodeId: (mediaId && episodeNumber) ? Number(`${mediaId}${episodeNumber}`) : 0
+    }, !!(mediaId && episodeNumber && state.duration > 0))
+
+    const insights = insightsData || []
+
+    useEffect(() => {
+        if (!state.ambilightEnabled || !state.isPlaying) return
+
+        let animId: number
+        const video = domElements.videoElement.current
+        const canvas = ambilightCanvasRef.current
+
+        const renderAmbilight = () => {
+            if (video && canvas && !video.paused) {
+                const ctx = canvas.getContext("2d")
+                if (ctx) {
+                    if (canvas.width !== video.videoWidth && video.videoWidth > 0) {
+                        canvas.width = video.videoWidth
+                        canvas.height = video.videoHeight
+                    }
+                    if (canvas.width > 0 && canvas.height > 0) {
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+                    }
+                }
+            }
+            animId = requestAnimationFrame(renderAmbilight)
+        }
+
+        animId = requestAnimationFrame(renderAmbilight)
+        return () => cancelAnimationFrame(animId)
+    }, [state.ambilightEnabled, state.isPlaying, domElements.videoElement])
 
     return (
         <div
@@ -49,6 +109,27 @@ export function PlayerUI({
                 !state.controlsVisible && state.isPlaying ? "cursor-none" : "cursor-default"
             )}
         >
+            {/* Cinematic Controls Animation Layer */}
+            {useGSAP(() => {
+                if (state.controlsVisible) {
+                    gsap.to(".player-top-bar", { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" })
+                    gsap.to(".player-bottom-bar", { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" })
+                    gsap.to(".player-overlays-bg", { opacity: 1, duration: 0.4 })
+                } else {
+                    gsap.to(".player-top-bar", { y: -20, opacity: 0, duration: 0.4, ease: "power3.in" })
+                    gsap.to(".player-bottom-bar", { y: 20, opacity: 0, duration: 0.4, ease: "power3.in" })
+                    gsap.to(".player-overlays-bg", { opacity: 0, duration: 0.6 })
+                }
+            }, [state.controlsVisible])}
+
+            <canvas
+                ref={ambilightCanvasRef}
+                className={cn(
+                    "absolute inset-0 w-full h-full scale-110 blur-3xl opacity-75 z-0 pointer-events-none transition-all duration-700",
+                    state.ambilightEnabled && state.isPlaying ? "opacity-75" : "opacity-0"
+                )}
+            />
+
             <video
                 ref={domElements.videoElement}
                 onClick={actions.togglePlay}
@@ -58,31 +139,36 @@ export function PlayerUI({
                 onTimeUpdate={actions.handleTimeUpdate}
                 onWaiting={() => actions.setIsBuffering(true)}
                 onPlaying={() => actions.setIsBuffering(false)}
-                className="w-full h-full bg-black z-0"
+                onEnded={() => {
+                    if (state.marathonMode && onNextEpisode) {
+                        onNextEpisode()
+                    }
+                }}
+                className="w-full h-full bg-black relative z-10"
                 style={{
                     objectFit: state.aspectRatio === "16/9" ? "contain" : 
                                state.aspectRatio === "fill" ? "fill" : 
                                state.aspectRatio === "cover" ? "cover" : "contain"
                 }}
+                crossOrigin="anonymous"
                 playsInline
             />
 
             <canvas
                 ref={domElements.canvasElement}
                 className={cn(
-                    "absolute inset-0 w-full h-full pointer-events-none z-[1]",
+                    "absolute inset-0 w-full h-full pointer-events-none z-[11]",
                     state.isJassubActive ? "block" : "hidden"
                 )}
             />
 
             <div
                 className={cn(
-                    "absolute inset-0 pointer-events-none transition-opacity duration-300 z-10",
-                    state.controlsVisible ? "opacity-100" : "opacity-0"
+                    "player-overlays-bg absolute inset-0 pointer-events-none transition-opacity duration-300 z-20 opacity-0"
                 )}
             >
-                <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-black/80 to-transparent" />
-                <div className="absolute bottom-0 inset-x-0 h-48 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+                <div className="absolute top-0 inset-x-0 h-48 bg-gradient-to-b from-black/80 via-black/20 to-transparent" />
+                <div className="absolute bottom-0 inset-x-0 h-64 bg-gradient-to-t from-black/95 via-black/40 to-transparent" />
             </div>
 
             <LoadingErrorOverlay
@@ -110,7 +196,7 @@ export function PlayerUI({
                 marathonMode={state.marathonMode}
                 countdownSeconds={state.countdownSeconds}
                 nextEpisodeTitle="Siguiente Episodio"
-                nextEpisodeNumber={undefined} // Since we removed episodeNumber prop from PlayerUI directly for simplicity, but could be passed if needed
+                nextEpisodeNumber={undefined}
                 onNext={onNextEpisode || (() => {})}
                 duration={state.duration}
                 remainingProgress={state.remainingProgress}
@@ -125,8 +211,7 @@ export function PlayerUI({
 
             <div
                 className={cn(
-                    "absolute top-0 inset-x-0 z-20 pointer-events-none transition-all duration-300",
-                    state.controlsVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"
+                    "player-top-bar absolute top-0 inset-x-0 z-30 pointer-events-none opacity-0 -translate-y-4"
                 )}
             >
                 <PlayerTopBar
@@ -138,13 +223,12 @@ export function PlayerUI({
 
             <div
                 className={cn(
-                    "absolute bottom-0 inset-x-0 z-20 pointer-events-none transition-all duration-300",
-                    state.controlsVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+                    "player-bottom-bar absolute bottom-0 inset-x-0 z-30 pointer-events-none opacity-0 translate-y-4"
                 )}
             >
                 <PlayerBottomBar
                     duration={state.duration}
-                    insights={[]}
+                    insights={insights}
                     progressBarRef={domElements.progressBarElement}
                     progressInputRef={domElements.progressInputElement}
                     handleSeek={actions.handleSeek}
@@ -178,7 +262,6 @@ export function PlayerUI({
                     onAutoSkipIntroChange={actions.setAutoSkipIntro}
                     autoSkipOutro={state.autoSkipOutro}
                     onAutoSkipOutroChange={actions.setAutoSkipOutro}
-                    onNextEpisode={onNextEpisode || (() => {})}
                     hlsLevels={state.hlsLevels}
                     activeHlsLevel={state.activeHlsLevel}
                     onHlsLevelChange={actions.setHlsLevel}
@@ -192,6 +275,11 @@ export function PlayerUI({
                     onLoopEnabledChange={actions.setLoopEnabled}
                     autoDisableSubtitlesWhenDubbed={state.autoDisableSubtitlesWhenDubbed}
                     onAutoDisableSubtitlesWhenDubbedChange={actions.setAutoDisableSubtitlesWhenDubbed}
+                    ambilightEnabled={state.ambilightEnabled}
+                    onAmbilightChange={actions.setAmbilightEnabled}
+                    marathonMode={state.marathonMode}
+                    onMarathonModeChange={actions.setMarathonMode}
+                    onNextEpisode={onNextEpisode}
                 />
             </div>
         </div>

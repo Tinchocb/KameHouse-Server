@@ -1,9 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
-import React, { useMemo, useState } from "react"
+import React, { useMemo, useState, useRef } from "react"
+import { Virtuoso } from "react-virtuoso"
+import { useGSAP } from "@gsap/react"
+import gsap from "gsap"
 import { FolderOpen, Play } from "lucide-react"
 import { toast } from "sonner"
 import { FaPlay } from "react-icons/fa"
+import { useAppStore } from "@/lib/store"
 
 import { cn } from "@/components/ui/core/styling"
 import { getHighResImage } from "@/lib/helpers/images"
@@ -151,6 +155,29 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         }
     }
 
+    const marathonModeStore = useAppStore(s => s.marathonMode)
+
+    const handleNextEpisode = () => {
+        if (!computedEpisodes || !playTarget) return
+        const currentEpIdx = computedEpisodes.findIndex(ep => ep.episodeNumber === playTarget.episodeNumber)
+        if (currentEpIdx === -1 || currentEpIdx >= computedEpisodes.length - 1) {
+            toast.info("Has llegado al final de la lista de episodios.")
+            setPlayTarget(null)
+            return
+        }
+        const nextEp = computedEpisodes[currentEpIdx + 1]
+        const lf = (entry?.localFiles || []).find(f => 
+            Number(f.metadata?.episode) === nextEp.episodeNumber || 
+            Number(f.parsedInfo?.episode) === nextEp.episodeNumber
+        )
+        if (!lf) {
+            toast.error("El siguiente episodio no está disponible localmente.")
+            setPlayTarget(null)
+            return
+        }
+        handlePlayEpisode(lf, nextEp)
+    }
+
     if (isLoading) {
         return (
             <div className="min-h-screen bg-background text-white flex items-center justify-center">
@@ -220,6 +247,9 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                     episodeNumber={playTarget.episodeNumber}
                     mediaId={Number(seriesId)}
                     malId={playTarget.malId}
+                    marathonMode={marathonModeStore}
+                    onNextEpisode={handleNextEpisode}
+                    hasNextEpisode={computedEpisodes ? computedEpisodes.findIndex(ep => ep.episodeNumber === playTarget.episodeNumber) < computedEpisodes.length - 1 : false}
                     onClose={() => setPlayTarget(null)}
                 />
             )}
@@ -244,15 +274,28 @@ const HeroSection = React.memo(function HeroSection({
     onPlay,
     className
 }: HeroSectionProps) {
+    const containerRef = useRef<HTMLElement>(null)
     const [synopsisExpanded, setSynopsisExpanded] = useState(false)
     const media = entry.media!
+
+    useGSAP(() => {
+        gsap.from(".hero-content > *", {
+            y: 30,
+            opacity: 0,
+            duration: 1.4,
+            stagger: 0.15,
+            ease: "power4.out",
+            delay: 0.2
+        })
+    }, { scope: containerRef })
+
     const synopsis = media.description || "Sin descripción disponible."
     const cleanSynopsis = useMemo(() => sanitizeHtml(synopsis), [synopsis])
     
     const title = media.titleSpanish || media.titleEnglish || media.titleRomaji || "Título Desconocido"
     const year = media.year?.toString() || ""
     
-    const parseGenres = (g: any): string[] => {
+    const parseGenres = (g: string | string[] | undefined | null): string[] => {
         if (!g) return []
         if (Array.isArray(g)) return g as string[]
         if (typeof g === "string") {
@@ -284,7 +327,15 @@ const HeroSection = React.memo(function HeroSection({
     const accentColor = stringToColor(title)
 
     return (
-        <section className={cn("relative w-full min-h-[85vh] flex flex-col justify-end overflow-hidden", className)}>
+        <section 
+            ref={containerRef}
+            className={cn("relative w-full min-h-[85vh] flex flex-col justify-end overflow-hidden", className)}
+        >
+            {/* Cinematic Grain Overlay */}
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay z-20"
+                style={{ backgroundImage: `url("https://grainy-gradients.vercel.app/noise.svg")` }}
+            />
+
             {/* Cinematic Ambient Halo / Gradient Fallback */}
             <div className="absolute inset-0 overflow-hidden bg-[#09090b]">
                 {media.posterImage ? (
@@ -306,8 +357,9 @@ const HeroSection = React.memo(function HeroSection({
                     />
                 )}
                 {/* Master Gradients for Depth */}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#09090b] via-[#09090b]/80 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-b from-[#09090b]/60 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#09090b] via-[#09090b]/40 to-transparent opacity-100" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#09090b] via-[#09090b]/40 to-transparent opacity-90" />
+                <div className="absolute inset-0 bg-gradient-to-b from-[#09090b]/20 via-transparent to-transparent" />
             </div>
 
             {/* Backdrop (Cinematic Overlay) */}
@@ -334,7 +386,7 @@ const HeroSection = React.memo(function HeroSection({
             )}
 
             {/* Content */}
-            <div className="relative z-10 flex flex-col lg:flex-row items-end gap-12 px-6 sm:px-12 pb-24 pt-40 max-w-[1800px] mx-auto w-full">
+            <div className="hero-content relative z-10 flex flex-col lg:flex-row items-end gap-12 px-6 sm:px-12 pb-24 pt-40 max-w-[1800px] mx-auto w-full">
                 {/* Cover Poster (Hero Version) */}
                 <div className="hidden lg:block w-[340px] shrink-0 relative z-10">
                     <ClassicPosterCard 
@@ -510,18 +562,18 @@ const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
         if (!saga) return episodes
         
         if (activeSubSagaId !== "all" && saga.subSagas) {
-            const subSaga = saga.subSagas.find((ss: any) => ss.id === activeSubSagaId)
+            const subSaga = saga.subSagas.find((ss) => ss.id === activeSubSagaId)
             if (subSaga) {
                 return episodes.filter(ep => {
                     const epNum = ep.absoluteEpisodeNumber || ep.episodeNumber
-                    return (ep as any).sagaId === subSaga.id || (epNum >= subSaga.startEp && epNum <= subSaga.endEp)
+                    return (ep as Anime_Episode & { sagaId?: string }).sagaId === subSaga.id || (epNum >= subSaga.startEp && epNum <= subSaga.endEp)
                 })
             }
         }
         
         return episodes.filter(ep => {
             const epNum = ep.absoluteEpisodeNumber || ep.episodeNumber
-            return (ep as any).sagaId === saga.id || (epNum >= saga.startEp && epNum <= saga.endEp)
+            return (ep as Anime_Episode & { sagaId?: string }).sagaId === saga.id || (epNum >= saga.startEp && epNum <= saga.endEp)
         })
     }, [episodes, generatedSagas, activeSagaId, activeSubSagaId])
 
@@ -548,7 +600,7 @@ const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
                                 <span className="w-8 h-[1px] bg-zinc-800" />
                                 Seleccionar Saga
                             </h3>
-                            <div className="flex flex-col border border-white/5 bg-zinc-950/20 backdrop-blur-md overflow-hidden">
+                            <div className="flex flex-col border border-white/[0.03] bg-zinc-950/40 backdrop-blur-xl rounded-2xl overflow-hidden shadow-2xl">
                                 {generatedSagas.map((saga, idx) => {
                                     const isLast = idx === generatedSagas.length - 1
                                     const isActive = activeSagaId === saga.id.toString()
@@ -562,15 +614,15 @@ const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
                                                     setActiveSubSagaId("all")
                                                 }}
                                                 className={cn(
-                                                    "group w-full flex items-center justify-between px-6 py-4 transition-all duration-300 relative",
-                                                    isActive ? "bg-white/[0.03]" : "hover:bg-white/[0.01]"
+                                                    "group w-full flex items-center justify-between px-6 py-5 transition-all duration-300 relative",
+                                                    isActive ? "bg-white/[0.04]" : "hover:bg-white/[0.02]"
                                                 )}
                                             >
                                                 <div className="flex items-center gap-4 relative z-10">
                                                     <div className="flex flex-col items-center">
                                                         <div className={cn(
-                                                            "w-1.5 h-1.5 rounded-full transition-all duration-500",
-                                                            isActive ? "bg-brand-orange scale-125 shadow-[0_0_10px_rgba(255,110,58,0.8)]" : "bg-zinc-800 group-hover:bg-zinc-600"
+                                                            "w-1 h-1 rounded-full transition-all duration-500",
+                                                            isActive ? "bg-brand-orange scale-150" : "bg-zinc-800 group-hover:bg-zinc-600"
                                                         )} />
                                                         {!isLast && (
                                                             <div className="w-[1px] h-10 bg-zinc-900 mt-2" />
@@ -667,21 +719,27 @@ const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
                             <p className="text-zinc-700 text-xs font-black uppercase tracking-[0.3em] mt-2">INTENTA ACTUALIZAR LA BIBLIOTECA</p>
                         </div>
                     ) : (
-                        <div className="flex flex-col gap-4">
-                            {visibleEpisodes.map((ep) => (
-                                <EpisodeCard
-                                    key={ep.episodeNumber}
-                                    episode={ep}
-                                    variant="horizontal"
-                                    fallbackThumb={fallbackThumb}
-                                    localFile={getLocalFile(ep.episodeNumber)}
-                                    onPlay={onPlay}
-                                    isCurrentlyPlaying={currentlyPlayingEpNumber === ep.episodeNumber}
-                                    seriesTmdbId={seriesTmdbId}
-                                    seriesTitle={seriesTitle}
-                                />
-                            ))}
-                        </div>
+                        <Virtuoso
+                            useWindowScroll
+                            data={visibleEpisodes}
+                            initialItemCount={10}
+                            increaseViewportBy={400}
+                            itemContent={(index, ep) => (
+                                <div className="pb-4">
+                                    <EpisodeCard
+                                        key={ep.episodeNumber}
+                                        episode={ep}
+                                        variant="horizontal"
+                                        fallbackThumb={fallbackThumb}
+                                        localFile={getLocalFile(ep.episodeNumber)}
+                                        onPlay={onPlay}
+                                        isCurrentlyPlaying={currentlyPlayingEpNumber === ep.episodeNumber}
+                                        seriesTmdbId={seriesTmdbId}
+                                        seriesTitle={seriesTitle}
+                                    />
+                                </div>
+                            )}
+                        />
                     )}
                 </div>
             </div>

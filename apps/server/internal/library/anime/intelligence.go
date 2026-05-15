@@ -6,6 +6,7 @@ import (
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
+	"strings"
 	"sync"
 
 	"github.com/rs/zerolog"
@@ -34,6 +35,7 @@ type EpisodeIntelligence struct {
 	IsFiller bool       `json:"isFiller"`
 	ArcName  ArcName    `json:"arcName"` // Empty string when unknown
 	Tag      ContentTag `json:"tag"`
+	Vibes    []string   `json:"vibes"` // Emotional or thematic tags (e.g., "EPIC", "CHILL", "TEARS")
 }
 
 // SmartMetadataResult wraps episode metadata enriched with intelligence data.
@@ -205,6 +207,7 @@ func (s *IntelligenceService) computeIntelligence(mediaID, episodeNum int, base 
 		IsFiller: false,
 		ArcName:  "",
 		Tag:      TagCanon,
+		Vibes:    make([]string, 0),
 	}
 
 	// ── Filler detection ─────────────────────────────────────────────
@@ -241,17 +244,63 @@ func (s *IntelligenceService) computeIntelligence(mediaID, episodeNum int, base 
 		}
 	}()
 
-	// ── Special type promotion ────────────────────────────────────────
-	if base != nil && intel.Tag == TagCanon {
-		// EpisodeMetadata comes from AniDB; no format field here.
-		// Special files are detected by the parent Episode.Type field;
-		// we honour whatever the caller already flagged in base.IsFiller.
-	}
-
 	// ── Arc grouping ─────────────────────────────────────────────────
 	intel.ArcName = resolveArc(mediaID, episodeNum)
 
+	// ── Vibe derivation ──────────────────────────────────────────────
+	intel.Vibes = s.deriveVibes(mediaID, episodeNum, base, intel)
+
 	return intel
+}
+
+// DeriveSeriesVibes categorizes the "feel" of a series based on genres and score.
+func (s *IntelligenceService) DeriveSeriesVibes(media *models.LibraryMedia) []string {
+	vibes := make([]string, 0)
+	if media == nil {
+		return vibes
+	}
+
+	hasGenre := func(g string) bool {
+		return strings.Contains(strings.ToLower(string(media.Genres)), strings.ToLower(g))
+	}
+
+	score := float64(media.Score)
+	rating := score / 10.0
+
+	if score >= epicScoreThreshold {
+		vibes = append(vibes, "EPIC")
+	}
+
+	if hasGenre("Drama") || hasGenre("Romance") {
+		if rating > 7.5 {
+			vibes = append(vibes, "EMOTIONAL")
+		}
+	}
+
+	if hasGenre("Action") || hasGenre("Adventure") {
+		if rating > 8.0 {
+			vibes = append(vibes, "HYPED")
+		}
+	}
+
+	if hasGenre("Comedy") || hasGenre("Slice of Life") {
+		vibes = append(vibes, "CHILL")
+	}
+
+	if hasGenre("Horror") || hasGenre("Psychological") || hasGenre("Thriller") {
+		vibes = append(vibes, "INTENSE")
+	}
+
+	return vibes
+}
+
+// deriveVibes categorizes the "feel" of an episode based on genres, score, and tags.
+func (s *IntelligenceService) deriveVibes(mediaID, _ int, _ *EpisodeMetadata, intel *EpisodeIntelligence) []string {
+	var media models.LibraryMedia
+	if err := s.db.Gorm().Where("id = ?", mediaID).First(&media).Error; err != nil {
+		return make([]string, 0)
+	}
+	return s.DeriveSeriesVibes(&media)
 }
 
 // InvalidateCache removes all cached intelligence for a given media.
@@ -285,17 +334,11 @@ type CuratedHomeResponse struct {
 	Swimlanes []*CuratedSwimlane `json:"swimlanes"`
 }
 
-// ContinueWatchingEntry is now replaced by dto.ContinueWatchingItem.
-// We keep the aliases for backward compatibility if needed, but the core logic
-// will use the official DTO.
-
 // GetContinueWatching returns a list of media the user is currently watching,
 // suggesting the next episode if the current one is almost finished.
 func (s *IntelligenceService) GetContinueWatching(ctx context.Context, userID uint) ([]dto.ContinueWatchingItem, error) {
 	var history []models.WatchHistory
 
-	// Get the latest watch history for each media for this specific user
-	// ordered by most recent update
 	subQuery := s.db.Gorm().
 		Select("media_id, MAX(updated_at) as latest").
 		Table("watch_histories").
@@ -312,14 +355,11 @@ func (s *IntelligenceService) GetContinueWatching(ctx context.Context, userID ui
 		return nil, err
 	}
 
-	// Load all local files to check existence for next episodes
-	// Note: In a large library, this should be optimized to pull only files for relevant MediaIDs.
 	allLocalFiles, _, err := db.GetLocalFiles(s.db)
 	if err != nil {
 		return nil, err
 	}
 
-	// Create a map for quick lookup: mediaId -> episodeNumber -> bool
 	fileMap := make(map[int]map[int]bool)
 	for _, lf := range allLocalFiles {
 		if lf.MediaId == 0 {
@@ -357,31 +397,25 @@ func (s *IntelligenceService) GetContinueWatching(ctx context.Context, userID ui
 			IsNextEpisode:   false,
 		}
 
-		// If finished (>=90%), try to find the next episode
 		if progress >= 0.9 {
 			var nextEpisode models.LibraryEpisode
-			// Try next episode in same season
 			err := s.db.Gorm().Where("library_media_id = ? AND season_number = ? AND episode_number = ?",
 				h.MediaID, currentEpisode.SeasonNumber, currentEpisode.EpisodeNumber+1).First(&nextEpisode).Error
 
 			if err != nil {
-				// Try first episode of next season
 				err = s.db.Gorm().Where("library_media_id = ? AND season_number = ? AND episode_number = 1",
 					h.MediaID, currentEpisode.SeasonNumber+1).First(&nextEpisode).Error
 			}
 
 			if err == nil {
-				// Verify LocalFile exists for the next episode
 				if hasFile := fileMap[int(h.MediaID)][nextEpisode.EpisodeNumber]; hasFile {
 					item.Episode = &nextEpisode
 					item.Progress = 0
 					item.IsNextEpisode = true
 				} else {
-					// series is "finished" in terms of local availability
 					continue
 				}
 			} else {
-				// no next episode found in library_episodes, truly finished
 				continue
 			}
 		}
@@ -393,28 +427,23 @@ func (s *IntelligenceService) GetContinueWatching(ctx context.Context, userID ui
 }
 
 // GetCuratedSwimlanes returns the four curated home swimlanes.
-// Each lane is built independently; a failure in one never breaks the others.
 func (s *IntelligenceService) GetCuratedSwimlanes(_ context.Context) (*CuratedHomeResponse, error) {
 	resp := &CuratedHomeResponse{
 		Swimlanes: make([]*CuratedSwimlane, 0, 4),
 	}
 
-	// ── 1. Tu Videoteca Local ─────────────────────────────────────────
 	if lane := s.buildLocalLibraryLane(); lane != nil {
 		resp.Swimlanes = append(resp.Swimlanes, lane)
 	}
 
-	// ── 2. Sagas Épicas y Legendarias ────────────────────────────────
 	if lane := s.buildEpicMomentsLane(); lane != nil {
 		resp.Swimlanes = append(resp.Swimlanes, lane)
 	}
 
-	// ── 3. Cine Esencial ─────────────────────────────────────────────
 	if lane := s.buildEssentialCinemaLane(); lane != nil {
 		resp.Swimlanes = append(resp.Swimlanes, lane)
 	}
 
-	// ── 4. Descubrir en la Red ───────────────────────────────────────
 	if lane := s.buildTrendingLane(); lane != nil {
 		resp.Swimlanes = append(resp.Swimlanes, lane)
 	}
@@ -422,16 +451,10 @@ func (s *IntelligenceService) GetCuratedSwimlanes(_ context.Context) (*CuratedHo
 	return resp, nil
 }
 
-// GetCuratedHome is kept for backwards-compatibility with existing route handlers.
-// New code should use IntelligenceService.GetCuratedSwimlanes instead.
 func GetCuratedHome(_ context.Context, database *db.Database) (*CuratedHomeResponse, error) {
 	svc := NewIntelligenceService(database, nil, nil)
 	return svc.GetCuratedSwimlanes(context.Background())
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Lane builders — each returns nil on error so the caller can skip gracefully.
-// ─────────────────────────────────────────────────────────────────────────────
 
 func (s *IntelligenceService) buildLocalLibraryLane() *CuratedSwimlane {
 	var media []*models.LibraryMedia
@@ -483,7 +506,6 @@ func (s *IntelligenceService) buildEpicMomentsLane() *CuratedSwimlane {
 }
 
 func (s *IntelligenceService) buildEssentialCinemaLane() *CuratedSwimlane {
-	// "Essential Cinema": movies and OVAs with a score ≥ 75.
 	var media []*models.LibraryMedia
 	if err := s.db.Gorm().
 		Where("format IN ? AND score >= ?", []string{"MOVIE", "OVA", "SPECIAL"}, 75).

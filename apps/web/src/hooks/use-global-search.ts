@@ -48,7 +48,7 @@ export function useGlobalSearch() {
     }, [unlinkedFiles])
 
     const results = useMemo(() => {
-        const combined: any[] = [...allEntries, ...syntheticUnlinked]
+        const combined = [...allEntries, ...syntheticUnlinked]
         if (!isSearchActive) {
             return combined.slice(0, 10)
         }
@@ -57,9 +57,10 @@ export function useGlobalSearch() {
         return combined
             .filter(entry => {
                 const media = entry.media
+                const vibes = entry.vibes?.join(" ") || ""
                 const title = media 
-                    ? `${media.titleRomaji || ""} ${media.titleEnglish || ""} ${media.titleOriginal || ""}`.toLowerCase()
-                    : `desconocido ${entry.mediaId}`
+                    ? `${media.titleRomaji || ""} ${media.titleEnglish || ""} ${media.titleOriginal || ""} ${vibes}`.toLowerCase()
+                    : `desconocido ${entry.mediaId} ${vibes}`
                 
                 return title.includes(q)
             })

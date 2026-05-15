@@ -1,5 +1,5 @@
 import React, { useMemo } from "react"
-import { FaPlay } from "react-icons/fa"
+import { FaPlay, FaStar } from "react-icons/fa"
 import { ManualMatchModal } from "@/components/shared/manual-match-modal"
 import { useAnimeEntryUnmatch } from "@/api/hooks/anime_entries.hooks"
 import { Anime_Episode, Anime_LocalFile } from "@/api/generated/types"
@@ -8,7 +8,6 @@ import { cn } from "@/components/ui/core/styling"
 import { sanitizeHtml } from "@/lib/helpers/sanitizer"
 import { motion } from "framer-motion"
 import { getDragonBallSpanishTitle } from "@/lib/config/dragonball.config"
-import { FolderOpen } from "lucide-react"
 
 // ─── MediaActionButtons ───────────────────────────────────────────────────────
 
@@ -36,27 +35,28 @@ const MediaActionButtons = React.memo(function MediaActionButtons({
     }
 
     return (
-        <div className="flex flex-wrap items-center gap-6 mt-8">
-            {/* Play Button - Stark Brutalist */}
+        <div className="flex flex-wrap items-center gap-4 mt-8">
+            {/* Play Button - Cinematic Glass */}
             <button
                 className={cn(
-                    "group/play relative flex items-center gap-4 px-12 py-5 bg-white text-black transition-all duration-200",
-                    "font-black text-xs uppercase tracking-[0.4em] border border-white",
-                    "hover:bg-black hover:text-white active:scale-95"
+                    "group/play relative flex items-center gap-4 px-10 py-4 bg-brand-orange text-white transition-all duration-300",
+                    "font-black text-[11px] uppercase tracking-[0.3em] rounded-xl overflow-hidden shadow-2xl shadow-brand-orange/20",
+                    "hover:bg-brand-orange/90 hover:scale-105 active:scale-95"
                 )}
                 onClick={onPlay}
             >
-                <FaPlay className="w-4 h-4" />
-                <span>Reproducir</span>
+                <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-0 group-hover/play:opacity-100 transition-opacity" />
+                <FaPlay className="w-3.5 h-3.5 relative z-10" />
+                <span className="relative z-10">Reproducir</span>
             </button>
 
-            {/* Manual Link - Stark Outline */}
+            {/* Manual Link - Cinematic Glass */}
             <button
                 onClick={() => setMatchOpen(true)}
                 className={cn(
-                    "flex items-center gap-3 px-10 py-5 bg-black text-white border border-white transition-all duration-200",
-                    "font-black text-xs uppercase tracking-[0.3em]",
-                    "hover:bg-white hover:text-black active:scale-95"
+                    "flex items-center gap-3 px-8 py-4 bg-white/5 backdrop-blur-xl text-white border border-white/10 transition-all duration-300",
+                    "font-black text-[11px] uppercase tracking-[0.2em] rounded-xl",
+                    "hover:bg-white/10 hover:border-white/20 hover:scale-105 active:scale-95"
                 )}
             >
                 <span>Vincular</span>
@@ -67,9 +67,9 @@ const MediaActionButtons = React.memo(function MediaActionButtons({
                 onClick={handleUnmatch}
                 disabled={isUnmatching}
                 className={cn(
-                    "flex items-center gap-3 px-10 py-5 bg-transparent text-red-500 border border-red-500/50 transition-all duration-200",
-                    "font-black text-xs uppercase tracking-[0.3em]",
-                    "hover:bg-red-500 hover:text-white active:scale-95 disabled:opacity-50"
+                    "flex items-center gap-3 px-8 py-4 bg-red-500/5 backdrop-blur-xl text-red-500 border border-red-500/20 transition-all duration-300",
+                    "font-black text-[11px] uppercase tracking-[0.2em] rounded-xl",
+                    "hover:bg-red-500/10 hover:border-red-500/40 hover:scale-105 active:scale-95 disabled:opacity-50"
                 )}
             >
                 <span>Desvincular</span>
@@ -97,7 +97,6 @@ interface EpisodeCardProps {
     isCurrentlyPlaying?: boolean
     variant?: "grid" | "horizontal"
     seriesTmdbId?: number | null
-    seriesTitle?: string
 }
 
 const EpisodeCard = React.memo(function EpisodeCard({
@@ -109,7 +108,6 @@ const EpisodeCard = React.memo(function EpisodeCard({
     isCurrentlyPlaying,
     variant = "grid",
     seriesTmdbId,
-    seriesTitle = "DRAGONBALL Z",
 }: EpisodeCardProps) {
     const thumb = episode.episodeMetadata?.image || fallbackThumb
     
@@ -128,11 +126,11 @@ const EpisodeCard = React.memo(function EpisodeCard({
     const technical = localFile?.technicalInfo
     const resolution = technical?.videoStream ? `${technical.videoStream.width}x${technical.videoStream.height}` : null
     const codec = technical?.videoStream?.codec?.toUpperCase()
-    const fileSize = technical?.size ? `${(technical.size / (1024 * 1024 * 1024)).toFixed(2)} GB` : null
     const duration = episode.episodeMetadata?.length ? `${episode.episodeMetadata.length}m` : null
 
-    // Format air date if available
-    const airDate = episode.episodeMetadata?.airDate ? new Date(episode.episodeMetadata.airDate).toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' }) : null
+    // Intelligence
+    const vibes = episode.intelligence?.vibes || []
+    const rating = episode.intelligence?.rating
 
 
     const handlePlay = (e: React.MouseEvent) => {
@@ -156,7 +154,7 @@ const EpisodeCard = React.memo(function EpisodeCard({
                 onClick={hasLocalFile ? handlePlay : undefined}
                 className={cn(
                     "group relative flex flex-col md:flex-row gap-8 transition-all duration-500 py-6 border-b border-white/[0.03] last:border-0",
-                    isCurrentlyPlaying ? "bg-white/[0.02] -mx-4 px-4" : "hover:bg-white/[0.01]",
+                    isCurrentlyPlaying ? "bg-white/[0.03] -mx-4 px-4 rounded-xl shadow-2xl" : "hover:bg-white/[0.01]",
                     !hasLocalFile && "opacity-50",
                     hasLocalFile ? "cursor-pointer" : "cursor-default"
                 )}
@@ -192,7 +190,7 @@ const EpisodeCard = React.memo(function EpisodeCard({
                             <motion.div 
                                 initial={{ width: 0 }}
                                 animate={{ width: "45%" }} 
-                                className="h-full bg-brand-orange shadow-[0_0_15px_rgba(255,110,58,1)]" 
+                                className="h-full bg-brand-orange" 
                             />
                         </div>
                     )}
@@ -225,6 +223,27 @@ const EpisodeCard = React.memo(function EpisodeCard({
                                         {duration}
                                     </span>
                                 )}
+                                {rating && rating > 8 && (
+                                    <span className="flex items-center gap-1 text-[9px] font-black text-brand-orange bg-brand-orange/10 px-2 py-0.5 rounded border border-brand-orange/20">
+                                        <FaStar className="w-2.5 h-2.5" />
+                                        {rating.toFixed(1)}
+                                    </span>
+                                )}
+                                {vibes.map(vibe => (
+                                    <span 
+                                        key={vibe}
+                                        className={cn(
+                                            "text-[8px] font-black tracking-[0.1em] uppercase px-2 py-0.5 rounded border",
+                                            vibe === "EPIC" ? "bg-purple-500/20 text-purple-400 border-purple-500/30" :
+                                            vibe === "HYPED" ? "bg-red-500/20 text-red-400 border-red-500/30" :
+                                            vibe === "EMOTIONAL" ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" :
+                                            vibe === "CHILL" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" :
+                                            "bg-orange-500/20 text-orange-400 border-orange-500/30"
+                                        )}
+                                    >
+                                        {vibe}
+                                    </span>
+                                ))}
                             </div>
                             
                             <h4 className={cn(
@@ -267,7 +286,7 @@ const EpisodeCard = React.memo(function EpisodeCard({
                             <div className="flex items-center gap-3">
                                 <button 
                                     onClick={handlePlay}
-                                    className="flex items-center gap-2 px-5 py-2.5 bg-white text-black text-[10px] font-black uppercase tracking-[0.2em] hover:bg-brand-orange transition-colors"
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-brand-orange text-white text-[10px] font-black uppercase tracking-[0.2em] hover:bg-brand-orange/80 transition-colors rounded-md"
                                 >
                                     Reproducir
                                 </button>
@@ -297,10 +316,10 @@ const EpisodeCard = React.memo(function EpisodeCard({
         <div
             onClick={handlePlay}
             className={cn(
-                "group relative flex flex-col bg-zinc-900/40 border transition-all duration-500 overflow-hidden rounded-xl",
+                "group relative flex flex-col transition-all duration-500 overflow-hidden rounded-xl",
                 isCurrentlyPlaying 
-                    ? "border-brand-orange ring-2 ring-brand-orange/40 shadow-[0_0_40px_rgba(255,110,58,0.25)]" 
-                    : "border-white/5 hover:border-brand-orange/40 hover:shadow-2xl hover:-translate-y-1",
+                    ? "border-brand-orange/50 bg-brand-orange/[0.03] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)]" 
+                    : "border-white/[0.03] bg-zinc-950/40 hover:border-brand-orange/40 hover:shadow-2xl hover:-translate-y-1",
                 !hasLocalFile && "opacity-60",
                 hasLocalFile ? "cursor-pointer" : "cursor-default"
             )}
@@ -353,6 +372,21 @@ const EpisodeCard = React.memo(function EpisodeCard({
                             FILLER
                         </span>
                     )}
+                    {vibes.slice(0, 2).map(vibe => (
+                        <span 
+                            key={vibe}
+                            className={cn(
+                                "px-2 py-0.5 backdrop-blur-md text-[8px] font-black tracking-widest uppercase border rounded-md",
+                                vibe === "EPIC" ? "bg-purple-500/20 text-purple-400 border-purple-500/30" :
+                                vibe === "HYPED" ? "bg-red-500/20 text-red-400 border-red-500/30" :
+                                vibe === "EMOTIONAL" ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" :
+                                vibe === "CHILL" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" :
+                                "bg-orange-500/20 text-orange-400 border-orange-500/30"
+                            )}
+                        >
+                            {vibe}
+                        </span>
+                    ))}
                 </div>
 
                 <div className="absolute top-3 right-3 z-20">
@@ -383,6 +417,7 @@ const EpisodeCard = React.memo(function EpisodeCard({
             </div>
 
             {/* Info Area */}
+            <div className="p-4 flex flex-col h-full min-w-0">
                 <div className="flex flex-col gap-1">
                     <div className="flex items-start justify-between gap-2">
                         <h4 className={cn(
@@ -409,13 +444,14 @@ const EpisodeCard = React.memo(function EpisodeCard({
                     )}
                 </div>
                 
-                <div className="mt-auto pt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[8px] font-black uppercase tracking-[0.1em] text-zinc-600">
+                <div className="mt-auto pt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[8px] font-black uppercase tracking-[0.1em] text-zinc-600">
                     {duration && <span className="text-zinc-500">{duration}</span>}
                     <div className="flex items-center gap-2">
                         {resolution && <span className="text-zinc-600">{resolution}</span>}
                         {codec && <span className="text-zinc-700">{codec}</span>}
                     </div>
                 </div>
+            </div>
         </div>
     )
 })

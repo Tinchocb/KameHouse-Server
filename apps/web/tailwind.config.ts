@@ -1,6 +1,13 @@
 import type { Config } from "tailwindcss"
 
-const { default: flattenColorPalette } = require("tailwindcss/lib/util/flattenColorPalette")
+import typography from "@tailwindcss/typography"
+import forms from "@tailwindcss/forms"
+import scrollbarHide from "tailwind-scrollbar-hide"
+import animate from "tailwindcss-animate"
+
+// @ts-expect-error - tailwindcss does not provide types for this utility
+import flattenColorPalette from "tailwindcss/lib/util/flattenColorPalette"
+
 
 const config: Config = {
     darkMode: "class",
@@ -340,10 +347,10 @@ const config: Config = {
         },
     },
     plugins: [
-        require("@tailwindcss/typography"),
-        require("@tailwindcss/forms"),
-        require("tailwind-scrollbar-hide"),
-        require("tailwindcss-animate"),
+        typography,
+        forms,
+        scrollbarHide,
+        animate,
         addVariablesForColors,
         function ({ addVariant }: { addVariant: (variant: string, selector: string) => void }) {
             addVariant("firefox", ":-moz-any(&)")
@@ -353,9 +360,9 @@ const config: Config = {
 export default config
 
 
-function addVariablesForColors({ addBase, theme }: any) {
-    let allColors = flattenColorPalette(theme("colors"))
-    let newVars = Object.fromEntries(
+function addVariablesForColors({ addBase, theme }: { addBase: any; theme: any }) {
+    const allColors = flattenColorPalette(theme("colors"))
+    const newVars = Object.fromEntries(
         Object.entries(allColors).map(([key, val]) => [`--${key}`, val]),
     )
 

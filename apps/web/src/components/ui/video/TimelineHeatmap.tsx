@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect } from "react"
+import React, { useRef, useEffect } from "react"
 
 interface TimelineHeatmapProps {
     duration: number
@@ -6,7 +6,7 @@ interface TimelineHeatmapProps {
     className?: string
 }
 
-export function TimelineHeatmap({ duration, data, className }: TimelineHeatmapProps) {
+export function TimelineHeatmap({ duration: _, data, className }: TimelineHeatmapProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
 
     useEffect(() => {

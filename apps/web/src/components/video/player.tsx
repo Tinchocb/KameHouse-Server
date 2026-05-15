@@ -1,11 +1,11 @@
-import React, { useMemo } from "react"
+import React, { useMemo, useState } from "react"
 import { useRequestMediastreamMediaContainer } from "@/api/hooks/mediastream.hooks"
 import { Loader2, AlertTriangle } from "lucide-react"
 
 import { usePlayerCore } from "./player-core"
 import { PlayerUI } from "./player-ui"
 import type { EpisodeSource } from "@/api/types/unified.types"
-import type { Mediastream_StreamType } from "@/api/generated/types"
+import type { Mediastream_StreamType, Audio, Subtitle } from "@/api/generated/types"
 import type { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
 
 export type VideoPlayerProps = {
@@ -60,8 +60,8 @@ interface OrchestratorProps extends VideoPlayerProps {
 }
 
 function VideoPlayerOrchestrator(props: OrchestratorProps) {
-    const [streamType, setStreamType] = React.useState<string>(props.streamType || "direct")
-    const [clientId] = React.useState(() => Math.random().toString(36).substring(2, 11))
+    const [streamType, setStreamType] = useState<string>(props.streamType || "direct")
+    const [clientId] = useState(() => Math.random().toString(36).substring(2, 11))
     
     const isLocal = !props.isExternalStream && Boolean(props.streamUrl) && streamType !== "online"
 
@@ -79,21 +79,21 @@ function VideoPlayerOrchestrator(props: OrchestratorProps) {
     const backendTracks = useMemo(() => {
         if (!data?.mediaInfo) return undefined
         return {
-            audioTracks: data.mediaInfo.audios?.map((a: any, i: number) => ({
+            audioTracks: data.mediaInfo.audios?.map((a: Audio, i: number) => ({
                 index: a.index ?? i,
                 language: a.language ?? "und",
                 title: a.title || a.language || `Audio ${i + 1}`,
                 codec: a.codec,
                 channels: a.channels,
-                default: a.default
+                default: a.isDefault
             })) || [],
-            subtitleTracks: data.mediaInfo.subtitles?.map((s: any, i: number) => ({
+            subtitleTracks: data.mediaInfo.subtitles?.map((s: Subtitle, i: number) => ({
                 index: s.index ?? i,
                 language: s.language ?? "und",
                 title: s.title || s.language || `Subtitle ${i + 1}`,
                 codec: s.codec,
-                default: s.default,
-                forced: s.forced,
+                default: s.isDefault,
+                forced: s.isForced,
                 url: `/api/v1/mediastream/subtitles?path=${encodeURIComponent(props.streamUrl)}&trackIndex=${s.index ?? i}&clientId=${clientId}`
             })) || []
         }
@@ -159,11 +159,14 @@ function VideoPlayerOrchestrator(props: OrchestratorProps) {
             onClose={props.onClose}
             onNextEpisode={props.onNextEpisode}
             playableUrl={playableUrl}
-            streamType={streamType as any}
+            streamType={streamType as "local" | "online" | "direct" | "transcode" | "optimized"}
             episodeSources={episodeSources}
             onSourceSwitch={handleSourceSwitch}
             core={core}
             clientId={clientId}
+            mediaId={props.mediaId}
+            episodeNumber={props.episodeNumber}
         />
     )
 }
+

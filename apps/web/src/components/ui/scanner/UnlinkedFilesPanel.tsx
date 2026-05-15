@@ -51,7 +51,7 @@ const FileCard = React.forwardRef<HTMLDivElement, { file: GhostFile }>(function 
     const [expanded, setExpanded] = useState(false)
     const [searchQuery, setSearchQuery] = useState("")
     const [debouncedQuery, setDebouncedQuery] = useState("")
-    const debounceRef = React.useRef<any>()
+    const debounceRef = React.useRef<NodeJS.Timeout | null>(null)
     const { data: results = [], isFetching } = useTMDBSearch(debouncedQuery)
     const resolve = useResolveUnlinkedFileAction()
 

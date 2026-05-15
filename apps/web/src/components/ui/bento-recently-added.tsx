@@ -11,6 +11,7 @@ export interface BentoItem {
     year?: string | number
     rating?: number
     description?: string
+    vibes?: string[]
     onClick: () => void
 }
 
@@ -45,9 +46,10 @@ export function BentoRecentlyAdded({ items, className }: BentoRecentlyAddedProps
                         }}
                         onClick={item.onClick}
                         className={cn(
-                            "group relative overflow-hidden rounded-3xl border border-white/5 bg-zinc-900 cursor-pointer",
+                            "group relative overflow-hidden rounded-3xl border border-white/[0.03] bg-zinc-950 cursor-pointer transition-all duration-500",
                             isLarge ? "md:col-span-2 md:row-span-2 h-[400px] md:h-full" : "h-[200px] md:h-full",
-                            isMedium && !isLarge ? "md:col-span-1" : ""
+                            isMedium && !isLarge ? "md:col-span-1" : "",
+                            "hover:border-white/10 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.5)]"
                         )}
                     >
                         {/* Background Image */}
@@ -76,6 +78,11 @@ export function BentoRecentlyAdded({ items, className }: BentoRecentlyAddedProps
                                             {item.year}
                                         </div>
                                     )}
+                                    {item.vibes?.slice(0, 2).map(vibe => (
+                                        <div key={vibe} className="text-[0.6rem] font-black tracking-[0.1em] uppercase px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-zinc-500">
+                                            {vibe}
+                                        </div>
+                                    ))}
                                 </div>
                                 
                                 <h3 className={cn(

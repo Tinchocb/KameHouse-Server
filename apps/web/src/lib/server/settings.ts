@@ -252,7 +252,7 @@ export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>): 
         vcTranslateProvider: "",
         vcTranslateTargetLanguage: "",
     },
-    torrent: {} as any,
+    torrent: {} as GettingStarted_Variables["torrent"],
     Platform: {
         hideAudienceScore: false,
 

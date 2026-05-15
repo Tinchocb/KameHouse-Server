@@ -19,7 +19,7 @@ export interface EpisodeListItemProps {
     onClick?: () => void
 }
 
-export function EpisodeListItem({
+export const EpisodeListItem = React.memo(function EpisodeListItem({
     number,
     title,
     synopsis,
@@ -112,4 +112,4 @@ export function EpisodeListItem({
             </div>
         </div>
     )
-}
+})

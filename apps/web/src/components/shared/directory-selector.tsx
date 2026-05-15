@@ -24,12 +24,12 @@ export type DirectorySelectorProps = {
     libraryPathSelectionProps?: {
         showLibrarySelector?: boolean
         selectedLibrary?: string
-        libraryOptions?: { label: string; value: string }[] | any[]
+        libraryOptions?: { label: string; value: string }[]
         handleLibraryPathSelect: (path: string) => void
     }
 } & Omit<TextInputProps, "onSelect" | "value">
 
-export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, DirectorySelectorProps>(function (props: DirectorySelectorProps, ref) {
+export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, DirectorySelectorProps>(function (props: DirectorySelectorProps, ref: React.ForwardedRef<HTMLInputElement>) {
 
     const {
         defaultValue,
@@ -58,7 +58,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
         setInputRaw(sanitizePath(newInput))
     }, [sanitizePath])
 
-    const { data, isLoading, error } = useDirectorySelector(debouncedInput)
+    const { data, isLoading } = useDirectorySelector(debouncedInput)
 
     React.useEffect(() => {
         if (firstRender.current) {

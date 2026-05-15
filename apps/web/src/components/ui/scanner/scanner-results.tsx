@@ -79,7 +79,7 @@ export function ScanActionCard({
 
     if (to) {
         return (
-            <Link to={to as any} className={baseClasses}>
+            <Link to={to as "/"} className={baseClasses}>
                 {content}
             </Link>
         )
@@ -87,7 +87,7 @@ export function ScanActionCard({
 
     return (
         <button
-            ref={cardRef as any}
+            ref={cardRef as React.RefObject<HTMLButtonElement>}
             onClick={onClick}
             disabled={disabled}
             type="button"

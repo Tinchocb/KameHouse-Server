@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { filterEntriesByTitle, filterListEntries, DEFAULT_COLLECTION_PARAMS } from "./filtering"
-import { Platform_MediaFormat, Platform_MediaStatus, Platform_AnimeListEntry, Platform_MediaSort } from "@/api/generated/types"
+import { Platform_AnimeListEntry } from "@/api/generated/types"
 
 describe("filtering helper", () => {
     describe("filterEntriesByTitle", () => {

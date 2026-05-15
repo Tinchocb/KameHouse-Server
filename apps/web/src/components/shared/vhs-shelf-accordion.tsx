@@ -109,7 +109,8 @@ const VHS_THEMES: Record<number, {
 }
 
 // Dynamic theme generator for generic/non-DB shows based on string hashes
-function getGenericTheme(title: string, index: number) {
+// Dynamic theme generator for generic/non-DB shows based on string hashes
+function getGenericTheme(title: string) {
     const hash = title.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
     const options = [
         { // Neon Cyberpunk
@@ -183,7 +184,7 @@ export const VhsShelfAccordion = memo(function VhsShelfAccordion({
 
                         // ── Theme Mapping ──
                         const tmdbId = item.tmdbId || 0
-                        const theme = VHS_THEMES[tmdbId] || getGenericTheme(item.title, index)
+                        const theme = VHS_THEMES[tmdbId] || getGenericTheme(item.title)
                         
                         const titleText = item.title
                         const subtitleText = item.subtitle || theme.defaultSubtitle

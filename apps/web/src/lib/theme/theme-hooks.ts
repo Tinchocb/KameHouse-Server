@@ -1,5 +1,5 @@
 import { Models_Theme } from "@/api/generated/types"
-const useServerStatus = () => null;
+
 import React from "react"
 import { useWindowSize } from "react-use"
 
@@ -138,75 +138,7 @@ export function useThemeSettings(): ThemeSettingsHook {
     }
 }
 
-function getThemeValue<K extends keyof ThemeSettings>(key: K, settings: ThemeSettings | undefined | null): ThemeSettings[K] {
-    const defaultValue = THEME_DEFAULT_VALUES[key]
 
-    if (!settings) {
-        return defaultValue as ThemeSettings[K]
-    }
-
-    // Special case for mediaPageBannerInfoBoxSize
-    if (key === "mediaPageBannerInfoBoxSize") {
-        if (settings?.mediaPageBannerInfoBoxSize !== "boxed") {
-            return defaultValue as ThemeSettings[K]
-        }
-    }
-
-    const val = settings[key] as unknown
-    const defaultType = typeof defaultValue
-    const valType = typeof val
-
-    // Handle different types based on the default value's type
-    if (val === null || val === undefined) {
-        return defaultValue as ThemeSettings[K]
-    }
-
-    switch (defaultType) {
-        case "string":
-            // For strings: only use default if current value is empty string and default is not empty
-            if (valType === "string" && val === "" && defaultValue !== "") {
-                return defaultValue as ThemeSettings[K]
-            }
-            // If types don't match, use default
-            if (valType !== "string") {
-                return defaultValue as ThemeSettings[K]
-            }
-            return val as ThemeSettings[K]
-
-        case "number":
-            // For numbers: use default if not a valid number
-            if (valType !== "number" || isNaN(val as number)) {
-                return defaultValue as ThemeSettings[K]
-            }
-            return val as ThemeSettings[K]
-
-        case "boolean":
-            // For booleans: use actual value if it's a boolean, otherwise use default
-            if (valType === "boolean") {
-                return val as ThemeSettings[K]
-            }
-            return defaultValue as ThemeSettings[K]
-
-        case "object":
-            if (Array.isArray(defaultValue)) {
-                // For arrays: use default if not an array
-                if (!Array.isArray(val)) {
-                    return defaultValue as ThemeSettings[K]
-                }
-                return val as ThemeSettings[K]
-            } else {
-                // For objects: use default if not an object
-                if (valType !== "object" || val === null) {
-                    return defaultValue as ThemeSettings[K]
-                }
-                return val as ThemeSettings[K]
-            }
-
-        default:
-            // For any other type, return the value
-            return val as ThemeSettings[K]
-    }
-}
 
 export function useIsMobile(): { isMobile: boolean } {
     const { width } = useWindowSize()

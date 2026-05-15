@@ -68,6 +68,7 @@ type (
 		AvailabilityType       string                  `json:"availabilityType"`            // FULL_LOCAL, HYBRID, ONLY_ONLINE
 		EntryLibraryData       *EntryLibraryData       `json:"libraryData"`  // Library data
 		EntryListData          *EntryListData          `json:"listData"`     // Local list data
+		Vibes                  []string                `json:"vibes"`        // Emotional or thematic tags
 	}
 
 	// UnmatchedGroup holds the data for a group of unmatched local files.
@@ -297,6 +298,7 @@ func (lc *LibraryCollection) hydrateCollectionLists(
 				CompletedAt: listData.CompletedAt,
 			},
 		}
+		lce.DeriveVibes()
 
 		statusGroups[status] = append(statusGroups[status], lce)
 	}
@@ -483,4 +485,73 @@ func (lc *LibraryCollection) hydrateUnmatchedGroups() {
 
 	// Assign the created groups
 	lc.UnmatchedGroups = groups
+}
+
+func (e *LibraryCollectionEntry) DeriveVibes() {
+	vibes := make([]string, 0)
+	if e.Media == nil {
+		return
+	}
+
+	// 1. Epic vibe based on score
+	if e.Media.Score >= 8.5 || e.Media.Score >= 85 {
+		vibes = append(vibes, "EPIC")
+	}
+
+	var genres []string
+	_ = json.Unmarshal(e.Media.Genres, &genres)
+
+	// 2. Chill vibe
+	isChill := false
+	for _, g := range genres {
+		gl := strings.ToLower(g)
+		if gl == "slice of life" || gl == "music" || gl == "healing" || gl == "comedy" {
+			isChill = true
+			break
+		}
+	}
+	if isChill {
+		vibes = append(vibes, "CHILL")
+	}
+
+	// 3. Emotional vibe
+	isEmotional := false
+	for _, g := range genres {
+		gl := strings.ToLower(g)
+		if gl == "drama" || gl == "romance" || gl == "tearjerker" {
+			isEmotional = true
+			break
+		}
+	}
+	if isEmotional {
+		vibes = append(vibes, "EMOTIONAL")
+	}
+
+	// 4. Hyped vibe
+	isHyped := false
+	for _, g := range genres {
+		gl := strings.ToLower(g)
+		if gl == "action" || gl == "sports" || gl == "shounen" || gl == "adventure" {
+			isHyped = true
+			break
+		}
+	}
+	if isHyped {
+		vibes = append(vibes, "HYPED")
+	}
+
+	// 5. Intense vibe
+	isIntense := false
+	for _, g := range genres {
+		gl := strings.ToLower(g)
+		if gl == "horror" || gl == "psychological" || gl == "thriller" || gl == "dark fantasy" {
+			isIntense = true
+			break
+		}
+	}
+	if isIntense {
+		vibes = append(vibes, "INTENSE")
+	}
+
+	e.Vibes = vibes
 }

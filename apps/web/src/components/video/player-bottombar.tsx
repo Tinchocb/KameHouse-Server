@@ -77,10 +77,16 @@ export interface PlayerBottomBarProps {
 
     autoDisableSubtitlesWhenDubbed?: boolean
     onAutoDisableSubtitlesWhenDubbedChange?: (enabled: boolean) => void
+
+    ambilightEnabled?: boolean
+    onAmbilightChange?: (enabled: boolean) => void
+
+    marathonMode?: boolean
+    onMarathonModeChange?: (enabled: boolean) => void
 }
 
 export function PlayerBottomBar({
-    duration, insights, progressBarRef, progressInputRef, handleSeek,
+    duration, insights, progressInputRef, handleSeek,
     isPlaying, togglePlay, skipTime,
     isMuted, toggleMute, volume, handleVolume,
     timeTextRef,
@@ -100,12 +106,14 @@ export function PlayerBottomBar({
     subtitleSize = 100, onSubtitleSizeChange,
     loopEnabled = false, onLoopEnabledChange,
     autoDisableSubtitlesWhenDubbed = true, onAutoDisableSubtitlesWhenDubbedChange,
+    ambilightEnabled = true, onAmbilightChange,
+    marathonMode = true, onMarathonModeChange,
 }: PlayerBottomBarProps) {
 
     return (
         <div className={cn(
-            "absolute bottom-0 inset-x-0 w-full flex flex-col pointer-events-auto select-none",
-            "bg-gradient-to-t from-black/95 via-black/50 to-transparent pt-12 pb-5 px-5",
+            "absolute bottom-0 inset-x-0 w-full flex flex-col pointer-events-auto select-none transition-all duration-500",
+            "bg-zinc-950/40 backdrop-blur-2xl border-t border-white/[0.03] pt-12 pb-6 px-8",
         )}>
 
             {/* Progress Timeline */}
@@ -118,7 +126,13 @@ export function PlayerBottomBar({
                     />
                 )}
                 {/* Track background */}
-                <div className="absolute inset-x-0 h-[3px] group-hover/progress:h-[5px] bg-white/15 rounded-full transition-all duration-200" style={{ bottom: 8 }} />
+                <div className="absolute inset-x-0 h-[2px] group-hover/progress:h-[4px] bg-white/10 rounded-full transition-all duration-300" style={{ bottom: 8 }}>
+                    <div 
+                        ref={progressBarRef}
+                        className="h-full bg-brand-orange shadow-[0_0_15px_rgba(255,110,58,0.5)] rounded-full transition-all duration-200"
+                        style={{ width: '0%' }}
+                    />
+                </div>
                 <input
                     ref={progressInputRef}
                     type="range"
@@ -141,10 +155,10 @@ export function PlayerBottomBar({
                     <button
                         onClick={(e) => { e.stopPropagation(); togglePlay(); }}
                         aria-label={isPlaying ? "Pausar" : "Reproducir"}
-                        className="text-white hover:text-white/80 transition-all flex items-center justify-center w-9 h-9">
+                        className="text-white hover:text-brand-orange transition-all duration-300 flex items-center justify-center w-10 h-10 bg-white/5 rounded-full hover:bg-white/10">
                         {isPlaying
-                            ? <Pause className="w-5 h-5 fill-current" />
-                            : <Play className="w-5 h-5 fill-current" />
+                            ? <Pause className="w-4 h-4 fill-current" />
+                            : <Play className="w-4 h-4 fill-current ml-0.5" />
                         }
                     </button>
 
@@ -167,13 +181,13 @@ export function PlayerBottomBar({
                         <button
                             onClick={(e) => { e.stopPropagation(); toggleMute(); }}
                             aria-label={isMuted || volume === 0 ? "Activar sonido" : "Silenciar"}
-                            className="text-zinc-400 hover:text-white transition-all flex items-center justify-center w-8 h-8">
+                            className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8">
                             {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                         </button>
                         <div className="w-0 overflow-hidden group-hover/volume:w-20 transition-all duration-300 flex items-center">
                             <div className="w-full h-[3px] bg-white/20 relative rounded-full">
                                 <div
-                                    className="absolute left-0 h-full bg-white rounded-full transition-all"
+                                    className="absolute left-0 h-full bg-brand-orange rounded-full transition-all"
                                     style={{ width: `${isMuted ? 0 : volume * 100}%` }}
                                 />
                                 <input
@@ -264,6 +278,10 @@ export function PlayerBottomBar({
                         onLoopEnabledChange={onLoopEnabledChange}
                         autoDisableSubtitlesWhenDubbed={autoDisableSubtitlesWhenDubbed}
                         onAutoDisableSubtitlesWhenDubbedChange={onAutoDisableSubtitlesWhenDubbedChange}
+                        ambilightEnabled={ambilightEnabled}
+                        onAmbilightChange={onAmbilightChange}
+                        marathonMode={marathonMode}
+                        onMarathonModeChange={onMarathonModeChange}
                     />
 
                     {/* Fullscreen */}

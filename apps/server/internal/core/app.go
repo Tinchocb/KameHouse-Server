@@ -59,9 +59,10 @@ type (
 	}
 
 	LibraryServices struct {
-		FillerManager   *fillermanager.FillerManager
-		AutoScanner     *autoscanner.AutoScanner
-		LibraryExplorer *library_explorer.LibraryExplorer
+		FillerManager       *fillermanager.FillerManager
+		AutoScanner         *autoscanner.AutoScanner
+		LibraryExplorer     *library_explorer.LibraryExplorer
+		IntelligenceService *anime.IntelligenceService
 	}
 
 	KameHouse struct {

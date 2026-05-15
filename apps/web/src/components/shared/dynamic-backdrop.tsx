@@ -113,13 +113,15 @@ export function DynamicBackdrop() {
                 }}
             />
 
+            {/* ── Cinematic Grain Overlay ── */}
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay z-10"
+                style={{ backgroundImage: `url("https://grainy-gradients.vercel.app/noise.svg")` }}
+            />
+
             {/* ── Vignette stack — ensures text is always legible ───────── */}
-            {/* Radial centre highlight (Seanime-style subtle glow) */}
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_120%_80%_at_50%_0%,rgba(255,255,255,0.04),transparent_60%)]" />
-            {/* Left-to-right crush ensures left-aligned hero text pops */}
-            <div className="absolute inset-0 bg-gradient-to-r from-zinc-950/95 via-zinc-950/60 to-transparent" />
-            {/* Bottom crush anchors swimlanes */}
-            <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/75 to-zinc-950/10" />
+            <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/40 to-transparent opacity-90" />
+            <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent opacity-100" />
         </div>
     )
 }

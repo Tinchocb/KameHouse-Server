@@ -155,10 +155,10 @@ export const MediaCard = React.memo(function MediaCard({
             }}
             className={cn(
                 // Base
-                "group/card relative shrink-0 cursor-pointer overflow-hidden rounded-2xl border border-white/10 transition-all duration-500",
-                "bg-zinc-900/20 hover:border-brand-orange/40 hover:z-50",
-                "shadow-lg hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]",
-                "hover:ring-2 hover:ring-brand-orange/30",
+                "group/card relative shrink-0 cursor-pointer overflow-hidden rounded-[28px] border border-white/[0.05] transition-all duration-700",
+                "bg-zinc-950/40 hover:border-primary/30 hover:z-50",
+                "shadow-lg hover:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)]",
+                "hover:ring-1 hover:ring-primary/20",
                 // Intrinsic sizing
                 isPoster
                     ? "aspect-[2/3] w-[150px] md:w-[185px] lg:w-[220px]"
@@ -188,11 +188,11 @@ export const MediaCard = React.memo(function MediaCard({
             {/* ── Top-right: Source Icon ─────────────────── */}
             {availabilityType && (
                 <div className="absolute right-0 top-0 z-20">
-                    <span className="flex h-7 w-7 items-center justify-center bg-black/60 backdrop-blur-md rounded-bl-lg border-l border-b border-white/10 text-brand-orange">
+                    <span className="flex h-8 w-8 items-center justify-center bg-zinc-950/60 backdrop-blur-md rounded-bl-2xl border-l border-b border-white/5 text-primary">
                         {availabilityType === "ONLY_ONLINE" ? (
-                            <Zap className="h-3.5 w-3.5" />
+                            <Zap className="h-3.5 w-3.5 fill-current" />
                         ) : (
-                            <Folder className="h-3.5 w-3.5" />
+                            <Folder className="h-3.5 w-3.5 fill-current" />
                         )}
                     </span>
                 </div>
@@ -201,7 +201,7 @@ export const MediaCard = React.memo(function MediaCard({
             {/* ── Top-left: Format Badge ──────────────── */}
             {badge && (
                 <div className="absolute left-0 top-0 z-20">
-                    <span className="bg-brand-orange/15 backdrop-blur-md px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-brand-orange rounded-br-lg border-r border-b border-white/10">
+                    <span className="bg-primary/10 backdrop-blur-md px-3 py-1 text-[9px] font-black uppercase tracking-[0.25em] text-primary rounded-br-2xl border-r border-b border-white/5">
                         {badge}
                     </span>
                 </div>
@@ -230,17 +230,17 @@ export const MediaCard = React.memo(function MediaCard({
             </div>
 
             {/* ── Hover Overlay (Active State) ────────────────── */}
-            <div className="absolute inset-0 z-30 flex flex-col justify-end bg-gradient-to-t from-black via-black/40 to-transparent p-5 opacity-0 transition-all duration-500 group-hover/card:opacity-100">
-                <div className="flex flex-col gap-3 translate-y-4 transition-transform duration-500 group-hover/card:translate-y-0">
-                    <div className="flex items-center gap-4">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/20 text-white bg-brand-orange backdrop-blur-md transition-all duration-300 hover:scale-110 shadow-lg shadow-brand-orange/30">
-                            <svg viewBox="0 0 24 24" className="ml-1 h-6 w-6 fill-current" xmlns="http://www.w3.org/2000/svg">
+            <div className="absolute inset-0 z-30 flex flex-col justify-end bg-gradient-to-t from-zinc-950 via-zinc-950/60 to-transparent p-5 opacity-0 transition-all duration-700 group-hover/card:opacity-100">
+                <div className="flex flex-col gap-4 translate-y-4 transition-transform duration-700 group-hover/card:translate-y-0">
+                    <div className="flex flex-col gap-2">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 text-white bg-primary shadow-2xl shadow-primary/40 transition-transform duration-500 hover:scale-110">
+                            <svg viewBox="0 0 24 24" className="ml-1 h-7 w-7 fill-current" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M8 5v14l11-7z" />
                             </svg>
                         </div>
-                        <p className="line-clamp-2 text-[20px] font-black leading-[1.1] text-white uppercase tracking-tight font-display drop-shadow-2xl">
+                        <h3 className="line-clamp-2 font-bebas text-[2rem] leading-[0.9] text-white uppercase tracking-wider">
                             {title}
-                        </p>
+                        </h3>
                     </div>
 
                     {description && (
@@ -266,9 +266,9 @@ export const MediaCard = React.memo(function MediaCard({
 
             {/* ── Progress Bar ──────────────────────────────────────────── */}
             {progress !== undefined && (
-                <div className="absolute inset-x-0 bottom-0 z-50 h-[2.5px] bg-white/10 group-hover/card:h-[4px] transition-all duration-200">
+                <div className="absolute inset-x-0 bottom-0 z-50 h-[1.5px] bg-white/10 group-hover/card:h-[3.5px] transition-all duration-300">
                     <div
-                        className="h-full bg-gradient-to-r from-brand-orange to-amber-500"
+                        className="h-full bg-primary"
                         style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
                     />
                 </div>

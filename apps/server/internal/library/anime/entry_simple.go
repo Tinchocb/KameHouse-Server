@@ -26,6 +26,8 @@ type (
 		NextEpisode         *Episode             `json:"nextEpisode"`
 		LocalFiles          []*LocalFile         `json:"localFiles"`
 		CurrentEpisodeCount int                  `json:"currentEpisodeCount"`
+		Vibes               []string             `json:"vibes,omitempty"`
+		IntelligenceSvc     *IntelligenceService `json:"-"`
 	}
 
 	SimpleEntryListData struct {
@@ -43,6 +45,7 @@ type (
 		PlatformRef         *util.Ref[platform.Platform]
 		MetadataProviderRef *util.Ref[metadata_provider.Provider]
 		LibraryEpisodes     map[string]*models.LibraryEpisode
+		IntelligenceSvc     *IntelligenceService
 	}
 )
 
@@ -55,6 +58,7 @@ func NewSimpleEntry(ctx context.Context, opts *NewSimpleAnimeEntryOptions) (*Sim
 	// Create new Entry
 	entry := new(SimpleEntry)
 	entry.MediaId = opts.MediaId
+	entry.IntelligenceSvc = opts.IntelligenceSvc
 
 	// Get local DB media
 	var fetchedMedia *models.LibraryMedia
@@ -89,6 +93,9 @@ func NewSimpleEntry(ctx context.Context, opts *NewSimpleAnimeEntryOptions) (*Sim
 	}
 	entry.Media = fetchedMedia
 	entry.CurrentEpisodeCount = 0
+	if opts.IntelligenceSvc != nil {
+		entry.Vibes = opts.IntelligenceSvc.DeriveSeriesVibes(fetchedMedia)
+	}
 
 	// +---------------------+
 	// |   Local files       |
@@ -172,6 +179,7 @@ func (e *SimpleEntry) hydrateEntryEpisodeData(amw metadata_provider.AnimeMetadat
 				IsDownloaded:    true,
 				MetadataWrapper: amw,
 				LibraryEpisode:  libEp,
+				IntelligenceSvc: e.IntelligenceSvc,
 			})
 		})
 	}
