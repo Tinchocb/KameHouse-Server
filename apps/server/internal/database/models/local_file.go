@@ -25,3 +25,7 @@ type LocalFile struct {
 	Metadata         json.RawMessage `gorm:"column:metadata;type:text" json:"metadata"`
 	TechnicalInfo    json.RawMessage `gorm:"column:technical_info;type:text" json:"technicalInfo"`
 }
+
+func (LocalFile) TableName() string {
+	return "local_file"
+}

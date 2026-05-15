@@ -103,6 +103,7 @@ export function HeroBanner({
     const prefersReducedMotion = usePrefersReducedMotion()
     const [activeIndex, setActiveIndex] = React.useState(initialIndex)
     const [isPaused, setIsPaused] = React.useState(false)
+    const [isAutoPlaying, setIsAutoPlaying] = React.useState(true)
     
     // Parallax state
     const [mousePos, setMousePos] = React.useState({ x: 0, y: 0 })
@@ -110,7 +111,7 @@ export function HeroBanner({
         if (prefersReducedMotion) return
         const { clientX, clientY } = e
         const { innerWidth, innerHeight } = window
-        const x = (clientX / innerWidth - 0.5) * 20 // Max 20px offset
+        const x = (clientX / innerWidth - 0.5) * 20
         const y = (clientY / innerHeight - 0.5) * 20
         setMousePos({ x, y })
     }, [prefersReducedMotion])
@@ -120,14 +121,14 @@ export function HeroBanner({
     }, [initialIndex])
 
     React.useEffect(() => {
-        if (prefersReducedMotion || items.length <= 1 || isPaused) return
+        if (prefersReducedMotion || items.length <= 1 || isPaused || !isAutoPlaying) return
 
         const intervalId = window.setInterval(() => {
             setActiveIndex((current) => (current + 1) % items.length)
         }, autoRotateMs)
 
         return () => window.clearInterval(intervalId)
-    }, [autoRotateMs, items.length, prefersReducedMotion, isPaused])
+    }, [autoRotateMs, items.length, prefersReducedMotion, isPaused, isAutoPlaying])
 
     if (items.length === 0) return null
 
@@ -143,25 +144,21 @@ export function HeroBanner({
             }}
             onMouseMove={handleMouseMove}
             className={cn(
-                "relative flex min-h-[720px] w-full items-end overflow-hidden bg-background",
+                "relative flex min-h-[720px] w-full items-end overflow-hidden bg-zinc-950",
                 "h-[100dvh] max-h-[1100px]",
                 className,
             )}
         >
             {/* ── Backdrop images ────────────────────────────────────────── */}
             <div 
-                className="absolute inset-x-[-20px] inset-y-[-20px] cursor-pointer"
+                className="absolute inset-0 cursor-pointer"
                 onClick={() => activeItem.onPlay()}
-                style={{
-                    transform: `translate3d(${mousePos.x}px, ${mousePos.y}px, 0)`,
-                    transition: isPaused ? "none" : "transform 0.2s ease-out",
-                }}
             >
                 {items.map((item, index) => (
                     <div
                         key={item.id}
                         className={cn(
-                            "absolute inset-0 transition-all duration-1000 ease-in-out",
+                            "absolute inset-0 transition-all duration-1000 ease-[cubic-bezier(0.23,1,0.32,1)]",
                             index === activeIndex ? "opacity-100 z-10 scale-100" : "opacity-0 z-0 scale-110",
                         )}
                     >
@@ -172,7 +169,7 @@ export function HeroBanner({
                                 muted
                                 loop
                                 playsInline
-                                className="h-full w-full object-cover object-center brightness-[0.4] saturate-[1.1] scale-105"
+                                className="h-full w-full object-cover object-center brightness-[0.35] saturate-[1.2] scale-105"
                             />
                         ) : (
                             <img
@@ -180,7 +177,7 @@ export function HeroBanner({
                                 alt=""
                                 aria-hidden="true"
                                 className={cn(
-                                    "h-full w-full object-cover object-center brightness-[0.4] saturate-[0.85]",
+                                    "h-full w-full object-cover object-center brightness-[0.35] saturate-[0.85]",
                                     index === activeIndex && "animate-ken-burns"
                                 )}
                             />
@@ -189,173 +186,168 @@ export function HeroBanner({
                 ))}
             </div>
 
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.02),transparent_60%)] pointer-events-none" />
+            {/* Overlays */}
+            <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/40 to-transparent pointer-events-none z-20" />
+            <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-transparent pointer-events-none z-20" />
             
-            <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/20 to-transparent pointer-events-none" />
-            <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent opacity-90 pointer-events-none" />
-            
-            {/* The Perfect Fade to Black: seamless transition to the body bg */}
-            <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-zinc-950 via-zinc-950/90 to-transparent pointer-events-none" />
-
-            {/* ── Progress Indicators ───────────────────────────────────────── */}
-            <div className="absolute bottom-12 right-6 md:right-10 lg:right-16 z-50 flex gap-3 items-center">
-                {items.map((_, idx) => (
-                    <button
-                        key={idx}
-                        onClick={() => {
-                            setActiveIndex(idx)
-                            setIsAutoPlaying(false)
-                        }}
-                        className={cn(
-                            "group relative h-1 rounded-full transition-all duration-700 overflow-hidden",
-                            activeIndex === idx ? "w-12 bg-white/10" : "w-3 bg-white/20 hover:bg-white/40"
-                        )}
-                    >
-                        {activeIndex === idx && isAutoPlaying && (
-                            <motion.div 
-                                initial={{ width: 0 }}
-                                animate={{ width: "100%" }}
-                                transition={{ duration: autoRotateMs / 1000, ease: "linear" }}
-                                className="absolute inset-0 bg-primary"
-                            />
-                        )}
-                        {activeIndex === idx && !isAutoPlaying && (
-                            <div className="absolute inset-0 bg-primary" />
-                        )}
-                    </button>
-                ))}
-            </div>
-
             {/* ── Content ───────────────────────────────────────────────── */}
-            <div className="relative z-10 mx-auto flex w-full max-w-[1680px] flex-col justify-end gap-6 px-6 pb-16 pt-36 md:px-10 lg:px-14 lg:pb-20 xl:flex-row xl:items-end xl:justify-between">
-                {/* Left: metadata + CTAs */}
-                <div className="max-w-3xl">
-                    {/* Intelligence chips + meta strip */}
-                    <div className="mb-5 flex flex-wrap items-center gap-2">
+            <div className="relative z-30 mx-auto flex w-full max-w-[1920px] flex-col justify-end gap-12 px-6 pb-20 pt-36 md:px-12 lg:px-20 lg:pb-24 xl:flex-row xl:items-end xl:justify-between">
+                
+                {/* Left: Metadata + Title + CTAs */}
+                <div className="flex-1 max-w-5xl">
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        key={`meta-${activeItem.id}`}
+                        transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
+                        className="mb-8 flex flex-wrap items-center gap-4"
+                    >
                         <EpicChip tag={activeItem.contentTag} />
                         <ArcChip arcName={activeItem.arcName} />
-                        {activeItem.rating !== undefined && <RatingRing rating={activeItem.rating} />}
-                        {activeItem.format && (
-                            <span className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-zinc-500">
-                                {activeItem.format}
-                            </span>
-                        )}
-                        {activeItem.year !== undefined && (
-                            <span className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-zinc-500">
-                                {activeItem.year}
-                            </span>
-                        )}
-                        {activeItem.episodeCount !== undefined && (
-                            <span className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-zinc-500">
-                                {activeItem.episodeCount} ep.
-                            </span>
-                        )}
-                    </div>
+                        
+                        <div className="flex items-center gap-4 text-[0.65rem] font-medium tracking-[0.2em] text-zinc-500 uppercase">
+                            {activeItem.rating !== undefined && <RatingRing rating={activeItem.rating} />}
+                            {activeItem.rating !== undefined && <div className="h-1 w-1 rounded-full bg-white/20" />}
+                            {activeItem.format && <span>{activeItem.format}</span>}
+                            {activeItem.format && <div className="h-1 w-1 rounded-full bg-white/20" />}
+                            {activeItem.year && <span>{activeItem.year}</span>}
+                        </div>
+                    </motion.div>
 
-                    {/* Title or logo */}
-                    <div 
-                        className="cursor-pointer group/title mb-6 md:mb-8"
+                    <motion.div 
+                        key={`title-${activeItem.id}`}
+                        initial={{ opacity: 0, x: -40 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 1, ease: [0.23, 1, 0.32, 1] }}
+                        className="relative mb-10 group/title cursor-pointer"
                         onClick={() => activeItem.onPlay()}
+                        style={{
+                            transform: `translate3d(${mousePos.x * 0.5}px, ${mousePos.y * 0.5}px, 0)`,
+                        }}
                     >
                         {activeItem.logoUrl ? (
                             <img
                                 src={activeItem.logoUrl}
                                 alt={activeItem.title}
-                                className="max-h-32 md:max-h-40 max-w-[min(36rem,85vw)] object-contain object-left group-hover/title:scale-[1.02] transition-transform duration-500"
+                                className="max-h-32 md:max-h-48 max-w-full object-contain object-left group-hover/title:scale-[1.02] transition-transform duration-700"
                             />
                         ) : (
-                            <h1 className="max-w-4xl font-bebas font-normal leading-[0.8] tracking-tight text-white text-[5rem] md:text-[8rem] xl:text-[11rem] uppercase group-hover/title:text-primary transition-all duration-500">
+                            <h1 className="font-bebas text-[7rem] md:text-[10rem] lg:text-[14rem] leading-[0.75] tracking-tight text-white uppercase drop-shadow-2xl">
                                 {activeItem.title}
                             </h1>
                         )}
-                    </div>
+                    </motion.div>
 
-                    <p className="line-clamp-3 max-w-2xl text-lg leading-relaxed text-zinc-200/90 md:text-xl drop-shadow-md">
+                    <motion.p 
+                        key={`synopsis-${activeItem.id}`}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 0.8 }}
+                        transition={{ delay: 0.3, duration: 1 }}
+                        className="line-clamp-3 max-w-2xl text-lg md:text-xl leading-relaxed text-zinc-300 mb-12"
+                    >
                         {activeItem.synopsis || "Sinopsis no disponible."}
-                    </p>
+                    </motion.p>
 
-                    {/* CTAs */}
-                    <div className="mt-12 flex flex-wrap items-center gap-6">
+                    <div className="flex flex-wrap items-center gap-6">
                         <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
+                            whileHover={{ scale: 1.02, backgroundColor: "rgb(var(--primary-hover))" }}
+                            whileTap={{ scale: 0.98 }}
                             onClick={() => activeItem.onPlay()}
-                            className="group/btn relative flex items-center justify-center gap-4 bg-primary text-white h-16 md:h-20 px-12 rounded-[28px] font-bebas text-2xl uppercase tracking-[0.12em] transition-all shadow-[0_20px_40px_-12px_rgba(var(--primary-rgb),0.5)] overflow-hidden border border-white/10"
+                            className="group/btn relative flex items-center justify-center gap-4 bg-primary text-white h-16 md:h-18 px-12 rounded-2xl font-bebas text-2xl uppercase tracking-[0.1em] transition-all shadow-[0_20px_40px_-12px_rgba(var(--primary-rgb),0.4)]"
                         >
-                            <Play className="w-6 h-6 fill-current relative z-10 transition-transform group-hover/btn:scale-110" />
-                            <span className="relative z-10">REPRODUCIR</span>
-                            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-500" />
+                            <Play className="w-5 h-5 fill-current" />
+                            <span>REPRODUCIR</span>
                         </motion.button>
 
                         <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
+                            whileHover={{ scale: 1.02, backgroundColor: "rgba(255,255,255,0.05)" }}
+                            whileTap={{ scale: 0.98 }}
                             onClick={() => activeItem.onMoreInfo()}
-                            className="group/btn relative flex items-center justify-center gap-4 bg-zinc-950/40 backdrop-blur-3xl text-zinc-300 h-16 md:h-20 px-12 rounded-[28px] font-bebas text-2xl uppercase tracking-[0.12em] transition-all border border-white/10 hover:border-white/20 hover:text-white"
+                            className="group/btn relative flex items-center justify-center gap-4 bg-transparent text-zinc-300 h-16 md:h-18 px-12 rounded-2xl font-bebas text-2xl uppercase tracking-[0.1em] transition-all border border-white/10"
                         >
-                            <Info className="w-6 h-6 relative z-10" />
-                            <span className="relative z-10">DETALLES</span>
-                            <div className="absolute inset-0 bg-white/5 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
+                            <Info className="w-5 h-5" />
+                            <span>DETALLES</span>
                         </motion.button>
                     </div>
                 </div>
 
-                {/* Right: glass poster (xl only) */}
-                <div 
-                    className="hidden w-full max-w-sm xl:block cursor-pointer group/poster"
-                    onClick={() => activeItem.onPlay()}
-                >
-                    <div className="border border-white/5 bg-zinc-900/20 p-6 rounded-[40px] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)] backdrop-blur-3xl ring-1 ring-white/10 transition-all duration-700 group-hover/poster:border-primary/40 group-hover/poster:bg-zinc-900/40">
-                        {activeItem.posterUrl ? (
-                            <div className="relative">
+                {/* Right: Premium Glass Poster */}
+                <div className="hidden xl:flex flex-col items-center gap-8 w-[400px]">
+                    <motion.div
+                        key={`poster-${activeItem.id}`}
+                        initial={{ opacity: 0, scale: 0.9, rotateY: 20 }}
+                        animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+                        transition={{ duration: 1.2, ease: [0.23, 1, 0.32, 1] }}
+                        style={{
+                            perspective: "1000px",
+                            transform: `translate3d(${mousePos.x}px, ${mousePos.y}px, 0) rotateX(${-mousePos.y * 0.1}deg) rotateY(${mousePos.x * 0.1}deg)`,
+                        }}
+                        className="relative w-full group/poster cursor-pointer"
+                        onClick={() => activeItem.onMoreInfo()}
+                    >
+                        <div className="relative aspect-[2/3] w-full overflow-hidden rounded-[32px] border border-white/10 bg-zinc-900/40 backdrop-blur-3xl shadow-[0_40px_80px_-20px_rgba(0,0,0,0.8)] transition-all duration-700 group-hover/poster:border-primary/50 group-hover/poster:shadow-primary/10">
+                            {activeItem.posterUrl ? (
                                 <img
                                     src={activeItem.posterUrl}
                                     alt={activeItem.title}
-                                    className="aspect-[2/3] w-full object-cover rounded-xl transition-all duration-500 group-hover/poster:scale-[1.02]"
+                                    className="h-full w-full object-cover transition-transform duration-700 group-hover/poster:scale-105"
                                 />
-                            </div>
-                        ) : (
-                            <div className="aspect-[2/3] w-full bg-zinc-900 rounded-xl" />
-                        )}
+                            ) : (
+                                <div className="h-full w-full bg-zinc-900" />
+                            )}
+                            
+                            {/* Inner Glass Glow */}
+                            <div className="absolute inset-0 bg-gradient-to-tr from-zinc-950/40 via-transparent to-white/5 pointer-events-none" />
+                        </div>
 
+                        {/* Progress Bar (if available) */}
                         {activeItem.progress !== undefined && (
-                            <div className="mt-4">
-                                <div className="mb-2 flex items-center justify-between text-[0.7rem] uppercase tracking-[0.18em] text-zinc-400">
-                                    <span>Continuar viendo</span>
-                                    <span>{Math.round(activeItem.progress)}%</span>
+                            <div className="absolute -bottom-4 left-6 right-6 z-40 bg-zinc-900/80 backdrop-blur-xl border border-white/5 rounded-2xl p-4 shadow-2xl">
+                                <div className="flex items-center justify-between text-[0.6rem] font-bold uppercase tracking-[0.2em] text-zinc-500 mb-2">
+                                    <span>Continuar</span>
+                                    <span className="text-primary">{Math.round(activeItem.progress)}%</span>
                                 </div>
-                                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-gradient-to-r from-brand-orange to-amber-500"
-                                        style={{
-                                            width: `${Math.min(100, Math.max(0, activeItem.progress))}%`,
-                                        }}
+                                <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                                    <motion.div 
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${activeItem.progress}%` }}
+                                        transition={{ duration: 1, ease: "circOut" }}
+                                        className="h-full bg-primary"
                                     />
                                 </div>
                             </div>
                         )}
-                    </div>
+                    </motion.div>
                 </div>
             </div>
 
-            {/* ── Dot navigation ────────────────────────────────────────── */}
-            {items.length > 1 && (
-                <div className="absolute bottom-8 left-6 z-10 flex items-center gap-2 md:left-10 lg:left-14">
-                    {items.map((item, index) => (
-                        <button
-                            key={item.id}
-                            type="button"
-                            aria-label={`Mostrar ${item.title}`}
-                            aria-pressed={index === activeIndex}
-                            onClick={() => setActiveIndex(index)}
-                            className={cn(
-                                "h-1.5 rounded-full bg-white/20 transition-all duration-300 motion-reduce:transition-none",
-                                index === activeIndex ? "w-10 bg-brand-orange" : "w-4 hover:bg-white/50",
+            {/* ── Progress Indicators (Navigation) ─────────────────────────── */}
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3">
+                {items.map((item, idx) => (
+                    <button
+                        key={item.id}
+                        onClick={() => {
+                            setActiveIndex(idx)
+                            setIsAutoPlaying(false)
+                        }}
+                        className="group relative py-4"
+                    >
+                        <div className={cn(
+                            "h-[2px] rounded-full transition-all duration-700",
+                            activeIndex === idx ? "w-16 bg-primary" : "w-8 bg-white/10 group-hover:bg-white/30"
+                        )}>
+                            {activeIndex === idx && isAutoPlaying && (
+                                <motion.div 
+                                    initial={{ width: 0 }}
+                                    animate={{ width: "100%" }}
+                                    transition={{ duration: autoRotateMs / 1000, ease: "linear" }}
+                                    className="h-full bg-white/40"
+                                />
                             )}
-                        />
-                    ))}
-                </div>
-            )}
+                        </div>
+                    </button>
+                ))}
+            </div>
         </section>
     )
 }
@@ -364,37 +356,28 @@ export function HeroBannerSkeleton({ className }: { className?: string }) {
     return (
         <section
             className={cn(
-                "relative h-[480px] w-full overflow-hidden bg-background md:h-[580px] lg:h-[680px]",
+                "relative h-[100dvh] w-full overflow-hidden bg-zinc-950",
                 className,
             )}
         >
-            <div className="absolute inset-0 flex items-center px-6 md:px-10 lg:px-14">
-                <div className="z-10 w-full max-w-2xl">
-                    <div className="flex flex-wrap items-center gap-3">
-                        <Skeleton className="h-6 w-24 rounded-md" />
-                        <Skeleton className="h-6 w-32 rounded-md" />
+            <div className="absolute inset-0 flex items-center px-12 md:px-20">
+                <div className="z-10 w-full max-w-3xl">
+                    <div className="flex gap-4">
+                        <Skeleton className="h-6 w-24 bg-white/5" />
+                        <Skeleton className="h-6 w-32 bg-white/5" />
                     </div>
-
-                    <Skeleton className="mt-6 h-12 w-3/4 md:h-16 lg:h-20 rounded-xl" />
-
-                    <div className="mt-4 flex flex-wrap items-center gap-4">
-                        <Skeleton className="h-4 w-16 rounded-md" />
-                        <Skeleton className="h-4 w-16 rounded-md" />
-                        <Skeleton className="h-4 w-16 rounded-md" />
+                    <Skeleton className="mt-10 h-32 w-full bg-white/5" />
+                    <div className="mt-12 space-y-3">
+                        <Skeleton className="h-4 w-full bg-white/5" />
+                        <Skeleton className="h-4 w-5/6 bg-white/5" />
                     </div>
-
-                    <div className="mt-6 space-y-2">
-                        <Skeleton className="h-4 w-full rounded-md" />
-                        <Skeleton className="h-4 w-5/6 rounded-md" />
-                        <Skeleton className="h-4 w-4/6 rounded-md" />
-                    </div>
-
-                    <div className="mt-10 flex flex-wrap items-center gap-4">
-                        <Skeleton className="h-12 w-40 rounded-xl" />
-                        <Skeleton className="h-12 w-40 rounded-xl" />
+                    <div className="mt-16 flex gap-6">
+                        <Skeleton className="h-16 w-48 rounded-2xl bg-white/5" />
+                        <Skeleton className="h-16 w-48 rounded-2xl bg-white/5" />
                     </div>
                 </div>
             </div>
         </section>
     )
 }
+

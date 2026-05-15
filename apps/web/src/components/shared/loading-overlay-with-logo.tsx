@@ -18,43 +18,56 @@ export function LoadingOverlayWithLogo({ refetch, title }: { refetch?: () => voi
     }, [])
 
     return (
-        <LoadingOverlay showSpinner={false} className="bg-black">
-            {/* Cinematic Background Decoration - Monochromatic */}
-            <div className="absolute inset-0 pointer-events-none opacity-[0.03]">
-                <svg className="w-full h-full" viewBox="0 0 900 320" preserveAspectRatio="xMidYMid slice">
-                    {Array.from({ length: 60 }).map((_, i) => (
-                        <line
-                            key={i}
-                            x1="450" y1="160"
-                            x2={450 + Math.cos((i / 60) * Math.PI * 2) * 1200}
-                            y2={160 + Math.sin((i / 60) * Math.PI * 2) * 1200}
-                            stroke="white"
-                            strokeWidth="0.5"
-                        />
-                    ))}
-                </svg>
+        <LoadingOverlay showSpinner={false} className="bg-zinc-950">
+            {/* Cinematic Background Decoration - Spirit Bomb convergence */}
+            <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,165,0,0.05)_0%,transparent_70%)] animate-pulse" />
+                <div className="absolute inset-0 opacity-[0.03] mix-blend-overlay" style={{ backgroundImage: `url("https://grainy-gradients.vercel.app/noise.svg")` }} />
             </div>
             
-            <DeferredImage
-                src="/kamehouse-logo.png"
-                alt="Loading..."
-                priority
-                className="w-24 h-24 animate-pulse z-[1] grayscale brightness-200"
-            />
+            <div className="relative flex items-center justify-center">
+                {/* 7 Dragon Balls Orbiting */}
+                <div className="absolute w-48 h-48 animate-spin-slow">
+                    {Array.from({ length: 7 }).map((_, i) => (
+                        <div
+                            key={i}
+                            className="absolute w-3 h-3 bg-brand-orange rounded-full shadow-[0_0_15px_rgba(251,146,60,0.8)]"
+                            style={{
+                                top: "50%",
+                                left: "50%",
+                                transform: `rotate(${i * (360 / 7)}deg) translate(80px) rotate(-${i * (360 / 7)}deg)`,
+                            }}
+                        >
+                            <div className="absolute inset-0 bg-white/20 blur-[1px] rounded-full scale-50" />
+                        </div>
+                    ))}
+                </div>
+
+                {/* Central Logo with aura */}
+                <div className="relative group">
+                    <div className="absolute inset-0 bg-brand-orange/20 blur-3xl rounded-full animate-pulse" />
+                    <DeferredImage
+                        src="/kamehouse-logo.png"
+                        alt="Loading..."
+                        priority
+                        className="w-24 h-24 z-[1] relative hover:scale-110 transition-transform duration-700 brightness-110"
+                    />
+                </div>
+            </div>
 
 
         {timedOut ? (
-            <div className="flex flex-col items-center gap-4 mt-6 z-[1] animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <div className="flex flex-col items-center gap-4 mt-12 z-[1] animate-in fade-in slide-in-from-bottom-2 duration-500">
                 <p className="text-zinc-500 text-xs font-medium uppercase tracking-widest text-center max-w-xs">
                     Error de conexión<br />
-                    <span className="opacity-50 mt-1 block">El servidor no responde</span>
+                    <span className="opacity-50 mt-1 block font-light">El servidor de la Capsule Corp. no responde</span>
                 </p>
                 <div className="flex gap-4">
                     <Button
                         onClick={() => window.location.reload()}
                         intent="gray"
                         size="sm"
-                        className="rounded-none border-zinc-800"
+                        className="rounded-xl border-zinc-800 uppercase tracking-widest text-[10px]"
                         leftIcon={<RiRefreshLine />}
                     >
                         Reintentar
@@ -63,7 +76,7 @@ export function LoadingOverlayWithLogo({ refetch, title }: { refetch?: () => voi
                         onClick={() => { window.location.href = "/settings" }}
                         intent="white"
                         size="sm"
-                        className="rounded-none"
+                        className="rounded-xl uppercase tracking-widest text-[10px]"
                         leftIcon={<RiSettings3Line />}
                     >
                         Configuración
@@ -71,13 +84,17 @@ export function LoadingOverlayWithLogo({ refetch, title }: { refetch?: () => voi
                 </div>
             </div>
         ) : (
-            <div className="mt-6 flex flex-col items-center gap-2 z-[1]">
-                <h1 className="text-white text-3xl font-bebas tracking-[0.2em] uppercase animate-pulse">
-                    {title ?? "KameHouse"}
-                </h1>
-                <div className="h-[1px] w-12 bg-white/20 animate-scale-x" />
+            <div className="mt-12 flex flex-col items-center gap-4 z-[1]">
+                <div className="flex flex-col items-center">
+                    <h1 className="text-white text-4xl font-bebas tracking-[0.3em] uppercase leading-none">
+                        {title ?? "KameHouse"}
+                    </h1>
+                    <span className="text-[10px] text-brand-orange font-black tracking-[0.5em] uppercase opacity-50 mt-2">Ultra Instinct</span>
+                </div>
+                <div className="h-[1px] w-24 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-scale-x" />
             </div>
         )}
+
 
         {(__isDesktop__ && !!refetch) && (
             <Button

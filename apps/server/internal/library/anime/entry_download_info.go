@@ -198,7 +198,6 @@ func NewEntryDownloadInfo(opts *NewEntryDownloadInfoOptions) (*EntryDownloadInfo
 				Media:                opts.Media,
 				ProgressOffset:       progressOffset,
 				IsDownloaded:         false,
-				MetadataProvider:     opts.MetadataProviderRef.Get(),
 			})
 			str.Episode.AniDBEpisode = ep.aniDBEpisode
 			// Reset the local file to nil, since it's a placeholder

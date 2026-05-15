@@ -13,6 +13,7 @@ import (
 	"kamehouse/internal/library/fillermanager"
 	"kamehouse/internal/library/metadata"
 	"kamehouse/internal/library/scanner"
+	"kamehouse/internal/library/anime"
 	"kamehouse/internal/library_explorer"
 	"kamehouse/internal/local"
 	"kamehouse/internal/mediastream"

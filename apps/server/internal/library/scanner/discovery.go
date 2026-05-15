@@ -107,6 +107,14 @@ func (scn *Scanner) createLocalFiles(ctx context.Context, paths []string, librar
 	jobs := make(chan string, len(paths))
 	results := make(chan *dto.LocalFile, len(paths))
 	var skipped atomic.Int64
+	
+	// Pre-map existing files by path for O(1) lookup in workers
+	existingMap := make(map[string]*dto.LocalFile)
+	for _, f := range scn.ExistingLocalFiles {
+		if f != nil {
+			existingMap[util.NormalizePath(f.Path)] = f
+		}
+	}
 
 	var workerWg sync.WaitGroup
 	for i := 0; i < maxWorkers; i++ {
@@ -131,6 +139,19 @@ func (scn *Scanner) createLocalFiles(ctx context.Context, paths []string, librar
 				if stat, err := os.Stat(path); err == nil {
 					lf.FileSize = stat.Size()
 					lf.FileModTime = stat.ModTime().Unix()
+				}
+
+				// Preservation logic: If we already know this file, keep its associations
+				// unless the scanner explicitly changes them later.
+				if existing, ok := existingMap[normPath]; ok {
+					lf.MediaId = existing.MediaId
+					lf.LibraryMediaId = existing.LibraryMediaId
+					lf.Locked = existing.Locked
+					lf.Ignored = existing.Ignored
+					// Copy metadata if it was already matched
+					if lf.MediaId != 0 {
+						lf.Metadata = existing.Metadata
+					}
 				}
 				
 				results <- lf

@@ -3,6 +3,7 @@ package anime
 import (
 	"cmp"
 	"context"
+	"encoding/json"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
@@ -11,6 +12,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strings"
 
 	"github.com/samber/lo"
 	lop "github.com/samber/lo/parallel"

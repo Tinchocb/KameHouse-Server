@@ -1,39 +1,49 @@
 import * as React from "react"
-import { Sparkles, Zap, Globe2, Tv, Film } from "lucide-react"
-import { motion } from "framer-motion"
-import { ErrorBoundary } from "@/components/shared/app-error-boundary"
+import { motion, AnimatePresence } from "framer-motion"
+import { cn } from "@/lib/utils"
+import { 
+    Tv, 
+    Zap, 
+    Film, 
+    Sparkles, 
+    Globe2,
+    Play
+} from "lucide-react"
 import { Swimlane, type SwimlaneItem } from "@/components/ui/swimlane"
-import { SmartSwimlane } from "@/components/ui/smart-swimlane"
 import { BentoRecentlyAdded, type BentoItem } from "@/components/ui/bento-recently-added"
-import { SectionLabel } from "./home.components"
-import type { CuratedSwimlane } from "@/api/types/intelligence.types"
+import { SectionLabel, ErrorBoundary } from "./home.components"
+import { SmartSwimlane } from "@/components/home/smart-swimlane"
+import type { CuratedSwimlane } from "@/hooks/use-home-intelligence"
 
 // ─── 0. Intelligent Swimlanes ───────────────────────────────────────────────
 
 interface HomeIntelligentSectionsProps {
     swimlanes?: CuratedSwimlane[]
     onNavigate: (mediaId: number) => void
+    startIndex?: number
 }
 
 export const HomeIntelligentSections = React.memo(function HomeIntelligentSections({
     swimlanes,
     onNavigate,
+    startIndex = 2,
 }: HomeIntelligentSectionsProps) {
     if (!swimlanes?.length) return null
 
     return (
-        <div className="space-y-20">
+        <div className="space-y-32 py-12">
             {swimlanes.map((lane, idx) => (
                 <ErrorBoundary
                     key={lane.id}
                 >
                     <motion.div 
-                        initial={{ opacity: 0, x: idx % 2 === 0 ? -20 : 20 }}
-                        whileInView={{ opacity: 1, x: 0 }}
+                        initial={{ opacity: 0, y: 40 }}
+                        whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true, margin: "-100px" }}
-                        transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
-                        className="home-section"
+                        transition={{ duration: 1, ease: [0.23, 1, 0.32, 1] }}
+                        className="home-section space-y-12"
                     >
+                        <SectionLabel icon={Sparkles} label={lane.title} index={startIndex + idx} />
                         <SmartSwimlane
                             lane={lane}
                             onNavigate={(mediaId) => onNavigate(Number(mediaId))}
@@ -62,19 +72,21 @@ export const HomeContinueWatchingSection = React.memo(function HomeContinueWatch
     return (
         <ErrorBoundary>
             <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.8 }}
-                className="home-section space-y-8"
+                transition={{ duration: 1 }}
+                className="home-section relative py-20 bg-white/[0.015] border-y border-white/[0.03]"
             >
-                <SectionLabel icon={Zap} label="Seguir Viendo" />
-                <Swimlane
-                    title="Continuar Viendo"
-                    items={items}
-                    defaultAspect="wide"
-                    onHover={onHover}
-                />
+                <div className="space-y-12">
+                    <SectionLabel icon={Zap} label="Seguir Viendo" index="01" />
+                    <Swimlane
+                        title=""
+                        items={items}
+                        defaultAspect="wide"
+                        onHover={onHover}
+                    />
+                </div>
             </motion.div>
         </ErrorBoundary>
     )
@@ -97,15 +109,15 @@ export const HomeSeriesSection = React.memo(function HomeSeriesSection({
     return (
         <ErrorBoundary>
             <motion.div 
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.8 }}
-                className="home-section space-y-8"
+                transition={{ duration: 1, ease: [0.23, 1, 0.32, 1] }}
+                className="home-section space-y-12 pt-20"
             >
-                <SectionLabel icon={Tv} label="Series" />
+                <SectionLabel icon={Tv} label="Series" index="COLL" />
                 <Swimlane
-                    title="Series"
+                    title=""
                     items={items}
                     defaultAspect="poster"
                     onHover={onHover}
@@ -132,15 +144,15 @@ export const HomeMoviesSection = React.memo(function HomeMoviesSection({
     return (
         <ErrorBoundary>
             <motion.div 
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.8 }}
-                className="home-section space-y-8"
+                transition={{ duration: 1, ease: [0.23, 1, 0.32, 1] }}
+                className="home-section space-y-12 pt-20"
             >
-                <SectionLabel icon={Film} label="Películas y Especiales" />
+                <SectionLabel icon={Film} label="Películas y Especiales" index="MOV" />
                 <Swimlane
-                    title="Películas y OVAs"
+                    title=""
                     items={items}
                     defaultAspect="poster"
                     onHover={onHover}
@@ -168,10 +180,10 @@ export const HomeRecentBentoSection = React.memo(function HomeRecentBentoSection
                 initial={{ opacity: 0, scale: 0.98 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
-                transition={{ duration: 1, ease: [0.23, 1, 0.32, 1] }}
-                className="home-section space-y-12"
+                transition={{ duration: 1.2, ease: [0.23, 1, 0.32, 1] }}
+                className="home-section space-y-16 py-24 bg-gradient-to-b from-primary/5 via-transparent to-transparent"
             >
-                <SectionLabel icon={Sparkles} label="Nuevas Adiciones" />
+                <SectionLabel icon={Sparkles} label="Nuevas Adiciones" index="NEW" />
                 <BentoRecentlyAdded items={items} />
             </motion.div>
         </ErrorBoundary>
@@ -199,11 +211,11 @@ export const HomeFullLibrarySection = React.memo(function HomeFullLibrarySection
                 whileInView={{ opacity: 0.8 }}
                 whileHover={{ opacity: 1 }}
                 viewport={{ once: true }}
-                className="home-section space-y-8 transition-opacity pb-20"
+                className="home-section space-y-12 py-20 transition-opacity pb-32"
             >
-                <SectionLabel icon={Globe2} label="Tu Videoteca" />
+                <SectionLabel icon={Globe2} label="Tu Videoteca" index="LIB" />
                 <Swimlane
-                    title="Tu colección"
+                    title=""
                     items={items}
                     defaultAspect="poster"
                 />
@@ -239,42 +251,59 @@ export const HomeVibeFilteredSection = React.memo(function HomeVibeFilteredSecti
     return (
         <ErrorBoundary>
             <motion.div 
-                initial={{ opacity: 0, y: 40 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -40 }}
-                transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
-                className="home-section space-y-4 py-16 bg-gradient-to-b from-primary/5 via-transparent to-transparent border-t border-white/5"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.8 }}
+                className="home-section relative overflow-hidden"
             >
-                <div className="px-6 md:px-10 lg:px-16 xl:px-24 2xl:px-32 flex flex-col gap-3">
-                    <div className="flex items-center gap-4">
-                        <div className="h-[1px] w-12 bg-primary/50" />
-                        <span className="text-primary font-black tracking-[0.4em] text-[0.65rem] uppercase">EXPLORA EL MOOD</span>
-                    </div>
-                    <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-                        <div className="space-y-1">
-                            <h2 className="text-6xl md:text-8xl font-bebas tracking-widest text-white leading-none uppercase">
-                                {meta.label}
-                            </h2>
-                            <p className="max-w-2xl text-zinc-400 text-lg md:text-xl font-light leading-relaxed">
-                                {meta.description}
-                            </p>
-                        </div>
-                        <div className="flex items-center gap-4 text-[0.6rem] font-bold tracking-[0.2em] text-white/20 uppercase pb-2">
-                            <span>{items.length} Títulos</span>
-                            <div className="h-1 w-1 rounded-full bg-white/20" />
-                            <span>Curación Manual</span>
-                        </div>
-                    </div>
-                </div>
-                <Swimlane
-                    title=""
-                    items={items}
-                    defaultAspect="poster"
-                    onHover={onHover}
-                    className="!py-0"
+                {/* Reveal Mask Animation */}
+                <motion.div 
+                    initial={{ x: "-100%" }}
+                    animate={{ x: "100%" }}
+                    transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute inset-0 bg-primary z-50 pointer-events-none"
                 />
+
+                <motion.div
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.3, duration: 1, ease: [0.23, 1, 0.32, 1] }}
+                    className="space-y-12 py-24 bg-gradient-to-b from-primary/10 via-transparent to-transparent border-t border-white/5"
+                >
+                    <div className="px-6 md:px-12 lg:px-20 flex flex-col gap-6">
+                        <div className="flex items-center gap-4">
+                            <div className="h-[2px] w-16 bg-primary" />
+                            <span className="text-primary font-bold tracking-[0.4em] text-[0.7rem] uppercase">EXPLORA EL MOOD</span>
+                        </div>
+                        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8">
+                            <div className="space-y-4">
+                                <h2 className="text-7xl md:text-9xl font-bebas tracking-tighter text-white leading-none uppercase">
+                                    {meta.label}
+                                <span className="text-primary">.</span>
+                                </h2>
+                                <p className="max-w-3xl text-zinc-400 text-xl md:text-2xl font-light leading-relaxed">
+                                    {meta.description}
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-6 text-[0.7rem] font-bold tracking-[0.2em] text-white/10 uppercase pb-4">
+                                <span>{items.length} TÍTULOS</span>
+                                <div className="h-1 w-1 rounded-full bg-white/10" />
+                                <span>CURACIÓN IA</span>
+                            </div>
+                        </div>
+                    </div>
+                    <Swimlane
+                        title=""
+                        items={items}
+                        defaultAspect="poster"
+                        onHover={onHover}
+                        className="!py-0"
+                    />
+                </motion.div>
             </motion.div>
         </ErrorBoundary>
     )
-})
+}
+)
 HomeVibeFilteredSection.displayName = "HomeVibeFilteredSection"

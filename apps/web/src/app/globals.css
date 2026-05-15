@@ -18,7 +18,14 @@
         @apply transition-all duration-300 hover:scale-105 hover:brightness-110 active:scale-95;
     }
     .glass-morphism {
-        @apply bg-black/40 backdrop-blur-md border border-white/10;
+        @apply bg-zinc-950/40 backdrop-blur-xl border border-white/5 shadow-2xl;
+    }
+    .mask-cinematic {
+        mask-image: linear-gradient(to bottom, black 50%, transparent 95%), linear-gradient(to right, black 80%, transparent 100%);
+        mask-composite: intersect;
+    }
+    .text-balance {
+        text-wrap: balance;
     }
 }
 

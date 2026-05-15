@@ -46,24 +46,40 @@ export function EmptyState() {
 /**
  * A styled label for home sections.
  */
-export function SectionLabel({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
+export function SectionLabel({ 
+    icon: Icon, 
+    label, 
+    index 
+}: { 
+    icon: React.ElementType; 
+    label: string;
+    index?: number | string;
+}) {
     return (
-        <div className="px-6 md:px-10 lg:px-16 xl:px-24 2xl:px-32">
-            <div className="flex items-center gap-6 group/label cursor-default">
-                <div className="relative flex h-14 w-14 items-center justify-center rounded-[22px] border border-white/5 bg-zinc-950/40 backdrop-blur-2xl text-zinc-500 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover/label:border-primary/20 group-hover/label:text-primary group-hover/label:bg-zinc-900/60 group-hover/label:scale-110">
-                    <Icon className="h-6 w-6 stroke-[1.5px]" />
-                    {/* Subtle accent glow behind icon */}
-                    <div className="absolute inset-0 rounded-full bg-primary/20 blur-2xl opacity-0 group-hover/label:opacity-40 transition-opacity duration-700" />
-                </div>
-                <div className="flex flex-col">
-                    <span className="text-[0.65rem] font-black uppercase tracking-[0.4em] text-zinc-600 mb-1 transition-colors group-hover/label:text-zinc-500">
-                        EXPLORAR
+        <div className="px-6 md:px-12 lg:px-20">
+            <div className="flex items-center gap-8 group/label cursor-default">
+                {index && (
+                    <span className="font-bebas text-4xl md:text-5xl text-white/10 transition-colors group-hover/label:text-primary/20">
+                        {typeof index === 'number' ? index.toString().padStart(2, '0') : index}
                     </span>
-                    <h2 className="text-3xl font-bebas tracking-widest text-zinc-300 group-hover/label:text-white transition-all duration-500">
-                        {label}
-                    </h2>
+                )}
+                
+                <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-4">
+                        <Icon className="h-4 w-4 text-primary opacity-60" />
+                        <span className="text-[0.65rem] font-bold uppercase tracking-[0.4em] text-zinc-500">
+                            CAPÍTULO
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-6">
+                        <h2 className="text-4xl md:text-5xl font-bebas tracking-wider text-white">
+                            {label}
+                        </h2>
+                        <div className="h-[1px] flex-1 min-w-[100px] bg-gradient-to-r from-white/10 to-transparent" />
+                    </div>
                 </div>
             </div>
         </div>
     )
 }
+

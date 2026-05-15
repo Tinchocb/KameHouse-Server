@@ -69,41 +69,34 @@ func (cm *CleanupManager) trimScanSummaryEntries() {
 	}
 }
 
-// trimLocalFileEntries trims local file entries
+// trimLocalFileEntries trims local file entries in the legacy blob table
 func (cm *CleanupManager) trimLocalFileEntries() {
 	var count int64
-	err := cm.gormdb.Model(&models.LocalFiles{}).Count(&count).Error
+	// Explicitly use the legacy table name to avoid any ambiguity
+	err := cm.gormdb.Table("local_files").Count(&count).Error
 	if err != nil {
-		cm.logger.Error().Err(err).Msg("database: Failed to count local file entries")
+		cm.logger.Error().Err(err).Msg("database: Failed to count legacy local file entries")
 		return
 	}
 	if count > 10 {
 		var idsToDelete []uint
-		err = cm.gormdb.Model(&models.LocalFiles{}).
+		err = cm.gormdb.Table("local_files").
 			Select("id").
 			Order("id ASC").
 			Limit(int(count-5)).
 			Pluck("id", &idsToDelete).Error
 		if err != nil {
-			cm.logger.Error().Err(err).Msg("database: Failed to get local file IDs to delete")
+			cm.logger.Error().Err(err).Msg("database: Failed to get legacy local file IDs to delete")
 			return
 		}
 
 		if len(idsToDelete) > 0 {
-			batchSize := 900
-			for i := 0; i < len(idsToDelete); i += batchSize {
-				end := i + batchSize
-				if end > len(idsToDelete) {
-					end = len(idsToDelete)
-				}
-				batch := idsToDelete[i:end]
-				err = cm.gormdb.Delete(&models.LocalFiles{}, batch).Error
-				if err != nil {
-					cm.logger.Error().Err(err).Msg("database: Failed to delete old local file entries")
-					return // Exit on first error
-				}
+			err = cm.gormdb.Table("local_files").Delete(nil, idsToDelete).Error
+			if err != nil {
+				cm.logger.Error().Err(err).Msg("database: Failed to delete old legacy local file entries")
+				return
 			}
-			cm.logger.Debug().Int("deleted", len(idsToDelete)).Msg("database: Deleted old local file entries")
+			cm.logger.Debug().Int("deleted", len(idsToDelete)).Msg("database: Deleted old legacy local file entries (blob storage)")
 		}
 	}
 }

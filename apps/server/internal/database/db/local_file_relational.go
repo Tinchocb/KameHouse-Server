@@ -157,6 +157,8 @@ func LocalFileDtoToModel(f *dto.LocalFile) *models.LocalFile {
 		Ignored:        f.Ignored,
 		LibraryMediaId: f.LibraryMediaId,
 		MediaId:        f.MediaId,
+		FileSize:       f.FileSize,
+		FileModTime:    f.FileModTime,
 	}
 
 	if f.ParsedData != nil {
@@ -187,6 +189,8 @@ func LocalFileModelToDto(m *models.LocalFile) *dto.LocalFile {
 		Ignored:        m.Ignored,
 		LibraryMediaId: m.LibraryMediaId,
 		MediaId:        m.MediaId,
+		FileSize:       m.FileSize,
+		FileModTime:    m.FileModTime,
 	}
 
 	if len(m.ParsedData) > 0 {

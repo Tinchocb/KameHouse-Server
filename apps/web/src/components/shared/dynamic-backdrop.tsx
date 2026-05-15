@@ -19,10 +19,23 @@ export function DynamicBackdrop() {
     const [displayedUrl, setDisplayedUrl] = React.useState<string | null>(null)
     const [nextUrl, setNextUrl] = React.useState<string | null>(null)
     const [isCrossFading, setIsCrossFading] = React.useState(false)
+    const [mousePos, setMousePos] = React.useState({ x: 0, y: 0 })
 
     const currentLayerRef = React.useRef<HTMLDivElement>(null)
     const nextLayerRef = React.useRef<HTMLDivElement>(null)
     const containerRef = React.useRef<HTMLDivElement>(null)
+
+    // Handle global mouse move for orbital effect
+    React.useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            const { clientX, clientY } = e
+            const x = (clientX / window.innerWidth - 0.5) * 100
+            const y = (clientY / window.innerHeight - 0.5) * 100
+            setMousePos({ x, y })
+        }
+        window.addEventListener("mousemove", handleMouseMove)
+        return () => window.removeEventListener("mousemove", handleMouseMove)
+    }, [])
 
     // Organic breathing animation with GSAP
     useGSAP(() => {
@@ -107,10 +120,20 @@ export function DynamicBackdrop() {
                 style={{
                     backgroundImage: nextUrl ? `url(${nextUrl})` : undefined,
                     opacity: isCrossFading ? 0.2 : 0,
-                    transform: isCrossFading ? "scale(1.05)" : "scale(1.2)",
+                    transform: isCrossFading ? `scale(1.05) translate(${mousePos.x * 0.1}px, ${mousePos.y * 0.1}px)` : `scale(1.2) translate(0px, 0px)`,
                     transition: "opacity 500ms ease-in-out, transform 600ms cubic-bezier(0.4, 0, 0.2, 1)",
                     willChange: "opacity, transform",
                 }}
+            />
+
+            {/* ── Orbital Orbs ── */}
+            <div 
+                className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full bg-primary/10 blur-[120px] mix-blend-screen transition-transform duration-&lsqb;2000ms&rsqb; ease-out"
+                style={{ transform: `translate(${mousePos.x * 0.5}px, ${mousePos.y * 0.5}px)` }}
+            />
+            <div 
+                className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full bg-blue-500/5 blur-[100px] mix-blend-screen transition-transform duration-&lsqb;3000ms&rsqb; ease-out"
+                style={{ transform: `translate(${-mousePos.x * 0.3}px, ${-mousePos.y * 0.3}px)` }}
             />
 
             {/* ── Cinematic Grain Overlay ── */}
@@ -125,3 +148,4 @@ export function DynamicBackdrop() {
         </div>
     )
 }
+

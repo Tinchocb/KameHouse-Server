@@ -236,6 +236,10 @@ const config: Config = {
                 "shimmer": {
                     "100%": { transform: "translateX(100%)" },
                 },
+                "scale-x": {
+                    "0%, 100%": { transform: "scaleX(0.5)", opacity: "0.3" },
+                    "50%": { transform: "scaleX(1.5)", opacity: "1" },
+                },
             },
             animation: {
                 "accordion-down": "accordion-down 0.15s linear",
@@ -244,6 +248,8 @@ const config: Config = {
                 "slide-up": "slide-up 0.15s ease-in-out",
                 "indeterminate-progress": "indeterminate-progress 1s infinite ease-out",
                 "shimmer": "shimmer 2s infinite",
+                "spin-slow": "spin 8s linear infinite",
+                "scale-x": "scale-x 2s ease-in-out infinite",
             },
             transformOrigin: {
                 "left-right": "0% 100%",

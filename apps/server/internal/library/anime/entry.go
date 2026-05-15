@@ -384,7 +384,6 @@ func (e *Entry) hydrateEntryEpisodeData(
 				Media:                e.Media,
 				ProgressOffset:       progressOffset,
 				IsDownloaded:         isDownloaded,
-				MetadataProvider:     metadataProviderRef.Get(),
 				LibraryEpisode:       libEp,
 				IntelligenceSvc:      e.IntelligenceSvc,
 			})
