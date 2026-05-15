@@ -25,7 +25,10 @@ export function MediaStack({ stackCount = 3, className, ...props }: MediaStackPr
             {stackItems.map((idx) => (
                 <motion.div
                     key={idx}
-                    className="absolute inset-0 bg-zinc-950 border border-white/5 rounded-xl shadow-2xl overflow-hidden"
+                    className={cn(
+                        "absolute inset-0 border border-white/5 rounded-xl shadow-2xl overflow-hidden",
+                        "bg-gradient-to-br from-zinc-900 via-zinc-850 to-primary/5"
+                    )}
                     initial={false}
                     animate={{
                         x: 0,

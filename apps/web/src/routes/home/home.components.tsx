@@ -1,6 +1,7 @@
 import * as React from "react"
 import { AlertTriangle, FolderOpen, RefreshCcw } from "lucide-react"
 import { EmptyState as SharedEmptyState } from "@/components/shared/empty-state"
+export { ErrorBoundary } from "@/components/shared/app-error-boundary"
 
 /**
  * Banner shown when a library error occurs.

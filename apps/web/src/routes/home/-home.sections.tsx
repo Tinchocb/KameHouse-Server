@@ -12,7 +12,7 @@ import {
 import { Swimlane, type SwimlaneItem } from "@/components/ui/swimlane"
 import { BentoRecentlyAdded, type BentoItem } from "@/components/ui/bento-recently-added"
 import { SectionLabel, ErrorBoundary } from "./home.components"
-import { SmartSwimlane } from "@/components/home/smart-swimlane"
+import { SmartSwimlane } from "@/components/ui/smart-swimlane"
 import type { CuratedSwimlane } from "@/hooks/use-home-intelligence"
 
 // ─── 0. Intelligent Swimlanes ───────────────────────────────────────────────
@@ -304,6 +304,5 @@ export const HomeVibeFilteredSection = React.memo(function HomeVibeFilteredSecti
             </motion.div>
         </ErrorBoundary>
     )
-}
-)
+})
 HomeVibeFilteredSection.displayName = "HomeVibeFilteredSection"

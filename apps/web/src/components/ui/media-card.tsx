@@ -1,6 +1,6 @@
 import { cn } from "@/components/ui/core/styling"
 import type { CardAspect } from "@/api/types/intelligence.types"
-import { Folder, Zap } from "lucide-react"
+import { Folder, ImageOff, Play, Zap } from "lucide-react"
 import * as React from "react"
 import { useGSAP } from "@gsap/react"
 import gsap from "gsap"
@@ -138,6 +138,28 @@ export const MediaCard = React.memo(function MediaCard({
 
     // Progress bar expands height slightly on card hover via CSS, removing the need for shadow pulsing JS logic
 
+    const [hasImageError, setHasImageError] = React.useState(false)
+
+    // Netflix-style Fallback UI
+    const fallbackUI = (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-zinc-900 via-zinc-950 to-zinc-900 p-6 text-center">
+            <div className="relative mb-6">
+                <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full" />
+                <ImageOff className="relative h-12 w-12 text-zinc-700 opacity-50" />
+            </div>
+            <div className="mt-auto w-full space-y-2">
+                <p className="font-bebas text-3xl text-white/20 line-clamp-2 uppercase leading-none tracking-widest">
+                    {title}
+                </p>
+                {year && (
+                    <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">
+                        {year}
+                    </p>
+                )}
+            </div>
+        </div>
+    )
+
     return (
         <motion.div
             ref={cardRef}
@@ -182,7 +204,12 @@ export const MediaCard = React.memo(function MediaCard({
             <DeferredImage
                 src={getHighResImage(artwork)}
                 alt={title}
-                className="absolute inset-0 h-full w-full select-none object-cover transition-all duration-500 group-hover/card:scale-105"
+                fallback={fallbackUI}
+                onError={() => setHasImageError(true)}
+                className={cn(
+                    "absolute inset-0 h-full w-full select-none object-cover transition-all duration-700 group-hover/card:scale-110 group-hover/card:brightness-50",
+                    (!artwork || hasImageError) && "opacity-0" 
+                )}
             />
 
             {/* ── Top-right: Source Icon ─────────────────── */}
@@ -230,37 +257,43 @@ export const MediaCard = React.memo(function MediaCard({
             </div>
 
             {/* ── Hover Overlay (Active State) ────────────────── */}
-            <div className="absolute inset-0 z-30 flex flex-col justify-end bg-gradient-to-t from-zinc-950 via-zinc-950/60 to-transparent p-5 opacity-0 transition-all duration-700 group-hover/card:opacity-100">
-                <div className="flex flex-col gap-4 translate-y-4 transition-transform duration-700 group-hover/card:translate-y-0">
-                    <div className="flex flex-col gap-2">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 text-white bg-primary shadow-2xl shadow-primary/40 transition-transform duration-500 hover:scale-110">
-                            <svg viewBox="0 0 24 24" className="ml-1 h-7 w-7 fill-current" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M8 5v14l11-7z" />
-                            </svg>
+            <div className="absolute inset-0 z-30 flex flex-col justify-end bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent p-5 opacity-0 transition-all duration-500 group-hover/card:opacity-100">
+                <div className="flex flex-col gap-3 translate-y-2 transition-transform duration-500 group-hover/card:translate-y-0">
+                    
+                    {/* Netflix Action Row */}
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-black transition-transform duration-300 hover:scale-110 active:scale-95 shadow-xl">
+                            <Play className="ml-1 h-5 w-5 fill-current" />
                         </div>
-                        <h3 className="line-clamp-2 font-bebas text-[2rem] leading-[0.9] text-white uppercase tracking-wider">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/40 bg-zinc-900/40 backdrop-blur-sm text-white transition-all duration-300 hover:border-white hover:bg-zinc-800">
+                            <span className="text-xl font-light">+</span>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                        <h3 className="line-clamp-2 font-bebas text-[2.2rem] leading-[0.85] text-white uppercase tracking-tight">
                             {title}
                         </h3>
+                        
+                        {/* Netflix Metadata Row */}
+                        <div className="flex items-center gap-2 text-[11px] font-bold tracking-wider">
+                            {rating && (
+                                <span className="text-emerald-400 font-black">
+                                    {(rating * 10).toFixed(0)}% Match
+                                </span>
+                            )}
+                            <span className="text-white/60">•</span>
+                            <span className="text-white/80">{year}</span>
+                            <span className="text-white/60">•</span>
+                            <span className="border border-white/30 px-1.5 py-0.5 rounded-sm text-[9px] text-white/70">{badge}</span>
+                        </div>
                     </div>
 
                     {description && (
-                        <p className="line-clamp-3 text-[12px] leading-relaxed text-white/70 font-medium">
+                        <p className="line-clamp-2 text-[11px] leading-relaxed text-zinc-300/90 font-medium">
                             {description}
                         </p>
                     )}
-
-                    {/* Metadata Strip */}
-                    <div className="flex items-center justify-between gap-2 border-t border-white/10 pt-3 mt-1">
-                        <div className="flex gap-3">
-                            {year && <span className="text-[11px] font-black text-white/80 uppercase tracking-widest">{year}</span>}
-                            {badge && <span className="text-[11px] font-black text-brand-orange/90 uppercase tracking-widest">{badge}</span>}
-                        </div>
-                        {rating !== undefined && (
-                            <span className="text-[11px] font-black text-brand-orange uppercase tracking-widest bg-brand-orange/15 border border-brand-orange/20 px-2.5 py-1 rounded-md shadow-inner">
-                                {rating.toFixed(1)} ★
-                            </span>
-                        )}
-                    </div>
                 </div>
             </div>
 
