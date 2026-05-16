@@ -1,5 +1,6 @@
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { useGetUnlinkedFiles } from "@/api/hooks/unlinked.hooks"
+import { IntelligentEntry } from "@/api/types/intelligence.types"
 import { useState, useMemo } from "react"
 import { useDebounce } from "react-use"
 
@@ -56,11 +57,12 @@ export function useGlobalSearch() {
         const q = debouncedQuery.toLowerCase()
         return combined
             .filter(entry => {
-                const media = entry.media
-                const vibes = entry.vibes?.join(" ") || ""
+                const e = entry as IntelligentEntry
+                const media = e.media
+                const vibes = e.vibes?.join(" ") || ""
                 const title = media 
                     ? `${media.titleRomaji || ""} ${media.titleEnglish || ""} ${media.titleOriginal || ""} ${vibes}`.toLowerCase()
-                    : `desconocido ${entry.mediaId} ${vibes}`
+                    : `desconocido ${e.mediaId} ${vibes}`
                 
                 return title.includes(q)
             })

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
@@ -16,6 +17,9 @@ import (
 // enrichMediaMetadata fetches additional metadata (seasons, episodes, sagas) for TV shows.
 func (scn *Scanner) enrichMediaMetadata(ctx context.Context, libraryMediaIdMap map[int]uint, movieIds map[int]bool, localFiles []*dto.LocalFile) error {
 	mediaFetched := make(map[int]bool)
+	var allSeasons []*models.LibrarySeason
+	var allEpisodes []*models.LibraryEpisode
+	tagger := metadata_provider.NewIntelligenceTagger()
 
 	for tmdbMediaId, libMediaId := range libraryMediaIdMap {
 		if movieIds[tmdbMediaId] || movieIds[tmdbMediaId-1_000_000] {
@@ -47,6 +51,11 @@ func (scn *Scanner) enrichMediaMetadata(ctx context.Context, libraryMediaIdMap m
 			continue
 		}
 
+		// Update LibraryMedia with AniDB and MAL IDs
+		if animeMeta.Mappings != nil {
+			_ = db.UpdateLibraryMediaMappings(scn.Database, libMediaId, animeMeta.Mappings.AnidbId, animeMeta.Mappings.MyanimelistId)
+		}
+
 		episodesBySeason := make(map[int][]*apiMetadata.EpisodeMetadata)
 		for _, ep := range animeMeta.Episodes {
 			episodesBySeason[ep.SeasonNumber] = append(episodesBySeason[ep.SeasonNumber], ep)
@@ -74,14 +83,13 @@ func (scn *Scanner) enrichMediaMetadata(ctx context.Context, libraryMediaIdMap m
 				}
 			}
 
-			libSeason := &models.LibrarySeason{
+			allSeasons = append(allSeasons, &models.LibrarySeason{
 				LibraryMediaID: libMediaId,
 				SeasonNumber:   seasonNum,
 				Title:          seasonTitle,
 				Description:    seasonDescription,
 				Image:          seasonImage,
-			}
-			_ = db.UpsertLibrarySeason(scn.Database, libSeason)
+			})
 
 			for _, ep := range eps {
 				libEp := &models.LibraryEpisode{
@@ -110,6 +118,12 @@ func (scn *Scanner) enrichMediaMetadata(ctx context.Context, libraryMediaIdMap m
 						libEp.AirDate = parsedDate
 					}
 				}
+
+				// Intelligence & Tagging V2
+				analysis := tagger.Analyze(fmt.Sprintf("%d_%d_%d", positiveTmdbId, ep.SeasonNumber, ep.EpisodeNumber), libEp.Title, libEp.Description, false)
+				libEp.Tags = analysis.GetTagsAsJSON()
+				libEp.DominantVibe = analysis.DominantVibe
+				libEp.SuggestedSwimlane = analysis.SuggestedSwimlane
 
 				// Extract languages from local files
 				var audioLangs []string
@@ -145,10 +159,25 @@ func (scn *Scanner) enrichMediaMetadata(ctx context.Context, libraryMediaIdMap m
 					}
 				}
 
-				_ = db.UpsertLibraryEpisode(scn.Database, libEp)
+				allEpisodes = append(allEpisodes, libEp)
 			}
 		}
 	}
+
+	if len(allSeasons) > 0 {
+		scn.Logger.Info().Int("count", len(allSeasons)).Msg("scanner: Persisting seasons batch")
+		if err := db.UpsertLibrarySeasonBatch(scn.Database, allSeasons, 20); err != nil {
+			scn.Logger.Warn().Err(err).Msg("scanner: Failed to persist seasons batch")
+		}
+	}
+
+	if len(allEpisodes) > 0 {
+		scn.Logger.Info().Int("count", len(allEpisodes)).Msg("scanner: Persisting episodes batch")
+		if err := db.UpsertLibraryEpisodeBatch(scn.Database, allEpisodes, 50); err != nil {
+			scn.Logger.Warn().Err(err).Msg("scanner: Failed to persist episodes batch")
+		}
+	}
+
 	return nil
 }
 

@@ -23,7 +23,7 @@ func (h *Handler) HandleGetMediastreamSettings(c echo.Context) error {
 				ID: 1,
 			},
 			TranscodeEnabled: false,
-			TranscodeHwAccel: "cpu",
+			TranscodeHwAccel: "auto",
 			TranscodePreset:  "fast",
 			TranscodeThreads: 0,
 			DirectPlayOnly:   false,

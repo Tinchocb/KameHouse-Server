@@ -142,6 +142,35 @@ func (o LibraryPaths) Value() (driver.Value, error) {
 	return strings.Join(o, ","), nil
 }
 
+type StringSlice []string
+
+func (o *StringSlice) Scan(src interface{}) error {
+	if src == nil {
+		*o = []string{}
+		return nil
+	}
+	str, ok := src.(string)
+	if !ok {
+		b, ok := src.([]byte)
+		if !ok {
+			return errors.New("src value cannot cast to string")
+		}
+		str = string(b)
+	}
+	if str == "" {
+		*o = []string{}
+		return nil
+	}
+	*o = strings.Split(str, ",")
+	return nil
+}
+
+func (o StringSlice) Value() (driver.Value, error) {
+	if len(o) == 0 {
+		return nil, nil
+	}
+	return strings.Join(o, ","), nil
+}
 
 type IntSlice []int
 

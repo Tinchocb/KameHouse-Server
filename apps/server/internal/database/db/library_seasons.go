@@ -19,6 +19,25 @@ func UpsertLibrarySeason(d *Database, season *models.LibrarySeason) error {
 	}).Create(season).Error
 }
 
+// UpsertLibrarySeasonBatch inserts or updates a slice of LibrarySeasons in batches.
+func UpsertLibrarySeasonBatch(d *Database, seasons []*models.LibrarySeason, batchSize int) error {
+	if len(seasons) == 0 {
+		return nil
+	}
+	if batchSize <= 0 {
+		batchSize = 20
+	}
+	return d.Gorm().Clauses(clause.OnConflict{
+		Columns: []clause.Column{
+			{Name: "library_media_id"},
+			{Name: "season_number"},
+		},
+		DoUpdates: clause.AssignmentColumns([]string{
+			"title", "description", "image",
+		}),
+	}).CreateInBatches(seasons, batchSize).Error
+}
+
 // GetLibrarySeasonsByMediaID retrieves all seasons for a given LibraryMedia.
 func GetLibrarySeasonsByMediaID(d *Database, libraryMediaID uint) ([]models.LibrarySeason, error) {
 	var seasons []models.LibrarySeason

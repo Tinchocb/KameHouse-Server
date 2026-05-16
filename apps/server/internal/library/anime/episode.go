@@ -198,6 +198,11 @@ func NewEpisode(opts *NewEpisodeOptions) *Episode {
 			entryEp.EpisodeTitle = entryEp.EpisodeMetadata.Title
 		}
 
+		if episodeMetadata != nil {
+			entryEp.SagaId = episodeMetadata.SagaId
+			entryEp.SagaName = episodeMetadata.SagaName
+		}
+
 	} else if len(opts.OptionalAniDBEpisode) > 0 && opts.AnimeMetadata != nil {
 		// No LocalFile, but AniDB episode is provided
 
@@ -243,6 +248,9 @@ func NewEpisode(opts *NewEpisodeOptions) *Episode {
 			if entryEp.EpisodeTitle == "" {
 				entryEp.EpisodeTitle = entryEp.EpisodeMetadata.Title
 			}
+
+			entryEp.SagaId = episodeMetadata.SagaId
+			entryEp.SagaName = episodeMetadata.SagaName
 		} else {
 			// DEVNOTE: Non-downloaded, without any AniDB data. Don't handle this case.
 			// Non-downloaded episodes are determined from AniDB data either way.
@@ -276,7 +284,11 @@ func NewEpisode(opts *NewEpisodeOptions) *Episode {
 		}
 		entryEp.SagaName = dbEp.SagaName
 		entryEp.SagaId = dbEp.SagaId
+		if dbEp.AbsoluteNumber > 0 {
+			entryEp.AbsoluteEpisodeNumber = dbEp.AbsoluteNumber
+		}
 	}
+
 
 	// If for some reason the episode is not hydrated, set it as invalid
 	if !hydrated {
@@ -399,6 +411,8 @@ func NewSimpleEpisode(opts *NewSimpleEpisodeOptions) *Episode {
 		HasImage: epMetadata.HasImage,
 		Title:    epMetadata.Title,
 	}
+	entryEp.SagaId = epMetadata.SagaId
+	entryEp.SagaName = epMetadata.SagaName
 
 	// Override with Local Database LibraryEpisode if available
 	dbEp := opts.LibraryEpisode
@@ -426,6 +440,9 @@ func NewSimpleEpisode(opts *NewSimpleEpisodeOptions) *Episode {
 		}
 		entryEp.SagaName = dbEp.SagaName
 		entryEp.SagaId = dbEp.SagaId
+		if dbEp.AbsoluteNumber > 0 {
+			entryEp.AbsoluteEpisodeNumber = dbEp.AbsoluteNumber
+		}
 	}
 
 	if !hydrated {

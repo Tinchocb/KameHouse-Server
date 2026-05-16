@@ -30,6 +30,7 @@ type (
 		NextEpisode         *Episode                `json:"nextEpisode"`
 		LocalFiles          []*LocalFile            `json:"localFiles"`
 		AnidbId             int                     `json:"anidbId"`
+		MalId               int                     `json:"malId"`
 		CurrentEpisodeCount int                     `json:"currentEpisodeCount"`
 		Seasons             []*models.LibrarySeason `json:"seasons,omitempty"`
 		Vibes               []string                `json:"vibes,omitempty"`
@@ -246,6 +247,7 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 	}
 
 	entry.AnidbId = animeMetadata.GetMappings().AnidbId
+	entry.MalId = animeMetadata.GetMappings().MyanimelistId
 
 	// +---------------------+
 	// |       Episodes      |
@@ -396,8 +398,14 @@ func (e *Entry) hydrateEntryEpisodeData(
 		})
 	}
 	episodes := p.Wait()
-	// Sort by progress number
+	// Sort by absolute episode number first, then season/episode
 	sort.Slice(episodes, func(i, j int) bool {
+		if episodes[i].AbsoluteEpisodeNumber != episodes[j].AbsoluteEpisodeNumber {
+			return episodes[i].AbsoluteEpisodeNumber < episodes[j].AbsoluteEpisodeNumber
+		}
+		if episodes[i].SeasonNumber != episodes[j].SeasonNumber {
+			return episodes[i].SeasonNumber < episodes[j].SeasonNumber
+		}
 		return episodes[i].EpisodeNumber < episodes[j].EpisodeNumber
 	})
 	e.Episodes = episodes

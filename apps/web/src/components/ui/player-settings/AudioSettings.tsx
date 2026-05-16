@@ -7,14 +7,15 @@ interface AudioSettingsProps {
     audioTracks: AudioTrack[]
     activeAudioIndex: number
     onSelectAudio: (track: AudioTrack) => void
+    getFriendlyLanguage: (lang: string) => string
 }
 
 export function AudioSettings({
     audioTracks,
     activeAudioIndex,
     onSelectAudio,
+    getFriendlyLanguage,
 }: AudioSettingsProps) {
-    const langLabel = (lang: string) => lang.toUpperCase().slice(0, 3)
 
     return (
         <div className="flex flex-col">
@@ -31,7 +32,7 @@ export function AudioSettings({
                     >
                         <div className="flex flex-col">
                             <span className="text-xs font-bold leading-none">
-                                {track.title || langLabel(track.language)}
+                                {track.title || getFriendlyLanguage(track.language)}
                             </span>
                             <span className={cn(
                                 "text-[9px] font-bold mt-1.5 uppercase opacity-60",

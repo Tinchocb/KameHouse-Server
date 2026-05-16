@@ -87,6 +87,7 @@ export interface PlayerCore {
         activeHlsLevel: number
         showResume: boolean
         resumeTime: number
+        autoDisableSubtitlesWhenDubbed: boolean
     }
     actions: {
         setIsPlaying: (playing: boolean) => void
@@ -96,13 +97,13 @@ export interface PlayerCore {
         setIsSettingsOpen: (open: boolean) => void
         triggerControlsVisibility: () => void
         togglePlay: () => void
-        handleSeek: (time: number) => void
+        handleSeek: (e: React.ChangeEvent<HTMLInputElement>) => void
         skipTime: (seconds: number) => void
         skipOpening: () => void
-        handleVolume: (volume: number) => void
+        handleVolume: (e: React.ChangeEvent<HTMLInputElement>) => void
         toggleMute: () => void
-        onSelectAudio: (index: number) => void
-        onSelectSubtitle: (index: number | null) => void
+        onSelectAudio: (track: AudioTrack) => void
+        onSelectSubtitle: (track: SubtitleTrack | null) => void
         toggleFullscreen: () => void
         handleSkipIntro: () => void
         handleTimeUpdate: (e: React.SyntheticEvent<HTMLVideoElement>) => void
@@ -121,6 +122,7 @@ export interface PlayerCore {
         setMarathonMode: (val: boolean) => void
         handleResume: () => void
         setShowResume: (val: boolean) => void
+        setAutoDisableSubtitlesWhenDubbed: (val: boolean) => void
     }
 }
 
@@ -843,7 +845,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         return () => window.removeEventListener("keydown", handleKeyDown)
     }, [isPlaying, isMuted, volume, isFullscreen, showSkipIntro, showNextEpisode, onNextEpisode, handleSkipIntro, onClose, skipOpening, skipTime, takeScreenshot, toggleMute, togglePip, togglePlay])
 
-    const handleTimeUpdate = () => {
+    const handleTimeUpdate = useCallback(() => {
         const video = videoRef.current
         if (!video) return
         
@@ -941,14 +943,27 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             setStatsData({
                 currentTime: curr.toFixed(2),
                 duration: total.toFixed(2),
-                buffer: video.buffered.length > 0 ? (video.buffered.end(video.buffered.length - 1) - curr).toFixed(2) : 0,
+                buffer: video.buffered.length > 0 ? (video.buffered.end(video.buffered.length - 1) - curr).toFixed(2) : "0.00",
                 resolution: `${video.videoWidth}x${video.videoHeight}`,
-                playbackRate: video.playbackRate,
-                volume: Math.round(video.volume * 100),
+                playbackRate: video.playbackRate.toString(),
+                volume: Math.round(video.volume * 100).toString(),
                 source: playableUrl.substring(0, 50) + "...",
             })
         }
-    }
+    }, [isPlaying, showStats, lastSentHeartbeatRef, skipTimes, autoSkipIntroPref, autoSkipOutroPref, showSkipIntro, showNextEpisode, hasNextEpisode, onNextEpisode, onProgress, onTrackingProgress, onSyncProgress, playableUrl, sendHeartbeat])
+
+    // Apply playback rate instantly
+    useEffect(() => {
+        const video = videoRef.current
+        if (video && video.playbackRate !== playbackRatePref) {
+            video.playbackRate = playbackRatePref
+        }
+    }, [playbackRatePref])
+
+    // Force skip check when preferences change
+    useEffect(() => {
+        handleTimeUpdate()
+    }, [autoSkipIntroPref, autoSkipOutroPref, handleTimeUpdate])
 
     useEffect(() => {
         if (showNextEpisode && countdownSeconds > 0 && isPlaying) {
@@ -1001,6 +1016,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             currentTime,
             showResume,
             resumeTime,
+            autoDisableSubtitlesWhenDubbed,
         },
         actions: {
             setIsPlaying, setDuration, setIsBuffering, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, skipTime, skipOpening, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, toggleFullscreen, handleSkipIntro, handleTimeUpdate,
@@ -1014,6 +1030,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             setMarathonMode,
             handleResume,
             setShowResume,
+            setAutoDisableSubtitlesWhenDubbed: (val: boolean) => useAppStore.getState().setAutoDisableSubtitlesWhenDubbed(val),
         }
     }
 }

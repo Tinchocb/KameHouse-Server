@@ -62,11 +62,11 @@ func NewTranscoder(opts *NewTranscoderOptions) (*Transcoder, error) {
 		logger:     opts.Logger,
 		settings: Settings{
 			StreamDir: streamDir,
-			HwAccel: GetHardwareAccelSettings(HwAccelOptions{
+			HwAccel: GetHardwareAccelSettings(opts.FfmpegPath, HwAccelOptions{
 				Kind:           opts.HwAccelKind,
 				Preset:         opts.Preset,
 				CustomSettings: opts.HwAccelCustomSettings,
-			}),
+			}, opts.Logger),
 			FfmpegPath:  opts.FfmpegPath,
 			FfprobePath: opts.FfprobePath,
 		},
@@ -362,6 +362,7 @@ func (b *FFmpegBuilder) BuildForHLS(decision PlaybackMethod, inputFile, outputDi
 		"-hls_time", "3",
 		"-hls_playlist_type", "event",
 		"-hls_segment_type", "mpegts",
+		"-hls_flags", "independent_segments",
 		"-hls_list_size", "0",
 		"-hls_segment_filename", filepath.Join(outputDir, "%04d.ts"),
 		filepath.Join(outputDir, "index.m3u8"),

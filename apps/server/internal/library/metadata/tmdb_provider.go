@@ -279,6 +279,7 @@ func TmdbTVDetailsToNormalizedMedia(r *tmdb.TVDetails) *dto.NormalizedMedia {
 	title := &dto.NormalizedMediaTitle{}
 	if r.Name != "" {
 		title.English = &r.Name
+		title.Spanish = &r.Name
 		title.UserPreferred = &r.Name
 	}
 	if r.OriginalName != "" && r.OriginalName != r.Name {

@@ -57,26 +57,25 @@ export function SectionLabel({
     index?: number | string;
 }) {
     return (
-        <div className="px-6 md:px-12 lg:px-20">
-            <div className="flex items-center gap-8 group/label cursor-default">
+        <div className="px-6 md:px-12 lg:px-20 mb-2">
+            <div className="flex items-end gap-6 group/label cursor-default">
                 {index && (
-                    <span className="font-bebas text-4xl md:text-5xl text-white/10 transition-colors group-hover/label:text-primary/20">
+                    <span className="font-bebas text-5xl md:text-6xl text-white/5 transition-colors group-hover/label:text-primary/10 leading-[0.8] -mb-1">
                         {typeof index === 'number' ? index.toString().padStart(2, '0') : index}
                     </span>
                 )}
                 
-                <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-4">
-                        <Icon className="h-4 w-4 text-primary opacity-60" />
-                        <span className="text-[0.65rem] font-bold uppercase tracking-[0.4em] text-zinc-500">
-                            CAPÍTULO
+                <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center gap-3">
+                        <Icon className="h-4 w-4 text-primary opacity-80" strokeWidth={2.5} />
+                        <span className="text-[0.65rem] font-black uppercase tracking-[0.3em] text-zinc-500">
+                            DESCUBRE
                         </span>
                     </div>
-                    <div className="flex items-center gap-6">
-                        <h2 className="text-4xl md:text-5xl font-bebas tracking-wider text-white">
+                    <div className="flex items-end gap-4">
+                        <h2 className="text-3xl md:text-4xl font-bebas tracking-wide text-white/90 leading-[0.9]">
                             {label}
                         </h2>
-                        <div className="h-[1px] flex-1 min-w-[100px] bg-gradient-to-r from-white/10 to-transparent" />
                     </div>
                 </div>
             </div>

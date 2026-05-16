@@ -115,9 +115,10 @@ func EvaluatePlayback(mediaInfo *videofile.MediaInfo, client ClientProfile) Deci
 	method := AnalyzePlayback(container, videoCodec, audioCodec, needsBurnSubs || client.BurnSubtitles, &client)
 
 	reason := "Direct Play eligible"
-	if method == Transcode {
+	switch method {
+	case Transcode:
 		reason = "codec unsupported or burn-in required — Transcode"
-	} else if method == DirectStream {
+	case DirectStream:
 		reason = "container incompatible; codec is remux-safe — DirectStream (remux)"
 	}
 

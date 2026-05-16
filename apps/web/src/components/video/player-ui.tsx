@@ -8,6 +8,7 @@ import { PlayerBottomBar } from "./player-bottombar"
 import { LoadingErrorOverlay, CenterPlayFlash, SkipIntroOverlay, NextEpisodeOverlay, ResumeOverlay } from "./player-overlays"
 import type { EpisodeSource } from "@/api/types/unified.types"
 import { useGetVideoInsights } from "@/api/hooks/videocore.hooks"
+import { useAniSkipTimes } from "@/api/hooks/aniskip.hooks"
 import type { PlayerCore, PlayerStats } from "./player-core"
 
 function StatsOverlay({ show, data }: { show: boolean, data: PlayerStats }) {
@@ -48,13 +49,14 @@ export interface PlayerUIProps {
     clientId: string
     mediaId?: number
     episodeNumber?: number
+    malId?: number | null
 }
 
 export function PlayerUI(props: PlayerUIProps) {
     const {
         title, episodeLabel, onClose, onNextEpisode, playableUrl,
         streamType, episodeSources, onSourceSwitch, core,
-        mediaId, episodeNumber
+        mediaId, episodeNumber, malId
     } = props
 
     const {
@@ -71,6 +73,50 @@ export function PlayerUI(props: PlayerUIProps) {
     }, !!(mediaId && episodeNumber && state.duration > 0))
 
     const insights = insightsData || []
+
+    // Fetch AniSkip data
+    const { data: aniSkip } = useAniSkipTimes({
+        malId,
+        episodeNumber,
+        episodeDuration: state.duration,
+        enabled: state.duration > 0
+    })
+
+    // AniSkip Logic
+    const isWithinOP = aniSkip?.op && state.currentTime >= aniSkip.op.startTime && state.currentTime <= aniSkip.op.endTime
+    const isWithinED = aniSkip?.ed && state.currentTime >= aniSkip.ed.startTime && state.currentTime <= aniSkip.ed.endTime
+    const showSkipIntro = !!isWithinOP
+    const showSkipEnding = !!isWithinED
+    const skipTarget = showSkipIntro ? aniSkip!.op?.endTime : (showSkipEnding ? aniSkip!.ed?.endTime : 0)
+    const skipLabel = showSkipIntro ? "SALTAR INTRO" : "SALTAR ENDING"
+    const remainingSkipSeconds = showSkipIntro ? Math.ceil(aniSkip!.op!.endTime - state.currentTime) : (showSkipEnding ? Math.ceil(aniSkip!.ed!.endTime - state.currentTime) : 0)
+
+    // Keyboard Shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key.toLowerCase() === "s" && (showSkipIntro || showSkipEnding) && skipTarget) {
+                e.preventDefault()
+                if (domElements.videoElement.current) {
+                    domElements.videoElement.current.currentTime = skipTarget
+                }
+            }
+        }
+        window.addEventListener("keydown", handleKeyDown)
+        return () => window.removeEventListener("keydown", handleKeyDown)
+    }, [showSkipIntro, showSkipEnding, skipTarget, domElements.videoElement])
+
+    // Cinematic Controls Animation Layer
+    useGSAP(() => {
+        if (state.controlsVisible) {
+            gsap.to(".player-top-bar", { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" })
+            gsap.to(".player-bottom-bar", { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" })
+            gsap.to(".player-overlays-bg", { opacity: 1, duration: 0.4 })
+        } else {
+            gsap.to(".player-top-bar", { y: -20, opacity: 0, duration: 0.4, ease: "power3.in" })
+            gsap.to(".player-bottom-bar", { y: 20, opacity: 0, duration: 0.4, ease: "power3.in" })
+            gsap.to(".player-overlays-bg", { opacity: 0, duration: 0.6 })
+        }
+    }, { dependencies: [state.controlsVisible], scope: domElements.containerElement })
 
     useEffect(() => {
         if (!state.ambilightEnabled || !state.isPlaying) return
@@ -101,7 +147,7 @@ export function PlayerUI(props: PlayerUIProps) {
 
     return (
         <div
-            ref={domElements.containerElement}
+            ref={domElements.containerElement as any}
             onMouseMove={actions.triggerControlsVisibility}
             onMouseLeave={() => actions.setControlsVisible(false)}
             className={cn(
@@ -109,18 +155,6 @@ export function PlayerUI(props: PlayerUIProps) {
                 !state.controlsVisible && state.isPlaying ? "cursor-none" : "cursor-default"
             )}
         >
-            {/* Cinematic Controls Animation Layer */}
-            {useGSAP(() => {
-                if (state.controlsVisible) {
-                    gsap.to(".player-top-bar", { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" })
-                    gsap.to(".player-bottom-bar", { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" })
-                    gsap.to(".player-overlays-bg", { opacity: 1, duration: 0.4 })
-                } else {
-                    gsap.to(".player-top-bar", { y: -20, opacity: 0, duration: 0.4, ease: "power3.in" })
-                    gsap.to(".player-bottom-bar", { y: 20, opacity: 0, duration: 0.4, ease: "power3.in" })
-                    gsap.to(".player-overlays-bg", { opacity: 0, duration: 0.6 })
-                }
-            }, [state.controlsVisible])}
 
             <canvas
                 ref={ambilightCanvasRef}
@@ -131,7 +165,7 @@ export function PlayerUI(props: PlayerUIProps) {
             />
 
             <video
-                ref={domElements.videoElement}
+                ref={domElements.videoElement as any}
                 onClick={actions.togglePlay}
                 onPlay={() => actions.setIsPlaying(true)}
                 onPause={() => actions.setIsPlaying(false)}
@@ -155,7 +189,7 @@ export function PlayerUI(props: PlayerUIProps) {
             />
 
             <canvas
-                ref={domElements.canvasElement}
+                ref={domElements.canvasElement as any}
                 className={cn(
                     "absolute inset-0 w-full h-full pointer-events-none z-[11]",
                     state.isJassubActive ? "block" : "hidden"
@@ -167,7 +201,22 @@ export function PlayerUI(props: PlayerUIProps) {
                     "player-overlays-bg absolute inset-0 pointer-events-none transition-opacity duration-300 z-20 opacity-0"
                 )}
             >
-                <div className="absolute top-0 inset-x-0 h-48 bg-gradient-to-b from-black/80 via-black/20 to-transparent" />
+                <div className="absolute inset-0 z-50 pointer-events-none player-overlays-bg bg-gradient-to-t from-black/80 via-transparent to-black/60" />
+
+                {/* Skip Intro / Ending Button */}
+                <SkipIntroOverlay
+                    show={showSkipIntro || showSkipEnding}
+                    onSkip={() => {
+                        if (skipTarget && domElements.videoElement.current) {
+                            domElements.videoElement.current.currentTime = skipTarget
+                        }
+                    }}
+                    skipLabel={skipLabel}
+                    remainingSeconds={remainingSkipSeconds}
+                    shortcutKey="S"
+                />
+
+                {/* Resume Overlay */}
                 <div className="absolute bottom-0 inset-x-0 h-64 bg-gradient-to-t from-black/95 via-black/40 to-transparent" />
             </div>
 
@@ -181,7 +230,7 @@ export function PlayerUI(props: PlayerUIProps) {
 
             <CenterPlayFlash flash={state.flash} />
 
-            <StatsOverlay show={state.showStats} data={state.statsData} />
+            <StatsOverlay show={state.showStats} data={state.statsData!} />
 
             <SkipIntroOverlay
                 show={state.showSkipIntro}
@@ -229,17 +278,17 @@ export function PlayerUI(props: PlayerUIProps) {
                 <PlayerBottomBar
                     duration={state.duration}
                     insights={insights}
-                    progressBarRef={domElements.progressBarElement}
-                    progressInputRef={domElements.progressInputElement}
-                    handleSeek={actions.handleSeek}
+                    progressBarRef={domElements.progressBarElement as any}
+                    progressInputRef={domElements.progressInputElement as any}
+                    handleSeek={actions.handleSeek as any}
                     isPlaying={state.isPlaying}
                     togglePlay={actions.togglePlay}
                     skipTime={actions.skipTime}
                     isMuted={state.isMuted}
                     toggleMute={actions.toggleMute}
                     volume={state.volume}
-                    handleVolume={actions.handleVolume}
-                    timeTextRef={domElements.timeTextElement}
+                    handleVolume={actions.handleVolume as any}
+                    timeTextRef={domElements.timeTextElement as any}
                     audioTracks={state.audioTracks}
                     activeAudioIndex={state.activeAudioIndex}
                     onSelectAudio={actions.onSelectAudio}

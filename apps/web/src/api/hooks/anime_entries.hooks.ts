@@ -23,6 +23,7 @@ export function useGetAnimeEntry(id: Nullish<string | number>) {
         method: API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.methods[0],
         queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, String(id)],
         enabled: !!id,
+        staleTime: 24 * 60 * 60 * 1000, // 24 hours
     })
 }
 

@@ -152,6 +152,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	var localFiles []*dto.LocalFile
 	skippedLfs := make(map[string]*dto.LocalFile)
 	var libraryPaths []string
+	var hashDoneChan <-chan struct{}
 
 	if scn.ScanMode == "metadata" {
 		scn.Logger.Info().Msg("scanner: Running in metadata improvement mode. Skipping file matching and probing.")
@@ -230,6 +231,15 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		})
 
 		localFiles = scn.createLocalFiles(ctx, paths, libraryPaths, skippedLfs)
+
+		// Start background hashing (I/O light, only reads 128KB per file)
+		hashDoneChan = StartFileHashing(ctx, localFiles, scn.Logger)
+		defer func() {
+			// Ensure hashing workers clean up if scan fails
+			if hashDoneChan != nil {
+				<-hashDoneChan
+			}
+		}()
 
 		if scn.ScanLogger != nil {
 			scn.ScanLogger.logger.Debug().
@@ -584,6 +594,13 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	// +---------------------+
 	// |    FileHydrator     |
 	// +---------------------+
+
+	// Ensure hashing is complete before moving to hydration (needed for some enrichers)
+	if hashDoneChan != nil {
+		telemetry.Send(events.EventScanStatus, "Completing file hashing...")
+		<-hashDoneChan
+		hashDoneChan = nil // mark as done
+	}
 
 	// Create a new hydrator
 	hydrator := &FileHydrator{

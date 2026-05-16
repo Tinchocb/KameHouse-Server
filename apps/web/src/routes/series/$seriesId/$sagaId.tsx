@@ -321,12 +321,13 @@ function RightPanel({
                 {/* Episode list */}
                 <div
                     className={cn(
-                        "flex flex-col gap-1 overflow-hidden transition-all duration-300",
-                        episodesOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0",
+                        "flex flex-col gap-1 overflow-hidden transition-all duration-500",
+                        episodesOpen ? "max-h-[20000px] opacity-100" : "max-h-0 opacity-0",
                     )}
                 >
                     {episodes.map((ep, idx) => {
-                        const episodeProgress = libraryEntry?.episodes?.[idx]?.watched /* 0-100 de progreso */
+                        const fullEp = libraryEntry?.episodes?.find(e => e.episodeNumber === ep.number)
+                        const episodeProgress = fullEp?.watched
                         return (
                             <EpisodeRow
                                 key={ep.id}

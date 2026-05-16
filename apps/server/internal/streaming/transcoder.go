@@ -59,11 +59,52 @@ func NewTranscoder(ffmpegPath string, sem Semaphore, logger *zerolog.Logger) *Ff
 	outDir := filepath.Join(os.TempDir(), "kamehouse_transcodes")
 	_ = os.MkdirAll(outDir, 0755)
 
-	return &FfmpegTranscoder{
+	t := &FfmpegTranscoder{
 		FfmpegPath: ffmpegPath,
 		OutDir:     outDir,
 		sem:        sem,
 		logger:     logger,
+	}
+
+	// Start cleanup reaper every 30 minutes
+	t.StartReaper(30 * time.Minute)
+
+	return t
+}
+
+// StartReaper starts a background goroutine that periodically cleans up stale transcode sessions.
+func (t *FfmpegTranscoder) StartReaper(interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	go func() {
+		for range ticker.C {
+			t.reap()
+		}
+	}()
+}
+
+func (t *FfmpegTranscoder) reap() {
+	entries, err := os.ReadDir(t.OutDir)
+	if err != nil {
+		return
+	}
+
+	now := time.Now()
+	reapThreshold := 12 * time.Hour // Keep sessions for 12 hours of inactivity
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		dirPath := filepath.Join(t.OutDir, entry.Name())
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+
+		if now.Sub(info.ModTime()) > reapThreshold {
+			t.logger.Info().Str("path", dirPath).Msg("streaming: Reaping stale transcode session")
+			_ = os.RemoveAll(dirPath)
+		}
 	}
 }
 

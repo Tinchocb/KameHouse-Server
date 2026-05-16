@@ -12,18 +12,17 @@ function tagBadge(tag: ContentTag): { label: string; className: string } | null 
         case "EPIC":
             return {
                 label: "ÉPICO",
-                className:
-                    "bg-amber-500/20 border-amber-400/40 text-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.3)]",
+                className: "bg-amber-500/10 border-amber-500/30 text-amber-500 backdrop-blur-md",
             }
         case "FILLER":
             return {
                 label: "RELLENO",
-                className: "bg-zinc-700/40 border-zinc-500/30 text-zinc-400",
+                className: "bg-zinc-800/50 border-zinc-700/50 text-zinc-400 backdrop-blur-md",
             }
         case "SPECIAL":
             return {
                 label: "ESPECIAL",
-                className: "bg-blue-500/20 border-blue-400/40 text-blue-300",
+                className: "bg-blue-500/10 border-blue-500/30 text-blue-400 backdrop-blur-md",
             }
         default:
             return null
@@ -54,13 +53,32 @@ export interface SmartSwimlaneProps {
     aspect?: "poster" | "wide"
 }
 
-import { Sparkles, Play, Award, Library } from "lucide-react"
+import { 
+    Sparkles, 
+    Play, 
+    Award, 
+    Library, 
+    Zap, 
+    Sword, 
+    History, 
+    Users, 
+    Heart, 
+    Flame, 
+    Shield 
+} from "lucide-react"
 import { SectionLabel } from "@/routes/home/home.components"
 
 const LANE_ICONS: Record<string, any> = {
     epic_moments: Play,
     essential_cinema: Award,
     local_library: Library,
+    eleva_tu_ki: Zap,
+    camino_guerrero: Sword,
+    cronicas_trunks: History,
+    fusion_ha: Users,
+    redencion: Heart,
+    deseos_prohibidos: Flame,
+    fuera_ring: Shield,
 }
 
 export const SmartSwimlane = React.memo(function SmartSwimlane({ lane, onNavigate, aspect }: SmartSwimlaneProps) {
@@ -79,30 +97,54 @@ export const SmartSwimlane = React.memo(function SmartSwimlane({ lane, onNavigat
                     ? (tagBadge(intel.tag)?.label ?? laneBadge(lane.type))
                     : laneBadge(lane.type)
 
-            // Subtitle: year + format + arc name (if available)
+            const isEpisode = !!entry.episode
+            const fallbackBackdrop = media?.bannerImage || media?.posterImage
+            
+            // Subtitle construction
             const parts: string[] = []
-            if (media?.year) parts.push(String(media.year))
-            if (media?.format) parts.push(media.format)
-            if (intel?.arcName) parts.push(intel.arcName)
-            if (intel?.vibes?.length) {
-                parts.push(intel.vibes.join(" · "))
+            if (isEpisode) {
+                // Si es episodio, mostrar la serie como subtítulo
+                parts.push(media?.titleEnglish || media?.titleRomaji || media?.titleOriginal || "—")
+                if (intel?.arcName) parts.push(intel.arcName)
+            } else {
+                if (media?.year) parts.push(String(media.year))
+                if (media?.format) parts.push(media.format)
+                if (intel?.arcName) parts.push(intel.arcName)
+                if (intel?.vibes?.length) {
+                    parts.push(intel.vibes.join(" · "))
+                }
             }
 
-            const backdropUrl = media?.bannerImage || media?.posterImage
+            const title = isEpisode
+                ? entry.episode!.titleSpanish || entry.episode!.episodeTitle || `Episodio ${entry.episode!.episodeNumber}`
+                : media?.titleEnglish || media?.titleRomaji || media?.titleOriginal || "—"
+            
+            const image = isEpisode
+                ? (entry.episode!.episodeMetadata?.image || fallbackBackdrop || "")
+                : (resolvedAspect === "poster" ? (media?.posterImage ?? "") : (fallbackBackdrop ?? ""))
 
             return {
-                id: String(entry.mediaId),
-                title: media?.titleEnglish || media?.titleRomaji || media?.titleOriginal || "—",
+                id: isEpisode ? `ep-${entry.mediaId}-${entry.episode!.episodeNumber}` : String(entry.mediaId),
+                title,
                 subtitle: parts.join(" · "),
                 badge,
-                image: resolvedAspect === "poster" ? (media?.posterImage ?? "") : (backdropUrl ?? ""),
+                image,
                 availabilityType: entry.availabilityType as SwimlaneItem["availabilityType"],
-                backdropUrl: backdropUrl ?? undefined,
-                description: media?.description,
+                backdropUrl: fallbackBackdrop ?? undefined,
+                description: isEpisode ? entry.episode!.episodeMetadata?.summary : media?.description,
                 intelligenceTag: intel?.tag,
                 year: media?.year,
                 rating: intel?.rating,
-                onClick: () => onNavigate(String(entry.mediaId)),
+                episodeNumber: isEpisode ? entry.episode!.episodeNumber : undefined,
+                onClick: () => {
+                    if (isEpisode) {
+                        // Idealmente iríamos al player directo, pero onNavigate(mediaId) está bien
+                        // para que vaya a la página de la serie y el usuario elija.
+                        onNavigate(String(entry.mediaId))
+                    } else {
+                        onNavigate(String(entry.mediaId))
+                    }
+                },
             }
         })
     }, [lane, onNavigate, resolvedAspect])

@@ -1452,6 +1452,7 @@ export type Anime_LocalFile = {
     ignored: boolean
     libraryMediaId: number
     mediaId: number
+    tags?: string[]
     technicalInfo?: {
         format: string
         size: number

@@ -18,6 +18,7 @@ type (
 type (
 	AnimeMetadata struct {
 		Titles       map[string]string           `json:"titles"`
+		Description  string                      `json:"description"`
 		Episodes     map[string]*EpisodeMetadata `json:"episodes"`
 		EpisodeCount int                         `json:"episodeCount"`
 		SpecialCount int                         `json:"specialCount"`

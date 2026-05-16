@@ -1,12 +1,5 @@
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { useGetContinuityWatchHistory } from "@/api/hooks/continuity.hooks"
-import type {
-    Anime_Episode,
-    Anime_LibraryCollectionEntry,
-    Models_LibraryMedia,
-} from "@/api/generated/types"
-import { HeroBanner, type HeroBannerItem, HeroBannerSkeleton } from "@/components/ui/hero-banner"
-import { type SwimlaneItem, SwimlaneSkeleton } from "@/components/ui/swimlane"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { motion, AnimatePresence } from "framer-motion"
 import * as React from "react"
@@ -16,15 +9,14 @@ import {
     useIntelligenceStore,
 } from "@/hooks/use-home-intelligence"
 import { DynamicBackdrop } from "@/components/shared/dynamic-backdrop"
-import type { BentoItem } from "@/components/ui/bento-recently-added"
-import { useGSAP } from "@gsap/react"
-import gsap from "gsap"
+import { HeroBanner, HeroBannerSkeleton } from "@/components/ui/hero-banner"
+import { SwimlaneSkeleton } from "@/components/ui/swimlane"
 
-import { getTitle, getBackdrop } from "./home.helpers"
+import { getTitle } from "./home.helpers"
 import { 
-    mapEpisodeToSwimlaneItem, 
-    mapEpisodeToHeroItem,
-    mapLibraryEntryToSwimlaneItem
+    mapEpisodeToMediaCard, 
+    mapLibraryEntryToMediaCard,
+    mapToHeroItem
 } from "./home.mappers"
 import { ErrorBanner, EmptyState } from "./home.components"
 import {
@@ -42,7 +34,7 @@ export const Route = createFileRoute("/home/")({
     component: HomePage,
 })
 
-export default function HomePage() {
+function HomePage() {
     const navigate = useNavigate()
     const { data: collection, isLoading: isCollectionLoading, error } = useGetLibraryCollection()
     const { data: watchHistory } = useGetContinuityWatchHistory()
@@ -60,245 +52,74 @@ export default function HomePage() {
         [navigate],
     )
 
-    const lists = React.useMemo(() => collection?.lists ?? [], [collection?.lists])
+    // ── Data Processing ────────────────────────────────────────────────────────
+    
+    const allEntries = React.useMemo(() => {
+        if (!collection?.lists) return []
+        return collection.lists.flatMap(list => list.entries ?? [])
+    }, [collection])
 
-    const entriesByMediaId = React.useMemo(() => {
-        const map = new Map<number, Anime_LibraryCollectionEntry>()
-        for (const list of lists) {
-            for (const entry of list.entries ?? []) {
-                const entryToStore = { ...entry }
-                if (!entryToStore.media) {
-                    entryToStore.media = {
-                        id: entryToStore.mediaId,
-                        title: { 
-                            userPreferred: `Desconocido (${entryToStore.mediaId})`, 
-                            romaji: `Desconocido (${entryToStore.mediaId})`,
-                            english: null,
-                            native: null
-                        },
-                        format: "TV",
-                        description: "Archivo local sin identificar",
-                    } as unknown as Models_LibraryMedia
-                }
-                map.set(entryToStore.mediaId, entryToStore)
-            }
-        }
-        return map
-    }, [lists])
+    const heroItems = React.useMemo(() => {
+        if (!collection?.continueWatchingList && !allEntries.length) return []
+        
+        // Priority: Continue Watching episodes
+        const cwHero = (collection?.continueWatchingList ?? [])
+            .slice(0, 3)
+            .map(ep => mapToHeroItem(ep.baseAnime!, handleNavigate, ep.episodeMetadata?.summary))
 
-    const allEntries = React.useMemo(() => Array.from(entriesByMediaId.values()), [entriesByMediaId])
+        if (cwHero.length > 0) return cwHero
 
-    const resolveEpisodeMedia = React.useCallback(
-        (episode: Anime_Episode): Models_LibraryMedia | undefined =>
-            episode.baseAnime ||
-            (episode.localFile?.mediaId
-                ? entriesByMediaId.get(episode.localFile.mediaId)?.media
-                : undefined),
-        [entriesByMediaId],
-    )
-
-    // ── Continue Watching ─────────────────────────────────────────────────────
-    const continueWatchingItems = React.useMemo(
-        () =>
-            (cwData || [])
-                .map((entry) => {
-                    return mapEpisodeToSwimlaneItem(
-                        entry.episode,
-                        entry.media,
-                        entriesByMediaId.get(entry.media.id)?.availabilityType,
-                        watchHistory,
-                        handleNavigate,
-                    )
-                }),
-        [cwData, entriesByMediaId, handleNavigate, watchHistory],
-    )
-
-    // ── Series ──────────────────────────────────────────────────────────────
-    const dbSeriesItems = React.useMemo((): SwimlaneItem[] => {
+        // Fallback: Recent additions
         return allEntries
-            .filter((entry) => entry.media?.format === "TV")
-            .sort((a, b) => {
-                const aDate = a.media?.createdAt ? new Date(a.media.createdAt).getTime() : 0
-                const bDate = b.media?.createdAt ? new Date(b.media.createdAt).getTime() : 0
-                return bDate - aDate
-            })
-            .map((entry): SwimlaneItem | null => {
-                if (!entry.media) return null
-                const m = entry.media
-                return {
-                    id: `db-series-${entry.mediaId}`,
-                    title: getTitle(m),
-                    image: m.posterImage || getBackdrop(m),
-                    subtitle: m.year ? String(m.year) : m.format,
-                    badge: m.format,
-                    availabilityType: entry.availabilityType as SwimlaneItem["availabilityType"],
-                    backdropUrl: getBackdrop(m) || undefined,
-                    description: m.description,
-                    aspect: "poster",
-                    year: m.year,
-                    rating: m.score ? (m.score > 10 ? m.score / 10 : m.score) : undefined,
-                    onClick: () => handleNavigate(entry.mediaId),
-                }
-            })
-            .filter((x): x is SwimlaneItem => x !== null)
-    }, [allEntries, handleNavigate])
+            .slice(0, 3)
+            .map(entry => mapToHeroItem(entry.media!, handleNavigate))
+    }, [collection, allEntries, handleNavigate])
 
-    // ── Películas y Especiales ────────────────────────────────────────────
-    const moviesAndSpecialsItems = React.useMemo((): SwimlaneItem[] => {
+    const continueWatchingItems = React.useMemo(() => {
+        return (cwData || []).map(entry => 
+            mapEpisodeToMediaCard(entry.episode, entry.media, watchHistory, handleNavigate)
+        )
+    }, [cwData, watchHistory, handleNavigate])
+
+    const seriesItems = React.useMemo(() => {
         return allEntries
-            .filter((entry) => {
-                const format = entry.media?.format
-                return format === "MOVIE" || format === "OVA" || format === "SPECIAL"
-            })
-            .sort((a, b) => (b.media?.year || 0) - (a.media?.year || 0))
-            .map((entry): SwimlaneItem | null => {
-                if (!entry.media) return null
-                const m = entry.media
-                return {
-                    id: `movie-${entry.mediaId}`,
-                    title: getTitle(m),
-                    image: m.posterImage || getBackdrop(m),
-                    subtitle: m.year ? String(m.year) : m.format,
-                    badge: m.format,
-                    availabilityType: entry.availabilityType as SwimlaneItem["availabilityType"],
-                    backdropUrl: getBackdrop(m) || undefined,
-                    description: m.description,
-                    aspect: "poster",
-                    year: m.year,
-                    rating: m.score ? (m.score > 10 ? m.score / 10 : m.score) : undefined,
-                    onClick: () => handleNavigate(entry.mediaId),
-                }
-            })
-            .filter((x): x is SwimlaneItem => x !== null)
+            .filter(e => e.media?.format === "TV")
+            .map(e => mapLibraryEntryToMediaCard(e, handleNavigate))
     }, [allEntries, handleNavigate])
 
-    // ── Añadido Recientemente (Bento Grid) ────────────────────────────────────────────────
-    const recentBentoItems = React.useMemo((): BentoItem[] => {
-        return [...allEntries]
-            .sort((a, b) => {
-                const aDate = a.media?.createdAt ? new Date(a.media.createdAt).getTime() : 0
-                const bDate = b.media?.createdAt ? new Date(b.media.createdAt).getTime() : 0
-                return bDate - aDate
-            })
-            .slice(0, 6)
-            .map((entry): BentoItem | null => {
-                if (!entry.media) return null
-                const m = entry.media
-                return {
-                    id: `recent-${entry.mediaId}`,
-                    title: getTitle(m),
-                    image: getBackdrop(m) || m.posterImage || "",
-                    year: m.year,
-                    rating: m.score ? (m.score > 10 ? m.score / 10 : m.score) : undefined,
-                    description: m.description,
-                    vibes: entry.vibes,
-                    onClick: () => handleNavigate(entry.mediaId),
-                }
-            })
-            .filter((x): x is BentoItem => x !== null)
-    }, [allEntries, handleNavigate])
-
-    // ── Full Library Items (Fallback) ───────────────────────────────────────────────────
-    const fullLibraryItems = React.useMemo((): SwimlaneItem[] => {
+    const movieItems = React.useMemo(() => {
         return allEntries
-            .slice(0, 40)
-            .filter((e) => e.media)
-            .map((entry): SwimlaneItem => {
-                const m = entry.media!
-                return {
-                    id: `coll-${entry.mediaId}`,
-                    title: getTitle(m),
-                    image: m.posterImage || getBackdrop(m),
-                    subtitle: m.year ? String(m.year) : m.format,
-                    badge: m.format,
-                    availabilityType: entry.availabilityType as SwimlaneItem["availabilityType"],
-                    backdropUrl: getBackdrop(m) || undefined,
-                    description: m.description,
-                    year: m.year,
-                    rating: m.score ? (m.score > 10 ? m.score / 10 : m.score) : undefined,
-                    onClick: () => handleNavigate(entry.mediaId),
-                }
-            })
+            .filter(e => ["MOVIE", "OVA", "SPECIAL"].includes(e.media?.format || ""))
+            .map(e => mapLibraryEntryToMediaCard(e, handleNavigate))
     }, [allEntries, handleNavigate])
 
-    // ── Hero: Prioridad 1 = Continuar, Prioridad 2 = Sugerencia aleatoria ─────────────
-    const heroItems = React.useMemo((): HeroBannerItem[] => {
-        const items: HeroBannerItem[] = []
-        const seen = new Set<number>()
+    const bentoItems = React.useMemo(() => {
+        return allEntries.slice(0, 6).map(e => ({
+            id: `recent-${e.mediaId}`,
+            title: getTitle(e.media!),
+            image: e.media?.bannerImage || e.media?.posterImage || "",
+            year: e.media?.year ?? undefined,
+            rating: e.media?.score ?? undefined,
+            description: e.media?.description || "",
+            onClick: () => handleNavigate(e.mediaId),
+        }))
+    }, [allEntries, handleNavigate])
 
-        // 1. Continuar Viendo (máxima prioridad)
-        const continueWatchingEpisodes = collection?.continueWatchingList ?? []
-        for (const ep of continueWatchingEpisodes) {
-            const media = resolveEpisodeMedia(ep)
-            if (!media || seen.has(media.id)) continue
-            seen.add(media.id)
-            items.push(mapEpisodeToHeroItem(ep, media, watchHistory, handleNavigate))
-            if (items.length >= 3) break
-        }
-
-        if (items.length === 0 && recentBentoItems.length > 0) {
-            const charSum = recentBentoItems.reduce((acc, item) => acc + (item.title.charCodeAt(0) || 0), 0)
-            const idx = charSum % Math.min(5, recentBentoItems.length)
-            const randomEntry = recentBentoItems[idx]
-            if (randomEntry) {
-                const mediaId = Number(randomEntry.id.replace("recent-", ""))
-                seen.add(mediaId)
-                items.push({
-                    id: `hero-suggestion-${mediaId}`,
-                    title: randomEntry.title,
-                    synopsis: randomEntry.description || "",
-                    backdropUrl: randomEntry.image,
-                    posterUrl: entriesByMediaId.get(mediaId)?.media?.posterImage,
-                    year: randomEntry.year,
-                    rating: randomEntry.rating,
-                    mediaId: mediaId,
-                    onPlay: () => handleNavigate(mediaId),
-                    onMoreInfo: () => handleNavigate(mediaId),
-                })
-            }
-        }
-
-        return items
-    }, [collection?.continueWatchingList, handleNavigate, resolveEpisodeMedia, watchHistory, recentBentoItems, entriesByMediaId])
-
-    const filteredVibeItems = React.useMemo(() => {
+    const vibeItems = React.useMemo(() => {
         if (!selectedVibe) return []
-        return allEntries
-            .filter(entry => entry.vibes?.includes(selectedVibe))
-            .map(entry => mapLibraryEntryToSwimlaneItem(entry, handleNavigate))
-    }, [selectedVibe, allEntries, handleNavigate])
+        return (allEntries as any[])
+            .filter(e => e.vibes?.includes(selectedVibe))
+            .map(e => mapLibraryEntryToMediaCard(e, handleNavigate))
+    }, [allEntries, selectedVibe, handleNavigate])
 
-    const containerRef = React.useRef<HTMLDivElement>(null)
+    // ── Render Helpers ─────────────────────────────────────────────────────────
 
-    useGSAP(() => {
-        if (isLoading) return
-
-        const sections = gsap.utils.toArray(".home-section")
-        if (sections.length > 0) {
-            gsap.from(sections, {
-                y: 60,
-                opacity: 0,
-                duration: 1.2,
-                stagger: 0.15,
-                ease: "power4.out",
-                clearProps: "all"
-            })
-        }
-    }, { scope: containerRef, dependencies: [isLoading, selectedVibe] })
-
-    if (error && !collection) return <ErrorBanner message={error instanceof Error ? error.message : "Error de conexión."} />
-
-    if (isLoading && !heroItems.length) {
-        return <HomeSkeleton />
-    }
-
-    if (!isCollectionLoading && allEntries.length === 0) {
-        return <EmptyState />
-    }
+    if (error && !collection) return <ErrorBanner message="Hubo un problema al cargar tu biblioteca." />
+    if (isLoading && !heroItems.length) return <HomeSkeleton />
+    if (!isCollectionLoading && allEntries.length === 0) return <EmptyState />
 
     return (
         <motion.div 
-            ref={containerRef}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="relative min-h-screen bg-zinc-950 text-white overflow-x-hidden"
@@ -306,60 +127,38 @@ export default function HomePage() {
             <DynamicBackdrop />
 
             <div className="relative z-10 flex flex-col">
-                <HeroBanner 
-                    items={heroItems} 
-                    onHover={setBackdropUrl}
-                />
+                <HeroBanner items={heroItems} />
 
-                <VibePicker 
-                    selectedVibe={selectedVibe} 
-                    onSelect={(vibe) => setSelectedVibe(vibe === selectedVibe ? null : vibe)}
-                />
+                <div className="relative -mt-24 space-y-32 pb-40">
+                    <div className="space-y-12">
+                        <VibePicker 
+                            selectedVibe={selectedVibe} 
+                            onSelect={(vibe) => setSelectedVibe(vibe === selectedVibe ? null : vibe)}
+                        />
+                    </div>
 
-                <div className="flex flex-col pb-32">
                     <AnimatePresence mode="wait">
                         {selectedVibe ? (
                             <HomeVibeFilteredSection 
                                 key={`vibe-${selectedVibe}`}
                                 vibe={selectedVibe} 
-                                items={filteredVibeItems} 
+                                items={vibeItems} 
                                 onHover={setBackdropUrl}
                             />
                         ) : (
                             <motion.div 
                                 key="main-feed"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: 0.6 }}
-                                className="flex flex-col"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                                className="flex flex-col space-y-40"
                             >
-                                <HomeContinueWatchingSection 
-                                    items={continueWatchingItems} 
-                                    onHover={setBackdropUrl} 
-                                />
-
-                                <HomeIntelligentSections 
-                                    swimlanes={intelligenceData?.curatedSwimlanes} 
-                                    onNavigate={handleNavigate} 
-                                />
-
-                                <HomeSeriesSection 
-                                    items={dbSeriesItems} 
-                                    onHover={setBackdropUrl} 
-                                />
-
-                                <HomeRecentBentoSection items={recentBentoItems} />
-
-                                <HomeMoviesSection 
-                                    items={moviesAndSpecialsItems} 
-                                    onHover={setBackdropUrl} 
-                                />
-
-                                <HomeFullLibrarySection 
-                                    items={fullLibraryItems} 
-                                    isLoading={isCollectionLoading} 
-                                />
+                                <HomeContinueWatchingSection items={continueWatchingItems} onHover={setBackdropUrl} />
+                                <HomeIntelligentSections swimlanes={intelligenceData?.swimlanes} onNavigate={handleNavigate} />
+                                <HomeSeriesSection items={seriesItems} onHover={setBackdropUrl} />
+                                <HomeRecentBentoSection items={bentoItems} />
+                                <HomeMoviesSection items={movieItems} onHover={setBackdropUrl} />
+                                <HomeFullLibrarySection items={seriesItems.slice(0, 10)} isLoading={false} />
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -371,11 +170,10 @@ export default function HomePage() {
 
 function HomeSkeleton() {
     return (
-        <div className="min-h-screen bg-zinc-950 flex flex-col gap-24 overflow-hidden">
+        <div className="min-h-screen bg-zinc-950 flex flex-col gap-32 overflow-hidden">
             <HeroBannerSkeleton />
-            <div className="space-y-24">
-                <SwimlaneSkeleton title="Cargando biblioteca" aspect="wide" />
-                <SwimlaneSkeleton aspect="poster" />
+            <div className="space-y-32">
+                <SwimlaneSkeleton aspect="wide" />
                 <SwimlaneSkeleton aspect="poster" />
             </div>
         </div>

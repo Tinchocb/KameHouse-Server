@@ -86,7 +86,7 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 	// Resolve the real TMDB ID and type from the database.
 	isMovie := false
 	if p.db != nil {
-		if m, err := db.GetLibraryMediaByTmdbId(p.db, id); err == nil && m != nil {
+		if m, err := db.GetLibraryMediaByID(p.db, uint(id)); err == nil && m != nil {
 			if m.TmdbId > 0 {
 				tmdbId = m.TmdbId
 			}
@@ -97,6 +97,7 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 	var episodes map[string]*apiMetadata.EpisodeMetadata
 	var totalEpisodes, totalSpecials int
 	var titles map[string]string
+	var description string
 
 	if isMovie {
 		// --- MOVIE PATH ---
@@ -116,6 +117,7 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 				Length:   0, // Movie details SearchResult doesn't have runtime
 			},
 		}
+		description = movieDetails.Overview
 	} else {
 		// --- TV SHOW PATH ---
 		// Fetch the TV show details to determine how many seasons exist.
@@ -126,6 +128,7 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 
 		titles = buildTitleMapFromTV(tvDetails)
 		episodes = make(map[string]*apiMetadata.EpisodeMetadata)
+		description = tvDetails.Overview
 
 		// Fetch seasons 0 (specials) through N, tracking absolute episode counter
 		maxSeasons := 5
@@ -172,6 +175,7 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 
 	result := &apiMetadata.AnimeMetadata{
 		Titles:       titles,
+		Description:  description,
 		Episodes:     episodes,
 		EpisodeCount: totalEpisodes,
 		SpecialCount: totalSpecials,

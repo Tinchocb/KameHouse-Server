@@ -166,6 +166,7 @@ function VideoPlayerOrchestrator(props: OrchestratorProps) {
             clientId={clientId}
             mediaId={props.mediaId}
             episodeNumber={props.episodeNumber}
+            malId={props.malId}
         />
     )
 }

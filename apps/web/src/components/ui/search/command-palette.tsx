@@ -62,7 +62,8 @@ export function CommandPalette() {
                                 className="text-[10px] font-black tracking-[0.3em] text-zinc-600 px-2 pt-2 pb-4 uppercase"
                             >
                                 <div className="grid gap-3 mt-2">
-                                    {results?.map((result) => {
+                                    {results?.map((res) => {
+                                        const result = res as any
                                         const media = result.media
                                         const title = media?.titleRomaji || media?.titleEnglish || `Desconocido (${result.mediaId})`
                                         
@@ -126,19 +127,19 @@ export function CommandPalette() {
                                                                 <span className="text-[10px] font-black uppercase tracking-[0.1em] text-zinc-600">
                                                                     {media?.format || "LOCAL"}
                                                                 </span>
-                                                                {media?.score && (
-                                                                    <>
-                                                                        <div className="w-1 h-1 rounded-full bg-white/10" />
-                                                                        <span className="text-[10px] font-black text-brand-orange tracking-wider">
-                                                                            ★ {(media.score > 10 ? media.score / 10 : media.score).toFixed(1)}
-                                                                        </span>
-                                                                    </>
-                                                                )}
-                                                                {result.vibes?.map(vibe => (
-                                                                    <span key={vibe} className="text-[8px] font-black tracking-[0.1em] uppercase px-1.5 py-0.5 rounded border border-white/5 bg-white/5 text-zinc-500 group-hover:text-zinc-300 transition-colors">
-                                                                        {vibe}
-                                                                    </span>
-                                                                ))}
+                                                                 {(media as any)?.score && (
+                                                                      <>
+                                                                          <div className="w-1 h-1 rounded-full bg-white/10" />
+                                                                          <span className="text-[10px] font-black text-brand-orange tracking-wider">
+                                                                              ★ {(((media as any).score > 10 ? (media as any).score / 10 : (media as any).score) as number).toFixed(1)}
+                                                                          </span>
+                                                                      </>
+                                                                  )}
+                                                                  {(result as any).vibes?.map((vibe: string) => (
+                                                                      <span key={vibe} className="text-[8px] font-black tracking-[0.1em] uppercase px-1.5 py-0.5 rounded border border-white/5 bg-white/5 text-zinc-500 group-hover:text-zinc-300 transition-colors">
+                                                                          {vibe}
+                                                                      </span>
+                                                                  ))}
                                                             </div>
                                                         </div>
                                                     </Link>

@@ -60,7 +60,7 @@ const FileCard = React.forwardRef<HTMLDivElement, { file: GhostFile }>(function 
 
     const handleSearch = (v: string) => {
         setSearchQuery(v)
-        clearTimeout(debounceRef.current)
+        if (debounceRef.current) clearTimeout(debounceRef.current)
         debounceRef.current = setTimeout(() => setDebouncedQuery(v), 450)
     }
 

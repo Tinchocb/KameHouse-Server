@@ -25,6 +25,8 @@ type (
 		Episodes            []*Episode           `json:"episodes"`
 		NextEpisode         *Episode             `json:"nextEpisode"`
 		LocalFiles          []*LocalFile         `json:"localFiles"`
+		AnidbId             int                  `json:"anidbId"`
+		MalId               int                  `json:"malId"`
 		CurrentEpisodeCount int                  `json:"currentEpisodeCount"`
 		Vibes               []string             `json:"vibes,omitempty"`
 		IntelligenceSvc     *IntelligenceService `json:"-"`
@@ -92,6 +94,8 @@ func NewSimpleEntry(ctx context.Context, opts *NewSimpleAnimeEntryOptions) (*Sim
 		return nil, errors.New("media not found in local db")
 	}
 	entry.Media = fetchedMedia
+	entry.AnidbId = int(fetchedMedia.AnidbId)
+	entry.MalId = int(fetchedMedia.MyanimelistId)
 	entry.CurrentEpisodeCount = 0
 	if opts.IntelligenceSvc != nil {
 		entry.Vibes = opts.IntelligenceSvc.DeriveSeriesVibes(fetchedMedia)

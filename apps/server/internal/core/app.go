@@ -237,6 +237,7 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 		Logger:     logger,
 		FileCacher: fileCacher,
 		Database:   database,
+		TMDBClient: tmdbClient,
 	})
 
 	// Set initial metadata provider (will change if offline mode is enabled)

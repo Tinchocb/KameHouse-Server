@@ -187,7 +187,18 @@ func (c *metadataFetchCache) FetchOnce(
 
 		// ── Persistent Cache store ────────────────────────────────────────────
 		if c.db != nil {
-			_ = db.UpsertMetadataCache(c.db, "scanner", key, result, 7*24*time.Hour) // 1 week TTL
+			ttl := 7 * 24 * time.Hour // Default 1 week
+			if result.Status != nil {
+				switch *result.Status {
+				case dto.MediaStatusFinished:
+					ttl = 365 * 24 * time.Hour // 1 year for finished series
+				case dto.MediaStatusReleasing:
+					ttl = 24 * time.Hour // 1 day for airing series
+				case dto.MediaStatusCancelled, dto.MediaStatusHiatus:
+					ttl = 30 * 24 * time.Hour // 1 month
+				}
+			}
+			_ = db.UpsertMetadataCache(c.db, "scanner", key, result, ttl)
 		}
 
 		return result, nil

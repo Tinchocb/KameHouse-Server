@@ -4,6 +4,7 @@ import (
 	"runtime"
 
 	"github.com/goccy/go-json"
+	"github.com/rs/zerolog"
 )
 
 type (
@@ -14,18 +15,22 @@ type (
 	}
 )
 
-func GetHardwareAccelSettings(opts HwAccelOptions) HwAccelSettings {
+func GetHardwareAccelSettings(ffmpegPath string, opts HwAccelOptions, logger *zerolog.Logger) HwAccelSettings {
 	name := opts.Kind
-	if name == "" || name == "auto" || name == "cpu" || name == "none" {
+	if name == "" || name == "auto" {
+		name = GetAutoHwAccelKind(ffmpegPath, logger)
+	}
+
+	if name == "cpu" || name == "none" {
 		name = "disabled"
 	}
-	streamLogger.Debug().Msgf("transcoder: Hardware acceleration: %s", name)
+	logger.Debug().Msgf("transcoder: Hardware acceleration: %s", name)
 
 	var customHwAccelSettings HwAccelSettings
 	if opts.CustomSettings != "" && name == "custom" {
 		err := json.Unmarshal([]byte(opts.CustomSettings), &customHwAccelSettings)
 		if err != nil {
-			streamLogger.Error().Err(err).Msg("transcoder: Failed to parse custom hardware acceleration settings, falling back to CPU")
+			logger.Error().Err(err).Msg("transcoder: Failed to parse custom hardware acceleration settings, falling back to CPU")
 			name = "disabled"
 		}
 		customHwAccelSettings.Name = "custom"
@@ -143,7 +148,7 @@ func GetHardwareAccelSettings(opts HwAccelOptions) HwAccelSettings {
 	case "custom":
 		return customHwAccelSettings
 	default:
-		streamLogger.Fatal().Msgf("No hardware accelerator named: %s", name)
+		logger.Fatal().Msgf("No hardware accelerator named: %s", name)
 		panic("unreachable")
 	}
 }

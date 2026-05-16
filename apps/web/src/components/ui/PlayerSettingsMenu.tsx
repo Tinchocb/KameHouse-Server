@@ -108,7 +108,20 @@ export function PlayerSettingsMenu({
         return () => document.removeEventListener("keydown", onKey, { capture: true })
     }, [isOpen, setIsOpen])
 
-    const langLabel = (lang: string) => lang.toUpperCase().slice(0, 3)
+    const getFriendlyLanguage = (lang: string) => {
+        const lower = lang.toLowerCase()
+        if (lower.startsWith("spa") || lower === "es") return "Español"
+        if (lower.startsWith("jpn") || lower === "ja") return "Japonés"
+        if (lower.startsWith("eng") || lower === "en") return "Inglés"
+        if (lower.startsWith("fra") || lower === "fr") return "Francés"
+        if (lower.startsWith("ger") || lower === "de") return "Alemán"
+        if (lower.startsWith("ita") || lower === "it") return "Italiano"
+        if (lower.startsWith("por") || lower === "pt") return "Portugués"
+        if (lower === "und") return "Desconocido"
+        return lang.toUpperCase()
+    }
+
+    const langLabel = (lang: string) => getFriendlyLanguage(lang)
 
     const activeAudio = audioTracks.find(t => t.index === activeAudioIndex)
     const activeSubtitle = activeSubtitleIndex !== null
@@ -209,6 +222,7 @@ export function PlayerSettingsMenu({
                                     audioTracks={audioTracks}
                                     activeAudioIndex={activeAudioIndex}
                                     onSelectAudio={onSelectAudio}
+                                    getFriendlyLanguage={getFriendlyLanguage}
                                 />
                             </SettingsLayout>
                         )}
@@ -229,6 +243,7 @@ export function PlayerSettingsMenu({
                                     }}
                                     subtitleSize={subtitleSize}
                                     onSubtitleSizeChange={onSubtitleSizeChange}
+                                    getFriendlyLanguage={getFriendlyLanguage}
                                 />
                             </SettingsLayout>
                         )}

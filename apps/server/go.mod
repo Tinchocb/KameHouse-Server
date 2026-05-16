@@ -25,6 +25,7 @@ require (
 	github.com/imroc/req/v3 v3.57.0
 	github.com/kr/pretty v0.3.1
 	github.com/labstack/echo/v4 v4.15.0
+	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/mileusna/useragent v1.3.5
 	github.com/nssteinbrenner/anitogo v1.0.0
 	github.com/nwaples/rardecode/v2 v2.2.2

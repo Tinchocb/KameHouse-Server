@@ -86,7 +86,7 @@ export interface PlayerBottomBarProps {
 }
 
 export function PlayerBottomBar({
-    duration, insights, progressInputRef, handleSeek,
+    duration, insights, progressBarRef, progressInputRef, handleSeek,
     isPlaying, togglePlay, skipTime,
     isMuted, toggleMute, volume, handleVolume,
     timeTextRef,

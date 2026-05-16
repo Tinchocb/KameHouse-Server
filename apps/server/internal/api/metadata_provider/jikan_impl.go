@@ -131,13 +131,14 @@ func (p *JikanProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata
 				}
 
 				result.Episodes[epStr] = &apiMetadata.EpisodeMetadata{
-					EpisodeNumber: ep.Episode,
-					SeasonNumber:  1,
-					Episode:       epStr,
-					Title:         ep.Title,
-					Overview:      ep.Synopsis,
-					HasImage:      false,
-					AirDate:       airDate,
+					EpisodeNumber:         ep.Episode,
+					SeasonNumber:          1,
+					Episode:               epStr,
+					Title:                 ep.Title,
+					Overview:              ep.Synopsis,
+					HasImage:              false,
+					AirDate:               airDate,
+					AbsoluteEpisodeNumber: ep.Episode,
 				}
 			}
 		}
@@ -148,24 +149,26 @@ func (p *JikanProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata
 		for i := 1; i <= malAnime.Episodes; i++ {
 			epStr := strconv.Itoa(i)
 			result.Episodes[epStr] = &apiMetadata.EpisodeMetadata{
-				EpisodeNumber: i,
-				SeasonNumber:  1,
-				Episode:       epStr,
-				Title:         fmt.Sprintf("Episode %d", i),
-				Overview:      malAnime.Synopsis,
-				Image:         malAnime.Images.Jpg.LargeImageUrl,
-				HasImage:      true,
+				EpisodeNumber:         i,
+				SeasonNumber:          1,
+				Episode:               epStr,
+				Title:                 fmt.Sprintf("Episode %d", i),
+				Overview:              malAnime.Synopsis,
+				Image:                 malAnime.Images.Jpg.LargeImageUrl,
+				HasImage:              true,
+				AbsoluteEpisodeNumber: i,
 			}
 		}
 		if malAnime.Episodes == 0 { // e.g. ongoing or unknown count movie
 			result.Episodes["1"] = &apiMetadata.EpisodeMetadata{
-				EpisodeNumber: 1,
-				SeasonNumber:  1,
-				Episode:       "1",
-				Title:         titles["en"],
-				Overview:      malAnime.Synopsis,
-				Image:         malAnime.Images.Jpg.LargeImageUrl,
-				HasImage:      true,
+				EpisodeNumber:         1,
+				SeasonNumber:          1,
+				Episode:               "1",
+				Title:                 titles["en"],
+				Overview:              malAnime.Synopsis,
+				Image:                 malAnime.Images.Jpg.LargeImageUrl,
+				HasImage:              true,
+				AbsoluteEpisodeNumber: 1,
 			}
 			result.EpisodeCount = 1
 		}

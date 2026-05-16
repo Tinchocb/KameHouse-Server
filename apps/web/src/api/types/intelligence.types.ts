@@ -9,7 +9,7 @@ export type CardAspect = "poster" | "wide" | "square"
 /**
  * ContentTag mirrors the Go backend enum in internal/library/anime/intelligence.go
  */
-export type ContentTag = "FILLER" | "EPIC" | "CANON" | "SPECIAL"
+export type ContentTag = "FILLER" | "EPIC" | "CANON" | "SPECIAL" | "HYPED" | "EMOTIONAL" | "INTENSE" | "CHILL"
 
 /**
  * EpisodeIntelligence carries computed intelligence about a single episode or movie.
@@ -34,6 +34,14 @@ export interface EpisodeIntelligence {
 export interface IntelligentEntry extends Anime_LibraryCollectionEntry {
     /** Aggregated or specific intelligence for the item */
     intelligence?: EpisodeIntelligence
+    /** AI-derived tags (Character, Technique, Lore) */
+    tags?: string[]
+    /** Primary vibe detected by the AI engine */
+    dominantVibe?: string
+    /** Thematic vibes for filtering */
+    vibes?: string[]
+    /** Local episode data if this entry is an episode swimlane */
+    episode?: Anime_Episode
 }
 
 /**

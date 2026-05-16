@@ -2,6 +2,7 @@ package anime
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
@@ -295,7 +296,7 @@ func (s *IntelligenceService) DeriveSeriesVibes(media *models.LibraryMedia) []st
 }
 
 // deriveVibes categorizes the "feel" of an episode based on genres, score, and tags.
-func (s *IntelligenceService) deriveVibes(mediaID, _ int, _ *EpisodeMetadata, intel *EpisodeIntelligence) []string {
+func (s *IntelligenceService) deriveVibes(mediaID, _ int, _ *EpisodeMetadata, _ *EpisodeIntelligence) []string {
 	var media models.LibraryMedia
 	if err := s.db.Gorm().Where("id = ?", mediaID).First(&media).Error; err != nil {
 		return make([]string, 0)
@@ -426,12 +427,52 @@ func (s *IntelligenceService) GetContinueWatching(ctx context.Context, userID ui
 	return items, nil
 }
 
-// GetCuratedSwimlanes returns the four curated home swimlanes.
+// GetCuratedSwimlanes returns the curated home swimlanes, including DB Intelligence lanes.
 func (s *IntelligenceService) GetCuratedSwimlanes(_ context.Context) (*CuratedHomeResponse, error) {
 	resp := &CuratedHomeResponse{
-		Swimlanes: make([]*CuratedSwimlane, 0, 4),
+		Swimlanes: make([]*CuratedSwimlane, 0, 10),
 	}
 
+	// 1. New Intelligence Lanes (Highest priority for KameHouse)
+	intelLanes := []struct {
+		ID    string
+		Title string
+	}{
+		{"eleva_tu_ki", "¡Eleva tu Ki!: Batallas que rompieron los límites"},
+		{"camino_guerrero", "El Camino del Guerrero: Focus en Gohan"},
+		{"cronicas_trunks", "Crónicas de Trunks: El Futuro en Llamas"},
+		{"fusion_ha", "¡Fusión HA!: Guerreros Definitivos"},
+		{"redencion", "Historias de Redención: Rivales que se volvieron Hermanos"},
+		{"deseos_prohibidos", "Deseos Prohibidos y Dragones Sagrados"},
+		{"fuera_ring", "¡Fuera del Ring!: Los Grandes Torneos"},
+	}
+
+	for _, l := range intelLanes {
+		if lane := s.buildIntelligenceLane(l.ID, l.Title); lane != nil {
+			resp.Swimlanes = append(resp.Swimlanes, lane)
+		}
+	}
+
+	// 1.5. Episode-specific Intelligence Lanes (Tags on LocalFiles)
+	episodeLanes := []struct {
+		ID    string
+		Title string
+		Tag   string
+	}{
+		{"tecnicas_letales", "Técnicas Letales", "Técnicas Letales"},
+		{"torneo_uranai", "Torneo de Uranai Baba", "El Torneo de Uranai Baba"},
+		{"mundo_demonios", "Mundo de los Demonios", "Mundo de los Demonios"},
+		{"entidades_supremas", "Entidades Supremas", "Entidades Supremas"},
+		{"supervivencia_universal", "Supervivencia Universal", "Supervivencia Universal"},
+	}
+
+	for _, l := range episodeLanes {
+		if lane := s.buildEpisodeTagLane(l.ID, l.Title, l.Tag); lane != nil {
+			resp.Swimlanes = append(resp.Swimlanes, lane)
+		}
+	}
+
+	// 2. Standard Lanes
 	if lane := s.buildLocalLibraryLane(); lane != nil {
 		resp.Swimlanes = append(resp.Swimlanes, lane)
 	}
@@ -449,6 +490,112 @@ func (s *IntelligenceService) GetCuratedSwimlanes(_ context.Context) (*CuratedHo
 	}
 
 	return resp, nil
+}
+
+func (s *IntelligenceService) buildIntelligenceLane(id, title string) *CuratedSwimlane {
+	var media []*models.LibraryMedia
+	// Search by SuggestedSwimlane matching the title
+	if err := s.db.Gorm().
+		Where("suggested_swimlane = ?", title).
+		Order("score DESC").
+		Limit(20).
+		Find(&media).Error; err != nil || len(media) == 0 {
+		return nil
+	}
+
+	lane := &CuratedSwimlane{
+		ID:      id,
+		Title:   title,
+		Type:    "intelligence",
+		Entries: make([]*LibraryCollectionEntry, 0, len(media)),
+	}
+	for _, m := range media {
+		lane.Entries = append(lane.Entries, &LibraryCollectionEntry{
+			Media:            m,
+			MediaId:          int(m.ID),
+			AvailabilityType: "HYBRID",
+		})
+	}
+	return lane
+}
+
+func (s *IntelligenceService) buildEpisodeTagLane(id, title, tag string) *CuratedSwimlane {
+	var localFiles []*models.LocalFile
+	// Querying SQLite JSON string slice using LIKE
+	query := fmt.Sprintf(`%%"%s"%%`, tag)
+	if err := s.db.Gorm().
+		Where("tags LIKE ?", query).
+		Limit(20).
+		Find(&localFiles).Error; err != nil || len(localFiles) == 0 {
+		return nil
+	}
+
+	lane := &CuratedSwimlane{
+		ID:      id,
+		Title:   title,
+		Type:    "episode_tag",
+		Entries: make([]*LibraryCollectionEntry, 0, len(localFiles)),
+	}
+
+	// We need to keep track of added episodes to avoid duplicates if tags are weird
+	added := make(map[uint]bool)
+
+	for _, lf := range localFiles {
+		// Attempt to resolve LibraryMedia
+		var media models.LibraryMedia
+		if err := s.db.Gorm().Where("id = ?", lf.LibraryMediaId).First(&media).Error; err != nil {
+			continue
+		}
+
+		// Attempt to resolve LibraryEpisode
+		// Since we have lf.Metadata.Episode inside parsed info, we need a reliable way to map it.
+		// LocalFile has MediaId, but to find LibraryEpisode we need LibraryMediaID and EpisodeNumber.
+		
+		// To safely extract episode number from lf, we can use the TechnicalInfo or ParsedData.
+		// However, a simpler query is to match by name or by scanning all episodes for this media.
+		// Wait, a more straightforward way is to fetch the episode based on metadata episode number.
+		// But in Kamehouse, LocalFiles might not easily link to LibraryEpisode without parsing JSON.
+		// Let's use a subquery or directly query LibraryEpisode where tags match? 
+		// Actually, tags are stored on LocalFile, not LibraryEpisode.
+		// Let's assume the LocalFile Name contains the episode number or it's just the first match.
+		// Actually, let's query LibraryEpisode directly joining with LocalFile if needed.
+		// No, let's just parse the Episode number from ParsedData.
+		
+		// Unmarshal ParsedData to get the Episode number
+		var parsedInfo struct {
+			Episode int `json:"episode"`
+		}
+		if len(lf.ParsedData) > 0 {
+			_ = json.Unmarshal(lf.ParsedData, &parsedInfo)
+		}
+
+		var episode models.LibraryEpisode
+		if parsedInfo.Episode > 0 {
+			if err := s.db.Gorm().Where("library_media_id = ? AND episode_number = ?", media.ID, parsedInfo.Episode).First(&episode).Error; err != nil {
+				continue
+			}
+		} else {
+			continue
+		}
+
+		if added[episode.ID] {
+			continue
+		}
+		added[episode.ID] = true
+
+		lane.Entries = append(lane.Entries, &LibraryCollectionEntry{
+			Media:            &media,
+			MediaId:          int(media.ID),
+			Episode:          &episode,
+			AvailabilityType: "FULL_LOCAL",
+		})
+	}
+
+	if len(lane.Entries) == 0 {
+		return nil
+	}
+
+	return lane
 }
 
 func GetCuratedHome(_ context.Context, database *db.Database) (*CuratedHomeResponse, error) {

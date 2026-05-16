@@ -24,6 +24,7 @@ type LocalFile struct {
 	EmbeddedMetadata json.RawMessage `gorm:"column:embedded_metadata;type:text" json:"embeddedMetadata"`
 	Metadata         json.RawMessage `gorm:"column:metadata;type:text" json:"metadata"`
 	TechnicalInfo    json.RawMessage `gorm:"column:technical_info;type:text" json:"technicalInfo"`
+	Tags             StringSlice     `gorm:"column:tags;type:text" json:"tags"`
 }
 
 func (LocalFile) TableName() string {

@@ -21,6 +21,7 @@ export interface SwimlaneItem {
     intelligenceTag?: string
     year?: string | number
     rating?: number
+    episodeNumber?: number
     onClick: () => void
     /** URL to use as the dynamic home backdrop when this card is hovered */
     backdropUrl?: string
@@ -73,76 +74,36 @@ const SwimlaneInner = React.memo(function SwimlaneInner({
                     safeDisplacement={18}
                     applyRubberBandEffect
                 >
-                    {items.map((item, index) => {
-                        const isHovered = hoveredIndex === index
-                        const isNeighbor = hoveredIndex !== null && Math.abs(hoveredIndex - index) === 1
-                        const isOther = hoveredIndex !== null && !isHovered && !isNeighbor
-
-                        return (
-                            <motion.div
-                                key={item.id}
-                                className="snap-start"
-                                onMouseEnter={() => {
-                                    setHoveredIndex(index)
-                                    onHover?.(item.backdropUrl ?? null)
-                                }}
-                                onMouseLeave={() => {
-                                    setHoveredIndex(null)
-                                    onHover?.(null)
-                                }}
-                                initial={{ opacity: 0, y: 20 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                animate={{ 
-                                    scale: isHovered ? 1.05 : hoveredIndex !== null ? 0.96 : 1,
-                                    opacity: isOther ? 0.6 : 1,
-                                    zIndex: isHovered ? 40 : 10,
-                                }}
-                                viewport={{ once: true, margin: "-50px" }}
-                                transition={{ 
-                                    type: "spring",
-                                    stiffness: 260,
-                                    damping: 20,
-                                    delay: hoveredIndex === null ? index * 0.03 : 0,
-                                }}
-                            >
-                                {item.badge === "TV" ? (
-                                    <MediaStack
-                                        artwork={item.image}
-                                        title={item.title}
-                                        subtitle={item.subtitle}
-                                        badge={item.badge}
-                                        availabilityType={item.availabilityType}
-                                        description={item.description}
-                                        progress={item.progress}
-                                        aspect={item.aspect ?? defaultAspect}
-                                        intelligenceTag={item.intelligenceTag}
-                                        year={item.year}
-                                        rating={item.rating}
-                                        onClick={item.onClick}
-                                        layoutId={`poster-${item.id}`}
-                                        className="motion-reduce:transition-none shadow-2xl transition-shadow duration-500 hover:shadow-primary/10"
-                                    />
-                                ) : (
-                                    <MediaCard
-                                        artwork={item.image}
-                                        title={item.title}
-                                        subtitle={item.subtitle}
-                                        badge={item.badge}
-                                        availabilityType={item.availabilityType}
-                                        description={item.description}
-                                        progress={item.progress}
-                                        aspect={item.aspect ?? defaultAspect}
-                                        intelligenceTag={item.intelligenceTag}
-                                        year={item.year}
-                                        rating={item.rating}
-                                        onClick={item.onClick}
-                                        layoutId={`poster-${item.id}`}
-                                        className="motion-reduce:transition-none shadow-2xl transition-shadow duration-500 hover:shadow-primary/10"
-                                    />
-                                )}
-                            </motion.div>
-                        )
-                    })}
+                    {items.map((item, index) => (
+                        <motion.div
+                            key={item.id}
+                            className="snap-start"
+                            onMouseEnter={() => onHover?.(item.backdropUrl ?? null)}
+                            onMouseLeave={() => onHover?.(null)}
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true, margin: "-50px" }}
+                            transition={{ 
+                                duration: 0.8,
+                                delay: index * 0.05,
+                                ease: [0.23, 1, 0.32, 1]
+                            }}
+                        >
+                            {item.badge === "TV" ? (
+                                <MediaStack
+                                    {...item}
+                                    artwork={item.image}
+                                    aspect={item.aspect ?? defaultAspect}
+                                />
+                            ) : (
+                                <MediaCard
+                                    {...item}
+                                    artwork={item.image}
+                                    aspect={item.aspect ?? defaultAspect}
+                                />
+                            )}
+                        </motion.div>
+                    ))}
                 </HorizontalDraggableScroll>
             </div>
         </section>

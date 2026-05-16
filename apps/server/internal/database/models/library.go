@@ -26,6 +26,8 @@ type LibraryMedia struct {
 	BannerImage string `gorm:"column:banner_image" json:"bannerImage"` // Path or URL
 
 	TmdbId         int    `gorm:"column:tmdb_id;uniqueIndex:idx_tmdb_id_type" json:"tmdbId"`
+	AnidbId        int    `gorm:"column:anidb_id" json:"anidbId"`
+	MyanimelistId int    `gorm:"column:myanimelist_id" json:"myanimelistId"`
 
 	SeasonNumber int       `gorm:"column:season_number" json:"seasonNumber"`
 	StartDate    time.Time `gorm:"column:start_date" json:"startDate"`
@@ -37,7 +39,9 @@ type LibraryMedia struct {
 	IsNsfw bool    `gorm:"column:is_nsfw" json:"isNsfw"`
 
 	Genres        json.RawMessage `gorm:"column:genres;type:text" json:"genres"` // JSON array of strings
-	Tags          json.RawMessage `gorm:"column:tags;type:text" json:"tags"`     // JSON array of objects
+	Tags          json.RawMessage `gorm:"column:tags;type:text" json:"tags"`     // JSON array of strings or objects
+	DominantVibe  string          `gorm:"column:dominant_vibe" json:"dominantVibe"`
+	SuggestedSwimlane string      `gorm:"column:suggested_swimlane" json:"suggestedSwimlane"`
 	TotalEpisodes int    `gorm:"column:total_episodes" json:"totalEpisodes"`
 	Runtime       int    `gorm:"column:runtime" json:"runtime"`
 
@@ -141,6 +145,10 @@ type LibraryEpisode struct {
 	// Saga/Story Arc association
 	SagaName string `gorm:"column:saga_name" json:"sagaName"`
 	SagaId   string `gorm:"column:saga_id" json:"sagaId"`
+
+	Tags              json.RawMessage `gorm:"column:tags;type:text" json:"tags"`
+	DominantVibe      string          `gorm:"column:dominant_vibe" json:"dominantVibe"`
+	SuggestedSwimlane string          `gorm:"column:suggested_swimlane" json:"suggestedSwimlane"`
 
 	AudioTracks    json.RawMessage `gorm:"column:audio_tracks;type:text" json:"audioTracks"`       // JSON array of strings
 	SubtitleTracks json.RawMessage `gorm:"column:subtitle_tracks;type:text" json:"subtitleTracks"` // JSON array of strings

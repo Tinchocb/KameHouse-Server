@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
-import React, { useMemo, useState, useRef } from "react"
+import React, { useMemo, useState, useRef, useEffect } from "react"
 import { Virtuoso } from "react-virtuoso"
 import { useGSAP } from "@gsap/react"
 import gsap from "gsap"
@@ -371,6 +371,7 @@ const HeroSection = React.memo(function HeroSection({
                     <img
                         src={backdropUrl}
                         alt={title}
+                        fetchPriority="high"
                         className="w-full h-full object-cover object-center opacity-40 grayscale-[0.1] transition-all duration-1000 scale-[1.01] group-hover/hero:scale-105 group-hover/hero:opacity-60"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#09090b] via-[#09090b]/40 to-transparent transition-opacity group-hover/hero:opacity-60" />
@@ -549,8 +550,26 @@ const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
         return chunks
     }, [sagas, episodes, fallbackThumb])
 
-    const [activeSagaId, setActiveSagaId] = useState<string>(generatedSagas[0]?.id?.toString() || "")
-    const [activeSubSagaId, setActiveSubSagaId] = useState<string>("all")
+    const [activeSagaId, setActiveSagaId] = useState<string>("")
+    const [activeSubSagaId, setActiveSubSagaId] = useState<string>("")
+
+    useEffect(() => {
+        if (generatedSagas.length > 0 && !generatedSagas.find(s => s.id.toString() === activeSagaId)) {
+            setActiveSagaId(generatedSagas[0].id.toString())
+        }
+    }, [generatedSagas, activeSagaId])
+
+    useEffect(() => {
+        const activeSaga = generatedSagas.find(s => s.id.toString() === activeSagaId)
+        if (activeSaga?.subSagas && activeSaga.subSagas.length > 0) {
+            const hasActive = activeSaga.subSagas.find(ss => ss.id === activeSubSagaId)
+            if (!hasActive) {
+                setActiveSubSagaId(activeSaga.subSagas[0].id)
+            }
+        } else {
+            setActiveSubSagaId("")
+        }
+    }, [generatedSagas, activeSagaId, activeSubSagaId])
 
     const activeMainSaga = useMemo(() => {
         return generatedSagas.find(s => s.id.toString() === activeSagaId)
@@ -561,7 +580,7 @@ const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
         const saga = generatedSagas.find(s => s.id.toString() === activeSagaId)
         if (!saga) return episodes
         
-        if (activeSubSagaId !== "all" && saga.subSagas) {
+        if (activeSubSagaId && saga.subSagas) {
             const subSaga = saga.subSagas.find((ss) => ss.id === activeSubSagaId)
             if (subSaga) {
                 return episodes.filter(ep => {
@@ -611,7 +630,6 @@ const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
                                             <button
                                                 onClick={() => {
                                                     setActiveSagaId(saga.id.toString())
-                                                    setActiveSubSagaId("all")
                                                 }}
                                                 className={cn(
                                                     "group w-full flex items-center justify-between px-6 py-5 transition-all duration-300 relative",
@@ -660,15 +678,7 @@ const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
                                                     className="overflow-hidden ml-[31px] border-l border-white/5"
                                                 >
                                                     <div className="flex flex-col py-2 gap-1">
-                                                        <button
-                                                            onClick={() => setActiveSubSagaId("all")}
-                                                            className={cn(
-                                                                "px-6 py-2 text-[10px] font-bold uppercase tracking-[0.15em] text-left transition-all",
-                                                                activeSubSagaId === "all" ? "text-brand-orange" : "text-zinc-600 hover:text-zinc-400"
-                                                            )}
-                                                        >
-                                                            Ver Todo
-                                                        </button>
+
                                                         {saga.subSagas?.map((sub) => (
                                                             <button
                                                                 key={sub.id}
@@ -735,7 +745,6 @@ const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
                                         onPlay={onPlay}
                                         isCurrentlyPlaying={currentlyPlayingEpNumber === ep.episodeNumber}
                                         seriesTmdbId={seriesTmdbId}
-                                        seriesTitle={seriesTitle}
                                     />
                                 </div>
                             )}

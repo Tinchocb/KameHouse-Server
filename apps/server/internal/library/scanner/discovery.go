@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-func (scn *Scanner) discoverFilePaths(ctx context.Context, lastScanAt time.Time) ([]string, []string, []string) {
+func (scn *Scanner) discoverFilePaths(ctx context.Context, _ time.Time) ([]string, []string, []string) {
 	var libraryPaths []string
 	isPartial := len(scn.TargetPaths) > 0
 

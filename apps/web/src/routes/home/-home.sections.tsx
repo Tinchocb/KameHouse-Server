@@ -1,6 +1,6 @@
 import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { cn } from "@/lib/utils"
+import { cn } from "@/components/ui/core/styling"
 import { 
     Tv, 
     Zap, 
@@ -37,13 +37,13 @@ export const HomeIntelligentSections = React.memo(function HomeIntelligentSectio
                     key={lane.id}
                 >
                     <motion.div 
+                        id={`lane-${lane.type}`}
                         initial={{ opacity: 0, y: 40 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true, margin: "-100px" }}
                         transition={{ duration: 1, ease: [0.23, 1, 0.32, 1] }}
                         className="home-section space-y-12"
                     >
-                        <SectionLabel icon={Sparkles} label={lane.title} index={startIndex + idx} />
                         <SmartSwimlane
                             lane={lane}
                             onNavigate={(mediaId) => onNavigate(Number(mediaId))}

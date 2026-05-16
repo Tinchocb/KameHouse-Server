@@ -80,6 +80,7 @@ func (h *Handler) getAnimeEntry(c echo.Context, lfs []*dto.LocalFile, mId int) (
 	// If the media has a TmdbId and episodes are missing synopsis/image,
 	// fetch TMDB season data and fill in the gaps (best-effort, never fails the request).
 	h.enrichEpisodesWithTMDB(c.Request().Context(), entry)
+	h.enrichMediaWithTMDB(c.Request().Context(), entry)
 
 	return entry, nil
 }
@@ -215,7 +216,7 @@ func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry
 		if ep == nil {
 			continue
 		}
-		te, ok := epMap[ep.EpisodeNumber]
+		te, ok := epMap[ep.AbsoluteEpisodeNumber]
 		if !ok {
 			continue
 		}
@@ -259,6 +260,88 @@ func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry
 		Int("tmdbId", tmdbId).
 		Int("mapped", len(epMap)).
 		Msg("enrichEpisodesWithTMDB: complete")
+}
+
+// enrichMediaWithTMDB fetches series-level metadata from TMDB if the local description is missing.
+func (h *Handler) enrichMediaWithTMDB(ctx context.Context, entry *anime.Entry) {
+	if entry == nil || entry.Media == nil || entry.Media.TmdbId == 0 {
+		return
+	}
+
+	// Only enrich if important metadata is missing
+	missingMetadata := entry.Media.Description == "" || 
+		(entry.Media.TitleSpanish == "" && entry.Media.TitleEnglish == "") ||
+		entry.Media.PosterImage == ""
+		
+	if !missingMetadata {
+		return
+	}
+
+	h.App.Logger.Debug().Int("tmdbId", entry.Media.TmdbId).Msg("enrichMediaWithTMDB: fetching series metadata")
+
+	var tmdbToken string
+	var tmdbLanguage string
+	if settings, err := h.App.Database.GetSettings(); err == nil && settings != nil {
+		tmdbToken = settings.Library.TmdbApiKey
+		tmdbLanguage = settings.Library.TmdbLanguage
+	}
+	if tmdbToken == "" {
+		tmdbToken = os.Getenv("KAMEHOUSE_TMDB_TOKEN")
+	}
+	if tmdbToken == "" {
+		return
+	}
+	if tmdbLanguage == "" || tmdbLanguage == "en" || tmdbLanguage == "es" {
+		tmdbLanguage = "es-MX"
+	}
+
+	provider := librarymetadata.NewTMDBProvider(tmdbToken, h.App.Database, tmdbLanguage)
+	tmdbId := entry.Media.TmdbId
+
+	// Fetch details
+	lookUpId := strconv.Itoa(tmdbId)
+	if entry.Media.Format == string(platform.MediaFormatMovie) {
+		lookUpId = strconv.Itoa(tmdbId + 1000000)
+	}
+
+	nm, err := provider.GetMediaDetails(ctx, lookUpId)
+	if err != nil || nm == nil {
+		return
+	}
+
+	updated := false
+	if nm.Description != nil && *nm.Description != "" && entry.Media.Description == "" {
+		entry.Media.Description = *nm.Description
+		updated = true
+	}
+	if nm.Title != nil {
+		if nm.Title.Spanish != nil && *nm.Title.Spanish != "" && entry.Media.TitleSpanish == "" {
+			entry.Media.TitleSpanish = *nm.Title.Spanish
+			updated = true
+		}
+		if nm.Title.English != nil && *nm.Title.English != "" && entry.Media.TitleEnglish == "" {
+			entry.Media.TitleEnglish = *nm.Title.English
+			updated = true
+		}
+	}
+	if nm.CoverImage != nil && nm.CoverImage.Large != nil && entry.Media.PosterImage == "" {
+		entry.Media.PosterImage = *nm.CoverImage.Large
+		updated = true
+	}
+	if nm.BannerImage != nil && *nm.BannerImage != "" && entry.Media.BannerImage == "" {
+		entry.Media.BannerImage = *nm.BannerImage
+		updated = true
+	}
+
+	if updated {
+		// Persist to database
+		_, err := db.InsertLibraryMedia(h.App.Database, entry.Media)
+		if err != nil {
+			h.App.Logger.Warn().Err(err).Int("tmdbId", tmdbId).Msg("enrichMediaWithTMDB: failed to persist enriched metadata")
+		} else {
+			h.App.Logger.Info().Int("tmdbId", tmdbId).Msg("enrichMediaWithTMDB: updated series metadata in DB")
+		}
+	}
 }
 
 

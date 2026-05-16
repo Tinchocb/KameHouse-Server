@@ -67,10 +67,13 @@ type (
 	LibraryCollectionEntry struct {
 		Media                  *models.LibraryMedia    `json:"media"`
 		MediaId                int                     `json:"mediaId"`
+		Episode                *models.LibraryEpisode  `json:"episode,omitempty"` // For episode-specific swimlanes
 		AvailabilityType       string                  `json:"availabilityType"`            // FULL_LOCAL, HYBRID, ONLY_ONLINE
 		EntryLibraryData       *EntryLibraryData       `json:"libraryData"`  // Library data
 		EntryListData          *EntryListData          `json:"listData"`     // Local list data
 		Vibes                  []string                `json:"vibes"`        // Emotional or thematic tags
+		Tags                   []string                `json:"tags"`         // AI-derived intelligence tags
+		DominantVibe           string                  `json:"dominantVibe"` // Primary AI-derived vibe
 	}
 
 	// UnmatchedGroup holds the data for a group of unmatched local files.
@@ -299,7 +302,13 @@ func (lc *LibraryCollection) hydrateCollectionLists(
 				StartedAt:   listData.StartedAt,
 				CompletedAt: listData.CompletedAt,
 			},
+			DominantVibe: media.DominantVibe,
 		}
+
+		if media.Tags != nil {
+			_ = json.Unmarshal(media.Tags, &lce.Tags)
+		}
+
 		lce.DeriveVibes()
 
 		statusGroups[status] = append(statusGroups[status], lce)
@@ -495,15 +504,22 @@ func (e *LibraryCollectionEntry) DeriveVibes() {
 		return
 	}
 
-	// 1. Epic vibe based on score
+	// 1. AI-derived dominant vibe (highest priority)
+	if e.Media.DominantVibe != "" {
+		vibes = append(vibes, strings.ToUpper(e.Media.DominantVibe))
+	}
+
+	// 2. Epic vibe based on score
 	if e.Media.Score >= 8.5 || e.Media.Score >= 85 {
-		vibes = append(vibes, "EPIC")
+		if !slices.Contains(vibes, "EPIC") {
+			vibes = append(vibes, "EPIC")
+		}
 	}
 
 	var genres []string
 	_ = json.Unmarshal(e.Media.Genres, &genres)
 
-	// 2. Chill vibe
+	// 3. Chill vibe
 	isChill := false
 	for _, g := range genres {
 		gl := strings.ToLower(g)
@@ -513,10 +529,12 @@ func (e *LibraryCollectionEntry) DeriveVibes() {
 		}
 	}
 	if isChill {
-		vibes = append(vibes, "CHILL")
+		if !slices.Contains(vibes, "CHILL") {
+			vibes = append(vibes, "CHILL")
+		}
 	}
 
-	// 3. Emotional vibe
+	// 4. Emotional vibe
 	isEmotional := false
 	for _, g := range genres {
 		gl := strings.ToLower(g)
@@ -526,10 +544,12 @@ func (e *LibraryCollectionEntry) DeriveVibes() {
 		}
 	}
 	if isEmotional {
-		vibes = append(vibes, "EMOTIONAL")
+		if !slices.Contains(vibes, "EMOTIONAL") {
+			vibes = append(vibes, "EMOTIONAL")
+		}
 	}
 
-	// 4. Hyped vibe
+	// 5. Hyped vibe
 	isHyped := false
 	for _, g := range genres {
 		gl := strings.ToLower(g)
@@ -539,10 +559,12 @@ func (e *LibraryCollectionEntry) DeriveVibes() {
 		}
 	}
 	if isHyped {
-		vibes = append(vibes, "HYPED")
+		if !slices.Contains(vibes, "HYPED") {
+			vibes = append(vibes, "HYPED")
+		}
 	}
 
-	// 5. Intense vibe
+	// 6. Intense vibe
 	isIntense := false
 	for _, g := range genres {
 		gl := strings.ToLower(g)
@@ -552,8 +574,29 @@ func (e *LibraryCollectionEntry) DeriveVibes() {
 		}
 	}
 	if isIntense {
-		vibes = append(vibes, "INTENSE")
+		if !slices.Contains(vibes, "INTENSE") {
+			vibes = append(vibes, "INTENSE")
+		}
 	}
+
+	// 7. Map custom AI vibes to standard ones if needed
+	// Example: "Tensión Absoluta" -> "INTENSE"
+	for i, v := range vibes {
+		switch v {
+		case "TENSIÓN ABSOLUTA":
+			vibes[i] = "INTENSE"
+		case "EMOCIÓN PURA":
+			vibes[i] = "EMOTIONAL"
+		case "RELAJADO":
+			vibes[i] = "CHILL"
+		case "AVENTURA":
+			vibes[i] = "HYPED"
+		}
+	}
+
+	// Remove duplicates and empty strings
+	vibes = lo.Uniq(vibes)
+	vibes = lo.Filter(vibes, func(v string, _ int) bool { return v != "" })
 
 	e.Vibes = vibes
 }

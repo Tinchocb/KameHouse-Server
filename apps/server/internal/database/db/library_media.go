@@ -111,3 +111,10 @@ func UpsertLibraryMediaBatch(d *Database, media []*models.LibraryMedia, batchSiz
 		UpdateAll: true,
 	}).CreateInBatches(media, batchSize).Error
 }
+// UpdateLibraryMediaMappings updates the external mappings (AniDB, MAL) for a LibraryMedia record.
+func UpdateLibraryMediaMappings(d *Database, id uint, anidbId, malId int) error {
+	return d.Gorm().Model(&models.LibraryMedia{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"anidb_id":        anidbId,
+		"myanimelist_id": malId,
+	}).Error
+}

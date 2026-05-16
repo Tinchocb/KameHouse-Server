@@ -10,78 +10,62 @@ interface MediaStackProps extends MediaCardProps {
 }
 
 /**
- * MediaStack (Stacked Cassettes)
+ * MediaStack (Stacked)
  * 
- * Represents a collection (series/season) as a stack of physical media (cassettes).
- * Features a "fanning" animation on hover using 3D perspective.
+ * Represents a series or collection as a clean stack of cards.
  */
-export function MediaStack({ stackCount = 3, className, ...props }: MediaStackProps) {
-    // Generate indices for the background cards (the "stack" underneath)
-    const stackItems = Array.from({ length: stackCount - 1 }).map((_, i) => i + 1)
+export function MediaStack({ stackCount = 2, className, ...props }: MediaStackProps) {
+    const stackItems = Array.from({ length: stackCount }).map((_, i) => i + 1)
 
     return (
-        <div className={cn("relative group/stack perspective-1000", className)}>
-            {/* Background stack elements (Cassette lomos/edges) */}
+        <div className={cn("relative group/stack", className)}>
+            {/* Background stack elements */}
             {stackItems.map((idx) => (
                 <motion.div
                     key={idx}
                     className={cn(
-                        "absolute inset-0 border border-white/5 rounded-xl shadow-2xl overflow-hidden",
-                        "bg-gradient-to-br from-zinc-900 via-zinc-850 to-primary/5"
+                        "absolute inset-0 border border-white/5 rounded-2xl shadow-2xl overflow-hidden",
+                        "bg-zinc-900/50 backdrop-blur-sm"
                     )}
                     initial={false}
                     animate={{
-                        x: 0,
-                        y: 0,
-                        rotateZ: 0,
-                        scale: 1 - idx * 0.02,
+                        x: idx * 4,
+                        y: idx * 4,
+                        scale: 1,
                     }}
                     whileHover={{
-                        x: idx * 16,
-                        y: -idx * 2,
-                        rotateZ: idx * 1.5,
+                        x: idx * 12,
+                        y: -idx * 4,
+                        rotateZ: idx * 1,
                         transition: { 
                             type: "spring", 
                             stiffness: 300, 
                             damping: 25,
-                            delay: idx * 0.01 
                         }
                     }}
                     style={{
                         zIndex: 10 - idx,
-                        transformOrigin: "bottom left"
                     }}
-                >
-                    {/* Retro "marker" label style on the edge/spine */}
-                    <div className="absolute top-2 left-1 bottom-2 w-5 bg-primary/10 rounded-md flex items-center justify-center overflow-hidden border border-primary/20">
-                        <span className="rotate-90 whitespace-nowrap text-[8px] font-mono font-black text-primary tracking-tighter">
-                            VOL. {idx + 1}
-                        </span>
-                    </div>
-                </motion.div>
+                />
             ))}
 
-            {/* Main top card (The front cassette) */}
+            {/* Main top card */}
             <motion.div
                 className="relative z-20"
                 whileHover={{
-                    x: -2,
-                    y: -4,
-                    rotateZ: -0.5,
+                    y: -8,
                     transition: { type: "spring", stiffness: 300, damping: 25 }
                 }}
             >
                 <MediaCard {...props} />
                 
-                <div className="absolute -top-1 -right-1 z-30 flex items-center justify-center">
-                    <div className="bg-primary text-white text-[9px] font-black px-2 py-0.5 rounded-full border border-white/20 shadow-lg shadow-primary/20">
-                        SERIE
+                {/* Minimalist Series Indicator */}
+                <div className="absolute top-4 right-4 z-30">
+                    <div className="bg-black/60 backdrop-blur-md text-white/70 text-[8px] font-black px-2 py-1 rounded-md border border-white/10 uppercase tracking-[0.2em]">
+                        Serie
                     </div>
                 </div>
             </motion.div>
-
-            {/* Retro texture overlay */}
-            <div className="absolute inset-0 z-40 pointer-events-none mix-blend-overlay opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/p6.png')]" />
         </div>
     )
 }

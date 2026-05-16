@@ -3,6 +3,7 @@ package scanner
 import (
 	"encoding/json"
 	"fmt"
+	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
@@ -14,6 +15,7 @@ import (
 func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds map[int]bool, normalizedMedia []*dto.NormalizedMedia, localFiles []*dto.LocalFile) map[int]uint {
 	libraryMediaIdMap := make(map[int]uint)
 	mediaBatch := make([]*models.LibraryMedia, 0, len(allMatchedIds))
+	tagger := metadata_provider.NewIntelligenceTagger()
 
 	normalizedMap := make(map[int]*dto.NormalizedMedia)
 	for _, nm := range normalizedMedia {
@@ -95,6 +97,12 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 					newMedia.Genres = jb
 				}
 			}
+
+			// Intelligence & Tagging V2
+			analysis := tagger.Analyze(fmt.Sprintf("%d", realTmdbId), newMedia.GetPreferredTitle(), newMedia.Description, newMedia.Type == "MOVIE")
+			newMedia.Tags = analysis.GetTagsAsJSON()
+			newMedia.DominantVibe = analysis.DominantVibe
+			newMedia.SuggestedSwimlane = analysis.SuggestedSwimlane
 		}
 
 		if newMedia.TitleRomaji == "" && newMedia.TitleEnglish == "" {

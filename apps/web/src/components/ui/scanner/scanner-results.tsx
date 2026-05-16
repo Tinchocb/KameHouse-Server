@@ -79,7 +79,7 @@ export function ScanActionCard({
 
     if (to) {
         return (
-            <Link to={to as "/"} className={baseClasses}>
+            <Link to={to as "/home"} className={baseClasses}>
                 {content}
             </Link>
         )

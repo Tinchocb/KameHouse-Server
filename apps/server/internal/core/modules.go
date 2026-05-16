@@ -16,6 +16,7 @@ import (
 	"kamehouse/internal/library_explorer"
 	"kamehouse/internal/mediastream"
 	"kamehouse/internal/api/tmdb"
+	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/platforms/tmdb_platform"
 	"kamehouse/internal/util"
 
@@ -175,6 +176,12 @@ func (a *App) InitOrRefreshModules() {
 		}
 		a.Metadata.PlatformRef.Set(tmdb_platform.NewPlatform(tmdbApiKey, tmdbLanguage))
 		a.Metadata.TMDBClient = tmdb.NewClient(tmdbApiKey, tmdbLanguage)
+		a.Metadata.ProviderRef.Set(metadata_provider.NewProvider(&metadata_provider.NewProviderImplOptions{
+			Logger:     a.Logger,
+			FileCacher: a.FileCacher,
+			Database:   a.Database,
+			TMDBClient: a.Metadata.TMDBClient,
+		}))
 	}
 
 	a.Logger.Info().Msg("app: Refreshed modules")
@@ -191,7 +198,7 @@ func (a *App) InitOrRefreshMediastreamSettings() {
 				ID: 1,
 			},
 			TranscodeEnabled:    false,
-			TranscodeHwAccel:    "cpu",
+			TranscodeHwAccel:    "auto",
 			TranscodePreset:     "fast",
 			PreTranscodeEnabled: false,
 		})
@@ -199,6 +206,11 @@ func (a *App) InitOrRefreshMediastreamSettings() {
 			a.Logger.Error().Err(err).Msg("app: Failed to initialize mediastream module")
 			return
 		}
+	}
+
+	if settings.TranscodeHwAccel == "disabled" || settings.TranscodeHwAccel == "" {
+		settings.TranscodeHwAccel = "auto"
+		a.Database.UpsertMediastreamSettings(settings)
 	}
 
 	a.MediastreamRepository.InitializeModules(settings, a.Config.Cache.Dir, a.Config.Cache.TranscodeDir)

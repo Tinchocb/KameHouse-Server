@@ -132,11 +132,36 @@ export const createPlayerSlice: StateCreator<UIState & PlayerState, [], [], Play
 })
 
 // --- Combined Store ---
-export const useAppStore = create<UIState & PlayerState & ScannerState>()((...a) => ({
-    ...createUISlice(...a),
-    ...createPlayerSlice(...a),
-    ...createScannerSlice(...a),
-}))
+export const useAppStore = create<UIState & PlayerState & ScannerState>()(
+    persist(
+        (...a) => ({
+            ...createUISlice(...a),
+            ...createPlayerSlice(...a),
+            ...createScannerSlice(...a),
+        }),
+        {
+            name: "kamehouse-app-settings",
+            partialize: (state) => ({
+                // Solo persistimos lo que queremos que sobreviva
+                sidebarOpen: state.sidebarOpen,
+                activeTheme: state.activeTheme,
+                autoSkipIntro: state.autoSkipIntro,
+                autoSkipOutro: state.autoSkipOutro,
+                playbackRate: state.playbackRate,
+                preferredAudioLang: state.preferredAudioLang,
+                preferredSubtitleLang: state.preferredSubtitleLang,
+                showHeatmap: state.showHeatmap,
+                aspectRatio: state.aspectRatio,
+                subtitleSize: state.subtitleSize,
+                loopEnabled: state.loopEnabled,
+                autoDisableSubtitlesWhenDubbed: state.autoDisableSubtitlesWhenDubbed,
+                ambilightEnabled: state.ambilightEnabled,
+                marathonMode: state.marathonMode,
+                playerVolume: state.playerVolume,
+            }),
+        }
+    )
+)
 
 // --- Progress Store (Persisted) ---
 // Uses Record<string, true> instead of string[] for O(1) isWatched() lookups.
