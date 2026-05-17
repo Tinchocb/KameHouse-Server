@@ -266,6 +266,7 @@ export function PlayerUI(props: PlayerUIProps) {
                 <PlayerTopBar
                     title={title}
                     episodeLabel={episodeLabel}
+                    episodeNumber={episodeNumber}
                     onClose={onClose}
                 />
             </div>
