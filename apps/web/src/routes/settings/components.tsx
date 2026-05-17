@@ -1,6 +1,6 @@
 import React from "react"
 import { cn } from "@/components/ui/core/styling"
-import { LucideRefreshCw, LucideCloud, LucidePlus, LucideTrash2, LucideFolder } from "lucide-react"
+import { LucideRefreshCw, LucideCloud, LucidePlus, LucideTrash2, LucideFolder, LucideEye, LucideEyeOff, LucideChevronDown } from "lucide-react"
 import { Controller, type Control, type Path, type FieldValues } from "react-hook-form"
 import { Switch } from "@/components/ui/switch"
 
@@ -209,3 +209,112 @@ export function PathList<T extends FieldValues>({ control, name, label, placehol
     )
 }
 
+export interface OsInputProps<T extends FieldValues> {
+    control: Control<T>
+    name: Path<T>
+    label: string
+    desc?: string
+    placeholder?: string
+    isSecure?: boolean
+    isMono?: boolean
+    type?: "text" | "number"
+}
+
+export function OsInput<T extends FieldValues>({
+    control,
+    name,
+    label,
+    desc,
+    placeholder,
+    isSecure = false,
+    isMono = false,
+    type = "text"
+}: OsInputProps<T>) {
+    const [showSecure, setShowSecure] = React.useState(false)
+
+    return (
+        <Controller
+            control={control}
+            name={name}
+            render={({ field }) => (
+                <div className="flex flex-col md:flex-row md:items-center justify-between px-8 py-8 border-b border-white/[0.03] last:border-0 hover:bg-white/[0.02] transition-all duration-500 gap-8 group/input">
+                    <div className="space-y-2 flex-1 max-w-xl">
+                        <p className="text-xl font-bold text-zinc-100 tracking-tight group-hover/input:text-white transition-colors">{label}</p>
+                        {desc && <p className="text-base text-zinc-500 leading-relaxed font-medium">{desc}</p>}
+                    </div>
+                    <div className="flex items-center gap-4 bg-white/5 border border-white/10 group-focus-within/input:border-white/20 px-6 py-3 w-full md:w-96 transition-all relative">
+                        <input
+                            type={isSecure ? (showSecure ? "text" : "password") : type}
+                            placeholder={placeholder}
+                            value={field.value ?? ""}
+                            onChange={(e) => {
+                                const val = type === "number" ? (e.target.value === "" ? 0 : Number(e.target.value)) : e.target.value
+                                field.onChange(val)
+                            }}
+                            className={cn(
+                                "flex-1 bg-transparent text-white placeholder-zinc-700 text-sm focus:outline-none transition-all pr-8",
+                                isMono && "font-mono text-xs tracking-tight"
+                            )}
+                        />
+                        {isSecure && (
+                            <button
+                                type="button"
+                                onClick={() => setShowSecure(!showSecure)}
+                                className="absolute right-6 text-zinc-500 hover:text-white transition-colors"
+                            >
+                                {showSecure ? <LucideEyeOff size={18} /> : <LucideEye size={18} />}
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
+        />
+    )
+}
+
+export interface OsSelectProps<T extends FieldValues> {
+    control: Control<T>
+    name: Path<T>
+    label: string
+    desc?: string
+    options: { value: string; label: string }[]
+}
+
+export function OsSelect<T extends FieldValues>({
+    control,
+    name,
+    label,
+    desc,
+    options
+}: OsSelectProps<T>) {
+    return (
+        <Controller
+            control={control}
+            name={name}
+            render={({ field }) => (
+                <div className="flex flex-col md:flex-row md:items-center justify-between px-8 py-8 border-b border-white/[0.03] last:border-0 hover:bg-white/[0.02] transition-all duration-500 gap-8 group/select">
+                    <div className="space-y-2 flex-1 max-w-xl">
+                        <p className="text-xl font-bold text-zinc-100 tracking-tight group-hover/select:text-white transition-colors">{label}</p>
+                        {desc && <p className="text-base text-zinc-500 leading-relaxed font-medium">{desc}</p>}
+                    </div>
+                    <div className="flex items-center gap-4 bg-white/5 border border-white/10 group-focus-within/select:border-white/20 px-6 py-3 w-full md:w-96 transition-all relative">
+                        <select
+                            value={field.value ?? ""}
+                            onChange={(e) => field.onChange(e.target.value)}
+                            className="flex-1 bg-transparent text-white text-sm focus:outline-none appearance-none cursor-pointer pr-8 font-medium [&>option]:bg-zinc-950 [&>option]:text-white"
+                        >
+                            {options.map((opt) => (
+                                <option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                </option>
+                            ))}
+                        </select>
+                        <div className="absolute right-6 pointer-events-none text-zinc-500 group-hover/select:text-white transition-colors">
+                            <LucideChevronDown size={18} />
+                        </div>
+                    </div>
+                </div>
+            )}
+        />
+    )
+}

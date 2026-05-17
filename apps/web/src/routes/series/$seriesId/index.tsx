@@ -27,7 +27,7 @@ import { ClassicPosterCard } from "@/components/shared/classic-poster-card"
 export const Route = createFileRoute("/series/$seriesId/")({
     loader: async ({ params: { seriesId }, context }) => {
         const qc = context.queryClient
-        await qc.prefetchQuery({
+        qc.prefetchQuery({
             queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, seriesId],
             queryFn: () => fetchAnimeEntry(seriesId),
         })
@@ -733,8 +733,9 @@ const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
     const localFilesByEpisode = useMemo(() => {
         const map: Record<number, Anime_LocalFile> = {}
         localFiles.forEach((lf) => {
-            if (lf.metadata?.episode) {
-                map[lf.metadata.episode] = lf
+            const epNum = lf.metadata?.episode || lf.parsedInfo?.episode
+            if (epNum != null) {
+                map[Number(epNum)] = lf
             }
         })
         return map
@@ -867,7 +868,7 @@ const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
                             key={`${activeSagaId}-${activeSubSagaId}`}
                             useWindowScroll
                             data={visibleEpisodes}
-                            initialItemCount={Math.min(visibleEpisodes.length, 50)}
+                            initialItemCount={Math.min(visibleEpisodes.length, 12)}
                             increaseViewportBy={1000}
                             itemContent={(index, ep) => {
                                 if (!ep) return <div className="pb-4 h-[160px] animate-pulse bg-zinc-900/50 rounded-xl" />;

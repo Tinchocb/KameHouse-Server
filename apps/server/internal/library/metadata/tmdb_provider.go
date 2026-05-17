@@ -42,7 +42,20 @@ func NewTMDBProviderWithClient(client *tmdb.Client, database *db.Database) *TMDB
 
 // GetTVSeason fetches the details of a specific TV season, including its episodes.
 func (p *TMDBProvider) GetTVSeason(ctx context.Context, tvID int, seasonNumber int) (tmdb.TVSeasonDetails, error) {
-	return p.client.GetTVSeason(ctx, tvID, seasonNumber)
+	cacheKey := fmt.Sprintf("%d-%d", tvID, seasonNumber)
+	if p.db != nil {
+		var cached tmdb.TVSeasonDetails
+		found, err := db.GetMetadataCache(p.db, "tmdb-season-details", cacheKey, &cached)
+		if err == nil && found {
+			return cached, nil
+		}
+	}
+
+	details, err := p.client.GetTVSeason(ctx, tvID, seasonNumber)
+	if err == nil && p.db != nil {
+		_ = db.UpsertMetadataCache(p.db, "tmdb-season-details", cacheKey, details, 7*24*time.Hour)
+	}
+	return details, err
 }
 
 func (p *TMDBProvider) GetProviderID() string {

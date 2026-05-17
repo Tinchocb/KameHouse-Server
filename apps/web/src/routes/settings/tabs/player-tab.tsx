@@ -1,6 +1,6 @@
 import React from "react"
 import { TabsContent } from "@/components/ui/tabs/tabs"
-import { Section, Card, OsToggle } from "../components"
+import { Section, Card, OsToggle, OsInput, OsSelect } from "../components"
 import { type Control } from "react-hook-form"
 import { type SettingsFormValues } from "../index"
 
@@ -24,7 +24,7 @@ export function PlayerTab({ control }: { control: Control<SettingsFormValues> })
                     </Card>
                 </Section>
 
-                <Section label="Transmisión & HW">
+                <Section label="Transmisión & Buffer">
                     <Card>
                         <OsToggle control={control} name="mediastream.transcodeEnabled"
                             label="Transcodificación HW"
@@ -35,6 +35,46 @@ export function PlayerTab({ control }: { control: Control<SettingsFormValues> })
                     </Card>
                 </Section>
             </div>
+
+            <Section label="Optimización del Servidor Multimedia (FFmpeg)">
+                <Card>
+                    <OsSelect
+                        control={control}
+                        name="mediastream.transcodeHwAccel"
+                        label="Acelerador por Hardware"
+                        desc="El motor de aceleración gráfico de tu sistema para codificar y decodificar video en tiempo real."
+                        options={[
+                            { value: "", label: "Desactivado (Solo CPU)" },
+                            { value: "cuda", label: "NVIDIA (CUDA / NVDEC)" },
+                            { value: "vaapi", label: "Intel / AMD (VAAPI / Linux)" },
+                            { value: "qsv", label: "Intel QuickSync (QSV)" },
+                        ]}
+                    />
+                    <OsInput
+                        control={control}
+                        name="mediastream.transcodeThreads"
+                        label="Hilos de CPU del Transcodificador"
+                        desc="Número de núcleos que puede usar FFmpeg para procesar video (0 para auto-detectar)."
+                        type="number"
+                    />
+                    <OsInput
+                        control={control}
+                        name="mediastream.ffmpegPath"
+                        label="Ruta de FFmpeg"
+                        desc="Ubicación ejecutable del binario FFmpeg en el sistema del servidor."
+                        placeholder="Ej. C:\ffmpeg\bin\ffmpeg.exe o /usr/bin/ffmpeg"
+                        isMono
+                    />
+                    <OsInput
+                        control={control}
+                        name="mediastream.ffprobePath"
+                        label="Ruta de FFprobe"
+                        desc="Ubicación ejecutable del binario FFprobe en el sistema del servidor."
+                        placeholder="Ej. C:\ffmpeg\bin\ffprobe.exe o /usr/bin/ffprobe"
+                        isMono
+                    />
+                </Card>
+            </Section>
         </TabsContent>
     )
 }

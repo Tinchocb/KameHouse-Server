@@ -241,7 +241,7 @@ function SettingsPage() {
                     <form onSubmit={handleSubmit(onSubmit as unknown as SubmitHandler<FieldValues>)} className="w-full pb-48">
                         <LibraryTab isScanning={isScanning} handleScan={handleScan} control={control} />
                         <PlayerTab control={control} />
-                        <IntegrationsTab />
+                        <IntegrationsTab control={control} />
                         <SystemTab />
                     </form>
                 </main>
@@ -249,26 +249,35 @@ function SettingsPage() {
                 <AnimatePresence>
                     {isDirty && (
                          <motion.div
-                            initial={{ opacity: 0, y: 60 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 120 }}
+                            initial={{ opacity: 0, y: 60, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 60, scale: 0.95 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 25 }}
                             className="fixed bottom-12 right-12 z-50"
                         >
-                            <div className="bg-white text-black p-1 pl-8 rounded-none shadow-[20px_20px_0px_0px_rgba(255,255,255,0.1)] flex items-center gap-8 min-w-[400px]">
-                                <span className="text-xs font-black uppercase tracking-widest text-black/40">Cambios pendientes</span>
-                                <div className="flex gap-1 ml-auto">
+                            <div className="bg-zinc-950/80 border border-white/10 backdrop-blur-md px-6 py-3 rounded-none shadow-[0_0_50px_rgba(235,94,40,0.15)] flex items-center gap-10 min-w-[450px]">
+                                <div className="flex items-center gap-3">
+                                    <span className="relative flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                    </span>
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Cambios pendientes</span>
+                                </div>
+                                <div className="flex gap-2 ml-auto">
                                     <button
+                                        type="button"
                                         onClick={() => reset()}
-                                        className="px-8 py-4 text-xs font-black uppercase tracking-widest hover:bg-black/5 transition-colors"
+                                        className="px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 hover:text-white hover:bg-white/5 border border-transparent transition-all"
                                     >
                                         Descartar
                                     </button>
                                     <button
+                                        type="button"
                                         disabled={isSaving}
                                         onClick={handleSubmit(onSubmit as unknown as SubmitHandler<FieldValues>)}
-                                        className="bg-black text-white px-10 py-4 text-xs font-black uppercase tracking-widest hover:bg-zinc-800 disabled:opacity-50 flex items-center gap-3 transition-all"
+                                        className="bg-primary text-black hover:bg-primary/95 px-8 py-3 text-[10px] font-black uppercase tracking-[0.2em] disabled:opacity-50 flex items-center gap-3 transition-all relative overflow-hidden group/savebtn active:scale-95"
                                     >
-                                        {isSaving ? <LucideRefreshCw className="animate-spin" size={16} /> : <LucideSave size={16} />}
+                                        {isSaving ? <LucideRefreshCw className="animate-spin" size={14} /> : <LucideSave size={14} />}
                                         {isSaving ? "Guardando..." : "Aplicar Ajustes"}
                                     </button>
                                 </div>
