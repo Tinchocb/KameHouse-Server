@@ -97,6 +97,7 @@ interface EpisodeCardProps {
     isCurrentlyPlaying?: boolean
     variant?: "grid" | "horizontal"
     seriesTmdbId?: number | null
+    priority?: boolean
 }
 
 const EpisodeCard = React.memo(function EpisodeCard({
@@ -108,7 +109,9 @@ const EpisodeCard = React.memo(function EpisodeCard({
     isCurrentlyPlaying,
     variant = "grid",
     seriesTmdbId,
+    priority = false,
 }: EpisodeCardProps) {
+    if (!episode) return null
     const thumb = episode.episodeMetadata?.image || fallbackThumb
     
     const localizedTitle = getDragonBallSpanishTitle(seriesTmdbId, episode.episodeNumber)
@@ -173,6 +176,7 @@ const EpisodeCard = React.memo(function EpisodeCard({
                             isWatched && "opacity-40 grayscale-[0.5]"
                         )}
                         showSkeleton={false}
+                        priority={priority}
                     />
                     
                     {/* Hover Play Button Overlay */}
@@ -334,6 +338,7 @@ const EpisodeCard = React.memo(function EpisodeCard({
                         isWatched && "opacity-40 grayscale-[0.5]"
                     )}
                     showSkeleton={false}
+                    priority={priority}
                     fallback={
                         <div 
                             className="w-full h-full opacity-20 blur-3xl scale-150"

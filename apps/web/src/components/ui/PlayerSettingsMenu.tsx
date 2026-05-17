@@ -150,13 +150,13 @@ export function PlayerSettingsMenu({
                 aria-label="Configuración [O]"
                 title="Configuración [O]"
                 className={cn(
-                    "relative flex items-center justify-center w-9 h-9",
-                    "text-zinc-400 hover:text-white",
+                    "relative flex items-center justify-center w-8 h-8",
+                    "text-zinc-500 hover:text-white",
                     "transition-all duration-200",
                     isOpen && "text-white"
                 )}
             >
-                <IoSettingsSharp className={cn("w-4 h-4 transition-transform duration-300", isOpen && "rotate-90")} />
+                <IoSettingsSharp className={cn("w-3.5 h-3.5 transition-transform duration-300", isOpen && "rotate-90")} />
                 {isLoadingSubtitle && (
                     <span className="absolute -top-0.5 -right-0.5">
                         <Loader2 className="w-3 h-3 text-white animate-spin" />

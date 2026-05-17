@@ -113,23 +113,23 @@ export function PlayerBottomBar({
     return (
         <div className={cn(
             "absolute bottom-0 inset-x-0 w-full flex flex-col pointer-events-auto select-none transition-all duration-500",
-            "bg-zinc-950/40 backdrop-blur-2xl border-t border-white/[0.03] pt-12 pb-6 px-8",
+            "bg-zinc-950/45 backdrop-blur-2xl border-t border-white/[0.02] pt-8 pb-3.5 px-6",
         )}>
 
             {/* Progress Timeline */}
-            <div className="relative group/progress flex items-center mb-3" style={{ height: 20 }}>
+            <div className="relative group/progress flex items-center mb-2" style={{ height: 20 }}>
                 {showHeatmap && (
                     <TimelineHeatmap
                         duration={duration}
                         insights={insights}
-                        className="absolute bottom-0 inset-x-0 w-full h-6 opacity-30 pointer-events-none group-hover/progress:opacity-60 transition-all duration-300"
+                        className="absolute bottom-0 inset-x-0 w-full h-4 opacity-15 pointer-events-none group-hover/progress:opacity-35 transition-all duration-300"
                     />
                 )}
                 {/* Track background */}
                 <div className="absolute inset-x-0 h-[2px] group-hover/progress:h-[4px] bg-white/10 rounded-full transition-all duration-300" style={{ bottom: 8 }}>
                     <div 
                         ref={progressBarRef}
-                        className="h-full bg-brand-orange shadow-[0_0_15px_rgba(255,110,58,0.5)] rounded-full transition-all duration-200"
+                        className="h-full bg-brand-orange rounded-full transition-all duration-200"
                         style={{ width: '0%' }}
                     />
                 </div>
@@ -149,16 +149,16 @@ export function PlayerBottomBar({
             <div className="flex items-center justify-between w-full">
 
                 {/* Left Wing */}
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
 
                     {/* Play/Pause */}
                     <button
                         onClick={(e) => { e.stopPropagation(); togglePlay(); }}
                         aria-label={isPlaying ? "Pausar" : "Reproducir"}
-                        className="text-white hover:text-brand-orange transition-all duration-300 flex items-center justify-center w-10 h-10 bg-white/5 rounded-full hover:bg-white/10">
+                        className="text-white hover:text-brand-orange transition-all duration-300 flex items-center justify-center w-8 h-8 bg-white/5 rounded-full hover:bg-white/10">
                         {isPlaying
-                            ? <Pause className="w-4 h-4 fill-current" />
-                            : <Play className="w-4 h-4 fill-current ml-0.5" />
+                            ? <Pause className="w-3.5 h-3.5 fill-current" />
+                            : <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
                         }
                     </button>
 
@@ -166,26 +166,26 @@ export function PlayerBottomBar({
                     <button
                         onClick={(e) => { e.stopPropagation(); skipTime(-10); }}
                         aria-label="Retroceder 10 segundos"
-                        className="text-zinc-400 hover:text-white transition-all flex items-center justify-center w-8 h-8">
-                        <ChevronLeft className="w-5 h-5" />
+                        className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-7 h-7">
+                        <ChevronLeft className="w-4 h-4" />
                     </button>
                     <button
                         onClick={(e) => { e.stopPropagation(); skipTime(10); }}
                         aria-label="Adelantar 10 segundos"
-                        className="text-zinc-400 hover:text-white transition-all flex items-center justify-center w-8 h-8">
-                        <ChevronRight className="w-5 h-5" />
+                        className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-7 h-7">
+                        <ChevronRight className="w-4 h-4" />
                     </button>
 
                     {/* Volume Control */}
-                    <div className="hidden md:flex items-center gap-2 group/volume">
+                    <div className="hidden md:flex items-center gap-1 group/volume">
                         <button
                             onClick={(e) => { e.stopPropagation(); toggleMute(); }}
                             aria-label={isMuted || volume === 0 ? "Activar sonido" : "Silenciar"}
-                            className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8">
-                            {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                            className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-7 h-7">
+                            {isMuted || volume === 0 ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
                         </button>
-                        <div className="w-0 overflow-hidden group-hover/volume:w-20 transition-all duration-300 flex items-center">
-                            <div className="w-full h-[3px] bg-white/20 relative rounded-full">
+                        <div className="w-0 overflow-hidden group-hover/volume:w-16 transition-all duration-300 flex items-center">
+                            <div className="w-full h-[2.5px] bg-white/20 relative rounded-full">
                                 <div
                                     className="absolute left-0 h-full bg-brand-orange rounded-full transition-all"
                                     style={{ width: `${isMuted ? 0 : volume * 100}%` }}
@@ -202,15 +202,15 @@ export function PlayerBottomBar({
                     </div>
 
                     {/* Time indicator */}
-                    <div className="flex items-center gap-1.5 text-[13px] font-medium tracking-wide tabular-nums">
-                        <span ref={timeTextRef} className="text-white">00:00</span>
-                        <span className="text-zinc-600">/</span>
-                        <span className="text-zinc-400">{formatTime(duration)}</span>
+                    <div className="flex items-center gap-1 text-[11px] font-black uppercase tracking-wider tabular-nums text-zinc-500">
+                        <span ref={timeTextRef} className="text-zinc-300">00:00</span>
+                        <span className="text-zinc-700">/</span>
+                        <span className="text-zinc-500">{formatTime(duration)}</span>
                     </div>
                 </div>
 
                 {/* Right Wing */}
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5">
 
                     {/* Screenshot */}
                     {onTakeScreenshot && (
@@ -218,8 +218,8 @@ export function PlayerBottomBar({
                             onClick={(e) => { e.stopPropagation(); onTakeScreenshot(); }}
                             aria-label="Captura de pantalla [G]"
                             title="Captura de pantalla [G]"
-                            className="text-zinc-400 hover:text-white transition-all flex items-center justify-center w-9 h-9">
-                            <Camera className="w-4 h-4" />
+                            className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8">
+                            <Camera className="w-3.5 h-3.5" />
                         </button>
                     )}
 
@@ -229,8 +229,8 @@ export function PlayerBottomBar({
                             onClick={(e) => { e.stopPropagation(); onTogglePip(); }}
                             aria-label="Picture in Picture [I]"
                             title="Picture in Picture [I]"
-                            className="text-zinc-400 hover:text-white transition-all flex items-center justify-center w-9 h-9">
-                            <PictureInPicture className="w-4 h-4" />
+                            className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8">
+                            <PictureInPicture className="w-3.5 h-3.5" />
                         </button>
                     )}
 
@@ -240,8 +240,8 @@ export function PlayerBottomBar({
                             onClick={(e) => { e.stopPropagation(); onNextEpisode(); }}
                             aria-label="Siguiente episodio [N]"
                             title="Siguiente episodio [N]"
-                            className="text-zinc-400 hover:text-white transition-all flex items-center justify-center w-9 h-9">
-                            <SkipForward className="w-4 h-4" />
+                            className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8">
+                            <SkipForward className="w-3.5 h-3.5" />
                         </button>
                     )}
 
@@ -289,8 +289,8 @@ export function PlayerBottomBar({
                         onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
                         aria-label={isFullscreen ? "Salir de pantalla completa [F]" : "Pantalla completa [F]"}
                         title={isFullscreen ? "Salir de pantalla completa [F]" : "Pantalla completa [F]"}
-                        className="text-zinc-400 hover:text-white transition-all flex items-center justify-center w-9 h-9">
-                        {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+                        className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8">
+                        {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
                     </button>
                 </div>
             </div>

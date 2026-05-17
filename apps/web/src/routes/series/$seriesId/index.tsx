@@ -41,7 +41,7 @@ function SeriesDetailPage() {
 
     return (
         <HydrationBoundary state={dehydrateState}>
-            <SeriesDetailClient seriesId={seriesId} />
+            <SeriesDetailClient key={seriesId} seriesId={seriesId} />
         </HydrationBoundary>
     )
 }
@@ -61,7 +61,9 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     
     const computedEpisodes = useMemo(() => {
         if (!entry) return []
-        if (entry.episodes && entry.episodes.length > 0) return entry.episodes;
+        if (entry.episodes && entry.episodes.length > 0) {
+            return entry.episodes.filter(ep => ep && typeof ep.episodeNumber === 'number');
+        }
         
         if (entry.localFiles && entry.localFiles.length > 0) {
             const epMap = new Map<number, Anime_Episode>();
@@ -249,7 +251,7 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                     malId={playTarget.malId}
                     marathonMode={marathonModeStore}
                     onNextEpisode={handleNextEpisode}
-                    hasNextEpisode={computedEpisodes ? computedEpisodes.findIndex(ep => ep.episodeNumber === playTarget.episodeNumber) < computedEpisodes.length - 1 : false}
+                    hasNextEpisode={computedEpisodes && playTarget ? computedEpisodes.findIndex(ep => ep?.episodeNumber === playTarget.episodeNumber) < computedEpisodes.length - 1 : false}
                     onClose={() => setPlayTarget(null)}
                 />
             )}
@@ -535,8 +537,8 @@ const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
         
         const chunks = []
         for (let i = 0; i < episodes.length; i += 20) {
-            const startEp = episodes[i].episodeNumber
-            const endEp = episodes[Math.min(i + 19, episodes.length - 1)].episodeNumber
+            const startEp = episodes[i]?.episodeNumber ?? 0
+            const endEp = episodes[Math.min(i + 19, episodes.length - 1)]?.episodeNumber ?? 0
             chunks.push({
                 id: `chunk-${i}`,
                 title: `Episodios ${startEp} - ${endEp}`,
@@ -584,6 +586,7 @@ const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
             const subSaga = saga.subSagas.find((ss) => ss.id === activeSubSagaId)
             if (subSaga) {
                 return episodes.filter(ep => {
+                    if (!ep) return false
                     const epNum = ep.absoluteEpisodeNumber || ep.episodeNumber
                     return (ep as Anime_Episode & { sagaId?: string }).sagaId === subSaga.id || (epNum >= subSaga.startEp && epNum <= subSaga.endEp)
                 })
@@ -591,6 +594,7 @@ const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
         }
         
         return episodes.filter(ep => {
+            if (!ep) return false
             const epNum = ep.absoluteEpisodeNumber || ep.episodeNumber
             return (ep as Anime_Episode & { sagaId?: string }).sagaId === saga.id || (epNum >= saga.startEp && epNum <= saga.endEp)
         })
@@ -732,22 +736,26 @@ const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
                         <Virtuoso
                             useWindowScroll
                             data={visibleEpisodes}
-                            initialItemCount={10}
-                            increaseViewportBy={400}
-                            itemContent={(index, ep) => (
-                                <div className="pb-4">
-                                    <EpisodeCard
-                                        key={ep.episodeNumber}
-                                        episode={ep}
-                                        variant="horizontal"
-                                        fallbackThumb={fallbackThumb}
-                                        localFile={getLocalFile(ep.episodeNumber)}
-                                        onPlay={onPlay}
-                                        isCurrentlyPlaying={currentlyPlayingEpNumber === ep.episodeNumber}
-                                        seriesTmdbId={seriesTmdbId}
-                                    />
-                                </div>
-                            )}
+                            initialItemCount={Math.min(visibleEpisodes.length, 50)}
+                            increaseViewportBy={1000}
+                            itemContent={(index, ep) => {
+                                if (!ep) return <div className="pb-4 h-[160px] animate-pulse bg-zinc-900/50 rounded-xl" />;
+                                return (
+                                    <div className="pb-4">
+                                        <EpisodeCard
+                                            key={ep.episodeNumber}
+                                            episode={ep}
+                                            variant="horizontal"
+                                            fallbackThumb={fallbackThumb}
+                                            localFile={getLocalFile(ep.episodeNumber)}
+                                            onPlay={onPlay}
+                                            isCurrentlyPlaying={currentlyPlayingEpNumber === ep.episodeNumber}
+                                            seriesTmdbId={seriesTmdbId}
+                                            priority={index < 6}
+                                        />
+                                    </div>
+                                );
+                            }}
                         />
                     )}
                 </div>

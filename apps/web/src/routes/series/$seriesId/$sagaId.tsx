@@ -326,7 +326,7 @@ function RightPanel({
                     )}
                 >
                     {episodes.map((ep, idx) => {
-                        const fullEp = libraryEntry?.episodes?.find(e => e.episodeNumber === ep.number)
+                        const fullEp = libraryEntry?.episodes?.find(e => e && e.episodeNumber === ep.number)
                         const episodeProgress = fullEp?.watched
                         return (
                             <EpisodeRow
@@ -389,7 +389,7 @@ function DetailPage() {
         
         // Filter those belonging inside saga boundaries
         const arcEpisodes = allEpisodes
-            .filter(ep => ep.episodeNumber >= rawSaga.startEp && ep.episodeNumber <= rawSaga.endEp)
+            .filter(ep => ep && typeof ep.episodeNumber === 'number' && ep.episodeNumber >= rawSaga.startEp && ep.episodeNumber <= rawSaga.endEp)
             .sort((a, b) => a.episodeNumber - b.episodeNumber)
 
         // Map to expected UI layout
@@ -440,7 +440,7 @@ function DetailPage() {
     const downloadedEpisodes = useMemo(() => {
         const set = new Set<number>()
         libraryEntry?.episodes?.forEach(ep => {
-            if (ep.isDownloaded) set.add(ep.episodeNumber)
+            if (ep && ep.isDownloaded) set.add(ep.episodeNumber)
         })
         return set
     }, [libraryEntry])
@@ -449,7 +449,7 @@ function DetailPage() {
 
     // When user clicks an episode → play if local
     const handleEpisodePlay = (ep: Episode) => {
-        const fullEp = libraryEntry?.episodes?.find(e => e.episodeNumber === ep.number)
+        const fullEp = libraryEntry?.episodes?.find(e => e && e.episodeNumber === ep.number)
         if (!fullEp?.localFile?.path) {
             toast.error("Archivo local no disponible.")
             return
@@ -479,7 +479,7 @@ function DetailPage() {
         const nextIdx = currentIdx + 1
         setCurrentIdx(nextIdx)
         const nextEp = saga.episodes[nextIdx]
-        const fullEp = libraryEntry?.episodes?.find(e => e.episodeNumber === nextEp.number)
+        const fullEp = libraryEntry?.episodes?.find(e => e && e.episodeNumber === nextEp.number)
         if (!fullEp?.localFile?.path) {
             toast.error("Siguiente episodio no disponible localmente.")
             setIsPlayerOpen(false)
