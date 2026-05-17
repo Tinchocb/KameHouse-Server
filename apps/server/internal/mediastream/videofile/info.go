@@ -62,6 +62,8 @@ type Video struct {
 	Height uint32 `json:"height"`
 	// The average bitrate of the video in bytes/s
 	Bitrate uint32 `json:"bitrate"`
+	// Pixel format of the video stream
+	PixFmt string `json:"pixFmt"`
 }
 
 type Audio struct {
@@ -206,6 +208,7 @@ func FfprobeGetInfo(ffprobePath, path, hash string) (*MediaInfo, error) {
 			// ffmpeg does not report bitrate in mkv files, fallback to bitrate of the whole container
 			// (bigger than the result since it contains audio and other videos but better than nothing).
 			Bitrate: uint32(bitrate),
+			PixFmt:  stream.PixFmt,
 		}
 	})
 

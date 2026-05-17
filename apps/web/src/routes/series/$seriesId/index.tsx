@@ -245,6 +245,7 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                 <VideoPlayer
                     streamUrl={playTarget.path}
                     streamType={playTarget.streamType as "local" | "online" | "direct"}
+                    title={title}
                     episodeLabel={playTarget.episodeLabel}
                     episodeNumber={playTarget.episodeNumber}
                     mediaId={Number(seriesId)}

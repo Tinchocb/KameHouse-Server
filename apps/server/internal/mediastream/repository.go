@@ -4,7 +4,7 @@ import (
 	"errors"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/events"
-	"kamehouse/internal/mediastream/transcoder"
+	"kamehouse/internal/mediastream/cassette"
 	"kamehouse/internal/mediastream/videofile"
 	"kamehouse/internal/util/filecache"
 	"os"
@@ -17,7 +17,7 @@ import (
 
 type (
 	Repository struct {
-		transcoder         mo.Option[*transcoder.Transcoder]
+		transcoder         mo.Option[*cassette.Cassette]
 		settings           mo.Option[*models.MediastreamSettings]
 		playbackManager    *PlaybackManager
 		mediaInfoExtractor *videofile.MediaInfoExtractor
@@ -40,7 +40,7 @@ func NewRepository(opts *NewRepositoryOptions) *Repository {
 	ret := &Repository{
 		logger: opts.Logger,
 		settings:           mo.None[*models.MediastreamSettings](),
-		transcoder:         mo.None[*transcoder.Transcoder](),
+		transcoder:         mo.None[*cassette.Cassette](),
 		wsEventManager:     opts.WSEventManager,
 		fileCacher:         opts.FileCacher,
 		mediaInfoExtractor: videofile.NewMediaInfoExtractor(opts.FileCacher, opts.Logger),
@@ -207,7 +207,7 @@ func (r *Repository) initializeTranscoder(settings mo.Option[*models.Mediastream
 		tc.Destroy()
 	}
 
-	r.transcoder = mo.None[*transcoder.Transcoder]()
+	r.transcoder = mo.None[*cassette.Cassette]()
 
 	// If the transcoder is not enabled, don't initialize the transcoder
 	if !settings.MustGet().TranscodeEnabled {
@@ -220,7 +220,7 @@ func (r *Repository) initializeTranscoder(settings mo.Option[*models.Mediastream
 		return false
 	}
 
-	opts := &transcoder.NewTranscoderOptions{
+	opts := &cassette.NewCassetteOptions{
 		Logger:                r.logger,
 		HwAccelKind:           settings.MustGet().TranscodeHwAccel,
 		Preset:                settings.MustGet().TranscodePreset,
@@ -228,9 +228,10 @@ func (r *Repository) initializeTranscoder(settings mo.Option[*models.Mediastream
 		FfprobePath:           settings.MustGet().FfprobePath,
 		HwAccelCustomSettings: settings.MustGet().TranscodeHwAccelCustomSettings,
 		TempOutDir:            r.transcodeDir,
+		MaxConcurrency:        0, // Use default (NumCPU)
 	}
 
-	tc, err := transcoder.NewTranscoder(opts)
+	tc, err := cassette.New(opts)
 	if err != nil {
 		r.logger.Error().Err(err).Msg("mediastream: Failed to initialize transcoder")
 		return false
@@ -239,7 +240,7 @@ func (r *Repository) initializeTranscoder(settings mo.Option[*models.Mediastream
 	r.playbackManager.mediaContainers.Clear()
 
 	r.logger.Info().Msg("mediastream: Transcoder module initialized")
-	r.transcoder = mo.Some[*transcoder.Transcoder](tc)
+	r.transcoder = mo.Some[*cassette.Cassette](tc)
 
 	return true
 }

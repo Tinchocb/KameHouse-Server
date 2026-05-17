@@ -3,7 +3,7 @@ package mediastream
 import (
 	"errors"
 	"kamehouse/internal/events"
-	"kamehouse/internal/mediastream/transcoder"
+	"kamehouse/internal/mediastream/cassette"
 	"strconv"
 	"strings"
 
@@ -37,7 +37,7 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientId string) e
 	}
 
 	if path == "master.m3u8" {
-		ret, err := r.transcoder.MustGet().GetMaster(mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, clientId)
+		ret, err := r.transcoder.MustGet().GetMaster(mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, clientId, "")
 		if err != nil {
 			return err
 		}
@@ -53,12 +53,12 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientId string) e
 			return errors.New("invalid index.m3u8 path")
 		}
 
-		quality, err := transcoder.QualityFromString(split[0])
+		quality, err := cassette.QualityFromString(split[0])
 		if err != nil {
 			return err
 		}
 
-		ret, err := r.transcoder.MustGet().GetVideoIndex(mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, quality, clientId)
+		ret, err := r.transcoder.MustGet().GetVideoIndex(mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, quality, clientId, "")
 		if err != nil {
 			return err
 		}
@@ -79,7 +79,7 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientId string) e
 			return err
 		}
 
-		ret, err := r.transcoder.MustGet().GetAudioIndex(mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, int32(audioIndex), clientId)
+		ret, err := r.transcoder.MustGet().GetAudioIndex(mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, int32(audioIndex), clientId, "")
 		if err != nil {
 			return err
 		}
@@ -95,12 +95,12 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientId string) e
 			return errors.New("invalid video segment path")
 		}
 
-		quality, err := transcoder.QualityFromString(split[0])
+		quality, err := cassette.QualityFromString(split[0])
 		if err != nil {
 			return err
 		}
 
-		segment, err := transcoder.ParseSegment(split[1])
+		segment, err := cassette.ParseSegment(split[1])
 		if err != nil {
 			return err
 		}
@@ -126,7 +126,7 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientId string) e
 			return err
 		}
 
-		segment, err := transcoder.ParseSegment(split[2])
+		segment, err := cassette.ParseSegment(split[2])
 		if err != nil {
 			return err
 		}

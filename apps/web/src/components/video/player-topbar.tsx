@@ -27,7 +27,7 @@ export function PlayerTopBar({ title, episodeLabel, episodeNumber, onClose }: Pl
                 
                 <div className="flex flex-col gap-1">
                     <h1 className="text-white font-bebas text-xl md:text-3xl tracking-[0.02em] uppercase leading-none truncate max-w-[50vw]">
-                        {episodeLabel || title || "Reproduciendo"}
+                        {title || episodeLabel || "Reproduciendo"}
                     </h1>
                     {episodeNumber && (
                         <span className="text-zinc-500 font-bold tracking-[0.1em] uppercase text-[9px] md:text-[10px] flex items-center gap-2 opacity-80">

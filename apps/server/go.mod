@@ -25,13 +25,12 @@ require (
 	github.com/imroc/req/v3 v3.57.0
 	github.com/kr/pretty v0.3.1
 	github.com/labstack/echo/v4 v4.15.0
-	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/mileusna/useragent v1.3.5
 	github.com/nssteinbrenner/anitogo v1.0.0
 	github.com/nwaples/rardecode/v2 v2.2.2
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.34.0
-	github.com/samber/lo v1.52.0
+	github.com/samber/lo v1.53.0
 	github.com/samber/mo v1.16.0
 	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8
 	github.com/spf13/viper v1.21.0

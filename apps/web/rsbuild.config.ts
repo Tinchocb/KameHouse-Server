@@ -100,6 +100,16 @@ export default defineConfig({
                 target: devBackendTarget,
                 changeOrigin: true,
                 ws: true,
+                onError: (err, req, res) => {
+                    const code = (err as any).code || '';
+                    if (code === 'ECONNRESET' || code === 'ECONNABORTED' || code === 'EPIPE') {
+                        return;
+                    }
+                    if (res && 'writeHead' in res && !(res as any).headersSent) {
+                        (res as any).writeHead(500, { 'Content-Type': 'text/plain' });
+                        (res as any).end('Proxy error: ' + err.message);
+                    }
+                }
             },
         },
     },
@@ -216,6 +226,11 @@ export default defineConfig({
                 },
             },
             module: {
+                parser: {
+                    javascript: {
+                        strictExportPresence: false,
+                    },
+                },
                 rules: [
                     { // stops circular deps warning
                         test: /jassub[\\/]dist[\\/].*\.js$/,

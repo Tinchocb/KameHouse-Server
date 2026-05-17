@@ -467,7 +467,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
                     modernWasmUrl: "/jassub/jassub-worker-modern.wasm",
                     canvas: canvasRef.current ?? undefined,
                     useOffscreen: true,
-                    prescaleFactor: 1.0,
+                    prescaleFactor: subtitleSizePref / 100,
                     width: video.videoWidth || 1920,
                     height: video.videoHeight || 1080,
                 })
@@ -492,7 +492,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
                 setIsJassubActive(false)
             }
         }
-    }, [activeSubtitleIndex, subtitleTracks])
+    }, [activeSubtitleIndex, subtitleTracks, subtitleSizePref])
 
     // Auto-select preferred tracks
     const onSelectAudio = useCallback((track: AudioTrack) => {

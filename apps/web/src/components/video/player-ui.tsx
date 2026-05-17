@@ -74,37 +74,6 @@ export function PlayerUI(props: PlayerUIProps) {
 
     const insights = insightsData || []
 
-    // Fetch AniSkip data
-    const { data: aniSkip } = useAniSkipTimes({
-        malId,
-        episodeNumber,
-        episodeDuration: state.duration,
-        enabled: state.duration > 0
-    })
-
-    // AniSkip Logic
-    const isWithinOP = aniSkip?.op && state.currentTime >= aniSkip.op.startTime && state.currentTime <= aniSkip.op.endTime
-    const isWithinED = aniSkip?.ed && state.currentTime >= aniSkip.ed.startTime && state.currentTime <= aniSkip.ed.endTime
-    const showSkipIntro = !!isWithinOP
-    const showSkipEnding = !!isWithinED
-    const skipTarget = showSkipIntro ? aniSkip!.op?.endTime : (showSkipEnding ? aniSkip!.ed?.endTime : 0)
-    const skipLabel = showSkipIntro ? "SALTAR INTRO" : "SALTAR ENDING"
-    const remainingSkipSeconds = showSkipIntro ? Math.ceil(aniSkip!.op!.endTime - state.currentTime) : (showSkipEnding ? Math.ceil(aniSkip!.ed!.endTime - state.currentTime) : 0)
-
-    // Keyboard Shortcuts
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key.toLowerCase() === "s" && (showSkipIntro || showSkipEnding) && skipTarget) {
-                e.preventDefault()
-                if (domElements.videoElement.current) {
-                    domElements.videoElement.current.currentTime = skipTarget
-                }
-            }
-        }
-        window.addEventListener("keydown", handleKeyDown)
-        return () => window.removeEventListener("keydown", handleKeyDown)
-    }, [showSkipIntro, showSkipEnding, skipTarget, domElements.videoElement])
-
     // Cinematic Controls Animation Layer
     useGSAP(() => {
         if (state.controlsVisible) {
@@ -129,13 +98,11 @@ export function PlayerUI(props: PlayerUIProps) {
             if (video && canvas && !video.paused) {
                 const ctx = canvas.getContext("2d")
                 if (ctx) {
-                    if (canvas.width !== video.videoWidth && video.videoWidth > 0) {
-                        canvas.width = video.videoWidth
-                        canvas.height = video.videoHeight
+                    if (canvas.width !== 32) {
+                        canvas.width = 32
+                        canvas.height = 18
                     }
-                    if (canvas.width > 0 && canvas.height > 0) {
-                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-                    }
+                    ctx.drawImage(video, 0, 0, 32, 18)
                 }
             }
             animId = requestAnimationFrame(renderAmbilight)
@@ -202,19 +169,6 @@ export function PlayerUI(props: PlayerUIProps) {
                 )}
             >
                 <div className="absolute inset-0 z-50 pointer-events-none player-overlays-bg bg-gradient-to-t from-black/80 via-transparent to-black/60" />
-
-                {/* Skip Intro / Ending Button */}
-                <SkipIntroOverlay
-                    show={showSkipIntro || showSkipEnding}
-                    onSkip={() => {
-                        if (skipTarget && domElements.videoElement.current) {
-                            domElements.videoElement.current.currentTime = skipTarget
-                        }
-                    }}
-                    skipLabel={skipLabel}
-                    remainingSeconds={remainingSkipSeconds}
-                    shortcutKey="S"
-                />
 
                 {/* Resume Overlay */}
                 <div className="absolute bottom-0 inset-x-0 h-64 bg-gradient-to-t from-black/95 via-black/40 to-transparent" />
