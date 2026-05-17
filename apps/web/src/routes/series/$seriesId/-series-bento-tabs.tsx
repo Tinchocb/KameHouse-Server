@@ -1,10 +1,13 @@
 import React from "react"
 import { Models_LibraryMedia, Anime_LocalFile } from "@/api/generated/types"
 import { MonitorPlay, Database } from "lucide-react"
+import { useNavigate } from "@tanstack/react-router"
 
 // ─── RELATIONS TAB ─────────────────────────────────────────────────────────────
 
 export const RelationsTab = React.memo(function RelationsTab({ media }: { media?: Models_LibraryMedia }) {
+    const navigate = useNavigate()
+
     if (!media || !media.relations || media.relations.length === 0) {
         return (
             <div className="py-24 text-center">
@@ -17,16 +20,27 @@ export const RelationsTab = React.memo(function RelationsTab({ media }: { media?
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {media.relations.map((relation, idx) => (
-                <div key={idx} className="flex gap-4 p-4 bg-zinc-900 border border-white/10 hover:border-white/30 transition-all duration-300 group cursor-pointer">
-                    <div className="w-16 h-24 shrink-0 bg-zinc-800 overflow-hidden relative">
+                <div 
+                    key={idx} 
+                    onClick={() => {
+                        if (relation.node?.id) {
+                            navigate({
+                                to: "/series/$seriesId",
+                                params: { seriesId: String(relation.node.id) }
+                            })
+                        }
+                    }}
+                    className="flex gap-4 p-4 bg-zinc-900/40 backdrop-blur-md border border-white/5 hover:border-brand-orange/40 hover:bg-zinc-900/80 rounded-xl hover:shadow-[0_0_20px_rgba(249,115,22,0.1)] transition-all duration-300 group cursor-pointer"
+                >
+                    <div className="w-16 h-24 shrink-0 bg-zinc-800 overflow-hidden relative rounded-lg border border-white/10">
                         {relation.node?.posterImage && (
                             <img src={relation.node.posterImage} alt={relation.node.titleRomaji || "Relacion"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                         )}
                     </div>
                     <div className="flex flex-col flex-1 justify-center">
-                        <span className="text-[10px] font-black text-white/50 tracking-widest uppercase mb-1">{relation.relationType}</span>
-                        <h4 className="text-sm font-bold leading-tight line-clamp-2 text-white">{relation.node?.titleRomaji || relation.node?.titleEnglish}</h4>
-                        <span className="text-xs font-black text-brand-orange mt-2 tracking-widest uppercase">{relation.node?.format}</span>
+                        <span className="text-[9px] font-black text-brand-orange/70 tracking-widest uppercase mb-1">{relation.relationType}</span>
+                        <h4 className="text-sm font-bold leading-tight line-clamp-2 text-white group-hover:text-brand-orange transition-colors duration-200">{relation.node?.titleSpanish || relation.node?.titleRomaji || relation.node?.titleEnglish}</h4>
+                        <span className="text-[10px] font-black text-white/40 mt-2 tracking-widest uppercase">{relation.node?.format}</span>
                     </div>
                 </div>
             ))}
@@ -49,14 +63,14 @@ export const CharactersTab = React.memo(function CharactersTab({ characters }: {
     return (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
             {characters.slice(0, 24).map((char, idx) => (
-                <div key={idx} className="flex flex-col items-center text-center gap-3 group">
-                    <div className="w-24 h-24 rounded-full overflow-hidden bg-zinc-800 border-2 border-white/5 group-hover:border-white/50 transition-all duration-300 shadow-xl">
+                <div key={idx} className="flex flex-col items-center text-center gap-3 group cursor-pointer">
+                    <div className="w-24 h-24 rounded-full overflow-hidden bg-zinc-800 border-2 border-white/5 group-hover:border-brand-orange/50 hover:shadow-[0_0_15px_rgba(249,115,22,0.15)] transition-all duration-300 shadow-xl">
                         {char.node?.image && (
                             <img src={char.node.image} alt={char.node.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                         )}
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-xs font-bold text-white uppercase tracking-wider">{char.node?.name}</span>
+                        <span className="text-xs font-bold text-white group-hover:text-brand-orange uppercase tracking-wider transition-colors duration-200">{char.node?.name}</span>
                         <span className="text-[10px] font-black text-white/40 tracking-[0.2em] uppercase mt-1">{char.role}</span>
                     </div>
                 </div>
@@ -91,51 +105,51 @@ export const TechnicalMetadataTab = React.memo(function TechnicalMetadataTab({ l
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Video Specs */}
-            <div className="bg-zinc-900 border border-white/10 p-6 flex flex-col gap-4">
-                <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-                    <MonitorPlay className="w-6 h-6 text-white/50" />
+            <div className="bg-zinc-900/30 backdrop-blur-md border border-white/5 rounded-2xl p-6 flex flex-col gap-4 hover:border-white/10 hover:bg-zinc-900/60 transition-all duration-300">
+                <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+                    <MonitorPlay className="w-6 h-6 text-brand-orange" />
                     <h3 className="text-xl font-bebas tracking-widest uppercase">Video</h3>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1">
-                        <span className="text-[10px] font-black text-white/40 tracking-[0.2em] uppercase">Resolución</span>
+                        <span className="text-[9px] font-black text-white/40 tracking-[0.2em] uppercase">Resolución</span>
                         <span className="text-sm font-bold uppercase">{tech.videoStream?.width}x{tech.videoStream?.height}</span>
                     </div>
                     <div className="flex flex-col gap-1">
-                        <span className="text-[10px] font-black text-white/40 tracking-[0.2em] uppercase">Códec</span>
+                        <span className="text-[9px] font-black text-white/40 tracking-[0.2em] uppercase">Códec</span>
                         <span className="text-sm font-bold uppercase">{tech.videoStream?.codec}</span>
                     </div>
                     <div className="flex flex-col gap-1">
-                        <span className="text-[10px] font-black text-white/40 tracking-[0.2em] uppercase">Color Space</span>
+                        <span className="text-[9px] font-black text-white/40 tracking-[0.2em] uppercase">Color Space</span>
                         <span className="text-sm font-bold uppercase">{tech.videoStream?.colorSpace || "N/A"}</span>
                     </div>
                     <div className="flex flex-col gap-1">
-                        <span className="text-[10px] font-black text-white/40 tracking-[0.2em] uppercase">Frame Rate</span>
+                        <span className="text-[9px] font-black text-white/40 tracking-[0.2em] uppercase">Frame Rate</span>
                         <span className="text-sm font-bold uppercase">{tech.videoStream?.frameRate || "N/A"}</span>
                     </div>
                 </div>
             </div>
 
             {/* Audio Specs */}
-            <div className="bg-zinc-900 border border-white/10 p-6 flex flex-col gap-4">
-                <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-                    <Database className="w-6 h-6 text-white/50" />
+            <div className="bg-zinc-900/30 backdrop-blur-md border border-white/5 rounded-2xl p-6 flex flex-col gap-4 hover:border-white/10 hover:bg-zinc-900/60 transition-all duration-300">
+                <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+                    <Database className="w-6 h-6 text-brand-orange" />
                     <h3 className="text-xl font-bebas tracking-widest uppercase">Audio & Formato</h3>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1">
-                        <span className="text-[10px] font-black text-white/40 tracking-[0.2em] uppercase">Contenedor</span>
+                        <span className="text-[9px] font-black text-white/40 tracking-[0.2em] uppercase">Contenedor</span>
                         <span className="text-sm font-bold uppercase">{tech.format}</span>
                     </div>
                     <div className="flex flex-col gap-1">
-                        <span className="text-[10px] font-black text-white/40 tracking-[0.2em] uppercase">Tamaño</span>
+                        <span className="text-[9px] font-black text-white/40 tracking-[0.2em] uppercase">Tamaño</span>
                         <span className="text-sm font-bold uppercase">{(tech.size / 1024 / 1024).toFixed(2)} MB</span>
                     </div>
                     <div className="flex flex-col gap-1 col-span-2">
-                        <span className="text-[10px] font-black text-white/40 tracking-[0.2em] uppercase">Pistas de Audio</span>
+                        <span className="text-[9px] font-black text-white/40 tracking-[0.2em] uppercase">Pistas de Audio</span>
                         <div className="flex flex-wrap gap-2 mt-2">
                             {tech.audioStreams?.map((aud, i) => (
-                                <span key={i} className="px-2 py-1 bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-wider">
+                                <span key={i} className="px-3 py-1 bg-white/5 border border-white/5 rounded-lg text-[10px] font-bold uppercase tracking-wider">
                                     {aud.language || "UND"} - {aud.codec}
                                 </span>
                             ))}

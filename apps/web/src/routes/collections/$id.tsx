@@ -235,11 +235,10 @@ function CollectionDetailPage() {
                                             {/* Action Button */}
                                             <button
                                                 onClick={() => {
-                                                    // Navigate to detail pages based on whether it is series or movie
-                                                    const routeType = part.format === "MOVIE" ? "movies" : "series"
+                                                    // Navigate to detail page unifingly using seriesId
                                                     navigate({
-                                                        to: `/${routeType}/$id`,
-                                                        params: { id: String(part.id) },
+                                                        to: "/series/$seriesId",
+                                                        params: { seriesId: String(part.id) },
                                                     })
                                                 }}
                                                 className="self-start flex items-center gap-2 py-2.5 px-5 bg-white text-black text-[9px] font-black uppercase tracking-[0.2em] hover:bg-yellow-500 transition-all duration-200"

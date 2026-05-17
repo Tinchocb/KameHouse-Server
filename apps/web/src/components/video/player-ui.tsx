@@ -153,6 +153,7 @@ export function PlayerUI(props: PlayerUIProps) {
                 }}
                 crossOrigin="anonymous"
                 playsInline
+                preload="auto"
             />
 
             <canvas

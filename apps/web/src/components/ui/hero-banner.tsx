@@ -3,6 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Info, Play } from "lucide-react"
 import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
+import { ParticleBackground } from "@/components/shared/particle-bg"
 
 export interface HeroBannerItem {
     id: string
@@ -72,6 +73,9 @@ export function HeroBanner({
                     />
                 </motion.div>
             </AnimatePresence>
+
+            {/* Particle Background */}
+            <ParticleBackground className="absolute inset-0 z-[5] pointer-events-none opacity-40 mix-blend-screen" color="#FF6E3A" quantity={150} />
 
             {/* ── Gradients ───────────────────────────────── */}
             <div className="absolute inset-0 z-10 bg-gradient-to-t from-zinc-950 via-transparent to-transparent" />

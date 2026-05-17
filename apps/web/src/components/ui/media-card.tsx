@@ -5,6 +5,7 @@ import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { getHighResImage } from "@/lib/helpers/images"
 import { DeferredImage } from "@/components/shared/deferred-image"
+import { GlowingEffect } from "@/components/shared/glowing-effect"
 
 export interface MediaCardProps {
     artwork: string
@@ -56,6 +57,9 @@ export const MediaCard = React.memo(function MediaCard({
                 className
             )}
         >
+            {/* Glowing effect */}
+            <GlowingEffect glow={isHovered} blur={6} spread={30} disabled={false} borderWidth={1.5} />
+
             {/* ── Artwork ─────────────────────────────────── */}
             <div className="absolute inset-0 z-0">
                 <DeferredImage

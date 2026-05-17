@@ -19,6 +19,7 @@ import { EmptyState } from "@/components/shared/empty-state"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { VideoPlayer } from "@/components/video/player"
 import { MediaActionButtons, EpisodeCard } from "./-series-interactivity-client"
+import { RelationsTab, CharactersTab, TechnicalMetadataTab } from "./-series-bento-tabs"
 import { sanitizeHtml } from "@/lib/helpers/sanitizer"
 import { resolveSeriesSagas, getDragonBallSpanishTitle, type SagaDefinition } from "@/lib/config/dragonball.config"
 import { ClassicPosterCard } from "@/components/shared/classic-poster-card"
@@ -56,6 +57,8 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         episodeNumber: number
         malId?: number | null
     } | null>(null)
+
+    const [activeTab, setActiveTab] = useState<"episodes" | "relations" | "characters" | "technical">("episodes")
 
     const sagas = useMemo(() => entry?.media ? resolveSeriesSagas(entry.media) : [], [entry])
     
@@ -205,6 +208,10 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     const title = entry.media.titleSpanish || entry.media.titleRomaji || entry.media.titleEnglish || "Título Desconocido"
     const heroBackdrop = getHighResImage(entry.media.bannerImage || entry.media.posterImage || "")
 
+    const hasRelations = entry.media?.relations && entry.media.relations.length > 0
+    const hasCharacters = entry.media?.characters?.edges && entry.media.characters.edges.length > 0
+    const hasTechnical = entry.localFiles && entry.localFiles.length > 0
+
     return (
         <div className="min-h-screen bg-[#09090b] text-white pb-16">
             <HeroSection
@@ -217,26 +224,109 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
             />
 
             <div className="w-full max-w-[1800px] mx-auto px-6 sm:px-12 mt-12">
-                <div className="mt-8">
-                    {entry.media?.format === "MOVIE" ? (
-                        <LocalFilesSection
-                            localFiles={entry.localFiles || []}
-                            title={title}
-                            thumbnail={heroBackdrop}
-                            onPlay={handlePlayLocalFile}
-                            tmdbId={entry.media?.tmdbId}
-                        />
-                    ) : (
-                        <SagaEpisodesSection 
-                            seriesTitle={title} 
-                            fallbackThumb={heroBackdrop} 
-                            episodes={computedEpisodes}
-                            localFiles={entry.localFiles || []}
-                            sagas={sagas}
-                            seriesTmdbId={entry.media?.tmdbId}
-                            onPlay={handlePlayEpisode}
-                            currentlyPlayingEpNumber={playTarget?.episodeNumber}
-                        />
+                {/* Custom Glassmorphic Tabs Navigation */}
+                <div className="flex border-b border-white/5 pb-2 mb-8 gap-8 overflow-x-auto no-scrollbar">
+                    <button
+                        onClick={() => setActiveTab("episodes")}
+                        className={cn(
+                            "text-sm uppercase tracking-[0.2em] font-black pb-3 transition-all relative shrink-0",
+                            activeTab === "episodes" ? "text-brand-orange" : "text-zinc-500 hover:text-zinc-300"
+                        )}
+                    >
+                        {entry.media?.format === "MOVIE" ? "Archivos Locales" : "Episodios"}
+                        {activeTab === "episodes" && (
+                            <motion.div layoutId="detailActiveLine" className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-orange" />
+                        )}
+                    </button>
+
+                    {hasRelations && (
+                        <button
+                            onClick={() => setActiveTab("relations")}
+                            className={cn(
+                                "text-sm uppercase tracking-[0.2em] font-black pb-3 transition-all relative shrink-0",
+                                activeTab === "relations" ? "text-brand-orange" : "text-zinc-500 hover:text-zinc-300"
+                            )}
+                        >
+                            Relacionados
+                            {activeTab === "relations" && (
+                                <motion.div layoutId="detailActiveLine" className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-orange" />
+                            )}
+                        </button>
+                    )}
+
+                    {hasCharacters && (
+                        <button
+                            onClick={() => setActiveTab("characters")}
+                            className={cn(
+                                "text-sm uppercase tracking-[0.2em] font-black pb-3 transition-all relative shrink-0",
+                                activeTab === "characters" ? "text-brand-orange" : "text-zinc-500 hover:text-zinc-300"
+                            )}
+                        >
+                            Personajes
+                            {activeTab === "characters" && (
+                                <motion.div layoutId="detailActiveLine" className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-orange" />
+                            )}
+                        </button>
+                    )}
+
+                    {hasTechnical && (
+                        <button
+                            onClick={() => setActiveTab("technical")}
+                            className={cn(
+                                "text-sm uppercase tracking-[0.2em] font-black pb-3 transition-all relative shrink-0",
+                                activeTab === "technical" ? "text-brand-orange" : "text-zinc-500 hover:text-zinc-300"
+                            )}
+                        >
+                            Datos Técnicos
+                            {activeTab === "technical" && (
+                                <motion.div layoutId="detailActiveLine" className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-orange" />
+                            )}
+                        </button>
+                    )}
+                </div>
+
+                <div className="mt-8 min-h-[300px]">
+                    {activeTab === "episodes" && (
+                        <div className="mt-8">
+                            {entry.media?.format === "MOVIE" ? (
+                                <LocalFilesSection
+                                    localFiles={entry.localFiles || []}
+                                    title={title}
+                                    thumbnail={heroBackdrop}
+                                    onPlay={handlePlayLocalFile}
+                                    tmdbId={entry.media?.tmdbId}
+                                />
+                            ) : (
+                                <SagaEpisodesSection 
+                                    seriesTitle={title} 
+                                    fallbackThumb={heroBackdrop} 
+                                    episodes={computedEpisodes}
+                                    localFiles={entry.localFiles || []}
+                                    sagas={sagas}
+                                    seriesTmdbId={entry.media?.tmdbId}
+                                    onPlay={handlePlayEpisode}
+                                    currentlyPlayingEpNumber={playTarget?.episodeNumber}
+                                />
+                            )}
+                        </div>
+                    )}
+
+                    {activeTab === "relations" && (
+                        <div className="py-4 animate-fade-in">
+                            <RelationsTab media={entry.media} />
+                        </div>
+                    )}
+
+                    {activeTab === "characters" && (
+                        <div className="py-4 animate-fade-in">
+                            <CharactersTab characters={entry.media?.characters?.edges || []} />
+                        </div>
+                    )}
+
+                    {activeTab === "technical" && (
+                        <div className="py-4 animate-fade-in">
+                            <TechnicalMetadataTab localFiles={entry.localFiles || []} />
+                        </div>
                     )}
                 </div>
             </div>
@@ -583,23 +673,62 @@ const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
         const saga = generatedSagas.find(s => s.id.toString() === activeSagaId)
         if (!saga) return episodes
         
+        let start = saga.startEp
+        let end = saga.endEp
+        let activeSagaIdStr = saga.id.toString()
+        
         if (activeSubSagaId && saga.subSagas) {
             const subSaga = saga.subSagas.find((ss) => ss.id === activeSubSagaId)
             if (subSaga) {
-                return episodes.filter(ep => {
-                    if (!ep) return false
-                    const epNum = ep.absoluteEpisodeNumber || ep.episodeNumber
-                    return (ep as Anime_Episode & { sagaId?: string }).sagaId === subSaga.id || (epNum >= subSaga.startEp && epNum <= subSaga.endEp)
-                })
+                start = subSaga.startEp
+                end = subSaga.endEp
+                activeSagaIdStr = subSaga.id
             }
         }
-        
-        return episodes.filter(ep => {
+
+        const currentFiltered = episodes.filter(ep => {
             if (!ep) return false
             const epNum = ep.absoluteEpisodeNumber || ep.episodeNumber
-            return (ep as Anime_Episode & { sagaId?: string }).sagaId === saga.id || (epNum >= saga.startEp && epNum <= saga.endEp)
+            const inRange = epNum >= start && epNum <= end
+            const matchesSaga = (ep as Anime_Episode & { sagaId?: string }).sagaId === activeSagaIdStr
+            return matchesSaga || inRange
         })
-    }, [episodes, generatedSagas, activeSagaId, activeSubSagaId])
+
+        // Pad any missing episode number within [start, end]
+        const epMap = new Map<number, Anime_Episode>()
+        currentFiltered.forEach(ep => {
+            if (ep && typeof ep.episodeNumber === 'number') {
+                epMap.set(ep.episodeNumber, ep)
+            }
+        })
+
+        const paddedEpisodes: Anime_Episode[] = []
+        for (let i = start; i <= end; i++) {
+            if (epMap.has(i)) {
+                paddedEpisodes.push(epMap.get(i)!)
+            } else {
+                let displayTitle = `Episodio ${i}`
+                
+                paddedEpisodes.push({
+                    episodeNumber: i,
+                    absoluteEpisodeNumber: i,
+                    episodeTitle: displayTitle,
+                    displayTitle: displayTitle,
+                    watched: false,
+                    sagaId: activeSagaIdStr,
+                    type: "main",
+                    progressNumber: i,
+                    isDownloaded: false,
+                    isInvalid: false,
+                    episodeMetadata: {
+                        episodeNumber: i,
+                        image: fallbackThumb || "",
+                    }
+                } as unknown as Anime_Episode)
+            }
+        }
+        return paddedEpisodes
+    }, [episodes, generatedSagas, activeSagaId, activeSubSagaId, fallbackThumb])
 
     const localFilesByEpisode = useMemo(() => {
         const map: Record<number, Anime_LocalFile> = {}
@@ -735,6 +864,7 @@ const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
                         </div>
                     ) : (
                         <Virtuoso
+                            key={`${activeSagaId}-${activeSubSagaId}`}
                             useWindowScroll
                             data={visibleEpisodes}
                             initialItemCount={Math.min(visibleEpisodes.length, 50)}

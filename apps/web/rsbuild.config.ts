@@ -1,4 +1,4 @@
-import { defineConfig, loadEnv, RsbuildPluginAPI } from "@rsbuild/core"
+import { defineConfig, loadEnv, RsbuildPluginAPI, RsbuildConfig } from "@rsbuild/core"
 import { pluginBabel } from "@rsbuild/plugin-babel"
 import { pluginReact } from "@rsbuild/plugin-react"
 import { RsdoctorRspackPlugin } from "@rsdoctor/rspack-plugin"
@@ -18,7 +18,7 @@ const devBackendPort =
     "43211"
 const devBackendTarget = `http://127.0.0.1:${devBackendPort}`
 
-export default defineConfig({
+const config: RsbuildConfig = {
     plugins: [
         pluginReact(),
         { // run stuff before build
@@ -86,6 +86,7 @@ export default defineConfig({
     resolve: {
         alias: {
             "@": path.resolve(__dirname, "./src"),
+            "react$": path.resolve(__dirname, "./src/react-alias.ts"),
         },
     },
     server: { // dev server
@@ -250,4 +251,5 @@ export default defineConfig({
             },
         },
     },
-})
+}
+export default defineConfig(config)
