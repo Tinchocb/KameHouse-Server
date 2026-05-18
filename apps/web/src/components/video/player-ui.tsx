@@ -302,6 +302,10 @@ export function PlayerUI(props: PlayerUIProps) {
                     onNextEpisode={onNextEpisode}
                     skipTimesOp={state.skipTimesOp}
                     skipTimesEd={state.skipTimesEd}
+                    chapters={state.chapters}
+                    skipToNextChapter={actions.skipToNextChapter}
+                    skipToPrevChapter={actions.skipToPrevChapter}
+                    activeChapter={state.activeChapter}
                 />
             </div>
         </div>

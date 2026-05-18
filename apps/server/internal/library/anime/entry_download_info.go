@@ -8,6 +8,7 @@ import (
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/util"
 	"strconv"
+	"time"
 
 	"github.com/samber/lo"
 	"github.com/sourcegraph/conc/pool"
@@ -100,15 +101,22 @@ func NewEntryDownloadInfo(opts *NewEntryDownloadInfoOptions) (*EntryDownloadInfo
 	}
 
 	// Filter out episodes not aired
-	// TODO: Replace with local scheduling metadata when available
-	/*
-		if opts.Media.NextAiringEpisode != nil {
-			epSlice.filter(func(item *episodeSliceItem, index int) bool {
-				// e.g. if the next airing episode is 13, then filter out episodes 14 and above
-				return index+1 < opts.Media.NextAiringEpisode.Episode
-			})
-		}
-	*/
+	if opts.AnimeMetadata != nil {
+		epSlice.filter(func(item *episodeSliceItem, index int) bool {
+			epMeta, found := opts.AnimeMetadata.FindEpisode(item.aniDBEpisode)
+			if !found {
+				return true
+			}
+			if epMeta.AirDate == "" {
+				return true
+			}
+			airDate, err := time.Parse("2006-01-02", epMeta.AirDate)
+			if err != nil {
+				return true
+			}
+			return airDate.Before(time.Now()) || airDate.Equal(time.Now())
+		})
+	}
 
 	// Get progress, if the media isn't in the user's list, progress is 0
 	// If the media is completed, set progress is 0

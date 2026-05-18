@@ -43,21 +43,21 @@ export function BentoRecentlyAdded({ items, className }: BentoRecentlyAddedProps
                         }}
                         onClick={item.onClick}
                         className={cn(
-                            "group relative overflow-hidden rounded-[32px] border border-white/[0.05] bg-zinc-900/40 backdrop-blur-xl cursor-pointer transition-all duration-700",
+                            "group relative overflow-hidden rounded-[32px] border border-white/[0.05] bg-zinc-900/40 backdrop-blur-xl cursor-pointer transition-all duration-500",
                             isLarge ? "md:col-span-2 md:row-span-2 h-[450px] md:h-full" : "h-[220px] md:h-full",
                             isMedium && !isLarge ? "md:col-span-1" : "",
-                            "hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/5"
+                            "hover:border-brand-orange/20 hover:shadow-[0_20px_40px_-15px_rgba(255,110,58,0.15)]"
                         )}
                     >
                         {/* Background Image */}
                         <img
                             src={item.image}
                             alt={item.title}
-                            className="absolute inset-0 h-full w-full object-cover transition-transform duration-1000 ease-out group-hover:scale-105 brightness-[0.5]"
+                            className="absolute inset-0 h-full w-full object-cover transition-all duration-[1200ms] [transition-timing-function:cubic-bezier(0.25,1,0.5,1)] group-hover:scale-[1.06] group-hover:brightness-[0.4] group-hover:saturate-[1.1] brightness-[0.5]"
                         />
 
                         {/* Overlays */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/25 to-transparent opacity-80 group-hover:opacity-100 transition-opacity" />
 
                         {/* Content */}
                         <div className="absolute inset-0 p-8 flex flex-col justify-end">
@@ -77,7 +77,7 @@ export function BentoRecentlyAdded({ items, className }: BentoRecentlyAddedProps
                                 </div>
                                 
                                 <h3 className={cn(
-                                    "font-bebas text-white leading-[0.9] tracking-tight transition-all duration-500",
+                                    "font-bebas text-white leading-[0.9] uppercase tracking-wide transition-all duration-500 group-hover:text-brand-orange",
                                     isLarge ? "text-5xl md:text-8xl" : "text-3xl md:text-4xl"
                                 )}>
                                     {item.title}
@@ -92,9 +92,9 @@ export function BentoRecentlyAdded({ items, className }: BentoRecentlyAddedProps
                         </div>
 
                         {/* Centered Play Indicator */}
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-700 pointer-events-none">
-                            <div className="bg-white/10 backdrop-blur-3xl p-6 rounded-full border border-white/20 scale-50 group-hover:scale-100 transition-transform duration-500">
-                                <Play className="w-8 h-8 text-white fill-current" />
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-30">
+                            <div className="bg-brand-orange/20 backdrop-blur-md p-5 rounded-full border border-brand-orange/40 scale-75 group-hover:scale-100 shadow-[0_0_20px_rgba(255,110,58,0.25)] transition-all duration-500">
+                                <Play className="w-6 h-6 text-white fill-current translate-x-[2px]" />
                             </div>
                         </div>
                     </motion.div>

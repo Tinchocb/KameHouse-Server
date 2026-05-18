@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 )
 
 // GetTVSeason fetches the details of a specific TV season, including its episodes.
 func (c *Client) GetTVSeason(ctx context.Context, tvID int, seasonNumber int) (TVSeasonDetails, error) {
 	cacheKey := fmt.Sprintf("tv_season:%d:%d:%s", tvID, seasonNumber, c.language)
-	if cached, ok := c.cache.Load(cacheKey); ok {
-		return cached.(TVSeasonDetails), nil
+	if cached, ok := GetCached[TVSeasonDetails](c, cacheKey); ok {
+		return cached, nil
 	}
 
 	params := url.Values{}
@@ -53,15 +54,15 @@ func (c *Client) GetTVSeason(ctx context.Context, tvID int, seasonNumber int) (T
 		}
 	}
 
-	c.cache.Store(cacheKey, *resp)
+	SetCached(c, cacheKey, *resp, 7*24*time.Hour)
 	return *resp, nil
 }
 
 // GetTVDetails fetches a specific TV show by ID with full details.
 func (c *Client) GetTVDetails(ctx context.Context, id string) (*TVDetails, error) {
 	cacheKey := fmt.Sprintf("tv_detail_full:%s:%s", id, c.language)
-	if cached, ok := c.cache.Load(cacheKey); ok {
-		return cached.(*TVDetails), nil
+	if cached, ok := GetCached[*TVDetails](c, cacheKey); ok {
+		return cached, nil
 	}
 
 	params := url.Values{}
@@ -85,15 +86,15 @@ func (c *Client) GetTVDetails(ctx context.Context, id string) (*TVDetails, error
 		}
 	}
 
-	c.cache.Store(cacheKey, resp)
+	SetCached(c, cacheKey, resp, 7*24*time.Hour)
 	return resp, nil
 }
 
 // GetTVAlternativeTitles gets all alternative titles for a TV show.
 func (c *Client) GetTVAlternativeTitles(ctx context.Context, tvID int) ([]AlternativeTitle, error) {
 	cacheKey := fmt.Sprintf("tv_alt:%d", tvID)
-	if cached, ok := c.cache.Load(cacheKey); ok {
-		return cached.([]AlternativeTitle), nil
+	if cached, ok := GetCached[[]AlternativeTitle](c, cacheKey); ok {
+		return cached, nil
 	}
 
 	params := url.Values{}
@@ -103,15 +104,15 @@ func (c *Client) GetTVAlternativeTitles(ctx context.Context, tvID int) ([]Altern
 		return nil, fmt.Errorf("tmdb get tv alternative titles: %w", err)
 	}
 
-	c.cache.Store(cacheKey, resp.Results)
+	SetCached(c, cacheKey, resp.Results, 7*24*time.Hour)
 	return resp.Results, nil
 }
 
 // GetTVExternalIDs fetches the external IDs (TVDB, IMDb, etc.) for a TV show.
 func (c *Client) GetTVExternalIDs(ctx context.Context, tvID int) (*ExternalIDs, error) {
 	cacheKey := fmt.Sprintf("tv_external_ids:%d", tvID)
-	if cached, ok := c.cache.Load(cacheKey); ok {
-		return cached.(*ExternalIDs), nil
+	if cached, ok := GetCached[*ExternalIDs](c, cacheKey); ok {
+		return cached, nil
 	}
 
 	resp, err := executeWithRetry[ExternalIDs](ctx, c, fmt.Sprintf("/tv/%d/external_ids", tvID))
@@ -119,15 +120,15 @@ func (c *Client) GetTVExternalIDs(ctx context.Context, tvID int) (*ExternalIDs, 
 		return nil, fmt.Errorf("tmdb get tv external ids: %w", err)
 	}
 
-	c.cache.Store(cacheKey, resp)
+	SetCached(c, cacheKey, resp, 7*24*time.Hour)
 	return resp, nil
 }
 
 // GetEpisodeGroups fetches the episode groups (story arcs/sagas) for a TV show.
 func (c *Client) GetEpisodeGroups(ctx context.Context, tvID int) ([]EpisodeGroup, error) {
 	cacheKey := fmt.Sprintf("episode_groups:%d:%s", tvID, c.language)
-	if cached, ok := c.cache.Load(cacheKey); ok {
-		return cached.([]EpisodeGroup), nil
+	if cached, ok := GetCached[[]EpisodeGroup](c, cacheKey); ok {
+		return cached, nil
 	}
 
 	params := url.Values{}
@@ -138,15 +139,15 @@ func (c *Client) GetEpisodeGroups(ctx context.Context, tvID int) ([]EpisodeGroup
 		return nil, fmt.Errorf("tmdb get episode groups: %w", err)
 	}
 
-	c.cache.Store(cacheKey, resp.Groups)
+	SetCached(c, cacheKey, resp.Groups, 7*24*time.Hour)
 	return resp.Groups, nil
 }
 
 // fetchTVDetails fetches full TV details from TMDB
 func (c *Client) fetchTVDetails(ctx context.Context, tvID int) (TVDetails, error) {
 	cacheKey := fmt.Sprintf("tv_full:%d:%s", tvID, c.language)
-	if cached, ok := c.cache.Load(cacheKey); ok {
-		return cached.(TVDetails), nil
+	if cached, ok := GetCached[TVDetails](c, cacheKey); ok {
+		return cached, nil
 	}
 
 	params := url.Values{}
@@ -157,7 +158,7 @@ func (c *Client) fetchTVDetails(ctx context.Context, tvID int) (TVDetails, error
 		return TVDetails{}, fmt.Errorf("tmdb fetch tv details: %w", err)
 	}
 
-	c.cache.Store(cacheKey, *resp)
+	SetCached(c, cacheKey, *resp, 7*24*time.Hour)
 	return *resp, nil
 }
 

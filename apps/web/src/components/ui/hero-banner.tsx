@@ -1,6 +1,6 @@
 import { cn } from "@/components/ui/core/styling"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Info, Play } from "lucide-react"
+import { Info, Play, Sparkles } from "lucide-react"
 import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { ParticleBackground } from "@/components/shared/particle-bg"
@@ -115,8 +115,8 @@ export function HeroBanner({
                                     </>
                                 )}
                                 {/* AI badge */}
-                                <div className="ml-auto flex items-center gap-1.5 rounded-full bg-primary/15 border border-primary/20 px-3 py-1 text-primary text-[9px] font-black tracking-[0.25em]">
-                                    <span>&#9733;</span>
+                                <div className="ml-auto flex items-center gap-1.5 rounded-full bg-brand-orange/10 border border-brand-orange/20 px-3 py-1 text-brand-orange text-[9px] font-black tracking-[0.25em] shadow-sm shadow-brand-orange/5 animate-pulse">
+                                    <Sparkles className="w-3 h-3 text-brand-orange animate-spin [animation-duration:10s]" />
                                     <span>KAME IA</span>
                                 </div>
                             </div>
@@ -134,20 +134,20 @@ export function HeroBanner({
                             {/* Actions */}
                             <div className="flex items-center gap-6 pt-4">
                                 <motion.button
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
+                                    whileHover={{ scale: 1.03 }}
+                                    whileTap={{ scale: 0.97 }}
                                     onClick={activeItem.onPlay}
-                                    className="flex items-center gap-4 bg-white text-black px-10 py-4 rounded-xl font-bebas text-xl uppercase tracking-wider shadow-[0_20px_40px_-10px_rgba(255,255,255,0.2)]"
+                                    className="flex items-center gap-4 bg-brand-orange text-white px-10 py-4 rounded-xl font-bebas text-xl uppercase tracking-wider shadow-[0_15px_30px_-5px_rgba(255,110,58,0.3)] hover:shadow-[0_20px_40px_-5px_rgba(255,110,58,0.45)] border border-brand-orange/20 transition-all duration-300"
                                 >
                                     <Play size={20} fill="currentColor" />
                                     <span>Reproducir</span>
                                 </motion.button>
 
                                 <motion.button
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
+                                    whileHover={{ scale: 1.03 }}
+                                    whileTap={{ scale: 0.97 }}
                                     onClick={activeItem.onMoreInfo}
-                                    className="flex items-center gap-4 bg-white/10 backdrop-blur-md text-white px-10 py-4 rounded-xl border border-white/10 font-bebas text-xl uppercase tracking-wider hover:bg-white/20 transition-all"
+                                    className="flex items-center gap-4 bg-white/[0.03] backdrop-blur-md text-white px-10 py-4 rounded-xl border border-white/10 font-bebas text-xl uppercase tracking-wider hover:bg-white/[0.08] hover:border-white/25 transition-all duration-300"
                                 >
                                     <Info size={20} />
                                     <span>Detalles</span>
@@ -160,14 +160,16 @@ export function HeroBanner({
 
             {/* ── Indicators ──────────────────────────────── */}
             {items.length > 1 && (
-                <div className="absolute bottom-10 right-16 z-30 flex items-center gap-4">
+                <div className="absolute bottom-10 right-16 z-30 flex items-center gap-2">
                     {items.map((_, idx) => (
                         <button
                             key={idx}
                             onClick={() => setActiveIndex(idx)}
                             className={cn(
-                                "h-1 rounded-full transition-all duration-700",
-                                activeIndex === idx ? "w-12 bg-white" : "w-4 bg-white/20"
+                                "h-1.5 rounded-full transition-all duration-500 ease-out",
+                                activeIndex === idx 
+                                    ? "w-10 bg-brand-orange shadow-[0_0_12px_rgba(255,110,58,0.4)]" 
+                                    : "w-2.5 bg-white/25 hover:bg-white/50"
                             )}
                         />
                     ))}

@@ -78,7 +78,7 @@ func (r *Repository) InitializeModules(settings *models.MediastreamSettings, cac
 	}
 
 	// Set the settings
-	r.settings = mo.Some[*models.MediastreamSettings](settings)
+	r.settings = mo.Some(settings)
 
 	r.cacheDir = cacheDir
 	r.transcodeDir = transcodeDir
@@ -198,6 +198,37 @@ func (r *Repository) RequestPreloadDirectPlay(filepath string) (err error) {
 	return
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Optimized Play
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func (r *Repository) RequestOptimizedStream(filepath string, clientId string) (ret *MediaContainer, err error) {
+	r.reqMu.Lock()
+	defer r.reqMu.Unlock()
+
+	r.logger.Debug().Str("filepath", filepath).Msg("mediastream: Optimized stream requested")
+
+	if !r.IsInitialized() {
+		return nil, errors.New("module not initialized")
+	}
+
+	ret, err = r.playbackManager.RequestPlayback(filepath, StreamTypeOptimized, clientId)
+
+	return
+}
+
+func (r *Repository) RequestPreloadOptimizedStream(filepath string) (err error) {
+	r.logger.Debug().Str("filepath", filepath).Msg("mediastream: Optimized stream preloading requested")
+
+	if !r.IsInitialized() {
+		return errors.New("module not initialized")
+	}
+
+	_, err = r.playbackManager.PreloadPlayback(filepath, StreamTypeOptimized)
+
+	return
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
 func (r *Repository) initializeTranscoder(settings mo.Option[*models.MediastreamSettings]) bool {
@@ -240,7 +271,7 @@ func (r *Repository) initializeTranscoder(settings mo.Option[*models.Mediastream
 	r.playbackManager.mediaContainers.Clear()
 
 	r.logger.Info().Msg("mediastream: Transcoder module initialized")
-	r.transcoder = mo.Some[*cassette.Cassette](tc)
+	r.transcoder = mo.Some(tc)
 
 	return true
 }

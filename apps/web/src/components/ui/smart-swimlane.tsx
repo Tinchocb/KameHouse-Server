@@ -33,9 +33,9 @@ function tagBadge(tag: ContentTag): { label: string; className: string } | null 
 function laneBadge(laneType: string): string {
     switch (laneType) {
         case "epic_moments":
-            return "Épico 🔥"
+            return "Épico"
         case "essential_cinema":
-            return "Esencial 🏆"
+            return "Esencial"
         case "local_library":
             return "Local"
         default:

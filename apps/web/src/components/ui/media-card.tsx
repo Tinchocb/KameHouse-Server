@@ -112,8 +112,9 @@ export const MediaCard = React.memo(function MediaCard({
                 {/* Episode/Saga Badge */}
                 {episodeNumber !== undefined && (
                     <div className="absolute top-0 left-0 z-20">
-                        <div className="bg-white text-zinc-950 px-2.5 py-1 rounded-br-lg font-black text-[10px] tracking-wider uppercase">
-                            EP {episodeNumber}
+                        <div className="bg-zinc-950/70 backdrop-blur-md text-zinc-300 border-r border-b border-white/10 px-3 py-1.5 rounded-br-xl font-black text-[10px] tracking-[0.15em] uppercase flex items-center gap-1 shadow-md">
+                            <span>EP</span>
+                            <span className="text-brand-orange">{episodeNumber}</span>
                         </div>
                     </div>
                 )}
@@ -136,7 +137,7 @@ export const MediaCard = React.memo(function MediaCard({
                 {progress !== undefined && (
                     <div className="absolute inset-x-0 bottom-0 z-20 h-1 bg-white/10">
                         <div
-                            className="h-full bg-primary"
+                            className="h-full bg-brand-orange shadow-[0_0_8px_rgba(255,110,58,0.5)]"
                             style={{ width: `${progress}%` }}
                         />
                     </div>
@@ -176,11 +177,11 @@ export const MediaCard = React.memo(function MediaCard({
                             
                             {/* Fast Play Action Indicator */}
                             <div className="absolute bottom-3 left-4 flex items-center gap-2">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-black shadow-lg hover:scale-110 active:scale-95 transition-all">
-                                    <Play size={16} fill="currentColor" className="ml-0.5" />
+                                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-orange text-white shadow-lg hover:scale-110 hover:shadow-brand-orange/20 active:scale-95 transition-all duration-300 cursor-pointer">
+                                    <Play size={15} fill="currentColor" className="ml-0.5" />
                                 </div>
-                                <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-black/45 backdrop-blur-md text-white hover:bg-black/60 transition-colors">
-                                    <Plus size={16} />
+                                <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-zinc-900/60 backdrop-blur-md text-zinc-300 hover:text-white hover:bg-zinc-800/80 hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer">
+                                    <Plus size={15} />
                                 </div>
                             </div>
                         </div>
@@ -212,7 +213,7 @@ export const MediaCard = React.memo(function MediaCard({
                                     {vibes.slice(0, 3).map((vibe, idx) => (
                                         <span
                                             key={idx}
-                                            className="text-[8px] font-bold tracking-widest uppercase bg-primary/10 border border-primary/20 text-primary px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm"
+                                            className="text-[8px] font-bold tracking-widest uppercase bg-brand-orange/10 border border-brand-orange/20 text-brand-orange px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm"
                                         >
                                             <Sparkles size={8} className="animate-pulse" />
                                             {vibe}
@@ -233,7 +234,7 @@ export const MediaCard = React.memo(function MediaCard({
                         {progress !== undefined && (
                             <div className="absolute inset-x-0 bottom-0 h-1 bg-white/10 z-20">
                                 <div
-                                    className="h-full bg-primary"
+                                    className="h-full bg-brand-orange shadow-[0_0_8px_rgba(255,110,58,0.5)]"
                                     style={{ width: `${progress}%` }}
                                 />
                             </div>

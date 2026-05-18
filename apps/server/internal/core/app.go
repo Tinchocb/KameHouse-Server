@@ -200,6 +200,9 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 
 	tmdbToken := cfg.Metadata.TMDBApiKey // Assuming it's in config
 	tmdbClient := tmdb.NewClient(tmdbToken)
+	if database != nil {
+		tmdbClient.SetPersistentCache(&TMDbCacheAdapter{db: database})
+	}
 
 	// Initialize internal dispatcher and WebSocket event manager for real-time communication
 	dispatcher := events.NewDispatcher()

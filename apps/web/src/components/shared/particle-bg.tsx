@@ -75,56 +75,8 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
     const canvasSize = useRef<{ w: number; h: number }>({ w: 0, h: 0 })
     const dpr = typeof window !== "undefined" ? window.devicePixelRatio : 1
 
-    // eslint-disable-next-line @typescript-eslint-no-unused-vars
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [_, setBgMousePosition] = useState({ x: 0, y: 0 })
-
-    useEffect(() => {
-        if (canvasRef.current) {
-            context.current = canvasRef.current.getContext("2d")
-        }
-        initCanvas()
-        animate()
-        window.addEventListener("resize", initCanvas)
-
-        return () => {
-            window.removeEventListener("resize", initCanvas)
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [color])
-
-    useEffect(() => {
-        onMouseMove()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [mousePosition.x, mousePosition.y])
-
-    useEffect(() => {
-        initCanvas()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [refresh])
-
-    function initCanvas() {
-        resizeCanvas()
-        drawParticleBackground()
-    }
-
-    function onMouseMove() {
-        if (canvasRef.current) {
-            const rect = canvasRef.current.getBoundingClientRect()
-            const { w, h } = canvasSize.current
-            const x = mousePosition.x - rect.left - w / 2
-            const y = mousePosition.y - rect.top - h / 2
-            const inside = x < w / 2 && x > -w / 2 && y < h / 2 && y > -h / 2
-            if (inside) {
-                mouse.current.x = x
-                mouse.current.y = y
-            }
-
-            const x2 = Math.min((mousePosition.x - (rect.left + rect.width / 2)) / 60, 20)
-            const y2 = Math.min((mousePosition.y - (rect.top + rect.height / 2)) / 60, 20)
-            setBgMousePosition({ x: x2, y: y2 })
-        }
-    }
-
     type Circle = {
         x: number;
         y: number;
@@ -138,16 +90,26 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
         magnetism: number;
     };
 
-    function resizeCanvas() {
-        if (canvasRef.current && context.current) {
-            circles.current.length = 0
-            canvasSize.current.w = canvasContainerRef.current?.offsetWidth || window.innerWidth
-            canvasSize.current.h = canvasContainerRef.current?.offsetHeight || window.innerHeight
-            canvasRef.current.width = canvasSize.current.w * dpr
-            canvasRef.current.height = canvasSize.current.h * dpr
-            canvasRef.current.style.width = `${canvasSize.current.w}px`
-            canvasRef.current.style.height = `${canvasSize.current.h}px`
-            context.current.scale(dpr, dpr)
+    function remapValue(
+        value: number,
+        start1: number,
+        end1: number,
+        start2: number,
+        end2: number,
+    ): number {
+        const remapped =
+            ((value - start1) * (end2 - start2)) / (end1 - start1) + start2
+        return remapped > 0 ? remapped : 0
+    }
+
+    function clearContext() {
+        if (context.current) {
+            context.current.clearRect(
+                0,
+                0,
+                canvasSize.current.w,
+                canvasSize.current.h,
+            )
         }
     }
 
@@ -194,14 +156,16 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
         }
     }
 
-    function clearContext() {
-        if (context.current) {
-            context.current.clearRect(
-                0,
-                0,
-                canvasSize.current.w,
-                canvasSize.current.h,
-            )
+    function resizeCanvas() {
+        if (canvasRef.current && context.current) {
+            circles.current.length = 0
+            canvasSize.current.w = canvasContainerRef.current?.offsetWidth || window.innerWidth
+            canvasSize.current.h = canvasContainerRef.current?.offsetHeight || window.innerHeight
+            canvasRef.current.width = canvasSize.current.w * dpr
+            canvasRef.current.height = canvasSize.current.h * dpr
+            canvasRef.current.style.width = `${canvasSize.current.w}px`
+            canvasRef.current.style.height = `${canvasSize.current.h}px`
+            context.current.scale(dpr, dpr)
         }
     }
 
@@ -214,16 +178,27 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
         }
     }
 
-    function remapValue(
-        value: number,
-        start1: number,
-        end1: number,
-        start2: number,
-        end2: number,
-    ): number {
-        const remapped =
-            ((value - start1) * (end2 - start2)) / (end1 - start1) + start2
-        return remapped > 0 ? remapped : 0
+    function initCanvas() {
+        resizeCanvas()
+        drawParticleBackground()
+    }
+
+    function onMouseMove() {
+        if (canvasRef.current) {
+            const rect = canvasRef.current.getBoundingClientRect()
+            const { w, h } = canvasSize.current
+            const x = mousePosition.x - rect.left - w / 2
+            const y = mousePosition.y - rect.top - h / 2
+            const inside = x < w / 2 && x > -w / 2 && y < h / 2 && y > -h / 2
+            if (inside) {
+                mouse.current.x = x
+                mouse.current.y = y
+            }
+
+            const x2 = Math.min((mousePosition.x - (rect.left + rect.width / 2)) / 60, 20)
+            const y2 = Math.min((mousePosition.y - (rect.top + rect.height / 2)) / 60, 20)
+            setBgMousePosition({ x: x2, y: y2 })
+        }
     }
 
     function animate() {
@@ -272,9 +247,34 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
         window.requestAnimationFrame(animate)
     }
 
+    useEffect(() => {
+        if (canvasRef.current) {
+            context.current = canvasRef.current.getContext("2d")
+        }
+        initCanvas()
+        animate()
+        window.addEventListener("resize", initCanvas)
+
+        return () => {
+            window.removeEventListener("resize", initCanvas)
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [color])
+
+    useEffect(() => {
+        onMouseMove()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [mousePosition.x, mousePosition.y])
+
+    useEffect(() => {
+        initCanvas()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [refresh])
+
     return (
         <div className={className} ref={canvasContainerRef} aria-hidden="true">
             <canvas ref={canvasRef} className="w-full h-full" />
         </div>
     )
+
 }

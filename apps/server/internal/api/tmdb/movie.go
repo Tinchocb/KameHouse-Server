@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 )
 
 // GetMovieDetails fetches a specific Movie by ID with full details.
 func (c *Client) GetMovieDetails(ctx context.Context, id string) (*MovieDetails, error) {
 	cacheKey := fmt.Sprintf("movie_detail_full:%s:%s", id, c.language)
-	if cached, ok := c.cache.Load(cacheKey); ok {
-		return cached.(*MovieDetails), nil
+	if cached, ok := GetCached[*MovieDetails](c, cacheKey); ok {
+		return cached, nil
 	}
 
 	params := url.Values{}
@@ -35,15 +36,15 @@ func (c *Client) GetMovieDetails(ctx context.Context, id string) (*MovieDetails,
 		}
 	}
 
-	c.cache.Store(cacheKey, resp)
+	SetCached(c, cacheKey, resp, 7*24*time.Hour)
 	return resp, nil
 }
 
 // GetMovieDetailsV2 fetches detailed info about a movie, including its franchise collection.
 func (c *Client) GetMovieDetailsV2(ctx context.Context, id int) (MovieDetails, error) {
 	cacheKey := fmt.Sprintf("movie_detail_v2:%d:%s", id, c.language)
-	if cached, ok := c.cache.Load(cacheKey); ok {
-		return cached.(MovieDetails), nil
+	if cached, ok := GetCached[MovieDetails](c, cacheKey); ok {
+		return cached, nil
 	}
 
 	params := url.Values{}
@@ -54,15 +55,15 @@ func (c *Client) GetMovieDetailsV2(ctx context.Context, id int) (MovieDetails, e
 		return MovieDetails{}, fmt.Errorf("tmdb get movie details v2: %w", err)
 	}
 
-	c.cache.Store(cacheKey, *resp)
+	SetCached(c, cacheKey, *resp, 7*24*time.Hour)
 	return *resp, nil
 }
 
 // GetCollection fetches a TMDB franchise/saga collection by its collection ID.
 func (c *Client) GetCollection(ctx context.Context, collectionID int) (CollectionDetails, error) {
 	cacheKey := fmt.Sprintf("collection:%d:%s", collectionID, c.language)
-	if cached, ok := c.cache.Load(cacheKey); ok {
-		return cached.(CollectionDetails), nil
+	if cached, ok := GetCached[CollectionDetails](c, cacheKey); ok {
+		return cached, nil
 	}
 
 	params := url.Values{}
@@ -73,15 +74,15 @@ func (c *Client) GetCollection(ctx context.Context, collectionID int) (Collectio
 		return CollectionDetails{}, fmt.Errorf("tmdb get collection: %w", err)
 	}
 
-	c.cache.Store(cacheKey, *resp)
+	SetCached(c, cacheKey, *resp, 7*24*time.Hour)
 	return *resp, nil
 }
 
 // GetMovieAlternativeTitles gets all alternative titles for a movie.
 func (c *Client) GetMovieAlternativeTitles(ctx context.Context, movieID int) ([]AlternativeTitle, error) {
 	cacheKey := fmt.Sprintf("movie_alt:%d", movieID)
-	if cached, ok := c.cache.Load(cacheKey); ok {
-		return cached.([]AlternativeTitle), nil
+	if cached, ok := GetCached[[]AlternativeTitle](c, cacheKey); ok {
+		return cached, nil
 	}
 
 	params := url.Values{}
@@ -91,7 +92,7 @@ func (c *Client) GetMovieAlternativeTitles(ctx context.Context, movieID int) ([]
 		return nil, fmt.Errorf("tmdb get movie alternative titles: %w", err)
 	}
 
-	c.cache.Store(cacheKey, resp.Results)
+	SetCached(c, cacheKey, resp.Results, 7*24*time.Hour)
 	return resp.Results, nil
 }
 
@@ -154,9 +155,8 @@ func (c *Client) GetAllTitlesForResult(ctx context.Context, result SearchResult)
 //	results, err := client.FindByExternalID(ctx, "81189", ExternalSourceTvdb)
 func (c *Client) FindByExternalID(ctx context.Context, externalID string, source ExternalIDSource) (*FindResponse, error) {
 	cacheKey := fmt.Sprintf("find:%s:%s", source, externalID)
-	if cached, ok := c.cache.Load(cacheKey); ok {
-		v := cached.(FindResponse)
-		return &v, nil
+	if cached, ok := GetCached[FindResponse](c, cacheKey); ok {
+		return &cached, nil
 	}
 
 	params := url.Values{}
@@ -168,6 +168,6 @@ func (c *Client) FindByExternalID(ctx context.Context, externalID string, source
 		return nil, fmt.Errorf("tmdb find by external id (%s=%s): %w", source, externalID, err)
 	}
 
-	c.cache.Store(cacheKey, *resp)
+	SetCached(c, cacheKey, *resp, 7*24*time.Hour)
 	return resp, nil
 }

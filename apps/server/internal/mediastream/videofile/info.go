@@ -111,7 +111,25 @@ type Chapter struct {
 	EndTime float32 `json:"endTime"`
 	// The name of this chapter. This should be a human-readable name that could be presented to the user
 	Name string `json:"name"`
-	// TODO: add a type field for Opening, Credits...
+	// The semantic type of this chapter (e.g. "opening", "ending", "preview", "prologue", "general")
+	Type string `json:"type"`
+}
+
+func ClassifyChapterName(name string) string {
+	lower := strings.ToLower(name)
+	if strings.Contains(lower, "opening") || strings.Contains(lower, " op ") || strings.HasPrefix(lower, "op ") || strings.HasSuffix(lower, " op") || lower == "op" || strings.Contains(lower, "intro") {
+		return "opening"
+	}
+	if strings.Contains(lower, "ending") || strings.Contains(lower, " ed ") || strings.HasPrefix(lower, "ed ") || strings.HasSuffix(lower, " ed") || lower == "ed" || strings.Contains(lower, "outro") || strings.Contains(lower, "credits") {
+		return "ending"
+	}
+	if strings.Contains(lower, "preview") || strings.Contains(lower, "avance") || strings.Contains(lower, "proximo") || strings.Contains(lower, "próximo") {
+		return "preview"
+	}
+	if strings.Contains(lower, "prologue") || strings.Contains(lower, "recap") || strings.Contains(lower, "prólogo") || strings.Contains(lower, "resumen") {
+		return "prologue"
+	}
+	return "general"
 }
 
 type MediaInfoExtractor struct {
@@ -264,10 +282,12 @@ func FfprobeGetInfo(ffprobePath, path, hash string) (*MediaInfo, error) {
 
 	// Get chapters
 	mi.Chapters = lo.Map(data.Chapters, func(chapter *ffprobe.Chapter, _ int) Chapter {
+		titleName := chapter.Title()
 		return Chapter{
 			StartTime: float32(chapter.StartTimeSeconds),
 			EndTime:   float32(chapter.EndTimeSeconds),
-			Name:      chapter.Title(),
+			Name:      titleName,
+			Type:      ClassifyChapterName(titleName),
 		}
 	})
 

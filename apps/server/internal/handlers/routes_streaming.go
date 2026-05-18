@@ -17,6 +17,7 @@ func (h *Handler) RegisterStreamingRoutes(v1 *echo.Group) {
 	v1Mediastream.POST("/shutdown-transcode", h.HandleMediastreamShutdownTranscodeStream)
 	v1Mediastream.GET("/direct/play", h.HandleMediastreamDirectPlay)
 	v1Mediastream.GET("/transcode/*", h.HandleMediastreamTranscode)
+	v1Mediastream.GET("/hls/*", h.HandleMediastreamServeOptimizedStatic)
 	v1Mediastream.GET("/subs", h.HandleMediastreamGetSubtitles)
 	v1Mediastream.GET("/att", h.HandleMediastreamGetAttachments)
 	v1Mediastream.GET("/file", h.HandleMediastreamFile)

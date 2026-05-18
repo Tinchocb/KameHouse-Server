@@ -1,6 +1,6 @@
-// @ts-expect-error
+// @ts-expect-error: Direct import of node_modules react to customize exports
 import * as ReactOriginal from "../node_modules/react";
-// @ts-expect-error
+// @ts-expect-error: Direct export of node_modules react to customize exports
 export * from "../node_modules/react";
 export default ReactOriginal;
 

@@ -29,6 +29,7 @@ export interface PlayerCoreProps {
     backendTracks?: {
         audioTracks: AudioTrack[]
         subtitleTracks: SubtitleTrack[]
+        chapters?: { startTime: number; endTime: number; name: string; type?: string }[]
     }
     initialProgressSeconds?: number
     onProgress?: (seconds: number) => void
@@ -99,6 +100,8 @@ export interface PlayerCore {
         skipTimesOp?: { startTime: number; endTime: number }
         skipTimesEd?: { startTime: number; endTime: number }
         showAutoSkipToast: "intro" | "outro" | null
+        chapters: { startTime: number; endTime: number; name: string; type?: string }[]
+        activeChapter: string | null
     }
     actions: {
         setIsPlaying: (playing: boolean) => void
@@ -134,6 +137,8 @@ export interface PlayerCore {
         handleResume: () => void
         setShowResume: (val: boolean) => void
         setAutoDisableSubtitlesWhenDubbed: (val: boolean) => void
+        skipToNextChapter: () => void
+        skipToPrevChapter: () => void
     }
 }
 
@@ -163,6 +168,10 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const progressInputRef = useRef<HTMLInputElement>(null)
     const timeTextRef = useRef<HTMLSpanElement>(null)
 
+    const hasAutoSkippedIntroRef = useRef(false)
+    const hasAutoSkippedOutroRef = useRef(false)
+    const toastTimerRef = useRef<NodeJS.Timeout | null>(null)
+
     const [isPlaying, setIsPlaying] = useState(false)
     const [currentTime, setCurrentTime] = useState(0)
     const [duration, setDuration] = useState(0)
@@ -181,6 +190,13 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const [showNextEpisode, setShowNextEpisode] = useState(false)
     const [countdownSeconds, setCountdownSeconds] = useState(10)
     const [showAutoSkipToast, setShowAutoSkipToast] = useState<"intro" | "outro" | null>(null)
+    const [activeChapter, setActiveChapter] = useState<string | null>(null)
+
+    const triggerToast = useCallback((type: "intro" | "outro") => {
+        setShowAutoSkipToast(type)
+        if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+        toastTimerRef.current = setTimeout(() => setShowAutoSkipToast(null), 3000)
+    }, [])
 
     const [audioTracks, setAudioTracks] = useState<AudioTrack[]>([])
     const [activeAudioIndex, setActiveAudioIndex] = useState(0)
@@ -252,6 +268,28 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         episodeDuration: duration > 0 ? duration : undefined,
         enabled: !!(malId && episodeNumber),
     })
+
+    const chapters = useMemo(() => {
+        return backendTracks?.chapters || []
+    }, [backendTracks])
+
+    const skipTimesOp = useMemo(() => {
+        if (skipTimes?.op) return skipTimes.op
+        const opChap = chapters.find(c => c.type === "opening" || c.name.toLowerCase().includes("op") || c.name.toLowerCase().includes("opening"))
+        if (opChap) {
+            return { startTime: opChap.startTime, endTime: opChap.endTime }
+        }
+        return undefined
+    }, [skipTimes, chapters])
+
+    const skipTimesEd = useMemo(() => {
+        if (skipTimes?.ed) return skipTimes.ed
+        const edChap = chapters.find(c => c.type === "ending" || c.name.toLowerCase().includes("ed") || c.name.toLowerCase().includes("ending") || c.name.toLowerCase().includes("outro"))
+        if (edChap) {
+            return { startTime: edChap.startTime, endTime: edChap.endTime }
+        }
+        return undefined
+    }, [skipTimes, chapters])
 
     const { mutate: shutdownTranscode } = useMediastreamShutdownTranscodeStream()
 
@@ -421,10 +459,44 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         }
     }, [status])
 
+    const checkManualSkipOverrides = useCallback((target: number) => {
+        const video = videoRef.current
+        if (!video) return
+        const total = video.duration
+        const isTvSeries = !mediaFormat || mediaFormat === "TV" || mediaFormat === "TV_SHORT"
+
+        // Check intro override
+        if (skipTimesOp) {
+            if (target >= skipTimesOp.startTime && target < skipTimesOp.endTime) {
+                hasAutoSkippedIntroRef.current = true
+            }
+        } else if (isTvSeries) {
+            // Decoupled fallback intro window is [0, 120]
+            if (target >= 0 && target < 120) {
+                hasAutoSkippedIntroRef.current = true
+            }
+        }
+
+        // Check outro override
+        if (skipTimesEd) {
+            if (target >= skipTimesEd.startTime && target < skipTimesEd.endTime) {
+                hasAutoSkippedOutroRef.current = true
+            }
+        } else if (isTvSeries && total > 300) {
+            // Decoupled fallback outro window is [total - 120, total - 5]
+            if (target >= total - 120 && target < total - 5) {
+                hasAutoSkippedOutroRef.current = true
+            }
+        }
+    }, [skipTimesOp, skipTimesEd, mediaFormat])
+
     const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
         const video = videoRef.current
         if (!video) return
         const val = parseFloat(e.target.value)
+
+        checkManualSkipOverrides(val)
+
         video.currentTime = val
         triggerControlsVisibility()
     }
@@ -440,9 +512,13 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const skipTime = useCallback((amount: number) => {
         const video = videoRef.current
         if (!video) return
-        video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + amount))
+        const target = Math.max(0, Math.min(video.duration, video.currentTime + amount))
+
+        checkManualSkipOverrides(target)
+
+        video.currentTime = target
         triggerControlsVisibility()
-    }, [triggerControlsVisibility])
+    }, [checkManualSkipOverrides, triggerControlsVisibility])
 
     const skipOpening = useCallback(() => {
         const video = videoRef.current
@@ -450,6 +526,36 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         video.currentTime = Math.min(video.duration, video.currentTime + 85)
         triggerControlsVisibility()
     }, [triggerControlsVisibility])
+
+    const skipToNextChapter = useCallback(() => {
+        const video = videoRef.current
+        if (!video || chapters.length === 0) return
+        const curr = video.currentTime
+        const next = chapters.find(c => c.startTime > curr + 0.5)
+        if (next) {
+            const target = next.startTime
+            checkManualSkipOverrides(target)
+            video.currentTime = target
+            triggerControlsVisibility()
+        }
+    }, [chapters, checkManualSkipOverrides, triggerControlsVisibility])
+
+    const skipToPrevChapter = useCallback(() => {
+        const video = videoRef.current
+        if (!video || chapters.length === 0) return
+        const curr = video.currentTime
+        const prevs = chapters.filter(c => c.startTime < curr - 1.5)
+        let target = 0
+        if (prevs.length > 0) {
+            const prev = prevs[prevs.length - 1]
+            target = prev.startTime
+        } else {
+            target = 0
+        }
+        checkManualSkipOverrides(target)
+        video.currentTime = target
+        triggerControlsVisibility()
+    }, [chapters, checkManualSkipOverrides, triggerControlsVisibility])
 
     const handleVolume = (e: React.ChangeEvent<HTMLInputElement>) => {
         const video = videoRef.current
@@ -525,40 +631,60 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         const video = videoRef.current
         if (video && val) {
             const curr = video.currentTime
+            const isTvSeries = !mediaFormat || mediaFormat === "TV" || mediaFormat === "TV_SHORT"
+            
             // OP / Intro skip
-            if (skipTimes?.op) {
-                const { startTime, endTime } = skipTimes.op
+            if (skipTimesOp) {
+                const { startTime, endTime } = skipTimesOp
                 if (curr >= startTime && curr < endTime) {
                     video.currentTime = endTime
                     setSkipMode(null)
                     return
                 }
-            }
-            // Fallback skip
-            if (!skipTimes?.op && !skipTimes?.ed) {
-                const isTvSeries = !mediaFormat || mediaFormat === "TV" || mediaFormat === "TV_SHORT"
-                if (isTvSeries && curr >= 30 && curr < 120) {
-                    video.currentTime = 120
+            } else if (isTvSeries) {
+                // Fallback intro skip
+                const introTarget = curr < 30 ? 90 : 120
+                if (curr >= 0 && curr < introTarget) {
+                    video.currentTime = introTarget
                     setSkipMode(null)
+                    return
                 }
             }
         }
-    }, [setAutoSkipIntro, skipTimes, mediaFormat])
+    }, [setAutoSkipIntro, skipTimesOp, mediaFormat])
 
     const handleSetAutoSkipOutro = useCallback((val: boolean) => {
         setAutoSkipOutro(val)
         const video = videoRef.current
-        if (video && val && skipTimes?.ed) {
+        if (video && val) {
             const curr = video.currentTime
-            const { startTime, endTime } = skipTimes.ed
-            if (!skipTimes?.op || curr >= skipTimes.op.endTime) {
-                if (curr >= startTime && curr < endTime) {
-                    video.currentTime = endTime
-                    setSkipMode(null)
+            const total = video.duration
+            const isTvSeries = !mediaFormat || mediaFormat === "TV" || mediaFormat === "TV_SHORT"
+
+            if (skipTimesEd) {
+                const { startTime, endTime } = skipTimesEd
+                if (!skipTimesOp || curr >= skipTimesOp.endTime) {
+                    if (curr >= startTime && curr < endTime) {
+                        video.currentTime = endTime
+                        setSkipMode(null)
+                        return
+                    }
+                }
+            } else if (isTvSeries && total > 300) {
+                // Fallback outro skip
+                const outroStart = total - 120
+                const outroEnd = total - 5
+                const opEndTime = skipTimesOp ? skipTimesOp.endTime : 120
+                if (curr >= opEndTime) {
+                    if (curr >= outroStart && curr < outroEnd) {
+                        video.currentTime = outroEnd
+                        setSkipMode(null)
+                        return
+                    }
                 }
             }
         }
-    }, [setAutoSkipOutro, skipTimes])
+    }, [setAutoSkipOutro, skipTimesOp, skipTimesEd, mediaFormat])
 
     const handleSetMarathonMode = useCallback((val: boolean) => {
         setMarathonMode(val)
@@ -598,17 +724,27 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         const video = videoRef.current
         if (!video) return
         const curr = video.currentTime
-        // Jump to end of the currently-active skip segment (not always the OP)
-        if (skipTimes?.op && curr >= skipTimes.op.startTime && curr < skipTimes.op.endTime) {
-            video.currentTime = skipTimes.op.endTime
-        } else if (skipTimes?.ed && curr >= skipTimes.ed.startTime && curr < skipTimes.ed.endTime) {
-            video.currentTime = skipTimes.ed.endTime
-        } else if (curr < 120) {
-            // Fallback: skip to 2 minutes (generic fallback window)
-            video.currentTime = 120
+        const total = video.duration
+        const isTvSeries = !mediaFormat || mediaFormat === "TV" || mediaFormat === "TV_SHORT"
+
+        // Resolve active mode based on current skipMode overlay status
+        const activeMode = skipMode || (curr < 120 ? "intro" : "outro")
+
+        if (activeMode === "intro") {
+            if (skipTimesOp && curr >= skipTimesOp.startTime && curr < skipTimesOp.endTime) {
+                video.currentTime = skipTimesOp.endTime
+            } else if (isTvSeries) {
+                video.currentTime = 120
+            }
+        } else if (activeMode === "outro") {
+            if (skipTimesEd && curr >= skipTimesEd.startTime && curr < skipTimesEd.endTime) {
+                video.currentTime = skipTimesEd.endTime
+            } else if (isTvSeries && total > 300) {
+                video.currentTime = total - 5
+            }
         }
         setSkipMode(null)
-    }, [skipTimes])
+    }, [skipMode, skipTimesOp, skipTimesEd, mediaFormat])
 
     // Keyboard shortcuts hook
     usePlayerShortcuts({
@@ -633,6 +769,8 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         setIsMuted,
         setIsSettingsOpen,
         setShowStats,
+        skipToNextChapter,
+        skipToPrevChapter,
     })
 
     const handleTimeUpdate = useCallback(() => {
@@ -644,6 +782,14 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         
         setCurrentTime(curr)
         setDuration(total)
+
+        if (chapters.length > 0) {
+            const current = chapters.find(c => curr >= c.startTime && curr < c.endTime)
+            const name = current ? current.name : null
+            if (activeChapter !== name) {
+                setActiveChapter(name)
+            }
+        }
 
         if (progressBarRef.current) {
             const percent = total > 0 ? (curr / total) * 100 : 0
@@ -672,12 +818,50 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             lastSentHeartbeatRef.current = now
         }
 
+        // Reset the auto-skip flags when outside the respective windows
+        if (skipTimesOp) {
+            if (curr < skipTimesOp.startTime || curr >= skipTimesOp.endTime) {
+                hasAutoSkippedIntroRef.current = false
+            }
+        } else {
+            const isTvSeries = !mediaFormat || mediaFormat === "TV" || mediaFormat === "TV_SHORT"
+            if (isTvSeries) {
+                if (curr < 0 || curr >= 120) {
+                    hasAutoSkippedIntroRef.current = false
+                }
+            }
+        }
+
+        if (skipTimesEd) {
+            if (curr < skipTimesEd.startTime || curr >= skipTimesEd.endTime) {
+                hasAutoSkippedOutroRef.current = false
+            }
+        } else {
+            const isTvSeries = !mediaFormat || mediaFormat === "TV" || mediaFormat === "TV_SHORT"
+            if (isTvSeries && total > 300) {
+                if (curr < total - 120 || curr >= total - 5) {
+                    hasAutoSkippedOutroRef.current = false
+                }
+            }
+        }
+
+        const isTvSeries = !mediaFormat || mediaFormat === "TV" || mediaFormat === "TV_SHORT"
+
         // ─── OP / Intro window ────────────────────────────────────────────
-        if (skipTimes?.op) {
-            const { startTime, endTime } = skipTimes.op
+        let activeOp = skipTimesOp
+        if (!activeOp && isTvSeries) {
+            // Adaptive fallback intro
+            activeOp = { startTime: 0, endTime: 120 }
+        }
+
+        if (activeOp) {
+            const { startTime, endTime } = activeOp
             const inOpWindow = curr >= startTime && curr < endTime
-            if (autoSkipIntroPref && inOpWindow) {
+            if (autoSkipIntroPref && inOpWindow && !hasAutoSkippedIntroRef.current) {
+                hasAutoSkippedIntroRef.current = true
                 video.currentTime = endTime
+                setSkipMode(null)
+                triggerToast("intro")
                 return
             }
             if (inOpWindow) {
@@ -692,15 +876,25 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         }
 
         // ─── ED / Outro window ────────────────────────────────────────────
-        if (skipTimes?.ed) {
-            const { startTime, endTime } = skipTimes.ed
+        let activeEd = skipTimesEd
+        if (!activeEd && isTvSeries && total > 300) {
+            // Fallback outro: last 120 seconds, ending 5 seconds before absolute end
+            activeEd = { startTime: total - 120, endTime: total - 5 }
+        }
+
+        if (activeEd) {
+            const { startTime, endTime } = activeEd
             const inEdWindow = curr >= startTime && curr < endTime
-            if (autoSkipOutroPref && inEdWindow) {
+            if (autoSkipOutroPref && inEdWindow && !hasAutoSkippedOutroRef.current) {
+                hasAutoSkippedOutroRef.current = true
                 video.currentTime = endTime
+                setSkipMode(null)
+                triggerToast("outro")
                 return
             }
-            // Only show outro if OP window is already past (or absent)
-            if (!skipTimes?.op || curr >= skipTimes.op.endTime) {
+            // Only show outro UI if we are past the intro
+            const opEnd = activeOp ? activeOp.endTime : 120
+            if (curr >= opEnd) {
                 if (inEdWindow) {
                     const remaining = Math.ceil(endTime - curr)
                     const progress = Math.round(((curr - startTime) / (endTime - startTime)) * 100)
@@ -713,30 +907,8 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             }
         }
 
-        // ─── Fallback window (only for TV series, not movies/OVAs) ───────
-        if (!skipTimes?.op && !skipTimes?.ed) {
-            const isTvSeries = !mediaFormat || mediaFormat === "TV" || mediaFormat === "TV_SHORT"
-            if (isTvSeries) {
-                const inFallback = curr >= 30 && curr < 120
-                if (autoSkipIntroPref && inFallback) {
-                    video.currentTime = 120
-                    setSkipMode(null)
-                    return
-                }
-                if (inFallback) {
-                    const remaining = Math.ceil(120 - curr)
-                    const progress = Math.round(((curr - 30) / (120 - 30)) * 100)
-                    if (skipMode !== "intro") setSkipMode("intro")
-                    if (skipRemainingSeconds !== remaining) setSkipRemainingSeconds(remaining)
-                    if (segmentProgress !== progress) setSegmentProgress(progress)
-                } else if (skipMode === "intro") {
-                    setSkipMode(null)
-                }
-            }
-        }
-
         // ─── Next episode trigger ─────────────────────────────────────────
-        const ed = skipTimes?.ed
+        const ed = skipTimesEd
         const edTriggered = ed ? curr >= ed.startTime : false
 
         const shouldShowNext =
@@ -764,7 +936,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
                 source: playableUrl.substring(0, 50) + "...",
             })
         }
-    }, [showStats, lastSentHeartbeatRef, skipTimes, autoSkipIntroPref, autoSkipOutroPref, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, hasNextEpisode, onNextEpisode, onProgress, onTrackingProgress, onSyncProgress, playableUrl, sendHeartbeat, mediaFormat])
+    }, [showStats, lastSentHeartbeatRef, skipTimesOp, skipTimesEd, autoSkipIntroPref, autoSkipOutroPref, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, hasNextEpisode, onNextEpisode, onProgress, onTrackingProgress, onSyncProgress, playableUrl, sendHeartbeat, mediaFormat, chapters, activeChapter, triggerToast])
 
     // Apply playback rate instantly
     useEffect(() => {
@@ -774,64 +946,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         }
     }, [playbackRatePref])
 
-    // Direct, bulletproof forced-skip event listener with 0ms latency
-    useEffect(() => {
-        const video = videoRef.current
-        if (!video) return
 
-        let toastTimer: NodeJS.Timeout | null = null
-        const triggerToast = (type: "intro" | "outro") => {
-            setShowAutoSkipToast(type)
-            if (toastTimer) clearTimeout(toastTimer)
-            toastTimer = setTimeout(() => setShowAutoSkipToast(null), 3000)
-        }
-
-        const checkForcedSkip = () => {
-            const curr = video.currentTime
-            // 1. OP / Intro window
-            if (skipTimes?.op) {
-                const { startTime, endTime } = skipTimes.op
-                if (autoSkipIntroPref && curr >= startTime && curr < endTime) {
-                    video.currentTime = endTime
-                    setSkipMode(null)
-                    triggerToast("intro")
-                    return
-                }
-            }
-            // 2. ED / Outro window
-            if (skipTimes?.ed) {
-                const { startTime, endTime } = skipTimes.ed
-                if (autoSkipOutroPref && curr >= startTime && curr < endTime) {
-                    if (!skipTimes?.op || curr >= skipTimes.op.endTime) {
-                        video.currentTime = endTime
-                        setSkipMode(null)
-                        triggerToast("outro")
-                        return
-                    }
-                }
-            }
-            // 3. Fallback window
-            if (!skipTimes?.op && !skipTimes?.ed) {
-                const isTvSeries = !mediaFormat || mediaFormat === "TV" || mediaFormat === "TV_SHORT"
-                if (isTvSeries && autoSkipIntroPref && curr >= 30 && curr < 120) {
-                    video.currentTime = 120
-                    setSkipMode(null)
-                    triggerToast("intro")
-                }
-            }
-        }
-
-        video.addEventListener("playing", checkForcedSkip)
-        video.addEventListener("seeked", checkForcedSkip)
-        video.addEventListener("timeupdate", checkForcedSkip)
-
-        return () => {
-            video.removeEventListener("playing", checkForcedSkip)
-            video.removeEventListener("seeked", checkForcedSkip)
-            video.removeEventListener("timeupdate", checkForcedSkip)
-            if (toastTimer) clearTimeout(toastTimer)
-        }
-    }, [skipTimes, autoSkipIntroPref, autoSkipOutroPref, mediaFormat])
 
     // Force skip check when preferences change
     useEffect(() => {
@@ -900,8 +1015,10 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             showResume,
             resumeTime,
             autoDisableSubtitlesWhenDubbed,
-            skipTimesOp: skipTimes?.op,
-            skipTimesEd: skipTimes?.ed,
+            skipTimesOp,
+            skipTimesEd,
+            chapters,
+            activeChapter,
         },
         actions: {
             setIsPlaying, setDuration, setIsBuffering, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, skipTime, skipOpening, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, toggleFullscreen, handleSkipIntro, handleTimeUpdate,
@@ -918,6 +1035,8 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             handleResume,
             setShowResume,
             setAutoDisableSubtitlesWhenDubbed: (val: boolean) => { useAppStore.setState(s => ({ ...s, autoDisableSubtitlesWhenDubbed: val })) },
+            skipToNextChapter,
+            skipToPrevChapter,
         }
     }
 }

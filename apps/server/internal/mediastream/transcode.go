@@ -4,6 +4,7 @@ import (
 	"errors"
 	"kamehouse/internal/events"
 	"kamehouse/internal/mediastream/cassette"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -140,6 +141,33 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientId string) e
 	}
 
 	return errors.New("invalid path")
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Optimized
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// ServeEchoOptimizedStream serves pre-transcoded static HLS stream files directly from cacheDir/optimized/<hash>.
+func (r *Repository) ServeEchoOptimizedStream(c echo.Context, clientId string) error {
+	if !r.IsInitialized() {
+		return errors.New("module not initialized")
+	}
+
+	mediaContainer, found := r.playbackManager.clientMediaContainers.Get(clientId)
+	if !found {
+		mediaContainer, found = r.playbackManager.currentMediaContainer.Get()
+		if !found {
+			return errors.New("no file has been loaded")
+		}
+	}
+
+	path := c.Param("*")
+	if path == "" {
+		return errors.New("invalid path")
+	}
+
+	absPath := filepath.Join(r.cacheDir, "optimized", mediaContainer.Hash, path)
+	return c.File(absPath)
 }
 
 // ShutdownTranscodeStream It should be called when unmounting the player (playback is no longer needed).

@@ -12,8 +12,8 @@ import (
 // It filters results to animation genre (16) and Japanese origin when possible.
 func (c *Client) SearchTV(ctx context.Context, query string) ([]SearchResult, error) {
 	// Check cache
-	if cached, ok := c.cache.Load("tv:" + query); ok {
-		return cached.([]SearchResult), nil
+	if cached, ok := GetCached[[]SearchResult](c, "tv:"+query); ok {
+		return cached, nil
 	}
 
 	params := url.Values{}
@@ -63,15 +63,15 @@ func (c *Client) SearchTV(ctx context.Context, query string) ([]SearchResult, er
 		results = results[:100]
 	}
 
-	c.cache.Store("tv:"+query, results)
+	SetCached(c, "tv:"+query, results, 7*24*time.Hour)
 	return results, nil
 }
 
 // SearchMovie searches for anime movies on TMDb.
 func (c *Client) SearchMovie(ctx context.Context, query string) ([]SearchResult, error) {
 	// Check cache
-	if cached, ok := c.cache.Load("movie:" + query); ok {
-		return cached.([]SearchResult), nil
+	if cached, ok := GetCached[[]SearchResult](c, "movie:"+query); ok {
+		return cached, nil
 	}
 
 	params := url.Values{}
@@ -122,7 +122,7 @@ func (c *Client) SearchMovie(ctx context.Context, query string) ([]SearchResult,
 		results = results[:100]
 	}
 
-	c.cache.Store("movie:"+query, results)
+	SetCached(c, "movie:"+query, results, 7*24*time.Hour)
 	return results, nil
 }
 
@@ -140,9 +140,8 @@ func (c *Client) DiscoverTV(ctx context.Context, page *int, sort *string, status
 	if airingAtLesser != nil { al = *airingAtLesser }
 
 	cacheKey := fmt.Sprintf("discover_tv:p=%d:s=%s:st=%s:g=%v:y=%d:ag=%d:al=%d", p, s, st, genres, y, ag, al)
-	if cached, ok := c.cache.Load(cacheKey); ok {
-		resp := cached.(SearchResponse)
-		return resp.Results, resp.TotalPages, nil
+	if cached, ok := GetCached[SearchResponse](c, cacheKey); ok {
+		return cached.Results, cached.TotalPages, nil
 	}
 
 	params := url.Values{}
@@ -185,6 +184,6 @@ func (c *Client) DiscoverTV(ctx context.Context, page *int, sort *string, status
 		return nil, 0, fmt.Errorf("tmdb discover tv: %w", err)
 	}
 
-	c.cache.Store(cacheKey, *resp)
+	SetCached(c, cacheKey, *resp, 7*24*time.Hour)
 	return resp.Results, resp.TotalPages, nil
 }

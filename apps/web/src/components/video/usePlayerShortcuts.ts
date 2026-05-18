@@ -22,6 +22,8 @@ interface UsePlayerShortcutsProps {
     setIsMuted: (m: boolean) => void
     setIsSettingsOpen: React.Dispatch<React.SetStateAction<boolean>>
     setShowStats: React.Dispatch<React.SetStateAction<boolean>>
+    skipToNextChapter?: () => void
+    skipToPrevChapter?: () => void
 }
 
 export function usePlayerShortcuts({
@@ -46,6 +48,8 @@ export function usePlayerShortcuts({
     setIsMuted,
     setIsSettingsOpen,
     setShowStats,
+    skipToNextChapter,
+    skipToPrevChapter,
 }: UsePlayerShortcutsProps) {
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -58,6 +62,18 @@ export function usePlayerShortcuts({
             }
 
             switch (e.key.toLowerCase()) {
+                case "[":
+                    if (skipToPrevChapter) {
+                        e.preventDefault()
+                        skipToPrevChapter()
+                    }
+                    break
+                case "]":
+                    if (skipToNextChapter) {
+                        e.preventDefault()
+                        skipToNextChapter()
+                    }
+                    break
                 case " ":
                 case "k":
                     e.preventDefault()
@@ -172,6 +188,8 @@ export function usePlayerShortcuts({
         setIsMuted,
         setIsSettingsOpen,
         setShowStats,
+        skipToNextChapter,
+        skipToPrevChapter,
         videoRef,
     ])
 }

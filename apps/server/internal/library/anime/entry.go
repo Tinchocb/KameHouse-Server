@@ -481,7 +481,7 @@ func FindDiscrepancy(media *models.LibraryMedia, animeMetadata *metadata.AnimeMe
 	_, aniDBHasS1 := animeMetadata.Episodes["S1"]
 	_, aniDBHasS2 := animeMetadata.Episodes["S2"]
 
-	difference := 0 // TODO: Get expected total episodes if needed here
+	difference := media.TotalEpisodes - animeMetadata.GetMainEpisodeCount()
 	if difference == 0 {
 		return DiscrepancyNone
 	}

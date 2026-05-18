@@ -175,7 +175,11 @@ func (a *App) InitOrRefreshModules() {
 			a.Logger.Warn().Msg("app: No TMDB API key configured — platform features will be limited")
 		}
 		a.Metadata.PlatformRef.Set(tmdb_platform.NewPlatform(tmdbApiKey, tmdbLanguage))
-		a.Metadata.TMDBClient = tmdb.NewClient(tmdbApiKey, tmdbLanguage)
+		tmdbClient := tmdb.NewClient(tmdbApiKey, tmdbLanguage)
+		if a.Database != nil {
+			tmdbClient.SetPersistentCache(&TMDbCacheAdapter{db: a.Database})
+		}
+		a.Metadata.TMDBClient = tmdbClient
 		a.Metadata.ProviderRef.Set(metadata_provider.NewProvider(&metadata_provider.NewProviderImplOptions{
 			Logger:     a.Logger,
 			FileCacher: a.FileCacher,
@@ -290,5 +294,17 @@ func cleanupTranscodeDirs(logger *zerolog.Logger) {
 	if removed > 0 {
 		logger.Info().Int("count", removed).Msg("app: cleaned up old transcode directories")
 	}
+}
+
+type TMDbCacheAdapter struct {
+	db *db.Database
+}
+
+func (t *TMDbCacheAdapter) Get(key string, out interface{}) (bool, error) {
+	return db.GetMetadataCache(t.db, "tmdb-api", key, out)
+}
+
+func (t *TMDbCacheAdapter) Set(key string, value interface{}, ttl time.Duration) error {
+	return db.UpsertMetadataCache(t.db, "tmdb-api", key, value, ttl)
 }
 

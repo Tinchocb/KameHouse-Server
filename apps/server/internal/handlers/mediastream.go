@@ -95,8 +95,7 @@ func (h *Handler) HandleRequestMediastreamMediaContainer(c echo.Context) error {
 	case mediastream.StreamTypeTranscode:
 		mediaContainer, err = h.App.MediastreamRepository.RequestTranscodeStream(b.Path, b.ClientId)
 	case mediastream.StreamTypeOptimized:
-		err = fmt.Errorf("stream type %s not implemented", b.StreamType)
-		//mediaContainer, err = h.App.MediastreamRepository.RequestOptimizedStream(b.Path)
+		mediaContainer, err = h.App.MediastreamRepository.RequestOptimizedStream(b.Path, b.ClientId)
 	default:
 		err = fmt.Errorf("stream type %s not implemented", b.StreamType)
 	}
@@ -133,6 +132,8 @@ func (h *Handler) HandlePreloadMediastreamMediaContainer(c echo.Context) error {
 		err = h.App.MediastreamRepository.RequestPreloadTranscodeStream(b.Path)
 	case mediastream.StreamTypeDirect:
 		err = h.App.MediastreamRepository.RequestPreloadDirectPlay(b.Path)
+	case mediastream.StreamTypeOptimized:
+		err = h.App.MediastreamRepository.RequestPreloadOptimizedStream(b.Path)
 	default:
 		err = fmt.Errorf("stream type %s not implemented", b.StreamType)
 	}
@@ -202,6 +203,14 @@ func (h *Handler) HandleMediastreamShutdownTranscodeStream(c echo.Context) error
 //
 // Serve file
 //
+
+func (h *Handler) HandleMediastreamServeOptimizedStatic(c echo.Context) error {
+	client := c.QueryParam("clientId")
+	if client == "" {
+		client = "1"
+	}
+	return h.App.MediastreamRepository.ServeEchoOptimizedStream(c, client)
+}
 
 func (h *Handler) HandleMediastreamFile(c echo.Context) error {
 	client := c.QueryParam("clientId")

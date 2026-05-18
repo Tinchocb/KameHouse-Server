@@ -1,10 +1,17 @@
 import React from "react"
-import { Play, Pause, ChevronLeft, ChevronRight, Volume2, VolumeX, Maximize, Minimize, SkipForward, PictureInPicture } from "lucide-react"
+import { Play, Pause, ChevronLeft, ChevronRight, Volume2, VolumeX, Maximize, Minimize, SkipForward, PictureInPicture, SkipBack } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 import { TimelineHeatmap, type InsightNode } from "@/components/ui/timeline-heatmap"
 import { PlayerSettingsMenu } from "@/components/ui/PlayerSettingsMenu"
 import type { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
 import type { EpisodeSource } from "@/api/types/unified.types"
+
+export interface Chapter {
+    startTime: number
+    endTime: number
+    name: string
+    type?: string
+}
 
 const formatTime = (secs: number) => {
     if (!secs || isNaN(secs)) return "00:00"
@@ -87,6 +94,12 @@ export interface PlayerBottomBarProps {
     /** AniSkip intervals for rendering visual markers on the timeline */
     skipTimesOp?: { startTime: number; endTime: number }
     skipTimesEd?: { startTime: number; endTime: number }
+
+    // Chapters
+    chapters?: Chapter[]
+    skipToNextChapter?: () => void
+    skipToPrevChapter?: () => void
+    activeChapter?: string | null
 }
 
 export function PlayerBottomBar({
@@ -114,7 +127,18 @@ export function PlayerBottomBar({
     marathonMode = true, onMarathonModeChange,
     skipTimesOp,
     skipTimesEd,
+    chapters = [],
+    skipToNextChapter,
+    skipToPrevChapter,
+    activeChapter,
 }: PlayerBottomBarProps) {
+
+    const SkipNextChapterIcon = () => (
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" className="fill-current">
+            <polygon points="5 4 15 12 5 20 5 4" fill="currentColor"/>
+            <line x1="19" y1="5" x2="19" y2="19" />
+        </svg>
+    )
 
     return (
         <div className={cn(
@@ -156,13 +180,28 @@ export function PlayerBottomBar({
                         />
                     )}
 
+                    {/* Chapter tick markers */}
+                    {duration > 0 && chapters && chapters.map((chapter, idx) => {
+                        if (chapter.startTime <= 0 || chapter.startTime >= duration) return null;
+                        return (
+                            <div
+                                key={idx}
+                                className="absolute top-0 bottom-0 w-[2px] bg-zinc-950 pointer-events-none z-20"
+                                style={{
+                                    left: `${(chapter.startTime / duration) * 100}%`,
+                                }}
+                                title={chapter.name}
+                            />
+                        )
+                    })}
+
                     <div 
                         ref={progressBarRef}
                         className="h-full bg-brand-orange rounded-full transition-all duration-100 relative"
                         style={{ width: '0%' }}
                     >
-                        {/* Thumb indicator - glows and shows on hover */}
-                        <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 rounded-full bg-brand-orange border border-white opacity-0 group-hover/progress:opacity-100 transition-opacity duration-200 shadow-[0_0_8px_rgba(249,115,22,0.6)] pointer-events-none" />
+                        {/* Thumb indicator - sleek and shows on hover with scale transition */}
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 rounded-full bg-brand-orange border-2 border-white opacity-0 group-hover/progress:opacity-100 scale-90 group-hover/progress:scale-100 transition-all duration-200 shadow-md ring-2 ring-zinc-950/40 pointer-events-none" />
                     </div>
                 </div>
                 <input
@@ -207,6 +246,26 @@ export function PlayerBottomBar({
                         <ChevronRight className="w-4 h-4" />
                     </button>
 
+                    {/* Chapter Prev/Next navigation */}
+                    {chapters && chapters.length > 0 && (
+                        <div className="flex items-center gap-0.5 border-l border-white/10 pl-2 ml-1">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); skipToPrevChapter?.(); }}
+                                aria-label="Capítulo anterior"
+                                title="Capítulo anterior [[ ]"
+                                className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-7 h-7">
+                                <SkipBack className="w-3.5 h-3.5 fill-current" />
+                            </button>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); skipToNextChapter?.(); }}
+                                aria-label="Siguiente capítulo"
+                                title="Siguiente capítulo [ ] ]"
+                                className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-7 h-7">
+                                <SkipNextChapterIcon />
+                            </button>
+                        </div>
+                    )}
+
                     {/* Volume Control */}
                     <div className="hidden md:flex items-center gap-1 group/volume">
                         <button
@@ -237,6 +296,14 @@ export function PlayerBottomBar({
                         <span ref={timeTextRef} className="text-zinc-200">00:00</span>
                         <span className="text-zinc-600">/</span>
                         <span className="text-zinc-400">{formatTime(duration)}</span>
+                        {activeChapter && (
+                            <>
+                                <span className="text-zinc-600 ml-1">•</span>
+                                <span className="text-brand-orange font-bold uppercase tracking-wider text-[10px] ml-1 truncate max-w-[150px] md:max-w-[240px]" title={activeChapter}>
+                                    {activeChapter}
+                                </span>
+                            </>
+                        )}
                     </div>
                 </div>
 

@@ -51,9 +51,11 @@ export function DeferredImage(props: DeferredImageProps) {
 
     useEffect(() => {
         if (!src) {
-            setHasError(true);
-            setIsLoaded(true);
-            setIsIntersecting(true);
+            Promise.resolve().then(() => {
+                setHasError(true);
+                setIsLoaded(true);
+                setIsIntersecting(true);
+            });
             return;
         }
 

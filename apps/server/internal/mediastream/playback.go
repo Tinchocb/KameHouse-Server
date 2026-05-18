@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"kamehouse/internal/mediastream/videofile"
 	"kamehouse/internal/util/result"
+	"os"
+	"path/filepath"
 
 	"github.com/rs/zerolog"
 	"github.com/samber/mo"
@@ -108,10 +110,10 @@ func (p *PlaybackManager) PreloadPlayback(filepath string, streamType StreamType
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func (p *PlaybackManager) newMediaContainer(filepath string, streamType StreamType) (ret *MediaContainer, err error) {
-	p.logger.Debug().Str("filepath", filepath).Any("type", streamType).Msg("mediastream: New media container requested")
+func (p *PlaybackManager) newMediaContainer(filePath string, streamType StreamType) (ret *MediaContainer, err error) {
+	p.logger.Debug().Str("filepath", filePath).Any("type", streamType).Msg("mediastream: New media container requested")
 	// Get the hash of the file.
-	hash, err := videofile.GetHashFromPath(filepath)
+	hash, err := videofile.GetHashFromPath(filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -128,14 +130,14 @@ func (p *PlaybackManager) newMediaContainer(filepath string, streamType StreamTy
 
 	// Get the media information of the file.
 	ret = &MediaContainer{
-		Filepath:   filepath,
+		Filepath:   filePath,
 		Hash:       hash,
 		StreamType: streamType,
 	}
 
 	p.logger.Debug().Msg("mediastream: Extracting media info")
 
-	ret.MediaInfo, err = p.repository.mediaInfoExtractor.GetInfo(p.repository.settings.MustGet().FfprobePath, filepath)
+	ret.MediaInfo, err = p.repository.mediaInfoExtractor.GetInfo(p.repository.settings.MustGet().FfprobePath, filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +145,7 @@ func (p *PlaybackManager) newMediaContainer(filepath string, streamType StreamTy
 	p.logger.Debug().Msg("mediastream: Extracted media info, extracting attachments")
 
 	// Extract the attachments from the file.
-	err = videofile.ExtractAttachment(p.repository.settings.MustGet().FfmpegPath, filepath, hash, ret.MediaInfo, p.repository.cacheDir, p.logger)
+	err = videofile.ExtractAttachment(p.repository.settings.MustGet().FfmpegPath, filePath, hash, ret.MediaInfo, p.repository.cacheDir, p.logger)
 	if err != nil {
 		p.logger.Error().Err(err).Msg("mediastream: Failed to extract attachments")
 		return nil, err
@@ -160,9 +162,14 @@ func (p *PlaybackManager) newMediaContainer(filepath string, streamType StreamTy
 		// Live transcode the file.
 		streamUrl = "/api/v1/mediastream/transcode/master.m3u8"
 	case StreamTypeOptimized:
-		// TODO: Check if the file is already transcoded when the feature is implemented.
-		// ...
-		streamUrl = "/api/v1/mediastream/hls/master.m3u8"
+		optimizedPath := filepath.Join(p.repository.cacheDir, "optimized", hash, "master.m3u8")
+		if _, err := os.Stat(optimizedPath); err == nil {
+			streamUrl = "/api/v1/mediastream/hls/master.m3u8"
+		} else {
+			// Fall back gracefully to transcode stream
+			ret.StreamType = StreamTypeTranscode
+			streamUrl = "/api/v1/mediastream/transcode/master.m3u8"
+		}
 	}
 
 	// TODO: Add metadata to the media container.

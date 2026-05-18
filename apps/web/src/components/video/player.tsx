@@ -53,11 +53,19 @@ export function VideoPlayer(props: VideoPlayerProps) {
     )
 }
 
+export interface Chapter {
+    startTime: number
+    endTime: number
+    name: string
+    type?: string
+}
+
 interface OrchestratorProps extends VideoPlayerProps {
     playableUrl?: string
     backendTracks?: {
         audioTracks: AudioTrack[]
         subtitleTracks: SubtitleTrack[]
+        chapters: Chapter[]
     }
 }
 
@@ -97,6 +105,12 @@ function VideoPlayerOrchestrator(props: OrchestratorProps) {
                 default: s.isDefault,
                 forced: s.isForced,
                 url: `/api/v1/mediastream/subtitles?path=${encodeURIComponent(props.streamUrl)}&trackIndex=${s.index ?? i}&clientId=${clientId}`
+            })) || [],
+            chapters: data.mediaInfo.chapters?.map((c: any) => ({
+                startTime: c.startTime || 0,
+                endTime: c.endTime || 0,
+                name: c.name || "",
+                type: c.type
             })) || []
         }
     }, [data, props.streamUrl, clientId])

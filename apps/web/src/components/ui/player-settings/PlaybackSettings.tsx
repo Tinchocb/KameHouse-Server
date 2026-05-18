@@ -31,18 +31,21 @@ function ToggleRow({ label, enabled, onChange }: { label: string; enabled: boole
         <button
             onClick={handleToggle}
             className={cn(
-                "flex items-center justify-between w-full px-6 py-3 transition-all",
+                "flex items-center justify-between w-full px-6 py-3 transition-all duration-300 ease-out group text-left relative overflow-hidden",
                 enabled ? "text-white" : "text-zinc-500 hover:text-zinc-300"
             )}
         >
-            <span className="text-[11px] font-black uppercase tracking-widest text-left">{label}</span>
+            {/* Hover visual accent indicator on the left edge */}
+            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-0 bg-brand-orange group-hover:h-1/2 transition-all duration-300 ease-out rounded-r-md" />
+
+            <span className="text-[11px] font-black uppercase tracking-widest text-left group-hover:translate-x-1.5 transition-transform duration-300 ease-out">{label}</span>
             <div className={cn(
-                "w-10 h-5 rounded-full relative transition-all duration-300 shrink-0 ml-4",
-                enabled ? "bg-white" : "bg-white/10"
+                "w-9 h-5 rounded-full relative transition-all duration-300 shrink-0 ml-4 border border-white/5",
+                enabled ? "bg-brand-orange" : "bg-white/10"
             )}>
                 <div className={cn(
-                    "absolute top-1 w-3 h-3 rounded-full transition-all duration-300",
-                    enabled ? "right-1 bg-black" : "left-1 bg-zinc-600"
+                    "absolute top-[3px] w-3 h-3 rounded-full transition-all duration-300 shadow-sm",
+                    enabled ? "left-[21px] bg-white" : "left-[3px] bg-zinc-400"
                 )} />
             </div>
         </button>
@@ -78,20 +81,23 @@ export function PlaybackSettings({
                 <span className="text-[9px] font-black uppercase tracking-[0.4em] text-zinc-600">Velocidad</span>
             </div>
             <div className="flex flex-row px-6 gap-2 flex-wrap mb-6">
-                {[0.5, 0.75, 1, 1.25, 1.5, 2].map((rate) => (
-                    <button
-                        key={rate}
-                        onClick={() => onPlaybackRateChange(rate)}
-                        className={cn(
-                            "flex-1 min-w-[50px] py-2 text-center text-[10px] font-black tracking-widest transition-all border",
-                            playbackRate === rate
-                                ? "bg-white text-black border-white"
-                                : "text-zinc-500 border-white/10 hover:border-white/40 hover:text-white"
-                        )}
-                    >
-                        {rate}x
-                    </button>
-                ))}
+                {[0.5, 0.75, 1, 1.25, 1.5, 2].map((rate) => {
+                    const isActive = playbackRate === rate
+                    return (
+                        <button
+                            key={rate}
+                            onClick={() => onPlaybackRateChange(rate)}
+                            className={cn(
+                                "flex-1 min-w-[50px] py-2 text-center text-[10px] font-black tracking-widest transition-all duration-300 border rounded-lg active:scale-95",
+                                isActive
+                                    ? "bg-brand-orange text-white border-brand-orange shadow-md shadow-brand-orange/15"
+                                    : "text-zinc-500 border-white/5 hover:border-white/20 hover:text-white bg-white/[0.02]"
+                            )}
+                        >
+                            {rate}x
+                        </button>
+                    )
+                })}
             </div>
 
             {/* Auto-skip section */}

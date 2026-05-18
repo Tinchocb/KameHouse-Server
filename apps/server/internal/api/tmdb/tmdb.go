@@ -14,13 +14,20 @@ import (
 	httputil "kamehouse/internal/util/http"
 )
 
+// Cache defines the interface for persistent caching of TMDb API responses.
+type Cache interface {
+	Get(key string, out interface{}) (bool, error)
+	Set(key string, value interface{}, ttl time.Duration) error
+}
+
 // Client handles TMDb API requests with caching using the new EdgeHTTPClient.
 type Client struct {
-	bearerToken string
-	language    string
-	cache       sync.Map // simple in-memory cache for search results
-	rateLimiter chan struct{}
-	httpClient  *http.Client
+	bearerToken     string
+	language        string
+	cache           sync.Map // simple in-memory cache for search results
+	persistentCache Cache    // persistent SQL-backed cache
+	rateLimiter     chan struct{}
+	httpClient      *http.Client
 }
 
 // language is a BCP 47 language tag (e.g. "es-MX", "en-US"). If empty, defaults to "es-MX".
@@ -35,6 +42,36 @@ func NewClient(bearerToken string, language ...string) *Client {
 		rateLimiter: make(chan struct{}, 4), // max 4 concurrent requests
 		httpClient:  httputil.NewFastClient(),
 	}
+}
+
+// SetPersistentCache assigns a persistent cache backend to the client.
+func (c *Client) SetPersistentCache(pc Cache) {
+	c.persistentCache = pc
+}
+
+// GetCached attempts to retrieve a value from the persistent cache first, falling back to the in-memory cache.
+func GetCached[T any](c *Client, key string) (T, bool) {
+	var zero T
+	if c.persistentCache != nil {
+		var val T
+		if ok, err := c.persistentCache.Get(key, &val); ok && err == nil {
+			return val, true
+		}
+	}
+	if cached, ok := c.cache.Load(key); ok {
+		if val, assertOk := cached.(T); assertOk {
+			return val, true
+		}
+	}
+	return zero, false
+}
+
+// SetCached stores a value in both the in-memory cache and the persistent cache (if available).
+func SetCached[T any](c *Client, key string, value T, ttl time.Duration) {
+	if c.persistentCache != nil {
+		_ = c.persistentCache.Set(key, value, ttl)
+	}
+	c.cache.Store(key, value)
 }
 
 // GetClient returns the client instance itself (provided for compatibility/easier access)

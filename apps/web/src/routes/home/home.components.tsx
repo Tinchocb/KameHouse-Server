@@ -58,24 +58,28 @@ export function SectionLabel({
 }) {
     return (
         <div className="px-6 md:px-12 lg:px-20 mb-2">
-            <div className="flex items-end gap-6 group/label cursor-default">
+            <div className="flex items-end gap-6 group/label cursor-default w-fit">
                 {index && (
-                    <span className="font-bebas text-5xl md:text-6xl text-white/5 transition-colors group-hover/label:text-primary/10 leading-[0.8] -mb-1">
+                    <span className="font-bebas text-5xl md:text-6xl text-white/[0.03] transition-all duration-500 group-hover/label:text-brand-orange/10 group-hover/label:scale-105 leading-[0.8] -mb-1 select-none">
                         {typeof index === 'number' ? index.toString().padStart(2, '0') : index}
                     </span>
                 )}
                 
-                <div className="flex flex-col gap-1.5">
-                    <div className="flex items-center gap-3">
-                        <Icon className="h-4 w-4 text-primary opacity-80" strokeWidth={2.5} />
-                        <span className="text-[0.65rem] font-black uppercase tracking-[0.3em] text-zinc-500">
+                <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2.5">
+                        <div className="flex items-center justify-center p-1 rounded bg-brand-orange/10 border border-brand-orange/15 shadow-sm shadow-brand-orange/5">
+                            <Icon className="h-3.5 w-3.5 text-brand-orange" strokeWidth={2.5} />
+                        </div>
+                        <span className="text-[0.6rem] font-black uppercase tracking-[0.35em] text-zinc-500 group-hover/label:text-zinc-400 transition-colors duration-300">
                             DESCUBRE
                         </span>
                     </div>
-                    <div className="flex items-end gap-4">
-                        <h2 className="text-3xl md:text-4xl font-bebas tracking-wide text-white/90 leading-[0.9]">
+                    <div className="flex flex-col gap-1">
+                        <h2 className="text-3xl md:text-4xl font-bebas tracking-wide text-white/95 leading-[0.9] group-hover/label:text-white transition-colors duration-300 uppercase">
                             {label}
                         </h2>
+                        {/* Dynamic underlining micro-animation */}
+                        <div className="h-[2px] w-8 bg-brand-orange/20 rounded-full group-hover/label:w-full group-hover/label:bg-brand-orange/60 transition-all duration-500 ease-out" />
                     </div>
                 </div>
             </div>
