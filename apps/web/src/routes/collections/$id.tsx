@@ -1,8 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useGetMediaCollection } from "@/api/hooks/collections.hooks"
+import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import React, { useMemo, useRef } from "react"
 import { EmptyState } from "@/components/shared/empty-state"
-import { FaPlay, FaCalendar, FaTag, FaChevronLeft } from "react-icons/fa"
+import { FaPlay, FaCalendar, FaTag, FaChevronLeft, FaStar, FaCheckCircle } from "react-icons/fa"
 import { cn } from "@/components/ui/core/styling"
 import { DynamicBackdrop } from "@/components/shared/dynamic-backdrop"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
@@ -17,7 +18,13 @@ function CollectionDetailPage() {
     const { id } = Route.useParams()
     const navigate = useNavigate()
     const { data: collection, isLoading, error } = useGetMediaCollection(Number(id))
+    const { data: libraryCollection } = useGetLibraryCollection()
     const { setBackdropUrl } = useIntelligenceStore()
+
+    const libraryEntries = useMemo(() => {
+        if (!libraryCollection?.lists) return []
+        return libraryCollection.lists.flatMap(list => list.entries || [])
+    }, [libraryCollection])
 
     const containerRef = useRef<HTMLDivElement>(null)
     const timelineRef = useRef<HTMLDivElement>(null)
@@ -189,6 +196,17 @@ function CollectionDetailPage() {
                               })
                             : "Fecha Desconocida"
 
+                        const libraryEntry = libraryEntries.find(e => e.mediaId === part.id)
+                        const hasLocal = libraryEntry ? (libraryEntry.libraryData?.mainFileCount || 0) > 0 : false
+                        const isCompleted = libraryEntry ? (libraryEntry.listData?.status === "COMPLETED" || (libraryEntry.listData?.progress || 0) >= (libraryEntry.media?.totalEpisodes || 0)) : false
+                        const isCurrent = libraryEntry ? libraryEntry.listData?.status === "CURRENT" : false
+                        const isPlanning = libraryEntry ? libraryEntry.listData?.status === "PLANNING" : false
+                        const userScore = libraryEntry?.listData?.score || 0
+
+                        const progress = libraryEntry?.listData?.progress || 0
+                        const totalEp = libraryEntry?.media?.totalEpisodes || 1
+                        const progressPercent = Math.min(100, Math.max(0, (progress / totalEp) * 100))
+
                         return (
                             <div
                                 key={part.id}
@@ -205,12 +223,27 @@ function CollectionDetailPage() {
                                     >
                                         {/* Entry Poster */}
                                         {part.posterPath && (
-                                            <div className="shrink-0 w-28 md:w-32 bg-black border border-white/5 group-hover:border-white/20 overflow-hidden transition-all duration-500 aspect-[2/3]">
+                                            <div className="shrink-0 w-28 md:w-32 bg-black border border-white/5 group-hover:border-white/20 overflow-hidden transition-all duration-500 aspect-[2/3] relative">
                                                 <img
                                                     src={part.posterPath}
                                                     alt={part.title}
                                                     className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-transform duration-500 group-hover:scale-105"
                                                 />
+                                                
+                                                {/* LOC Badge */}
+                                                {hasLocal && (
+                                                    <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/75 backdrop-blur-md border border-green-500/40 text-[7px] font-black text-green-400 tracking-wider shadow-[0_0_10px_rgba(34,197,94,0.2)]">
+                                                        LOC
+                                                    </div>
+                                                )}
+
+                                                {/* Score Badge */}
+                                                {userScore > 0 && (
+                                                    <div className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded bg-black/75 backdrop-blur-md border border-yellow-500/40 text-[7px] font-black text-yellow-500 tracking-wider flex items-center gap-1 shadow-md">
+                                                        <FaStar className="w-2 h-2" />
+                                                        <span>{userScore}</span>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
 
@@ -221,6 +254,30 @@ function CollectionDetailPage() {
                                                     <span className="flex items-center gap-1.5"><FaCalendar className="text-[8px]" /> {formattedDate}</span>
                                                     <span>•</span>
                                                     <span className="flex items-center gap-1.5"><FaTag className="text-[8px]" /> {part.format || "N/A"}</span>
+                                                    {isCompleted && (
+                                                        <>
+                                                            <span>•</span>
+                                                            <span className="flex items-center gap-1 text-green-400 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20 shadow-sm">
+                                                                <FaCheckCircle className="text-[8px]" /> COMPLETADO
+                                                            </span>
+                                                        </>
+                                                    )}
+                                                    {isCurrent && (
+                                                        <>
+                                                            <span>•</span>
+                                                            <span className="flex items-center gap-1 text-brand-orange bg-brand-orange/10 px-2 py-0.5 rounded border border-brand-orange/20 shadow-sm animate-pulse">
+                                                                VIENDO ({progress}/{totalEp})
+                                                            </span>
+                                                        </>
+                                                    )}
+                                                    {isPlanning && (
+                                                        <>
+                                                            <span>•</span>
+                                                            <span className="flex items-center gap-1 text-zinc-400 bg-zinc-800/40 px-2 py-0.5 rounded border border-zinc-700/30">
+                                                                PLANIFICADO
+                                                            </span>
+                                                        </>
+                                                    )}
                                                 </div>
                                                 <h3 className="text-xl md:text-2xl font-black text-white leading-tight uppercase tracking-tight group-hover:text-yellow-500 transition-colors">
                                                     {part.title}
@@ -230,20 +287,46 @@ function CollectionDetailPage() {
                                                         {part.overview}
                                                     </p>
                                                 )}
+
+                                                {/* Watch progress bar for CURRENT */}
+                                                {isCurrent && progressPercent > 0 && (
+                                                    <div className="pt-2 space-y-1">
+                                                        <div className="flex justify-between items-center text-[8px] font-bold tracking-widest text-zinc-400 uppercase">
+                                                            <span>PROGRESO VISTA</span>
+                                                            <span>{Math.round(progressPercent)}%</span>
+                                                        </div>
+                                                        <div className="h-1 w-full bg-zinc-900 rounded-full overflow-hidden border border-white/5">
+                                                            <div 
+                                                                className="h-full bg-gradient-to-r from-brand-orange to-white rounded-full transition-all duration-500" 
+                                                                style={{ width: `${progressPercent}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
 
                                             {/* Action Button */}
                                             <button
                                                 onClick={() => {
-                                                    // Navigate to detail page unifingly using seriesId
-                                                    navigate({
-                                                        to: "/series/$seriesId",
-                                                        params: { seriesId: String(part.id) },
-                                                    })
+                                                    const isMovie = part.format === "MOVIE" || part.format === "SPECIAL" || part.format === "OVA" || libraryEntry?.media?.format === "MOVIE"
+                                                    if (isMovie) {
+                                                        navigate({
+                                                            to: "/movies/$movieId",
+                                                            params: { movieId: String(part.id) },
+                                                        })
+                                                    } else {
+                                                        navigate({
+                                                            to: "/series/$seriesId",
+                                                            params: { seriesId: String(part.id) },
+                                                        })
+                                                    }
                                                 }}
-                                                className="self-start flex items-center gap-2 py-2.5 px-5 bg-white text-black text-[9px] font-black uppercase tracking-[0.2em] hover:bg-yellow-500 transition-all duration-200"
+                                                className={cn(
+                                                    "self-start flex items-center gap-2 py-2.5 px-5 bg-white text-black text-[9px] font-black uppercase tracking-[0.2em] transition-all duration-200",
+                                                    isCurrent ? "bg-brand-orange text-white hover:bg-brand-orange/80 shadow-[0_4px_20px_rgba(255,107,0,0.2)]" : "hover:bg-yellow-500"
+                                                )}
                                             >
-                                                <FaPlay className="text-[8px]" /> VER DETALLES
+                                                <FaPlay className="text-[8px]" /> {isCurrent ? "REANUDAR PELÍCULA" : "VER DETALLES"}
                                             </button>
                                         </div>
                                     </div>

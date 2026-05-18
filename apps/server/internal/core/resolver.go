@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"kamehouse/internal/database/db"
+	"kamehouse/internal/database/models"
 	"github.com/rs/zerolog"
 )
 
@@ -72,7 +73,15 @@ func (r *UnifiedResolver) ResolveUnifiedMedia(ctx context.Context, mediaID strin
 	// Resolve media title from the database (best-effort).
 	title := fmt.Sprintf("Episode %d", episode)
 	if id < 0 {
-		if libMedia, err := db.GetLibraryMediaByTmdbId(r.db, -id); err == nil && libMedia != nil {
+		var libMedia *models.LibraryMedia
+		var err error
+		tmdbId := -id
+		if tmdbId >= 1_000_000 {
+			libMedia, err = db.GetLibraryMediaByTmdbIdAndType(r.db, tmdbId-1_000_000, "MOVIE")
+		} else {
+			libMedia, err = db.GetLibraryMediaByTmdbIdAndType(r.db, tmdbId, "SHOW")
+		}
+		if err == nil && libMedia != nil {
 			switch {
 			case libMedia.TitleEnglish != "":
 				title = libMedia.TitleEnglish

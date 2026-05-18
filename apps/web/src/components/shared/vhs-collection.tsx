@@ -64,12 +64,20 @@ const VhsTapeCard = memo(({
     const baseColor = item.color || getSeriesColor(item.title)
     const progress = item.episodesCount ? (item.watchedCount || 0) / item.episodesCount * 100 : 0
 
+    // Dynamic HSL status accent glowing stripe colors
+    const statusAccentClass = 
+        item.status === "Completado" ? "bg-[#10b981] shadow-[0_0_12px_rgba(16,185,129,0.7)]" :
+        item.status === "En progreso" ? "bg-sky-500 shadow-[0_0_12px_rgba(14,165,233,0.7)]" :
+        "bg-brand-orange shadow-[0_0_10px_rgba(255,107,0,0.5)]"
+
     return (
         <div 
             onClick={onClick}
             className={cn(
-                "h-full flex flex-col cursor-pointer border-r-[0.5px] border-black/40 transition-all duration-300 ease-out min-w-[100px] sm:min-w-[140px] overflow-hidden shrink-0",
-                isSelected ? "flex-[2.5] min-w-[280px] sm:min-w-[360px]" : "flex-1"
+                "h-full flex flex-col cursor-pointer border-r-[0.5px] border-black/40 transition-all duration-500 ease-out min-w-[100px] sm:min-w-[140px] overflow-hidden shrink-0 relative rounded-t-md",
+                isSelected 
+                    ? "flex-[2.5] min-w-[280px] sm:min-w-[360px] -translate-y-8 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.9)] z-30" 
+                    : "flex-1 translate-y-0 hover:-translate-y-2 hover:shadow-[0_15px_30px_-10px_rgba(0,0,0,0.7)] z-10"
             )}
         >
             {/* 1. .vhs-poster */}
@@ -155,9 +163,12 @@ const VhsTapeCard = memo(({
                 </div>
             </div>
 
+            {/* Status Accent Laser Strip */}
+            <div className={cn("h-[4px] w-full shrink-0 relative z-10 transition-all duration-300", statusAccentClass)} />
+
             {/* 2. .vhs-label (Simplified) */}
             <div 
-                className="py-3 px-3 flex flex-col gap-1.5 shrink-0 border-t border-white/10"
+                className="py-3 px-3 flex flex-col gap-1.5 shrink-0"
                 style={{ backgroundColor: baseColor }}
             >
                 <div className="flex items-center justify-between">
@@ -195,8 +206,8 @@ export const VhsCollection = memo(({
 
     return (
         <div className={cn("w-full h-full flex flex-col bg-[#0d0f14] overflow-hidden min-h-0", className)}>
-            {/* Vhs Row */}
-            <div className="flex-1 w-full flex flex-row items-stretch min-h-0 overflow-x-auto no-scrollbar">
+            {/* Vhs Row with Top/Bottom padding to prevent slide-up clip */}
+            <div className="flex-1 w-full flex flex-row items-stretch min-h-0 overflow-x-auto no-scrollbar pt-10 pb-4 px-4 gap-0">
                 {items.map((item) => (
                     <VhsTapeCard
                         key={item.id}

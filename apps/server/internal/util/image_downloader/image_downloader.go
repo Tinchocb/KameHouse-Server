@@ -18,6 +18,8 @@ import (
 	"sync"
 	"time"
 
+	httputil "kamehouse/internal/util/http"
+
 	"github.com/goccy/go-json"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
@@ -36,6 +38,7 @@ type (
 		registry      Registry
 		cancelChannel chan struct{}
 		logger        *zerolog.Logger
+		client        *http.Client
 		actionMu      sync.Mutex
 		registryMu    sync.Mutex
 	}
@@ -67,6 +70,7 @@ func NewImageDownloader(downloadDir string, logger *zerolog.Logger) *ImageDownlo
 			content:      &RegistryContent{},
 		},
 		cancelChannel: make(chan struct{}),
+		client:        httputil.NewFastClient(),
 	}
 }
 
@@ -222,8 +226,10 @@ func (id *ImageDownloader) downloadImage(url string) {
 	imgID := uuid.NewString()
 
 	// Download the image
-	client := &http.Client{Timeout: 15 * time.Second}
-	resp, err := client.Get(url)
+	if id.client == nil {
+		id.client = httputil.NewFastClient()
+	}
+	resp, err := id.client.Get(url)
 	if err != nil {
 		id.logger.Error().Err(err).Msgf("image downloader: Failed to download image from URL %s", url)
 		return

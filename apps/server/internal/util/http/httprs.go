@@ -27,7 +27,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 )
 
 // HttpReadSeeker implements io.ReadSeeker for HTTP responses
@@ -58,7 +57,7 @@ func NewHttpReadSeeker(resp *http.Response) *HttpReadSeeker {
 
 	return &HttpReadSeeker{
 		url:        url,
-		client:     http.DefaultClient,
+		client:     NewFastClient(),
 		resp:       resp,
 		offset:     0,
 		size:       size,
@@ -68,7 +67,7 @@ func NewHttpReadSeeker(resp *http.Response) *HttpReadSeeker {
 }
 
 func NewHttpReadSeekerFromURL(url string) (*HttpReadSeeker, error) {
-	client := &http.Client{Timeout: 15 * time.Second}
+	client := NewFastClient()
 	resp, err := client.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("httprs: failed to get URL %s: %w", url, err)

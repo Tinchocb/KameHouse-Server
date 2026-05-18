@@ -25,7 +25,6 @@ import {
     HomeSeriesSection,
     HomeMoviesSection,
     HomeRecentBentoSection,
-    HomeFullLibrarySection,
     HomeVibeFilteredSection
 } from "./-home.sections"
 import { VibePicker } from "./-vibe-picker"
@@ -45,13 +44,6 @@ function HomePage() {
 
     const isLoading = isCollectionLoading || isIntelligenceLoading || isCwLoading
 
-    const handleNavigate = React.useCallback(
-        (mediaId: number) => {
-            navigate({ to: "/series/$seriesId", params: { seriesId: String(mediaId) } })
-        },
-        [navigate],
-    )
-
     // ── Data Processing ────────────────────────────────────────────────────────
     
     const allEntries = React.useMemo(() => {
@@ -59,11 +51,25 @@ function HomePage() {
         return collection.lists.flatMap(list => list.entries ?? [])
     }, [collection])
 
+    const handleNavigate = React.useCallback(
+        (mediaId: number) => {
+            const entry = allEntries.find(e => e.mediaId === mediaId)
+            const isMovie = entry?.media?.format === "MOVIE" || entry?.media?.format === "SPECIAL" || entry?.media?.format === "OVA" || (entry?.mediaId && entry.mediaId >= 1000000)
+            if (isMovie) {
+                navigate({ to: "/movies/$movieId", params: { movieId: String(mediaId) } })
+            } else {
+                navigate({ to: "/series/$seriesId", params: { seriesId: String(mediaId) } })
+            }
+        },
+        [navigate, allEntries],
+    )
+
     const heroItems = React.useMemo(() => {
         if (!collection?.continueWatchingList && !allEntries.length) return []
         
         // Priority: Continue Watching episodes
         const cwHero = (collection?.continueWatchingList ?? [])
+            .filter(ep => ep && ep.baseAnime)
             .slice(0, 3)
             .map(ep => mapToHeroItem(ep.baseAnime!, handleNavigate, ep.episodeMetadata?.summary))
 
@@ -71,46 +77,63 @@ function HomePage() {
 
         // Fallback: Recent additions
         return allEntries
+            .filter(entry => entry && entry.media)
             .slice(0, 3)
             .map(entry => mapToHeroItem(entry.media!, handleNavigate))
     }, [collection, allEntries, handleNavigate])
 
     const continueWatchingItems = React.useMemo(() => {
-        return (cwData || []).map(entry => 
-            mapEpisodeToMediaCard(entry.episode, entry.media, watchHistory, handleNavigate)
-        )
+        return (cwData || [])
+            .filter(entry => entry && entry.episode && entry.media)
+            .map(entry => 
+                mapEpisodeToMediaCard(entry.episode, entry.media, watchHistory, handleNavigate)
+            )
     }, [cwData, watchHistory, handleNavigate])
 
     const seriesItems = React.useMemo(() => {
         return allEntries
-            .filter(e => e.media?.format === "TV")
+            .filter(e => e && e.media && e.media.format === "TV")
             .map(e => mapLibraryEntryToMediaCard(e, handleNavigate))
     }, [allEntries, handleNavigate])
 
     const movieItems = React.useMemo(() => {
         return allEntries
-            .filter(e => ["MOVIE", "OVA", "SPECIAL"].includes(e.media?.format || ""))
+            .filter(e => e && e.media && ["MOVIE", "OVA", "SPECIAL"].includes(e.media.format || ""))
             .map(e => mapLibraryEntryToMediaCard(e, handleNavigate))
     }, [allEntries, handleNavigate])
 
     const bentoItems = React.useMemo(() => {
-        return allEntries.slice(0, 6).map(e => ({
-            id: `recent-${e.mediaId}`,
-            title: getTitle(e.media!),
-            image: e.media?.bannerImage || e.media?.posterImage || "",
-            year: e.media?.year ?? undefined,
-            rating: e.media?.score ?? undefined,
-            description: e.media?.description || "",
-            onClick: () => handleNavigate(e.mediaId),
-        }))
+        return allEntries
+            .filter(e => e && e.media)
+            .slice(0, 6)
+            .map(e => ({
+                id: `recent-${e.mediaId}`,
+                title: getTitle(e.media!),
+                image: e.media?.bannerImage || e.media?.posterImage || "",
+                year: e.media?.year ?? undefined,
+                rating: e.media?.score ?? undefined,
+                description: e.media?.description || "",
+                onClick: () => handleNavigate(e.mediaId),
+            }))
     }, [allEntries, handleNavigate])
 
     const vibeItems = React.useMemo(() => {
-        if (!selectedVibe) return []
-        return (allEntries as any[])
-            .filter(e => e.vibes?.includes(selectedVibe))
-            .map(e => mapLibraryEntryToMediaCard(e, handleNavigate))
-    }, [allEntries, selectedVibe, handleNavigate])
+        if (!selectedVibe || !intelligenceData?.swimlanes?.length) return []
+        // Collect all IntelligentEntry items across swimlanes, deduplicate by mediaId
+        const seen = new Set<number>()
+        const filtered: ReturnType<typeof mapLibraryEntryToMediaCard>[] = []
+        for (const lane of intelligenceData.swimlanes) {
+            for (const entry of lane.entries || []) {
+                if (!entry?.media) continue
+                const vibe = entry.dominantVibe?.toUpperCase()
+                if (vibe !== selectedVibe) continue
+                if (seen.has(entry.media.id)) continue
+                seen.add(entry.media.id)
+                filtered.push(mapLibraryEntryToMediaCard(entry, handleNavigate))
+            }
+        }
+        return filtered
+    }, [intelligenceData, selectedVibe, handleNavigate])
 
     // ── Render Helpers ─────────────────────────────────────────────────────────
 
@@ -154,11 +177,10 @@ function HomePage() {
                                 className="flex flex-col space-y-40"
                             >
                                 <HomeContinueWatchingSection items={continueWatchingItems} onHover={setBackdropUrl} />
+                                <HomeRecentBentoSection items={bentoItems} />
                                 <HomeIntelligentSections swimlanes={intelligenceData?.swimlanes} onNavigate={handleNavigate} />
                                 <HomeSeriesSection items={seriesItems} onHover={setBackdropUrl} />
-                                <HomeRecentBentoSection items={bentoItems} />
                                 <HomeMoviesSection items={movieItems} onHover={setBackdropUrl} />
-                                <HomeFullLibrarySection items={seriesItems.slice(0, 10)} isLoading={false} />
                             </motion.div>
                         )}
                     </AnimatePresence>

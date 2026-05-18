@@ -43,8 +43,13 @@ func NewNormalizedMedia(m *platform.UnifiedMedia) *dto.NormalizedMedia {
 		}
 	}
 
+	id := m.ID
+	if string(m.Format) == "MOVIE" && id < 1_000_000 {
+		id += 1_000_000
+	}
+
 	return &dto.NormalizedMedia{
-		ID:                m.ID,
+		ID:                id,
 		Title:             title,
 		Format:            (*dto.MediaFormat)(&m.Format),
 		Status:            (*dto.MediaStatus)(&m.Status),

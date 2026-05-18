@@ -3,6 +3,15 @@ import { Models_LibraryMedia, Anime_LocalFile } from "@/api/generated/types"
 import { MonitorPlay, Database } from "lucide-react"
 import { useNavigate } from "@tanstack/react-router"
 
+// Helper to format file size beautifully
+const formatFileSize = (bytes: number) => {
+    const mb = bytes / (1024 * 1024)
+    if (mb >= 1024) {
+        return `${(mb / 1024).toFixed(2)} GB`
+    }
+    return `${mb.toFixed(0)} MB`
+}
+
 // ─── RELATIONS TAB ─────────────────────────────────────────────────────────────
 
 export const RelationsTab = React.memo(function RelationsTab({ media }: { media?: Models_LibraryMedia }) {
@@ -30,17 +39,17 @@ export const RelationsTab = React.memo(function RelationsTab({ media }: { media?
                             })
                         }
                     }}
-                    className="flex gap-4 p-4 bg-zinc-900/40 backdrop-blur-md border border-white/5 hover:border-brand-orange/40 hover:bg-zinc-900/80 rounded-xl hover:shadow-[0_0_20px_rgba(249,115,22,0.1)] transition-all duration-300 group cursor-pointer"
+                    className="flex gap-4 p-4 bg-zinc-950/20 backdrop-blur-md border border-white/5 hover:border-brand-orange/30 hover:bg-zinc-900/40 rounded-xl hover:shadow-[0_0_25px_rgba(255,110,58,0.12)] transition-all duration-500 group cursor-pointer"
                 >
-                    <div className="w-16 h-24 shrink-0 bg-zinc-800 overflow-hidden relative rounded-lg border border-white/10">
+                    <div className="w-16 h-24 shrink-0 bg-zinc-950 overflow-hidden relative rounded-lg border border-white/10 group-hover:border-brand-orange/30 transition-colors duration-500">
                         {relation.node?.posterImage && (
-                            <img src={relation.node.posterImage} alt={relation.node.titleRomaji || "Relacion"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            <img src={relation.node.posterImage} alt={relation.node.titleRomaji || "Relacion"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                         )}
                     </div>
                     <div className="flex flex-col flex-1 justify-center">
-                        <span className="text-[9px] font-black text-brand-orange/70 tracking-widest uppercase mb-1">{relation.relationType}</span>
-                        <h4 className="text-sm font-bold leading-tight line-clamp-2 text-white group-hover:text-brand-orange transition-colors duration-200">{relation.node?.titleSpanish || relation.node?.titleRomaji || relation.node?.titleEnglish}</h4>
-                        <span className="text-[10px] font-black text-white/40 mt-2 tracking-widest uppercase">{relation.node?.format}</span>
+                        <span className="text-[8px] font-black text-brand-orange tracking-[0.18em] uppercase mb-1">{relation.relationType}</span>
+                        <h4 className="text-sm font-bold leading-tight line-clamp-2 text-white group-hover:text-brand-orange transition-colors duration-300">{relation.node?.titleSpanish || relation.node?.titleRomaji || relation.node?.titleEnglish}</h4>
+                        <span className="text-[9px] font-black text-white/30 mt-2 tracking-[0.2em] uppercase">{relation.node?.format}</span>
                     </div>
                 </div>
             ))}
@@ -64,14 +73,14 @@ export const CharactersTab = React.memo(function CharactersTab({ characters }: {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
             {characters.slice(0, 24).map((char, idx) => (
                 <div key={idx} className="flex flex-col items-center text-center gap-3 group cursor-pointer">
-                    <div className="w-24 h-24 rounded-full overflow-hidden bg-zinc-800 border-2 border-white/5 group-hover:border-brand-orange/50 hover:shadow-[0_0_15px_rgba(249,115,22,0.15)] transition-all duration-300 shadow-xl">
+                    <div className="w-24 h-24 rounded-full overflow-hidden bg-zinc-950/40 border-2 border-white/5 group-hover:border-brand-orange/60 group-hover:shadow-[0_0_20px_rgba(255,110,58,0.25)] transition-all duration-500 shadow-xl">
                         {char.node?.image && (
-                            <img src={char.node.image} alt={char.node.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                            <img src={char.node.image} alt={char.node.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                         )}
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-xs font-bold text-white group-hover:text-brand-orange uppercase tracking-wider transition-colors duration-200">{char.node?.name}</span>
-                        <span className="text-[10px] font-black text-white/40 tracking-[0.2em] uppercase mt-1">{char.role}</span>
+                        <span className="text-xs font-bold text-white group-hover:text-brand-orange uppercase tracking-wider transition-colors duration-300">{char.node?.name}</span>
+                        <span className="text-[9px] font-black text-white/35 tracking-[0.15em] uppercase mt-1 group-hover:text-brand-orange/60 transition-colors duration-300">{char.role}</span>
                     </div>
                 </div>
             ))}
@@ -104,55 +113,59 @@ export const TechnicalMetadataTab = React.memo(function TechnicalMetadataTab({ l
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Video Specs */}
-            <div className="bg-zinc-900/30 backdrop-blur-md border border-white/5 rounded-2xl p-6 flex flex-col gap-4 hover:border-white/10 hover:bg-zinc-900/60 transition-all duration-300">
+            {/* Video Specs - Capsule Corp Terminal Style */}
+            <div className="bg-zinc-950/60 backdrop-blur-md border border-brand-orange/10 rounded-2xl p-6 flex flex-col gap-4 hover:border-brand-orange/30 hover:shadow-[0_0_30px_rgba(255,110,58,0.1)] transition-all duration-500">
                 <div className="flex items-center gap-3 border-b border-white/5 pb-4">
-                    <MonitorPlay className="w-6 h-6 text-brand-orange" />
-                    <h3 className="text-xl font-bebas tracking-widest uppercase">Video</h3>
+                    <MonitorPlay className="w-5 h-5 text-brand-orange animate-pulse" />
+                    <h3 className="text-lg font-bebas tracking-[0.15em] text-white uppercase">VIDEO SPECS</h3>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="flex flex-col gap-1">
-                        <span className="text-[9px] font-black text-white/40 tracking-[0.2em] uppercase">Resolución</span>
-                        <span className="text-sm font-bold uppercase">{tech.videoStream?.width}x{tech.videoStream?.height}</span>
+                <div className="grid grid-cols-2 gap-4 font-mono">
+                    <div className="flex flex-col gap-1 border border-white/[0.02] bg-black/20 p-3 rounded-xl hover:border-white/5 transition-colors">
+                        <span className="text-[8px] font-black text-zinc-500 tracking-[0.15em] uppercase">Resolución</span>
+                        <span className="text-xs font-bold text-white tracking-widest uppercase">{tech.videoStream?.width} <span className="text-zinc-600 font-normal">x</span> {tech.videoStream?.height}</span>
                     </div>
-                    <div className="flex flex-col gap-1">
-                        <span className="text-[9px] font-black text-white/40 tracking-[0.2em] uppercase">Códec</span>
-                        <span className="text-sm font-bold uppercase">{tech.videoStream?.codec}</span>
+                    <div className="flex flex-col gap-1 border border-white/[0.02] bg-black/20 p-3 rounded-xl hover:border-white/5 transition-colors">
+                        <span className="text-[8px] font-black text-zinc-500 tracking-[0.15em] uppercase">Códec</span>
+                        <span className="text-xs font-bold text-brand-orange tracking-widest uppercase">{tech.videoStream?.codec || "N/A"}</span>
                     </div>
-                    <div className="flex flex-col gap-1">
-                        <span className="text-[9px] font-black text-white/40 tracking-[0.2em] uppercase">Color Space</span>
-                        <span className="text-sm font-bold uppercase">{tech.videoStream?.colorSpace || "N/A"}</span>
+                    <div className="flex flex-col gap-1 border border-white/[0.02] bg-black/20 p-3 rounded-xl hover:border-white/5 transition-colors">
+                        <span className="text-[8px] font-black text-zinc-500 tracking-[0.15em] uppercase">Color Space</span>
+                        <span className="text-xs font-bold text-white tracking-widest uppercase">{tech.videoStream?.colorSpace || "N/A"}</span>
                     </div>
-                    <div className="flex flex-col gap-1">
-                        <span className="text-[9px] font-black text-white/40 tracking-[0.2em] uppercase">Frame Rate</span>
-                        <span className="text-sm font-bold uppercase">{tech.videoStream?.frameRate || "N/A"}</span>
+                    <div className="flex flex-col gap-1 border border-white/[0.02] bg-black/20 p-3 rounded-xl hover:border-white/5 transition-colors">
+                        <span className="text-[8px] font-black text-zinc-500 tracking-[0.15em] uppercase">Frame Rate</span>
+                        <span className="text-xs font-bold text-white tracking-widest uppercase">{tech.videoStream?.frameRate || "N/A"} FPS</span>
                     </div>
                 </div>
             </div>
 
-            {/* Audio Specs */}
-            <div className="bg-zinc-900/30 backdrop-blur-md border border-white/5 rounded-2xl p-6 flex flex-col gap-4 hover:border-white/10 hover:bg-zinc-900/60 transition-all duration-300">
+            {/* Audio Specs - Capsule Corp Terminal Style */}
+            <div className="bg-zinc-950/60 backdrop-blur-md border border-brand-orange/10 rounded-2xl p-6 flex flex-col gap-4 hover:border-brand-orange/30 hover:shadow-[0_0_30px_rgba(255,110,58,0.1)] transition-all duration-500">
                 <div className="flex items-center gap-3 border-b border-white/5 pb-4">
-                    <Database className="w-6 h-6 text-brand-orange" />
-                    <h3 className="text-xl font-bebas tracking-widest uppercase">Audio & Formato</h3>
+                    <Database className="w-5 h-5 text-brand-orange animate-pulse" />
+                    <h3 className="text-lg font-bebas tracking-[0.15em] text-white uppercase">AUDIO & FORMAT</h3>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="flex flex-col gap-1">
-                        <span className="text-[9px] font-black text-white/40 tracking-[0.2em] uppercase">Contenedor</span>
-                        <span className="text-sm font-bold uppercase">{tech.format}</span>
+                <div className="grid grid-cols-2 gap-4 font-mono">
+                    <div className="flex flex-col gap-1 border border-white/[0.02] bg-black/20 p-3 rounded-xl hover:border-white/5 transition-colors">
+                        <span className="text-[8px] font-black text-zinc-500 tracking-[0.15em] uppercase">Contenedor</span>
+                        <span className="text-xs font-bold text-brand-orange tracking-widest uppercase">{tech.format || "N/A"}</span>
                     </div>
-                    <div className="flex flex-col gap-1">
-                        <span className="text-[9px] font-black text-white/40 tracking-[0.2em] uppercase">Tamaño</span>
-                        <span className="text-sm font-bold uppercase">{(tech.size / 1024 / 1024).toFixed(2)} MB</span>
+                    <div className="flex flex-col gap-1 border border-white/[0.02] bg-black/20 p-3 rounded-xl hover:border-white/5 transition-colors">
+                        <span className="text-[8px] font-black text-zinc-500 tracking-[0.15em] uppercase">Tamaño</span>
+                        <span className="text-xs font-bold text-white tracking-widest uppercase">{formatFileSize(tech.size)}</span>
                     </div>
-                    <div className="flex flex-col gap-1 col-span-2">
-                        <span className="text-[9px] font-black text-white/40 tracking-[0.2em] uppercase">Pistas de Audio</span>
+                    <div className="flex flex-col gap-1 col-span-2 border border-white/[0.02] bg-black/20 p-3 rounded-xl hover:border-white/5 transition-colors">
+                        <span className="text-[8px] font-black text-zinc-500 tracking-[0.15em] uppercase">Pistas de Audio</span>
                         <div className="flex flex-wrap gap-2 mt-2">
-                            {tech.audioStreams?.map((aud, i) => (
-                                <span key={i} className="px-3 py-1 bg-white/5 border border-white/5 rounded-lg text-[10px] font-bold uppercase tracking-wider">
-                                    {aud.language || "UND"} - {aud.codec}
-                                </span>
-                            ))}
+                            {tech.audioStreams && tech.audioStreams.length > 0 ? (
+                                tech.audioStreams.map((aud, i) => (
+                                    <span key={i} className="px-3 py-1.5 bg-black/40 border border-white/5 hover:border-brand-orange/30 rounded-lg text-[9px] font-bold uppercase tracking-wider text-zinc-300 hover:text-white transition-all duration-300">
+                                        {aud.language ? aud.language.toUpperCase() : "UND"} <span className="text-zinc-600 font-normal">|</span> {aud.codec ? aud.codec.toUpperCase() : "N/A"}
+                                    </span>
+                                ))
+                            ) : (
+                                <span className="text-xs font-bold text-zinc-600 uppercase">Sin pistas de audio</span>
+                            )}
                         </div>
                     </div>
                 </div>

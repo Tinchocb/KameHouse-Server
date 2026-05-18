@@ -95,7 +95,12 @@ func (h *Handler) processHeartbeat(p PlaybackHeartbeatPayload) {
 		return
 	}
 
-	userID := uint(1) // Default user; in multi-user setups this comes from the WS session
+	// NOTE: WS heartbeats currently do not carry authenticated user context.
+	// In a single-user deployment this is fine — all history is written under userID=1.
+	// For proper multi-user support, the frontend would need to include a signed
+	// sessionToken in the WS handshake (via Authorization header or first WS message),
+	// and the server would resolve it here instead of defaulting to 1.
+	userID := uint(1)
 
 	key := fmt.Sprintf("%d:%d:%d:%f", userID, p.MediaId, p.EpisodeNumber, p.Duration)
 	h.App.ContinuityManager.TelemetryManager.UpdateProgress(key, int(p.CurrentTime))

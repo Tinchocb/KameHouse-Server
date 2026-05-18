@@ -25,7 +25,7 @@ func (cm *CleanupManager) RunAllCleanupOperations() {
 
 	cm.trimScanSummaryEntries()
 	cm.trimLocalFileEntries()
-
+	cm.removeOrphanedAndCollidedMedia()
 
 	cm.logger.Debug().Msg("database: Cleanup operations completed")
 }
@@ -97,6 +97,45 @@ func (cm *CleanupManager) trimLocalFileEntries() {
 				return
 			}
 			cm.logger.Debug().Int("deleted", len(idsToDelete)).Msg("database: Deleted old legacy local file entries (blob storage)")
+		}
+	}
+}
+
+// removeOrphanedAndCollidedMedia cleans up orphaned TV shows that share TMDB IDs with movies
+func (cm *CleanupManager) removeOrphanedAndCollidedMedia() {
+	var movies []models.LibraryMedia
+	if err := cm.gormdb.Where("type = ?", "MOVIE").Find(&movies).Error; err != nil {
+		cm.logger.Error().Err(err).Msg("database cleanup: Failed to fetch movies")
+		return
+	}
+
+	movieTmdbIds := make(map[int]bool)
+	for _, m := range movies {
+		movieTmdbIds[m.TmdbId] = true
+	}
+
+	var shows []models.LibraryMedia
+	if err := cm.gormdb.Where("type IN ?", []string{"SHOW", "ANIME"}).Find(&shows).Error; err != nil {
+		cm.logger.Error().Err(err).Msg("database cleanup: Failed to fetch shows")
+		return
+	}
+
+	for _, s := range shows {
+		if movieTmdbIds[s.TmdbId] {
+			// Check if this show actually has any local files linked
+			var localFileCount int64
+			if err := cm.gormdb.Model(&models.LocalFile{}).Where("library_media_id = ?", s.ID).Count(&localFileCount).Error; err == nil && localFileCount == 0 {
+				cm.logger.Warn().Uint("id", s.ID).Int("tmdbId", s.TmdbId).Str("title", s.TitleEnglish).Msg("database cleanup: Found collided show with no local files. Deleting.")
+
+				// Start a transaction to delete show and its children safely
+				_ = cm.gormdb.Transaction(func(tx *gorm.DB) error {
+					_ = tx.Where("library_media_id = ?", s.ID).Delete(&models.LibraryEpisode{})
+					_ = tx.Where("library_media_id = ?", s.ID).Delete(&models.LibrarySeason{})
+					_ = tx.Where("library_media_id = ?", s.ID).Delete(&models.MediaEntryListData{})
+					_ = tx.Delete(&s)
+					return nil
+				})
+			}
 		}
 	}
 }

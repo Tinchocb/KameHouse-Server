@@ -106,44 +106,51 @@ export function CommandPalette() {
                                                             </div>
                                                         </div>
                                                     </button>
-                                                ) : (
-                                                    <Link to="/series/$seriesId" params={{ seriesId: result.mediaId.toString() }} className="flex w-full items-center gap-5 p-3">
-                                                        <div
-                                                            className="h-20 w-14 flex-shrink-0 rounded-xl bg-cover bg-center shadow-2xl border border-white/5 group-hover:scale-105 transition-transform duration-500 bg-zinc-900 flex items-center justify-center overflow-hidden relative"
-                                                            style={media?.posterImage ? { backgroundImage: `url(${media.posterImage})` } : {}}
-                                                        >
-                                                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                            {!media?.posterImage && <span className="text-[8px] font-black opacity-20 uppercase tracking-tighter">NO COVER</span>}
-                                                        </div>
-                                                        <div className="flex flex-col overflow-hidden text-left py-1">
-                                                            <span className="truncate text-lg font-bold text-zinc-200 group-hover:text-white transition-colors leading-tight" title={title}>
-                                                                {title}
-                                                            </span>
-                                                            <div className="flex items-center gap-3 mt-2">
-                                                                <span className="text-[10px] font-black uppercase tracking-[0.1em] text-zinc-500">
-                                                                    {media?.year || "N/A"}
-                                                                </span>
-                                                                <div className="w-1 h-1 rounded-full bg-white/10" />
-                                                                <span className="text-[10px] font-black uppercase tracking-[0.1em] text-zinc-600">
-                                                                    {media?.format || "LOCAL"}
-                                                                </span>
-                                                                 {(media as any)?.score && (
-                                                                      <>
-                                                                          <div className="w-1 h-1 rounded-full bg-white/10" />
-                                                                          <span className="text-[10px] font-black text-brand-orange tracking-wider">
-                                                                              ★ {(((media as any).score > 10 ? (media as any).score / 10 : (media as any).score) as number).toFixed(1)}
-                                                                          </span>
-                                                                      </>
-                                                                  )}
-                                                                  {(result as any).vibes?.map((vibe: string) => (
-                                                                      <span key={vibe} className="text-[8px] font-black tracking-[0.1em] uppercase px-1.5 py-0.5 rounded border border-white/5 bg-white/5 text-zinc-500 group-hover:text-zinc-300 transition-colors">
-                                                                          {vibe}
-                                                                      </span>
-                                                                  ))}
-                                                            </div>
-                                                        </div>
-                                                    </Link>
-                                                )}
+                                                ) : (() => {
+                                                        const isMovie = media?.format === "MOVIE" || media?.format === "SPECIAL" || media?.format === "OVA"
+                                                        const linkProps = isMovie 
+                                                            ? { to: "/movies/$movieId" as const, params: { movieId: result.mediaId.toString() } }
+                                                            : { to: "/series/$seriesId" as const, params: { seriesId: result.mediaId.toString() } }
+
+                                                        return (
+                                                            <Link {...linkProps} className="flex w-full items-center gap-5 p-3" onClick={() => setOpen(false)}>
+                                                                <div
+                                                                    className="h-20 w-14 flex-shrink-0 rounded-xl bg-cover bg-center shadow-2xl border border-white/5 group-hover:scale-105 transition-transform duration-500 bg-zinc-900 flex items-center justify-center overflow-hidden relative"
+                                                                    style={media?.posterImage ? { backgroundImage: `url(${media.posterImage})` } : {}}
+                                                                >
+                                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                                    {!media?.posterImage && <span className="text-[8px] font-black opacity-20 uppercase tracking-tighter">NO COVER</span>}
+                                                                </div>
+                                                                <div className="flex flex-col overflow-hidden text-left py-1">
+                                                                    <span className="truncate text-lg font-bold text-zinc-200 group-hover:text-white transition-colors leading-tight" title={title}>
+                                                                        {title}
+                                                                    </span>
+                                                                    <div className="flex items-center gap-3 mt-2">
+                                                                        <span className="text-[10px] font-black uppercase tracking-[0.1em] text-zinc-500">
+                                                                            {media?.year || "N/A"}
+                                                                        </span>
+                                                                        <div className="w-1 h-1 rounded-full bg-white/10" />
+                                                                        <span className="text-[10px] font-black uppercase tracking-[0.1em] text-zinc-600">
+                                                                            {media?.format || "LOCAL"}
+                                                                        </span>
+                                                                        {(media as any)?.score && (
+                                                                            <>
+                                                                                <div className="w-1 h-1 rounded-full bg-white/10" />
+                                                                                <span className="text-[10px] font-black text-brand-orange tracking-wider">
+                                                                                    ★ {(((media as any).score > 10 ? (media as any).score / 10 : (media as any).score) as number).toFixed(1)}
+                                                                                </span>
+                                                                            </>
+                                                                        )}
+                                                                        {(result as any).vibes?.map((vibe: string) => (
+                                                                            <span key={vibe} className="text-[8px] font-black tracking-[0.1em] uppercase px-1.5 py-0.5 rounded border border-white/5 bg-white/5 text-zinc-500 group-hover:text-zinc-300 transition-colors">
+                                                                                {vibe}
+                                                                            </span>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            </Link>
+                                                        )
+                                                    })()}
                                             </CommandItem>
                                         )
                                     })}

@@ -6,7 +6,6 @@ import {
     Zap, 
     Film, 
     Sparkles, 
-    Globe2,
     Play
 } from "lucide-react"
 import { Swimlane, type SwimlaneItem } from "@/components/ui/swimlane"
@@ -191,38 +190,7 @@ export const HomeRecentBentoSection = React.memo(function HomeRecentBentoSection
 })
 HomeRecentBentoSection.displayName = "HomeRecentBentoSection"
 
-// ─── 5. Biblioteca Completa (Fallback) ──────────────────────────────────────
 
-interface HomeFullLibrarySectionProps {
-    items: SwimlaneItem[]
-    isLoading: boolean
-}
-
-export const HomeFullLibrarySection = React.memo(function HomeFullLibrarySection({
-    items,
-    isLoading,
-}: HomeFullLibrarySectionProps) {
-    if (isLoading || items.length === 0) return null
-
-    return (
-        <ErrorBoundary>
-            <motion.div 
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 0.8 }}
-                whileHover={{ opacity: 1 }}
-                viewport={{ once: true }}
-                className="home-section space-y-12 py-20 transition-opacity pb-32"
-            >
-                <SectionLabel icon={Globe2} label="Tu Videoteca" index="LIB" />
-                <Swimlane
-                    title=""
-                    items={items}
-                    defaultAspect="poster"
-                />
-            </motion.div>
-        </ErrorBoundary>
-    )
-})
 // ─── 6. Filtrado por Vibe (Dinámico) ──────────────────────────────────────────
 
 interface HomeVibeFilteredSectionProps {

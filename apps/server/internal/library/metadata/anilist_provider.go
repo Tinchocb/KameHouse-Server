@@ -3,23 +3,36 @@ package metadata
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"kamehouse/internal/database/models/dto"
+	"kamehouse/internal/util/filecache"
+	httputil "kamehouse/internal/util/http"
+	"kamehouse/internal/util/limiter"
 )
 
 type AniListProvider struct {
-	client *http.Client
+	client      *http.Client
+	rateLimiter *limiter.Limiter
+	cache       *filecache.Cacher
 }
 
 func NewAniListProvider() *AniListProvider {
+	cacheDir := filepath.Join(os.TempDir(), "kamehouse", "cache", "anilist")
+	cacher, _ := filecache.NewCacher(cacheDir)
 	return &AniListProvider{
-		client: &http.Client{},
+		client:      httputil.NewFastClient(),
+		rateLimiter: limiter.NewLimiter(10*time.Second, 5),
+		cache:       cacher,
 	}
 }
 
@@ -198,6 +211,23 @@ func (p *AniListProvider) doGraphQL(ctx context.Context, query string, variables
 		return nil, err
 	}
 
+	hash := sha256.Sum256(bodyBytes)
+	cacheKey := fmt.Sprintf("%x", hash)
+	bucket := filecache.NewBucket("graphql", 24*time.Hour*30)
+
+	if p.cache != nil {
+		var cachedRes anilistResponse
+		if found, _ := p.cache.Get(bucket, cacheKey, &cachedRes); found {
+			return &cachedRes, nil
+		}
+	}
+
+	if p.rateLimiter != nil {
+		if err := p.rateLimiter.Wait(ctx); err != nil {
+			return nil, err
+		}
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, anilistGraphqlEndpoint, bytes.NewReader(bodyBytes))
 	if err != nil {
 		return nil, err
@@ -230,6 +260,10 @@ func (p *AniListProvider) doGraphQL(ctx context.Context, query string, variables
 			return nil, ErrNotFound
 		}
 		return nil, fmt.Errorf("anilist graphql error: %s", res.Errors[0].Message)
+	}
+
+	if p.cache != nil {
+		_ = p.cache.Set(bucket, cacheKey, res)
 	}
 
 	return &res, nil

@@ -16,7 +16,9 @@ import (
 	"time"
 
 	"kamehouse/internal/database/models/dto"
+	httputil "kamehouse/internal/util/http"
 	"kamehouse/internal/util/httpclient"
+	"kamehouse/internal/util/limiter"
 
 	"github.com/rs/zerolog"
 	"go.felesatra.moe/anidb"
@@ -41,6 +43,7 @@ type (
 		cachePath string
 		logger    *zerolog.Logger
 		client    *http.Client
+		rateLimiter *limiter.Limiter
 
 		loaded bool
 		titles []anidb.AnimeT
@@ -56,11 +59,10 @@ func NewAniDBProvider(cachePath string, logger *zerolog.Logger) *AniDBProvider {
 		cachePath = aniDBDefaultCache
 	}
 	return &AniDBProvider{
-		cachePath: filepath.Clean(cachePath),
-		logger:    logger,
-		client: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+		cachePath:   filepath.Clean(cachePath),
+		logger:      logger,
+		client:      httputil.NewClientWithTimeout(30 * time.Second),
+		rateLimiter: limiter.NewLimiter(2*time.Second, 1),
 	}
 }
 
@@ -207,6 +209,12 @@ func (p *AniDBProvider) downloadTitles(ctx context.Context) ([]anidb.AnimeT, err
 			return nil, err
 		}
 		req.Header.Set("User-Agent", "KameHouse/1.0")
+
+		if p.rateLimiter != nil {
+			if err := p.rateLimiter.Wait(ctx); err != nil {
+				return nil, err
+			}
+		}
 
 		resp, err := p.client.Do(req)
 		if err != nil {

@@ -14,7 +14,7 @@ export const DropdownMenuAnatomy = defineStyleAnatomy({
     ]),
     subContent: cva([
         "UI-DropdownMenu__subContent",
-        "z-50 min-w-[12rem] overflow-hidden rounded-xl border border-white/10 bg-[--background]/70 backdrop-blur-xl p-2 text-[--foreground] shadow-lg",
+        "z-50 min-w-[12rem] overflow-hidden rounded-xl border border-white/[0.08] bg-surface-1/55 backdrop-blur-3xl p-2 text-[--foreground] shadow-2xl",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "data-[state=closed]:zoom-out-100 data-[state=open]:zoom-in-95",
@@ -23,7 +23,7 @@ export const DropdownMenuAnatomy = defineStyleAnatomy({
     ]),
     root: cva([
         "UI-DropdownMenu__root",
-        "z-50 min-w-[15rem] overflow-hidden rounded-xl border border-white/10 bg-[--background]/70 backdrop-blur-xl p-2 text-[--foreground] shadow-lg",
+        "z-50 min-w-[15rem] overflow-hidden rounded-xl border border-white/[0.08] bg-surface-1/55 backdrop-blur-3xl p-2 text-[--foreground] shadow-2xl",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "data-[state=closed]:zoom-out-100 data-[state=open]:zoom-in-95",

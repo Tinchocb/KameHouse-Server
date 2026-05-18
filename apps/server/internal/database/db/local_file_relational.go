@@ -40,7 +40,7 @@ func UpsertLocalFileRelationalBatch(d *Database, files []*dto.LocalFile) error {
 		return tx.Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "path"}},
 			UpdateAll: true,
-		}).CreateInBatches(dbFiles, 30).Error
+		}).CreateInBatches(dbFiles, 60).Error
 	})
 }
 
@@ -96,7 +96,7 @@ func SyncLocalFilesRelational(d *Database, files []*dto.LocalFile) error {
 		}
 
 		// Delete files not in the temporary table
-		if err := tx.Exec("DELETE FROM local_files WHERE path NOT IN (SELECT path FROM sync_paths)").Error; err != nil {
+		if err := tx.Exec("DELETE FROM local_file WHERE path NOT IN (SELECT path FROM sync_paths)").Error; err != nil {
 			return err
 		}
 

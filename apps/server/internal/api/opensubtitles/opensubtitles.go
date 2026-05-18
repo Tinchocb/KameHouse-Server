@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"sync"
 	"time"
+
+	httputil "kamehouse/internal/util/http"
 )
 
 const baseURL = "https://api.opensubtitles.com/api/v1"
@@ -18,8 +20,9 @@ const baseURL = "https://api.opensubtitles.com/api/v1"
 type Client struct {
 	apiKey    string
 	userAgent string
-	client    *http.Client
-	cache     sync.Map
+	client      *http.Client
+	cache       sync.Map
+	rateLimiter chan struct{}
 }
 
 // NewClient creates a new OpenSubtitles client.
@@ -29,9 +32,10 @@ func NewClient(apiKey, userAgent string) *Client {
 		userAgent = "KameHouse/2.0"
 	}
 	return &Client{
-		apiKey:    apiKey,
-		userAgent: userAgent,
-		client:    &http.Client{Timeout: 15 * time.Second},
+		apiKey:      apiKey,
+		userAgent:   userAgent,
+		client:      httputil.NewClientWithTimeout(15 * time.Second),
+		rateLimiter: make(chan struct{}, 2), // limit to 2 concurrent network requests
 	}
 }
 
@@ -132,6 +136,15 @@ func (c *Client) SearchSubtitles(ctx context.Context, opts SearchOptions) (*Sear
 	req.Header.Set("Api-Key", c.apiKey)
 	req.Header.Set("User-Agent", c.userAgent)
 	req.Header.Set("Content-Type", "application/json")
+
+	if c.rateLimiter != nil {
+		select {
+		case c.rateLimiter <- struct{}{}:
+			defer func() { <-c.rateLimiter }()
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
 
 	resp, err := c.client.Do(req)
 	if err != nil {

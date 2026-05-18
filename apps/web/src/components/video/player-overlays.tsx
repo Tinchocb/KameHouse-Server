@@ -114,16 +114,25 @@ export function CenterPlayFlash({ flash }: { flash: "play" | "pause" | null }) {
 export function SkipIntroOverlay({
     show,
     onSkip,
-    skipLabel = "SALTAR INTRO",
+    skipMode = "intro",
     remainingSeconds,
+    segmentProgress = 0,
     shortcutKey = "S",
 }: {
     show: boolean
     onSkip: () => void
-    skipLabel?: string
+    /** "intro" for opening, "outro" for ending — controls label and accent color */
+    skipMode?: "intro" | "outro"
     remainingSeconds?: number
+    /** 0-100: how much of the current skip segment has elapsed (drives the fill bar) */
+    segmentProgress?: number
     shortcutKey?: string
 }) {
+    const isOutro = skipMode === "outro"
+    const label = isOutro ? "SALTAR OUTRO" : "SALTAR INTRO"
+    // Progress left = how much is remaining (inverted from elapsed)
+    const fillProgress = 100 - segmentProgress
+
     return (
         <div className={cn(
             "absolute bottom-32 left-10 md:left-12 z-30 transition-all duration-300 pointer-events-auto",
@@ -131,46 +140,69 @@ export function SkipIntroOverlay({
         )}>
             <button
                 id="skip-intro-btn"
-                aria-label="Saltar Introducción"
+                aria-label={isOutro ? "Saltar Outro / Ending" : "Saltar Intro / Opening"}
                 onClick={(e) => {
                     e.stopPropagation()
                     onSkip()
                 }}
                 className={cn(
-                    "flex items-center gap-3 px-6 py-3",
-                    "bg-white/10 backdrop-blur-xl text-white border border-white/20",
-                    "hover:bg-white hover:text-black hover:border-white",
+                    "relative flex items-center gap-3 px-6 py-3 overflow-hidden",
+                    "bg-black/60 backdrop-blur-xl text-white border",
+                    isOutro
+                        ? "border-purple-500/40 hover:bg-purple-500 hover:border-purple-400"
+                        : "border-white/20 hover:bg-white hover:border-white",
                     "text-[10px] font-black uppercase tracking-[0.3em]",
                     "transition-all duration-200",
                     "active:scale-95",
                     "group"
                 )}
             >
+                {/* Animated segment countdown fill — shrinks from full to empty */}
+                <div
+                    className={cn(
+                        "absolute bottom-0 left-0 h-[2px] transition-all duration-1000 ease-linear",
+                        isOutro ? "bg-purple-400" : "bg-brand-orange"
+                    )}
+                    style={{ width: `${fillProgress}%` }}
+                />
+
                 {/* Skip icon */}
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 transition-colors group-hover:text-black">
+                <svg viewBox="0 0 24 24" fill="currentColor" className={cn(
+                    "w-4 h-4 transition-colors shrink-0",
+                    isOutro ? "group-hover:text-white" : "group-hover:text-black"
+                )}>
                     <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/>
                 </svg>
 
-                <span className="transition-colors group-hover:text-black">{skipLabel}</span>
+                <span className={cn(
+                    "transition-colors",
+                    isOutro ? "group-hover:text-white" : "group-hover:text-black"
+                )}>{label}</span>
 
                 {/* Remaining seconds badge */}
                 {remainingSeconds !== undefined && remainingSeconds > 0 && (
                     <span className={cn(
                         "text-[9px] font-mono tabular-nums tracking-widest",
-                        "bg-white/10 px-2 py-0.5 rounded-sm",
-                        "transition-colors group-hover:bg-black/10 group-hover:text-black"
+                        "px-2 py-0.5",
+                        isOutro
+                            ? "bg-purple-500/20 text-purple-300 group-hover:bg-white/20 group-hover:text-white"
+                            : "bg-white/10 group-hover:bg-black/10 group-hover:text-black"
                     )}>
                         {remainingSeconds}s
                     </span>
                 )}
 
-                <span className="text-white/30 text-[9px] font-black ml-1 hidden sm:inline transition-colors group-hover:text-black/40">
+                <span className={cn(
+                    "text-white/30 text-[9px] font-black ml-1 hidden sm:inline transition-colors",
+                    isOutro ? "group-hover:text-white/40" : "group-hover:text-black/40"
+                )}>
                     [{shortcutKey}]
                 </span>
             </button>
         </div>
     )
 }
+
 
 export function NextEpisodeOverlay({
     show,

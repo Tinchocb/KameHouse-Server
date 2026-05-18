@@ -105,6 +105,18 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	// Recovery middleware
 	e.Use(middleware.Recover())
 
+	// Gzip compression middleware to speed up JSON transfers, skipping video streams and WebSocket connections
+	e.Use(middleware.GzipWithConfig(middleware.GzipConfig{
+		Level: 5,
+		Skipper: func(c echo.Context) bool {
+			path := c.Request().URL.Path
+			return strings.HasPrefix(path, "/api/v1/mediastream") ||
+				strings.HasPrefix(path, "/api/v1/proxy") ||
+				strings.HasPrefix(path, "/api/v1/events") ||
+				strings.HasPrefix(path, "/api/v1/ws")
+		},
+	}))
+
 	// Client ID middleware
 	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
@@ -169,6 +181,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	v1.POST("/status/home-items", h.HandleUpdateHomeItems)
 	v1.GET("/home/curated", h.HandleGetHomeCurated)
 	v1.GET("/home/continue-watching", h.HandleGetContinueWatching)
+	v1.POST("/home/retag", h.HandleRetagEpisodes) // Re-runs IntelligenceTagger on all episodes
 	// Unified stream resolver (Local only)
 	v1.GET("/resolver/streams", h.HandleResolveStreams)
 	v1.GET("/log/*", h.HandleGetLogContent)

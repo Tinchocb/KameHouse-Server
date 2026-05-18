@@ -1,6 +1,6 @@
-// @ts-ignore
+// @ts-expect-error
 import * as ReactOriginal from "../node_modules/react";
-// @ts-ignore
+// @ts-expect-error
 export * from "../node_modules/react";
 export default ReactOriginal;
 

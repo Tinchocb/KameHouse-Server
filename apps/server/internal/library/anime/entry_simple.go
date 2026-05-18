@@ -70,9 +70,16 @@ func NewSimpleEntry(ctx context.Context, opts *NewSimpleAnimeEntryOptions) (*Sim
 
 	// If not found, try looking it up by TMDB ID
 	if fetchedMedia == nil {
-		m, err := db.GetLibraryMediaByTmdbId(opts.Database, opts.MediaId)
-		if err == nil && m != nil {
-			fetchedMedia = m
+		if opts.MediaId > 1_000_000 {
+			m, err := db.GetLibraryMediaByTmdbIdAndType(opts.Database, opts.MediaId-1_000_000, "MOVIE")
+			if err == nil && m != nil {
+				fetchedMedia = m
+			}
+		} else {
+			m, err := db.GetLibraryMediaByTmdbIdAndType(opts.Database, opts.MediaId, "SHOW")
+			if err == nil && m != nil {
+				fetchedMedia = m
+			}
 		}
 	}
 
@@ -174,6 +181,11 @@ func (e *SimpleEntry) hydrateEntryEpisodeData(amw metadata_provider.AnimeMetadat
 				key := fmt.Sprintf("%d-%d", seasonNum, lf.GetEpisodeNumber())
 				if ep, ok := libraryEpisodes[key]; ok {
 					libEp = ep
+				} else {
+					absKey := fmt.Sprintf("abs-%d", lf.GetEpisodeNumber())
+					if ep, ok := libraryEpisodes[absKey]; ok {
+						libEp = ep
+					}
 				}
 			}
 

@@ -64,11 +64,21 @@ import {
     Users, 
     Heart, 
     Flame, 
-    Shield 
+    Shield,
+    Star,
+    Clock,
+    Skull,
+    Trophy,
+    HeartHandshake,
+    Swords,
+    Globe,
+    Wand2,
+    HeartCrack,
 } from "lucide-react"
 import { SectionLabel } from "@/routes/home/home.components"
 
 const LANE_ICONS: Record<string, any> = {
+    // Existing lanes
     epic_moments: Play,
     essential_cinema: Award,
     local_library: Library,
@@ -79,6 +89,21 @@ const LANE_ICONS: Record<string, any> = {
     redencion: Heart,
     deseos_prohibidos: Flame,
     fuera_ring: Shield,
+    // New episode-tag lanes
+    capitulos_imperdibles: Star,
+    gohan_poder: Zap,
+    krilin_muere: HeartCrack,
+    nuevo_enemigo: Skull,
+    torneos_artes_marciales: Trophy,
+    tecnicas_letales: Swords,
+    torneo_uranai: Shield,
+    mundo_demonios: Wand2,
+    entidades_supremas: Globe,
+    supervivencia_universal: Globe,
+    // Suggested-swimlane episode lanes
+    trunks_del_futuro: Clock,
+    torneo_poder: Trophy,
+    torneo_poder_super: Trophy,
 }
 
 export const SmartSwimlane = React.memo(function SmartSwimlane({ lane, onNavigate, aspect }: SmartSwimlaneProps) {
@@ -115,12 +140,20 @@ export const SmartSwimlane = React.memo(function SmartSwimlane({ lane, onNavigat
                 }
             }
 
-            const title = isEpisode
-                ? entry.episode!.titleSpanish || entry.episode!.episodeTitle || `Episodio ${entry.episode!.episodeNumber}`
-                : media?.titleEnglish || media?.titleRomaji || media?.titleOriginal || "—"
+            const title = (() => {
+                if (!isEpisode) {
+                    return media?.titleEnglish || media?.titleRomaji || media?.titleOriginal || "—"
+                }
+                const rawTitle = (entry.episode as any).title || entry.episode!.titleSpanish || entry.episode!.episodeTitle || entry.episode!.displayTitle || ""
+                const epNum = entry.episode!.episodeNumber
+                if (rawTitle && !rawTitle.toLowerCase().startsWith("episode") && !rawTitle.toLowerCase().startsWith("episodio")) {
+                    return `Ep. ${epNum} - ${rawTitle}`
+                }
+                return rawTitle || `Episodio ${epNum}`
+            })()
             
             const image = isEpisode
-                ? (entry.episode!.episodeMetadata?.image || fallbackBackdrop || "")
+                ? ((entry.episode as any).image || entry.episode!.episodeMetadata?.image || fallbackBackdrop || "")
                 : (resolvedAspect === "poster" ? (media?.posterImage ?? "") : (fallbackBackdrop ?? ""))
 
             return {
@@ -131,7 +164,9 @@ export const SmartSwimlane = React.memo(function SmartSwimlane({ lane, onNavigat
                 image,
                 availabilityType: entry.availabilityType as SwimlaneItem["availabilityType"],
                 backdropUrl: fallbackBackdrop ?? undefined,
-                description: isEpisode ? entry.episode!.episodeMetadata?.summary : media?.description,
+                description: isEpisode 
+                    ? ((entry.episode as any).description || entry.episode!.episodeMetadata?.summary || entry.episode!.episodeMetadata?.overview || "")
+                    : media?.description,
                 intelligenceTag: intel?.tag,
                 year: media?.year,
                 rating: intel?.rating,

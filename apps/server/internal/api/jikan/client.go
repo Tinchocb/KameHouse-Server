@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	httputil "kamehouse/internal/util/http"
@@ -59,7 +61,8 @@ type AnimeEpisodesResponse struct {
 
 // SearchAnime queries the Jikan API by title and returns the first match.
 func (c *Client) SearchAnime(ctx context.Context, title string) (*AnimeSearchResponse, error) {
-	url := fmt.Sprintf("https://api.jikan.moe/v4/anime?q=%s&limit=1", title)
+	escapedQuery := strings.ReplaceAll(url.QueryEscape(title), "+", "%20")
+	url := fmt.Sprintf("https://api.jikan.moe/v4/anime?q=%s&limit=1", escapedQuery)
 	
 	for attempt := 0; attempt < 3; attempt++ {
 		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)

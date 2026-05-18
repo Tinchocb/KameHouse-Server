@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"kamehouse/internal/database/db"
+	"kamehouse/internal/library/anime"
 	"kamehouse/internal/library/scanner"
 	"kamehouse/internal/library/summary"
 
@@ -185,6 +186,7 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		// Background maintenance tasks
 		go func() {
 			ClearLibraryCollectionCache()
+			anime.InvalidateCuratedHomeCache()
 			_, _ = h.App.Metadata.PlatformRef.Get().RefreshAnimeCollection(context.Background())
 		}()
 	}()

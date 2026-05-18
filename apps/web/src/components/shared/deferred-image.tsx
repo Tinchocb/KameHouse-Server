@@ -50,6 +50,13 @@ export function DeferredImage(props: DeferredImageProps) {
     }, [onError]);
 
     useEffect(() => {
+        if (!src) {
+            setHasError(true);
+            setIsLoaded(true);
+            setIsIntersecting(true);
+            return;
+        }
+
         if (priority) {
             Promise.resolve().then(() => {
                 setIsIntersecting(true);
@@ -144,11 +151,12 @@ export function DeferredImage(props: DeferredImageProps) {
                             <ImageOff className="mb-2 h-8 w-8 opacity-20" />
                             <img
                                 src={NO_COVER}
-                                alt={alt}
+                                alt=""
+                                aria-hidden="true"
                                 className="absolute inset-0 h-full w-full object-cover opacity-10"
                             />
                             <span className="px-4 text-center text-[10px] font-medium uppercase tracking-wider opacity-40">
-                                {alt || "Imagen no disponible"}
+                                Imagen no disponible
                             </span>
                         </>
                     )}

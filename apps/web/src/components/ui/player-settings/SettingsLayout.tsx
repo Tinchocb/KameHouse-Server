@@ -16,7 +16,7 @@ export function SettingsLayout({ title, onBack, onClose, children }: SettingsLay
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.98 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="w-80 bg-black/95 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden flex flex-col"
+            className="w-80 bg-surface-1/55 backdrop-blur-3xl border border-white/[0.08] shadow-2xl overflow-hidden flex flex-col rounded-2xl"
         >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-white/5">

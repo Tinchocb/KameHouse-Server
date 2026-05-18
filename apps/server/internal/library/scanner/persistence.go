@@ -7,8 +7,9 @@ import (
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
+	"path/filepath"
 
-	"github.com/samber/lo"
+
 )
 
 // persistMatchedMedia saves LibraryMedia records to the database and maps their IDs back to LocalFiles.
@@ -105,8 +106,23 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 			newMedia.SuggestedSwimlane = analysis.SuggestedSwimlane
 		}
 
-		if newMedia.TitleRomaji == "" && newMedia.TitleEnglish == "" {
-			newMedia.TitleEnglish = fmt.Sprintf("TMDB Media %d", realTmdbId)
+		if newMedia.TitleRomaji == "" && newMedia.TitleEnglish == "" && newMedia.TitleSpanish == "" && newMedia.TitleOriginal == "" {
+			var fallbackTitle string
+			for _, lf := range localFiles {
+				if lf.MediaId == id {
+					if lf.ParsedData != nil && lf.ParsedData.Title != "" {
+						fallbackTitle = lf.ParsedData.Title
+					} else {
+						fallbackTitle = filepath.Base(filepath.Dir(lf.Path))
+					}
+					break
+				}
+			}
+			if fallbackTitle != "" {
+				newMedia.TitleEnglish = fallbackTitle
+			} else {
+				newMedia.TitleEnglish = fmt.Sprintf("TMDB Media %d", realTmdbId)
+			}
 		}
 
 		mediaBatch = append(mediaBatch, newMedia)
@@ -121,8 +137,15 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 
 		var insertedMedia []*models.LibraryMedia
 		if scn.Database != nil {
-			tmdbIds := lo.Map(mediaBatch, func(m *models.LibraryMedia, _ int) int { return m.TmdbId })
-			scn.Database.Gorm().Where("tmdb_id IN ?", tmdbIds).Find(&insertedMedia)
+			query := scn.Database.Gorm()
+			for i, m := range mediaBatch {
+				if i == 0 {
+					query = query.Where("tmdb_id = ? AND type = ?", m.TmdbId, m.Type)
+				} else {
+					query = query.Or("tmdb_id = ? AND type = ?", m.TmdbId, m.Type)
+				}
+			}
+			query.Find(&insertedMedia)
 			
 			scn.Logger.Debug().Int("insertedCount", len(insertedMedia)).Msg("scanner: Retrieved persisted LibraryMedia records")
 			

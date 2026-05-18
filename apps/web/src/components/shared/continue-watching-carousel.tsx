@@ -32,7 +32,7 @@ export function ContinueWatchingCarousel() {
 
     // Build a lookup map: mediaId → LibraryCollectionEntry
     const entryMap = useMemo(() => {
-        const map = new Map<number, { title: string; posterUrl: string; subtitle?: string; totalEpisodes?: number; localEpisodes?: number }>()
+        const map = new Map<number, { title: string; posterUrl: string; subtitle?: string; totalEpisodes?: number; format?: string; localEpisodes?: number }>()
         if (!collection?.lists) return map
         collection.lists.forEach(list => {
             list.entries?.forEach(entry => {
@@ -43,6 +43,7 @@ export function ContinueWatchingCarousel() {
                     posterUrl: m.posterImage || "",
                     subtitle: m.genres?.[0] ?? m.format ?? undefined,
                     totalEpisodes: m.totalEpisodes ?? undefined,
+                    format: m.format ?? undefined,
                     localEpisodes: entry.libraryData?.allFilesLocked !== undefined
                         ? undefined
                         : undefined,
@@ -102,12 +103,20 @@ export function ContinueWatchingCarousel() {
                                     subtitle={meta.subtitle}
                                     totalEpisodes={meta.totalEpisodes}
                                     watchHistoryItem={item}
-                                    onClick={() =>
-                                        navigate({
-                                            to: "/series/$seriesId",
-                                            params: { seriesId: item.mediaId.toString() },
-                                        })
-                                    }
+                                    onClick={() => {
+                                        const isMovie = meta.format === "MOVIE" || meta.format === "SPECIAL" || meta.format === "OVA"
+                                        if (isMovie) {
+                                            navigate({
+                                                to: "/movies/$movieId",
+                                                params: { movieId: item.mediaId.toString() },
+                                            })
+                                        } else {
+                                            navigate({
+                                                to: "/series/$seriesId",
+                                                params: { seriesId: item.mediaId.toString() },
+                                            })
+                                        }
+                                    }}
                                 />
                                 {/* Episode label below card */}
                                 <p className="mt-1.5 text-[9px] font-bold text-zinc-500 uppercase tracking-widest text-center truncate">

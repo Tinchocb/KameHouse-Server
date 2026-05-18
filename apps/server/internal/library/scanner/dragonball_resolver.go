@@ -156,9 +156,9 @@ func ResolveDragonBallID(title string) (int, bool, bool) {
 			resId = 18095
 			found = true
 		}
-		// Yo! Son Goku and His Friends Return!! (TMDB: 101037)
+		// Yo! Son Goku and His Friends Return!! (TMDB: 38594)
 		if !found && ((hasWord("hola") && hasWord("goku")) || hasWord("regresan") || hasWord("return")) {
-			resId = 101037
+			resId = 38594
 			found = true
 		}
 		// Goku's Traffic Safety / Seguridad Vial (TMDB: 39322)

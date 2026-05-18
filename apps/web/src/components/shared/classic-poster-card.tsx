@@ -40,6 +40,15 @@ export const ClassicPosterCard = memo(function ClassicPosterCard({
                     alt={title}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                     showSkeleton={false}
+                    fallback={
+                        <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center" style={{ background: `linear-gradient(to bottom right, #18181b, #09090b)` }}>
+                            <div className="absolute inset-0 opacity-20 mix-blend-overlay" style={{ backgroundImage: `url("https://grainy-gradients.vercel.app/noise.svg")` }} />
+                            <span className="text-3xl font-bebas tracking-widest text-white/70 drop-shadow-lg z-10 line-clamp-4 leading-[1.1]">
+                                {title}
+                            </span>
+                            <div className="w-12 h-1 bg-brand-orange mt-6 rounded-full opacity-50 z-10" />
+                        </div>
+                    }
                 />
 
                 {/* Overlays */}

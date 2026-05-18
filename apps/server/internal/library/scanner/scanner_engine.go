@@ -152,6 +152,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	var localFiles []*dto.LocalFile
 	skippedLfs := make(map[string]*dto.LocalFile)
 	var libraryPaths []string
+	var sortedLibraryPaths []string
 	var hashDoneChan <-chan struct{}
 
 	if scn.ScanMode == "metadata" {
@@ -165,7 +166,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		// +---------------------+
 
 		var paths []string
-		paths, libraryPaths, _ = scn.discoverFilePaths(ctx, time.Time{})
+		paths, libraryPaths, sortedLibraryPaths = scn.discoverFilePaths(ctx, time.Time{})
 
 		if scn.ScanLogger != nil {
 			scn.ScanLogger.logger.Info().
@@ -179,10 +180,48 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 
 		// Get skipped files depending on options
 		if scn.ExistingLocalFiles != nil {
+			libraryPathExistsCache := make(map[string]bool)
+
 			// Retrieve skipped files from existing local files
 			for _, lf := range scn.ExistingLocalFiles {
 				if lf == nil {
 					continue
+				}
+
+				// Check if the file exists physically
+				stat, err := os.Stat(lf.Path)
+				exists := err == nil
+
+				if !exists && scn.WithShelving {
+					// The file does not exist. Check if the containing library path is offline!
+					var matchedLibPath string
+					for _, libPath := range sortedLibraryPaths {
+						if strings.HasPrefix(lf.GetNormalizedPath(), util.NormalizePath(libPath)) {
+							matchedLibPath = libPath
+							break
+						}
+					}
+
+					if matchedLibPath != "" {
+						existsLib, checked := libraryPathExistsCache[matchedLibPath]
+						if !checked {
+							_, errLib := os.Stat(matchedLibPath)
+							existsLib = errLib == nil || !os.IsNotExist(errLib)
+							libraryPathExistsCache[matchedLibPath] = existsLib
+							if !existsLib {
+								scn.Logger.Warn().Str("libraryPath", matchedLibPath).Msg("scanner: containing library folder is offline/disconnected. Shelving files from deletion.")
+							}
+						}
+
+						if !existsLib {
+							// Library path is offline! We must SHELVE this file to protect it from deletion!
+							scn.Logger.Debug().Str("path", lf.Path).Msg("scanner: shelving file because its library is offline")
+							scn.shelvedLocalFiles = append(scn.shelvedLocalFiles, lf)
+							// Also add to skippedLfs so we don't process it further in this scan
+							skippedLfs[lf.GetNormalizedPath()] = lf
+							continue
+						}
+					}
 				}
 
 				// 1. Explicit skip (locked/ignored)
@@ -193,7 +232,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 
 				// 2. File Map optimization (Fast Scan)
 				if scn.ScanMode != "deep" {
-					if stat, err := os.Stat(lf.Path); err == nil {
+					if exists {
 						if stat.Size() == lf.FileSize && stat.ModTime().Unix() == lf.FileModTime {
 							skippedLfs[lf.GetNormalizedPath()] = lf
 							continue
@@ -303,7 +342,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		}
 
 		// Add remaining shelved files
-		scn.addRemainingShelvedFiles(skippedLfs)
+		scn.addRemainingShelvedFiles(skippedLfs, sortedLibraryPaths)
 
 		scn.Logger.Debug().Msg("scanner: Scan completed")
 		if scn.WSEventManager != nil {
@@ -699,6 +738,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 
 					// 3. OpenSubtitles (Per LocalFile)
 					if scn.OpenSubsEnricher != nil {
+						var fileWg sync.WaitGroup
 						for _, lf := range mediaGroups[mId] {
 							season, episode := 0, 0
 							if lf.ParsedData != nil {
@@ -709,8 +749,13 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 									episode, _ = util.StringToInt(lf.ParsedData.Episode)
 								}
 							}
-							_ = scn.OpenSubsEnricher.EnrichLocalFile(ctx, lf, matchedMedia, season, episode)
+							fileWg.Add(1)
+							go func(lf *dto.LocalFile, s, e int) {
+								defer fileWg.Done()
+								_ = scn.OpenSubsEnricher.EnrichLocalFile(ctx, lf, matchedMedia, s, e)
+							}(lf, season, episode)
 						}
+						fileWg.Wait()
 					}
 				}
 			}()
@@ -833,31 +878,54 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		if scn.Database != nil && scn.TMDBClient != nil && len(movieIds) > 0 {
 			scn.Logger.Info().Int("movieCount", len(movieIds)).Msg("scanner: Fetching BelongsToCollection for movies")
 
-			// Map collectionID → list of real TMDB movie IDs
-			collectionMembers := make(map[int][]int)
-
+			// Collect real movie IDs for concurrent lookup.
+			realMovieIDs := make([]int, 0, len(movieIds))
 			for normalizedID := range movieIds {
-				if ctx.Err() != nil {
-					break
-				}
-				realMovieID := normalizedID - 1_000_000
-				if realMovieID <= 0 {
-					continue
-				}
-
-				details, detailErr := scn.TMDBClient.GetMovieDetailsV2(ctx, realMovieID)
-				if detailErr != nil {
-					scn.Logger.Debug().Err(detailErr).Int("tmdbId", realMovieID).Msg("scanner: Could not get movie details for collection lookup")
-					continue
-				}
-
-				if details.BelongsToCollection != nil && details.BelongsToCollection.ID > 0 {
-					collID := details.BelongsToCollection.ID
-					collectionMembers[collID] = append(collectionMembers[collID], realMovieID)
+				if realMovieID := normalizedID - 1_000_000; realMovieID > 0 {
+					realMovieIDs = append(realMovieIDs, realMovieID)
 				}
 			}
 
-			// Upsert each discovered collection
+			// Fan-out: fetch all movie details concurrently (up to 5 workers).
+			var collectionMu sync.Mutex
+			collectionMembers := make(map[int][]int)
+
+			movieIDCh := make(chan int, len(realMovieIDs))
+			for _, id := range realMovieIDs {
+				movieIDCh <- id
+			}
+			close(movieIDCh)
+
+			collWorkers := 5
+			if len(realMovieIDs) < collWorkers {
+				collWorkers = len(realMovieIDs)
+			}
+			var collWg sync.WaitGroup
+			for w := 0; w < collWorkers; w++ {
+				collWg.Add(1)
+				go func() {
+					defer collWg.Done()
+					for realMovieID := range movieIDCh {
+						if ctx.Err() != nil {
+							return
+						}
+						details, detailErr := scn.TMDBClient.GetMovieDetailsV2(ctx, realMovieID)
+						if detailErr != nil {
+							scn.Logger.Debug().Err(detailErr).Int("tmdbId", realMovieID).Msg("scanner: Could not get movie details for collection lookup")
+							continue
+						}
+						if details.BelongsToCollection != nil && details.BelongsToCollection.ID > 0 {
+							collID := details.BelongsToCollection.ID
+							collectionMu.Lock()
+							collectionMembers[collID] = append(collectionMembers[collID], realMovieID)
+							collectionMu.Unlock()
+						}
+					}
+				}()
+			}
+			collWg.Wait()
+
+			// Upsert each discovered collection (small N, sequential is fine here).
 			for collID, memberIDs := range collectionMembers {
 				if ctx.Err() != nil {
 					break
@@ -936,7 +1004,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	// +---------------------+
 
 	// Add remaining shelved files
-	scn.addRemainingShelvedFiles(skippedLfs)
+	scn.addRemainingShelvedFiles(skippedLfs, sortedLibraryPaths)
 
 	scn.Logger.Info().Msg("scanner: Scan completed")
 	if scn.WSEventManager != nil {

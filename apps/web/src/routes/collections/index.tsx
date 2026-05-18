@@ -3,6 +3,8 @@ import { useState, useMemo, memo } from "react"
 import { FaSearch, FaPlay, FaListOl, FaLayerGroup } from "react-icons/fa"
 import { EmptyState } from "@/components/shared/empty-state"
 import { useGetMediaCollections } from "@/api/hooks/collections.hooks"
+import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
+import { Anime_LibraryCollectionEntry } from "@/api/generated/types"
 import { cn } from "@/components/ui/core/styling"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { HeroSection } from "@/components/shared/hero-section"
@@ -20,6 +22,12 @@ function CollectionsPage() {
     const [search, setSearch] = useState("")
     const navigate = useNavigate()
     const { data: collections = [], isLoading } = useGetMediaCollections()
+    const { data: library } = useGetLibraryCollection()
+
+    const libraryEntries = useMemo(() => {
+        if (!library?.lists) return []
+        return library.lists.flatMap(list => list.entries || [])
+    }, [library])
 
     const filtered = useMemo(() => {
         return collections.filter(c => {
@@ -86,6 +94,7 @@ function CollectionsPage() {
                                 key={coll.id}
                                 coll={coll}
                                 idx={idx}
+                                libraryEntries={libraryEntries}
                                 onNavigate={handleNavigate}
                             />
                         ))}
@@ -114,13 +123,51 @@ interface CollectionCassetteProps {
         memberIds?: number[]
     }
     idx: number
+    libraryEntries: Anime_LibraryCollectionEntry[]
     onNavigate: (id: number) => void
 }
 
 const CollectionCassette = memo(function CollectionCassette({
-    coll, idx, onNavigate
+    coll, idx, libraryEntries, onNavigate
 }: CollectionCassetteProps) {
     const count = coll.memberIds?.length || 0
+    const totalMembers = coll.memberIds?.length || 0
+
+    const localMembers = useMemo(() => {
+        if (!coll.memberIds) return 0
+        return libraryEntries.filter(entry => 
+            entry.mediaId && 
+            coll.memberIds?.includes(entry.mediaId) && 
+            (entry.libraryData?.mainFileCount || 0) > 0
+        ).length
+    }, [coll.memberIds, libraryEntries])
+
+    const watchedMembers = useMemo(() => {
+        if (!coll.memberIds) return 0
+        return libraryEntries.filter(entry => 
+            entry.mediaId && 
+            coll.memberIds?.includes(entry.mediaId) && 
+            (entry.media?.watched || (entry.listData?.progress || 0) >= (entry.media?.totalEpisodes || 0))
+        ).length
+    }, [coll.memberIds, libraryEntries])
+
+    const isFullyWatched = totalMembers > 0 && watchedMembers === totalMembers
+    const isFullyLocal = totalMembers > 0 && localMembers === totalMembers
+
+    const accentStripeClass = cn(
+        "absolute left-0 inset-y-0 w-1 transition-all duration-300",
+        isFullyWatched 
+            ? "bg-[#10b981] shadow-[0_0_8px_rgba(16,185,129,0.6)]" 
+            : isFullyLocal 
+                ? "bg-brand-orange shadow-[0_0_8px_rgba(255,107,0,0.6)]" 
+                : "bg-yellow-500"
+    )
+
+    const stateColorClass = isFullyWatched 
+        ? "text-[#10b981]" 
+        : isFullyLocal 
+            ? "text-brand-orange" 
+            : "text-yellow-500"
 
     return (
         <div
@@ -159,11 +206,11 @@ const CollectionCassette = memo(function CollectionCassette({
                     }}
                 >
                     {/* Accent stripe */}
-                    <div className="absolute left-0 inset-y-0 w-1 bg-yellow-500" />
+                    <div className={accentStripeClass} />
                     
                     {/* Size badge */}
                     <div className="mt-4 ml-4 flex items-center gap-1">
-                        <FaLayerGroup className="text-[8px] text-yellow-500" />
+                        <FaLayerGroup className={cn("text-[8px] transition-colors", stateColorClass)} />
                         <span className="text-[9px] font-black tabular-nums text-zinc-400">{count} PARTES</span>
                     </div>
 
@@ -199,6 +246,16 @@ const CollectionCassette = memo(function CollectionCassette({
 
                     {/* Hover info overlay */}
                     <div className="absolute inset-0 flex flex-col justify-end p-5 opacity-0 group-hover/item:opacity-100 transition-all duration-400 bg-black/95">
+                        
+                        {/* Sello Retro SAGA COMPLETADA */}
+                        {isFullyWatched && (
+                            <div className="absolute top-5 right-5 z-20 pointer-events-none select-none transition-all duration-500 rotate-[-12deg] scale-100">
+                                <span className="block px-2 py-1 border border-[#10b981]/50 text-[#10b981] text-[8px] font-black uppercase tracking-widest rounded bg-[#10b981]/5 backdrop-blur-sm shadow-[0_4px_10px_rgba(16,185,129,0.15)]">
+                                    COMPLETADA
+                                </span>
+                            </div>
+                        )}
+
                         {/* Play CTA */}
                         <button
                             onClick={() => onNavigate(coll.tmdbCollectionId)}
@@ -213,11 +270,31 @@ const CollectionCassette = memo(function CollectionCassette({
                             {coll.name}
                         </h3>
 
-                        {/* Count */}
-                        <div className="flex items-center gap-2 mb-4">
-                            <span className="flex items-center gap-1 text-[10px] font-black px-2 py-1 bg-white text-black">
-                                <FaListOl className="text-[8px]" /> {count} PELÍCULAS
+                        {/* Library Stats */}
+                        <div className="flex flex-wrap gap-1.5 mb-4">
+                            <span className="flex items-center gap-1 text-[8px] font-black px-2 py-1 bg-zinc-800 text-zinc-300 uppercase tracking-widest border border-white/5">
+                                <FaListOl className="text-[7px]" /> {count} PARTES
                             </span>
+                            {localMembers > 0 && (
+                                <span className={cn(
+                                    "flex items-center gap-1 text-[8px] font-black px-2 py-1 uppercase tracking-widest border transition-all duration-300",
+                                    isFullyLocal
+                                        ? "bg-[#ff6b00]/10 text-brand-orange border-brand-orange/30 shadow-[0_0_8px_rgba(255,107,0,0.15)]"
+                                        : "bg-zinc-800/40 text-zinc-400 border-white/5"
+                                )}>
+                                    {localMembers}/{totalMembers} LOCAL
+                                </span>
+                            )}
+                            {watchedMembers > 0 && (
+                                <span className={cn(
+                                    "flex items-center gap-1 text-[8px] font-black px-2 py-1 uppercase tracking-widest border transition-all duration-300",
+                                    isFullyWatched
+                                        ? "bg-[#10b981]/10 text-[#10b981] border-[#10b981]/30 shadow-[0_0_8px_rgba(16,185,129,0.15)]"
+                                        : "bg-zinc-800/40 text-zinc-400 border-white/5"
+                                )}>
+                                    {watchedMembers}/{totalMembers} VISTAS
+                                </span>
+                            )}
                         </div>
 
                         {/* Description */}

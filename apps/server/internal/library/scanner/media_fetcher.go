@@ -87,8 +87,9 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 				for _, list := range c.Lists {
 					for _, entry := range list.Entries {
 						if entry.Media != nil {
-							mf.AllMedia = append(mf.AllMedia, anime.NewNormalizedMedia(entry.Media))
-							mf.CollectionMediaIds = append(mf.CollectionMediaIds, entry.Media.ID)
+							norm := anime.NewNormalizedMedia(entry.Media)
+							mf.AllMedia = append(mf.AllMedia, norm)
+							mf.CollectionMediaIds = append(mf.CollectionMediaIds, norm.ID)
 						}
 					}
 				}

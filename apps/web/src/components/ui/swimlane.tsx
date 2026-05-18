@@ -68,7 +68,7 @@ const SwimlaneInner = React.memo(function SwimlaneInner({
 
                 <HorizontalDraggableScroll
                     className="px-0"
-                    containerClass="gap-6 px-6 pb-12 md:px-12 lg:px-20 xl:px-24 2xl:px-28"
+                    containerClass="gap-6 px-6 pt-16 pb-20 -mt-16 -mb-4 md:px-12 lg:px-20 xl:px-24 2xl:px-28"
                     chevronOverlayClass="from-zinc-950/95 to-transparent"
                     scrollAmount={420}
                     safeDisplacement={18}

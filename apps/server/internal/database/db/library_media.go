@@ -17,6 +17,16 @@ func GetLibraryMediaByTmdbId(d *Database, tmdbId int) (*models.LibraryMedia, err
 	return &media, nil
 }
 
+// GetLibraryMediaByTmdbIdAndType retrieves a LibraryMedia by its TMDB ID and Type.
+func GetLibraryMediaByTmdbIdAndType(d *Database, tmdbId int, mediaType string) (*models.LibraryMedia, error) {
+	var media models.LibraryMedia
+	err := d.Gorm().Where("tmdb_id = ? AND type = ?", tmdbId, mediaType).First(&media).Error
+	if err != nil {
+		return nil, err
+	}
+	return &media, nil
+}
+
 // GetLibraryMediaByID retrieves a LibraryMedia by its primary key ID.
 func GetLibraryMediaByID(d *Database, id uint) (*models.LibraryMedia, error) {
 	var media models.LibraryMedia

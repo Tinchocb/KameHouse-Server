@@ -14,6 +14,7 @@ import { Route as SeriesIndexRouteImport } from './routes/series/index'
 import { Route as MoviesIndexRouteImport } from './routes/movies/index'
 import { Route as HomeIndexRouteImport } from './routes/home/index'
 import { Route as CollectionsIndexRouteImport } from './routes/collections/index'
+import { Route as MoviesMovieIdRouteImport } from './routes/movies/$movieId'
 import { Route as CollectionsIdRouteImport } from './routes/collections/$id'
 import { Route as SeriesSeriesIdIndexRouteImport } from './routes/series/$seriesId/index'
 import { Route as SeriesSeriesIdSagaIdRouteImport } from './routes/series/$seriesId/$sagaId'
@@ -43,6 +44,11 @@ const CollectionsIndexRoute = CollectionsIndexRouteImport.update({
   path: '/collections/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MoviesMovieIdRoute = MoviesMovieIdRouteImport.update({
+  id: '/movies/$movieId',
+  path: '/movies/$movieId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CollectionsIdRoute = CollectionsIdRouteImport.update({
   id: '/collections/$id',
   path: '/collections/$id',
@@ -61,6 +67,7 @@ const SeriesSeriesIdSagaIdRoute = SeriesSeriesIdSagaIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/collections/$id': typeof CollectionsIdRoute
+  '/movies/$movieId': typeof MoviesMovieIdRoute
   '/collections/': typeof CollectionsIndexRoute
   '/home/': typeof HomeIndexRoute
   '/movies/': typeof MoviesIndexRoute
@@ -71,6 +78,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/collections/$id': typeof CollectionsIdRoute
+  '/movies/$movieId': typeof MoviesMovieIdRoute
   '/collections': typeof CollectionsIndexRoute
   '/home': typeof HomeIndexRoute
   '/movies': typeof MoviesIndexRoute
@@ -82,6 +90,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/collections/$id': typeof CollectionsIdRoute
+  '/movies/$movieId': typeof MoviesMovieIdRoute
   '/collections/': typeof CollectionsIndexRoute
   '/home/': typeof HomeIndexRoute
   '/movies/': typeof MoviesIndexRoute
@@ -94,6 +103,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/collections/$id'
+    | '/movies/$movieId'
     | '/collections/'
     | '/home/'
     | '/movies/'
@@ -104,6 +114,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/collections/$id'
+    | '/movies/$movieId'
     | '/collections'
     | '/home'
     | '/movies'
@@ -114,6 +125,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/collections/$id'
+    | '/movies/$movieId'
     | '/collections/'
     | '/home/'
     | '/movies/'
@@ -125,6 +137,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   CollectionsIdRoute: typeof CollectionsIdRoute
+  MoviesMovieIdRoute: typeof MoviesMovieIdRoute
   CollectionsIndexRoute: typeof CollectionsIndexRoute
   HomeIndexRoute: typeof HomeIndexRoute
   MoviesIndexRoute: typeof MoviesIndexRoute
@@ -171,6 +184,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CollectionsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/movies/$movieId': {
+      id: '/movies/$movieId'
+      path: '/movies/$movieId'
+      fullPath: '/movies/$movieId'
+      preLoaderRoute: typeof MoviesMovieIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/collections/$id': {
       id: '/collections/$id'
       path: '/collections/$id'
@@ -197,6 +217,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   CollectionsIdRoute: CollectionsIdRoute,
+  MoviesMovieIdRoute: MoviesMovieIdRoute,
   CollectionsIndexRoute: CollectionsIndexRoute,
   HomeIndexRoute: HomeIndexRoute,
   MoviesIndexRoute: MoviesIndexRoute,

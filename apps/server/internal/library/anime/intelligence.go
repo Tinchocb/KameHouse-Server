@@ -9,6 +9,9 @@ import (
 	"kamehouse/internal/database/models/dto"
 	"strings"
 	"sync"
+	"time"
+
+	"kamehouse/internal/util/cache"
 
 	"github.com/rs/zerolog"
 )
@@ -356,6 +359,10 @@ func (s *IntelligenceService) GetContinueWatching(ctx context.Context, userID ui
 		return nil, err
 	}
 
+	if len(history) == 0 {
+		return []dto.ContinueWatchingItem{}, nil
+	}
+
 	allLocalFiles, _, err := db.GetLocalFiles(s.db)
 	if err != nil {
 		return nil, err
@@ -372,6 +379,35 @@ func (s *IntelligenceService) GetContinueWatching(ctx context.Context, userID ui
 		fileMap[lf.MediaId][lf.Metadata.Episode] = true
 	}
 
+	// Extract unique media IDs
+	mediaIDs := make([]uint, 0, len(history))
+	for _, h := range history {
+		mediaIDs = append(mediaIDs, uint(h.MediaID))
+	}
+
+	// 1. Batch-fetch all parent LibraryMedia
+	var mediaList []models.LibraryMedia
+	if err := s.db.Gorm().Where("id IN (?)", mediaIDs).Find(&mediaList).Error; err != nil {
+		return nil, err
+	}
+	mediaMap := make(map[uint]*models.LibraryMedia)
+	for i := range mediaList {
+		mediaMap[mediaList[i].ID] = &mediaList[i]
+	}
+
+	// 2. Batch-fetch all episodes for these media
+	var episodeList []models.LibraryEpisode
+	if err := s.db.Gorm().Where("library_media_id IN (?)", mediaIDs).Find(&episodeList).Error; err != nil {
+		return nil, err
+	}
+
+	// Map episodes by media_id -> season_id -> episode_num for high performance lookups
+	episodeMap := make(map[string]*models.LibraryEpisode)
+	for i := range episodeList {
+		key := fmt.Sprintf("%d_%d_%d", episodeList[i].LibraryMediaID, episodeList[i].SeasonNumber, episodeList[i].EpisodeNumber)
+		episodeMap[key] = &episodeList[i]
+	}
+
 	items := make([]dto.ContinueWatchingItem, 0, len(history))
 
 	for _, h := range history {
@@ -380,37 +416,44 @@ func (s *IntelligenceService) GetContinueWatching(ctx context.Context, userID ui
 			progress = h.CurrentTime / h.Duration
 		}
 
-		var media models.LibraryMedia
-		if err := s.db.Gorm().First(&media, h.MediaID).Error; err != nil {
+		media, ok := mediaMap[uint(h.MediaID)]
+		if !ok {
 			continue
 		}
 
-		var currentEpisode models.LibraryEpisode
-		if err := s.db.Gorm().Where("library_media_id = ? AND episode_number = ?", h.MediaID, h.EpisodeNumber).First(&currentEpisode).Error; err != nil {
+		// Find current episode in memory
+		var currentEpisode *models.LibraryEpisode
+		for i := range episodeList {
+			if episodeList[i].LibraryMediaID == uint(h.MediaID) && episodeList[i].EpisodeNumber == h.EpisodeNumber {
+				currentEpisode = &episodeList[i]
+				break
+			}
+		}
+		if currentEpisode == nil {
 			continue
 		}
 
 		item := dto.ContinueWatchingItem{
-			Media:           &media,
-			Episode:         &currentEpisode,
+			Media:           media,
+			Episode:         currentEpisode,
 			Progress:        progress,
 			LastPlaybackPos: h.CurrentTime,
 			IsNextEpisode:   false,
 		}
 
 		if progress >= 0.9 {
-			var nextEpisode models.LibraryEpisode
-			err := s.db.Gorm().Where("library_media_id = ? AND season_number = ? AND episode_number = ?",
-				h.MediaID, currentEpisode.SeasonNumber, currentEpisode.EpisodeNumber+1).First(&nextEpisode).Error
-
-			if err != nil {
-				err = s.db.Gorm().Where("library_media_id = ? AND season_number = ? AND episode_number = 1",
-					h.MediaID, currentEpisode.SeasonNumber+1).First(&nextEpisode).Error
+			// Find next episode in the same season: currentEpisode.EpisodeNumber + 1
+			nextKey := fmt.Sprintf("%d_%d_%d", uint(h.MediaID), currentEpisode.SeasonNumber, currentEpisode.EpisodeNumber+1)
+			nextEpisode, found := episodeMap[nextKey]
+			if !found {
+				// Try season + 1, episode 1
+				nextKey = fmt.Sprintf("%d_%d_%d", uint(h.MediaID), currentEpisode.SeasonNumber+1, 1)
+				nextEpisode, found = episodeMap[nextKey]
 			}
 
-			if err == nil {
+			if found {
 				if hasFile := fileMap[int(h.MediaID)][nextEpisode.EpisodeNumber]; hasFile {
-					item.Episode = &nextEpisode
+					item.Episode = nextEpisode
 					item.Progress = 0
 					item.IsNextEpisode = true
 				} else {
@@ -430,49 +473,10 @@ func (s *IntelligenceService) GetContinueWatching(ctx context.Context, userID ui
 // GetCuratedSwimlanes returns the curated home swimlanes, including DB Intelligence lanes.
 func (s *IntelligenceService) GetCuratedSwimlanes(_ context.Context) (*CuratedHomeResponse, error) {
 	resp := &CuratedHomeResponse{
-		Swimlanes: make([]*CuratedSwimlane, 0, 10),
+		Swimlanes: make([]*CuratedSwimlane, 0, 45),
 	}
 
-	// 1. New Intelligence Lanes (Highest priority for KameHouse)
-	intelLanes := []struct {
-		ID    string
-		Title string
-	}{
-		{"eleva_tu_ki", "¡Eleva tu Ki!: Batallas que rompieron los límites"},
-		{"camino_guerrero", "El Camino del Guerrero: Focus en Gohan"},
-		{"cronicas_trunks", "Crónicas de Trunks: El Futuro en Llamas"},
-		{"fusion_ha", "¡Fusión HA!: Guerreros Definitivos"},
-		{"redencion", "Historias de Redención: Rivales que se volvieron Hermanos"},
-		{"deseos_prohibidos", "Deseos Prohibidos y Dragones Sagrados"},
-		{"fuera_ring", "¡Fuera del Ring!: Los Grandes Torneos"},
-	}
-
-	for _, l := range intelLanes {
-		if lane := s.buildIntelligenceLane(l.ID, l.Title); lane != nil {
-			resp.Swimlanes = append(resp.Swimlanes, lane)
-		}
-	}
-
-	// 1.5. Episode-specific Intelligence Lanes (Tags on LocalFiles)
-	episodeLanes := []struct {
-		ID    string
-		Title string
-		Tag   string
-	}{
-		{"tecnicas_letales", "Técnicas Letales", "Técnicas Letales"},
-		{"torneo_uranai", "Torneo de Uranai Baba", "El Torneo de Uranai Baba"},
-		{"mundo_demonios", "Mundo de los Demonios", "Mundo de los Demonios"},
-		{"entidades_supremas", "Entidades Supremas", "Entidades Supremas"},
-		{"supervivencia_universal", "Supervivencia Universal", "Supervivencia Universal"},
-	}
-
-	for _, l := range episodeLanes {
-		if lane := s.buildEpisodeTagLane(l.ID, l.Title, l.Tag); lane != nil {
-			resp.Swimlanes = append(resp.Swimlanes, lane)
-		}
-	}
-
-	// 2. Standard Lanes
+	// 1. Standard Collection Entry Points (Top priority)
 	if lane := s.buildLocalLibraryLane(); lane != nil {
 		resp.Swimlanes = append(resp.Swimlanes, lane)
 	}
@@ -481,11 +485,75 @@ func (s *IntelligenceService) GetCuratedSwimlanes(_ context.Context) (*CuratedHo
 		resp.Swimlanes = append(resp.Swimlanes, lane)
 	}
 
-	if lane := s.buildEssentialCinemaLane(); lane != nil {
+	if lane := s.buildTrendingLane(); lane != nil {
 		resp.Swimlanes = append(resp.Swimlanes, lane)
 	}
 
-	if lane := s.buildTrendingLane(); lane != nil {
+	// 2. Curated Episode-level lanes by LibraryEpisode.suggested_swimlane
+	// These values exactly match the output of IntelligenceTagger.suggestSwimlane().
+	// Using LIKE '%substring%' queries so small encoding differences don't block results.
+	epNameLanes := []struct {
+		ID   string
+		Name string // unique substring of the suggestSwimlane() output
+	}{
+		// ── Combate y Transformaciones ──────────────────────────────────────────
+		{"capitulos_imperdibles", "Capítulos Imperdibles"},
+		{"eleva_tu_ki_ep", "Eleva tu Ki"},
+		{"transformaciones_saiyajin", "Transformaciones Saiyajin"},
+		{"forma_final_villano", "Forma Final"},
+		{"tecnicas_sacrificio", "Último Recurso"},
+		{"tecnicas_letales", "Sin Vuelta Atrás"},
+		{"fusion_ha", "Uniones Más Poderosas"},
+		{"espadachines", "Espadachines y Guerreros"},
+		// ── Torneos ─────────────────────────────────────────────────────────────
+		{"torneos_artes_marciales", "Grandes Torneos"},
+		{"torneo_uranai_baba", "Uranai Baba"},
+		{"juegos_cell", "Juegos de Cell"},
+		{"torneo_mas_alla", "Más Allá: Combates"},
+		{"torneo_poder", "Torneo del Poder"},
+		// ── Sagas y Facciones ───────────────────────────────────────────────────
+		{"imperio_freezer", "Imperio de Freezer"},
+		{"patrulla_roja", "Patrulla Roja"},
+		{"saiyajins_legendarios", "Poder Berserker"},
+		{"los_saiyajins", "Raza Guerrera Más Poderosa"},
+		{"los_tsufurujin", "Venganza de Baby"},
+		{"dragones_malignos", "Amenaza Final de GT"},
+		{"dioses_destruccion", "Entidades Supremas del Universo"},
+		{"patrulla_galactica", "Policías del Cosmos"},
+		{"guerreras_poderosas", "Guerreras Indomables"},
+		{"nuevas_generaciones", "Nuevas Generaciones de Guerreros"},
+		{"los_namekuseijin", "Namekuseijin"},
+		// ── Sci-Fi y Aventura ───────────────────────────────────────────────────
+		{"guardianes_tiempo", "Guardianes del Tiempo"},
+		{"cronicas_supervivencia", "Futuro en Llamas"},
+		{"cruce_universos", "Cruce de Universos"},
+		{"invasion_tierra", "Tierra Bajo Ataque"},
+		{"viajes_espacio", "Aventura Espacial"},
+		{"busqueda_esferas", "Deseos Prohibidos"},
+		// ── Magia y Sobrenatural ────────────────────────────────────────────────
+		{"artes_oscuras_ep", "Artes Oscuras"},
+		{"maldicion_mini", "Maldición Mini"},
+		// ── Drama y Emociones ───────────────────────────────────────────────────
+		{"sacrificio_heroico", "Héroes lo Dan Todo"},
+		{"tension_absoluta", "Borde del Abismo"},
+		{"romance_boda", "Amor en el Universo"},
+		{"gran_saiyaman", "Héroe Enmascarado"},
+		{"humor_relleno", "Lado Cómico"},
+		// ── Entrenamiento ───────────────────────────────────────────────────────
+		{"entrenamiento_divino", "Camino de los Dioses"},
+		{"entrenamiento_extremo", "Camino del Guerrero"},
+		// ── Películas ───────────────────────────────────────────────────────────
+		{"esencia_cinema_ep", "Esencia de Cinema"},
+	}
+
+	for _, l := range epNameLanes {
+		if lane := s.buildEpisodeSwimlaneByName(l.ID, l.Name); lane != nil {
+			resp.Swimlanes = append(resp.Swimlanes, lane)
+		}
+	}
+
+	// 3. Essential Cinema (Beautiful closing row focusing on Movies and OVAs)
+	if lane := s.buildEssentialCinemaLane(); lane != nil {
 		resp.Swimlanes = append(resp.Swimlanes, lane)
 	}
 
@@ -494,9 +562,12 @@ func (s *IntelligenceService) GetCuratedSwimlanes(_ context.Context) (*CuratedHo
 
 func (s *IntelligenceService) buildIntelligenceLane(id, title string) *CuratedSwimlane {
 	var media []*models.LibraryMedia
-	// Search by SuggestedSwimlane matching the title
+	hasFiles := s.db.Gorm().Model(&models.LocalFile{}).Select("1").
+		Where("library_media_id = library_media.id AND library_media_id > 0").Limit(1)
+	// Search by SuggestedSwimlane matching the title, only for media with local files
 	if err := s.db.Gorm().
-		Where("suggested_swimlane = ?", title).
+		Omit("description", "synonyms", "audio_tracks", "subtitle_tracks").
+		Where("EXISTS (?) AND suggested_swimlane = ?", hasFiles, title).
 		Order("score DESC").
 		Limit(20).
 		Find(&media).Error; err != nil || len(media) == 0 {
@@ -510,11 +581,18 @@ func (s *IntelligenceService) buildIntelligenceLane(id, title string) *CuratedSw
 		Entries: make([]*LibraryCollectionEntry, 0, len(media)),
 	}
 	for _, m := range media {
+		// Skip media stubs: must have a real poster image and a resolved title
+		if m.PosterImage == "" || m.GetPreferredTitle() == "" {
+			continue
+		}
 		lane.Entries = append(lane.Entries, &LibraryCollectionEntry{
 			Media:            m,
 			MediaId:          int(m.ID),
 			AvailabilityType: "HYBRID",
 		})
+	}
+	if len(lane.Entries) == 0 {
+		return nil
 	}
 	return lane
 }
@@ -581,6 +659,10 @@ func (s *IntelligenceService) buildEpisodeTagLane(id, title, tag string) *Curate
 		if added[episode.ID] {
 			continue
 		}
+		// Skip media stubs without a real poster image
+		if media.PosterImage == "" || media.GetPreferredTitle() == "" {
+			continue
+		}
 		added[episode.ID] = true
 
 		lane.Entries = append(lane.Entries, &LibraryCollectionEntry{
@@ -598,14 +680,180 @@ func (s *IntelligenceService) buildEpisodeTagLane(id, title, tag string) *Curate
 	return lane
 }
 
+var curatedHomeCache = cache.NewCache[*CuratedHomeResponse](30 * time.Minute)
+
+// InvalidateCuratedHomeCache clears the thread-safe in-memory cache for the curated home swimlanes.
+func InvalidateCuratedHomeCache() {
+	curatedHomeCache.Clear()
+}
+
 func GetCuratedHome(_ context.Context, database *db.Database) (*CuratedHomeResponse, error) {
+	cacheKey := "curated_home"
+	if cached, ok := curatedHomeCache.Get(cacheKey); ok && cached != nil {
+		return cached, nil
+	}
+
 	svc := NewIntelligenceService(database, nil, nil)
-	return svc.GetCuratedSwimlanes(context.Background())
+	resp, err := svc.GetCuratedSwimlanes(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	curatedHomeCache.Set(cacheKey, resp)
+	return resp, nil
+}
+
+// buildEpisodeSwimlaneByTag builds a swimlane of LibraryEpisodes whose tags JSON array
+// contains the given tag string (SQLite JSON LIKE). Enriches each entry with its parent
+// LibraryMedia so the frontend can display series name + episode image.
+func (s *IntelligenceService) buildEpisodeSwimlaneByTag(id, title, tag string) *CuratedSwimlane {
+	query := fmt.Sprintf(`%%"%s"%%`, tag)
+	var episodes []models.LibraryEpisode
+	if err := s.db.Gorm().
+		Where("tags LIKE ?", query).
+		Order("episode_number ASC").
+		Limit(20).
+		Find(&episodes).Error; err != nil || len(episodes) == 0 {
+		return nil
+	}
+
+	// Batch-fetch all parent LibraryMedia records
+	mediaIDs := make([]uint, 0, len(episodes))
+	for _, ep := range episodes {
+		mediaIDs = append(mediaIDs, ep.LibraryMediaID)
+	}
+
+	var mediaList []models.LibraryMedia
+	if err := s.db.Gorm().
+		Omit("description", "synonyms", "audio_tracks", "subtitle_tracks").
+		Where("id IN (?)", mediaIDs).
+		Find(&mediaList).Error; err != nil {
+		return nil
+	}
+
+	mediaMap := make(map[uint]*models.LibraryMedia)
+	for i := range mediaList {
+		mediaMap[mediaList[i].ID] = &mediaList[i]
+	}
+
+	lane := &CuratedSwimlane{
+		ID:      id,
+		Title:   title,
+		Type:    "episode_tag",
+		Entries: make([]*LibraryCollectionEntry, 0, len(episodes)),
+	}
+
+	added := make(map[uint]bool)
+	for i := range episodes {
+		ep := &episodes[i]
+		if added[ep.ID] {
+			continue
+		}
+		media, ok := mediaMap[ep.LibraryMediaID]
+		if !ok {
+			continue
+		}
+		// Skip media stubs: must have a real poster image and a resolved title
+		if media.PosterImage == "" || media.GetPreferredTitle() == "" {
+			continue
+		}
+		added[ep.ID] = true
+		lane.Entries = append(lane.Entries, &LibraryCollectionEntry{
+			Media:            media,
+			MediaId:          int(media.ID),
+			Episode:          ep,
+			AvailabilityType: "FULL_LOCAL",
+		})
+	}
+
+	if len(lane.Entries) == 0 {
+		return nil
+	}
+	return lane
+}
+
+// buildEpisodeSwimlaneByName builds a swimlane of LibraryEpisodes whose suggested_swimlane
+// contains the given name substring. The lane title is derived from the first match.
+func (s *IntelligenceService) buildEpisodeSwimlaneByName(id, name string) *CuratedSwimlane {
+	query := fmt.Sprintf(`%%%s%%`, name)
+	var episodes []models.LibraryEpisode
+	if err := s.db.Gorm().
+		Where("suggested_swimlane LIKE ?", query).
+		Order("episode_number ASC").
+		Limit(20).
+		Find(&episodes).Error; err != nil || len(episodes) == 0 {
+		return nil
+	}
+
+	// Use the actual suggested_swimlane from the DB as the lane title
+	title := name
+	if episodes[0].SuggestedSwimlane != "" {
+		title = episodes[0].SuggestedSwimlane
+	}
+
+	// Batch-fetch all parent LibraryMedia records
+	mediaIDs := make([]uint, 0, len(episodes))
+	for _, ep := range episodes {
+		mediaIDs = append(mediaIDs, ep.LibraryMediaID)
+	}
+
+	var mediaList []models.LibraryMedia
+	if err := s.db.Gorm().
+		Omit("description", "synonyms", "audio_tracks", "subtitle_tracks").
+		Where("id IN (?)", mediaIDs).
+		Find(&mediaList).Error; err != nil {
+		return nil
+	}
+
+	mediaMap := make(map[uint]*models.LibraryMedia)
+	for i := range mediaList {
+		mediaMap[mediaList[i].ID] = &mediaList[i]
+	}
+
+	lane := &CuratedSwimlane{
+		ID:      id,
+		Title:   title,
+		Type:    "episode_tag",
+		Entries: make([]*LibraryCollectionEntry, 0, len(episodes)),
+	}
+
+	added := make(map[uint]bool)
+	for i := range episodes {
+		ep := &episodes[i]
+		if added[ep.ID] {
+			continue
+		}
+		media, ok := mediaMap[ep.LibraryMediaID]
+		if !ok {
+			continue
+		}
+		// Skip media stubs: must have a real poster image and a resolved title
+		if media.PosterImage == "" || media.GetPreferredTitle() == "" {
+			continue
+		}
+		added[ep.ID] = true
+		lane.Entries = append(lane.Entries, &LibraryCollectionEntry{
+			Media:            media,
+			MediaId:          int(media.ID),
+			Episode:          ep,
+			AvailabilityType: "FULL_LOCAL",
+		})
+	}
+
+	if len(lane.Entries) == 0 {
+		return nil
+	}
+	return lane
 }
 
 func (s *IntelligenceService) buildLocalLibraryLane() *CuratedSwimlane {
 	var media []*models.LibraryMedia
+	// Only show media that has at least one local file in the collection
+	hasFiles := s.db.Gorm().Model(&models.LocalFile{}).Select("1").
+		Where("library_media_id = library_media.id AND library_media_id > 0").Limit(1)
 	if err := s.db.Gorm().
+		Omit("description", "synonyms", "audio_tracks", "subtitle_tracks").
+		Where("EXISTS (?)", hasFiles).
 		Order("updated_at DESC").
 		Limit(40).
 		Find(&media).Error; err != nil || len(media) == 0 {
@@ -618,19 +866,28 @@ func (s *IntelligenceService) buildLocalLibraryLane() *CuratedSwimlane {
 		Entries: make([]*LibraryCollectionEntry, 0, len(media)),
 	}
 	for _, m := range media {
+		if m.PosterImage == "" || m.GetPreferredTitle() == "" {
+			continue
+		}
 		lane.Entries = append(lane.Entries, &LibraryCollectionEntry{
 			Media:            m,
 			MediaId:          int(m.ID),
 			AvailabilityType: "FULL_LOCAL",
 		})
 	}
+	if len(lane.Entries) == 0 {
+		return nil
+	}
 	return lane
 }
 
 func (s *IntelligenceService) buildEpicMomentsLane() *CuratedSwimlane {
 	var media []*models.LibraryMedia
+	hasFiles := s.db.Gorm().Model(&models.LocalFile{}).Select("1").
+		Where("library_media_id = library_media.id AND library_media_id > 0").Limit(1)
 	if err := s.db.Gorm().
-		Where("score >= ?", epicScoreThreshold).
+		Omit("description", "synonyms", "audio_tracks", "subtitle_tracks").
+		Where("EXISTS (?) AND score >= ?", hasFiles, epicScoreThreshold).
 		Order("score DESC").
 		Limit(40).
 		Find(&media).Error; err != nil || len(media) == 0 {
@@ -643,19 +900,28 @@ func (s *IntelligenceService) buildEpicMomentsLane() *CuratedSwimlane {
 		Entries: make([]*LibraryCollectionEntry, 0, len(media)),
 	}
 	for _, m := range media {
+		if m.PosterImage == "" || m.GetPreferredTitle() == "" {
+			continue
+		}
 		lane.Entries = append(lane.Entries, &LibraryCollectionEntry{
 			Media:            m,
 			MediaId:          int(m.ID),
 			AvailabilityType: "HYBRID",
 		})
 	}
+	if len(lane.Entries) == 0 {
+		return nil
+	}
 	return lane
 }
 
 func (s *IntelligenceService) buildEssentialCinemaLane() *CuratedSwimlane {
 	var media []*models.LibraryMedia
+	hasFiles := s.db.Gorm().Model(&models.LocalFile{}).Select("1").
+		Where("library_media_id = library_media.id AND library_media_id > 0").Limit(1)
 	if err := s.db.Gorm().
-		Where("format IN ? AND score >= ?", []string{"MOVIE", "OVA", "SPECIAL"}, 75).
+		Omit("description", "synonyms", "audio_tracks", "subtitle_tracks").
+		Where("EXISTS (?) AND format IN ?", hasFiles, []string{"MOVIE", "OVA", "SPECIAL"}).
 		Order("score DESC").
 		Limit(30).
 		Find(&media).Error; err != nil || len(media) == 0 {
@@ -663,40 +929,57 @@ func (s *IntelligenceService) buildEssentialCinemaLane() *CuratedSwimlane {
 	}
 	lane := &CuratedSwimlane{
 		ID:      "essential_cinema",
-		Title:   "Cine Esencial",
+		Title:   "Cine Esencial: Películas Dragon Ball",
 		Type:    "essential_cinema",
 		Entries: make([]*LibraryCollectionEntry, 0, len(media)),
 	}
 	for _, m := range media {
+		if m.PosterImage == "" || m.GetPreferredTitle() == "" {
+			continue
+		}
 		lane.Entries = append(lane.Entries, &LibraryCollectionEntry{
 			Media:            m,
 			MediaId:          int(m.ID),
-			AvailabilityType: "HYBRID",
+			AvailabilityType: "FULL_LOCAL",
 		})
+	}
+	if len(lane.Entries) == 0 {
+		return nil
 	}
 	return lane
 }
 
 func (s *IntelligenceService) buildTrendingLane() *CuratedSwimlane {
+	// Shows Dragon Ball series sorted by recently added to the collection
 	var media []*models.LibraryMedia
+	hasFiles := s.db.Gorm().Model(&models.LocalFile{}).Select("1").
+		Where("library_media_id = library_media.id AND library_media_id > 0").Limit(1)
 	if err := s.db.Gorm().
+		Omit("description", "synonyms", "audio_tracks", "subtitle_tracks").
+		Where("EXISTS (?) AND format = ?", hasFiles, "TV").
 		Order("created_at DESC").
-		Limit(40).
+		Limit(20).
 		Find(&media).Error; err != nil || len(media) == 0 {
 		return nil
 	}
 	lane := &CuratedSwimlane{
 		ID:      "trending",
-		Title:   "Descubrir en la Red",
+		Title:   "Series Dragon Ball: Tu Colección",
 		Type:    "trending",
 		Entries: make([]*LibraryCollectionEntry, 0, len(media)),
 	}
 	for _, m := range media {
+		if m.PosterImage == "" || m.GetPreferredTitle() == "" {
+			continue
+		}
 		lane.Entries = append(lane.Entries, &LibraryCollectionEntry{
 			Media:            m,
 			MediaId:          int(m.ID),
-			AvailabilityType: "ONLY_ONLINE",
+			AvailabilityType: "FULL_LOCAL",
 		})
+	}
+	if len(lane.Entries) == 0 {
+		return nil
 	}
 	return lane
 }

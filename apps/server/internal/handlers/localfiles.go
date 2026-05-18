@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"kamehouse/internal/database/db"
+	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/library/filesystem"
 	"kamehouse/internal/library_explorer"
@@ -221,7 +222,14 @@ func (h *Handler) HandleUpdateLocalFileData(c echo.Context) error {
 
 	// If a mediaId is being assigned, also resolve and set LibraryMediaId
 	if b.MediaId > 0 {
-		if libMedia, err := db.GetLibraryMediaByTmdbId(h.App.Database, b.MediaId); err == nil && libMedia != nil {
+		var libMedia *models.LibraryMedia
+		var err error
+		if b.MediaId > 1_000_000 {
+			libMedia, err = db.GetLibraryMediaByTmdbIdAndType(h.App.Database, b.MediaId-1_000_000, "MOVIE")
+		} else {
+			libMedia, err = db.GetLibraryMediaByTmdbIdAndType(h.App.Database, b.MediaId, "SHOW")
+		}
+		if err == nil && libMedia != nil {
 			lf.LibraryMediaId = libMedia.ID
 		}
 	} else if b.MediaId == 0 {
@@ -321,7 +329,14 @@ func (h *Handler) HandleUpdateLocalFiles(c echo.Context) error {
 			lf.Ignored = false
 			// Also resolve LibraryMediaId for complete state
 			if b.MediaId > 0 {
-				if libMedia, err := db.GetLibraryMediaByTmdbId(h.App.Database, b.MediaId); err == nil && libMedia != nil {
+				var libMedia *models.LibraryMedia
+				var err error
+				if b.MediaId > 1_000_000 {
+					libMedia, err = db.GetLibraryMediaByTmdbIdAndType(h.App.Database, b.MediaId-1_000_000, "MOVIE")
+				} else {
+					libMedia, err = db.GetLibraryMediaByTmdbIdAndType(h.App.Database, b.MediaId, "SHOW")
+				}
+				if err == nil && libMedia != nil {
 					lf.LibraryMediaId = libMedia.ID
 				}
 			}

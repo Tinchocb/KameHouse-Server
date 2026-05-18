@@ -23,6 +23,8 @@ export type VideoPlayerProps = {
     episodeNumber?: number
     malId?: number | null
     marathonMode?: boolean
+    /** Media format ("TV", "MOVIE", "OVA", etc.) — passed to player core to control fallback skip window */
+    mediaFormat?: string | null
 }
 
 function PlayerLoadingScreen() {
@@ -104,6 +106,7 @@ function VideoPlayerOrchestrator(props: OrchestratorProps) {
         playableUrl,
         backendTracks,
         clientId,
+        mediaFormat: props.mediaFormat,
     })
 
     const episodeSources = useMemo<EpisodeSource[]>(() => [

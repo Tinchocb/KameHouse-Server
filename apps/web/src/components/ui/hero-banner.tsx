@@ -56,19 +56,24 @@ export function HeroBanner({
                 className
             )}
         >
-            {/* ── Background Layer ────────────────────────── */}
+            {/* ── Background Layer ─────────────────────────────── */}
             <AnimatePresence mode="wait">
                 <motion.div
                     key={activeItem.id}
-                    initial={{ opacity: 0, scale: 1.1 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 1.5, ease: [0.23, 1, 0.32, 1] }}
+                    initial={{ opacity: 0, scale: 1.06 }}
+                    animate={{ opacity: 1, scale: 1.0 }}
+                    exit={{ opacity: 0, scale: 0.97 }}
+                    transition={{ duration: 1.4, ease: [0.23, 1, 0.32, 1] }}
                     className="absolute inset-0 z-0"
                 >
-                    <img
+                    {/* Ken Burns slow zoom on the inner image */}
+                    <motion.img
+                        key={`img-${activeItem.id}`}
                         src={activeItem.backdropUrl}
                         alt=""
+                        initial={{ scale: 1.0 }}
+                        animate={{ scale: 1.08 }}
+                        transition={{ duration: 14, ease: "linear" }}
                         className="h-full w-full object-cover object-center brightness-[0.4] saturate-[0.8]"
                     />
                 </motion.div>
@@ -109,6 +114,11 @@ export function HeroBanner({
                                         <span className="text-emerald-400">{(activeItem.rating * 10).toFixed(0)}% Match</span>
                                     </>
                                 )}
+                                {/* AI badge */}
+                                <div className="ml-auto flex items-center gap-1.5 rounded-full bg-primary/15 border border-primary/20 px-3 py-1 text-primary text-[9px] font-black tracking-[0.25em]">
+                                    <span>&#9733;</span>
+                                    <span>KAME IA</span>
+                                </div>
                             </div>
 
                             {/* Title */}

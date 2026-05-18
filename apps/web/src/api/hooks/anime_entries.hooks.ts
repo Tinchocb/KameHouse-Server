@@ -1,4 +1,4 @@
-import { useServerMutation, useServerQuery } from "@/api/client/requests"
+import { useServerMutation, useServerQuery, buildSeaQuery } from "@/api/client/requests"
 import {
     AnimeEntryManualMatch_Variables,
     AnimeEntryUnmatch_Variables,
@@ -10,7 +10,6 @@ import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
 export const fetchAnimeEntry = async (id: string | number) => {
-    const { buildSeaQuery } = await import("@/api/client/requests")
     return buildSeaQuery<Anime_Entry>({
         endpoint: API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.endpoint.replace("{id}", String(id)),
         method: API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.methods[0],

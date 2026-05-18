@@ -102,12 +102,12 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [refresh])
 
-    const initCanvas = () => {
+    function initCanvas() {
         resizeCanvas()
         drawParticleBackground()
     }
 
-    const onMouseMove = () => {
+    function onMouseMove() {
         if (canvasRef.current) {
             const rect = canvasRef.current.getBoundingClientRect()
             const { w, h } = canvasSize.current
@@ -138,7 +138,7 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
         magnetism: number;
     };
 
-    const resizeCanvas = () => {
+    function resizeCanvas() {
         if (canvasRef.current && context.current) {
             circles.current.length = 0
             canvasSize.current.w = canvasContainerRef.current?.offsetWidth || window.innerWidth
@@ -151,7 +151,7 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
         }
     }
 
-    const circleParams = (): Circle => {
+    function circleParams(): Circle {
         const x = Math.floor(Math.random() * canvasSize.current.w)
         const y = Math.floor(Math.random() * canvasSize.current.h)
         const translateX = 0
@@ -178,7 +178,7 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
 
     const rgb = hexToRgb(color)
 
-    const drawCircle = (circle: Circle, update = false) => {
+    function drawCircle(circle: Circle, update = false) {
         if (context.current) {
             const { x, y, translateX, translateY, size, alpha } = circle
             context.current.translate(translateX, translateY)
@@ -194,7 +194,7 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
         }
     }
 
-    const clearContext = () => {
+    function clearContext() {
         if (context.current) {
             context.current.clearRect(
                 0,
@@ -205,7 +205,7 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
         }
     }
 
-    const drawParticleBackground = () => {
+    function drawParticleBackground() {
         clearContext()
         const particleCount = quantity
         for (let i = 0; i < particleCount; i++) {
@@ -214,19 +214,19 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
         }
     }
 
-    const remapValue = (
+    function remapValue(
         value: number,
         start1: number,
         end1: number,
         start2: number,
         end2: number,
-    ): number => {
+    ): number {
         const remapped =
             ((value - start1) * (end2 - start2)) / (end1 - start1) + start2
         return remapped > 0 ? remapped : 0
     }
 
-    const animate = () => {
+    function animate() {
         clearContext()
         circles.current.forEach((circle: Circle, i: number) => {
             const edge = [

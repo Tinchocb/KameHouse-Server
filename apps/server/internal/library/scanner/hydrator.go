@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/library/summary"
@@ -123,6 +124,15 @@ func (fh *FileHydrator) hydrateGroupMetadata(
 		}
 		return
 	}
+
+	var (
+		fetchedGroupMetadata bool
+		groupMetadata        *metadata.AnimeMetadata
+
+		fetchedForcedMetadata bool
+		forcedMetadata        *metadata.AnimeMetadata
+		forcedMetadataErr     error
+	)
 
 	// Process each local file in the group sequentially
 	for _, lf := range lfs {
@@ -313,7 +323,13 @@ func (fh *FileHydrator) hydrateGroupMetadata(
 				// Try part-relative normalization before expensive media tree analysis.
 				// This handles cases where filenames use numbering relative to a previous part of the same season
 				// (e.g., S04E12 for the first episode of Part 2, where Part 1 had 11 episodes).
-				if relativeEp, ok := fh.tryPartRelativeNormalization(lf, episode, mId, rateLimiter); ok {
+				if !fetchedGroupMetadata && fh.MetadataProviderRef != nil {
+					rateLimiter.Wait(context.Background())
+					groupMetadata, _ = fh.MetadataProviderRef.Get().GetAnimeMetadata(mId)
+					fetchedGroupMetadata = true
+				}
+
+				if relativeEp, ok := fh.tryPartRelativeNormalization(lf, episode, mId, groupMetadata); ok {
 					lf.Metadata.Episode = relativeEp
 					lf.Metadata.AniDBEpisode = strconv.Itoa(relativeEp)
 
@@ -353,12 +369,17 @@ func (fh *FileHydrator) hydrateGroupMetadata(
 
 				// When we encounter a file with an episode number higher than the media's episode count
 				// we have a forced media ID, we will fetch the media from TMDB and get the offset
-				animeMetadata, err := fh.MetadataProviderRef.Get().GetAnimeMetadata(fh.ForceMediaId)
-				if err != nil {
+				if !fetchedForcedMetadata && fh.MetadataProviderRef != nil {
+					rateLimiter.Wait(context.Background())
+					forcedMetadata, forcedMetadataErr = fh.MetadataProviderRef.Get().GetAnimeMetadata(fh.ForceMediaId)
+					fetchedForcedMetadata = true
+				}
+
+				if forcedMetadataErr != nil {
 					/*Log */
 					if fh.ScanLogger != nil {
 						fh.logFileHydration(zerolog.ErrorLevel, lf, mId, episode).
-							Str("error", err.Error()).
+							Str("error", forcedMetadataErr.Error()).
 							Msg("Could not fetch TMDB metadata")
 					}
 					lf.Metadata.Episode = episode
@@ -369,7 +390,7 @@ func (fh *FileHydrator) hydrateGroupMetadata(
 				}
 
 				// Get the first episode to calculate the offset
-				firstEp, ok := animeMetadata.Episodes["1"]
+				firstEp, ok := forcedMetadata.Episodes["1"]
 				if !ok {
 					/*Log */
 					if fh.ScanLogger != nil {
@@ -389,7 +410,7 @@ func (fh *FileHydrator) hydrateGroupMetadata(
 				maxPartAbsoluteEpisodeNumber := 0
 				if usePartEpisodeNumber {
 					minPartAbsoluteEpisodeNumber = firstEp.EpisodeNumber
-					maxPartAbsoluteEpisodeNumber = minPartAbsoluteEpisodeNumber + animeMetadata.GetMainEpisodeCount() - 1
+					maxPartAbsoluteEpisodeNumber = minPartAbsoluteEpisodeNumber + forcedMetadata.GetMainEpisodeCount() - 1
 				}
 
 				absoluteEpisodeNumber := firstEp.AbsoluteEpisodeNumber
@@ -473,16 +494,9 @@ func (fh *FileHydrator) tryPartRelativeNormalization(
 	lf *dto.LocalFile,
 	episode int, // parsed episode number (e.g. 12)
 	mediaId int, // matched media ID
-	rateLimiter *limiter.Limiter,
+	animeMetadata *metadata.AnimeMetadata,
 ) (int, bool) {
-	if fh.MetadataProviderRef == nil {
-		return 0, false
-	}
-
-	rateLimiter.Wait(context.Background())
-
-	animeMetadata, err := fh.MetadataProviderRef.Get().GetAnimeMetadata(mediaId)
-	if err != nil || animeMetadata == nil {
+	if animeMetadata == nil {
 		return 0, false
 	}
 

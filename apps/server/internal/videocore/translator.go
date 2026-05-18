@@ -18,6 +18,8 @@ import (
 	"sync"
 	"time"
 
+	httputil "kamehouse/internal/util/http"
+
 	"github.com/5rahim/go-astisub"
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
@@ -45,9 +47,9 @@ func NewTranslatorService(vc *VideoCore, apiKey string, provider string, targetL
 	var t Translator
 	switch provider {
 	case "openai":
-		t = &OpenAITranslator{Token: apiKey, logger: vc.logger}
+		t = &OpenAITranslator{Token: apiKey, client: httputil.NewClientWithTimeout(30 * time.Second), logger: vc.logger}
 	case "deepl":
-		t = &DeepLTranslator{Token: apiKey, logger: vc.logger}
+		t = &DeepLTranslator{Token: apiKey, client: httputil.NewFastClient(), logger: vc.logger}
 	default:
 		t = NewFreeGoogleTranslator(vc.logger)
 	}
@@ -419,6 +421,7 @@ func cleanSubtitleText(input string) string {
 
 type DeepLTranslator struct {
 	Token  string
+	client *http.Client
 	logger *zerolog.Logger
 }
 
@@ -449,6 +452,11 @@ func (d *DeepLTranslator) TranslateBatch(ctx context.Context, texts []string, ta
 		return nil, err
 	}
 
+	if d.client == nil {
+		d.client = httputil.NewFastClient()
+	}
+	client := d.client
+
 	for i := 0; i < 3; i++ {
 		req, err := http.NewRequestWithContext(ctx, "POST", u, bytes.NewBuffer(jsonData))
 		if err != nil {
@@ -457,7 +465,6 @@ func (d *DeepLTranslator) TranslateBatch(ctx context.Context, texts []string, ta
 		req.Header.Add("Authorization", "DeepL-Auth-Key "+d.Token)
 		req.Header.Add("Content-Type", "application/json")
 
-		client := &http.Client{Timeout: 10 * time.Second}
 		resp, err := client.Do(req)
 		if err != nil {
 			return nil, err
@@ -495,6 +502,7 @@ func (d *DeepLTranslator) TranslateBatch(ctx context.Context, texts []string, ta
 
 type OpenAITranslator struct {
 	Token  string
+	client *http.Client
 	logger *zerolog.Logger
 }
 
@@ -541,6 +549,11 @@ func (o *OpenAITranslator) TranslateBatch(ctx context.Context, texts []string, t
 		return nil, err
 	}
 
+	if o.client == nil {
+		o.client = httputil.NewClientWithTimeout(30 * time.Second)
+	}
+	client := o.client
+
 	for i := 0; i < 3; i++ {
 		req, err := http.NewRequestWithContext(ctx, "POST", u, bytes.NewBuffer(jsonData))
 		if err != nil {
@@ -549,7 +562,6 @@ func (o *OpenAITranslator) TranslateBatch(ctx context.Context, texts []string, t
 		req.Header.Add("Authorization", "Bearer "+o.Token)
 		req.Header.Add("Content-Type", "application/json")
 
-		client := &http.Client{Timeout: 30 * time.Second}
 		resp, err := client.Do(req)
 		if err != nil {
 			return nil, err
@@ -611,7 +623,7 @@ type FreeGoogleTranslator struct {
 func NewFreeGoogleTranslator(logger *zerolog.Logger) *FreeGoogleTranslator {
 	return &FreeGoogleTranslator{
 		limiter: rate.NewLimiter(rate.Every(500*time.Millisecond), 50),
-		client:  &http.Client{Timeout: 10 * time.Second},
+		client:  httputil.NewFastClient(),
 		logger:  logger,
 	}
 }
@@ -678,6 +690,10 @@ func (g *FreeGoogleTranslator) translateSingle(ctx context.Context, text, target
 	}
 
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36")
+
+	if g.client == nil {
+		g.client = httputil.NewFastClient()
+	}
 
 	resp, err := g.client.Do(req)
 	if err != nil {

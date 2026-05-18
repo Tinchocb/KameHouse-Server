@@ -58,7 +58,13 @@ func (h *Handler) getTMDBEpisodeCollection(mId int) (*anime.EpisodeCollection, e
 	tmdbId := -mId
 
 	// Look for LibraryMedia that has this TMDB ID
-	libraryMedia, err := db.GetLibraryMediaByTmdbId(h.App.Database, tmdbId)
+	var libraryMedia *models.LibraryMedia
+	var err error
+	if tmdbId >= 1_000_000 {
+		libraryMedia, err = db.GetLibraryMediaByTmdbIdAndType(h.App.Database, tmdbId-1_000_000, "MOVIE")
+	} else {
+		libraryMedia, err = db.GetLibraryMediaByTmdbIdAndType(h.App.Database, tmdbId, "SHOW")
+	}
 	if err != nil || libraryMedia == nil {
 		return &anime.EpisodeCollection{
 			Episodes: make([]*anime.Episode, 0),

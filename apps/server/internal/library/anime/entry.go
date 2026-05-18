@@ -109,12 +109,14 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 
 	// 2. If no local file provides a mapping, try to lookup by TMDB ID directly.
 	if fetchedMedia == nil {
-		m, err := db.GetLibraryMediaByTmdbId(opts.Database, opts.MediaId)
-		if err == nil && m != nil {
-			fetchedMedia = m
-		} else if opts.MediaId > 1_000_000 {
+		if opts.MediaId > 1_000_000 {
 			// Movies from TMDB have a 1,000,000 offset applied to their MediaId to avoid collisions
-			m, err := db.GetLibraryMediaByTmdbId(opts.Database, opts.MediaId-1_000_000)
+			m, err := db.GetLibraryMediaByTmdbIdAndType(opts.Database, opts.MediaId-1_000_000, "MOVIE")
+			if err == nil && m != nil {
+				fetchedMedia = m
+			}
+		} else {
+			m, err := db.GetLibraryMediaByTmdbIdAndType(opts.Database, opts.MediaId, "SHOW")
 			if err == nil && m != nil {
 				fetchedMedia = m
 			}
@@ -199,6 +201,10 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 			for _, ep := range dbEpisodes {
 				key := fmt.Sprintf("%d-%d", ep.SeasonNumber, ep.EpisodeNumber)
 				opts.LibraryEpisodes[key] = ep
+				if ep.AbsoluteNumber > 0 {
+					absKey := fmt.Sprintf("abs-%d", ep.AbsoluteNumber)
+					opts.LibraryEpisodes[absKey] = ep
+				}
 			}
 		}
 	}
@@ -375,6 +381,11 @@ func (e *Entry) hydrateEntryEpisodeData(
 				key := fmt.Sprintf("%d-%d", seasonTarget, episodeTarget)
 				if ep, ok := libraryEpisodes[key]; ok {
 					libEp = ep
+				} else {
+					absKey := fmt.Sprintf("abs-%d", episodeTarget)
+					if ep, ok := libraryEpisodes[absKey]; ok {
+						libEp = ep
+					}
 				}
 			}
 

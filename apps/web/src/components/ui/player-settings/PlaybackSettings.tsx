@@ -23,9 +23,13 @@ interface PlaybackSettingsProps {
 }
 
 function ToggleRow({ label, enabled, onChange }: { label: string; enabled: boolean; onChange: (v: boolean) => void }) {
+    const handleToggle = () => {
+        onChange(!enabled)
+    }
+
     return (
         <button
-            onClick={() => onChange(!enabled)}
+            onClick={handleToggle}
             className={cn(
                 "flex items-center justify-between w-full px-6 py-3 transition-all",
                 enabled ? "text-white" : "text-zinc-500 hover:text-zinc-300"

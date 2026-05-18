@@ -1,5 +1,5 @@
 import React from "react"
-import { Play, Pause, ChevronLeft, ChevronRight, Volume2, VolumeX, Maximize, Minimize, SkipForward, Camera, PictureInPicture } from "lucide-react"
+import { Play, Pause, ChevronLeft, ChevronRight, Volume2, VolumeX, Maximize, Minimize, SkipForward, PictureInPicture } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 import { TimelineHeatmap, type InsightNode } from "@/components/ui/timeline-heatmap"
 import { PlayerSettingsMenu } from "@/components/ui/PlayerSettingsMenu"
@@ -83,6 +83,10 @@ export interface PlayerBottomBarProps {
 
     marathonMode?: boolean
     onMarathonModeChange?: (enabled: boolean) => void
+
+    /** AniSkip intervals for rendering visual markers on the timeline */
+    skipTimesOp?: { startTime: number; endTime: number }
+    skipTimesEd?: { startTime: number; endTime: number }
 }
 
 export function PlayerBottomBar({
@@ -108,16 +112,18 @@ export function PlayerBottomBar({
     autoDisableSubtitlesWhenDubbed = true, onAutoDisableSubtitlesWhenDubbedChange,
     ambilightEnabled = true, onAmbilightChange,
     marathonMode = true, onMarathonModeChange,
+    skipTimesOp,
+    skipTimesEd,
 }: PlayerBottomBarProps) {
 
     return (
         <div className={cn(
             "absolute bottom-0 inset-x-0 w-full flex flex-col pointer-events-auto select-none transition-all duration-500",
-            "bg-zinc-950/45 backdrop-blur-2xl border-t border-white/[0.02] pt-8 pb-3.5 px-6",
+            "bg-zinc-950/45 backdrop-blur-2xl border-t border-white/[0.02] pt-6 pb-3 px-6",
         )}>
 
             {/* Progress Timeline */}
-            <div className="relative group/progress flex items-center mb-2" style={{ height: 20 }}>
+            <div className="relative group/progress flex items-center h-4 cursor-pointer w-full mb-3">
                 {showHeatmap && (
                     <TimelineHeatmap
                         duration={duration}
@@ -126,12 +132,38 @@ export function PlayerBottomBar({
                     />
                 )}
                 {/* Track background */}
-                <div className="absolute inset-x-0 h-[2px] group-hover/progress:h-[4px] bg-white/10 rounded-full transition-all duration-300" style={{ bottom: 8 }}>
+                <div className="w-full h-[3px] group-hover/progress:h-[5px] bg-white/10 rounded-full transition-all duration-200 relative flex items-center">
+
+                    {/* Skip segment markers — rendered behind the playback bar */}
+                    {duration > 0 && skipTimesOp && (
+                        <div
+                            className="absolute top-0 bottom-0 bg-brand-orange/25 pointer-events-none rounded-sm"
+                            title={`Intro: ${Math.round(skipTimesOp.startTime)}s – ${Math.round(skipTimesOp.endTime)}s`}
+                            style={{
+                                left: `${(skipTimesOp.startTime / duration) * 100}%`,
+                                width: `${((skipTimesOp.endTime - skipTimesOp.startTime) / duration) * 100}%`,
+                            }}
+                        />
+                    )}
+                    {duration > 0 && skipTimesEd && (
+                        <div
+                            className="absolute top-0 bottom-0 bg-purple-400/25 pointer-events-none rounded-sm"
+                            title={`Outro: ${Math.round(skipTimesEd.startTime)}s – ${Math.round(skipTimesEd.endTime)}s`}
+                            style={{
+                                left: `${(skipTimesEd.startTime / duration) * 100}%`,
+                                width: `${((skipTimesEd.endTime - skipTimesEd.startTime) / duration) * 100}%`,
+                            }}
+                        />
+                    )}
+
                     <div 
                         ref={progressBarRef}
-                        className="h-full bg-brand-orange rounded-full transition-all duration-200"
+                        className="h-full bg-brand-orange rounded-full transition-all duration-100 relative"
                         style={{ width: '0%' }}
-                    />
+                    >
+                        {/* Thumb indicator - glows and shows on hover */}
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 rounded-full bg-brand-orange border border-white opacity-0 group-hover/progress:opacity-100 transition-opacity duration-200 shadow-[0_0_8px_rgba(249,115,22,0.6)] pointer-events-none" />
+                    </div>
                 </div>
                 <input
                     ref={progressInputRef}
@@ -140,8 +172,7 @@ export function PlayerBottomBar({
                     max={duration || 0}
                     step="any"
                     onChange={handleSeek}
-                    className="absolute inset-x-0 w-full cursor-pointer opacity-0 z-10"
-                    style={{ height: 20, bottom: 0 }}
+                    className="absolute inset-0 w-full h-full cursor-pointer opacity-0 z-10"
                 />
             </div>
 
@@ -184,8 +215,8 @@ export function PlayerBottomBar({
                             className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-7 h-7">
                             {isMuted || volume === 0 ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
                         </button>
-                        <div className="w-0 overflow-hidden group-hover/volume:w-16 transition-all duration-300 flex items-center">
-                            <div className="w-full h-[2.5px] bg-white/20 relative rounded-full">
+                        <div className="w-0 overflow-hidden group-hover/volume:w-16 transition-all duration-300 flex items-center h-5 pl-1">
+                            <div className="w-full h-[3px] bg-white/20 relative rounded-full flex items-center">
                                 <div
                                     className="absolute left-0 h-full bg-brand-orange rounded-full transition-all"
                                     style={{ width: `${isMuted ? 0 : volume * 100}%` }}
@@ -202,26 +233,17 @@ export function PlayerBottomBar({
                     </div>
 
                     {/* Time indicator */}
-                    <div className="flex items-center gap-1 text-[11px] font-black uppercase tracking-wider tabular-nums text-zinc-500">
-                        <span ref={timeTextRef} className="text-zinc-300">00:00</span>
-                        <span className="text-zinc-700">/</span>
-                        <span className="text-zinc-500">{formatTime(duration)}</span>
+                    <div className="flex items-center gap-1.5 text-xs font-medium tracking-wide tabular-nums text-zinc-400 font-sans">
+                        <span ref={timeTextRef} className="text-zinc-200">00:00</span>
+                        <span className="text-zinc-600">/</span>
+                        <span className="text-zinc-400">{formatTime(duration)}</span>
                     </div>
                 </div>
 
                 {/* Right Wing */}
                 <div className="flex items-center gap-0.5">
 
-                    {/* Screenshot */}
-                    {onTakeScreenshot && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onTakeScreenshot(); }}
-                            aria-label="Captura de pantalla [G]"
-                            title="Captura de pantalla [G]"
-                            className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8">
-                            <Camera className="w-3.5 h-3.5" />
-                        </button>
-                    )}
+
 
                     {/* PiP */}
                     {onTogglePip && (

@@ -15,8 +15,8 @@ export function useGetContinuityWatchHistoryItem(id: number) {
     return useServerQuery<Continuity_WatchHistoryItemResponse>({
         endpoint: API_ENDPOINTS.CONTINUITY.GetContinuityWatchHistoryItem.endpoint.replace("{id}", String(id)),
         method: API_ENDPOINTS.CONTINUITY.GetContinuityWatchHistoryItem.methods[0],
-        queryKey: [API_ENDPOINTS.CONTINUITY.GetContinuityWatchHistoryItem.key],
-        enabled: true,
+        queryKey: [API_ENDPOINTS.CONTINUITY.GetContinuityWatchHistoryItem.key, id],
+        enabled: id > 0,
     })
 }
 

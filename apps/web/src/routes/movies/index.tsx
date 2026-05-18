@@ -1,14 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { useState, useMemo, memo } from "react"
-import { Clapperboard, SlidersHorizontal } from "lucide-react"
-import { PageHeader } from "@/components/ui/page-header"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { NativeSelect } from "@/components/ui/native-select"
+import { useState, useMemo, memo, useRef, useCallback } from "react"
+import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion"
+import { Play, Clock, Star, ChevronDown, Check, Layers } from "lucide-react"
 import { EmptyState } from "@/components/shared/empty-state"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
-import type { Anime_LibraryCollectionEntry } from "@/api/generated/types"
+import { useGetContinuityWatchHistory } from "@/api/hooks/continuity.hooks"
+import type { Anime_LibraryCollectionEntry, Continuity_WatchHistoryItem } from "@/api/generated/types"
 import { cn } from "@/components/ui/core/styling"
-import { Play } from "lucide-react"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { getHighResImage } from "@/lib/helpers/images"
 
@@ -18,373 +16,503 @@ export const Route = createFileRoute("/movies/")({
 
 // ─── Constants & Data ────────────────────────────────────────────────────────
 
-type EraTab = "all" | "classic" | "z" | "super" | "gt" | "specials"
-
+type EraTab = "all" | "Dragon Ball" | "Dragon Ball Z" | "Dragon Ball Super" | "Dragon Ball GT" | "Especiales y OVAs"
 type SortOption = "year_asc" | "year_desc" | "recently_add" | "alpha"
 
-const ERA_TABS: { value: EraTab; label: string }[] = [
-    { value: "all", label: "Todas" },
-    { value: "classic", label: "Dragon Ball" },
-    { value: "z", label: "Dragon Ball Z" },
-    { value: "gt", label: "Dragon Ball GT" },
-    { value: "super", label: "Dragon Ball Super" },
-    { value: "specials", label: "Especiales y OVAs" },
+const ERA_TABS: { value: EraTab; label: string; shortLabel: string; color: string; glow: string }[] = [
+    { value: "all",      label: "Todas",               shortLabel: "Todas",    color: "#ff6b00", glow: "rgba(255,107,0,0.3)" },
+    { value: "Dragon Ball",  label: "Dragon Ball",          shortLabel: "Dragon Ball",  color: "#e07030", glow: "rgba(224,112,48,0.3)" },
+    { value: "Dragon Ball Z",        label: "Dragon Ball Z",        shortLabel: "Dragon Ball Z",        color: "#e74c3c", glow: "rgba(231,76,60,0.3)"  },
+    { value: "Dragon Ball GT",       label: "Dragon Ball GT",       shortLabel: "Dragon Ball GT",       color: "#3498db", glow: "rgba(52,152,219,0.3)" },
+    { value: "Dragon Ball Super",    label: "Dragon Ball Super",    shortLabel: "Dragon Ball Super",    color: "#9b59b6", glow: "rgba(155,89,182,0.3)" },
+    { value: "Especiales y OVAs", label: "Especiales y OVAs",    shortLabel: "Especiales y OVAs", color: "#1abc9c", glow: "rgba(26,188,156,0.3)" },
 ]
-
-const SAGA_CONFIG: Record<EraTab, { name: string; color: string }> = {
-    all: { name: "Todas", color: "#ff6b00" },
-    super: { name: "Dragon Ball Super", color: "#9b59b6" },
-    z: { name: "Dragon Ball Z", color: "#e74c3c" },
-    gt: { name: "Dragon Ball GT", color: "#3498db" },
-    classic: { name: "Dragon Ball", color: "#e07030" },
-    specials: { name: "Especiales y OVAs", color: "#1abc9c" }
-}
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
-    { value: "year_asc", label: "Año (Más antiguo)" },
-    { value: "year_desc", label: "Año (Más reciente)" },
-    { value: "recently_add", label: "Agregado recientemente" },
-    { value: "alpha", label: "Alfabético" },
+    { value: "year_asc",     label: "Año: Más antiguo" },
+    { value: "year_desc",    label: "Año: Más reciente" },
+    { value: "recently_add", label: "Añadido recientemente" },
+    { value: "alpha",        label: "Alfabético" },
 ]
-
 
 function getEntryEra(entry: Anime_LibraryCollectionEntry): EraTab {
     const media = entry.media
-    if (!media) return "specials"
+    if (!media) return "Especiales y OVAs"
+    const tmdbId = media.tmdbId || 0
 
-    // Check all title variants including Spanish
-    const allTitles = [
-        media.titleRomaji,
-        media.titleEnglish,
-        media.titleOriginal,
-        media.titleSpanish,
-    ].filter(Boolean).join(" ").toLowerCase()
+    const specialsTmdbIds = new Set([39323, 39324, 38594, 47734, 15461, 1259215, 109963])
+    if (specialsTmdbIds.has(tmdbId)) return "Especiales y OVAs"
 
-    // Super must come first (contains "super" and "dragon ball")
-    if (allTitles.includes("super")) return "super"
+    const classicTmdbIds = new Set([39144, 33499, 39145, 116776, 33513, 39148])
+    if (classicTmdbIds.has(tmdbId)) return "Dragon Ball"
 
-    // GT detection
-    if (allTitles.includes(" gt") || allTitles.includes("gt ")) return "gt"
+    const zTmdbIds = new Set([28609, 15448, 39100, 39101, 39102, 24752, 15452, 39103, 39104, 15454, 34433, 39105, 44251, 39106, 39107, 39108, 177572, 126963, 303857])
+    if (zTmdbIds.has(tmdbId)) return "Dragon Ball Z"
 
-    // DBZ detection — look for " z" as word boundary, common Spanish keywords
-    const isZ = allTitles.includes(" z ") || allTitles.includes(" z:") || 
-                 allTitles.includes("kai") || allTitles.includes("改") ||
-                 // Spanish-specific DBZ movie keywords
-                 allTitles.includes("freezer") || allTitles.includes("frieza") ||
-                 allTitles.includes("cooler") || allTitles.includes("androide") ||
-                 allTitles.includes("android") || allTitles.includes("bojack") ||
-                 allTitles.includes("janemba") || allTitles.includes("tapion") ||
-                 allTitles.includes("bardock") || allTitles.includes("trunks") ||
-                 allTitles.includes("broly") || allTitles.includes("slug") ||
-                 allTitles.includes("turles") || allTitles.includes("dead zone") ||
-                 allTitles.includes("fusion") || allTitles.includes("bio-broly") ||
-                 allTitles.includes("gohan") || allTitles.includes("vegeta") ||
-                 // Year clue: all Z movies are 1989–2013
-                 (media.year != null && media.year >= 1989 && media.year <= 2013 && 
-                  allTitles.includes("dragon ball"))
-    if (isZ) return "z"
+    const gtTmdbIds = new Set([18095, 39149])
+    if (gtTmdbIds.has(tmdbId)) return "Dragon Ball GT"
 
-    // Classic Dragon Ball (1986-1988 movies, El Camino 1996)
-    if (allTitles.includes("dragon ball")) return "classic"
+    const superTmdbIds = new Set([503314, 610150])
+    if (superTmdbIds.has(tmdbId)) return "Dragon Ball Super"
 
-    // True OVAs/Specials (format from API + no DB keyword) go to specials
-    if (media.format === "OVA" || media.format === "SPECIAL") return "specials"
+    if (tmdbId >= 1000000) return "Especiales y OVAs"
 
-    return "specials"
+    const allTitles = [media.titleRomaji, media.titleEnglish, media.titleOriginal, media.titleSpanish]
+        .filter(Boolean).join(" ").toLowerCase()
+
+    if (!allTitles.includes("dragon ball")) return "Especiales y OVAs"
+    if (allTitles.includes("special") || allTitles.includes("especial") || allTitles.includes("ova") || media.format === "SPECIAL" || media.format === "OVA") return "Especiales y OVAs"
+    if (allTitles.includes("super")) return "Dragon Ball Super"
+    if (allTitles.includes(" gt") || allTitles.includes("gt ")) return "Dragon Ball GT"
+    const isZ = ["z ", " z:", "kai", "改", "freezer", "frieza", "cooler", "androide", "android", "bojack", "janemba", "tapion", "bardock", "trunks", "broly", "slug", "turles", "dead zone", "fusion", "bio-broly", "gohan", "vegeta"].some(k => allTitles.includes(k))
+    if (isZ) return "Dragon Ball Z"
+    return "Dragon Ball"
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── Main Page ────────────────────────────────────────────────────────────────
 
 function MoviesPage() {
     const [activeEra, setActiveEra] = useState<EraTab>("all")
     const [sortBy, setSortBy] = useState<SortOption>("year_asc")
-
+    const [sortOpen, setSortOpen] = useState(false)
+    const [hoveredBackdrop, setHoveredBackdrop] = useState<string | null>(null)
+    const heroRef = useRef<HTMLDivElement>(null)
     const navigate = useNavigate()
     const { data: collection, isLoading } = useGetLibraryCollection()
+    const { data: watchHistory } = useGetContinuityWatchHistory()
+
+    const { scrollY } = useScroll()
+    const heroOpacity = useTransform(scrollY, [0, 280], [1, 0])
+    const heroScale = useTransform(scrollY, [0, 280], [1, 1.06])
 
     const allMovies = useMemo(() => {
         if (!collection?.lists) return []
-
-        const allEntries = collection.lists.flatMap((list) => list.entries || [])
-
-        const rawMovies = allEntries.filter((entry) => {
-            const format = entry.media?.format
-            const type = entry.media?.type
-            return (
-                format === "MOVIE" || format === "OVA" || format === "SPECIAL" ||
-                type?.toUpperCase() === "MOVIE" ||
-                (entry.mediaId && entry.mediaId >= 1000000)
-            )
+        const allEntries = collection.lists.flatMap(l => l.entries || [])
+        const rawMovies = allEntries.filter(e => {
+            const fmt = e.media?.format
+            const type = e.media?.type
+            return fmt === "MOVIE" || fmt === "OVA" || fmt === "SPECIAL" || type?.toUpperCase() === "MOVIE" || (e.mediaId && e.mediaId >= 1000000)
         })
-
         const unique = new Map<number, Anime_LibraryCollectionEntry>()
-        rawMovies.forEach((m) => {
-            if (m.mediaId) unique.set(m.mediaId, m)
-        })
+        rawMovies.forEach(m => { if (m.mediaId) unique.set(m.mediaId, m) })
         return Array.from(unique.values())
     }, [collection])
 
-    const filteredMovies = useMemo(() => {
-        let result = allMovies
-
-        if (activeEra !== "all") {
-            result = result.filter((entry) => getEntryEra(entry) === activeEra)
-        }
-
-        return result
-    }, [allMovies, activeEra])
-
-    const sortedMovies = useMemo(() => {
-        const movies = [...filteredMovies]
-
+    const filteredSorted = useMemo(() => {
+        const result = activeEra === "all" ? allMovies : allMovies.filter(e => getEntryEra(e) === activeEra)
         switch (sortBy) {
-            case "year_asc":
-                return movies.sort((a, b) => (a.media?.year || 0) - (b.media?.year || 0))
-            case "year_desc":
-                return movies.sort((a, b) => (b.media?.year || 0) - (a.media?.year || 0))
-            case "recently_add":
-                return movies.sort((a, b) => {
-                    const dateA = a.listData?.startedAt ? new Date(a.listData.startedAt).getTime() : 0
-                    const dateB = b.listData?.startedAt ? new Date(b.listData.startedAt).getTime() : 0
-                    return dateB - dateA
-                })
-            case "alpha":
-                return movies.sort((a, b) => {
-                    const titleA = a.media?.titleRomaji || a.media?.titleEnglish || ""
-                    const titleB = b.media?.titleRomaji || b.media?.titleEnglish || ""
-                    return titleA.localeCompare(titleB)
-                })
-            default:
-                return movies
+            case "year_asc":     return [...result].sort((a, b) => (a.media?.year || 0) - (b.media?.year || 0))
+            case "year_desc":    return [...result].sort((a, b) => (b.media?.year || 0) - (a.media?.year || 0))
+            case "recently_add": return [...result].sort((a, b) => new Date(b.listData?.startedAt || 0).getTime() - new Date(a.listData?.startedAt || 0).getTime())
+            case "alpha":        return [...result].sort((a, b) => (a.media?.titleRomaji || "").localeCompare(b.media?.titleRomaji || ""))
         }
-    }, [filteredMovies, sortBy])
+    }, [allMovies, activeEra, sortBy])
 
-    const handleMovieClick = (mediaId: number) => {
-        navigate({ to: "/series/$seriesId", params: { seriesId: String(mediaId) } })
-    }
+    const activeEraConfig = ERA_TABS.find(t => t.value === activeEra) || ERA_TABS[0]
+
+    // Hero backdrop: use hovered poster, else first movie with poster
+    const backdropSrc = useMemo(() => {
+        if (hoveredBackdrop) return hoveredBackdrop
+        const first = filteredSorted.find(m => m.media?.bannerImage || m.media?.posterImage)
+        return first?.media?.bannerImage || first?.media?.posterImage || null
+    }, [hoveredBackdrop, filteredSorted])
+
+    const handleMovieClick = useCallback((mediaId: number) => {
+        navigate({ to: "/movies/$movieId", params: { movieId: String(mediaId) } })
+    }, [navigate])
+
+    const localCount = allMovies.filter(m => (m.libraryData?.mainFileCount || 0) > 0).length
 
     return (
-        <div className="flex-1 w-full min-h-screen bg-background text-white overflow-y-auto pb-32 font-sans selection:bg-brand-orange/30">
-            <div className="relative z-10">
-            <PageHeader
-                title={
-                    <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-3">
-                            <Clapperboard className="w-6 h-6 text-brand-orange animate-pulse" />
-                            <span className="font-bebas text-4xl tracking-wider text-white">
-                                PELÍCULAS Y ESPECIALES
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">
-                            <span>{allMovies.length} Títulos</span>
-                            <span className="w-1 h-1 rounded-full bg-zinc-800" />
-                            <span className="text-green-500/60">
-                                {allMovies.filter(m => (m.libraryData?.mainFileCount || 0) > 0).length} Locales
-                            </span>
-                        </div>
-                    </div>
-                }
-                className="px-6 md:px-14 border-b border-white/5 bg-background/20 backdrop-blur-md"
-            />
+        <div className="min-h-screen bg-[#09090b] text-white overflow-x-hidden selection:bg-brand-orange/30">
 
-            {/* Sticky Glass Tabs Navigation */}
-            <Tabs 
-                value={activeEra} 
-                onValueChange={(v) => setActiveEra(v as EraTab)} 
-                className="sticky top-0 z-30 bg-background/40 backdrop-blur-md border-b border-white/5 shadow-lg"
-            >
-                <TabsList className="max-w-[1600px] mx-auto px-6 md:px-14 justify-start border-none h-14">
-                    {ERA_TABS.map((tab) => {
-                        const count = tab.value === "all" 
-                            ? allMovies.length 
-                            : allMovies.filter(m => getEntryEra(m) === tab.value).length
-                        
-                        return (
-                            <TabsTrigger 
-                                key={tab.value} 
-                                value={tab.value}
-                                className="text-xs uppercase tracking-widest font-black transition-all duration-300 border-b-2 border-transparent data-[state=active]:border-brand-orange data-[state=active]:text-brand-orange hover:text-white px-5 py-4 flex items-center gap-2"
-                            >
-                                {tab.label}
-                                <span className="text-[9px] opacity-40">({count})</span>
-                            </TabsTrigger>
-                        )
-                    })}
-                </TabsList>
-            </Tabs>
-
-            {/* Controls Toolbar (Search and Sort Option) */}
-            <div className="max-w-[1600px] mx-auto px-6 md:px-14 py-8 flex flex-wrap gap-4 items-center justify-end">
-
-                <div className="flex items-center gap-3 w-full sm:w-auto">
-                    <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/5 rounded-full backdrop-blur-md text-[9px] font-black uppercase tracking-widest text-zinc-400">
-                        <SlidersHorizontal className="w-3.5 h-3.5" />
-                        <span>Ordenar</span>
-                    </div>
-                    <NativeSelect
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value as SortOption)}
-                        options={SORT_OPTIONS}
-                        className="w-full sm:w-56 bg-[#0a0e1a]/60 border-white/5 rounded-xl hover:bg-[#0a0e1a]/80 text-sm focus:border-brand-orange/50 transition-all text-white py-2.5 px-4 h-[42px]"
+            {/* ── Cinematic Hero ─────────────────────────────────────────── */}
+            <div ref={heroRef} className="relative h-[340px] overflow-hidden">
+                {/* Backdrop layer */}
+                <motion.div className="absolute inset-0" style={{ scale: heroScale, opacity: heroOpacity }}>
+                    <AnimatePresence mode="sync">
+                        {backdropSrc && (
+                            <motion.img
+                                key={backdropSrc}
+                                src={getHighResImage(backdropSrc)}
+                                alt=""
+                                aria-hidden
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.8 }}
+                                className="w-full h-full object-cover object-center scale-110 blur-sm"
+                            />
+                        )}
+                    </AnimatePresence>
+                    {/* Dark vignette gradients */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-[#09090b]/60 via-transparent to-[#09090b]" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#09090b]/80 via-transparent to-[#09090b]/50" />
+                    {/* Era color tint */}
+                    <motion.div
+                        className="absolute inset-0 opacity-20"
+                        animate={{ backgroundColor: activeEraConfig.glow }}
+                        transition={{ duration: 0.6 }}
                     />
+                </motion.div>
+
+                {/* Hero content */}
+                <div className="relative h-full flex flex-col justify-end pb-8 px-6 md:px-14">
+                    {/* Title block */}
+                    <motion.div
+                        className="flex flex-col gap-2"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
+                    >
+                        <div className="flex items-center gap-3 mb-1">
+                            <motion.div
+                                className="w-6 h-6 rounded-md flex items-center justify-center"
+                                style={{ backgroundColor: activeEraConfig.color + "30", border: `1px solid ${activeEraConfig.color}40` }}
+                                animate={{ borderColor: activeEraConfig.color + "60", backgroundColor: activeEraConfig.color + "25" }}
+                                transition={{ duration: 0.5 }}
+                            >
+                                <Layers className="w-3.5 h-3.5" style={{ color: activeEraConfig.color }} />
+                            </motion.div>
+                            <span className="text-[9px] font-black uppercase tracking-[0.5em] text-zinc-500">Películas &amp; Especiales</span>
+                        </div>
+
+                        <h1 className="font-bebas text-5xl md:text-7xl tracking-wider leading-none text-white drop-shadow-xl">
+                            <motion.span
+                                key={activeEra}
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.4 }}
+                                className="block"
+                            >
+                                {activeEraConfig.label === "Todas" ? "Colección" : activeEraConfig.label}
+                            </motion.span>
+                        </h1>
+
+                        <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.3em]">
+                            <span style={{ color: activeEraConfig.color }}>{filteredSorted.length} Títulos</span>
+                            <span className="w-1 h-1 rounded-full bg-zinc-700" />
+                            <span className="text-zinc-500">{localCount} Descargados</span>
+                        </div>
+                    </motion.div>
                 </div>
             </div>
 
-            {/* Saga-grouped Content */}
-            <div className="max-w-[1600px] mx-auto px-6 md:px-14 pt-4">
-                {isLoading ? (
-                    <div className="space-y-12">
-                        {[1, 2, 3].map(i => (
-                            <div key={i} className="space-y-4">
-                                <div className="h-6 w-48 bg-zinc-900 rounded animate-pulse" />
-                                <div className="flex gap-4 overflow-hidden">
-                                    {[1, 2, 3, 4, 5, 6].map(j => (
-                                        <div key={j} className="w-[120px] aspect-[2/3] bg-zinc-900 rounded-lg animate-pulse shrink-0" />
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : sortedMovies.length === 0 ? (
-                    <EmptyState
-                        title="Sin coincidencias"
-                        message="No hemos encontrado películas que coincidan con tu búsqueda actual."
-                        illustration={<Clapperboard className="w-20 h-20 text-zinc-800" />}
-                    />
-                ) : (
-                    <div className="flex flex-col gap-12">
-                        {ERA_TABS.filter(t => t.value !== "all").map(era => {
-                            const eraMovies = sortedMovies.filter(m => getEntryEra(m) === era.value)
-                            if (eraMovies.length === 0 && activeEra !== "all") return null
-                            if (activeEra !== "all" && activeEra !== era.value) return null
-                            if (eraMovies.length === 0) return null
+            {/* ── Sticky Filters Bar ─────────────────────────────────────── */}
+            <div className="sticky top-0 z-40 bg-[#09090b]/80 backdrop-blur-xl border-b border-white/[0.04] shadow-[0_1px_0_rgba(255,255,255,0.04)]">
+                <div className="max-w-[1700px] mx-auto px-4 md:px-10 h-14 flex items-center justify-between gap-4">
 
-                            const config = SAGA_CONFIG[era.value as EraTab]
-
+                    {/* Era Pills */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+                        {ERA_TABS.map(tab => {
+                            const count = tab.value === "all" ? allMovies.length : allMovies.filter(m => getEntryEra(m) === tab.value).length
+                            const isActive = activeEra === tab.value
                             return (
-                                <div key={era.value} className="space-y-6">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-1 h-5 rounded-full" style={{ backgroundColor: config.color }} />
-                                        <h2 className="text-xs font-black uppercase tracking-[0.2em] text-white/70">
-                                            {config.name}
-                                        </h2>
-                                        <span className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
-                                            {eraMovies.length} Títulos
-                                        </span>
-                                    </div>
-
-                                    <div className="flex gap-5 overflow-x-auto pb-6 no-scrollbar snap-x">
-                                        {eraMovies.map((entry) => (
-                                            <MoviePosterCard
-                                                key={entry.mediaId}
-                                                entry={entry}
-                                                color={config.color}
-                                                onClick={() => handleMovieClick(entry.mediaId)}
-                                            />
-                                        ))}
-                                    </div>
-                                </div>
+                                <motion.button
+                                    key={tab.value}
+                                    onClick={() => setActiveEra(tab.value)}
+                                    whileTap={{ scale: 0.95 }}
+                                    className={cn(
+                                        "relative flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shrink-0 transition-all duration-300 select-none",
+                                        isActive
+                                            ? "text-white shadow-lg"
+                                            : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
+                                    )}
+                                    style={isActive ? {
+                                        backgroundColor: tab.color + "20",
+                                        border: `1px solid ${tab.color}40`,
+                                        boxShadow: `0 0 20px ${tab.glow}, 0 4px 12px rgba(0,0,0,0.5)`,
+                                        color: tab.color
+                                    } : { border: "1px solid transparent" }}
+                                >
+                                    {isActive && (
+                                        <motion.div
+                                            layoutId="era-active-pill"
+                                            className="absolute inset-0 rounded-full"
+                                            style={{ backgroundColor: tab.color + "15" }}
+                                            transition={{ type: "spring", bounce: 0.2, duration: 0.5 }}
+                                        />
+                                    )}
+                                    <span className="relative z-10">{tab.shortLabel}</span>
+                                    <span className="relative z-10 opacity-40 text-[8px]">{count}</span>
+                                </motion.button>
                             )
                         })}
                     </div>
-                )}
+
+                    {/* Sort dropdown */}
+                    <div className="relative shrink-0">
+                        <button
+                            onClick={() => setSortOpen(o => !o)}
+                            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/5 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-all duration-200"
+                        >
+                            <span>{SORT_OPTIONS.find(s => s.value === sortBy)?.label}</span>
+                            <motion.span animate={{ rotate: sortOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                                <ChevronDown className="w-3.5 h-3.5" />
+                            </motion.span>
+                        </button>
+
+                        <AnimatePresence>
+                            {sortOpen && (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.92, y: -4 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.92, y: -4 }}
+                                    transition={{ duration: 0.18 }}
+                                    className="absolute right-0 top-full mt-2 w-52 bg-zinc-950/98 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-xl z-50 overflow-hidden p-1"
+                                    onMouseLeave={() => setSortOpen(false)}
+                                >
+                                    {SORT_OPTIONS.map(opt => (
+                                        <button
+                                            key={opt.value}
+                                            onClick={() => { setSortBy(opt.value); setSortOpen(false) }}
+                                            className={cn(
+                                                "w-full flex items-center justify-between px-4 py-3 rounded-xl text-[11px] font-bold transition-all duration-150",
+                                                sortBy === opt.value
+                                                    ? "text-brand-orange bg-brand-orange/10"
+                                                    : "text-zinc-400 hover:text-white hover:bg-white/5"
+                                            )}
+                                        >
+                                            {opt.label}
+                                            {sortBy === opt.value && <Check className="w-3.5 h-3.5" />}
+                                        </button>
+                                    ))}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                </div>
             </div>
+
+            {/* ── Movie Grid ─────────────────────────────────────────────── */}
+            <div className="max-w-[1700px] mx-auto px-4 md:px-10 py-10 pb-32">
+                {isLoading ? (
+                    <MovieGridSkeleton />
+                ) : filteredSorted.length === 0 ? (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-32">
+                        <EmptyState
+                            title="Sin películas"
+                            message="No hay películas que coincidan con este filtro."
+                        />
+                    </motion.div>
+                ) : (
+                    <motion.div
+                        key={activeEra}
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+                        className="grid gap-5 md:gap-6"
+                        style={{
+                            gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+                        }}
+                    >
+                        {filteredSorted.map((entry, i) => (
+                            <motion.div
+                                key={entry.mediaId}
+                                initial={{ opacity: 0, y: 12 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.35, delay: Math.min(i * 0.025, 0.4), ease: [0.23, 1, 0.32, 1] }}
+                            >
+                                <MovieCard
+                                    entry={entry}
+                                    era={getEntryEra(entry)}
+                                    watchHistoryItem={watchHistory?.[entry.mediaId]}
+                                    onClick={() => handleMovieClick(entry.mediaId)}
+                                    onHoverBackdrop={setHoveredBackdrop}
+                                />
+                            </motion.div>
+                        ))}
+                    </motion.div>
+                )}
             </div>
         </div>
     )
 }
 
-// ─── Movie Poster Card ────────────────────────────────────────────────────────
+// ─── Movie Card ───────────────────────────────────────────────────────────────
 
-const MoviePosterCard = memo(function MoviePosterCard({
+const MovieCard = memo(function MovieCard({
     entry,
-    color,
+    era,
+    watchHistoryItem,
     onClick,
+    onHoverBackdrop,
 }: {
     entry: Anime_LibraryCollectionEntry
-    color?: string
+    era: EraTab
+    watchHistoryItem?: Continuity_WatchHistoryItem | null
     onClick: () => void
+    onHoverBackdrop: (url: string | null) => void
 }) {
     const movie = entry.media
     if (!movie) return null
 
+    const eraConfig = ERA_TABS.find(t => t.value === era) || ERA_TABS[0]
     const title = movie.titleSpanish || movie.titleEnglish || movie.titleRomaji || "Sin título"
     const hasLocalFiles = (entry.libraryData?.mainFileCount || 0) > 0
-    const isWatched = movie.watched || (entry.listData?.progress || 0) >= (movie.totalEpisodes || 0)
+    const isCompleted = movie.watched || (entry.listData?.progress || 0) >= (movie.totalEpisodes || 1)
+
+    const progressTime = watchHistoryItem?.currentTime || 0
+    const totalDuration = watchHistoryItem?.duration || 0
+    const hasProgress = progressTime > 30 && totalDuration > 0 && progressTime < totalDuration
+    const progressPercent = hasProgress ? Math.min(100, (progressTime / totalDuration) * 100) : 0
+
+    const posterUrl = getHighResImage(movie.posterImage || "")
+    const backdropUrl = movie.bannerImage || movie.posterImage || ""
 
     return (
-        <div className="group relative shrink-0 w-[120px] snap-start">
-            {/* Tooltip on Hover */}
-            <div className="absolute bottom-[calc(100%+12px)] left-1/2 -translate-x-1/2 w-[220px] p-4 bg-[#12151c]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 z-50">
-                <h4 className="text-xs font-black uppercase text-white mb-1 line-clamp-2 leading-tight tracking-wide">{title}</h4>
-                <div className="flex items-center gap-2 text-[9px] font-bold text-zinc-500 uppercase tracking-widest mb-3">
-                    <span>{movie.year}</span>
-                    <span className="w-1 h-1 rounded-full bg-zinc-800" />
-                    <span>{movie.runtime || "???"} MIN</span>
+        <div
+            className="group relative cursor-pointer"
+            onClick={onClick}
+            onMouseEnter={() => onHoverBackdrop(backdropUrl || null)}
+            onMouseLeave={() => onHoverBackdrop(null)}
+        >
+            {/* ─ Poster ─ */}
+            <div className={cn(
+                "relative aspect-[2/3] w-full overflow-hidden rounded-xl",
+                "border border-white/[0.06] transition-all duration-500 ease-out",
+                "group-hover:border-white/20 group-hover:shadow-2xl",
+                !hasLocalFiles && "grayscale opacity-40",
+            )}
+                style={{
+                    boxShadow: "0 4px 24px rgba(0,0,0,0.6)",
+                }}
+            >
+                {/* Poster image */}
+                <DeferredImage
+                    src={posterUrl}
+                    alt={title}
+                    className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                    showSkeleton={false}
+                    fallback={
+                        <div
+                            className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center"
+                            style={{ background: `linear-gradient(135deg, ${eraConfig.color}20, #09090b)` }}
+                        >
+                            <span className="font-bebas text-lg tracking-widest text-white/80 line-clamp-3 leading-tight drop-shadow-lg">
+                                {title}
+                            </span>
+                        </div>
+                    }
+                />
+
+                {/* Top gradient — for badges */}
+                <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/70 to-transparent" />
+
+                {/* Bottom gradient — for play overlay */}
+                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
+
+                {/* Play button */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                    <motion.div
+                        whileHover={{ scale: 1.12 }}
+                        whileTap={{ scale: 0.94 }}
+                        className="w-12 h-12 rounded-full bg-white/15 backdrop-blur-md border border-white/30 flex items-center justify-center shadow-2xl"
+                        style={{ boxShadow: `0 0 30px ${eraConfig.glow}` }}
+                    >
+                        <Play className="w-5 h-5 text-white fill-white ml-0.5" />
+                    </motion.div>
                 </div>
-                <button 
-                    onClick={(e) => { e.stopPropagation(); onClick(); }}
-                    className="w-full py-2 bg-brand-orange hover:bg-brand-orange/80 text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 pointer-events-auto"
-                >
-                    <Play className="w-3 h-3 fill-current" />
-                    Ver ahora
-                </button>
-                <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-[#12151c]/95" />
+
+                {/* Era accent line (bottom left corner) */}
+                <div
+                    className="absolute bottom-0 left-0 w-8 h-0.5 opacity-70 group-hover:w-full transition-all duration-500 ease-out"
+                    style={{ backgroundColor: eraConfig.color }}
+                />
+
+                {/* Top badges */}
+                <div className="absolute top-2 left-2 right-2 flex justify-between items-start">
+                    {/* Year badge */}
+                    {movie.year && (
+                        <div className="px-1.5 py-0.5 rounded-md bg-black/60 backdrop-blur-sm text-[8px] font-black text-white/60 tracking-widest">
+                            {movie.year}
+                        </div>
+                    )}
+
+                    {/* Status badges */}
+                    <div className="flex flex-col items-end gap-1 ml-auto">
+                        {isCompleted && (
+                            <div className="px-1.5 py-0.5 rounded-md bg-green-500/80 backdrop-blur-sm border border-green-400/30 text-[7px] font-black text-white uppercase tracking-wider">
+                                ✓ Visto
+                            </div>
+                        )}
+                        {!isCompleted && hasProgress && (
+                            <div className="px-1.5 py-0.5 rounded-md bg-brand-orange/80 backdrop-blur-sm text-[7px] font-black text-white uppercase tracking-wider">
+                                {Math.round(progressPercent)}%
+                            </div>
+                        )}
+                        {!hasLocalFiles && (
+                            <div className="px-1.5 py-0.5 rounded-md bg-zinc-900/80 backdrop-blur-sm border border-white/10 text-[7px] font-black text-zinc-500 uppercase tracking-wider">
+                                No local
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Progress bar */}
+                {hasProgress && (
+                    <div className="absolute bottom-0 inset-x-0 h-[2px] bg-black/50">
+                        <div
+                            className="h-full transition-all duration-500"
+                            style={{ width: `${progressPercent}%`, backgroundColor: eraConfig.color }}
+                        />
+                    </div>
+                )}
             </div>
 
-            <div 
-                className="flex flex-col gap-3 cursor-pointer"
-                onClick={onClick}
-            >
-                {/* Poster Container */}
-                <div 
-                    className={cn(
-                        "relative aspect-[2/3] w-full overflow-hidden rounded-xl border transition-all duration-300",
-                        "border-white/5 group-hover:border-brand-orange/40 group-hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)]",
-                        !hasLocalFiles && "grayscale opacity-50"
+            {/* ─ Info below poster ─ */}
+            <div className="mt-3 px-0.5 space-y-0.5">
+                <h3 className="text-[11px] font-bold text-white/80 leading-tight line-clamp-2 group-hover:text-white transition-colors duration-300">
+                    {title}
+                </h3>
+                <div className="flex items-center gap-2 text-[9px] text-zinc-600 font-medium">
+                    {movie.runtime && (
+                        <span className="flex items-center gap-1">
+                            <Clock className="w-2.5 h-2.5" />
+                            {movie.runtime}m
+                        </span>
                     )}
-                    style={{ backgroundColor: `${color}10` }}
-                >
-                    <DeferredImage
-                        src={getHighResImage(movie.posterImage || "")}
-                        alt={title}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                        showSkeleton={false}
-                    />
-
-                    {/* Badge LOC */}
-                    {hasLocalFiles && (
-                        <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded-sm bg-black/60 backdrop-blur-md border border-white/10 text-[7px] font-black text-white/70 uppercase tracking-widest">
-                            LOC
-                        </div>
+                    {movie.score && movie.score > 0 && (
+                        <>
+                            <span className="w-0.5 h-0.5 rounded-full bg-zinc-700" />
+                            <span className="flex items-center gap-1">
+                                <Star className="w-2.5 h-2.5 fill-amber-400/60 text-amber-400/60" />
+                                {(movie.score / 10).toFixed(1)}
+                            </span>
+                        </>
                     )}
-
-                    {/* Watched Badge */}
-                    {isWatched && (
-                        <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center text-white shadow-lg">
-                            <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
-                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-                            </svg>
-                        </div>
+                    {!movie.runtime && !movie.score && (
+                        <span
+                            className="text-[8px] font-black uppercase tracking-widest"
+                            style={{ color: eraConfig.color + "80" }}
+                        >
+                            {movie.format || "PELÍCULA"}
+                        </span>
                     )}
-
-                    {/* Hover Tint */}
-                    <div className="absolute inset-0 bg-brand-orange/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                </div>
-
-                {/* Info */}
-                <div className="flex flex-col gap-1 min-w-0">
-                    <h3 className="text-[10px] font-bold text-white/90 uppercase tracking-wide truncate group-hover:text-brand-orange transition-colors">
-                        {title}
-                    </h3>
-                    <div className="text-[9px] font-medium text-zinc-500 tabular-nums">
-                        {movie.year} · {movie.runtime || "???"}m
-                    </div>
                 </div>
             </div>
         </div>
     )
 })
-MoviePosterCard.displayName = "MoviePosterCard"
+MovieCard.displayName = "MovieCard"
 
-// ─── Skeleton ──────────────────────────────────────────────────────────────
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+
+function MovieGridSkeleton() {
+    return (
+        <div
+            className="grid gap-5"
+            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}
+        >
+            {Array.from({ length: 18 }).map((_, i) => (
+                <div key={i} className="space-y-3">
+                    <div className="aspect-[2/3] rounded-xl bg-white/[0.04] animate-pulse" />
+                    <div className="space-y-1.5">
+                        <div className="h-2.5 w-3/4 bg-white/[0.04] rounded animate-pulse" />
+                        <div className="h-2 w-1/2 bg-white/[0.03] rounded animate-pulse" />
+                    </div>
+                </div>
+            ))}
+        </div>
+    )
+}

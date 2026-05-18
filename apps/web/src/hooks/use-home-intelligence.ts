@@ -25,7 +25,8 @@ export function useHomeIntelligence(): UseQueryResult<CuratedHomeResponse, Error
             });
             return result ?? { swimlanes: [] };
         },
-        staleTime: 1000 * 60 * 5, // 5 min
+        staleTime: 1000 * 30, // 30 seconds — keeps fresh during development
+        refetchOnWindowFocus: true,
     })
 }
 

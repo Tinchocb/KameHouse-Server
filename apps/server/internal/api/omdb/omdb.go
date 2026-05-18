@@ -7,7 +7,8 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
-	"time"
+
+	httputil "kamehouse/internal/util/http"
 )
 
 const baseURL = "https://www.omdbapi.com"
@@ -24,7 +25,7 @@ type Client struct {
 func NewClient(apiKey string) *Client {
 	return &Client{
 		apiKey: apiKey,
-		client: &http.Client{Timeout: 10 * time.Second},
+		client: httputil.NewFastClient(),
 	}
 }
 

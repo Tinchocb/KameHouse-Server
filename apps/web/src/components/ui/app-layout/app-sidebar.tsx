@@ -7,6 +7,7 @@ import { motion } from "framer-motion"
 import * as React from "react"
 import { FaBook, FaCog, FaHome, FaFilm, FaTv, FaMoon, FaDownload, FaLayerGroup } from "react-icons/fa"
 import { cn } from "../core/styling"
+import { RandomPlayButton } from "./random-play-button"
 
 interface SidebarItem {
     to: string
@@ -99,21 +100,8 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
 
             {/* Footer / Info */}
             <div className="mt-auto pb-6 w-full flex flex-col items-center gap-6 pt-8">
-                <Magnetic>
-                    <button
-                        onClick={() => {
-                            setActiveTheme(activeTheme === "dark" ? "light" : "dark")
-                        }}
-                        title="Cambiar Tema"
-                        className="flex items-center justify-center w-12 h-12 rounded-2xl border border-white/5 text-zinc-500 hover:bg-white/5 hover:text-white hover:border-white/20 transition-all duration-500 group"
-                    >
-                        <FaMoon className="w-5 h-5 group-hover:rotate-[15deg] transition-transform" />
-                    </button>
-                </Magnetic>
-
-                <div className="flex flex-col items-center opacity-20 select-none group">
-                    <span className="text-[9px] font-black tracking-[0.5em] text-white uppercase group-hover:tracking-[0.6em] transition-all duration-700">KameHouse</span>
-                </div>
+                {/* Random Play */}
+                <RandomPlayButton />
             </div>
         </div>
     )

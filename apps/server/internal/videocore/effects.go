@@ -93,7 +93,11 @@ func (vc *VideoCore) setupSharedEffects() {
 						CurrentTime: event.CurrentTime,
 						Duration:    event.Duration,
 						MediaId: func() int {
-							if m, ok := state.PlaybackInfo.Media.(interface{ GetID() int }); ok {
+							if m, ok := state.PlaybackInfo.Media.(map[string]interface{}); ok {
+								if id, ok := m["id"].(float64); ok {
+									return int(id)
+								}
+							} else if m, ok := state.PlaybackInfo.Media.(interface{ GetID() int }); ok {
 								return m.GetID()
 							}
 							// Fallback/Placeholder

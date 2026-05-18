@@ -189,7 +189,7 @@ func (lc *LibraryCollection) hydrateCollectionLists(
 		// If id >= 1_000_000, it's a TMDB movie ID with offset.
 		// We should look it up by the tmdb_id column.
 		if id >= 1_000_000 {
-			m, err := db.GetLibraryMediaByTmdbId(dbInfo, id-1_000_000)
+			m, err := db.GetLibraryMediaByTmdbIdAndType(dbInfo, id-1_000_000, "MOVIE")
 			if err == nil && m != nil {
 				media = m
 				lookupId = m.ID
@@ -218,7 +218,7 @@ func (lc *LibraryCollection) hydrateCollectionLists(
 		// 3. Fallback: If it's a positive ID but not >= 1M, it might STILL be a TMDB TV show ID
 		// stored in the tmdb_id column instead of being the primary key.
 		if media == nil && id > 0 && id < 1_000_000 {
-			m, err := db.GetLibraryMediaByTmdbId(dbInfo, id)
+			m, err := db.GetLibraryMediaByTmdbIdAndType(dbInfo, id, "SHOW")
 			if err == nil && m != nil {
 				media = m
 				lookupId = m.ID

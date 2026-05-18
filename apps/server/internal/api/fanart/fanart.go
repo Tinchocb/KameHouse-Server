@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
-	"time"
+
+	httputil "kamehouse/internal/util/http"
 )
 
 const baseURL = "https://webservice.fanart.tv/v3"
@@ -23,7 +24,7 @@ type Client struct {
 func NewClient(apiKey string) *Client {
 	return &Client{
 		apiKey: apiKey,
-		client: &http.Client{Timeout: 10 * time.Second},
+		client: httputil.NewFastClient(),
 	}
 }
 

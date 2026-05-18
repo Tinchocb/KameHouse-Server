@@ -10,6 +10,7 @@ import (
 	"kamehouse/internal/api/anilist"
 	apiMetadata "kamehouse/internal/api/metadata"
 	"kamehouse/internal/database/db"
+	"kamehouse/internal/database/models"
 	"kamehouse/internal/platforms/platform"
 
 	"github.com/rs/zerolog"
@@ -72,7 +73,13 @@ func (p *AniListProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetada
 		return nil, fmt.Errorf("database required to map local ID to AniList")
 	}
 
-	media, err := db.GetLibraryMediaByTmdbId(p.db, id)
+	var media *models.LibraryMedia
+	var err error
+	if id >= 1_000_000 {
+		media, err = db.GetLibraryMediaByTmdbIdAndType(p.db, id-1_000_000, "MOVIE")
+	} else {
+		media, err = db.GetLibraryMediaByTmdbIdAndType(p.db, id, "SHOW")
+	}
 	if err != nil || media == nil {
 		return nil, fmt.Errorf("media not found in library for ID %d", id)
 	}
