@@ -296,6 +296,8 @@ export function useDraggableScroll(
         }
     }
 
+    const rafId = useRef<number | null>(null)
+
     const onMouseMove = (e: MouseEvent) => {
         if (!internalState.current.isMouseDown) {
             return
@@ -303,38 +305,41 @@ export function useDraggableScroll(
 
         e.preventDefault()
 
-        const dx = internalState.current.lastMouseX - e.clientX
-        internalState.current.lastMouseX = e.clientX
+        if (rafId.current) cancelAnimationFrame(rafId.current)
+        rafId.current = requestAnimationFrame(() => {
+            const dx = internalState.current.lastMouseX - e.clientX
+            internalState.current.lastMouseX = e.clientX
 
-        internalState.current.scrollSpeedX = dx / timing
-        internalState.current.isDraggingX = true
+            internalState.current.scrollSpeedX = dx / timing
+            internalState.current.isDraggingX = true
 
-        const dy = internalState.current.lastMouseY - e.clientY
-        internalState.current.lastMouseY = e.clientY
+            const dy = internalState.current.lastMouseY - e.clientY
+            internalState.current.lastMouseY = e.clientY
 
-        internalState.current.scrollSpeedY = dy / timing
-        internalState.current.isDraggingY = true
+            internalState.current.scrollSpeedY = dy / timing
+            internalState.current.isDraggingY = true
 
-        ref.current.style.cursor = "grabbing";  
-        (ref.current.childNodes as NodeListOf<HTMLOptionElement>).forEach(
-            (child: HTMLElement) => {
-                child.style.cursor = "grabbing"  
-            },
-        )
+            ref.current.style.cursor = "grabbing";  
+            (ref.current.childNodes as NodeListOf<HTMLOptionElement>).forEach(
+                (child: HTMLElement) => {
+                    child.style.cursor = "grabbing"  
+                },
+            )
 
-        const isAtLeft = ref.current.scrollLeft <= 0 && layoutState.current.isScrollableAlongX
-        const isAtRight =
-            ref.current.scrollLeft >= layoutState.current.maxHorizontalScroll && layoutState.current.isScrollableAlongX
-        const isAtTop = ref.current.scrollTop <= 0 && layoutState.current.isScrollableAlongY
-        const isAtBottom =
-            ref.current.scrollTop >= layoutState.current.maxVerticalScroll && layoutState.current.isScrollableAlongY
-        const isAtAnEdge = isAtLeft || isAtRight || isAtTop || isAtBottom
+            const isAtLeft = ref.current.scrollLeft <= 0 && layoutState.current.isScrollableAlongX
+            const isAtRight =
+                ref.current.scrollLeft >= layoutState.current.maxHorizontalScroll && layoutState.current.isScrollableAlongX
+            const isAtTop = ref.current.scrollTop <= 0 && layoutState.current.isScrollableAlongY
+            const isAtBottom =
+                ref.current.scrollTop >= layoutState.current.maxVerticalScroll && layoutState.current.isScrollableAlongY
+            const isAtAnEdge = isAtLeft || isAtRight || isAtTop || isAtBottom
 
-        if (isAtAnEdge && applyRubberBandEffect) {
-            rubberBandCallback(e)
-        }
+            if (isAtAnEdge && applyRubberBandEffect) {
+                rubberBandCallback(e)
+            }
 
-        runScroll()
+            runScroll()
+        })
     }
 
     const handleResize = () => {

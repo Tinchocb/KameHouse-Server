@@ -1,4 +1,4 @@
-package handlers
+﻿package handlers
 
 import (
 	"context"
@@ -65,8 +65,8 @@ func (h *Handler) getAnimeEntry(c echo.Context, lfs []*dto.LocalFile, mId int) (
 		MediaId:             mId,
 		LocalFiles:          lfs,
 		Database:            h.App.Database,
-		PlatformRef:         h.App.Metadata.PlatformRef,
-		MetadataProviderRef: h.App.Metadata.ProviderRef,
+		PlatformRef:         h.App.Metadata.Platform,
+		MetadataProviderRef: h.App.Metadata.Provider,
 		IsSimulated:         h.App.GetUser() != nil && h.App.GetUser().IsSimulated,
 		IntelligenceSvc:     h.App.IntelligenceService,
 	})
@@ -76,7 +76,7 @@ func (h *Handler) getAnimeEntry(c echo.Context, lfs []*dto.LocalFile, mId int) (
 
 	h.App.FillerManager.HydrateFillerData(entry)
 
-	// ── TMDB Episode Enrichment ──────────────────────────────────────────────────
+	// â”€â”€ TMDB Episode Enrichment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 	// If the media has a TmdbId and episodes are missing synopsis/image,
 	// fetch TMDB season data and fill in the gaps (best-effort, never fails the request).
 	h.enrichEpisodesWithTMDB(c.Request().Context(), entry)
@@ -88,7 +88,7 @@ func (h *Handler) getAnimeEntry(c echo.Context, lfs []*dto.LocalFile, mId int) (
 // enrichEpisodesWithTMDB fetches episode-level metadata from TMDB and fills in
 // any fields that AniDB/Animap left empty (title, overview/summary, still image, runtime).
 // Supports multi-season series by fetching all available seasons in parallel.
-// This is purely additive — never overwrites existing non-empty values.
+// This is purely additive â€” never overwrites existing non-empty values.
 func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry) {
 	if entry == nil || entry.Media == nil || entry.Media.TmdbId == 0 {
 		return
@@ -517,12 +517,12 @@ func (h *Handler) HandleUpdateAnimeEntryProgress(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	err := h.App.Metadata.PlatformRef.Get().UpdateEntryProgress(c.Request().Context(), b.MediaId, b.Progress, nil)
+	err := h.App.Metadata.Platform.UpdateEntryProgress(c.Request().Context(), b.MediaId, b.Progress, nil)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
 
-	_, _ = h.App.Metadata.PlatformRef.Get().RefreshAnimeCollection(context.Background())
+	_, _ = h.App.Metadata.Platform.RefreshAnimeCollection(context.Background())
 	ClearLibraryCollectionCache()
 
 
@@ -548,12 +548,12 @@ func (h *Handler) HandleUpdateAnimeEntryRepeat(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	err := h.App.Metadata.PlatformRef.Get().UpdateEntryRepeat(c.Request().Context(), b.MediaId, b.Repeat)
+	err := h.App.Metadata.Platform.UpdateEntryRepeat(c.Request().Context(), b.MediaId, b.Repeat)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
 
-	_, _ = h.App.Metadata.PlatformRef.Get().RefreshAnimeCollection(context.Background())
+	_, _ = h.App.Metadata.Platform.RefreshAnimeCollection(context.Background())
 	ClearLibraryCollectionCache()
 
 
@@ -589,7 +589,7 @@ func (h *Handler) HandleManualMatch(c echo.Context) error {
 	_ = db.DeleteMetadataCache(h.App.Database, "jikan-anime-episodes", strconv.Itoa(b.MediaId))
 	_ = db.DeleteMetadataCache(h.App.Database, "tmdb-tv-details", strconv.Itoa(b.MediaId))
 	_ = db.DeleteMetadataCache(h.App.Database, "tmdb-movie-details", strconv.Itoa(b.MediaId))
-	h.App.Metadata.ProviderRef.Get().ClearCache()
+	h.App.Metadata.Provider.ClearCache()
 
 	libraryMediaID, err := h.ensureLibraryMediaForManualMatch(c.Request().Context(), b.MediaId, lfs)
 	if err != nil {
@@ -614,7 +614,7 @@ func (h *Handler) HandleManualMatch(c echo.Context) error {
 	}
 
 	// Refresh the collection
-	_, _ = h.App.Metadata.PlatformRef.Get().RefreshAnimeCollection(context.Background())
+	_, _ = h.App.Metadata.Platform.RefreshAnimeCollection(context.Background())
 	ClearLibraryCollectionCache()
 
 	return h.RespondWithData(c, true)
@@ -820,10 +820,10 @@ func (h *Handler) HandleDeletePlatformEntry(c echo.Context) error {
 	}
 
 	// Delete the entry from the user's collection
-	if err := h.App.Metadata.PlatformRef.Get().DeleteEntry(c.Request().Context(), b.MediaId, b.MediaId); err != nil {
+	if err := h.App.Metadata.Platform.DeleteEntry(c.Request().Context(), b.MediaId, b.MediaId); err != nil {
 		return h.RespondWithError(c, errors.New("error: Platform responded with an error, this is most likely a rate limit issue"))
 	}
-	_, _ = h.App.Metadata.PlatformRef.Get().RefreshAnimeCollection(context.Background())
+	_, _ = h.App.Metadata.Platform.RefreshAnimeCollection(context.Background())
 
 	return h.RespondWithData(c, true)
 }
@@ -848,7 +848,7 @@ func (h *Handler) HandleGetMissingEpisodes(c echo.Context) error {
 		Database:            h.App.Database,
 		LocalFiles:          lfs,
 		SilencedMediaIds:    mIds,
-		MetadataProviderRef: h.App.Metadata.ProviderRef,
+		MetadataProviderRef: h.App.Metadata.Provider,
 	})
 
 	return h.RespondWithData(c, missing)
@@ -885,7 +885,7 @@ func (h *Handler) HandleGetUpcomingEpisodes(c echo.Context) error {
 
 	upcoming := anime.NewUpcomingEpisodes(&anime.NewUpcomingEpisodesOptions{
 		AnimeCollection:     animeCollection,
-		MetadataProviderRef: h.App.Metadata.ProviderRef,
+		MetadataProviderRef: h.App.Metadata.Provider,
 	})
 
 	return h.RespondWithData(c, upcoming)
@@ -1006,3 +1006,4 @@ func (h *Handler) HandleToggleAnimeEntrySilenceStatus(c echo.Context) error {
 		"silenced": false, // Placeholder until silence column is added to DB
 	})
 }
+

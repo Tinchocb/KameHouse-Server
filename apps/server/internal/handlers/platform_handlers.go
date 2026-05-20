@@ -29,7 +29,7 @@ func (h *Handler) HandlePlatformListAnime(c echo.Context) error {
 	}
 
 	ctx := c.Request().Context()
-	activePlatform := h.App.Metadata.PlatformRef.Get()
+	activePlatform := h.App.Metadata.Platform
 
 	res, err := activePlatform.ListAnime(ctx, b.Page, b.Search, b.PerPage, b.Sort, b.Status, b.Genres, b.AverageScoreGreater, b.Season, b.SeasonYear, b.Format, b.IsAdult)
 	if err != nil {
@@ -55,7 +55,7 @@ func (h *Handler) HandlePlatformListRecentAiringAnime(c echo.Context) error {
 	}
 
 	ctx := c.Request().Context()
-	activePlatform := h.App.Metadata.PlatformRef.Get()
+	activePlatform := h.App.Metadata.Platform
 
 	res, err := activePlatform.ListRecentAnime(ctx, b.Page, b.PerPage, b.AiringAtGreater, b.AiringAtLesser, b.NotYetAired)
 	if err != nil {
@@ -68,7 +68,7 @@ func (h *Handler) HandlePlatformListRecentAiringAnime(c echo.Context) error {
 // HandleGetPlatformStats returns viewer stats for the active platform
 func (h *Handler) HandleGetPlatformStats(c echo.Context) error {
 	ctx := c.Request().Context()
-	activePlatform := h.App.Metadata.PlatformRef.Get()
+	activePlatform := h.App.Metadata.Platform
 
 	res, err := activePlatform.GetViewerStats(ctx)
 	if err != nil {

@@ -1,4 +1,4 @@
-package anime
+﻿package anime
 
 import (
 	"errors"
@@ -6,10 +6,8 @@ import (
 	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/models"
-	"kamehouse/internal/util"
 	"strconv"
 	"time"
-
 	"github.com/samber/lo"
 	"github.com/sourcegraph/conc/pool"
 )
@@ -40,7 +38,7 @@ type (
 		Media               *models.LibraryMedia
 		Progress            int
 		Status              string
-		MetadataProviderRef *util.Ref[metadata_provider.Provider]
+		MetadataProviderRef metadata_provider.Provider
 	}
 )
 
@@ -175,7 +173,7 @@ func NewEntryDownloadInfo(opts *NewEntryDownloadInfoOptions) (*EntryDownloadInfo
 
 	// DEVNOTE: The EntryEpisode generated has inaccurate progress numbers since not local files are passed in
 
-	mediaWrapper := opts.MetadataProviderRef.Get().GetAnimeMetadataWrapper(nil, opts.AnimeMetadata)
+	mediaWrapper := opts.MetadataProviderRef.GetAnimeMetadataWrapper(nil, opts.AnimeMetadata)
 
 	progressOffset := 0
 	if discrepancy == DiscrepancyPlatformCountsEpisodeZero {
@@ -325,3 +323,5 @@ func (s *episodeSlice) print() {
 		fmt.Printf("(%d) %d -> %s\n", i, item.episodeNumber, item.aniDBEpisode)
 	}
 }
+
+

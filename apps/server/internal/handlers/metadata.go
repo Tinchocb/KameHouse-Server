@@ -1,4 +1,4 @@
-package handlers
+﻿package handlers
 
 import (
 	"errors"
@@ -35,7 +35,7 @@ func (h *Handler) HandlePopulateFillerData(c echo.Context) error {
 	var media *platform.UnifiedMedia
 	if !found {
 		// Fetch media from active platform (TMDB-based)
-		m, err := h.App.Metadata.PlatformRef.Get().GetAnime(c.Request().Context(), b.MediaId)
+		m, err := h.App.Metadata.Platform.GetAnime(c.Request().Context(), b.MediaId)
 		if err != nil {
 			return h.RespondWithError(c, err)
 		}
@@ -140,7 +140,7 @@ func (h *Handler) HandleSaveMediaMetadataParent(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	h.App.Metadata.ProviderRef.Get().ClearCache()
+	h.App.Metadata.Provider.ClearCache()
 	anime.ClearEpisodeCollectionCache()
 
 	return h.RespondWithData(c, savedParent)
@@ -167,8 +167,9 @@ func (h *Handler) HandleDeleteMediaMetadataParent(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	h.App.Metadata.ProviderRef.Get().ClearCache()
+	h.App.Metadata.Provider.ClearCache()
 	anime.ClearEpisodeCollectionCache()
 
 	return h.RespondWithData(c, true)
 }
+

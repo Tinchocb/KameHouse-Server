@@ -1,4 +1,4 @@
-package anime
+﻿package anime
 
 import (
 	"context"
@@ -9,10 +9,8 @@ import (
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/platforms/platform"
-	"kamehouse/internal/util"
 	"sort"
 	"strconv"
-
 	"github.com/sourcegraph/conc/pool"
 )
 
@@ -44,8 +42,8 @@ type (
 		MediaId             int
 		LocalFiles          []*LocalFile // All local files
 		Database            *db.Database
-		PlatformRef         *util.Ref[platform.Platform]
-		MetadataProviderRef *util.Ref[metadata_provider.Provider]
+		PlatformRef         platform.Platform
+		MetadataProviderRef metadata_provider.Provider
 		LibraryEpisodes     map[string]*models.LibraryEpisode
 		IntelligenceSvc     *IntelligenceService
 	}
@@ -54,7 +52,7 @@ type (
 func NewSimpleEntry(ctx context.Context, opts *NewSimpleAnimeEntryOptions) (*SimpleEntry, error) {
 
 	if opts.Database == nil ||
-		opts.PlatformRef.IsAbsent() {
+		opts.PlatformRef == nil {
 		return nil, errors.New("missing arguments when creating simple media entry")
 	}
 	// Create new Entry
@@ -145,7 +143,7 @@ func NewSimpleEntry(ctx context.Context, opts *NewSimpleAnimeEntryOptions) (*Sim
 	// |       Episodes      |
 	// +---------------------+
 
-	amw := opts.MetadataProviderRef.Get().GetAnimeMetadataWrapper(nil, nil)
+	amw := opts.MetadataProviderRef.GetAnimeMetadataWrapper(nil, nil)
 
 	// Create episode entities
 	entry.hydrateEntryEpisodeData(amw, opts.LibraryEpisodes)
@@ -286,3 +284,5 @@ func NewAnimeMetadataFromEpisodeCount(media *models.LibraryMedia, episodes []int
 
 	return animeMetadata
 }
+
+

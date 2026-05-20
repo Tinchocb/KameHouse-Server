@@ -1,4 +1,4 @@
-package handlers
+﻿package handlers
 
 import (
 	"errors"
@@ -55,9 +55,9 @@ func (h *Handler) HandleGetLibraryCollection(c echo.Context) error {
 
 	libraryCollection, err := anime.NewLibraryCollection(c.Request().Context(), &anime.NewLibraryCollectionOptions{
 		Database:            h.App.Database,
-		PlatformRef:         h.App.Metadata.PlatformRef,
+		PlatformRef:         h.App.Metadata.Platform,
 		LocalFiles:          lfs,
-		MetadataProviderRef: h.App.Metadata.ProviderRef,
+		MetadataProviderRef: h.App.Metadata.Provider,
 	})
 	if err != nil {
 		return h.RespondWithError(c, err)
@@ -96,7 +96,7 @@ func (h *Handler) HandleGetAnimeCollectionSchedule(c echo.Context) error {
 		return h.RespondWithData(c, ret)
 	}
 
-	animeScheduleData, err := h.App.Metadata.PlatformRef.Get().GetAnimeAiringSchedule(c.Request().Context())
+	animeScheduleData, err := h.App.Metadata.Platform.GetAnimeAiringSchedule(c.Request().Context())
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
@@ -133,7 +133,7 @@ func (h *Handler) HandleAddUnknownMedia(c echo.Context) error {
 	}
 
 	// Add non-added media entries to Platform collection
-	if err := h.App.Metadata.PlatformRef.Get().AddMediaToCollection(c.Request().Context(), b.MediaIds); err != nil {
+	if err := h.App.Metadata.Platform.AddMediaToCollection(c.Request().Context(), b.MediaIds); err != nil {
 		return h.RespondWithError(c, errors.New("error: Platform responded with an error, this is most likely a rate limit issue"))
 	}
 
@@ -147,3 +147,4 @@ func (h *Handler) HandleAddUnknownMedia(c echo.Context) error {
 	ClearLibraryCollectionCache()
 	return h.RespondWithData(c, animeCollection)
 }
+

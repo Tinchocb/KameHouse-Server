@@ -1,4 +1,4 @@
-import { useState, memo, useMemo, useRef } from "react"
+import { useState, memo, useMemo, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/components/ui/core/styling"
 
@@ -73,25 +73,57 @@ const VhsFlatTape = memo(({
 }) => {
     const baseColor = item.color || getSeriesColor(item.title)
 
-    // Dynamic 3D interactive physics tilt state
-    const [tilt, setTilt] = useState({ x: 0, y: 0 })
-    const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 })
-    const [hovered, setHovered] = useState(false)
     const cardRef = useRef<HTMLDivElement>(null)
+    const [hovered, setHovered] = useState(false)
+
+    // High speed spool rotation when tape is first selected
+    const [fastSpin, setFastSpin] = useState(false)
+    useEffect(() => {
+        if (isSelected) {
+            setFastSpin(true)
+            const timer = setTimeout(() => setFastSpin(false), 600)
+            return () => clearTimeout(timer)
+        }
+    }, [isSelected])
+
+    // Vintage rewritten label narrative
+    const crossedOutTitle = useMemo(() => {
+        const idNum = typeof item.id === 'number' ? item.id : String(item.id).charCodeAt(0)
+        const options = [
+            "CINE DE ACCION '92",
+            "BODA TIO PEPE 1994",
+            "FORMULA 1 MONACO",
+            "FUTBOL COPA '96",
+            "GRABAR ENCIMA",
+            "DRAGON BALL EP 1-10",
+            "ANIME MIX VOL 3",
+            "CUMPLE DE MARTI",
+            "COMERCIALES TV"
+        ]
+        return options[idNum % options.length]
+    }, [item.id])
+
+    const rafRef = useRef<number | null>(null)
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
         if (!cardRef.current) return
         const rect = cardRef.current.getBoundingClientRect()
         const x = e.clientX - rect.left
         const y = e.clientY - rect.top
-        setCursorPos({ x, y })
         
         // Calculate elegant 3D tilt
         const normalizedX = (x / rect.width) * 2 - 1
         const normalizedY = (y / rect.height) * 2 - 1
-        setTilt({
-            x: -normalizedY * 6, // Rotate X (tilt forward/backward)
-            y: normalizedX * 5,  // Rotate Y (turn left/right)
+        const tiltX = -normalizedY * 5
+        const tiltY = normalizedX * 4
+
+        if (rafRef.current) cancelAnimationFrame(rafRef.current)
+        rafRef.current = requestAnimationFrame(() => {
+            if (!cardRef.current) return
+            cardRef.current.style.setProperty('--tilt-x', `${tiltX}deg`)
+            cardRef.current.style.setProperty('--tilt-y', `${tiltY}deg`)
+            cardRef.current.style.setProperty('--mouse-x', `${x}px`)
+            cardRef.current.style.setProperty('--mouse-y', `${y}px`)
         })
     }
 
@@ -102,7 +134,12 @@ const VhsFlatTape = memo(({
 
     const handleMouseLeaveLocal = () => {
         setHovered(false)
-        setTilt({ x: 0, y: 0 })
+        if (cardRef.current) {
+            cardRef.current.style.setProperty('--tilt-x', '0deg')
+            cardRef.current.style.setProperty('--tilt-y', '0deg')
+            cardRef.current.style.setProperty('--mouse-x', '0px')
+            cardRef.current.style.setProperty('--mouse-y', '0px')
+        }
         onMouseLeave()
     }
 
@@ -261,7 +298,7 @@ const VhsFlatTape = memo(({
                 isSelected && "border-brand-orange shadow-[0_0_20px_rgba(255,107,0,0.4)]"
             )}
             style={{
-                transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateX(${isSelected ? '24px' : hovered ? '14px' : '0px'}) scale(${hovered && !isSelected ? 1.015 : 1})`,
+                transform: `perspective(1000px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) translateX(${isSelected ? '24px' : hovered ? '14px' : '0px'}) scale(${hovered && !isSelected ? 1.015 : 1})`,
                 borderColor: isSelected ? baseColor : hovered ? `${baseColor}60` : "rgba(63,63,70,0.4)",
                 boxShadow: isSelected 
                     ? `0 12px 25px -8px rgba(0,0,0,0.85), 0 0 25px ${baseColor}50, inset 0 0 2px rgba(255,255,255,0.1)` 
@@ -269,15 +306,16 @@ const VhsFlatTape = memo(({
                         ? `0 8px 18px -6px rgba(0,0,0,0.7), 0 0 15px ${baseColor}25, inset 0 0 1px rgba(255,255,255,0.05)`
                         : "inset 0 1.5px 2px rgba(255,255,255,0.02), 0 4px 8px rgba(0,0,0,0.5)",
                 transition: hovered 
-                    ? "transform 0.08s ease-out, box-shadow 0.15s ease-out, border-color 0.3s ease" 
-                    : "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s ease",
+                    ? "transform 0.15s ease-out, box-shadow 0.2s ease-out, border-color 0.3s ease" 
+                    : "transform 0.55s cubic-bezier(0.25, 1.15, 0.45, 1), box-shadow 0.55s cubic-bezier(0.25, 1.15, 0.45, 1), border-color 0.55s ease",
+                willChange: "transform, box-shadow"
             }}
         >
             {/* Satin dynamic light sweep */}
             <div 
                 className="absolute inset-0 pointer-events-none z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                 style={{
-                    background: hovered ? `radial-gradient(circle 120px at ${cursorPos.x}px ${cursorPos.y}px, rgba(255,255,255,0.06) 0%, transparent 80%)` : 'none'
+                    background: hovered ? `radial-gradient(circle 120px at var(--mouse-x, 0px) var(--mouse-y, 0px), rgba(255,255,255,0.06) 0%, transparent 80%)` : 'none'
                 }}
             />
 
@@ -334,14 +372,31 @@ const VhsFlatTape = memo(({
                     <div className="absolute inset-0 pointer-events-none opacity-[0.05] z-[1] mix-blend-overlay bg-[url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.1%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22/%3E%3C/svg%3E')]" />
 
                     {/* Label Brand and Handwritten Text */}
-                    <div className="flex-1 flex flex-col justify-center min-w-0 pl-1 z-10 font-sans">
-                        {/* Brand header */}
-                        <div className="text-[6.5px] font-black text-zinc-500 leading-none select-none tracking-widest flex items-center gap-1 uppercase">
-                            {retro.brand} <span className="text-[4.5px] font-bold text-zinc-400 bg-zinc-800 px-0.8 py-0.1 rounded">{retro.tapeModel}</span>
+                    <div className="flex-1 flex flex-col justify-center min-w-0 pl-1 z-10 font-sans h-full">
+                        {/* Brand header & Crossed out previous recording */}
+                        <div className="flex items-center justify-between gap-1 w-full select-none">
+                            <div className="text-[6.5px] font-black text-zinc-500 leading-none tracking-widest flex items-center gap-1 uppercase">
+                                {retro.brand} <span className="text-[4.5px] font-bold text-zinc-400 bg-zinc-800 px-0.8 py-0.1 rounded">{retro.tapeModel}</span>
+                            </div>
+                            
+                            {/* Crossed out title */}
+                            <div className="relative leading-none select-none opacity-45 transform scale-[0.75] origin-right mr-1 max-w-[50%] shrink-0">
+                                <span 
+                                    className="text-[8px] font-black tracking-tight italic line-clamp-1 text-blue-800/80"
+                                    style={{
+                                        fontFamily: "'Caveat', cursive",
+                                    }}
+                                >
+                                    {crossedOutTitle}
+                                </span>
+                                {/* Crossed-out lines */}
+                                <div className="absolute top-[48%] left-[-1.5px] right-[-1.5px] h-[1px] bg-red-700/60 rounded-full rotate-[-1.5deg]" />
+                                <div className="absolute top-[52%] left-[1px] right-[-1px] h-[0.7px] bg-red-700/50 rounded-full rotate-[1deg]" />
+                            </div>
                         </div>
                         {/* Cursive Handwriting title */}
                         <div 
-                            className="text-[11.5px] sm:text-[13px] font-black tracking-tight line-clamp-1 leading-none mt-1 filter opacity-95 shrink-0"
+                            className="text-[11.5px] sm:text-[13px] font-black tracking-tight line-clamp-1 leading-none mt-1.5 filter opacity-95 shrink-0"
                             style={{
                                 color: retro.handwrittenColor,
                                 fontFamily: retro.handwrittenFont,
@@ -363,7 +418,7 @@ const VhsFlatTape = memo(({
 
             {/* MIDDLE-RIGHT: Acrylic viewing window with spools */}
             <div className="w-[100px] sm:w-[130px] h-[80%] rounded bg-[#090a0d] border border-zinc-900 shadow-[inset_0_2px_4px_rgba(0,0,0,0.98)] relative flex items-center justify-around overflow-hidden px-1 sm:px-1.5 shrink-0 mr-1 z-10">
-                {/* Glare sheen */}
+                 {/* Glare sheen */}
                 <div 
                     className="absolute inset-0 pointer-events-none z-15 mix-blend-screen opacity-55"
                     style={{
@@ -371,8 +426,8 @@ const VhsFlatTape = memo(({
                             ? `linear-gradient(120deg, transparent 20%, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.18) 30%, rgba(255,255,255,0.04) 35%, transparent 45%)`
                             : `linear-gradient(120deg, transparent 40%, rgba(255,255,255,0.02) 43%, rgba(255,255,255,0.06) 46%, rgba(255,255,255,0.02) 49%, transparent 52%)`,
                         backgroundSize: '200% 100%',
-                        backgroundPosition: hovered ? `${(cursorPos.x / 1.2) - 20}% 0` : '0% 0',
-                        transition: 'background-position 0.12s ease-out'
+                        backgroundPosition: hovered ? `calc((var(--mouse-x, 0px) / 1.2) - 20px) 0px` : '0% 0',
+                        transition: 'background-position 0.15s ease-out'
                     }}
                 />
                 
@@ -381,8 +436,8 @@ const VhsFlatTape = memo(({
                 <div className="w-6.5 h-6.5 rounded-full bg-[#111215] border border-zinc-900 flex items-center justify-center relative overflow-hidden shrink-0">
                     <motion.div 
                         className="rounded-full bg-zinc-950 flex items-center justify-center relative" 
-                        animate={hovered ? { rotate: 360 } : { rotate: 0 }}
-                        transition={hovered ? { repeat: Infinity, duration: 4, ease: "linear" } : { duration: 0.5 }}
+                        animate={fastSpin ? { rotate: 360 * 3 } : (hovered || isSelected) ? { rotate: 360 } : { rotate: 0 }}
+                        transition={fastSpin ? { repeat: Infinity, duration: 0.5, ease: "linear" } : (hovered || isSelected) ? { repeat: Infinity, duration: 16, ease: "linear" } : { duration: 0.5 }}
                         style={{ 
                             width: '20px', 
                             height: '20px', 
@@ -416,8 +471,8 @@ const VhsFlatTape = memo(({
                 <div className="w-6.5 h-6.5 rounded-full bg-[#111215] border border-zinc-900 flex items-center justify-center relative overflow-hidden shrink-0">
                     <motion.div 
                         className="rounded-full bg-zinc-950 flex items-center justify-center relative" 
-                        animate={hovered ? { rotate: 360 } : { rotate: 0 }}
-                        transition={hovered ? { repeat: Infinity, duration: 4, ease: "linear" } : { duration: 0.5 }}
+                        animate={fastSpin ? { rotate: 360 * 3 } : (hovered || isSelected) ? { rotate: 360 } : { rotate: 0 }}
+                        transition={fastSpin ? { repeat: Infinity, duration: 0.5, ease: "linear" } : (hovered || isSelected) ? { repeat: Infinity, duration: 16, ease: "linear" } : { duration: 0.5 }}
                         style={{ 
                             width: '20px', 
                             height: '20px', 
@@ -483,6 +538,18 @@ const VhsFlatTape = memo(({
             </div>
         </motion.div>
     )
+}, (prevProps, nextProps) => {
+    return (
+        prevProps.isSelected === nextProps.isSelected &&
+        prevProps.index === nextProps.index &&
+        prevProps.totalItems === nextProps.totalItems &&
+        prevProps.item.id === nextProps.item.id &&
+        prevProps.item.title === nextProps.item.title &&
+        prevProps.item.watchedCount === nextProps.item.watchedCount &&
+        prevProps.item.episodesCount === nextProps.item.episodesCount &&
+        prevProps.item.status === nextProps.item.status &&
+        prevProps.item.color === nextProps.item.color
+    )
 })
 VhsFlatTape.displayName = "VhsFlatTape"
 
@@ -529,19 +596,13 @@ export const VhsShelfAccordion = memo(function VhsShelfAccordion({
                 {/* Cassettes Container - Stacked Vertically */}
                 <div className="flex-1 w-full flex flex-col gap-2.5 overflow-y-auto no-scrollbar py-3 px-1 min-h-0 select-none">
                     {items.map((item, index) => (
-                        <VhsFlatTape
+                        <VhsFlatTapeWrapper
                             key={item.id}
                             item={item}
                             isSelected={selectedId === item.id}
-                            onClick={() => {
-                                if (selectedId === item.id) {
-                                    onItemClick(item)
-                                } else {
-                                    onSelectId(item.id)
-                                }
-                            }}
-                            onMouseEnter={() => onHoverItem?.(item)}
-                            onMouseLeave={() => onHoverItem?.(null)}
+                            onItemClick={onItemClick}
+                            onSelectId={onSelectId}
+                            onHoverItem={onHoverItem}
                             index={index}
                             totalItems={items.length}
                         />
@@ -570,3 +631,40 @@ export const VhsShelfAccordion = memo(function VhsShelfAccordion({
         </div>
     )
 })
+VhsShelfAccordion.displayName = "VhsShelfAccordion"
+
+// ─── Tape Wrapper to Prevent Inline Function Re-renders ───────────────────────
+
+const VhsFlatTapeWrapper = memo(({
+    item,
+    isSelected,
+    onItemClick,
+    onSelectId,
+    onHoverItem,
+    index,
+    totalItems
+}: {
+    item: VhsTapeItem;
+    isSelected: boolean;
+    onItemClick: (item: VhsTapeItem) => void;
+    onSelectId: (id: string | number | null) => void;
+    onHoverItem?: (item: VhsTapeItem | null) => void;
+    index: number;
+    totalItems: number;
+}) => {
+    return (
+        <VhsFlatTape
+            item={item}
+            isSelected={isSelected}
+            onClick={() => {
+                if (isSelected) onItemClick(item)
+                else onSelectId(item.id)
+            }}
+            onMouseEnter={() => onHoverItem?.(item)}
+            onMouseLeave={() => onHoverItem?.(null)}
+            index={index}
+            totalItems={totalItems}
+        />
+    )
+})
+VhsFlatTapeWrapper.displayName = "VhsFlatTapeWrapper"

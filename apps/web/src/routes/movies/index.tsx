@@ -22,19 +22,19 @@ type EraTab = "all" | "Dragon Ball" | "Dragon Ball Z" | "Dragon Ball Super" | "D
 type SortOption = "year_asc" | "year_desc" | "recently_add" | "alpha"
 
 const ERA_TABS: { value: EraTab; label: string; shortLabel: string; color: string; glow: string }[] = [
-    { value: "all",      label: "Todas",               shortLabel: "Todas",    color: "#ff6b00", glow: "rgba(255,107,0,0.3)" },
-    { value: "Dragon Ball",  label: "Dragon Ball",          shortLabel: "Dragon Ball",  color: "#e07030", glow: "rgba(224,112,48,0.3)" },
-    { value: "Dragon Ball Z",        label: "Dragon Ball Z",        shortLabel: "Dragon Ball Z",        color: "#e74c3c", glow: "rgba(231,76,60,0.3)"  },
-    { value: "Dragon Ball GT",       label: "Dragon Ball GT",       shortLabel: "Dragon Ball GT",       color: "#3498db", glow: "rgba(52,152,219,0.3)" },
-    { value: "Dragon Ball Super",    label: "Dragon Ball Super",    shortLabel: "Dragon Ball Super",    color: "#9b59b6", glow: "rgba(155,89,182,0.3)" },
-    { value: "Especiales y OVAs", label: "Especiales y OVAs",    shortLabel: "Especiales y OVAs", color: "#1abc9c", glow: "rgba(26,188,156,0.3)" },
+    { value: "all", label: "Todas", shortLabel: "Todas", color: "#ff6b00", glow: "rgba(255,107,0,0.3)" },
+    { value: "Dragon Ball", label: "Dragon Ball", shortLabel: "Dragon Ball", color: "#e07030", glow: "rgba(224,112,48,0.3)" },
+    { value: "Dragon Ball Z", label: "Dragon Ball Z", shortLabel: "Dragon Ball Z", color: "#e74c3c", glow: "rgba(231,76,60,0.3)" },
+    { value: "Dragon Ball GT", label: "Dragon Ball GT", shortLabel: "Dragon Ball GT", color: "#3498db", glow: "rgba(52,152,219,0.3)" },
+    { value: "Dragon Ball Super", label: "Dragon Ball Super", shortLabel: "Dragon Ball Super", color: "#9b59b6", glow: "rgba(155,89,182,0.3)" },
+    { value: "Especiales y OVAs", label: "Especiales y OVAs", shortLabel: "Especiales y OVAs", color: "#1abc9c", glow: "rgba(26,188,156,0.3)" },
 ]
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
-    { value: "year_asc",     label: "Año: Más antiguo" },
-    { value: "year_desc",    label: "Año: Más reciente" },
+    { value: "year_asc", label: "Año: Más antiguo" },
+    { value: "year_desc", label: "Año: Más reciente" },
     { value: "recently_add", label: "Añadido recientemente" },
-    { value: "alpha",        label: "Alfabético" },
+    { value: "alpha", label: "Alfabético" },
 ]
 
 function getEntryEra(entry: Anime_LibraryCollectionEntry): EraTab {
@@ -79,6 +79,7 @@ function MoviesPage() {
     const [sortOpen, setSortOpen] = useState(false)
     const [hoveredMovie, setHoveredMovie] = useState<Anime_LibraryCollectionEntry | null>(null)
     const heroRef = useRef<HTMLDivElement>(null)
+    const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const navigate = useNavigate()
     const { data: collection, isLoading } = useGetLibraryCollection()
     const { data: watchHistory } = useGetContinuityWatchHistory()
@@ -97,27 +98,38 @@ function MoviesPage() {
             const type = e.media?.type
             return fmt === "MOVIE" || fmt === "OVA" || fmt === "SPECIAL" || type?.toUpperCase() === "MOVIE" || (e.mediaId && e.mediaId >= 1000000)
         })
-        const unique = new Map<number, Anime_LibraryCollectionEntry>()
-        rawMovies.forEach(m => { if (m.mediaId) unique.set(m.mediaId, m) })
+        const unique = new Map<number, Anime_LibraryCollectionEntry & { _era?: EraTab, _addedAt?: number }>()
+        rawMovies.forEach(m => { 
+            if (m.mediaId && !unique.has(m.mediaId)) {
+                unique.set(m.mediaId, {
+                    ...m,
+                    _era: getEntryEra(m),
+                    _addedAt: m.listData?.startedAt ? new Date(m.listData.startedAt).getTime() : 0
+                })
+            } 
+        })
         return Array.from(unique.values())
     }, [collection])
 
     const filteredSorted = useMemo(() => {
-        const result = activeEra === "all" ? allMovies : allMovies.filter(e => getEntryEra(e) === activeEra)
+        const result = activeEra === "all" ? allMovies : allMovies.filter(e => e._era === activeEra)
         switch (sortBy) {
-            case "year_asc":     return [...result].sort((a, b) => (a.media?.year || 0) - (b.media?.year || 0))
-            case "year_desc":    return [...result].sort((a, b) => (b.media?.year || 0) - (a.media?.year || 0))
-            case "recently_add": return [...result].sort((a, b) => new Date(b.listData?.startedAt || 0).getTime() - new Date(a.listData?.startedAt || 0).getTime())
-            case "alpha":        return [...result].sort((a, b) => (a.media?.titleRomaji || "").localeCompare(b.media?.titleRomaji || ""))
+            case "year_asc": return [...result].sort((a, b) => (a.media?.year || 0) - (b.media?.year || 0))
+            case "year_desc": return [...result].sort((a, b) => (b.media?.year || 0) - (a.media?.year || 0))
+            case "recently_add": return [...result].sort((a, b) => (b._addedAt || 0) - (a._addedAt || 0))
+            case "alpha": return [...result].sort((a, b) => (a.media?.titleRomaji || "").localeCompare(b.media?.titleRomaji || ""))
+            default: return result
         }
     }, [allMovies, activeEra, sortBy])
 
+    const filteredSortedIds = useMemo(() => new Set(filteredSorted.map(m => m.mediaId)), [filteredSorted])
+
     const activeMovie = useMemo(() => {
-        if (hoveredMovie && filteredSorted.some(m => m.mediaId === hoveredMovie.mediaId)) {
+        if (hoveredMovie && filteredSortedIds.has(hoveredMovie.mediaId)) {
             return hoveredMovie
         }
         return filteredSorted[0] || null
-    }, [hoveredMovie, filteredSorted])
+    }, [hoveredMovie, filteredSorted, filteredSortedIds])
 
     // Sync active movie backdrop to the global intelligence store
     useEffect(() => {
@@ -128,10 +140,11 @@ function MoviesPage() {
         }
         return () => {
             setBackdropUrl(null)
+            if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
         }
     }, [activeMovie, setBackdropUrl])
 
-    const activeMovieEra = activeMovie ? getEntryEra(activeMovie) : "all"
+    const activeMovieEra = activeMovie ? ((activeMovie as any)._era || getEntryEra(activeMovie)) : "all"
     const activeMovieEraConfig = ERA_TABS.find(t => t.value === activeMovieEra) || ERA_TABS[0]
 
     const backdropSrc = useMemo(() => {
@@ -141,6 +154,13 @@ function MoviesPage() {
     const handleMovieClick = useCallback((mediaId: number) => {
         navigate({ to: "/movies/$movieId", params: { movieId: String(mediaId) } })
     }, [navigate])
+
+    const handleMovieHover = useCallback((entry: Anime_LibraryCollectionEntry | null) => {
+        if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
+        hoverTimeoutRef.current = setTimeout(() => {
+            setHoveredMovie(entry)
+        }, 150)
+    }, [])
 
     const localCount = allMovies.filter(m => (m.libraryData?.mainFileCount || 0) > 0).length
 
@@ -163,6 +183,7 @@ function MoviesPage() {
                                 exit={{ opacity: 0 }}
                                 transition={{ duration: 0.8 }}
                                 className="w-full h-full object-cover object-center scale-110 blur-3xl saturate-150 opacity-20"
+                                style={{ willChange: "opacity" }}
                             />
                         )}
                     </AnimatePresence>
@@ -207,10 +228,10 @@ function MoviesPage() {
                                     <Play className="w-6 h-6 text-white fill-white ml-1" />
                                 </div>
                             </div>
-                            
+
                             {/* Accent bottom border using era color */}
-                            <div 
-                                className="absolute bottom-0 inset-x-0 h-1 transition-all duration-500" 
+                            <div
+                                className="absolute bottom-0 inset-x-0 h-1 transition-all duration-500"
                                 style={{ backgroundColor: activeMovieEraConfig.color }}
                             />
                         </motion.div>
@@ -227,7 +248,7 @@ function MoviesPage() {
                                 className="flex flex-col items-center lg:items-start"
                             >
                                 {/* Era Badge */}
-                                <div 
+                                <div
                                     className="flex items-center gap-2 px-3 py-1.5 rounded-full border text-[9px] font-black uppercase tracking-[0.25em] mb-3 backdrop-blur-md shadow-md"
                                     style={{
                                         borderColor: `${activeMovieEraConfig.color}40`,
@@ -430,20 +451,14 @@ function MoviesPage() {
                         }}
                     >
                         {filteredSorted.map((entry, i) => (
-                            <motion.div
+                            <AnimatedCassetteCard
                                 key={entry.mediaId}
-                                initial={{ opacity: 0, y: 12 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.35, delay: Math.min(i * 0.025, 0.4), ease: [0.23, 1, 0.32, 1] }}
-                            >
-                                <CassetteCard
-                                    entry={entry}
-                                    watchHistoryItem={watchHistory?.[entry.mediaId]}
-                                    onClick={() => handleMovieClick(entry.mediaId)}
-                                    onMouseEnter={() => setHoveredMovie(entry)}
-                                    onMouseLeave={() => setHoveredMovie(null)}
-                                />
-                            </motion.div>
+                                entry={entry}
+                                index={i}
+                                watchHistoryItem={watchHistory?.[entry.mediaId]}
+                                onClick={handleMovieClick}
+                                onHover={handleMovieHover}
+                            />
                         ))}
                     </motion.div>
                 )}
@@ -617,6 +632,41 @@ const MovieCard = memo(function MovieCard({
     )
 })
 MovieCard.displayName = "MovieCard"
+
+// ─── Animated Cassette Wrapper ────────────────────────────────────────────────
+
+const AnimatedCassetteCard = memo(function AnimatedCassetteCard({
+    entry,
+    index,
+    watchHistoryItem,
+    onClick,
+    onHover
+}: {
+    entry: Anime_LibraryCollectionEntry;
+    index: number;
+    watchHistoryItem?: Continuity_WatchHistoryItem | null;
+    onClick: (id: number) => void;
+    onHover: (entry: Anime_LibraryCollectionEntry | null) => void;
+}) {
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: Math.min(index * 0.025, 0.4), ease: [0.23, 1, 0.32, 1] }}
+        >
+            <CassetteCard
+                entry={entry}
+                watchHistoryItem={watchHistoryItem}
+                onClick={() => {
+                    if (entry.mediaId) onClick(entry.mediaId)
+                }}
+                onMouseEnter={() => onHover(entry)}
+                onMouseLeave={() => onHover(null)}
+            />
+        </motion.div>
+    )
+})
+AnimatedCassetteCard.displayName = "AnimatedCassetteCard"
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 

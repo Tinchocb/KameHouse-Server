@@ -1,10 +1,9 @@
-package handlers
+﻿package handlers
 
 import (
 	"kamehouse/internal/core"
 	util "kamehouse/internal/util/proxies"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -21,51 +20,23 @@ type Handler struct {
 }
 
 func InitRoutes(app *core.App, e *echo.Echo) {
-	allowedOriginsStr := os.Getenv("KAMEHOUSE_CORS_ALLOWED_ORIGINS")
-	var allowedOrigins []string
-	if allowedOriginsStr != "" {
-		for _, o := range strings.Split(allowedOriginsStr, ",") {
-			allowedOrigins = append(allowedOrigins, strings.TrimSpace(o))
-		}
-	} else if devOrigins := os.Getenv("KAMEHOUSE_DEV_CORS_ORIGINS"); devOrigins != "" {
-		for _, o := range strings.Split(devOrigins, ",") {
-			allowedOrigins = append(allowedOrigins, strings.TrimSpace(o))
-		}
-	} else if os.Getenv("KAMEHOUSE_ENV") != "production" {
-		// Development defaults: allow the frontend dev server on port 43210
-		allowedOrigins = []string{
-			"http://localhost:43210",
-			"http://127.0.0.1:43210",
-			"http://localhost:5173",
-			"http://127.0.0.1:5173",
-			"http://localhost:3000",
-			"http://127.0.0.1:3000",
-			"http://localhost",
-			"http://127.0.0.1",
-		}
-	} else {
-		allowedOrigins = []string{"http://localhost", "http://127.0.0.1"}
-	}
+	allowedOrigins := app.Config.Server.CorsOrigins
 
-	// CORS — includes byte-range headers required by the web video player
+	// CORS — incluye cabeceras byte-range requeridas por el reproductor web de video
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: allowedOrigins,
 		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions, http.MethodHead},
 		AllowHeaders: []string{
 			"Origin", "Content-Type", "Accept", "Cookie", "Authorization",
-			// Byte-range streaming — without these the browser cannot seek in video
 			"Range", "Accept-Ranges", "Content-Range", "If-Range",
-			// App-specific auth headers
 			"X-KameHouse-Token",
 		},
-		// ExposeHeaders lets the browser READ these headers from streaming responses
 		ExposeHeaders: []string{
 			"Accept-Ranges", "Content-Range", "Content-Length", "Content-Disposition",
 		},
 		AllowCredentials: true,
 	}))
 
-	// Delegate to the canonical error handler defined in response.go.
 	e.HTTPErrorHandler = CustomHTTPErrorHandler
 
 	lechoLogger := lecho.From(*app.Logger)
@@ -79,7 +50,6 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 		"/api/v1/proxy",
 	}
 
-	// Logging middleware
 	e.Use(lecho.Middleware(lecho.Config{
 		Logger: lechoLogger,
 		Skipper: func(c echo.Context) bool {
@@ -97,15 +67,12 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 			return false
 		},
 		Enricher: func(c echo.Context, logger zerolog.Context) zerolog.Context {
-			// Add which file the request came from
 			return logger.Str("file", c.Path())
 		},
 	}))
 
-	// Recovery middleware
 	e.Use(middleware.Recover())
 
-	// Gzip compression middleware to speed up JSON transfers, skipping video streams and WebSocket connections
 	e.Use(middleware.GzipWithConfig(middleware.GzipConfig{
 		Level: 5,
 		Skipper: func(c echo.Context) bool {
@@ -117,37 +84,25 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 		},
 	}))
 
-	// Client ID middleware
 	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			// Check if the client has a UUID cookie
 			cookie, err := c.Cookie("KameHouse-Client-Id")
-
 			if err != nil || cookie.Value == "" {
-				// Generate a new UUID for the client
 				u := uuid.New().String()
-
-				// Create a cookie with the UUID
 				newCookie := new(http.Cookie)
 				newCookie.Name = "KameHouse-Client-Id"
 				newCookie.Value = u
-				newCookie.HttpOnly = false // Make the cookie accessible via JS
+				newCookie.HttpOnly = false
 				newCookie.Expires = time.Now().Add(24 * time.Hour)
 				newCookie.Path = "/"
 				newCookie.Domain = ""
 				newCookie.SameSite = http.SameSiteDefaultMode
 				newCookie.Secure = c.Scheme() == "https" || c.Request().Header.Get("X-Forwarded-Proto") == "https"
-
-				// Set the cookie
 				c.SetCookie(newCookie)
-
-				// Store the UUID in the context for use in the request
 				c.Set("KameHouse-Client-Id", u)
 			} else {
-				// Store the existing UUID in the context for use in the request
 				c.Set("KameHouse-Client-Id", cookie.Value)
 			}
-
 			return next(c)
 		}
 	})
@@ -158,20 +113,15 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 		App: app,
 	}
 
-	// Start the WebSocket playback heartbeat subscriber for real-time progress sync.
-	// This must happen before route registration to ensure the subscriber goroutine
-	// is ready before any client connects.
 	h.StartPlaybackHeartbeatSubscriber()
 
 	v1 := e.Group("/api/v1")
 	v1.GET("/events", h.webSocketEventHandler)
-	v1.GET("/ws", h.webSocketEventHandler) // alias consumed by the web/native clients
+	v1.GET("/ws", h.webSocketEventHandler)
 
-	// Auth and feature middleware
 	v1.Use(h.OptionalAuthMiddleware)
 	v1.Use(h.FeaturesMiddleware)
 
-	// Shared routes
 	imageProxy := &util.ImageProxy{}
 	v1.GET("/image-proxy", imageProxy.ProxyImage)
 	v1.GET("/proxy", h.VideoProxy)
@@ -181,8 +131,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	v1.POST("/status/home-items", h.HandleUpdateHomeItems)
 	v1.GET("/home/curated", h.HandleGetHomeCurated)
 	v1.GET("/home/continue-watching", h.HandleGetContinueWatching)
-	v1.POST("/home/retag", h.HandleRetagEpisodes) // Re-runs IntelligenceTagger on all episodes
-	// Unified stream resolver (Local only)
+	v1.POST("/home/retag", h.HandleRetagEpisodes)
 	v1.GET("/resolver/streams", h.HandleResolveStreams)
 	v1.GET("/log/*", h.HandleGetLogContent)
 	v1.GET("/logs/filenames", h.HandleGetLogFilenames)
@@ -197,13 +146,11 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	v1.POST("/directory-selector", h.HandleDirectorySelector)
 	v1.POST("/open-in-explorer", h.HandleOpenInExplorer)
 
-	// Domain-specific routes
 	h.RegisterLibraryRoutes(v1)
 	h.RegisterStreamingRoutes(v1)
 	h.RegisterSettingsRoutes(v1)
 	h.RegisterLocalRoutes(v1)
 }
-
 
 func (h *Handler) JSON(c echo.Context, code int, i interface{}) error {
 	return c.JSON(code, i)
@@ -223,29 +170,19 @@ func (h *Handler) RespondWithCodeError(c echo.Context, code int, err error) erro
 
 func headMethodMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-
-
 		if c.Request().Method == http.MethodHead {
-			// Set the method to GET temporarily to reuse the handler
 			c.Request().Method = http.MethodGet
-
 			defer func() {
 				c.Request().Method = http.MethodHead
-			}() // Restore method after
-
-			// Call the next handler and then clear the response body
+			}()
 			if err := next(c); err != nil {
 				if err.Error() == echo.ErrMethodNotAllowed.Error() {
 					return c.NoContent(http.StatusOK)
 				}
-
 				return err
 			}
-			
 			return nil
 		}
-
 		return next(c)
 	}
 }
-

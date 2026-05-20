@@ -1,4 +1,4 @@
-package handlers
+﻿package handlers
 
 import (
 	"errors"
@@ -11,7 +11,7 @@ import (
 // HandleGetCollection returns the TMDB collection by ID.
 // It fetches from the TMDB platform and returns a CollectionResponse that matches
 // the MediaCollectionData frontend interface. Collection-level metadata (poster,
-// backdrop, overview) is sourced from: DB cache → TMDB live → entry-level fallback.
+// backdrop, overview) is sourced from: DB cache â†’ TMDB live â†’ entry-level fallback.
 func (h *Handler) HandleGetCollection(c echo.Context) error {
 	idStr := c.Param("id")
 	collectionID, err := strconv.Atoi(idStr)
@@ -20,7 +20,7 @@ func (h *Handler) HandleGetCollection(c echo.Context) error {
 	}
 
 	// Fetch from TMDB platform (live query)
-	unifiedColl, err := h.App.Metadata.PlatformRef.Get().GetMediaCollection(c.Request().Context(), collectionID)
+	unifiedColl, err := h.App.Metadata.Platform.GetMediaCollection(c.Request().Context(), collectionID)
 	if err != nil {
 		return c.JSON(500, NewErrorResponse(err))
 	}
@@ -51,7 +51,7 @@ func (h *Handler) HandleGetCollection(c echo.Context) error {
 		Parts        []PartResponse `json:"parts"`
 	}
 
-	// Priority: DB (cached scan data) → TMDB live collection metadata → entry-level fallback
+	// Priority: DB (cached scan data) â†’ TMDB live collection metadata â†’ entry-level fallback
 	var overview *string
 	var poster *string
 	var backdrop *string
@@ -135,4 +135,5 @@ func (h *Handler) HandleListCollections(c echo.Context) error {
 	}
 	return c.JSON(200, NewDataResponse(colls))
 }
+
 

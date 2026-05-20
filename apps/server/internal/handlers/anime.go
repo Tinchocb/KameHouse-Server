@@ -1,4 +1,4 @@
-package handlers
+﻿package handlers
 
 import (
 	"fmt"
@@ -22,11 +22,11 @@ func (h *Handler) getAnimeEpisodeCollection(c echo.Context, mId int) (*anime.Epi
 		return h.getTMDBEpisodeCollection(mId)
 	}
 
-completeAnime, err := h.App.Metadata.PlatformRef.Get().GetAnime(c.Request().Context(), mId)
+completeAnime, err := h.App.Metadata.Platform.GetAnime(c.Request().Context(), mId)
 	if err != nil {
 		return nil, err
 	}
-	animeMetadata, err := h.App.Metadata.ProviderRef.Get().GetAnimeMetadata(mId)
+	animeMetadata, err := h.App.Metadata.Provider.GetAnimeMetadata(mId)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ completeAnime, err := h.App.Metadata.PlatformRef.Get().GetAnime(c.Request().Cont
 	ec, err := anime.NewEpisodeCollection(anime.NewEpisodeCollectionOptions{
 		AnimeMetadata:       animeMetadata,
 		Media:               baseAnime.ToBaseAnime(),
-		MetadataProviderRef: h.App.Metadata.ProviderRef,
+		MetadataProviderRef: h.App.Metadata.Provider,
 		Logger:              h.App.Logger,
 	})
 	if err != nil {
@@ -144,6 +144,7 @@ func (h *Handler) HandleGetAnimeEpisodeCollection(c echo.Context) error {
 
 	return h.RespondWithData(c, ec)
 }
+
 
 
 

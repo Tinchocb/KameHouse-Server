@@ -1,4 +1,4 @@
-import { useState, memo, useMemo, useEffect } from "react"
+import { useState, memo, useMemo, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Play } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
@@ -72,23 +72,54 @@ const VhsTapeCard = memo(({
     const baseColor = item.color || getSeriesColor(item.title)
     const progress = item.episodesCount ? (item.watchedCount || 0) / item.episodesCount * 100 : 0
 
-    // Dynamic 3D interactive physics tilt state
-    const [tilt, setTilt] = useState({ x: 0, y: 0 })
-    const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 })
+    // High speed spool rotation when tape is first selected
+    const [fastSpin, setFastSpin] = useState(false)
+    useEffect(() => {
+        if (isSelected) {
+            setFastSpin(true)
+            const timer = setTimeout(() => setFastSpin(false), 600)
+            return () => clearTimeout(timer)
+        }
+    }, [isSelected])
+
+    // Vintage rewritten label narrative
+    const crossedOutTitle = useMemo(() => {
+        const idNum = typeof item.id === 'number' ? item.id : String(item.id).charCodeAt(0)
+        const options = [
+            "CINE DE ACCION '92",
+            "BODA TIO PEPE 1994",
+            "FORMULA 1 MONACO",
+            "FUTBOL COPA '96",
+            "GRABAR ENCIMA",
+            "DRAGON BALL EP 1-10",
+            "ANIME MIX VOL 3",
+            "CUMPLE DE MARTI",
+            "COMERCIALES TV"
+        ]
+        return options[idNum % options.length]
+    }, [item.id])
+
+    const cardRef = useRef<HTMLDivElement>(null)
     const [hovered, setHovered] = useState(false)
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
         const rect = e.currentTarget.getBoundingClientRect()
         const x = e.clientX - rect.left
         const y = e.clientY - rect.top
-        setCursorPos({ x, y })
         
-        // Calculate tilt between -10 and 10 degrees for elegant motion
-        const normalizedX = (x / rect.width) * 2 - 1
-        const normalizedY = (y / rect.height) * 2 - 1
-        setTilt({
-            x: -normalizedY * 10, // Rotate X (tilt forward/backward)
-            y: normalizedX * 10,   // Rotate Y (turn left/right)
+        requestAnimationFrame(() => {
+            // Calculate tilt between -10 and 10 degrees for elegant motion
+            const normalizedX = (x / rect.width) * 2 - 1
+            const normalizedY = (y / rect.height) * 2 - 1
+            const tiltX = -normalizedY * 8
+            const tiltY = normalizedX * 8
+
+            if (cardRef.current) {
+                cardRef.current.style.setProperty('--tilt-x', `${tiltX}deg`)
+                cardRef.current.style.setProperty('--tilt-y', `${tiltY}deg`)
+                cardRef.current.style.setProperty('--mouse-x', `${x}px`)
+                cardRef.current.style.setProperty('--mouse-y', `${y}px`)
+            }
         })
     }
 
@@ -99,7 +130,12 @@ const VhsTapeCard = memo(({
 
     const handleMouseLeaveLocal = () => {
         setHovered(false)
-        setTilt({ x: 0, y: 0 })
+        if (cardRef.current) {
+            cardRef.current.style.setProperty('--tilt-x', '0deg')
+            cardRef.current.style.setProperty('--tilt-y', '0deg')
+            cardRef.current.style.setProperty('--mouse-x', '0px')
+            cardRef.current.style.setProperty('--mouse-y', '0px')
+        }
         onMouseLeave?.()
     }
 
@@ -252,6 +288,7 @@ const VhsTapeCard = memo(({
 
     return (
         <div 
+            ref={cardRef}
             onClick={onClick}
             onMouseEnter={handleMouseEnterLocal}
             onMouseLeave={handleMouseLeaveLocal}
@@ -263,22 +300,23 @@ const VhsTapeCard = memo(({
                     : "flex-1 z-10"
             )}
             style={{
-                transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateY(${isSelected ? '-48px' : hovered ? '-24px' : '0px'}) scale(${hovered && !isSelected ? 1.04 : 1})`,
+                transform: `perspective(1000px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) translateY(${isSelected ? '-36px' : hovered ? '-18px' : '0px'}) scale(${hovered && !isSelected ? 1.03 : 1})`,
                 boxShadow: isSelected 
-                    ? `0 45px 85px -10px rgba(0,0,0,0.98), 0 0 45px ${baseColor}50, inset 0 0 1px rgba(255,255,255,0.3)` 
+                    ? `0 35px 70px -10px rgba(0,0,0,0.95), 0 0 35px ${baseColor}50, inset 0 0 1px rgba(255,255,255,0.3)` 
                     : hovered 
-                        ? `0 35px 65px -12px rgba(0,0,0,0.95), 0 0 25px ${baseColor}40, 6px 12px 24px rgba(0,0,0,0.4)`
+                        ? `0 25px 50px -12px rgba(0,0,0,0.9), 0 0 20px ${baseColor}30, 6px 12px 24px rgba(0,0,0,0.4)`
                         : "0 6px 16px rgba(0,0,0,0.65), 1px 2px 4px rgba(0,0,0,0.3)",
                 transition: hovered 
-                    ? "transform 0.08s ease-out, box-shadow 0.15s ease-out, flex 0.6s cubic-bezier(0.16, 1, 0.3, 1)" 
-                    : "transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.6s cubic-bezier(0.16, 1, 0.3, 1), flex 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
+                    ? "transform 0.15s ease-out, box-shadow 0.2s ease-out, flex 0.5s cubic-bezier(0.16, 1, 0.3, 1)" 
+                    : "transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1), flex 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
+                willChange: "transform, box-shadow, flex"
             }}
         >
             {/* Satin dynamic light sweep */}
             <div 
                 className="absolute inset-0 pointer-events-none z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                 style={{
-                    background: hovered ? `radial-gradient(circle 180px at ${cursorPos.x}px ${cursorPos.y}px, rgba(255,255,255,0.08) 0%, transparent 80%)` : 'none'
+                    background: hovered ? `radial-gradient(circle 180px at var(--mouse-x, 0px) var(--mouse-y, 0px), rgba(255,255,255,0.08) 0%, transparent 80%)` : 'none'
                 }}
             />
 
@@ -288,7 +326,7 @@ const VhsTapeCard = memo(({
                 style={{
                     top: 'calc(100% - 150px)', // Centered right where the separator sits
                     height: '65px',
-                    opacity: (hovered || isSelected) ? 1 : 0,
+                    opacity: isSelected ? 1 : 0,
                     boxShadow: "inset 0 10px 10px rgba(0,0,0,0.9), inset 0 -10px 10px rgba(0,0,0,0.9)"
                 }}
             >
@@ -317,9 +355,9 @@ const VhsTapeCard = memo(({
             <motion.div 
                 className="flex-1 relative overflow-hidden bg-[#0d0f14] group rounded-t-md z-10"
                 animate={{
-                    y: isSelected ? -24 : hovered ? -12 : 0,
+                    y: isSelected ? -12 : 0,
                 }}
-                transition={{ type: "spring", stiffness: 180, damping: 20 }}
+                transition={{ type: "spring", stiffness: 145, damping: 17 }}
             >
                 {/* Fiber Cardboard Texture Overlay */}
                 <div 
@@ -411,7 +449,25 @@ const VhsTapeCard = memo(({
                     )}
                     style={{ background: "linear-gradient(transparent 0%, rgba(8,10,15,0.99) 35%)" }}
                 >
-                    <h3 className="text-[20px] sm:text-[24px] font-black text-white mb-2 leading-[1.1] font-display tracking-tight">{item.title}</h3>
+                    {/* Title with Retro RGB Channel Glitch Effect */}
+                    <div className="relative mb-2 select-none">
+                        <h3 className={cn(
+                            "text-[20px] sm:text-[24px] font-black text-white leading-[1.1] font-display tracking-tight",
+                            fastSpin && "animate-[text-glitch_0.3s_steps(2)_infinite]"
+                        )}>
+                            {item.title}
+                        </h3>
+                        {fastSpin && (
+                            <>
+                                <h3 className="absolute top-0 left-[-1.5px] text-[20px] sm:text-[24px] font-black text-red-500/80 leading-[1.1] font-display tracking-tight mix-blend-screen pointer-events-none select-none animate-[red-shift_0.15s_infinite] w-full">
+                                    {item.title}
+                                </h3>
+                                <h3 className="absolute top-0 left-[1.5px] text-[20px] sm:text-[24px] font-black text-cyan-500/80 leading-[1.1] font-display tracking-tight mix-blend-screen pointer-events-none select-none animate-[cyan-shift_0.15s_infinite] w-full">
+                                    {item.title}
+                                </h3>
+                            </>
+                        )}
+                    </div>
                     <div className="text-[11px] sm:text-[12px] text-white/50 flex items-center gap-2 mb-4 font-medium uppercase tracking-wider">
                         <span className="bg-white/10 px-2 py-0.5 rounded-md">{item.year || "2024"}</span>
                         <span className="w-[3px] h-[3px] rounded-full bg-white/20" />
@@ -463,9 +519,9 @@ const VhsTapeCard = memo(({
                     boxShadow: "inset 0 6px 14px rgba(0,0,0,0.95), 0 3px 6px rgba(0,0,0,0.85)"
                 }}
                 animate={{
-                    y: isSelected ? 24 : hovered ? 12 : 0,
+                    y: isSelected ? 12 : 0,
                 }}
-                transition={{ type: "spring", stiffness: 180, damping: 20 }}
+                transition={{ type: "spring", stiffness: 145, damping: 17 }}
             >
                 {/* Matte Corrugated Plastic Texture Overlay */}
                 <div 
@@ -535,8 +591,8 @@ const VhsTapeCard = memo(({
                                 ? `linear-gradient(120deg, transparent 15%, rgba(255,255,255,0.05) 20%, rgba(255,255,255,0.22) 25%, rgba(255,255,255,0.05) 30%, transparent 40%)`
                                 : `linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.02) 35%, rgba(255,255,255,0.08) 38%, rgba(255,255,255,0.02) 41%, transparent 46%)`,
                             backgroundSize: '200% 100%',
-                            backgroundPosition: hovered ? `${(cursorPos.x / 1.5) - 30}% 0` : '0% 0',
-                            transition: 'background-position 0.12s ease-out'
+                            backgroundPosition: hovered ? 'calc(var(--mouse-x, 0px) / 1.5 - 30px) 0%' : '0% 0%',
+                            transition: hovered ? 'none' : 'background-position 0.5s ease-out'
                         }}
                     />
 
@@ -584,7 +640,11 @@ const VhsTapeCard = memo(({
                             <div 
                                 className={cn(
                                     "w-4 h-4 rounded-full bg-[#fcfdfd] border border-zinc-300 shadow-[0_1.5px_2px_rgba(0,0,0,0.6)] flex items-center justify-center relative shrink-0",
-                                    (hovered || isSelected) ? "animate-[drive-spindle-spin_16s_linear_infinite]" : "rotate-[25deg]"
+                                    fastSpin
+                                        ? "animate-[drive-spindle-spin-fast_0.5s_linear_infinite]"
+                                        : (hovered || isSelected) 
+                                            ? "animate-[drive-spindle-spin_16s_linear_infinite]" 
+                                            : "rotate-[25deg]"
                                 )}
                             >
                                 <div className="absolute inset-[1.5px] rounded-full border border-zinc-200" />
@@ -631,7 +691,11 @@ const VhsTapeCard = memo(({
                             <div 
                                 className={cn(
                                     "w-4 h-4 rounded-full bg-[#fcfdfd] border border-zinc-300 shadow-[0_1.5px_2px_rgba(0,0,0,0.6)] flex items-center justify-center relative shrink-0",
-                                    (hovered || isSelected) ? "animate-[drive-spindle-spin_16s_linear_infinite]" : "rotate-[70deg]"
+                                    fastSpin
+                                        ? "animate-[drive-spindle-spin-fast_0.5s_linear_infinite]"
+                                        : (hovered || isSelected) 
+                                            ? "animate-[drive-spindle-spin_16s_linear_infinite]" 
+                                            : "rotate-[70deg]"
                                 )}
                             >
                                 <div className="absolute inset-[1.5px] rounded-full border border-zinc-200" />
@@ -718,22 +782,39 @@ const VhsTapeCard = memo(({
                             <div className="flex-1 bg-amber-500" />
                         </div>
                         
-                        {/* Sticker Content Row - Handwritten Title */}
-                        <div className="flex items-center justify-between gap-1.5 relative z-10 pl-3 min-h-[22px]">
-                            <span 
-                                className="text-[12px] sm:text-[14px] font-black tracking-tight line-clamp-1 italic rotate-[-0.8deg] flex-1 filter opacity-95"
-                                style={{
-                                    color: retro.handwrittenColor,
-                                    fontFamily: retro.handwrittenFont,
-                                    textShadow: `0.3px 0.3px 1.5px rgba(0,0,0,0.12), 0px 0px 1px ${retro.handwrittenColor}80, 0px 0px 2px ${retro.handwrittenColor}30`
-                                }}
-                            >
-                                {item.title}
-                            </span>
-                            
-                            <span className="text-[5px] font-black uppercase text-red-650/80 border-2 border-red-650/40 px-1 py-0.2 rounded font-mono select-none tracking-widest rotate-[-4deg] shrink-0 scale-90 bg-white/20 backdrop-blur-[0.5px]">
-                                ¡REBOBINADO!
-                            </span>
+                        {/* Sticker Content Row - Handwritten Title with Crossed out previous recording */}
+                        <div className="flex flex-col gap-0.5 relative z-10 pl-3 min-h-[30px] justify-center flex-1">
+                            {/* Crossed out title */}
+                            <div className="relative self-start max-w-[85%] leading-none select-none opacity-45 transform scale-[0.8] origin-left mb-[1px]">
+                                <span 
+                                    className="text-[9px] font-black tracking-tight italic line-clamp-1 text-blue-800/80"
+                                    style={{
+                                        fontFamily: "'Caveat', cursive",
+                                    }}
+                                >
+                                    {crossedOutTitle}
+                                </span>
+                                {/* Handwritten cross-out lines */}
+                                <div className="absolute top-[48%] left-[-2px] right-[-2px] h-[1.2px] bg-red-700/60 rounded-full rotate-[-1.5deg]" />
+                                <div className="absolute top-[52%] left-[1px] right-[-1px] h-[0.8px] bg-red-700/50 rounded-full rotate-[1deg]" />
+                            </div>
+
+                            <div className="flex items-center justify-between gap-1.5 w-full">
+                                <span 
+                                    className="text-[12px] sm:text-[14px] font-black tracking-tight line-clamp-1 italic rotate-[-0.8deg] flex-1 filter opacity-95"
+                                    style={{
+                                        color: retro.handwrittenColor,
+                                        fontFamily: retro.handwrittenFont,
+                                        textShadow: `0.3px 0.3px 1.5px rgba(0,0,0,0.12), 0px 0px 1px ${retro.handwrittenColor}80, 0px 0px 2px ${retro.handwrittenColor}30`
+                                    }}
+                                >
+                                    {item.title}
+                                </span>
+                                
+                                <span className="text-[5px] font-black uppercase text-red-650/80 border-2 border-red-650/40 px-1 py-0.2 rounded font-mono select-none tracking-widest rotate-[-4deg] shrink-0 scale-90 bg-white/20 backdrop-blur-[0.5px]">
+                                    ¡REBOBINADO!
+                                </span>
+                            </div>
                         </div>
 
                         {/* 3D Folded/Peeled Dog-Ear sticker corner (shows plastic cassette underneath) */}
@@ -791,6 +872,16 @@ const VhsTapeCard = memo(({
             </motion.div>
         </div>
     )
+}, (prevProps, nextProps) => {
+    return (
+        prevProps.isSelected === nextProps.isSelected &&
+        prevProps.item.id === nextProps.item.id &&
+        prevProps.item.status === nextProps.item.status &&
+        prevProps.item.watchedCount === nextProps.item.watchedCount &&
+        prevProps.item.episodesCount === nextProps.item.episodesCount &&
+        prevProps.item.title === nextProps.item.title &&
+        prevProps.item.color === nextProps.item.color
+    )
 })
 VhsTapeCard.displayName = "VhsTapeCard"
 
@@ -806,13 +897,18 @@ export const VhsCollection = memo(({
     const [localSelectedId, setLocalSelectedId] = useState<string | number | null>(null)
     const isControlled = controlledSelectedId !== undefined
     const selectedId = isControlled ? controlledSelectedId : localSelectedId
-    const setSelectedId = (id: string | number | null) => {
+    const handleSetSelectedId = useCallback((id: string | number | null) => {
         if (onSelectId) onSelectId(id)
         if (!isControlled) setLocalSelectedId(id)
-    }
+    }, [onSelectId, isControlled])
 
     // Local state to track hover item within VhsCollection for dynamic backdrop rendering
     const [hoveredItem, setHoveredItem] = useState<VhsCollectionItem | null>(null)
+    
+    const handleHoverItem = useCallback((item: VhsCollectionItem | null) => {
+        setHoveredItem(item)
+        onHoverItem?.(item)
+    }, [onHoverItem])
 
     // Lookup selected item details
     const selectedItem = useMemo(() => {
@@ -836,18 +932,15 @@ export const VhsCollection = memo(({
         <div 
             className={cn("w-full h-full flex flex-col overflow-hidden min-h-0 relative", className)}
             style={{
-                backgroundColor: "#100804", // Deep brown walnut wood shadow base
+                backgroundColor: "#06070a", // Deep obsidian black
                 backgroundImage: `
-                    /* Vertical plank slats and recessed board shadows */
-                    repeating-linear-gradient(90deg, rgba(0,0,0,0.45) 0px, rgba(0,0,0,0.45) 3px, transparent 3px, transparent 150px, rgba(0,0,0,0.65) 150px, rgba(0,0,0,0.65) 153px),
-                    /* Wooden grain fine organic fiber lines */
-                    repeating-linear-gradient(0deg, rgba(255,255,255,0.005) 0px, rgba(255,255,255,0.005) 1px, transparent 1px, transparent 4px),
-                    repeating-linear-gradient(90deg, rgba(255,255,255,0.005) 0px, rgba(255,255,255,0.005) 2px, transparent 2px, transparent 5px),
-                    /* Aged wood lighting vignette highlights */
-                    radial-gradient(circle at 50% 50%, rgba(255,255,255,0.02) 0%, transparent 80%),
-                    /* Base vertical plank gradient shades */
-                    linear-gradient(to right, #0e0704, #180c06 20%, #1f1109 50%, #180c06 80%, #0e0704)
-                `
+                    /* Tech Grid Pattern */
+                    linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px),
+                    /* Subtle Spotlight Vignette */
+                    radial-gradient(circle at 50% 50%, rgba(255,255,255,0.02) 0%, transparent 80%)
+                `,
+                backgroundSize: '40px 40px, 40px 40px, 100% 100%'
             }}
         >
             {/* CRT Phosphor Scanline & Shadow-mask Overlay (Atmospheric vintage flicker) */}
@@ -900,25 +993,43 @@ export const VhsCollection = memo(({
                 }}
             />
 
-            {/* Cabinet Wood Moldings (Left & Right margins in polished Walnut trim) */}
+            {/* Anodized Carbon Metal Rails (Left & Right margins) */}
             <div 
-                className="absolute inset-y-0 left-0 w-3 z-20 shadow-[8px_0_20px_rgba(0,0,0,0.85)] border-r border-white/5" 
+                className="absolute inset-y-0 left-0 w-3.5 z-20 shadow-[8px_0_20px_rgba(0,0,0,0.85)] border-r border-white/5 flex flex-row-reverse" 
                 style={{
-                    background: "linear-gradient(to right, #2d160b, #1d0e06 80%, #110803 100%)"
+                    background: "linear-gradient(to right, #1f2229, #0d0f12 85%, #050607 100%)"
                 }}
-            />
+            >
+                {/* Left LED Ambient strip */}
+                <div 
+                    className="w-[1.5px] h-full transition-all duration-1000 opacity-60"
+                    style={{
+                        background: `linear-gradient(to bottom, transparent, ${activeColor || "#ff6b00"}, transparent)`,
+                        boxShadow: `0 0 8px ${activeColor || "#ff6b00"}`
+                    }}
+                />
+            </div>
             <div 
-                className="absolute inset-y-0 right-0 w-3 z-20 shadow-[-8px_0_20px_rgba(0,0,0,0.85)] border-l border-white/5" 
+                className="absolute inset-y-0 right-0 w-3.5 z-20 shadow-[-8px_0_20px_rgba(0,0,0,0.85)] border-l border-white/5 flex" 
                 style={{
-                    background: "linear-gradient(to left, #2d160b, #1d0e06 80%, #110803 100%)"
+                    background: "linear-gradient(to left, #1f2229, #0d0f12 85%, #050607 100%)"
                 }}
-            />
+            >
+                {/* Right LED Ambient strip */}
+                <div 
+                    className="w-[1.5px] h-full transition-all duration-1000 opacity-60"
+                    style={{
+                        background: `linear-gradient(to bottom, transparent, ${activeColor || "#ff6b00"}, transparent)`,
+                        boxShadow: `0 0 8px ${activeColor || "#ff6b00"}`
+                    }}
+                />
+            </div>
 
             {/* Premium Top Lip Housing and LED Lightbar casing */}
-            <div className="absolute top-0 inset-x-0 h-4 bg-[#0a0604] border-b border-black/80 z-25 shadow-[0_4px_12px_rgba(0,0,0,0.95)]">
-                <div className="absolute top-[2px] inset-x-12 h-1 bg-[#1a110d] rounded-full border border-white/5 overflow-hidden flex items-center justify-around">
-                    <div className="w-1/4 h-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-                    <div className="w-1/4 h-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+            <div className="absolute top-0 inset-x-0 h-4 bg-[#08090c] border-b border-black/90 z-25 shadow-[0_4px_12px_rgba(0,0,0,0.95)]">
+                <div className="absolute top-[2px] inset-x-12 h-1 bg-[#101216] rounded-full border border-white/5 overflow-hidden flex items-center justify-around">
+                    <div className="w-1/4 h-full bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+                    <div className="w-1/4 h-full bg-gradient-to-r from-transparent via-white/15 to-transparent" />
                 </div>
             </div>
 
@@ -933,53 +1044,43 @@ export const VhsCollection = memo(({
 
             {/* Shelf Slot Rails (grooves in backing behind tapes) */}
             <div 
-                className="absolute inset-x-3 bottom-[26px] h-[36px] opacity-75 pointer-events-none z-0 border-t border-black/85"
+                className="absolute inset-x-3.5 bottom-[26px] h-[36px] opacity-75 pointer-events-none z-0 border-t border-black/90"
                 style={{
-                    background: "repeating-linear-gradient(90deg, #060709 0px, #060709 136px, #18191f 136px, #18191f 140px, #040506 140px, #040506 142px)",
-                    boxShadow: "inset 0 4px 6px rgba(0,0,0,0.95), 0 2px 2px rgba(255,255,255,0.02)"
+                    background: "repeating-linear-gradient(90deg, #040507 0px, #040507 136px, #0c0d12 136px, #0c0d12 140px, #020203 140px, #020203 142px)",
+                    boxShadow: "inset 0 4px 6px rgba(0,0,0,0.98), 0 2px 2px rgba(255,255,255,0.01)"
                 }}
             />
 
             {/* Vhs Row with Top/Bottom padding to prevent slide-up clip */}
             <div className="flex-1 w-full flex flex-row items-stretch min-h-0 overflow-x-auto no-scrollbar pt-16 pb-6 px-7 gap-1.5 relative z-10">
                 {items.map((item) => (
-                    <VhsTapeCard
+                    <VhsTapeWrapper
                         key={item.id}
                         item={item}
                         isSelected={selectedId === item.id}
-                        onClick={() => {
-                            if (selectedId === item.id) {
-                                onItemClick(item)
-                            } else {
-                                setSelectedId(item.id)
-                            }
-                        }}
-                        onPlayClick={() => onItemClick(item)}
-                        onMouseEnter={() => {
-                            setHoveredItem(item)
-                            onHoverItem?.(item)
-                        }}
-                        onMouseLeave={() => {
-                            setHoveredItem(null)
-                            onHoverItem?.(null)
-                        }}
+                        onItemClick={onItemClick}
+                        onSelectId={handleSetSelectedId}
+                        onHoverItem={handleHoverItem}
                     />
                 ))}
             </div>
             
-            {/* High-End Collector's Shelf Floor with Metallic Bronze Bevel and LED Reflections */}
-            <div className="h-[28px] shrink-0 bg-[#2b170c] border-t-[3px] border-[#422413] relative z-30 shadow-[0_-8px_24px_rgba(0,0,0,0.85)]"
+            {/* Premium Dark Acrylic/Brushed Metal Shelf Floor with LED Reflections */}
+            <div className="h-[28px] shrink-0 bg-[#0d0f14] border-t-[3px] border-[#181a21] relative z-30 shadow-[0_-8px_24px_rgba(0,0,0,0.9)]"
                  style={{
-                     backgroundImage: 'linear-gradient(to bottom, #201109, #120905 50%, #080402 100%)'
+                     backgroundImage: 'linear-gradient(to bottom, #090a0d, #060709 50%, #020203 100%)'
                  }}
             >
-                {/* Metallic shelf gold/bronze front bevel strip */}
-                <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-amber-600/30 via-amber-400/70 to-amber-600/30 border-b border-black/40" />
+                {/* Metallic shelf anodized silver/steel front bevel strip */}
+                <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-zinc-700/40 via-zinc-400/80 to-zinc-700/40 border-b border-black/80" />
                 
                 {/* Dynamic LED Lightbar Reflection */}
                 <div 
-                    className="absolute inset-x-0 top-0 h-[2.5px] blur-[1px] transition-all duration-700" 
-                    style={{ backgroundColor: activeColor || "#ff6b00", opacity: 0.95 }}
+                    className="absolute inset-x-0 top-0 h-[2.5px] blur-[1.5px] transition-all duration-700 opacity-90" 
+                    style={{ 
+                        backgroundColor: activeColor || "#ff6b00",
+                        boxShadow: `0 0 10px ${activeColor || "#ff6b00"}`
+                    }}
                 />
                 
                 <div className="h-full flex items-center justify-between px-6">
@@ -1008,6 +1109,29 @@ export const VhsCollection = memo(({
                     100% { transform: rotate(360deg); }
                 }
 
+                @keyframes drive-spindle-spin-fast {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+
+                @keyframes text-glitch {
+                    0%, 100% { transform: translate(0); opacity: 1; }
+                    20% { transform: translate(-1px, 1px); }
+                    40% { transform: translate(-1.5px, -1px); opacity: 0.85; }
+                    60% { transform: translate(1.5px, 0.5px); }
+                    80% { transform: translate(0px, -0.5px); opacity: 0.95; }
+                }
+
+                @keyframes red-shift {
+                    0%, 100% { transform: translate(0); }
+                    50% { transform: translate(-2px, 0.5px); }
+                }
+
+                @keyframes cyan-shift {
+                    0%, 100% { transform: translate(0); }
+                    50% { transform: translate(2px, -0.5px); }
+                }
+
                 @keyframes tape-sheen {
                     0% { background-position: -100px 0; }
                     100% { background-position: 200px 0; }
@@ -1034,3 +1158,34 @@ export const VhsCollection = memo(({
     )
 })
 VhsCollection.displayName = "VhsCollection"
+
+// ─── Tape Wrapper to Prevent Inline Function Re-renders ───────────────────────
+
+const VhsTapeWrapper = memo(({
+    item,
+    isSelected,
+    onItemClick,
+    onSelectId,
+    onHoverItem
+}: {
+    item: VhsCollectionItem;
+    isSelected: boolean;
+    onItemClick: (item: VhsCollectionItem) => void;
+    onSelectId: (id: string | number | null) => void;
+    onHoverItem?: (item: VhsCollectionItem | null) => void;
+}) => {
+    return (
+        <VhsTapeCard
+            item={item}
+            isSelected={isSelected}
+            onClick={() => {
+                if (isSelected) onItemClick(item)
+                else onSelectId(item.id)
+            }}
+            onPlayClick={() => onItemClick(item)}
+            onMouseEnter={() => onHoverItem?.(item)}
+            onMouseLeave={() => onHoverItem?.(null)}
+        />
+    )
+})
+VhsTapeWrapper.displayName = "VhsTapeWrapper"

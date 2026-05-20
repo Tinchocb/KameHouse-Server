@@ -38,7 +38,9 @@ func (db *Database) Gorm() *gorm.DB {
 	return db.gormdb
 }
 
-// NewDatabase initializes a highly concurrent connection pool and ensures schema migration finishes before traffic.
+// NewDatabase inicializa el pool de conexiones SQLite (WAL) y ejecuta la
+// migración de esquema (DDL) de forma síncrona. La migración de datos
+// heredados (DML) se delega a runDataMigrations en segundo plano.
 func NewDatabase(ctx context.Context, appDataDir, dbName string, logger *zerolog.Logger) (*Database, error) {
 	var sqlitePath string
 	if os.Getenv("TEST_ENV") == "true" || appDataDir == "" {
@@ -60,8 +62,8 @@ func NewDatabase(ctx context.Context, appDataDir, dbName string, logger *zerolog
 				Colorful:                  true,
 			},
 		),
-		PrepareStmt:            true, // Caches prepared statements for performance
-		SkipDefaultTransaction: true, // +30% write speed by skipping implicit txs on single-record creates
+		PrepareStmt:            true,
+		SkipDefaultTransaction: true,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database connection: %w", err)
@@ -72,19 +74,16 @@ func NewDatabase(ctx context.Context, appDataDir, dbName string, logger *zerolog
 		return nil, fmt.Errorf("failed to obtain underlying sql.DB: %w", err)
 	}
 
-	// SQLite serializes writes via WAL journal. A small pool reduces SQLITE_BUSY
-	// contention while still allowing concurrent reads.
 	sqlDB.SetMaxOpenConns(4)
 	sqlDB.SetMaxIdleConns(2)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	// Block and verify connection availability using the startup context timeout
 	if err := sqlDB.PingContext(ctx); err != nil {
 		return nil, fmt.Errorf("database ping fail or connection timeout: %w", err)
 	}
 
-	// Execute fail-safe migration within context
-	if err := migrateTables(ctx, db); err != nil {
+	// DDL síncrono: esquema e índices
+	if err := migrateSchema(ctx, db); err != nil {
 		logger.Fatal().Err(err).Msg("db: Failed to perform auto migration. Schema out of date.")
 		return nil, err
 	}
@@ -97,14 +96,16 @@ func NewDatabase(ctx context.Context, appDataDir, dbName string, logger *zerolog
 		CurrMediaFillers: mo.None[map[int]*MediaFillerItem](),
 	}
 
-	// Initialize background managers
 	database.cleanupManager = NewCleanupManager(database.gormdb, database.Logger)
 	database.bufferedWriter = NewBufferedWriter(database.gormdb, database.Logger, 50, 500*time.Millisecond)
+
+	// DML asíncrono: migración de datos legacy en segundo plano
+	go database.runDataMigrations()
 
 	return database, nil
 }
 
-// EnqueueWrite adds an asynchronous write task to the ring buffer.
+// EnqueueWrite añade una operación de escritura asíncrona al ring buffer.
 func (db *Database) EnqueueWrite(op DbWriteOperation) {
 	if db.bufferedWriter != nil {
 		db.bufferedWriter.Enqueue(op)
@@ -118,14 +119,14 @@ func (db *Database) EnqueueWrite(op DbWriteOperation) {
 	}
 }
 
-// Shutdown gracefully flushes all pending database operations.
+// Shutdown cierra gracefulmente todas las operaciones de base de datos pendientes.
 func (db *Database) Shutdown() {
 	if db.bufferedWriter != nil {
 		db.bufferedWriter.Shutdown()
 	}
 }
 
-// Close releases the underlying database connection pool.
+// Close libera el pool de conexiones subyacente.
 func (db *Database) Close() error {
 	sqlDB, err := db.gormdb.DB()
 	if err != nil {
@@ -134,9 +135,27 @@ func (db *Database) Close() error {
 	return sqlDB.Close()
 }
 
-// migrateTables strictly ensures that schema migration executes within standard timeout.
-func migrateTables(ctx context.Context, db *gorm.DB) error {
-	// Trim duplicates from LibraryMedia (TMDB IDs should be unique PER TYPE)
+// runDataMigrations ejecuta migraciones de datos (DML) en segundo plano
+// una vez que el pool WAL está activo y el servidor web responde peticiones.
+func (db *Database) runDataMigrations() {
+	defer func() {
+		if r := recover(); r != nil {
+			db.Logger.Error().Interface("panic", r).Msg("db: panic en runDataMigrations")
+		}
+	}()
+
+	db.Logger.Info().Msg("db: iniciando migración de datos legacy en segundo plano")
+	if err := migrateLegacyLocalFiles(db.gormdb); err != nil {
+		db.Logger.Error().Err(err).Msg("db: fallo en migración de datos legacy LocalFiles -> LocalFile")
+		return
+	}
+	db.Logger.Info().Msg("db: migración de datos legacy completada")
+}
+
+// migrateSchema ejecuta exclusivamente operaciones DDL (AutoMigrate + índices)
+// de forma síncrona durante el inicio. No contiene lógica de migración de datos.
+func migrateSchema(ctx context.Context, db *gorm.DB) error {
+	// Limpia duplicados de LibraryMedia (los TMDB ID deben ser únicos POR TIPO)
 	db.Exec(`
 		DELETE FROM library_media
 		WHERE tmdb_id IS NOT NULL
@@ -146,8 +165,8 @@ func migrateTables(ctx context.Context, db *gorm.DB) error {
 			FROM library_media
 			WHERE tmdb_id IS NOT NULL AND tmdb_id != 0
 			GROUP BY tmdb_id, type
-		)
-	`)
+		  )
+		`)
 
 	if err := db.WithContext(ctx).AutoMigrate(
 		&models.LocalFiles{},
@@ -179,26 +198,29 @@ func migrateTables(ctx context.Context, db *gorm.DB) error {
 		return err
 	}
 
-	// Manual Migration: Update LibraryMedia unique index to handle collisions between movies and shows
+	// Migración manual: actualiza el índice único de LibraryMedia para manejar
+	// colisiones entre películas y series.
 	if db.Migrator().HasIndex(&models.LibraryMedia{}, "idx_library_media_tmdb_id") {
 		_ = db.Migrator().DropIndex(&models.LibraryMedia{}, "idx_library_media_tmdb_id")
-		// Re-run automigrate to ensure the new index is created
 		_ = db.AutoMigrate(&models.LibraryMedia{})
 	}
 
-	// Data Migration: LocalFiles (blob) -> LocalFile (relational)
+	return nil
+}
+
+// migrateLegacyLocalFiles convierte el blob legacy LocalFiles al modelo relacional
+// LocalFile. Se ejecuta en segundo plano una vez que el pool WAL está activo.
+func migrateLegacyLocalFiles(gormDB *gorm.DB) error {
 	var count int64
-	db.Model(&models.LocalFiles{}).Count(&count)
+	gormDB.Model(&models.LocalFiles{}).Count(&count)
 	var relationalCount int64
-	db.Model(&models.LocalFile{}).Count(&relationalCount)
+	gormDB.Model(&models.LocalFile{}).Count(&relationalCount)
 
 	if relationalCount == 0 && count > 0 {
 		var legacy models.LocalFiles
-		if err := db.Last(&legacy).Error; err == nil {
+		if err := gormDB.Last(&legacy).Error; err == nil {
 			var lfs []*dto.LocalFile
 			if err := json.Unmarshal(legacy.Value, &lfs); err == nil && len(lfs) > 0 {
-				// We can't use db.UpsertLocalFileRelationalBatch here because of package cycles or internal access
-				// But we can just use a local migration loop
 				dbFiles := make([]*models.LocalFile, len(lfs))
 				for i, f := range lfs {
 					dbf := &models.LocalFile{
@@ -224,21 +246,20 @@ func migrateTables(ctx context.Context, db *gorm.DB) error {
 					}
 					dbFiles[i] = dbf
 				}
-				_ = db.CreateInBatches(dbFiles, 100).Error
+				return gormDB.CreateInBatches(dbFiles, 100).Error
 			}
 		}
 	}
-
 	return nil
 }
 
-// RunDatabaseCleanup runs all database cleanup operations
+// RunDatabaseCleanup ejecuta todas las operaciones de limpieza de la base de datos.
 func (db *Database) RunDatabaseCleanup() {
 	db.cleanupManager.RunAllCleanupOperations()
 }
 
-// ResetLocalFilesMediaIds resets all media IDs and library media IDs in the local files database.
-// This forces the scanner to re-match all files on the next scan.
+// ResetLocalFilesMediaIds resetea todos los media IDs y library media IDs en la base de datos
+// de archivos locales. Fuerza al escáner a re-coincidir todos los archivos en el próximo escaneo.
 func (db *Database) ResetLocalFilesMediaIds() error {
 	lfs, id, err := GetLocalFiles(db)
 	if err != nil {
@@ -257,7 +278,6 @@ func (db *Database) ResetLocalFilesMediaIds() error {
 		return err
 	}
 
-	// Also clear ghost associations to prevent the system from "remembering" bad matches
 	_ = db.Gorm().Exec("DELETE FROM ghost_associated_media").Error
 
 	db.Logger.Info().Msg("db: All local file media associations and ghost associations have been reset")

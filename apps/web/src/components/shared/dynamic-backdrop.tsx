@@ -27,14 +27,21 @@ export function DynamicBackdrop() {
 
     // Handle global mouse move for orbital effect
     React.useEffect(() => {
+        let rafId: number | null = null
         const handleMouseMove = (e: MouseEvent) => {
-            const { clientX, clientY } = e
-            const x = (clientX / window.innerWidth - 0.5) * 100
-            const y = (clientY / window.innerHeight - 0.5) * 100
-            setMousePos({ x, y })
+            if (rafId) cancelAnimationFrame(rafId)
+            rafId = requestAnimationFrame(() => {
+                const { clientX, clientY } = e
+                const x = (clientX / window.innerWidth - 0.5) * 100
+                const y = (clientY / window.innerHeight - 0.5) * 100
+                setMousePos({ x, y })
+            })
         }
         window.addEventListener("mousemove", handleMouseMove)
-        return () => window.removeEventListener("mousemove", handleMouseMove)
+        return () => {
+            window.removeEventListener("mousemove", handleMouseMove)
+            if (rafId) cancelAnimationFrame(rafId)
+        }
     }, [])
 
     // Organic breathing animation with GSAP

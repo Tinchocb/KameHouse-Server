@@ -1,4 +1,4 @@
-package local
+﻿package local
 
 import (
 	"context"
@@ -9,7 +9,6 @@ import (
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/events"
 	"kamehouse/internal/platforms/platform"
-	"kamehouse/internal/util"
 	"os"
 	"path/filepath"
 
@@ -81,10 +80,10 @@ type (
 		isOffline      bool
 
 		logger                  *zerolog.Logger
-		metadataProviderRef     *util.Ref[metadata_provider.Provider]
+		metadataProviderRef     metadata_provider.Provider
 		wsEventManager          events.WSEventManagerInterface
 		offlineMetadataProvider metadata_provider.Provider
-		platformRef             *util.Ref[platform.Platform]
+		platformRef             platform.Platform
 
 		syncer *Syncer
 
@@ -109,10 +108,10 @@ type (
 		LocalDir            string
 		AssetDir            string
 		Logger              *zerolog.Logger
-		MetadataProviderRef *util.Ref[metadata_provider.Provider]
+		MetadataProviderRef metadata_provider.Provider
 		Database            *db.Database
 		WSEventManager      events.WSEventManagerInterface
-		PlatformRef         *util.Ref[platform.Platform]
+		PlatformRef         platform.Platform
 		IsOffline           bool
 	}
 )
@@ -475,7 +474,7 @@ func (m *ManagerImpl) SynchronizePlatform() error {
 					score = lo.ToPtr(int(*entry.Score))
 				}
 
-				_ = m.platformRef.Get().UpdateEntry(
+				_ = m.platformRef.UpdateEntry(
 					context.Background(),
 					entry.Media.ID,
 					entry.Status,
@@ -634,7 +633,7 @@ func (m *ManagerImpl) SynchronizeSimulatedCollectionToPlatform() error {
 					score = lo.ToPtr(0)
 				}
 
-				_ = m.platformRef.Get().UpdateEntry(
+				_ = m.platformRef.UpdateEntry(
 					context.Background(),
 					entry.Media.ID,
 					entry.Status,

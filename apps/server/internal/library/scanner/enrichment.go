@@ -24,7 +24,7 @@ type enrichWorkerResult struct {
 // enrichMediaMetadata fetches additional metadata (seasons, episodes) for TV shows
 // using a concurrent worker pool to avoid the 2-3 minute sequential bottleneck.
 func (scn *Scanner) enrichMediaMetadata(ctx context.Context, libraryMediaIdMap map[int]uint, movieIds map[int]bool, localFiles []*dto.LocalFile) error {
-	if scn.MetadataProviderRef == nil || scn.MetadataProviderRef.IsAbsent() {
+	if scn.MetadataProviderRef == nil {
 		return nil
 	}
 
@@ -62,7 +62,7 @@ func (scn *Scanner) enrichMediaMetadata(ctx context.Context, libraryMediaIdMap m
 	}
 	close(jobCh)
 
-	provider := scn.MetadataProviderRef.Get()
+	provider := scn.MetadataProviderRef
 	tagger := metadata_provider.NewIntelligenceTagger()
 
 	var wg sync.WaitGroup

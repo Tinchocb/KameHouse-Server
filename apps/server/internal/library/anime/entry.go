@@ -1,4 +1,4 @@
-package anime
+﻿package anime
 
 import (
 	"context"
@@ -9,7 +9,6 @@ import (
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/platforms/platform"
-	"kamehouse/internal/util"
 	"sort"
 	"strconv"
 	"strings"
@@ -54,8 +53,8 @@ type (
 		MediaId             int
 		LocalFiles          []*LocalFile // All local files
 		Database            *db.Database
-		PlatformRef         *util.Ref[platform.Platform]
-		MetadataProviderRef *util.Ref[metadata_provider.Provider]
+		PlatformRef         platform.Platform
+		MetadataProviderRef metadata_provider.Provider
 		IsSimulated         bool // If the account is simulated
 		LibraryEpisodes     map[string]*models.LibraryEpisode
 		IntelligenceSvc     *IntelligenceService
@@ -83,7 +82,7 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 
 
 
-	if opts.Database == nil || opts.PlatformRef.IsAbsent() {
+	if opts.Database == nil || opts.PlatformRef == nil {
 		return nil, errors.New("missing arguments when creating media entry")
 	}
 
@@ -214,7 +213,7 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 	// +---------------------+
 
 	// Fetch AniDB data and cache it for 30 minutes
-	animeMetadata, err := opts.MetadataProviderRef.Get().GetAnimeMetadata(opts.MediaId)
+	animeMetadata, err := opts.MetadataProviderRef.GetAnimeMetadata(opts.MediaId)
 	if err != nil {
 
 		// +---------------- Start
@@ -272,7 +271,7 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 func (e *Entry) hydrateEntryEpisodeData(
 	listData *models.MediaEntryListData,
 	animeMetadata *metadata.AnimeMetadata,
-	metadataProviderRef *util.Ref[metadata_provider.Provider],
+	metadataProviderRef metadata_provider.Provider,
 	libraryEpisodes map[string]*models.LibraryEpisode,
 ) {
 
@@ -299,7 +298,7 @@ func (e *Entry) hydrateEntryEpisodeData(
 	}
 
 	// Pass nil as platform.UnifiedMedia since we are moving away from legacy provider types
-	amw := metadataProviderRef.Get().GetAnimeMetadataWrapper(nil, animeMetadata)
+	amw := metadataProviderRef.GetAnimeMetadataWrapper(nil, animeMetadata)
 
 	// +---------------------+
 	// |       Episodes      |

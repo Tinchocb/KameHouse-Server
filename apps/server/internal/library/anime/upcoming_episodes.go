@@ -1,16 +1,14 @@
-package anime
+﻿package anime
 
 import (
 	"context"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/platforms/platform"
-	"kamehouse/internal/util"
 	"kamehouse/internal/util/limiter"
 	"sort"
 	"strconv"
 	"sync"
 	"time"
-
 	"github.com/samber/lo"
 )
 
@@ -30,7 +28,7 @@ type (
 
 	NewUpcomingEpisodesOptions struct {
 		AnimeCollection     *platform.UnifiedCollection
-		MetadataProviderRef *util.Ref[metadata_provider.Provider]
+		MetadataProviderRef metadata_provider.Provider
 	}
 )
 
@@ -80,21 +78,18 @@ func NewUpcomingEpisodes(opts *NewUpcomingEpisodesOptions) *UpcomingEpisodes {
 				BaseAnime:       media,
 			}
 
-			// Get episode metadata
+				// Get episode metadata
 			if opts.MetadataProviderRef != nil {
-				provider := opts.MetadataProviderRef.Get()
-				if provider != nil {
-					rateLimiter.Wait(context.Background())
-					animeMetadata, err := provider.GetAnimeMetadata(media.ID)
-					if err == nil {
-						if ep, ok := animeMetadata.FindEpisode(strconv.Itoa(media.NextAiringEpisode.Episode)); ok {
-							upcomingEp.EpisodeMetadata = &EpisodeMetadata{
-								Title:    ep.Title,
-								Image:    ep.Image,
-								AirDate:  ep.AirDate,
-								Summary:  ep.Summary,
-								Overview: ep.Overview,
-							}
+				rateLimiter.Wait(context.Background())
+				animeMetadata, err := opts.MetadataProviderRef.GetAnimeMetadata(media.ID)
+				if err == nil {
+					if ep, ok := animeMetadata.FindEpisode(strconv.Itoa(media.NextAiringEpisode.Episode)); ok {
+						upcomingEp.EpisodeMetadata = &EpisodeMetadata{
+							Title:    ep.Title,
+							Image:    ep.Image,
+							AirDate:  ep.AirDate,
+							Summary:  ep.Summary,
+							Overview: ep.Overview,
 						}
 					}
 				}
@@ -116,3 +111,4 @@ func NewUpcomingEpisodes(opts *NewUpcomingEpisodesOptions) *UpcomingEpisodes {
 
 	return upcoming
 }
+

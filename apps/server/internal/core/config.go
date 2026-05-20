@@ -1,4 +1,4 @@
-package core
+﻿package core
 
 import (
 	"errors"
@@ -60,9 +60,9 @@ type Config struct {
 	Metadata struct {
 		TMDBApiKey       string `mapstructure:"tmdbApiKey"`
 		TMDBLanguage     string `mapstructure:"tmdbLanguage"`
-		FanArtApiKey     string `mapstructure:"fanartApiKey"`     // FanArt.tv — logos, clearart, thumbs (free key from fanart.tv/get-an-api-key)
-		OMDbApiKey       string `mapstructure:"omdbApiKey"`       // OMDb — ratings, runtime, director (free key, 1k req/day)
-		OpenSubsApiKey   string `mapstructure:"openSubsApiKey"`   // OpenSubtitles v1 REST — remote subtitle search (free key)
+		FanArtApiKey     string `mapstructure:"fanartApiKey"`     // FanArt.tv â€” logos, clearart, thumbs (free key from fanart.tv/get-an-api-key)
+		OMDbApiKey       string `mapstructure:"omdbApiKey"`       // OMDb â€” ratings, runtime, director (free key, 1k req/day)
+		OpenSubsApiKey   string `mapstructure:"openSubsApiKey"`   // OpenSubtitles v1 REST â€” remote subtitle search (free key)
 		OpenSubsLanguages []string `mapstructure:"openSubsLanguages"` // Languages to search, e.g. ["es", "en"]
 	} `mapstructure:"metadata"`
 }
@@ -140,6 +140,7 @@ func NewConfig(options *ConfigOptions, logger *zerolog.Logger) (*Config, error) 
 	}
 
 	expandEnvironmentValues(&cfg)
+	resolveCorsOrigins(&cfg)
 	cfg.Data.AppDataDir = dataDir
 
 	wd, err := getWorkingDir(cfg.Server.UseBinaryPath)
@@ -385,3 +386,37 @@ omdbApiKey = ""
 openSubsApiKey = ""
 openSubsLanguages = ["es", "en"]
 `
+
+// resolveCorsOrigins resuelve los orígenes CORS permitidos desde variables de
+// entorno o valores por defecto según el entorno (desarrollo/producción).
+func resolveCorsOrigins(cfg *Config) {
+	if len(cfg.Server.CorsOrigins) > 0 {
+		return
+	}
+	if originsStr := os.Getenv("KAMEHOUSE_CORS_ALLOWED_ORIGINS"); originsStr != "" {
+		for _, o := range strings.Split(originsStr, ",") {
+			cfg.Server.CorsOrigins = append(cfg.Server.CorsOrigins, strings.TrimSpace(o))
+		}
+		return
+	}
+	if devOrigins := os.Getenv("KAMEHOUSE_DEV_CORS_ORIGINS"); devOrigins != "" {
+		for _, o := range strings.Split(devOrigins, ",") {
+			cfg.Server.CorsOrigins = append(cfg.Server.CorsOrigins, strings.TrimSpace(o))
+		}
+		return
+	}
+	if os.Getenv("KAMEHOUSE_ENV") != "production" {
+		cfg.Server.CorsOrigins = []string{
+			"http://localhost:43210",
+			"http://127.0.0.1:43210",
+			"http://localhost:5173",
+			"http://127.0.0.1:5173",
+			"http://localhost:3000",
+			"http://127.0.0.1:3000",
+			"http://localhost",
+			"http://127.0.0.1",
+		}
+		return
+	}
+	cfg.Server.CorsOrigins = []string{"http://localhost", "http://127.0.0.1"}
+}

@@ -1,4 +1,4 @@
-package core
+﻿package core
 
 import (
 	"os"
@@ -74,8 +74,9 @@ a.AddCleanupFunction(func() {
 		Database:            a.Database,
 		Logger:              a.Logger,
 		WSEventManager:      a.WSEventManager,
-		Enabled:             false, // Will be set in InitOrRefreshModules
-		MetadataProviderRef: a.Metadata.ProviderRef,
+		Enabled:             false,
+		MetadataProvider:    a.Metadata.Provider,
+		Platform:            a.Metadata.Platform,
 		LogsDir:             a.Config.Logs.Dir,
 		OnRefreshCollection: func() {
 		},
@@ -172,15 +173,15 @@ func (a *App) InitOrRefreshModules() {
 			tmdbLanguage = "es-MX"
 		}
 		if tmdbApiKey == "" {
-			a.Logger.Warn().Msg("app: No TMDB API key configured — platform features will be limited")
+			a.Logger.Warn().Msg("app: No TMDB API key configured â€” platform features will be limited")
 		}
-		a.Metadata.PlatformRef.Set(tmdb_platform.NewPlatform(tmdbApiKey, tmdbLanguage))
+		a.Metadata.Platform.SetPlatform(tmdb_platform.NewPlatform(tmdbApiKey, tmdbLanguage))
 		tmdbClient := tmdb.NewClient(tmdbApiKey, tmdbLanguage)
 		if a.Database != nil {
 			tmdbClient.SetPersistentCache(&TMDbCacheAdapter{db: a.Database})
 		}
 		a.Metadata.TMDBClient = tmdbClient
-		a.Metadata.ProviderRef.Set(metadata_provider.NewProvider(&metadata_provider.NewProviderImplOptions{
+		a.Metadata.Provider.SetProvider(metadata_provider.NewProvider(&metadata_provider.NewProviderImplOptions{
 			Logger:     a.Logger,
 			FileCacher: a.FileCacher,
 			Database:   a.Database,
@@ -307,4 +308,5 @@ func (t *TMDbCacheAdapter) Get(key string, out interface{}) (bool, error) {
 func (t *TMDbCacheAdapter) Set(key string, value interface{}, ttl time.Duration) error {
 	return db.UpsertMetadataCache(t.db, "tmdb-api", key, value, ttl)
 }
+
 

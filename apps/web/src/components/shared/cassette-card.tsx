@@ -76,7 +76,8 @@ export const CassetteCard = memo(function CassetteCard({
                 style={{
                     aspectRatio: "1 / 1.7",
                     zIndex: 5,
-                    transformOrigin: "bottom center"
+                    transformOrigin: "bottom center",
+                    willChange: "transform, opacity"
                 }}
                 variants={{
                     idle: { 
@@ -143,12 +144,12 @@ export const CassetteCard = memo(function CassetteCard({
 
             {/* ── 2. The Translucent Protective Sleeve/Case (Main Front Area) ── */}
             <motion.div
-                className="relative z-10 w-full h-full overflow-hidden bg-[#0d111d]/45 border border-white/5 rounded-2xl shadow-xl flex flex-col justify-end"
+                className="relative z-10 w-full h-full overflow-hidden bg-[#0d111d]/45 border border-white/5 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.4),inset_0_0_30px_rgba(255,255,255,0.02)] flex flex-col justify-end group-hover:border-brand-orange/25 group-hover:shadow-[10px_20px_40px_rgba(0,0,0,0.6),inset_0_0_40px_rgba(255,110,58,0.05)] transition-all duration-300"
                 style={{
                     aspectRatio: "1 / 1.7",
-                    boxShadow: "0 10px 40px rgba(0,0,0,0.4), inset 0 0 30px rgba(255,255,255,0.02)",
                     backdropFilter: "blur(12px)",
-                    transformStyle: "preserve-3d"
+                    transformStyle: "preserve-3d",
+                    willChange: "transform"
                 }}
                 variants={{
                     idle: { rotateY: 0, rotateX: 0, scale: 1 },
@@ -156,8 +157,6 @@ export const CassetteCard = memo(function CassetteCard({
                         rotateY: size === "hero" ? -4 : -8, 
                         rotateX: size === "hero" ? 2 : 4, 
                         scale: 1.02, 
-                        borderColor: "rgba(255,110,58,0.25)",
-                        boxShadow: "10px 20px 40px rgba(0,0,0,0.6), inset 0 0 40px rgba(255,110,58,0.05)",
                         transition: { duration: 0.3 } 
                     }
                 }}

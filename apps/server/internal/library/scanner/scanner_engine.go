@@ -37,7 +37,7 @@ type Scanner struct {
 	MoviePaths                 []string
 	Enhanced                   bool
 	EnhanceWithOfflineDatabase bool
-	PlatformRef                *util.Ref[platform.Platform]
+	PlatformRef                platform.Platform
 	Logger                     *zerolog.Logger
 	WSEventManager             events.WSEventManagerInterface
 	ExistingLocalFiles         []*dto.LocalFile
@@ -46,7 +46,7 @@ type Scanner struct {
 	ScanSummaryLogger          *summary.ScanSummaryLogger
 	ScanLogger                 *ScanLogger
 	Database                   *db.Database // Used to save LibraryMedia found via NFO
-	MetadataProviderRef        *util.Ref[metadata_provider.Provider]
+	MetadataProviderRef        metadata_provider.Provider
 	MetadataProviders          []librarymetadata.Provider
 	UseLegacyMatching          bool
 	MatchingThreshold          float64 // only used by legacy
@@ -543,13 +543,13 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	// +---------------------+
 	// If MetadataProviderRef is unset (or uses the empty stub), replace it with the
 	// TMDB-backed implementation so episodes get real titles/thumbnails/overviews.
-	if tmdbClient != nil && (scn.MetadataProviderRef == nil || scn.MetadataProviderRef.IsAbsent()) {
+	if tmdbClient != nil && scn.MetadataProviderRef == nil {
 		realProvider := metadata_provider.NewProvider(&metadata_provider.NewProviderImplOptions{
 			Database:   scn.Database,
 			Logger:     scn.Logger,
 			TMDBClient: tmdbClient,
 		})
-		scn.MetadataProviderRef = util.NewRef(realProvider)
+		scn.MetadataProviderRef = realProvider
 		scn.Logger.Info().Msg("scanner: TMDB episode metadata provider initialized")
 	}
 
@@ -770,12 +770,12 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	// +---------------------+
 
 	// Add non-added media entries to platform collection
-	if len(mf.UnknownMediaIds) < 5 && scn.PlatformRef != nil && !scn.PlatformRef.IsAbsent() {
+	if len(mf.UnknownMediaIds) < 5 && scn.PlatformRef != nil {
 		if scn.WSEventManager != nil {
 			scn.WSEventManager.SendEvent(events.EventScanStatus, "Adding missing media to platform...")
 		}
 
-		if err = scn.PlatformRef.Get().AddMediaToCollection(ctx, mf.UnknownMediaIds); err != nil {
+		if err = scn.PlatformRef.AddMediaToCollection(ctx, mf.UnknownMediaIds); err != nil {
 			scn.Logger.Warn().Msg("scanner: An error occurred while adding media to collection: " + err.Error())
 		}
 	}
@@ -858,14 +858,14 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		}
 
 		// Add media to platform collection (requires platform ref)
-		if scn.PlatformRef != nil && !scn.PlatformRef.IsAbsent() {
+		if scn.PlatformRef != nil {
 			allIds := make([]int, 0, len(allMatchedIds))
 			for id := range allMatchedIds {
 				allIds = append(allIds, id)
 			}
 			if len(allIds) > 0 {
 				scn.Logger.Debug().Int("count", len(allIds)).Msg("scanner: Adding all matched media to platform collection")
-				if err = scn.PlatformRef.Get().AddMediaToCollection(ctx, allIds); err != nil {
+				if err = scn.PlatformRef.AddMediaToCollection(ctx, allIds); err != nil {
 					scn.Logger.Warn().Msg("scanner: An error occurred while adding TMDB media to collection: " + err.Error())
 				}
 			}

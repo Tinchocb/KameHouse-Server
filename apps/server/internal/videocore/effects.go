@@ -1,4 +1,4 @@
-package videocore
+﻿package videocore
 
 import (
 	"context"
@@ -41,7 +41,7 @@ func (vc *VideoCore) setupSharedEffects() {
 				vc.settingsMu.RUnlock()
 				if shouldUpdateProgress {
 					// get the list entry
-					collection, err := vc.platformRef.Get().GetAnimeCollection(context.Background(), false)
+					collection, err := vc.dynamicPlatform.GetAnimeCollection(context.Background(), false)
 					if err != nil {
 						vc.logger.Error().Err(err).Msg("videocore: Cannot update progress, failed to get anime collection")
 						continue
@@ -77,7 +77,7 @@ func (vc *VideoCore) setupSharedEffects() {
 						continue
 					}
 
-					err = vc.platformRef.Get().UpdateEntryProgress(context.Background(), mediaId, progress, totalEpisodes)
+					err = vc.dynamicPlatform.UpdateEntryProgress(context.Background(), mediaId, progress, totalEpisodes)
 					if err != nil {
 						vc.logger.Error().Err(err).Msgf("videocore: Failed to update progress for media %d", mediaId)
 					}
@@ -150,3 +150,4 @@ func (vc *VideoCore) setupOnlinestreamEffects() {
 		}
 	}(subscriber)
 }
+

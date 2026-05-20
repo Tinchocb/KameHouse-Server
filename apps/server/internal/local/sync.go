@@ -130,7 +130,7 @@ func (q *Syncer) synchronizeAnime(diff *AnimeDiffResult) {
 	if diff.DiffType == DiffTypeMissing || diff.DiffType == DiffTypeMetadata {
 		// Get the anime metadata
 		var err error
-		animeMetadata, err = q.manager.metadataProviderRef.Get().GetAnimeMetadata(entry.Media.ID)
+		animeMetadata, err = q.manager.metadataProviderRef.GetAnimeMetadata(entry.Media.ID)
 		if err != nil {
 			// If the anime metadata doesn't exist, create a fake one
 			simpleEntry, err := anime.NewSimpleEntry(context.Background(), &anime.NewSimpleAnimeEntryOptions{
@@ -148,7 +148,7 @@ func (q *Syncer) synchronizeAnime(diff *AnimeDiffResult) {
 
 			animeMetadata = anime.NewAnimeMetadataFromEntry(models.ToLibraryMedia(entry.Media), simpleEntry.Episodes)
 		}
-		metadataWrapper = q.manager.metadataProviderRef.Get().GetAnimeMetadataWrapper(entry.Media, animeMetadata)
+		metadataWrapper = q.manager.metadataProviderRef.GetAnimeMetadataWrapper(entry.Media, animeMetadata)
 	}
 
 	//

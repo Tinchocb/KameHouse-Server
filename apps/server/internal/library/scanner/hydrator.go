@@ -31,8 +31,8 @@ var calcRegex = regexp.MustCompile(`\{calc\(([^)]+)\)}`)
 type FileHydrator struct {
 	LocalFiles          []*dto.LocalFile       // Local files to hydrate
 	AllMedia            []*dto.NormalizedMedia // All media used to hydrate local files
-	PlatformRef         *util.Ref[platform.Platform]
-	MetadataProviderRef *util.Ref[metadata_provider.Provider]
+	PlatformRef         platform.Platform
+	MetadataProviderRef metadata_provider.Provider
 	Logger              *zerolog.Logger
 	ScanLogger          *ScanLogger                // optional
 	ScanSummaryLogger   *summary.ScanSummaryLogger // optional
@@ -325,7 +325,7 @@ func (fh *FileHydrator) hydrateGroupMetadata(
 				// (e.g., S04E12 for the first episode of Part 2, where Part 1 had 11 episodes).
 				if !fetchedGroupMetadata && fh.MetadataProviderRef != nil {
 					rateLimiter.Wait(context.Background())
-					groupMetadata, _ = fh.MetadataProviderRef.Get().GetAnimeMetadata(mId)
+					groupMetadata, _ = fh.MetadataProviderRef.GetAnimeMetadata(mId)
 					fetchedGroupMetadata = true
 				}
 
@@ -371,7 +371,7 @@ func (fh *FileHydrator) hydrateGroupMetadata(
 				// we have a forced media ID, we will fetch the media from TMDB and get the offset
 				if !fetchedForcedMetadata && fh.MetadataProviderRef != nil {
 					rateLimiter.Wait(context.Background())
-					forcedMetadata, forcedMetadataErr = fh.MetadataProviderRef.Get().GetAnimeMetadata(fh.ForceMediaId)
+					forcedMetadata, forcedMetadataErr = fh.MetadataProviderRef.GetAnimeMetadata(fh.ForceMediaId)
 					fetchedForcedMetadata = true
 				}
 

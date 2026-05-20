@@ -1,10 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { useState, useMemo, useRef } from "react"
+import { useState, useMemo, useRef, useCallback } from "react"
 import { Tv } from "lucide-react"
 import { EmptyState } from "@/components/shared/empty-state"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { VhsCollection, type VhsCollectionItem } from "@/components/shared/vhs-collection"
 import { PremiumPosterCard } from "@/components/shared/premium-poster-card"
+import { SeriesQuickPanel } from "@/components/shared/series-quick-panel"
 import { motion, AnimatePresence } from "framer-motion"
 import { useGSAP } from "@gsap/react"
 import gsap from "gsap"
@@ -15,6 +16,7 @@ export const Route = createFileRoute("/series/")({
 
 function SeriesPage() {
     const [viewMode] = useState<"grid" | "shelf">("shelf")
+    const [quickPanelId, setQuickPanelId] = useState<number | null>(null)
     
     const navigate = useNavigate()
     const { data: collection, isLoading } = useGetLibraryCollection()
@@ -95,7 +97,15 @@ function SeriesPage() {
         }
     }, { scope: containerRef, dependencies: [isLoading, filtered.length, viewMode] })
 
-    return (        <div ref={containerRef} className="flex-1 w-full h-full bg-background text-white overflow-hidden font-sans">
+    const handleVhsClick = useCallback((item: VhsCollectionItem) => {
+        setQuickPanelId(Number(item.id))
+    }, [])
+
+    const handleNavigateToDetail = useCallback((id: string) => {
+        navigate({ to: "/series/$seriesId", params: { seriesId: id } })
+    }, [navigate])
+
+    return (<div ref={containerRef} className="flex-1 w-full h-full bg-background text-white overflow-hidden font-sans">
             
             {/* ── Content Area ── */}
             <div className="w-full h-full">
@@ -132,7 +142,7 @@ function SeriesPage() {
                                         year={entry.media?.year}
                                         format={entry.media?.format}
                                         genres={entry.media?.genres}
-                                        onClick={() => navigate({ to: "/series/$seriesId", params: { seriesId: entry.mediaId.toString() } })}
+                                        onClick={() => setQuickPanelId(entry.mediaId)}
                                     />
                                 </div>
                             ))}
@@ -147,12 +157,21 @@ function SeriesPage() {
                         >
                             <VhsCollection
                                 items={vhsTapeItems}
-                                onItemClick={(item) => navigate({ to: "/series/$seriesId", params: { seriesId: item.id.toString() } })}
+                                onItemClick={handleVhsClick}
                             />
                         </motion.div>
                     )}
                 </AnimatePresence>
             </div>
+
+            {/* ── Quick Preview Panel ── */}
+            <SeriesQuickPanel
+                seriesId={quickPanelId}
+                open={quickPanelId !== null}
+                onClose={() => setQuickPanelId(null)}
+                onNavigate={handleNavigateToDetail}
+                onPlay={(id) => handleNavigateToDetail(id)}
+            />
 
             <style>{`
                 .no-scrollbar::-webkit-scrollbar { display: none; }

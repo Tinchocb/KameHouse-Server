@@ -114,13 +114,19 @@ function Magnetic({ children }: { children: React.ReactNode }) {
     const ref = React.useRef<HTMLDivElement>(null)
     const [position, setPosition] = React.useState({ x: 0, y: 0 })
 
+    const rafId = React.useRef<number | null>(null)
+
     const handleMouseMove = (e: React.MouseEvent) => {
         if (!ref.current) return
         const { clientX, clientY } = e
         const { left, top, width, height } = ref.current.getBoundingClientRect()
         const middleX = clientX - (left + width / 2)
         const middleY = clientY - (top + height / 2)
-        setPosition({ x: middleX * 0.35, y: middleY * 0.35 })
+        
+        if (rafId.current) cancelAnimationFrame(rafId.current)
+        rafId.current = requestAnimationFrame(() => {
+            setPosition({ x: middleX * 0.35, y: middleY * 0.35 })
+        })
     }
 
     const reset = () => setPosition({ x: 0, y: 0 })

@@ -1,15 +1,14 @@
-package videocore
+﻿package videocore
 
 import (
 	"context"
 	"encoding/json"
 	"kamehouse/internal/api/metadata_provider"
-	"kamehouse/internal/continuity"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/events"
+	"kamehouse/internal/continuity"
 	"kamehouse/internal/mkvparser"
 	"kamehouse/internal/platforms/platform"
-	"kamehouse/internal/util"
 	"kamehouse/internal/util/result"
 	"strings"
 	"sync"
@@ -31,9 +30,9 @@ type (
 		translatorService *TranslatorService
 
 		continuityManager   *continuity.Manager
-		metadataProviderRef *util.Ref[metadata_provider.Provider]
-		platformRef         *util.Ref[platform.Platform]
-		isOfflineRef        *util.Ref[bool]
+		dynamicProvider *metadata_provider.DynamicProvider
+		dynamicPlatform   *platform.DynamicPlatform
+		isOffline         *atomic.Bool
 
 		playbackStatusMu  sync.RWMutex
 		playbackStatus    *PlaybackStatus
@@ -65,10 +64,10 @@ type (
 	NewVideoCoreOptions struct {
 		WsEventManager      events.WSEventManagerInterface
 		Logger              *zerolog.Logger
-		MetadataProviderRef *util.Ref[metadata_provider.Provider]
+		DynamicProvider   *metadata_provider.DynamicProvider
 		ContinuityManager    *continuity.Manager
-		PlatformRef         *util.Ref[platform.Platform]
-		IsOfflineRef        *util.Ref[bool]
+		DynamicPlatform   *platform.DynamicPlatform
+		IsOffline         *atomic.Bool
 	}
 )
 
@@ -77,9 +76,9 @@ func New(opts NewVideoCoreOptions) *VideoCore {
 	vc := &VideoCore{
 		wsEventManager:              opts.WsEventManager,
 		continuityManager:           opts.ContinuityManager,
-		metadataProviderRef:         opts.MetadataProviderRef,
-		platformRef:                 opts.PlatformRef,
-		isOfflineRef:                opts.IsOfflineRef,
+		dynamicProvider:             opts.DynamicProvider,
+		dynamicPlatform:             opts.DynamicPlatform,
+		isOffline:                   opts.IsOffline,
 		subscribers:                 result.NewMap[string, *Subscriber](),
 		clientPlayerEventSubscriber: opts.WsEventManager.SubscribeToClientVideoCoreEvents("videocore"),
 		logger:                      opts.Logger,
@@ -977,3 +976,9 @@ func (vc *VideoCore) listenToClientEvents() {
 		}
 	}()
 }
+
+
+
+
+
+

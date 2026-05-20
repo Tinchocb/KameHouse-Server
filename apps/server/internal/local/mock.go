@@ -15,7 +15,6 @@ import (
 func GetMockManager(t *testing.T, db *db.Database) Manager {
 	logger := util.NewLogger()
 	metadataProvider := metadata_provider.GetFakeProvider(t, db)
-	metadataProviderRef := util.NewRef[metadata_provider.Provider](metadataProvider)
 
 	wsEventManager := events.NewMockWSEventManager(logger)
 
@@ -28,7 +27,7 @@ func GetMockManager(t *testing.T, db *db.Database) Manager {
 		LocalDir:            localDir,
 		AssetDir:            assetsDir,
 		Logger:              util.NewLogger(),
-		MetadataProviderRef: metadataProviderRef,
+		MetadataProviderRef: metadataProvider,
 		Database:            db,
 		WSEventManager:      wsEventManager,
 		PlatformRef:         nil, // platform dependency removed

@@ -1,4 +1,4 @@
-package anime
+﻿package anime
 
 import (
 	"cmp"
@@ -9,12 +9,10 @@ import (
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/platforms/platform"
-	"kamehouse/internal/util"
 	"kamehouse/internal/util/result"
 	"slices"
 	"strconv"
 	"time"
-
 	"github.com/rs/zerolog"
 	"github.com/samber/lo"
 )
@@ -40,7 +38,7 @@ type NewEpisodeCollectionOptions struct {
 	// AnimeMetadata can be nil, if not provided, it will be fetched from the metadata provider.
 	AnimeMetadata       *metadata.AnimeMetadata
 	Media               *models.LibraryMedia
-	MetadataProviderRef *util.Ref[metadata_provider.Provider]
+	MetadataProviderRef metadata_provider.Provider
 	Logger              *zerolog.Logger
 }
 
@@ -59,7 +57,7 @@ func NewEpisodeCollection(opts NewEpisodeCollectionOptions) (ec *EpisodeCollecti
 		return nil, fmt.Errorf("cannot create episode collection, media is nil")
 	}
 
-	if opts.MetadataProviderRef.IsAbsent() {
+	if opts.MetadataProviderRef == nil {
 		return nil, fmt.Errorf("cannot create episode collection, metadata provider is nil")
 	}
 
@@ -70,7 +68,7 @@ func NewEpisodeCollection(opts NewEpisodeCollectionOptions) (ec *EpisodeCollecti
 
 	if opts.AnimeMetadata == nil {
 		// Fetch the metadata
-		opts.AnimeMetadata, err = opts.MetadataProviderRef.Get().GetAnimeMetadata(int(opts.Media.ID))
+		opts.AnimeMetadata, err = opts.MetadataProviderRef.GetAnimeMetadata(int(opts.Media.ID))
 		if err != nil {
 			opts.AnimeMetadata = &metadata.AnimeMetadata{
 				Titles:       make(map[string]string),
@@ -114,7 +112,7 @@ func NewEpisodeCollection(opts NewEpisodeCollectionOptions) (ec *EpisodeCollecti
 	// causing NewEntryDownloadInfo to return a valid list of episodes to download
 	if info == nil || info.EpisodesToDownload == nil {
 		opts.Logger.Debug().Msg("torrentstream: no episodes found from AniDB, using internal provider")
-		mediaWrapper := opts.MetadataProviderRef.Get().GetAnimeMetadataWrapper(nil, nil)
+		mediaWrapper := opts.MetadataProviderRef.GetAnimeMetadataWrapper(nil, nil)
 		for epIdx := range opts.Media.TotalEpisodes {
 			episodeNumber := epIdx + 1
 
@@ -174,8 +172,8 @@ type NewEpisodeCollectionFromLocalFilesOptions struct {
 	LocalFiles          []*LocalFile
 	Media               *models.LibraryMedia
 	Database            *db.Database
-	PlatformRef         *util.Ref[platform.Platform]
-	MetadataProviderRef *util.Ref[metadata_provider.Provider]
+	PlatformRef         platform.Platform
+	MetadataProviderRef metadata_provider.Provider
 	Logger              *zerolog.Logger
 }
 
@@ -202,7 +200,7 @@ func NewEpisodeCollectionFromLocalFiles(ctx context.Context, opts NewEpisodeColl
 	}
 
 	// Should be cached if it exists
-	animeMetadata, err := opts.MetadataProviderRef.Get().GetAnimeMetadata(int(opts.Media.ID))
+	animeMetadata, err := opts.MetadataProviderRef.GetAnimeMetadata(int(opts.Media.ID))
 	if err != nil {
 		animeMetadata = &metadata.AnimeMetadata{
 			Titles:       make(map[string]string),
@@ -279,3 +277,5 @@ func (ec *EpisodeCollection) FindNextEpisode(current *Episode) (*Episode, bool) 
 	}
 	return next, true
 }
+
+

@@ -1,4 +1,4 @@
-package handlers
+﻿package handlers
 
 import (
 	"context"
@@ -117,7 +117,7 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		Enhanced:                   true,
 		EnhanceWithOfflineDatabase: true,
 		ScanMode:                   b.Mode, // Pass the mode
-		PlatformRef:                h.App.Metadata.PlatformRef,
+		PlatformRef:                h.App.Metadata.Platform,
 		Logger:                     h.App.Logger,
 		WSEventManager:             h.App.WSEventManager,
 		EventDispatcher:            h.App.WSEventManager.Dispatcher(),
@@ -127,7 +127,7 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		ScanSummaryLogger:          scanSummaryLogger,
 		ScanLogger:                 scanLogger,
 		Database:                   h.App.Database,
-		MetadataProviderRef:        h.App.Metadata.ProviderRef,
+		MetadataProviderRef:        h.App.Metadata.Provider,
 		MatchingAlgorithm:          h.App.Settings.GetLibrary().ScannerMatchingAlgorithm,
 		MatchingThreshold:          h.App.Settings.GetLibrary().ScannerMatchingThreshold,
 		UseLegacyMatching:          h.App.Settings.GetLibrary().ScannerUseLegacyMatching,
@@ -187,7 +187,7 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		go func() {
 			ClearLibraryCollectionCache()
 			anime.InvalidateCuratedHomeCache()
-			_, _ = h.App.Metadata.PlatformRef.Get().RefreshAnimeCollection(context.Background())
+			_, _ = h.App.Metadata.Platform.RefreshAnimeCollection(context.Background())
 		}()
 	}()
 
@@ -263,4 +263,5 @@ func (h *Handler) HandleResolveUnlinkedFile(c echo.Context) error {
 	}
 	return h.RespondWithData(c, map[string]any{"ok": true})
 }
+
 

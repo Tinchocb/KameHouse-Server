@@ -1,4 +1,4 @@
-package anime
+﻿package anime
 
 import (
 	"cmp"
@@ -95,8 +95,8 @@ type (
 	NewLibraryCollectionOptions struct {
 		Database            *db.Database
 		LocalFiles          []*LocalFile
-		PlatformRef         *util.Ref[platform.Platform]
-		MetadataProviderRef *util.Ref[metadata_provider.Provider]
+		PlatformRef         platform.Platform
+		MetadataProviderRef metadata_provider.Provider
 	}
 )
 
@@ -161,7 +161,7 @@ func (lc *LibraryCollection) hydrateCollectionLists(
 		opts.Database.Logger.Warn().Msg("anime/collection: No media IDs found from local files!")
 	}
 
-	// Build a mapping from MediaId → LibraryMediaId using local files.
+	// Build a mapping from MediaId â†’ LibraryMediaId using local files.
 	// This is needed because for TMDB media, the DB primary key
 	// (LibraryMediaId) might differ from the external MediaId.
 	mediaIdToLibraryMediaId := make(map[int]uint)
@@ -392,8 +392,8 @@ func (lc *LibraryCollection) hydrateContinueWatchingList(
 	ctx context.Context,
 	localFiles []*LocalFile,
 	database *db.Database,
-	platformRef *util.Ref[platform.Platform],
-	metadataProviderRef *util.Ref[metadata_provider.Provider],
+	platformRef platform.Platform,
+	metadataProviderRef metadata_provider.Provider,
 ) {
 
 	// Get currently watching list
@@ -580,12 +580,12 @@ func (e *LibraryCollectionEntry) DeriveVibes() {
 	}
 
 	// 7. Map custom AI vibes to standard ones if needed
-	// Example: "Tensión Absoluta" -> "INTENSE"
+	// Example: "TensiÃ³n Absoluta" -> "INTENSE"
 	for i, v := range vibes {
 		switch v {
-		case "TENSIÓN ABSOLUTA":
+		case "TENSIÃ“N ABSOLUTA":
 			vibes[i] = "INTENSE"
-		case "EMOCIÓN PURA":
+		case "EMOCIÃ“N PURA":
 			vibes[i] = "EMOTIONAL"
 		case "RELAJADO":
 			vibes[i] = "CHILL"
@@ -600,3 +600,4 @@ func (e *LibraryCollectionEntry) DeriveVibes() {
 
 	e.Vibes = vibes
 }
+

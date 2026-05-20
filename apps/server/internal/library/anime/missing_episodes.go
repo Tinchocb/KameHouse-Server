@@ -1,16 +1,14 @@
-package anime
+﻿package anime
 
 import (
 	"context"
 	"fmt"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
-	"kamehouse/internal/util"
 	"kamehouse/internal/util/limiter"
 	"sort"
 	"sync"
 	"time"
-
 	"github.com/samber/lo"
 	lop "github.com/samber/lo/parallel"
 )
@@ -25,7 +23,7 @@ type (
 		Database            *db.Database
 		LocalFiles          []*LocalFile
 		SilencedMediaIds    []int
-		MetadataProviderRef *util.Ref[metadata_provider.Provider]
+		MetadataProviderRef metadata_provider.Provider
 	}
 )
 
@@ -70,7 +68,7 @@ func NewMissingEpisodes(opts *NewMissingEpisodesOptions) *MissingEpisodes {
 
 			rateLimiter.Wait(context.Background())
 			// Fetch anime metadata
-			animeMetadata, err := opts.MetadataProviderRef.Get().GetAnimeMetadata(int(media.ID))
+			animeMetadata, err := opts.MetadataProviderRef.GetAnimeMetadata(int(media.ID))
 			if err != nil {
 				return
 			}
@@ -136,3 +134,5 @@ func NewMissingEpisodes(opts *NewMissingEpisodesOptions) *MissingEpisodes {
 
 	return missing
 }
+
+

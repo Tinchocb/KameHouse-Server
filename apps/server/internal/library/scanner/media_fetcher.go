@@ -33,8 +33,8 @@ type MediaFetcher struct {
 }
 
 type MediaFetcherOptions struct {
-	PlatformRef            *util.Ref[platform.Platform]
-	MetadataProviderRef    *util.Ref[metadata_provider.Provider]
+	PlatformRef            platform.Platform
+	MetadataProviderRef    metadata_provider.Provider
 	MetadataProviders      []librarymetadata.Provider
 	LocalFiles             []*dto.LocalFile
 	Logger                 *zerolog.Logger
@@ -80,8 +80,8 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 	}
 
 	// 1. Fetch user's collection if available
-	if !opts.DisableAnimeCollection && opts.PlatformRef != nil && !opts.PlatformRef.IsAbsent() {
-		collection, err := opts.PlatformRef.Get().GetAnimeCollection(ctx, false)
+	if !opts.DisableAnimeCollection && opts.PlatformRef != nil {
+		collection, err := opts.PlatformRef.GetAnimeCollection(ctx, false)
 		if err == nil && collection != nil {
 			if c, ok := collection.(*platform.UnifiedCollection); ok {
 				for _, list := range c.Lists {

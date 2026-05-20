@@ -1,4 +1,4 @@
-package handlers
+﻿package handlers
 
 import (
 	"context"
@@ -259,8 +259,9 @@ func (h *Handler) HandleTMDBAssign(c echo.Context) error {
 	}
 
 	// 5. Refresh collection
-	_, _ = h.App.Metadata.PlatformRef.Get().RefreshAnimeCollection(context.Background())
+	_, _ = h.App.Metadata.Platform.RefreshAnimeCollection(context.Background())
 
 	return h.RespondWithData(c, true)
 }
+
 

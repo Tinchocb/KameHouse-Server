@@ -23,19 +23,19 @@ import (
 
 type (
 	AutoScanner struct {
-		fileActionCh        chan struct{} // Used to notify the scanner that a file action has occurred.
-		waiting             bool          // Used to prevent multiple scans from occurring at the same time.
-		missedAction        bool          // Used to indicate that a file action was missed while scanning.
+		fileActionCh        chan struct{}
+		waiting             bool
+		missedAction        bool
 		mu                  sync.Mutex
 		scannedCh           chan struct{}
-		waitTime            time.Duration // Wait time to listen to additional changes before triggering a scan.
+		waitTime            time.Duration
 		enabled             bool
 		settings            models.LibrarySettings
-		platformRef         *util.Ref[platform.Platform]
+		platform            platform.Platform
 		logger              *zerolog.Logger
 		wsEventManager      events.WSEventManagerInterface
-		db                  *db.Database                   // Database instance is required to update the local files.
-		metadataProviderRef *util.Ref[metadata_provider.Provider]
+		db                  *db.Database
+		metadataProvider    metadata_provider.Provider
 		logsDir             string
 		scanning            atomic.Bool
 		onRefreshCollection func()
@@ -45,12 +45,12 @@ type (
 	}
 	NewAutoScannerOptions struct {
 		Database            *db.Database
-		PlatformRef         *util.Ref[platform.Platform]
+		Platform            platform.Platform
 		Logger              *zerolog.Logger
 		WSEventManager      events.WSEventManagerInterface
 		Enabled             bool
 		WaitTime            time.Duration
-		MetadataProviderRef *util.Ref[metadata_provider.Provider]
+		MetadataProvider    metadata_provider.Provider
 		LogsDir             string
 		OnRefreshCollection func()
 		EventDispatcher     events.Dispatcher
@@ -71,11 +71,11 @@ func New(opts *NewAutoScannerOptions) *AutoScanner {
 		scannedCh:           make(chan struct{}, 1),
 		waitTime:            wt,
 		enabled:             opts.Enabled,
-		platformRef:         opts.PlatformRef,
+		platform:            opts.Platform,
 		logger:              opts.Logger,
 		wsEventManager:      opts.WSEventManager,
 		db:                  opts.Database,
-		metadataProviderRef: opts.MetadataProviderRef,
+		metadataProvider:    opts.MetadataProvider,
 		logsDir:             opts.LogsDir,
 		onRefreshCollection: opts.OnRefreshCollection,
 		eventDispatcher:     opts.EventDispatcher,
@@ -193,9 +193,9 @@ func (as *AutoScanner) TriggerScan(targets []string) {
 		SeriesPaths:           as.settings.SeriesPaths,
 		MoviePaths:            as.settings.MoviePaths,
 		Logger:                as.logger,
-		PlatformRef:           as.platformRef,
+		PlatformRef:           as.platform,
 		Database:              as.db,
-		MetadataProviderRef:   as.metadataProviderRef,
+		MetadataProviderRef:   as.metadataProvider,
 		UseTMDB:               as.settings.ScannerProvider == "tmdb",
 		EventDispatcher:       as.eventDispatcher,
 		MatchingAlgorithm:     as.settings.ScannerMatchingAlgorithm,

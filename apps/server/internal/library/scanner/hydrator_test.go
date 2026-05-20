@@ -144,7 +144,7 @@ func TestFileHydrator_HydrateMetadata(t *testing.T) {
 			fh := &FileHydrator{
 				LocalFiles:          lfs,
 				AllMedia:            mc.NormalizedMedia,
-				MetadataProviderRef: util.NewRef(metadataProvider),
+				MetadataProviderRef: metadataProvider,
 				Logger:              logger,
 				ScanLogger:          scanLogger,
 				Config:              config,

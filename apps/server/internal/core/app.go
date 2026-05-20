@@ -1,19 +1,26 @@
-package core
+﻿package core
 
 import (
 	"context"
-	"kamehouse/internal/api/tmdb"
+	"os"
+	"runtime"
+	"sync"
+	"sync/atomic"
+
+	"github.com/rs/zerolog"
+
 	"kamehouse/internal/api/metadata_provider"
+	"kamehouse/internal/api/tmdb"
 	"kamehouse/internal/constants"
 	"kamehouse/internal/continuity"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/events"
+	"kamehouse/internal/library/anime"
 	"kamehouse/internal/library/autoscanner"
 	"kamehouse/internal/library/fillermanager"
 	"kamehouse/internal/library/metadata"
 	"kamehouse/internal/library/scanner"
-	"kamehouse/internal/library/anime"
 	"kamehouse/internal/library_explorer"
 	"kamehouse/internal/local"
 	"kamehouse/internal/mediastream"
@@ -25,24 +32,16 @@ import (
 	"kamehouse/internal/util/cache"
 	"kamehouse/internal/util/filecache"
 	"kamehouse/internal/videocore"
-	"os"
-	"runtime"
-	"sync"
-
-	"github.com/rs/zerolog"
 )
 
 type (
 	MetadataProviders struct {
-		TMDBClient         *tmdb.Client
-		OfflinePlatformRef *util.Ref[platform.Platform]
-		PlatformRef        *util.Ref[platform.Platform]
-		ProviderRef        *util.Ref[metadata_provider.Provider]
-
-		// Enrichers
-		FanArt      *metadata.FanArtEnricher
-		OMDb        *metadata.OMDbEnricher
-		OpenSubs    *metadata.OpenSubtitlesEnricher
+		TMDBClient *tmdb.Client
+		Provider   *metadata_provider.DynamicProvider
+		Platform   *platform.DynamicPlatform
+		FanArt     *metadata.FanArtEnricher
+		OMDb       *metadata.OMDbEnricher
+		OpenSubs   *metadata.OpenSubtitlesEnricher
 	}
 
 	CoreServices struct {
@@ -71,53 +70,41 @@ type (
 		StreamingServices
 		LibraryServices
 
-		// File system monitoring
 		Watcher *scanner.Watcher
 
-		// Metadata Providers (Decoupled Foundation)
 		Metadata MetadataProviders
 
-		// Offline and local account
 		LocalManager local.Manager
 
-		// Continuity and sync
 		ContinuityManager *continuity.Manager
 		TelemetryManager  *continuity.TelemetryManager
 
-		// Lifecycle management
 		Cleanups    []func()
 		OnFlushLogs func()
 
-		// Configuration and feature flags
-		FeatureFlags      FeatureFlags
-		FeatureManager    *FeatureManager
-		Settings          *models.Settings
+		FeatureFlags   FeatureFlags
+		FeatureManager *FeatureManager
+		Settings       *models.Settings
 		SecondarySettings struct {
 			Mediastream *models.MediastreamSettings
 		}
 
-		// Metadata
 		Version          string
 		TotalLibrarySize uint64
 		LibraryDir       string
 		IsDesktopSidecar bool
 		Flags            KameHouseFlags
 
-		// Internal state
 		user               *user.User
 		previousVersion    string
 		moduleMu           sync.Mutex
 		ServerReady        bool
-		isOfflineRef       *util.Ref[bool]
+		isOffline          atomic.Bool
 		ServerPasswordHash string
 
-		// Lifecycle: shutdownCtx is cancelled when the app is shutting down.
-		// Pass this context to long-running goroutines so they exit cleanly.
 		shutdownCtx    context.Context
 		shutdownCancel context.CancelFunc
 
-		// Show this version's tour on the frontend
-		// Hydrated by migrations.go when there's a version change
 		ShowTour string
 	}
 
@@ -128,208 +115,65 @@ type AppOption func(*KameHouse)
 
 func WithConfig(cfg *Config) AppOption            { return func(a *KameHouse) { a.Config = cfg } }
 func WithLogger(logger *zerolog.Logger) AppOption { return func(a *KameHouse) { a.Logger = logger } }
-func WithDatabase(db *db.Database) AppOption      { return func(a *KameHouse) { a.Database = db } }
+func WithDatabase(database *db.Database) AppOption { return func(a *KameHouse) { a.Database = database } }
 func WithWSEventManager(ws *events.WSEventManager) AppOption {
 	return func(a *KameHouse) { a.WSEventManager = ws }
 }
 
-// NewApp creates a new server instance
+// NewKameHouse crea una nueva instancia del servidor.
 func NewKameHouse(configOpts *ConfigOptions) *App {
+	logger := initLogger()
+	initSystemInfo(logger)
 
-	// Initialize logger with predefined format
-	logger := util.NewLogger()
-
-	// Log application version, OS, architecture and system info
-	logger.Info().Msgf("app: KameHouse %s-%s", constants.Version, constants.VersionName)
-	logger.Info().Msgf("app: OS: %s", runtime.GOOS)
-	logger.Info().Msgf("app: Arch: %s", runtime.GOARCH)
-	logger.Info().Msgf("app: Processor count: %d", runtime.NumCPU())
-
-	// Store current version to detect version changes
 	previousVersion := constants.Version
-
-	// Add callback to track version changes
 	configOpts.OnVersionChange = append(configOpts.OnVersionChange, func(oldVersion string, newVersion string) {
 		logger.Info().Str("prev", oldVersion).Str("current", newVersion).Msg("app: Version change detected")
 		previousVersion = oldVersion
 	})
 
-	// Initialize configuration with provided options
-	// Creates config directory if it doesn't exist
-	cfg, err := NewConfig(configOpts, logger)
-	if err != nil {
-		logger.Fatal().Err(err).Msg("app: Failed to initialize config")
-	}
+	cfg := initConfig(configOpts, logger)
+	serverPasswordHash := initServerPassword(cfg)
+	initLogsDir(cfg, logger)
+	startLogTrimmer(cfg, logger)
 
-	// Compute SHA-256 hash of the server password
-	serverPasswordHash := ""
-	if cfg.Server.Password != "" {
-		serverPasswordHash = util.HashSHA256Hex(cfg.Server.Password)
-	}
+	database := initDatabase(cfg, logger)
+	initAppDatabaseEntries(database, logger)
 
-	// Create logs directory if it doesn't exist
-	_ = os.MkdirAll(cfg.Logs.Dir, 0755)
+	tmdbClient := initTMDBClient(cfg, database)
+	_, wsEventManager := initEventSystem(logger, database)
+	enrichers := initMetadataEnrichers(cfg)
+	fileCacher := initFileCacher(cfg, logger)
+	metadataProvider := initMetadataProvider(logger, fileCacher, database, tmdbClient)
 
-	// Start background process to trim log files
-	go func() {
-		defer util.HandlePanicInModuleThen("core/TrimLogEntries", func() {})
-		TrimLogEntries(cfg.Logs.Dir, logger)
-	}()
+	localManager := initLocalManager(cfg, database, logger, wsEventManager)
 
-	logger.Info().Msgf("app: Data directory: %s", cfg.Data.AppDataDir)
-	logger.Info().Msgf("app: Working directory: %s", cfg.Data.WorkingDir)
+	// DynamicProvider envuelve el provider activo con conmutación atómica
+	dynamicProvider := metadata_provider.NewDynamicProvider(resolveInitialProvider(cfg, localManager, metadataProvider))
 
-	// Log if running in desktop sidecar mode
-	if configOpts.Flags.IsDesktopSidecar {
-		logger.Info().Msg("app: Desktop sidecar mode enabled")
-	}
+	offlinePlatform := initOfflinePlatform(localManager, logger)
+	simulatedPlatform := initSimulatedPlatform(logger, database)
 
-	// Initialize database connection
-	database, err := db.NewDatabase(context.Background(), cfg.Data.AppDataDir, cfg.Database.Name, logger)
-	if err != nil {
-		logger.Fatal().Err(err).Msg("app: Failed to initialize database")
-	}
+	// DynamicPlatform envuelve la plataforma activa con conmutación atómica
+	dynamicPlatform := platform.NewDynamicPlatform(resolveInitialPlatform(cfg, offlinePlatform, simulatedPlatform))
 
-	HandleNewDatabaseEntries(database, logger)
+	isOffline := atomic.Bool{}
+	isOffline.Store(cfg.Server.Offline)
 
-	// Clean up old database entries using the cleanup manager to prevent concurrent access issues
-	database.RunDatabaseCleanup() // Remove old entries from all tables sequentially
+	continuityManager := initContinuityManager(fileCacher, logger, database)
 
-	// Get anime library paths for context
-	_, _ = database.GetAllLibraryPathsFromSettings()
+	videoCore := initVideoCore(wsEventManager, logger, dynamicProvider, continuityManager, dynamicPlatform, &isOffline)
+	thumbnailCache := initThumbnailCache(logger)
 
-	tmdbToken := cfg.Metadata.TMDBApiKey // Assuming it's in config
-	tmdbClient := tmdb.NewClient(tmdbToken)
-	if database != nil {
-		tmdbClient.SetPersistentCache(&TMDbCacheAdapter{db: database})
-	}
-
-	// Initialize internal dispatcher and WebSocket event manager for real-time communication
-	dispatcher := events.NewDispatcher()
-	wsEventManager := events.NewWSEventManager(logger, dispatcher)
-
-	database.SetOnError(func(err error) {
-		if wsEventManager != nil {
-			wsEventManager.SendEvent(events.ErrorToast, "DB Error: "+err.Error())
-		}
-	})
-
-	// Initialize Metadata Enrichers
-	fanartEnricher := metadata.NewFanArtEnricher(cfg.Metadata.FanArtApiKey)
-	omdbEnricher := metadata.NewOMDbEnricher(cfg.Metadata.OMDbApiKey)
-
-	openSubsLangs := cfg.Metadata.OpenSubsLanguages
-	if len(openSubsLangs) == 0 {
-		openSubsLangs = []string{"es", "en"}
-	}
-	openSubsEnricher := metadata.NewOpenSubtitlesEnricher(cfg.Metadata.OpenSubsApiKey, openSubsLangs...)
-
-	// Exit if no WebSocket connections in desktop sidecar mode
-	if configOpts.Flags.IsDesktopSidecar {
-		wsEventManager.ExitIfNoConnsAsDesktopSidecar()
-	}
-
-	// Initialize file cache system for media and metadata
-	fileCacher, err := filecache.NewCacher(cfg.Cache.Dir)
-	if err != nil {
-		logger.Fatal().Err(err).Msgf("app: Failed to initialize file cacher")
-	}
-
-	// Initialize metadata provider for media information
-	metadataProvider := metadata_provider.NewProvider(&metadata_provider.NewProviderImplOptions{
-		Logger:     logger,
-		FileCacher: fileCacher,
-		Database:   database,
-		TMDBClient: tmdbClient,
-	})
-
-	// Set initial metadata provider (will change if offline mode is enabled)
-	activeMetadataProvider := metadataProvider
-
-	activePlatformRef := util.NewRef[platform.Platform](nil)
-	metadataProviderRef := util.NewRef(activeMetadataProvider)
-
-	// Initialize sync manager for offline/online synchronization
-	localManager, err := local.NewManager(&local.NewManagerOptions{
-		LocalDir:            cfg.Offline.Dir,
-		AssetDir:            cfg.Offline.AssetDir,
-		Logger:              logger,
-		MetadataProviderRef: metadataProviderRef,
-		Database:            database,
-		WSEventManager:      wsEventManager,
-		IsOffline:           cfg.Server.Offline,
-	})
-	if err != nil {
-		logger.Fatal().Err(err).Msgf("app: Failed to initialize sync manager")
-	}
-
-	// Use local metadata provider if in offline mode
-	if cfg.Server.Offline {
-		activeMetadataProvider = localManager.GetOfflineMetadataProvider()
-	}
-
-	// Initialize local platform for offline operations
-	offlinePlatform, err := offline_platform.NewOfflinePlatform(localManager, logger)
-	if err != nil {
-		logger.Fatal().Err(err).Msgf("app: Failed to initialize local platform")
-	}
-
-	// Initialize simulated platform for unauthenticated operations
-	simulatedPlatform := simulated_platform.NewSimulatedPlatform(logger, database)
-	if simulatedPlatform == nil {
-		logger.Fatal().Err(err).Msgf("app: Failed to initialize simulated platform")
-	}
-
-	// Change active platform if offline mode is enabled
-	if cfg.Server.Offline {
-		logger.Warn().Msg("app: Offline mode is active, using offline platform")
-		activePlatformRef.Set(offlinePlatform)
-	} else {
-		logger.Warn().Msg("app: Using simulated platform")
-		activePlatformRef.Set(simulatedPlatform)
-	}
-
-	isOfflineRef := util.NewRef(cfg.Server.Offline)
-	offlinePlatformRef := util.NewRef(platform.Platform(offlinePlatform))
-
-	// +---------------------+
-	// | Phase 2: Base       |
-	// +---------------------+
-
-	continuityManager := continuity.NewManager(&continuity.NewManagerOptions{
-		FileCacher: fileCacher,
-		Logger:     logger,
-		Database:   database,
-	})
-
-	videoCore := videocore.New(videocore.NewVideoCoreOptions{
-		WsEventManager:      wsEventManager,
-		Logger:              logger,
-		MetadataProviderRef: metadataProviderRef,
-		ContinuityManager:   continuityManager,
-		PlatformRef:         activePlatformRef,
-		IsOfflineRef:        isOfflineRef,
-	})
-
-	// Initialize Thumbnail Cache (LRU bounded to 1000 items to prevent OOM)
-	thumbnailCache, err := cache.NewThumbnailCache(1000)
-	if err != nil {
-		logger.Fatal().Err(err).Msg("app: Failed to initialize thumbnail cache")
-	}
-
-	// Create a cancellable context for the app's lifecycle.
-	// Long-running goroutines should listen to this context.
 	shutdownCtx, shutdownCancel := context.WithCancel(context.Background())
 
-	// Create the main app instance with initialized components
 	app := &KameHouse{
 		CoreServices: CoreServices{
-			Config:           cfg,
-			Database:         database,
-			Logger:           logger,
-			WSEventManager:   wsEventManager,
-			FileCacher:       fileCacher,
-			ThumbnailCache:   thumbnailCache,
+			Config:         cfg,
+			Database:       database,
+			Logger:         logger,
+			WSEventManager: wsEventManager,
+			FileCacher:     fileCacher,
+			ThumbnailCache: thumbnailCache,
 		},
 		StreamingServices: StreamingServices{
 			VideoCore:             videoCore,
@@ -343,13 +187,12 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 		Flags:          configOpts.Flags,
 		FeatureManager: NewFeatureManager(logger, configOpts.Flags),
 		Metadata: MetadataProviders{
-			TMDBClient:         tmdbClient,
-			PlatformRef:        activePlatformRef,
-			OfflinePlatformRef: offlinePlatformRef,
-			ProviderRef:        metadataProviderRef,
-			FanArt:             fanartEnricher,
-			OMDb:               omdbEnricher,
-			OpenSubs:           openSubsEnricher,
+			TMDBClient: tmdbClient,
+			Provider:   dynamicProvider,
+			Platform:   dynamicPlatform,
+			FanArt:     enrichers.FanArt,
+			OMDb:       enrichers.OMDb,
+			OpenSubs:   enrichers.OpenSubs,
 		},
 		Version:           constants.Version,
 		ContinuityManager: continuityManager,
@@ -361,36 +204,209 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 			Mediastream *models.MediastreamSettings
 		}{Mediastream: nil},
 		moduleMu:           sync.Mutex{},
-		isOfflineRef:       isOfflineRef,
+		isOffline:          isOffline,
 		ServerPasswordHash: serverPasswordHash,
 		shutdownCtx:        shutdownCtx,
 		shutdownCancel:     shutdownCancel,
 	}
 
-	// Initialize modules that only need to be initialized once
 	app.initModulesOnce()
-
-	// Initialize all modules that depend on settings
 	app.InitOrRefreshModules()
-
-	// Set ServerReady
 	app.ServerReady = true
-
-	// Initialize mediastream settings (for streaming media)
 	app.InitOrRefreshMediastreamSettings()
-
-	// Run one-time initialization actions
 	app.performActionsOnce()
 
 	return app
 }
 
-func (a *KameHouse) IsOffline() bool {
-	return a.isOfflineRef.Get()
+func initLogger() *zerolog.Logger {
+	return util.NewLogger()
 }
 
-func (a *KameHouse) IsOfflineRef() *util.Ref[bool] {
-	return a.isOfflineRef
+func initSystemInfo(logger *zerolog.Logger) {
+	logger.Info().Msgf("app: KameHouse %s-%s", constants.Version, constants.VersionName)
+	logger.Info().Msgf("app: OS: %s", runtime.GOOS)
+	logger.Info().Msgf("app: Arch: %s", runtime.GOARCH)
+	logger.Info().Msgf("app: Processor count: %d", runtime.NumCPU())
+}
+
+func initConfig(configOpts *ConfigOptions, logger *zerolog.Logger) *Config {
+	cfg, err := NewConfig(configOpts, logger)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("app: Failed to initialize config")
+	}
+	logger.Info().Msgf("app: Data directory: %s", cfg.Data.AppDataDir)
+	logger.Info().Msgf("app: Working directory: %s", cfg.Data.WorkingDir)
+	if configOpts.Flags.IsDesktopSidecar {
+		logger.Info().Msg("app: Desktop sidecar mode enabled")
+	}
+	return cfg
+}
+
+func initServerPassword(cfg *Config) string {
+	if cfg.Server.Password != "" {
+		return util.HashSHA256Hex(cfg.Server.Password)
+	}
+	return ""
+}
+
+func initLogsDir(cfg *Config, logger *zerolog.Logger) {
+	_ = os.MkdirAll(cfg.Logs.Dir, 0755)
+}
+
+func startLogTrimmer(cfg *Config, logger *zerolog.Logger) {
+	go func() {
+		defer util.HandlePanicInModuleThen("core/TrimLogEntries", func() {})
+		TrimLogEntries(cfg.Logs.Dir, logger)
+	}()
+}
+
+func initDatabase(cfg *Config, logger *zerolog.Logger) *db.Database {
+	database, err := db.NewDatabase(context.Background(), cfg.Data.AppDataDir, cfg.Database.Name, logger)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("app: Failed to initialize database")
+	}
+	return database
+}
+
+func initAppDatabaseEntries(database *db.Database, logger *zerolog.Logger) {
+	HandleNewDatabaseEntries(database, logger)
+	database.RunDatabaseCleanup()
+	_, _ = database.GetAllLibraryPathsFromSettings()
+}
+
+func initTMDBClient(cfg *Config, database *db.Database) *tmdb.Client {
+	tmdbToken := cfg.Metadata.TMDBApiKey
+	tmdbClient := tmdb.NewClient(tmdbToken)
+	if database != nil {
+		tmdbClient.SetPersistentCache(&TMDbCacheAdapter{db: database})
+	}
+	return tmdbClient
+}
+
+func initEventSystem(logger *zerolog.Logger, database *db.Database) (events.Dispatcher, *events.WSEventManager) {
+	dispatcher := events.NewDispatcher()
+	wsEventManager := events.NewWSEventManager(logger, dispatcher)
+	database.SetOnError(func(err error) {
+		if wsEventManager != nil {
+			wsEventManager.SendEvent(events.ErrorToast, "DB Error: "+err.Error())
+		}
+	})
+	return dispatcher, wsEventManager
+}
+
+type metadataEnrichers struct {
+	FanArt   *metadata.FanArtEnricher
+	OMDb     *metadata.OMDbEnricher
+	OpenSubs *metadata.OpenSubtitlesEnricher
+}
+
+func initMetadataEnrichers(cfg *Config) metadataEnrichers {
+	fanartEnricher := metadata.NewFanArtEnricher(cfg.Metadata.FanArtApiKey)
+	omdbEnricher := metadata.NewOMDbEnricher(cfg.Metadata.OMDbApiKey)
+	openSubsLangs := cfg.Metadata.OpenSubsLanguages
+	if len(openSubsLangs) == 0 {
+		openSubsLangs = []string{"es", "en"}
+	}
+	openSubsEnricher := metadata.NewOpenSubtitlesEnricher(cfg.Metadata.OpenSubsApiKey, openSubsLangs...)
+	return metadataEnrichers{
+		FanArt:   fanartEnricher,
+		OMDb:     omdbEnricher,
+		OpenSubs: openSubsEnricher,
+	}
+}
+
+func initFileCacher(cfg *Config, logger *zerolog.Logger) *filecache.Cacher {
+	fileCacher, err := filecache.NewCacher(cfg.Cache.Dir)
+	if err != nil {
+		logger.Fatal().Err(err).Msgf("app: Failed to initialize file cacher")
+	}
+	return fileCacher
+}
+
+func initMetadataProvider(logger *zerolog.Logger, fileCacher *filecache.Cacher, database *db.Database, tmdbClient *tmdb.Client) metadata_provider.Provider {
+	return metadata_provider.NewProvider(&metadata_provider.NewProviderImplOptions{
+		Logger:     logger,
+		FileCacher: fileCacher,
+		Database:   database,
+		TMDBClient: tmdbClient,
+	})
+}
+
+func resolveInitialProvider(cfg *Config, localManager local.Manager, onlineProvider metadata_provider.Provider) metadata_provider.Provider {
+	if cfg.Server.Offline {
+		return localManager.GetOfflineMetadataProvider()
+	}
+	return onlineProvider
+}
+
+func initLocalManager(cfg *Config, database *db.Database, logger *zerolog.Logger, wsEventManager *events.WSEventManager) local.Manager {
+	localManager, err := local.NewManager(&local.NewManagerOptions{
+		LocalDir:       cfg.Offline.Dir,
+		AssetDir:       cfg.Offline.AssetDir,
+		Logger:         logger,
+		Database:       database,
+		WSEventManager: wsEventManager,
+		IsOffline:      cfg.Server.Offline,
+	})
+	if err != nil {
+		logger.Fatal().Err(err).Msgf("app: Failed to initialize sync manager")
+	}
+	return localManager
+}
+
+func initOfflinePlatform(localManager local.Manager, logger *zerolog.Logger) platform.Platform {
+	offlinePlatform, err := offline_platform.NewOfflinePlatform(localManager, logger)
+	if err != nil {
+		logger.Fatal().Err(err).Msgf("app: Failed to initialize local platform")
+	}
+	return offlinePlatform
+}
+
+func initSimulatedPlatform(logger *zerolog.Logger, database *db.Database) platform.Platform {
+	simulatedPlatform := simulated_platform.NewSimulatedPlatform(logger, database)
+	if simulatedPlatform == nil {
+		logger.Fatal().Err(nil).Msgf("app: Failed to initialize simulated platform")
+	}
+	return simulatedPlatform
+}
+
+func resolveInitialPlatform(cfg *Config, offlinePlatform, simulatedPlatform platform.Platform) platform.Platform {
+	if cfg.Server.Offline {
+		return offlinePlatform
+	}
+	return simulatedPlatform
+}
+
+func initContinuityManager(fileCacher *filecache.Cacher, logger *zerolog.Logger, database *db.Database) *continuity.Manager {
+	return continuity.NewManager(&continuity.NewManagerOptions{
+		FileCacher: fileCacher,
+		Logger:     logger,
+		Database:   database,
+	})
+}
+
+func initVideoCore(wsEventManager *events.WSEventManager, logger *zerolog.Logger, dynamicProvider *metadata_provider.DynamicProvider, continuityManager *continuity.Manager, dynamicPlatform *platform.DynamicPlatform, isOffline *atomic.Bool) *videocore.VideoCore {
+	return videocore.New(videocore.NewVideoCoreOptions{
+		WsEventManager:    wsEventManager,
+		Logger:            logger,
+		DynamicProvider:   dynamicProvider,
+		ContinuityManager: continuityManager,
+		DynamicPlatform:   dynamicPlatform,
+		IsOffline:         isOffline,
+	})
+}
+
+func initThumbnailCache(logger *zerolog.Logger) *cache.ThumbnailCache {
+	thumbnailCache, err := cache.NewThumbnailCache(1000)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("app: Failed to initialize thumbnail cache")
+	}
+	return thumbnailCache
+}
+
+func (a *KameHouse) IsOffline() bool {
+	return a.isOffline.Load()
 }
 
 func (a *KameHouse) AddCleanupFunction(f func()) {
@@ -398,7 +414,6 @@ func (a *KameHouse) AddCleanupFunction(f func()) {
 }
 
 func (a *KameHouse) Cleanup(ctx context.Context) {
-	// Signal all goroutines that are listening on shutdownCtx to exit.
 	a.shutdownCancel()
 
 	done := make(chan struct{})
@@ -433,7 +448,7 @@ func (a *KameHouse) GetUser() *user.User {
 }
 
 func (a *KameHouse) GetAnimeCollection(bypassCache bool) (*platform.UnifiedCollection, error) {
-	res, err := a.Metadata.PlatformRef.Get().GetAnimeCollection(context.Background(), bypassCache)
+	res, err := a.Metadata.Platform.GetAnimeCollection(context.Background(), bypassCache)
 	if err != nil {
 		return nil, err
 	}

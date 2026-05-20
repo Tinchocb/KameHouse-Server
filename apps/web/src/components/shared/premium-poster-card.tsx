@@ -40,26 +40,30 @@ export const PremiumPosterCard = React.memo(({
         const glow = glowRef.current
         if (!card || !glow) return
 
+        let rafId: number | null = null;
         const onMouseMove = (e: MouseEvent) => {
-            const rect = card.getBoundingClientRect()
-            const x = e.clientX - rect.left
-            const y = e.clientY - rect.top
-            
-            gsap.to(glow, {
-                x: x - 75,
-                y: y - 75,
-                duration: 0.6,
-                ease: "power2.out"
-            })
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(() => {
+                const rect = card.getBoundingClientRect()
+                const x = e.clientX - rect.left
+                const y = e.clientY - rect.top
+                
+                gsap.to(glow, {
+                    x: x - 75,
+                    y: y - 75,
+                    duration: 0.6,
+                    ease: "power2.out"
+                })
 
-            const rotateX = (y / rect.height - 0.5) * 10
-            const rotateY = (x / rect.width - 0.5) * -10
-            
-            gsap.to(card, {
-                rotateX,
-                rotateY,
-                duration: 0.4,
-                ease: "power2.out"
+                const rotateX = (y / rect.height - 0.5) * 10
+                const rotateY = (x / rect.width - 0.5) * -10
+                
+                gsap.to(card, {
+                    rotateX,
+                    rotateY,
+                    duration: 0.4,
+                    ease: "power2.out"
+                })
             })
         }
 
