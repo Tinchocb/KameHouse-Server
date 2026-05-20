@@ -94,6 +94,8 @@ export interface PlayerState {
     setAmbilightEnabled: (enabled: boolean) => void
     marathonMode: boolean
     setMarathonMode: (enabled: boolean) => void
+    tvMode: boolean
+    setTvMode: (enabled: boolean) => void
 }
 
 export const createPlayerSlice: StateCreator<UIState & PlayerState, [], [], PlayerState> = (set) => ({
@@ -129,6 +131,8 @@ export const createPlayerSlice: StateCreator<UIState & PlayerState, [], [], Play
     setAmbilightEnabled: (ambilightEnabled) => set({ ambilightEnabled }),
     marathonMode: true,
     setMarathonMode: (marathonMode) => set({ marathonMode }),
+    tvMode: false,
+    setTvMode: (tvMode) => set({ tvMode }),
 })
 
 // --- Combined Store ---
@@ -158,6 +162,7 @@ export const useAppStore = create<UIState & PlayerState & ScannerState>()(
                 ambilightEnabled: state.ambilightEnabled,
                 marathonMode: state.marathonMode,
                 playerVolume: state.playerVolume,
+                tvMode: state.tvMode,
             }),
         }
     )

@@ -63,13 +63,13 @@ const SwimlaneInner = React.memo(function SwimlaneInner({
             )}
 
             <div className="relative group/swimlane">
-                <div className="pointer-events-none absolute inset-y-0 left-0 z-30 hidden w-48 bg-gradient-to-r from-zinc-950 via-zinc-950/20 to-transparent md:block" />
-                <div className="pointer-events-none absolute inset-y-0 right-0 z-30 hidden w-48 bg-gradient-to-l from-zinc-950 via-zinc-950/20 to-transparent md:block" />
+                <div className="pointer-events-none absolute inset-y-0 left-0 z-30 hidden w-48 bg-gradient-to-r from-background via-background/20 to-transparent md:block" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 z-30 hidden w-48 bg-gradient-to-l from-background via-background/20 to-transparent md:block" />
 
                 <HorizontalDraggableScroll
                     className="px-0"
-                    containerClass="gap-6 px-6 pt-16 pb-20 -mt-16 -mb-4 md:px-12 lg:px-20 xl:px-24 2xl:px-28"
-                    chevronOverlayClass="from-zinc-950/95 to-transparent"
+                    containerClass="gap-6 px-6 pt-16 pb-32 -mt-16 -mb-16 md:px-12 lg:px-20 xl:px-24 2xl:px-28"
+                    chevronOverlayClass="from-background/95 via-background/60 to-transparent"
                     scrollAmount={420}
                     safeDisplacement={18}
                     applyRubberBandEffect

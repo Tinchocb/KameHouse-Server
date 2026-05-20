@@ -1,0 +1,855 @@
+{
+  "pilaf": {
+    "id": "pilaf",
+    "title": "Saga del Emperador Pilaf",
+    "seriesId": 12609,
+    "description": "El joven Goku conoce a Bulma durante su búsqueda de las Esferas del Dragón. Juntos se enfrentan al ridículo pero ambicioso Emperador Pilaf, quien desea dominar el mundo con el poder del Dragón Shenlong.",
+    "tags": [
+      "Búsqueda de las Esferas",
+      "Los Guerreros Z",
+      "Shonen Clásico",
+      "Artes Marciales",
+      "Acción"
+    ],
+    "dominantVibe": "Aventura",
+    "suggestedSwimlane": "Deseos Prohibidos y Dragones Sagrados"
+  },
+  "torneo-21": {
+    "id": "torneo-21",
+    "title": "Saga 21° Torneo de las Artes Marciales",
+    "seriesId": 12609,
+    "description": "Bajo la tutela del legendario Maestro Roshi, Goku y Krilin se preparan para el campeonato mundial de artes marciales. El torneo revela que existen guerreros mucho más poderosos en el mundo.",
+    "tags": [
+      "Artes Marciales Clásicas",
+      "Entrenamiento Extremo",
+      "Los Guerreros Z",
+      "Shonen Clásico",
+      "Artes Marciales"
+    ],
+    "dominantVibe": "Épico",
+    "suggestedSwimlane": "¡Fuera del Ring!: Los Grandes Torneos"
+  },
+  "red-ribbon": {
+    "id": "red-ribbon",
+    "title": "Saga de la Patrulla Roja",
+    "seriesId": 12609,
+    "description": "Goku inicia la búsqueda de la esfera de 4 estrellas de su abuelo Gohan. En su camino se topa con el ejército de la Patrulla Roja, una organización criminal con tecnología avanzada que también busca las esferas para dominar el mundo.",
+    "tags": [
+      "Búsqueda de las Esferas",
+      "El Torneo de Uranai Baba",
+      "Invasión a la Tierra",
+      "Los Guerreros Z",
+      "La Patrulla Roja"
+    ],
+    "dominantVibe": "Aventura",
+    "suggestedSwimlane": "El Misterioso Torneo de Uranai Baba"
+  },
+  "uranai-baba": {
+    "id": "uranai-baba",
+    "title": "Saga de Uranai Baba",
+    "seriesId": 12609,
+    "description": "Goku acude a la vidente Uranai Baba para localizar la última esfera del dragón. A cambio, debe enfrentarse a cinco poderosos guerreros en retos únicos. El torneo trae una sorpresa emotiva: el reencuentro con el abuelo Gohan.",
+    "tags": [
+      "Búsqueda de las Esferas",
+      "Artes Marciales Clásicas",
+      "El Torneo de Uranai Baba",
+      "Los Guerreros Z",
+      "Shonen Clásico"
+    ],
+    "dominantVibe": "Aventura",
+    "suggestedSwimlane": "¡Fuera del Ring!: Los Grandes Torneos"
+  },
+  "torneo-22": {
+    "id": "torneo-22",
+    "title": "Saga 22° Torneo de las Artes Marciales",
+    "seriesId": 12609,
+    "description": "Han pasado 3 años desde el último torneo. Goku regresa transformado en un joven fuerte y habilidoso. Los peligrosos discípulos de la Escuela Grulla, Tenshinhan y Chaotzu, vienen a destruir la Escuela Tortuga.",
+    "tags": [
+      "Artes Marciales Clásicas",
+      "Supervivencia Universal",
+      "Vida Cotidiana",
+      "Los Guerreros Z",
+      "Shonen Clásico"
+    ],
+    "dominantVibe": "Tensión Absoluta",
+    "suggestedSwimlane": "¡Fuera del Ring!: Los Grandes Torneos"
+  },
+  "piccolo": {
+    "id": "piccolo",
+    "title": "Saga del Rey Demonio Piccolo",
+    "seriesId": 12609,
+    "description": "El demonio Piccolo Daimaku, sellado durante siglos, es liberado accidentalmente. Con un poder inimaginable y una sed infinita de destrucción, el Rey Demonio busca recuperar su juventud y esclavizar a la humanidad.",
+    "tags": [
+      "Supervivencia Universal",
+      "Mundo de los Demonios",
+      "Maldición Mini",
+      "Los Guerreros Z",
+      "Shonen Clásico"
+    ],
+    "dominantVibe": "Tensión Absoluta",
+    "suggestedSwimlane": "Crónicas de Supervivencia: El Futuro en Llamas"
+  },
+  "piccolo-jr": {
+    "id": "piccolo-jr",
+    "title": "Saga de Piccolo Jr.",
+    "seriesId": 12609,
+    "description": "Han pasado 3 años desde la derrota del Rey Demonio. En el 23° Torneo Mundial de Artes Marciales, Goku se enfrenta a Piccolo Jr., el hijo del demonio, quien ha heredado todo el odio y el poder de su padre para vengarse.",
+    "tags": [
+      "Artes Marciales Clásicas",
+      "Mundo de los Demonios",
+      "Los Guerreros Z",
+      "Shonen Clásico",
+      "Artes Marciales"
+    ],
+    "dominantVibe": "Aventura",
+    "suggestedSwimlane": "¡Fuera del Ring!: Los Grandes Torneos"
+  },
+  "black-star": {
+    "id": "black-star",
+    "title": "Saga de las Esferas Definitivas",
+    "seriesId": 12697,
+    "description": "Un deseo accidental convierte a Goku en niño y esparce las Esferas del Dragón Negras por toda la galaxia amenazando con destruir la Tierra.",
+    "tags": [
+      "Búsqueda de las Esferas",
+      "Viajes por el Espacio",
+      "Los Guerreros Z",
+      "Shonen Clásico",
+      "Artes Marciales"
+    ],
+    "dominantVibe": "Aventura",
+    "suggestedSwimlane": "Más Allá de las Estrellas: Aventura Espacial"
+  },
+  "baby": {
+    "id": "baby",
+    "title": "Saga de Baby",
+    "seriesId": 12697,
+    "description": "Un parásito mutante artificial creado por la raza Tsufuru busca infectar y esclavizar a todo el universo clamando venganza contra los Saiyajins.",
+    "tags": [
+      "Batalla Épica",
+      "Los Saiyajins",
+      "Los Tsufurujin",
+      "Shonen Clásico",
+      "Artes Marciales"
+    ],
+    "dominantVibe": "Épico",
+    "suggestedSwimlane": "Los Saiyajins: La Raza Guerrera Más Poderosa"
+  },
+  "super-17": {
+    "id": "super-17",
+    "title": "Saga de Super 17",
+    "seriesId": 12697,
+    "description": "Dos genios malvados abren un portal del infierno para fusionar a dos Androides 17 y crear a una máquina casi invencible.",
+    "tags": [
+      "Fusión de Guerreros",
+      "La Patrulla Roja",
+      "Shonen Clásico",
+      "Artes Marciales",
+      "Acción"
+    ],
+    "dominantVibe": "Emocionante",
+    "suggestedSwimlane": "¡Fusión HA!: Las Uniones Más Poderosas"
+  },
+  "shadow-dragons": {
+    "id": "shadow-dragons",
+    "title": "Saga de los Dragones Malignos",
+    "seriesId": 12697,
+    "description": "El abuso en el uso de las Esferas del Dragón provoca su corrupción, naciendo 7 temibles dragones con el poder de obliterar el universo.",
+    "tags": [
+      "Búsqueda de las Esferas",
+      "Shonen Clásico",
+      "Artes Marciales",
+      "Acción",
+      "Aventura"
+    ],
+    "dominantVibe": "Aventura",
+    "suggestedSwimlane": "Deseos Prohibidos y Dragones Sagrados"
+  },
+  "saiyajin": {
+    "id": "saiyajin",
+    "title": "Saga Saiyajin",
+    "seriesId": 12971,
+    "description": "La llegada de Raditz revela el verdadero origen extraterrestre de Goku. Los guerreros Z deben prepararse para la invasión de dos Saiyajins increíblemente poderosos: Nappa y Vegeta.",
+    "tags": [
+      "Invasión a la Tierra",
+      "Los Guerreros Z",
+      "Los Saiyajins",
+      "Shonen Clásico",
+      "Artes Marciales"
+    ],
+    "dominantVibe": "Emocionante",
+    "suggestedSwimlane": "Los Saiyajins: La Raza Guerrera Más Poderosa"
+  },
+  "freezer": {
+    "id": "freezer",
+    "title": "Saga Freezer",
+    "seriesId": 12971,
+    "description": "Gohan, Krilin y Bulma viajan al planeta Namek para reunir las Esferas del Dragón originales y revivir a sus amigos, pero se topan con el tirano galáctico Freezer.",
+    "tags": [
+      "Búsqueda de las Esferas",
+      "Viajes por el Espacio",
+      "Los Guerreros Z",
+      "Los Namekuseijin",
+      "El Imperio de Freezer",
+      "Nuevas Generaciones"
+    ],
+    "dominantVibe": "Aventura",
+    "suggestedSwimlane": "El Imperio de Freezer: El Tirano del Universo"
+  },
+  "garlic-jr": {
+    "id": "garlic-jr",
+    "title": "Saga Garlic Jr.",
+    "seriesId": 12971,
+    "description": "Aprovechando la ausencia de Goku, Garlic Jr. escapa de la Zona Muerta con intención de esclavizar a la humanidad.",
+    "tags": [
+      "Los Guerreros Z",
+      "Villanos de Películas",
+      "Shonen Clásico",
+      "Artes Marciales",
+      "Acción"
+    ],
+    "dominantVibe": "Emocionante",
+    "suggestedSwimlane": "Aventuras en el Universo Dragon Ball"
+  },
+  "cell": {
+    "id": "cell",
+    "title": "Saga Androides y Cell",
+    "seriesId": 12971,
+    "description": "Un misterioso joven del futuro advierte sobre la llegada de unos androides asesinos creados por la Patrulla Roja y la aparición accidental de la bio-arma perfecta: Cell.",
+    "tags": [
+      "Viajes en el Tiempo",
+      "Invasión a la Tierra",
+      "La Patrulla Roja",
+      "Shonen Clásico",
+      "Artes Marciales"
+    ],
+    "dominantVibe": "Emocionante",
+    "suggestedSwimlane": "La Patrulla Roja: Androides y Cell"
+  },
+  "torneo-otro-mundo": {
+    "id": "torneo-otro-mundo",
+    "title": "Saga Torneo del Otro Mundo",
+    "seriesId": 12971,
+    "description": "Goku participa en un torneo celestial con los guerreros más fuertes del universo bajo la tutela del Gran Kaio.",
+    "tags": [
+      "Artes Marciales Clásicas",
+      "Torneo del Más Allá",
+      "Los Guerreros Z",
+      "Shonen Clásico",
+      "Artes Marciales"
+    ],
+    "dominantVibe": "Épico",
+    "suggestedSwimlane": "¡Fuera del Ring!: Los Grandes Torneos"
+  },
+  "majin-buu": {
+    "id": "majin-buu",
+    "title": "Saga Majin Buu",
+    "seriesId": 12971,
+    "description": "Siete años después del juego de Cell, el malvado mago Babidi busca despertar al monstruo más temible que jamás haya existido en el universo: Majin Buu.",
+    "tags": [
+      "Súper Saiyajin",
+      "Magia y Hechizos",
+      "Mundo de los Demonios",
+      "La Patrulla Roja",
+      "Shonen Clásico"
+    ],
+    "dominantVibe": "Aventura",
+    "suggestedSwimlane": "Más Allá del Límite: Transformaciones Saiyajin"
+  },
+  "kai-saiyajin": {
+    "id": "kai-saiyajin",
+    "title": "Saga Saiyajin (Kai)",
+    "seriesId": 61709,
+    "description": "La versión remasterizada de la saga Saiyajin. Raditz llega a la Tierra revelando el origen de Goku, desencadenando una cadena de eventos que llevará a los guerreros Z a enfrentarse a Vegeta y Nappa.",
+    "tags": [
+      "Los Guerreros Z",
+      "Los Saiyajins",
+      "Shonen Clásico",
+      "Artes Marciales",
+      "Acción"
+    ],
+    "dominantVibe": "Emocionante",
+    "suggestedSwimlane": "Los Saiyajins: La Raza Guerrera Más Poderosa"
+  },
+  "kai-freezer": {
+    "id": "kai-freezer",
+    "title": "Saga Freezer (Kai)",
+    "seriesId": 61709,
+    "description": "La batalla en el planeta Namek remasterizada. Los guerreros Z se enfrentan al tirano Freezer en una lucha épica que despertará el poder del legendario Super Saiyajin.",
+    "tags": [
+      "Batalla Épica",
+      "Súper Saiyajin",
+      "Viajes por el Espacio",
+      "Los Namekuseijin",
+      "Los Saiyajins",
+      "El Imperio de Freezer"
+    ],
+    "dominantVibe": "Aventura",
+    "suggestedSwimlane": "Capítulos Imperdibles: Las Batallas Más Épicas"
+  },
+  "kai-cell": {
+    "id": "kai-cell",
+    "title": "Saga Androides y Cell (Kai)",
+    "seriesId": 61709,
+    "description": "Los androides de la Patrulla Roja y la amenaza de Cell en version remasterizada sin relleno. Gohan alcanzará un poder que superará a su padre.",
+    "tags": [
+      "Humor y Relleno",
+      "Los Guerreros Z",
+      "La Patrulla Roja",
+      "Shonen Clásico",
+      "Artes Marciales"
+    ],
+    "dominantVibe": "Relajado",
+    "suggestedSwimlane": "La Patrulla Roja: Androides y Cell"
+  },
+  "kai-buu": {
+    "id": "kai-buu",
+    "title": "Saga Majin Buu (Kai)",
+    "seriesId": 61709,
+    "description": "La saga final de Kai: el mago Babidi despierta al temible Majin Buu. Los guerreros Z deberán unir fuerzas con antiguos enemigos para salvar el universo.",
+    "tags": [
+      "Supervivencia Universal",
+      "Magia y Hechizos",
+      "Mundo de los Demonios",
+      "Shonen Clásico",
+      "Artes Marciales"
+    ],
+    "dominantVibe": "Tensión Absoluta",
+    "suggestedSwimlane": "Crónicas de Supervivencia: El Futuro en Llamas"
+  },
+  "dioses": {
+    "id": "dioses",
+    "title": "La Batalla de los Dioses",
+    "seriesId": 62715,
+    "description": "El Dios de la Destrucción Bills despierta tras décadas de sueño buscando al Super Saiyajin Dios de una antigua profecía.",
+    "tags": [
+      "Batalla Épica",
+      "Súper Saiyajin",
+      "Supervivencia Universal",
+      "Los Saiyajins",
+      "Dioses de la Destrucción"
+    ],
+    "dominantVibe": "Tensión Absoluta",
+    "suggestedSwimlane": "Capítulos Imperdibles: Las Batallas Más Épicas"
+  },
+  "resurreccion": {
+    "id": "resurreccion",
+    "title": "La Resurrección de 'F'",
+    "seriesId": 62715,
+    "description": "Restos del ejército de Freezer logran reunir las Esferas del Dragón y revivir a su amo, quien entrenará para vengarse de Goku.",
+    "tags": [
+      "Búsqueda de las Esferas",
+      "Invasión a la Tierra",
+      "Entrenamiento Extremo",
+      "Los Guerreros Z",
+      "El Imperio de Freezer"
+    ],
+    "dominantVibe": "Aventura",
+    "suggestedSwimlane": "El Imperio de Freezer: El Tirano del Universo"
+  },
+  "champa": {
+    "id": "champa",
+    "title": "Torneo del Universo 6",
+    "seriesId": 62715,
+    "description": "Un torneo de artes marciales amistoso entre el Universo 6 de Champa y el Universo 7 de Bills por el control de las Súper Esferas del Dragón.",
+    "tags": [
+      "Búsqueda de las Esferas",
+      "Artes Marciales Clásicas",
+      "Cruce de Universos",
+      "Dioses de la Destrucción",
+      "Shonen Clásico"
+    ],
+    "dominantVibe": "Aventura",
+    "suggestedSwimlane": "¡Fuera del Ring!: Los Grandes Torneos"
+  },
+  "goku-black": {
+    "id": "goku-black",
+    "title": "Saga de Goku Black",
+    "seriesId": 62715,
+    "description": "Trunks del futuro regresa al presente pidiendo ayuda tras la devastación de su línea temporal a manos de un misterioso enemigo con el rostro de Goku.",
+    "tags": [
+      "Espadachines y Armas",
+      "Viajes en el Tiempo",
+      "Los Guerreros Z",
+      "Shonen Clásico",
+      "Artes Marciales"
+    ],
+    "dominantVibe": "Emocionante",
+    "suggestedSwimlane": "Espadachines y Guerreros con Armas"
+  },
+  "supervivencia": {
+    "id": "supervivencia",
+    "title": "Saga Supervivencia Universal",
+    "seriesId": 62715,
+    "description": "Zeno-Sama organiza el Torneo del Poder donde 8 universos batallarán. El universo perdedor será aniquilado inmediatamente.",
+    "tags": [
+      "Batalla Épica",
+      "Artes Marciales Clásicas",
+      "Supervivencia Universal",
+      "Dioses de la Destrucción",
+      "Shonen Clásico"
+    ],
+    "dominantVibe": "Tensión Absoluta",
+    "suggestedSwimlane": "¡Eleva tu Ki!: Batallas que rompieron los límites"
+  },
+  "daima-misterio": {
+    "id": "daima-misterio",
+    "title": "El Misterio del Mundo Demonio",
+    "seriesId": 240411,
+    "description": "Goku y sus amigos son convertidos en niños por una conspiración del Mundo Demonio. Deben viajar a una dimensión desconocida para revertir el hechizo y descubrir la verdad detrás de las Esferas del Dragón.",
+    "tags": [
+      "Búsqueda de las Esferas",
+      "Magia y Hechizos",
+      "Mundo de los Demonios",
+      "Los Guerreros Z",
+      "Shonen Clásico"
+    ],
+    "dominantVibe": "Aventura",
+    "suggestedSwimlane": "Deseos Prohibidos y Dragones Sagrados"
+  },
+  "daima-travesia": {
+    "id": "daima-travesia",
+    "title": "La Travesía en el Mundo Demonio",
+    "seriesId": 240411,
+    "description": "La aventura continúa en las profundidades del Mundo Demonio. Goku y compañía enfrentan nuevos enemigos mientras buscan las Esferas del Dragón demoniacas para restaurar sus cuerpos.",
+    "tags": [
+      "Búsqueda de las Esferas",
+      "Mundo de los Demonios",
+      "Los Guerreros Z",
+      "Shonen Clásico",
+      "Artes Marciales"
+    ],
+    "dominantVibe": "Aventura",
+    "suggestedSwimlane": "Deseos Prohibidos y Dragones Sagrados"
+  },
+  "movie-39144": {
+    "id": "movie-39144",
+    "title": "La Leyenda de Shenlong",
+    "tmdbId": 39144,
+    "description": "Bulma y Goku buscan las Esferas del Dragón. Se enfrentan al malvado Rey Gurumes, quien destruye su propio reino buscando comida deliciosa.",
+    "tags": [
+      "Película",
+      "Búsqueda de las Esferas",
+      "Los Guerreros Z",
+      "Shonen Clásico",
+      "Artes Marciales"
+    ],
+    "dominantVibe": "Aventura",
+    "suggestedSwimlane": "Esencia de Cinema: Películas Legendarias",
+    "isMovie": true
+  },
+  "movie-39145": {
+    "id": "movie-39145",
+    "title": "La Princesa Durmiente en el Castillo del Mal",
+    "tmdbId": 39145,
+    "description": "Goku y Krilin entrenan con el Maestro Roshi. Para ser aceptados, deben rescatar a la Princesa Durmiente en un siniestro castillo habitado por Lucifer.",
+    "tags": [
+      "Película",
+      "Entrenamiento Extremo",
+      "Los Guerreros Z",
+      "Shonen Clásico",
+      "Artes Marciales"
+    ],
+    "dominantVibe": "Emocionante",
+    "suggestedSwimlane": "Esencia de Cinema: Películas Legendarias",
+    "isMovie": true
+  },
+  "movie-116776": {
+    "id": "movie-116776",
+    "title": "Una Aventura Mística",
+    "tmdbId": 116776,
+    "description": "Goku y Krilin viajan al imperio de Mifan para participar en un torneo de artes marciales. Allí descubren una conspiración liderada por el malvado General Tao Pai Pai y el Maestro Shen.",
+    "tags": [
+      "Película",
+      "Artes Marciales Clásicas",
+      "Los Guerreros Z",
+      "Shonen Clásico",
+      "Artes Marciales"
+    ],
+    "dominantVibe": "Épico",
+    "suggestedSwimlane": "Esencia de Cinema: Películas Legendarias",
+    "isMovie": true
+  },
+  "movie-39148": {
+    "id": "movie-39148",
+    "title": "El Camino Hacia el Poder",
+    "tmdbId": 39148,
+    "description": "Una hermosa reinterpretación del inicio de la serie clásica. Goku inicia su viaje, conoce a Bulma y destruye a la temible Patrulla Roja con su Kamehameha.",
+    "tags": [
+      "Película",
+      "Técnicas de Ki",
+      "Los Guerreros Z",
+      "La Patrulla Roja",
+      "Shonen Clásico"
+    ],
+    "dominantVibe": "Emocionante",
+    "suggestedSwimlane": "Esencia de Cinema: Películas Legendarias",
+    "isMovie": true
+  },
+  "movie-28609": {
+    "id": "movie-28609",
+    "title": "¡Devuélveme a mi Gohan! (Garlic Jr.)",
+    "tmdbId": 28609,
+    "description": "El malvado Garlic Jr. secuestra a Gohan para apoderarse de la esfera de 4 estrellas. Goku y Piccolo unen fuerzas en un combate a muerte en la Zona Muerta.",
+    "tags": [
+      "Película",
+      "Batalla Épica",
+      "Búsqueda de las Esferas",
+      "Sacrificio Heroico",
+      "Los Guerreros Z",
+      "Villanos de Películas"
+    ],
+    "dominantVibe": "Emoción Pura",
+    "suggestedSwimlane": "Esencia de Cinema: Películas Legendarias",
+    "isMovie": true
+  },
+  "movie-39100": {
+    "id": "movie-39100",
+    "title": "El Hombre Más Fuerte de este Mundo",
+    "tmdbId": 39100,
+    "description": "El cerebro incorpóreo del Dr. Willow busca el cuerpo del guerrero más fuerte del mundo. Goku lucha contra temibles bioguerreros para salvar la Tierra.",
+    "tags": [
+      "Película",
+      "Batalla Épica",
+      "Supervivencia Universal",
+      "Los Guerreros Z",
+      "Shonen Clásico"
+    ],
+    "dominantVibe": "Tensión Absoluta",
+    "suggestedSwimlane": "Esencia de Cinema: Películas Legendarias",
+    "isMovie": true
+  },
+  "movie-39101": {
+    "id": "movie-39101",
+    "title": "La Súper Batalla (Turles)",
+    "tmdbId": 39101,
+    "description": "El saiyajin desertor Turles llega a la Tierra para plantar el Árbol Sagrado, el cual absorbe la energía del planeta. Goku y los guerreros Z libran un combate brutal contra los invasores.",
+    "tags": [
+      "Película",
+      "Batalla Épica",
+      "Técnicas de Ki",
+      "Viajes por el Espacio",
+      "Invasión a la Tierra",
+      "Los Guerreros Z"
+    ],
+    "dominantVibe": "Aventura",
+    "suggestedSwimlane": "Esencia de Cinema: Películas Legendarias",
+    "isMovie": true
+  },
+  "movie-39102": {
+    "id": "movie-39102",
+    "title": "El Súper Guerrero Goku (Lord Slug)",
+    "tmdbId": 39102,
+    "description": "Lord Slug, un anciano y despiadado Namekuseijin supermago, llega a la Tierra para rejuvenecer con las esferas y conquistarla. Goku despierta una transformación de ki legendaria.",
+    "tags": [
+      "Película",
+      "Técnicas de Ki",
+      "Súper Saiyajin",
+      "Búsqueda de las Esferas",
+      "Viajes por el Espacio",
+      "Invasión a la Tierra"
+    ],
+    "dominantVibe": "Aventura",
+    "suggestedSwimlane": "Esencia de Cinema: Películas Legendarias",
+    "isMovie": true
+  },
+  "movie-24752": {
+    "id": "movie-24752",
+    "title": "Los Rivales Más Poderosos (Cooler)",
+    "tmdbId": 24752,
+    "description": "Cooler llega a la Tierra con su ejército para vengar la derrota de su hermano Freezer a manos del Super Saiyajin Goku.",
+    "tags": [
+      "Película",
+      "Súper Saiyajin",
+      "Invasión a la Tierra",
+      "Los Guerreros Z",
+      "Los Saiyajins",
+      "El Imperio de Freezer"
+    ],
+    "dominantVibe": "Emocionante",
+    "suggestedSwimlane": "El Imperio de Freezer: El Tirano del Universo",
+    "isMovie": true
+  },
+  "movie-39103": {
+    "id": "movie-39103",
+    "title": "El Regreso de Cooler",
+    "tmdbId": 39103,
+    "description": "Los guerreros Z viajan al Nuevo Namek para defenderlo de la Estrella Gete, un planeta viviente cibernético liderado por Metal Cooler.",
+    "tags": [
+      "Película",
+      "Viajes por el Espacio",
+      "Los Namekuseijin",
+      "El Imperio de Freezer",
+      "Villanos de Películas"
+    ],
+    "dominantVibe": "Aventura",
+    "suggestedSwimlane": "El Imperio de Freezer: El Tirano del Universo",
+    "isMovie": true
+  },
+  "movie-39104": {
+    "id": "movie-39104",
+    "title": "La Pelea de los Tres Saiyajin (Androide 13)",
+    "tmdbId": 39104,
+    "description": "Tras la muerte del Dr. Gero, los androides 13, 14 y 15 despiertan para cumplir la misión original de destruir a Goku. La batalla final se traslada a los glaciares.",
+    "tags": [
+      "Película",
+      "Batalla Épica",
+      "Sacrificio Heroico",
+      "Los Guerreros Z",
+      "Los Saiyajins",
+      "La Patrulla Roja"
+    ],
+    "dominantVibe": "Emoción Pura",
+    "suggestedSwimlane": "Esencia de Cinema: Películas Legendarias",
+    "isMovie": true
+  },
+  "movie-34433": {
+    "id": "movie-34433",
+    "title": "El Poderoso Super Saiyajin (Broly)",
+    "tmdbId": 34433,
+    "description": "Paragus invita a Vegeta a gobernar el Nuevo Planeta Vegeta, pero es una trampa para acabar con los Saiyajin usando al incontrolable Super Saiyajin Legendario: Broly.",
+    "tags": [
+      "Película",
+      "Súper Saiyajin",
+      "Viajes por el Espacio",
+      "Los Guerreros Z",
+      "Los Saiyajins",
+      "Saiyajins Legendarios"
+    ],
+    "dominantVibe": "Aventura",
+    "suggestedSwimlane": "Saiyajins Legendarios: El Poder Berserker",
+    "isMovie": true
+  },
+  "movie-39105": {
+    "id": "movie-39105",
+    "title": "La Galaxia Corre Peligro (Bojack)",
+    "tmdbId": 39105,
+    "description": "Tras los juegos de Cell, se celebra un torneo de artes marciales galáctico que es interrumpido por Bojack y sus secuaces interestelares. Gohan debe despertar todo su potencial desatado.",
+    "tags": [
+      "Película",
+      "Súper Saiyajin",
+      "Poderes Ocultos",
+      "Artes Marciales Clásicas",
+      "Los Juegos de Cell",
+      "Supervivencia Universal"
+    ],
+    "dominantVibe": "Tensión Absoluta",
+    "suggestedSwimlane": "Esencia de Cinema: Películas Legendarias",
+    "isMovie": true
+  },
+  "movie-44251": {
+    "id": "movie-44251",
+    "title": "El Regreso de Broly",
+    "tmdbId": 44251,
+    "description": "Broly revive tras su derrota y llega a la Tierra, atacando a Goten, Trunks y Videl. Gohan lucha desesperadamente y se produce una triple Genkidama/Kamehameha familiar.",
+    "tags": [
+      "Película",
+      "Batalla Épica",
+      "Técnicas de Ki",
+      "Vida Cotidiana",
+      "Los Guerreros Z",
+      "Saiyajins Legendarios"
+    ],
+    "dominantVibe": "Relajado",
+    "suggestedSwimlane": "Saiyajins Legendarios: El Poder Berserker",
+    "isMovie": true
+  },
+  "movie-39106": {
+    "id": "movie-39106",
+    "title": "El Combate Definitivo (Bio-Broly)",
+    "tmdbId": 39106,
+    "description": "Científicos locos crean un clon de Broly usando ingeniería genética. El clon muta en una masa viscosa y destructiva que ataca un laboratorio. Goten, Trunks y Androide 18 defienden la isla.",
+    "tags": [
+      "Película",
+      "Batalla Épica",
+      "Saiyajins Legendarios",
+      "La Patrulla Roja",
+      "Nuevas Generaciones",
+      "Villanos de Películas"
+    ],
+    "dominantVibe": "Épico",
+    "suggestedSwimlane": "Saiyajins Legendarios: El Poder Berserker",
+    "isMovie": true
+  },
+  "movie-39107": {
+    "id": "movie-39107",
+    "title": "¡El Renacer de la Fusión! Goku y Vegeta (Janemba)",
+    "tmdbId": 39107,
+    "description": "Una explosión de energía espiritual en el infierno da vida al demonio gigante Janemba. Goku y Vegeta deben realizar la danza de la fusión para convertirse en Gogeta.",
+    "tags": [
+      "Película",
+      "Técnicas de Ki",
+      "Técnicas Especiales",
+      "Fusión de Guerreros",
+      "Mundo de los Demonios",
+      "Los Guerreros Z"
+    ],
+    "dominantVibe": "Aventura",
+    "suggestedSwimlane": "¡Fusión HA!: Las Uniones Más Poderosas",
+    "isMovie": true
+  },
+  "movie-39108": {
+    "id": "movie-39108",
+    "title": "El Ataque del Dragón (Tapion)",
+    "tmdbId": 39108,
+    "description": "El legendario héroe Tapion llega a la Tierra cargando al monstruo gigante Hildegarn sellado dentro de su cuerpo. Goku usa el Puño del Dragón para derrotar al demonio.",
+    "tags": [
+      "Película",
+      "Batalla Épica",
+      "Mundo de los Demonios",
+      "Los Guerreros Z",
+      "Shonen Clásico"
+    ],
+    "dominantVibe": "Aventura",
+    "suggestedSwimlane": "Esencia de Cinema: Películas Legendarias",
+    "isMovie": true
+  },
+  "movie-126963": {
+    "id": "movie-126963",
+    "title": "La Batalla de los Dioses",
+    "tmdbId": 126963,
+    "description": "El Dios de la Destrucción Bills despierta tras décadas de sueño buscando al Super Saiyajin Dios de una antigua profecía. Goku entrena con Whis y alcanza el ki divino.",
+    "tags": [
+      "Película",
+      "Batalla Épica",
+      "Técnicas de Ki",
+      "Súper Saiyajin",
+      "Supervivencia Universal",
+      "Entrenamiento Divino"
+    ],
+    "dominantVibe": "Tensión Absoluta",
+    "suggestedSwimlane": "Esencia de Cinema: Películas Legendarias",
+    "isMovie": true
+  },
+  "movie-303857": {
+    "id": "movie-303857",
+    "title": "La Resurrección de 'F'",
+    "tmdbId": 303857,
+    "description": "El ejército de Freezer reúne las esferas para revivir a su amo. Freezer entrena duro y regresa en su forma Golden para tomar venganza contra los Saiyajin.",
+    "tags": [
+      "Película",
+      "Batalla Épica",
+      "Súper Saiyajin",
+      "Búsqueda de las Esferas",
+      "Invasión a la Tierra",
+      "Los Saiyajins"
+    ],
+    "dominantVibe": "Aventura",
+    "suggestedSwimlane": "Esencia de Cinema: Películas Legendarias",
+    "isMovie": true
+  },
+  "movie-503314": {
+    "id": "movie-503314",
+    "title": "Dragon Ball Super: Broly",
+    "tmdbId": 503314,
+    "description": "Freezer llega a la Tierra acompañado de Broly, un Saiyajin exiliado con un poder de ki berserker inmenso. Goku y Vegeta se fusionan en Gogeta Blue para hacerle frente.",
+    "tags": [
+      "Película",
+      "Técnicas de Ki",
+      "Súper Saiyajin",
+      "Fusión de Guerreros",
+      "Búsqueda de las Esferas",
+      "Los Guerreros Z"
+    ],
+    "dominantVibe": "Aventura",
+    "suggestedSwimlane": "¡Fusión HA!: Las Uniones Más Poderosas",
+    "isMovie": true
+  },
+  "movie-610150": {
+    "id": "movie-610150",
+    "title": "Dragon Ball Super: Super Hero",
+    "tmdbId": 610150,
+    "description": "La Patrulla Roja revive creando a los Androides Gamma 1 y Gamma 2, y al colosal Cell Max. Gohan y Piccolo despiertan nuevas transformaciones divinas para derrotarlos.",
+    "tags": [
+      "Película",
+      "Batalla Épica",
+      "Súper Saiyajin",
+      "Búsqueda de las Esferas",
+      "Los Guerreros Z",
+      "La Patrulla Roja"
+    ],
+    "dominantVibe": "Aventura",
+    "suggestedSwimlane": "Esencia de Cinema: Películas Legendarias",
+    "isMovie": true
+  },
+  "movie-39323": {
+    "id": "movie-39323",
+    "title": "La Batalla del Padre de Goku (Bardock)",
+    "tmdbId": 39323,
+    "description": "El guerrero saiyajin Bardock recibe visiones del futuro que le revelan el plan de Freezer de destruir el Planeta Vegeta. Intenta rebelarse en solitario en una batalla heroica.",
+    "tags": [
+      "Película",
+      "Batalla Épica",
+      "Viajes por el Espacio",
+      "Viajes en el Tiempo",
+      "Los Guerreros Z",
+      "Los Saiyajins"
+    ],
+    "dominantVibe": "Aventura",
+    "suggestedSwimlane": "Esencia de Cinema: Películas Legendarias",
+    "isMovie": true
+  },
+  "movie-39324": {
+    "id": "movie-39324",
+    "title": "Un Futuro Diferente (Trunks)",
+    "tmdbId": 39324,
+    "description": "En un futuro postapocalíptico, los androides 17 y 18 han exterminado a los Guerreros Z. Gohan y Trunks son la última línea de defensa contra los cyborgs asesinos.",
+    "tags": [
+      "Película",
+      "Viajes en el Tiempo",
+      "Los Guerreros Z",
+      "La Patrulla Roja",
+      "Shonen Clásico"
+    ],
+    "dominantVibe": "Emocionante",
+    "suggestedSwimlane": "Esencia de Cinema: Películas Legendarias",
+    "isMovie": true
+  },
+  "movie-18095": {
+    "id": "movie-18095",
+    "title": "100 Años Después (GT Especial)",
+    "tmdbId": 18095,
+    "description": "Un siglo después de los eventos de GT, el tataranieto de Goku, Goku Jr., emprende un viaje al Monte Paozu para buscar una Esfera del Dragón y curar a su abuela Pan.",
+    "tags": [
+      "Película",
+      "Búsqueda de las Esferas",
+      "Los Guerreros Z",
+      "Nuevas Generaciones",
+      "Shonen Clásico"
+    ],
+    "dominantVibe": "Aventura",
+    "suggestedSwimlane": "Esencia de Cinema: Películas Legendarias",
+    "isMovie": true
+  },
+  "movie-38594": {
+    "id": "movie-38594",
+    "title": "¡Hola! ¡Goku y sus amigos regresan!",
+    "tmdbId": 38594,
+    "description": "Una divertida aventura de reencuentro dos años después de Majin Buu. El hermano menor de Vegeta, Tarble, llega pidiendo auxilio para enfrentar a remanentes de Freezer.",
+    "tags": [
+      "Película",
+      "Magia y Hechizos",
+      "Mundo de los Demonios",
+      "Los Guerreros Z",
+      "El Imperio de Freezer"
+    ],
+    "dominantVibe": "Aventura",
+    "suggestedSwimlane": "El Imperio de Freezer: El Tirano del Universo",
+    "isMovie": true
+  },
+  "movie-39322": {
+    "id": "movie-39322",
+    "title": "Seguridad Vial de Goku",
+    "tmdbId": 39322,
+    "description": "Goku enseña lecciones cómicas sobre seguridad vial en la ciudad mientras viaja con su familia.",
+    "tags": [
+      "Película",
+      "Vida Cotidiana",
+      "Los Guerreros Z",
+      "Shonen Clásico",
+      "Artes Marciales"
+    ],
+    "dominantVibe": "Relajado",
+    "suggestedSwimlane": "Esencia de Cinema: Películas Legendarias",
+    "isMovie": true
+  }
+}

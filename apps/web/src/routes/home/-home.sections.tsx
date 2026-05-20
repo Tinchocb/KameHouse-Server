@@ -1,15 +1,7 @@
 import * as React from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { cn } from "@/components/ui/core/styling"
-import { 
-    Tv, 
-    Zap, 
-    Film, 
-    Sparkles, 
-    Play
-} from "lucide-react"
+import { motion } from "framer-motion"
+import { Zap } from "lucide-react"
 import { Swimlane, type SwimlaneItem } from "@/components/ui/swimlane"
-import { BentoRecentlyAdded, type BentoItem } from "@/components/ui/bento-recently-added"
 import { SectionLabel, ErrorBoundary } from "./home.components"
 import { SmartSwimlane } from "@/components/ui/smart-swimlane"
 import type { CuratedSwimlane } from "@/hooks/use-home-intelligence"
@@ -36,7 +28,7 @@ export const HomeIntelligentSections = React.memo(function HomeIntelligentSectio
                     key={lane.id}
                 >
                     <motion.div 
-                        id={`lane-${lane.type}`}
+                        id={`lane-${lane.id}`}
                         initial={{ opacity: 0, y: 40 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true, margin: "-100px" }}
@@ -45,6 +37,7 @@ export const HomeIntelligentSections = React.memo(function HomeIntelligentSectio
                     >
                         <SmartSwimlane
                             lane={lane}
+                            index={idx + startIndex}
                             onNavigate={(mediaId) => onNavigate(Number(mediaId))}
                         />
                     </motion.div>
@@ -75,8 +68,12 @@ export const HomeContinueWatchingSection = React.memo(function HomeContinueWatch
                 whileInView={{ opacity: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 1 }}
-                className="home-section relative py-20 bg-white/[0.015] border-y border-white/[0.03]"
+                className="home-section relative py-16 bg-gradient-to-b from-white/[0.015] to-transparent border-y border-white/[0.03] overflow-hidden"
             >
+                {/* Subtle section glow */}
+                <div className="absolute top-0 left-1/4 -translate-y-1/2 w-96 h-32 rounded-full bg-brand-orange/5 blur-[80px] pointer-events-none" />
+                <div className="absolute bottom-0 right-1/4 translate-y-1/2 w-96 h-32 rounded-full bg-blue-500/5 blur-[80px] pointer-events-none" />
+
                 <div className="space-y-12">
                     <SectionLabel icon={Zap} label="Seguir Viendo" index="01" />
                     <Swimlane
@@ -92,185 +89,5 @@ export const HomeContinueWatchingSection = React.memo(function HomeContinueWatch
 })
 HomeContinueWatchingSection.displayName = "HomeContinueWatchingSection"
 
-// ─── 2. Series ──────────────────────────────────────────────────────────────
-
-interface HomeSeriesSectionProps {
-    items: SwimlaneItem[]
-    onHover?: (url: string | null) => void
-}
-
-export const HomeSeriesSection = React.memo(function HomeSeriesSection({
-    items,
-    onHover,
-}: HomeSeriesSectionProps) {
-    if (items.length === 0) return null
-
-    return (
-        <ErrorBoundary>
-            <motion.div 
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1, ease: [0.23, 1, 0.32, 1] }}
-                className="home-section space-y-12 pt-20"
-            >
-                <SectionLabel icon={Tv} label="Series" index="COLL" />
-                <Swimlane
-                    title=""
-                    items={items}
-                    defaultAspect="poster"
-                    onHover={onHover}
-                />
-            </motion.div>
-        </ErrorBoundary>
-    )
-})
-HomeSeriesSection.displayName = "HomeSeriesSection"
-
-// ─── 3. Películas y Especiales ──────────────────────────────────────────────
-
-interface HomeMoviesSectionProps {
-    items: SwimlaneItem[]
-    onHover?: (url: string | null) => void
-}
-
-export const HomeMoviesSection = React.memo(function HomeMoviesSection({
-    items,
-    onHover,
-}: HomeMoviesSectionProps) {
-    if (items.length === 0) return null
-
-    return (
-        <ErrorBoundary>
-            <motion.div 
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1, ease: [0.23, 1, 0.32, 1] }}
-                className="home-section space-y-12 pt-20"
-            >
-                <SectionLabel icon={Film} label="Películas y Especiales" index="MOV" />
-                <Swimlane
-                    title=""
-                    items={items}
-                    defaultAspect="poster"
-                    onHover={onHover}
-                />
-            </motion.div>
-        </ErrorBoundary>
-    )
-})
-HomeMoviesSection.displayName = "HomeMoviesSection"
-
-// ─── 4. Añadido Recientemente (Bento Grid) ───────────────────────────────────
-
-interface HomeRecentBentoSectionProps {
-    items: BentoItem[]
-}
-
-export const HomeRecentBentoSection = React.memo(function HomeRecentBentoSection({
-    items,
-}: HomeRecentBentoSectionProps) {
-    if (items.length === 0) return null
-
-    return (
-        <ErrorBoundary className="px-0">
-            <motion.div 
-                initial={{ opacity: 0, scale: 0.98 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1.2, ease: [0.23, 1, 0.32, 1] }}
-                className="home-section space-y-16 py-24 bg-gradient-to-b from-primary/5 via-transparent to-transparent"
-            >
-                <SectionLabel icon={Sparkles} label="Nuevas Adiciones" index="NEW" />
-                <BentoRecentlyAdded items={items} />
-            </motion.div>
-        </ErrorBoundary>
-    )
-})
-HomeRecentBentoSection.displayName = "HomeRecentBentoSection"
 
 
-// ─── 6. Filtrado por Vibe (Dinámico) ──────────────────────────────────────────
-
-interface HomeVibeFilteredSectionProps {
-    vibe: string
-    items: SwimlaneItem[]
-    onHover?: (url: string | null) => void
-}
-
-const VIBE_METADATA: Record<string, { label: string, description: string }> = {
-    EPIC: { label: "Épico", description: "Historias legendarias, batallas memorables y momentos que definen épocas." },
-    CHILL: { label: "Chill", description: "Contenido para relajar el alma. Slice of life, música y comedia ligera." },
-    EMOTIONAL: { label: "Emocional", description: "Historias profundas que exploran la condición humana y el sentimiento." },
-    HYPED: { label: "Hype", description: "Acción desenfrenada, aventuras épicas y adrenalina pura en cada episodio." },
-    INTENSE: { label: "Intenso", description: "Suspenso psicológico, terror y thrillers que desafiarán tus sentidos." },
-}
-
-export const HomeVibeFilteredSection = React.memo(function HomeVibeFilteredSection({
-    vibe,
-    items,
-    onHover,
-}: HomeVibeFilteredSectionProps) {
-    if (items.length === 0) return null
-
-    const meta = VIBE_METADATA[vibe] || { label: vibe, description: "Colección curada por vibe." }
-
-    return (
-        <ErrorBoundary>
-            <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.8 }}
-                className="home-section relative overflow-hidden"
-            >
-                {/* Reveal Mask Animation */}
-                <motion.div 
-                    initial={{ x: "-100%" }}
-                    animate={{ x: "100%" }}
-                    transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
-                    className="absolute inset-0 bg-primary z-50 pointer-events-none"
-                />
-
-                <motion.div
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.3, duration: 1, ease: [0.23, 1, 0.32, 1] }}
-                    className="space-y-12 py-24 bg-gradient-to-b from-primary/10 via-transparent to-transparent border-t border-white/5"
-                >
-                    <div className="px-6 md:px-12 lg:px-20 flex flex-col gap-6">
-                        <div className="flex items-center gap-4">
-                            <div className="h-[2px] w-16 bg-primary" />
-                            <span className="text-primary font-bold tracking-[0.4em] text-[0.7rem] uppercase">EXPLORA EL MOOD</span>
-                        </div>
-                        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8">
-                            <div className="space-y-4">
-                                <h2 className="text-7xl md:text-9xl font-bebas tracking-tighter text-white leading-none uppercase">
-                                    {meta.label}
-                                <span className="text-primary">.</span>
-                                </h2>
-                                <p className="max-w-3xl text-zinc-400 text-xl md:text-2xl font-light leading-relaxed">
-                                    {meta.description}
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-6 text-[0.7rem] font-bold tracking-[0.2em] text-white/10 uppercase pb-4">
-                                <span>{items.length} TÍTULOS</span>
-                                <div className="h-1 w-1 rounded-full bg-white/10" />
-                                <span>CURACIÓN IA</span>
-                            </div>
-                        </div>
-                    </div>
-                    <Swimlane
-                        title=""
-                        items={items}
-                        defaultAspect="poster"
-                        onHover={onHover}
-                        className="!py-0"
-                    />
-                </motion.div>
-            </motion.div>
-        </ErrorBoundary>
-    )
-})
-HomeVibeFilteredSection.displayName = "HomeVibeFilteredSection"

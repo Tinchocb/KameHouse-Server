@@ -1,33 +1,17 @@
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
-import { useGetContinuityWatchHistory } from "@/api/hooks/continuity.hooks"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import * as React from "react"
 import {
-    useContinueWatching,
     useHomeIntelligence,
-    useIntelligenceStore,
 } from "@/hooks/use-home-intelligence"
-import { DynamicBackdrop } from "@/components/shared/dynamic-backdrop"
-import { HeroBanner, HeroBannerSkeleton } from "@/components/ui/hero-banner"
-import { SwimlaneSkeleton } from "@/components/ui/swimlane"
+import { Skeleton } from "@/components/ui/skeleton"
 
-import { getTitle } from "./home.helpers"
 import { 
-    mapEpisodeToMediaCard, 
-    mapLibraryEntryToMediaCard,
-    mapToHeroItem
+    mapLibraryEntryToMediaCard
 } from "./home.mappers"
 import { ErrorBanner, EmptyState } from "./home.components"
-import {
-    HomeIntelligentSections,
-    HomeContinueWatchingSection,
-    HomeSeriesSection,
-    HomeMoviesSection,
-    HomeRecentBentoSection,
-    HomeVibeFilteredSection
-} from "./-home.sections"
-import { VibePicker } from "./-vibe-picker"
+import { MediaSpotlight } from "@/components/ui/media-spotlight"
 
 export const Route = createFileRoute("/home/")({
     component: HomePage,
@@ -36,13 +20,9 @@ export const Route = createFileRoute("/home/")({
 function HomePage() {
     const navigate = useNavigate()
     const { data: collection, isLoading: isCollectionLoading, error } = useGetLibraryCollection()
-    const { data: watchHistory } = useGetContinuityWatchHistory()
-    const { data: intelligenceData, isLoading: isIntelligenceLoading } = useHomeIntelligence()
-    const { data: cwData, isLoading: isCwLoading } = useContinueWatching()
-    const { setBackdropUrl } = useIntelligenceStore()
-    const [selectedVibe, setSelectedVibe] = React.useState<string | null>(null)
+    const { isLoading: isIntelligenceLoading } = useHomeIntelligence()
 
-    const isLoading = isCollectionLoading || isIntelligenceLoading || isCwLoading
+    const isLoading = isCollectionLoading || isIntelligenceLoading
 
     // ── Data Processing ────────────────────────────────────────────────────────
     
@@ -64,126 +44,42 @@ function HomePage() {
         [navigate, allEntries],
     )
 
-    const heroItems = React.useMemo(() => {
-        if (!collection?.continueWatchingList && !allEntries.length) return []
+    const spotlightItems = React.useMemo(() => {
+        if (!allEntries.length) return []
         
-        // Priority: Continue Watching episodes
-        const cwHero = (collection?.continueWatchingList ?? [])
-            .filter(ep => ep && ep.baseAnime)
-            .slice(0, 3)
-            .map(ep => mapToHeroItem(ep.baseAnime!, handleNavigate, ep.episodeMetadata?.summary))
-
-        if (cwHero.length > 0) return cwHero
-
-        // Fallback: Recent additions
-        return allEntries
-            .filter(entry => entry && entry.media)
-            .slice(0, 3)
-            .map(entry => mapToHeroItem(entry.media!, handleNavigate))
-    }, [collection, allEntries, handleNavigate])
-
-    const continueWatchingItems = React.useMemo(() => {
-        return (cwData || [])
-            .filter(entry => entry && entry.episode && entry.media)
-            .map(entry => 
-                mapEpisodeToMediaCard(entry.episode, entry.media, watchHistory, handleNavigate)
-            )
-    }, [cwData, watchHistory, handleNavigate])
-
-    const seriesItems = React.useMemo(() => {
-        return allEntries
-            .filter(e => e && e.media && e.media.format === "TV")
-            .map(e => mapLibraryEntryToMediaCard(e, handleNavigate))
-    }, [allEntries, handleNavigate])
-
-    const movieItems = React.useMemo(() => {
-        return allEntries
-            .filter(e => e && e.media && ["MOVIE", "OVA", "SPECIAL"].includes(e.media.format || ""))
-            .map(e => mapLibraryEntryToMediaCard(e, handleNavigate))
-    }, [allEntries, handleNavigate])
-
-    const bentoItems = React.useMemo(() => {
-        return allEntries
-            .filter(e => e && e.media)
-            .slice(0, 6)
-            .map(e => ({
-                id: `recent-${e.mediaId}`,
-                title: getTitle(e.media!),
-                image: e.media?.bannerImage || e.media?.posterImage || "",
-                year: e.media?.year ?? undefined,
-                rating: e.media?.score ?? undefined,
-                description: e.media?.description || "",
-                onClick: () => handleNavigate(e.mediaId),
-            }))
-    }, [allEntries, handleNavigate])
-
-    const vibeItems = React.useMemo(() => {
-        if (!selectedVibe || !intelligenceData?.swimlanes?.length) return []
-        // Collect all IntelligentEntry items across swimlanes, deduplicate by mediaId
         const seen = new Set<number>()
-        const filtered: ReturnType<typeof mapLibraryEntryToMediaCard>[] = []
-        for (const lane of intelligenceData.swimlanes) {
-            for (const entry of lane.entries || []) {
-                if (!entry?.media) continue
-                const vibe = entry.dominantVibe?.toUpperCase()
-                if (vibe !== selectedVibe) continue
-                if (seen.has(entry.media.id)) continue
-                seen.add(entry.media.id)
-                filtered.push(mapLibraryEntryToMediaCard(entry, handleNavigate))
-            }
-        }
-        return filtered
-    }, [intelligenceData, selectedVibe, handleNavigate])
+        const uniqueEntries = allEntries.filter(entry => {
+            if (!entry || !entry.media) return false
+            if (seen.has(entry.media.id)) return false
+            seen.add(entry.media.id)
+            return true
+        })
+
+        uniqueEntries.sort((a, b) => (b.media?.score || 0) - (a.media?.score || 0))
+
+        return uniqueEntries.map(entry => mapLibraryEntryToMediaCard(entry, handleNavigate))
+    }, [allEntries, handleNavigate])
 
     // ── Render Helpers ─────────────────────────────────────────────────────────
 
     if (error && !collection) return <ErrorBanner message="Hubo un problema al cargar tu biblioteca." />
-    if (isLoading && !heroItems.length) return <HomeSkeleton />
+    if (isLoading) return <HomeSkeleton />
     if (!isCollectionLoading && allEntries.length === 0) return <EmptyState />
 
     return (
         <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="relative min-h-screen bg-zinc-950 text-white overflow-x-hidden"
+            className="relative min-h-screen text-white overflow-x-hidden"
         >
-            <DynamicBackdrop />
-
             <div className="relative z-10 flex flex-col">
-                <HeroBanner items={heroItems} />
-
-                <div className="relative -mt-24 space-y-32 pb-40">
-                    <div className="space-y-12">
-                        <VibePicker 
-                            selectedVibe={selectedVibe} 
-                            onSelect={(vibe) => setSelectedVibe(vibe === selectedVibe ? null : vibe)}
+                <div className="relative pt-0 pb-12">
+                    {spotlightItems.length > 0 && (
+                        <MediaSpotlight 
+                            items={spotlightItems} 
+                            onNavigate={(item) => handleNavigate(Number(item.id.replace("media-", "")))} 
                         />
-                    </div>
-
-                    <AnimatePresence mode="wait">
-                        {selectedVibe ? (
-                            <HomeVibeFilteredSection 
-                                key={`vibe-${selectedVibe}`}
-                                vibe={selectedVibe} 
-                                items={vibeItems} 
-                                onHover={setBackdropUrl}
-                            />
-                        ) : (
-                            <motion.div 
-                                key="main-feed"
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -20 }}
-                                className="flex flex-col space-y-40"
-                            >
-                                <HomeContinueWatchingSection items={continueWatchingItems} onHover={setBackdropUrl} />
-                                <HomeRecentBentoSection items={bentoItems} />
-                                <HomeIntelligentSections swimlanes={intelligenceData?.swimlanes} onNavigate={handleNavigate} />
-                                <HomeSeriesSection items={seriesItems} onHover={setBackdropUrl} />
-                                <HomeMoviesSection items={movieItems} onHover={setBackdropUrl} />
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                    )}
                 </div>
             </div>
         </motion.div>
@@ -192,11 +88,31 @@ function HomePage() {
 
 function HomeSkeleton() {
     return (
-        <div className="min-h-screen bg-zinc-950 flex flex-col gap-32 overflow-hidden">
-            <HeroBannerSkeleton />
-            <div className="space-y-32">
-                <SwimlaneSkeleton aspect="wide" />
-                <SwimlaneSkeleton aspect="poster" />
+        <div className="min-h-screen bg-zinc-950 flex flex-col gap-8 p-6 md:p-12 lg:p-24 overflow-hidden animate-pulse">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch min-h-[500px]">
+                {/* Left side details skeleton */}
+                <div className="lg:col-span-8 bg-zinc-900/40 rounded-3xl min-h-[400px] p-8 flex flex-col justify-end space-y-4">
+                    <Skeleton className="h-6 w-32 bg-white/5 rounded-full" />
+                    <Skeleton className="h-16 w-3/4 bg-white/5 rounded-lg" />
+                    <Skeleton className="h-4 w-1/2 bg-white/5 rounded-lg" />
+                    <Skeleton className="h-20 w-full bg-white/5 rounded-lg" />
+                    <div className="flex gap-4">
+                        <Skeleton className="h-10 w-32 bg-white/5 rounded-full" />
+                        <Skeleton className="h-10 w-32 bg-white/5 rounded-full" />
+                    </div>
+                </div>
+                {/* Right side list skeleton */}
+                <div className="lg:col-span-4 flex flex-col gap-4">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                        <div key={i} className="flex items-center gap-4 p-3 bg-zinc-900/20 rounded-2xl border border-white/5">
+                            <Skeleton className="h-16 w-24 bg-white/5 rounded-lg shrink-0" />
+                            <div className="flex-1 space-y-2">
+                                <Skeleton className="h-5 w-2/3 bg-white/5 rounded" />
+                                <Skeleton className="h-3 w-1/2 bg-white/5 rounded" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
         </div>
     )

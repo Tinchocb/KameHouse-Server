@@ -552,6 +552,11 @@ func (s *IntelligenceService) GetCuratedSwimlanes(_ context.Context) (*CuratedHo
 		}
 	}
 
+	// 2.2 Dynamic Tag-based swimlanes (Tags with >= 50 episodes)
+	if tagLanes := s.BuildDynamicTagLanes(); len(tagLanes) > 0 {
+		resp.Swimlanes = append(resp.Swimlanes, tagLanes...)
+	}
+
 	// 3. Essential Cinema (Beautiful closing row focusing on Movies and OVAs)
 	if lane := s.buildEssentialCinemaLane(); lane != nil {
 		resp.Swimlanes = append(resp.Swimlanes, lane)

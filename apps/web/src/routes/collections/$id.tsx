@@ -5,7 +5,6 @@ import React, { useMemo, useRef } from "react"
 import { EmptyState } from "@/components/shared/empty-state"
 import { FaPlay, FaCalendar, FaTag, FaChevronLeft, FaStar, FaCheckCircle } from "react-icons/fa"
 import { cn } from "@/components/ui/core/styling"
-import { DynamicBackdrop } from "@/components/shared/dynamic-backdrop"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
 import gsap from "gsap"
 import { useGSAP } from "@gsap/react"
@@ -74,7 +73,7 @@ function CollectionDetailPage() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-[#09090b] text-white flex flex-col items-center justify-center">
+            <div className="min-h-screen bg-transparent text-white flex flex-col items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-12 h-12 border-2 border-white/10 border-t-white rounded-full animate-spin" />
                     <span className="text-[10px] font-black tracking-[0.4em] uppercase text-zinc-500">Cargando Cronología...</span>
@@ -85,7 +84,7 @@ function CollectionDetailPage() {
 
     if (error || !collection) {
         return (
-            <div className="min-h-screen bg-[#09090b] text-white flex items-center justify-center p-6">
+            <div className="min-h-screen bg-transparent text-white flex items-center justify-center p-6">
                 <EmptyState
                     title="Saga no encontrada"
                     message="No pudimos localizar los datos de la saga seleccionada. Intenta recargar o vuelve al catálogo de sagas."
@@ -107,8 +106,7 @@ function CollectionDetailPage() {
     const partCount = sortedParts.length
 
     return (
-        <div ref={containerRef} className="min-h-screen bg-[#09090b] text-white flex flex-col w-full relative overflow-x-hidden pb-32">
-            <DynamicBackdrop />
+        <div ref={containerRef} className="min-h-screen bg-transparent text-white flex flex-col w-full relative overflow-x-hidden pb-32">
 
             {/* Back Button */}
             <button
@@ -128,7 +126,7 @@ function CollectionDetailPage() {
                             alt={collection.name}
                             className="w-full h-full object-cover object-center opacity-25 grayscale select-none pointer-events-none"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#09090b] via-[#09090b]/80 to-transparent" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
                     </div>
                 )}
 

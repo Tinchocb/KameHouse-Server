@@ -143,8 +143,8 @@ export function DynamicBackdrop() {
 
             {/* ── Vignette stack — ensures text is always legible ───────── */}
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_120%_80%_at_50%_0%,rgba(255,255,255,0.04),transparent_60%)]" />
-            <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/40 to-transparent opacity-90" />
-            <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent opacity-100" />
+            <div className="absolute inset-0 bg-gradient-to-r from-background via-background/40 to-transparent opacity-90" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-100" />
         </div>
     )
 }

@@ -44,7 +44,7 @@ function CollectionsPage() {
     }
 
     return (
-        <div className="flex-1 w-full min-h-screen bg-[#09090b] text-white overflow-hidden font-sans selection:bg-primary/30">
+        <div className="flex-1 w-full min-h-screen bg-transparent text-white overflow-hidden font-sans selection:bg-primary/30">
             {/* Page Header */}
             <HeroSection
                 title={<>SAGAS<br /><span className="text-transparent stroke-text opacity-20">UNIFICADAS</span></>}
@@ -56,7 +56,7 @@ function CollectionsPage() {
             />
 
             {/* Controls */}
-            <div className="sticky top-0 z-30 bg-[#09090b]/80 border-b border-white/[0.04] backdrop-blur-2xl">
+            <div className="sticky top-0 z-30 bg-[#0b0f19]/80 border-b border-white/[0.04] backdrop-blur-2xl">
                 <div className="px-8 md:px-16 py-3 flex flex-wrap gap-4 items-center justify-between">
                     {/* Search */}
                     <div className="relative group">

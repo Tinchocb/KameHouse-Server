@@ -73,6 +73,7 @@ export interface PlayerCore {
         showNextEpisode: boolean
         countdownSeconds: number
         marathonMode: boolean
+        tvMode: boolean
         remainingProgress: number
         audioTracks: AudioTrack[]
         activeAudioIndex: number
@@ -134,6 +135,7 @@ export interface PlayerCore {
         setLoopEnabled: (val: boolean) => void
         setAmbilightEnabled: (val: boolean) => void
         setMarathonMode: (val: boolean) => void
+        setTvMode: (val: boolean) => void
         handleResume: () => void
         setShowResume: (val: boolean) => void
         setAutoDisableSubtitlesWhenDubbed: (val: boolean) => void
@@ -231,6 +233,8 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const autoDisableSubtitlesWhenDubbed = useAppStore(state => state.autoDisableSubtitlesWhenDubbed)
     const marathonMode = useAppStore(state => state.marathonMode)
     const setMarathonMode = useAppStore(state => state.setMarathonMode)
+    const tvMode = useAppStore(state => state.tvMode)
+    const setTvMode = useAppStore(state => state.setTvMode)
     const ambilightEnabled = useAppStore(state => state.ambilightEnabled)
     const setAmbilightEnabled = useAppStore(state => state.setAmbilightEnabled)
 
@@ -693,6 +697,15 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         }
     }, [setMarathonMode, showNextEpisode, countdownSeconds, onNextEpisode])
 
+    const handleSetTvMode = useCallback((val: boolean) => {
+        setTvMode(val)
+        if (val) {
+            setAutoSkipIntro(true)
+            setAutoSkipOutro(true)
+            setMarathonMode(true)
+        }
+    }, [setTvMode, setAutoSkipIntro, setAutoSkipOutro, setMarathonMode])
+
     useEffect(() => {
         const video = videoRef.current
         if (video) {
@@ -962,9 +975,16 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
 
     useEffect(() => {
         if (showNextEpisode && countdownSeconds > 0 && isPlaying) {
-            nextEpisodeTimerRef.current = setTimeout(() => {
-                setCountdownSeconds((c) => c - 1)
-            }, 1000)
+            if (tvMode && onNextEpisode) {
+                if (!hasTriggeredNextEpisodeRef.current) {
+                    hasTriggeredNextEpisodeRef.current = true
+                    onNextEpisode()
+                }
+            } else {
+                nextEpisodeTimerRef.current = setTimeout(() => {
+                    setCountdownSeconds((c) => c - 1)
+                }, 1000)
+            }
         } else if (showNextEpisode && countdownSeconds === 0 && marathonMode && onNextEpisode) {
             if (!hasTriggeredNextEpisodeRef.current) {
                 hasTriggeredNextEpisodeRef.current = true
@@ -975,7 +995,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         return () => {
             if (nextEpisodeTimerRef.current) clearTimeout(nextEpisodeTimerRef.current)
         }
-    }, [showNextEpisode, countdownSeconds, isPlaying, marathonMode, onNextEpisode])
+    }, [showNextEpisode, countdownSeconds, isPlaying, marathonMode, tvMode, onNextEpisode])
 
     const remainingProgress = useMemo(() => {
         return (countdownSeconds / 10) * 100
@@ -998,7 +1018,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             timeTextElement: timeTextRef,
         },
         state: {
-            isPlaying, duration, volume, isMuted, isFullscreen, controlsVisible, status, errorMsg, isBuffering, flash, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, countdownSeconds, marathonMode, audioTracks, activeAudioIndex, subtitleTracks, activeSubtitleIndex, isJassubLoading, isJassubActive, isSettingsOpen, remainingProgress, showAutoSkipToast,
+            isPlaying, duration, volume, isMuted, isFullscreen, controlsVisible, status, errorMsg, isBuffering, flash, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, countdownSeconds, marathonMode, tvMode, audioTracks, activeAudioIndex, subtitleTracks, activeSubtitleIndex, isJassubLoading, isJassubActive, isSettingsOpen, remainingProgress, showAutoSkipToast,
             autoSkipIntro: autoSkipIntroPref,
             autoSkipOutro: autoSkipOutroPref,
             playbackRate: playbackRatePref,
@@ -1032,6 +1052,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             setLoopEnabled: setLoopEnabledPref,
             setAmbilightEnabled,
             setMarathonMode: handleSetMarathonMode,
+            setTvMode: handleSetTvMode,
             handleResume,
             setShowResume,
             setAutoDisableSubtitlesWhenDubbed: (val: boolean) => { useAppStore.setState(s => ({ ...s, autoDisableSubtitlesWhenDubbed: val })) },

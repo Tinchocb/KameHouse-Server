@@ -91,6 +91,9 @@ export interface PlayerBottomBarProps {
     marathonMode?: boolean
     onMarathonModeChange?: (enabled: boolean) => void
 
+    tvMode?: boolean
+    onTvModeChange?: (enabled: boolean) => void
+
     /** AniSkip intervals for rendering visual markers on the timeline */
     skipTimesOp?: { startTime: number; endTime: number }
     skipTimesEd?: { startTime: number; endTime: number }
@@ -125,6 +128,7 @@ export function PlayerBottomBar({
     autoDisableSubtitlesWhenDubbed = true, onAutoDisableSubtitlesWhenDubbedChange,
     ambilightEnabled = true, onAmbilightChange,
     marathonMode = true, onMarathonModeChange,
+    tvMode = false, onTvModeChange,
     skipTimesOp,
     skipTimesEd,
     chapters = [],
@@ -371,6 +375,8 @@ export function PlayerBottomBar({
                         onAmbilightChange={onAmbilightChange}
                         marathonMode={marathonMode}
                         onMarathonModeChange={onMarathonModeChange}
+                        tvMode={tvMode}
+                        onTvModeChange={onTvModeChange}
                     />
 
                     {/* Fullscreen */}

@@ -73,13 +73,17 @@ export function SectionLabel({
                         <span className="text-[0.6rem] font-black uppercase tracking-[0.35em] text-zinc-500 group-hover/label:text-zinc-400 transition-colors duration-300">
                             DESCUBRE
                         </span>
+                        <span className="relative flex h-1.5 w-1.5 -ml-1">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-orange/60 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-brand-orange"></span>
+                        </span>
                     </div>
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-1.5">
                         <h2 className="text-3xl md:text-4xl font-bebas tracking-wide text-white/95 leading-[0.9] group-hover/label:text-white transition-colors duration-300 uppercase">
                             {label}
                         </h2>
-                        {/* Dynamic underlining micro-animation */}
-                        <div className="h-[2px] w-8 bg-brand-orange/20 rounded-full group-hover/label:w-full group-hover/label:bg-brand-orange/60 transition-all duration-500 ease-out" />
+                        {/* Dynamic gradient underlining micro-animation */}
+                        <div className="h-[2px] w-8 bg-gradient-to-r from-brand-orange/30 to-transparent rounded-full group-hover/label:w-full group-hover/label:from-brand-orange/70 transition-all duration-500 ease-out" />
                     </div>
                 </div>
             </div>

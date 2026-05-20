@@ -18,7 +18,7 @@ const HorizontalDraggableScrollAnatomy = defineStyleAnatomy({
         "flex max-w-full w-full overflow-x-scroll scrollbar-hide scroll select-none",
     ]),
     chevronOverlay: cva([
-        "flex flex-none items-center justify-center cursor-pointer hover:text-white absolute bg-gradient-to-r from-zinc-950 z-40",
+        "flex flex-none items-center justify-center cursor-pointer absolute z-40 group/chevron",
         "h-full w-24 opacity-90 hover:opacity-100 transition-all duration-500",
         "data-[state=hidden]:opacity-0 data-[state=hidden]:pointer-events-none",
         "data-[state=visible]:animate-in data-[state=hidden]:animate-out",
@@ -28,8 +28,8 @@ const HorizontalDraggableScrollAnatomy = defineStyleAnatomy({
     ], {
         variants: {
             side: {
-                left: "left-0 bg-gradient-to-r rounded-none",
-                right: "right-0 bg-gradient-to-l rounded-none",
+                left: "left-0 bg-gradient-to-r from-background via-background/60 to-transparent rounded-none",
+                right: "right-0 bg-gradient-to-l from-background via-background/60 to-transparent rounded-none",
             },
         },
     }),
@@ -37,7 +37,9 @@ const HorizontalDraggableScrollAnatomy = defineStyleAnatomy({
         "flex max-w-full w-full space-x-3 overflow-x-scroll scrollbar-hide scroll select-none",
     ]),
     chevronIcon: cva([
-        "w-7 h-7 stroke-2 mx-auto",
+        "w-12 h-12 stroke-[2.5px] p-3 rounded-full bg-zinc-950/70 text-white/80 border border-white/10 shadow-lg",
+        "backdrop-blur-md transition-all duration-300",
+        "group-hover/chevron:bg-brand-orange group-hover/chevron:text-white group-hover/chevron:border-brand-orange group-hover/chevron:scale-110 group-hover/chevron:shadow-[0_0_15px_rgba(255,110,58,0.4)]",
     ]),
 
 })

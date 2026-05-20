@@ -22,6 +22,7 @@ export interface MediaCardProps {
     onClick?: () => void
     className?: string
     layoutId?: string
+    onPopupOpenChange?: (isOpen: boolean) => void
 }
 
 export const MediaCard = React.memo(function MediaCard({
@@ -38,6 +39,7 @@ export const MediaCard = React.memo(function MediaCard({
     onClick,
     className,
     layoutId,
+    onPopupOpenChange,
 }: MediaCardProps) {
     const isPoster = aspect === "poster"
     const [isHovered, setIsHovered] = React.useState(false)
@@ -51,8 +53,9 @@ export const MediaCard = React.memo(function MediaCard({
         // Debounce hover activation by 350ms to verify "hover intent" (Netflix style)
         hoverTimeoutRef.current = setTimeout(() => {
             setShowPopup(true)
+            onPopupOpenChange?.(true)
         }, 350)
-    }, [])
+    }, [onPopupOpenChange])
 
     const handleMouseLeave = React.useCallback(() => {
         setIsHovered(false)
@@ -61,7 +64,8 @@ export const MediaCard = React.memo(function MediaCard({
             hoverTimeoutRef.current = null
         }
         setShowPopup(false)
-    }, [])
+        onPopupOpenChange?.(false)
+    }, [onPopupOpenChange])
 
     React.useEffect(() => {
         return () => {
@@ -82,112 +86,106 @@ export const MediaCard = React.memo(function MediaCard({
         <div
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
-            className="relative shrink-0 select-none"
+            className={cn(
+                "relative shrink-0 select-none transition-all duration-300",
+                isPoster
+                    ? "aspect-[2/3] w-[160px] md:w-[200px] lg:w-[240px]"
+                    : "aspect-[16/9] w-[280px] md:w-[380px] lg:w-[440px]"
+            )}
         >
-            {/* ─── Base Card ────────────────────────────────────────── */}
             <motion.div
-                layoutId={layoutId}
+                layout
                 onClick={onClick}
                 className={cn(
-                    "group relative cursor-pointer overflow-hidden bg-zinc-900/40 border border-white/5",
-                    "transition-all duration-500 [transition-timing-function:cubic-bezier(0.23,1,0.32,1)]",
-                    isPoster
-                        ? "aspect-[2/3] w-[160px] md:w-[200px] lg:w-[240px] rounded-xl"
-                        : "aspect-[16/9] w-[280px] md:w-[380px] lg:w-[440px] rounded-2xl",
-                    showPopup ? "opacity-0 scale-95 pointer-events-none" : "opacity-100 scale-100",
-                    className
+                    "absolute top-0 left-0 overflow-hidden flex flex-col origin-top",
+                    "transition-all duration-300 ease-out",
+                    showPopup
+                        ? cn(
+                              "z-[100] bg-zinc-950/95 backdrop-blur-xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.85)]",
+                              isPoster
+                                  ? "-top-[12%] -left-[12.5%] w-[125%] h-[135%] rounded-2xl"
+                                  : "-top-[15%] -left-[10%] w-[120%] h-[135%] rounded-2xl"
+                          )
+                        : cn(
+                              "z-10 w-full h-full bg-zinc-900/40 border border-white/5 hover:border-brand-orange/30 hover:shadow-[0_0_20px_rgba(255,110,58,0.15)] shadow-md group cursor-pointer",
+                              isPoster ? "rounded-xl" : "rounded-2xl"
+                          )
                 )}
             >
-                {/* Artwork */}
-                <div className="absolute inset-0 z-0">
+                {/* Glowing effect inside expanded card */}
+                {showPopup && (
+                    <GlowingEffect glow={true} blur={8} spread={40} disabled={false} borderWidth={1.5} className="opacity-30 pointer-events-none" />
+                )}
+
+                {/* Artwork Container */}
+                <div className={cn("relative w-full overflow-hidden transition-all duration-300 shrink-0", showPopup ? "aspect-[16/9]" : "h-full")}>
                     <DeferredImage
                         src={getHighResImage(artwork)}
                         alt={title}
-                        className="h-full w-full object-cover transition-transform duration-1000 [transition-timing-function:cubic-bezier(0.23,1,0.32,1)] group-hover:scale-105"
+                        className="h-full w-full object-cover transition-transform duration-1000 [transition-timing-function:cubic-bezier(0.23,1,0.32,1)] group-hover:scale-[1.08]"
                     />
+                    
                     {/* Shadow Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/35 to-transparent opacity-95" />
-                </div>
+                    <div className={cn(
+                        "absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent transition-opacity duration-500",
+                        showPopup ? "opacity-100" : "opacity-75 group-hover:opacity-85"
+                    )} />
 
-                {/* Episode/Saga Badge */}
-                {episodeNumber !== undefined && (
-                    <div className="absolute top-0 left-0 z-20">
-                        <div className="bg-zinc-950/70 backdrop-blur-md text-zinc-300 border-r border-b border-white/10 px-3 py-1.5 rounded-br-xl font-black text-[10px] tracking-[0.15em] uppercase flex items-center gap-1 shadow-md">
-                            <span>EP</span>
-                            <span className="text-brand-orange">{episodeNumber}</span>
-                        </div>
-                    </div>
-                )}
-
-                {/* Static Text Content */}
-                <div className="absolute inset-0 z-10 flex flex-col justify-end p-4 md:p-5">
-                    <div className="space-y-1">
-                        <h3 className="font-bebas text-lg md:text-xl leading-none tracking-wide text-white line-clamp-1">
-                            {title}
-                        </h3>
-                        {subtitle && (
-                            <p className="text-[9px] font-black uppercase tracking-[0.15em] text-white/35 line-clamp-1">
-                                {subtitle}
-                            </p>
-                        )}
-                    </div>
-                </div>
-
-                {/* Progress bar */}
-                {progress !== undefined && (
-                    <div className="absolute inset-x-0 bottom-0 z-20 h-1 bg-white/10">
-                        <div
-                            className="h-full bg-brand-orange shadow-[0_0_8px_rgba(255,110,58,0.5)]"
-                            style={{ width: `${progress}%` }}
-                        />
-                    </div>
-                )}
-            </motion.div>
-
-            {/* ─── Premium Netflix-Style Hover Popup ────────────────── */}
-            <AnimatePresence>
-                {showPopup && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                        animate={{ opacity: 1, scale: 1.06, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                        transition={{ type: "spring", damping: 25, stiffness: 220 }}
-                        onClick={onClick}
-                        className={cn(
-                            "absolute z-[100] cursor-pointer overflow-hidden",
-                            "bg-zinc-950/95 backdrop-blur-xl border border-white/10 rounded-2xl",
-                            "shadow-[0_20px_50px_rgba(0,0,0,0.85)]",
-                            isPoster
-                                ? "-top-[12%] -left-[12.5%] w-[125%] aspect-[2/3.3] min-h-[300px]"
-                                : "-top-[15%] -left-[10%] w-[120%] aspect-[16/11] min-h-[220px]"
-                        )}
-                    >
-                        {/* Glowing effect inside card */}
-                        <GlowingEffect glow={true} blur={8} spread={40} disabled={false} borderWidth={1.5} className="opacity-30" />
-
-                        {/* Banner Image */}
-                        <div className="relative w-full aspect-[16/9] overflow-hidden">
-                            <DeferredImage
-                                src={getHighResImage(artwork)}
-                                alt={title}
-                                className="h-full w-full object-cover"
+                    {/* Glass sheen sweep */}
+                    {!showPopup && (
+                        <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden rounded-[inherit]">
+                            <motion.div 
+                                initial={{ x: "-150%" }}
+                                animate={isHovered ? { x: "150%" } : { x: "-150%" }}
+                                transition={{ duration: 0.9, ease: [0.25, 1, 0.5, 1] }}
+                                className="w-1/3 h-full bg-gradient-to-r from-transparent via-white/15 to-transparent -skew-x-12 absolute inset-y-0"
                             />
-                            {/* Backdrop shadow gradient */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent" />
-                            
-                            {/* Fast Play Action Indicator */}
-                            <div className="absolute bottom-3 left-4 flex items-center gap-2">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-orange text-white shadow-lg hover:scale-110 hover:shadow-brand-orange/20 active:scale-95 transition-all duration-300 cursor-pointer">
-                                    <Play size={15} fill="currentColor" className="ml-0.5" />
-                                </div>
-                                <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-zinc-900/60 backdrop-blur-md text-zinc-300 hover:text-white hover:bg-zinc-800/80 hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer">
-                                    <Plus size={15} />
-                                </div>
+                        </div>
+                    )}
+
+                    {/* Episode/Saga Badge */}
+                    {episodeNumber !== undefined && (
+                        <div className="absolute top-0 left-0 z-20">
+                            <div className="bg-zinc-950/70 backdrop-blur-md text-zinc-300 border-r border-b border-white/10 px-3 py-1.5 rounded-br-xl font-black text-[10px] tracking-[0.15em] uppercase flex items-center gap-1 shadow-md">
+                                <span>EP</span>
+                                <span className="text-brand-orange">{episodeNumber}</span>
                             </div>
                         </div>
+                    )}
 
-                        {/* Extended Details Body */}
-                        <div className="p-4 space-y-2 select-none">
+                    {/* Quick Play Action Indicator */}
+                    {showPopup && (
+                        <div className="absolute bottom-3 left-4 z-20 flex items-center gap-2">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-orange text-white shadow-lg hover:scale-110 hover:shadow-brand-orange/20 active:scale-95 transition-all duration-300 cursor-pointer">
+                                <Play size={15} fill="currentColor" className="ml-0.5" />
+                            </div>
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-zinc-900/60 backdrop-blur-md text-zinc-300 hover:text-white hover:bg-zinc-800/80 hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer">
+                                <Plus size={15} />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Static Text Content (only when not popped up) */}
+                    {!showPopup && (
+                        <div className="absolute inset-0 z-10 flex flex-col justify-end p-4 md:p-5 transition-transform duration-500 ease-out group-hover:translate-y-[-2px]">
+                            <div className="space-y-1.5">
+                                <h3 className="font-bebas text-lg md:text-xl leading-none tracking-wide text-white line-clamp-1">
+                                    {title}
+                                </h3>
+                                {subtitle && (
+                                    <p className="text-[9px] font-black uppercase tracking-[0.15em] text-white/40 group-hover:text-white/60 transition-colors duration-500 line-clamp-1">
+                                        {subtitle}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Extended Details Body (only when popped up) */}
+                {showPopup && (
+                    <div className="flex-1 p-4 space-y-2 select-none flex flex-col justify-between overflow-hidden bg-zinc-950/90">
+                        <div className="space-y-2">
                             <h3 className="font-bebas text-xl md:text-2xl leading-none text-white uppercase tracking-wide line-clamp-1">
                                 {title}
                             </h3>
@@ -229,19 +227,19 @@ export const MediaCard = React.memo(function MediaCard({
                                 </p>
                             )}
                         </div>
-
-                        {/* Progress Bar inside Popup */}
-                        {progress !== undefined && (
-                            <div className="absolute inset-x-0 bottom-0 h-1 bg-white/10 z-20">
-                                <div
-                                    className="h-full bg-brand-orange shadow-[0_0_8px_rgba(255,110,58,0.5)]"
-                                    style={{ width: `${progress}%` }}
-                                />
-                            </div>
-                        )}
-                    </motion.div>
+                    </div>
                 )}
-            </AnimatePresence>
+
+                {/* Progress Bar */}
+                {progress !== undefined && (
+                    <div className="absolute inset-x-0 bottom-0 z-20 h-1 bg-white/10">
+                        <div
+                            className="h-full bg-brand-orange shadow-[0_0_8px_rgba(255,110,58,0.5)]"
+                            style={{ width: `${progress}%` }}
+                        />
+                    </div>
+                )}
+            </motion.div>
         </div>
     )
 })

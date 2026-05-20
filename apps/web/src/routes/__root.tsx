@@ -14,15 +14,18 @@ import { PageTransition } from "@/components/shared/page-transition"
 import { WebsocketProvider } from "@/app/websocket-provider"
 import { FaBars } from "react-icons/fa"
 import { useAppStore } from "@/lib/store"
+import { DynamicBackdrop } from "@/components/shared/dynamic-backdrop"
 
 function RootComponent() {
     const routerState = useRouterState()
+    const isHome = routerState.location.pathname.startsWith("/home")
     return (
         <AppLayout>
+            <DynamicBackdrop />
             <WebsocketProvider>
                 <AppSidebar />
                 <CommandPalette />
-                <AppLayoutContent className="md:pl-24">
+                <AppLayoutContent className={isHome ? "" : "md:pl-24"}>
                     {/* Mobile Menu Trigger */}
                     <button 
                         onClick={() => useAppStore.getState().setSidebarOpen(true)}

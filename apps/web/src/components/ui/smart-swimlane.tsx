@@ -51,6 +51,7 @@ export interface SmartSwimlaneProps {
     onNavigate: (mediaId: string) => void
     /** Show posters instead of wide backdrops for "local_library" type lanes */
     aspect?: "poster" | "wide"
+    index?: number | string
 }
 
 import { 
@@ -74,10 +75,12 @@ import {
     Globe,
     Wand2,
     HeartCrack,
+    Smile,
+    ShieldAlert,
 } from "lucide-react"
 import { SectionLabel } from "@/routes/home/home.components"
 
-const LANE_ICONS: Record<string, any> = {
+export const LANE_ICONS: Record<string, any> = {
     // Existing lanes
     epic_moments: Play,
     essential_cinema: Award,
@@ -104,9 +107,24 @@ const LANE_ICONS: Record<string, any> = {
     trunks_del_futuro: Clock,
     torneo_poder: Trophy,
     torneo_poder_super: Trophy,
+    // Dynamic tag lanes (>= 50 episodes)
+    tag_super_saiyajin: Flame,
+    tag_batalla_epica: Swords,
+    tag_fusion_de_guerreros: Users,
+    tag_busqueda_de_las_esferas: Sparkles,
+    tag_mundo_de_los_demonios: Wand2,
+    tag_entrenamiento_extremo: Sword,
+    tag_viajes_en_el_tiempo: Clock,
+    tag_la_patrulla_roja: ShieldAlert,
+    tag_dioses_de_la_destruccion: Globe,
+    tag_nuevas_generaciones: Users,
+    tag_vida_cotidiana: Heart,
+    tag_humor_y_relleno: Smile,
+    tag_tecnicas_de_ki: Zap,
+    tag_tecnicas_letales: Swords,
 }
 
-export const SmartSwimlane = React.memo(function SmartSwimlane({ lane, onNavigate, aspect }: SmartSwimlaneProps) {
+export const SmartSwimlane = React.memo(function SmartSwimlane({ lane, onNavigate, aspect, index }: SmartSwimlaneProps) {
     const { setBackdropUrl } = useIntelligenceStore()
 
     const resolvedAspect = aspect ?? (lane.type === "local_library" ? "poster" : "wide")
@@ -190,7 +208,7 @@ export const SmartSwimlane = React.memo(function SmartSwimlane({ lane, onNavigat
 
     return (
         <div className="space-y-4">
-            <SectionLabel icon={Icon} label={lane.title} />
+            <SectionLabel icon={Icon} label={lane.title} index={index} />
             <Swimlane
                 title=""
                 items={items}

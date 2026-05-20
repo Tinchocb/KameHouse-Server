@@ -19,6 +19,8 @@ interface PlaybackSettingsProps {
     onAmbilightChange?: (enabled: boolean) => void
     marathonMode?: boolean
     onMarathonModeChange?: (enabled: boolean) => void
+    tvMode?: boolean
+    onTvModeChange?: (enabled: boolean) => void
     showSeparator?: boolean
 }
 
@@ -69,6 +71,8 @@ export function PlaybackSettings({
     onAmbilightChange = () => {},
     marathonMode = true,
     onMarathonModeChange = () => {},
+    tvMode = false,
+    onTvModeChange = () => {},
     showSeparator = true,
 }: PlaybackSettingsProps) {
     return (
@@ -106,6 +110,7 @@ export function PlaybackSettings({
                 <FastForward className="w-3.5 h-3.5 text-zinc-600" />
                 <span className="text-[9px] font-black uppercase tracking-[0.4em] text-zinc-600">Skip Automático</span>
             </div>
+            <ToggleRow label="Modo TV (Reproducción Continua)" enabled={tvMode} onChange={onTvModeChange} />
             <ToggleRow label="Saltar Intro Automáticamente" enabled={autoSkipIntro} onChange={onAutoSkipIntroChange} />
             <ToggleRow label="Saltar Outro Automáticamente" enabled={autoSkipOutro} onChange={onAutoSkipOutroChange} />
             <ToggleRow label="Modo Maratón (Auto-Next al terminar)" enabled={marathonMode} onChange={onMarathonModeChange} />

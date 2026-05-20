@@ -59,6 +59,8 @@ export function PlayerSettingsMenu({
     onAmbilightChange,
     marathonMode = true,
     onMarathonModeChange,
+    tvMode = false,
+    onTvModeChange,
 }: PlayerSettingsMenuProps) {
     const [internalOpen, setInternalOpen] = React.useState(false)
     const [view, setView] = React.useState<SettingsView>("main")
@@ -356,6 +358,8 @@ export function PlayerSettingsMenu({
                                     onAmbilightChange={onAmbilightChange ?? (() => {})}
                                     marathonMode={marathonMode}
                                     onMarathonModeChange={onMarathonModeChange ?? (() => {})}
+                                    tvMode={tvMode}
+                                    onTvModeChange={onTvModeChange}
                                     showSeparator={false}
                                 />
                             </SettingsLayout>

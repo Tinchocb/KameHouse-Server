@@ -299,6 +299,8 @@ export function PlayerUI(props: PlayerUIProps) {
                     onAmbilightChange={actions.setAmbilightEnabled}
                     marathonMode={state.marathonMode}
                     onMarathonModeChange={actions.setMarathonMode}
+                    tvMode={state.tvMode}
+                    onTvModeChange={actions.setTvMode}
                     onNextEpisode={onNextEpisode}
                     skipTimesOp={state.skipTimesOp}
                     skipTimesEd={state.skipTimesEd}

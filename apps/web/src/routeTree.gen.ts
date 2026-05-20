@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
-import { Route as SeriesIndexRouteImport } from './routes/series/index'
 import { Route as MoviesIndexRouteImport } from './routes/movies/index'
 import { Route as HomeIndexRouteImport } from './routes/home/index'
 import { Route as CollectionsIndexRouteImport } from './routes/collections/index'
@@ -22,11 +21,6 @@ import { Route as SeriesSeriesIdSagaIdRouteImport } from './routes/series/$serie
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
   id: '/settings/',
   path: '/settings/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SeriesIndexRoute = SeriesIndexRouteImport.update({
-  id: '/series/',
-  path: '/series/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MoviesIndexRoute = MoviesIndexRouteImport.update({
@@ -71,7 +65,6 @@ export interface FileRoutesByFullPath {
   '/collections/': typeof CollectionsIndexRoute
   '/home/': typeof HomeIndexRoute
   '/movies/': typeof MoviesIndexRoute
-  '/series/': typeof SeriesIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/series/$seriesId/$sagaId': typeof SeriesSeriesIdSagaIdRoute
   '/series/$seriesId/': typeof SeriesSeriesIdIndexRoute
@@ -82,7 +75,6 @@ export interface FileRoutesByTo {
   '/collections': typeof CollectionsIndexRoute
   '/home': typeof HomeIndexRoute
   '/movies': typeof MoviesIndexRoute
-  '/series': typeof SeriesIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/series/$seriesId/$sagaId': typeof SeriesSeriesIdSagaIdRoute
   '/series/$seriesId': typeof SeriesSeriesIdIndexRoute
@@ -94,7 +86,6 @@ export interface FileRoutesById {
   '/collections/': typeof CollectionsIndexRoute
   '/home/': typeof HomeIndexRoute
   '/movies/': typeof MoviesIndexRoute
-  '/series/': typeof SeriesIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/series/$seriesId/$sagaId': typeof SeriesSeriesIdSagaIdRoute
   '/series/$seriesId/': typeof SeriesSeriesIdIndexRoute
@@ -107,7 +98,6 @@ export interface FileRouteTypes {
     | '/collections/'
     | '/home/'
     | '/movies/'
-    | '/series/'
     | '/settings/'
     | '/series/$seriesId/$sagaId'
     | '/series/$seriesId/'
@@ -118,7 +108,6 @@ export interface FileRouteTypes {
     | '/collections'
     | '/home'
     | '/movies'
-    | '/series'
     | '/settings'
     | '/series/$seriesId/$sagaId'
     | '/series/$seriesId'
@@ -129,7 +118,6 @@ export interface FileRouteTypes {
     | '/collections/'
     | '/home/'
     | '/movies/'
-    | '/series/'
     | '/settings/'
     | '/series/$seriesId/$sagaId'
     | '/series/$seriesId/'
@@ -141,7 +129,6 @@ export interface RootRouteChildren {
   CollectionsIndexRoute: typeof CollectionsIndexRoute
   HomeIndexRoute: typeof HomeIndexRoute
   MoviesIndexRoute: typeof MoviesIndexRoute
-  SeriesIndexRoute: typeof SeriesIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
   SeriesSeriesIdSagaIdRoute: typeof SeriesSeriesIdSagaIdRoute
   SeriesSeriesIdIndexRoute: typeof SeriesSeriesIdIndexRoute
@@ -154,13 +141,6 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings/'
       preLoaderRoute: typeof SettingsIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/series/': {
-      id: '/series/'
-      path: '/series'
-      fullPath: '/series/'
-      preLoaderRoute: typeof SeriesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/movies/': {
@@ -221,7 +201,6 @@ const rootRouteChildren: RootRouteChildren = {
   CollectionsIndexRoute: CollectionsIndexRoute,
   HomeIndexRoute: HomeIndexRoute,
   MoviesIndexRoute: MoviesIndexRoute,
-  SeriesIndexRoute: SeriesIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
   SeriesSeriesIdSagaIdRoute: SeriesSeriesIdSagaIdRoute,
   SeriesSeriesIdIndexRoute: SeriesSeriesIdIndexRoute,

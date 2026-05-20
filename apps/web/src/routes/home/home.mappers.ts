@@ -57,6 +57,14 @@ export function mapLibraryEntryToMediaCard(
     }
 }
 
+const TRAILER_MAPPINGS: Record<string, string> = {
+    "dragon ball": "XVn-J0rJ1eY",
+    "dragon ball z": "sU149S_d33M",
+    "dragon ball gt": "HkApq7k5K3M",
+    "dragon ball super": "tLs51Lku0z8",
+    "dragon ball daima": "2Sg0B5tY9Bw",
+}
+
 /**
  * Maps an entry to HeroBannerItem.
  */
@@ -65,6 +73,16 @@ export function mapToHeroItem(
     onNavigate: (mediaId: number) => void,
     synopsis?: string,
 ): HeroBannerItem {
+    const title = getTitle(media).toLowerCase()
+    let youtubeTrailerId: string | undefined = undefined
+
+    for (const [key, value] of Object.entries(TRAILER_MAPPINGS)) {
+        if (title.includes(key)) {
+            youtubeTrailerId = value
+            break
+        }
+    }
+
     return {
         id: `hero-${media.id}`,
         title: getTitle(media),
@@ -75,6 +93,7 @@ export function mapToHeroItem(
         format: media.format,
         rating: media.score ? (media.score > 10 ? media.score / 10 : media.score) : undefined,
         mediaId: media.id,
+        youtubeTrailerId,
         onPlay: () => onNavigate(media.id),
         onMoreInfo: () => onNavigate(media.id),
     }
