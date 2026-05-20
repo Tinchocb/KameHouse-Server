@@ -306,7 +306,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                 entry={entry}
                 onPlay={handlePlayDefault}
                 continuityItem={continuityData?.item}
-                className="cursor-pointer group/hero"
+                className="md:w-[calc(100%+6rem)] md:-ml-24 cursor-pointer group/hero"
             />
             <div className="w-full max-w-[1800px] mx-auto px-6 sm:px-12 mt-12">
                 {/* Custom Glassmorphic Tabs Navigation for Series/Shows */}

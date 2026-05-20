@@ -3,10 +3,9 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Play, Star, Calendar, Tv, Layers, ChevronRight } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 import { DeferredImage } from "@/components/shared/deferred-image"
-
 import { sanitizeHtml } from "@/lib/helpers/sanitizer"
 
-// ─── Types & Schema ────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface VhsTapeItem {
     id: string | number
@@ -31,128 +30,35 @@ interface VhsShelfAccordionProps {
     className?: string
 }
 
-// ─── Dragon Ball Config Matching ──────────────────────────────────────────────
+// ─── Dragon Ball Themes ────────────────────────────────────────────────────────
 
-const DRAGON_BALL_SERIES = {
-    ORIGINAL: 862,
-    Z: 12971,
-    GT: 888,
-    KAI: 61709,
-    SUPER: 62715,
-    DAIMA: 240411,
-}
+const DB = { ORIGINAL: 862, Z: 12971, GT: 888, KAI: 61709, SUPER: 62715, DAIMA: 240411 }
 
-// Retro themes inspired by real VHS spine releases
 const VHS_THEMES: Record<number, {
-    spineBg: string         // Tailwind classes for lomo background
-    textColor: string       // Spine text color
-    spineTitleColor: string // Spine title color
-    accentBorder: string    // Accent color for outlines
-    defaultSubtitle: string // Subtitle fallback
-    toeiCatBg: string       // Toei cat circle bg
-    blackBottomText: string // Embossed brand
+    accent: string
+    labelBg: string
+    labelText: string
+    brandLabel: string
+    subtitle: string
 }> = {
-    [DRAGON_BALL_SERIES.ORIGINAL]: {
-        spineBg: "bg-[#54c0d4] bg-gradient-to-b from-[#69d0e2] via-[#54c0d4] to-[#3ca0b3]",
-        textColor: "text-zinc-900",
-        spineTitleColor: "text-[#d11c1b]",
-        accentBorder: "border-[#d11c1b]/30",
-        defaultSubtitle: "Original Series",
-        toeiCatBg: "bg-[#e22d28]",
-        blackBottomText: "SHUEISHA"
-    },
-    [DRAGON_BALL_SERIES.Z]: {
-        spineBg: "bg-[#f57e1a] bg-gradient-to-b from-[#f79339] via-[#f57e1a] to-[#d66504]",
-        textColor: "text-zinc-950",
-        spineTitleColor: "text-[#1d1d1b]",
-        accentBorder: "border-amber-950/20",
-        defaultSubtitle: "Saiyan Saga",
-        toeiCatBg: "bg-[#1d1d1b]",
-        blackBottomText: "TOEI ANIME"
-    },
-    [DRAGON_BALL_SERIES.GT]: {
-        spineBg: "bg-[#1c3966] bg-gradient-to-b from-[#254b85] via-[#1c3966] to-[#122442]",
-        textColor: "text-zinc-100",
-        spineTitleColor: "text-[#fad41e]",
-        accentBorder: "border-[#fad41e]/20",
-        defaultSubtitle: "Dragon Ball GT",
-        toeiCatBg: "bg-[#e22d28]",
-        blackBottomText: "BIRD STUDIO"
-    },
-    [DRAGON_BALL_SERIES.SUPER]: {
-        spineBg: "bg-[#b81d18] bg-gradient-to-b from-[#d12c26] via-[#b81d18] to-[#91130f]",
-        textColor: "text-white",
-        spineTitleColor: "text-[#fad41e]",
-        accentBorder: "border-amber-400/20",
-        defaultSubtitle: "Saga Súper",
-        toeiCatBg: "bg-[#fad41e]",
-        blackBottomText: "TOEI ANIME"
-    },
-    [DRAGON_BALL_SERIES.KAI]: {
-        spineBg: "bg-[#b1b9de] bg-gradient-to-b from-[#c8cef0] via-[#b1b9de] to-[#8c94ba]",
-        textColor: "text-zinc-900",
-        spineTitleColor: "text-[#102d6b]",
-        accentBorder: "border-[#102d6b]/20",
-        defaultSubtitle: "Remasterizada",
-        toeiCatBg: "bg-[#102d6b]",
-        blackBottomText: "SHUEISHA"
-    },
-    [DRAGON_BALL_SERIES.DAIMA]: {
-        spineBg: "bg-[#eed429] bg-gradient-to-b from-[#fae23f] via-[#eed429] to-[#cca716]",
-        textColor: "text-zinc-950",
-        spineTitleColor: "text-[#d11c1b]",
-        accentBorder: "border-zinc-950/20",
-        defaultSubtitle: "Nueva Aventura",
-        toeiCatBg: "bg-[#d11c1b]",
-        blackBottomText: "BIRD STUDIO"
-    }
+    [DB.ORIGINAL]: { accent: "#e22d28", labelBg: "#54c0d4", labelText: "#d11c1b", brandLabel: "SHUEISHA", subtitle: "Original Series" },
+    [DB.Z]:        { accent: "#f57e1a", labelBg: "#f57e1a", labelText: "#1d1d1b", brandLabel: "TOEI ANIME", subtitle: "Saiyan Saga" },
+    [DB.GT]:       { accent: "#fad41e", labelBg: "#1c3966", labelText: "#fad41e", brandLabel: "BIRD STUDIO", subtitle: "Dragon Ball GT" },
+    [DB.SUPER]:    { accent: "#fad41e", labelBg: "#b81d18", labelText: "#fad41e", brandLabel: "TOEI ANIME", subtitle: "Saga Súper" },
+    [DB.KAI]:      { accent: "#102d6b", labelBg: "#b1b9de", labelText: "#102d6b", brandLabel: "SHUEISHA", subtitle: "Remasterizada" },
+    [DB.DAIMA]:    { accent: "#d11c1b", labelBg: "#eed429", labelText: "#d11c1b", brandLabel: "BIRD STUDIO", subtitle: "Nueva Aventura" },
 }
 
-// Dynamic theme generator for generic/non-DB shows based on string hashes
-function getGenericTheme(title: string, index: number) {
-    const hash = title.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
-    const options = [
-        { // Neon Cyberpunk
-            spineBg: "bg-[#11131c] bg-gradient-to-b from-[#1c1e2d] via-[#11131c] to-[#08090f] border-r border-[#ff3e8b]/20",
-            textColor: "text-zinc-400",
-            spineTitleColor: "text-[#ff3e8b]",
-            accentBorder: "border-[#ff3e8b]/20",
-            defaultSubtitle: "Cyberpunk Arch",
-            toeiCatBg: "bg-[#ff3e8b]",
-            blackBottomText: "KAME TAPE"
-        },
-        { // Classic Purple Shonen
-            spineBg: "bg-[#4a154b] bg-gradient-to-b from-[#631e64] via-[#4a154b] to-[#310c32]",
-            textColor: "text-purple-100",
-            spineTitleColor: "text-[#00ffcc]",
-            accentBorder: "border-[#00ffcc]/20",
-            defaultSubtitle: "Fantasy Arc",
-            toeiCatBg: "bg-[#00ffcc]",
-            blackBottomText: "MANGA CO."
-        },
-        { // Dark Mecha Green
-            spineBg: "bg-[#0f1f1a] bg-gradient-to-b from-[#18332b] via-[#0f1f1a] to-[#07100d]",
-            textColor: "text-emerald-400",
-            spineTitleColor: "text-[#10b981]",
-            accentBorder: "border-emerald-500/20",
-            defaultSubtitle: "Sci-Fi Saga",
-            toeiCatBg: "bg-[#10b981]",
-            blackBottomText: "KAME MEDIA"
-        },
-        { // Retro Slate Vintage
-            spineBg: "bg-[#334155] bg-gradient-to-b from-[#475569] via-[#334155] to-[#1e293b]",
-            textColor: "text-slate-200",
-            spineTitleColor: "text-amber-500",
-            accentBorder: "border-amber-500/20",
-            defaultSubtitle: "Vintage Series",
-            toeiCatBg: "bg-amber-500",
-            blackBottomText: "KAMEHOUSE"
-        }
-    ]
-    return options[hash % options.length]
+const GENERIC_ACCENTS = ["#ff3e8b", "#00ffcc", "#10b981", "#f59e0b", "#818cf8", "#f43f5e"]
+
+function getTheme(tmdbId: number, title: string) {
+    if (VHS_THEMES[tmdbId]) return VHS_THEMES[tmdbId]
+    const hash = title.split("").reduce((a, c) => a + c.charCodeAt(0), 0)
+    const accent = GENERIC_ACCENTS[hash % GENERIC_ACCENTS.length]
+    return { accent, labelBg: "#1a1b24", labelText: accent, brandLabel: "KAMEHOUSE", subtitle: "Anime Series" }
 }
 
-// ─── Main Accordion Component ─────────────────────────────────────────────────
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export const VhsShelfAccordion = memo(function VhsShelfAccordion({
     items,
@@ -160,266 +66,387 @@ export const VhsShelfAccordion = memo(function VhsShelfAccordion({
     type = "series",
     className,
 }: VhsShelfAccordionProps) {
-    const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
-    const [activeIndex, setActiveIndex] = useState<number | null>(0) // Default first item active
+    const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
+    const [activeIdx, setActiveIdx] = useState<number | null>(0)
 
     if (items.length === 0) return null
 
     return (
-        <div className={cn("w-full flex flex-col gap-4", className)}>
-            {/* VHS Tape Shelf Base Container */}
+        <div className={cn("w-full flex flex-col flex-1 h-full", className)}>
+            {/* ── SHELF CONTAINER ── */}
             <div
-                className="relative flex flex-row items-stretch overflow-x-auto no-scrollbar py-6 px-1 w-full h-[650px] rounded-2xl bg-zinc-950/70 border border-white/5 shadow-[inset_0_10px_30px_rgba(0,0,0,0.9),0_20px_40px_rgba(0,0,0,0.6)]"
-                style={{ perspective: "1800px" }}
+                className="relative flex flex-row items-stretch overflow-x-auto no-scrollbar w-full flex-1 min-h-[600px] bg-[#080a0f] border-y border-white/[0.04]"
+                style={{ perspective: "2000px" }}
             >
-                {/* Wood Shelf Bottom Indicator */}
-                <div className="absolute bottom-0 inset-x-0 h-4 bg-gradient-to-t from-zinc-900 via-zinc-800 to-zinc-950 border-t border-white/5 z-0 pointer-events-none" />
+                {/* Estante de madera inferior */}
+                <div className="absolute bottom-0 inset-x-0 h-6 z-20 pointer-events-none"
+                    style={{ background: "linear-gradient(to top, #1a1209 0%, #2d2010 60%, transparent 100%)" }} />
+                <div className="absolute bottom-6 inset-x-0 h-1 bg-[#3d2e14] z-20 pointer-events-none" />
+                {/* Sombra ambiental superior */}
+                <div className="absolute top-0 inset-x-0 h-12 bg-gradient-to-b from-black/60 to-transparent z-10 pointer-events-none" />
 
-                <div className="flex flex-row items-stretch gap-1.5 md:gap-2.5 h-full z-10 px-4">
+                <div className="flex flex-row items-stretch gap-[3px] h-full z-10 px-3 pb-7 pt-4">
                     {items.map((item, index) => {
-                        const isHovered = hoveredIndex === index
-                        const isActive = activeIndex === index
-                        const isExpanded = isHovered || (hoveredIndex === null && isActive)
-
-                        // ── Theme Mapping ──
-                        const tmdbId = item.tmdbId || 0
-                        const theme = VHS_THEMES[tmdbId] || getGenericTheme(item.title, index)
-
-                        const titleText = item.title
-                        const subtitleText = item.subtitle || theme.defaultSubtitle
+                        const isHovered = hoveredIdx === index
+                        const isActive = activeIdx === index
+                        const isExpanded = isHovered || (hoveredIdx === null && isActive)
+                        const theme = getTheme(item.tmdbId || 0, item.title)
                         const scoreStr = item.score
                             ? (Number(item.score) > 10 ? Number(item.score) / 10 : Number(item.score)).toFixed(1)
                             : null
+                        const subtitle = item.subtitle || theme.subtitle
 
                         return (
                             <motion.div
                                 key={item.id}
                                 className={cn(
-                                    "relative flex flex-row shrink-0 cursor-pointer overflow-hidden rounded-xl transition-shadow duration-300 select-none",
+                                    "relative flex flex-row shrink-0 cursor-pointer overflow-hidden select-none h-full",
+                                    "rounded-sm",
                                     isExpanded
-                                        ? "shadow-[15px_15px_30px_rgba(0,0,0,0.85)] border border-white/10"
-                                        : "shadow-[5px_5px_15px_rgba(0,0,0,0.6)] border border-black/30 hover:shadow-[10px_10px_20px_rgba(0,0,0,0.7)]"
+                                        ? "shadow-[20px_0_60px_rgba(0,0,0,0.9),−20px_0_60px_rgba(0,0,0,0.9)] z-30"
+                                        : "shadow-[8px_0_24px_rgba(0,0,0,0.7)] z-10 hover:z-20"
                                 )}
                                 animate={{
-                                    width: isExpanded ? 600 : 140,
-                                    rotateY: isExpanded ? 0 : 4,
-                                    scale: isExpanded ? 1.01 : 0.98,
+                                    width: isExpanded ? 820 : 90,
+                                    rotateY: isExpanded ? 0 : 2,
+                                    scale: isExpanded ? 1 : 0.985,
+                                    filter: isExpanded ? "brightness(1)" : (hoveredIdx !== null && !isHovered ? "brightness(0.7)" : "brightness(1)"),
                                 }}
-                                transition={{
-                                    type: "spring",
-                                    stiffness: 160,
-                                    damping: 22
-                                }}
-                                onMouseEnter={() => setHoveredIndex(index)}
-                                onMouseLeave={() => setHoveredIndex(null)}
+                                transition={{ type: "spring", stiffness: 200, damping: 26 }}
+                                style={{ transformStyle: "preserve-3d", transformOrigin: "left center" }}
+                                onMouseEnter={() => setHoveredIdx(index)}
+                                onMouseLeave={() => setHoveredIdx(null)}
                                 onClick={() => {
-                                    setActiveIndex(index)
-                                    // On mobile/double click, navigate
-                                    if (isExpanded) {
-                                        onItemClick(item)
-                                    }
-                                }}
-                                style={{
-                                    transformStyle: "preserve-3d",
-                                    transformOrigin: "left center"
+                                    setActiveIdx(index)
+                                    if (isExpanded) onItemClick(item)
                                 }}
                             >
-                                {/* ── VHS TAPE SPINE (LOMO) ── */}
-                                <div
-                                    className="w-[140px] shrink-0 flex flex-col justify-between py-3 border-r border-black/50 relative overflow-hidden bg-zinc-900"
-                                >
-                                    {/* Spine Background Full Poster */}
+                                {/* ════════════════════════════════════════
+                                    LOMO (SPINE) — poster a pantalla completa
+                                ════════════════════════════════════════ */}
+                                <div className="w-[90px] shrink-0 h-full relative overflow-hidden flex flex-col">
+
+                                    {/* Poster como fondo — alta visibilidad */}
                                     <div className="absolute inset-0 z-0">
                                         <DeferredImage
                                             src={item.posterUrl || ""}
                                             alt=""
-                                            className="w-full h-full object-cover object-center filter brightness-[0.6] contrast-125 grayscale-[30%] group-hover:brightness-[0.9] transition-all duration-500"
+                                            className="w-full h-full object-cover object-top"
+                                            style={{ filter: "brightness(0.92) saturate(1.1) contrast(1.05)" }}
                                             showSkeleton={false}
                                         />
-                                        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
+                                        {/* Vignette sutil en los bordes — NO aplana el poster */}
+                                        <div className="absolute inset-0"
+                                            style={{ background: "radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.55) 100%)" }} />
+                                        {/* Gradiente inferior para el chassis */}
+                                        <div className="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-black via-black/70 to-transparent" />
+                                        {/* Gradiente superior para el año */}
+                                        <div className="absolute top-0 inset-x-0 h-16 bg-gradient-to-b from-black/70 to-transparent" />
                                     </div>
 
-                                    {/* Spine Shiny Gloss Reflection Overlay */}
-                                    <div className="absolute inset-y-0 left-0 w-0.5 bg-gradient-to-b from-white/30 via-white/10 to-transparent pointer-events-none z-10" />
-                                    <div className="absolute inset-y-0 right-0 w-1 bg-black/10 pointer-events-none z-10" />
+                                    {/* Barra de acento temático — borde izquierdo */}
+                                    <div className="absolute inset-y-0 left-0 w-[4px] z-20 pointer-events-none"
+                                        style={{ background: `linear-gradient(to bottom, ${theme.accent}, ${theme.accent}88, ${theme.accent})` }} />
 
-                                    {/* Spine Header: New Badge */}
-                                    <div className="flex flex-col items-center gap-1.5 px-2 relative z-10 min-h-[46px]">
-                                        {/* Golden/Yellow "NEW" Ribbon diagonal */}
+                                    {/* Reflejo plástico derecho */}
+                                    <div className="absolute inset-y-0 right-0 w-[2px] z-20 pointer-events-none"
+                                        style={{ background: "linear-gradient(to bottom, rgba(255,255,255,0.18), rgba(255,255,255,0.04) 50%, transparent)" }} />
+
+                                    {/* ── CABECERA: año y badge NEW ── */}
+                                    <div className="relative z-10 flex flex-col items-center pt-2 gap-1 px-1.5">
+                                        <span
+                                            className="text-[7px] font-black font-mono tracking-[0.12em] uppercase px-1.5 py-[2px] rounded-[2px]"
+                                            style={{
+                                                background: "rgba(0,0,0,0.55)",
+                                                color: "rgba(255,255,255,0.75)",
+                                                backdropFilter: "blur(4px)",
+                                                border: `1px solid ${theme.accent}55`
+                                            }}
+                                        >
+                                            {item.year || "VHS"}
+                                        </span>
                                         {item.year && Number(item.year) >= 2024 && (
-                                            <div className="absolute top-1 right-1 bg-[#eed429] text-zinc-950 text-[6px] font-black uppercase py-0.5 px-1.5 rotate-12 shadow-md border border-zinc-950/10 scale-110">
+                                            <span
+                                                className="text-[6px] font-black uppercase px-1.5 py-[2px] rotate-[-4deg] shadow-md"
+                                                style={{ background: theme.accent, color: theme.labelText }}
+                                            >
                                                 NEW
-                                            </div>
+                                            </span>
                                         )}
                                     </div>
 
-                                    {/* Spine Center: Vertical Title */}
-                                    <div className="flex-1 flex items-center justify-center py-4 relative z-10">
-                                        <h3 className="font-bebas text-[28px] tracking-[0.1em] text-center leading-none uppercase max-h-[300px] text-white drop-shadow-[0_4px_4px_rgba(0,0,0,1)] select-none pointer-events-none [writing-mode:vertical-rl] rotate-180">
-                                            {titleText}
+                                    {/* ── TÍTULO VERTICAL ── */}
+                                    <div className="flex-1 flex items-center justify-center relative z-10 overflow-hidden py-3">
+                                        <h3
+                                            className="font-bebas leading-none uppercase tracking-[0.06em] text-white text-center"
+                                            style={{
+                                                writingMode: "vertical-rl",
+                                                transform: "rotate(180deg)",
+                                                fontSize: "clamp(16px, 1.5vw, 22px)",
+                                                textShadow: "0 2px 12px rgba(0,0,0,1), 0 0 30px rgba(0,0,0,0.8)",
+                                                overflow: "hidden",
+                                                display: "-webkit-box",
+                                                WebkitLineClamp: 1,
+                                                WebkitBoxOrient: "horizontal",
+                                                maxHeight: "100%",
+                                            } as React.CSSProperties}
+                                        >
+                                            {item.title}
                                         </h3>
                                     </div>
 
-                                    {/* Spine Footer: Saga Subtitle & Ratings & VHS Logo */}
-                                    <div className="flex flex-col items-center gap-2 px-1 relative z-10 text-center">
-                                        {/* Small vertical description text line */}
-                                        <div className="max-h-[70px] flex items-center justify-center">
-                                            <span
-                                                className={cn(
-                                                    "text-[7px] font-black font-mono tracking-widest uppercase opacity-70 whitespace-nowrap [writing-mode:vertical-rl] rotate-180",
-                                                    theme.textColor
-                                                )}
-                                            >
-                                                {subtitleText}
-                                            </span>
+                                    {/* ── CHASSIS VHS (base mecánica) ── */}
+                                    <div
+                                        className="relative z-10 flex flex-col items-center justify-center shrink-0 overflow-hidden"
+                                        style={{
+                                            height: "52px",
+                                            background: "linear-gradient(135deg, #0d0e14 0%, #15161f 40%, #0a0b10 100%)",
+                                            borderTop: "1px solid rgba(255,255,255,0.06)",
+                                        }}
+                                    >
+                                        {/* Ranuras de cartucho */}
+                                        <div className="absolute inset-x-2 top-1.5 bottom-1.5 flex gap-[3px] opacity-20 pointer-events-none">
+                                            {Array.from({ length: 8 }).map((_, i) => (
+                                                <div key={i} className="flex-1 rounded-[1px]" style={{ background: "rgba(255,255,255,0.4)" }} />
+                                            ))}
                                         </div>
-
-                                        {/* Sello Toei Animation Cat Badge */}
-                                        <div className={cn("w-5.5 h-5.5 rounded-full flex items-center justify-center p-0.5 shadow-sm border border-black/15", theme.toeiCatBg)}>
-                                            {/* Stylized Toei cat whiskers */}
-                                            <span className="text-[5px] text-white font-black leading-none tracking-tighter">TC</span>
+                                        {/* Ventana de cinta magnética */}
+                                        <div
+                                            className="w-10 h-5 rounded-sm relative overflow-hidden"
+                                            style={{
+                                                background: "rgba(0,0,0,0.8)",
+                                                border: "1px solid rgba(255,255,255,0.1)",
+                                                boxShadow: "inset 0 2px 4px rgba(0,0,0,0.9)"
+                                            }}
+                                        >
+                                            {/* Bobinas */}
+                                            <div className="absolute left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border border-zinc-600/60" style={{ background: "rgba(30,30,40,0.9)" }}>
+                                                <div className="w-1 h-1 rounded-full bg-zinc-500/40 absolute inset-1/2 -translate-x-1/2 -translate-y-1/2" />
+                                            </div>
+                                            <div className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border border-zinc-600/60" style={{ background: "rgba(30,30,40,0.9)" }}>
+                                                <div className="w-1 h-1 rounded-full bg-zinc-500/40 absolute inset-1/2 -translate-x-1/2 -translate-y-1/2" />
+                                            </div>
                                         </div>
-
-                                        {/* VHS Logo Bordered Box */}
-                                        <div className="border border-current px-1 py-0.2 rounded-sm text-[7px] font-serif font-black tracking-widest text-center uppercase opacity-85 scale-90 select-none">
-                                            VHS
-                                        </div>
-                                    </div>
-
-                                    {/* Spine Base Plastic Cartridge Exposure (Embossed Retro Detail) */}
-                                    <div className="h-11 bg-gradient-to-r from-[#0d0e12] via-[#1a1b24] to-[#07080b] border-t border-zinc-800/80 relative overflow-hidden flex flex-col items-center justify-center shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] mt-2">
-                                        {/* Plastic grooves/stripes */}
-                                        <div className="absolute inset-y-0 left-2 w-[1px] bg-black/60 shadow-r" />
-                                        <div className="absolute inset-y-0 left-3 w-[1px] bg-black/60" />
-                                        <div className="absolute inset-y-0 right-2 w-[1px] bg-black/60" />
-                                        <div className="absolute inset-y-0 right-3 w-[1px] bg-black/60" />
-
-                                        {/* Embossed text "VHS" */}
-                                        <span className="font-serif text-[8px] font-black tracking-[0.2em] text-[#22232a] select-none uppercase drop-shadow-[0.5px_0.5px_0px_rgba(255,255,255,0.05)]">
-                                            VHS
-                                        </span>
-                                        <span className="text-[5px] font-mono font-black text-[#1d1d22] tracking-tighter mt-0.5 scale-90">
-                                            {theme.blackBottomText}
+                                        {/* Marca */}
+                                        <span className="text-[5.5px] font-mono font-black tracking-[0.2em] uppercase mt-1"
+                                            style={{ color: `${theme.accent}80` }}>
+                                            {theme.brandLabel}
                                         </span>
                                     </div>
                                 </div>
 
-                                {/* ── VHS TAPE CASE COVER (REVEAL ON EXPAND) ── */}
+                                {/* ════════════════════════════════════════
+                                    PANEL EXPANDIDO
+                                ════════════════════════════════════════ */}
                                 <AnimatePresence>
                                     {isExpanded && (
                                         <motion.div
-                                            initial={{ opacity: 0, x: -40, width: 0 }}
-                                            animate={{ opacity: 1, x: 0, width: 460 }}
-                                            exit={{ opacity: 0, x: -20, width: 0 }}
-                                            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                                            className="h-full w-[460px] shrink-0 bg-[#06080e] relative flex flex-col justify-end overflow-hidden border-l border-white/5 shadow-[20px_0_60px_rgba(0,0,0,0.8)]"
+                                            initial={{ opacity: 0, x: -24 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            exit={{ opacity: 0, x: -16 }}
+                                            transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+                                            className="flex-1 h-full relative overflow-hidden flex flex-row"
                                         >
-                                            {/* Advanced Dynamic Background (Poster Blur) */}
+                                            {/* ── BANNER como fondo (sin blur en la zona derecha) ── */}
                                             <div className="absolute inset-0 z-0">
                                                 <DeferredImage
                                                     src={item.bannerUrl || item.posterUrl || ""}
                                                     alt=""
-                                                    className="w-full h-full object-cover filter blur-[80px] opacity-40 scale-150 transition-all duration-1000"
+                                                    className="w-full h-full object-cover object-center"
+                                                    style={{ filter: "brightness(0.35) saturate(1.2)" }}
                                                     showSkeleton={false}
                                                 />
-                                                <div className="absolute inset-0 bg-gradient-to-tr from-[#06080e] via-[#06080e]/95 to-transparent" />
-                                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(255,110,58,0.08),transparent_70%)]" />
+                                                {/* Gradiente izquierda → opaco para el contenido */}
+                                                <div className="absolute inset-0"
+                                                    style={{ background: "linear-gradient(to right, rgba(6,8,14,0.98) 0%, rgba(6,8,14,0.88) 45%, rgba(6,8,14,0.2) 100%)" }} />
+                                                {/* Gradiente inferior */}
+                                                <div className="absolute inset-0"
+                                                    style={{ background: "linear-gradient(to top, rgba(6,8,14,0.9) 0%, transparent 50%)" }} />
+                                                {/* Glow temático */}
+                                                <div className="absolute inset-0 pointer-events-none"
+                                                    style={{ background: `radial-gradient(ellipse at 20% 80%, ${theme.accent}18 0%, transparent 60%)` }} />
                                             </div>
 
-                                            {/* Mechanical Detail: Magnetic Tape Reel Representation */}
-                                            <div className="absolute top-12 -right-24 w-64 h-64 opacity-[0.03] pointer-events-none rotate-12">
-                                                <svg viewBox="0 0 100 100" className="w-full h-full fill-white">
-                                                    <circle cx="50" cy="50" r="45" stroke="white" strokeWidth="1" fill="transparent" />
-                                                    <circle cx="50" cy="50" r="15" fill="white" />
-                                                    <path d="M 50 5 L 50 95 M 5 50 L 95 50" stroke="white" strokeWidth="0.5" />
+                                            {/* Decoración: carrete SVG */}
+                                            <div className="absolute top-6 right-10 opacity-[0.06] pointer-events-none w-52 h-52">
+                                                <svg viewBox="0 0 100 100" className="w-full h-full">
+                                                    <circle cx="50" cy="50" r="46" stroke="white" strokeWidth="1.5" fill="none" />
+                                                    <circle cx="50" cy="50" r="30" stroke="white" strokeWidth="0.8" fill="none" />
+                                                    <circle cx="50" cy="50" r="10" fill="white" />
+                                                    <path d="M50 4 L50 20 M50 80 L50 96 M4 50 L20 50 M80 50 L96 50" stroke="white" strokeWidth="1.2" />
+                                                    <path d="M17 17 L28 28 M72 72 L83 83 M83 17 L72 28 M28 72 L17 83" stroke="white" strokeWidth="0.8" />
                                                 </svg>
                                             </div>
 
-                                            {/* Content Area with Sophisticated Glassmorphism */}
-                                            <div className="relative z-10 p-8 flex flex-col gap-6 justify-end h-full">
+                                            {/* ── LAYOUT: poster | info ── */}
+                                            <div className="relative z-10 flex flex-row w-full h-full">
 
-                                                {/* Mini Poster Preview (Mechanical Slide-in) */}
+                                                {/* POSTER GRANDE */}
+                                                <motion.div
+                                                    initial={{ y: 24, opacity: 0 }}
+                                                    animate={{ y: 0, opacity: 1 }}
+                                                    transition={{ delay: 0.08, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                                                    className="w-[170px] md:w-[200px] shrink-0 h-full flex items-end pl-6 pb-8"
+                                                >
+                                                    <div
+                                                        className="w-full aspect-[2/3] rounded-lg overflow-hidden relative"
+                                                        style={{
+                                                            boxShadow: `0 24px 60px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.08), 0 0 40px ${theme.accent}22`
+                                                        }}
+                                                    >
+                                                        <DeferredImage
+                                                            src={item.posterUrl || ""}
+                                                            alt={item.title}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                        {/* Brillo sutil sobre el poster */}
+                                                        <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] via-transparent to-black/30 pointer-events-none" />
+                                                        {/* Borde acento en el poster */}
+                                                        <div
+                                                            className="absolute bottom-0 inset-x-0 h-[3px]"
+                                                            style={{ background: theme.accent }}
+                                                        />
+                                                    </div>
+                                                </motion.div>
+
+                                                {/* INFO */}
                                                 <motion.div
                                                     initial={{ y: 20, opacity: 0 }}
                                                     animate={{ y: 0, opacity: 1 }}
-                                                    transition={{ delay: 0.2 }}
-                                                    className="w-24 aspect-[2/3] rounded-lg border border-white/10 shadow-2xl overflow-hidden mb-2"
+                                                    transition={{ delay: 0.13, duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
+                                                    className="flex-1 flex flex-col justify-end gap-3 px-7 pb-8 pt-8 min-w-0"
                                                 >
-                                                    <DeferredImage src={item.posterUrl || ""} alt="" className="w-full h-full object-cover" />
-                                                </motion.div>
-
-                                                {/* Header Badges with premium styling */}
-                                                <div className="flex flex-wrap items-center gap-2.5">
-                                                    {scoreStr && (
-                                                        <div className="flex items-center gap-1.5 bg-brand-orange/10 text-brand-orange font-black text-[10px] px-3 py-1 rounded-lg border border-brand-orange/20 backdrop-blur-3xl shadow-[0_0_20px_rgba(255,110,58,0.1)]">
-                                                            <Star className="w-3 h-3 fill-current" />
-                                                            <span className="tracking-widest">{scoreStr}</span>
-                                                        </div>
-                                                    )}
-                                                    {item.year && (
-                                                        <div className="flex items-center gap-1.5 bg-white/5 text-zinc-300 font-black text-[10px] px-3 py-1 rounded-lg border border-white/5 backdrop-blur-3xl">
-                                                            <Calendar className="w-3 h-3" />
-                                                            <span className="tracking-widest">{item.year}</span>
-                                                        </div>
-                                                    )}
-                                                    {item.format && (
-                                                        <div className="flex items-center gap-1.5 bg-white/5 text-zinc-300 font-black text-[10px] px-3 py-1 rounded-lg border border-white/5 backdrop-blur-3xl">
-                                                            <Tv className="w-3 h-3" />
-                                                            <span className="tracking-widest">{item.format}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* Title & Metadata */}
-                                                <div className="space-y-2">
-                                                    <h2 className="font-bebas text-5xl leading-[0.85] text-white tracking-wide uppercase drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]">
-                                                        {item.title}
-                                                    </h2>
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="h-[1px] w-8 bg-brand-orange/40" />
-                                                        <p className="text-[11px] font-black uppercase text-brand-orange/80 tracking-[0.3em] font-mono">
-                                                            {subtitleText}
-                                                        </p>
+                                                    {/* Badges superiores */}
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        {scoreStr && (
+                                                            <div className="flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-black"
+                                                                style={{
+                                                                    background: `${theme.accent}18`,
+                                                                    color: theme.accent,
+                                                                    border: `1px solid ${theme.accent}35`,
+                                                                }}>
+                                                                <Star className="w-3 h-3 fill-current" />
+                                                                <span className="tracking-widest">{scoreStr}</span>
+                                                            </div>
+                                                        )}
+                                                        {item.year && (
+                                                            <div className="flex items-center gap-1.5 bg-white/[0.06] text-zinc-300 px-3 py-1 rounded-md text-[11px] font-black border border-white/[0.08]">
+                                                                <Calendar className="w-3 h-3" />
+                                                                <span className="tracking-widest">{item.year}</span>
+                                                            </div>
+                                                        )}
+                                                        {item.format && (
+                                                            <div className="flex items-center gap-1.5 bg-white/[0.06] text-zinc-300 px-3 py-1 rounded-md text-[11px] font-black border border-white/[0.08]">
+                                                                <Tv className="w-3 h-3" />
+                                                                <span className="tracking-widest">{item.format}</span>
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                </div>
 
-                                                {/* Description with high-end glass container */}
-                                                {item.description && (
-                                                    <p
-                                                        className="text-[12px] text-zinc-400 font-medium leading-relaxed uppercase tracking-wider line-clamp-3 bg-white/[0.02] p-4 rounded-xl border border-white/[0.05] backdrop-blur-2xl shadow-inner"
-                                                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.description) }}
-                                                    />
-                                                )}
+                                                    {/* Título y saga */}
+                                                    <div>
+                                                        <h2
+                                                            className="font-bebas uppercase leading-[0.88] text-white line-clamp-2"
+                                                            style={{
+                                                                fontSize: "clamp(36px, 4vw, 56px)",
+                                                                textShadow: "0 8px 30px rgba(0,0,0,0.6)",
+                                                            }}
+                                                        >
+                                                            {item.title}
+                                                        </h2>
+                                                        <div className="flex items-center gap-2.5 mt-2">
+                                                            <div className="h-[2px] w-10 rounded-full flex-shrink-0"
+                                                                style={{ background: theme.accent }} />
+                                                            <span
+                                                                className="text-[10px] font-black uppercase tracking-[0.35em] font-mono"
+                                                                style={{ color: theme.accent }}
+                                                            >
+                                                                {subtitle}
+                                                            </span>
+                                                        </div>
+                                                    </div>
 
-                                                {/* Technical Specs Stripe */}
-                                                <div className="flex items-center gap-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 font-mono border-t border-white/10 pt-4 mt-2">
-                                                    <span className="flex items-center gap-2 text-zinc-300">
-                                                        <Layers className="w-3.5 h-3.5 text-brand-orange/50" />
-                                                        {item.episodesCount && item.episodesCount > 0 ? `${item.episodesCount} EPISODES` : "TV SERIES"}
-                                                    </span>
-                                                    {item.runtime && (
-                                                        <span className="flex items-center gap-2">
-                                                            RUN: <strong className="text-white">{item.runtime}</strong>
-                                                        </span>
+                                                    {/* Descripción — legible, normal case */}
+                                                    {item.description && (
+                                                        <p
+                                                            className="text-[13px] leading-[1.65] text-zinc-300/90 line-clamp-3 font-normal"
+                                                            style={{ maxWidth: "480px" }}
+                                                            dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.description) }}
+                                                        />
                                                     )}
-                                                </div>
 
-                                                {/* Premium Action Button */}
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        onItemClick(item)
-                                                    }}
-                                                    className="group/btn w-full mt-4 h-14 bg-white text-black hover:bg-brand-orange hover:text-white font-black text-xs tracking-[0.25em] uppercase flex items-center justify-center gap-4 rounded-2xl shadow-2xl transition-all duration-500 hover:scale-[1.02] active:scale-[0.98]"
-                                                >
-                                                    <Play className="w-4 h-4 fill-current group-hover/btn:scale-110 transition-transform duration-500" />
-                                                    <span>{type === "series" ? "INICIAR REPRODUCCIÓN" : "SINTONIZAR ARCO"}</span>
-                                                    <ChevronRight className="w-5 h-5 ml-auto opacity-40 group-hover/btn:opacity-100 group-hover/btn:translate-x-1 transition-all" />
-                                                </button>
+                                                    {/* Géneros */}
+                                                    {item.genres && item.genres.length > 0 && (
+                                                        <div className="flex flex-wrap gap-1.5">
+                                                            {item.genres.slice(0, 5).map(g => (
+                                                                <span
+                                                                    key={g}
+                                                                    className="text-[9px] font-black uppercase tracking-widest px-2.5 py-[4px] rounded-full"
+                                                                    style={{
+                                                                        background: "rgba(255,255,255,0.05)",
+                                                                        border: "1px solid rgba(255,255,255,0.1)",
+                                                                        color: "rgba(200,200,210,0.8)"
+                                                                    }}
+                                                                >
+                                                                    {g}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Stats + botón */}
+                                                    <div
+                                                        className="pt-3 flex items-center justify-between gap-4"
+                                                        style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
+                                                    >
+                                                        <div className="flex items-center gap-5 text-[11px] font-mono font-black uppercase tracking-[0.15em]">
+                                                            {item.episodesCount != null && item.episodesCount > 0 && (
+                                                                <span className="flex items-center gap-2 text-zinc-400">
+                                                                    <Layers className="w-3.5 h-3.5" style={{ color: theme.accent }} />
+                                                                    <span className="text-white text-base font-black mr-0.5">{item.episodesCount}</span>
+                                                                    EPISODIOS
+                                                                </span>
+                                                            )}
+                                                            {item.runtime && (
+                                                                <span className="text-zinc-500">
+                                                                    RUN: <strong className="text-zinc-300">{item.runtime}</strong>
+                                                                </span>
+                                                            )}
+                                                        </div>
+
+                                                        <button
+                                                            onClick={e => { e.stopPropagation(); onItemClick(item) }}
+                                                            className="flex items-center gap-3 px-6 py-3 rounded-xl font-black text-[11px] tracking-[0.2em] uppercase transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] shrink-0"
+                                                            style={{
+                                                                background: "white",
+                                                                color: "black",
+                                                                boxShadow: `0 8px 32px rgba(0,0,0,0.4), 0 0 0 0 ${theme.accent}`,
+                                                                transition: "background 0.25s, color 0.25s, box-shadow 0.25s, transform 0.1s",
+                                                            }}
+                                                            onMouseEnter={e => {
+                                                                const btn = e.currentTarget as HTMLButtonElement
+                                                                btn.style.background = theme.accent
+                                                                btn.style.color = theme.labelText
+                                                                btn.style.boxShadow = `0 8px 32px ${theme.accent}55`
+                                                            }}
+                                                            onMouseLeave={e => {
+                                                                const btn = e.currentTarget as HTMLButtonElement
+                                                                btn.style.background = "white"
+                                                                btn.style.color = "black"
+                                                                btn.style.boxShadow = `0 8px 32px rgba(0,0,0,0.4)`
+                                                            }}
+                                                        >
+                                                            <Play className="w-4 h-4 fill-current flex-shrink-0" />
+                                                            <span>{type === "series" ? "INICIAR REPRODUCCIÓN" : "SINTONIZAR ARCO"}</span>
+                                                            <ChevronRight className="w-4 h-4 ml-1 opacity-50" />
+                                                        </button>
+                                                    </div>
+                                                </motion.div>
                                             </div>
 
-                                            {/* Edge gloss/plastic texture */}
-                                            <div className="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-black/20 to-transparent pointer-events-none" />
+                                            {/* Borde izquierdo del panel — continuación del lomo */}
+                                            <div className="absolute inset-y-0 left-0 w-[4px] pointer-events-none z-20"
+                                                style={{ background: theme.accent }} />
                                         </motion.div>
                                     )}
                                 </AnimatePresence>

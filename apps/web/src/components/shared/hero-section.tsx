@@ -1,138 +1,120 @@
-import * as React from "react"
-import { motion } from "framer-motion"
-import { cn } from "@/components/ui/core/styling"
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Play, Film } from 'lucide-react'; // Ajusta los iconos a la librería que uses (lucide, heroicons, etc.)
 
-interface HeroSectionProps {
-    title: React.ReactNode // Usually "MI<br/><span...>...</span>"
-    subtitle?: string
-    decorationTag?: string
-    verticalTag?: string
-    count?: number | string
-    countLabel?: string
-    children?: React.ReactNode // Extra content like stats or buttons
-    className?: string
-    maxWidth?: string
+interface HeroProps {
+    bgImage: string;
+    logoUrl: string;
+    description: string;
+    charactersImage?: string;
 }
 
-export function HeroSection({
-    title,
-    subtitle,
-    decorationTag = "COLECCIÓN PREMIUM",
-    verticalTag = "BIBLIOTECA · COLECCIÓN · ARCHIVOS",
-    count,
-    countLabel = "Títulos",
-    children,
-    className,
-    maxWidth = "max-w-none"
-}: HeroSectionProps) {
+export const HeroSection: React.FC<HeroProps> = ({
+    bgImage,
+    logoUrl,
+    description,
+    charactersImage
+}) => {
     return (
-        <div className={cn("relative overflow-hidden pt-32 pb-20 px-6 md:px-14", className)}>
-            <SpeedLines opacity={0.02} />
-            <HalftoneDots />
-            
-            {/* Vertical Decoration */}
-            <div className="absolute right-6 top-1/2 -translate-y-1/2 [writing-mode:vertical-rl] font-black text-[11px] tracking-[0.5em] text-zinc-900 uppercase pointer-events-none select-none">
-                {verticalTag}
+        // 1. h-screen hace que ocupe toda la pantalla. overflow-hidden evita scrollbars innecesarios
+        <section className="relative w-full h-screen overflow-hidden bg-black text-white">
+
+            {/* --- FONDO ANIMADO --- */}
+            <motion.div
+                initial={{ scale: 1.08, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 1.5, ease: "easeOut" }}
+                className="absolute inset-0"
+            >
+                <img
+                    src={bgImage}
+                    alt="Fondo"
+                    className="w-full h-full object-cover"
+                />
+            </motion.div>
+
+            {/* --- GRADIENTES ESTILO STREAMING --- */}
+            {/* Oscurece la izquierda para que el texto sea siempre legible */}
+            <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/40 to-transparent z-10" />
+            {/* Oscurece la parte inferior para fusionarse con el resto de la app */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent z-10" />
+
+            {/* --- CONTENIDO PRINCIPAL (Texto y Botones) --- */}
+            <div className="relative z-20 flex flex-col justify-center h-full px-6 md:px-16 lg:px-24 w-full max-w-3xl">
+
+                {/* Logo de la serie */}
+                <motion.img
+                    initial={{ y: 30, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.2, duration: 0.8 }}
+                    src={logoUrl}
+                    className="w-full max-w-[300px] md:max-w-[500px] mb-6 drop-shadow-2xl"
+                    alt="Logo de la Serie"
+                />
+
+                {/* Sinopsis */}
+                <motion.p
+                    initial={{ y: 30, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.4, duration: 0.8 }}
+                    className="text-gray-200 text-base md:text-lg lg:text-xl line-clamp-3 md:line-clamp-4 mb-8 text-shadow-md max-w-2xl font-medium"
+                >
+                    {description}
+                </motion.p>
+
+                {/* Botones de Acción */}
+                <motion.div
+                    initial={{ y: 30, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.6, duration: 0.8 }}
+                    className="flex flex-wrap items-center gap-4"
+                >
+                    <button className="flex items-center gap-2 bg-white text-black px-6 md:px-8 py-2 md:py-3 rounded-md font-bold text-lg hover:bg-white/80 transition-all hover:scale-105 active:scale-95 shadow-lg">
+                        <Play className="w-6 h-6 fill-black" />
+                        Reproducir
+                    </button>
+
+                    <button className="flex items-center gap-2 bg-gray-500/60 text-white px-6 md:px-8 py-2 md:py-3 rounded-md font-bold text-lg backdrop-blur-md hover:bg-gray-500/80 transition-all hover:scale-105 active:scale-95 shadow-lg">
+                        <Film className="w-6 h-6" />
+                        Tráiler
+                    </button>
+                </motion.div>
             </div>
 
-            <div className={cn("relative z-10 mx-auto", maxWidth)}>
-                <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.7 }}
-                    className="flex items-center gap-4 mb-6"
+            {/* --- PERSONAJES FLOTANTES (Animación Mejorada y Más Grandes) --- */}
+            {charactersImage && (
+                <motion.div
+                    // Inicia fuera de la pantalla a la derecha, más pequeño y transparente
+                    initial={{ x: 150, y: 50, opacity: 0, scale: 0.8 }}
+                    // Entra y luego se queda flotando en el eje Y
+                    animate={{
+                        x: 0,
+                        y: [0, -20, 0], // Movimiento de levitación constante
+                        opacity: 1,
+                        scale: 1.3 // Escala aumentada al 130% para que sean más grandes
+                    }}
+                    transition={{
+                        x: { delay: 0.5, duration: 1.2, ease: "easeOut" },
+                        opacity: { delay: 0.5, duration: 1.2 },
+                        scale: { delay: 0.5, duration: 1.2, ease: "easeOut" },
+                        // La levitación (eje Y) se repite infinitamente de forma suave
+                        y: {
+                            repeat: Infinity,
+                            duration: 5,
+                            ease: "easeInOut",
+                            delay: 1.7
+                        }
+                    }}
+                    className="absolute bottom-0 right-5 lg:right-20 z-20 hidden md:block origin-bottom-right"
                 >
-                    <div className="h-[2px] w-12 bg-white" />
-                    <p className="text-[11px] font-black uppercase tracking-[0.4em] text-zinc-500">{decorationTag}</p>
-                </motion.div>
-                
-                <motion.h1 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, delay: 0.1 }}
-                    className="font-bebas text-7xl md:text-9xl lg:text-[11rem] leading-[0.8] tracking-[0.02em] text-white uppercase"
-                >
-                    {title}
-                </motion.h1>
-
-                {subtitle && (
-                    <motion.p 
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, delay: 0.2 }}
-                        className="font-bebas text-3xl md:text-5xl tracking-[0.1em] text-white mt-4 uppercase"
-                    >
-                        {subtitle}
-                    </motion.p>
-                )}
-                
-                <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, delay: 0.4 }}
-                    className="mt-12"
-                >
-                    {count !== undefined && (
-                        <div className="inline-block px-4 py-2 bg-black border border-white/20">
-                            <p className="text-[14px] font-black text-white tabular-nums uppercase tracking-widest">
-                                {count} <span className="text-[11px] font-black text-zinc-600 uppercase ml-2 tracking-widest">{countLabel}</span>
-                            </p>
-                        </div>
-                    )}
-                    {children}
-                </motion.div>
-            </div>
-            
-            <style>{`
-                .stroke-text {
-                    -webkit-text-stroke: 1.5px white;
-                }
-            `}</style>
-        </div>
-    )
-}
-
-// ─── Shared Cinematic Decorations ───────────────────────
-
-function SpeedLines({ opacity = 0.04 }: { opacity?: number }) {
-    return (
-        <svg
-            aria-hidden
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            style={{ opacity }}
-            viewBox="0 0 900 320"
-            preserveAspectRatio="xMidYMid slice"
-        >
-            {Array.from({ length: 32 }).map((_, i) => {
-                const angle = (i / 32) * 360
-                const rad = (angle * Math.PI) / 180
-                return (
-                    <line
-                        key={i}
-                        x1="450" y1="160"
-                        x2={450 + Math.cos(rad) * 1400}
-                        y2={160 + Math.sin(rad) * 1400}
-                        stroke="white"
-                        strokeWidth={i % 4 === 0 ? "1.5" : "0.6"}
+                    <img
+                        src={charactersImage}
+                        alt="Personajes"
+                        className="h-[50vh] lg:h-[70vh] object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.7)]"
+                        style={{ filter: 'brightness(1.1) contrast(1.1)' }} // Ligero realce para que destaquen más
                     />
-                )
-            })}
-        </svg>
-    )
-}
-
-function HalftoneDots() {
-    return (
-        <svg
-            aria-hidden
-            className="absolute inset-0 w-full h-full opacity-[0.025] pointer-events-none"
-        >
-            <defs>
-                <pattern id="dots" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse">
-                    <circle cx="6" cy="6" r="1.5" fill="white" />
-                </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#dots)" />
-        </svg>
-    )
-}
+                </motion.div>
+            )}
+        </section>
+    );
+};

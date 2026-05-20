@@ -71,7 +71,7 @@ export const VhsShelfAccordion = memo(({
 
     return (
         <div className={cn(
-            "w-full py-12 px-4 md:px-8 rounded-[32px] bg-gradient-to-b from-[#0b0e17] to-[#030509] border border-white/5 relative shadow-2xl overflow-x-auto no-scrollbar select-none transform-gpu",
+            "w-full py-6 px-4 md:px-8 rounded-[32px] bg-gradient-to-b from-[#0b0e17] to-[#030509] border border-white/5 relative shadow-2xl overflow-x-auto no-scrollbar select-none transform-gpu",
             className
         )}>
             {/* ── MUEBLE 3D DEL ESTANTE (BASE DE APOYO REALISTA) ── */}
@@ -81,7 +81,7 @@ export const VhsShelfAccordion = memo(({
             <div className="absolute inset-x-0 bottom-[24px] md:bottom-[28px] h-6 bg-black/95 blur-[5px] z-0" />
 
             {/* CONTENEDOR DE CINTAS: Usa porcentajes de pantalla para ocupar gran parte de ella */}
-            <div className="flex items-end justify-start gap-2 md:gap-3 relative z-10 px-2 min-w-max h-[58vh] min-h-[480px] max-h-[680px]">
+            <div className={cn("flex items-end justify-start gap-2 md:gap-3 relative z-10 px-2 min-w-max h-[150vh] min-h-[640px] max-h-[1200px]")}>
                 {items.map((item, idx) => {
                     const isSelected = selectedId === item.id
                     const baseColor = item.color || getRetroColor(item.title)
@@ -103,8 +103,8 @@ export const VhsShelfAccordion = memo(({
                                 "relative flex flex-col justify-between cursor-pointer rounded-t border-t border-x border-black/40 overflow-hidden text-white transform-gpu shrink-0",
                                 // TAMAÑOS MAXIMIZADOS: Lomo más imponente y cuerpo expandido súper ancho
                                 isSelected
-                                    ? "w-[88vw] sm:w-[540px] md:w-[680px] h-full z-20 shadow-[20px_0_40px_rgba(0,0,0,0.85)]"
-                                    : "w-[80px] md:w-[105px] h-[92%] hover:h-[95%] z-10 hover:-translate-y-1 shadow-[6px_0_14px_rgba(0,0,0,0.65)] transition-[transform] duration-200"
+                                    ? "w-[90vw] sm:w-[580px] md:w-[780px] h-full z-20 shadow-[20px_0_40px_rgba(0,0,0,0.85)]"
+                                    : "w-[90px] md:w-[120px] h-[92%] hover:h-[96%] z-10 hover:-translate-y-2 shadow-[6px_0_14px_rgba(0,0,0,0.65)] transition-[transform] duration-200"
                             )}
                             style={{ backgroundColor: baseColor }}
                         >

@@ -245,7 +245,7 @@ export function MediaSpotlight({ items, onNavigate, className }: MediaSpotlightP
     }
 
     return (
-        <section className={cn("relative pt-16 md:pt-24 pb-12 px-6 pr-6 md:pl-32 md:pr-12 lg:pl-44 lg:pr-20 xl:pl-48 xl:pr-24 w-full select-none overflow-hidden", className)}>
+        <section className={cn("relative pt-16 md:pt-24 pb-12 w-full select-none overflow-hidden", className)}>
 
             {/* Ambient Background Glow (Blurry, Low Opacity) */}
             <div className="absolute inset-x-0 top-0 h-[660px] md:h-[690px] lg:h-[720px] overflow-hidden pointer-events-none z-0">
@@ -269,7 +269,7 @@ export function MediaSpotlight({ items, onNavigate, className }: MediaSpotlightP
             </div>
 
             {/* Main content grid: Left Column (Portada/Cover Card) & Right Column (Synopsis + Eras List) */}
-            <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch z-10 w-full">
+            <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch z-10 w-full px-6 md:pl-32 md:pr-12 lg:pl-44 lg:pr-20 xl:pl-48 xl:pr-24">
 
                 {/* ─── LADO IZQUIERDO: Portada Principal Widescreen (Sharp Cover Card) ─── */}
                 <div className="lg:col-span-7 xl:col-span-8 flex flex-col justify-center">
@@ -420,7 +420,7 @@ export function MediaSpotlight({ items, onNavigate, className }: MediaSpotlightP
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
                         transition={{ duration: 0.4 }}
-                        className="relative z-10 mt-12 text-left space-y-4"
+                        className="relative z-10 mt-12 text-left space-y-4 px-6 md:pl-32 md:pr-12 lg:pl-44 lg:pr-20 xl:pl-48 xl:pr-24"
                     >
                         <h4 className="font-bebas text-2xl tracking-wider text-zinc-300 uppercase flex items-center gap-2">
                             <span>Películas disponibles de</span>

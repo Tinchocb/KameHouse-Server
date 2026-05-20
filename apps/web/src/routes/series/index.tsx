@@ -105,35 +105,37 @@ function SeriesPage() {
     }, { scope: containerRef, dependencies: [isLoading, filtered.length, viewMode] })
 
     return (
-        <div ref={containerRef} className="flex-1 w-full bg-background text-white overflow-x-hidden font-sans pb-10">
-
-
+        <div ref={containerRef} className="flex-1 w-full h-full bg-background text-white font-sans flex flex-col overflow-x-hidden">
 
             {/* ── Content Area ── */}
-            <div className="max-w-[1800px] mx-auto px-6 md:px-14 pb-20">
-                <AnimatePresence mode="wait">
-                    {isLoading ? (
-                        <div key="loading" className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+            <AnimatePresence mode="wait">
+                {isLoading ? (
+                    <div key="loading" className="max-w-[1800px] mx-auto px-6 md:px-14 pb-20">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
                             {Array.from({ length: 12 }).map((_, i) => (
                                 <div key={i} className="aspect-[2/3] bg-zinc-900 animate-pulse rounded-2xl" />
                             ))}
                         </div>
-                    ) : filtered.length === 0 ? (
-                        <div key="empty" className="py-20">
+                    </div>
+                ) : filtered.length === 0 ? (
+                    <div key="empty" className="max-w-[1800px] mx-auto px-6 md:px-14 pb-20">
+                        <div className="py-20">
                             <EmptyState
                                 title="Sin resultados"
                                 message="No encontramos series con esos filtros."
                                 illustration={<Tv className="w-20 h-20 text-zinc-800" />}
                             />
                         </div>
-                    ) : viewMode === "grid" ? (
-                        <motion.div
-                            key="grid"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 md:gap-8"
-                        >
+                    </div>
+                ) : viewMode === "grid" ? (
+                    <motion.div
+                        key="grid"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="max-w-[1800px] mx-auto px-6 md:px-14 pb-20"
+                    >
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 md:gap-8">
                             {filtered.map((entry) => (
                                 <div key={entry.mediaId} className="series-card">
                                     <PremiumPosterCard
@@ -148,23 +150,25 @@ function SeriesPage() {
                                     />
                                 </div>
                             ))}
-                        </motion.div>
-                    ) : (
-                        <motion.div
-                            key="shelf"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                        >
-                            <VhsShelfAccordion
-                                items={vhsTapeItems}
-                                onItemClick={(item) => navigate({ to: "/series/$seriesId", params: { seriesId: item.id.toString() } })}
-                                type="series"
-                            />
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
+                        </div>
+                    </motion.div>
+                ) : (
+                    <motion.div
+                        key="shelf"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="flex-1 flex flex-col min-h-0"
+                    >
+                        <VhsShelfAccordion
+                            items={vhsTapeItems}
+                            onItemClick={(item) => navigate({ to: "/series/$seriesId", params: { seriesId: item.id.toString() } })}
+                            type="series"
+                            className="flex-1 h-full"
+                        />
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <style>{`
                 .no-scrollbar::-webkit-scrollbar { display: none; }
