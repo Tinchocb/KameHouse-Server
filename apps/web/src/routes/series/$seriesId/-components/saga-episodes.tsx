@@ -5,6 +5,7 @@ import { cn } from "@/components/ui/core/styling"
 import { Anime_Episode, Anime_LocalFile, Continuity_WatchHistoryItem } from "@/api/generated/types"
 import { SagaDefinition } from "@/lib/config/dragonball.config"
 import { EpisodeCard } from "../-series-interactivity-client"
+import { useWindowVirtualizer } from "@tanstack/react-virtual"
 
 interface SagaEpisodesSectionProps {
     seriesTitle: string
@@ -70,6 +71,20 @@ export const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
     const handleLayoutChange = useCallback((mode: "grid" | "horizontal") => {
         setLayoutMode(mode)
         localStorage.setItem("kamehouse-series-layout", mode)
+    }, [])
+
+    const [cols, setCols] = useState(3)
+
+    useEffect(() => {
+        const updateCols = () => {
+            const width = window.innerWidth
+            if (width < 640) setCols(1)
+            else if (width < 1024) setCols(2)
+            else setCols(3)
+        }
+        updateCols()
+        window.addEventListener("resize", updateCols)
+        return () => window.removeEventListener("resize", updateCols)
     }, [])
 
     useEffect(() => {
@@ -173,6 +188,18 @@ export const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
             return Number(lfEp) === ep.episodeNumber
         })
     }, [localFiles])
+
+    const rowCount = layoutMode === "grid" ? Math.ceil(visibleEpisodes.length / cols) : visibleEpisodes.length
+
+    const estimateSize = useCallback(() => {
+        return layoutMode === "grid" ? 280 : 120
+    }, [layoutMode])
+
+    const rowVirtualizer = useWindowVirtualizer({
+        count: rowCount,
+        estimateSize,
+        overscan: 5,
+    })
 
     return (
         <section className="relative z-[1] pb-20 max-w-[1800px] mx-auto">
@@ -376,48 +403,89 @@ export const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
                                         <p className="text-zinc-600 font-bebas text-4xl tracking-widest">SIN EPISODIOS DISPONIBLES</p>
                                         <p className="text-zinc-700 text-xs font-black uppercase tracking-[0.3em] mt-2">INTENTA ACTUALIZAR LA BIBLIOTECA</p>
                                     </div>
-                                ) : layoutMode === "grid" ? (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        {visibleEpisodes.map((ep, index) => {
-                                            const epNum = ep.absoluteEpisodeNumber || ep.episodeNumber
-                                            return (
-                                                <EpisodeCard
-                                                    key={epNum}
-                                                    episode={ep}
-                                                    variant="grid"
-                                                    fallbackThumb={fallbackThumb}
-                                                    localFile={getLocalFile(ep)}
-                                                    onPlay={onPlay}
-                                                    onToggleWatched={onToggleWatched}
-                                                    onUpdateProgress={onUpdateProgress}
-                                                    continuityItem={continuityItem}
-                                                    isCurrentlyPlaying={currentlyPlayingEpNumber === epNum}
-                                                    seriesTmdbId={seriesTmdbId}
-                                                    priority={index < 6}
-                                                />
-                                            )
-                                        })}
-                                    </div>
                                 ) : (
-                                    <div className="flex flex-col gap-1">
-                                        {visibleEpisodes.map((ep, index) => {
-                                            const epNum = ep.absoluteEpisodeNumber || ep.episodeNumber
-                                            return (
-                                                <EpisodeCard
-                                                    key={epNum}
-                                                    episode={ep}
-                                                    variant="horizontal"
-                                                    fallbackThumb={fallbackThumb}
-                                                    localFile={getLocalFile(ep)}
-                                                    onPlay={onPlay}
-                                                    onToggleWatched={onToggleWatched}
-                                                    onUpdateProgress={onUpdateProgress}
-                                                    continuityItem={continuityItem}
-                                                    isCurrentlyPlaying={currentlyPlayingEpNumber === epNum}
-                                                    seriesTmdbId={seriesTmdbId}
-                                                    priority={index < 6}
-                                                />
-                                            )
+                                    <div
+                                        key={`${layoutMode}-${activeSagaId}`}
+                                        style={{
+                                            height: `${rowVirtualizer.getTotalSize()}px`,
+                                            width: "100%",
+                                            position: "relative",
+                                        }}
+                                    >
+                                        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                                            const rowIndex = virtualRow.index
+                                            if (layoutMode === "grid") {
+                                                const startIndex = rowIndex * cols
+                                                const rowEpisodes = visibleEpisodes.slice(startIndex, startIndex + cols)
+                                                return (
+                                                    <div
+                                                        key={virtualRow.key}
+                                                        data-index={rowIndex}
+                                                        ref={rowVirtualizer.measureElement}
+                                                        style={{
+                                                            position: "absolute",
+                                                            top: 0,
+                                                            left: 0,
+                                                            width: "100%",
+                                                            transform: `translateY(${virtualRow.start}px)`,
+                                                        }}
+                                                        className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                                                    >
+                                                        {rowEpisodes.map((ep, idx) => {
+                                                            const epNum = ep.absoluteEpisodeNumber || ep.episodeNumber
+                                                            const globalIndex = startIndex + idx
+                                                            return (
+                                                                <EpisodeCard
+                                                                    key={epNum}
+                                                                    episode={ep}
+                                                                    variant="grid"
+                                                                    fallbackThumb={fallbackThumb}
+                                                                    localFile={getLocalFile(ep)}
+                                                                    onPlay={onPlay}
+                                                                    onToggleWatched={onToggleWatched}
+                                                                    onUpdateProgress={onUpdateProgress}
+                                                                    continuityItem={continuityItem}
+                                                                    isCurrentlyPlaying={currentlyPlayingEpNumber === epNum}
+                                                                    seriesTmdbId={seriesTmdbId}
+                                                                    priority={globalIndex < 6}
+                                                                />
+                                                            )
+                                                        })}
+                                                    </div>
+                                                )
+                                            } else {
+                                                const ep = visibleEpisodes[rowIndex]
+                                                const epNum = ep.absoluteEpisodeNumber || ep.episodeNumber
+                                                return (
+                                                    <div
+                                                        key={virtualRow.key}
+                                                        data-index={rowIndex}
+                                                        ref={rowVirtualizer.measureElement}
+                                                        style={{
+                                                            position: "absolute",
+                                                            top: 0,
+                                                            left: 0,
+                                                            width: "100%",
+                                                            transform: `translateY(${virtualRow.start}px)`,
+                                                        }}
+                                                        className="flex flex-col gap-1 pb-1"
+                                                    >
+                                                        <EpisodeCard
+                                                            episode={ep}
+                                                            variant="horizontal"
+                                                            fallbackThumb={fallbackThumb}
+                                                            localFile={getLocalFile(ep)}
+                                                            onPlay={onPlay}
+                                                            onToggleWatched={onToggleWatched}
+                                                            onUpdateProgress={onUpdateProgress}
+                                                            continuityItem={continuityItem}
+                                                            isCurrentlyPlaying={currentlyPlayingEpNumber === epNum}
+                                                            seriesTmdbId={seriesTmdbId}
+                                                            priority={rowIndex < 6}
+                                                        />
+                                                    </div>
+                                                )
+                                            }
                                         })}
                                     </div>
                                 )}

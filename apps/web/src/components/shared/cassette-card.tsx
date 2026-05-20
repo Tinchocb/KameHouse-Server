@@ -1,273 +1,173 @@
 import { memo } from "react"
 import { motion } from "framer-motion"
-import { Play } from "lucide-react"
-import { FaStar } from "react-icons/fa"
-import { Anime_LibraryCollectionEntry, Continuity_WatchHistoryItem } from "@/api/generated/types"
-import { DeferredImage } from "@/components/shared/deferred-image"
 import { cn } from "@/components/ui/core/styling"
 
-interface CassetteCardProps {
-    entry: Anime_LibraryCollectionEntry
-    watchHistoryItem?: Continuity_WatchHistoryItem | null
-    onClick?: () => void
-    onMouseEnter?: () => void
-    onMouseLeave?: () => void
-    className?: string
-    size?: "normal" | "hero"
+export interface VhsCollectionItem {
+    id: number
+    title: string
+    episodesCount: number
+    watchedCount: number
+    genres: string[]
+    year?: number
+    status: string
+    isNew: boolean
+    posterUrl: string
+    bannerUrl: string
 }
 
-// SVG Reel for the realistic cassette tape
-const CassetteReel = () => (
-    <motion.svg
-        variants={{
-            idle: { rotate: 0 },
-            hover: { rotate: 360, transition: { repeat: Infinity, duration: 3, ease: "linear" } }
-        }}
-        className="w-full h-full max-w-[32px] max-h-[32px] text-zinc-700/80 fill-zinc-900/60"
-        viewBox="0 0 100 100"
-    >
-        <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="8" fill="transparent" />
-        <path d="M 50 15 L 50 85 M 15 50 L 85 50 M 25 25 L 75 75 M 25 75 L 75 25" stroke="currentColor" strokeWidth="6" />
-        <circle cx="50" cy="50" r="16" fill="#03060f" stroke="currentColor" strokeWidth="4" />
-    </motion.svg>
-)
+interface VhsCollectionProps {
+    items: VhsCollectionItem[]
+    onItemClick: (item: VhsCollectionItem) => void
+}
 
-export const CassetteCard = memo(function CassetteCard({
-    entry,
-    watchHistoryItem,
-    onClick,
-    onMouseEnter,
-    onMouseLeave,
-    className,
-    size = "normal"
-}: CassetteCardProps) {
-    const media = entry.media
-    if (!media) return null
+// Paletas de colores retro vibrantes inspiradas directamente en tu imagen de Dragon Ball
+const RETRO_PALETTES = [
+    { bg: "bg-sky-500 text-sky-950 border-sky-400/40", text: "text-sky-950", accent: "bg-sky-600/20" },
+    { bg: "bg-orange-500 text-orange-950 border-orange-400/40", text: "text-orange-950", accent: "bg-orange-600/20" },
+    { bg: "bg-blue-900 text-blue-50 border-blue-800/40", text: "text-blue-50", accent: "bg-blue-950/40" },
+    { bg: "bg-red-800 text-red-50 border-red-700/40", text: "text-red-50", accent: "bg-red-950/40" },
+    { bg: "bg-indigo-300 text-indigo-950 border-indigo-200/40", text: "text-indigo-950", accent: "bg-indigo-400/20" },
+    { bg: "bg-purple-500 text-purple-950 border-purple-400/40", text: "text-purple-950", accent: "bg-purple-600/20" },
+    { bg: "bg-yellow-400 text-yellow-950 border-yellow-300/40", text: "text-yellow-950", accent: "bg-yellow-500/20" },
+]
 
-    const title = media.titleEnglish || media.titleRomaji || media.titleOriginal || "Sin título"
-    const score = media.score 
-        ? (media.score > 10 ? media.score / 10 : media.score).toFixed(1)
-        : null
-
-    const hasLocalFiles = (entry.libraryData?.mainFileCount || 0) > 0
-    const isCompleted = media.watched || (entry.listData?.progress || 0) >= (media.totalEpisodes || 1)
-
-    const progressTime = watchHistoryItem?.currentTime || 0
-    const totalDuration = watchHistoryItem?.duration || 0
-    const hasProgress = progressTime > 30 && totalDuration > 0 && progressTime < totalDuration
-    const progressPercent = hasProgress ? Math.min(100, (progressTime / totalDuration) * 100) : 0
-
-    const SPINE_WIDTH = size === "hero" ? 56 : 40
+const VhsTape = memo(({ item, index, onClick }: { item: VhsCollectionItem; index: number; onClick: () => void }) => {
+    // Asigna un color consistente basado en el índice
+    const palette = RETRO_PALETTES[index % RETRO_PALETTES.length]
 
     return (
-        <motion.div 
-            className={cn("group relative cursor-pointer", className)}
+        <motion.div
+            onClick={onClick}
+            className={cn(
+                "relative flex flex-col justify-between w-[85px] sm:w-[105px] h-[360px] sm:h-[440px] cursor-pointer rounded-t border-t border-x shadow-[4px_0_10px_rgba(0,0,0,0.6)] overflow-hidden select-none transform-gpu shrink-0",
+                palette.bg
+            )}
+            variants={{
+                idle: { y: 0, scale: 1, zIndex: 10 },
+                hover: { 
+                    y: -18, 
+                    scale: 1.03, 
+                    zIndex: 30,
+                    boxShadow: "12px 15px 30px rgba(0,0,0,0.7)",
+                    transition: { type: "spring", stiffness: 220, damping: 16 }
+                }
+            }}
             initial="idle"
             whileHover="hover"
-            animate="idle"
-            style={{ transformStyle: "preserve-3d" }}
-            onClick={onClick}
-            onMouseEnter={onMouseEnter}
-            onMouseLeave={onMouseLeave}
         >
-            {/* ── 1. The Slidable Plastic Cassette Tape Body (Slides Up on Hover) ── */}
-            <motion.div
-                className="absolute inset-x-2 bg-gradient-to-b from-[#0e1220] to-[#04060b] border border-white/10 rounded-xl p-3 flex flex-col justify-between shadow-[0_4px_30px_rgba(0,0,0,0.8)] overflow-hidden"
-                style={{
-                    aspectRatio: "1 / 1.7",
-                    zIndex: 5,
-                    transformOrigin: "bottom center",
-                    willChange: "transform, opacity"
-                }}
-                variants={{
-                    idle: { 
-                        y: 0, 
-                        scale: 0.95, 
-                        opacity: 0,
-                        rotateY: 0,
-                        rotateX: 0
-                    },
-                    hover: { 
-                        y: size === "hero" ? "-55%" : "-45%", 
-                        scale: 1, 
-                        opacity: 1,
-                        rotateY: size === "hero" ? -4 : -8, 
-                        rotateX: size === "hero" ? 2 : 4,
-                        transition: { type: "spring", stiffness: 180, damping: 18 } 
-                    }
-                }}
-            >
-                {media.bannerImage && (
-                    <div className="absolute inset-0 z-0 opacity-20">
-                        <DeferredImage src={media.bannerImage} alt="Tape Label" className="w-full h-full object-cover" showSkeleton={false} />
-                    </div>
-                )}
-                
-                {/* Cassette Top notches & brand label */}
-                <div className="relative z-10 flex justify-between items-center px-1 border-b border-white/5 pb-2">
-                    <span className={cn("font-mono font-black text-brand-orange/80 tracking-widest uppercase", size === "hero" ? "text-[10px]" : "text-[7px]")}>
-                        KAMEHOUSE TAPE
+            {/* Brillo reflectante vertical tipo plástico protector */}
+            <div className="absolute inset-y-0 left-0 w-1 bg-white/25 pointer-events-none z-20" />
+            <div className="absolute inset-0 bg-gradient-to-r from-white/5 via-transparent to-black/15 pointer-events-none z-20" />
+
+            {/* ── 1. SECCIÓN SUPERIOR: Indicador "NEW" o Año ── */}
+            <div className="pt-2 px-1 text-center font-mono font-black text-[8px] sm:text-[10px] tracking-widest uppercase border-b border-black/10 bg-black/5">
+                {item.isNew ? (
+                    <span className="text-yellow-300 bg-black/50 px-1 py-0.5 rounded text-[7px] sm:text-[9px] border border-yellow-400/20 tracking-normal inline-block transform -rotate-2">
+                        NEW
                     </span>
-                    <span className={cn("font-mono text-zinc-500 font-bold tracking-tight", size === "hero" ? "text-[10px]" : "text-[7px]")}>
-                        SIDE A
-                    </span>
-                </div>
-
-                {/* Cassette Mechanical Reels Center section */}
-                <div className="relative z-10 py-2 px-1 bg-[#020408]/90 border border-white/10 rounded-lg flex items-center justify-around h-1/4 min-h-[40px] shadow-inner">
-                    {/* Spool background window */}
-                    <div className="absolute inset-y-2 inset-x-6 bg-zinc-950/80 rounded border border-white/5 flex items-center justify-center">
-                        <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-brand-orange/20 to-transparent" />
-                    </div>
-                    <div className="h-full aspect-square flex items-center justify-center relative z-10"><CassetteReel /></div>
-                    <div className="h-full aspect-square flex items-center justify-center relative z-10"><CassetteReel /></div>
-                </div>
-
-                {/* Bottom recording specifications info */}
-                <div className={cn("relative z-10 flex flex-col gap-1.5 px-1 pt-1 font-mono", size === "hero" ? "text-[11px]" : "text-[8px]")}>
-                    <div className="flex justify-between items-start gap-2">
-                        <span className="text-zinc-500 shrink-0">VOL:</span>
-                        <span className="font-bold text-white uppercase tracking-tight line-clamp-2 text-right">
-                            {title}
-                        </span>
-                    </div>
-                    {media.totalEpisodes && (
-                        <div className="flex justify-between items-center text-brand-orange/90">
-                            <span>EPS:</span>
-                            <span className="font-bold tabular-nums">
-                                {media.totalEpisodes}
-                            </span>
-                        </div>
-                    )}
-                </div>
-            </motion.div>
-
-            {/* ── 2. The Translucent Protective Sleeve/Case (Main Front Area) ── */}
-            <motion.div
-                className="relative z-10 w-full h-full overflow-hidden bg-[#0d111d]/45 border border-white/5 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.4),inset_0_0_30px_rgba(255,255,255,0.02)] flex flex-col justify-end group-hover:border-brand-orange/25 group-hover:shadow-[10px_20px_40px_rgba(0,0,0,0.6),inset_0_0_40px_rgba(255,110,58,0.05)] transition-all duration-300"
-                style={{
-                    aspectRatio: "1 / 1.7",
-                    backdropFilter: "blur(12px)",
-                    transformStyle: "preserve-3d",
-                    willChange: "transform"
-                }}
-                variants={{
-                    idle: { rotateY: 0, rotateX: 0, scale: 1 },
-                    hover: { 
-                        rotateY: size === "hero" ? -4 : -8, 
-                        rotateX: size === "hero" ? 2 : 4, 
-                        scale: 1.02, 
-                        transition: { duration: 0.3 } 
-                    }
-                }}
-            >
-                {/* Spine representation (left-aligned stripe inside case) */}
-                <div
-                    className="absolute inset-y-0 left-0 z-20 overflow-hidden border-r border-white/5 bg-[#03060f]/80 backdrop-blur-md flex flex-col justify-between py-4"
-                    style={{ width: SPINE_WIDTH }}
-                >
-                    {/* Glossy edge gradient */}
-                    <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-white/20 to-transparent" />
-
-                    {/* Spine score indicator */}
-                    {score ? (
-                        <div className="flex flex-col items-center gap-1">
-                            <FaStar className={cn("text-brand-orange drop-shadow-[0_0_5px_rgba(255,110,58,0.5)]", size === "hero" ? "text-[10px]" : "text-[7px]")} />
-                            <span className={cn("font-black text-brand-orange tracking-tighter tabular-nums", size === "hero" ? "text-[12px]" : "text-[8px]")}>{score}</span>
-                        </div>
-                    ) : <div />}
-
-                    {/* Spine vertically stacked labels */}
-                    <div className="flex flex-col items-center gap-2">
-                        {media.year && (
-                            <span className={cn("font-mono font-black text-zinc-500 uppercase tracking-widest rotate-90 my-2 whitespace-nowrap", size === "hero" ? "text-[10px]" : "text-[7px]")}>
-                                {media.year}
-                            </span>
-                        )}
-                        <span className={cn("font-mono font-bold text-zinc-600 rotate-90 py-1 uppercase whitespace-nowrap", size === "hero" ? "text-[10px]" : "text-[7px]")}>
-                            {media.format || "TV"}
-                        </span>
-                    </div>
-                </div>
-
-                {/* Cover Art Poster (inside case) */}
-                <div 
-                    className="absolute inset-y-0 right-0 overflow-hidden rounded-r-2xl bg-zinc-950"
-                    style={{ left: SPINE_WIDTH }}
-                >
-                    <DeferredImage
-                        src={media.posterImage || ""}
-                        alt={title}
-                        className={cn(
-                            "w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-90 group-hover:opacity-100",
-                            !hasLocalFiles && "grayscale opacity-50 contrast-75 brightness-75"
-                        )}
-                        showSkeleton={false}
-                    />
-
-                    {/* Premium glass reflection gloss overlay */}
-                    <div 
-                        className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.02] to-white/[0.06] pointer-events-none transition-all duration-300 group-hover:via-white/[0.05]" 
-                    />
-                    
-                    {/* Shadow overlay at bottom for text visibility */}
-                    <div className="absolute bottom-0 left-0 right-0 h-2/3 bg-gradient-to-t from-black via-black/40 to-transparent" />
-
-                    {/* Retro Rental stickers & indicators */}
-                    <div className="absolute top-2 right-2 flex flex-col gap-1 z-25">
-                        {isCompleted && (
-                            <div className="rotate-[-6deg] bg-emerald-500/90 text-white font-mono font-black text-[7px] uppercase tracking-wider px-1.5 py-0.5 rounded shadow-[0_2px_4px_rgba(0,0,0,0.5)] border border-emerald-400/30 select-none">
-                                REBOBINADO
-                            </div>
-                        )}
-                        {!isCompleted && hasProgress && (
-                            <div className="rotate-[4deg] bg-brand-orange text-white font-mono font-black text-[7px] uppercase tracking-wider px-1.5 py-0.5 rounded shadow-[0_2px_4px_rgba(0,0,0,0.5)] border border-brand-orange/30 select-none">
-                                EN CINTA: {Math.round(progressPercent)}%
-                            </div>
-                        )}
-                        {!hasLocalFiles && (
-                            <div className="rotate-[-2deg] bg-zinc-800/90 text-zinc-400 font-mono font-black text-[7px] uppercase tracking-wider px-1.5 py-0.5 rounded shadow-[0_2px_4px_rgba(0,0,0,0.5)] border border-white/5 select-none">
-                                SIN COPIA
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Lower progress bar inside sleeve if in progress */}
-                {hasProgress && (
-                    <div className="absolute bottom-[68px] inset-x-0 h-1 bg-black/40 z-20" style={{ left: SPINE_WIDTH }}>
-                        <div 
-                            className="h-full bg-brand-orange shadow-[0_0_8px_rgba(255,110,58,0.8)] transition-all duration-500" 
-                            style={{ width: `${progressPercent}%` }}
-                        />
-                    </div>
+                ) : (
+                    <span className="opacity-80 font-bold">{item.year || "RETRO"}</span>
                 )}
+            </div>
 
-                {/* ── Outer text information overlay (always readable) ── */}
-                <div className="relative z-20 p-4 w-full" style={{ paddingLeft: SPINE_WIDTH + 16 }}>
-                    {/* Badge */}
-                    <div className="mb-2">
-                        <span className={cn("font-black uppercase tracking-[0.2em] text-brand-orange bg-brand-orange/10 px-2.5 py-1 rounded-md border border-brand-orange/20 backdrop-blur-md", size === "hero" ? "text-[10px]" : "text-[8px]")}>
-                            {media.genres?.[0] || "ANIME"}
-                        </span>
-                    </div>
+            {/* ── 2. MINIATURA DE ILUSTRACIÓN (Cuadrada) ── */}
+            <div className="p-1 sm:p-1.5">
+                <div className="aspect-square w-full border border-black/20 rounded bg-black/30 relative overflow-hidden shadow-inner">
+                    <img 
+                        src={item.posterUrl || item.bannerUrl} 
+                        alt={item.title} 
+                        className="w-full h-full object-cover grayscale-[15%] contrast-[1.15]"
+                        loading="lazy"
+                    />
+                </div>
+            </div>
 
-                    {/* Title */}
-                    <h3 className={cn("font-black text-white uppercase tracking-tight leading-[1.1] line-clamp-2 drop-shadow-xl group-hover:text-brand-orange transition-colors duration-300 font-display", size === "hero" ? "text-[24px] tracking-normal" : "text-[14px]")}>
-                        {title}
+            {/* ── 3. TÍTULO VERTICAL ROTADO (Estilo Logo de lomo) ── */}
+            <div className="flex-1 flex items-center justify-center overflow-hidden relative py-4">
+                <div className="absolute w-[200px] sm:w-[260px] text-center transform -rotate-90 pointer-events-none flex items-center justify-center">
+                    <h3 className={cn(
+                        "font-black tracking-wide text-[13px] sm:text-[16px] uppercase line-clamp-1 select-none font-display",
+                        palette.text,
+                        "drop-shadow-[1px_2px_0px_rgba(0,0,0,0.2)]"
+                    )}>
+                        {item.title}
                     </h3>
                 </div>
+            </div>
 
-                {/* Interactive Play icon hovering at the top of the case on hover */}
-                <div className="absolute top-3 right-3 z-20 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0">
-                    <div className={cn("rounded-full bg-brand-orange text-white flex items-center justify-center shadow-xl shadow-brand-orange/20 hover:scale-110 active:scale-95 transition-all", size === "hero" ? "w-11 h-11" : "w-8 h-8")}>
-                        <Play className={cn("fill-current text-white translate-x-0.5", size === "hero" ? "w-5 h-5" : "w-4 h-4")} />
-                    </div>
+            {/* ── 4. DETALLES TÉCNICOS Y SINOPSIS DE LOMO ── */}
+            <div className={cn("px-1.5 py-2 font-mono text-[7px] sm:text-[9px] leading-tight border-t border-black/10 bg-black/5 flex flex-col gap-0.5", palette.text)}>
+                <div className="font-black truncate opacity-80 text-center uppercase tracking-tight text-[6px] sm:text-[8px]">
+                    {item.genres[0] || "ANIME COLLECTION"}
                 </div>
-            </motion.div>
+                <hr className="border-black/10 my-0.5" />
+                <div className="flex justify-between font-bold">
+                    <span className="opacity-60">EPISODIOS:</span>
+                    <span>{item.episodesCount || "??"}</span>
+                </div>
+                <div className="flex justify-between font-bold">
+                    <span className="opacity-60">VISTOS:</span>
+                    <span>{item.watchedCount}</span>
+                </div>
+            </div>
 
-            {/* ── 3. Subtle Floating Shadow base underneath ── */}
-            <div className="absolute -bottom-6 inset-x-4 h-6 opacity-20 blur-xl bg-black rounded-full scale-95 group-hover:scale-110 group-hover:opacity-40 transition-all duration-500 pointer-events-none" />
+            {/* ── 5. BRANDING RETRO & INSIGNIA VHS ── */}
+            <div className="pt-1 pb-1.5 px-1 flex flex-col items-center justify-center gap-1 border-t border-black/10 bg-black/10">
+                <span className="font-mono font-bold text-[5px] sm:text-[6.5px] opacity-40 tracking-widest text-center uppercase whitespace-nowrap">
+                    KAMEHOUSE VIDEO
+                </span>
+                
+                {/* Cuadro de Logo VHS Clásico */}
+                <div className={cn(
+                    "border border-current px-1 py-0.5 rounded font-mono font-black text-[8px] sm:text-[10px] tracking-tighter leading-none bg-black/5 select-none",
+                    palette.text
+                )}>
+                    VHS
+                </div>
+            </div>
+
+            {/* ── 6. BLOQUE INFERIOR DE PLÁSTICO NEGRO (Carátula/Casete base) ── */}
+            <div className="h-7 sm:h-9 bg-zinc-900 border-t-2 border-black flex flex-col justify-center items-center relative overflow-hidden shrink-0">
+                {/* Estrías/Rendijas de agarre texturizadas de plástico */}
+                <div className="absolute inset-x-0 top-1 bottom-1 flex justify-center gap-[3px] opacity-15">
+                    {Array.from({ length: 7 }).map((_, i) => (
+                        <div key={i} className="w-[1.5px] h-full bg-white" />
+                    ))}
+                </div>
+                {/* Código de serial falso */}
+                <span className="text-[5px] sm:text-[6px] font-mono font-bold text-zinc-600 relative z-10 tracking-tighter">
+                    SHA-{item.id.toString().slice(-4)}
+                </span>
+            </div>
         </motion.div>
     )
 })
+
+VhsTape.displayName = "VhsTape"
+
+export const VhsCollection = memo(({ items, onItemClick }: VhsCollectionProps) => {
+    return (
+        <div className="w-full py-10 px-4 md:px-8 rounded-3xl bg-gradient-to-b from-[#0f1322] to-[#05070d] border border-white/5 relative shadow-inner overflow-x-auto no-scrollbar">
+            
+            {/* ESTRUCTURA DEL ESTANTE MODULAR (Base metálica/madera detrás de las cintas) */}
+            {/* Línea de madera superior del estante inferior */}
+            <div className="absolute inset-x-0 bottom-[44px] sm:bottom-[50px] h-4 bg-gradient-to-b from-zinc-800 via-zinc-700 to-zinc-950 border-t border-white/10 shadow-xl z-0" />
+            {/* Sombra proyectada debajo del estante */}
+            <div className="absolute inset-x-0 bottom-[32px] sm:bottom-[36px] h-3 bg-black/80 blur-[2px] z-0" />
+
+            {/* Contenedor horizontal que alinea las cintas de VHS perfectamente en el estante */}
+            <div className="flex items-end justify-start gap-1 sm:gap-1.5 relative z-10 px-2 min-w-max h-[400px] sm:h-[480px]">
+                {items.map((item, idx) => (
+                    <VhsTape 
+                        key={item.id} 
+                        item={item} 
+                        index={idx} 
+                        onClick={() => onItemClick(item)} 
+                    />
+                ))}
+            </div>
+        </div>
+    )
+})
+
+VhsCollection.displayName = "VhsCollection"

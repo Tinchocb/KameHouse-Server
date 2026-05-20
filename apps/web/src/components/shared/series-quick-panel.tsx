@@ -42,8 +42,8 @@ function parseGenres(g: unknown): string[] {
     if (Array.isArray(g)) return g as string[]
     if (typeof g === "string") {
         try {
-            if (g.startsWith("[")) return JSON.parse(g)
-            return JSON.parse(atob(g))
+            if (g.startsWith("[")) return JSON.parse(g) as string[]
+            return JSON.parse(atob(g)) as string[]
         } catch {
             return []
         }
@@ -199,7 +199,7 @@ export function SeriesQuickPanel({
     const id = seriesId ? String(seriesId) : null
 
     const { data: entry, isLoading } = useGetAnimeEntry(open ? id : null)
-    const { data: continuityData } = useGetContinuityWatchHistoryItem(open && id ? Number(id) : null)
+    const { data: continuityData } = useGetContinuityWatchHistoryItem(open && id ? Number(id) : 0)
 
     const scrollRef = React.useRef<HTMLDivElement>(null)
 

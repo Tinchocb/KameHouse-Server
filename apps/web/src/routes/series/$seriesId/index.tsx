@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { HydrationBoundary, dehydrate, useQueryClient } from "@tanstack/react-query"
 import React, { useMemo, useState } from "react"
 import { toast } from "sonner"
@@ -18,9 +18,7 @@ import { resolveSeriesSagas } from "@/lib/config/dragonball.config"
 
 // Modular Components
 import { HeroSection } from "./-components/series-hero"
-import { MovieHeroSection } from "./-components/movie-hero"
 import { SagaEpisodesSection } from "./-components/saga-episodes"
-import { LocalFilesSection } from "./-components/local-files-section"
 
 export const Route = createFileRoute("/series/$seriesId/")({
     loader: async ({ params: { seriesId }, context }) => {
@@ -47,8 +45,20 @@ function SeriesDetailPage() {
 
 export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     const queryClient = useQueryClient()
+    const navigate = useNavigate()
     const { data: entry, isLoading } = useGetAnimeEntry(seriesId)
     const { data: continuityData, refetch: refetchContinuity } = useGetContinuityWatchHistoryItem(Number(seriesId))
+
+    const isMovie = React.useMemo(() => {
+        if (!entry?.media) return false
+        return entry.media.format === "MOVIE" || entry.media.format === "SPECIAL" || entry.media.format === "OVA"
+    }, [entry])
+
+    React.useEffect(() => {
+        if (isMovie) {
+            navigate({ to: "/movies/$movieId", params: { movieId: String(seriesId) }, replace: true })
+        }
+    }, [isMovie, seriesId, navigate])
 
     const [playTarget, setPlayTarget] = useState<{
         path: string
@@ -63,8 +73,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
 
     if (entry?.media && entry.media.id !== prevEntryId) {
         setPrevEntryId(entry.media.id)
-        const isMovie = entry.media.format === "MOVIE" || entry.media.format === "SPECIAL" || entry.media.format === "OVA"
-        setActiveTab(isMovie ? "movie" : "episodes")
+        setActiveTab("episodes")
     }
 
     const sagas = useMemo(() => entry?.media ? resolveSeriesSagas(entry.media) : [], [entry])
@@ -257,12 +266,14 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         handlePlayEpisode(lf, nextEp)
     }
 
-    if (isLoading) {
+    if (isLoading || isMovie) {
         return (
             <div className="min-h-screen bg-[#09090b] text-white flex items-center justify-center">
                 <div className="flex flex-col items-center gap-5">
                     <div className="w-10 h-10 border-2 border-brand-orange border-t-transparent rounded-full animate-spin" />
-                    <span className="text-[9px] font-black uppercase tracking-[0.5em] text-zinc-500 animate-pulse">Cargando...</span>
+                    <span className="text-[9px] font-black uppercase tracking-[0.5em] text-zinc-500 animate-pulse">
+                        {isMovie ? "Redirigiendo a Película..." : "Cargando..."}
+                    </span>
                 </div>
             </div>
         )
@@ -288,379 +299,112 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
 
     return (
         <div className="min-h-screen bg-[#09090b] text-white pb-16">
-            {entry.media?.format === "MOVIE" || entry.media?.format === "SPECIAL" || entry.media?.format === "OVA" ? (
-                <MovieHeroSection
-                    seriesId={seriesId}
-                    directoryPath={entry.libraryData?.sharedPath || ""}
-                    backdropUrl={getHighResImage(entry.media.bannerImage || entry.media.posterImage)}
-                    entry={entry}
-                    onPlay={handlePlayDefault}
-                    continuityItem={continuityData?.item}
-                    className="cursor-pointer group/hero"
-                />
-            ) : (
-                <HeroSection
-                    seriesId={seriesId}
-                    directoryPath={entry.libraryData?.sharedPath || ""}
-                    backdropUrl={getHighResImage(entry.media.bannerImage || entry.media.posterImage)}
-                    entry={entry}
-                    onPlay={handlePlayDefault}
-                    continuityItem={continuityData?.item}
-                    className="cursor-pointer group/hero"
-                />
-            )}
+            <HeroSection
+                seriesId={seriesId}
+                directoryPath={entry.libraryData?.sharedPath || ""}
+                backdropUrl={getHighResImage(entry.media.bannerImage || entry.media.posterImage)}
+                entry={entry}
+                onPlay={handlePlayDefault}
+                continuityItem={continuityData?.item}
+                className="cursor-pointer group/hero"
+            />
             <div className="w-full max-w-[1800px] mx-auto px-6 sm:px-12 mt-12">
                 {/* Custom Glassmorphic Tabs Navigation for Series/Shows */}
-                {entry.media?.format !== "MOVIE" && (
-                    <div className="flex border-b border-white/5 pb-2 mb-8 gap-8 overflow-x-auto no-scrollbar">
+                <div className="flex border-b border-white/5 pb-2 mb-8 gap-8 overflow-x-auto no-scrollbar">
+                    <button
+                        onClick={() => setActiveTab("episodes")}
+                        className={cn(
+                            "text-sm uppercase tracking-[0.2em] font-black pb-3 transition-all relative shrink-0",
+                            activeTab === "episodes" ? "text-brand-orange" : "text-zinc-500 hover:text-zinc-300"
+                        )}
+                    >
+                        Episodios
+                        {activeTab === "episodes" && (
+                            <motion.div layoutId="detailActiveLine" className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-orange" />
+                        )}
+                    </button>
+
+                    {hasRelations && (
                         <button
-                            onClick={() => setActiveTab("episodes")}
+                            onClick={() => setActiveTab("relations")}
                             className={cn(
                                 "text-sm uppercase tracking-[0.2em] font-black pb-3 transition-all relative shrink-0",
-                                activeTab === "episodes" ? "text-brand-orange" : "text-zinc-500 hover:text-zinc-300"
+                                activeTab === "relations" ? "text-brand-orange" : "text-zinc-500 hover:text-zinc-300"
                             )}
                         >
-                            Episodios
-                            {activeTab === "episodes" && (
+                            Relacionados
+                            {activeTab === "relations" && (
                                 <motion.div layoutId="detailActiveLine" className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-orange" />
                             )}
                         </button>
+                    )}
 
-                        {hasRelations && (
-                            <button
-                                onClick={() => setActiveTab("relations")}
-                                className={cn(
-                                    "text-sm uppercase tracking-[0.2em] font-black pb-3 transition-all relative shrink-0",
-                                    activeTab === "relations" ? "text-brand-orange" : "text-zinc-500 hover:text-zinc-300"
-                                )}
-                            >
-                                Relacionados
-                                {activeTab === "relations" && (
-                                    <motion.div layoutId="detailActiveLine" className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-orange" />
-                                )}
-                            </button>
-                        )}
-
-                        {hasCharacters && (
-                            <button
-                                onClick={() => setActiveTab("characters")}
-                                className={cn(
-                                    "text-sm uppercase tracking-[0.2em] font-black pb-3 transition-all relative shrink-0",
-                                    activeTab === "characters" ? "text-brand-orange" : "text-zinc-500 hover:text-zinc-300"
-                                )}
-                            >
-                                Personajes
-                                {activeTab === "characters" && (
-                                    <motion.div layoutId="detailActiveLine" className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-orange" />
-                                )}
-                            </button>
-                        )}
-
-                        {hasTechnical && (
-                            <button
-                                onClick={() => setActiveTab("technical")}
-                                className={cn(
-                                    "text-sm uppercase tracking-[0.2em] font-black pb-3 transition-all relative shrink-0",
-                                    activeTab === "technical" ? "text-brand-orange" : "text-zinc-500 hover:text-zinc-300"
-                                )}
-                            >
-                                Datos Técnicos
-                                {activeTab === "technical" && (
-                                    <motion.div layoutId="detailActiveLine" className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-orange" />
-                                )}
-                            </button>
-                        )}
-                    </div>
-                )}
-
-                {/* Custom Glassmorphic Tabs Navigation for Movies */}
-                {entry.media?.format === "MOVIE" && (
-                    <div className="flex border-b border-white/5 pb-2 mb-8 gap-8 overflow-x-auto no-scrollbar">
+                    {hasCharacters && (
                         <button
-                            onClick={() => setActiveTab("movie")}
+                            onClick={() => setActiveTab("characters")}
                             className={cn(
                                 "text-sm uppercase tracking-[0.2em] font-black pb-3 transition-all relative shrink-0",
-                                activeTab === "movie" ? "text-brand-orange" : "text-zinc-500 hover:text-zinc-300"
+                                activeTab === "characters" ? "text-brand-orange" : "text-zinc-500 hover:text-zinc-300"
                             )}
                         >
-                            Ver Película
-                            {activeTab === "movie" && (
+                            Personajes
+                            {activeTab === "characters" && (
                                 <motion.div layoutId="detailActiveLine" className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-orange" />
                             )}
                         </button>
+                    )}
 
-                        {hasRelations && (
-                            <button
-                                onClick={() => setActiveTab("relations")}
-                                className={cn(
-                                    "text-sm uppercase tracking-[0.2em] font-black pb-3 transition-all relative shrink-0",
-                                    activeTab === "relations" ? "text-brand-orange" : "text-zinc-500 hover:text-zinc-300"
-                                )}
-                            >
-                                Relacionados
-                                {activeTab === "relations" && (
-                                    <motion.div layoutId="detailActiveLine" className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-orange" />
-                                )}
-                            </button>
-                        )}
-
-                        {hasCharacters && (
-                            <button
-                                onClick={() => setActiveTab("characters")}
-                                className={cn(
-                                    "text-sm uppercase tracking-[0.2em] font-black pb-3 transition-all relative shrink-0",
-                                    activeTab === "characters" ? "text-brand-orange" : "text-zinc-500 hover:text-zinc-300"
-                                )}
-                            >
-                                Personajes
-                                {activeTab === "characters" && (
-                                    <motion.div layoutId="detailActiveLine" className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-orange" />
-                                )}
-                            </button>
-                        )}
-
-                        {hasTechnical && (
-                            <button
-                                onClick={() => setActiveTab("technical")}
-                                className={cn(
-                                    "text-sm uppercase tracking-[0.2em] font-black pb-3 transition-all relative shrink-0",
-                                    activeTab === "technical" ? "text-brand-orange" : "text-zinc-500 hover:text-zinc-300"
-                                )}
-                            >
-                                Datos Técnicos
-                                {activeTab === "technical" && (
-                                    <motion.div layoutId="detailActiveLine" className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-orange" />
-                                )}
-                            </button>
-                        )}
-                    </div>
-                )}
+                    {hasTechnical && (
+                        <button
+                            onClick={() => setActiveTab("technical")}
+                            className={cn(
+                                "text-sm uppercase tracking-[0.2em] font-black pb-3 transition-all relative shrink-0",
+                                activeTab === "technical" ? "text-brand-orange" : "text-zinc-500 hover:text-zinc-300"
+                            )}
+                        >
+                            Datos Técnicos
+                            {activeTab === "technical" && (
+                                <motion.div layoutId="detailActiveLine" className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-orange" />
+                            )}
+                        </button>
+                    )}
+                </div>
 
                 <div className="mt-8 min-h-[300px]">
-                    {entry.media?.format === "MOVIE" ? (
-                        <div className="flex flex-col gap-12 animate-fade-in">
-                            {/* Local Movie File Section */}
-                            {activeTab === "movie" && (
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
-                                    {/* Left Column: Synopsis, Alternative Versions & Premium Reparto (Cast) */}
-                                    <div className="lg:col-span-2 flex flex-col gap-8">
-                                        <div className="flex flex-col gap-4">
-                                            <p className="text-[17px] text-zinc-300 leading-relaxed font-normal tracking-wide antialiased">
-                                                {entry.media?.description ? entry.media.description.replace(/<[^>]*>/g, '') : "Sin descripción disponible."}
-                                            </p>
-                                        </div>
-
-                                        {/* Premium Visual Reparto (Cast Grid) */}
-                                        {entry.media?.characters?.edges && entry.media.characters.edges.length > 0 && (
-                                            <div className="flex flex-col gap-5 pt-8 border-t border-white/5">
-                                                <div className="flex items-center justify-between">
-                                                    <h4 className="text-xs font-black uppercase tracking-[0.25em] text-zinc-400">Reparto Principal</h4>
-                                                    {entry.media.characters.edges.length > 6 && (
-                                                        <button 
-                                                            onClick={() => setActiveTab("characters")}
-                                                            className="text-[10px] font-black text-brand-orange hover:text-white uppercase tracking-[0.15em] transition-colors"
-                                                        >
-                                                            Ver Reparto Completo →
-                                                        </button>
-                                                    )}
-                                                </div>
-                                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                                    {entry.media.characters.edges.slice(0, 6).map((edge, idx) => (
-                                                        <div 
-                                                            key={idx} 
-                                                            className="flex items-center gap-3.5 p-3.5 bg-zinc-950/20 border border-white/5 rounded-2xl hover:border-brand-orange/20 transition-all duration-300 group cursor-pointer"
-                                                            onClick={() => setActiveTab("characters")}
-                                                        >
-                                                            <div className="w-11 h-11 rounded-full overflow-hidden bg-zinc-900 border border-white/10 shrink-0 shadow-lg group-hover:border-brand-orange/50 transition-colors">
-                                                                {edge.node?.image ? (
-                                                                    <img src={edge.node.image} alt={edge.node.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                                                ) : (
-                                                                    <div className="w-full h-full bg-zinc-950 flex items-center justify-center text-[10px] text-zinc-600 font-bold uppercase">
-                                                                        {edge.node?.name ? edge.node.name.slice(0, 2) : "C"}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                            <div className="flex flex-col truncate">
-                                                                <span className="text-[12px] font-bold text-white group-hover:text-brand-orange transition-colors truncate">{edge.node?.name}</span>
-                                                                <span className="text-[9px] font-black text-zinc-500 tracking-wider uppercase truncate mt-0.5">{edge.role === "MAIN" ? "Principal" : "Secundario"}</span>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Alternate Versions & Local Files Switcher (Low Profile) */}
-                                        {entry.localFiles && entry.localFiles.length > 1 && (
-                                            <div className="flex flex-col gap-4 pt-8 border-t border-white/5">
-                                                <span className="text-[10px] font-black text-zinc-500 tracking-[0.2em] uppercase">Versiones Alternativas Disponibles:</span>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                    {entry.localFiles.map((lf, idx) => (
-                                                        <div 
-                                                            key={idx} 
-                                                            className="flex items-center justify-between p-4 bg-zinc-950/30 border border-white/5 rounded-2xl hover:border-brand-orange/30 hover:bg-zinc-900/10 transition-all duration-300 group"
-                                                        >
-                                                            <span className="text-xs text-zinc-400 font-bold truncate max-w-[70%] group-hover:text-white transition-colors">{lf.name}</span>
-                                                            <button 
-                                                                onClick={() => handlePlayLocalFile(lf)}
-                                                                className="px-3.5 py-1.5 bg-white/5 border border-white/10 rounded-lg text-[9px] font-black text-brand-orange hover:bg-brand-orange hover:text-white hover:border-brand-orange uppercase tracking-wider transition-all duration-300"
-                                                            >
-                                                                REPRODUCIR
-                                                            </button>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Right Column: Premium Metadata & General Info Sidebar */}
-                                    <div className="flex flex-col gap-6 bg-zinc-950/20 backdrop-blur-md border border-white/5 rounded-2xl p-8 hover:border-brand-orange/10 transition-all duration-500">
-                                        {/* Géneros */}
-                                        {entry.media?.genres && (
-                                            <div className="flex flex-col gap-2">
-                                                <span className="text-[10px] font-black text-zinc-500 tracking-[0.2em] uppercase">Géneros:</span>
-                                                <div className="flex flex-wrap gap-2 mt-1">
-                                                    {(() => {
-                                                        const g = entry.media.genres as any;
-                                                        if (!g) return null;
-                                                        let genresArr: any[] = [];
-                                                        if (Array.isArray(g)) genresArr = g;
-                                                        else if (typeof g === "string") {
-                                                            try {
-                                                                if (g.startsWith("[")) {
-                                                                    const parsed = JSON.parse(g);
-                                                                    if (Array.isArray(parsed)) genresArr = parsed;
-                                                                } else {
-                                                                    const decoded = atob(g);
-                                                                    if (decoded.startsWith("[")) {
-                                                                        const parsed = JSON.parse(decoded);
-                                                                        if (Array.isArray(parsed)) genresArr = parsed;
-                                                                    }
-                                                                }
-                                                            } catch {
-                                                                genresArr = [g];
-                                                            }
-                                                        }
-                                                        return genresArr.map((gen: string) => (
-                                                            <span key={gen} className="px-2.5 py-1 text-[9px] font-black uppercase tracking-wider bg-white/5 border border-white/10 text-white/70 rounded-md">
-                                                                {gen}
-                                                            </span>
-                                                        ));
-                                                    })()}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Especificaciones del Archivo */}
-                                        {entry.localFiles && entry.localFiles.length > 0 && (
-                                            <div className="flex flex-col gap-4 pt-4 border-t border-white/5">
-                                                <span className="text-[10px] font-black text-zinc-500 tracking-[0.2em] uppercase">Especificaciones del Archivo:</span>
-                                                {(() => {
-                                                    const tech = entry.localFiles[0]?.technicalInfo;
-                                                    const isMp4 = entry.localFiles[0]?.path?.toLowerCase().endsWith(".mp4");
-                                                    return (
-                                                        <div className="flex flex-col gap-3 font-mono text-[11px] text-zinc-400">
-                                                            <div className="flex items-center justify-between py-1 border-b border-white/[0.02]">
-                                                                <span className="font-sans font-black text-[9px] text-zinc-600 tracking-wider uppercase">Contenedor</span>
-                                                                <span className="font-bold text-white uppercase tracking-widest">{isMp4 ? "MP4" : "MKV"}</span>
-                                                            </div>
-                                                            {tech?.videoStream && (
-                                                                <>
-                                                                    <div className="flex items-center justify-between py-1 border-b border-white/[0.02]">
-                                                                        <span className="font-sans font-black text-[9px] text-zinc-600 tracking-wider uppercase">Resolución</span>
-                                                                        <span className="font-bold text-white tracking-widest">{tech.videoStream.width}x{tech.videoStream.height}</span>
-                                                                    </div>
-                                                                    <div className="flex items-center justify-between py-1 border-b border-white/[0.02]">
-                                                                        <span className="font-sans font-black text-[9px] text-zinc-600 tracking-wider uppercase">Video Códec</span>
-                                                                        <span className="font-bold text-brand-orange tracking-widest uppercase">{tech.videoStream.codec || "AVC"}</span>
-                                                                    </div>
-                                                                </>
-                                                            )}
-                                                            <div className="flex items-center justify-between py-1">
-                                                                <span className="font-sans font-black text-[9px] text-zinc-600 tracking-wider uppercase">Estado</span>
-                                                                <span className="font-bold text-emerald-500 uppercase tracking-widest">Listo</span>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })()}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Characters Section */}
-                            {activeTab === "characters" && hasCharacters && (
-                                <div className="bg-zinc-950/40 backdrop-blur-md border border-white/5 rounded-3xl p-8 hover:border-brand-orange/10 transition-all duration-500">
-                                    <div className="flex items-center justify-between mb-8 border-b border-white/5 pb-4">
-                                        <h3 className="text-xl font-bebas tracking-[0.2em] text-white uppercase">REPARTO Y PERSONAJES</h3>
-                                        <span className="text-[9px] font-black tracking-widest text-zinc-500 uppercase">PERSONAJES PRINCIPALES</span>
-                                    </div>
-                                    <CharactersTab characters={entry.media?.characters?.edges || []} />
-                                </div>
-                            )}
-
-                            {/* Technical Specs Panel */}
-                            {activeTab === "technical" && hasTechnical && (
-                                <div className="bg-zinc-950/40 backdrop-blur-md border border-white/5 rounded-3xl p-8 hover:border-brand-orange/10 transition-all duration-500">
-                                    <div className="flex items-center justify-between mb-8 border-b border-white/5 pb-4">
-                                        <h3 className="text-xl font-bebas tracking-[0.2em] text-white uppercase">INFORMACIÓN TÉCNICA</h3>
-                                        <span className="text-[9px] font-black tracking-widest text-zinc-500 uppercase">DETALLES DEL ARCHIVO DE VIDEO</span>
-                                    </div>
-                                    <TechnicalMetadataTab localFiles={entry.localFiles || []} />
-                                </div>
-                            )}
-
-                            {/* Relations / Sequel/Prequel Movies & Series */}
-                            {activeTab === "relations" && hasRelations && (
-                                <div className="bg-zinc-950/40 backdrop-blur-md border border-white/5 rounded-3xl p-8 hover:border-brand-orange/10 transition-all duration-500">
-                                    <div className="flex items-center justify-between mb-8 border-b border-white/5 pb-4">
-                                        <h3 className="text-xl font-bebas tracking-[0.2em] text-white uppercase">CONTENIDO RELACIONADO</h3>
-                                        <span className="text-[9px] font-black tracking-widest text-zinc-500 uppercase">SAGA Y SECUELAS</span>
-                                    </div>
-                                    <RelationsTab media={entry.media} />
-                                </div>
-                            )}
+                    {activeTab === "episodes" && (
+                        <div className="mt-8 animate-fade-in">
+                            <SagaEpisodesSection 
+                                seriesTitle={title} 
+                                fallbackThumb={heroBackdrop} 
+                                episodes={computedEpisodes}
+                                localFiles={entry.localFiles || []}
+                                sagas={sagas}
+                                seriesTmdbId={entry.media?.tmdbId}
+                                onPlay={handlePlayEpisode}
+                                onToggleWatched={handleToggleWatched}
+                                onUpdateProgress={handleUpdateProgress}
+                                continuityItem={continuityData?.item}
+                                currentlyPlayingEpNumber={playTarget?.episodeNumber}
+                            />
                         </div>
-                    ) : (
-                        <>
-                            {activeTab === "episodes" && (
-                                <div className="mt-8 animate-fade-in">
-                                    <SagaEpisodesSection 
-                                        seriesTitle={title} 
-                                        fallbackThumb={heroBackdrop} 
-                                        episodes={computedEpisodes}
-                                        localFiles={entry.localFiles || []}
-                                        sagas={sagas}
-                                        seriesTmdbId={entry.media?.tmdbId}
-                                        onPlay={handlePlayEpisode}
-                                        onToggleWatched={handleToggleWatched}
-                                        onUpdateProgress={handleUpdateProgress}
-                                        continuityItem={continuityData?.item}
-                                        currentlyPlayingEpNumber={playTarget?.episodeNumber}
-                                    />
-                                </div>
-                            )}
+                    )}
 
-                            {activeTab === "relations" && (
-                                <div className="py-4 animate-fade-in">
-                                    <RelationsTab media={entry.media} />
-                                </div>
-                            )}
+                    {activeTab === "relations" && (
+                        <div className="py-4 animate-fade-in">
+                            <RelationsTab media={entry.media} />
+                        </div>
+                    )}
 
-                            {activeTab === "characters" && (
-                                <div className="py-4 animate-fade-in">
-                                    <CharactersTab characters={entry.media?.characters?.edges || []} />
-                                </div>
-                            )}
+                    {activeTab === "characters" && (
+                        <div className="py-4 animate-fade-in">
+                            <CharactersTab characters={entry.media?.characters?.edges || []} />
+                        </div>
+                    )}
 
-                            {activeTab === "technical" && (
-                                <div className="py-4 animate-fade-in">
-                                    <TechnicalMetadataTab localFiles={entry.localFiles || []} />
-                                </div>
-                            )}
-                        </>
+                    {activeTab === "technical" && (
+                        <div className="py-4 animate-fade-in">
+                            <TechnicalMetadataTab localFiles={entry.localFiles || []} />
+                        </div>
                     )}
                 </div>
             </div>

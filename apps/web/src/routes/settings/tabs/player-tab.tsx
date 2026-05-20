@@ -6,13 +6,17 @@ import { type SettingsFormValues } from "../index"
 
 export function PlayerTab({ control }: { control: Control<SettingsFormValues> }) {
     return (
-        <TabsContent value="player" className="m-0 space-y-16 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-            <header className="space-y-4">
-                <h1 className="text-7xl font-black tracking-tighter text-white font-bebas">MOTOR <span className="text-zinc-500">REPRODUCCIÓN</span></h1>
-                <p className="text-zinc-400 text-xl font-medium leading-relaxed max-w-3xl">Optimiza la fluidez y la automatización de tu experiencia visual.</p>
+        <TabsContent value="player" className="m-0 space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700 outline-none">
+            <header className="space-y-2">
+                <h1 className="text-5xl font-black tracking-wider text-white font-bebas leading-none">
+                    MOTOR <span className="text-zinc-500">REPRODUCCIÓN</span>
+                </h1>
+                <p className="text-zinc-400 text-base font-medium leading-relaxed max-w-3xl">
+                    Optimiza la fluidez y la automatización de tu experiencia visual en KameHouse.
+                </p>
             </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 <Section label="Automatización">
                     <Card>
                         <OsToggle control={control} name="library.autoPlayNextEpisode"
@@ -29,7 +33,7 @@ export function PlayerTab({ control }: { control: Control<SettingsFormValues> })
                         <OsToggle control={control} name="mediastream.transcodeEnabled"
                             label="Transcodificación HW"
                             desc="Usar aceleración por hardware para el streaming de video." />
-                         <OsToggle control={control} name="mediastream.preTranscodeEnabled"
+                        <OsToggle control={control} name="mediastream.preTranscodeEnabled"
                             label="Pre-Transcodificado"
                             desc="Preparar el buffer antes de iniciar la reproducción." />
                     </Card>

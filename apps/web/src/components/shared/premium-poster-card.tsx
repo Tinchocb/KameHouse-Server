@@ -97,7 +97,7 @@ export const PremiumPosterCard = React.memo(({
                 }
             }}
             className={cn(
-                "group relative aspect-[2/3] w-full cursor-pointer rounded-2xl bg-zinc-900 transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] focus-visible:ring-4 focus-visible:ring-brand-orange focus-visible:ring-offset-4 focus-visible:ring-offset-background",
+                "group relative aspect-[2/3] w-full cursor-pointer rounded-2xl bg-zinc-900 transition-[box-shadow] duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] focus-visible:ring-4 focus-visible:ring-brand-orange focus-visible:ring-offset-4 focus-visible:ring-offset-background transform-gpu",
                 "perspective-1000",
                 className
             )}
@@ -108,7 +108,7 @@ export const PremiumPosterCard = React.memo(({
                 <DeferredImage
                     src={getHighResImage(posterUrl)}
                     alt={title}
-                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110 transform-gpu"
                 />
                 
                 {/* ── Overlays ── */}
@@ -117,7 +117,7 @@ export const PremiumPosterCard = React.memo(({
                 {/* ── Interactive Glow (Cursor Follow) ── */}
                 <div 
                     ref={glowRef}
-                    className="pointer-events-none absolute h-40 w-40 rounded-full bg-brand-orange/20 blur-[60px] opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                    className="pointer-events-none absolute h-40 w-40 rounded-full bg-brand-orange/20 blur-[60px] opacity-0 transition-opacity duration-500 group-hover:opacity-100 transform-gpu"
                 />
 
                 {/* ── Top Badges ── */}
@@ -136,7 +136,7 @@ export const PremiumPosterCard = React.memo(({
                 </div>
 
                 {/* ── Hover Content ── */}
-                <div className="absolute inset-x-0 bottom-0 flex flex-col gap-2.5 p-5 translate-y-4 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
+                <div className="absolute inset-x-0 bottom-0 flex flex-col gap-2.5 p-5 translate-y-4 opacity-0 transition-[transform,opacity] duration-500 group-hover:translate-y-0 group-hover:opacity-100 transform-gpu">
                     <div className="flex flex-wrap gap-2">
                         {genres?.slice(0, 2).map(g => (
                             <span key={g} className="text-[10px] font-black uppercase tracking-[0.15em] text-brand-orange bg-brand-orange/10 px-2 py-0.5 rounded border border-brand-orange/20 backdrop-blur-md">
@@ -151,10 +151,10 @@ export const PremiumPosterCard = React.memo(({
                     
                     <div className="flex items-center justify-between pt-2">
                         <div className="flex items-center gap-4">
-                            <button className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-orange text-white transition-all hover:scale-110 shadow-lg shadow-brand-orange/30">
+                            <button className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-orange text-white transition-transform duration-300 hover:scale-110 shadow-lg shadow-brand-orange/30 transform-gpu">
                                 <Play className="h-5 w-5 fill-current" />
                             </button>
-                            <button className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-xl transition-all hover:bg-white/20 border border-white/10">
+                            <button className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-xl transition-[transform,background-color] duration-300 hover:scale-110 hover:bg-white/20 border border-white/10 transform-gpu">
                                 <Info className="h-5 w-5" />
                             </button>
                         </div>

@@ -142,10 +142,10 @@ const NAV_ITEMS = [
 
 function TabsTriggerActiveIndicator() {
     return (
-         <motion.div 
+        <motion.div 
             layoutId="active-nav-bg"
-            className="absolute inset-0 bg-white/10 rounded-none -z-10 border border-white/20"
-            transition={{ type: "spring", stiffness: 350, damping: 35 }}
+            className="absolute inset-y-1.5 inset-x-0 border-l-[3px] border-primary bg-white/[0.02] -z-10 shadow-[inset_1px_0_0_rgba(255,255,255,0.02)]"
+            transition={{ type: "spring", stiffness: 350, damping: 30 }}
         />
     )
 }
@@ -192,53 +192,54 @@ function SettingsPage() {
     if (isLoading) return <LoadingOverlayWithLogo />
 
     return (
-        <div className="flex h-full w-full bg-black/40 backdrop-blur-3xl overflow-hidden selection:bg-primary/30">
-            <header className="fixed top-0 left-0 lg:left-24 right-0 h-16 border-b border-white/[0.03] bg-black/50 backdrop-blur-md z-40 flex items-center justify-between px-8">
+        <div className="flex h-full w-full bg-gradient-to-br from-[#09090b] via-[#121215] to-[#09090b] text-white selection:bg-primary/20 overflow-hidden relative">
+            <header className="fixed top-0 left-0 lg:left-24 right-0 h-16 border-b border-white/[0.02] bg-[#09090b]/85 backdrop-blur-xl z-40 flex items-center justify-between px-8">
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-none bg-white flex items-center justify-center p-1.5 shadow-lg">
-                        <LucideHardDrive className="text-black" size={18} />
+                    <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center p-1.5 shadow-md">
+                        <LucideHardDrive className="text-black" size={14} />
                     </div>
-                    <span className="text-sm font-black tracking-widest uppercase text-white/90 font-bebas">KameHouse <span className="text-zinc-500">Ajustes</span></span>
+                    <span className="text-[11px] font-black tracking-[0.25em] uppercase text-white/90 font-mono">
+                        KAMEHOUSE <span className="text-primary font-bold">AJUSTES</span>
+                    </span>
                 </div>
             </header>
 
             <Tabs defaultValue="library" className="flex-1 flex h-full pt-16 relative">
-                <aside className="w-[320px] h-full border-r border-white/[0.03] bg-black/30 flex flex-col p-8 space-y-10 z-10 overflow-y-auto relative">
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
-                    <div className="space-y-4 mt-4 relative z-10">
-                        <p className="text-xs font-black uppercase tracking-[0.3em] text-zinc-600 px-4">Panel de Control</p>
-                        <TabsList className="bg-transparent border-0 flex flex-col items-stretch h-auto p-0 gap-2">
+                <aside className="w-[280px] h-full border-r border-white/[0.02] bg-[#09090b]/40 flex flex-col p-6 space-y-8 z-10 overflow-y-auto relative pt-10">
+                    <div className="space-y-3 relative z-10">
+                        <p className="text-[9px] font-black uppercase tracking-[0.25em] text-zinc-500 px-3">Configuración</p>
+                        <TabsList className="bg-transparent border-0 flex flex-col items-stretch h-auto p-0 gap-1.5">
                             {NAV_ITEMS.map((item) => (
                                 <TabsTrigger
                                     key={item.id}
                                     value={item.id}
                                     className={cn(
-                                        "relative flex items-center justify-start gap-5 px-5 py-4 rounded-none text-[15px] font-black text-zinc-500",
-                                        "transition-all duration-500 group/nav outline-none hover:bg-white/[0.03] hover:text-zinc-300",
-                                        "data-[state=active]:bg-white/[0.04] data-[state=active]:text-white data-[state=active]:border-white/10 border border-transparent"
+                                        "relative flex items-center justify-start gap-4 px-4 py-3 rounded-xl text-sm font-bold text-zinc-500",
+                                        "transition-all duration-300 group/nav outline-none hover:text-zinc-300 hover:bg-white/[0.01]",
+                                        "data-[state=active]:text-white border border-transparent"
                                     )}
                                 >
-                                    <item.icon size={22} className="shrink-0 transition-transform duration-500 group-hover/nav:scale-110 group-hover/nav:text-white data-[state=active]:text-white" />
-                                    <span className="relative z-10 tracking-tight">{item.label}</span>
+                                    <item.icon size={18} className="shrink-0 transition-transform duration-300 group-hover/nav:scale-105 group-hover/nav:text-white data-[state=active]:text-white" />
+                                    <span className="relative z-10 tracking-tight font-medium">{item.label}</span>
                                     <TabsTriggerActiveIndicator />
                                 </TabsTrigger>
                             ))}
                         </TabsList>
                     </div>
 
-                    <div className="pt-8 space-y-5 border-t border-white/[0.03] mt-auto relative z-10">
-                        <div className="glass-panel-premium mx-1 p-6 rounded-none bg-white/[0.02] border border-white/5 relative overflow-hidden group/premium">
-                            <div className="absolute top-0 right-0 p-3 opacity-20 group-hover/premium:opacity-40 transition-all duration-700 ease-spring group-hover/premium:scale-110 group-hover/premium:rotate-12">
-                                <LucideCrown size={48} className="text-white" />
+                    <div className="pt-6 space-y-4 border-t border-white/[0.03] mt-auto relative z-10">
+                        <div className="glass-panel-premium mx-1 p-5 rounded-2xl bg-white/[0.01] border border-white/5 relative overflow-hidden group/premium transition-all hover:bg-white/[0.02] hover:border-white/10">
+                            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover/premium:opacity-20 transition-all duration-700 ease-spring group-hover/premium:scale-110 group-hover/premium:rotate-6">
+                                <LucideCrown size={36} className="text-white" />
                             </div>
-                            <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-black">KameHouse Engine</p>
-                            <p className="text-[12px] text-white mt-1 font-bebas">ALPHA VERSION 3.5.0</p>
+                            <p className="text-[9px] text-zinc-500 uppercase tracking-widest font-black">KameHouse Engine</p>
+                            <p className="text-xs text-white/80 mt-1 font-mono tracking-tight">ALPHA VERSION 3.5.0</p>
                         </div>
                     </div>
                 </aside>
 
-                <main className="flex-1 h-full overflow-y-auto bg-black/10 scrollbar-hide py-8 px-8">
-                    <form onSubmit={handleSubmit(onSubmit as unknown as SubmitHandler<FieldValues>)} className="w-full pb-48">
+                <main className="flex-1 h-full overflow-y-auto bg-black/5 scrollbar-hide py-8 px-10">
+                    <form onSubmit={handleSubmit(onSubmit as unknown as SubmitHandler<FieldValues>)} className="w-full pb-36 max-w-5xl">
                         <LibraryTab isScanning={isScanning} handleScan={handleScan} control={control} />
                         <PlayerTab control={control} />
                         <IntegrationsTab control={control} />
@@ -249,25 +250,25 @@ function SettingsPage() {
                 <AnimatePresence>
                     {isDirty && (
                          <motion.div
-                            initial={{ opacity: 0, y: 60, scale: 0.95 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 60, scale: 0.95 }}
-                            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                            className="fixed bottom-12 right-12 z-50"
+                            initial={{ opacity: 0, y: 40, x: "-50%" }}
+                            animate={{ opacity: 1, y: 0, x: "-50%" }}
+                            exit={{ opacity: 0, y: 40, x: "-50%" }}
+                            transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                            className="fixed bottom-8 left-[calc(50%_+_140px)] -translate-x-1/2 z-50"
                         >
-                            <div className="bg-zinc-950/80 border border-white/10 backdrop-blur-md px-6 py-3 rounded-none shadow-[0_0_50px_rgba(235,94,40,0.15)] flex items-center gap-10 min-w-[450px]">
+                            <div className="bg-[#09090b]/80 border border-white/10 backdrop-blur-md px-6 py-3.5 rounded-2xl shadow-[0_15px_50px_rgba(0,0,0,0.6),0_0_30px_rgba(235,94,40,0.05)] flex items-center gap-10 min-w-[480px]">
                                 <div className="flex items-center gap-3">
                                     <span className="relative flex h-2 w-2">
                                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                                         <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
                                     </span>
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Cambios pendientes</span>
+                                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">Ajustes Modificados</span>
                                 </div>
                                 <div className="flex gap-2 ml-auto">
                                     <button
                                         type="button"
                                         onClick={() => reset()}
-                                        className="px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 hover:text-white hover:bg-white/5 border border-transparent transition-all"
+                                        className="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 hover:text-white hover:bg-white/5 border border-transparent transition-all active:scale-95"
                                     >
                                         Descartar
                                     </button>
@@ -275,10 +276,10 @@ function SettingsPage() {
                                         type="button"
                                         disabled={isSaving}
                                         onClick={handleSubmit(onSubmit as unknown as SubmitHandler<FieldValues>)}
-                                        className="bg-primary text-black hover:bg-primary/95 px-8 py-3 text-[10px] font-black uppercase tracking-[0.2em] disabled:opacity-50 flex items-center gap-3 transition-all relative overflow-hidden group/savebtn active:scale-95"
+                                        className="bg-primary text-black hover:bg-primary/90 px-6 py-2 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] disabled:opacity-50 flex items-center gap-2 transition-all font-bold active:scale-95 shadow-[0_4px_15px_rgba(235,94,40,0.15)]"
                                     >
-                                        {isSaving ? <LucideRefreshCw className="animate-spin" size={14} /> : <LucideSave size={14} />}
-                                        {isSaving ? "Guardando..." : "Aplicar Ajustes"}
+                                        {isSaving ? <LucideRefreshCw className="animate-spin" size={12} /> : <LucideSave size={12} />}
+                                        {isSaving ? "Guardando..." : "Guardar Cambios"}
                                     </button>
                                 </div>
                             </div>

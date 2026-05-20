@@ -125,7 +125,7 @@ export const LANE_ICONS: Record<string, any> = {
 }
 
 export const SmartSwimlane = React.memo(function SmartSwimlane({ lane, onNavigate, aspect, index }: SmartSwimlaneProps) {
-    const { setBackdropUrl } = useIntelligenceStore()
+    const setBackdropUrl = useIntelligenceStore(s => s.setBackdropUrl)
 
     const resolvedAspect = aspect ?? (lane.type === "local_library" ? "poster" : "wide")
 

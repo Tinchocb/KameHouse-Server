@@ -5,9 +5,11 @@ import gsap from "gsap"
 import { cn } from "@/components/ui/core/styling"
 import { getHighResImage } from "@/lib/helpers/images"
 import { Anime_Entry, Continuity_WatchHistoryItem } from "@/api/generated/types"
-import { ClassicPosterCard } from "@/components/shared/classic-poster-card"
-import { MediaActionButtons } from "../-series-interactivity-client"
-import { sanitizeHtml } from "@/lib/helpers/sanitizer"
+import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
+import { Play, Sparkles, Star, Heart, Check, Film } from "lucide-react"
+import { DeferredImage } from "@/components/shared/deferred-image"
+import { useUpdateAnimeEntryProgress } from "@/api/hooks/anime_entries.hooks"
+import { toast } from "sonner"
 
 interface MovieHeroSectionProps {
     seriesId: string
@@ -21,7 +23,6 @@ interface MovieHeroSectionProps {
 
 export const MovieHeroSection = React.memo(function MovieHeroSection({
     seriesId,
-    directoryPath,
     backdropUrl,
     entry,
     onPlay,
@@ -30,40 +31,117 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
 }: MovieHeroSectionProps) {
     const containerRef = useRef<HTMLElement>(null)
     const media = entry.media!
+    const setBackdropUrl = useIntelligenceStore(s => s.setBackdropUrl)
+
+    // Sync current backdrop with global DynamicBackdrop blur background
+    React.useEffect(() => {
+        if (backdropUrl) {
+            setBackdropUrl(backdropUrl)
+        }
+        return () => {
+            setBackdropUrl(null)
+        }
+    }, [backdropUrl, setBackdropUrl])
 
     useGSAP(() => {
-        gsap.from(".movie-hero-content > *", {
-            y: 40,
+        gsap.from(".movie-hero-animate", {
+            y: 30,
             opacity: 0,
-            duration: 1.4,
-            stagger: 0.15,
+            duration: 1.2,
+            stagger: 0.12,
             ease: "power4.out",
-            delay: 0.2
+            delay: 0.1
         })
     }, { scope: containerRef })
-
-    const synopsis = media.description || "Sin descripción disponible."
-    const cleanSynopsis = useMemo(() => sanitizeHtml(synopsis), [synopsis])
     
     const title = media.titleSpanish || media.titleEnglish || media.titleRomaji || "Título Desconocido"
     const year = media.year?.toString() || ""
-    
-    const parseGenres = (g: string | string[] | undefined | null): string[] => {
-        if (!g) return []
-        if (Array.isArray(g)) return g as string[]
-        if (typeof g === "string") {
-            try {
-                if (g.startsWith("[")) return JSON.parse(g) as string[]
-                const decoded = atob(g)
-                if (decoded.startsWith("[")) return JSON.parse(decoded) as string[]
-            } catch {
-                return []
-            }
-        }
-        return []
-    }
-    const genres = parseGenres(media.genres)
     const score = media.score ? (media.score / 10).toFixed(1) : null
+
+    // 1. Duration Calculation & Formatting
+    const durationMins = useMemo(() => {
+        const epLength = entry.episodes?.[0]?.episodeMetadata?.length
+        if (epLength) return epLength
+        const historyDuration = continuityItem?.duration
+        if (historyDuration) return Math.round(historyDuration / 60)
+        return null
+    }, [entry, continuityItem])
+
+    const formattedDuration = useMemo(() => {
+        if (!durationMins) return null
+        const h = Math.floor(durationMins / 60)
+        const m = durationMins % 60
+        return h > 0 ? `${h}h ${m}m` : `${m}m`
+    }, [durationMins])
+
+    // 2. Technical details from files
+    const tech = entry.localFiles?.[0]?.technicalInfo
+    
+    const qualityBadge = useMemo(() => {
+        if (!tech?.videoStream) return null
+        const w = tech.videoStream.width
+        if (w >= 3840) return "4K ULTRA HD"
+        if (w >= 1920) return "1080P FHD"
+        if (w >= 1280) return "720P HD"
+        return null
+    }, [tech])
+
+    const codecBadge = useMemo(() => {
+        if (!tech?.videoStream?.codec) return null
+        const c = tech.videoStream.codec.toLowerCase()
+        if (c.includes("hevc") || c.includes("x265") || c.includes("h265")) return "HEVC"
+        if (c.includes("avc") || c.includes("x264") || c.includes("h264")) return "AVC"
+        return c.toUpperCase()
+    }, [tech])
+
+    const audioBadge = useMemo(() => {
+        if (!tech?.audioStreams || tech.audioStreams.length === 0) return null
+        const langs = tech.audioStreams.map(a => a.language?.toLowerCase() || "")
+        const hasSpa = langs.some(l => l.includes("spa") || l.includes("esp") || l.includes("lat"))
+        const hasJpn = langs.some(l => l.includes("jpn") || l.includes("jap"))
+        const labels: string[] = []
+        if (hasSpa) labels.push("ESPAÑOL")
+        if (hasJpn) labels.push("JAPONÉS")
+        return labels.length > 0 ? labels.join(" / ") : null
+    }, [tech])
+
+    // 3. User actions state & progress mutation
+    const initialWatched = useMemo(() => {
+        return entry.episodes?.[0]?.watched || false
+    }, [entry])
+    const [isWatched, setIsWatched] = React.useState(initialWatched)
+    React.useEffect(() => {
+        setIsWatched(initialWatched)
+    }, [initialWatched])
+
+    const [isFavorite, setIsFavorite] = React.useState(false)
+    const { mutate: updateProgress } = useUpdateAnimeEntryProgress(Number(seriesId), 1, false)
+
+    const handleToggleWatched = (e: React.MouseEvent) => {
+        e.stopPropagation()
+        const nextState = !isWatched
+        setIsWatched(nextState)
+        
+        updateProgress({
+            mediaId: Number(seriesId),
+            episodeNumber: nextState ? 1 : 0,
+            totalEpisodes: 1,
+            malId: entry.media?.idMal || undefined
+        })
+        
+        toast.success(nextState ? "Marcada como vista" : "Quitada de vistas")
+    }
+
+    const handleToggleFavorite = (e: React.MouseEvent) => {
+        e.stopPropagation()
+        setIsFavorite(prev => !prev)
+        toast.success(!isFavorite ? "Añadida a favoritos" : "Quitada de favoritos")
+    }
+
+    const progressPercent = useMemo(() => {
+        if (!continuityItem || !continuityItem.duration) return 0
+        return (continuityItem.currentTime / continuityItem.duration) * 100
+    }, [continuityItem])
 
     // Dynamic gradient fallback if no backdrop
     const stringToColor = (str: string) => {
@@ -72,30 +150,30 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
             hash = str.charCodeAt(i) + ((hash << 5) - hash)
         }
         const h = Math.abs(hash % 360)
-        return `hsl(${h}, 60%, 15%)`
+        return `hsl(${h}, 60%, 12%)`
     }
     const accentColor = stringToColor(title)
 
     return (
         <section 
             ref={containerRef}
-            className={cn("relative w-full min-h-[75vh] xl:min-h-[85vh] flex flex-col justify-end overflow-hidden", className)}
+            className={cn("relative w-full min-h-[75vh] md:min-h-[85vh] flex flex-col justify-end overflow-hidden bg-[#09090b] select-none", className)}
         >
             {/* Cinematic Grain Overlay */}
             <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay z-20"
                 style={{ backgroundImage: `url("https://grainy-gradients.vercel.app/noise.svg")` }}
             />
 
-            {/* Cinematic Ambient Halo / Gradient Fallback */}
-            <div className="absolute inset-0 overflow-hidden bg-[#09090b]">
+            {/* Ambient Blur Background */}
+            <div className="absolute inset-0 overflow-hidden bg-[#09090b] z-0">
                 {media.posterImage ? (
                     <div
-                        className="absolute left-1/2 top-0 -translate-x-1/2 w-full h-full opacity-35"
+                        className="absolute left-1/2 top-0 -translate-x-1/2 w-full h-full opacity-30"
                         style={{
                             backgroundImage: `url(${getHighResImage(media.posterImage)})`,
                             backgroundSize: "cover",
                             backgroundPosition: "center 20%",
-                            filter: "blur(120px) saturate(150%) brightness(0.4)",
+                            filter: "blur(120px) saturate(150%) brightness(0.3)",
                         }}
                     />
                 ) : (
@@ -106,88 +184,152 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
                         }}
                     />
                 )}
-                {/* Master Gradients for Depth */}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#09090b] via-[#09090b]/40 to-transparent opacity-100" />
-                <div className="absolute inset-0 bg-gradient-to-r from-[#09090b] via-[#09090b]/40 to-transparent opacity-95" />
-                <div className="absolute inset-0 bg-gradient-to-b from-[#09090b]/20 via-transparent to-transparent" />
             </div>
 
-            {/* Backdrop (Cinematic Overlay) */}
+            {/* High Res Crisp Backdrop */}
             {backdropUrl && (
                 <div 
-                    className="absolute inset-0 overflow-hidden cursor-pointer"
+                    className="absolute inset-0 overflow-hidden cursor-pointer z-0"
                     onClick={onPlay}
                 >
-                    <img
+                    <DeferredImage
                         src={backdropUrl}
                         alt={title}
-                        fetchPriority="high"
-                        className="w-full h-full object-cover object-center opacity-45 grayscale-[0.05] transition-all duration-1000 scale-[1.01] group-hover/hero:scale-105 group-hover/hero:opacity-65"
+                        className="w-full h-full object-cover object-center opacity-45 grayscale-[0.05] transition-all duration-1000 scale-[1.01] group-hover/hero:scale-105 group-hover/hero:opacity-60"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#09090b] via-[#09090b]/30 to-transparent transition-opacity group-hover/hero:opacity-60" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-[#09090b] via-transparent to-transparent transition-opacity group-hover/hero:opacity-60" />
-                    
-
                 </div>
             )}
 
-            {/* Content */}
-            <div className="movie-hero-content relative z-10 flex flex-col lg:flex-row items-end gap-12 px-6 sm:px-12 pb-20 pt-40 max-w-[1800px] mx-auto w-full">
-                {/* Cover Poster (Hero Version) */}
-                <div className="hidden lg:block w-[300px] shrink-0 relative z-10">
-                    <ClassicPosterCard 
-                        entry={entry} 
-                        className="w-full hover:scale-105 transition-transform duration-500 border border-white/5 shadow-2xl rounded-2xl overflow-hidden" 
-                        onClick={onPlay} 
-                        posterUrlOverride={getHighResImage(media.posterImage)} 
-                    />
-                </div>
+            {/* Cinematic Gradient Masking */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#09090b] via-[#09090b]/50 to-transparent opacity-100 z-10 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#09090b]/90 via-transparent to-transparent opacity-100 z-10 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#09090b]/15 via-transparent to-transparent opacity-100 z-10 pointer-events-none" />
 
-                {/* Meta Information */}
-                <div className="flex-1 flex flex-col gap-8 min-w-0 pb-4">
-                    {/* Tags & Score */}
-                    <div className="flex flex-wrap items-center gap-4">
-                        {score && (
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-brand-orange text-black rounded-md font-black text-[10px] tracking-widest">
-                                <span className="text-sm">★</span>
-                                {score}
-                            </div>
-                        )}
-                        {year && (
-                            <div className="px-3 py-1.5 bg-white/5 backdrop-blur-md text-white/90 border border-white/10 rounded-md font-black text-[10px] tracking-widest uppercase">
-                                {year}
-                            </div>
-                        )}
-                        <span className="px-3 py-1.5 bg-white/5 backdrop-blur-md text-white/80 border border-white/10 rounded-md font-black text-[10px] tracking-widest uppercase">
-                            PELÍCULA
-                        </span>
-                        <div className="flex flex-wrap gap-2">
-                            {genres.slice(0, 3).map((g: string) => (
-                                <span
-                                    key={g}
-                                    className="px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.25em] bg-white/5 backdrop-blur-md text-white/60 border border-white/10 rounded-md"
-                                >
-                                    {g}
-                                </span>
-                            ))}
+            {/* Content (Bottom Left) */}
+            <div className="relative z-20 flex flex-col justify-end items-start px-6 sm:px-12 md:px-24 pb-16 pt-48 max-w-[1500px] w-full gap-5">
+                
+                {/* Meta details (above title) */}
+                <div className="movie-hero-animate flex flex-wrap items-center gap-3">
+                    {score && (
+                        <div className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-brand-orange to-amber-500 text-black font-black text-[10px] tracking-widest rounded shadow-md">
+                            <Star size={10} fill="currentColor" className="stroke-none" />
+                            {score} Ki
                         </div>
-                    </div>
-
-                    {/* Main Title */}
-                    <div className="flex flex-col gap-2">
-                        <h1 
-                            className="text-[clamp(2.5rem,6vw,7.5rem)] font-bebas font-normal leading-[0.85] tracking-tighter text-white uppercase drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)] cursor-pointer"
-                            onClick={onPlay}
-                        >
-                            {title}
-                        </h1>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="mt-2">
-                        <MediaActionButtons seriesId={seriesId} directoryPath={directoryPath} onPlay={onPlay} continuityItem={continuityItem} />
-                    </div>
+                    )}
+                    {year && (
+                        <div className="px-2.5 py-1 bg-white/5 backdrop-blur-md text-white/80 border border-white/10 rounded font-black text-[10px] tracking-widest uppercase">
+                            {year}
+                        </div>
+                    )}
+                    {formattedDuration && (
+                        <div className="px-2.5 py-1 bg-white/5 backdrop-blur-md text-white/80 border border-white/10 rounded font-black text-[10px] tracking-widest uppercase">
+                            {formattedDuration}
+                        </div>
+                    )}
+                    <span className="px-2.5 py-1 bg-gradient-to-r from-brand-orange/20 to-orange-500/20 backdrop-blur-md text-brand-orange border border-brand-orange/30 rounded font-black text-[10px] tracking-widest uppercase flex items-center gap-1 shadow-sm">
+                        <Film size={10} className="animate-pulse" />
+                        PELÍCULA
+                    </span>
+                    
+                    {/* Quality Badges */}
+                    {qualityBadge && (
+                        <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-950/20 border border-emerald-500/30 rounded">
+                            {qualityBadge}
+                        </span>
+                    )}
+                    {codecBadge && (
+                        <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-indigo-400 bg-indigo-950/20 border border-indigo-500/30 rounded">
+                            {codecBadge}
+                        </span>
+                    )}
+                    {audioBadge && (
+                        <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-zinc-400 bg-white/5 border border-white/10 rounded">
+                            {audioBadge}
+                        </span>
+                    )}
                 </div>
+
+                {/* Main Cinematic Title */}
+                <div className="movie-hero-animate flex flex-col gap-1">
+                    <h1 
+                        className="text-[clamp(2.5rem,6vw,7rem)] font-bebas font-normal leading-[0.9] tracking-wider text-white uppercase drop-shadow-[0_4px_30px_rgba(0,0,0,0.85)] cursor-pointer hover:text-brand-orange transition-colors duration-300"
+                        onClick={onPlay}
+                    >
+                        {title}
+                    </h1>
+                </div>
+
+                {/* Action Row */}
+                <div className="movie-hero-animate flex flex-wrap items-center gap-4 mt-3">
+                    
+                    {/* Main Play Button */}
+                    <button
+                        onClick={onPlay}
+                        className="group/play relative flex items-center gap-4 px-8 py-4 bg-gradient-to-r from-brand-orange via-orange-500 to-amber-500 text-white rounded-2xl overflow-hidden shadow-[0_10px_35px_rgba(255,110,58,0.3)] hover:shadow-[0_15px_45px_rgba(255,110,58,0.5)] transition-all duration-500 hover:scale-105 active:scale-95 border border-white/10 hover:border-brand-orange/40"
+                    >
+                        {/* Glossy shine */}
+                        <div className="absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-transparent opacity-0 group-hover/play:opacity-100 transition-opacity duration-500 z-0" />
+                        {/* Glow halo */}
+                        <div className="absolute -inset-10 bg-brand-orange/30 blur-xl group-hover/play:opacity-100 opacity-0 transition-opacity duration-500 -z-10 animate-pulse" />
+
+                        <div className="p-2.5 bg-black/40 backdrop-blur-xl rounded-xl border border-white/10 text-white group-hover/play:bg-white group-hover/play:text-black transition-all duration-300 shadow-inner z-10 shrink-0">
+                            <Play className="w-4 h-4 fill-current" />
+                        </div>
+                        
+                        <div className="flex flex-col items-start z-10 select-none text-left">
+                            <span className="font-bebas text-[16px] tracking-[0.2em] font-black uppercase text-white transition-colors">
+                                {continuityItem && continuityItem.currentTime ? "Reanudar Película" : "Reproducir Película"}
+                            </span>
+                            {continuityItem && continuityItem.currentTime ? (
+                                <span className="text-[9px] font-black text-white/60 tracking-[0.1em] uppercase transition-colors mt-0.5">
+                                    Minuto {Math.round(continuityItem.currentTime / 60)} ({Math.round(progressPercent)}%)
+                                </span>
+                            ) : (
+                                <span className="text-[9px] font-black text-white/60 tracking-[0.1em] uppercase transition-colors mt-0.5">
+                                    Comenzar desde el inicio
+                                </span>
+                            )}
+                        </div>
+                    </button>
+
+                    {/* Secondary: Agregar a Favoritos */}
+                    <button
+                        onClick={handleToggleFavorite}
+                        className={cn(
+                            "flex items-center justify-center p-4 rounded-2xl border transition-all duration-300 hover:scale-105 active:scale-95",
+                            isFavorite
+                                ? "bg-red-500/10 border-red-500/40 text-red-500 hover:bg-red-500/20"
+                                : "bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-white/10 hover:border-white/20"
+                        )}
+                        title={isFavorite ? "Quitar de favoritos" : "Añadir a favoritos"}
+                    >
+                        <Heart className="w-5 h-5" fill={isFavorite ? "currentColor" : "none"} />
+                    </button>
+
+                    {/* Secondary: Marcar como vista */}
+                    <button
+                        onClick={handleToggleWatched}
+                        className={cn(
+                            "flex items-center justify-center p-4 rounded-2xl border transition-all duration-300 hover:scale-105 active:scale-95",
+                            isWatched
+                                ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/20"
+                                : "bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-white/10 hover:border-white/20"
+                        )}
+                        title={isWatched ? "Marcar como no vista" : "Marcar como vista"}
+                    >
+                        <Check className={cn("w-5 h-5", isWatched && "stroke-[3px]")} />
+                    </button>
+                </div>
+
+                {/* Progress bar underneath if in progress */}
+                {continuityItem && continuityItem.currentTime && (
+                    <div className="movie-hero-animate w-full max-w-xs mt-1 h-[4px] bg-white/5 border border-white/10 rounded-full overflow-hidden shadow-inner relative z-10">
+                        <div 
+                            className="h-full bg-gradient-to-r from-brand-orange to-amber-500 shadow-[0_0_10px_rgba(255,110,58,0.8)] animate-pulse"
+                            style={{ width: `${progressPercent}%` }}
+                        />
+                    </div>
+                )}
             </div>
         </section>
     )

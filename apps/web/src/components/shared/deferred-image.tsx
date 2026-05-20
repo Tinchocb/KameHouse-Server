@@ -133,6 +133,7 @@ export function DeferredImage(props: DeferredImageProps) {
                     srcSet={generateSrcSet(src)}
                     alt={alt}
                     loading={priority ? "eager" : "lazy"}
+                    decoding="async"
                     onLoad={handleLoad}
                     onError={handleError}
                     className={cn(
@@ -155,6 +156,7 @@ export function DeferredImage(props: DeferredImageProps) {
                                 src={NO_COVER}
                                 alt=""
                                 aria-hidden="true"
+                                decoding="async"
                                 className="absolute inset-0 h-full w-full object-cover opacity-10"
                             />
                             <span className="px-4 text-center text-[10px] font-medium uppercase tracking-wider opacity-40">

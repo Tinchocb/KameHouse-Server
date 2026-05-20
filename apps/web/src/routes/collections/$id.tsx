@@ -18,7 +18,7 @@ function CollectionDetailPage() {
     const navigate = useNavigate()
     const { data: collection, isLoading, error } = useGetMediaCollection(Number(id))
     const { data: libraryCollection } = useGetLibraryCollection()
-    const { setBackdropUrl } = useIntelligenceStore()
+    const setBackdropUrl = useIntelligenceStore(s => s.setBackdropUrl)
 
     const libraryEntries = useMemo(() => {
         if (!libraryCollection?.lists) return []

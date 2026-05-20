@@ -6,10 +6,14 @@ import { type SettingsFormValues } from "../index"
 
 export function IntegrationsTab({ control }: { control: Control<SettingsFormValues> }) {
     return (
-        <TabsContent value="integrations" className="m-0 space-y-16 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-             <header className="space-y-4">
-                <h1 className="text-7xl font-black tracking-tighter text-white font-bebas">ECOSISTEMA <span className="text-zinc-500">EXTERNO</span></h1>
-                <p className="text-zinc-400 text-xl font-medium leading-relaxed max-w-3xl">Conecta con servicios de tracking para mantener tu lista sincronizada en la nube.</p>
+        <TabsContent value="integrations" className="m-0 space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700 outline-none">
+             <header className="space-y-2">
+                <h1 className="text-5xl font-black tracking-wider text-white font-bebas leading-none">
+                    ECOSISTEMA <span className="text-zinc-500">EXTERNO</span>
+                </h1>
+                <p className="text-zinc-400 text-base font-medium leading-relaxed max-w-3xl">
+                    Conecta con servicios de tracking para mantener tu lista sincronizada en la nube de forma transparente.
+                </p>
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
