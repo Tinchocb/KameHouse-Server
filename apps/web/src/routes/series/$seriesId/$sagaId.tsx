@@ -1,13 +1,12 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback } from "react"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { cn } from "@/components/ui/core/styling"
 import { useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
-import { HardDrive, Star, ArrowLeft, Calendar, Clock, CheckCircle2, Circle, ChevronDown } from "lucide-react"
+import { HardDrive, Star, ArrowLeft, Calendar, Clock, CheckCircle2, Circle, ChevronRight, ChevronDown } from "lucide-react"
 import { VideoPlayer } from "@/components/video/player"
-import type { Mediastream_StreamType } from "@/api/generated/types"
+import type { Mediastream_StreamType, Anime_Episode } from "@/api/generated/types"
 import { toast } from "sonner"
-import { useAppStore } from "@/lib/store"
-
+import { PageHeader } from "@/components/ui/page-header"
 import { ProgressBar } from "@/components/ui/progress-bar"
 
 export const Route = createFileRoute("/series/$seriesId/$sagaId")({
@@ -192,8 +191,8 @@ function EpisodeRow({ episode, isActive, isWatched, isDownloaded, progress, onSe
             {/* Progress bar (cuando está a medias) */}
             {progress !== undefined && progress > 0 && progress < 100 && !isWatched && (
                 <div className="w-20 shrink-0">
-                    <ProgressBar 
-                        value={progress} 
+                    <ProgressBar
+                        value={progress}
                         className="bg-zinc-900"
                         indicatorClass="bg-brand-orange"
                     />
@@ -227,7 +226,7 @@ interface RightPanelProps {
     currentWatched: boolean
     onPlayEpisode: (ep: Episode) => void
     downloadedEpisodes: Set<number>
-    libraryEntry?: Anime_Entry | null
+    libraryEntry?: any | null
 }
 
 function RightPanel({
@@ -321,13 +320,12 @@ function RightPanel({
                 {/* Episode list */}
                 <div
                     className={cn(
-                        "flex flex-col gap-1 overflow-hidden transition-all duration-500",
-                        episodesOpen ? "max-h-[20000px] opacity-100" : "max-h-0 opacity-0",
+                        "flex flex-col gap-1 overflow-hidden transition-all duration-300",
+                        episodesOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0",
                     )}
                 >
                     {episodes.map((ep, idx) => {
-                        const fullEp = libraryEntry?.episodes?.find(e => e && e.episodeNumber === ep.number)
-                        const episodeProgress = fullEp?.watched
+                        const episodeProgress = libraryEntry?.episodes?.[idx]?.watched /* 0-100 de progreso */
                         return (
                             <EpisodeRow
                                 key={ep.id}
@@ -335,7 +333,7 @@ function RightPanel({
                                 isActive={idx === currentIndex}
                                 isWatched={isWatched(ep.id)}
                                 isDownloaded={downloadedEpisodes.has(ep.number)}
-                                progress={episodeProgress ? 100 : undefined}
+                                progress={episodeProgress}
                                 onSelect={() => onSelectEpisode(idx)}
                             />
                         )
@@ -354,15 +352,15 @@ function DetailPage() {
     const navigate = useNavigate()
     const { isWatched, markWatched, unmarkWatched } = {
         isWatched: (_id: string) => false,
-        markWatched: (_id: string) => {},
-        unmarkWatched: (_id: string) => {},
+        markWatched: (_id: string) => { },
+        unmarkWatched: (_id: string) => { },
     }
 
     const { data: libraryEntry } = useGetAnimeEntry(seriesId)
 
     // Match saga from our local mapping using the shared resolver
     const seriesSagas = resolveSeriesSagas(libraryEntry?.media)
-    
+
     const rawSaga = seriesSagas.find((s) => s.id === sagaId)
 
     // Build the frontend standard format 
@@ -374,7 +372,7 @@ function DetailPage() {
             title: media.titleRomaji || media.titleEnglish || "Serie",
             year: media.year?.toString() || "",
             episodesCount: media.totalEpisodes || 0,
-            genres: media.genres || ["Anime"],
+            genres: (media.genres as unknown as string[]) || ["Anime"],
             rating: media.score || media.rating || 0,
             durationPerEp: "24 min / ep",
             studios: [] as string[],
@@ -383,13 +381,13 @@ function DetailPage() {
 
     const saga = useMemo(() => {
         if (!rawSaga) return null
-        
+
         // Find episodes physically available from standard GET
         const allEpisodes = libraryEntry?.episodes || []
-        
+
         // Filter those belonging inside saga boundaries
         const arcEpisodes = allEpisodes
-            .filter(ep => ep && typeof ep.episodeNumber === 'number' && ep.episodeNumber >= rawSaga.startEp && ep.episodeNumber <= rawSaga.endEp)
+            .filter(ep => ep.episodeNumber >= rawSaga.startEp && ep.episodeNumber <= rawSaga.endEp)
             .sort((a, b) => a.episodeNumber - b.episodeNumber)
 
         // Map to expected UI layout
@@ -440,7 +438,7 @@ function DetailPage() {
     const downloadedEpisodes = useMemo(() => {
         const set = new Set<number>()
         libraryEntry?.episodes?.forEach(ep => {
-            if (ep && ep.isDownloaded) set.add(ep.episodeNumber)
+            if (ep.isDownloaded) set.add(ep.episodeNumber)
         })
         return set
     }, [libraryEntry])
@@ -448,8 +446,8 @@ function DetailPage() {
     const currentEpisode = saga?.episodes[currentIdx]
 
     // When user clicks an episode → play if local
-    const handleEpisodePlay = (ep: Episode) => {
-        const fullEp = libraryEntry?.episodes?.find(e => e && e.episodeNumber === ep.number)
+    const handleEpisodePlay = useCallback((ep: Episode) => {
+        const fullEp = libraryEntry?.episodes?.find(e => e.episodeNumber === ep.number)
         if (!fullEp?.localFile?.path) {
             toast.error("Archivo local no disponible.")
             return
@@ -466,37 +464,7 @@ function DetailPage() {
             seriesId: Number(seriesId)
         })
         setIsPlayerOpen(true)
-    }
-
-    const marathonModeStore = useAppStore(s => s.marathonMode)
-
-    const handleNextEpisode = () => {
-        if (!saga || currentIdx >= saga.episodes.length - 1) {
-            toast.info("Has terminado la saga.")
-            setIsPlayerOpen(false)
-            return
-        }
-        const nextIdx = currentIdx + 1
-        setCurrentIdx(nextIdx)
-        const nextEp = saga.episodes[nextIdx]
-        const fullEp = libraryEntry?.episodes?.find(e => e && e.episodeNumber === nextEp.number)
-        if (!fullEp?.localFile?.path) {
-            toast.error("Siguiente episodio no disponible localmente.")
-            setIsPlayerOpen(false)
-            return
-        }
-
-        const isMp4 = fullEp.localFile.path.toLowerCase().endsWith(".mp4")
-        const targetType = isMp4 ? "direct" : "transcode"
-
-        setPlayTarget({
-            path: fullEp.localFile.path,
-            streamType: targetType as Mediastream_StreamType,
-            episodeLabel: nextEp.title,
-            episodeNumber: nextEp.number,
-            seriesId: Number(seriesId)
-        })
-    }
+    }, [libraryEntry, seriesId])
 
     if (!series || !saga || saga.episodes.length === 0) {
         return (
@@ -553,9 +521,7 @@ function DetailPage() {
                     mediaId={playTarget.seriesId}
                     episodeNumber={playTarget.episodeNumber}
                     isExternalStream={false}
-                    marathonMode={marathonModeStore}
-                    onNextEpisode={handleNextEpisode}
-                    hasNextEpisode={currentIdx < (saga?.episodes.length ?? 0) - 1}
+                    marathonMode={false}
                     onClose={() => setIsPlayerOpen(false)}
                 />
             )}

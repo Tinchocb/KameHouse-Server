@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { useState, useMemo, memo, useRef, useCallback, useEffect } from "react"
+import { useState, useMemo, memo, useRef, useCallback } from "react"
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion"
 import { Play, Clock, Star, ChevronDown, Check, Layers } from "lucide-react"
 import { EmptyState } from "@/components/shared/empty-state"
@@ -9,8 +9,6 @@ import type { Anime_LibraryCollectionEntry, Continuity_WatchHistoryItem } from "
 import { cn } from "@/components/ui/core/styling"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { getHighResImage } from "@/lib/helpers/images"
-import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
-import { CassetteCard } from "@/components/shared/cassette-card"
 
 export const Route = createFileRoute("/movies/")({
     component: MoviesPage,
@@ -48,13 +46,13 @@ function getEntryEra(entry: Anime_LibraryCollectionEntry): EraTab {
     const classicTmdbIds = new Set([39144, 33499, 39145, 116776, 33513, 39148])
     if (classicTmdbIds.has(tmdbId)) return "Dragon Ball"
 
-    const zTmdbIds = new Set([28609, 15448, 39100, 39101, 39102, 24752, 15452, 39103, 39104, 15454, 34433, 39105, 44251, 39106, 39107, 39108, 126963])
+    const zTmdbIds = new Set([28609, 15448, 39100, 39101, 39102, 24752, 15452, 39103, 39104, 15454, 34433, 39105, 44251, 39106, 39107, 39108, 177572, 126963, 303857])
     if (zTmdbIds.has(tmdbId)) return "Dragon Ball Z"
 
     const gtTmdbIds = new Set([18095, 39149])
     if (gtTmdbIds.has(tmdbId)) return "Dragon Ball GT"
 
-    const superTmdbIds = new Set([503314, 610150, 177572, 303857])
+    const superTmdbIds = new Set([503314, 610150])
     if (superTmdbIds.has(tmdbId)) return "Dragon Ball Super"
 
     if (tmdbId >= 1000000) return "Especiales y OVAs"
@@ -77,18 +75,15 @@ function MoviesPage() {
     const [activeEra, setActiveEra] = useState<EraTab>("all")
     const [sortBy, setSortBy] = useState<SortOption>("year_asc")
     const [sortOpen, setSortOpen] = useState(false)
-    const [hoveredMovie, setHoveredMovie] = useState<Anime_LibraryCollectionEntry | null>(null)
+    const [hoveredBackdrop, setHoveredBackdrop] = useState<string | null>(null)
     const heroRef = useRef<HTMLDivElement>(null)
-    const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const navigate = useNavigate()
     const { data: collection, isLoading } = useGetLibraryCollection()
     const { data: watchHistory } = useGetContinuityWatchHistory()
 
     const { scrollY } = useScroll()
-    const heroOpacity = useTransform(scrollY, [0, 360], [1, 0])
-    const heroScale = useTransform(scrollY, [0, 360], [1, 1.06])
-
-    const { setBackdropUrl } = useIntelligenceStore()
+    const heroOpacity = useTransform(scrollY, [0, 280], [1, 0])
+    const heroScale = useTransform(scrollY, [0, 280], [1, 1.06])
 
     const allMovies = useMemo(() => {
         if (!collection?.lists) return []
@@ -98,77 +93,41 @@ function MoviesPage() {
             const type = e.media?.type
             return fmt === "MOVIE" || fmt === "OVA" || fmt === "SPECIAL" || type?.toUpperCase() === "MOVIE" || (e.mediaId && e.mediaId >= 1000000)
         })
-        const unique = new Map<number, Anime_LibraryCollectionEntry & { _era?: EraTab, _addedAt?: number }>()
-        rawMovies.forEach(m => { 
-            if (m.mediaId && !unique.has(m.mediaId)) {
-                unique.set(m.mediaId, {
-                    ...m,
-                    _era: getEntryEra(m),
-                    _addedAt: m.listData?.startedAt ? new Date(m.listData.startedAt).getTime() : 0
-                })
-            } 
-        })
+        const unique = new Map<number, Anime_LibraryCollectionEntry>()
+        rawMovies.forEach(m => { if (m.mediaId) unique.set(m.mediaId, m) })
         return Array.from(unique.values())
     }, [collection])
 
     const filteredSorted = useMemo(() => {
-        const result = activeEra === "all" ? allMovies : allMovies.filter(e => e._era === activeEra)
+        const result = activeEra === "all" ? allMovies : allMovies.filter(e => getEntryEra(e) === activeEra)
         switch (sortBy) {
             case "year_asc": return [...result].sort((a, b) => (a.media?.year || 0) - (b.media?.year || 0))
             case "year_desc": return [...result].sort((a, b) => (b.media?.year || 0) - (a.media?.year || 0))
-            case "recently_add": return [...result].sort((a, b) => (b._addedAt || 0) - (a._addedAt || 0))
+            case "recently_add": return [...result].sort((a, b) => new Date(b.listData?.startedAt || 0).getTime() - new Date(a.listData?.startedAt || 0).getTime())
             case "alpha": return [...result].sort((a, b) => (a.media?.titleRomaji || "").localeCompare(b.media?.titleRomaji || ""))
-            default: return result
         }
     }, [allMovies, activeEra, sortBy])
 
-    const filteredSortedIds = useMemo(() => new Set(filteredSorted.map(m => m.mediaId)), [filteredSorted])
+    const activeEraConfig = ERA_TABS.find(t => t.value === activeEra) || ERA_TABS[0]
 
-    const activeMovie = useMemo(() => {
-        if (hoveredMovie && filteredSortedIds.has(hoveredMovie.mediaId)) {
-            return hoveredMovie
-        }
-        return filteredSorted[0] || null
-    }, [hoveredMovie, filteredSorted, filteredSortedIds])
-
-    // Sync active movie backdrop to the global intelligence store
-    useEffect(() => {
-        if (activeMovie?.media?.bannerImage || activeMovie?.media?.posterImage) {
-            setBackdropUrl(activeMovie.media.bannerImage || activeMovie.media.posterImage)
-        } else {
-            setBackdropUrl(null)
-        }
-        return () => {
-            setBackdropUrl(null)
-            if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
-        }
-    }, [activeMovie, setBackdropUrl])
-
-    const activeMovieEra = activeMovie ? ((activeMovie as any)._era || getEntryEra(activeMovie)) : "all"
-    const activeMovieEraConfig = ERA_TABS.find(t => t.value === activeMovieEra) || ERA_TABS[0]
-
+    // Hero backdrop: use hovered poster, else first movie with poster
     const backdropSrc = useMemo(() => {
-        return activeMovie?.media?.bannerImage || activeMovie?.media?.posterImage || null
-    }, [activeMovie])
+        if (hoveredBackdrop) return hoveredBackdrop
+        const first = filteredSorted.find(m => m.media?.bannerImage || m.media?.posterImage)
+        return first?.media?.bannerImage || first?.media?.posterImage || null
+    }, [hoveredBackdrop, filteredSorted])
 
     const handleMovieClick = useCallback((mediaId: number) => {
         navigate({ to: "/movies/$movieId", params: { movieId: String(mediaId) } })
     }, [navigate])
 
-    const handleMovieHover = useCallback((entry: Anime_LibraryCollectionEntry | null) => {
-        if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
-        hoverTimeoutRef.current = setTimeout(() => {
-            setHoveredMovie(entry)
-        }, 150)
-    }, [])
-
     const localCount = allMovies.filter(m => (m.libraryData?.mainFileCount || 0) > 0).length
 
     return (
-        <div className="min-h-screen bg-transparent text-white overflow-x-hidden selection:bg-brand-orange/30">
+        <div className="min-h-screen bg-[#09090b] text-white overflow-x-hidden selection:bg-brand-orange/30">
 
             {/* ── Cinematic Hero ─────────────────────────────────────────── */}
-            <div ref={heroRef} className="relative min-h-[460px] lg:h-[480px] overflow-hidden flex flex-col justify-end">
+            <div ref={heroRef} className="relative h-[340px] overflow-hidden">
                 {/* Backdrop layer */}
                 <motion.div className="absolute inset-0" style={{ scale: heroScale, opacity: heroOpacity }}>
                     <AnimatePresence mode="sync">
@@ -182,175 +141,71 @@ function MoviesPage() {
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
                                 transition={{ duration: 0.8 }}
-                                className="w-full h-full object-cover object-center scale-110 blur-3xl saturate-150 opacity-20"
-                                style={{ willChange: "opacity" }}
+                                className="w-full h-full object-cover object-center scale-110 blur-sm"
                             />
                         )}
                     </AnimatePresence>
                     {/* Dark vignette gradients */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-transparent to-background" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-transparent to-background/50" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-[#09090b]/60 via-transparent to-[#09090b]" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#09090b]/80 via-transparent to-[#09090b]/50" />
                     {/* Era color tint */}
                     <motion.div
                         className="absolute inset-0 opacity-20"
-                        animate={{ backgroundColor: activeMovieEraConfig.glow }}
+                        animate={{ backgroundColor: activeEraConfig.glow }}
                         transition={{ duration: 0.6 }}
                     />
                 </motion.div>
 
                 {/* Hero content */}
-                <div className="relative w-full h-full max-w-[1700px] mx-auto px-6 md:px-14 pt-24 pb-8 flex flex-col lg:flex-row items-center lg:items-end gap-8 z-10">
-                    {/* Left Column: Widescreen Card of Active Movie */}
-                    {activeMovie && (
-                        <motion.div
-                            initial={{ opacity: 0, x: -30, scale: 0.95 }}
-                            animate={{ opacity: 1, x: 0, scale: 1 }}
-                            key={`hero-card-${activeMovie.mediaId}`}
-                            transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
-                            onClick={() => handleMovieClick(activeMovie.mediaId)}
-                            className="relative w-full max-w-[440px] aspect-video lg:h-[240px] lg:w-[426px] rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.8)] cursor-pointer group/hero shrink-0 self-center lg:self-end"
-                        >
-                            {/* Card Image */}
-                            <DeferredImage
-                                src={getHighResImage(activeMovie.media?.bannerImage || activeMovie.media?.posterImage || "")}
-                                alt={activeMovie.media?.titleSpanish || activeMovie.media?.titleEnglish || ""}
-                                className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover/hero:scale-105"
-                                showSkeleton={true}
-                            />
-                            {/* Glass gradient overlay */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover/hero:opacity-100 transition-opacity duration-300" />
-                            {/* Play indicator */}
-                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/hero:opacity-100 transition-all duration-300">
-                                <div
-                                    className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center shadow-2xl scale-90 group-hover/hero:scale-100 transition-all duration-300"
-                                    style={{ boxShadow: `0 0 30px ${activeMovieEraConfig.glow}` }}
-                                >
-                                    <Play className="w-6 h-6 text-white fill-white ml-1" />
-                                </div>
-                            </div>
-
-                            {/* Accent bottom border using era color */}
-                            <div
-                                className="absolute bottom-0 inset-x-0 h-1 transition-all duration-500"
-                                style={{ backgroundColor: activeMovieEraConfig.color }}
-                            />
-                        </motion.div>
-                    )}
-
-                    {/* Right Column: Complete movie details */}
-                    <div className="flex-1 flex flex-col justify-end text-center lg:text-left self-center lg:self-end w-full">
-                        {activeMovie ? (
+                <div className="relative h-full flex flex-col justify-end pb-8 px-6 md:px-14">
+                    {/* Title block */}
+                    <motion.div
+                        className="flex flex-col gap-2"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
+                    >
+                        <div className="flex items-center gap-3 mb-1">
                             <motion.div
-                                key={`hero-info-${activeMovie.mediaId}`}
-                                initial={{ opacity: 0, y: 30 }}
+                                className="w-6 h-6 rounded-md flex items-center justify-center"
+                                style={{ backgroundColor: activeEraConfig.color + "30", border: `1px solid ${activeEraConfig.color}40` }}
+                                animate={{ borderColor: activeEraConfig.color + "60", backgroundColor: activeEraConfig.color + "25" }}
+                                transition={{ duration: 0.5 }}
+                            >
+                                <Layers className="w-3.5 h-3.5" style={{ color: activeEraConfig.color }} />
+                            </motion.div>
+                            <span className="text-[9px] font-black uppercase tracking-[0.5em] text-zinc-500">Películas &amp; Especiales</span>
+                        </div>
+
+                        <h1 className="font-bebas text-5xl md:text-7xl tracking-wider leading-none text-white drop-shadow-xl">
+                            <motion.span
+                                key={activeEra}
+                                initial={{ opacity: 0, y: 8 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.6, delay: 0.1, ease: [0.23, 1, 0.32, 1] }}
-                                className="flex flex-col items-center lg:items-start"
+                                transition={{ duration: 0.4 }}
+                                className="block"
                             >
-                                {/* Era Badge */}
-                                <div
-                                    className="flex items-center gap-2 px-3 py-1.5 rounded-full border text-[9px] font-black uppercase tracking-[0.25em] mb-3 backdrop-blur-md shadow-md"
-                                    style={{
-                                        borderColor: `${activeMovieEraConfig.color}40`,
-                                        backgroundColor: `${activeMovieEraConfig.color}15`,
-                                        color: activeMovieEraConfig.color,
-                                        boxShadow: `0 2px 10px ${activeMovieEraConfig.glow}`
-                                    }}
-                                >
-                                    <Layers className="w-3 h-3" />
-                                    <span>{activeMovieEra === "all" ? "Películas & Especiales" : activeMovieEra}</span>
-                                </div>
+                                {activeEraConfig.label === "Todas" ? "Colección" : activeEraConfig.label}
+                            </motion.span>
+                        </h1>
 
-                                {/* Title */}
-                                <h1 className="font-bebas text-4xl md:text-5xl lg:text-6xl tracking-wider leading-none text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] mb-3 text-center lg:text-left">
-                                    {activeMovie.media?.titleSpanish || activeMovie.media?.titleEnglish || activeMovie.media?.titleRomaji || "Sin título"}
-                                </h1>
-
-                                {/* Metadata Row */}
-                                <div className="flex items-center justify-center lg:justify-start gap-4 text-xs font-bold text-zinc-300 mb-4 select-none">
-                                    {activeMovie.media?.year && (
-                                        <span className="px-2 py-0.5 rounded-md bg-white/[0.06] border border-white/5">{activeMovie.media.year}</span>
-                                    )}
-                                    {activeMovie.media?.runtime && (
-                                        <span className="flex items-center gap-1.5">
-                                            <Clock className="w-3.5 h-3.5 text-zinc-400" />
-                                            {activeMovie.media.runtime}m
-                                        </span>
-                                    )}
-                                    {activeMovie.media?.score && activeMovie.media.score > 0 && (
-                                        <span className="flex items-center gap-1 text-amber-400 font-black">
-                                            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                                            {(activeMovie.media.score / 10).toFixed(1)} Ki
-                                        </span>
-                                    )}
-                                    {/* Action count or badges */}
-                                    {(activeMovie.libraryData?.mainFileCount || 0) > 0 ? (
-                                        <span className="text-[9px] font-black uppercase text-emerald-400 tracking-widest px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20">Disponible</span>
-                                    ) : (
-                                        <span className="text-[9px] font-black uppercase text-zinc-500 tracking-widest px-2 py-0.5 rounded-md bg-zinc-900 border border-white/5">No descargada</span>
-                                    )}
-                                </div>
-
-                                {/* Synopsis / Description */}
-                                {activeMovie.media?.description && (
-                                    <p className="text-zinc-400 text-xs md:text-sm max-w-2xl leading-relaxed line-clamp-3 text-center lg:text-left drop-shadow mb-6">
-                                        {activeMovie.media.description.replace(/<[^>]*>/g, "")}
-                                    </p>
-                                )}
-
-                                {/* Action Buttons */}
-                                <div className="flex items-center gap-3">
-                                    <motion.button
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                        onClick={() => handleMovieClick(activeMovie.mediaId)}
-                                        className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-black font-black uppercase tracking-widest text-[10px] shadow-[0_8px_30px_rgba(255,255,255,0.15)] hover:bg-brand-orange hover:text-white transition-all duration-300"
-                                        style={{
-                                            boxShadow: `0 8px 30px ${activeMovieEraConfig.glow}`
-                                        }}
-                                    >
-                                        <Play className="w-4 h-4 fill-current" />
-                                        Ver Película
-                                    </motion.button>
-                                </div>
-                            </motion.div>
-                        ) : (
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                className="flex flex-col gap-2 py-8 items-center lg:items-start"
-                            >
-                                <div className="flex items-center gap-3 mb-1">
-                                    <div
-                                        className="w-6 h-6 rounded-md flex items-center justify-center bg-brand-orange/20 border border-brand-orange/30"
-                                    >
-                                        <Layers className="w-3.5 h-3.5 text-brand-orange" />
-                                    </div>
-                                    <span className="text-[9px] font-black uppercase tracking-[0.5em] text-zinc-500">Películas &amp; Especiales</span>
-                                </div>
-
-                                <h1 className="font-bebas text-5xl md:text-7xl tracking-wider leading-none text-white drop-shadow-xl">
-                                    Colección
-                                </h1>
-
-                                <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.3em]">
-                                    <span className="text-brand-orange">{filteredSorted.length} Títulos</span>
-                                    <span className="w-1 h-1 rounded-full bg-zinc-700" />
-                                    <span className="text-zinc-500">{localCount} Descargados</span>
-                                </div>
-                            </motion.div>
-                        )}
-                    </div>
+                        <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.3em]">
+                            <span style={{ color: activeEraConfig.color }}>{filteredSorted.length} Títulos</span>
+                            <span className="w-1 h-1 rounded-full bg-zinc-700" />
+                            <span className="text-zinc-500">{localCount} Descargados</span>
+                        </div>
+                    </motion.div>
                 </div>
             </div>
 
             {/* ── Sticky Filters Bar ─────────────────────────────────────── */}
-            <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-white/[0.04] shadow-[0_1px_0_rgba(255,255,255,0.04)]">
+            <div className="sticky top-0 z-40 bg-[#09090b]/80 backdrop-blur-xl border-b border-white/[0.04] shadow-[0_1px_0_rgba(255,255,255,0.04)]">
                 <div className="max-w-[1700px] mx-auto px-4 md:px-10 h-14 flex items-center justify-between gap-4">
 
                     {/* Era Pills */}
                     <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
                         {ERA_TABS.map(tab => {
+                            const count = tab.value === "all" ? allMovies.length : allMovies.filter(m => getEntryEra(m) === tab.value).length
                             const isActive = activeEra === tab.value
                             return (
                                 <motion.button
@@ -379,6 +234,7 @@ function MoviesPage() {
                                         />
                                     )}
                                     <span className="relative z-10">{tab.shortLabel}</span>
+                                    <span className="relative z-10 opacity-40 text-[8px]">{count}</span>
                                 </motion.button>
                             )
                         })}
@@ -445,20 +301,26 @@ function MoviesPage() {
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-                        className="grid gap-x-5 gap-y-16 md:gap-x-6 md:gap-y-20 pt-8"
+                        className="grid gap-5 md:gap-6"
                         style={{
-                            gridTemplateColumns: "repeat(auto-fill, minmax(155px, 1fr))",
+                            gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
                         }}
                     >
                         {filteredSorted.map((entry, i) => (
-                            <AnimatedCassetteCard
+                            <motion.div
                                 key={entry.mediaId}
-                                entry={entry}
-                                index={i}
-                                watchHistoryItem={watchHistory?.[entry.mediaId]}
-                                onClick={handleMovieClick}
-                                onHover={handleMovieHover}
-                            />
+                                initial={{ opacity: 0, y: 12 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.35, delay: Math.min(i * 0.025, 0.4), ease: [0.23, 1, 0.32, 1] }}
+                            >
+                                <MovieCard
+                                    entry={entry}
+                                    era={getEntryEra(entry)}
+                                    watchHistoryItem={watchHistory?.[entry.mediaId]}
+                                    onClick={() => handleMovieClick(entry.mediaId)}
+                                    onHoverBackdrop={setHoveredBackdrop}
+                                />
+                            </motion.div>
                         ))}
                     </motion.div>
                 )}
@@ -474,13 +336,13 @@ const MovieCard = memo(function MovieCard({
     era,
     watchHistoryItem,
     onClick,
-    onHoverMovie,
+    onHoverBackdrop,
 }: {
     entry: Anime_LibraryCollectionEntry
     era: EraTab
     watchHistoryItem?: Continuity_WatchHistoryItem | null
     onClick: () => void
-    onHoverMovie: (entry: Anime_LibraryCollectionEntry | null) => void
+    onHoverBackdrop: (url: string | null) => void
 }) {
     const movie = entry.media
     if (!movie) return null
@@ -496,13 +358,14 @@ const MovieCard = memo(function MovieCard({
     const progressPercent = hasProgress ? Math.min(100, (progressTime / totalDuration) * 100) : 0
 
     const posterUrl = getHighResImage(movie.posterImage || "")
+    const backdropUrl = movie.bannerImage || movie.posterImage || ""
 
     return (
         <div
             className="group relative cursor-pointer"
             onClick={onClick}
-            onMouseEnter={() => onHoverMovie(entry)}
-            onMouseLeave={() => onHoverMovie(null)}
+            onMouseEnter={() => onHoverBackdrop(backdropUrl || null)}
+            onMouseLeave={() => onHoverBackdrop(null)}
         >
             {/* ─ Poster ─ */}
             <div className={cn(
@@ -524,7 +387,7 @@ const MovieCard = memo(function MovieCard({
                     fallback={
                         <div
                             className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center"
-                            style={{ background: `linear-gradient(135deg, ${eraConfig.color}20, #07090e)` }}
+                            style={{ background: `linear-gradient(135deg, ${eraConfig.color}20, #09090b)` }}
                         >
                             <span className="font-bebas text-lg tracking-widest text-white/80 line-clamp-3 leading-tight drop-shadow-lg">
                                 {title}
@@ -633,53 +496,18 @@ const MovieCard = memo(function MovieCard({
 })
 MovieCard.displayName = "MovieCard"
 
-// ─── Animated Cassette Wrapper ────────────────────────────────────────────────
-
-const AnimatedCassetteCard = memo(function AnimatedCassetteCard({
-    entry,
-    index,
-    watchHistoryItem,
-    onClick,
-    onHover
-}: {
-    entry: Anime_LibraryCollectionEntry;
-    index: number;
-    watchHistoryItem?: Continuity_WatchHistoryItem | null;
-    onClick: (id: number) => void;
-    onHover: (entry: Anime_LibraryCollectionEntry | null) => void;
-}) {
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: Math.min(index * 0.025, 0.4), ease: [0.23, 1, 0.32, 1] }}
-        >
-            <CassetteCard
-                entry={entry}
-                watchHistoryItem={watchHistoryItem}
-                onClick={() => {
-                    if (entry.mediaId) onClick(entry.mediaId)
-                }}
-                onMouseEnter={() => onHover(entry)}
-                onMouseLeave={() => onHover(null)}
-            />
-        </motion.div>
-    )
-})
-AnimatedCassetteCard.displayName = "AnimatedCassetteCard"
-
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
 function MovieGridSkeleton() {
     return (
         <div
-            className="grid gap-x-5 gap-y-16 md:gap-x-6 md:gap-y-20 pt-8"
-            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(155px, 1fr))" }}
+            className="grid gap-5"
+            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}
         >
             {Array.from({ length: 18 }).map((_, i) => (
                 <div key={i} className="space-y-3">
-                    <div className="aspect-[1/1.7] rounded-2xl bg-white/[0.04] animate-pulse" />
-                    <div className="space-y-1.5 px-2">
+                    <div className="aspect-[2/3] rounded-xl bg-white/[0.04] animate-pulse" />
+                    <div className="space-y-1.5">
                         <div className="h-2.5 w-3/4 bg-white/[0.04] rounded animate-pulse" />
                         <div className="h-2 w-1/2 bg-white/[0.03] rounded animate-pulse" />
                     </div>
