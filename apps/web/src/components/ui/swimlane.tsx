@@ -13,17 +13,16 @@ export interface SwimlaneItem {
     image: string
     subtitle?: string
     badge?: string
+    mediaTypeBadge?: string
     availabilityType?: "FULL_LOCAL" | "HYBRID" | "ONLY_ONLINE"
     description?: string
     progress?: number
     aspect?: CardAspect
-    /** ContentTag from IntelligenceService — rendered as a bottom label on the card */
     intelligenceTag?: string
     year?: string | number
     rating?: number
     episodeNumber?: number
     onClick: () => void
-    /** URL to use as the dynamic home backdrop when this card is hovered */
     backdropUrl?: string
 }
 

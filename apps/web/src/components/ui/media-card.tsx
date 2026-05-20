@@ -12,6 +12,7 @@ export interface MediaCardProps {
     title: string
     subtitle?: string
     badge?: string
+    mediaTypeBadge?: string
     availabilityType?: "FULL_LOCAL" | "HYBRID" | "ONLY_ONLINE"
     description?: string
     aspect?: CardAspect
@@ -30,6 +31,7 @@ export const MediaCard = React.memo(function MediaCard({
     title,
     subtitle,
     badge,
+    mediaTypeBadge,
     description,
     aspect = "poster",
     progress,
@@ -149,6 +151,15 @@ export const MediaCard = React.memo(function MediaCard({
                             <div className="bg-zinc-950/70 backdrop-blur-md text-zinc-300 border-r border-b border-white/10 px-3 py-1.5 rounded-br-xl font-black text-[10px] tracking-[0.15em] uppercase flex items-center gap-1 shadow-md">
                                 <span>EP</span>
                                 <span className="text-brand-orange">{episodeNumber}</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Media Type Badge (e.g. PELÍCULA, EPISODIO, OVA) */}
+                    {mediaTypeBadge && (
+                        <div className="absolute top-0 right-0 z-20">
+                            <div className="bg-zinc-950/70 backdrop-blur-md text-zinc-400 border-l border-b border-white/10 px-2.5 py-1 rounded-bl-xl font-black text-[8px] tracking-[0.2em] uppercase shadow-md">
+                                {mediaTypeBadge}
                             </div>
                         </div>
                     )}

@@ -5,7 +5,7 @@ import { cn } from "@/components/ui/core/styling"
 import { PageHeader } from "@/components/ui/page-header"
 import { EmptyState } from "@/components/shared/empty-state"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
-import { VhsCollection, type VhsCollectionItem } from "@/components/shared/vhs-collection"
+import { VhsShelfAccordion, type VhsTapeItem } from "@/components/shared/vhs-shelf-accordion"
 import { ContinueWatchingCarousel } from "@/components/shared/continue-watching-carousel"
 import { PremiumPosterCard } from "@/components/shared/premium-poster-card"
 import { motion, AnimatePresence } from "framer-motion"
@@ -57,21 +57,28 @@ function SeriesPage() {
         })
     }, [allSeries, search, activeGenre])
 
-    const vhsTapeItems = useMemo<VhsCollectionItem[]>(() => {
+    const vhsTapeItems = useMemo<VhsTapeItem[]>(() => {
         return filtered.map((s) => {
             const media = s.media
             const title = media?.titleEnglish || media?.titleRomaji || media?.titleOriginal || "Sin título"
+            const rawScore = media?.score ?? null
+            const score = rawScore
+                ? (rawScore > 10 ? rawScore / 10 : rawScore).toFixed(1)
+                : null
             return {
                 id: s.mediaId,
-                title: title,
-                episodesCount: media?.totalEpisodes || 0,
-                watchedCount: s.listData?.progress || 0,
-                genres: media?.genres || [],
-                year: media?.year,
-                status: s.listData?.status === "COMPLETED" ? "Completado" : s.listData?.status === "CURRENT" ? "En progreso" : "Sin comenzar",
-                isNew: !!(media?.year && media.year >= 2024),
+                title,
+                subtitle: media?.genres?.[0] || undefined,
+                description: media?.description || undefined,
                 posterUrl: media?.posterImage || "",
                 bannerUrl: media?.bannerImage || "",
+                episodesCount: media?.totalEpisodes || 0,
+                runtime: media?.totalEpisodes ? `${media.totalEpisodes} eps` : undefined,
+                score,
+                year: media?.year,
+                format: media?.format || undefined,
+                genres: media?.genres || [],
+                tmdbId: (media as any)?.tmdbId ?? null,
             }
         })
     }, [filtered])
@@ -100,78 +107,10 @@ function SeriesPage() {
     return (
         <div ref={containerRef} className="flex-1 w-full bg-background text-white overflow-x-hidden font-sans pb-10">
 
-            {/* ── Floating Premium Toolbar ── */}
-            <div className="sticky top-0 z-40 px-6 md:px-14 py-6 bg-background/0 pointer-events-none">
-                <div className="max-w-[1600px] mx-auto pointer-events-auto">
-                    <div className="bg-[#0a0e1a]/40 backdrop-blur-3xl border border-white/10 rounded-3xl p-3 flex flex-wrap items-center justify-between gap-4 shadow-2xl">
 
-                        <div className="flex items-center gap-3 flex-1 min-w-[200px]">
-                            <div className="relative flex-1 group">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-brand-orange transition-colors w-4 h-4" />
-                                <input
-                                    className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/5 focus:border-brand-orange/40 rounded-2xl text-[11px] font-bold uppercase tracking-widest outline-none transition-all placeholder:text-zinc-600 focus:bg-white/10"
-                                    type="text"
-                                    value={search}
-                                    onChange={e => setSearch(e.target.value)}
-                                    placeholder="BUSCAR EN TU COLECCIÓN..."
-                                />
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar max-w-full md:max-w-md lg:max-w-xl">
-                            <button
-                                onClick={() => setActiveGenre(null)}
-                                className={cn(
-                                    "whitespace-nowrap px-5 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-2xl border transition-all",
-                                    activeGenre === null
-                                        ? "bg-brand-orange text-white border-brand-orange shadow-lg shadow-brand-orange/20"
-                                        : "bg-white/5 text-zinc-500 border-white/5 hover:text-white hover:bg-white/10"
-                                )}
-                            >
-                                TODOS
-                            </button>
-                            {ALL_GENRES.slice(0, 8).map(g => (
-                                <button
-                                    key={g}
-                                    onClick={() => setActiveGenre(activeGenre === g ? null : g)}
-                                    className={cn(
-                                        "whitespace-nowrap px-5 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-2xl border transition-all",
-                                        activeGenre === g
-                                            ? "bg-brand-orange text-white border-brand-orange shadow-lg shadow-brand-orange/20"
-                                            : "bg-white/5 text-zinc-500 border-white/5 hover:text-white hover:bg-white/10"
-                                    )}
-                                >
-                                    {g}
-                                </button>
-                            ))}
-                        </div>
-
-                        <div className="flex items-center bg-white/5 border border-white/5 p-1 rounded-2xl">
-                            <button
-                                onClick={() => setViewMode("grid")}
-                                className={cn(
-                                    "p-2 rounded-xl transition-all",
-                                    viewMode === "grid" ? "bg-white text-black shadow-xl" : "text-zinc-500 hover:text-white"
-                                )}
-                            >
-                                <LayoutGrid className="w-4 h-4" />
-                            </button>
-                            <button
-                                onClick={() => setViewMode("shelf")}
-                                className={cn(
-                                    "p-2 rounded-xl transition-all",
-                                    viewMode === "shelf" ? "bg-white text-black shadow-xl" : "text-zinc-500 hover:text-white"
-                                )}
-                            >
-                                <LayoutList className="w-4 h-4" />
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             {/* ── Content Area ── */}
-            <div className="max-w-[1600px] mx-auto px-6 md:px-14 pb-20">
+            <div className="max-w-[1800px] mx-auto px-6 md:px-14 pb-20">
                 <AnimatePresence mode="wait">
                     {isLoading ? (
                         <div key="loading" className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
@@ -213,13 +152,14 @@ function SeriesPage() {
                     ) : (
                         <motion.div
                             key="shelf"
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
                         >
-                            <VhsCollection
+                            <VhsShelfAccordion
                                 items={vhsTapeItems}
                                 onItemClick={(item) => navigate({ to: "/series/$seriesId", params: { seriesId: item.id.toString() } })}
+                                type="series"
                             />
                         </motion.div>
                     )}
