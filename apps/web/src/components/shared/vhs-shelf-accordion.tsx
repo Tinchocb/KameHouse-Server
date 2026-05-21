@@ -1,5 +1,46 @@
-import { useState, memo } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+/**
+ * VhsShelfAccordion — mejorado
+ *
+ * Cambios:
+ *
+ * PERFORMANCE / ANIMACIONES (choppy fix)
+ * ───────────────────────────────────────
+ * • Spring más apretado: stiffness 200→400, damping 26→42, mass 0.7
+ *   → La apertura/cierre se siente instantánea y sin rebote excesivo
+ * • willChange: "width, transform" en cada tape
+ *   → Fuerza GPU layer, evita repaints en el layout principal
+ * • Dimming por overlay (opacity) en vez de filter: brightness() en el parent
+ *   → Animar filter en múltiples elementos simultáneos es muy caro;
+ *     un div overlay con opacity es casi gratis en GPU
+ * • useReducedMotion → respeta prefers-reduced-motion del OS
+ *
+ * ESTRUCTURA / CÓDIGO
+ * ───────────────────
+ * • Sub-componentes extraídos: VhsReel, VhsChassis (memoizados)
+ * • useCallback en todos los handlers → evita recrear funciones en cada render
+ * • useMemo en springCfg → objeto de config no se recrea en cada render
+ * • expandedIdx como derived state → fuente única de verdad entre hover y active
+ *
+ * UX / INTERACCIÓN
+ * ────────────────
+ * • Bobinas (VhsReel) giran con animation framer-motion cuando el tape está expandido
+ * • Scanlines en el chassis (repeating-linear-gradient, sin DOM extra)
+ * • Guía magnética de cinta animada con glow temático
+ * • Badge NEW con spring de entrada
+ * • Transición del panel expandido más rápida: 0.32→0.28s, ease mejorado
+ *
+ * ACCESIBILIDAD
+ * ─────────────
+ * • role="listbox" en el contenedor, role="option" + aria-selected en cada tape
+ * • aria-expanded, aria-label con título, año y episodios
+ * • tabIndex={0} + onFocus/onBlur para integración con hover state
+ * • Teclado: Enter/Space → seleccionar/abrir; ← → → navegar entre tapes
+ * • focus-visible ring temático (box-shadow, sin romper overflow)
+ * • Botón CTA con focus-visible propio
+ */
+
+import { useState, memo, useCallback, useMemo, useRef } from "react"
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion"
 import { Play, Star, Calendar, Tv, Layers, ChevronRight } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 import { DeferredImage } from "@/components/shared/deferred-image"
@@ -30,23 +71,19 @@ interface VhsShelfAccordionProps {
     className?: string
 }
 
-// ─── Dragon Ball Themes ────────────────────────────────────────────────────────
+// ─── Themes ───────────────────────────────────────────────────────────────────
 
 const DB = { ORIGINAL: 862, Z: 12971, GT: 888, KAI: 61709, SUPER: 62715, DAIMA: 240411 }
 
 const VHS_THEMES: Record<number, {
-    accent: string
-    labelBg: string
-    labelText: string
-    brandLabel: string
-    subtitle: string
+    accent: string; labelBg: string; labelText: string; brandLabel: string; subtitle: string
 }> = {
     [DB.ORIGINAL]: { accent: "#e22d28", labelBg: "#54c0d4", labelText: "#d11c1b", brandLabel: "SHUEISHA", subtitle: "Original Series" },
-    [DB.Z]:        { accent: "#f57e1a", labelBg: "#f57e1a", labelText: "#1d1d1b", brandLabel: "TOEI ANIME", subtitle: "Saiyan Saga" },
-    [DB.GT]:       { accent: "#fad41e", labelBg: "#1c3966", labelText: "#fad41e", brandLabel: "BIRD STUDIO", subtitle: "Dragon Ball GT" },
-    [DB.SUPER]:    { accent: "#fad41e", labelBg: "#b81d18", labelText: "#fad41e", brandLabel: "TOEI ANIME", subtitle: "Saga Súper" },
-    [DB.KAI]:      { accent: "#102d6b", labelBg: "#b1b9de", labelText: "#102d6b", brandLabel: "SHUEISHA", subtitle: "Remasterizada" },
-    [DB.DAIMA]:    { accent: "#d11c1b", labelBg: "#eed429", labelText: "#d11c1b", brandLabel: "BIRD STUDIO", subtitle: "Nueva Aventura" },
+    [DB.Z]: { accent: "#f57e1a", labelBg: "#f57e1a", labelText: "#1d1d1b", brandLabel: "TOEI ANIME", subtitle: "Saiyan Saga" },
+    [DB.GT]: { accent: "#fad41e", labelBg: "#1c3966", labelText: "#fad41e", brandLabel: "BIRD STUDIO", subtitle: "Dragon Ball GT" },
+    [DB.SUPER]: { accent: "#fad41e", labelBg: "#b81d18", labelText: "#fad41e", brandLabel: "TOEI ANIME", subtitle: "Saga Súper" },
+    [DB.KAI]: { accent: "#102d6b", labelBg: "#b1b9de", labelText: "#102d6b", brandLabel: "SHUEISHA", subtitle: "Remasterizada" },
+    [DB.DAIMA]: { accent: "#d11c1b", labelBg: "#eed429", labelText: "#d11c1b", brandLabel: "BIRD STUDIO", subtitle: "Nueva Aventura" },
 }
 
 const GENERIC_ACCENTS = ["#ff3e8b", "#00ffcc", "#10b981", "#f59e0b", "#818cf8", "#f43f5e"]
@@ -58,7 +95,134 @@ function getTheme(tmdbId: number, title: string) {
     return { accent, labelBg: "#1a1b24", labelText: accent, brandLabel: "KAMEHOUSE", subtitle: "Anime Series" }
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── VhsReel ──────────────────────────────────────────────────────────────────
+// Bobina SVG animada. isSpinning → rotación continua con framer-motion.
+// Se usa dentro del chassis, en pares.
+
+const VhsReel = memo(function VhsReel({
+    isSpinning,
+    accent,
+}: {
+    isSpinning: boolean
+    accent: string
+}) {
+    return (
+        <motion.svg
+            viewBox="0 0 20 20"
+            className="w-[14px] h-[14px]"
+            animate={{ rotate: isSpinning ? 360 : 0 }}
+            transition={
+                isSpinning
+                    ? { duration: 1.4, repeat: Infinity, ease: "linear", repeatDelay: 0 }
+                    : { duration: 0.25 }
+            }
+        >
+            {/* Aro exterior */}
+            <circle cx="10" cy="10" r="9" stroke="rgba(100,100,120,0.5)" strokeWidth="1" fill="rgba(12,12,20,0.96)" />
+            {/* Hub */}
+            <circle cx="10" cy="10" r="2.5" fill={`${accent}55`} />
+            <circle cx="10" cy="10" r="1" fill={`${accent}88`} />
+            {/* 5 radios */}
+            {[0, 72, 144, 216, 288].map(deg => {
+                const r = (deg * Math.PI) / 180
+                return (
+                    <line
+                        key={deg}
+                        x1={10 + Math.cos(r) * 3.2} y1={10 + Math.sin(r) * 3.2}
+                        x2={10 + Math.cos(r) * 7.8} y2={10 + Math.sin(r) * 7.8}
+                        stroke="rgba(140,140,165,0.35)"
+                        strokeWidth="0.8"
+                        strokeLinecap="round"
+                    />
+                )
+            })}
+            {/* Muescas exteriores */}
+            {[36, 108, 180, 252, 324].map(deg => {
+                const r = (deg * Math.PI) / 180
+                return (
+                    <line
+                        key={deg}
+                        x1={10 + Math.cos(r) * 7.5} y1={10 + Math.sin(r) * 7.5}
+                        x2={10 + Math.cos(r) * 9} y2={10 + Math.sin(r) * 9}
+                        stroke="rgba(120,120,145,0.25)"
+                        strokeWidth="0.6"
+                        strokeLinecap="round"
+                    />
+                )
+            })}
+        </motion.svg>
+    )
+})
+
+// ─── VhsChassis ───────────────────────────────────────────────────────────────
+// Bloque mecánico inferior del lomo. Scanlines + ventana de cinta + bobinas.
+
+const VhsChassis = memo(function VhsChassis({
+    isSpinning,
+    accent,
+    brandLabel,
+}: {
+    isSpinning: boolean
+    accent: string
+    brandLabel: string
+}) {
+    return (
+        <div
+            className="relative z-10 flex flex-col items-center justify-center shrink-0 overflow-hidden"
+            style={{
+                height: "54px",
+                background: "linear-gradient(160deg, #0e1018 0%, #161820 45%, #0a0c12 100%)",
+                borderTop: "1px solid rgba(255,255,255,0.07)",
+            }}
+        >
+            {/* Scanlines — solo CSS, cero DOM extra */}
+            <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                    backgroundImage:
+                        "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.2) 2px, rgba(0,0,0,0.2) 3px)",
+                    opacity: 0.6,
+                }}
+            />
+            {/* Ranuras del cartucho */}
+            <div className="absolute inset-x-2 top-1.5 bottom-1.5 flex gap-[3px] opacity-[0.13] pointer-events-none">
+                {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="flex-1 rounded-[1px]" style={{ background: "rgba(200,200,220,0.5)" }} />
+                ))}
+            </div>
+
+            {/* Ventana de cinta magnética */}
+            <div
+                className="w-11 h-6 rounded-sm relative overflow-hidden flex items-center justify-between px-1.5"
+                style={{
+                    background: "rgba(4,4,8,0.97)",
+                    border: "1px solid rgba(255,255,255,0.09)",
+                    boxShadow: "inset 0 2px 6px rgba(0,0,0,0.95), inset 0 0 12px rgba(0,0,0,0.8)",
+                }}
+            >
+                {/* Guía de cinta con glow temático */}
+                <div
+                    className="absolute inset-x-0 bottom-1.5 h-[1px] pointer-events-none"
+                    style={{
+                        background: `linear-gradient(to right, transparent, ${accent}50 30%, ${accent}80 50%, ${accent}50 70%, transparent)`,
+                    }}
+                />
+                <VhsReel isSpinning={isSpinning} accent={accent} />
+                <VhsReel isSpinning={isSpinning} accent={accent} />
+            </div>
+
+            {/* Marca de fábrica */}
+            <span
+                className="text-[5.5px] font-mono font-black tracking-[0.22em] uppercase mt-1"
+                style={{ color: `${accent}70` }}
+            >
+                {brandLabel}
+            </span>
+        </div>
+    )
+})
+
+// ─── VhsShelfAccordion ────────────────────────────────────────────────────────
 
 export const VhsShelfAccordion = memo(function VhsShelfAccordion({
     items,
@@ -69,121 +233,261 @@ export const VhsShelfAccordion = memo(function VhsShelfAccordion({
     const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
     const [activeIdx, setActiveIdx] = useState<number | null>(0)
 
+    // Respeta prefers-reduced-motion del sistema operativo
+    const prefersReduced = useReducedMotion()
+    const containerRef = useRef<HTMLDivElement>(null)
+
+    // ── Derived: qué tape está expandido
+    const expandedIdx = hoveredIdx !== null ? hoveredIdx : activeIdx
+    const anyHovered = hoveredIdx !== null
+
+    // ── Spring: más apretado → apertura más snappy, sin choppy
+    // (stiffness 200→400, damping 26→42, mass 0.7 en vez de 1)
+    const springCfg = useMemo(
+        () =>
+            prefersReduced
+                ? ({ duration: 0.01 } as const)
+                : ({ type: "spring", stiffness: 400, damping: 42, mass: 0.7 } as const),
+        [prefersReduced],
+    )
+
+    // ── Handlers memoizados
+    const handleMouseEnter = useCallback((idx: number) => setHoveredIdx(idx), [])
+    const handleMouseLeave = useCallback(() => setHoveredIdx(null), [])
+
+    const handleClick = useCallback(
+        (idx: number, item: VhsTapeItem) => {
+            setActiveIdx(idx)
+            // Segundo click (ya expandido) → navega
+            if (expandedIdx === idx) onItemClick(item)
+        },
+        [expandedIdx, onItemClick],
+    )
+
+    const handleKeyDown = useCallback(
+        (e: React.KeyboardEvent, idx: number, item: VhsTapeItem) => {
+            if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault()
+                setActiveIdx(idx)
+                if (expandedIdx === idx) onItemClick(item)
+            } else if (e.key === "ArrowRight") {
+                e.preventDefault()
+                const next = Math.min(items.length - 1, idx + 1)
+                setActiveIdx(next)
+                setHoveredIdx(null)
+                // Mover foco al siguiente elemento
+                setTimeout(() => {
+                    containerRef.current
+                        ?.querySelector<HTMLElement>(`[data-idx="${next}"]`)
+                        ?.focus()
+                }, 0)
+            } else if (e.key === "ArrowLeft") {
+                e.preventDefault()
+                const prev = Math.max(0, idx - 1)
+                setActiveIdx(prev)
+                setHoveredIdx(null)
+                setTimeout(() => {
+                    containerRef.current
+                        ?.querySelector<HTMLElement>(`[data-idx="${prev}"]`)
+                        ?.focus()
+                }, 0)
+            }
+        },
+        [expandedIdx, items.length, onItemClick],
+    )
+
     if (items.length === 0) return null
 
     return (
         <div className={cn("w-full flex flex-col flex-1 h-full", className)}>
+
             {/* ── SHELF CONTAINER ── */}
             <div
-                className="relative flex flex-row items-stretch overflow-x-auto no-scrollbar w-full flex-1 min-h-[600px] bg-[#080a0f] border-y border-white/[0.04]"
+                ref={containerRef}
+                role="listbox"
+                aria-label={type === "series" ? "Estantería de series" : "Estantería de sagas"}
+                aria-orientation="horizontal"
+                className="relative flex flex-row items-stretch overflow-x-auto no-scrollbar w-full flex-1 min-h-[600px] bg-[#06080d] border-y border-white/[0.04]"
                 style={{ perspective: "2000px" }}
             >
                 {/* Estante de madera inferior */}
-                <div className="absolute bottom-0 inset-x-0 h-6 z-20 pointer-events-none"
-                    style={{ background: "linear-gradient(to top, #1a1209 0%, #2d2010 60%, transparent 100%)" }} />
-                <div className="absolute bottom-6 inset-x-0 h-1 bg-[#3d2e14] z-20 pointer-events-none" />
+                <div
+                    className="absolute bottom-0 inset-x-0 h-6 z-20 pointer-events-none"
+                    style={{ background: "linear-gradient(to top, #14100a 0%, #261a0d 60%, transparent 100%)" }}
+                />
+                <div
+                    className="absolute bottom-6 inset-x-0 h-[2px] z-20 pointer-events-none"
+                    style={{
+                        background: "linear-gradient(to right, transparent, #3d2e14 15%, #4a3818 50%, #3d2e14 85%, transparent)",
+                    }}
+                />
                 {/* Sombra ambiental superior */}
-                <div className="absolute top-0 inset-x-0 h-12 bg-gradient-to-b from-black/60 to-transparent z-10 pointer-events-none" />
+                <div className="absolute top-0 inset-x-0 h-16 bg-gradient-to-b from-black/70 to-transparent z-10 pointer-events-none" />
+
+                {/* Badge contador de tapes — esquina superior derecha */}
+                <div
+                    className="absolute top-3 right-4 z-30 flex items-center gap-1.5 pointer-events-none"
+                    style={{
+                        background: "rgba(0,0,0,0.55)",
+                        border: "1px solid rgba(255,255,255,0.07)",
+                        backdropFilter: "blur(8px)",
+                        borderRadius: "6px",
+                        padding: "3px 8px",
+                    }}
+                >
+                    <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none">
+                        <rect x="0.5" y="2" width="9" height="7" rx="1" stroke="rgba(255,255,255,0.25)" strokeWidth="0.8" />
+                        <rect x="2" y="0.5" width="6" height="3" rx="0.5" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.18)" strokeWidth="0.6" />
+                        <circle cx="3.5" cy="6.5" r="1.2" stroke="rgba(255,255,255,0.2)" strokeWidth="0.6" />
+                        <circle cx="6.5" cy="6.5" r="1.2" stroke="rgba(255,255,255,0.2)" strokeWidth="0.6" />
+                    </svg>
+                    <span
+                        className="text-[9px] font-mono font-black uppercase tracking-[0.2em] tabular-nums"
+                        style={{ color: "rgba(255,255,255,0.25)" }}
+                    >
+                        {items.length} {type === "series" ? "series" : "sagas"}
+                    </span>
+                </div>
 
                 <div className="flex flex-row items-stretch gap-[3px] h-full z-10 px-3 pb-7 pt-4">
                     {items.map((item, index) => {
-                        const isHovered = hoveredIdx === index
+                        const isExpanded = expandedIdx === index
                         const isActive = activeIdx === index
-                        const isExpanded = isHovered || (hoveredIdx === null && isActive)
-                        const theme = getTheme(item.tmdbId || 0, item.title)
+                        const theme = getTheme(item.tmdbId ?? 0, item.title)
                         const scoreStr = item.score
-                            ? (Number(item.score) > 10 ? Number(item.score) / 10 : Number(item.score)).toFixed(1)
+                            ? (Number(item.score) > 10
+                                ? Number(item.score) / 10
+                                : Number(item.score)
+                            ).toFixed(1)
                             : null
                         const subtitle = item.subtitle || theme.subtitle
 
                         return (
                             <motion.div
                                 key={item.id}
+                                data-idx={index}
+                                // ── A11y
+                                role="option"
+                                aria-selected={isActive}
+                                aria-expanded={isExpanded}
+                                aria-label={[
+                                    item.title,
+                                    item.year ? String(item.year) : null,
+                                    item.episodesCount ? `${item.episodesCount} episodios` : null,
+                                ].filter(Boolean).join(", ")}
+                                tabIndex={0}
+                                // ── Clases
                                 className={cn(
-                                    "relative flex flex-row shrink-0 cursor-pointer overflow-hidden select-none h-full",
-                                    "rounded-sm",
-                                    isExpanded
-                                        ? "shadow-[20px_0_60px_rgba(0,0,0,0.9),−20px_0_60px_rgba(0,0,0,0.9)] z-30"
-                                        : "shadow-[8px_0_24px_rgba(0,0,0,0.7)] z-10 hover:z-20"
+                                    "relative flex flex-row shrink-0 cursor-pointer overflow-hidden select-none h-full rounded-sm",
+                                    "outline-none",
+                                    isExpanded ? "z-30" : "z-10 hover:z-20",
                                 )}
+                                // ── Animación (spring más apretado)
                                 animate={{
                                     width: isExpanded ? 820 : 90,
-                                    rotateY: isExpanded ? 0 : 2,
-                                    scale: isExpanded ? 1 : 0.985,
-                                    filter: isExpanded ? "brightness(1)" : (hoveredIdx !== null && !isHovered ? "brightness(0.7)" : "brightness(1)"),
+                                    rotateY: isExpanded ? 0 : 1.5,
+                                    scale: isExpanded ? 1 : 0.988,
                                 }}
-                                transition={{ type: "spring", stiffness: 200, damping: 26 }}
-                                style={{ transformStyle: "preserve-3d", transformOrigin: "left center" }}
-                                onMouseEnter={() => setHoveredIdx(index)}
-                                onMouseLeave={() => setHoveredIdx(null)}
-                                onClick={() => {
-                                    setActiveIdx(index)
-                                    if (isExpanded) onItemClick(item)
+                                transition={springCfg}
+                                style={{
+                                    transformStyle: "preserve-3d",
+                                    transformOrigin: "left center",
+                                    // Fuerza compositor GPU para width + transform
+                                    willChange: "width, transform",
+                                    // focus-visible: ring temático via box-shadow (no rompe overflow)
+                                    boxShadow: isExpanded
+                                        ? `20px 0 60px rgba(0,0,0,0.9), -8px 0 30px rgba(0,0,0,0.6), 0 0 0 1px ${theme.accent}22`
+                                        : "8px 0 24px rgba(0,0,0,0.7)",
                                 }}
+                                onMouseEnter={() => handleMouseEnter(index)}
+                                onMouseLeave={handleMouseLeave}
+                                onClick={() => handleClick(index, item)}
+                                onKeyDown={e => handleKeyDown(e, index, item)}
+                                // Teclado: hover visual al hacer focus
+                                onFocus={() => setHoveredIdx(index)}
+                                onBlur={handleMouseLeave}
                             >
+                                {/*
+                                 * DIMMING: overlay opacity en vez de filter: brightness() en el parent.
+                                 * Razón: animar filter en N elementos simultáneos genera un repaint
+                                 * de capa compuesta por cada frame. Un div con opacity en GPU es ~gratis.
+                                 */}
+                                <AnimatePresence>
+                                    {anyHovered && !isExpanded && (
+                                        <motion.div
+                                            className="absolute inset-0 z-40 pointer-events-none bg-black"
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 0.42 }}
+                                            exit={{ opacity: 0 }}
+                                            transition={{ duration: 0.14 }}
+                                        />
+                                    )}
+                                </AnimatePresence>
+
                                 {/* ════════════════════════════════════════
-                                    LOMO (SPINE) — poster a pantalla completa
+                                    LOMO (SPINE)
                                 ════════════════════════════════════════ */}
                                 <div className="w-[90px] shrink-0 h-full relative overflow-hidden flex flex-col">
 
-                                    {/* Poster como fondo — alta visibilidad */}
+                                    {/* Poster como fondo */}
                                     <div className="absolute inset-0 z-0">
                                         <DeferredImage
                                             src={item.posterUrl || ""}
                                             alt=""
                                             className="w-full h-full object-cover object-top"
-                                            style={{ filter: "brightness(0.92) saturate(1.1) contrast(1.05)" }}
+                                            style={{ filter: "brightness(0.9) saturate(1.1) contrast(1.06)" }}
                                             showSkeleton={false}
                                         />
-                                        {/* Vignette sutil en los bordes — NO aplana el poster */}
                                         <div className="absolute inset-0"
-                                            style={{ background: "radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.55) 100%)" }} />
-                                        {/* Gradiente inferior para el chassis */}
-                                        <div className="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-black via-black/70 to-transparent" />
-                                        {/* Gradiente superior para el año */}
-                                        <div className="absolute top-0 inset-x-0 h-16 bg-gradient-to-b from-black/70 to-transparent" />
+                                            style={{ background: "radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.6) 100%)" }} />
+                                        <div className="absolute bottom-0 inset-x-0 h-20 bg-gradient-to-t from-black via-black/60 to-transparent" />
+                                        <div className="absolute top-0 inset-x-0 h-14 bg-gradient-to-b from-black/70 to-transparent" />
                                     </div>
 
                                     {/* Barra de acento temático — borde izquierdo */}
-                                    <div className="absolute inset-y-0 left-0 w-[4px] z-20 pointer-events-none"
-                                        style={{ background: `linear-gradient(to bottom, ${theme.accent}, ${theme.accent}88, ${theme.accent})` }} />
+                                    <div className="absolute inset-y-0 left-0 w-1 z-20 pointer-events-none"
+                                        style={{ background: `linear-gradient(to bottom, ${theme.accent}dd, ${theme.accent}55, ${theme.accent}dd)` }} />
 
                                     {/* Reflejo plástico derecho */}
                                     <div className="absolute inset-y-0 right-0 w-[2px] z-20 pointer-events-none"
-                                        style={{ background: "linear-gradient(to bottom, rgba(255,255,255,0.18), rgba(255,255,255,0.04) 50%, transparent)" }} />
+                                        style={{ background: "linear-gradient(to bottom, rgba(255,255,255,0.16), rgba(255,255,255,0.03) 50%, transparent)" }} />
 
-                                    {/* ── CABECERA: año y badge NEW ── */}
-                                    <div className="relative z-10 flex flex-col items-center pt-2 gap-1 px-1.5">
+                                    {/* ── Cabecera: año + badge NEW ── */}
+                                    <div className="relative z-10 flex flex-col items-center pt-2.5 gap-1 px-1.5">
                                         <span
-                                            className="text-[7px] font-black font-mono tracking-[0.12em] uppercase px-1.5 py-[2px] rounded-[2px]"
+                                            className="text-[7px] font-black font-mono tracking-[0.14em] uppercase px-1.5 py-[2px] rounded-[2px]"
                                             style={{
-                                                background: "rgba(0,0,0,0.55)",
-                                                color: "rgba(255,255,255,0.75)",
+                                                background: "rgba(0,0,0,0.6)",
+                                                color: "rgba(255,255,255,0.8)",
                                                 backdropFilter: "blur(4px)",
-                                                border: `1px solid ${theme.accent}55`
+                                                border: `1px solid ${theme.accent}44`,
                                             }}
                                         >
                                             {item.year || "VHS"}
                                         </span>
                                         {item.year && Number(item.year) >= 2024 && (
-                                            <span
-                                                className="text-[6px] font-black uppercase px-1.5 py-[2px] rotate-[-4deg] shadow-md"
-                                                style={{ background: theme.accent, color: theme.labelText }}
+                                            <motion.span
+                                                initial={{ scale: 0.6, opacity: 0 }}
+                                                animate={{ scale: 1, opacity: 1 }}
+                                                transition={{ type: "spring", stiffness: 500, damping: 22, delay: 0.05 }}
+                                                className="text-[6px] font-black uppercase px-1.5 py-[2px] shadow-md"
+                                                style={{ background: theme.accent, color: theme.labelText, transform: "rotate(-4deg)" }}
                                             >
                                                 NEW
-                                            </span>
+                                            </motion.span>
                                         )}
                                     </div>
 
-                                    {/* ── TÍTULO VERTICAL ── */}
+                                    {/* ── Título vertical ── */}
                                     <div className="flex-1 flex items-center justify-center relative z-10 overflow-hidden py-3">
                                         <h3
-                                            className="font-bebas leading-none uppercase tracking-[0.06em] text-white text-center"
+                                            className="font-bebas leading-none uppercase text-white text-center"
                                             style={{
                                                 writingMode: "vertical-rl",
                                                 transform: "rotate(180deg)",
-                                                fontSize: "clamp(16px, 1.5vw, 22px)",
-                                                textShadow: "0 2px 12px rgba(0,0,0,1), 0 0 30px rgba(0,0,0,0.8)",
+                                                fontSize: "clamp(16px, 1.5vw, 21px)",
+                                                letterSpacing: "0.06em",
+                                                textShadow: "0 2px 14px rgba(0,0,0,1), 0 0 30px rgba(0,0,0,0.9)",
                                                 overflow: "hidden",
                                                 display: "-webkit-box",
                                                 WebkitLineClamp: 1,
@@ -195,44 +499,12 @@ export const VhsShelfAccordion = memo(function VhsShelfAccordion({
                                         </h3>
                                     </div>
 
-                                    {/* ── CHASSIS VHS (base mecánica) ── */}
-                                    <div
-                                        className="relative z-10 flex flex-col items-center justify-center shrink-0 overflow-hidden"
-                                        style={{
-                                            height: "52px",
-                                            background: "linear-gradient(135deg, #0d0e14 0%, #15161f 40%, #0a0b10 100%)",
-                                            borderTop: "1px solid rgba(255,255,255,0.06)",
-                                        }}
-                                    >
-                                        {/* Ranuras de cartucho */}
-                                        <div className="absolute inset-x-2 top-1.5 bottom-1.5 flex gap-[3px] opacity-20 pointer-events-none">
-                                            {Array.from({ length: 8 }).map((_, i) => (
-                                                <div key={i} className="flex-1 rounded-[1px]" style={{ background: "rgba(255,255,255,0.4)" }} />
-                                            ))}
-                                        </div>
-                                        {/* Ventana de cinta magnética */}
-                                        <div
-                                            className="w-10 h-5 rounded-sm relative overflow-hidden"
-                                            style={{
-                                                background: "rgba(0,0,0,0.8)",
-                                                border: "1px solid rgba(255,255,255,0.1)",
-                                                boxShadow: "inset 0 2px 4px rgba(0,0,0,0.9)"
-                                            }}
-                                        >
-                                            {/* Bobinas */}
-                                            <div className="absolute left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border border-zinc-600/60" style={{ background: "rgba(30,30,40,0.9)" }}>
-                                                <div className="w-1 h-1 rounded-full bg-zinc-500/40 absolute inset-1/2 -translate-x-1/2 -translate-y-1/2" />
-                                            </div>
-                                            <div className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border border-zinc-600/60" style={{ background: "rgba(30,30,40,0.9)" }}>
-                                                <div className="w-1 h-1 rounded-full bg-zinc-500/40 absolute inset-1/2 -translate-x-1/2 -translate-y-1/2" />
-                                            </div>
-                                        </div>
-                                        {/* Marca */}
-                                        <span className="text-[5.5px] font-mono font-black tracking-[0.2em] uppercase mt-1"
-                                            style={{ color: `${theme.accent}80` }}>
-                                            {theme.brandLabel}
-                                        </span>
-                                    </div>
+                                    {/* ── Chassis VHS ── */}
+                                    <VhsChassis
+                                        isSpinning={isExpanded && !prefersReduced}
+                                        accent={theme.accent}
+                                        brandLabel={theme.brandLabel}
+                                    />
                                 </div>
 
                                 {/* ════════════════════════════════════════
@@ -241,34 +513,31 @@ export const VhsShelfAccordion = memo(function VhsShelfAccordion({
                                 <AnimatePresence>
                                     {isExpanded && (
                                         <motion.div
-                                            initial={{ opacity: 0, x: -24 }}
+                                            initial={{ opacity: 0, x: -20 }}
                                             animate={{ opacity: 1, x: 0 }}
-                                            exit={{ opacity: 0, x: -16 }}
-                                            transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+                                            exit={{ opacity: 0, x: -12 }}
+                                            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
                                             className="flex-1 h-full relative overflow-hidden flex flex-row"
                                         >
-                                            {/* ── BANNER como fondo (sin blur en la zona derecha) ── */}
+                                            {/* Banner como fondo */}
                                             <div className="absolute inset-0 z-0">
                                                 <DeferredImage
                                                     src={item.bannerUrl || item.posterUrl || ""}
                                                     alt=""
                                                     className="w-full h-full object-cover object-center"
-                                                    style={{ filter: "brightness(0.35) saturate(1.2)" }}
+                                                    style={{ filter: "brightness(0.3) saturate(1.2)" }}
                                                     showSkeleton={false}
                                                 />
-                                                {/* Gradiente izquierda → opaco para el contenido */}
                                                 <div className="absolute inset-0"
-                                                    style={{ background: "linear-gradient(to right, rgba(6,8,14,0.98) 0%, rgba(6,8,14,0.88) 45%, rgba(6,8,14,0.2) 100%)" }} />
-                                                {/* Gradiente inferior */}
+                                                    style={{ background: "linear-gradient(to right, rgba(5,7,12,0.99) 0%, rgba(5,7,12,0.9) 42%, rgba(5,7,12,0.15) 100%)" }} />
                                                 <div className="absolute inset-0"
-                                                    style={{ background: "linear-gradient(to top, rgba(6,8,14,0.9) 0%, transparent 50%)" }} />
-                                                {/* Glow temático */}
+                                                    style={{ background: "linear-gradient(to top, rgba(5,7,12,0.95) 0%, transparent 55%)" }} />
                                                 <div className="absolute inset-0 pointer-events-none"
-                                                    style={{ background: `radial-gradient(ellipse at 20% 80%, ${theme.accent}18 0%, transparent 60%)` }} />
+                                                    style={{ background: `radial-gradient(ellipse at 18% 85%, ${theme.accent}20 0%, transparent 58%)` }} />
                                             </div>
 
                                             {/* Decoración: carrete SVG */}
-                                            <div className="absolute top-6 right-10 opacity-[0.06] pointer-events-none w-52 h-52">
+                                            <div className="absolute top-4 right-8 opacity-[0.055] pointer-events-none w-48 h-48">
                                                 <svg viewBox="0 0 100 100" className="w-full h-full">
                                                     <circle cx="50" cy="50" r="46" stroke="white" strokeWidth="1.5" fill="none" />
                                                     <circle cx="50" cy="50" r="30" stroke="white" strokeWidth="0.8" fill="none" />
@@ -278,20 +547,24 @@ export const VhsShelfAccordion = memo(function VhsShelfAccordion({
                                                 </svg>
                                             </div>
 
-                                            {/* ── LAYOUT: poster | info ── */}
+                                            {/* Borde izquierdo del panel — continuación del lomo */}
+                                            <div className="absolute inset-y-0 left-0 w-1 z-20 pointer-events-none"
+                                                style={{ background: theme.accent }} />
+
+                                            {/* Layout: poster | info */}
                                             <div className="relative z-10 flex flex-row w-full h-full">
 
                                                 {/* POSTER GRANDE */}
                                                 <motion.div
-                                                    initial={{ y: 24, opacity: 0 }}
+                                                    initial={{ y: 20, opacity: 0 }}
                                                     animate={{ y: 0, opacity: 1 }}
-                                                    transition={{ delay: 0.08, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                                                    transition={{ delay: 0.07, duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
                                                     className="w-[170px] md:w-[200px] shrink-0 h-full flex items-end pl-6 pb-8"
                                                 >
                                                     <div
                                                         className="w-full aspect-[2/3] rounded-lg overflow-hidden relative"
                                                         style={{
-                                                            boxShadow: `0 24px 60px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.08), 0 0 40px ${theme.accent}22`
+                                                            boxShadow: `0 24px 60px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.07), 0 0 40px ${theme.accent}1e`,
                                                         }}
                                                     >
                                                         <DeferredImage
@@ -299,32 +572,29 @@ export const VhsShelfAccordion = memo(function VhsShelfAccordion({
                                                             alt={item.title}
                                                             className="w-full h-full object-cover"
                                                         />
-                                                        {/* Brillo sutil sobre el poster */}
-                                                        <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] via-transparent to-black/30 pointer-events-none" />
-                                                        {/* Borde acento en el poster */}
-                                                        <div
-                                                            className="absolute bottom-0 inset-x-0 h-[3px]"
-                                                            style={{ background: theme.accent }}
-                                                        />
+                                                        <div className="absolute inset-0 bg-gradient-to-b from-white/[0.03] via-transparent to-black/25 pointer-events-none" />
+                                                        <div className="absolute bottom-0 inset-x-0 h-[3px]" style={{ background: theme.accent }} />
                                                     </div>
                                                 </motion.div>
 
                                                 {/* INFO */}
                                                 <motion.div
-                                                    initial={{ y: 20, opacity: 0 }}
+                                                    initial={{ y: 16, opacity: 0 }}
                                                     animate={{ y: 0, opacity: 1 }}
-                                                    transition={{ delay: 0.13, duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
+                                                    transition={{ delay: 0.11, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                                                     className="flex-1 flex flex-col justify-end gap-3 px-7 pb-8 pt-8 min-w-0"
                                                 >
-                                                    {/* Badges superiores */}
+                                                    {/* Badges */}
                                                     <div className="flex flex-wrap items-center gap-2">
                                                         {scoreStr && (
-                                                            <div className="flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-black"
+                                                            <div
+                                                                className="flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-black"
                                                                 style={{
-                                                                    background: `${theme.accent}18`,
+                                                                    background: `${theme.accent}1a`,
                                                                     color: theme.accent,
-                                                                    border: `1px solid ${theme.accent}35`,
-                                                                }}>
+                                                                    border: `1px solid ${theme.accent}30`,
+                                                                }}
+                                                            >
                                                                 <Star className="w-3 h-3 fill-current" />
                                                                 <span className="tracking-widest">{scoreStr}</span>
                                                             </div>
@@ -343,20 +613,19 @@ export const VhsShelfAccordion = memo(function VhsShelfAccordion({
                                                         )}
                                                     </div>
 
-                                                    {/* Título y saga */}
+                                                    {/* Título + saga */}
                                                     <div>
                                                         <h2
                                                             className="font-bebas uppercase leading-[0.88] text-white line-clamp-2"
                                                             style={{
-                                                                fontSize: "clamp(36px, 4vw, 56px)",
-                                                                textShadow: "0 8px 30px rgba(0,0,0,0.6)",
+                                                                fontSize: "clamp(34px, 4vw, 54px)",
+                                                                textShadow: "0 6px 28px rgba(0,0,0,0.65)",
                                                             }}
                                                         >
                                                             {item.title}
                                                         </h2>
                                                         <div className="flex items-center gap-2.5 mt-2">
-                                                            <div className="h-[2px] w-10 rounded-full flex-shrink-0"
-                                                                style={{ background: theme.accent }} />
+                                                            <div className="h-[2px] w-10 rounded-full shrink-0" style={{ background: theme.accent }} />
                                                             <span
                                                                 className="text-[10px] font-black uppercase tracking-[0.35em] font-mono"
                                                                 style={{ color: theme.accent }}
@@ -366,10 +635,10 @@ export const VhsShelfAccordion = memo(function VhsShelfAccordion({
                                                         </div>
                                                     </div>
 
-                                                    {/* Descripción — legible, normal case */}
+                                                    {/* Descripción */}
                                                     {item.description && (
                                                         <p
-                                                            className="text-[13px] leading-[1.65] text-zinc-300/90 line-clamp-3 font-normal"
+                                                            className="text-[13px] leading-[1.65] text-zinc-300/85 line-clamp-3 font-normal"
                                                             style={{ maxWidth: "480px" }}
                                                             dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.description) }}
                                                         />
@@ -384,8 +653,8 @@ export const VhsShelfAccordion = memo(function VhsShelfAccordion({
                                                                     className="text-[9px] font-black uppercase tracking-widest px-2.5 py-[4px] rounded-full"
                                                                     style={{
                                                                         background: "rgba(255,255,255,0.05)",
-                                                                        border: "1px solid rgba(255,255,255,0.1)",
-                                                                        color: "rgba(200,200,210,0.8)"
+                                                                        border: "1px solid rgba(255,255,255,0.09)",
+                                                                        color: "rgba(195,195,208,0.8)",
                                                                     }}
                                                                 >
                                                                     {g}
@@ -394,7 +663,7 @@ export const VhsShelfAccordion = memo(function VhsShelfAccordion({
                                                         </div>
                                                     )}
 
-                                                    {/* Stats + botón */}
+                                                    {/* Stats + botón CTA */}
                                                     <div
                                                         className="pt-3 flex items-center justify-between gap-4"
                                                         style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
@@ -416,37 +685,32 @@ export const VhsShelfAccordion = memo(function VhsShelfAccordion({
 
                                                         <button
                                                             onClick={e => { e.stopPropagation(); onItemClick(item) }}
-                                                            className="flex items-center gap-3 px-6 py-3 rounded-xl font-black text-[11px] tracking-[0.2em] uppercase transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] shrink-0"
+                                                            className="flex items-center gap-3 px-6 py-3 rounded-xl font-black text-[11px] tracking-[0.2em] uppercase transition-[background,color,box-shadow,transform] duration-200 hover:scale-[1.03] active:scale-[0.97] shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
                                                             style={{
                                                                 background: "white",
                                                                 color: "black",
-                                                                boxShadow: `0 8px 32px rgba(0,0,0,0.4), 0 0 0 0 ${theme.accent}`,
-                                                                transition: "background 0.25s, color 0.25s, box-shadow 0.25s, transform 0.1s",
+                                                                boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
                                                             }}
                                                             onMouseEnter={e => {
-                                                                const btn = e.currentTarget as HTMLButtonElement
+                                                                const btn = e.currentTarget
                                                                 btn.style.background = theme.accent
                                                                 btn.style.color = theme.labelText
                                                                 btn.style.boxShadow = `0 8px 32px ${theme.accent}55`
                                                             }}
                                                             onMouseLeave={e => {
-                                                                const btn = e.currentTarget as HTMLButtonElement
+                                                                const btn = e.currentTarget
                                                                 btn.style.background = "white"
                                                                 btn.style.color = "black"
-                                                                btn.style.boxShadow = `0 8px 32px rgba(0,0,0,0.4)`
+                                                                btn.style.boxShadow = "0 8px 32px rgba(0,0,0,0.4)"
                                                             }}
                                                         >
-                                                            <Play className="w-4 h-4 fill-current flex-shrink-0" />
+                                                            <Play className="w-4 h-4 fill-current shrink-0" />
                                                             <span>{type === "series" ? "INICIAR REPRODUCCIÓN" : "SINTONIZAR ARCO"}</span>
                                                             <ChevronRight className="w-4 h-4 ml-1 opacity-50" />
                                                         </button>
                                                     </div>
                                                 </motion.div>
                                             </div>
-
-                                            {/* Borde izquierdo del panel — continuación del lomo */}
-                                            <div className="absolute inset-y-0 left-0 w-[4px] pointer-events-none z-20"
-                                                style={{ background: theme.accent }} />
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
