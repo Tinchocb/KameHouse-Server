@@ -1,27 +1,73 @@
 import React from "react"
 import { TabsContent } from "@/components/ui/tabs/tabs"
-import { StatusCard, Section } from "../components"
+import { StatusCard, Section, Card, OsToggle } from "../components"
 import { LucideCrown, LucideHardDrive, LucideCheckCircle2, LucideAlertTriangle } from "lucide-react"
+import { type Control } from "react-hook-form"
+import { type SettingsFormValues } from "../index"
 import { toast } from "sonner"
 
-export function SystemTab() {
+export function SystemTab({ control }: { control: Control<SettingsFormValues> }) {
     return (
         <TabsContent value="system" className="m-0 space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700 outline-none">
              <header className="space-y-2">
                 <h1 className="text-5xl font-black tracking-wider text-white font-bebas leading-none">
-                    NÚCLEO <span className="text-zinc-500">SISTEMA</span>
+                    NÚCLEO DEL <span className="text-zinc-500">SISTEMA</span>
                 </h1>
                 <p className="text-zinc-400 text-base font-medium leading-relaxed max-w-3xl">
-                    Información técnica sobre el servidor y estado de los recursos.
+                    Información técnica sobre el servidor, estado de los recursos de la base de datos y opciones de red.
                 </p>
             </header>
 
+            {/* ── 1. Información Técnica ── */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <StatusCard label="Versión" value="3.5.0-ALPHA" icon={LucideCrown} />
                 <StatusCard label="Database" value="SQLite (WAL)" icon={LucideHardDrive} />
                 <StatusCard label="Entorno" value="Producción" icon={LucideCheckCircle2} />
             </div>
 
+            {/* ── 2. Preferencias de la Plataforma ── */}
+            <Section label="Comportamiento de la Plataforma">
+                <Card>
+                    <OsToggle
+                        control={control}
+                        name="Platform.hideAudienceScore"
+                        label="Ocultar Calificaciones Públicas"
+                        desc="Oculta las puntuaciones y valoraciones promedio de TMDB o AniList en las tarjetas de anime, series y películas."
+                    />
+                    <OsToggle
+                        control={control}
+                        name="Platform.disableCacheLayer"
+                        label="Desactivar Capa de Caché"
+                        desc="Deshabilita la caché intermedia en memoria para metadatos del servidor. Forzará consultas en vivo (no recomendado en producción)."
+                    />
+                </Card>
+            </Section>
+
+            {/* ── 3. Gestión de Notificaciones ── */}
+            <Section label="Notificaciones de la Aplicación">
+                <Card>
+                    <OsToggle
+                        control={control}
+                        name="notifications.disableNotifications"
+                        label="Desactivar Notificaciones Globales"
+                        desc="Deshabilita por completo todos los avisos y alertas flotantes del sistema en la interfaz de usuario."
+                    />
+                    <OsToggle
+                        control={control}
+                        name="notifications.disableAutoScannerNotifications"
+                        label="Desactivar Avisos del Escáner"
+                        desc="No mostrar notificaciones toast en tiempo real cuando se encuentren, indexen o enriquezcan archivos nuevos."
+                    />
+                    <OsToggle
+                        control={control}
+                        name="notifications.disableAutoDownloaderNotifications"
+                        label="Desactivar Avisos de Descarga"
+                        desc="No notificar cuando los torrents o episodios terminen de descargarse en segundo plano."
+                    />
+                </Card>
+            </Section>
+
+            {/* ── 4. Zona de Peligro ── */}
             <Section label="Zona de Peligro">
                 <div className="border border-red-950/40 bg-red-950/[0.03] backdrop-blur-md rounded-2xl p-6 space-y-6 relative overflow-hidden group/danger shadow-[inset_0_0_20px_rgba(239,68,68,0.01)]">
                     <div className="flex items-start gap-4">
@@ -31,7 +77,7 @@ export function SystemTab() {
                         <div className="space-y-1">
                             <h3 className="text-base font-bold text-red-400/90 tracking-tight">Zona de Riesgo Crítico</h3>
                             <p className="text-xs text-zinc-500 leading-relaxed font-medium">
-                                Operaciones que modifican permanentemente el estado de tu biblioteca o base de datos.
+                                Operaciones administrativas destructivas que alteran permanentemente los datos del servidor.
                             </p>
                         </div>
                     </div>
@@ -40,7 +86,7 @@ export function SystemTab() {
                         <div className="flex flex-col md:flex-row md:items-center justify-between py-4 gap-4 first:pt-0 last:pb-0">
                             <div className="space-y-1">
                                 <h4 className="text-sm font-semibold text-white/90">Restablecer Caché de Metadatos</h4>
-                                <p className="text-xs text-zinc-500">Elimina todas las portadas y sinopsis cacheadas. Esto forzará una descarga limpia en el próximo escaneo.</p>
+                                <p className="text-xs text-zinc-500">Elimina las portadas y sinopsis cacheadas localmente, forzando una nueva descarga limpia desde TMDB/AniList.</p>
                             </div>
                             <button
                                 type="button"
@@ -54,7 +100,7 @@ export function SystemTab() {
                         <div className="flex flex-col md:flex-row md:items-center justify-between py-4 gap-4 last:pb-0">
                             <div className="space-y-1">
                                 <h4 className="text-sm font-semibold text-white/90">Reiniciar Configuración de Fábrica</h4>
-                                <p className="text-xs text-zinc-500">Restablece todos los ajustes a los valores iniciales por defecto. Esta acción no se puede deshacer.</p>
+                                <p className="text-xs text-zinc-500">Restablece de forma irreversible todos los valores de este formulario a sus parámetros por defecto iniciales.</p>
                             </div>
                             <button
                                 type="button"

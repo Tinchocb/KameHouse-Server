@@ -1,9 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { HydrationBoundary, dehydrate, useQueryClient } from "@tanstack/react-query"
-import React, { useMemo, useState } from "react"
+import React, { useMemo, useState, useCallback } from "react"
 import { toast } from "sonner"
 import { useAppStore } from "@/lib/store"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 
 import { cn } from "@/components/ui/core/styling"
 import { getHighResImage } from "@/lib/helpers/images"
@@ -23,7 +23,7 @@ import { SagaEpisodesSection } from "./-components/saga-episodes"
 export const Route = createFileRoute("/series/$seriesId/")({
     loader: async ({ params: { seriesId }, context }) => {
         const qc = context.queryClient
-        qc.prefetchQuery({
+        await qc.prefetchQuery({
             queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, seriesId],
             queryFn: () => fetchAnimeEntry(seriesId),
         })
@@ -125,7 +125,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
 
     const { mutate: updateProgress } = useUpdateAnimeEntryProgress(seriesId, 0, false)
 
-    const handleUpdateProgress = (newProgress: number) => {
+    const handleUpdateProgress = useCallback((newProgress: number) => {
         if (!entry) return
         updateProgress({
             mediaId: Number(seriesId),
@@ -137,16 +137,16 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                 refetchContinuity()
             }
         })
-    }
+    }, [entry, seriesId, computedEpisodes.length, updateProgress, refetchContinuity])
 
-    const handleToggleWatched = (episode: Anime_Episode) => {
+    const handleToggleWatched = useCallback((episode: Anime_Episode) => {
         if (!entry) return
         const epNum = episode.absoluteEpisodeNumber || episode.episodeNumber
         const newProgress = episode.watched ? Math.max(0, epNum - 1) : epNum
         handleUpdateProgress(newProgress)
-    }
+    }, [entry, handleUpdateProgress])
 
-    const handlePlayEpisode = (localFile: Anime_LocalFile, episode: Anime_Episode) => {
+    const handlePlayEpisode = useCallback((localFile: Anime_LocalFile, episode: Anime_Episode) => {
         if (!localFile.path) {
             toast.error("Archivo local no disponible.")
             return
@@ -161,9 +161,9 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
             episodeNumber: epNum,
             malId: entry?.media?.idMal ?? null,
         })
-    }
+    }, [entry?.media?.idMal])
 
-    const handlePlayLocalFile = (localFile: Anime_LocalFile) => {
+    const handlePlayLocalFile = useCallback((localFile: Anime_LocalFile) => {
         if (!localFile.path) {
             toast.error("Archivo no disponible.")
             return
@@ -189,9 +189,9 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
             episodeNumber: resolvedEpNum,
             malId: entry?.media?.idMal ?? null,
         })
-    }
+    }, [computedEpisodes, entry?.media?.idMal])
     
-    const handlePlayDefault = () => {
+    const handlePlayDefault = useCallback(() => {
         if (entry?.media?.format === "MOVIE" || !computedEpisodes || computedEpisodes.length === 0) {
             if (entry?.localFiles && entry.localFiles.length > 0) {
                 let targetFile = entry.localFiles[0]
@@ -236,7 +236,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         } else {
             toast.info("No hay archivos locales disponibles para reproducir.")
         }
-    }
+    }, [entry, computedEpisodes, continuityData?.item, handlePlayLocalFile, handlePlayEpisode])
 
     const marathonModeStore = useAppStore(s => s.marathonMode)
 
@@ -266,9 +266,22 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         handlePlayEpisode(lf, nextEp)
     }
 
+    const heroBackdrop = useMemo(
+        () => getHighResImage(entry?.media?.bannerImage || entry?.media?.posterImage || ""),
+        [entry?.media?.bannerImage, entry?.media?.posterImage]
+    )
+
+    const hasNextEpisode = useMemo(() => {
+        if (!computedEpisodes || !playTarget) return false
+        const idx = computedEpisodes.findIndex(ep =>
+            (ep?.absoluteEpisodeNumber || ep?.episodeNumber) === playTarget.episodeNumber
+        )
+        return idx >= 0 && idx < computedEpisodes.length - 1
+    }, [computedEpisodes, playTarget])
+
     if (isLoading || isMovie) {
         return (
-            <div className="min-h-screen bg-[#09090b] text-white flex items-center justify-center">
+            <div className="h-full w-full bg-[#09090b] text-white flex items-center justify-center">
                 <div className="flex flex-col items-center gap-5">
                     <div className="w-10 h-10 border-2 border-brand-orange border-t-transparent rounded-full animate-spin" />
                     <span className="text-[9px] font-black uppercase tracking-[0.5em] text-zinc-500 animate-pulse">
@@ -281,7 +294,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
 
     if (!entry || !entry.media) {
         return (
-            <div className="min-h-screen bg-[#09090b] text-white flex items-center justify-center px-6">
+            <div className="h-full w-full bg-[#09090b] text-white flex items-center justify-center px-6">
                 <EmptyState
                     title="Contenido no encontrado"
                     message="No pudimos cargar este contenido. Vuelve al inicio o intenta con otro."
@@ -291,18 +304,17 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     }
 
     const title = entry.media.titleSpanish || entry.media.titleRomaji || entry.media.titleEnglish || "Título Desconocido"
-    const heroBackdrop = getHighResImage(entry.media.bannerImage || entry.media.posterImage || "")
 
     const hasRelations = entry.media?.relations && entry.media.relations.length > 0
     const hasCharacters = entry.media?.characters?.edges && entry.media.characters.edges.length > 0
     const hasTechnical = entry.localFiles && entry.localFiles.length > 0
 
     return (
-        <div className="min-h-screen bg-[#09090b] text-white pb-16">
+        <div className="h-full w-full flex flex-col overflow-y-auto bg-[#09090b] text-white pb-16">
             <HeroSection
                 seriesId={seriesId}
                 directoryPath={entry.libraryData?.sharedPath || ""}
-                backdropUrl={getHighResImage(entry.media.bannerImage || entry.media.posterImage)}
+                backdropUrl={heroBackdrop}
                 entry={entry}
                 onPlay={handlePlayDefault}
                 continuityItem={continuityData?.item}
@@ -371,41 +383,71 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                 </div>
 
                 <div className="mt-8 min-h-[300px]">
-                    {activeTab === "episodes" && (
-                        <div className="mt-8 animate-fade-in">
-                            <SagaEpisodesSection 
-                                seriesTitle={title} 
-                                fallbackThumb={heroBackdrop} 
-                                episodes={computedEpisodes}
-                                localFiles={entry.localFiles || []}
-                                sagas={sagas}
-                                seriesTmdbId={entry.media?.tmdbId}
-                                onPlay={handlePlayEpisode}
-                                onToggleWatched={handleToggleWatched}
-                                onUpdateProgress={handleUpdateProgress}
-                                continuityItem={continuityData?.item}
-                                currentlyPlayingEpNumber={playTarget?.episodeNumber}
-                            />
-                        </div>
-                    )}
+                    <AnimatePresence mode="wait">
+                        {activeTab === "episodes" && (
+                            <motion.div
+                                key="episodes"
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 10 }}
+                                transition={{ duration: 0.2 }}
+                                className="mt-8"
+                            >
+                                <SagaEpisodesSection 
+                                    seriesTitle={title} 
+                                    fallbackThumb={heroBackdrop} 
+                                    episodes={computedEpisodes}
+                                    localFiles={entry.localFiles || []}
+                                    sagas={sagas}
+                                    seriesTmdbId={entry.media?.tmdbId}
+                                    onPlay={handlePlayEpisode}
+                                    onToggleWatched={handleToggleWatched}
+                                    onUpdateProgress={handleUpdateProgress}
+                                    continuityItem={continuityData?.item}
+                                    currentlyPlayingEpNumber={playTarget?.episodeNumber}
+                                />
+                            </motion.div>
+                        )}
 
-                    {activeTab === "relations" && (
-                        <div className="py-4 animate-fade-in">
-                            <RelationsTab media={entry.media} />
-                        </div>
-                    )}
+                        {activeTab === "relations" && (
+                            <motion.div
+                                key="relations"
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 10 }}
+                                transition={{ duration: 0.2 }}
+                                className="py-4"
+                            >
+                                <RelationsTab media={entry.media} />
+                            </motion.div>
+                        )}
 
-                    {activeTab === "characters" && (
-                        <div className="py-4 animate-fade-in">
-                            <CharactersTab characters={entry.media?.characters?.edges || []} />
-                        </div>
-                    )}
+                        {activeTab === "characters" && (
+                            <motion.div
+                                key="characters"
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 10 }}
+                                transition={{ duration: 0.2 }}
+                                className="py-4"
+                            >
+                                <CharactersTab characters={entry.media?.characters?.edges || []} />
+                            </motion.div>
+                        )}
 
-                    {activeTab === "technical" && (
-                        <div className="py-4 animate-fade-in">
-                            <TechnicalMetadataTab localFiles={entry.localFiles || []} />
-                        </div>
-                    )}
+                        {activeTab === "technical" && (
+                            <motion.div
+                                key="technical"
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 10 }}
+                                transition={{ duration: 0.2 }}
+                                className="py-4"
+                            >
+                                <TechnicalMetadataTab localFiles={entry.localFiles || []} />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
 
@@ -421,7 +463,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                     mediaFormat={entry.media?.format ?? null}
                     marathonMode={marathonModeStore}
                     onNextEpisode={handleNextEpisode}
-                    hasNextEpisode={computedEpisodes && playTarget ? computedEpisodes.findIndex(ep => (ep?.absoluteEpisodeNumber || ep?.episodeNumber) === playTarget.episodeNumber) < computedEpisodes.length - 1 : false}
+                    hasNextEpisode={hasNextEpisode}
                     onClose={() => {
                         setPlayTarget(null)
                         refetchContinuity()

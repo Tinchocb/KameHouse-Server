@@ -1,10 +1,9 @@
-import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
+import { useGetLibraryCollection, fetchLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
+import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { motion } from "framer-motion"
 import * as React from "react"
-import {
-    useHomeIntelligence,
-} from "@/hooks/use-home-intelligence"
 import { Skeleton } from "@/components/ui/skeleton"
 
 import { 
@@ -12,18 +11,31 @@ import {
 } from "./home.mappers"
 import { ErrorBanner, EmptyState } from "./home.components"
 import { MediaSpotlight } from "@/components/ui/media-spotlight"
-import { HomeLoreSections } from "./-home.sections"
 
 export const Route = createFileRoute("/home/")({
+    loader: async ({ context }) => {
+        const qc = context.queryClient
+        await qc.prefetchQuery({
+            queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key],
+            queryFn: fetchLibraryCollection,
+        })
+        return { dehydrateState: dehydrate(qc) }
+    },
     component: HomePage,
 })
 
 function HomePage() {
-    const navigate = useNavigate()
-    const { data: collection, isLoading: isCollectionLoading, error } = useGetLibraryCollection()
-    const { isLoading: isIntelligenceLoading } = useHomeIntelligence()
+    const { dehydrateState } = Route.useLoaderData()
+    return (
+        <HydrationBoundary state={dehydrateState}>
+            <HomeClient />
+        </HydrationBoundary>
+    )
+}
 
-    const isLoading = isCollectionLoading || isIntelligenceLoading
+function HomeClient() {
+    const navigate = useNavigate()
+    const { data: collection, isLoading, error } = useGetLibraryCollection()
 
     // ── Data Processing ────────────────────────────────────────────────────────
     
@@ -43,18 +55,6 @@ function HomePage() {
             }
         },
         [navigate, allEntries],
-    )
-
-    const handleLoreNavigate = React.useCallback(
-        (mediaId: number, format: string) => {
-            const isMovie = format === "MOVIE" || format === "SPECIAL" || format === "OVA"
-            if (isMovie) {
-                navigate({ to: "/movies/$movieId", params: { movieId: String(mediaId) } })
-            } else {
-                navigate({ to: "/series/$seriesId", params: { seriesId: String(mediaId) } })
-            }
-        },
-        [navigate],
     )
 
     const spotlightItems = React.useMemo(() => {
@@ -77,7 +77,7 @@ function HomePage() {
 
     if (error && !collection) return <ErrorBanner message="Hubo un problema al cargar tu biblioteca." />
     if (isLoading) return <HomeSkeleton />
-    if (!isCollectionLoading && allEntries.length === 0) return <EmptyState />
+    if (allEntries.length === 0) return <EmptyState />
 
     return (
         <motion.div 
@@ -94,8 +94,6 @@ function HomePage() {
                         />
                     )}
                 </div>
-
-                <HomeLoreSections onNavigate={handleLoreNavigate} />
             </div>
         </motion.div>
     )

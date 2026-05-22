@@ -1,17 +1,37 @@
 import { useState, useMemo, useCallback } from "react"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { cn } from "@/components/ui/core/styling"
-import { useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
+import { useGetAnimeEntry, fetchAnimeEntry } from "@/api/hooks/anime_entries.hooks"
+import { API_ENDPOINTS } from "@/api/generated/endpoints"
+import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import { HardDrive, Star, ArrowLeft, Calendar, Clock, CheckCircle2, Circle, ChevronRight, ChevronDown } from "lucide-react"
 import { VideoPlayer } from "@/components/video/player"
 import type { Mediastream_StreamType, Anime_Episode } from "@/api/generated/types"
 import { toast } from "sonner"
 import { PageHeader } from "@/components/ui/page-header"
 import { ProgressBar } from "@/components/ui/progress-bar"
+import { DeferredImage } from "@/components/shared/deferred-image"
 
 export const Route = createFileRoute("/series/$seriesId/$sagaId")({
-    component: DetailPage,
+    loader: async ({ params: { seriesId }, context }) => {
+        const qc = context.queryClient
+        await qc.prefetchQuery({
+            queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, seriesId],
+            queryFn: () => fetchAnimeEntry(seriesId),
+        })
+        return { dehydrateState: dehydrate(qc) }
+    },
+    component: SagaDetailPage,
 })
+
+function SagaDetailPage() {
+    const { dehydrateState } = Route.useLoaderData()
+    return (
+        <HydrationBoundary state={dehydrateState}>
+            <DetailPage />
+        </HydrationBoundary>
+    )
+}
 
 import { resolveSeriesSagas } from "@/lib/config/dragonball.config"
 
@@ -63,7 +83,7 @@ interface LeftPanelProps {
 function LeftPanel({ posterUrl, title, synopsis, year, episodesCount, sagaTitle, genres, rating, durationPerEp, studios, onBack }: LeftPanelProps) {
 
     return (
-        <aside className="w-full lg:w-[30%] lg:min-h-screen lg:sticky lg:top-0 lg:self-start bg-[#070a14]/40 backdrop-blur-md border-r border-white/5 flex flex-col">
+        <aside className="w-full lg:w-[30%] lg:h-full bg-[#070a14]/40 backdrop-blur-md border-r border-white/5 flex flex-col overflow-y-auto shrink-0">
             {/* Back button */}
             <button
                 onClick={onBack}
@@ -76,9 +96,10 @@ function LeftPanel({ posterUrl, title, synopsis, year, episodesCount, sagaTitle,
             {/* Poster */}
             <div className="px-8 mt-4">
                 <div className="relative w-full aspect-[2/3] bg-zinc-950 border border-white/5 rounded-2xl overflow-hidden shadow-2xl">
-                    <img
+                    <DeferredImage
                         src={posterUrl}
                         alt={title}
+                        priority={true}
                         className="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
@@ -245,7 +266,7 @@ function RightPanel({
     const isCurrentDownloaded = downloadedEpisodes.has(current.number)
 
     return (
-        <main className="flex-1 flex flex-col bg-transparent overflow-y-auto">
+        <main className="flex-1 min-h-0 flex flex-col bg-transparent overflow-y-auto">
             {/* ── Current episode info ────────────────────────── */}
             <div className="px-10 pt-12 pb-10 border-b border-white/10">
                 <div className="flex items-start justify-between gap-12">
@@ -468,7 +489,7 @@ function DetailPage() {
 
     if (!series || !saga || saga.episodes.length === 0) {
         return (
-            <div className="min-h-screen flex items-center justify-center text-white bg-background">
+            <div className="h-full w-full flex items-center justify-center text-white bg-background">
                 Contenido no encontrado
             </div>
         )
@@ -481,7 +502,7 @@ function DetailPage() {
     }
 
     return (
-        <div className="flex flex-col lg:flex-row min-h-screen bg-background">
+        <div className="flex flex-col lg:flex-row h-full w-full overflow-hidden bg-background">
             {/* ── Left: Poster + Metadata (30%) ── */}
             <LeftPanel
                 posterUrl={saga.image}

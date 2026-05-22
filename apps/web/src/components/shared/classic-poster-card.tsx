@@ -85,13 +85,8 @@ export const ClassicPosterCard = memo(function ClassicPosterCard({
                 </div>
 
                 {/* Interactive Border on Hover */}
-                <motion.div 
-                    className="absolute inset-0 border-2 border-brand-orange opacity-0 z-30 pointer-events-none rounded-2xl"
-                    variants={{
-                        hover: { opacity: 1, scale: 1 },
-                        idle: { opacity: 0, scale: 1.02 }
-                    }}
-                    transition={{ duration: 0.3 }}
+                <div 
+                    className="absolute inset-0 border-2 border-brand-orange opacity-0 group-hover:opacity-100 z-30 pointer-events-none rounded-2xl transition-opacity duration-300"
                 />
             </div>
 

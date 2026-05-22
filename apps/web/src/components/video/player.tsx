@@ -25,6 +25,14 @@ export type VideoPlayerProps = {
     marathonMode?: boolean
     /** Media format ("TV", "MOVIE", "OVA", etc.) — passed to player core to control fallback skip window */
     mediaFormat?: string | null
+    episodes?: {
+        title?: string
+        episodeNumber: number
+        absoluteEpisodeNumber?: number
+        thumbnail?: string
+        watched?: boolean
+    }[]
+    onSelectEpisode?: (episodeNumber: number) => void
 }
 
 function PlayerLoadingScreen() {
@@ -184,6 +192,8 @@ function VideoPlayerOrchestrator(props: OrchestratorProps) {
             mediaId={props.mediaId}
             episodeNumber={props.episodeNumber}
             malId={props.malId}
+            episodes={props.episodes}
+            onSelectEpisode={props.onSelectEpisode}
         />
     )
 }

@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import Hls from "hls.js"
 import { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
 
@@ -6,6 +6,8 @@ interface UsePlayerHlsProps {
     videoRef: React.RefObject<HTMLVideoElement | null>
     hlsRef: React.MutableRefObject<Hls | null>
     playableUrl: string
+    absoluteLanUrl: string
+    isCastingRef: React.RefObject<boolean>
     backendTracks: { audioTracks: AudioTrack[]; subtitleTracks: SubtitleTrack[] } | null
     initialProgressSeconds?: number
     episodeNumber?: number
@@ -26,6 +28,8 @@ export function usePlayerHls({
     videoRef,
     hlsRef,
     playableUrl,
+    absoluteLanUrl,
+    isCastingRef,
     backendTracks,
     initialProgressSeconds,
     episodeNumber,
@@ -41,24 +45,47 @@ export function usePlayerHls({
     setShowResume,
     setIsPlaying,
 }: UsePlayerHlsProps) {
+    const backendTracksRef = useRef(backendTracks)
+    const hasPromptedResumeRef = useRef<string | null>(null)
+
+    useEffect(() => {
+        backendTracksRef.current = backendTracks
+    }, [backendTracks])
+
+    // Decoupled watch history/resume prompt logic
+    useEffect(() => {
+        if (!historyData?.found || !historyData?.item) return
+        if (historyData.item.episodeNumber !== episodeNumber) return
+
+        const currentKey = `${episodeNumber}-${playableUrl}`
+        if (hasPromptedResumeRef.current === currentKey) return
+
+        const time = historyData.item.currentTime
+        if (time > 10) {
+            hasPromptedResumeRef.current = currentKey
+            setResumeTime(time)
+            setShowResume(true)
+
+            const timer = setTimeout(() => setShowResume(false), 10000)
+            return () => clearTimeout(timer)
+        }
+    }, [historyData, episodeNumber, playableUrl, setResumeTime, setShowResume])
+
+    // Decoupled track updates for direct streams (non-HLS)
+    useEffect(() => {
+        if (!backendTracks) return
+        const isHlsUrl = playableUrl.includes(".m3u8")
+        if (!isHlsUrl || !Hls.isSupported()) {
+            setAudioTracks(backendTracks.audioTracks)
+            setSubtitleTracks(backendTracks.subtitleTracks)
+        }
+    }, [backendTracks, playableUrl, setAudioTracks, setSubtitleTracks])
+
     useEffect(() => {
         const video = videoRef.current
         if (!video) return
 
         const progressSeconds = initialProgressSeconds || 0
-
-        // Handle Resume Logic
-        if (historyData?.found && historyData.item && historyData.item.episodeNumber === episodeNumber) {
-            const time = historyData.item.currentTime
-            if (time > 10) { // Only resume if more than 10 seconds in
-                setTimeout(() => {
-                    setResumeTime(time)
-                    setShowResume(true)
-                }, 0)
-                // Auto-hide resume after 10 seconds
-                setTimeout(() => setShowResume(false), 10000)
-            }
-        }
 
         Promise.resolve().then(() => {
             setStatus("loading")
@@ -88,6 +115,10 @@ export function usePlayerHls({
         }
 
         const handleNativeError = () => {
+            if (isCastingRef.current) {
+                console.log("Ignoring native video error because casting is active.")
+                return
+            }
             setStatus("error")
             setErrorMsg(video.error?.message || "Ocurrió un error al cargar el archivo de video.")
         }
@@ -134,7 +165,7 @@ export function usePlayerHls({
                     language: t.lang || "und",
                     title: t.name || t.lang || `Audio ${t.id}`,
                 }))
-                setAudioTracks(mappedTracks.length > 0 ? mappedTracks : (backendTracks?.audioTracks || []))
+                setAudioTracks(mappedTracks.length > 0 ? mappedTracks : (backendTracksRef.current?.audioTracks || []))
                 setActiveAudioIndex(hls.audioTrack)
             })
 
@@ -144,7 +175,7 @@ export function usePlayerHls({
                     language: t.lang || "und",
                     title: t.name || t.lang || `Subtítulos ${i + 1}`,
                 }))
-                setSubtitleTracks(mappedSubs.length > 0 ? mappedSubs : (backendTracks?.subtitleTracks || []))
+                setSubtitleTracks(mappedSubs.length > 0 ? mappedSubs : (backendTracksRef.current?.subtitleTracks || []))
             })
 
             hls.on(Hls.Events.ERROR, (_, data) => {
@@ -156,16 +187,16 @@ export function usePlayerHls({
                 }
             })
         } else {
-            video.src = playableUrl
+            video.src = absoluteLanUrl
             video.load()
 
             video.addEventListener("canplay", handleCanPlay)
             video.addEventListener("error", handleNativeError)
 
-            if (backendTracks) {
+            if (backendTracksRef.current) {
                 Promise.resolve().then(() => {
-                    setAudioTracks(backendTracks.audioTracks)
-                    setSubtitleTracks(backendTracks.subtitleTracks)
+                    setAudioTracks(backendTracksRef.current!.audioTracks)
+                    setSubtitleTracks(backendTracksRef.current!.subtitleTracks)
                 })
             }
         }
@@ -182,13 +213,11 @@ export function usePlayerHls({
         }
     }, [
         playableUrl,
-        backendTracks,
+        absoluteLanUrl,
         initialProgressSeconds,
-        episodeNumber,
-        historyData?.found,
-        historyData?.item,
         videoRef,
         hlsRef,
+        isCastingRef,
         setStatus,
         setIsBuffering,
         setErrorMsg,
@@ -196,8 +225,6 @@ export function usePlayerHls({
         setAudioTracks,
         setSubtitleTracks,
         setActiveAudioIndex,
-        setResumeTime,
-        setShowResume,
         setIsPlaying,
     ])
 }

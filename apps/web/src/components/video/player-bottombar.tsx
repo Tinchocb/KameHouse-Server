@@ -1,6 +1,25 @@
 import React from "react"
 import { Play, Pause, ChevronLeft, ChevronRight, Volume2, VolumeX, Maximize, Minimize, SkipForward, PictureInPicture, SkipBack } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
+
+const CastIcon = ({ className }: { className?: string }) => (
+    <svg
+        viewBox="0 0 24 24"
+        width="14"
+        height="14"
+        stroke="currentColor"
+        strokeWidth="2"
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={className}
+    >
+        <path d="M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6" />
+        <path d="M2 12a9 9 0 0 1 8 8" />
+        <path d="M2 16a5 5 0 0 1 4 4" />
+        <line x1="2" x2="2.01" y1="20" y2="20" />
+    </svg>
+)
 import { TimelineHeatmap, type InsightNode } from "@/components/ui/timeline-heatmap"
 import { PlayerSettingsMenu } from "@/components/ui/PlayerSettingsMenu"
 import type { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
@@ -103,9 +122,19 @@ export interface PlayerBottomBarProps {
     skipToNextChapter?: () => void
     skipToPrevChapter?: () => void
     activeChapter?: string | null
+
+    // Casting
+    isCastSupported?: boolean
+    castState?: "disconnected" | "connecting" | "connected"
+    onPromptCast?: () => void
+
+    // Episode Selector
+    isEpisodesSidebarOpen?: boolean
+    onToggleEpisodesSidebar?: () => void
+    hasEpisodes?: boolean
 }
 
-export function PlayerBottomBar({
+export const PlayerBottomBar = React.memo(function PlayerBottomBar({
     duration, insights, progressBarRef, progressInputRef, handleSeek,
     isPlaying, togglePlay, skipTime,
     isMuted, toggleMute, volume, handleVolume,
@@ -135,6 +164,12 @@ export function PlayerBottomBar({
     skipToNextChapter,
     skipToPrevChapter,
     activeChapter,
+    isCastSupported = false,
+    castState = "disconnected",
+    onPromptCast,
+    isEpisodesSidebarOpen,
+    onToggleEpisodesSidebar,
+    hasEpisodes,
 }: PlayerBottomBarProps) {
 
     const SkipNextChapterIcon = () => (
@@ -146,7 +181,7 @@ export function PlayerBottomBar({
 
     return (
         <div className={cn(
-            "absolute bottom-0 inset-x-0 w-full flex flex-col pointer-events-auto select-none transition-all duration-500",
+            "absolute bottom-0 inset-x-0 w-full flex flex-col pointer-events-auto select-none",
             "bg-zinc-950/45 backdrop-blur-2xl border-t border-white/[0.02] pt-6 pb-3 px-6",
         )}>
 
@@ -327,6 +362,25 @@ export function PlayerBottomBar({
                         </button>
                     )}
 
+                    {/* Casting to TV */}
+                    {onPromptCast && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onPromptCast?.(); }}
+                            aria-label="Transmitir a TV"
+                            title="Transmitir a TV"
+                            className={cn(
+                                "transition-all duration-300 flex items-center justify-center w-8 h-8 rounded-full",
+                                castState === "connected"
+                                    ? "text-brand-orange bg-brand-orange/10 shadow-[0_0_12px_rgba(249,115,22,0.4)] animate-pulse"
+                                    : castState === "connecting"
+                                    ? "text-brand-orange animate-bounce"
+                                    : "text-zinc-500 hover:text-white"
+                            )}
+                        >
+                            <CastIcon className="w-3.5 h-3.5" />
+                        </button>
+                    )}
+
                     {/* Next episode */}
                     {onNextEpisode && (
                         <button
@@ -391,4 +445,5 @@ export function PlayerBottomBar({
             </div>
         </div>
     )
-}
+})
+PlayerBottomBar.displayName = "PlayerBottomBar"

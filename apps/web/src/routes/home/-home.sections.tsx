@@ -27,7 +27,7 @@ export const HomeIntelligentSections = React.memo(function HomeIntelligentSectio
                 <ErrorBoundary
                     key={lane.id}
                 >
-                    <motion.div 
+                    <motion.div
                         id={`lane-${lane.id}`}
                         initial={{ opacity: 0, y: 40 }}
                         whileInView={{ opacity: 1, y: 0 }}
@@ -63,7 +63,7 @@ export const HomeContinueWatchingSection = React.memo(function HomeContinueWatch
 
     return (
         <ErrorBoundary>
-            <motion.div 
+            <motion.div
                 initial={{ opacity: 0 }}
                 whileInView={{ opacity: 1 }}
                 viewport={{ once: true }}
@@ -350,7 +350,7 @@ export const HomeLoreSections = React.memo(function HomeLoreSections({
                                 <SectionLabel icon={collection.icon} label={collection.title} />
                                 <button
                                     type="button"
-                                    onClick={() => {/* future: navigate to curated collection page */}}
+                                    onClick={() => {/* future: navigate to curated collection page */ }}
                                     className="hidden md:flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-500 hover:text-brand-orange transition-colors duration-300 pb-6 group/cta"
                                 >
                                     <span>Ver todo</span>

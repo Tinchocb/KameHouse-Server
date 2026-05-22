@@ -99,6 +99,8 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 	type body struct {
 		Library       *models.LibrarySettings       `json:"library"`
 		MediaPlayer   *models.MediaPlayerSettings   `json:"mediaPlayer"`
+		Torrent       *models.TorrentSettings       `json:"torrent"`
+		Torrentstream *models.TorrentstreamSettings `json:"torrentstream"`
 		Mediastream   *models.MediastreamSettings   `json:"mediastream"`
 		Theme         *models.Theme                 `json:"theme"`
 	}
@@ -201,13 +203,13 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		}
 	}
 
-
-
-
-
+	if b.Torrent != nil {
+		merged.Torrent = *b.Torrent
+	}
 	
-
-
+	if b.Torrentstream != nil {
+		merged.Torrentstream = *b.Torrentstream
+	}
 
 	// ── 5. Single upsert for the main embedded settings ───────────────────────
 	saved, err := h.App.Database.UpsertSettings(merged)

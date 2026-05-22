@@ -1,8 +1,9 @@
-﻿package core
+package core
 
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -390,23 +391,21 @@ openSubsLanguages = ["es", "en"]
 // resolveCorsOrigins resuelve los orígenes CORS permitidos desde variables de
 // entorno o valores por defecto según el entorno (desarrollo/producción).
 func resolveCorsOrigins(cfg *Config) {
+	// Base allowed origins list
+	var origins []string
+
 	if len(cfg.Server.CorsOrigins) > 0 {
-		return
-	}
-	if originsStr := os.Getenv("KAMEHOUSE_CORS_ALLOWED_ORIGINS"); originsStr != "" {
+		origins = cfg.Server.CorsOrigins
+	} else if originsStr := os.Getenv("KAMEHOUSE_CORS_ALLOWED_ORIGINS"); originsStr != "" {
 		for _, o := range strings.Split(originsStr, ",") {
-			cfg.Server.CorsOrigins = append(cfg.Server.CorsOrigins, strings.TrimSpace(o))
+			origins = append(origins, strings.TrimSpace(o))
 		}
-		return
-	}
-	if devOrigins := os.Getenv("KAMEHOUSE_DEV_CORS_ORIGINS"); devOrigins != "" {
+	} else if devOrigins := os.Getenv("KAMEHOUSE_DEV_CORS_ORIGINS"); devOrigins != "" {
 		for _, o := range strings.Split(devOrigins, ",") {
-			cfg.Server.CorsOrigins = append(cfg.Server.CorsOrigins, strings.TrimSpace(o))
+			origins = append(origins, strings.TrimSpace(o))
 		}
-		return
-	}
-	if os.Getenv("KAMEHOUSE_ENV") != "production" {
-		cfg.Server.CorsOrigins = []string{
+	} else if os.Getenv("KAMEHOUSE_ENV") != "production" {
+		origins = []string{
 			"http://localhost:43210",
 			"http://127.0.0.1:43210",
 			"http://localhost:5173",
@@ -416,7 +415,81 @@ func resolveCorsOrigins(cfg *Config) {
 			"http://localhost",
 			"http://127.0.0.1",
 		}
-		return
+	} else {
+		origins = []string{"http://localhost", "http://127.0.0.1"}
 	}
-	cfg.Server.CorsOrigins = []string{"http://localhost", "http://127.0.0.1"}
+
+	// Always add Chromecast receiver origins (needed for subtitles & media stream fetches on Chromecast TVs)
+	chromecastOrigins := []string{
+		"https://www.gstatic.com",
+		"https://gstatic.com",
+		"chromecast-connection://",
+	}
+	for _, co := range chromecastOrigins {
+		if !containsString(origins, co) {
+			origins = append(origins, co)
+		}
+	}
+
+	// Always add local IPv4 addresses to allowed origins so clients on the local network (like Smart TVs) can fetch resources
+	localIPs := getLocalIPv4Addresses()
+	for _, ip := range localIPs {
+		ipOrigins := []string{
+			fmt.Sprintf("http://%s:43210", ip),
+			fmt.Sprintf("http://%s:5173", ip),
+			fmt.Sprintf("http://%s:3000", ip),
+			fmt.Sprintf("http://%s", ip),
+		}
+		for _, io := range ipOrigins {
+			if !containsString(origins, io) {
+				origins = append(origins, io)
+			}
+		}
+	}
+
+	cfg.Server.CorsOrigins = origins
+}
+
+func getLocalIPv4Addresses() []string {
+	var ipAddresses []string
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return ipAddresses
+	}
+	for _, iface := range interfaces {
+		if iface.Flags&net.FlagLoopback != 0 || iface.Flags&net.FlagUp == 0 {
+			continue
+		}
+		addrs, err := iface.Addrs()
+		if err != nil {
+			continue
+		}
+		for _, addr := range addrs {
+			var ip net.IP
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
+			}
+			if ip == nil || ip.IsLoopback() {
+				continue
+			}
+			ip = ip.To4()
+			if ip == nil {
+				continue
+			}
+			ipAddresses = append(ipAddresses, ip.String())
+		}
+	}
+	return ipAddresses
+}
+
+func containsString(slice []string, s string) bool {
+	for _, item := range slice {
+		if item == s {
+			return true
+		}
+	}
+	return false
 }

@@ -12,7 +12,7 @@ export function IntegrationsTab({ control }: { control: Control<SettingsFormValu
                     ECOSISTEMA <span className="text-zinc-500">EXTERNO</span>
                 </h1>
                 <p className="text-zinc-400 text-base font-medium leading-relaxed max-w-3xl">
-                    Conecta con servicios de tracking para mantener tu lista sincronizada en la nube de forma transparente.
+                    Conecta con servicios externos de metadatos, subtítulos y tracking de series en la nube.
                 </p>
             </header>
 
@@ -22,13 +22,13 @@ export function IntegrationsTab({ control }: { control: Control<SettingsFormValu
                 <IntegrationCard name="TMDB" status="Conectado" connected={true} />
             </div>
 
-            <Section label="Credenciales de Metadatos">
+            <Section label="Credenciales de Metadatos & Subtítulos">
                 <Card>
                     <OsSelect
                         control={control}
                         name="library.primaryMetadataProvider"
                         label="Proveedor Primario"
-                        desc="El proveedor principal para buscar y descargar información de películas y series."
+                        desc="El motor principal para buscar y descargar información de tu biblioteca multimedia."
                         options={[
                             { value: "tmdb", label: "The Movie Database (TMDB)" },
                         ]}
@@ -52,6 +52,15 @@ export function IntegrationsTab({ control }: { control: Control<SettingsFormValu
                             { value: "es-ES", label: "Español (España)" },
                             { value: "en-US", label: "Inglés (Estados Unidos)" },
                         ]}
+                    />
+                    <OsInput
+                        control={control}
+                        name="library.openSubsApiKey"
+                        label="OpenSubtitles API Key"
+                        desc="Llave de la API de OpenSubtitles para buscar y descargar subtítulos automáticamente."
+                        placeholder="Ingresa tu OpenSubtitles API Key"
+                        isSecure
+                        isMono
                     />
                     <OsInput
                         control={control}

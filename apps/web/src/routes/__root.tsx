@@ -18,14 +18,13 @@ import { DynamicBackdrop } from "@/components/shared/dynamic-backdrop"
 
 function RootComponent() {
     const routerState = useRouterState()
-    const isHome = routerState.location.pathname.startsWith("/home")
     return (
         <AppLayout>
             <DynamicBackdrop />
             <WebsocketProvider>
                 <AppSidebar />
                 <CommandPalette />
-                <AppLayoutContent className={isHome ? "" : "md:pl-24"}>
+                <AppLayoutContent>
                     {/* Mobile Menu Trigger */}
                     <button 
                         onClick={() => useAppStore.getState().setSidebarOpen(true)}

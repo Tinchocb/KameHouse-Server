@@ -2,9 +2,31 @@
 declare const self: ServiceWorkerGlobalScope;
 
 import { registerRoute } from 'workbox-routing';
-import { NetworkFirst, CacheFirst } from 'workbox-strategies';
+import { NetworkFirst, CacheFirst, StaleWhileRevalidate } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
+
+// Google Fonts caching (Stylesheets and Webfonts)
+registerRoute(
+    ({ url }) => url.origin === 'https://fonts.googleapis.com',
+    new StaleWhileRevalidate({
+        cacheName: 'google-fonts-stylesheets',
+    })
+);
+
+registerRoute(
+    ({ url }) => url.origin === 'https://fonts.gstatic.com',
+    new CacheFirst({
+        cacheName: 'google-fonts-webfonts',
+        plugins: [
+            new CacheableResponsePlugin({ statuses: [0, 200] }),
+            new ExpirationPlugin({
+                maxEntries: 30,
+                maxAgeSeconds: 365 * 24 * 60 * 60, // 365 Days
+            }),
+        ],
+    })
+);
 
 // SPA Navigation Fallback
 // This ensures that when the user visits /movies or /series/123 while offline,

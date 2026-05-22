@@ -89,7 +89,7 @@ export const MediaCard = React.memo(function MediaCard({
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
             className={cn(
-                "relative shrink-0 select-none transition-all duration-300",
+                "relative shrink-0 select-none",
                 isPoster
                     ? "aspect-[2/3] w-[160px] md:w-[200px] lg:w-[240px]"
                     : "aspect-[16/9] w-[280px] md:w-[380px] lg:w-[440px]"
@@ -100,7 +100,7 @@ export const MediaCard = React.memo(function MediaCard({
                 onClick={onClick}
                 className={cn(
                     "absolute top-0 left-0 overflow-hidden flex flex-col origin-top",
-                    "transition-all duration-300 ease-out",
+                    "transition-[border-color,box-shadow,background-color] duration-200 ease-out",
                     showPopup
                         ? cn(
                               "z-[100] bg-zinc-950/95 backdrop-blur-xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.85)]",
@@ -120,7 +120,7 @@ export const MediaCard = React.memo(function MediaCard({
                 )}
 
                 {/* Artwork Container */}
-                <div className={cn("relative w-full overflow-hidden transition-all duration-300 shrink-0", showPopup ? "aspect-[16/9]" : "h-full")}>
+                <div className={cn("relative w-full overflow-hidden shrink-0", showPopup ? "aspect-[16/9]" : "h-full")}>
                     <DeferredImage
                         src={getHighResImage(artwork)}
                         alt={title}

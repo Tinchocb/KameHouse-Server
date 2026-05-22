@@ -2,16 +2,41 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useState, useMemo, memo } from "react"
 import { FaSearch, FaPlay, FaListOl, FaLayerGroup } from "react-icons/fa"
 import { EmptyState } from "@/components/shared/empty-state"
-import { useGetMediaCollections } from "@/api/hooks/collections.hooks"
-import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
+import { useGetMediaCollections, fetchMediaCollections } from "@/api/hooks/collections.hooks"
+import { useGetLibraryCollection, fetchLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { Anime_LibraryCollectionEntry } from "@/api/generated/types"
 import { cn } from "@/components/ui/core/styling"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { HeroSection } from "@/components/shared/hero-section"
+import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
+import { API_ENDPOINTS } from "@/api/generated/endpoints"
 
 export const Route = createFileRoute("/collections/")({
-    component: CollectionsPage,
+    loader: async ({ context }) => {
+        const qc = context.queryClient
+        await Promise.all([
+            qc.prefetchQuery({
+                queryKey: ["collections-list"],
+                queryFn: fetchMediaCollections,
+            }),
+            qc.prefetchQuery({
+                queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key],
+                queryFn: fetchLibraryCollection,
+            })
+        ])
+        return { dehydrateState: dehydrate(qc) }
+    },
+    component: CollectionsPageWrapper,
 })
+
+function CollectionsPageWrapper() {
+    const { dehydrateState } = Route.useLoaderData()
+    return (
+        <HydrationBoundary state={dehydrateState}>
+            <CollectionsPage />
+        </HydrationBoundary>
+    )
+}
 
 const SPINE_W = 52
 const CASSETTE_W = 220
@@ -155,7 +180,7 @@ const CollectionCassette = memo(function CollectionCassette({
     const isFullyLocal = totalMembers > 0 && localMembers === totalMembers
 
     const accentStripeClass = cn(
-        "absolute left-0 inset-y-0 w-1 transition-all duration-300",
+        "absolute left-0 inset-y-0 w-1 transition-[background-color,box-shadow] duration-300",
         isFullyWatched 
             ? "bg-[#10b981] shadow-[0_0_8px_rgba(16,185,129,0.6)]" 
             : isFullyLocal 
@@ -172,7 +197,7 @@ const CollectionCassette = memo(function CollectionCassette({
     return (
         <div
             className={cn(
-                "group/item relative shrink-0 transition-all duration-500 ease-out hover:z-[9999]"
+                "group/item relative shrink-0 hover:z-[9999]"
             )}
             style={{
                 marginLeft: idx !== 0 ? -OVERLAP : 0,
@@ -181,7 +206,7 @@ const CollectionCassette = memo(function CollectionCassette({
         >
             {/* 3D wrapper */}
             <div
-                className="relative transition-all duration-500 ease-out [transform-style:preserve-3d]"
+                className="relative transition-transform duration-500 ease-out [transform-style:preserve-3d]"
                 style={{
                     width: CASSETTE_W + SPINE_W,
                     height: CASSETTE_H,
@@ -238,14 +263,14 @@ const CollectionCassette = memo(function CollectionCassette({
                     <DeferredImage
                         src={coll.posterPath || ""}
                         alt={coll.name}
-                        className="w-full h-full object-cover grayscale group-hover/item:grayscale-0 transition-all duration-500"
+                        className="w-full h-full object-cover grayscale group-hover/item:grayscale-0 transition-[filter] duration-500"
                     />
 
                     {/* Dark gradient base */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
 
                     {/* Hover info overlay */}
-                    <div className="absolute inset-0 flex flex-col justify-end p-5 opacity-0 group-hover/item:opacity-100 transition-all duration-400 bg-black/95">
+                    <div className="absolute inset-0 flex flex-col justify-end p-5 opacity-0 group-hover/item:opacity-100 transition-opacity duration-400 bg-black/95">
                         
                         {/* Sello Retro SAGA COMPLETADA */}
                         {isFullyWatched && (

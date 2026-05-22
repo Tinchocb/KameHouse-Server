@@ -8,6 +8,31 @@ import { Anime_Entry, Continuity_WatchHistoryItem } from "@/api/generated/types"
 import { MediaActionButtons } from "../-series-interactivity-client"
 import { sanitizeHtml } from "@/lib/helpers/sanitizer"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
+import { DeferredImage } from "@/components/shared/deferred-image"
+
+// Pure helpers — defined outside component to avoid recreation on every render
+const parseGenres = (g: string | string[] | undefined | null): string[] => {
+    if (!g) return []
+    if (Array.isArray(g)) return g as string[]
+    if (typeof g === "string") {
+        try {
+            if (g.startsWith("[")) return JSON.parse(g) as string[]
+            return JSON.parse(atob(g)) as string[]
+        } catch {
+            return []
+        }
+    }
+    return []
+}
+
+const stringToColor = (str: string) => {
+    let hash = 0
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash)
+    }
+    const h = Math.abs(hash % 360)
+    return `hsl(${h}, 60%, 15%)`
+}
 
 interface HeroSectionProps {
     seriesId: string
@@ -60,45 +85,21 @@ export const HeroSection = React.memo(function HeroSection({
     const title = media.titleSpanish || media.titleEnglish || media.titleRomaji || "Título Desconocido"
     const year = media.year?.toString() || ""
     
-    const parseGenres = (g: string | string[] | undefined | null): string[] => {
-        if (!g) return []
-        if (Array.isArray(g)) return g as string[]
-        if (typeof g === "string") {
-            try {
-                if (g.startsWith("[")) return JSON.parse(g) as string[]
-                return JSON.parse(atob(g)) as string[]
-            } catch {
-                return []
-            }
-        }
-        return []
-    }
-    const genres = parseGenres(media.genres)
-    
+    const genres = useMemo(() => parseGenres(media.genres), [media.genres])
+    const accentColor = useMemo(() => stringToColor(title), [title])
     const episodesCount = media.totalEpisodes || entry.episodes?.length || 0
     const localEpisodesCount = entry.localFiles?.length ?? 0
     const totalEpisodesCount = media.totalEpisodes || entry.episodes?.length || 0
     const score = media.score ? (media.score / 10).toFixed(1) : null
-
-    // Dynamic gradient fallback if no backdrop
-    const stringToColor = (str: string) => {
-        let hash = 0
-        for (let i = 0; i < str.length; i++) {
-            hash = str.charCodeAt(i) + ((hash << 5) - hash)
-        }
-        const h = Math.abs(hash % 360)
-        return `hsl(${h}, 60%, 15%)`
-    }
-    const accentColor = stringToColor(title)
 
     return (
         <section 
             ref={containerRef}
             className={cn("relative w-full min-h-[85vh] md:min-h-[90vh] flex flex-col justify-end overflow-hidden bg-[#09090b] select-none", className)}
         >
-            {/* Cinematic Grain Overlay */}
+            {/* Cinematic Grain Overlay — inline SVG noise, no external request */}
             <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay z-20"
-                style={{ backgroundImage: `url("https://grainy-gradients.vercel.app/noise.svg")` }}
+                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E")`, backgroundSize: '128px 128px' }}
             />
 
             {/* Cinematic Ambient Halo / Gradient Fallback */}
@@ -111,6 +112,8 @@ export const HeroSection = React.memo(function HeroSection({
                             backgroundSize: "cover",
                             backgroundPosition: "center 20%",
                             filter: "blur(120px) saturate(150%) brightness(0.4)",
+                            willChange: "transform",
+                            transform: "translateZ(0)",
                         }}
                     />
                 ) : (
@@ -129,10 +132,10 @@ export const HeroSection = React.memo(function HeroSection({
                     className="absolute inset-0 overflow-hidden cursor-pointer z-0"
                     onClick={onPlay}
                 >
-                    <img
+                    <DeferredImage
                         src={backdropUrl}
                         alt={title}
-                        fetchPriority="high"
+                        priority={true}
                         className="w-full h-full object-cover object-center opacity-50 grayscale-[0.05] transition-all duration-1000 scale-[1.01] group-hover/hero:scale-105 group-hover/hero:opacity-65"
                     />
                 </div>
@@ -144,7 +147,7 @@ export const HeroSection = React.memo(function HeroSection({
             <div className="absolute inset-0 bg-gradient-to-b from-[#09090b]/20 via-transparent to-transparent opacity-100 z-10 pointer-events-none" />
 
             {/* Cinematic Overlaid Content - Centered in tercio inferior izquierdo */}
-            <div className="hero-text-content relative z-20 flex flex-col justify-end items-start px-6 sm:px-12 md:px-24 pb-20 pt-48 max-w-[1400px] w-full gap-6">
+            <div className="hero-text-content relative z-20 flex flex-col justify-end items-start px-6 sm:px-12 md:pl-[240px] md:pr-24 pb-20 pt-48 max-w-[1400px] w-full gap-6">
                 {/* Meta Tags & Score */}
                 <div className="flex flex-wrap items-center gap-3">
                     {score && (

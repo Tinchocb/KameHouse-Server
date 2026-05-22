@@ -26,7 +26,7 @@ export const AppLayoutHeaderAnatomy = defineStyleAnatomy({
 export const AppLayoutContentAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-AppLayoutContent__root",
-        "flex-1 flex flex-col overflow-y-auto relative w-full",
+        "flex-1 min-w-0 h-full flex flex-col overflow-hidden relative w-full",
     ]),
 })
 
@@ -138,7 +138,7 @@ export const AppLayout = React.forwardRef<HTMLDivElement, AppLayoutProps>((props
             )}
             {...rest}
         >
-            <div className="flex-1 flex flex-col min-w-0">
+            <div className="flex-1 flex flex-row min-w-0 h-full overflow-hidden">
                 {children}
             </div>
         </div>

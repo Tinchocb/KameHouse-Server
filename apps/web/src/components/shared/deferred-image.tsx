@@ -39,6 +39,11 @@ export function DeferredImage(props: DeferredImageProps) {
     const [hasError, setHasError] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
+    useEffect(() => {
+        setIsLoaded(false);
+        setHasError(false);
+    }, [src]);
+
     const handleLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
         setIsLoaded(true);
         onLoad?.(e);
@@ -126,9 +131,9 @@ export function DeferredImage(props: DeferredImageProps) {
 
             {!hasError && isIntersecting && (
                 <motion.img
-                    initial={priority ? { opacity: 1, filter: "blur(0px)" } : { opacity: 0, filter: "blur(10px)", scale: 1.05 }}
-                    animate={isLoaded ? { opacity: 1, filter: "blur(0px)", scale: 1 } : priority ? {} : { opacity: 0, filter: "blur(10px)", scale: 1.05 }}
-                    transition={{ duration: 0.6, ease: "easeOut" }}
+                    initial={priority ? { opacity: 1 } : { opacity: 0 }}
+                    animate={isLoaded ? { opacity: 1 } : priority ? {} : { opacity: 0 }}
+                    transition={{ duration: 0.4, ease: "easeOut" }}
                     src={src}
                     srcSet={generateSrcSet(src)}
                     alt={alt}
@@ -137,7 +142,7 @@ export function DeferredImage(props: DeferredImageProps) {
                     onLoad={handleLoad}
                     onError={handleError}
                     className={cn(
-                        "h-full w-full object-cover will-change-[filter,transform,opacity]",
+                        "h-full w-full object-cover will-change-[opacity]",
                         !isLoaded && "invisible"
                     )}
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -2,6 +2,7 @@ import React from "react"
 import { motion } from "framer-motion"
 import { cn } from "@/components/ui/core/styling"
 import { Play } from "lucide-react"
+import { DeferredImage } from "@/components/shared/deferred-image"
 
 export interface BentoItem {
     id: string
@@ -50,9 +51,10 @@ export function BentoRecentlyAdded({ items, className }: BentoRecentlyAddedProps
                         )}
                     >
                         {/* Background Image */}
-                        <img
+                        <DeferredImage
                             src={item.image}
                             alt={item.title}
+                            priority={isLarge}
                             className="absolute inset-0 h-full w-full object-cover transition-all duration-[1200ms] [transition-timing-function:cubic-bezier(0.25,1,0.5,1)] group-hover:scale-[1.06] group-hover:brightness-[0.4] group-hover:saturate-[1.1] brightness-[0.5]"
                         />
 

@@ -9,13 +9,13 @@ import "@fontsource/bebas-neue/400.css"
 
 const router = createRouter({
     routeTree,
-    // defaultPreload: import.meta.env.PROD ? "intent" : false,
-    defaultPreload: false, // Platform rate limits
+    defaultPreload: "intent",
+    defaultPreloadDelay: 50,
     context: {
         queryClient,
     },
     scrollRestoration: true,
-    defaultPreloadStaleTime: 0,
+    defaultPreloadStaleTime: 30000,
 })
 
 declare module "@tanstack/react-router" {

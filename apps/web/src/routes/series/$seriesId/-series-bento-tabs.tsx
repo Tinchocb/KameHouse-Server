@@ -2,6 +2,7 @@ import React from "react"
 import { Models_LibraryMedia, Anime_LocalFile } from "@/api/generated/types"
 import { MonitorPlay, Database } from "lucide-react"
 import { useNavigate } from "@tanstack/react-router"
+import { DeferredImage } from "@/components/shared/deferred-image"
 
 // Helper to format file size beautifully
 const formatFileSize = (bytes: number) => {
@@ -43,7 +44,12 @@ export const RelationsTab = React.memo(function RelationsTab({ media }: { media?
                 >
                     <div className="w-16 h-24 shrink-0 bg-zinc-950 overflow-hidden relative rounded-lg border border-white/10 group-hover:border-brand-orange/30 transition-colors duration-500">
                         {relation.node?.posterImage && (
-                            <img src={relation.node.posterImage} alt={relation.node.titleRomaji || "Relacion"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                            <DeferredImage
+                                src={relation.node.posterImage}
+                                alt={relation.node.titleRomaji || "Relacion"}
+                                showSkeleton={false}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                            />
                         )}
                     </div>
                     <div className="flex flex-col flex-1 justify-center">
@@ -75,7 +81,12 @@ export const CharactersTab = React.memo(function CharactersTab({ characters }: {
                 <div key={idx} className="flex flex-col items-center text-center gap-3 group cursor-pointer">
                     <div className="w-24 h-24 rounded-full overflow-hidden bg-zinc-950/40 border-2 border-white/5 group-hover:border-brand-orange/60 group-hover:shadow-[0_0_20px_rgba(255,110,58,0.25)] transition-all duration-500 shadow-xl">
                         {char.node?.image && (
-                            <img src={char.node.image} alt={char.node.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                            <DeferredImage
+                                src={char.node.image}
+                                alt={char.node.name}
+                                showSkeleton={false}
+                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                            />
                         )}
                     </div>
                     <div className="flex flex-col">

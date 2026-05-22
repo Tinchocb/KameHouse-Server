@@ -1,11 +1,10 @@
 import * as React from "react"
 import { useMemo, useState, useEffect, useCallback } from "react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/components/ui/core/styling"
 import { Anime_Episode, Anime_LocalFile, Continuity_WatchHistoryItem } from "@/api/generated/types"
 import { SagaDefinition } from "@/lib/config/dragonball.config"
 import { EpisodeCard } from "../-series-interactivity-client"
-import { useWindowVirtualizer } from "@tanstack/react-virtual"
 
 interface SagaEpisodesSectionProps {
     seriesTitle: string
@@ -68,24 +67,16 @@ export const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
         return "grid"
     })
 
+    // Keep fallbackThumb stable across renders so visibleEpisodes memo
+    // doesn't invalidate just because the parent re-renders with the same URL string
+    const fallbackThumbRef = React.useRef(fallbackThumb)
+    React.useEffect(() => { fallbackThumbRef.current = fallbackThumb }, [fallbackThumb])
+
     const handleLayoutChange = useCallback((mode: "grid" | "horizontal") => {
         setLayoutMode(mode)
         localStorage.setItem("kamehouse-series-layout", mode)
     }, [])
 
-    const [cols, setCols] = useState(3)
-
-    useEffect(() => {
-        const updateCols = () => {
-            const width = window.innerWidth
-            if (width < 640) setCols(1)
-            else if (width < 1024) setCols(2)
-            else setCols(3)
-        }
-        updateCols()
-        window.addEventListener("resize", updateCols)
-        return () => window.removeEventListener("resize", updateCols)
-    }, [])
 
     useEffect(() => {
         if (generatedSagas.length > 0 && !generatedSagas.find(s => s.id.toString() === activeSagaId)) {
@@ -166,40 +157,41 @@ export const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
                     isInvalid: false,
                     episodeMetadata: {
                         episodeNumber: i,
-                        image: fallbackThumb || "",
+                        image: fallbackThumbRef.current || "",
                     }
                 } as unknown as Anime_Episode)
             }
         }
         return paddedEpisodes
-    }, [episodes, generatedSagas, activeSagaId, activeSubSagaId, fallbackThumb])
+    }, [episodes, generatedSagas, activeSagaId, activeSubSagaId])
+
+    // Precalculate a Map for O(1) lookup instead of O(n) per episode
+    const localFilesByEpisode = useMemo(() => {
+        const map = new Map<number, Anime_LocalFile>()
+        localFiles.forEach(lf => {
+            const lfEp = lf.metadata?.episode || lf.parsedInfo?.episode
+            const lfSeason = lf.parsedInfo?.season
+            if (lfEp == null) return
+            const epNum = Number(lfEp)
+            if (!isNaN(epNum)) {
+                // Key: season*10000+ep for season-aware lookup, else just ep
+                const key = lfSeason != null ? Number(lfSeason) * 10000 + epNum : epNum
+                if (!map.has(key)) map.set(key, lf)
+            }
+        })
+        return map
+    }, [localFiles])
 
     const getLocalFile = useCallback((ep: Anime_Episode) => {
         if (ep.localFile) return ep.localFile
-        
-        return localFiles.find(lf => {
-            const lfEp = lf.metadata?.episode || lf.parsedInfo?.episode
-            const lfSeason = lf.parsedInfo?.season
-            if (lfEp == null) return false
-            
-            if (typeof ep.seasonNumber === 'number' && lfSeason != null) {
-                return Number(lfEp) === ep.episodeNumber && Number(lfSeason) === ep.seasonNumber
-            }
-            return Number(lfEp) === ep.episodeNumber
-        })
-    }, [localFiles])
+        if (typeof ep.seasonNumber === 'number') {
+            const key = ep.seasonNumber * 10000 + ep.episodeNumber
+            return localFilesByEpisode.get(key) ?? localFilesByEpisode.get(ep.episodeNumber)
+        }
+        return localFilesByEpisode.get(ep.episodeNumber)
+    }, [localFilesByEpisode])
 
-    const rowCount = layoutMode === "grid" ? Math.ceil(visibleEpisodes.length / cols) : visibleEpisodes.length
 
-    const estimateSize = useCallback(() => {
-        return layoutMode === "grid" ? 280 : 120
-    }, [layoutMode])
-
-    const rowVirtualizer = useWindowVirtualizer({
-        count: rowCount,
-        estimateSize,
-        overscan: 5,
-    })
 
     return (
         <section className="relative z-[1] pb-20 max-w-[1800px] mx-auto">
@@ -404,75 +396,31 @@ export const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
                                         <p className="text-zinc-700 text-xs font-black uppercase tracking-[0.3em] mt-2">INTENTA ACTUALIZAR LA BIBLIOTECA</p>
                                     </div>
                                 ) : (
-                                    <div
-                                        key={`${layoutMode}-${activeSagaId}`}
-                                        style={{
-                                            height: `${rowVirtualizer.getTotalSize()}px`,
-                                            width: "100%",
-                                            position: "relative",
-                                        }}
+                                    <motion.div
+                                        layout
+                                        className={cn(
+                                            "w-full transition-all duration-500",
+                                            layoutMode === "grid"
+                                                ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                                                : "flex flex-col gap-6"
+                                        )}
                                     >
-                                        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                                            const rowIndex = virtualRow.index
-                                            if (layoutMode === "grid") {
-                                                const startIndex = rowIndex * cols
-                                                const rowEpisodes = visibleEpisodes.slice(startIndex, startIndex + cols)
-                                                return (
-                                                    <div
-                                                        key={virtualRow.key}
-                                                        data-index={rowIndex}
-                                                        ref={rowVirtualizer.measureElement}
-                                                        style={{
-                                                            position: "absolute",
-                                                            top: 0,
-                                                            left: 0,
-                                                            width: "100%",
-                                                            transform: `translateY(${virtualRow.start}px)`,
-                                                        }}
-                                                        className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                                                    >
-                                                        {rowEpisodes.map((ep, idx) => {
-                                                            const epNum = ep.absoluteEpisodeNumber || ep.episodeNumber
-                                                            const globalIndex = startIndex + idx
-                                                            return (
-                                                                <EpisodeCard
-                                                                    key={epNum}
-                                                                    episode={ep}
-                                                                    variant="grid"
-                                                                    fallbackThumb={fallbackThumb}
-                                                                    localFile={getLocalFile(ep)}
-                                                                    onPlay={onPlay}
-                                                                    onToggleWatched={onToggleWatched}
-                                                                    onUpdateProgress={onUpdateProgress}
-                                                                    continuityItem={continuityItem}
-                                                                    isCurrentlyPlaying={currentlyPlayingEpNumber === epNum}
-                                                                    seriesTmdbId={seriesTmdbId}
-                                                                    priority={globalIndex < 6}
-                                                                />
-                                                            )
-                                                        })}
-                                                    </div>
-                                                )
-                                            } else {
-                                                const ep = visibleEpisodes[rowIndex]
+                                        <AnimatePresence mode="popLayout">
+                                            {visibleEpisodes.map((ep, idx) => {
                                                 const epNum = ep.absoluteEpisodeNumber || ep.episodeNumber
                                                 return (
-                                                    <div
-                                                        key={virtualRow.key}
-                                                        data-index={rowIndex}
-                                                        ref={rowVirtualizer.measureElement}
-                                                        style={{
-                                                            position: "absolute",
-                                                            top: 0,
-                                                            left: 0,
-                                                            width: "100%",
-                                                            transform: `translateY(${virtualRow.start}px)`,
-                                                        }}
-                                                        className="flex flex-col gap-1 pb-1"
+                                                    <motion.div
+                                                        layout
+                                                        key={epNum}
+                                                        initial={{ opacity: 0, scale: 0.95 }}
+                                                        animate={{ opacity: 1, scale: 1 }}
+                                                        exit={{ opacity: 0, scale: 0.95 }}
+                                                        transition={{ duration: 0.25, ease: "easeInOut" }}
+                                                        className="w-full"
                                                     >
                                                         <EpisodeCard
                                                             episode={ep}
-                                                            variant="horizontal"
+                                                            variant={layoutMode}
                                                             fallbackThumb={fallbackThumb}
                                                             localFile={getLocalFile(ep)}
                                                             onPlay={onPlay}
@@ -481,13 +429,13 @@ export const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
                                                             continuityItem={continuityItem}
                                                             isCurrentlyPlaying={currentlyPlayingEpNumber === epNum}
                                                             seriesTmdbId={seriesTmdbId}
-                                                            priority={rowIndex < 6}
+                                                            priority={idx < 6}
                                                         />
-                                                    </div>
+                                                    </motion.div>
                                                 )
-                                            }
-                                        })}
-                                    </div>
+                                            })}
+                                        </AnimatePresence>
+                                    </motion.div>
                                 )}
                             </>
                 </div>

@@ -14,11 +14,12 @@ import { VideoPlayer } from "@/components/video/player"
 import { sanitizeHtml } from "@/lib/helpers/sanitizer"
 import { MovieHeroSection } from "../series/$seriesId/-components/movie-hero"
 import { PremiumPosterCard } from "@/components/shared/premium-poster-card"
+import { DeferredImage } from "@/components/shared/deferred-image"
 
 export const Route = createFileRoute("/movies/$movieId")({
     loader: async ({ params: { movieId }, context }) => {
         const qc = context.queryClient
-        qc.prefetchQuery({
+        await qc.prefetchQuery({
             queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, movieId],
             queryFn: () => fetchAnimeEntry(movieId),
         })
@@ -221,7 +222,12 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                                         >
                                             <div className="w-12 h-12 rounded-full overflow-hidden bg-zinc-900 border border-white/10 shrink-0 shadow-lg group-hover:border-brand-orange/50 transition-colors">
                                                 {edge.node?.image ? (
-                                                    <img src={edge.node.image} alt={edge.node.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                                    <DeferredImage
+                                                        src={edge.node.image}
+                                                        alt={edge.node.name}
+                                                        showSkeleton={false}
+                                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                                    />
                                                 ) : (
                                                     <div className="w-full h-full bg-zinc-950 flex items-center justify-center text-[10px] text-zinc-600 font-bold uppercase">
                                                         {edge.node?.name ? edge.node.name.slice(0, 2) : "C"}

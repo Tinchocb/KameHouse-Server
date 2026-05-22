@@ -14,7 +14,7 @@ export function PlayerTopBar({ title, episodeLabel, episodeNumber, onClose }: Pl
         <div className={cn(
             "absolute top-0 inset-x-0 p-6 md:p-10 flex items-center justify-between pointer-events-auto",
             "bg-gradient-to-b from-black/60 to-transparent",
-            "transition-all duration-300 ease-out z-[100]"
+            "z-[100]"
         )}>
             <div className="flex gap-4 md:gap-8 items-center">
                 <button

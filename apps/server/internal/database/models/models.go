@@ -49,6 +49,8 @@ type Settings struct {
 	BaseModel
 	Library        LibrarySettings        `json:"library" gorm:"embedded;embeddedPrefix:library_"`
 	MediaPlayer    MediaPlayerSettings    `json:"mediaPlayer" gorm:"embedded;embeddedPrefix:media_player_"`
+	Torrent        TorrentSettings        `json:"torrent" gorm:"embedded;embeddedPrefix:torrent_"`
+	Torrentstream  TorrentstreamSettings  `json:"torrentstream" gorm:"embedded;embeddedPrefix:torrentstream_"`
 	// Separate tables
 	Mediastream   *MediastreamSettings   `json:"mediastream" gorm:"-"`
 	Theme         *Theme                 `json:"theme" gorm:"-"`
@@ -220,6 +222,31 @@ type MediaPlayerSettings struct {
 	VcTranslateProvider           string `gorm:"column:vc_translate_provider" json:"vcTranslateProvider"`
 	VcTranslateApiKey              string `gorm:"column:vc_translate_api_key" json:"vcTranslateApiKey"`
 	VcTranslateTargetLanguage     string `gorm:"column:vc_translate_target_language" json:"vcTranslateTargetLanguage"`
+}
+
+
+
+type TorrentSettings struct {
+	DefaultTorrentClient   string `gorm:"column:default_torrent_client" json:"defaultTorrentClient"`
+	QbittorrentPath        string `gorm:"column:qbittorrent_path" json:"qbittorrentPath"`
+	QbittorrentHost        string `gorm:"column:qbittorrent_host" json:"qbittorrentHost"`
+	QbittorrentPort        int    `gorm:"column:qbittorrent_port" json:"qbittorrentPort"`
+	QbittorrentUsername    string `gorm:"column:qbittorrent_username" json:"qbittorrentUsername"`
+	QbittorrentPassword    string `gorm:"column:qbittorrent_password" json:"qbittorrentPassword"`
+	QbittorrentTags        string `gorm:"column:qbittorrent_tags" json:"qbittorrentTags"`
+	QbittorrentCategory    string `gorm:"column:qbittorrent_category" json:"qbittorrentCategory"`
+	TransmissionPath       string `gorm:"column:transmission_path" json:"transmissionPath"`
+	TransmissionHost       string `gorm:"column:transmission_host" json:"transmissionHost"`
+	TransmissionPort       int    `gorm:"column:transmission_port" json:"transmissionPort"`
+	TransmissionUsername   string `gorm:"column:transmission_username" json:"transmissionUsername"`
+	TransmissionPassword   string `gorm:"column:transmission_password" json:"transmissionPassword"`
+	ShowActiveTorrentCount bool   `gorm:"column:show_active_torrent_count" json:"showActiveTorrentCount"`
+	HideTorrentList        bool   `gorm:"column:hide_torrent_list" json:"hideTorrentList"`
+}
+
+type TorrentstreamSettings struct {
+	Enabled      bool   `gorm:"column:torrentstream_enabled" json:"enabled"`
+	TorrentioUrl string `gorm:"column:torrentio_url" json:"torrentioUrl"`
 }
 
 

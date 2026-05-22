@@ -1,4 +1,4 @@
-import { useServerQuery } from "@/api/client/requests"
+import { useServerQuery, buildSeaQuery } from "@/api/client/requests"
 
 export interface MediaCollection {
     id: number
@@ -29,12 +29,26 @@ export interface CollectionResponse {
     parts: CollectionPart[]
 }
 
+export const fetchMediaCollections = async () => {
+    return buildSeaQuery<MediaCollection[]>({
+        endpoint: "/api/v1/collections",
+        method: "GET",
+    })
+}
+
 export function useGetMediaCollections() {
     return useServerQuery<MediaCollection[]>({
         endpoint: "/api/v1/collections",
         method: "GET",
         queryKey: ["collections-list"],
         enabled: true,
+    })
+}
+
+export const fetchMediaCollection = async (id: number) => {
+    return buildSeaQuery<CollectionResponse>({
+        endpoint: `/api/v1/collections/${id}`,
+        method: "GET",
     })
 }
 

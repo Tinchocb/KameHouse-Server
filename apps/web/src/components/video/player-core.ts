@@ -12,6 +12,7 @@ import { useMediastreamShutdownTranscodeStream } from "@/api/hooks/mediastream.h
 import { useAppStore } from "@/lib/store"
 import { usePlayerProgressSync } from "@/api/hooks/usePlayerProgressSync"
 import { useGetContinuityWatchHistoryItem } from "@/api/hooks/continuity.hooks"
+import { useGetStatus } from "@/api/hooks/settings.hooks"
 import type { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
 
 export interface PlayerStats {
@@ -103,6 +104,10 @@ export interface PlayerCore {
         showAutoSkipToast: "intro" | "outro" | null
         chapters: { startTime: number; endTime: number; name: string; type?: string }[]
         activeChapter: string | null
+        isCastSupported: boolean
+        castState: "disconnected" | "connecting" | "connected"
+        serverIPs?: string[]
+        serverPort?: number
     }
     actions: {
         setIsPlaying: (playing: boolean) => void
@@ -141,7 +146,53 @@ export interface PlayerCore {
         setAutoDisableSubtitlesWhenDubbed: (val: boolean) => void
         skipToNextChapter: () => void
         skipToPrevChapter: () => void
+        promptCast: () => void
     }
+}
+
+function getAbsoluteLanUrl(playableUrl: string, serverIPs?: string[], serverPort?: number): string {
+    if (!playableUrl) return ""
+    let lanIp = "127.0.0.1"
+    if (serverIPs && serverIPs.length > 0) {
+        const preferredIp = serverIPs.find(ip => 
+            ip.startsWith("192.168.") || 
+            ip.startsWith("10.") || 
+            ip.startsWith("172.")
+        )
+        lanIp = preferredIp || serverIPs[0]
+    } else if (typeof window !== "undefined") {
+        const hn = window.location.hostname
+        if (hn !== "localhost" && hn !== "127.0.0.1" && hn !== "::1") {
+            lanIp = hn
+        }
+    }
+    const port = serverPort || 43211
+
+    if (playableUrl.startsWith("/")) {
+        return `http://${lanIp}:${port}${playableUrl}`
+    }
+
+    try {
+        const url = new URL(playableUrl)
+        if (url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "[::1]") {
+            url.hostname = lanIp
+            url.port = String(port)
+            return url.toString()
+        }
+        if (typeof window !== "undefined" && url.host === window.location.host) {
+            url.hostname = lanIp
+            url.port = String(port)
+            return url.toString()
+        }
+    } catch (e) {
+        if (playableUrl.includes("localhost") || playableUrl.includes("127.0.0.1")) {
+            return playableUrl
+                .replace("localhost", lanIp)
+                .replace("127.0.0.1", lanIp)
+                .replace(/:\d+\//, `:${port}/`)
+        }
+    }
+    return playableUrl
 }
 
 export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
@@ -160,6 +211,34 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         mediaFormat,
     } = props
 
+    const { data: statusQuery } = useGetStatus()
+    const serverIPs = statusQuery?.serverIPs
+    const serverPort = statusQuery?.serverPort
+
+    const absoluteLanUrl = useMemo(() => {
+        return getAbsoluteLanUrl(playableUrl, serverIPs, serverPort)
+    }, [playableUrl, serverIPs, serverPort])
+
+    const absoluteLanUrlRef = useRef(absoluteLanUrl)
+    const playableUrlRef = useRef(playableUrl)
+
+    useEffect(() => {
+        absoluteLanUrlRef.current = absoluteLanUrl
+    }, [absoluteLanUrl])
+
+    useEffect(() => {
+        playableUrlRef.current = playableUrl
+    }, [playableUrl])
+
+    const castingSavedStateRef = useRef<{
+        src: string
+        currentTime: number
+        wasPlaying: boolean
+        wasHls: boolean
+    } | null>(null)
+
+    const isCastingRef = useRef(false)
+
     const videoRef = useRef<HTMLVideoElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
     const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -175,7 +254,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const toastTimerRef = useRef<NodeJS.Timeout | null>(null)
 
     const [isPlaying, setIsPlaying] = useState(false)
-    const [currentTime, setCurrentTime] = useState(0)
     const [duration, setDuration] = useState(0)
     const [volume, setVolume] = useState(1)
     const [isMuted, setIsMuted] = useState(false)
@@ -193,6 +271,140 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const [countdownSeconds, setCountdownSeconds] = useState(10)
     const [showAutoSkipToast, setShowAutoSkipToast] = useState<"intro" | "outro" | null>(null)
     const [activeChapter, setActiveChapter] = useState<string | null>(null)
+    const [isCastSupported, setIsCastSupported] = useState(() => {
+        if (typeof window === "undefined") return false
+        const video = document.createElement("video")
+        return 'remote' in video || 'webkitShowPlaybackTargetPicker' in video
+    })
+    const [castState, setCastState] = useState<"disconnected" | "connecting" | "connected">("disconnected")
+
+    const prepareForCast = useCallback(() => {
+        const video = videoRef.current
+        if (!video || isCastingRef.current) return
+
+        isCastingRef.current = true
+
+        // We only save local playback state if it wasn't saved already by promptCast
+        if (!castingSavedStateRef.current) {
+            const isPlayingLocal = !video.paused
+            const timeLocal = video.currentTime
+            const isHls = hlsRef.current !== null
+
+            castingSavedStateRef.current = {
+                src: video.src,
+                currentTime: timeLocal,
+                wasPlaying: isPlayingLocal,
+                wasHls: isHls
+            }
+
+            if (isHls && hlsRef.current) {
+                hlsRef.current.detachMedia()
+            }
+        }
+
+        const timeLocal = castingSavedStateRef.current.currentTime
+        const targetUrl = absoluteLanUrlRef.current
+        console.log("Preparing Cast: Swapping source to absolute LAN URL:", targetUrl)
+        video.src = targetUrl
+        video.load()
+        video.currentTime = timeLocal
+    }, [])
+
+    const restoreLocalPlayback = useCallback(() => {
+        const video = videoRef.current
+        if (!video || !castingSavedStateRef.current) return
+
+        isCastingRef.current = false
+        const saved = castingSavedStateRef.current
+        castingSavedStateRef.current = null
+
+        const restoreTime = video.currentTime || saved.currentTime
+        console.log("Restoring local playback. Time:", restoreTime)
+
+        if (saved.wasHls && hlsRef.current) {
+            video.removeAttribute("src")
+            video.load()
+            hlsRef.current.attachMedia(video)
+            hlsRef.current.loadSource(playableUrlRef.current)
+
+            const handleManifestParsed = () => {
+                video.currentTime = restoreTime
+                if (saved.wasPlaying) {
+                    video.play().catch(e => console.error("Error playing local video:", e))
+                }
+                hlsRef.current?.off(Hls.Events.MANIFEST_PARSED, handleManifestParsed)
+            }
+            hlsRef.current.on(Hls.Events.MANIFEST_PARSED, handleManifestParsed)
+        } else {
+            video.src = saved.src
+            video.load()
+            video.currentTime = restoreTime
+            if (saved.wasPlaying) {
+                video.play().catch(e => console.error("Error playing local video:", e))
+            }
+        }
+    }, [])
+
+    useEffect(() => {
+        const video = videoRef.current
+        if (!video) return
+
+        const hasRemote = 'remote' in video && (video as any).remote;
+        const hasWebkit = 'webkitShowPlaybackTargetPicker' in video;
+
+        if (hasRemote) {
+            setIsCastSupported(true)
+            const remote = (video as any).remote
+
+            const handleStateChange = () => {
+                const state = remote.state
+                setCastState(state)
+                console.log("RemotePlayback state changed to:", state)
+
+                if (state === "connecting" || state === "connected") {
+                    prepareForCast()
+                } else if (state === "disconnected") {
+                    restoreLocalPlayback()
+                }
+            }
+
+            handleStateChange()
+            remote.addEventListener('connect', handleStateChange)
+            remote.addEventListener('connecting', handleStateChange)
+            remote.addEventListener('disconnect', handleStateChange)
+
+            return () => {
+                remote.removeEventListener('connect', handleStateChange)
+                remote.removeEventListener('connecting', handleStateChange)
+                remote.removeEventListener('disconnect', handleStateChange)
+            }
+        } else if (hasWebkit) {
+            setIsCastSupported(true)
+
+            const handleAvailability = (event: any) => {
+                setIsCastSupported(event.availability === 'available')
+            }
+
+            const handleWebkitTargetChange = () => {
+                const isWireless = (video as any).webkitCurrentPlaybackTargetIsWireless
+                setCastState(isWireless ? "connected" : "disconnected")
+                console.log("WebKit wireless target changed, isWireless:", isWireless)
+
+                if (isWireless) {
+                    prepareForCast()
+                } else {
+                    restoreLocalPlayback()
+                }
+            }
+
+            video.addEventListener('webkitplaybacktargetavailabilitychanged', handleAvailability)
+            video.addEventListener('webkitcurrentplaybacktargetiswirelesschanged', handleWebkitTargetChange)
+            return () => {
+                video.removeEventListener('webkitplaybacktargetavailabilitychanged', handleAvailability)
+                video.removeEventListener('webkitcurrentplaybacktargetiswirelesschanged', handleWebkitTargetChange)
+            }
+        }
+    }, [status, prepareForCast, restoreLocalPlayback])
 
     const triggerToast = useCallback((type: "intro" | "outro") => {
         setShowAutoSkipToast(type)
@@ -339,6 +551,8 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         videoRef,
         hlsRef,
         playableUrl,
+        absoluteLanUrl,
+        isCastingRef,
         backendTracks: backendTracks || null,
         initialProgressSeconds,
         episodeNumber,
@@ -793,8 +1007,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         const curr = video.currentTime
         const total = video.duration
         
-        setCurrentTime(curr)
-        setDuration(total)
 
         if (chapters.length > 0) {
             const current = chapters.find(c => curr >= c.startTime && curr < c.endTime)
@@ -1008,6 +1220,33 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         }
     }, [])
 
+    const promptCast = useCallback(async () => {
+        const video = videoRef.current
+        if (!video) return
+
+        const hasRemote = 'remote' in video && (video as any).remote;
+        const hasWebkit = 'webkitShowPlaybackTargetPicker' in video;
+
+        if (hasRemote) {
+            const remote = (video as any).remote
+            console.log("promptCast: Invoking remote.prompt() directly")
+            try {
+                await remote.prompt()
+            } catch (err) {
+                console.warn("User cancelled cast or prompt failed:", err)
+            }
+        } else if (hasWebkit) {
+            console.log("promptCast: Invoking webkitShowPlaybackTargetPicker() directly")
+            try {
+                (video as any).webkitShowPlaybackTargetPicker()
+            } catch (err) {
+                console.error("Webkit casting error:", err)
+            }
+        } else {
+            console.warn("Casting not supported in this browser.")
+        }
+    }, [])
+
     return {
         domElements: {
             videoElement: videoRef,
@@ -1031,7 +1270,9 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             statsData,
             hlsLevels,
             activeHlsLevel,
-            currentTime,
+            get currentTime() {
+                return videoRef.current?.currentTime || 0
+            },
             showResume,
             resumeTime,
             autoDisableSubtitlesWhenDubbed,
@@ -1039,6 +1280,10 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             skipTimesEd,
             chapters,
             activeChapter,
+            isCastSupported,
+            castState,
+            serverIPs,
+            serverPort,
         },
         actions: {
             setIsPlaying, setDuration, setIsBuffering, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, skipTime, skipOpening, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, toggleFullscreen, handleSkipIntro, handleTimeUpdate,
@@ -1058,6 +1303,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             setAutoDisableSubtitlesWhenDubbed: (val: boolean) => { useAppStore.setState(s => ({ ...s, autoDisableSubtitlesWhenDubbed: val })) },
             skipToNextChapter,
             skipToPrevChapter,
+            promptCast,
         }
     }
 }

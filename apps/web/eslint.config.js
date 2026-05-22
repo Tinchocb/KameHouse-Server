@@ -3,6 +3,7 @@ import reactHooksPlugin from "eslint-plugin-react-hooks"
 import jsxA11y from "eslint-plugin-jsx-a11y"
 import tseslint from "typescript-eslint"
 import globals from "globals"
+import reactCompiler from "eslint-plugin-react-compiler"
 
 export default tseslint.config(
     {
@@ -22,6 +23,7 @@ export default tseslint.config(
             react: reactPlugin,
             "react-hooks": reactHooksPlugin,
             "jsx-a11y": jsxA11y,
+            "react-compiler": reactCompiler,
         },
         languageOptions: {
             globals: {
@@ -68,6 +70,9 @@ export default tseslint.config(
             // TypeScript
             "@typescript-eslint/no-explicit-any": "warn",
             "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+
+            // React Compiler
+            "react-compiler/react-compiler": "error",
         },
     },
 )

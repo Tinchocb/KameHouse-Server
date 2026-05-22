@@ -3,16 +3,35 @@ import { useState, useMemo, memo, useRef, useCallback } from "react"
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion"
 import { Play, Clock, Star, ChevronDown, Check, Layers } from "lucide-react"
 import { EmptyState } from "@/components/shared/empty-state"
-import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
+import { useGetLibraryCollection, fetchLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { useGetContinuityWatchHistory } from "@/api/hooks/continuity.hooks"
 import type { Anime_LibraryCollectionEntry, Continuity_WatchHistoryItem } from "@/api/generated/types"
 import { cn } from "@/components/ui/core/styling"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { getHighResImage } from "@/lib/helpers/images"
+import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
+import { API_ENDPOINTS } from "@/api/generated/endpoints"
 
 export const Route = createFileRoute("/movies/")({
-    component: MoviesPage,
+    loader: async ({ context }) => {
+        const qc = context.queryClient
+        await qc.prefetchQuery({
+            queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key],
+            queryFn: fetchLibraryCollection,
+        })
+        return { dehydrateState: dehydrate(qc) }
+    },
+    component: MoviesPageWrapper,
 })
+
+function MoviesPageWrapper() {
+    const { dehydrateState } = Route.useLoaderData()
+    return (
+        <HydrationBoundary state={dehydrateState}>
+            <MoviesPage />
+        </HydrationBoundary>
+    )
+}
 
 // ─── Constants & Data ────────────────────────────────────────────────────────
 
@@ -35,24 +54,22 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
     { value: "alpha", label: "Alfabético" },
 ]
 
+const specialsTmdbIds = new Set([39323, 39324, 38594, 47734, 15461, 1259215, 109963])
+const classicTmdbIds = new Set([39144, 33499, 39145, 116776, 33513, 39148])
+const zTmdbIds = new Set([28609, 15448, 39100, 39101, 39102, 24752, 15452, 39103, 39104, 15454, 34433, 39105, 44251, 39106, 39107, 39108, 177572, 126963, 303857])
+const gtTmdbIds = new Set([18095, 39149])
+const superTmdbIds = new Set([503314, 610150])
+const zKeywords = ["z ", " z:", "kai", "改", "freezer", "frieza", "cooler", "androide", "android", "bojack", "janemba", "tapion", "bardock", "trunks", "broly", "slug", "turles", "dead zone", "fusion", "bio-broly", "gohan", "vegeta"]
+
 function getEntryEra(entry: Anime_LibraryCollectionEntry): EraTab {
     const media = entry.media
     if (!media) return "Especiales y OVAs"
     const tmdbId = media.tmdbId || 0
 
-    const specialsTmdbIds = new Set([39323, 39324, 38594, 47734, 15461, 1259215, 109963])
     if (specialsTmdbIds.has(tmdbId)) return "Especiales y OVAs"
-
-    const classicTmdbIds = new Set([39144, 33499, 39145, 116776, 33513, 39148])
     if (classicTmdbIds.has(tmdbId)) return "Dragon Ball"
-
-    const zTmdbIds = new Set([28609, 15448, 39100, 39101, 39102, 24752, 15452, 39103, 39104, 15454, 34433, 39105, 44251, 39106, 39107, 39108, 177572, 126963, 303857])
     if (zTmdbIds.has(tmdbId)) return "Dragon Ball Z"
-
-    const gtTmdbIds = new Set([18095, 39149])
     if (gtTmdbIds.has(tmdbId)) return "Dragon Ball GT"
-
-    const superTmdbIds = new Set([503314, 610150])
     if (superTmdbIds.has(tmdbId)) return "Dragon Ball Super"
 
     if (tmdbId >= 1000000) return "Especiales y OVAs"
@@ -64,7 +81,7 @@ function getEntryEra(entry: Anime_LibraryCollectionEntry): EraTab {
     if (allTitles.includes("special") || allTitles.includes("especial") || allTitles.includes("ova") || media.format === "SPECIAL" || media.format === "OVA") return "Especiales y OVAs"
     if (allTitles.includes("super")) return "Dragon Ball Super"
     if (allTitles.includes(" gt") || allTitles.includes("gt ")) return "Dragon Ball GT"
-    const isZ = ["z ", " z:", "kai", "改", "freezer", "frieza", "cooler", "androide", "android", "bojack", "janemba", "tapion", "bardock", "trunks", "broly", "slug", "turles", "dead zone", "fusion", "bio-broly", "gohan", "vegeta"].some(k => allTitles.includes(k))
+    const isZ = zKeywords.some(k => allTitles.includes(k))
     if (isZ) return "Dragon Ball Z"
     return "Dragon Ball"
 }
@@ -95,11 +112,14 @@ function MoviesPage() {
         })
         const unique = new Map<number, Anime_LibraryCollectionEntry>()
         rawMovies.forEach(m => { if (m.mediaId) unique.set(m.mediaId, m) })
-        return Array.from(unique.values())
+        return Array.from(unique.values()).map(entry => ({
+            ...entry,
+            era: getEntryEra(entry)
+        }))
     }, [collection])
 
     const filteredSorted = useMemo(() => {
-        const result = activeEra === "all" ? allMovies : allMovies.filter(e => getEntryEra(e) === activeEra)
+        const result = activeEra === "all" ? allMovies : allMovies.filter(e => e.era === activeEra)
         switch (sortBy) {
             case "year_asc": return [...result].sort((a, b) => (a.media?.year || 0) - (b.media?.year || 0))
             case "year_desc": return [...result].sort((a, b) => (b.media?.year || 0) - (a.media?.year || 0))
@@ -205,7 +225,7 @@ function MoviesPage() {
                     {/* Era Pills */}
                     <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
                         {ERA_TABS.map(tab => {
-                            const count = tab.value === "all" ? allMovies.length : allMovies.filter(m => getEntryEra(m) === tab.value).length
+                            const count = tab.value === "all" ? allMovies.length : allMovies.filter(m => m.era === tab.value).length
                             const isActive = activeEra === tab.value
                             return (
                                 <motion.button
@@ -297,31 +317,31 @@ function MoviesPage() {
                     </motion.div>
                 ) : (
                     <motion.div
-                        key={activeEra}
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
                         className="grid gap-5 md:gap-6"
                         style={{
                             gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
                         }}
                     >
-                        {filteredSorted.map((entry, i) => (
-                            <motion.div
-                                key={entry.mediaId}
-                                initial={{ opacity: 0, y: 12 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.35, delay: Math.min(i * 0.025, 0.4), ease: [0.23, 1, 0.32, 1] }}
-                            >
-                                <MovieCard
-                                    entry={entry}
-                                    era={getEntryEra(entry)}
-                                    watchHistoryItem={watchHistory?.[entry.mediaId]}
-                                    onClick={() => handleMovieClick(entry.mediaId)}
-                                    onHoverBackdrop={setHoveredBackdrop}
-                                />
-                            </motion.div>
-                        ))}
+                        <AnimatePresence mode="popLayout">
+                            {filteredSorted.map((entry) => (
+                                <motion.div
+                                    key={entry.mediaId}
+                                    layout
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    transition={{ duration: 0.25, ease: "easeInOut" }}
+                                >
+                                    <MovieCard
+                                        entry={entry}
+                                        era={entry.era}
+                                        watchHistoryItem={watchHistory?.[entry.mediaId]}
+                                        onClick={handleMovieClick}
+                                        onHoverBackdrop={setHoveredBackdrop}
+                                    />
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
                     </motion.div>
                 )}
             </div>
@@ -341,11 +361,15 @@ const MovieCard = memo(function MovieCard({
     entry: Anime_LibraryCollectionEntry
     era: EraTab
     watchHistoryItem?: Continuity_WatchHistoryItem | null
-    onClick: () => void
+    onClick: (id: number) => void
     onHoverBackdrop: (url: string | null) => void
 }) {
     const movie = entry.media
-    if (!movie) return null
+    if (!movie || !entry.mediaId) return null
+
+    const handleCardClick = () => {
+        onClick(entry.mediaId!)
+    }
 
     const eraConfig = ERA_TABS.find(t => t.value === era) || ERA_TABS[0]
     const title = movie.titleSpanish || movie.titleEnglish || movie.titleRomaji || "Sin título"
@@ -363,14 +387,14 @@ const MovieCard = memo(function MovieCard({
     return (
         <div
             className="group relative cursor-pointer"
-            onClick={onClick}
+            onClick={handleCardClick}
             onMouseEnter={() => onHoverBackdrop(backdropUrl || null)}
             onMouseLeave={() => onHoverBackdrop(null)}
         >
             {/* ─ Poster ─ */}
             <div className={cn(
                 "relative aspect-[2/3] w-full overflow-hidden rounded-xl",
-                "border border-white/[0.06] transition-all duration-500 ease-out",
+                "border border-white/[0.06] transition-[border-color,box-shadow] duration-500 ease-out",
                 "group-hover:border-white/20 group-hover:shadow-2xl",
                 !hasLocalFiles && "grayscale opacity-40",
             )}
@@ -416,7 +440,7 @@ const MovieCard = memo(function MovieCard({
 
                 {/* Era accent line (bottom left corner) */}
                 <div
-                    className="absolute bottom-0 left-0 w-8 h-0.5 opacity-70 group-hover:w-full transition-all duration-500 ease-out"
+                    className="absolute bottom-0 left-0 w-full h-0.5 opacity-70 scale-x-[0.12] origin-left transition-transform duration-500 ease-out group-hover:scale-x-100 transform-gpu"
                     style={{ backgroundColor: eraConfig.color }}
                 />
 

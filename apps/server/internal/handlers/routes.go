@@ -1,4 +1,4 @@
-﻿package handlers
+package handlers
 
 import (
 	"kamehouse/internal/core"
@@ -150,6 +150,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	h.RegisterStreamingRoutes(v1)
 	h.RegisterSettingsRoutes(v1)
 	h.RegisterLocalRoutes(v1)
+	h.RegisterTorrentClientRoutes(v1)
 }
 
 func (h *Handler) JSON(c echo.Context, code int, i interface{}) error {

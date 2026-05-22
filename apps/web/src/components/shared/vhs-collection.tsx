@@ -68,7 +68,7 @@ const VhsTapeCard = memo(({
         <div
             onClick={onClick}
             className={cn(
-                "h-full flex flex-col cursor-pointer border-r-[0.5px] border-black/40 transition-all duration-300 ease-out min-w-[100px] sm:min-w-[140px] overflow-hidden shrink-0",
+                "h-full flex flex-col cursor-pointer border-r-[0.5px] border-black/40 transition-[flex,min-width] duration-300 ease-out min-w-[100px] sm:min-w-[140px] overflow-hidden shrink-0",
                 isSelected ? "flex-[2.5] min-w-[280px] sm:min-w-[360px]" : "flex-1"
             )}
         >
@@ -81,7 +81,7 @@ const VhsTapeCard = memo(({
                             src={item.posterUrl || ""}
                             alt=""
                             className={cn(
-                                "w-full h-full object-cover transition-all duration-700",
+                                "w-full h-full object-cover transition-[filter,transform] duration-700",
                                 isSelected ? "brightness-100 scale-105" : "brightness-75 group-hover:brightness-90"
                             )}
                             showSkeleton={true}
@@ -96,7 +96,7 @@ const VhsTapeCard = memo(({
                 {/* Vertical title (hidden when selected) */}
                 <div
                     className={cn(
-                        "absolute inset-0 flex items-center justify-center transition-all duration-300 z-10 px-2",
+                        "absolute inset-0 flex items-center justify-center transition-[opacity,transform] duration-300 z-10 px-2",
                         isSelected ? "opacity-0 pointer-events-none scale-110" : "opacity-100 scale-100"
                     )}
                 >

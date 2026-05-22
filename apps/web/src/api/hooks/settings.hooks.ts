@@ -1,8 +1,17 @@
 import { useServerQuery, useServerMutation } from "@/api/client/requests"
-import { Models_Settings } from "@/api/generated/types"
+import { Models_Settings, Status } from "@/api/generated/types"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { SaveSettings_Variables, SaveAutoDownloaderSettings_Variables, SaveMediaPlayerSettings_Variables } from "@/api/generated/endpoint.types"
 import { useQueryClient } from "@tanstack/react-query"
+
+export function useGetStatus() {
+    return useServerQuery<Status>({
+        endpoint: API_ENDPOINTS.STATUS.GetStatus.endpoint,
+        method: API_ENDPOINTS.STATUS.GetStatus.methods[0],
+        queryKey: [API_ENDPOINTS.STATUS.GetStatus.key],
+        enabled: true,
+    })
+}
 
 export function useGetSettings() {
     return useServerQuery<Models_Settings>({

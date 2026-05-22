@@ -8,7 +8,6 @@ import { LoadingOverlayWithLogo } from "@/components/shared/loading-overlay-with
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs/tabs"
 
 import { useGetSettings, useSaveSettings } from "@/api/hooks/settings.hooks"
-import { useScanLocalFiles } from "@/api/hooks/scan.hooks"
 import {
     LucideSave, LucideRefreshCw, LucideHardDrive, LucideSettings, LucideRadar, LucideCrown, LucideCloud, LucidePlay
 } from "lucide-react"
@@ -19,6 +18,8 @@ import type { SaveSettings_Variables } from "@/api/generated/endpoint.types"
 // Import extracted tabs
 import { LibraryTab } from "./tabs/library-tab"
 import { PlayerTab } from "./tabs/player-tab"
+import { DownloadsTab } from "./tabs/downloads-tab"
+import { ScannerTab } from "./tabs/scanner-tab"
 import { IntegrationsTab } from "./tabs/integrations-tab"
 import { SystemTab } from "./tabs/system-tab"
 
@@ -135,7 +136,9 @@ export const Route = createFileRoute("/settings/")({
 
 const NAV_ITEMS = [
     { id: "library", label: "Biblioteca", icon: LucideRadar },
-    { id: "player", label: "Reproductor", icon: LucidePlay },
+    { id: "player", label: "Reproducción", icon: LucidePlay },
+    { id: "downloads", label: "Descargas", icon: LucideHardDrive },
+    { id: "scanner", label: "Escáner", icon: LucideRefreshCw },
     { id: "integrations", label: "Integraciones", icon: LucideCloud },
     { id: "system", label: "Sistema", icon: LucideSettings },
 ]
@@ -153,7 +156,6 @@ function TabsTriggerActiveIndicator() {
 function SettingsPage() {
     const { data: serverSettings, isLoading } = useGetSettings()
     const { mutateAsync: saveSettings, isPending: isSaving } = useSaveSettings()
-    const { mutate: scanFiles, isPending: isScanning } = useScanLocalFiles()
 
     const form = useForm<SettingsFormValues>({
         resolver: zodResolver(settingsSchema) as unknown as Resolver<SettingsFormValues>,
@@ -177,16 +179,6 @@ function SettingsPage() {
         } catch {
             toast.error("Error al guardar los ajustes")
         }
-    }
-
-    const handleScan = (full: boolean) => {
-        scanFiles({
-            enhanced: true,
-            enhanceWithOfflineDatabase: true,
-            skipLockedFiles: false,
-            skipIgnoredFiles: true,
-            fullScan: full,
-        })
     }
 
     if (isLoading) return <LoadingOverlayWithLogo />
@@ -240,10 +232,12 @@ function SettingsPage() {
 
                 <main className="flex-1 h-full overflow-y-auto bg-black/5 scrollbar-hide py-8 px-10">
                     <form onSubmit={handleSubmit(onSubmit as unknown as SubmitHandler<FieldValues>)} className="w-full pb-36 max-w-5xl">
-                        <LibraryTab isScanning={isScanning} handleScan={handleScan} control={control} />
+                        <LibraryTab control={control} />
                         <PlayerTab control={control} />
+                        <DownloadsTab control={control} />
+                        <ScannerTab />
                         <IntegrationsTab control={control} />
-                        <SystemTab />
+                        <SystemTab control={control} />
                     </form>
                 </main>
 

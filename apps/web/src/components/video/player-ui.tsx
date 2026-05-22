@@ -2,7 +2,9 @@
 import React, { useEffect, useRef } from "react"
 import gsap from "gsap"
 import { useGSAP } from "@gsap/react"
+import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/components/ui/core/styling"
+import { Tv, Copy, Check, X, Info } from "lucide-react"
 import { PlayerTopBar } from "./player-topbar"
 import { PlayerBottomBar } from "./player-bottombar"
 import { LoadingErrorOverlay, CenterPlayFlash, SkipIntroOverlay, NextEpisodeOverlay, ResumeOverlay } from "./player-overlays"
@@ -50,13 +52,22 @@ export interface PlayerUIProps {
     mediaId?: number
     episodeNumber?: number
     malId?: number | null
+    episodes?: {
+        title?: string
+        episodeNumber: number
+        absoluteEpisodeNumber?: number
+        thumbnail?: string
+        watched?: boolean
+    }[]
+    onSelectEpisode?: (episodeNumber: number) => void
 }
 
 export function PlayerUI(props: PlayerUIProps) {
     const {
         title, episodeLabel, onClose, onNextEpisode, playableUrl,
         streamType, episodeSources, onSourceSwitch, core,
-        mediaId, episodeNumber, malId
+        mediaId, episodeNumber, malId,
+        episodes, onSelectEpisode
     } = props
 
     const {
@@ -67,6 +78,56 @@ export function PlayerUI(props: PlayerUIProps) {
 
     const ambilightCanvasRef = useRef<HTMLCanvasElement>(null)
 
+    const [isEpisodesSidebarOpen, setIsEpisodesSidebarOpen] = React.useState(false)
+    const [isCastModalOpen, setIsCastModalOpen] = React.useState(false)
+    const [isCopied, setIsCopied] = React.useState(false)
+
+    const controlsVisible = state.controlsVisible || isEpisodesSidebarOpen || isCastModalOpen
+
+    // Force controls visibility if sidebar or cast modal is open
+    useEffect(() => {
+        if (isEpisodesSidebarOpen || isCastModalOpen) {
+            actions.setControlsVisible(true)
+        }
+    }, [isEpisodesSidebarOpen, isCastModalOpen, actions])
+
+    const localServerUrl = React.useMemo(() => {
+        if (typeof window === "undefined") return "http://localhost:43210"
+
+        const hostname = window.location.hostname
+        const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1"
+
+        // Si ya se accede desde una IP de red local, usar esa URL directamente.
+        // La TV solo necesita abrir la misma URL que ya está funcionando en este navegador.
+        if (!isLocalhost) {
+            return window.location.origin
+        }
+
+        // Fallback: si estamos en localhost, intentar con las IPs del backend
+        if (state.serverIPs && state.serverIPs.length > 0) {
+            const lanIp = state.serverIPs.find(ip =>
+                ip.startsWith("192.168.") ||
+                ip.startsWith("10.") ||
+                ip.startsWith("172.")
+            ) || state.serverIPs[0]
+            const port = window.location.port || "43210"
+            return `http://${lanIp}:${port}`
+        }
+
+        // Último recurso
+        return window.location.origin
+    }, [state.serverIPs])
+
+    const handleCopyUrl = async () => {
+        try {
+            await navigator.clipboard.writeText(localServerUrl)
+            setIsCopied(true)
+            setTimeout(() => setIsCopied(false), 2000)
+        } catch (err) {
+            console.error("Failed to copy URL:", err)
+        }
+    }
+
     // Fetch video insights (heatmap)
     const { data: insightsData } = useGetVideoInsights({
         episodeId: (mediaId && episodeNumber) ? Number(`${mediaId}${episodeNumber}`) : 0
@@ -76,7 +137,7 @@ export function PlayerUI(props: PlayerUIProps) {
 
     // Cinematic Controls Animation Layer
     useGSAP(() => {
-        if (state.controlsVisible) {
+        if (controlsVisible) {
             gsap.to(".player-top-bar", { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" })
             gsap.to(".player-bottom-bar", { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" })
             gsap.to(".player-overlays-bg", { opacity: 1, duration: 0.4 })
@@ -85,7 +146,7 @@ export function PlayerUI(props: PlayerUIProps) {
             gsap.to(".player-bottom-bar", { y: 20, opacity: 0, duration: 0.4, ease: "power3.in" })
             gsap.to(".player-overlays-bg", { opacity: 0, duration: 0.6 })
         }
-    }, { dependencies: [state.controlsVisible], scope: domElements.containerElement })
+    }, { dependencies: [controlsVisible], scope: domElements.containerElement })
 
     useEffect(() => {
         if (!state.ambilightEnabled || !state.isPlaying) return
@@ -93,9 +154,11 @@ export function PlayerUI(props: PlayerUIProps) {
         let animId: number
         const video = domElements.videoElement.current
         const canvas = ambilightCanvasRef.current
+        let lastDrawTime = 0
 
         const renderAmbilight = () => {
-            if (video && canvas && !video.paused) {
+            const now = Date.now()
+            if (video && canvas && !video.paused && (now - lastDrawTime >= 60)) {
                 const ctx = canvas.getContext("2d")
                 if (ctx) {
                     if (canvas.width !== 32) {
@@ -104,6 +167,7 @@ export function PlayerUI(props: PlayerUIProps) {
                     }
                     ctx.drawImage(video, 0, 0, 32, 18)
                 }
+                lastDrawTime = now
             }
             animId = requestAnimationFrame(renderAmbilight)
         }
@@ -119,7 +183,7 @@ export function PlayerUI(props: PlayerUIProps) {
             onMouseLeave={() => actions.setControlsVisible(false)}
             className={cn(
                 "fixed inset-0 z-[10000] w-screen h-screen bg-black flex flex-col items-center justify-center overflow-hidden font-sans",
-                !state.controlsVisible && state.isPlaying ? "cursor-none" : "cursor-default"
+                !controlsVisible && state.isPlaying ? "cursor-none" : "cursor-default"
             )}
         >
 
@@ -153,7 +217,7 @@ export function PlayerUI(props: PlayerUIProps) {
                 }}
                 crossOrigin="anonymous"
                 playsInline
-                preload="auto"
+                preload="metadata"
             />
 
             <canvas
@@ -308,8 +372,280 @@ export function PlayerUI(props: PlayerUIProps) {
                     skipToNextChapter={actions.skipToNextChapter}
                     skipToPrevChapter={actions.skipToPrevChapter}
                     activeChapter={state.activeChapter}
+                    isCastSupported={state.isCastSupported}
+                    castState={state.castState}
+                    onPromptCast={() => setIsCastModalOpen(true)}
+                    isEpisodesSidebarOpen={isEpisodesSidebarOpen}
+                    onToggleEpisodesSidebar={() => setIsEpisodesSidebarOpen(!isEpisodesSidebarOpen)}
+                    hasEpisodes={Boolean(episodes && episodes.length > 0)}
                 />
             </div>
+
+            {/* Episodes Sidebar */}
+            <AnimatePresence>
+                {isEpisodesSidebarOpen && episodes && episodes.length > 0 && (
+                    <>
+                        {/* Backdrop overlay */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsEpisodesSidebarOpen(false)}
+                            className="absolute inset-0 z-[150] bg-black/60 backdrop-blur-sm pointer-events-auto"
+                        />
+
+                        {/* Sidebar Panel */}
+                        <motion.div
+                            initial={{ x: "100%" }}
+                            animate={{ x: 0 }}
+                            exit={{ x: "100%" }}
+                            transition={{ type: "spring", damping: 30, stiffness: 300 }}
+                            className="absolute right-0 top-0 bottom-0 w-full sm:w-[400px] z-[160] bg-zinc-950/85 backdrop-blur-3xl border-l border-white/10 flex flex-col shadow-2xl pointer-events-auto select-none"
+                        >
+                            {/* Header */}
+                            <div className="flex items-center justify-between p-6 border-b border-white/5 shrink-0">
+                                <h3 className="text-sm font-black tracking-[0.25em] text-white uppercase flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-brand-orange animate-pulse" />
+                                    EPISODIOS
+                                </h3>
+                                <button
+                                    onClick={() => setIsEpisodesSidebarOpen(false)}
+                                    className="p-2 text-zinc-500 hover:text-white hover:bg-white/5 rounded-full transition-all"
+                                >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            {/* Episodes List */}
+                            <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar">
+                                {episodes.map((ep) => {
+                                    const epNum = ep.absoluteEpisodeNumber ?? ep.episodeNumber
+                                    const isCurrent = epNum === episodeNumber
+
+                                    return (
+                                        <button
+                                            key={epNum}
+                                            onClick={() => {
+                                                if (onSelectEpisode) {
+                                                    onSelectEpisode(epNum)
+                                                }
+                                                setIsEpisodesSidebarOpen(false)
+                                            }}
+                                            className={cn(
+                                                "w-full text-left flex gap-4 p-3 rounded-xl border transition-all duration-300 group",
+                                                isCurrent
+                                                    ? "bg-brand-orange/10 border-brand-orange/30 text-white shadow-[0_0_15px_rgba(255,110,58,0.1)]"
+                                                    : "bg-white/[0.02] border-white/5 text-zinc-400 hover:text-white hover:bg-white/[0.04] hover:border-white/10"
+                                            )}
+                                        >
+                                            {/* Thumbnail / Image container */}
+                                            <div className="relative w-28 aspect-video bg-zinc-900 border border-white/5 rounded-lg overflow-hidden shrink-0 flex items-center justify-center">
+                                                {ep.thumbnail ? (
+                                                    <img
+                                                        src={ep.thumbnail}
+                                                        alt={ep.title || `Episodio ${epNum}`}
+                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                                        loading="lazy"
+                                                    />
+                                                ) : (
+                                                    <span className="text-[10px] font-black text-zinc-700">SIN IMAGEN</span>
+                                                )}
+
+                                                {/* Dark overlay */}
+                                                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors duration-300" />
+
+                                                {/* Play overlay for current or hover */}
+                                                <div className={cn(
+                                                    "absolute inset-0 flex items-center justify-center transition-all duration-300",
+                                                    isCurrent ? "opacity-100 bg-brand-orange/10" : "opacity-0 group-hover:opacity-100 bg-black/40"
+                                                )}>
+                                                    <svg className={cn(
+                                                        "w-5 h-5 drop-shadow-md transition-transform duration-300",
+                                                        isCurrent ? "text-brand-orange scale-110" : "text-white scale-90 group-hover:scale-100"
+                                                    )} fill="currentColor" viewBox="0 0 24 24">
+                                                        <path d="M8 5v14l11-7z" />
+                                                    </svg>
+                                                </div>
+                                            </div>
+
+                                            {/* Meta content */}
+                                            <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className={cn(
+                                                        "text-[9px] font-black tracking-widest",
+                                                        isCurrent ? "text-brand-orange" : "text-zinc-500"
+                                                    )}>
+                                                        EPISODIO {epNum}
+                                                    </span>
+
+                                                    {ep.watched && (
+                                                        <span className="flex items-center justify-center w-3 h-3 rounded-full bg-green-500/20 text-green-500 border border-green-500/30">
+                                                            <svg className="w-2 h-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <h4 className={cn(
+                                                    "text-[11px] font-black uppercase tracking-wider truncate leading-tight transition-colors",
+                                                    isCurrent ? "text-white" : "text-zinc-300 group-hover:text-white"
+                                                )}>
+                                                    {ep.title || `Episodio ${epNum}`}
+                                                </h4>
+                                            </div>
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Casting Modal */}
+            <AnimatePresence>
+                {isCastModalOpen && (
+                    <>
+                        {/* Backdrop overlay */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsCastModalOpen(false)}
+                            className="absolute inset-0 z-[200] bg-black/80 backdrop-blur-md pointer-events-auto"
+                        />
+
+                        {/* Modal container */}
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            transition={{ type: "spring", duration: 0.5 }}
+                            className="absolute inset-0 m-auto w-full max-w-lg h-fit max-h-[90vh] overflow-y-auto z-[210] bg-zinc-900/95 backdrop-blur-2xl border border-white/10 p-8 rounded-3xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)] pointer-events-auto select-none flex flex-col gap-6 text-left"
+                        >
+                            {/* Header */}
+                            <div className="flex items-center justify-between border-b border-white/5 pb-4 shrink-0">
+                                <h3 className="text-sm font-black tracking-[0.25em] text-white uppercase flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-brand-orange animate-pulse" />
+                                    TRANSMITIR A PANTALLA
+                                </h3>
+                                <button
+                                    onClick={() => setIsCastModalOpen(false)}
+                                    className="p-2 text-zinc-500 hover:text-white hover:bg-white/5 rounded-full transition-all"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            {/* Content options */}
+                            <div className="space-y-5">
+                                {/* Option 1: Native casting */}
+                                <div 
+                                    onClick={() => {
+                                        actions.promptCast();
+                                        setIsCastModalOpen(false);
+                                    }}
+                                    className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-brand-orange/30 hover:bg-brand-orange/[0.02] transition-all duration-300 group cursor-pointer flex gap-4 items-start"
+                                >
+                                    <div className="p-3 bg-zinc-800/80 rounded-xl text-zinc-400 group-hover:text-brand-orange group-hover:bg-brand-orange/10 transition-all shrink-0">
+                                        <svg
+                                            viewBox="0 0 24 24"
+                                            width="20"
+                                            height="20"
+                                            stroke="currentColor"
+                                            strokeWidth="2.5"
+                                            fill="none"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        >
+                                            <path d="M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6" />
+                                            <path d="M2 12a9 9 0 0 1 8 8" />
+                                            <path d="M2 16a5 5 0 0 1 4 4" />
+                                            <line x1="2" x2="2.01" y1="20" y2="20" />
+                                        </svg>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="text-xs font-bold text-white tracking-wider uppercase mb-1 flex items-center gap-2">
+                                            Transmisión Directa
+                                        </h4>
+                                        <p className="text-[10px] text-zinc-400 leading-relaxed font-sans normal-case tracking-normal">
+                                            Utiliza la transmisión nativa del navegador (Google Cast / AirPlay). Recomendado si tienes un Chromecast o Apple TV conectado en tu misma red.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Option 2: Smart TV Browser */}
+                                <div 
+                                    className="p-5 rounded-2xl bg-brand-orange/[0.02] border border-brand-orange/20 transition-all duration-300 flex flex-col gap-4"
+                                >
+                                    <div className="flex gap-4 items-start">
+                                        <div className="p-3 bg-brand-orange/10 rounded-xl text-brand-orange shrink-0">
+                                            <Tv className="w-5 h-5" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className="text-xs font-bold text-white tracking-wider uppercase mb-1 flex items-center gap-2">
+                                                Conectar Smart TV
+                                                <span className="text-[8px] bg-brand-orange/20 text-brand-orange px-2 py-0.5 rounded-full font-black tracking-normal uppercase">
+                                                    Recomendado
+                                                </span>
+                                            </h4>
+                                            <p className="text-[10px] text-zinc-400 leading-relaxed font-sans normal-case tracking-normal">
+                                                Ideal para Smart TVs (Samsung Tizen, LG webOS, etc.). Abre el navegador de tu televisor e introduce <strong className="text-white">exactamente</strong> esta dirección:
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* URL Display and copy — protocolo destacado */}
+                                    <div className="flex items-center gap-2 bg-zinc-950/80 border border-white/5 rounded-xl p-3 shrink-0">
+                                        <code className="flex-1 font-mono text-[11px] break-all select-all font-bold tracking-tight px-1 flex items-center flex-wrap gap-0">
+                                            <span className="text-amber-400 shrink-0">{localServerUrl.split("://")[0]}://</span>
+                                            <span className="text-white">{localServerUrl.split("://")[1]}</span>
+                                        </code>
+                                        <button
+                                            onClick={handleCopyUrl}
+                                            className="px-3 py-2 bg-zinc-900 border border-white/10 hover:border-brand-orange/30 hover:bg-brand-orange/10 text-zinc-400 hover:text-brand-orange rounded-lg transition-all text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shrink-0"
+                                        >
+                                            {isCopied ? (
+                                                <>
+                                                    <Check className="w-3.5 h-3.5" />
+                                                    Copiado
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Copy className="w-3.5 h-3.5" />
+                                                    Copiar
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+
+                                    {/* Advertencia HTTPS → Samsung TV auto-upgrade */}
+                                    <div className="flex gap-2.5 items-start bg-amber-500/10 border border-amber-500/25 rounded-xl px-3.5 py-3">
+                                        <svg className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                                        </svg>
+                                        <p className="text-[9px] text-amber-300/80 leading-relaxed font-sans normal-case tracking-normal">
+                                            <strong className="text-amber-300">¡Importante!</strong> Samsung TV puede convertir la dirección a <code className="text-red-400 font-mono">https://</code> automáticamente. Asegúrate de que diga <code className="text-amber-300 font-mono">http://</code> (sin la «s»), ya que el servidor local no usa cifrado SSL.
+                                        </p>
+                                    </div>
+
+                                    {/* Quick Guide */}
+                                    <div className="pt-2 border-t border-white/5 flex gap-2.5 items-start">
+                                        <Info className="w-3.5 h-3.5 text-zinc-500 shrink-0 mt-0.5" />
+                                        <div className="space-y-1 text-[9px] text-zinc-500 leading-relaxed font-sans normal-case tracking-normal">
+                                            <p>1. Asegúrate de que el televisor esté conectado al mismo Wi-Fi que este ordenador.</p>
+                                            <p>2. Abre el navegador de tu Smart TV, borra la barra de direcciones y escribe la URL de arriba empezando siempre por <span className="text-amber-400 font-mono font-bold">http://</span></p>
+                                            <p>3. ¡Listo! Podrás explorar y reproducir todo tu catálogo directamente en pantalla grande.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
         </div>
     )
 }

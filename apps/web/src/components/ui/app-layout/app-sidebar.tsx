@@ -26,25 +26,37 @@ export function AppSidebar() {
     const sidebarOpen = useAppStore(state => state.sidebarOpen)
     const setSidebarOpen = useAppStore(state => state.setSidebarOpen)
     const isFullscreen = useAppStore(state => state.isFullscreen)
+    const [isMobile, setIsMobile] = React.useState(false)
+
+    React.useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 768) // 768px is the 'md' breakpoint
+        }
+        checkMobile()
+        window.addEventListener("resize", checkMobile)
+        return () => window.removeEventListener("resize", checkMobile)
+    }, [])
 
     if (isFullscreen) return null
 
     return (
         <>
             {/* Desktop Fixed Sidebar */}
-            <aside className="hidden md:flex flex-col fixed inset-y-0 left-0 w-24 border-r border-white/5 bg-zinc-950/40 backdrop-blur-2xl z-50">
+            <aside className="hidden md:flex flex-col shrink-0 h-full w-24 border-r border-white/5 bg-zinc-950/40 backdrop-blur-2xl z-50">
                 <SidebarContent setSidebarOpen={setSidebarOpen} />
             </aside>
 
             {/* Mobile Drawer */}
-            <Vaul open={sidebarOpen} onOpenChange={setSidebarOpen} direction="left">
-                <VaulContent
-                    className="md:hidden fixed inset-y-0 left-0 z-50 flex h-full w-[280px] flex-col border-r border-white/5 bg-zinc-950/60 backdrop-blur-2xl shadow-2xl"
-                    overlayClass="bg-black/60 backdrop-blur-sm"
-                >
-                    <SidebarContent setSidebarOpen={setSidebarOpen} />
-                </VaulContent>
-            </Vaul>
+            {isMobile && (
+                <Vaul open={sidebarOpen} onOpenChange={setSidebarOpen} direction="left">
+                    <VaulContent
+                        className="md:hidden fixed inset-y-0 left-0 z-50 flex h-full w-[280px] flex-col border-r border-white/5 bg-zinc-950/60 backdrop-blur-2xl shadow-2xl"
+                        overlayClass="md:hidden bg-black/60 backdrop-blur-sm"
+                    >
+                        <SidebarContent setSidebarOpen={setSidebarOpen} />
+                    </VaulContent>
+                </Vaul>
+            )}
         </>
     )
 }

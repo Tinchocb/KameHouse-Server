@@ -1,30 +1,4 @@
-import React, { useEffect, useRef, useState } from "react"
-
-interface MousePosition {
-    x: number;
-    y: number;
-}
-
-function useMousePosition(): MousePosition {
-    const [mousePosition, setMousePosition] = useState<MousePosition>({
-        x: 0,
-        y: 0,
-    })
-
-    useEffect(() => {
-        const handleMouseMove = (event: MouseEvent) => {
-            setMousePosition({ x: event.clientX, y: event.clientY })
-        }
-
-        window.addEventListener("mousemove", handleMouseMove)
-
-        return () => {
-            window.removeEventListener("mousemove", handleMouseMove)
-        }
-    }, [])
-
-    return mousePosition
-}
+import React, { useEffect, useRef } from "react"
 
 interface ParticleBackgroundProps {
     className?: string;
@@ -70,13 +44,12 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
     const canvasContainerRef = useRef<HTMLDivElement>(null)
     const context = useRef<CanvasRenderingContext2D | null>(null)
     const circles = useRef<any[]>([])
-    const mousePosition = useMousePosition()
     const mouse = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
     const canvasSize = useRef<{ w: number; h: number }>({ w: 0, h: 0 })
     const dpr = typeof window !== "undefined" ? window.devicePixelRatio : 1
+    const rafId = useRef<number | null>(null)
+    const isVisible = useRef(true)
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [_, setBgMousePosition] = useState({ x: 0, y: 0 })
     type Circle = {
         x: number;
         y: number;
@@ -183,37 +156,18 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
         drawParticleBackground()
     }
 
-    function onMouseMove() {
-        if (canvasRef.current) {
-            const rect = canvasRef.current.getBoundingClientRect()
-            const { w, h } = canvasSize.current
-            const x = mousePosition.x - rect.left - w / 2
-            const y = mousePosition.y - rect.top - h / 2
-            const inside = x < w / 2 && x > -w / 2 && y < h / 2 && y > -h / 2
-            if (inside) {
-                mouse.current.x = x
-                mouse.current.y = y
-            }
-
-            const x2 = Math.min((mousePosition.x - (rect.left + rect.width / 2)) / 60, 20)
-            const y2 = Math.min((mousePosition.y - (rect.top + rect.height / 2)) / 60, 20)
-            setBgMousePosition({ x: x2, y: y2 })
-        }
-    }
-
     function animate() {
+        if (!isVisible.current) return
         clearContext()
         circles.current.forEach((circle: Circle, i: number) => {
-            const edge = [
-                circle.x + circle.translateX - circle.size,
-                canvasSize.current.w - circle.x - circle.translateX - circle.size,
-                circle.y + circle.translateY - circle.size,
-                canvasSize.current.h - circle.y - circle.translateY - circle.size,
-            ]
-            const closestEdge = edge.reduce((a, b) => Math.min(a, b))
-            const remapClosestEdge = parseFloat(
-                remapValue(closestEdge, 0, 20, 0, 1).toFixed(2),
-            )
+            const edge0 = circle.x + circle.translateX - circle.size
+            const edge1 = canvasSize.current.w - circle.x - circle.translateX - circle.size
+            const edge2 = circle.y + circle.translateY - circle.size
+            const edge3 = canvasSize.current.h - circle.y - circle.translateY - circle.size
+
+            const closestEdge = Math.min(edge0, edge1, edge2, edge3)
+            const remapClosestEdge = closestEdge > 0 ? closestEdge / 20 : 0
+
             if (remapClosestEdge > 1) {
                 circle.alpha += 0.02
                 if (circle.alpha > circle.targetAlpha) {
@@ -244,7 +198,7 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
                 drawCircle(newCircle)
             }
         })
-        window.requestAnimationFrame(animate)
+        rafId.current = window.requestAnimationFrame(animate)
     }
 
     useEffect(() => {
@@ -252,19 +206,61 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
             context.current = canvasRef.current.getContext("2d")
         }
         initCanvas()
-        animate()
         window.addEventListener("resize", initCanvas)
+
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                isVisible.current = entry.isIntersecting
+                if (entry.isIntersecting) {
+                    if (!rafId.current) {
+                        animate()
+                    }
+                } else {
+                    if (rafId.current) {
+                        cancelAnimationFrame(rafId.current)
+                        rafId.current = null
+                    }
+                }
+            },
+            { threshold: 0 }
+        )
+
+        if (canvasContainerRef.current) {
+            observer.observe(canvasContainerRef.current)
+        }
 
         return () => {
             window.removeEventListener("resize", initCanvas)
+            observer.disconnect()
+            if (rafId.current) {
+                cancelAnimationFrame(rafId.current)
+                rafId.current = null
+            }
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [color])
 
     useEffect(() => {
-        onMouseMove()
+        const handleMouseMove = (event: MouseEvent) => {
+            if (canvasRef.current) {
+                const rect = canvasRef.current.getBoundingClientRect()
+                const { w, h } = canvasSize.current
+                const x = event.clientX - rect.left - w / 2
+                const y = event.clientY - rect.top - h / 2
+                const inside = x < w / 2 && x > -w / 2 && y < h / 2 && y > -h / 2
+                if (inside) {
+                    mouse.current.x = x
+                    mouse.current.y = y
+                }
+            }
+        }
+
+        window.addEventListener("mousemove", handleMouseMove)
+        return () => {
+            window.removeEventListener("mousemove", handleMouseMove)
+        }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [mousePosition.x, mousePosition.y])
+    }, [])
 
     useEffect(() => {
         initCanvas()
@@ -276,5 +272,4 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
             <canvas ref={canvasRef} className="w-full h-full" />
         </div>
     )
-
 }

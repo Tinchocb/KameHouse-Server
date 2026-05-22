@@ -40,6 +40,11 @@ export const PremiumPosterCard = React.memo(({
         const glow = glowRef.current
         if (!card || !glow) return
 
+        const glowXTo = gsap.quickTo(glow, "x", { duration: 0.6, ease: "power2.out" })
+        const glowYTo = gsap.quickTo(glow, "y", { duration: 0.6, ease: "power2.out" })
+        const cardRotateXTo = gsap.quickTo(card, "rotateX", { duration: 0.4, ease: "power2.out" })
+        const cardRotateYTo = gsap.quickTo(card, "rotateY", { duration: 0.4, ease: "power2.out" })
+
         let rafId: number | null = null;
         const onMouseMove = (e: MouseEvent) => {
             if (rafId) cancelAnimationFrame(rafId);
@@ -48,26 +53,22 @@ export const PremiumPosterCard = React.memo(({
                 const x = e.clientX - rect.left
                 const y = e.clientY - rect.top
                 
-                gsap.to(glow, {
-                    x: x - 75,
-                    y: y - 75,
-                    duration: 0.6,
-                    ease: "power2.out"
-                })
+                glowXTo(x - 75)
+                glowYTo(y - 75)
 
                 const rotateX = (y / rect.height - 0.5) * 10
                 const rotateY = (x / rect.width - 0.5) * -10
                 
-                gsap.to(card, {
-                    rotateX,
-                    rotateY,
-                    duration: 0.4,
-                    ease: "power2.out"
-                })
+                cardRotateXTo(rotateX)
+                cardRotateYTo(rotateY)
             })
         }
 
         const onMouseLeave = () => {
+            if (rafId) {
+                cancelAnimationFrame(rafId)
+                rafId = null
+            }
             gsap.to(card, {
                 rotateX: 0,
                 rotateY: 0,
@@ -79,6 +80,7 @@ export const PremiumPosterCard = React.memo(({
         card.addEventListener("mousemove", onMouseMove)
         card.addEventListener("mouseleave", onMouseLeave)
         return () => {
+            if (rafId) cancelAnimationFrame(rafId)
             card.removeEventListener("mousemove", onMouseMove)
             card.removeEventListener("mouseleave", onMouseLeave)
         }

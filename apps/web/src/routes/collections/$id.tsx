@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { useGetMediaCollection } from "@/api/hooks/collections.hooks"
-import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
+import { useGetMediaCollection, fetchMediaCollection } from "@/api/hooks/collections.hooks"
+import { useGetLibraryCollection, fetchLibraryCollection } from "@/api/hooks/anime_collection.hooks"
+import { API_ENDPOINTS } from "@/api/generated/endpoints"
+import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import React, { useMemo, useRef } from "react"
 import { EmptyState } from "@/components/shared/empty-state"
 import { FaPlay, FaCalendar, FaTag, FaChevronLeft, FaStar, FaCheckCircle } from "react-icons/fa"
@@ -8,10 +10,37 @@ import { cn } from "@/components/ui/core/styling"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
 import gsap from "gsap"
 import { useGSAP } from "@gsap/react"
+import { DeferredImage } from "@/components/shared/deferred-image"
 
 export const Route = createFileRoute("/collections/$id")({
-    component: CollectionDetailPage,
+    loader: async ({ params: { id }, context }) => {
+        const qc = context.queryClient
+        const collId = Number(id)
+        
+        await Promise.all([
+            qc.prefetchQuery({
+                queryKey: ["collection-detail", collId],
+                queryFn: () => fetchMediaCollection(collId),
+            }),
+            qc.prefetchQuery({
+                queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key],
+                queryFn: fetchLibraryCollection,
+            })
+        ])
+        
+        return { dehydrateState: dehydrate(qc) }
+    },
+    component: CollectionDetailPageWrapper,
 })
+
+function CollectionDetailPageWrapper() {
+    const { dehydrateState } = Route.useLoaderData()
+    return (
+        <HydrationBoundary state={dehydrateState}>
+            <CollectionDetailPage />
+        </HydrationBoundary>
+    )
+}
 
 function CollectionDetailPage() {
     const { id } = Route.useParams()
@@ -121,9 +150,10 @@ function CollectionDetailPage() {
                 {/* Backdrop with gradient and subtle motion blur */}
                 {backdropUrl && (
                     <div className="absolute inset-0 z-0 overflow-hidden bg-black">
-                        <img
+                        <DeferredImage
                             src={backdropUrl}
                             alt={collection.name}
+                            priority={true}
                             className="w-full h-full object-cover object-center opacity-25 grayscale select-none pointer-events-none"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
@@ -134,9 +164,10 @@ function CollectionDetailPage() {
                     {/* Big poster */}
                     {posterUrl && (
                         <div className="hero-content-anim hidden lg:block shrink-0 w-60 xl:w-72 border border-white/10 bg-black group transition-all duration-500 hover:border-white shadow-2xl">
-                            <img
+                            <DeferredImage
                                 src={posterUrl}
                                 alt={collection.name}
+                                priority={true}
                                 className="w-full aspect-[2/3] object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
                             />
                         </div>
@@ -222,7 +253,7 @@ function CollectionDetailPage() {
                                         {/* Entry Poster */}
                                         {part.posterPath && (
                                             <div className="shrink-0 w-28 md:w-32 bg-black border border-white/5 group-hover:border-white/20 overflow-hidden transition-all duration-500 aspect-[2/3] relative">
-                                                <img
+                                                <DeferredImage
                                                     src={part.posterPath}
                                                     alt={part.title}
                                                     className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-transform duration-500 group-hover:scale-105"

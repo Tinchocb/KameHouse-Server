@@ -9,6 +9,7 @@ import (
 	"kamehouse/internal/user"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/result"
+	"net"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -45,9 +46,46 @@ type Status struct {
 	ServerReady           bool                          `json:"serverReady"`
 	ServerHasPassword     bool                          `json:"serverHasPassword"`
 	ShowChangelogTour     string                        `json:"showChangelogTour"`
+	ServerIPs             []string                      `json:"serverIPs"`
+	ServerPort            int                           `json:"serverPort"`
 }
 
 var clientInfoCache = result.NewMap[string, util.ClientInfo]()
+
+func getLocalIPv4Addresses() []string {
+	var ipAddresses []string
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return ipAddresses
+	}
+	for _, iface := range interfaces {
+		if iface.Flags&net.FlagLoopback != 0 || iface.Flags&net.FlagUp == 0 {
+			continue
+		}
+		addrs, err := iface.Addrs()
+		if err != nil {
+			continue
+		}
+		for _, addr := range addrs {
+			var ip net.IP
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
+			}
+			if ip == nil || ip.IsLoopback() {
+				continue
+			}
+			ip = ip.To4()
+			if ip == nil {
+				continue
+			}
+			ipAddresses = append(ipAddresses, ip.String())
+		}
+	}
+	return ipAddresses
+}
 
 // NewStatus returns a new Status struct.
 // It uses the RouteCtx to get the App instance containing the Database instance.
@@ -107,6 +145,8 @@ func (h *Handler) NewStatus(c echo.Context) *Status {
 		ServerHasPassword:     h.App.Config.Server.Password != "",
 		DisabledFeatures:      h.App.FeatureManager.DisabledFeatures,
 		ShowChangelogTour:     h.App.ShowTour,
+		ServerIPs:             getLocalIPv4Addresses(),
+		ServerPort:            h.App.Config.Server.Port,
 	}
 
 	if c.Get("unauthenticated") != nil && c.Get("unauthenticated").(bool) {
