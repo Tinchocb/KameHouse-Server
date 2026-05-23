@@ -148,6 +148,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 
 	// Samsung Tizen TV Cast
 	v1.GET("/cast/samsung/discover", h.HandleSamsungDiscover)
+	v1.GET("/cast/samsung/paired", h.HandleSamsungPaired)
 	v1.POST("/cast/samsung/launch", h.HandleSamsungLaunch)
 
 	h.RegisterLibraryRoutes(v1)

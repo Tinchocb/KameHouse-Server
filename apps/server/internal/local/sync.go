@@ -51,7 +51,7 @@ type (
 	}
 
 	QueueMediaTask struct {
-		MediaId int    `json:"mediaId"`
+		MediaID int    `json:"mediaID"`
 		Image   string `json:"image"`
 		Title   string `json:"title"`
 		Type    string `json:"type"`
@@ -92,7 +92,7 @@ func (q *Syncer) processAnimeJobs() {
 
 		q.queueStateMu.Lock()
 		q.queueState.AnimeTasks[job.Diff.AnimeEntry.Media.ID] = &QueueMediaTask{
-			MediaId: job.Diff.AnimeEntry.Media.ID,
+			MediaID: job.Diff.AnimeEntry.Media.ID,
 			Image:   job.Diff.AnimeEntry.Media.GetCoverImageSafe(),
 			Title:   job.Diff.AnimeEntry.Media.GetTitleSafe(),
 			Type:    "anime",
@@ -122,7 +122,7 @@ func (q *Syncer) processAnimeJobs() {
 func (q *Syncer) synchronizeAnime(diff *AnimeDiffResult) {
 	entry := diff.AnimeEntry
 	lfs := lo.Filter(q.manager.localFiles, func(lf *dto.LocalFile, _ int) bool {
-		return lf.MediaId == entry.Media.ID
+		return lf.MediaID == entry.Media.ID
 	})
 
 	var animeMetadata *metadata.AnimeMetadata
@@ -134,7 +134,7 @@ func (q *Syncer) synchronizeAnime(diff *AnimeDiffResult) {
 		if err != nil {
 			// If the anime metadata doesn't exist, create a fake one
 			simpleEntry, err := anime.NewSimpleEntry(context.Background(), &anime.NewSimpleAnimeEntryOptions{
-				MediaId:             entry.Media.ID,
+				MediaID:             entry.Media.ID,
 				LocalFiles:          lfs,
 				Database:            nil,
 				PlatformRef:         q.manager.platformRef,
@@ -163,7 +163,7 @@ func (q *Syncer) synchronizeAnime(diff *AnimeDiffResult) {
 
 		// Create a new snapshot
 		snapshot := &AnimeSnapshot{
-			MediaId:           entry.Media.ID,
+			MediaID:           entry.Media.ID,
 			AnimeMetadata:     LocalAnimeMetadata(*animeMetadata),
 			BannerImagePath:   bannerImage,
 			CoverImagePath:    coverImage,
@@ -257,7 +257,7 @@ func (q *Syncer) synchronizeCollections() (err error) {
 	animeSnapshots, _ := q.manager.localDb.GetAnimeSnapshots()
 	animeSnapshotMap := make(map[int]*AnimeSnapshot)
 	for _, snapshot := range animeSnapshots {
-		animeSnapshotMap[snapshot.MediaId] = snapshot
+		animeSnapshotMap[snapshot.MediaID] = snapshot
 	}
 
 	localAnimeCollection := &platform.UnifiedCollection{

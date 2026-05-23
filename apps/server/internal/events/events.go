@@ -10,7 +10,7 @@ const (
 
 
 type WebsocketClientEvent struct {
-	ClientID string                   `json:"clientId"`
+	ClientID string                   `json:"clientID"`
 	Type     WebsocketClientEventType `json:"type"`
 	Payload  interface{}              `json:"payload"`
 }

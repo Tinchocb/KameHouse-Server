@@ -139,7 +139,7 @@ func (vc *VideoCore) PushEvent(event VideoEvent) {
 	if !ok {
 		return
 	}
-	event.identify(state.PlaybackInfo.Id, state.ClientId, state.PlayerType, state.PlaybackInfo.PlaybackType)
+	event.identify(state.PlaybackInfo.Id, state.ClientID, state.PlayerType, state.PlaybackInfo.PlaybackType)
 	select {
 	case vc.eventBus <- event:
 	default:
@@ -151,7 +151,7 @@ func (vc *VideoCore) dispatchEvent(event VideoEvent) {
 	//if _, ok := event.(*VideoStatusEvent); !ok {
 	//	vc.logger.Debug().Msgf("videocore: Dispatching event %T", event)
 	//} else {
-	//	//vc.logger.Trace().Msgf("videocore: Dispatching status, playbackId: %s, clientId: %s", event.GetPlaybackId(), event.GetClientId())
+	//	//vc.logger.Trace().Msgf("videocore: Dispatching status, playbackId: %s, clientID: %s", event.GetPlaybackId(), event.GetClientId())
 	//}
 	vc.subscribers.Range(func(id string, subscriber *Subscriber) bool {
 		if subscriber.isClosed.Load() {
@@ -176,19 +176,19 @@ func (vc *VideoCore) dispatchEvent(event VideoEvent) {
 }
 
 // sendPlayerEventTo sends an event of type events.VideoCoreEventType to the client.
-func (vc *VideoCore) sendPlayerEventTo(clientId string, t string, payload interface{}, noLog ...bool) {
+func (vc *VideoCore) sendPlayerEventTo(clientID string, t string, payload interface{}, noLog ...bool) {
 	vc.playbackStatusMu.RLock()
-	if vc.playbackStatus != nil && len(vc.playbackStatus.Id) > 0 && vc.playbackStatus.Duration > 0 && clientId == "" {
-		clientId = vc.playbackStatus.ClientId
+	if vc.playbackStatus != nil && len(vc.playbackStatus.Id) > 0 && vc.playbackStatus.Duration > 0 && clientID == "" {
+		clientID = vc.playbackStatus.ClientID
 	}
 	vc.playbackStatusMu.RUnlock()
 
 	if len(noLog) == 0 || !noLog[0] {
-		vc.logger.Trace().Msgf("videocore: Sending event %s to client %s", t, clientId)
+		vc.logger.Trace().Msgf("videocore: Sending event %s to client %s", t, clientID)
 	}
 
-	if clientId != "" {
-		vc.wsEventManager.SendEventTo(clientId, string(events.VideoCoreEventType), struct {
+	if clientID != "" {
+		vc.wsEventManager.SendEventTo(clientID, string(events.VideoCoreEventType), struct {
 			Type    string      `json:"type"`
 			Payload interface{} `json:"payload"`
 		}{
@@ -309,7 +309,7 @@ func (vc *VideoCore) GetCurrentClientId() string {
 	if !ok {
 		return ""
 	}
-	return state.ClientId
+	return state.ClientID
 }
 
 // GetCurrentPlayerType returns the current player type.
@@ -404,7 +404,7 @@ func (vc *VideoCore) Pause() {
 	if !ok {
 		return
 	}
-	vc.sendPlayerEventTo(state.ClientId, string(ServerEventPause), nil)
+	vc.sendPlayerEventTo(state.ClientID, string(ServerEventPause), nil)
 }
 
 // Resume sends a resume command to the video player.
@@ -413,7 +413,7 @@ func (vc *VideoCore) Resume() {
 	if !ok {
 		return
 	}
-	vc.sendPlayerEventTo(state.ClientId, string(ServerEventResume), nil)
+	vc.sendPlayerEventTo(state.ClientID, string(ServerEventResume), nil)
 }
 
 // Seek sends a seek command to the video player.
@@ -423,7 +423,7 @@ func (vc *VideoCore) Seek(seconds float64) {
 	if !ok {
 		return
 	}
-	vc.sendPlayerEventTo(state.ClientId, string(ServerEventSeek), seconds)
+	vc.sendPlayerEventTo(state.ClientID, string(ServerEventSeek), seconds)
 }
 
 // SeekTo sends a seek-to command to the video player.
@@ -433,7 +433,7 @@ func (vc *VideoCore) SeekTo(seconds float64) {
 	if !ok {
 		return
 	}
-	vc.sendPlayerEventTo(state.ClientId, string(ServerEventSeekTo), seconds)
+	vc.sendPlayerEventTo(state.ClientID, string(ServerEventSeekTo), seconds)
 }
 
 // SetFullscreen sends a set-fullscreen command to the video player.
@@ -442,7 +442,7 @@ func (vc *VideoCore) SetFullscreen(fullscreen bool) {
 	if !ok {
 		return
 	}
-	vc.sendPlayerEventTo(state.ClientId, string(ServerEventSetFullscreen), fullscreen)
+	vc.sendPlayerEventTo(state.ClientID, string(ServerEventSetFullscreen), fullscreen)
 }
 
 // SetPip sends a set-pip command to the video player.
@@ -451,7 +451,7 @@ func (vc *VideoCore) SetPip(pip bool) {
 	if !ok {
 		return
 	}
-	vc.sendPlayerEventTo(state.ClientId, string(ServerEventSetPip), pip)
+	vc.sendPlayerEventTo(state.ClientID, string(ServerEventSetPip), pip)
 }
 
 // SetSubtitleTrack sends a set-subtitle-track command to the video player.
@@ -460,7 +460,7 @@ func (vc *VideoCore) SetSubtitleTrack(trackNumber int) {
 	if !ok {
 		return
 	}
-	vc.sendPlayerEventTo(state.ClientId, string(ServerEventSetSubtitleTrack), trackNumber)
+	vc.sendPlayerEventTo(state.ClientID, string(ServerEventSetSubtitleTrack), trackNumber)
 }
 
 // AddSubtitleTrack sends an add-subtitle-track command to the video player.
@@ -469,7 +469,7 @@ func (vc *VideoCore) AddSubtitleTrack(track *mkvparser.TrackInfo) {
 	if !ok {
 		return
 	}
-	vc.sendPlayerEventTo(state.ClientId, string(ServerEventAddSubtitleTrack), track)
+	vc.sendPlayerEventTo(state.ClientID, string(ServerEventAddSubtitleTrack), track)
 }
 
 // AddSubtitleTrack sends an add-external-subtitle-track command to the video player.
@@ -478,7 +478,7 @@ func (vc *VideoCore) AddExternalSubtitleTrack(track *VideoSubtitleTrack) {
 	if !ok {
 		return
 	}
-	vc.sendPlayerEventTo(state.ClientId, string(ServerEventAddExternalSubtitleTrack), track)
+	vc.sendPlayerEventTo(state.ClientID, string(ServerEventAddExternalSubtitleTrack), track)
 }
 
 // SetMediaCaptionTrack sends a set-media-caption-track command to the video player.
@@ -487,7 +487,7 @@ func (vc *VideoCore) SetMediaCaptionTrack(trackIndex int) {
 	if !ok {
 		return
 	}
-	vc.sendPlayerEventTo(state.ClientId, string(ServerEventSetMediaCaptionTrack), trackIndex)
+	vc.sendPlayerEventTo(state.ClientID, string(ServerEventSetMediaCaptionTrack), trackIndex)
 }
 
 // AddMediaCaptionTrack sends an add-media-caption-track command to the video player.
@@ -496,7 +496,7 @@ func (vc *VideoCore) AddMediaCaptionTrack(track interface{}) {
 	if !ok {
 		return
 	}
-	vc.sendPlayerEventTo(state.ClientId, string(ServerEventAddMediaCaptionTrack), track)
+	vc.sendPlayerEventTo(state.ClientID, string(ServerEventAddMediaCaptionTrack), track)
 }
 
 // SetAudioTrack sends a set-audio-track command to the video player.
@@ -505,7 +505,7 @@ func (vc *VideoCore) SetAudioTrack(trackNumber int) {
 	if !ok {
 		return
 	}
-	vc.sendPlayerEventTo(state.ClientId, string(ServerEventSetAudioTrack), trackNumber)
+	vc.sendPlayerEventTo(state.ClientID, string(ServerEventSetAudioTrack), trackNumber)
 }
 
 func (vc *VideoCore) ShowMessage(message string, milliseconds int) {
@@ -513,7 +513,7 @@ func (vc *VideoCore) ShowMessage(message string, milliseconds int) {
 	if !ok {
 		return
 	}
-	vc.sendPlayerEventTo(state.ClientId, string(ServerEventShowMessage), struct {
+	vc.sendPlayerEventTo(state.ClientID, string(ServerEventShowMessage), struct {
 		Message  string `json:"message"`
 		Duration int    `json:"duration"`
 	}{
@@ -531,7 +531,7 @@ func (vc *VideoCore) Terminate() {
 	if !ok {
 		return
 	}
-	vc.sendPlayerEventTo(state.ClientId, string(ServerEventTerminate), nil)
+	vc.sendPlayerEventTo(state.ClientID, string(ServerEventTerminate), nil)
 	vc.clearPlayback()
 }
 
@@ -557,7 +557,7 @@ func (vc *VideoCore) SendGetFullscreen() {
 	if !ok {
 		return
 	}
-	vc.sendPlayerEventTo(state.ClientId, string(ServerEventGetFullscreen), nil)
+	vc.sendPlayerEventTo(state.ClientID, string(ServerEventGetFullscreen), nil)
 }
 
 // SendGetPip sends a get-pip request to the video player.
@@ -566,7 +566,7 @@ func (vc *VideoCore) SendGetPip() {
 	if !ok {
 		return
 	}
-	vc.sendPlayerEventTo(state.ClientId, string(ServerEventGetPip), nil)
+	vc.sendPlayerEventTo(state.ClientID, string(ServerEventGetPip), nil)
 }
 
 // SendGetAnime4K sends a get-anime-4k request to the video player.
@@ -575,7 +575,7 @@ func (vc *VideoCore) SendGetAnime4K() {
 	if !ok {
 		return
 	}
-	vc.sendPlayerEventTo(state.ClientId, string(ServerEventGetAnime4K), nil)
+	vc.sendPlayerEventTo(state.ClientID, string(ServerEventGetAnime4K), nil)
 }
 
 // SendGetSubtitleTrack sends a get-subtitle-track request to the video player.
@@ -584,7 +584,7 @@ func (vc *VideoCore) SendGetSubtitleTrack() {
 	if !ok {
 		return
 	}
-	vc.sendPlayerEventTo(state.ClientId, string(ServerEventGetSubtitleTrack), nil)
+	vc.sendPlayerEventTo(state.ClientID, string(ServerEventGetSubtitleTrack), nil)
 }
 
 // SendGetSubtitleTrackContent sends a get-subtitle-track-content request to the video player.
@@ -593,7 +593,7 @@ func (vc *VideoCore) SendGetSubtitleTrackContent() {
 	if !ok {
 		return
 	}
-	vc.sendPlayerEventTo(state.ClientId, string(ServerEventGetSubtitleTrackContent), nil)
+	vc.sendPlayerEventTo(state.ClientID, string(ServerEventGetSubtitleTrackContent), nil)
 }
 
 // SendGetAudioTrack sends a get-audio-track request to the video player.
@@ -602,7 +602,7 @@ func (vc *VideoCore) SendGetAudioTrack() {
 	if !ok {
 		return
 	}
-	vc.sendPlayerEventTo(state.ClientId, string(ServerEventGetAudioTrack), nil)
+	vc.sendPlayerEventTo(state.ClientID, string(ServerEventGetAudioTrack), nil)
 }
 
 // SendGetMediaCaptionTrack sends a get-media-caption-track request to the video player.
@@ -611,7 +611,7 @@ func (vc *VideoCore) SendGetMediaCaptionTrack() {
 	if !ok {
 		return
 	}
-	vc.sendPlayerEventTo(state.ClientId, string(ServerEventGetMediaCaptionTrack), nil)
+	vc.sendPlayerEventTo(state.ClientID, string(ServerEventGetMediaCaptionTrack), nil)
 }
 
 // SendGetPlaybackState sends a get-playback-state request to the video player.
@@ -620,7 +620,7 @@ func (vc *VideoCore) SendGetPlaybackState() {
 	if !ok {
 		return
 	}
-	vc.sendPlayerEventTo(state.ClientId, string(ServerEventGetPlaybackState), nil)
+	vc.sendPlayerEventTo(state.ClientID, string(ServerEventGetPlaybackState), nil)
 }
 
 // GetPlaylist sends a get-text-tracks request to the video player and returns the text tracks.
@@ -643,7 +643,7 @@ func (vc *VideoCore) GetTextTracks() (ret []*VideoTextTrack, ok bool) {
 		defer cancel()
 		<-time.After(5 * time.Second)
 	}(cancel)
-	vc.sendPlayerEventTo(state.ClientId, string(ServerEventGetTextTracks), nil)
+	vc.sendPlayerEventTo(state.ClientID, string(ServerEventGetTextTracks), nil)
 	<-done
 	return ret, ret != nil
 }
@@ -668,7 +668,7 @@ func (vc *VideoCore) PullStatus() (ret VideoStatusEvent, ok bool) {
 		defer cancel()
 		<-time.After(5 * time.Second)
 	}(cancel)
-	vc.sendPlayerEventTo(state.ClientId, string(ServerEventGetStatus), nil, true)
+	vc.sendPlayerEventTo(state.ClientID, string(ServerEventGetStatus), nil, true)
 	<-done
 	return ret, true
 }
@@ -697,7 +697,7 @@ func (vc *VideoCore) listenToClientEvents() {
 			if err := json.Unmarshal(marshaled, &playerEvent); err == nil {
 				// Validate that the event is from the current client
 				currentState, hasState := vc.GetPlaybackState()
-				if hasState && clientEvent.ClientID != "" && clientEvent.ClientID != currentState.ClientId {
+				if hasState && clientEvent.ClientID != "" && clientEvent.ClientID != currentState.ClientID {
 					continue
 				}
 
@@ -729,7 +729,7 @@ func (vc *VideoCore) listenToClientEvents() {
 						vc.playbackMkvEvents.Clear()
 						vc.setPlaybackStatus(&PlaybackStatus{
 							Id:          ps.PlaybackInfo.Id,
-							ClientId:    ps.ClientId,
+							ClientID:    ps.ClientID,
 							CurrentTime: payload.CurrentTime,
 							Duration:    payload.Duration,
 							Paused:      payload.Paused,
@@ -917,7 +917,7 @@ func (vc *VideoCore) listenToClientEvents() {
 							}
 							translated := vc.TranslateText(context.Background(), payload.Text)
 							// Send the result
-							vc.sendPlayerEventTo(state.ClientId, string(ServerEventTranslatedText), struct {
+							vc.sendPlayerEventTo(state.ClientID, string(ServerEventTranslatedText), struct {
 								Original   string `json:"original"`
 								Translated string `json:"translated"`
 							}{
@@ -964,8 +964,8 @@ func (vc *VideoCore) listenToClientEvents() {
 								payload.Label = payload.Label + " (translated)"
 								payload.Language = strings.ToLower(vc.GetTranslationTargetLanguage())
 								// Send the result
-								vc.logger.Debug().Str("clientId", state.ClientId).Int("length", len(*payload.Content)).Msgf("videocore: Sending translated subtitle track")
-								vc.sendPlayerEventTo(state.ClientId, string(ServerEventAddExternalSubtitleTrack), payload, true)
+								vc.logger.Debug().Str("clientID", state.ClientID).Int("length", len(*payload.Content)).Msgf("videocore: Sending translated subtitle track")
+								vc.sendPlayerEventTo(state.ClientID, string(ServerEventAddExternalSubtitleTrack), payload, true)
 							} else {
 								vc.logger.Error().Msgf("videocore: Failed to translate subtitle track")
 							}

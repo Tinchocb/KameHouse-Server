@@ -72,6 +72,18 @@ export const createUISlice: StateCreator<UIState & PlayerState, [], [], UIState>
     setBgMusicVolume: (volume) => set({ bgMusicVolume: volume }),
 })
 
+export interface PlaylistItem {
+    id: string | number
+    title: string
+    subtitle?: string
+    playableUrl: string
+    thumbnail?: string
+    mediaId: number
+    episodeNumber?: number
+    malId?: number | null
+    mediaFormat?: string | null
+}
+
 // --- Player Slice ---
 export interface PlayerState {
     playerVolume: number
@@ -108,6 +120,16 @@ export interface PlayerState {
     setMarathonMode: (enabled: boolean) => void
     tvMode: boolean
     setTvMode: (enabled: boolean) => void
+
+    playlistQueue: PlaylistItem[]
+    currentQueueIndex: number
+    activeQueuePlayItem: PlaylistItem | null
+    addToQueue: (item: PlaylistItem) => void
+    removeFromQueue: (index: number) => void
+    clearQueue: () => void
+    setCurrentQueueIndex: (index: number) => void
+    setActiveQueuePlayItem: (item: PlaylistItem | null) => void
+    playNext: (item: PlaylistItem) => void
 }
 
 export const createPlayerSlice: StateCreator<UIState & PlayerState, [], [], PlayerState> = (set) => ({
@@ -145,6 +167,59 @@ export const createPlayerSlice: StateCreator<UIState & PlayerState, [], [], Play
     setMarathonMode: (marathonMode) => set({ marathonMode }),
     tvMode: false,
     setTvMode: (tvMode) => set({ tvMode }),
+
+    playlistQueue: [],
+    currentQueueIndex: -1,
+    activeQueuePlayItem: null,
+    addToQueue: (item) => set((state) => {
+        const exists = state.playlistQueue.some(i => i.id === item.id && i.episodeNumber === item.episodeNumber);
+        if (exists) return {};
+        return { playlistQueue: [...state.playlistQueue, item] };
+    }),
+    removeFromQueue: (index) => set((state) => {
+        const nextQueue = state.playlistQueue.filter((_, i) => i !== index);
+        let nextIndex = state.currentQueueIndex;
+        if (index === state.currentQueueIndex) {
+            nextIndex = nextQueue.length > 0 ? Math.min(index, nextQueue.length - 1) : -1;
+        } else if (index < state.currentQueueIndex) {
+            nextIndex = state.currentQueueIndex - 1;
+        }
+
+        let nextPlayItem = state.activeQueuePlayItem;
+        if (nextIndex === -1) {
+            nextPlayItem = null;
+        } else if (index === state.currentQueueIndex || index < state.currentQueueIndex) {
+            nextPlayItem = nextQueue[nextIndex] || null;
+        }
+
+        return {
+            playlistQueue: nextQueue,
+            currentQueueIndex: nextIndex,
+            activeQueuePlayItem: nextPlayItem
+        };
+    }),
+    clearQueue: () => set({ playlistQueue: [], currentQueueIndex: -1, activeQueuePlayItem: null }),
+    setCurrentQueueIndex: (index) => set((state) => {
+        const item = state.playlistQueue[index] || null;
+        return { currentQueueIndex: index, activeQueuePlayItem: item };
+    }),
+    setActiveQueuePlayItem: (item) => set((state) => {
+        if (!item) {
+            return { activeQueuePlayItem: null, currentQueueIndex: -1 };
+        }
+        const idx = state.playlistQueue.findIndex(i => i.id === item.id && i.episodeNumber === item.episodeNumber);
+        return { activeQueuePlayItem: item, currentQueueIndex: idx };
+    }),
+    playNext: (item) => set((state) => {
+        const nextQueue = [...state.playlistQueue];
+        const existingIdx = nextQueue.findIndex(i => i.id === item.id && i.episodeNumber === item.episodeNumber);
+        if (existingIdx !== -1) {
+            nextQueue.splice(existingIdx, 1);
+        }
+        const insertIdx = state.currentQueueIndex + 1;
+        nextQueue.splice(insertIdx, 0, item);
+        return { playlistQueue: nextQueue };
+    }),
 })
 
 // --- Combined Store ---
@@ -177,6 +252,8 @@ export const useAppStore = create<UIState & PlayerState & ScannerState>()(
                 marathonMode: state.marathonMode,
                 playerVolume: state.playerVolume,
                 tvMode: state.tvMode,
+                playlistQueue: state.playlistQueue,
+                currentQueueIndex: state.currentQueueIndex,
             }),
         }
     )

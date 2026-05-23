@@ -1,10 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useState, useMemo, memo, useRef, useCallback, useEffect } from "react"
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion"
-import { Play, Clock, Star, ChevronDown, Check, Layers } from "lucide-react"
+import { Play, Clock, Star, ChevronDown, Check, Layers, ListPlus } from "lucide-react"
+import { useAppStore } from "@/lib/store"
 import { EmptyState } from "@/components/shared/empty-state"
 import { useGetLibraryCollection, fetchLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { useGetContinuityWatchHistory } from "@/api/hooks/continuity.hooks"
+import { fetchAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import type { Anime_LibraryCollectionEntry, Continuity_WatchHistoryItem } from "@/api/generated/types"
 import { cn } from "@/components/ui/core/styling"
 import { DeferredImage } from "@/components/shared/deferred-image"
@@ -440,16 +442,57 @@ const MovieCard = memo(function MovieCard({
                 {/* Bottom gradient — for play overlay */}
                 <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
 
-                {/* Play button */}
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                {/* Play & Add Queue buttons on hover */}
+                <div className="absolute inset-0 flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-all duration-300 z-30">
                     <motion.div
                         whileHover={{ scale: 1.12 }}
                         whileTap={{ scale: 0.94 }}
-                        className="w-12 h-12 rounded-full bg-white/15 backdrop-blur-md border border-white/30 flex items-center justify-center shadow-2xl"
+                        onClick={(e) => { e.stopPropagation(); handleCardClick(); }}
+                        className="w-12 h-12 rounded-full bg-white/15 backdrop-blur-md border border-white/30 flex items-center justify-center shadow-2xl cursor-pointer"
                         style={{ boxShadow: `0 0 30px ${eraConfig.glow}` }}
+                        title="Reproducir ahora"
                     >
                         <Play className="w-5 h-5 text-white fill-white ml-0.5" />
                     </motion.div>
+                    {hasLocalFiles && (
+                        <motion.div
+                            whileHover={{ scale: 1.12 }}
+                            whileTap={{ scale: 0.94 }}
+                            onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                    const fullEntry = await fetchAnimeEntry(String(entry.mediaId));
+                                    const localFile = fullEntry?.localFiles?.[0];
+                                    if (localFile && localFile.path) {
+                                        const epNum = localFile.parsedInfo?.episode || localFile.metadata?.episode || 1;
+                                        useAppStore.getState().addToQueue({
+                                            id: entry.mediaId!,
+                                            title: title,
+                                            playableUrl: localFile.path,
+                                            thumbnail: getHighResImage(movie.posterImage || ""),
+                                            mediaId: entry.mediaId!,
+                                            episodeNumber: Number(epNum),
+                                            malId: movie.idMal ?? null,
+                                            mediaFormat: movie.format ?? "MOVIE"
+                                        });
+                                        const { toast } = await import("sonner");
+                                        toast.success("Añadido a la cola de reproducción");
+                                    } else {
+                                        const { toast } = await import("sonner");
+                                        toast.error("No hay archivos locales disponibles para esta película.");
+                                    }
+                                } catch (err) {
+                                    console.error("Error fetching movie entry:", err);
+                                    const { toast } = await import("sonner");
+                                    toast.error("Error al obtener detalles del archivo.");
+                                }
+                            }}
+                            className="w-10 h-10 rounded-full bg-black/40 hover:bg-brand-orange backdrop-blur-md border border-white/10 hover:border-brand-orange/30 flex items-center justify-center shadow-2xl text-zinc-300 hover:text-white transition-colors duration-300 cursor-pointer"
+                            title="Añadir a la cola"
+                        >
+                            <ListPlus className="w-4 h-4" />
+                        </motion.div>
+                    )}
                 </div>
 
                 {/* Era accent line (bottom left corner) */}

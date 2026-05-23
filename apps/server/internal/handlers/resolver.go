@@ -20,21 +20,21 @@ import (
 // @route    /api/v1/resolver/streams [GET]
 //
 // Query parameters:
-//   - mediaId  (required) — Platform media ID (positive) or TMDB ID (negative)
+//   - mediaID  (required) — Platform media ID (positive) or TMDB ID (negative)
 //   - episode  (required) — 1-based episode number
 //   - kitsuId  (optional) — Kitsu anime ID; if absent, Torrentio is skipped
 func (h *Handler) HandleResolveStreams(c echo.Context) error {
 	// ── Parse required params ─────────────────────────────────────────────────
 
-	mediaIDStr := c.QueryParam("mediaId")
+	mediaIDStr := c.QueryParam("mediaID")
 	if mediaIDStr == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "query parameter 'mediaId' is required",
+			"error": "query parameter 'mediaID' is required",
 		})
 	}
 	if _, err := strconv.Atoi(mediaIDStr); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "'mediaId' must be a valid integer",
+			"error": "'mediaID' must be a valid integer",
 		})
 	}
 
@@ -65,7 +65,7 @@ func (h *Handler) HandleResolveStreams(c echo.Context) error {
 	unifiedResponse, err := resolver.ResolveUnifiedMedia(c.Request().Context(), mediaIDStr, episode, mediaType)
 	if err != nil {
 		h.App.Logger.Error().Err(err).
-			Str("mediaId", mediaIDStr).
+			Str("mediaID", mediaIDStr).
 			Int("episode", episode).
 			Msg("resolver: handler error")
 		return h.RespondWithError(c, err)

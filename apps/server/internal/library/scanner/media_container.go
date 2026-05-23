@@ -24,7 +24,7 @@ type (
 	// Before v3.5, it was used to flatten relations into NormalizedMedia.
 	MediaContainer struct {
 		NormalizedMedia       []*dto.NormalizedMedia
-		NormalizedTitlesCache map[int][]*NormalizedTitle // mediaId -> normalized titles
+		NormalizedTitlesCache map[int][]*NormalizedTitle // mediaID -> normalized titles
 		ScanLogger            *ScanLogger
 		// Inverted Index for fast candidate lookup
 		// Token -> media that contain this token in their title

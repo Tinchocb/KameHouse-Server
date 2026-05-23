@@ -218,7 +218,7 @@ func (p *TMDBProvider) GetClient() *tmdb.Client {
 
 // TmdbTVResultToNormalizedMedia converts a TMDB TV SearchResult to NormalizedMedia.
 func TmdbTVResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia {
-	tmdbId := r.ID
+	tmdbID := r.ID
 	title := &dto.NormalizedMediaTitle{}
 	if r.Name != "" {
 		title.English = &r.Name
@@ -270,10 +270,10 @@ func TmdbTVResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia {
 	}
 
 	return &dto.NormalizedMedia{
-		ID:               tmdbId,
-		TmdbId:           &tmdbId,
+		ID:               tmdbID,
+		TmdbID:           &tmdbID,
 		ExplicitProvider: "tmdb",
-		ExplicitID:       strconv.Itoa(tmdbId),
+		ExplicitID:       strconv.Itoa(tmdbID),
 		Title:            title,
 		Format:           format,
 		Year:             year,
@@ -288,7 +288,7 @@ func TmdbTVResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia {
 
 // TmdbTVDetailsToNormalizedMedia converts full TMDB TVDetails to NormalizedMedia.
 func TmdbTVDetailsToNormalizedMedia(r *tmdb.TVDetails) *dto.NormalizedMedia {
-	tmdbId := r.ID
+	tmdbID := r.ID
 	title := &dto.NormalizedMediaTitle{}
 	if r.Name != "" {
 		title.English = &r.Name
@@ -346,10 +346,10 @@ func TmdbTVDetailsToNormalizedMedia(r *tmdb.TVDetails) *dto.NormalizedMedia {
 	}
 
 	return &dto.NormalizedMedia{
-		ID:               tmdbId,
-		TmdbId:           &tmdbId,
+		ID:               tmdbID,
+		TmdbID:           &tmdbID,
 		ExplicitProvider: "tmdb",
-		ExplicitID:       strconv.Itoa(tmdbId),
+		ExplicitID:       strconv.Itoa(tmdbID),
 		Title:            title,
 		Format:           format,
 		Year:             year,
@@ -371,7 +371,7 @@ func TmdbTVDetailsToNormalizedMedia(r *tmdb.TVDetails) *dto.NormalizedMedia {
 
 // tmdbMovieResultToNormalizedMedia converts a TMDB Movie SearchResult to NormalizedMedia.
 func tmdbMovieResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia {
-	tmdbId := r.ID
+	tmdbID := r.ID
 	title := &dto.NormalizedMediaTitle{}
 	if r.Title != "" {
 		title.English = &r.Title
@@ -420,10 +420,10 @@ func tmdbMovieResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia 
 	}
 
 	return &dto.NormalizedMedia{
-		ID:               tmdbId + 1000000,
-		TmdbId:           &tmdbId,
+		ID:               tmdbID + 1000000,
+		TmdbID:           &tmdbID,
 		ExplicitProvider: "tmdb",
-		ExplicitID:       strconv.Itoa(tmdbId),
+		ExplicitID:       strconv.Itoa(tmdbID),
 		Title:            title,
 		Format:           format,
 		Year:             year,
@@ -437,7 +437,7 @@ func tmdbMovieResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia 
 
 // tmdbMovieDetailsToNormalizedMedia converts full TMDB MovieDetails to NormalizedMedia.
 func tmdbMovieDetailsToNormalizedMedia(r *tmdb.MovieDetails) *dto.NormalizedMedia {
-	tmdbId := r.ID
+	tmdbID := r.ID
 	title := &dto.NormalizedMediaTitle{}
 	if r.Title != "" {
 		title.English = &r.Title
@@ -492,10 +492,10 @@ func tmdbMovieDetailsToNormalizedMedia(r *tmdb.MovieDetails) *dto.NormalizedMedi
 	}
 
 	return &dto.NormalizedMedia{
-		ID:               tmdbId + 1000000,
-		TmdbId:           &tmdbId,
+		ID:               tmdbID + 1000000,
+		TmdbID:           &tmdbID,
 		ExplicitProvider: "tmdb",
-		ExplicitID:       strconv.Itoa(tmdbId),
+		ExplicitID:       strconv.Itoa(tmdbID),
 		Title:            title,
 		Format:           format,
 		Year:             year,

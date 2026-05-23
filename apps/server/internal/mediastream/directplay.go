@@ -17,7 +17,7 @@ import (
 // Direct
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func (r *Repository) ServeEchoFile(c echo.Context, rawFilePath string, clientId string, libraryPaths []string) error {
+func (r *Repository) ServeEchoFile(c echo.Context, rawFilePath string, clientID string, libraryPaths []string) error {
 	// Unescape the file path, ignore errors
 	filePath, _ := url.PathUnescape(rawFilePath)
 
@@ -52,7 +52,7 @@ func (r *Repository) ServeEchoFile(c echo.Context, rawFilePath string, clientId 
 	return c.File(filePath)
 }
 
-func (r *Repository) ServeEchoDirectPlay(c echo.Context, clientId string) error {
+func (r *Repository) ServeEchoDirectPlay(c echo.Context, clientID string) error {
 
 	if !r.IsInitialized() {
 		r.wsEventManager.SendEvent(events.MediastreamShutdownStream, "Module not initialized")

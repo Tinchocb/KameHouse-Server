@@ -108,12 +108,12 @@ export function ContinueWatchingCarousel() {
                                         if (isMovie) {
                                             navigate({
                                                 to: "/movies/$movieId",
-                                                params: { movieId: item.mediaId.toString() },
+                                                params: { movieId: item?.mediaId?.toString() || "0" },
                                             })
                                         } else {
                                             navigate({
                                                 to: "/series/$seriesId",
-                                                params: { seriesId: item.mediaId.toString() },
+                                                params: { seriesId: item?.mediaId?.toString() || "0" },
                                             })
                                         }
                                     }}

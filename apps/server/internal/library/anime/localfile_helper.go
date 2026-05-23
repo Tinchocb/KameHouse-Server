@@ -48,10 +48,10 @@ func GetMediaIdsFromLocalFiles(lfs []*dto.LocalFile) []int {
 }
 
 // GetLocalFilesFromMediaId returns all local files with the given media id.
-func GetLocalFilesFromMediaId(lfs []*dto.LocalFile, mId int) []*dto.LocalFile {
+func GetLocalFilesFromMediaId(lfs []*dto.LocalFile, mID int) []*dto.LocalFile {
 
 	return lo.Filter(lfs, func(item *dto.LocalFile, _ int) bool {
-		return item.MediaId == mId
+		return item.MediaID == mID
 	})
 
 }
@@ -59,7 +59,7 @@ func GetLocalFilesFromMediaId(lfs []*dto.LocalFile, mId int) []*dto.LocalFile {
 // GroupLocalFilesByMediaID returns a map of media id to local files.
 func GroupLocalFilesByMediaID(lfs []*dto.LocalFile) (groupedLfs map[int][]*dto.LocalFile) {
 	groupedLfs = lop.GroupBy(lfs, func(item *dto.LocalFile) int {
-		return item.MediaId
+		return item.MediaID
 	})
 
 	return

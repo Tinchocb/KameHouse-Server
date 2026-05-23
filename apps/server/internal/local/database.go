@@ -29,11 +29,11 @@ func (d *Database) UpdateSettings(settings *models.Settings) error {
 	return nil
 }
 
-func (d *Database) GetTrackedMedia(mediaId int, provider string) (bool, bool) {
+func (d *Database) GetTrackedMedia(mediaID int, provider string) (bool, bool) {
 	return false, true
 }
 
-func (d *Database) SetTrackedMedia(mediaId int, provider string, tracked bool) error {
+func (d *Database) SetTrackedMedia(mediaID int, provider string, tracked bool) error {
 	return nil
 }
 
@@ -73,7 +73,7 @@ func (d *Database) RemoveAnimeSnapshot(id uint) error {
 	return nil
 }
 
-func (d *Database) RemoveTrackedMedia(mediaId int, provider string) error {
+func (d *Database) RemoveTrackedMedia(mediaID int, provider string) error {
 	return nil
 }
 

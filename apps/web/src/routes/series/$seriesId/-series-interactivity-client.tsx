@@ -1,5 +1,8 @@
 import React, { useMemo } from "react"
 import { FaPlay, FaStar } from "react-icons/fa"
+import { ListPlus } from "lucide-react"
+import { useAppStore } from "@/lib/store"
+import { toast } from "sonner"
 import { Anime_Episode, Anime_LocalFile, Continuity_WatchHistoryItem } from "@/api/generated/types"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { cn } from "@/components/ui/core/styling"
@@ -60,6 +63,7 @@ interface EpisodeCardProps {
     variant?: "grid" | "horizontal"
     seriesTmdbId?: number | null
     priority?: boolean
+    mediaId?: number
 }
 
 const EpisodeCard = React.memo(function EpisodeCard({
@@ -74,6 +78,7 @@ const EpisodeCard = React.memo(function EpisodeCard({
     variant = "grid",
     seriesTmdbId,
     priority = false,
+    mediaId,
 }: EpisodeCardProps) {
     const thumb = episode?.episodeMetadata?.image || fallbackThumb
     
@@ -131,6 +136,24 @@ const EpisodeCard = React.memo(function EpisodeCard({
         e.stopPropagation()
         if (hasLocalFile && localFile && onPlay && episode) {
             onPlay(localFile, episode)
+        }
+    }
+
+    const handleAddToQueue = (e: React.MouseEvent) => {
+        e.stopPropagation()
+        if (hasLocalFile && localFile && episode) {
+            useAppStore.getState().addToQueue({
+                id: `${mediaId ?? 0}_${epNum}`,
+                title: baseTitle,
+                subtitle: `Episodio ${epNum}`,
+                playableUrl: localFile.path || "",
+                thumbnail: thumb,
+                mediaId: mediaId ?? 0,
+                episodeNumber: epNum,
+                malId: seriesTmdbId ?? null,
+                mediaFormat: "TV"
+            })
+            toast.success(`Añadido a la cola: E${epNum} - ${baseTitle}`)
         }
     }
 
@@ -325,6 +348,13 @@ const EpisodeCard = React.memo(function EpisodeCard({
                                 >
                                     Reproducir
                                 </button>
+                                <button 
+                                    onClick={handleAddToQueue}
+                                    className="flex items-center justify-center p-2.5 bg-white/5 border border-white/10 hover:border-brand-orange hover:bg-brand-orange/10 text-zinc-400 hover:text-brand-orange transition-colors rounded-md"
+                                    title="Agregar a la cola"
+                                >
+                                    <ListPlus className="w-3.5 h-3.5" />
+                                </button>
                                 {resolution && (
                                     <span className="text-[9px] font-black text-zinc-400 border border-white/10 px-2 py-1 uppercase tracking-widest rounded bg-zinc-900/20">
                                         {resolution}
@@ -493,6 +523,13 @@ const EpisodeCard = React.memo(function EpisodeCard({
                         
                         {hasLocalFile && (
                             <div className="flex items-center gap-2 shrink-0">
+                                <button 
+                                    onClick={handleAddToQueue}
+                                    className="w-5 h-5 rounded-md border border-white/10 hover:border-brand-orange hover:bg-brand-orange/10 flex items-center justify-center transition-all text-white/40 hover:text-brand-orange"
+                                    title="Agregar a la cola"
+                                >
+                                    <ListPlus className="w-3.5 h-3.5" />
+                                </button>
                                 {isWatched ? (
                                     <button 
                                         onClick={handleToggleWatched}

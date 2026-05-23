@@ -15,7 +15,7 @@ import (
 // ──────────────────────────────────────────────────────────────────────────────
 
 type PlaybackSyncPayload struct {
-	MediaId       int     `json:"mediaId"`
+	MediaID       int     `json:"mediaID"`
 	EpisodeNumber int     `json:"episodeNumber"`
 	Progress      float64 `json:"progress"`        // 0.0 - 1.0 percentage
 	CurrentTime   float64 `json:"currentTime"`     // seconds
@@ -35,8 +35,8 @@ type scrobbleEntry struct {
 	timestamp time.Time
 }
 
-func scrobbleKey(mediaId, episode int) string {
-	return fmt.Sprintf("%d:%d", mediaId, episode)
+func scrobbleKey(mediaID, episode int) string {
+	return fmt.Sprintf("%d:%d", mediaID, episode)
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -75,7 +75,7 @@ func (h *Handler) StartPlaybackHeartbeatSubscriber() {
 				continue
 			}
 
-			if payload.MediaId == 0 || payload.EpisodeNumber == 0 {
+			if payload.MediaID == 0 || payload.EpisodeNumber == 0 {
 				continue
 			}
 
@@ -102,7 +102,7 @@ func (h *Handler) processHeartbeat(p PlaybackHeartbeatPayload) {
 	// and the server would resolve it here instead of defaulting to 1.
 	userID := uint(1)
 
-	key := fmt.Sprintf("%d:%d:%d:%f", userID, p.MediaId, p.EpisodeNumber, p.Duration)
+	key := fmt.Sprintf("%d:%d:%d:%f", userID, p.MediaID, p.EpisodeNumber, p.Duration)
 	h.App.ContinuityManager.TelemetryManager.UpdateProgress(key, int(p.CurrentTime))
 
 	// Auto-scrobble at 85% completion (same logic as HTTP sync)
@@ -117,10 +117,10 @@ func (h *Handler) processHeartbeat(p PlaybackHeartbeatPayload) {
 			return true
 		})
 
-		sKey := scrobbleKey(p.MediaId, p.EpisodeNumber)
+		sKey := scrobbleKey(p.MediaID, p.EpisodeNumber)
 		if _, alreadyScrobbled := scrobbledEpisodes.LoadOrStore(sKey, scrobbleEntry{timestamp: now}); !alreadyScrobbled {
 			h.App.Logger.Info().
-				Int("mediaId", p.MediaId).
+				Int("mediaID", p.MediaID).
 				Int("episode", p.EpisodeNumber).
 				Float64("progress", p.Progress).
 				Msg("playback_sync: WS heartbeat auto-scrobbled episode (>= 85%)")
@@ -132,7 +132,7 @@ func (h *Handler) processHeartbeat(p PlaybackHeartbeatPayload) {
 // HTTP Handler
 // ──────────────────────────────────────────────────────────────────────────────
 
-// HandlePlaybackSync
+// HandlePlaybackSync ...
 //
 //	@summary receives playback telemetry from the frontend.
 //	@desc    Updates continuity watch history and, when progress >= 85%,
@@ -145,8 +145,8 @@ func (h *Handler) HandlePlaybackSync(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, NewErrorResponse(err))
 	}
 
-	if b.MediaId == 0 || b.EpisodeNumber == 0 {
-		return c.JSON(http.StatusBadRequest, NewErrorResponse(fmt.Errorf("mediaId and episodeNumber are required")))
+	if b.MediaID == 0 || b.EpisodeNumber == 0 {
+		return c.JSON(http.StatusBadRequest, NewErrorResponse(fmt.Errorf("mediaID and episodeNumber are required")))
 	}
 
 	// ─── 1. Update Continuity (watch position) ─────────────────────────
@@ -157,7 +157,7 @@ func (h *Handler) HandlePlaybackSync(c echo.Context) error {
 				userID = id
 			}
 		}
-		key := fmt.Sprintf("%d:%d:%d:%f", userID, b.MediaId, b.EpisodeNumber, b.Duration)
+		key := fmt.Sprintf("%d:%d:%d:%f", userID, b.MediaID, b.EpisodeNumber, b.Duration)
 		h.App.ContinuityManager.TelemetryManager.UpdateProgress(key, int(b.CurrentTime))
 	}
 
@@ -175,12 +175,12 @@ func (h *Handler) HandlePlaybackSync(c echo.Context) error {
 				return true
 			})
 
-			key := scrobbleKey(payload.MediaId, payload.EpisodeNumber)
+			key := scrobbleKey(payload.MediaID, payload.EpisodeNumber)
 
 			// Only scrobble once per episode per session
 			if _, alreadyScrobbled := scrobbledEpisodes.LoadOrStore(key, scrobbleEntry{timestamp: now}); !alreadyScrobbled {
 				h.App.Logger.Info().
-					Int("mediaId", payload.MediaId).
+					Int("mediaID", payload.MediaID).
 					Int("episode", payload.EpisodeNumber).
 					Float64("progress", payload.Progress).
 					Msg("playback sync: auto-scrobbling episode (>= 85%)")

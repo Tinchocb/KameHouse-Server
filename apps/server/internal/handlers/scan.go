@@ -16,7 +16,7 @@ import (
 
 var globalScanActive atomic.Bool
 
-// HandleScanLocalFiles
+// HandleScanLocalFiles ...
 //
 //	@summary scans the user's library.
 //	@desc This will scan the user's library.
@@ -197,7 +197,7 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 
 }
 
-// HandleGetScanStatus
+// HandleGetScanStatus ...
 //
 //	@summary returns the latest scan summary.
 //	@desc Returns metadata about the most recent library scan:
@@ -227,7 +227,7 @@ func (h *Handler) HandleGetScanStatus(c echo.Context) error {
 		"engine":      "Antigravity-v2",
 	})
 }
-// HandleGetUnlinkedFiles
+// HandleGetUnlinkedFiles ...
 //
 //	@summary returns all files the scanner failed to identify.
 //	@desc These are files stored as GhostAssociations in the database.
@@ -241,7 +241,7 @@ func (h *Handler) HandleGetUnlinkedFiles(c echo.Context) error {
 	return h.RespondWithData(c, associations)
 }
 
-// HandleResolveUnlinkedFile
+// HandleResolveUnlinkedFile ...
 //
 //	@summary manually links an unrecognized file to a media ID.
 //	@desc Persists the user's choice as a Ghost Association so the next scan picks it up.
@@ -249,16 +249,16 @@ func (h *Handler) HandleGetUnlinkedFiles(c echo.Context) error {
 func (h *Handler) HandleResolveUnlinkedFile(c echo.Context) error {
 	type body struct {
 		Path          string `json:"path"`
-		TargetMediaId int    `json:"targetMediaId"`
+		TargetMediaID int    `json:"targetMediaId"`
 	}
 	var b body
 	if err := c.Bind(&b); err != nil {
 		return h.RespondWithError(c, err)
 	}
-	if b.Path == "" || b.TargetMediaId == 0 {
+	if b.Path == "" || b.TargetMediaID == 0 {
 		return h.RespondWithError(c, errors.New("path and targetMediaId are required"))
 	}
-	if err := h.App.Database.ResolveGhostAssociation(b.Path, b.TargetMediaId); err != nil {
+	if err := h.App.Database.ResolveGhostAssociation(b.Path, b.TargetMediaID); err != nil {
 		return h.RespondWithError(c, err)
 	}
 	return h.RespondWithData(c, map[string]any{"ok": true})

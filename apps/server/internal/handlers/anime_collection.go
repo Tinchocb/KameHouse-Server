@@ -1,4 +1,4 @@
-﻿package handlers
+package handlers
 
 import (
 	"errors"
@@ -20,7 +20,7 @@ func ClearLibraryCollectionCache() {
 	libraryCollectionCache.Clear()
 }
 
-// HandleGetLibraryCollection
+// HandleGetLibraryCollection returns the main local anime collection.
 //
 //	@summary returns the main local anime anime collection.
 //	@desc This creates a new LibraryCollection struct and returns it.
@@ -79,7 +79,7 @@ func (h *Handler) HandleGetLibraryCollection(c echo.Context) error {
 
 var animeScheduleCache = result.NewCache[int, []*anime.ScheduleItem]()
 
-// HandleGetAnimeCollectionSchedule
+// HandleGetAnimeCollectionSchedule returns the anime collection schedule.
 //
 //	@summary returns anime collection schedule
 //	@desc This is used by the "Schedule" page to display the anime schedule.
@@ -114,7 +114,7 @@ func (h *Handler) HandleGetAnimeCollectionSchedule(c echo.Context) error {
 	return h.RespondWithData(c, ret)
 }
 
-// HandleAddUnknownMedia
+// HandleAddUnknownMedia adds the given media to the user's Platform planning collections.
 //
 //	@summary adds the given media to the user's Platform planning collections
 //	@desc Since media not found in the user's Platform collection are not displayed in the library, this route is used to add them.

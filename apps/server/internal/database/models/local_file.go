@@ -16,7 +16,7 @@ type LocalFile struct {
 	Locked         bool   `gorm:"column:locked" json:"locked"`
 	Ignored        bool   `gorm:"column:ignored" json:"ignored"`
 	LibraryMediaId uint   `gorm:"column:library_media_id;index" json:"libraryMediaId"`
-	MediaId        int    `gorm:"column:media_id;index" json:"mediaId"`
+	MediaID        int    `gorm:"column:media_id;index" json:"mediaID"`
 
 	// Metadata and technical info stored as JSON blocks for flexibility
 	ParsedData       json.RawMessage `gorm:"column:parsed_data;type:text" json:"parsedInfo"`

@@ -30,7 +30,7 @@ func (scn *Scanner) enrichMediaMetadata(ctx context.Context, libraryMediaIdMap m
 
 	// Collect TV show IDs to enrich (skip movies).
 	type enrichJob struct {
-		tmdbId    int
+		tmdbID    int
 		libId     uint
 	}
 	var jobs []enrichJob
@@ -43,7 +43,7 @@ func (scn *Scanner) enrichMediaMetadata(ctx context.Context, libraryMediaIdMap m
 			continue
 		}
 		seen[tmdbMediaId] = true
-		jobs = append(jobs, enrichJob{tmdbId: tmdbMediaId, libId: libId})
+		jobs = append(jobs, enrichJob{tmdbID: tmdbMediaId, libId: libId})
 	}
 
 	if len(jobs) == 0 {
@@ -79,7 +79,7 @@ func (scn *Scanner) enrichMediaMetadata(ctx context.Context, libraryMediaIdMap m
 				if ctx.Err() != nil {
 					return
 				}
-				result := scn.enrichSingleMedia(ctx, job.tmdbId, job.libId, provider, tagger, localFiles)
+				result := scn.enrichSingleMedia(ctx, job.tmdbID, job.libId, provider, tagger, localFiles)
 				resultCh <- result
 			}
 		}()
@@ -126,11 +126,11 @@ func (scn *Scanner) enrichSingleMedia(
 	tagger *metadata_provider.IntelligenceTagger,
 	localFiles []*dto.LocalFile,
 ) enrichWorkerResult {
-	scn.Logger.Info().Int("tmdbId", positiveTmdbId).Msg("scanner: Fetching enriched episode metadata")
+	scn.Logger.Info().Int("tmdbID", positiveTmdbId).Msg("scanner: Fetching enriched episode metadata")
 
 	animeMeta, err := provider.GetAnimeMetadata(positiveTmdbId)
 	if err != nil {
-		scn.Logger.Debug().Err(err).Int("tmdbId", positiveTmdbId).Msg("scanner: Enrichment skipped (provider error or missing API key)")
+		scn.Logger.Debug().Err(err).Int("tmdbID", positiveTmdbId).Msg("scanner: Enrichment skipped (provider error or missing API key)")
 		return enrichWorkerResult{}
 	}
 	if animeMeta == nil {
@@ -218,7 +218,7 @@ func (scn *Scanner) enrichSingleMedia(
 			var audioLangs []string
 			var subtitleLangs []string
 			for _, lf := range localFiles {
-				if lf.MediaId == positiveTmdbId && lf.Metadata != nil && lf.Metadata.Episode == ep.EpisodeNumber && lf.GetSeasonNumber() == ep.SeasonNumber {
+				if lf.MediaID == positiveTmdbId && lf.Metadata != nil && lf.Metadata.Episode == ep.EpisodeNumber && lf.GetSeasonNumber() == ep.SeasonNumber {
 					if lf.TechnicalInfo != nil {
 						for _, a := range lf.TechnicalInfo.AudioStreams {
 							if a.Language != "" {

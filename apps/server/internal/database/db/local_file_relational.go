@@ -156,7 +156,7 @@ func LocalFileDtoToModel(f *dto.LocalFile) *models.LocalFile {
 		Locked:         f.Locked,
 		Ignored:        f.Ignored,
 		LibraryMediaId: f.LibraryMediaId,
-		MediaId:        f.MediaId,
+		MediaID:        f.MediaID,
 		FileSize:       f.FileSize,
 		FileModTime:    f.FileModTime,
 	}
@@ -188,7 +188,7 @@ func LocalFileModelToDto(m *models.LocalFile) *dto.LocalFile {
 		Locked:         m.Locked,
 		Ignored:        m.Ignored,
 		LibraryMediaId: m.LibraryMediaId,
-		MediaId:        m.MediaId,
+		MediaID:        m.MediaID,
 		FileSize:       m.FileSize,
 		FileModTime:    m.FileModTime,
 	}

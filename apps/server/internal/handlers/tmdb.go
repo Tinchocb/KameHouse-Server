@@ -15,7 +15,7 @@ import (
 	"github.com/samber/lo"
 )
 
-// HandleTMDBSearch
+// HandleTMDBSearch ...
 //
 //	@summary search TMDB for anime/TV show metadata.
 //	@desc Searches TMDB for TV shows matching the query. Requires TMDB bearer token in the request body.
@@ -86,7 +86,7 @@ func (h *Handler) HandleTMDBSearch(c echo.Context) error {
 	return h.RespondWithData(c, combined)
 }
 
-// HandleTMDBGetDetails
+// HandleTMDBGetDetails ...
 //
 //	@summary get TMDB TV show details and alternative titles.
 //	@desc Returns detailed metadata and alternative titles for a TMDB TV show.
@@ -134,7 +134,7 @@ func (h *Handler) HandleTMDBGetDetails(c echo.Context) error {
 	})
 }
 
-// HandleTMDBAssign
+// HandleTMDBAssign ...
 //
 //	@summary manually assign a TMDB ID to a set of local files.
 //	@desc Fetches full TMDB details, upserts LibraryMedia, and updates the local files.
@@ -142,7 +142,7 @@ func (h *Handler) HandleTMDBGetDetails(c echo.Context) error {
 func (h *Handler) HandleTMDBAssign(c echo.Context) error {
 	type body struct {
 		Paths     []string `json:"paths"`
-		TmdbId    int      `json:"tmdbId"`
+		TmdbID    int      `json:"tmdbID"`
 		MediaType string   `json:"mediaType"` // "tv" or "movie"
 	}
 
@@ -154,8 +154,8 @@ func (h *Handler) HandleTMDBAssign(c echo.Context) error {
 	if len(b.Paths) == 0 {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "paths is required"})
 	}
-	if b.TmdbId == 0 {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "tmdbId is required"})
+	if b.TmdbID == 0 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "tmdbID is required"})
 	}
 
 	// 1. Fetch full details from TMDB
@@ -167,12 +167,12 @@ func (h *Handler) HandleTMDBAssign(c echo.Context) error {
 
 	provider := librarymetadata.NewTMDBProvider(token, h.App.Database, lang)
 	
-	lookUpId := strconv.Itoa(b.TmdbId)
+	lookUpID := strconv.Itoa(b.TmdbID)
 	if b.MediaType == "movie" {
-		lookUpId = strconv.Itoa(b.TmdbId + 1000000)
+		lookUpID = strconv.Itoa(b.TmdbID + 1000000)
 	}
 
-	nm, err := provider.GetMediaDetails(c.Request().Context(), lookUpId)
+	nm, err := provider.GetMediaDetails(c.Request().Context(), lookUpID)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
@@ -181,14 +181,14 @@ func (h *Handler) HandleTMDBAssign(c echo.Context) error {
 	if h.App.Metadata.FanArt != nil {
 		isMovie := b.MediaType == "movie"
 		if isMovie {
-			_ = h.App.Metadata.FanArt.EnrichMovie(c.Request().Context(), nm, b.TmdbId)
+			_ = h.App.Metadata.FanArt.EnrichMovie(c.Request().Context(), nm, b.TmdbID)
 		} else {
 			tvdbID := ""
 			if nm.TvdbId != nil {
 				tvdbID = strconv.Itoa(*nm.TvdbId)
 			}
 			if tvdbID == "" && h.App.Metadata.TMDBClient != nil {
-				extIds, err := h.App.Metadata.TMDBClient.GetTVExternalIDs(c.Request().Context(), b.TmdbId)
+				extIds, err := h.App.Metadata.TMDBClient.GetTVExternalIDs(c.Request().Context(), b.TmdbID)
 				if err == nil && extIds.TvdbID != "" {
 					tvdbID = extIds.TvdbID
 				}
@@ -202,7 +202,7 @@ func (h *Handler) HandleTMDBAssign(c echo.Context) error {
 	// 2. Map NormalizedMedia to LibraryMedia
 	libMedia := &models.LibraryMedia{
 		Type:        "ANIME",
-		TmdbId:      b.TmdbId,
+		TmdbID:      b.TmdbID,
 		Format:      string(lo.FromPtrOr(nm.Format, dto.MediaFormatTV)),
 		TotalEpisodes: lo.FromPtrOr(nm.Episodes, 0),
 		Year:        lo.FromPtrOr(nm.Year, 0),
@@ -236,7 +236,7 @@ func (h *Handler) HandleTMDBAssign(c echo.Context) error {
 	}
 
 	// 4. Update LocalFiles
-	lfs, lfsId, err := db.GetLocalFiles(h.App.Database)
+	lfs, lfsID, err := db.GetLocalFiles(h.App.Database)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
@@ -246,14 +246,14 @@ func (h *Handler) HandleTMDBAssign(c echo.Context) error {
 			return f.HasSamePath(path)
 		})
 		if found {
-			lf.MediaId = b.TmdbId
+			lf.MediaID = b.TmdbID
 			lf.LibraryMediaId = savedMedia.ID
 			lf.Locked = true   // Lock it to prevent scanner from changing it
 			lf.Ignored = false
 		}
 	}
 
-	_, err = db.SaveLocalFiles(h.App.Database, lfsId, lfs)
+	_, err = db.SaveLocalFiles(h.App.Database, lfsID, lfs)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}

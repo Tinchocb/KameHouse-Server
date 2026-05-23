@@ -31,9 +31,9 @@ func (m *MockWSEventManager) SendEvent(t string, payload interface{}) {
 	m.Logger.Trace().Any("payload", payload).Str("type", t).Msg("ws: Sent message")
 }
 
-func (m *MockWSEventManager) SendEventTo(clientId string, t string, payload interface{}, noLog ...bool) {
+func (m *MockWSEventManager) SendEventTo(clientID string, t string, payload interface{}, noLog ...bool) {
 	if len(noLog) == 0 || !noLog[0] {
-		m.Logger.Trace().Any("payload", payload).Str("type", t).Str("clientId", clientId).Msg("ws: Sent message to client")
+		m.Logger.Trace().Any("payload", payload).Str("type", t).Str("clientID", clientID).Msg("ws: Sent message to client")
 	}
 }
 

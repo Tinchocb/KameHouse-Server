@@ -400,6 +400,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                                     localFiles={entry.localFiles || []}
                                     sagas={sagas}
                                     seriesTmdbId={entry.media?.tmdbId}
+                                    mediaId={entry.media?.id}
                                     onPlay={handlePlayEpisode}
                                     onToggleWatched={handleToggleWatched}
                                     onUpdateProgress={handleUpdateProgress}

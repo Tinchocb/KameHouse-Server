@@ -4,7 +4,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// HandleLogin
+// HandleLogin logs in the user by saving the JWT token in the database.
 //
 //	@summary logs in the user by saving the JWT token in the database.
 //	@desc This is called when the JWT token is obtained after logging in with redirection on the client.
@@ -20,7 +20,7 @@ func (h *Handler) HandleLogin(c echo.Context) error {
 	return h.RespondWithData(c, status)
 }
 
-// HandleLogout
+// HandleLogout logs out the user by removing JWT token from the database.
 //
 //	@summary logs out the user by removing JWT token from the database.
 //	@route /api/v1/auth/logout [POST]

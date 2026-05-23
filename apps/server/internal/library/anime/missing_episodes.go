@@ -38,17 +38,17 @@ func NewMissingEpisodes(opts *NewMissingEpisodesOptions) *MissingEpisodes {
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 
-	for mId, lfs := range groupedLfs {
+	for mID, lfs := range groupedLfs {
 		wg.Add(1)
-		go func(mId int, lfs []*LocalFile) {
+		go func(mID int, lfs []*LocalFile) {
 			defer wg.Done()
 
-			media, err := db.GetLibraryMediaByID(opts.Database, uint(mId))
+			media, err := db.GetLibraryMediaByID(opts.Database, uint(mID))
 			if err != nil || media == nil {
 				return
 			}
 
-			listData, err := db.GetMediaEntryListData(opts.Database, uint(mId))
+			listData, err := db.GetMediaEntryListData(opts.Database, uint(mID))
 			status := "CURRENT"
 			progress := 0
 			if err == nil && listData != nil {
@@ -103,7 +103,7 @@ func NewMissingEpisodes(opts *NewMissingEpisodesOptions) *MissingEpisodes {
 			mu.Lock()
 			epsToDownload = append(epsToDownload, episodes)
 			mu.Unlock()
-		}(mId, lfs)
+		}(mID, lfs)
 	}
 	wg.Wait()
 

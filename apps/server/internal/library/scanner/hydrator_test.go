@@ -153,9 +153,9 @@ func TestFileHydrator_HydrateMetadata(t *testing.T) {
 			fh.HydrateMetadata(context.Background())
 
 			for _, lf := range fh.LocalFiles {
-				t.Logf("local file: %s, media id: %d, type: %s, episode: %d, aniDbEpisode: %s\n", lf.Name, lf.MediaId, lf.GetType(), lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
-				assert.NotNil(t, lf.MediaId, "expected media id to be set")
-				assert.Equal(t, tt.expectedMediaId, lf.MediaId, "expected media id %d, got %d", tt.expectedMediaId, lf.MediaId)
+				t.Logf("local file: %s, media id: %d, type: %s, episode: %d, aniDbEpisode: %s\n", lf.Name, lf.MediaID, lf.GetType(), lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
+				assert.NotNil(t, lf.MediaID, "expected media id to be set")
+				assert.Equal(t, tt.expectedMediaId, lf.MediaID, "expected media id %d, got %d", tt.expectedMediaId, lf.MediaID)
 				assert.Equal(t, tt.expectedType, lf.GetType(), "expected file type %s, got %s", tt.expectedType, lf.GetType())
 			}
 
@@ -194,7 +194,7 @@ func TestFileHydrator_applyHydrationRule(t *testing.T) {
 			},
 			localFile: &dto.LocalFile{
 				Name:    "episode_01.mkv",
-				MediaId: 123,
+				MediaID: 123,
 				Metadata: &dto.LocalFileMetadata{
 					Episode:      0,
 					AniDBEpisode: "",
@@ -227,7 +227,7 @@ func TestFileHydrator_applyHydrationRule(t *testing.T) {
 			},
 			localFile: &dto.LocalFile{
 				Name:    "Episode_03.mkv",
-				MediaId: 456,
+				MediaID: 456,
 				Metadata: &dto.LocalFileMetadata{
 					Episode:      0,
 					AniDBEpisode: "",
@@ -260,7 +260,7 @@ func TestFileHydrator_applyHydrationRule(t *testing.T) {
 			},
 			localFile: &dto.LocalFile{
 				Name:    "EP_12.mkv",
-				MediaId: 789,
+				MediaID: 789,
 				Metadata: &dto.LocalFileMetadata{
 					Episode:      0,
 					AniDBEpisode: "",
@@ -293,7 +293,7 @@ func TestFileHydrator_applyHydrationRule(t *testing.T) {
 			},
 			localFile: &dto.LocalFile{
 				Name:    "EP_12.mkv",
-				MediaId: 789,
+				MediaID: 789,
 				Metadata: &dto.LocalFileMetadata{
 					Episode:      0,
 					AniDBEpisode: "",
@@ -326,7 +326,7 @@ func TestFileHydrator_applyHydrationRule(t *testing.T) {
 			},
 			localFile: &dto.LocalFile{
 				Name:    "Season 2 Episode 5.mkv",
-				MediaId: 100,
+				MediaID: 100,
 				Metadata: &dto.LocalFileMetadata{
 					Episode:      0,
 					AniDBEpisode: "",
@@ -359,7 +359,7 @@ func TestFileHydrator_applyHydrationRule(t *testing.T) {
 			},
 			localFile: &dto.LocalFile{
 				Name:    "episode_01.mkv",
-				MediaId: 123,
+				MediaID: 123,
 				Metadata: &dto.LocalFileMetadata{
 					Episode:      0,
 					AniDBEpisode: "",
@@ -392,7 +392,7 @@ func TestFileHydrator_applyHydrationRule(t *testing.T) {
 			},
 			localFile: &dto.LocalFile{
 				Name:    "episode_01.mkv",
-				MediaId: 123,
+				MediaID: 123,
 				Metadata: &dto.LocalFileMetadata{
 					Episode:      0,
 					AniDBEpisode: "",
@@ -425,7 +425,7 @@ func TestFileHydrator_applyHydrationRule(t *testing.T) {
 			},
 			localFile: &dto.LocalFile{
 				Name:    "episode_01.mkv",
-				MediaId: 123,
+				MediaID: 123,
 				Metadata: &dto.LocalFileMetadata{
 					Episode:      0,
 					AniDBEpisode: "",
@@ -458,7 +458,7 @@ func TestFileHydrator_applyHydrationRule(t *testing.T) {
 			},
 			localFile: &dto.LocalFile{
 				Name:    "episode_01.mkv",
-				MediaId: 123,
+				MediaID: 123,
 				Metadata: &dto.LocalFileMetadata{
 					Episode:      0,
 					AniDBEpisode: "",
@@ -491,7 +491,7 @@ func TestFileHydrator_applyHydrationRule(t *testing.T) {
 			},
 			localFile: &dto.LocalFile{
 				Name:    "episode_01.mkv",
-				MediaId: 123,
+				MediaID: 123,
 				Metadata: &dto.LocalFileMetadata{
 					Episode:      0,
 					AniDBEpisode: "",
@@ -524,7 +524,7 @@ func TestFileHydrator_applyHydrationRule(t *testing.T) {
 			},
 			localFile: &dto.LocalFile{
 				Name:    "episode_01.mkv",
-				MediaId: 123,
+				MediaID: 123,
 				Metadata: &dto.LocalFileMetadata{
 					Episode:      0,
 					AniDBEpisode: "",
@@ -557,7 +557,7 @@ func TestFileHydrator_applyHydrationRule(t *testing.T) {
 			},
 			localFile: &dto.LocalFile{
 				Name:    "NC_OP.mkv",
-				MediaId: 456,
+				MediaID: 456,
 				Metadata: &dto.LocalFileMetadata{
 					Episode:      0,
 					AniDBEpisode: "",
@@ -590,7 +590,7 @@ func TestFileHydrator_applyHydrationRule(t *testing.T) {
 			},
 			localFile: &dto.LocalFile{
 				Name:    "test.mkv",
-				MediaId: 111,
+				MediaID: 111,
 				Metadata: &dto.LocalFileMetadata{
 					Episode:      0,
 					AniDBEpisode: "",
@@ -623,7 +623,7 @@ func TestFileHydrator_applyHydrationRule(t *testing.T) {
 			},
 			localFile: &dto.LocalFile{
 				Name:    "test.mkv",
-				MediaId: 333,
+				MediaID: 333,
 				Metadata: &dto.LocalFileMetadata{
 					Episode:      0,
 					AniDBEpisode: "",
@@ -663,7 +663,7 @@ func TestFileHydrator_applyHydrationRule(t *testing.T) {
 			},
 			localFile: &dto.LocalFile{
 				Name:    "episode_01.mkv",
-				MediaId: 444,
+				MediaID: 444,
 				Metadata: &dto.LocalFileMetadata{
 					Episode:      0,
 					AniDBEpisode: "",
@@ -815,7 +815,7 @@ func TestFileHydrator_applyHydrationRule_WithCalcExpressions(t *testing.T) {
 			},
 			localFile: &dto.LocalFile{
 				Name:    "Episode_12.mkv",
-				MediaId: 123,
+				MediaID: 123,
 				Metadata: &dto.LocalFileMetadata{
 					Episode:      0,
 					AniDBEpisode: "",
@@ -848,7 +848,7 @@ func TestFileHydrator_applyHydrationRule_WithCalcExpressions(t *testing.T) {
 			},
 			localFile: &dto.LocalFile{
 				Name:    "EP5.mkv",
-				MediaId: 456,
+				MediaID: 456,
 				Metadata: &dto.LocalFileMetadata{
 					Episode:      0,
 					AniDBEpisode: "",
@@ -881,7 +881,7 @@ func TestFileHydrator_applyHydrationRule_WithCalcExpressions(t *testing.T) {
 			},
 			localFile: &dto.LocalFile{
 				Name:    "S2E10.mkv",
-				MediaId: 789,
+				MediaID: 789,
 				Metadata: &dto.LocalFileMetadata{
 					Episode:      0,
 					AniDBEpisode: "",
@@ -914,7 +914,7 @@ func TestFileHydrator_applyHydrationRule_WithCalcExpressions(t *testing.T) {
 			},
 			localFile: &dto.LocalFile{
 				Name:    "test.mkv",
-				MediaId: 999,
+				MediaID: 999,
 				Metadata: &dto.LocalFileMetadata{
 					Episode:      0,
 					AniDBEpisode: "",
@@ -947,7 +947,7 @@ func TestFileHydrator_applyHydrationRule_WithCalcExpressions(t *testing.T) {
 			},
 			localFile: &dto.LocalFile{
 				Name:    "test.mkv",
-				MediaId: 999,
+				MediaID: 999,
 				Metadata: &dto.LocalFileMetadata{
 					Episode:      0,
 					AniDBEpisode: "",

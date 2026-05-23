@@ -54,16 +54,16 @@ func (mp *OfflineMetadataProvider) loadAnimeSnapshots() {
 	}
 
 	for _, snapshot := range animeSnapshots {
-		mp.animeSnapshots[snapshot.MediaId] = snapshot
+		mp.animeSnapshots[snapshot.MediaID] = snapshot
 	}
 }
 
-func (mp *OfflineMetadataProvider) GetAnimeMetadata(mId int) (*metadata.AnimeMetadata, error) {
-	if snapshot, ok := mp.animeSnapshots[mId]; ok {
+func (mp *OfflineMetadataProvider) GetAnimeMetadata(mID int) (*metadata.AnimeMetadata, error) {
+	if snapshot, ok := mp.animeSnapshots[mID]; ok {
 		localAnimeMetadata := snapshot.AnimeMetadata
 		for _, episode := range localAnimeMetadata.Episodes {
 			if imgUrl, ok := snapshot.EpisodeImagePaths[episode.Episode]; ok {
-				episode.Image = *FormatAssetUrl(mId, imgUrl)
+				episode.Image = *FormatAssetUrl(mID, imgUrl)
 			}
 		}
 

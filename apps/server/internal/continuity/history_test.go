@@ -40,9 +40,9 @@ func TestHistoryItems(t *testing.T) {
 	}
 
 	// Add items to the history
-	for _, mediaId := range mediaIds {
+	for _, mediaID := range mediaIds {
 		err = manager.UpdateWatchHistoryItem(&UpdateWatchHistoryItemOptions{
-			MediaId:       mediaId,
+			MediaID:       mediaID,
 			EpisodeNumber: 1,
 			CurrentTime:   10,
 			Duration:      100,
@@ -58,7 +58,7 @@ func TestHistoryItems(t *testing.T) {
 
 	// Update an item
 	err = manager.UpdateWatchHistoryItem(&UpdateWatchHistoryItemOptions{
-		MediaId:       mediaIds[0], // 1
+		MediaID:       mediaIds[0], // 1
 		EpisodeNumber: 2,
 		CurrentTime:   30,
 		Duration:      100,

@@ -18,6 +18,7 @@ interface SagaEpisodesSectionProps {
     onUpdateProgress?: (progress: number) => void
     continuityItem?: Continuity_WatchHistoryItem | null
     currentlyPlayingEpNumber?: number
+    mediaId?: number
 }
 
 export const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
@@ -31,7 +32,8 @@ export const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
     onToggleWatched,
     onUpdateProgress,
     continuityItem,
-    currentlyPlayingEpNumber
+    currentlyPlayingEpNumber,
+    mediaId
 }: SagaEpisodesSectionProps) {
     // Generate sagas or chunks of 20
     const generatedSagas = useMemo(() => {
@@ -79,13 +81,13 @@ export const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
 
 
     useEffect(() => {
-        if (generatedSagas.length > 0 && !generatedSagas.find(s => s.id.toString() === activeSagaId)) {
-            setActiveSagaId(generatedSagas[0].id.toString())
+        if (generatedSagas.length > 0 && !generatedSagas.find(s => s?.id?.toString() === activeSagaId)) {
+            setActiveSagaId(generatedSagas[0]?.id?.toString() || "")
         }
     }, [generatedSagas, activeSagaId])
 
     useEffect(() => {
-        const activeSaga = generatedSagas.find(s => s.id.toString() === activeSagaId)
+        const activeSaga = generatedSagas.find(s => s?.id?.toString() === activeSagaId)
         if (activeSaga?.subSagas && activeSaga.subSagas.length > 0) {
             const hasActive = activeSaga.subSagas.find(ss => ss.id === activeSubSagaId)
             if (!hasActive) {
@@ -97,17 +99,17 @@ export const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
     }, [generatedSagas, activeSagaId, activeSubSagaId])
 
     const activeMainSaga = useMemo(() => {
-        return generatedSagas.find(s => s.id.toString() === activeSagaId)
+        return generatedSagas.find(s => s?.id?.toString() === activeSagaId)
     }, [generatedSagas, activeSagaId])
 
     const visibleEpisodes = useMemo(() => {
         if (generatedSagas.length === 0) return episodes
-        const saga = generatedSagas.find(s => s.id.toString() === activeSagaId)
+        const saga = generatedSagas.find(s => s?.id?.toString() === activeSagaId)
         if (!saga) return episodes
         
         let start = saga.startEp
         let end = saga.endEp
-        let activeSagaIdStr = saga.id.toString()
+        let activeSagaIdStr = saga?.id?.toString() || ""
         
         if (activeSubSagaId && saga.subSagas) {
             const subSaga = saga.subSagas.find((ss) => ss.id === activeSubSagaId)
@@ -207,14 +209,14 @@ export const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
                             <div className="flex flex-col border border-white/[0.03] bg-zinc-950/40 backdrop-blur-xl rounded-2xl overflow-hidden shadow-2xl">
                                 {generatedSagas.map((saga, idx) => {
                                     const isLast = idx === generatedSagas.length - 1
-                                    const isActive = activeSagaId === saga.id.toString()
+                                    const isActive = activeSagaId === saga?.id?.toString()
                                     const hasSubSagas = saga.subSagas && saga.subSagas.length > 0
 
                                     return (
                                         <div key={saga.id} className="relative">
                                             <button
                                                 onClick={() => {
-                                                    setActiveSagaId(saga.id.toString())
+                                                    setActiveSagaId(saga?.id?.toString() || "")
                                                 }}
                                                 className={cn(
                                                     "group w-full flex items-center justify-between px-6 py-5 transition-all duration-300 relative",
@@ -428,6 +430,7 @@ export const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
                                                             isCurrentlyPlaying={currentlyPlayingEpNumber === epNum}
                                                             seriesTmdbId={seriesTmdbId}
                                                             priority={idx < 6}
+                                                            mediaId={mediaId}
                                                         />
                                                     </motion.div>
                                                 )

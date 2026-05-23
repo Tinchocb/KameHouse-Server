@@ -32,7 +32,7 @@ func (l *LibraryExplorer) SuperUpdateFiles(opts []*SuperUpdateFileOptions) error
 	wg := sync.WaitGroup{}
 	wg.Add(len(opts))
 
-	lfs, lfsId, err := db.GetLocalFiles(l.database)
+	lfs, lfsID, err := db.GetLocalFiles(l.database)
 	if err != nil {
 		return err
 	}
@@ -47,14 +47,14 @@ func (l *LibraryExplorer) SuperUpdateFiles(opts []*SuperUpdateFileOptions) error
 			sem <- struct{}{}
 			defer func() { <-sem }()
 			defer wg.Done()
-			_ = l.superUpdateFile(opt, lfs, lfsId, settings.GetLibrary().GetAllPaths())
+			_ = l.superUpdateFile(opt, lfs, lfsID, settings.GetLibrary().GetAllPaths())
 		}(opt)
 	}
 
 	wg.Wait()
 
 	// Save the local files
-	_, err = db.SaveLocalFiles(l.database, lfsId, lfs)
+	_, err = db.SaveLocalFiles(l.database, lfsID, lfs)
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ func (l *LibraryExplorer) SuperUpdateFiles(opts []*SuperUpdateFileOptions) error
 	return nil
 }
 
-func (l *LibraryExplorer) superUpdateFile(opt *SuperUpdateFileOptions, lfs []*dto.LocalFile, lfsId uint, libraryPaths []string) error {
+func (l *LibraryExplorer) superUpdateFile(opt *SuperUpdateFileOptions, lfs []*dto.LocalFile, lfsID uint, libraryPaths []string) error {
 
 	l.logger.Debug().
 		Any("path", opt.Path).

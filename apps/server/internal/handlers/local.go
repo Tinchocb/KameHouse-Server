@@ -7,7 +7,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// HandleSetOfflineMode
+// HandleSetOfflineMode ...
 //
 //	@summary sets the offline mode.
 //	@desc Returns true if the offline mode is active, false otherwise.
@@ -27,7 +27,7 @@ func (h *Handler) HandleSetOfflineMode(c echo.Context) error {
 	return h.RespondWithData(c, b.Enabled)
 }
 
-// HandleLocalGetTrackedMediaItems
+// HandleLocalGetTrackedMediaItems ...
 //
 //	@summary gets all tracked media.
 //	@route /api/v1/local/track [GET]
@@ -37,7 +37,7 @@ func (h *Handler) HandleLocalGetTrackedMediaItems(c echo.Context) error {
 	return h.RespondWithData(c, tracked)
 }
 
-// HandleLocalAddTrackedMedia
+// HandleLocalAddTrackedMedia ...
 //
 //	@summary adds one or multiple media to be tracked for offline sync.
 //	@route /api/v1/local/track [POST]
@@ -45,7 +45,7 @@ func (h *Handler) HandleLocalGetTrackedMediaItems(c echo.Context) error {
 func (h *Handler) HandleLocalAddTrackedMedia(c echo.Context) error {
 	type body struct {
 		Media []struct {
-			MediaId int    `json:"mediaId"`
+			MediaID int    `json:"mediaID"`
 			Type    string `json:"type"`
 		} `json:"media"`
 	}
@@ -59,7 +59,7 @@ func (h *Handler) HandleLocalAddTrackedMedia(c echo.Context) error {
 	for _, m := range b.Media {
 		switch m.Type {
 		case "anime":
-			err = h.App.LocalManager.TrackAnime(m.MediaId)
+			err = h.App.LocalManager.TrackAnime(m.MediaID)
 		
 		}
 	}
@@ -71,7 +71,7 @@ func (h *Handler) HandleLocalAddTrackedMedia(c echo.Context) error {
 	return h.RespondWithData(c, true)
 }
 
-// HandleLocalRemoveTrackedMedia
+// HandleLocalRemoveTrackedMedia ...
 //
 //	@summary remove media from being tracked for offline sync.
 //	@desc This will remove anime from being tracked for offline sync and delete any associated data.
@@ -79,7 +79,7 @@ func (h *Handler) HandleLocalAddTrackedMedia(c echo.Context) error {
 //	@returns bool
 func (h *Handler) HandleLocalRemoveTrackedMedia(c echo.Context) error {
 	type body struct {
-		MediaId int    `json:"mediaId"`
+		MediaID int    `json:"mediaID"`
 		Type    string `json:"type"`
 	}
 
@@ -91,7 +91,7 @@ func (h *Handler) HandleLocalRemoveTrackedMedia(c echo.Context) error {
 	var err error
 	switch b.Type {
 	case "anime":
-		err = h.App.LocalManager.UntrackAnime(b.MediaId)
+		err = h.App.LocalManager.UntrackAnime(b.MediaID)
 	
 	}
 
@@ -102,7 +102,7 @@ func (h *Handler) HandleLocalRemoveTrackedMedia(c echo.Context) error {
 	return h.RespondWithData(c, true)
 }
 
-// HandleLocalGetIsMediaTracked
+// HandleLocalGetIsMediaTracked ...
 //
 //	@summary checks if media is being tracked for offline sync.
 //	@route /api/v1/local/track/{id}/{type} [GET]
@@ -121,7 +121,7 @@ func (h *Handler) HandleLocalGetIsMediaTracked(c echo.Context) error {
 	return h.RespondWithData(c, tracked)
 }
 
-// HandleLocalSyncData
+// HandleLocalSyncData ...
 //
 //	@summary syncs local data with Platform.
 //	@route /api/v1/local/local [POST]
@@ -148,7 +148,7 @@ func (h *Handler) HandleLocalSyncData(c echo.Context) error {
 	return h.RespondWithData(c, true)
 }
 
-// HandleLocalGetSyncQueueState
+// HandleLocalGetSyncQueueState ...
 //
 //	@summary gets the current sync queue state.
 //	@desc This will return the list of media that are currently queued for syncing.
@@ -158,7 +158,7 @@ func (h *Handler) HandleLocalGetSyncQueueState(c echo.Context) error {
 	return h.RespondWithData(c, h.App.LocalManager.GetSyncer().GetQueueState())
 }
 
-// HandleLocalSyncPlatformData
+// HandleLocalSyncPlatformData ...
 //
 //	@summary syncs Platform data with local.
 //	@route /api/v1/local/Platform [POST]
@@ -171,7 +171,7 @@ func (h *Handler) HandleLocalSyncPlatformData(c echo.Context) error {
 	return h.RespondWithData(c, true)
 }
 
-// HandleLocalSetHasLocalChanges
+// HandleLocalSetHasLocalChanges ...
 //
 //	@summary sets the flag to determine if there are local changes that need to be synced with Platform.
 //	@route /api/v1/local/updated [POST]
@@ -190,7 +190,7 @@ func (h *Handler) HandleLocalSetHasLocalChanges(c echo.Context) error {
 	return h.RespondWithData(c, true)
 }
 
-// HandleLocalGetHasLocalChanges
+// HandleLocalGetHasLocalChanges ...
 //
 //	@summary gets the flag to determine if there are local changes that need to be synced with Platform.
 //	@route /api/v1/local/updated [GET]
@@ -200,7 +200,7 @@ func (h *Handler) HandleLocalGetHasLocalChanges(c echo.Context) error {
 	return h.RespondWithData(c, updated)
 }
 
-// HandleLocalGetLocalStorageSize
+// HandleLocalGetLocalStorageSize ...
 //
 //	@summary gets the size of the local storage in a human-readable format.
 //	@route /api/v1/local/storage/size [GET]
@@ -210,7 +210,7 @@ func (h *Handler) HandleLocalGetLocalStorageSize(c echo.Context) error {
 	return h.RespondWithData(c, util.Bytes(uint64(size)))
 }
 
-// HandleLocalSyncSimulatedDataToPlatform
+// HandleLocalSyncSimulatedDataToPlatform ...
 //
 //	@summary syncs the simulated data to Platform.
 //	@route /api/v1/local/sync-simulated-to-Platform [POST]

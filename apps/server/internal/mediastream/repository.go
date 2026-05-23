@@ -134,7 +134,7 @@ func (r *Repository) TranscoderIsInitialized() bool {
 	return r.IsInitialized() && r.transcoder.IsPresent()
 }
 
-func (r *Repository) RequestTranscodeStream(filepath string, clientId string) (ret *MediaContainer, err error) {
+func (r *Repository) RequestTranscodeStream(filepath string, clientID string) (ret *MediaContainer, err error) {
 	r.reqMu.Lock()
 	defer r.reqMu.Unlock()
 
@@ -150,7 +150,7 @@ func (r *Repository) RequestTranscodeStream(filepath string, clientId string) (r
 		}
 	}
 
-	ret, err = r.playbackManager.RequestPlayback(filepath, StreamTypeTranscode, clientId)
+	ret, err = r.playbackManager.RequestPlayback(filepath, StreamTypeTranscode, clientID)
 
 	return
 }
@@ -171,7 +171,7 @@ func (r *Repository) RequestPreloadTranscodeStream(filepath string) (err error) 
 // Direct Play
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func (r *Repository) RequestDirectPlay(filepath string, clientId string) (ret *MediaContainer, err error) {
+func (r *Repository) RequestDirectPlay(filepath string, clientID string) (ret *MediaContainer, err error) {
 	r.reqMu.Lock()
 	defer r.reqMu.Unlock()
 
@@ -181,7 +181,7 @@ func (r *Repository) RequestDirectPlay(filepath string, clientId string) (ret *M
 		return nil, errors.New("module not initialized")
 	}
 
-	ret, err = r.playbackManager.RequestPlayback(filepath, StreamTypeDirect, clientId)
+	ret, err = r.playbackManager.RequestPlayback(filepath, StreamTypeDirect, clientID)
 
 	return
 }
@@ -202,7 +202,7 @@ func (r *Repository) RequestPreloadDirectPlay(filepath string) (err error) {
 // Optimized Play
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func (r *Repository) RequestOptimizedStream(filepath string, clientId string) (ret *MediaContainer, err error) {
+func (r *Repository) RequestOptimizedStream(filepath string, clientID string) (ret *MediaContainer, err error) {
 	r.reqMu.Lock()
 	defer r.reqMu.Unlock()
 
@@ -212,7 +212,7 @@ func (r *Repository) RequestOptimizedStream(filepath string, clientId string) (r
 		return nil, errors.New("module not initialized")
 	}
 
-	ret, err = r.playbackManager.RequestPlayback(filepath, StreamTypeOptimized, clientId)
+	ret, err = r.playbackManager.RequestPlayback(filepath, StreamTypeOptimized, clientID)
 
 	return
 }

@@ -75,11 +75,11 @@ func (r *UnifiedResolver) ResolveUnifiedMedia(ctx context.Context, mediaID strin
 	if id < 0 {
 		var libMedia *models.LibraryMedia
 		var err error
-		tmdbId := -id
-		if tmdbId >= 1_000_000 {
-			libMedia, err = db.GetLibraryMediaByTmdbIdAndType(r.db, tmdbId-1_000_000, "MOVIE")
+		tmdbID := -id
+		if tmdbID >= 1_000_000 {
+			libMedia, err = db.GetLibraryMediaByTmdbIdAndType(r.db, tmdbID-1_000_000, "MOVIE")
 		} else {
-			libMedia, err = db.GetLibraryMediaByTmdbIdAndType(r.db, tmdbId, "SHOW")
+			libMedia, err = db.GetLibraryMediaByTmdbIdAndType(r.db, tmdbID, "SHOW")
 		}
 		if err == nil && libMedia != nil {
 			switch {
@@ -122,7 +122,7 @@ func (r *UnifiedResolver) getLocalSources(mediaID int, episode int) []MediaSourc
 
 	var sources []MediaSource
 	for _, lf := range lfs {
-		if lf == nil || lf.MediaId != mediaID || lf.Metadata == nil || lf.Metadata.Episode != episode {
+		if lf == nil || lf.MediaID != mediaID || lf.Metadata == nil || lf.Metadata.Episode != episode {
 			continue
 		}
 		quality := inferQuality(lf.Path)

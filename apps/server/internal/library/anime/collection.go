@@ -66,7 +66,7 @@ type (
 	// It is a slimmed down version of Entry. It holds the media, media id, library data, and list data.
 	LibraryCollectionEntry struct {
 		Media                  *models.LibraryMedia    `json:"media"`
-		MediaId                int                     `json:"mediaId"`
+		MediaID                int                     `json:"mediaID"`
 		Episode                *models.LibraryEpisode  `json:"episode,omitempty"` // For episode-specific swimlanes
 		AvailabilityType       string                  `json:"availabilityType"`            // FULL_LOCAL, HYBRID, ONLY_ONLINE
 		EntryLibraryData       *EntryLibraryData       `json:"libraryData"`  // Library data
@@ -85,7 +85,7 @@ type (
 	// UnknownGroup holds the data for a group of local files whose media is not in the user's platform collection.
 	// The client will use this data to suggest media to the user, so they can add it to their platform collection.
 	UnknownGroup struct {
-		MediaId    int          `json:"mediaId"`
+		MediaID    int          `json:"mediaID"`
 		LocalFiles []*LocalFile `json:"localFiles"`
 	}
 )
@@ -121,7 +121,7 @@ func NewLibraryCollection(ctx context.Context, opts *NewLibraryCollectionOptions
 	)
 
 	lc.UnmatchedLocalFiles = lo.Filter(opts.LocalFiles, func(lf *LocalFile, index int) bool {
-		return lf.MediaId == 0 && !lf.Ignored
+		return lf.MediaID == 0 && !lf.Ignored
 	})
 
 	lc.IgnoredLocalFiles = lo.Filter(opts.LocalFiles, func(lf *LocalFile, index int) bool {
@@ -161,14 +161,14 @@ func (lc *LibraryCollection) hydrateCollectionLists(
 		opts.Database.Logger.Warn().Msg("anime/collection: No media IDs found from local files!")
 	}
 
-	// Build a mapping from MediaId â†’ LibraryMediaId using local files.
+	// Build a mapping from MediaID â†’ LibraryMediaId using local files.
 	// This is needed because for TMDB media, the DB primary key
-	// (LibraryMediaId) might differ from the external MediaId.
+	// (LibraryMediaId) might differ from the external MediaID.
 	mediaIdToLibraryMediaId := make(map[int]uint)
 	for _, lf := range localFiles {
-		if lf.MediaId != 0 && lf.LibraryMediaId != 0 {
-			if _, exists := mediaIdToLibraryMediaId[lf.MediaId]; !exists {
-				mediaIdToLibraryMediaId[lf.MediaId] = lf.LibraryMediaId
+		if lf.MediaID != 0 && lf.LibraryMediaId != 0 {
+			if _, exists := mediaIdToLibraryMediaId[lf.MediaID]; !exists {
+				mediaIdToLibraryMediaId[lf.MediaID] = lf.LibraryMediaId
 			}
 		}
 	}
@@ -185,7 +185,7 @@ func (lc *LibraryCollection) hydrateCollectionLists(
 		var listData *models.MediaEntryListData
 		var lookupId uint
 
-		// 1. First, try looking up by MediaId directly.
+		// 1. First, try looking up by MediaID directly.
 		// If id >= 1_000_000, it's a TMDB movie ID with offset.
 		// We should look it up by the tmdb_id column.
 		if id >= 1_000_000 {
@@ -228,7 +228,7 @@ func (lc *LibraryCollection) hydrateCollectionLists(
 		if media != nil {
 			mediaMap[id] = media
 		} else {
-			opts.Database.Logger.Debug().Int("mediaId", id).Msg("anime/collection: Failed to hydrate media entry")
+			opts.Database.Logger.Debug().Int("mediaID", id).Msg("anime/collection: Failed to hydrate media entry")
 		}
 
 		// Look up list data using the same ID that successfully found the media
@@ -276,7 +276,7 @@ func (lc *LibraryCollection) hydrateCollectionLists(
 
 		libraryData, _ := NewEntryLibraryData(&NewEntryLibraryDataOptions{
 			EntryLocalFiles: entryLfs,
-			MediaId:         id,
+			MediaID:         id,
 			CurrentProgress: listData.Progress,
 		})
 
@@ -290,7 +290,7 @@ func (lc *LibraryCollection) hydrateCollectionLists(
 		}
 
 		lce := &LibraryCollectionEntry{
-			MediaId:          id,
+			MediaID:          id,
 			Media:            media,
 			AvailabilityType: availabilityType,
 			EntryLibraryData: libraryData,
@@ -347,7 +347,7 @@ func (lc *LibraryCollection) hydrateCollectionLists(
 	lc.UnknownGroups = make([]*UnknownGroup, 0)
 	for _, id := range unknownIds {
 		lc.UnknownGroups = append(lc.UnknownGroups, &UnknownGroup{
-			MediaId:    id,
+			MediaID:    id,
 			LocalFiles: groupedLfs[id],
 		})
 	}
@@ -410,15 +410,15 @@ func (lc *LibraryCollection) hydrateContinueWatchingList(
 	// Get media ids from current list
 	mIds := make([]int, len(current.Entries))
 	for i, entry := range current.Entries {
-		mIds[i] = entry.MediaId
+		mIds[i] = entry.MediaID
 	}
 
 	// Create a new Entry for each media id
 	mEntryPool := pool.NewWithResults[*Entry]()
-	for _, mId := range mIds {
+	for _, mID := range mIds {
 		mEntryPool.Go(func() *Entry {
 			me, _ := NewEntry(ctx, &NewEntryOptions{
-				MediaId:             mId,
+				MediaID:             mID,
 				LocalFiles:          localFiles,
 				Database:            database,
 				PlatformRef:         platformRef,

@@ -54,7 +54,7 @@ type SmartMetadataResult struct {
 
 // FillerChecker is satisfied by *fillermanager.FillerManager.
 type FillerChecker interface {
-	IsEpisodeFiller(mediaId int, episodeNumber int) bool
+	IsEpisodeFiller(mediaID int, episodeNumber int) bool
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -370,13 +370,13 @@ func (s *IntelligenceService) GetContinueWatching(ctx context.Context, userID ui
 
 	fileMap := make(map[int]map[int]bool)
 	for _, lf := range allLocalFiles {
-		if lf.MediaId == 0 {
+		if lf.MediaID == 0 {
 			continue
 		}
-		if _, ok := fileMap[lf.MediaId]; !ok {
-			fileMap[lf.MediaId] = make(map[int]bool)
+		if _, ok := fileMap[lf.MediaID]; !ok {
+			fileMap[lf.MediaID] = make(map[int]bool)
 		}
-		fileMap[lf.MediaId][lf.Metadata.Episode] = true
+		fileMap[lf.MediaID][lf.Metadata.Episode] = true
 	}
 
 	// Extract unique media IDs
@@ -592,7 +592,7 @@ func (s *IntelligenceService) buildIntelligenceLane(id, title string) *CuratedSw
 		}
 		lane.Entries = append(lane.Entries, &LibraryCollectionEntry{
 			Media:            m,
-			MediaId:          int(m.ID),
+			MediaID:          int(m.ID),
 			AvailabilityType: "HYBRID",
 		})
 	}
@@ -632,7 +632,7 @@ func (s *IntelligenceService) buildEpisodeTagLane(id, title, tag string) *Curate
 
 		// Attempt to resolve LibraryEpisode
 		// Since we have lf.Metadata.Episode inside parsed info, we need a reliable way to map it.
-		// LocalFile has MediaId, but to find LibraryEpisode we need LibraryMediaID and EpisodeNumber.
+		// LocalFile has MediaID, but to find LibraryEpisode we need LibraryMediaID and EpisodeNumber.
 		
 		// To safely extract episode number from lf, we can use the TechnicalInfo or ParsedData.
 		// However, a simpler query is to match by name or by scanning all episodes for this media.
@@ -672,7 +672,7 @@ func (s *IntelligenceService) buildEpisodeTagLane(id, title, tag string) *Curate
 
 		lane.Entries = append(lane.Entries, &LibraryCollectionEntry{
 			Media:            &media,
-			MediaId:          int(media.ID),
+			MediaID:          int(media.ID),
 			Episode:          &episode,
 			AvailabilityType: "FULL_LOCAL",
 		})
@@ -767,7 +767,7 @@ func (s *IntelligenceService) buildEpisodeSwimlaneByTag(id, title, tag string) *
 		added[ep.ID] = true
 		lane.Entries = append(lane.Entries, &LibraryCollectionEntry{
 			Media:            media,
-			MediaId:          int(media.ID),
+			MediaID:          int(media.ID),
 			Episode:          ep,
 			AvailabilityType: "FULL_LOCAL",
 		})
@@ -840,7 +840,7 @@ func (s *IntelligenceService) buildEpisodeSwimlaneByName(id, name string) *Curat
 		added[ep.ID] = true
 		lane.Entries = append(lane.Entries, &LibraryCollectionEntry{
 			Media:            media,
-			MediaId:          int(media.ID),
+			MediaID:          int(media.ID),
 			Episode:          ep,
 			AvailabilityType: "FULL_LOCAL",
 		})
@@ -877,7 +877,7 @@ func (s *IntelligenceService) buildLocalLibraryLane() *CuratedSwimlane {
 		}
 		lane.Entries = append(lane.Entries, &LibraryCollectionEntry{
 			Media:            m,
-			MediaId:          int(m.ID),
+			MediaID:          int(m.ID),
 			AvailabilityType: "FULL_LOCAL",
 		})
 	}
@@ -911,7 +911,7 @@ func (s *IntelligenceService) buildEpicMomentsLane() *CuratedSwimlane {
 		}
 		lane.Entries = append(lane.Entries, &LibraryCollectionEntry{
 			Media:            m,
-			MediaId:          int(m.ID),
+			MediaID:          int(m.ID),
 			AvailabilityType: "HYBRID",
 		})
 	}
@@ -945,7 +945,7 @@ func (s *IntelligenceService) buildEssentialCinemaLane() *CuratedSwimlane {
 		}
 		lane.Entries = append(lane.Entries, &LibraryCollectionEntry{
 			Media:            m,
-			MediaId:          int(m.ID),
+			MediaID:          int(m.ID),
 			AvailabilityType: "FULL_LOCAL",
 		})
 	}
@@ -980,7 +980,7 @@ func (s *IntelligenceService) buildTrendingLane() *CuratedSwimlane {
 		}
 		lane.Entries = append(lane.Entries, &LibraryCollectionEntry{
 			Media:            m,
-			MediaId:          int(m.ID),
+			MediaID:          int(m.ID),
 			AvailabilityType: "FULL_LOCAL",
 		})
 	}

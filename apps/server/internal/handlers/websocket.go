@@ -20,23 +20,29 @@ var allowedWSOrigins = map[string]bool{
 	"http://127.0.0.1":       true,
 }
 
-var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool {
-		origin := r.Header.Get("Origin")
-		if origin == "" {
-			// No origin header - same-origin request, allow it
-			return true
-		}
-		// Only allow explicitly whitelisted origins
-		return allowedWSOrigins[origin]
-	},
-}
-
 // webSocketEventHandler creates a new websocket handler for real-time event communication.
 // The route is registered BEFORE the auth middleware group so the HTTP→WS upgrade
 // is never blocked by a missing Authorization header (browsers can't send one during WS connect).
 // Clients that need auth send their token via ?token=<value> as a query parameter instead.
 func (h *Handler) webSocketEventHandler(c echo.Context) error {
+	var upgrader = websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool {
+			origin := r.Header.Get("Origin")
+			if origin == "" {
+				// No origin header - same-origin request, allow it
+				return true
+			}
+			// Allow if matches any config CORS origins
+			for _, o := range h.App.Config.Server.CorsOrigins {
+				if o == origin || o == "*" {
+					return true
+				}
+			}
+			// Fallback to static allowed origins
+			return allowedWSOrigins[origin]
+		},
+	}
+
 	ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
 		return err

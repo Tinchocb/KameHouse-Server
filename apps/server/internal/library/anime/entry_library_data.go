@@ -16,7 +16,7 @@ type (
 
 	NewEntryLibraryDataOptions struct {
 		EntryLocalFiles []*LocalFile
-		MediaId         int
+		MediaID         int
 		CurrentProgress int
 	}
 )
@@ -38,7 +38,7 @@ func NewEntryLibraryData(opts *NewEntryLibraryDataOptions) (ret *EntryLibraryDat
 	ok = true
 
 	lfw := NewLocalFileWrapper(opts.EntryLocalFiles)
-	lfwe, ok := lfw.GetLocalEntryById(opts.MediaId)
+	lfwe, ok := lfw.GetLocalEntryById(opts.MediaID)
 	if !ok {
 		return ret, true
 	}

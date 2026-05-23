@@ -7,7 +7,7 @@ import (
 // PlaybackHeartbeatPayload is the payload sent by the frontend every 5 seconds.
 type PlaybackHeartbeatPayload struct {
 	EventType     string  `json:"eventType"`
-	MediaId       int     `json:"mediaId"`
+	MediaID       int     `json:"mediaID"`
 	EpisodeNumber int     `json:"episodeNumber"`
 	CurrentTime   float64 `json:"currentTime"`
 	Duration      float64 `json:"duration"`
@@ -24,8 +24,8 @@ func (h *Handler) HandleClientEvents(event *events.WebsocketClientEvent) {
 				heartbeat := PlaybackHeartbeatPayload{
 					EventType: events.PlaybackHeartbeatProgress,
 				}
-				if v, ok := payload["mediaId"].(float64); ok {
-					heartbeat.MediaId = int(v)
+				if v, ok := payload["mediaID"].(float64); ok {
+					heartbeat.MediaID = int(v)
 				}
 				if v, ok := payload["episodeNumber"].(float64); ok {
 					heartbeat.EpisodeNumber = int(v)

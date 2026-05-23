@@ -34,12 +34,12 @@ type MatchingConfig struct {
 //	Example:
 //		{
 //			"pattern": "(?i)(.*)/(Mob Psycho)/(Season 1)"
-//			"mediaId": 12345
+//			"mediaID": 12345
 //		}
 type MatchingRule struct {
 	Pattern string `json:"pattern"`
 	// The Media ID to force match to
-	MediaID int `json:"mediaId"`
+	MediaID int `json:"mediaID"`
 }
 
 type HydrationConfig struct {
@@ -50,7 +50,7 @@ type HydrationConfig struct {
 //
 //	Example:
 //		"hydration": [{
-//			"mediaId": 12345,
+//			"mediaID": 12345,
 //			"files": [
 //				{
 //					"pattern": "Mob Psycho - (\d+) - (.*)$",
@@ -70,7 +70,7 @@ type HydrationRule struct {
 	// Regex pattern for the path
 	Pattern string `json:"pattern"`
 	// The Media ID
-	MediaID int `json:"mediaId"`
+	MediaID int `json:"mediaID"`
 	// Files represents a collection of files associated with a specific hydration rule.
 	Files []*HydrationFileRule `json:"files"`
 }

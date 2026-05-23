@@ -1,5 +1,5 @@
 import React from "react"
-import { Play, Pause, ChevronLeft, ChevronRight, Volume2, VolumeX, Maximize, Minimize, SkipForward, PictureInPicture, SkipBack } from "lucide-react"
+import { Play, Pause, ChevronLeft, ChevronRight, Volume2, VolumeX, Maximize, Minimize, SkipForward, PictureInPicture, SkipBack, ListVideo } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 
 const CastIcon = ({ className }: { className?: string }) => (
@@ -132,6 +132,11 @@ export interface PlayerBottomBarProps {
     isEpisodesSidebarOpen?: boolean
     onToggleEpisodesSidebar?: () => void
     hasEpisodes?: boolean
+
+    // Queue Selector
+    isQueueSidebarOpen?: boolean
+    onToggleQueueSidebar?: () => void
+    hasQueue?: boolean
 }
 
 export const PlayerBottomBar = React.memo(function PlayerBottomBar({
@@ -170,6 +175,9 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
     isEpisodesSidebarOpen,
     onToggleEpisodesSidebar,
     hasEpisodes,
+    isQueueSidebarOpen,
+    onToggleQueueSidebar,
+    hasQueue,
 }: PlayerBottomBarProps) {
 
     const SkipNextChapterIcon = () => (
@@ -378,6 +386,23 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                             )}
                         >
                             <CastIcon className="w-3.5 h-3.5" />
+                        </button>
+                    )}
+
+                    {/* Queue Button */}
+                    {hasQueue && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onToggleQueueSidebar?.(); }}
+                            aria-label="Ver cola de reproducción"
+                            title="Ver cola de reproducción"
+                            className={cn(
+                                "transition-all duration-300 flex items-center justify-center w-8 h-8 rounded-full",
+                                isQueueSidebarOpen
+                                    ? "text-brand-orange bg-brand-orange/10 shadow-[0_0_12px_rgba(249,115,22,0.4)] animate-pulse"
+                                    : "text-zinc-500 hover:text-white"
+                            )}
+                        >
+                            <ListVideo className="w-3.5 h-3.5" />
                         </button>
                     )}
 

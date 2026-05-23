@@ -10,7 +10,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// HandlePopulateFillerData
+// HandlePopulateFillerData ...
 //
 //	@summary fetches and caches filler data for the given media.
 //	@desc This will fetch and cache filler data for the given media.
@@ -18,7 +18,7 @@ import (
 //	@route /api/v1/metadata-provider/filler [POST]
 func (h *Handler) HandlePopulateFillerData(c echo.Context) error {
 	type body struct {
-		MediaId int `json:"mediaId"`
+		MediaID int `json:"mediaID"`
 	}
 
 	var b body
@@ -31,11 +31,11 @@ func (h *Handler) HandlePopulateFillerData(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	entry, found := animeCollection.GetListEntryFromMediaId(b.MediaId)
+	entry, found := animeCollection.GetListEntryFromMediaId(b.MediaID)
 	var media *platform.UnifiedMedia
 	if !found {
 		// Fetch media from active platform (TMDB-based)
-		m, err := h.App.Metadata.Platform.GetAnime(c.Request().Context(), b.MediaId)
+		m, err := h.App.Metadata.Platform.GetAnime(c.Request().Context(), b.MediaID)
 		if err != nil {
 			return h.RespondWithError(c, err)
 		}
@@ -57,7 +57,7 @@ func (h *Handler) HandlePopulateFillerData(c echo.Context) error {
 			titles = append(titles, *media.Title.Native)
 		}
 	}
-	err = h.App.FillerManager.FetchAndStoreFillerData(b.MediaId, titles)
+	err = h.App.FillerManager.FetchAndStoreFillerData(b.MediaID, titles)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
@@ -65,7 +65,7 @@ func (h *Handler) HandlePopulateFillerData(c echo.Context) error {
 	return h.RespondWithData(c, true)
 }
 
-// HandleRemoveFillerData
+// HandleRemoveFillerData ...
 //
 //	@summary removes filler data cache.
 //	@desc This will remove the filler data cache for the given media.
@@ -73,7 +73,7 @@ func (h *Handler) HandlePopulateFillerData(c echo.Context) error {
 //	@route /api/v1/metadata-provider/filler [DELETE]
 func (h *Handler) HandleRemoveFillerData(c echo.Context) error {
 	type body struct {
-		MediaId int `json:"mediaId"`
+		MediaID int `json:"mediaID"`
 	}
 
 	var b body
@@ -81,7 +81,7 @@ func (h *Handler) HandleRemoveFillerData(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	err := h.App.FillerManager.RemoveFillerData(b.MediaId)
+	err := h.App.FillerManager.RemoveFillerData(b.MediaID)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
@@ -89,7 +89,7 @@ func (h *Handler) HandleRemoveFillerData(c echo.Context) error {
 	return h.RespondWithData(c, true)
 }
 
-// HandleGetMediaMetadataParent
+// HandleGetMediaMetadataParent ...
 //
 //	@summary retrieves media metadata parent by media ID.
 //	@desc Returns the media metadata parent information for the given media ID.
@@ -110,7 +110,7 @@ func (h *Handler) HandleGetMediaMetadataParent(c echo.Context) error {
 	return h.RespondWithData(c, parent)
 }
 
-// HandleSaveMediaMetadataParent
+// HandleSaveMediaMetadataParent ...
 //
 //	@summary saves or updates media metadata parent.
 //	@desc Creates or updates the media metadata parent information.
@@ -118,7 +118,7 @@ func (h *Handler) HandleGetMediaMetadataParent(c echo.Context) error {
 //	@returns models.MediaMetadataParent
 func (h *Handler) HandleSaveMediaMetadataParent(c echo.Context) error {
 	type body struct {
-		ParentId      int `json:"parentId"`
+		ParentID      int `json:"parentId"`
 		SpecialOffset int `json:"specialOffset"`
 	}
 
@@ -127,13 +127,13 @@ func (h *Handler) HandleSaveMediaMetadataParent(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	if b.ParentId == 0 {
+	if b.ParentID == 0 {
 		return h.RespondWithError(c, errors.New("invalid parent id"))
 	}
 
 	savedParent, err := h.App.Database.InsertMediaMetadataParent(models.MediaMetadataParent{
-		MediaId:       b.ParentId,
-		ParentId:      b.ParentId,
+		MediaID:       b.ParentID,
+		ParentID:      b.ParentID,
 		SpecialOffset: b.SpecialOffset,
 	})
 	if err != nil {
@@ -146,7 +146,7 @@ func (h *Handler) HandleSaveMediaMetadataParent(c echo.Context) error {
 	return h.RespondWithData(c, savedParent)
 }
 
-// HandleDeleteMediaMetadataParent
+// HandleDeleteMediaMetadataParent ...
 //
 //	@summary deletes media metadata parent.
 //	@desc Removes the media metadata parent information for the given media ID.
@@ -154,7 +154,7 @@ func (h *Handler) HandleSaveMediaMetadataParent(c echo.Context) error {
 //	@returns bool
 func (h *Handler) HandleDeleteMediaMetadataParent(c echo.Context) error {
 	type body struct {
-		MediaId int `json:"mediaId"`
+		MediaID int `json:"mediaID"`
 	}
 
 	var b body
@@ -162,7 +162,7 @@ func (h *Handler) HandleDeleteMediaMetadataParent(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	err := h.App.Database.DeleteMediaMetadataParent(b.MediaId)
+	err := h.App.Database.DeleteMediaMetadataParent(b.MediaID)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}

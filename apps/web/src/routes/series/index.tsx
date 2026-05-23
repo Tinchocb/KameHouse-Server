@@ -59,7 +59,7 @@ const SeriesCard = memo(function SeriesCard({
         <motion.div
             onClick={() => {
                 if (isSelected) {
-                    onNavigate(item.id.toString());
+                    onNavigate(item?.id?.toString() || "");
                 } else {
                     onSelect(item.id);
                 }
@@ -155,7 +155,7 @@ const SeriesCard = memo(function SeriesCard({
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        onNavigate(item.id.toString());
+                                        onNavigate(item?.id?.toString() || "");
                                     }}
                                     className="flex-1 bg-brand-orange hover:bg-[#ff8559] text-white rounded-xl text-base font-black tracking-widest uppercase py-5 transition-transform hover:-translate-y-1 flex justify-center items-center gap-3 shadow-[0_10px_30px_rgba(255,110,58,0.4)]"
                                 >

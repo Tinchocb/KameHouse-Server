@@ -10,23 +10,23 @@ import (
 // Results are cached in memory after the first DB hit to avoid redundant
 // SQLite reads during scan-time enrichment loops.
 // Returns nil if no matching media is found.
-func GetLibraryMediaByTmdbId(d *Database, tmdbId int) (*models.LibraryMedia, error) {
-	if v, ok := d.LibraryMediaCache.Load(tmdbId); ok {
+func GetLibraryMediaByTmdbId(d *Database, tmdbID int) (*models.LibraryMedia, error) {
+	if v, ok := d.LibraryMediaCache.Load(tmdbID); ok {
 		return v.(*models.LibraryMedia), nil
 	}
 	var media models.LibraryMedia
-	err := d.Gorm().Where("tmdb_id = ?", tmdbId).First(&media).Error
+	err := d.Gorm().Where("tmdb_id = ?", tmdbID).First(&media).Error
 	if err != nil {
 		return nil, err
 	}
-	d.LibraryMediaCache.Store(tmdbId, &media)
+	d.LibraryMediaCache.Store(tmdbID, &media)
 	return &media, nil
 }
 
 // GetLibraryMediaByTmdbIdAndType retrieves a LibraryMedia by its TMDB ID and Type.
-func GetLibraryMediaByTmdbIdAndType(d *Database, tmdbId int, mediaType string) (*models.LibraryMedia, error) {
+func GetLibraryMediaByTmdbIdAndType(d *Database, tmdbID int, mediaType string) (*models.LibraryMedia, error) {
 	var media models.LibraryMedia
-	err := d.Gorm().Where("tmdb_id = ? AND type = ?", tmdbId, mediaType).First(&media).Error
+	err := d.Gorm().Where("tmdb_id = ? AND type = ?", tmdbID, mediaType).First(&media).Error
 	if err != nil {
 		return nil, err
 	}
@@ -65,8 +65,8 @@ func InsertLibraryMedia(d *Database, media *models.LibraryMedia) (*models.Librar
 		return nil, err
 	}
 	// Invalidate cache entry so the next read fetches the authoritative DB record.
-	if media.TmdbId != 0 {
-		d.LibraryMediaCache.Delete(media.TmdbId)
+	if media.TmdbID != 0 {
+		d.LibraryMediaCache.Delete(media.TmdbID)
 	}
 	return media, nil
 }
@@ -136,8 +136,8 @@ func UpsertLibraryMediaBatch(d *Database, media []*models.LibraryMedia, batchSiz
 	if err == nil {
 		// Evict stale cache entries for every record that was just written.
 		for _, m := range media {
-			if m.TmdbId != 0 {
-				d.LibraryMediaCache.Delete(m.TmdbId)
+			if m.TmdbID != 0 {
+				d.LibraryMediaCache.Delete(m.TmdbID)
 			}
 		}
 	}

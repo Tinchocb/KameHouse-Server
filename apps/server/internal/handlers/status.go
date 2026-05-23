@@ -163,7 +163,7 @@ func (h *Handler) NewStatus(c echo.Context) *Status {
 	return status
 }
 
-// HandleGetStatus
+// HandleGetStatus ...
 //
 //	@summary returns the server status.
 //	@desc The server status includes app info, auth info and settings.
@@ -365,7 +365,7 @@ func mapMemStats(m runtime.MemStats) MemoryStatsResponse {
 }
 
 
-// HandleGetMemoryStats
+// HandleGetMemoryStats ...
 //
 //	@summary returns current memory statistics.
 //	@desc This returns real-time memory usage statistics from the Go runtime.
@@ -380,7 +380,7 @@ func (h *Handler) HandleGetMemoryStats(c echo.Context) error {
 	return h.RespondWithData(c, response)
 }
 
-// HandleGetMemoryProfile
+// HandleGetMemoryProfile ...
 //
 //	@summary generates and returns a memory profile.
 //	@desc This generates a memory profile that can be analyzed with go tool pprof.
@@ -431,7 +431,7 @@ func (h *Handler) HandleGetMemoryProfile(c echo.Context) error {
 	return nil
 }
 
-// HandleGetGoRoutineProfile
+// HandleGetGoRoutineProfile ...
 //
 //	@summary generates and returns a goroutine profile.
 //	@desc This generates a goroutine profile showing all running goroutines and their stack traces.
@@ -458,7 +458,7 @@ func (h *Handler) HandleGetGoRoutineProfile(c echo.Context) error {
 	return nil
 }
 
-// HandleGetCPUProfile
+// HandleGetCPUProfile ...
 //
 //	@summary generates and returns a CPU profile.
 //	@desc This generates a CPU profile for the specified duration (default 30 seconds).
@@ -498,7 +498,7 @@ func (h *Handler) HandleGetCPUProfile(c echo.Context) error {
 	return nil
 }
 
-// HandleForceGC
+// HandleForceGC ...
 //
 //	@summary forces garbage collection and returns memory stats.
 //	@desc This forces a garbage collection cycle and returns the updated memory statistics.
@@ -524,7 +524,7 @@ func (h *Handler) HandleForceGC(c echo.Context) error {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// HandleGetHomeItems
+// HandleGetHomeItems ...
 //
 //	@summary returns the home items.
 //	@route /api/v1/status/home-items [GET]
@@ -542,7 +542,7 @@ func (h *Handler) HandleGetHomeItems(c echo.Context) error {
 	return h.RespondWithData(c, items)
 }
 
-// HandleUpdateHomeItems
+// HandleUpdateHomeItems ...
 //
 //	@summary updates the home items.
 //	@route /api/v1/status/home-items [POST]

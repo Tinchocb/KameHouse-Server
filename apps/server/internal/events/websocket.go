@@ -14,7 +14,7 @@ import (
 
 type WSEventManagerInterface interface {
 	SendEvent(t string, payload interface{})
-	SendEventTo(clientId string, t string, payload interface{}, noLog ...bool)
+	SendEventTo(clientID string, t string, payload interface{}, noLog ...bool)
 	SubscribeToClientEvents(id string) *ClientEventSubscriber
 	SubscribeToClientNativePlayerEvents(id string) *ClientEventSubscriber
 	SubscribeToClientVideoCoreEvents(id string) *ClientEventSubscriber
@@ -39,11 +39,11 @@ func (w *GlobalWSEventManagerWrapper) SendEvent(t string, payload interface{}) {
 	w.WSEventManager.SendEvent(t, payload)
 }
 
-func (w *GlobalWSEventManagerWrapper) SendEventTo(clientId string, t string, payload interface{}, noLog ...bool) {
+func (w *GlobalWSEventManagerWrapper) SendEventTo(clientID string, t string, payload interface{}, noLog ...bool) {
 	if w.WSEventManager == nil {
 		return
 	}
-	w.WSEventManager.SendEventTo(clientId, t, payload, noLog...)
+	w.WSEventManager.SendEventTo(clientID, t, payload, noLog...)
 }
 
 type (
@@ -257,11 +257,11 @@ func (m *WSEventManager) SendEvent(t string, payload interface{}) {
 }
 
 // SendEventTo sends a websocket event to the specified client.
-func (m *WSEventManager) SendEventTo(clientId string, t string, payload interface{}, noLog ...bool) {
+func (m *WSEventManager) SendEventTo(clientID string, t string, payload interface{}, noLog ...bool) {
 	m.connsMu.RLock()
 	var targetConn *WSConn
 	for _, conn := range m.Conns {
-		if conn.ID == clientId {
+		if conn.ID == clientID {
 			targetConn = conn
 			break
 		}
@@ -278,7 +278,7 @@ func (m *WSEventManager) SendEventTo(clientId string, t string, payload interfac
 			if len(truncated) > 500 {
 				truncated = truncated[:500] + "..."
 			}
-			m.Logger.Trace().Str("to", clientId).Str("type", t).Str("payload", truncated).Msg("ws: Sending message")
+			m.Logger.Trace().Str("to", clientID).Str("type", t).Str("payload", truncated).Msg("ws: Sending message")
 		}
 	}
 
@@ -298,12 +298,12 @@ func (m *WSEventManager) SendEventTo(clientId string, t string, payload interfac
 	wsEventPool.Put(env)
 }
 
-func (m *WSEventManager) SendStringTo(clientId string, s string) {
+func (m *WSEventManager) SendStringTo(clientID string, s string) {
 	m.connsMu.RLock()
 	defer m.connsMu.RUnlock()
 
 	for _, conn := range m.Conns {
-		if conn.ID == clientId {
+		if conn.ID == clientID {
 			conn.writeMu.Lock()
 			_ = conn.Conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 			_ = conn.Conn.WriteMessage(websocket.TextMessage, []byte(s))

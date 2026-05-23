@@ -20,18 +20,18 @@ const (
 
 type (
 	// WatchHistory is a map of WatchHistoryItem.
-	// The key is the WatchHistoryItem.MediaId.
+	// The key is the WatchHistoryItem.MediaID.
 	WatchHistory map[int]*WatchHistoryItem
 
 	// WatchHistoryItem are stored in the file cache.
 	// The history is used to resume playback from the last known position.
-	// Item.MediaId and Item.EpisodeNumber are used to identify the media and episode.
-	// Only one Item per MediaId should exist in the history.
+	// Item.MediaID and Item.EpisodeNumber are used to identify the media and episode.
+	// Only one Item per MediaID should exist in the history.
 	WatchHistoryItem struct {
 		Kind Kind `json:"kind"`
 		// Used for MediastreamKind and ExternalPlayerKind.
 		Filepath      string `json:"filepath"`
-		MediaId       int    `json:"mediaId"`
+		MediaID       int    `json:"mediaID"`
 		EpisodeNumber int    `json:"episodeNumber"`
 		// The current playback time in seconds.
 		// Used to determine when to remove the item from the history.
@@ -54,7 +54,7 @@ type (
 	UpdateWatchHistoryItemOptions struct {
 		CurrentTime   float64 `json:"currentTime"`
 		Duration      float64 `json:"duration"`
-		MediaId       int     `json:"mediaId"`
+		MediaID       int     `json:"mediaID"`
 		EpisodeNumber int     `json:"episodeNumber"`
 		Filepath      string  `json:"filepath,omitempty"`
 		Predictive    bool    `json:"predictive"`
@@ -62,7 +62,7 @@ type (
 	}
 
 	BingeWatcherProbability struct {
-		MediaId        int
+		MediaID        int
 		Probability    float64
 		IsBingeCooling bool
 	}
@@ -70,22 +70,22 @@ type (
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// CalculateBingeProbability evaluates if a user is aggressively watching episodes of a MediaId.
+// CalculateBingeProbability evaluates if a user is aggressively watching episodes of a MediaID.
 // A score of >= 0.70 means pre-caching should aggressively be fired.
-func (m *Manager) CalculateBingeProbability(mediaId int) BingeWatcherProbability {
+func (m *Manager) CalculateBingeProbability(mediaID int) BingeWatcherProbability {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	i, found := m.getWatchHistory(mediaId)
+	i, found := m.getWatchHistory(mediaID)
 	if !found || i == nil {
-		return BingeWatcherProbability{MediaId: mediaId, Probability: 0, IsBingeCooling: true}
+		return BingeWatcherProbability{MediaID: mediaID, Probability: 0, IsBingeCooling: true}
 	}
 
 	// Simple heuristic: if the item was updated less than 24 hours ago, and they are deep into the episode
 	timeSinceLastUpdate := time.Since(i.TimeUpdated)
 
 	if timeSinceLastUpdate > 24*time.Hour {
-		return BingeWatcherProbability{MediaId: mediaId, Probability: 0.1, IsBingeCooling: true}
+		return BingeWatcherProbability{MediaID: mediaID, Probability: 0.1, IsBingeCooling: true}
 	}
 
 	completionRatio := 0.0
@@ -106,7 +106,7 @@ func (m *Manager) CalculateBingeProbability(mediaId int) BingeWatcherProbability
 	}
 
 	return BingeWatcherProbability{
-		MediaId:        mediaId,
+		MediaID:        mediaID,
 		Probability:    probability,
 		IsBingeCooling: probability < 0.5,
 	}
@@ -126,19 +126,19 @@ func (m *Manager) GetWatchHistory() WatchHistory {
 
 	ret := make(WatchHistory)
 	for _, item := range items {
-		ret[item.MediaId] = item
+		ret[item.MediaID] = item
 	}
 
 	return ret
 }
 
-func (m *Manager) GetWatchHistoryItem(mediaId int) *WatchHistoryItemResponse {
+func (m *Manager) GetWatchHistoryItem(mediaID int) *WatchHistoryItemResponse {
 	defer util.HandlePanicInModuleThen("continuity/GetWatchHistoryItem", func() {})
 
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	i, found := m.getWatchHistory(mediaId)
+	i, found := m.getWatchHistory(mediaID)
 	return &WatchHistoryItemResponse{
 		Item:  i,
 		Found: found,
@@ -155,13 +155,13 @@ func (m *Manager) UpdateWatchHistoryItem(opts *UpdateWatchHistoryItemOptions) (e
 	added := false
 
 	// Get the current history
-	i, found := m.getWatchHistory(opts.MediaId)
+	i, found := m.getWatchHistory(opts.MediaID)
 	if !found {
 		added = true
 		i = &WatchHistoryItem{
 			Kind:          opts.Kind,
 			Filepath:      opts.Filepath,
-			MediaId:       opts.MediaId,
+			MediaID:       opts.MediaID,
 			EpisodeNumber: opts.EpisodeNumber,
 			CurrentTime:   opts.CurrentTime,
 			Duration:      opts.Duration,
@@ -177,7 +177,7 @@ func (m *Manager) UpdateWatchHistoryItem(opts *UpdateWatchHistoryItemOptions) (e
 	}
 
 	// Save the i
-	err = m.fileCacher.Set(*m.watchHistoryFileCacheBucket, strconv.Itoa(opts.MediaId), i)
+	err = m.fileCacher.Set(*m.watchHistoryFileCacheBucket, strconv.Itoa(opts.MediaID), i)
 	if err != nil {
 		return fmt.Errorf("continuity: Failed to save watch history item: %w", err)
 	}
@@ -189,19 +189,19 @@ func (m *Manager) UpdateWatchHistoryItem(opts *UpdateWatchHistoryItemOptions) (e
 
 	// Predictive Cache trigger
 	if opts.Predictive && opts.Duration > 0 && (opts.CurrentTime/opts.Duration) > 0.8 {
-		go m.triggerPredictiveCache(opts.MediaId, opts.EpisodeNumber)
+		go m.triggerPredictiveCache(opts.MediaID, opts.EpisodeNumber)
 	}
 
 	return nil
 }
 
-func (m *Manager) DeleteWatchHistoryItem(mediaId int) (err error) {
+func (m *Manager) DeleteWatchHistoryItem(mediaID int) (err error) {
 	defer util.HandlePanicInModuleWithError("continuity/DeleteWatchHistoryItem", &err)
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	err = m.fileCacher.Delete(*m.watchHistoryFileCacheBucket, strconv.Itoa(mediaId))
+	err = m.fileCacher.Delete(*m.watchHistoryFileCacheBucket, strconv.Itoa(mediaID))
 	if err != nil {
 		return fmt.Errorf("continuity: Failed to delete watch history item: %w", err)
 	}
@@ -213,7 +213,7 @@ func (m *Manager) DeleteWatchHistoryItem(mediaId int) (err error) {
 
 // GetExternalPlayerEpisodeWatchHistoryItem is called before launching the external player to get the last known position.
 // Unlike GetWatchHistoryItem, this checks if the episode numbers match.
-func (m *Manager) GetExternalPlayerEpisodeWatchHistoryItem(path string, isStream bool, episode, mediaId int) (ret *WatchHistoryItemResponse) {
+func (m *Manager) GetExternalPlayerEpisodeWatchHistoryItem(path string, isStream bool, episode, mediaID int) (ret *WatchHistoryItemResponse) {
 	defer util.HandlePanicInModuleThen("continuity/GetExternalPlayerEpisodeWatchHistoryItem", func() {})
 
 	m.mu.RLock()
@@ -235,7 +235,7 @@ func (m *Manager) GetExternalPlayerEpisodeWatchHistoryItem(path string, isStream
 		Str("path", path).
 		Bool("isStream", isStream).
 		Int("episode", episode).
-		Int("mediaId", mediaId).
+		Int("mediaID", mediaID).
 		Msg("continuity: Retrieving watch history item")
 
 	// Normalize path
@@ -244,15 +244,15 @@ func (m *Manager) GetExternalPlayerEpisodeWatchHistoryItem(path string, isStream
 	if isStream {
 
 
-		if episode == 0 || mediaId == 0 {
+		if episode == 0 || mediaID == 0 {
 			m.logger.Debug().
 				Int("episode", episode).
-				Int("mediaId", mediaId).
+				Int("mediaID", mediaID).
 				Msg("continuity: No episode or media provided")
 			return
 		}
 
-		i, found := m.getWatchHistory(mediaId)
+		i, found := m.getWatchHistory(mediaID)
 		if !found || i.EpisodeNumber != episode {
 			m.logger.Trace().
 				Interface("item", i).
@@ -297,12 +297,12 @@ func (m *Manager) GetExternalPlayerEpisodeWatchHistoryItem(path string, isStream
 			}
 		}
 
-		if lf == nil || lf.MediaId == 0 || !lf.IsMain() {
+		if lf == nil || lf.MediaID == 0 || !lf.IsMain() {
 			m.logger.Trace().Msg("continuity: Local file not found or not main")
 			return
 		}
 
-		i, found := m.getWatchHistory(lf.MediaId)
+		i, found := m.getWatchHistory(lf.MediaID)
 		if !found || i.EpisodeNumber != lf.GetEpisodeNumber() {
 			m.logger.Trace().
 				Interface("item", i).
@@ -343,13 +343,13 @@ func (m *Manager) UpdateExternalPlayerEpisodeWatchHistoryItem(currentTime, durat
 	}
 
 	// Get the current history
-	i, found := m.getWatchHistory(opts.MediaId)
+	i, found := m.getWatchHistory(opts.MediaID)
 	if !found {
 		added = true
 		i = &WatchHistoryItem{
 			Kind:          ExternalPlayerKind,
 			Filepath:      opts.Filepath,
-			MediaId:       opts.MediaId,
+			MediaID:       opts.MediaID,
 			EpisodeNumber: opts.EpisodeNumber,
 			CurrentTime:   currentTime,
 			Duration:      duration,
@@ -365,7 +365,7 @@ func (m *Manager) UpdateExternalPlayerEpisodeWatchHistoryItem(currentTime, durat
 	}
 
 	// Save the i
-	_ = m.fileCacher.Set(*m.watchHistoryFileCacheBucket, strconv.Itoa(opts.MediaId), i)
+	_ = m.fileCacher.Set(*m.watchHistoryFileCacheBucket, strconv.Itoa(opts.MediaID), i)
 
 	// If the item was added, check if we need to remove the oldest item
 	if added {
@@ -377,13 +377,13 @@ func (m *Manager) UpdateExternalPlayerEpisodeWatchHistoryItem(currentTime, durat
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func (m *Manager) getWatchHistory(mediaId int) (ret *WatchHistoryItem, exists bool) {
+func (m *Manager) getWatchHistory(mediaID int) (ret *WatchHistoryItem, exists bool) {
 	defer util.HandlePanicInModuleThen("continuity/getWatchHistory", func() {
 		ret = nil
 		exists = false
 	})
 
-	exists, _ = m.fileCacher.Get(*m.watchHistoryFileCacheBucket, strconv.Itoa(mediaId), &ret)
+	exists, _ = m.fileCacher.Get(*m.watchHistoryFileCacheBucket, strconv.Itoa(mediaID), &ret)
 
 	if exists && ret != nil && ret.Duration > 0 {
 		// If the item completion ratio is equal or above IgnoreRatioThreshold, don't return anything
@@ -392,7 +392,7 @@ func (m *Manager) getWatchHistory(mediaId int) (ret *WatchHistoryItem, exists bo
 			// Delete the item
 			go func() {
 				defer util.HandlePanicInModuleThen("continuity/getWatchHistory", func() {})
-				_ = m.fileCacher.Delete(*m.watchHistoryFileCacheBucket, strconv.Itoa(mediaId))
+				_ = m.fileCacher.Delete(*m.watchHistoryFileCacheBucket, strconv.Itoa(mediaID))
 			}()
 			return nil, false
 		}
@@ -435,7 +435,7 @@ func (m *Manager) trimWatchHistoryItems() error {
 
 // triggerPredictiveCache is called when a user has watched > 80% of an episode.
 // It checks if the next episode exists locally, and if not, triggers a PredictiveCacheEpisodeRequestedEvent.
-func (m *Manager) triggerPredictiveCache(mediaId int, currentEpisode int) {
+func (m *Manager) triggerPredictiveCache(mediaID int, currentEpisode int) {
 	defer util.HandlePanicInModuleThen("continuity/triggerPredictiveCache", func() {})
 
 	nextEpisode := currentEpisode + 1
@@ -447,13 +447,13 @@ func (m *Manager) triggerPredictiveCache(mediaId int, currentEpisode int) {
 	}
 
 	for _, lf := range lfs {
-		if lf.MediaId == mediaId && lf.GetEpisodeNumber() == nextEpisode {
-			m.logger.Debug().Int("mediaId", mediaId).Int("episode", nextEpisode).Msg("continuity: Next episode already exists locally, skipping predictive cache")
+		if lf.MediaID == mediaID && lf.GetEpisodeNumber() == nextEpisode {
+			m.logger.Debug().Int("mediaID", mediaID).Int("episode", nextEpisode).Msg("continuity: Next episode already exists locally, skipping predictive cache")
 			return
 		}
 	}
 
-	m.logger.Info().Int("mediaId", mediaId).Int("episode", nextEpisode).Msg("continuity: Triggering predictive cache download for next episode")
+	m.logger.Info().Int("mediaID", mediaID).Int("episode", nextEpisode).Msg("continuity: Triggering predictive cache download for next episode")
 
 	// Emit hook to start the download
 

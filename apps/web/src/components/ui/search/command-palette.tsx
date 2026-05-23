@@ -109,8 +109,8 @@ export function CommandPalette() {
                                                 ) : (() => {
                                                         const isMovie = media?.format === "MOVIE" || media?.format === "SPECIAL" || media?.format === "OVA"
                                                         const linkProps = isMovie 
-                                                            ? { to: "/movies/$movieId" as const, params: { movieId: result.mediaId.toString() } }
-                                                            : { to: "/series/$seriesId" as const, params: { seriesId: result.mediaId.toString() } }
+                                                            ? { to: "/movies/$movieId" as const, params: { movieId: result?.mediaId?.toString() || "0" } }
+                                                            : { to: "/series/$seriesId" as const, params: { seriesId: result?.mediaId?.toString() || "0" } }
 
                                                         return (
                                                             <Link {...linkProps} className="flex w-full items-center gap-5 p-3" onClick={() => setOpen(false)}>

@@ -107,7 +107,7 @@ type VideoInitialState struct {
 }
 
 type OnlinestreamParams struct {
-	MediaId       int    `json:"mediaId"`
+	MediaID       int    `json:"mediaID"`
 	EpisodeNumber int    `json:"episodeNumber"`
 	Provider      string `json:"provider"`
 	Server        string `json:"server"`
@@ -133,19 +133,19 @@ type VideoPlaybackInfo struct {
 type (
 	PlaybackStatus struct {
 		Id          string  `json:"id"`
-		ClientId    string  `json:"clientId"`
+		ClientID    string  `json:"clientID"`
 		Paused      bool    `json:"paused"`
 		CurrentTime float64 `json:"currentTime"` // in seconds
 		Duration    float64 `json:"duration"`    // in seconds
 	}
 	// PlaybackState is sent once when the video starts.
 	PlaybackState struct {
-		ClientId     string             `json:"clientId"`
+		ClientID     string             `json:"clientID"`
 		PlayerType   PlayerType         `json:"playerType"`
 		PlaybackInfo *VideoPlaybackInfo `json:"playbackInfo"`
 	}
 	ClientEvent struct {
-		ClientId string          `json:"clientId"`
+		ClientID string          `json:"clientID"`
 		Type     ClientEventType `json:"type"`
 		Payload  json.RawMessage `json:"payload"`
 	}
@@ -212,7 +212,7 @@ func (e *BaseVideoEvent) GetPlaybackId() string {
 	return e.PlaybackId
 }
 func (e *BaseVideoEvent) GetClientId() string {
-	return e.ClientId
+	return e.ClientID
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -230,14 +230,14 @@ type VideoEvent interface {
 	GetPlaybackId() string
 	GetClientId() string
 	IsCritical() bool
-	identify(id string, clientId string, playerType PlayerType, playbackType PlaybackType)
+	identify(id string, clientID string, playerType PlayerType, playbackType PlaybackType)
 }
 
 type BaseVideoEvent struct {
 	PlayerType   PlayerType   `json:"playerType"`
 	PlaybackType PlaybackType `json:"playbackType"`
 	PlaybackId   string       `json:"playbackId"`
-	ClientId     string       `json:"clientId"`
+	ClientID     string       `json:"clientID"`
 }
 
 func (e *BaseVideoEvent) GetPlayerType() PlayerType     { return e.PlayerType }
@@ -248,9 +248,9 @@ func (e *BaseVideoEvent) IsOnlinestream() bool          { return e.PlaybackType 
 func (e *BaseVideoEvent) IsTorrent() bool               { return e.PlaybackType == PlaybackTypeTorrent }
 func (e *BaseVideoEvent) IsDebrid() bool                { return e.PlaybackType == PlaybackTypeDebrid }
 func (e *BaseVideoEvent) IsCritical() bool              { return true }
-func (e *BaseVideoEvent) identify(id string, clientId string, playerType PlayerType, playbackType PlaybackType) {
+func (e *BaseVideoEvent) identify(id string, clientID string, playerType PlayerType, playbackType PlaybackType) {
 	e.PlaybackId = id
-	e.ClientId = clientId
+	e.ClientID = clientID
 	e.PlayerType = playerType
 	e.PlaybackType = playbackType
 }
@@ -258,12 +258,12 @@ func (e *BaseVideoEvent) identify(id string, clientId string, playerType PlayerT
 type (
 	VideoLoadedEvent struct {
 		BaseVideoEvent
-		ClientId string        `json:"clientId"`
+		ClientID string        `json:"clientID"`
 		State    PlaybackState `json:"state"`
 	}
 	VideoPlaybackStateEvent struct {
 		BaseVideoEvent
-		ClientId string        `json:"clientId"`
+		ClientID string        `json:"clientID"`
 		State    PlaybackState `json:"state"`
 	}
 	VideoPausedEvent struct {

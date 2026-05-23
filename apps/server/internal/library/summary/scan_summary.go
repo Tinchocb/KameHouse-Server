@@ -73,7 +73,7 @@ func (l *ScanSummaryLogger) GenerateSummary() *dto.ScanSummary {
 	// Generate summary files
 	for _, lf := range l.LocalFiles {
 
-		if lf.MediaId == 0 {
+		if lf.MediaID == 0 {
 			summary.UnmatchedFiles = append(summary.UnmatchedFiles, &dto.ScanSummaryFile{
 				ID:        uuid.NewString(),
 				LocalFile: lf,
@@ -91,21 +91,21 @@ func (l *ScanSummaryLogger) GenerateSummary() *dto.ScanSummary {
 		//summary.Files = append(summary.Files, summaryFile)
 
 		// Add to group
-		if _, ok := groupsMap[lf.MediaId]; !ok {
-			groupsMap[lf.MediaId] = make([]*dto.ScanSummaryFile, 0)
-			groupsMap[lf.MediaId] = append(groupsMap[lf.MediaId], summaryFile)
+		if _, ok := groupsMap[lf.MediaID]; !ok {
+			groupsMap[lf.MediaID] = make([]*dto.ScanSummaryFile, 0)
+			groupsMap[lf.MediaID] = append(groupsMap[lf.MediaID], summaryFile)
 		} else {
-			groupsMap[lf.MediaId] = append(groupsMap[lf.MediaId], summaryFile)
+			groupsMap[lf.MediaID] = append(groupsMap[lf.MediaID], summaryFile)
 		}
 	}
 
 	// Generate summary groups
-	for mediaId, files := range groupsMap {
+	for mediaID, files := range groupsMap {
 		mediaTitle := ""
 		mediaImage := ""
 		mediaIsInCollection := false
 		for _, m := range l.AllMedia {
-			if m.ID == mediaId {
+			if m.ID == mediaID {
 				mediaTitle = dto.GetTitleSafe(m)
 				mediaImage = ""
 				if m.CoverImage != nil && m.CoverImage.Large != nil {
@@ -115,7 +115,7 @@ func (l *ScanSummaryLogger) GenerateSummary() *dto.ScanSummary {
 			}
 		}
 		if l.AnimeCollection != nil {
-			if _, found := l.AnimeCollection.GetListEntryFromMediaId(mediaId); found {
+			if _, found := l.AnimeCollection.GetListEntryFromMediaId(mediaID); found {
 				mediaIsInCollection = true
 			}
 		}
@@ -123,7 +123,7 @@ func (l *ScanSummaryLogger) GenerateSummary() *dto.ScanSummary {
 		summary.Groups = append(summary.Groups, &dto.ScanSummaryGroup{
 			ID:                  uuid.NewString(),
 			Files:               files,
-			MediaId:             mediaId,
+			MediaID:             mediaID,
 			MediaTitle:          mediaTitle,
 			MediaImage:          mediaImage,
 			MediaIsInCollection: mediaIsInCollection,
@@ -142,11 +142,11 @@ func (l *ScanSummaryLogger) LogComparison(lf *dto.LocalFile, algo string, bestTi
 	l.logType(LogComparison, lf, msg)
 }
 
-func (l *ScanSummaryLogger) LogSuccessfullyMatched(lf *dto.LocalFile, mediaId int) {
+func (l *ScanSummaryLogger) LogSuccessfullyMatched(lf *dto.LocalFile, mediaID int) {
 	if l == nil {
 		return
 	}
-	msg := fmt.Sprintf("Successfully matched to media %d", mediaId)
+	msg := fmt.Sprintf("Successfully matched to media %d", mediaID)
 	l.logType(LogSuccessfullyMatched, lf, msg)
 }
 
@@ -166,11 +166,11 @@ func (l *ScanSummaryLogger) LogFailedMatch(lf *dto.LocalFile, reason string) {
 	l.logType(LogFailedMatch, lf, msg)
 }
 
-func (l *ScanSummaryLogger) LogMatchValidated(lf *dto.LocalFile, mediaId int) {
+func (l *ScanSummaryLogger) LogMatchValidated(lf *dto.LocalFile, mediaID int) {
 	if l == nil {
 		return
 	}
-	msg := fmt.Sprintf("Match validated for media %d", mediaId)
+	msg := fmt.Sprintf("Match validated for media %d", mediaID)
 	l.logType(LogMatchValidated, lf, msg)
 }
 
@@ -206,7 +206,7 @@ func (l *ScanSummaryLogger) LogMetadataMediaTreeFetchFailed(lf *dto.LocalFile, e
 	l.logType(LogMetadataMediaTreeFetchFailed, lf, msg)
 }
 
-func (l *ScanSummaryLogger) LogMetadataEpisodeNormalized(lf *dto.LocalFile, mediaId int, episode int, newEpisode int, newMediaId int, aniDBEpisode string) {
+func (l *ScanSummaryLogger) LogMetadataEpisodeNormalized(lf *dto.LocalFile, mediaID int, episode int, newEpisode int, newMediaId int, aniDBEpisode string) {
 	if l == nil {
 		return
 	}
@@ -254,11 +254,11 @@ func (l *ScanSummaryLogger) LogMetadataEpisodeZero(lf *dto.LocalFile, episode in
 	l.logType(LogMetadataEpisodeZero, lf, msg)
 }
 
-func (l *ScanSummaryLogger) LogMetadataHydrated(lf *dto.LocalFile, mediaId int) {
+func (l *ScanSummaryLogger) LogMetadataHydrated(lf *dto.LocalFile, mediaID int) {
 	if l == nil {
 		return
 	}
-	msg := fmt.Sprintf("Metadata hydrated for media %d", mediaId)
+	msg := fmt.Sprintf("Metadata hydrated for media %d", mediaID)
 	l.logType(LogMetadataHydrated, lf, msg)
 }
 

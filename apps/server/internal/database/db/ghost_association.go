@@ -21,7 +21,7 @@ func (db *Database) GetGhostAssociationByPath(path string) (*models.GhostAssocia
 }
 
 // UpsertGhostAssociation inserts or updates a ghost association.
-// If the path already has an association for the same TargetMediaId, it increments the GhostMatchCount.
+// If the path already has an association for the same TargetMediaID, it increments the GhostMatchCount.
 func (db *Database) UpsertGhostAssociation(association *models.GhostAssociatedMedia) error {
 	var existing models.GhostAssociatedMedia
 	err := db.gormdb.Where("path = ?", association.Path).First(&existing).Error
@@ -35,7 +35,7 @@ func (db *Database) UpsertGhostAssociation(association *models.GhostAssociatedMe
 	}
 
 	// Update existing
-	if existing.TargetMediaId == association.TargetMediaId {
+	if existing.TargetMediaID == association.TargetMediaID {
 		existing.GhostMatchCount++
 		existing.AlgorithmScore = association.AlgorithmScore // Update to latest score calculation
 		existing.UserResolved = association.UserResolved
@@ -43,7 +43,7 @@ func (db *Database) UpsertGhostAssociation(association *models.GhostAssociatedMe
 	} else {
 		// The path is now being associated with a DIFFERENT media ID.
 		// Reset the heuristics and point to the new ID.
-		existing.TargetMediaId = association.TargetMediaId
+		existing.TargetMediaID = association.TargetMediaID
 		existing.AlgorithmScore = association.AlgorithmScore
 		existing.UserResolved = association.UserResolved
 		existing.GhostMatchCount = 1
@@ -76,7 +76,7 @@ func (db *Database) ResolveGhostAssociation(path string, targetMediaId int) erro
 			// Create new association
 			a := &models.GhostAssociatedMedia{
 				Path:            path,
-				TargetMediaId:   targetMediaId,
+				TargetMediaID:   targetMediaId,
 				UserResolved:    true,
 				GhostMatchCount: 4,
 				AlgorithmScore:  1.0,
@@ -85,7 +85,7 @@ func (db *Database) ResolveGhostAssociation(path string, targetMediaId int) erro
 		}
 		return err
 	}
-	existing.TargetMediaId = targetMediaId
+	existing.TargetMediaID = targetMediaId
 	existing.UserResolved = true
 	existing.GhostMatchCount = 4
 	existing.AlgorithmScore = 1.0

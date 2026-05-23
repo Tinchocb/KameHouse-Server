@@ -11,7 +11,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// HandleGetSettings
+// HandleGetSettings returns the app settings.
 //
 //	@summary returns the app settings.
 //	@route /api/v1/settings [GET]
@@ -30,7 +30,7 @@ func (h *Handler) HandleGetSettings(c echo.Context) error {
 	return h.RespondWithData(c, settings)
 }
 
-// HandleGettingStarted
+// HandleGettingStarted implements the initial setup, saving base settings on first run.
 //
 //	@summary initial setup – save base settings on first run.
 //	@desc This will update the app settings.
@@ -85,7 +85,7 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 	return h.RespondWithData(c, h.NewStatus(c))
 }
 
-// HandleSaveSettings
+// HandleSaveSettings updates the app settings.
 //
 //	@summary updates the app settings.
 //	@desc Applies a PATCH-style merge: the incoming payload's non-nil sub-objects
@@ -237,7 +237,7 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 
 
 
-// HandleSaveMediaPlayerSettings
+// HandleSaveMediaPlayerSettings updates the media player settings.
 //
 //	@summary updates the media player settings.
 //	@route /api/v1/settings/media-player [PATCH]

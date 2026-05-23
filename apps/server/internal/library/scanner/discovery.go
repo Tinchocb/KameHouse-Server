@@ -144,12 +144,12 @@ func (scn *Scanner) createLocalFiles(ctx context.Context, paths []string, librar
 				// Preservation logic: If we already know this file, keep its associations
 				// unless the scanner explicitly changes them later.
 				if existing, ok := existingMap[normPath]; ok {
-					lf.MediaId = existing.MediaId
+					lf.MediaID = existing.MediaID
 					lf.LibraryMediaId = existing.LibraryMediaId
 					lf.Locked = existing.Locked
 					lf.Ignored = existing.Ignored
 					// Copy metadata if it was already matched
-					if lf.MediaId != 0 {
+					if lf.MediaID != 0 {
 						lf.Metadata = existing.Metadata
 					}
 				}

@@ -1,4 +1,5 @@
-﻿package handlers
+// Package handlers implements the HTTP route handlers for the KameHouse server.
+package handlers
 
 import (
 	"kamehouse/internal/core"

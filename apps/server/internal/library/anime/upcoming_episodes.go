@@ -18,7 +18,7 @@ type (
 	}
 
 	UpcomingEpisode struct {
-		MediaId         int                    `json:"mediaId"`
+		MediaID         int                    `json:"mediaID"`
 		EpisodeNumber   int                    `json:"episodeNumber"`
 		AiringAt        int64                  `json:"airingAt"`
 		TimeUntilAiring int                    `json:"timeUntilAiring"`
@@ -71,7 +71,7 @@ func NewUpcomingEpisodes(opts *NewUpcomingEpisodesOptions) *UpcomingEpisodes {
 			}
 
 			upcomingEp := &UpcomingEpisode{
-				MediaId:         media.ID,
+				MediaID:         media.ID,
 				EpisodeNumber:   media.NextAiringEpisode.Episode,
 				AiringAt:        int64(media.NextAiringEpisode.AiringAt),
 				TimeUntilAiring: media.NextAiringEpisode.TimeUntilAiring,

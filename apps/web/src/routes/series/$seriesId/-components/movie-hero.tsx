@@ -6,9 +6,10 @@ import { cn } from "@/components/ui/core/styling"
 import { getHighResImage } from "@/lib/helpers/images"
 import { Anime_Entry, Continuity_WatchHistoryItem } from "@/api/generated/types"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
-import { Play, Sparkles, Star, Heart, Check, Film } from "lucide-react"
-import { DeferredImage } from "@/components/shared/deferred-image"
+import { Play, Sparkles, Star, Heart, Check, Film, ListPlus } from "lucide-react"
 import { useUpdateAnimeEntryProgress } from "@/api/hooks/anime_entries.hooks"
+import { DeferredImage } from "@/components/shared/deferred-image"
+import { useAppStore } from "@/lib/store"
 import { toast } from "sonner"
 
 interface MovieHeroSectionProps {
@@ -131,6 +132,30 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
 
     const [isFavorite, setIsFavorite] = React.useState(false)
     const { mutate: updateProgress } = useUpdateAnimeEntryProgress(Number(seriesId), 1, false)
+
+    const addToQueue = useAppStore(state => state.addToQueue)
+
+    const handleAddToQueue = (e: React.MouseEvent) => {
+        e.stopPropagation()
+        if (entry.localFiles && entry.localFiles.length > 0) {
+            const localFile = entry.localFiles[0]
+            const epNum = localFile.parsedInfo?.episode || localFile.metadata?.episode || 1
+            
+            addToQueue({
+                id: entry.mediaId!,
+                title: title,
+                playableUrl: localFile.path || "",
+                thumbnail: getHighResImage(media.posterImage || ""),
+                mediaId: entry.mediaId!,
+                episodeNumber: Number(epNum),
+                malId: media.idMal ?? null,
+                mediaFormat: media.format ?? "MOVIE"
+            })
+            toast.success("Añadido a la cola de reproducción")
+        } else {
+            toast.error("No hay archivos locales disponibles para reproducir.")
+        }
+    }
 
     const handleToggleWatched = (e: React.MouseEvent) => {
         e.stopPropagation()
@@ -307,6 +332,17 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
                             )}
                         </div>
                     </button>
+
+                    {/* Secondary: Agregar a la cola */}
+                    {entry.localFiles && entry.localFiles.length > 0 && (
+                        <button
+                            onClick={handleAddToQueue}
+                            className="flex items-center justify-center p-4 rounded-2xl border bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all duration-300 hover:scale-105 active:scale-95 animate-fade-in"
+                            title="Agregar a la cola de reproducción"
+                        >
+                            <ListPlus className="w-5 h-5" />
+                        </button>
+                    )}
 
                     {/* Secondary: Agregar a Favoritos */}
                     <button

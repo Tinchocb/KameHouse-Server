@@ -21,7 +21,7 @@ type NfoFile struct {
 	XMLName       xml.Name      `xml:"tvshow"`
 	UniqueIDs     []NfoUniqueID `xml:"uniqueid"` // Jellyfin/Kodi-style: <uniqueid type="tmdb">603</uniqueid>
 	ID            int           `xml:"id"`       // Fallback / TMDB ID usually
-	TmdbId        int           `xml:"tmdbid"`   // TMDB ID
+	TmdbID        int           `xml:"tmdbid"`   // TMDB ID
 	TvdbId        int           `xml:"tvdbid"`   // TVDB ID
 	ImdbId        string        `xml:"imdbid"`   // IMDB ID
 	Season        int           `xml:"season"`   // Season number (episodedetails)
@@ -84,8 +84,8 @@ func (n *NfoFile) GetTmdbID() int {
 			}
 		}
 	}
-	if n.TmdbId > 0 {
-		return n.TmdbId
+	if n.TmdbID > 0 {
+		return n.TmdbID
 	}
 	return n.ID
 }

@@ -76,12 +76,12 @@ var dragonBallSeriesTitles = map[int]map[string]string{
 }
 
 // EnrichWithFiller marks Dragon Ball episodes as filler when applicable.
-func EnrichWithFiller(mediaId int, md *apiMetadata.AnimeMetadata) {
+func EnrichWithFiller(mediaID int, md *apiMetadata.AnimeMetadata) {
 	if md == nil || md.Episodes == nil {
 		return
 	}
 
-	fillerEps, ok := dragonBallFillerEpisodes[mediaId]
+	fillerEps, ok := dragonBallFillerEpisodes[mediaID]
 	if !ok {
 		return
 	}
@@ -99,12 +99,12 @@ func EnrichWithFiller(mediaId int, md *apiMetadata.AnimeMetadata) {
 
 // EnrichWithSeriesTitles overrides the AnimeMetadata title map with canonical
 // Latin Spanish and Japanese titles for Dragon Ball series.
-func EnrichWithSeriesTitles(mediaId int, md *apiMetadata.AnimeMetadata) {
+func EnrichWithSeriesTitles(mediaID int, md *apiMetadata.AnimeMetadata) {
 	if md == nil {
 		return
 	}
 
-	titles, ok := dragonBallSeriesTitles[mediaId]
+	titles, ok := dragonBallSeriesTitles[mediaID]
 	if !ok {
 		return
 	}

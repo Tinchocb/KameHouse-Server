@@ -57,8 +57,8 @@ var dragonBallSagaDefinitions = map[int][]SagaRange{
 }
 
 // ResolveSaga returns the saga ID and name for a given media and episode number.
-func ResolveSaga(tmdbId int, epNum int) (string, string) {
-	sagas, ok := dragonBallSagaDefinitions[tmdbId]
+func ResolveSaga(tmdbID int, epNum int) (string, string) {
+	sagas, ok := dragonBallSagaDefinitions[tmdbID]
 	if !ok {
 		return "", ""
 	}
@@ -73,12 +73,12 @@ func ResolveSaga(tmdbId int, epNum int) (string, string) {
 }
 
 // EnrichWithSagas populates saga metadata for Dragon Ball episodes.
-func EnrichWithSagas(mediaId int, metadata *apiMetadata.AnimeMetadata) {
+func EnrichWithSagas(mediaID int, metadata *apiMetadata.AnimeMetadata) {
 	if metadata == nil || metadata.Episodes == nil {
 		return
 	}
 
-	sagas, ok := dragonBallSagaDefinitions[mediaId]
+	sagas, ok := dragonBallSagaDefinitions[mediaID]
 	if !ok {
 		return
 	}
@@ -91,7 +91,7 @@ func EnrichWithSagas(mediaId int, metadata *apiMetadata.AnimeMetadata) {
 
 		// Handle absolute episode number for DBZ Kai if it's Season 2
 		// Season 1: 1-98, Season 2: 1-69 (starts at 99)
-		if mediaId == 61709 && ep.SeasonNumber == 2 {
+		if mediaID == 61709 && ep.SeasonNumber == 2 {
 			epNum += 98
 		}
 

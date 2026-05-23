@@ -6,7 +6,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// HandleGetScanSummaries
+// HandleGetScanSummaries returns the latest scan summaries.
 //
 //	@summary returns the latest scan summaries.
 //	@route /api/v1/library/scan-summaries [GET]

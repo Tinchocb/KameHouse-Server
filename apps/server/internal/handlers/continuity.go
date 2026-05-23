@@ -8,7 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// HandleUpdateContinuityWatchHistoryItem
+// HandleUpdateContinuityWatchHistoryItem updates the watch history item.
 //
 //	@summary Updates watch history item.
 //	@desc This endpoint is used to update a watch history item.
@@ -33,14 +33,14 @@ func (h *Handler) HandleUpdateContinuityWatchHistoryItem(c echo.Context) error {
 				userID = id
 			}
 		}
-		key := fmt.Sprintf("%d:%d:%d:%f", userID, b.Options.MediaId, b.Options.EpisodeNumber, b.Options.Duration)
+		key := fmt.Sprintf("%d:%d:%d:%f", userID, b.Options.MediaID, b.Options.EpisodeNumber, b.Options.Duration)
 		h.App.ContinuityManager.TelemetryManager.UpdateProgress(key, int(b.Options.CurrentTime))
 	}
 
 	return h.RespondWithData(c, true)
 }
 
-// HandleGetContinuityWatchHistoryItem
+// HandleGetContinuityWatchHistoryItem returns a watch history item.
 //
 //	@summary Returns a watch history item.
 //	@desc This endpoint is used to retrieve a watch history item.
@@ -64,7 +64,7 @@ func (h *Handler) HandleGetContinuityWatchHistoryItem(c echo.Context) error {
 	return h.RespondWithData(c, resp)
 }
 
-// HandleGetContinuityWatchHistory
+// HandleGetContinuityWatchHistory returns the continuity watch history.
 //
 //	@summary Returns the continuity watch history
 //	@desc This endpoint is used to retrieve all watch history items.

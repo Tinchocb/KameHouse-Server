@@ -14,7 +14,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// HandleGetVideoThumbnail
+// HandleGetVideoThumbnail ...
 //
 //	@summary extract a thumbnail from a video file.
 //	@desc Extracts a frame from a video file at approximately 5 minutes (or 25% if shorter)

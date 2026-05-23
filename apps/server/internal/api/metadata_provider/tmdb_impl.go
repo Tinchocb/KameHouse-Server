@@ -58,12 +58,12 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 	p.mu.Unlock()
 
 	// Resolve the real TMDB ID and type from the database.
-	tmdbId := id
+	tmdbID := id
 	
 	// 2. Check Database Persistent Cache
 	if p.db != nil {
 		var cachedData apiMetadata.AnimeMetadata
-		found, err := db.GetMetadataCache(p.db, "tmdb-anime-episodes", strconv.Itoa(tmdbId), &cachedData)
+		found, err := db.GetMetadataCache(p.db, "tmdb-anime-episodes", strconv.Itoa(tmdbID), &cachedData)
 		if err == nil && found {
 			// Store in memory cache too for subsequent lookups in this session
 			p.mu.Lock()
@@ -74,7 +74,7 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 			p.mu.Unlock()
 			
 			// Always re-apply enrichments to cached data to ensure local logic changes are reflected
-			p.applyEnrichments(tmdbId, &cachedData)
+			p.applyEnrichments(tmdbID, &cachedData)
 			
 			return &cachedData, nil
 		}
@@ -87,8 +87,8 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 	isMovie := false
 	if p.db != nil {
 		if m, err := db.GetLibraryMediaByID(p.db, uint(id)); err == nil && m != nil {
-			if m.TmdbId > 0 {
-				tmdbId = m.TmdbId
+			if m.TmdbID > 0 {
+				tmdbID = m.TmdbID
 			}
 			isMovie = m.Format == "MOVIE"
 		}
@@ -101,9 +101,9 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 
 	if isMovie {
 		// --- MOVIE PATH ---
-		movieDetails, err := p.client.GetMovieDetails(ctx, strconv.Itoa(tmdbId))
+		movieDetails, err := p.client.GetMovieDetails(ctx, strconv.Itoa(tmdbID))
 		if err != nil {
-			return nil, fmt.Errorf("tmdb_provider: GetMovieDetails(%d): %w", tmdbId, err)
+			return nil, fmt.Errorf("tmdb_provider: GetMovieDetails(%d): %w", tmdbID, err)
 		}
 
 		titles = buildTitleMapFromMovie(movieDetails)
@@ -121,9 +121,9 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 	} else {
 		// --- TV SHOW PATH ---
 		// Fetch the TV show details to determine how many seasons exist.
-		tvDetails, err := p.client.GetTVDetails(ctx, strconv.Itoa(tmdbId))
+		tvDetails, err := p.client.GetTVDetails(ctx, strconv.Itoa(tmdbID))
 		if err != nil {
-			return nil, fmt.Errorf("tmdb_provider: GetTVDetails(%d): %w", tmdbId, err)
+			return nil, fmt.Errorf("tmdb_provider: GetTVDetails(%d): %w", tmdbID, err)
 		}
 
 		titles = buildTitleMapFromTV(tvDetails)
@@ -141,7 +141,7 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 
 		absEpCounter := 0 // running counter across seasons for the flat episode key
 		for seasonNum := 0; seasonNum <= maxSeasons; seasonNum++ {
-			seasonDetails, err := p.client.GetTVSeason(ctx, tmdbId, seasonNum)
+			seasonDetails, err := p.client.GetTVSeason(ctx, tmdbID, seasonNum)
 			if err != nil || len(seasonDetails.Episodes) == 0 {
 				if seasonNum > 1 {
 					break
@@ -170,7 +170,7 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 	}
 
 	if len(episodes) == 0 {
-		return nil, fmt.Errorf("tmdb_provider: no episodes found for TMDB ID %d", tmdbId)
+		return nil, fmt.Errorf("tmdb_provider: no episodes found for TMDB ID %d", tmdbID)
 	}
 
 	result := &apiMetadata.AnimeMetadata{
@@ -183,7 +183,7 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 	}
 
 	// Apply Latin Spanish title overrides for Dragon Ball
-	p.applyEnrichments(tmdbId, result)
+	p.applyEnrichments(tmdbID, result)
 
 	// Store in cache
 	p.mu.Lock()
@@ -200,8 +200,8 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 
 	if p.logger != nil {
 		p.logger.Debug().
-			Int("mediaId", id).
-			Int("tmdbId", tmdbId).
+			Int("mediaID", id).
+			Int("tmdbID", tmdbID).
 			Int("episodes", totalEpisodes).
 			Int("specials", totalSpecials).
 			Msg("tmdb_provider: fetched episode metadata")
@@ -290,13 +290,13 @@ func buildTitleMapFromMovie(r *tmdb.MovieDetails) map[string]string {
 }
 
 // applyEnrichments runs the Dragon Ball specific metadata pipeline.
-func (p *TMDBProviderImpl) applyEnrichments(tmdbId int, metadata *apiMetadata.AnimeMetadata) {
+func (p *TMDBProviderImpl) applyEnrichments(tmdbID int, metadata *apiMetadata.AnimeMetadata) {
 	// Apply Latin Spanish title overrides for Dragon Ball
-	EnrichWithLatinTitles(tmdbId, metadata)
+	EnrichWithLatinTitles(tmdbID, metadata)
 	// Apply Saga metadata for Dragon Ball
-	EnrichWithSagas(tmdbId, metadata)
+	EnrichWithSagas(tmdbID, metadata)
 	// Apply Filler episode marking for Dragon Ball
-	EnrichWithFiller(tmdbId, metadata)
+	EnrichWithFiller(tmdbID, metadata)
 	// Apply canonical series titles for Dragon Ball
-	EnrichWithSeriesTitles(tmdbId, metadata)
+	EnrichWithSeriesTitles(tmdbID, metadata)
 }

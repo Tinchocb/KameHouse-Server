@@ -8,7 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// HandleGetMediastreamSettings
+// HandleGetMediastreamSettings returns the mediastream settings.
 //
 //	@summary get mediastream settings.
 //	@desc This returns the mediastream settings.
@@ -40,7 +40,7 @@ func (h *Handler) HandleGetMediastreamSettings(c echo.Context) error {
 	return h.RespondWithData(c, mediastreamSettings)
 }
 
-// HandleSaveMediastreamSettings
+// HandleSaveMediastreamSettings saves the mediastream settings.
 //
 //	@summary save mediastream settings.
 //	@desc This saves the mediastream settings.
@@ -66,7 +66,7 @@ func (h *Handler) HandleSaveMediastreamSettings(c echo.Context) error {
 	return h.RespondWithData(c, settings)
 }
 
-// HandleRequestMediastreamMediaContainer
+// HandleRequestMediastreamMediaContainer requests a media stream container.
 //
 //	@summary request media stream.
 //	@desc This requests a media stream and returns the media container to start the playback.
@@ -78,7 +78,7 @@ func (h *Handler) HandleRequestMediastreamMediaContainer(c echo.Context) error {
 		Path             string                 `json:"path"`             // The path of the file.
 		StreamType       mediastream.StreamType `json:"streamType"`       // The type of stream to request.
 		AudioStreamIndex int                    `json:"audioStreamIndex"` // The audio stream index to use. (unused)
-		ClientId         string                 `json:"clientId"`         // The session id
+		ClientID         string                 `json:"clientID"`         // The session id
 	}
 
 	var b body
@@ -91,11 +91,11 @@ func (h *Handler) HandleRequestMediastreamMediaContainer(c echo.Context) error {
 
 	switch b.StreamType {
 	case mediastream.StreamTypeDirect:
-		mediaContainer, err = h.App.MediastreamRepository.RequestDirectPlay(b.Path, b.ClientId)
+		mediaContainer, err = h.App.MediastreamRepository.RequestDirectPlay(b.Path, b.ClientID)
 	case mediastream.StreamTypeTranscode:
-		mediaContainer, err = h.App.MediastreamRepository.RequestTranscodeStream(b.Path, b.ClientId)
+		mediaContainer, err = h.App.MediastreamRepository.RequestTranscodeStream(b.Path, b.ClientID)
 	case mediastream.StreamTypeOptimized:
-		mediaContainer, err = h.App.MediastreamRepository.RequestOptimizedStream(b.Path, b.ClientId)
+		mediaContainer, err = h.App.MediastreamRepository.RequestOptimizedStream(b.Path, b.ClientID)
 	default:
 		err = fmt.Errorf("stream type %s not implemented", b.StreamType)
 	}
@@ -106,7 +106,7 @@ func (h *Handler) HandleRequestMediastreamMediaContainer(c echo.Context) error {
 	return h.RespondWithData(c, mediaContainer)
 }
 
-// HandlePreloadMediastreamMediaContainer
+// HandlePreloadMediastreamMediaContainer preloads a media stream for playback.
 //
 //	@summary preloads media stream for playback.
 //	@desc This preloads a media stream by extracting the media information and attachments.
@@ -164,7 +164,7 @@ func (h *Handler) HandleMediastreamGetAttachments(c echo.Context) error {
 //
 
 func (h *Handler) HandleMediastreamDirectPlay(c echo.Context) error {
-	client := c.QueryParam("clientId")
+	client := c.QueryParam("clientID")
 	if client == "" {
 		client = "1"
 	}
@@ -176,23 +176,23 @@ func (h *Handler) HandleMediastreamDirectPlay(c echo.Context) error {
 //
 
 func (h *Handler) HandleMediastreamTranscode(c echo.Context) error {
-	client := c.QueryParam("clientId")
+	client := c.QueryParam("clientID")
 	if client == "" {
 		client = "1"
 	}
 	return h.App.MediastreamRepository.ServeEchoTranscodeStream(c, client)
 }
 
-// HandleMediastreamShutdownTranscodeStream
+// HandleMediastreamShutdownTranscodeStream shuts down the transcode stream.
 //
-//	@summary shuts down the transcode stream
+//	@summary shuts down the transcode stream.
 //	@desc This requests the transcoder to shut down. It should be called when unmounting the player (playback is no longer needed).
 //	@desc This will also send an events.MediastreamShutdownStream event.
 //	@desc It will not return any error and is safe to call multiple times.
 //	@returns bool
 //	@route /api/v1/mediastream/shutdown-transcode [POST]
 func (h *Handler) HandleMediastreamShutdownTranscodeStream(c echo.Context) error {
-	client := c.QueryParam("clientId")
+	client := c.QueryParam("clientID")
 	if client == "" {
 		client = "1"
 	}
@@ -205,7 +205,7 @@ func (h *Handler) HandleMediastreamShutdownTranscodeStream(c echo.Context) error
 //
 
 func (h *Handler) HandleMediastreamServeOptimizedStatic(c echo.Context) error {
-	client := c.QueryParam("clientId")
+	client := c.QueryParam("clientID")
 	if client == "" {
 		client = "1"
 	}
@@ -213,7 +213,7 @@ func (h *Handler) HandleMediastreamServeOptimizedStatic(c echo.Context) error {
 }
 
 func (h *Handler) HandleMediastreamFile(c echo.Context) error {
-	client := c.QueryParam("clientId")
+	client := c.QueryParam("clientID")
 	if client == "" {
 		client = "1"
 	}

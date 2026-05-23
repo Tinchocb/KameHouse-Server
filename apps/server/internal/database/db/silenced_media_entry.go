@@ -37,9 +37,9 @@ func (db *Database) GetSilencedMediaEntryIds() ([]int, error) {
 	return mIds, nil
 }
 
-func (db *Database) GetSilencedMediaEntry(mId uint) (*models.SilencedMediaEntry, error) {
+func (db *Database) GetSilencedMediaEntry(mID uint) (*models.SilencedMediaEntry, error) {
 	var res models.SilencedMediaEntry
-	err := db.gormdb.First(&res, mId).Error
+	err := db.gormdb.First(&res, mID).Error
 	if err != nil {
 		return nil, err
 	}
@@ -47,13 +47,13 @@ func (db *Database) GetSilencedMediaEntry(mId uint) (*models.SilencedMediaEntry,
 	return &res, nil
 }
 
-func (db *Database) InsertSilencedMediaEntry(mId uint) error {
+func (db *Database) InsertSilencedMediaEntry(mID uint) error {
 	err := db.gormdb.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "id"}},
 		UpdateAll: true,
 	}).Create(&models.SilencedMediaEntry{
 		BaseModel: models.BaseModel{
-			ID: mId,
+			ID: mID,
 		},
 	}).Error
 	if err != nil {

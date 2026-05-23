@@ -8,7 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// HandleGetVideoInsights
+// HandleGetVideoInsights returns video insights (heatmap).
 //
 //	@summary returns video insights (heatmap)
 //	@param episodeId - string - true - "The Episode ID or string seed"
@@ -16,7 +16,7 @@ import (
 //	@returns []videocore.InsightNode
 //	@route /api/v1/videocore/insights/{episodeId} [GET]
 func (h *Handler) HandleGetVideoInsights(c echo.Context) error {
-	episodeId := c.Param("episodeId")
+	episodeID := c.Param("episodeId")
 	durationStr := c.QueryParam("duration")
 
 	duration := 1440.0 // 24 minutes default
@@ -24,7 +24,7 @@ func (h *Handler) HandleGetVideoInsights(c echo.Context) error {
 		duration = d
 	}
 
-	insights, err := videocore.GenerateVideoInsights(episodeId, duration)
+	insights, err := videocore.GenerateVideoInsights(episodeID, duration)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}

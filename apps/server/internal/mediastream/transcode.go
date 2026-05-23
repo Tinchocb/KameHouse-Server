@@ -15,7 +15,7 @@ import (
 // Transcode
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientId string) error {
+func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientID string) error {
 
 	if !r.IsInitialized() {
 		r.wsEventManager.SendEvent(events.MediastreamShutdownStream, "Module not initialized")
@@ -29,7 +29,7 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientId string) e
 
 	path := c.Param("*")
 
-	mediaContainer, found := r.playbackManager.clientMediaContainers.Get(clientId)
+	mediaContainer, found := r.playbackManager.clientMediaContainers.Get(clientID)
 	if !found {
 		mediaContainer, found = r.playbackManager.currentMediaContainer.Get()
 		if !found {
@@ -38,7 +38,7 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientId string) e
 	}
 
 	if path == "master.m3u8" {
-		ret, err := r.transcoder.MustGet().GetMaster(mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, clientId, "")
+		ret, err := r.transcoder.MustGet().GetMaster(mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, clientID, "")
 		if err != nil {
 			return err
 		}
@@ -59,7 +59,7 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientId string) e
 			return err
 		}
 
-		ret, err := r.transcoder.MustGet().GetVideoIndex(mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, quality, clientId, "")
+		ret, err := r.transcoder.MustGet().GetVideoIndex(mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, quality, clientID, "")
 		if err != nil {
 			return err
 		}
@@ -80,7 +80,7 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientId string) e
 			return err
 		}
 
-		ret, err := r.transcoder.MustGet().GetAudioIndex(mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, int32(audioIndex), clientId, "")
+		ret, err := r.transcoder.MustGet().GetAudioIndex(mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, int32(audioIndex), clientID, "")
 		if err != nil {
 			return err
 		}
@@ -106,7 +106,7 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientId string) e
 			return err
 		}
 
-		ret, err := r.transcoder.MustGet().GetVideoSegment(c.Request().Context(), mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, quality, segment, clientId)
+		ret, err := r.transcoder.MustGet().GetVideoSegment(c.Request().Context(), mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, quality, segment, clientID)
 		if err != nil {
 			return err
 		}
@@ -132,7 +132,7 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientId string) e
 			return err
 		}
 
-		ret, err := r.transcoder.MustGet().GetAudioSegment(c.Request().Context(), mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, int32(audioIndex), segment, clientId)
+		ret, err := r.transcoder.MustGet().GetAudioSegment(c.Request().Context(), mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, int32(audioIndex), segment, clientID)
 		if err != nil {
 			return err
 		}
@@ -148,12 +148,12 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientId string) e
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // ServeEchoOptimizedStream serves pre-transcoded static HLS stream files directly from cacheDir/optimized/<hash>.
-func (r *Repository) ServeEchoOptimizedStream(c echo.Context, clientId string) error {
+func (r *Repository) ServeEchoOptimizedStream(c echo.Context, clientID string) error {
 	if !r.IsInitialized() {
 		return errors.New("module not initialized")
 	}
 
-	mediaContainer, found := r.playbackManager.clientMediaContainers.Get(clientId)
+	mediaContainer, found := r.playbackManager.clientMediaContainers.Get(clientID)
 	if !found {
 		mediaContainer, found = r.playbackManager.currentMediaContainer.Get()
 		if !found {
@@ -172,7 +172,7 @@ func (r *Repository) ServeEchoOptimizedStream(c echo.Context, clientId string) e
 
 // ShutdownTranscodeStream It should be called when unmounting the player (playback is no longer needed).
 // This will also send an events.MediastreamShutdownStream event.
-func (r *Repository) ShutdownTranscodeStream(clientId string) {
+func (r *Repository) ShutdownTranscodeStream(clientID string) {
 	r.reqMu.Lock()
 	defer r.reqMu.Unlock()
 
@@ -184,10 +184,10 @@ func (r *Repository) ShutdownTranscodeStream(clientId string) {
 		return
 	}
 
-	r.logger.Warn().Str("client_id", clientId).Msg("mediastream: Received shutdown transcode stream request")
+	r.logger.Warn().Str("client_id", clientID).Msg("mediastream: Received shutdown transcode stream request")
 
-	r.playbackManager.clientMediaContainers.Delete(clientId)
-	r.transcoder.MustGet().RemoveClient(clientId)
+	r.playbackManager.clientMediaContainers.Delete(clientID)
+	r.transcoder.MustGet().RemoveClient(clientID)
 
 	// Send event
 	r.wsEventManager.SendEvent(events.MediastreamShutdownStream, nil)

@@ -48,38 +48,38 @@ func (vc *VideoCore) setupSharedEffects() {
 					}
 
 					// Helper to extract properties from various media types
-					var mediaId int
+					var mediaID int
 					var totalEpisodes *int
 
 					// Try to extract from common types or ignore if not possible
 					// This is a temporary measure until a proper Media interface is used across Videocore
 					if m, ok := state.PlaybackInfo.Media.(map[string]interface{}); ok {
 						if id, ok := m["id"].(float64); ok {
-							mediaId = int(id)
+							mediaID = int(id)
 						}
 						if eps, ok := m["episodes"].(float64); ok {
 							te := int(eps)
 							totalEpisodes = &te
 						}
 					} else if m, ok := state.PlaybackInfo.Media.(interface{ GetID() int }); ok {
-						mediaId = m.GetID()
+						mediaID = m.GetID()
 					}
 
 					progress := state.PlaybackInfo.Episode.GetProgressNumber()
 
 					if c, ok := collection.(*platform.UnifiedCollection); ok {
-						if listEntry, hasEntry := c.GetListEntryFromMediaId(mediaId); hasEntry {
+						if listEntry, hasEntry := c.GetListEntryFromMediaId(mediaID); hasEntry {
 							if listEntry.Progress != nil && progress <= *listEntry.Progress {
 								continue
 							}
 						}
-					} else if mediaId == 0 {
+					} else if mediaID == 0 {
 						continue
 					}
 
-					err = vc.dynamicPlatform.UpdateEntryProgress(context.Background(), mediaId, progress, totalEpisodes)
+					err = vc.dynamicPlatform.UpdateEntryProgress(context.Background(), mediaID, progress, totalEpisodes)
 					if err != nil {
-						vc.logger.Error().Err(err).Msgf("videocore: Failed to update progress for media %d", mediaId)
+						vc.logger.Error().Err(err).Msgf("videocore: Failed to update progress for media %d", mediaID)
 					}
 				}
 			case *VideoTerminatedEvent:
@@ -92,7 +92,7 @@ func (vc *VideoCore) setupSharedEffects() {
 					_ = vc.continuityManager.UpdateWatchHistoryItem(&continuity.UpdateWatchHistoryItemOptions{
 						CurrentTime: event.CurrentTime,
 						Duration:    event.Duration,
-						MediaId: func() int {
+						MediaID: func() int {
 							if m, ok := state.PlaybackInfo.Media.(map[string]interface{}); ok {
 								if id, ok := m["id"].(float64); ok {
 									return int(id)

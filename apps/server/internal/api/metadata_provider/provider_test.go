@@ -15,15 +15,15 @@ func TestProvider(t *testing.T) {
 
 	tests := []struct {
 		platform         metadata.Platform
-		mediaId          int
+		mediaID          int
 		expectedEpisodes int
 	}{
-		{platform: metadata.TMDBPlatform, mediaId: 199112, expectedEpisodes: 8},
+		{platform: metadata.TMDBPlatform, mediaID: 199112, expectedEpisodes: 8},
 	}
 
 	for _, tt := range tests {
-		t.Run(strconv.Itoa(tt.mediaId), func(t *testing.T) {
-			res, err := metadataProvider.GetAnimeMetadata(tt.mediaId)
+		t.Run(strconv.Itoa(tt.mediaID), func(t *testing.T) {
+			res, err := metadataProvider.GetAnimeMetadata(tt.mediaID)
 			if assert.NoError(t, err) {
 				t.Logf("Titles: %v", res.Titles)
 				t.Logf("\tEpisode count: %d", len(res.Episodes))

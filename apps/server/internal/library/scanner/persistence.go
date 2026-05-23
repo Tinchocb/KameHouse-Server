@@ -36,7 +36,7 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 
 		newMedia := &models.LibraryMedia{
 			Type:   mediaType,
-			TmdbId: realTmdbId,
+			TmdbID: realTmdbId,
 		}
 
 		if nm, ok := normalizedMap[id]; ok {
@@ -109,7 +109,7 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 		if newMedia.TitleRomaji == "" && newMedia.TitleEnglish == "" && newMedia.TitleSpanish == "" && newMedia.TitleOriginal == "" {
 			var fallbackTitle string
 			for _, lf := range localFiles {
-				if lf.MediaId == id {
+				if lf.MediaID == id {
 					if lf.ParsedData != nil && lf.ParsedData.Title != "" {
 						fallbackTitle = lf.ParsedData.Title
 					} else {
@@ -140,9 +140,9 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 			query := scn.Database.Gorm()
 			for i, m := range mediaBatch {
 				if i == 0 {
-					query = query.Where("tmdb_id = ? AND type = ?", m.TmdbId, m.Type)
+					query = query.Where("tmdb_id = ? AND type = ?", m.TmdbID, m.Type)
 				} else {
-					query = query.Or("tmdb_id = ? AND type = ?", m.TmdbId, m.Type)
+					query = query.Or("tmdb_id = ? AND type = ?", m.TmdbID, m.Type)
 				}
 			}
 			query.Find(&insertedMedia)
@@ -150,9 +150,9 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 			scn.Logger.Debug().Int("insertedCount", len(insertedMedia)).Msg("scanner: Retrieved persisted LibraryMedia records")
 			
 			for _, m := range insertedMedia {
-				mapKey := m.TmdbId
+				mapKey := m.TmdbID
 				if m.Type == "MOVIE" {
-					mapKey = m.TmdbId + 1_000_000
+					mapKey = m.TmdbID + 1_000_000
 				}
 				libraryMediaIdMap[mapKey] = m.ID
 			}
@@ -161,14 +161,14 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 
 	missingAssocCount := 0
 	for _, lf := range localFiles {
-		if lf.MediaId != 0 {
-			if libId, ok := libraryMediaIdMap[lf.MediaId]; ok {
+		if lf.MediaID != 0 {
+			if libId, ok := libraryMediaIdMap[lf.MediaID]; ok {
 				lf.LibraryMediaId = libId
 			} else {
 				missingAssocCount++
 				scn.Logger.Trace().
 					Str("path", lf.Path).
-					Int("mediaId", lf.MediaId).
+					Int("mediaID", lf.MediaID).
 					Msg("scanner: Local file matched media but failed to find internal LibraryMedia association")
 			}
 		}

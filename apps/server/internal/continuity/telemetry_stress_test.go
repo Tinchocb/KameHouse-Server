@@ -68,7 +68,7 @@ func TestTelemetryManager_Stress(t *testing.T) {
 	err = database.Gorm().Find(&records).Error
 	require.NoError(t, err)
 
-	// Because of deduplication across 500 concurrent goroutines updating mediaId 1,
+	// Because of deduplication across 500 concurrent goroutines updating mediaID 1,
 	// only the absolute last processed tick should survive. We expect 1 item.
 	require.Len(t, records, 1)
 	require.Equal(t, 1, records[0].MediaID)

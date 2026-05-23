@@ -244,7 +244,7 @@ func migrateLegacyLocalFiles(gormDB *gorm.DB) error {
 						Locked:         f.Locked,
 						Ignored:        f.Ignored,
 						LibraryMediaId: f.LibraryMediaId,
-						MediaId:        f.MediaId,
+						MediaID:        f.MediaID,
 					}
 					if f.ParsedData != nil {
 						dbf.ParsedData, _ = json.Marshal(f.ParsedData)
@@ -282,7 +282,7 @@ func (db *Database) ResetLocalFilesMediaIds() error {
 	}
 
 	for _, lf := range lfs {
-		lf.MediaId = 0
+		lf.MediaID = 0
 		lf.LibraryMediaId = 0
 	}
 

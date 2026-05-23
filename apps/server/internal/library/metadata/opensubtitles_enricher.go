@@ -49,8 +49,8 @@ func (e *OpenSubtitlesEnricher) EnrichLocalFile(
 	}
 
 	var tmdbID int
-	if media != nil && media.TmdbId != nil {
-		tmdbID = *media.TmdbId
+	if media != nil && media.TmdbID != nil {
+		tmdbID = *media.TmdbID
 	}
 
 	var allRemote []*dto.RemoteSubtitle

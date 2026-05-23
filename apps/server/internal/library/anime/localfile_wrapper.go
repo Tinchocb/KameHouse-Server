@@ -14,7 +14,7 @@ type (
 	}
 
 	LocalFileWrapperEntry struct {
-		MediaId    int          `json:"mediaId"`
+		MediaID    int          `json:"mediaID"`
 		LocalFiles []*LocalFile `json:"localFiles"`
 	}
 )
@@ -29,13 +29,13 @@ func NewLocalFileWrapper(lfs []*LocalFile) *LocalFileWrapper {
 
 	// Group local files by media id
 	groupedLfs := GroupLocalFilesByMediaID(lfs)
-	for mId, gLfs := range groupedLfs {
-		if mId == 0 {
+	for mID, gLfs := range groupedLfs {
+		if mID == 0 {
 			lfw.UnmatchedLocalFiles = gLfs
 			continue
 		}
 		lfw.LocalEntries = append(lfw.LocalEntries, &LocalFileWrapperEntry{
-			MediaId:    mId,
+			MediaID:    mID,
 			LocalFiles: gLfs,
 		})
 	}
@@ -43,9 +43,9 @@ func NewLocalFileWrapper(lfs []*LocalFile) *LocalFileWrapper {
 	return lfw
 }
 
-func (lfw *LocalFileWrapper) GetLocalEntryById(mId int) (*LocalFileWrapperEntry, bool) {
+func (lfw *LocalFileWrapper) GetLocalEntryById(mID int) (*LocalFileWrapperEntry, bool) {
 	for _, me := range lfw.LocalEntries {
-		if me.MediaId == mId {
+		if me.MediaID == mID {
 			return me, true
 		}
 	}
@@ -203,5 +203,5 @@ func (e *LocalFileWrapperEntry) GetLocalFiles() []*LocalFile {
 }
 
 func (e *LocalFileWrapperEntry) GetMediaId() int {
-	return e.MediaId
+	return e.MediaID
 }

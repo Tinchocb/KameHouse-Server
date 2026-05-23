@@ -29,7 +29,7 @@ type Account struct {
 type WatchHistory struct {
 	BaseModel
 	AccountID     uint    `gorm:"column:account_id;uniqueIndex:idx_media_episode" json:"accountId"`
-	MediaID       int     `gorm:"column:media_id;uniqueIndex:idx_media_episode" json:"mediaId"`
+	MediaID       int     `gorm:"column:media_id;uniqueIndex:idx_media_episode" json:"mediaID"`
 	EpisodeNumber int     `gorm:"column:episode_number;uniqueIndex:idx_media_episode" json:"episodeNumber"`
 	CurrentTime   float64 `gorm:"column:current_time" json:"currentTime"`
 	Duration      float64 `gorm:"column:duration" json:"duration"`
@@ -311,7 +311,7 @@ type MediastreamSettings struct {
 type GhostAssociatedMedia struct {
 	BaseModel
 	Path            string  `json:"path"`
-	TargetMediaId   int     `json:"targetMediaId"`
+	TargetMediaID   int     `json:"targetMediaId"`
 	GhostMatchCount int     `json:"ghostMatchCount"`
 	AlgorithmScore  float64 `json:"algorithmScore"`
 	UserResolved    bool    `json:"userResolved"`
@@ -321,14 +321,14 @@ type GhostAssociatedMedia struct {
 
 type MediaMetadataParent struct {
 	BaseModel
-	MediaId       int `json:"mediaId"`
-	ParentId      int `json:"parentId"`
+	MediaID       int `json:"mediaID"`
+	ParentID      int `json:"parentId"`
 	SpecialOffset int `json:"specialOffset"`
 }
 
 type OnlinestreamMapping struct {
 	BaseModel
-	MediaID  int    `json:"mediaId"`
+	MediaID  int    `json:"mediaID"`
 	AnimeID  string `json:"animeId"`
 	Provider string `json:"provider"`
 }
@@ -342,7 +342,7 @@ type SilencedMediaEntry struct {
 type MediaFiller struct {
 	BaseModel
 	Data          []byte    `json:"data"`
-	MediaID       int       `json:"mediaId"`
+	MediaID       int       `json:"mediaID"`
 	Provider      string    `json:"provider"`
 	Slug          string    `json:"slug"`
 	LastFetchedAt time.Time `json:"lastFetchedAt"`
@@ -355,7 +355,7 @@ type MediaFiller struct {
 type UserMediaProgress struct {
 	BaseModel
 	AnonUserId string  `gorm:"column:anon_user_id;uniqueIndex:idx_anon_media" json:"anonUserId"`
-	MediaId    int     `gorm:"column:media_id;uniqueIndex:idx_anon_media" json:"mediaId"`
+	MediaID    int     `gorm:"column:media_id;uniqueIndex:idx_anon_media" json:"mediaID"`
 	Status     string  `gorm:"column:status" json:"status"`
 	Progress   int     `gorm:"column:progress" json:"progress"`
 	Score      float64 `gorm:"column:score" json:"score"`

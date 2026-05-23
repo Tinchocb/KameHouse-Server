@@ -30,7 +30,7 @@ type (
 	}
 
 	PlaybackState struct {
-		MediaId int `json:"mediaId"` // The media ID
+		MediaID int `json:"mediaID"` // The media ID
 	}
 
 	MediaContainer struct {
@@ -62,7 +62,7 @@ func (p *PlaybackManager) KillPlayback() {
 }
 
 // RequestPlayback is called by the frontend to stream a media file
-func (p *PlaybackManager) RequestPlayback(filepath string, streamType StreamType, clientId string) (ret *MediaContainer, err error) {
+func (p *PlaybackManager) RequestPlayback(filepath string, streamType StreamType, clientID string) (ret *MediaContainer, err error) {
 
 	p.logger.Debug().Str("filepath", filepath).Any("type", streamType).Msg("mediastream: Requesting playback")
 
@@ -76,8 +76,8 @@ func (p *PlaybackManager) RequestPlayback(filepath string, streamType StreamType
 
 	// Set the current media container.
 	p.currentMediaContainer = mo.Some(ret)
-	if clientId != "" {
-		p.clientMediaContainers.Set(clientId, ret)
+	if clientID != "" {
+		p.clientMediaContainers.Set(clientID, ret)
 	}
 	p.clientMediaContainers.Set("1", ret)
 

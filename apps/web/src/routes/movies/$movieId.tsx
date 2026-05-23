@@ -3,6 +3,7 @@ import { HydrationBoundary, dehydrate, useQueryClient } from "@tanstack/react-qu
 import React, { useMemo, useState } from "react"
 import { toast } from "sonner"
 import { useAppStore } from "@/lib/store"
+import { ListPlus } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 import { getHighResImage } from "@/lib/helpers/images"
 import { fetchAnimeEntry, useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
@@ -140,6 +141,30 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
         })
     }
 
+    const handleAddToQueue = (lf: Anime_LocalFile) => {
+        if (!entry) {
+            toast.error("La información de la película no está cargada.")
+            return
+        }
+        if (!lf.path) {
+            toast.error("Archivo no disponible.")
+            return
+        }
+        const epNum = lf.parsedInfo?.episode || lf.metadata?.episode || 1
+        
+        useAppStore.getState().addToQueue({
+            id: entry.mediaId || Number(movieId),
+            title: title,
+            playableUrl: lf.path || "",
+            thumbnail: getHighResImage(entry.media?.posterImage || ""),
+            mediaId: entry.mediaId || Number(movieId),
+            episodeNumber: Number(epNum),
+            malId: entry?.media?.idMal ?? null,
+            mediaFormat: entry?.media?.format ?? "MOVIE"
+        })
+        toast.success(`Añadido a la cola: ${lf.name || title}`)
+    }
+
     const handlePlayDefault = () => {
         if (entry?.localFiles && entry.localFiles.length > 0) {
             let targetFile = entry.localFiles[0]
@@ -262,12 +287,21 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                                             className="flex items-center justify-between p-4 bg-zinc-950/20 border border-white/5 rounded-2xl hover:border-brand-orange/30 hover:bg-zinc-900/10 transition-all duration-300 group"
                                         >
                                             <span className="text-xs text-zinc-400 font-bold truncate max-w-[65%] group-hover:text-white transition-colors">{lf.name}</span>
-                                            <button 
-                                                onClick={() => handlePlayLocalFile(lf)}
-                                                className="px-4 py-2 bg-white/5 hover:bg-brand-orange hover:text-white hover:border-brand-orange border border-white/10 rounded-xl text-[10px] font-black text-brand-orange uppercase tracking-wider transition-all duration-300"
-                                            >
-                                                REPRODUCIR
-                                            </button>
+                                            <div className="flex items-center gap-2">
+                                                <button 
+                                                    onClick={() => handlePlayLocalFile(lf)}
+                                                    className="px-4 py-2 bg-white/5 hover:bg-brand-orange hover:text-white hover:border-brand-orange border border-white/10 rounded-xl text-[10px] font-black text-brand-orange uppercase tracking-wider transition-all duration-300"
+                                                >
+                                                    REPRODUCIR
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleAddToQueue(lf)}
+                                                    className="p-2 bg-white/5 hover:bg-brand-orange hover:text-white hover:border-brand-orange border border-white/10 rounded-xl text-zinc-400 hover:text-white transition-all duration-300"
+                                                    title="Agregar a la cola"
+                                                >
+                                                    <ListPlus className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>

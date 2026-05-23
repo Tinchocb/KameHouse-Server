@@ -22,7 +22,7 @@ import (
 	"github.com/sourcegraph/conc/pool"
 )
 
-// HandleGetLocalFiles
+// HandleGetLocalFiles returns all local files.
 //
 //	@summary returns all local files.
 //	@desc Reminder that local files are scanned from the library path.
@@ -93,7 +93,7 @@ func (h *Handler) HandleDumpLocalFilesToFile(c echo.Context) error {
 	return c.Blob(200, "application/json", jsonData)
 }
 
-// HandleImportLocalFiles
+// HandleImportLocalFiles imports local files from the given path.
 //
 //	@summary imports local files from the given path.
 //	@desc This will import local files from the given path.
@@ -133,7 +133,7 @@ func (h *Handler) HandleImportLocalFiles(c echo.Context) error {
 	return h.RespondWithData(c, true)
 }
 
-// HandleLocalFileBulkAction
+// HandleLocalFileBulkAction performs an action on all local files.
 //
 //	@summary performs an action on all local files.
 //	@desc This will perform the given action on all local files.
@@ -152,7 +152,7 @@ func (h *Handler) HandleLocalFileBulkAction(c echo.Context) error {
 	}
 
 	// Get all the local files
-	lfs, lfsId, err := db.GetLocalFiles(h.App.Database)
+	lfs, lfsID, err := db.GetLocalFiles(h.App.Database)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
@@ -162,7 +162,7 @@ func (h *Handler) HandleLocalFileBulkAction(c echo.Context) error {
 		for _, lf := range lfs {
 			// Note: Don't lock local files that are not associated with a media.
 			// Else refreshing the library will ignore them.
-			if lf.MediaId != 0 {
+			if lf.MediaID != 0 {
 				lf.Locked = true
 			}
 		}
@@ -173,7 +173,7 @@ func (h *Handler) HandleLocalFileBulkAction(c echo.Context) error {
 	}
 
 	// Save the local files
-	retLfs, err := db.SaveLocalFiles(h.App.Database, lfsId, lfs)
+	retLfs, err := db.SaveLocalFiles(h.App.Database, lfsID, lfs)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
@@ -181,7 +181,7 @@ func (h *Handler) HandleLocalFileBulkAction(c echo.Context) error {
 	return h.RespondWithData(c, retLfs)
 }
 
-// HandleUpdateLocalFileData
+// HandleUpdateLocalFileData updates the local file with the given path.
 //
 //	@summary updates the local file with the given path.
 //	@desc This will update the local file with the given path.
@@ -195,7 +195,7 @@ func (h *Handler) HandleUpdateLocalFileData(c echo.Context) error {
 		Metadata *dto.LocalFileMetadata `json:"metadata"`
 		Locked   bool                   `json:"locked"`
 		Ignored  bool                   `json:"ignored"`
-		MediaId  int                    `json:"mediaId"`
+		MediaID  int                    `json:"mediaID"`
 	}
 
 	b := new(body)
@@ -204,7 +204,7 @@ func (h *Handler) HandleUpdateLocalFileData(c echo.Context) error {
 	}
 
 	// Get all the local files
-	lfs, lfsId, err := db.GetLocalFiles(h.App.Database)
+	lfs, lfsID, err := db.GetLocalFiles(h.App.Database)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
@@ -218,27 +218,27 @@ func (h *Handler) HandleUpdateLocalFileData(c echo.Context) error {
 	lf.Metadata = b.Metadata
 	lf.Locked = b.Locked
 	lf.Ignored = b.Ignored
-	lf.MediaId = b.MediaId
+	lf.MediaID = b.MediaID
 
-	// If a mediaId is being assigned, also resolve and set LibraryMediaId
-	if b.MediaId > 0 {
+	// If a mediaID is being assigned, also resolve and set LibraryMediaId
+	if b.MediaID > 0 {
 		var libMedia *models.LibraryMedia
 		var err error
-		if b.MediaId > 1_000_000 {
-			libMedia, err = db.GetLibraryMediaByTmdbIdAndType(h.App.Database, b.MediaId-1_000_000, "MOVIE")
+		if b.MediaID > 1_000_000 {
+			libMedia, err = db.GetLibraryMediaByTmdbIdAndType(h.App.Database, b.MediaID-1_000_000, "MOVIE")
 		} else {
-			libMedia, err = db.GetLibraryMediaByTmdbIdAndType(h.App.Database, b.MediaId, "SHOW")
+			libMedia, err = db.GetLibraryMediaByTmdbIdAndType(h.App.Database, b.MediaID, "SHOW")
 		}
 		if err == nil && libMedia != nil {
 			lf.LibraryMediaId = libMedia.ID
 		}
-	} else if b.MediaId == 0 {
+	} else if b.MediaID == 0 {
 		// Unmatching: clear LibraryMediaId too
 		lf.LibraryMediaId = 0
 	}
 
 	// Save the local files
-	retLfs, err := db.SaveLocalFiles(h.App.Database, lfsId, lfs)
+	retLfs, err := db.SaveLocalFiles(h.App.Database, lfsID, lfs)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
@@ -247,7 +247,7 @@ func (h *Handler) HandleUpdateLocalFileData(c echo.Context) error {
 }
 
 
-// HandleSuperUpdateLocalFiles
+// HandleSuperUpdateLocalFiles updates local files with the given paths.
 //
 //	@summary updates local files with the given paths.
 //	@desc The client should refetch the entire library collection and media entry.
@@ -272,7 +272,7 @@ func (h *Handler) HandleSuperUpdateLocalFiles(c echo.Context) error {
 	return h.RespondWithData(c, true)
 }
 
-// HandleUpdateLocalFiles
+// HandleUpdateLocalFiles updates local files with the given paths.
 //
 //	@summary updates local files with the given paths.
 //	@desc The client should refetch the entire library collection and media entry.
@@ -283,7 +283,7 @@ func (h *Handler) HandleUpdateLocalFiles(c echo.Context) error {
 	type body struct {
 		Paths   []string `json:"paths"`
 		Action  string   `json:"action"`
-		MediaId int      `json:"mediaId,omitempty"`
+		MediaID int      `json:"mediaID,omitempty"`
 	}
 
 	b := new(body)
@@ -292,7 +292,7 @@ func (h *Handler) HandleUpdateLocalFiles(c echo.Context) error {
 	}
 
 	// Get all the local files
-	lfs, lfsId, err := db.GetLocalFiles(h.App.Database)
+	lfs, lfsID, err := db.GetLocalFiles(h.App.Database)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
@@ -311,7 +311,7 @@ func (h *Handler) HandleUpdateLocalFiles(c echo.Context) error {
 		case "unlock":
 			lf.Locked = false
 		case "ignore":
-			lf.MediaId = 0
+			lf.MediaID = 0
 			lf.LibraryMediaId = 0
 			lf.Ignored = true
 			lf.Locked = false
@@ -319,22 +319,22 @@ func (h *Handler) HandleUpdateLocalFiles(c echo.Context) error {
 			lf.Ignored = false
 			lf.Locked = false
 		case "unmatch":
-			lf.MediaId = 0
+			lf.MediaID = 0
 			lf.LibraryMediaId = 0
 			lf.Locked = false
 			lf.Ignored = false
 		case "match":
-			lf.MediaId = b.MediaId
+			lf.MediaID = b.MediaID
 			lf.Locked = true
 			lf.Ignored = false
 			// Also resolve LibraryMediaId for complete state
-			if b.MediaId > 0 {
+			if b.MediaID > 0 {
 				var libMedia *models.LibraryMedia
 				var err error
-				if b.MediaId > 1_000_000 {
-					libMedia, err = db.GetLibraryMediaByTmdbIdAndType(h.App.Database, b.MediaId-1_000_000, "MOVIE")
+				if b.MediaID > 1_000_000 {
+					libMedia, err = db.GetLibraryMediaByTmdbIdAndType(h.App.Database, b.MediaID-1_000_000, "MOVIE")
 				} else {
-					libMedia, err = db.GetLibraryMediaByTmdbIdAndType(h.App.Database, b.MediaId, "SHOW")
+					libMedia, err = db.GetLibraryMediaByTmdbIdAndType(h.App.Database, b.MediaID, "SHOW")
 				}
 				if err == nil && libMedia != nil {
 					lf.LibraryMediaId = libMedia.ID
@@ -345,7 +345,7 @@ func (h *Handler) HandleUpdateLocalFiles(c echo.Context) error {
 	}
 
 	// Save the local files
-	_, err = db.SaveLocalFiles(h.App.Database, lfsId, lfs)
+	_, err = db.SaveLocalFiles(h.App.Database, lfsID, lfs)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
@@ -353,7 +353,7 @@ func (h *Handler) HandleUpdateLocalFiles(c echo.Context) error {
 	return h.RespondWithData(c, true)
 }
 
-// HandleDeleteLocalFiles
+// HandleDeleteLocalFiles deletes local files with the given paths.
 //
 //	@summary deletes local files with the given paths.
 //	@desc This will delete the local files with the given paths.
@@ -397,7 +397,7 @@ func (h *Handler) HandleDeleteLocalFiles(c echo.Context) error {
 	}
 
 	// Get all the local files
-	lfs, lfsId, err := db.GetLocalFiles(h.App.Database)
+	lfs, lfsID, err := db.GetLocalFiles(h.App.Database)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
@@ -428,7 +428,7 @@ func (h *Handler) HandleDeleteLocalFiles(c echo.Context) error {
 	})
 
 	// Save the local files
-	_, err = db.SaveLocalFiles(h.App.Database, lfsId, lfs)
+	_, err = db.SaveLocalFiles(h.App.Database, lfsID, lfs)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
@@ -440,7 +440,7 @@ func (h *Handler) HandleDeleteLocalFiles(c echo.Context) error {
 	return h.RespondWithData(c, true)
 }
 
-// HandleRemoveEmptyDirectories
+// HandleRemoveEmptyDirectories removes empty directories.
 //
 //	@summary removes empty directories.
 //	@desc This will remove empty directories in the library path.

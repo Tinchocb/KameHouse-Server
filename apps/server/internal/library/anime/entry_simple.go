@@ -16,7 +16,7 @@ import (
 
 type (
 	SimpleEntry struct {
-		MediaId             int                  `json:"mediaId"`
+		MediaID             int                  `json:"mediaID"`
 		Media               *models.LibraryMedia `json:"media"`
 		EntryListData       *EntryListData       `json:"listData"`
 		EntryLibraryData    *EntryLibraryData    `json:"libraryData"`
@@ -39,7 +39,7 @@ type (
 	}
 
 	NewSimpleAnimeEntryOptions struct {
-		MediaId             int
+		MediaID             int
 		LocalFiles          []*LocalFile // All local files
 		Database            *db.Database
 		PlatformRef         platform.Platform
@@ -57,24 +57,24 @@ func NewSimpleEntry(ctx context.Context, opts *NewSimpleAnimeEntryOptions) (*Sim
 	}
 	// Create new Entry
 	entry := new(SimpleEntry)
-	entry.MediaId = opts.MediaId
+	entry.MediaID = opts.MediaID
 	entry.IntelligenceSvc = opts.IntelligenceSvc
 
 	// Get local DB media
 	var fetchedMedia *models.LibraryMedia
 
 	// Try direct lookup by potential PK
-	fetchedMedia, _ = db.GetLibraryMediaByID(opts.Database, uint(opts.MediaId))
+	fetchedMedia, _ = db.GetLibraryMediaByID(opts.Database, uint(opts.MediaID))
 
 	// If not found, try looking it up by TMDB ID
 	if fetchedMedia == nil {
-		if opts.MediaId > 1_000_000 {
-			m, err := db.GetLibraryMediaByTmdbIdAndType(opts.Database, opts.MediaId-1_000_000, "MOVIE")
+		if opts.MediaID > 1_000_000 {
+			m, err := db.GetLibraryMediaByTmdbIdAndType(opts.Database, opts.MediaID-1_000_000, "MOVIE")
 			if err == nil && m != nil {
 				fetchedMedia = m
 			}
 		} else {
-			m, err := db.GetLibraryMediaByTmdbIdAndType(opts.Database, opts.MediaId, "SHOW")
+			m, err := db.GetLibraryMediaByTmdbIdAndType(opts.Database, opts.MediaID, "SHOW")
 			if err == nil && m != nil {
 				fetchedMedia = m
 			}
@@ -85,7 +85,7 @@ func NewSimpleEntry(ctx context.Context, opts *NewSimpleAnimeEntryOptions) (*Sim
 	// find the LibraryMediaId from local files
 	if fetchedMedia == nil {
 		for _, lf := range opts.LocalFiles {
-			if lf.MediaId == opts.MediaId && lf.LibraryMediaId > 0 {
+			if lf.MediaID == opts.MediaID && lf.LibraryMediaId > 0 {
 				m, err := db.GetLibraryMediaByID(opts.Database, lf.LibraryMediaId)
 				if err == nil && m != nil {
 					fetchedMedia = m
@@ -111,7 +111,7 @@ func NewSimpleEntry(ctx context.Context, opts *NewSimpleAnimeEntryOptions) (*Sim
 	// +---------------------+
 
 	// Get the entry's local files
-	lfs := GetLocalFilesFromMediaId(opts.LocalFiles, opts.MediaId)
+	lfs := GetLocalFilesFromMediaId(opts.LocalFiles, opts.MediaID)
 	entry.LocalFiles = lfs // Returns empty slice if no local files are found
 
 	listData, _ := db.GetMediaEntryListData(opts.Database, fetchedMedia.ID)
@@ -134,7 +134,7 @@ func NewSimpleEntry(ctx context.Context, opts *NewSimpleAnimeEntryOptions) (*Sim
 
 	libraryData, _ := NewEntryLibraryData(&NewEntryLibraryDataOptions{
 		EntryLocalFiles: lfs,
-		MediaId:         int(entry.Media.ID),
+		MediaID:         int(entry.Media.ID),
 		CurrentProgress: progress,
 	})
 	entry.EntryLibraryData = libraryData

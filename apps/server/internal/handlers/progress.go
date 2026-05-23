@@ -8,7 +8,7 @@ import (
 )
 
 type SaveProgressRequest struct {
-	MediaId  int     `json:"mediaId"`
+	MediaID  int     `json:"mediaID"`
 	Status   string  `json:"status"`
 	Progress int     `json:"progress"`
 	Score    float64 `json:"score"`
@@ -16,14 +16,14 @@ type SaveProgressRequest struct {
 
 // HandleGetProgress handles GET /api/v1/progress
 func (h *Handler) HandleGetProgress(c echo.Context) error {
-	clientIdRaw := c.Get("KameHouse-Client-Id")
-	if clientIdRaw == nil {
+	clientIDRaw := c.Get("KameHouse-Client-Id")
+	if clientIDRaw == nil {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "missing client id"})
 	}
-	clientId := clientIdRaw.(string)
+	clientID := clientIDRaw.(string)
 
 	var progress []models.UserMediaProgress
-	if err := h.App.Database.Gorm().Where("anon_user_id = ?", clientId).Find(&progress).Error; err != nil {
+	if err := h.App.Database.Gorm().Where("anon_user_id = ?", clientID).Find(&progress).Error; err != nil {
 		return h.RespondWithError(c, err)
 	}
 
@@ -32,29 +32,29 @@ func (h *Handler) HandleGetProgress(c echo.Context) error {
 
 // HandleSaveProgress handles POST /api/v1/progress
 func (h *Handler) HandleSaveProgress(c echo.Context) error {
-	clientIdRaw := c.Get("KameHouse-Client-Id")
-	if clientIdRaw == nil {
+	clientIDRaw := c.Get("KameHouse-Client-Id")
+	if clientIDRaw == nil {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "missing client id"})
 	}
-	clientId := clientIdRaw.(string)
+	clientID := clientIDRaw.(string)
 
 	var req SaveProgressRequest
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 	}
 
-	if req.MediaId == 0 {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "mediaId is required"})
+	if req.MediaID == 0 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "mediaID is required"})
 	}
 
 	var progress models.UserMediaProgress
-	result := h.App.Database.Gorm().Where("anon_user_id = ? AND media_id = ?", clientId, req.MediaId).First(&progress)
+	result := h.App.Database.Gorm().Where("anon_user_id = ? AND media_id = ?", clientID, req.MediaID).First(&progress)
 
 	if result.Error != nil {
 		// Create new
 		progress = models.UserMediaProgress{
-			AnonUserId: clientId,
-			MediaId:    req.MediaId,
+			AnonUserId: clientID,
+			MediaID:    req.MediaID,
 			Status:     req.Status,
 			Progress:   req.Progress,
 			Score:      req.Score,

@@ -4,7 +4,7 @@ import gsap from "gsap"
 import { useGSAP } from "@gsap/react"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/components/ui/core/styling"
-import { Tv, Copy, Check, X, Info, RefreshCw, Loader2 } from "lucide-react"
+import { Tv, X, RefreshCw, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { buildSeaQuery } from "@/api/client/requests"
 import { PlayerTopBar } from "./player-topbar"
@@ -14,6 +14,7 @@ import type { EpisodeSource } from "@/api/types/unified.types"
 import { useGetVideoInsights } from "@/api/hooks/videocore.hooks"
 import { useAniSkipTimes } from "@/api/hooks/aniskip.hooks"
 import type { PlayerCore, PlayerStats } from "./player-core"
+import { useAppStore } from "@/lib/store"
 
 function StatsOverlay({ show, data }: { show: boolean, data: PlayerStats }) {
     if (!show || !data) return null
@@ -82,19 +83,23 @@ export function PlayerUI(props: PlayerUIProps) {
 
     const [isEpisodesSidebarOpen, setIsEpisodesSidebarOpen] = React.useState(false)
     const [isCastModalOpen, setIsCastModalOpen] = React.useState(false)
-    const [isCopied, setIsCopied] = React.useState(false)
+    const [isQueueSidebarOpen, setIsQueueSidebarOpen] = React.useState(false)
     const [discoveredTvs, setDiscoveredTvs] = React.useState<{ ip: string; name: string }[]>([])
+    const [pairedTvs, setPairedTvs] = React.useState<{ ip: string; name: string; wifi_mac?: string; ethernet_mac?: string }[]>([])
     const [isDiscovering, setIsDiscovering] = React.useState(false)
     const [castingTvIp, setCastingTvIp] = React.useState<string | null>(null)
 
-    const controlsVisible = state.controlsVisible || isEpisodesSidebarOpen || isCastModalOpen
+    const playlistQueue = useAppStore(state => state.playlistQueue)
+    const currentQueueIndex = useAppStore(state => state.currentQueueIndex)
+
+    const controlsVisible = state.controlsVisible || isEpisodesSidebarOpen || isCastModalOpen || isQueueSidebarOpen
 
     // Force controls visibility if sidebar or cast modal is open
     useEffect(() => {
-        if (isEpisodesSidebarOpen || isCastModalOpen) {
+        if (isEpisodesSidebarOpen || isCastModalOpen || isQueueSidebarOpen) {
             actions.setControlsVisible(true)
         }
-    }, [isEpisodesSidebarOpen, isCastModalOpen, actions])
+    }, [isEpisodesSidebarOpen, isCastModalOpen, isQueueSidebarOpen, actions])
 
     const localServerUrl = React.useMemo(() => {
         if (typeof window === "undefined") return "http://localhost:43210"
@@ -123,19 +128,29 @@ export function PlayerUI(props: PlayerUIProps) {
         return window.location.origin
     }, [state.serverIPs])
 
-    const handleCopyUrl = async () => {
-        try {
-            await navigator.clipboard.writeText(localServerUrl)
-            setIsCopied(true)
-            setTimeout(() => setIsCopied(false), 2000)
-        } catch (err) {
-            console.error("Failed to copy URL:", err)
+    const targetUrl = React.useMemo(() => {
+        if (typeof window !== "undefined") {
+            return `${localServerUrl}${window.location.pathname}`
         }
-    }
+        return localServerUrl
+    }, [localServerUrl])
+
+    const fetchPairedTvs = React.useCallback(async () => {
+        try {
+            const result = await buildSeaQuery<{ ip: string; name: string; wifi_mac?: string; ethernet_mac?: string }[]>({
+                endpoint: "/api/v1/cast/samsung/paired",
+                method: "GET",
+            })
+            setPairedTvs(result || [])
+        } catch (err) {
+            console.error("Error fetching paired TVs:", err)
+        }
+    }, [])
 
     const discoverTvs = React.useCallback(async () => {
         setIsDiscovering(true)
         try {
+            await fetchPairedTvs()
             const result = await buildSeaQuery<{ ip: string; name: string }[]>({
                 endpoint: "/api/v1/cast/samsung/discover",
                 method: "GET",
@@ -147,7 +162,20 @@ export function PlayerUI(props: PlayerUIProps) {
         } finally {
             setIsDiscovering(false)
         }
-    }, [])
+    }, [fetchPairedTvs])
+
+    const allTvs = React.useMemo(() => {
+        const list: { ip: string; name: string; isOnline: boolean }[] = []
+        discoveredTvs.forEach(tv => {
+            list.push({ ip: tv.ip, name: tv.name, isOnline: true })
+        })
+        pairedTvs.forEach(ptv => {
+            if (!list.some(tv => tv.ip === ptv.ip)) {
+                list.push({ ip: ptv.ip, name: ptv.name, isOnline: false })
+            }
+        })
+        return list
+    }, [discoveredTvs, pairedTvs])
 
     const handleCastToSamsung = async (ip: string, name: string) => {
         setCastingTvIp(ip)
@@ -157,7 +185,7 @@ export function PlayerUI(props: PlayerUIProps) {
                 method: "POST",
                 data: {
                     ip,
-                    url: localServerUrl,
+                    url: targetUrl,
                 },
             })
             if (result?.success) {
@@ -429,6 +457,9 @@ export function PlayerUI(props: PlayerUIProps) {
                     isEpisodesSidebarOpen={isEpisodesSidebarOpen}
                     onToggleEpisodesSidebar={() => setIsEpisodesSidebarOpen(!isEpisodesSidebarOpen)}
                     hasEpisodes={Boolean(episodes && episodes.length > 0)}
+                    isQueueSidebarOpen={isQueueSidebarOpen}
+                    onToggleQueueSidebar={() => setIsQueueSidebarOpen(!isQueueSidebarOpen)}
+                    hasQueue={playlistQueue.length > 0}
                 />
             </div>
 
@@ -555,6 +586,155 @@ export function PlayerUI(props: PlayerUIProps) {
                 )}
             </AnimatePresence>
 
+            {/* Queue Sidebar */}
+            <AnimatePresence>
+                {isQueueSidebarOpen && (
+                    <>
+                        {/* Backdrop overlay */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsQueueSidebarOpen(false)}
+                            className="absolute inset-0 z-[150] bg-black/60 backdrop-blur-sm pointer-events-auto"
+                        />
+
+                        {/* Sidebar Panel */}
+                        <motion.div
+                            initial={{ x: "100%" }}
+                            animate={{ x: 0 }}
+                            exit={{ x: "100%" }}
+                            transition={{ type: "spring", damping: 30, stiffness: 300 }}
+                            className="absolute right-0 top-0 bottom-0 w-full sm:w-[400px] z-[160] bg-zinc-950/85 backdrop-blur-3xl border-l border-white/10 flex flex-col shadow-2xl pointer-events-auto select-none"
+                        >
+                            {/* Header */}
+                            <div className="flex items-center justify-between p-6 border-b border-white/5 shrink-0">
+                                <h3 className="text-sm font-black tracking-[0.25em] text-white uppercase flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-brand-orange animate-pulse" />
+                                    COLA DE REPRODUCCIÓN
+                                </h3>
+                                <button
+                                    onClick={() => setIsQueueSidebarOpen(false)}
+                                    className="p-2 text-zinc-500 hover:text-white hover:bg-white/5 rounded-full transition-all"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            {/* Queue Items List */}
+                            <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar">
+                                {playlistQueue.map((item, idx) => {
+                                    const isCurrent = idx === currentQueueIndex
+
+                                    return (
+                                        <div
+                                            key={`${item.id}_${idx}`}
+                                            className={cn(
+                                                "w-full text-left flex gap-4 p-3 rounded-xl border transition-all duration-300 group relative",
+                                                isCurrent
+                                                    ? "bg-brand-orange/10 border-brand-orange/30 text-white shadow-[0_0_15px_rgba(255,110,58,0.1)]"
+                                                    : "bg-white/[0.02] border-white/5 text-zinc-400 hover:text-white hover:bg-white/[0.04] hover:border-white/10"
+                                            )}
+                                        >
+                                            {/* Clickable Area to play */}
+                                            <div 
+                                                onClick={() => {
+                                                    useAppStore.getState().setCurrentQueueIndex(idx);
+                                                }}
+                                                className="flex-1 flex gap-4 cursor-pointer"
+                                            >
+                                                {/* Thumbnail */}
+                                                <div className="relative w-28 aspect-video bg-zinc-900 border border-white/5 rounded-lg overflow-hidden shrink-0 flex items-center justify-center">
+                                                    {item.thumbnail ? (
+                                                        <img
+                                                            src={item.thumbnail}
+                                                            alt={item.title}
+                                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                                            loading="lazy"
+                                                        />
+                                                    ) : (
+                                                        <span className="text-[10px] font-black text-zinc-700">SIN IMAGEN</span>
+                                                    )}
+
+                                                    {/* Dark overlay */}
+                                                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors duration-300" />
+
+                                                    {/* Play overlay for current or hover */}
+                                                    <div className={cn(
+                                                        "absolute inset-0 flex items-center justify-center transition-all duration-300",
+                                                        isCurrent ? "opacity-100 bg-brand-orange/10" : "opacity-0 group-hover:opacity-100 bg-black/40"
+                                                    )}>
+                                                        <svg className={cn(
+                                                            "w-5 h-5 drop-shadow-md transition-transform duration-300",
+                                                            isCurrent ? "text-brand-orange scale-110" : "text-white scale-90 group-hover:scale-100"
+                                                        )} fill="currentColor" viewBox="0 0 24 24">
+                                                            <path d="M8 5v14l11-7z" />
+                                                        </svg>
+                                                    </div>
+                                                </div>
+
+                                                {/* Meta content */}
+                                                <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                                    {item.subtitle && (
+                                                        <span className={cn(
+                                                            "text-[9px] font-black tracking-widest mb-0.5",
+                                                            isCurrent ? "text-brand-orange" : "text-zinc-500"
+                                                        )}>
+                                                            {item.subtitle.toUpperCase()}
+                                                        </span>
+                                                    )}
+                                                    <h4 className={cn(
+                                                        "text-[11px] font-black uppercase tracking-wider truncate leading-tight transition-colors",
+                                                        isCurrent ? "text-white" : "text-zinc-300 group-hover:text-white"
+                                                    )}>
+                                                        {item.title}
+                                                    </h4>
+                                                </div>
+                                            </div>
+
+                                            {/* Remove button */}
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    useAppStore.getState().removeFromQueue(idx);
+                                                }}
+                                                className="p-1.5 text-zinc-500 hover:text-red-400 self-center hover:bg-white/5 rounded-full transition-all duration-200 z-10"
+                                                title="Eliminar de la cola"
+                                            >
+                                                <X className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    )
+                                })}
+                                
+                                {playlistQueue.length === 0 && (
+                                    <div className="py-20 flex flex-col items-center justify-center text-center gap-3">
+                                        <p className="text-[10px] text-zinc-500 font-sans tracking-normal uppercase font-bold">
+                                            La cola está vacía
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Footer / Actions */}
+                            {playlistQueue.length > 0 && (
+                                <div className="p-6 border-t border-white/5 shrink-0 flex justify-between gap-4">
+                                    <button
+                                        onClick={() => {
+                                            useAppStore.getState().clearQueue();
+                                            setIsQueueSidebarOpen(false);
+                                        }}
+                                        className="w-full py-3 border border-white/10 hover:border-red-500/30 hover:bg-red-500/10 text-zinc-500 hover:text-red-400 font-black text-[10px] uppercase tracking-widest rounded-xl transition-all duration-300"
+                                    >
+                                        Vaciar Cola
+                                    </button>
+                                </div>
+                            )}
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
             {/* Casting Modal */}
             <AnimatePresence>
                 {isCastModalOpen && (
@@ -592,40 +772,7 @@ export function PlayerUI(props: PlayerUIProps) {
 
                             {/* Content options */}
                             <div className="space-y-5">
-                                {/* Option 1: Native casting */}
-                                <div 
-                                    onClick={() => {
-                                        actions.promptCast();
-                                        setIsCastModalOpen(false);
-                                    }}
-                                    className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-brand-orange/30 hover:bg-brand-orange/[0.02] transition-all duration-300 group cursor-pointer flex gap-4 items-start"
-                                >
-                                    <div className="p-3 bg-zinc-800/80 rounded-xl text-zinc-400 group-hover:text-brand-orange group-hover:bg-brand-orange/10 transition-all shrink-0">
-                                        <svg
-                                            viewBox="0 0 24 24"
-                                            width="20"
-                                            height="20"
-                                            stroke="currentColor"
-                                            strokeWidth="2.5"
-                                            fill="none"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                        >
-                                            <path d="M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6" />
-                                            <path d="M2 12a9 9 0 0 1 8 8" />
-                                            <path d="M2 16a5 5 0 0 1 4 4" />
-                                            <line x1="2" x2="2.01" y1="20" y2="20" />
-                                        </svg>
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h4 className="text-xs font-bold text-white tracking-wider uppercase mb-1 flex items-center gap-2">
-                                            Transmisión Directa
-                                        </h4>
-                                        <p className="text-[10px] text-zinc-400 leading-relaxed font-sans normal-case tracking-normal">
-                                            Utiliza la transmisión nativa del navegador (Google Cast / AirPlay). Recomendado si tienes un Chromecast o Apple TV conectado en tu misma red.
-                                        </p>
-                                    </div>
-                                </div>
+
 
                                 {/* Option 2: Automatic Samsung TV Casting */}
                                 <div className="p-5 rounded-2xl bg-brand-orange/[0.02] border border-brand-orange/20 transition-all duration-300 flex flex-col gap-4">
@@ -653,9 +800,9 @@ export function PlayerUI(props: PlayerUIProps) {
                                                 Buscando Smart TVs en la red local...
                                             </p>
                                         </div>
-                                    ) : discoveredTvs.length > 0 ? (
+                                    ) : allTvs.length > 0 ? (
                                         <div className="space-y-2">
-                                            {discoveredTvs.map((tv) => (
+                                            {allTvs.map((tv) => (
                                                 <div
                                                     key={tv.ip}
                                                     onClick={() => castingTvIp === null && handleCastToSamsung(tv.ip, tv.name)}
@@ -663,21 +810,36 @@ export function PlayerUI(props: PlayerUIProps) {
                                                         "p-3.5 rounded-xl border transition-all duration-300 flex justify-between items-center group cursor-pointer",
                                                         castingTvIp === tv.ip
                                                             ? "bg-brand-orange/10 border-brand-orange/40 text-brand-orange"
-                                                            : "bg-zinc-950/40 border-white/5 hover:border-brand-orange/30 hover:bg-brand-orange/[0.02] text-white"
+                                                            : tv.isOnline
+                                                                ? "bg-zinc-950/40 border-white/5 hover:border-brand-orange/30 hover:bg-brand-orange/[0.02] text-white"
+                                                                : "bg-zinc-950/10 border-white/[0.03] opacity-60 hover:opacity-100 hover:border-brand-orange/20 hover:bg-brand-orange/[0.01] text-zinc-400 hover:text-white"
                                                     )}
                                                 >
                                                     <div className="flex flex-col">
-                                                        <span className="text-xs font-bold tracking-wide">{tv.name}</span>
-                                                        <span className="text-[9px] text-zinc-500 font-mono tracking-tight">{tv.ip}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs font-bold tracking-wide">{tv.name}</span>
+                                                            <span className={cn(
+                                                                "w-1.5 h-1.5 rounded-full shrink-0",
+                                                                tv.isOnline ? "bg-emerald-500 animate-pulse" : "bg-zinc-600"
+                                                            )} />
+                                                        </div>
+                                                        <span className="text-[9px] text-zinc-500 font-mono tracking-tight">
+                                                            {tv.ip} {!tv.isOnline && "· En espera (WoL)"}
+                                                        </span>
                                                     </div>
                                                     {castingTvIp === tv.ip ? (
                                                         <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-brand-orange">
                                                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                            Transmitiendo...
+                                                            {tv.isOnline ? "Transmitiendo..." : "Encendiendo TV..."}
                                                         </div>
                                                     ) : (
-                                                        <div className="px-2.5 py-1 bg-zinc-900 border border-white/10 group-hover:border-brand-orange/30 group-hover:bg-brand-orange/10 text-zinc-400 group-hover:text-brand-orange rounded-md transition-all text-[9px] font-black uppercase tracking-wider">
-                                                            Transmitir
+                                                        <div className={cn(
+                                                            "px-2.5 py-1 rounded-md transition-all text-[9px] font-black uppercase tracking-wider border",
+                                                            tv.isOnline
+                                                                ? "bg-zinc-900 border-white/10 group-hover:border-brand-orange/30 group-hover:bg-brand-orange/10 text-zinc-400 group-hover:text-brand-orange"
+                                                                : "bg-zinc-900/50 border-white/5 group-hover:border-brand-orange/20 group-hover:bg-brand-orange/5 text-zinc-500 group-hover:text-zinc-300"
+                                                        )}>
+                                                            {tv.isOnline ? "Transmitir" : "Encender"}
                                                         </div>
                                                     )}
                                                 </div>
@@ -690,66 +852,7 @@ export function PlayerUI(props: PlayerUIProps) {
                                     )}
                                 </div>
 
-                                {/* Option 3: Manual Connection Fallback */}
-                                <div className="p-5 rounded-2xl bg-white/[0.01] border border-white/5 transition-all duration-300 flex flex-col gap-4">
-                                    <div className="flex gap-4 items-start">
-                                        <div className="p-3 bg-zinc-800/80 rounded-xl text-zinc-400 shrink-0">
-                                            <Tv className="w-5 h-5" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <h4 className="text-xs font-bold text-white tracking-wider uppercase mb-1">
-                                                Conexión Manual (Otras TVs / Fallback)
-                                            </h4>
-                                            <p className="text-[10px] text-zinc-400 leading-relaxed font-sans normal-case tracking-normal">
-                                                Si tienes otra marca (LG webOS, Sony, etc.) o falla el descubrimiento, abre el navegador de tu TV e introduce:
-                                            </p>
-                                        </div>
-                                    </div>
 
-                                    {/* URL Display and copy — protocolo destacado */}
-                                    <div className="flex items-center gap-2 bg-zinc-950/80 border border-white/5 rounded-xl p-3 shrink-0">
-                                        <code className="flex-1 font-mono text-[11px] break-all select-all font-bold tracking-tight px-1 flex items-center flex-wrap gap-0">
-                                            <span className="text-amber-400 shrink-0">{localServerUrl.split("://")[0]}://</span>
-                                            <span className="text-white">{localServerUrl.split("://")[1]}</span>
-                                        </code>
-                                        <button
-                                            onClick={handleCopyUrl}
-                                            className="px-3 py-2 bg-zinc-900 border border-white/10 hover:border-brand-orange/30 hover:bg-brand-orange/10 text-zinc-400 hover:text-brand-orange rounded-lg transition-all text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shrink-0"
-                                        >
-                                            {isCopied ? (
-                                                <>
-                                                    <Check className="w-3.5 h-3.5" />
-                                                    Copiado
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Copy className="w-3.5 h-3.5" />
-                                                    Copiar
-                                                </>
-                                            )}
-                                        </button>
-                                    </div>
-
-                                    {/* Advertencia HTTPS */}
-                                    <div className="flex gap-2.5 items-start bg-amber-500/10 border border-amber-500/25 rounded-xl px-3.5 py-3">
-                                        <svg className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="currentColor">
-                                            <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-                                        </svg>
-                                        <p className="text-[9px] text-amber-300/80 leading-relaxed font-sans normal-case tracking-normal">
-                                            <strong className="text-amber-300">¡Importante!</strong> Las TVs de Samsung pueden forzar <code className="text-red-400 font-mono">https://</code>. Asegúrate de usar <code className="text-amber-300 font-mono">http://</code> (sin la «s»).
-                                        </p>
-                                    </div>
-
-                                    {/* Quick Guide */}
-                                    <div className="pt-2 border-t border-white/5 flex gap-2.5 items-start">
-                                        <Info className="w-3.5 h-3.5 text-zinc-500 shrink-0 mt-0.5" />
-                                        <div className="space-y-1 text-[9px] text-zinc-500 leading-relaxed font-sans normal-case tracking-normal">
-                                            <p>1. Asegúrate de que el televisor esté conectado al mismo Wi-Fi que este ordenador.</p>
-                                            <p>2. Abre el navegador de tu Smart TV, borra la barra de direcciones y escribe la URL de arriba empezando siempre por <span className="text-amber-400 font-mono font-bold">http://</span></p>
-                                            <p>3. ¡Listo! Podrás explorar y reproducir todo tu catálogo directamente en pantalla grande.</p>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
                         </motion.div>
                     </>

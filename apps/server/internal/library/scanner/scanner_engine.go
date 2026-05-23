@@ -428,7 +428,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 					default:
 					}
 
-					if lf == nil || lf.LibraryMediaId != 0 || lf.MediaId != 0 {
+					if lf == nil || lf.LibraryMediaId != 0 || lf.MediaID != 0 {
 						continue
 					}
 
@@ -504,7 +504,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 			var withTmdb, withoutTmdb []*nfoEntry
 			for _, e := range nfoEntries {
 				if e.tmdbID > 0 {
-					e.media.TmdbId = e.tmdbID
+					e.media.TmdbID = e.tmdbID
 					withTmdb = append(withTmdb, e)
 				} else {
 					withoutTmdb = append(withoutTmdb, e)
@@ -539,14 +539,14 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 				}
 				idMap := make(map[tmdbTypeKey]uint, len(persisted))
 				for _, m := range persisted {
-					idMap[tmdbTypeKey{m.TmdbId, m.Type}] = m.ID
+					idMap[tmdbTypeKey{m.TmdbID, m.Type}] = m.ID
 				}
 
 				for _, e := range withTmdb {
 					key := tmdbTypeKey{e.tmdbID, e.media.Type}
 					if id, ok := idMap[key]; ok {
 						e.lf.LibraryMediaId = id
-						e.lf.MediaId = e.tmdbID
+						e.lf.MediaID = e.tmdbID
 						if !e.isPerFile {
 							nfoFolderMap.Store(e.folderPath, id)
 						}
@@ -727,8 +727,8 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	telemetry.Send(events.EventScanStatus, "Hydrating metadata...")
 	telemetry.Send(events.EventScanProgressDetailed, map[string]interface{}{
 		"stage":      "matching-complete",
-		"matched":    len(lo.Filter(localFiles, func(lf *dto.LocalFile, _ int) bool { return lf.MediaId != 0 })),
-		"unmatched":  len(lo.Filter(localFiles, func(lf *dto.LocalFile, _ int) bool { return lf.MediaId == 0 })),
+		"matched":    len(lo.Filter(localFiles, func(lf *dto.LocalFile, _ int) bool { return lf.MediaID != 0 })),
+		"unmatched":  len(lo.Filter(localFiles, func(lf *dto.LocalFile, _ int) bool { return lf.MediaID == 0 })),
 		"totalFiles": len(localFiles),
 		"message":    "Matching complete, hydrating metadata...",
 	})
@@ -768,15 +768,15 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 			normalizedMap[nm.ID] = nm
 		}
 
-		// Group local files by MediaId to avoid redundant enrichment
+		// Group local files by MediaID to avoid redundant enrichment
 		mediaGroups := make(map[int][]*dto.LocalFile)
 		for _, lf := range localFiles {
-			if lf.MediaId != 0 {
-				mediaGroups[lf.MediaId] = append(mediaGroups[lf.MediaId], lf)
+			if lf.MediaID != 0 {
+				mediaGroups[lf.MediaID] = append(mediaGroups[lf.MediaID], lf)
 			}
 		}
 
-		// Parallel process enrichment per unique MediaId
+		// Parallel process enrichment per unique MediaID
 		enrichWorkers := runtime.NumCPU()
 		if enrichWorkers < 2 {
 			enrichWorkers = 2
@@ -786,8 +786,8 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		}
 
 		mIdChan := make(chan int, len(mediaGroups))
-		for mId := range mediaGroups {
-			mIdChan <- mId
+		for mID := range mediaGroups {
+			mIdChan <- mID
 		}
 		close(mIdChan)
 
@@ -796,13 +796,13 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 			enrichWg.Add(1)
 			go func() {
 				defer enrichWg.Done()
-				for mId := range mIdChan {
-					matchedMedia, ok := normalizedMap[mId]
+				for mID := range mIdChan {
+					matchedMedia, ok := normalizedMap[mID]
 					if !ok {
 						continue
 					}
 
-					// 1. FanArt.tv (Per MediaId)
+					// 1. FanArt.tv (Per MediaID)
 					if scn.FanArtEnricher != nil {
 						isMovie := matchedMedia.ID >= 1_000_000 || (matchedMedia.Format != nil && *matchedMedia.Format == dto.MediaFormatMovie)
 						if isMovie {
@@ -828,7 +828,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 						}
 					}
 
-					// 2. OMDb (Per MediaId)
+					// 2. OMDb (Per MediaID)
 					if scn.OMDbEnricher != nil {
 						if matchedMedia.Title != nil && matchedMedia.Title.UserPreferred != nil {
 							year := 0
@@ -842,7 +842,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 					// 3. OpenSubtitles (Per LocalFile)
 					if scn.OpenSubsEnricher != nil {
 						var fileWg sync.WaitGroup
-						for _, lf := range mediaGroups[mId] {
+						for _, lf := range mediaGroups[mID] {
 							season, episode := 0, 0
 							if lf.ParsedData != nil {
 								if lf.ParsedData.Season != "" {
@@ -906,8 +906,8 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		// Collect all unique media IDs from matched local files
 		allMatchedIds := make(map[int]struct{})
 		for _, lf := range localFiles {
-			if lf.MediaId != 0 {
-				allMatchedIds[lf.MediaId] = struct{}{}
+			if lf.MediaID != 0 {
+				allMatchedIds[lf.MediaID] = struct{}{}
 			}
 		}
 		// Also include CollectionMediaIds from the fetcher
@@ -920,19 +920,19 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		fileTitleMap := make(map[int]string)
 		movieIds := make(map[int]bool)
 		for _, lf := range localFiles {
-			if lf.MediaId != 0 {
-				if _, exists := fileTitleMap[lf.MediaId]; !exists {
+			if lf.MediaID != 0 {
+				if _, exists := fileTitleMap[lf.MediaID]; !exists {
 					info := ParseFolderStructure(lf.Path, libraryPaths)
 					if info.SeriesName != "" {
-						fileTitleMap[lf.MediaId] = info.SeriesName
+						fileTitleMap[lf.MediaID] = info.SeriesName
 					}
 					if info.IsMovie {
-						movieIds[lf.MediaId] = true
+						movieIds[lf.MediaID] = true
 					}
 				}
 				// IDs with offset >= 1,000,000 are always movies (DragonBallResolver convention)
-				if lf.MediaId >= 1_000_000 {
-					movieIds[lf.MediaId] = true
+				if lf.MediaID >= 1_000_000 {
+					movieIds[lf.MediaID] = true
 				}
 			}
 		}
@@ -1014,7 +1014,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 						}
 						details, detailErr := scn.TMDBClient.GetMovieDetailsV2(ctx, realMovieID)
 						if detailErr != nil {
-							scn.Logger.Debug().Err(detailErr).Int("tmdbId", realMovieID).Msg("scanner: Could not get movie details for collection lookup")
+							scn.Logger.Debug().Err(detailErr).Int("tmdbID", realMovieID).Msg("scanner: Could not get movie details for collection lookup")
 							continue
 						}
 						if details.BelongsToCollection != nil && details.BelongsToCollection.ID > 0 {

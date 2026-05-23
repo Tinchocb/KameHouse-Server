@@ -21,7 +21,7 @@ type DirectorySelectorResponse struct {
 	Directories []DirectoryInfo `json:"Directories"`
 }
 
-// HandleDirectorySelector
+// HandleDirectorySelector returns directory content based on the input path.
 //
 //	@summary returns directory content based on the input path.
 //	@desc This used by the directory selector component to get directory validation and suggestions.

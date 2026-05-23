@@ -13,7 +13,7 @@ type MediaFillerItem struct {
 	DbId           uint      `json:"dbId"`
 	Provider       string    `json:"provider"`
 	Slug           string    `json:"slug"`
-	MediaId        int       `json:"mediaId"`
+	MediaID        int       `json:"mediaID"`
 	LastFetchedAt  time.Time `json:"lastFetchedAt"`
 	FillerEpisodes []string  `json:"fillerEpisodes"`
 }
@@ -50,7 +50,7 @@ func (db *Database) GetCachedMediaFillers() (map[int]*MediaFillerItem, error) {
 		mediaFillers[mf.MediaID] = &MediaFillerItem{
 			DbId:           mf.ID,
 			Provider:       mf.Provider,
-			MediaId:        mf.MediaID,
+			MediaID:        mf.MediaID,
 			Slug:           mf.Slug,
 			LastFetchedAt:  mf.LastFetchedAt,
 			FillerEpisodes: fillerEpisodes,
@@ -63,21 +63,21 @@ func (db *Database) GetCachedMediaFillers() (map[int]*MediaFillerItem, error) {
 	return db.CurrMediaFillers.MustGet(), nil
 }
 
-func (db *Database) GetMediaFillerItem(mediaId int) (*MediaFillerItem, bool) {
+func (db *Database) GetMediaFillerItem(mediaID int) (*MediaFillerItem, bool) {
 
 	mediaFillers, err := db.GetCachedMediaFillers()
 	if err != nil {
 		return nil, false
 	}
 
-	item, ok := mediaFillers[mediaId]
+	item, ok := mediaFillers[mediaID]
 
 	return item, ok
 }
 
 func (db *Database) InsertMediaFiller(
 	provider string,
-	mediaId int,
+	mediaID int,
 	slug string,
 	lastFetchedAt time.Time,
 	fillerEpisodes []string,
@@ -94,12 +94,12 @@ func (db *Database) InsertMediaFiller(
 	}
 
 	// Delete the existing media filler
-	_ = db.DeleteMediaFiller(mediaId)
+	_ = db.DeleteMediaFiller(mediaID)
 
 	// Save the media filler
 	err = db.gormdb.Create(&models.MediaFiller{
 		Provider:      provider,
-		MediaID:       mediaId,
+		MediaID:       mediaID,
 		Slug:          slug,
 		LastFetchedAt: lastFetchedAt,
 		Data:          fillerDataBytes,
@@ -159,14 +159,14 @@ func (db *Database) SaveCachedMediaFillerItems() error {
 	return nil
 }
 
-func (db *Database) DeleteMediaFiller(mediaId int) error {
+func (db *Database) DeleteMediaFiller(mediaID int) error {
 
 	mediaFillers, err := db.GetCachedMediaFillers()
 	if err != nil {
 		return err
 	}
 
-	item, ok := mediaFillers[mediaId]
+	item, ok := mediaFillers[mediaID]
 	if !ok {
 		return nil
 	}

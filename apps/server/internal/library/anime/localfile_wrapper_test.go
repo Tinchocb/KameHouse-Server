@@ -34,21 +34,21 @@ func TestLocalFileWrapperEntry(t *testing.T) {
 
 	tests := []struct {
 		name                              string
-		mediaId                           int
+		mediaID                           int
 		expectedNbMainLocalFiles          int
 		expectedLatestEpisode             int
 		expectedEpisodeNumberAfterEpisode []int
 	}{
 		{
 			name:                              "One Piece",
-			mediaId:                           21,
+			mediaID:                           21,
 			expectedNbMainLocalFiles:          5,
 			expectedLatestEpisode:             1074,
 			expectedEpisodeNumberAfterEpisode: []int{1071, 1072},
 		},
 		{
 			name:                              "Blue Lock",
-			mediaId:                           22222,
+			mediaID:                           22222,
 			expectedNbMainLocalFiles:          3,
 			expectedLatestEpisode:             3,
 			expectedEpisodeNumberAfterEpisode: []int{2, 3},
@@ -63,10 +63,10 @@ func TestLocalFileWrapperEntry(t *testing.T) {
 		for _, tt := range tests {
 
 			// Can get by id
-			entry, ok := lfw.GetLocalEntryById(tt.mediaId)
+			entry, ok := lfw.GetLocalEntryById(tt.mediaID)
 			if assert.Truef(t, ok, "could not find entry for %s", tt.name) {
 
-				assert.Equalf(t, tt.mediaId, entry.GetMediaId(), "media id does not match for %s", tt.name)
+				assert.Equalf(t, tt.mediaID, entry.GetMediaId(), "media id does not match for %s", tt.name)
 
 				// Can get main local files
 				mainLfs, ok := entry.GetMainLocalFiles()
@@ -117,7 +117,7 @@ func TestLocalFileWrapperEntryProgressNumber(t *testing.T) {
 
 	tests := []struct {
 		name                              string
-		mediaId                           int
+		mediaID                           int
 		expectedNbMainLocalFiles          int
 		expectedLatestEpisode             int
 		expectedEpisodeNumberAfterEpisode []int
@@ -125,7 +125,7 @@ func TestLocalFileWrapperEntryProgressNumber(t *testing.T) {
 	}{
 		{
 			name:                              "Kimi ni Todoke",
-			mediaId:                           9656,
+			mediaID:                           9656,
 			expectedNbMainLocalFiles:          3,
 			expectedLatestEpisode:             2,
 			expectedEpisodeNumberAfterEpisode: []int{1, 2},
@@ -133,7 +133,7 @@ func TestLocalFileWrapperEntryProgressNumber(t *testing.T) {
 		},
 		{
 			name:                              "Kimi ni Todoke 2",
-			mediaId:                           9656_2,
+			mediaID:                           9656_2,
 			expectedNbMainLocalFiles:          3,
 			expectedLatestEpisode:             3,
 			expectedEpisodeNumberAfterEpisode: []int{2, 3},
@@ -149,10 +149,10 @@ func TestLocalFileWrapperEntryProgressNumber(t *testing.T) {
 		for _, tt := range tests {
 
 			// Can get by id
-			entry, ok := lfw.GetLocalEntryById(tt.mediaId)
+			entry, ok := lfw.GetLocalEntryById(tt.mediaID)
 			if assert.Truef(t, ok, "could not find entry for %s", tt.name) {
 
-				assert.Equalf(t, tt.mediaId, entry.GetMediaId(), "media id does not match for %s", tt.name)
+				assert.Equalf(t, tt.mediaID, entry.GetMediaId(), "media id does not match for %s", tt.name)
 
 				// Can get main local files
 				mainLfs, ok := entry.GetMainLocalFiles()

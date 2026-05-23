@@ -97,7 +97,7 @@ func (d *Diff) GetAnimeDiffs(opts GetAnimeDiffOptions) map[int]*AnimeDiffResult 
 			}
 
 			_lfs := lo.Filter(opts.LocalFiles, func(lf *dto.LocalFile, _ int) bool {
-				return lf.MediaId == _entry.Media.ID
+				return lf.MediaID == _entry.Media.ID
 			})
 
 			// Check if the anime has changed
@@ -151,7 +151,7 @@ func GetAnimeReferenceKey(bAnime *platform.UnifiedMedia, lfs []*dto.LocalFile) s
 	// Reference key is used to compare the snapshot with the current data.
 	// If the reference key is different, the snapshot is outdated.
 	animeLfs := lo.Filter(lfs, func(lf *dto.LocalFile, _ int) bool {
-		return lf.MediaId == bAnime.ID
+		return lf.MediaID == bAnime.ID
 	})
 
 	// Extract the paths and sort them to maintain a consistent order.

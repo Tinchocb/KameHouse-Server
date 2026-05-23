@@ -35,7 +35,7 @@ type (
 		Locked           bool                       `json:"locked"`
 		Ignored          bool                       `json:"ignored"` // Unused for now
 		LibraryMediaId   uint                       `json:"libraryMediaId"`
-		MediaId          int                        `json:"mediaId"`
+		MediaID          int                        `json:"mediaID"`
 	}
 
 	LocalFileEmbeddedMetadata struct {
@@ -182,7 +182,7 @@ func newLocalFile(opath string, info *filesystem.SeparatedFilePath) *LocalFile {
 		Locked:         false,
 		Ignored:        false,
 		LibraryMediaId: 0,
-		MediaId:        0,
+		MediaID:        0,
 	}
 
 	return localFile
@@ -203,7 +203,7 @@ func NewLocalFileFromModel(m *models.LocalFile) *LocalFile {
 		Locked:         m.Locked,
 		Ignored:        m.Ignored,
 		LibraryMediaId: m.LibraryMediaId,
-		MediaId:        m.MediaId,
+		MediaID:        m.MediaID,
 	}
 
 	// Unmarshal JSON fields

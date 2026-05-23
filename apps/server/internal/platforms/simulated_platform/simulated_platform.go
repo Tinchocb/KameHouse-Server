@@ -47,7 +47,7 @@ func (p *SimulatedPlatform) UpdateEntryProgress(ctx context.Context, mediaID int
 func (p *SimulatedPlatform) UpdateEntryRepeat(ctx context.Context, mediaID int, repeat int) error {
 	return nil
 }
-func (p *SimulatedPlatform) DeleteEntry(ctx context.Context, mediaId, entryId int) error {
+func (p *SimulatedPlatform) DeleteEntry(ctx context.Context, mediaID, entryId int) error {
 	return nil
 }
 func (p *SimulatedPlatform) GetAnime(ctx context.Context, mediaID int) (interface{}, error) {

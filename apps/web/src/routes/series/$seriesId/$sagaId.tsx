@@ -199,7 +199,7 @@ function EpisodeRow({ episode, isActive, isWatched, isDownloaded, progress, onSe
                         isActive ? "text-white" : "text-zinc-700 group-hover:text-zinc-400",
                     )}
                 >
-                    {episode.number.toString().padStart(2, '0')}
+                    {episode?.number?.toString().padStart(2, '0') || "00"}
                 </span>
                 {isDownloaded && <HardDrive className={cn("w-3 h-3 mt-1", isActive ? "text-white/65" : "text-zinc-700")} />}
             </div>
@@ -413,7 +413,7 @@ function DetailPage() {
 
         // Map to expected UI layout
         const mappedEpisodes: Episode[] = arcEpisodes.map(ep => ({
-            id: ep.absoluteEpisodeNumber?.toString() ?? ep.episodeNumber.toString(),
+            id: ep?.absoluteEpisodeNumber?.toString() ?? ep?.episodeNumber?.toString() ?? "0",
             number: ep.episodeNumber,
             title: ep.episodeTitle || ep.displayTitle || `Episodio ${ep.episodeNumber}`,
             description: ep.episodeMetadata?.overview || ep.episodeMetadata?.summary || "Sin descripción disponible.",

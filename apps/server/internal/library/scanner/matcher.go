@@ -100,7 +100,7 @@ func (m *Matcher) BayesianResolve(lf *dto.LocalFile) {
 		if isMovie {
 			targetId += 1000000
 		}
-		lf.MediaId = targetId
+		lf.MediaID = targetId
 		lf.Metadata.Episodes = pm.Episodes
 		lf.Metadata.Type = dto.LocalFileTypeMain
 
@@ -156,13 +156,13 @@ func (m *Matcher) BayesianResolve(lf *dto.LocalFile) {
 			if association, err := m.Database.GetGhostAssociationByPath(lf.Path); err == nil && association != nil {
 				if association.UserResolved || association.GhostMatchCount > 3 {
 					// The system learned this override! Forcibly map it.
-					lf.MediaId = association.TargetMediaId
+					lf.MediaID = association.TargetMediaID
 					bestConfidence = 1.0 // Heuristic Absolute Truth
-					m.Logger.Info().Msgf("AgentMatcher: Resurrected identity using Ghost Association for '%s' -> %d", lf.Name, lf.MediaId)
+					m.Logger.Info().Msgf("AgentMatcher: Resurrected identity using Ghost Association for '%s' -> %d", lf.Name, lf.MediaID)
 
 					// Find and assign the bestMatch struct
 					for _, media := range m.MediaContainer.NormalizedMedia {
-						if media.ID == association.TargetMediaId {
+						if media.ID == association.TargetMediaID {
 							bestMatch = media
 							break
 						}
@@ -226,7 +226,7 @@ verdict:
 		}
 		// ---------------------------------------------
 
-		lf.MediaId = bestMatch.ID
+		lf.MediaID = bestMatch.ID
 
 		lf.Metadata.Episodes = pm.Episodes
 		lf.Metadata.Type = dto.LocalFileTypeMain
@@ -241,7 +241,7 @@ verdict:
 				Path:           lf.Path,
 				OriginalTitle:  lf.Name,
 				AlgorithmScore: bestConfidence,
-				TargetMediaId:  bestMatch.ID,
+				TargetMediaID:  bestMatch.ID,
 				UserResolved:   false,
 			}
 			_ = m.Database.UpsertGhostAssociation(ghost) // Silent best-effort insert
@@ -319,7 +319,7 @@ func (m *Matcher) calculateBayesianScore(pm parser.ParsedMedia, media *dto.Norma
 		if dbId >= 1_000_000 {
 			realDbId = dbId - 1_000_000
 		}
-		tmdbMatch := media.TmdbId != nil && (*media.TmdbId == realDbId || *media.TmdbId == dbId)
+		tmdbMatch := media.TmdbID != nil && (*media.TmdbID == realDbId || *media.TmdbID == dbId)
 		idMatch := media.ID == dbId
 		if tmdbMatch || idMatch {
 			bestDice = 1.0

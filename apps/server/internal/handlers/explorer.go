@@ -10,7 +10,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// HandleOpenInExplorer
+// HandleOpenInExplorer opens the given directory in the file explorer.
 //
 //	@summary opens the given directory in the file explorer.
 //	@desc It returns 'true' whether the operation was successful or not.

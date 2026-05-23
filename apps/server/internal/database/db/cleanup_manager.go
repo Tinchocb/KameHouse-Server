@@ -111,7 +111,7 @@ func (cm *CleanupManager) removeOrphanedAndCollidedMedia() {
 
 	movieTmdbIds := make(map[int]bool)
 	for _, m := range movies {
-		movieTmdbIds[m.TmdbId] = true
+		movieTmdbIds[m.TmdbID] = true
 	}
 
 	var shows []models.LibraryMedia
@@ -121,11 +121,11 @@ func (cm *CleanupManager) removeOrphanedAndCollidedMedia() {
 	}
 
 	for _, s := range shows {
-		if movieTmdbIds[s.TmdbId] {
+		if movieTmdbIds[s.TmdbID] {
 			// Check if this show actually has any local files linked
 			var localFileCount int64
 			if err := cm.gormdb.Model(&models.LocalFile{}).Where("library_media_id = ?", s.ID).Count(&localFileCount).Error; err == nil && localFileCount == 0 {
-				cm.logger.Warn().Uint("id", s.ID).Int("tmdbId", s.TmdbId).Str("title", s.TitleEnglish).Msg("database cleanup: Found collided show with no local files. Deleting.")
+				cm.logger.Warn().Uint("id", s.ID).Int("tmdbID", s.TmdbID).Str("title", s.TitleEnglish).Msg("database cleanup: Found collided show with no local files. Deleting.")
 
 				// Start a transaction to delete show and its children safely
 				_ = cm.gormdb.Transaction(func(tx *gorm.DB) error {

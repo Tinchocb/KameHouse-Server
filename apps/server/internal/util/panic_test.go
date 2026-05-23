@@ -5,12 +5,12 @@ import "testing"
 func TestHandlePanicInModuleThen(t *testing.T) {
 
 	type testStruct struct {
-		mediaId int
+		mediaID int
 	}
 
 	testDangerousWork := func(obj *testStruct, work func()) {
 		defer HandlePanicInModuleThen("util/panic_test", func() {
-			obj.mediaId = 0
+			obj.mediaID = 0
 		})
 
 		work()
@@ -24,7 +24,7 @@ func TestHandlePanicInModuleThen(t *testing.T) {
 	}{
 		{
 			name: "Test 1",
-			obj:  testStruct{mediaId: 1},
+			obj:  testStruct{mediaID: 1},
 			work: func() {
 				panic("Test 1")
 			},
@@ -32,7 +32,7 @@ func TestHandlePanicInModuleThen(t *testing.T) {
 		},
 		{
 			name: "Test 2",
-			obj:  testStruct{mediaId: 2},
+			obj:  testStruct{mediaID: 2},
 			work: func() {
 				// Do nothing
 			},
@@ -45,8 +45,8 @@ func TestHandlePanicInModuleThen(t *testing.T) {
 
 			testDangerousWork(&tc.obj, tc.work)
 
-			if tc.obj.mediaId != tc.expectedMediaId {
-				t.Errorf("Expected mediaId to be %d, got %d", tc.expectedMediaId, tc.obj.mediaId)
+			if tc.obj.mediaID != tc.expectedMediaId {
+				t.Errorf("Expected mediaID to be %d, got %d", tc.expectedMediaId, tc.obj.mediaID)
 			}
 
 		})

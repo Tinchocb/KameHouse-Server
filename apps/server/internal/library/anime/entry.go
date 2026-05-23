@@ -20,7 +20,7 @@ type (
 	// Entry is a container for all data related to a media.
 	// It is the primary data structure used by the frontend.
 	Entry struct {
-		MediaId             int                     `json:"mediaId"`
+		MediaID             int                     `json:"mediaID"`
 		Media               *models.LibraryMedia    `json:"media"`
 		EntryListData       *EntryListData          `json:"listData"`
 		EntryLibraryData    *EntryLibraryData       `json:"libraryData"`
@@ -50,7 +50,7 @@ type (
 type (
 	// NewEntryOptions is a constructor for Entry.
 	NewEntryOptions struct {
-		MediaId             int
+		MediaID             int
 		LocalFiles          []*LocalFile // All local files
 		Database            *db.Database
 		PlatformRef         platform.Platform
@@ -77,7 +77,7 @@ type (
 func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 	// Create new Entry
 	entry := new(Entry)
-	entry.MediaId = opts.MediaId
+	entry.MediaID = opts.MediaID
 	entry.IntelligenceSvc = opts.IntelligenceSvc
 
 
@@ -97,7 +97,7 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 	// This is the most reliable way because LocalFiles explicitly stores the primary key 
 	// for TMDB associations (where the NormalizedMedia.ID is different from the DB primary key).
 	for _, lf := range opts.LocalFiles {
-		if lf.MediaId == opts.MediaId && lf.LibraryMediaId > 0 {
+		if lf.MediaID == opts.MediaID && lf.LibraryMediaId > 0 {
 			m, err := db.GetLibraryMediaByID(opts.Database, lf.LibraryMediaId)
 			if err == nil && m != nil {
 				fetchedMedia = m
@@ -108,34 +108,34 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 
 	// 2. If no local file provides a mapping, try to lookup by TMDB ID directly.
 	if fetchedMedia == nil {
-		if opts.MediaId > 1_000_000 {
-			// Movies from TMDB have a 1,000,000 offset applied to their MediaId to avoid collisions
-			m, err := db.GetLibraryMediaByTmdbIdAndType(opts.Database, opts.MediaId-1_000_000, "MOVIE")
+		if opts.MediaID > 1_000_000 {
+			// Movies from TMDB have a 1,000,000 offset applied to their MediaID to avoid collisions
+			m, err := db.GetLibraryMediaByTmdbIdAndType(opts.Database, opts.MediaID-1_000_000, "MOVIE")
 			if err == nil && m != nil {
 				fetchedMedia = m
 			}
 		} else {
-			m, err := db.GetLibraryMediaByTmdbIdAndType(opts.Database, opts.MediaId, "SHOW")
+			m, err := db.GetLibraryMediaByTmdbIdAndType(opts.Database, opts.MediaID, "SHOW")
 			if err == nil && m != nil {
 				fetchedMedia = m
 			}
 		}
 	}
 
-	// 3. Fallback: If still nil, it means the LocalFile points to a MediaId that does not exist 
+	// 3. Fallback: If still nil, it means the LocalFile points to a MediaID that does not exist 
 	// in the LibraryMedia table (e.g., leftover from AniList or unlinked).
 	// We create a "Dummy" entry to prevent the frontend from crashing, allowing the user to 
 	// view the page and use "Unmatch" or "Identify".
 	if fetchedMedia == nil {
-		opts.Database.Logger.Warn().Int("mediaId", opts.MediaId).Msg("anime/entry: MediaId not found in LibraryMedia, creating dummy entry for frontend fallback")
+		opts.Database.Logger.Warn().Int("mediaID", opts.MediaID).Msg("anime/entry: MediaID not found in LibraryMedia, creating dummy entry for frontend fallback")
 		fetchedMedia = &models.LibraryMedia{
 			BaseModel:     models.BaseModel{ID: 0},
-			TmdbId:        opts.MediaId,
+			TmdbID:        opts.MediaID,
 			Type:          "SHOW",
 			Format:        "TV",
-			TitleEnglish:  fmt.Sprintf("Unknown Media (%d)", opts.MediaId),
-			TitleRomaji:   fmt.Sprintf("Unknown Media (%d)", opts.MediaId),
-			TitleOriginal: fmt.Sprintf("Unknown Media (%d)", opts.MediaId),
+			TitleEnglish:  fmt.Sprintf("Unknown Media (%d)", opts.MediaID),
+			TitleRomaji:   fmt.Sprintf("Unknown Media (%d)", opts.MediaID),
+			TitleOriginal: fmt.Sprintf("Unknown Media (%d)", opts.MediaID),
 			Description:   "This media is not properly linked in the database. Please Rematch or Unmatch the files.",
 		}
 	}
@@ -162,7 +162,7 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 	// +---------------------+
 
 	// Get the entry's local files
-	lfs := GetLocalFilesFromMediaId(opts.LocalFiles, opts.MediaId)
+	lfs := GetLocalFilesFromMediaId(opts.LocalFiles, opts.MediaID)
 	entry.LocalFiles = lfs // Returns empty slice if no local files are found
 
 	listData, _ := db.GetMediaEntryListData(opts.Database, fetchedMedia.ID)
@@ -186,7 +186,7 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 
 	libraryData, _ := NewEntryLibraryData(&NewEntryLibraryDataOptions{
 		EntryLocalFiles: lfs,
-		MediaId:         opts.MediaId,
+		MediaID:         opts.MediaID,
 		CurrentProgress: progress,
 	})
 	entry.EntryLibraryData = libraryData
@@ -213,7 +213,7 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 	// +---------------------+
 
 	// Fetch AniDB data and cache it for 30 minutes
-	animeMetadata, err := opts.MetadataProviderRef.GetAnimeMetadata(opts.MediaId)
+	animeMetadata, err := opts.MetadataProviderRef.GetAnimeMetadata(opts.MediaID)
 	if err != nil {
 
 		// +---------------- Start
@@ -223,7 +223,7 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 
 		// If Animap data is not found, we will still create the Entry without it
 		simpleAnimeEntry, err := NewSimpleEntry(ctx, &NewSimpleAnimeEntryOptions{
-			MediaId:             opts.MediaId,
+			MediaID:             opts.MediaID,
 			LocalFiles:          opts.LocalFiles,
 			Database:            opts.Database,
 			PlatformRef:         opts.PlatformRef,
@@ -236,7 +236,7 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 		}
 
 		return &Entry{
-			MediaId:             simpleAnimeEntry.MediaId,
+			MediaID:             simpleAnimeEntry.MediaID,
 			Media:               simpleAnimeEntry.Media,
 			EntryListData:       simpleAnimeEntry.EntryListData,
 			EntryLibraryData:    simpleAnimeEntry.EntryLibraryData,

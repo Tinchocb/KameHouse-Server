@@ -39,9 +39,9 @@ type Manager interface {
 	AutoTrackCurrentMedia() (bool, error)
 	// TrackAnime adds an anime to track for offline use.
 	// It checks that the anime is currently in the user's anime collection.
-	TrackAnime(mId int) error
+	TrackAnime(mID int) error
 	// UntrackAnime removes the anime from tracking.
-	UntrackAnime(mId int) error
+	UntrackAnime(mID int) error
 	// IsMediaTracked checks if the media is tracked in the local database.
 	IsMediaTracked(aId int, kind string) bool
 	// GetTrackedMediaItems returns all tracked media items.
@@ -99,7 +99,7 @@ type (
 		RefreshPlatformCollectionsFunc func()
 	}
 	TrackedMediaItem struct {
-		MediaId    int                              `json:"mediaId"`
+		MediaID    int                              `json:"mediaID"`
 		Type       string                           `json:"type"`
 		AnimeEntry *platform.UnifiedCollectionEntry `json:"animeEntry,omitempty"`
 	}
@@ -217,11 +217,11 @@ func (m *ManagerImpl) AutoTrackCurrentMedia() (added bool, err error) {
 	trackedMedia := m.GetTrackedMediaItems()
 	trackedMediaMap := make(map[int]struct{})
 	for _, item := range trackedMedia {
-		trackedMediaMap[item.MediaId] = struct{}{}
+		trackedMediaMap[item.MediaID] = struct{}{}
 	}
 
 	groupedLocalFiles := lo.GroupBy(m.localFiles, func(f *dto.LocalFile) int {
-		return f.MediaId
+		return f.MediaID
 	})
 
 	animeCollection, ok := m.animeCollection.Get()
@@ -256,12 +256,12 @@ func (m *ManagerImpl) AutoTrackCurrentMedia() (added bool, err error) {
 // TrackAnime adds an anime to track.
 // It checks that the anime is currently in the user's anime collection.
 // The anime should have local files, or else ManagerImpl.Synchronize will remove it from tracking.
-func (m *ManagerImpl) TrackAnime(mId int) error {
+func (m *ManagerImpl) TrackAnime(mID int) error {
 
-	m.logger.Trace().Msgf("local manager: Adding anime %d to local database", mId)
+	m.logger.Trace().Msgf("local manager: Adding anime %d to local database", mID)
 
 	s := &TrackedMedia{
-		MediaId: mId,
+		MediaID: mID,
 		Type:    AnimeType,
 	}
 
@@ -271,34 +271,34 @@ func (m *ManagerImpl) TrackAnime(mId int) error {
 		return fmt.Errorf("anime collection not set")
 	}
 
-	if _, found := m.animeCollection.MustGet().GetListEntryFromMediaId(mId); !found {
-		m.logger.Error().Msgf("local manager: Anime %d not found in user's anime collection", mId)
+	if _, found := m.animeCollection.MustGet().GetListEntryFromMediaId(mID); !found {
+		m.logger.Error().Msgf("local manager: Anime %d not found in user's anime collection", mID)
 		return fmt.Errorf("anime is not in collection")
 	}
 
-	if _, found := m.localDb.GetTrackedMedia(mId, AnimeType); found {
+	if _, found := m.localDb.GetTrackedMedia(mID, AnimeType); found {
 		return ErrAlreadyTracked
 	}
 
 	err := m.localDb.gormdb.Create(s).Error
 	if err != nil {
-		m.logger.Error().Msgf("local manager: Failed to add anime %d to local database: %v", mId, err)
-		return fmt.Errorf("failed to add anime %d to local database: %w", mId, err)
+		m.logger.Error().Msgf("local manager: Failed to add anime %d to local database: %v", mID, err)
+		return fmt.Errorf("failed to add anime %d to local database: %w", mID, err)
 	}
 
 	return nil
 }
 
-func (m *ManagerImpl) UntrackAnime(mId int) error {
+func (m *ManagerImpl) UntrackAnime(mID int) error {
 
-	m.logger.Trace().Msgf("local manager: Removing anime %d from local database", mId)
+	m.logger.Trace().Msgf("local manager: Removing anime %d from local database", mID)
 
-	if _, found := m.localDb.GetTrackedMedia(mId, AnimeType); !found {
-		m.logger.Error().Msgf("local manager: Anime %d not in local database", mId)
+	if _, found := m.localDb.GetTrackedMedia(mID, AnimeType); !found {
+		m.logger.Error().Msgf("local manager: Anime %d not in local database", mID)
 		return fmt.Errorf("anime is not in local database")
 	}
 
-	err := m.removeAnime(mId)
+	err := m.removeAnime(mID)
 	if err != nil {
 		return err
 	}
@@ -330,17 +330,17 @@ func (m *ManagerImpl) GetTrackedMediaItems() (ret []*TrackedMediaItem) {
 	for _, item := range trackedMedia {
 		if item.Type == AnimeType {
 			if localAnimeCollection, found := m.localAnimeCollection.Get(); found {
-				if e, found := localAnimeCollection.GetListEntryFromMediaId(item.MediaId); found {
+				if e, found := localAnimeCollection.GetListEntryFromMediaId(item.MediaID); found {
 					ret = append(ret, &TrackedMediaItem{
-						MediaId:    item.MediaId,
+						MediaID:    item.MediaID,
 						Type:       item.Type,
 						AnimeEntry: e,
 					})
 					continue
 				}
-				if e, found := m.animeCollection.MustGet().GetListEntryFromMediaId(item.MediaId); found {
+				if e, found := m.animeCollection.MustGet().GetListEntryFromMediaId(item.MediaID); found {
 					ret = append(ret, &TrackedMediaItem{
-						MediaId:    item.MediaId,
+						MediaID:    item.MediaID,
 						Type:       item.Type,
 						AnimeEntry: e,
 					})
@@ -405,10 +405,10 @@ func (m *ManagerImpl) synchronize(lfs []*dto.LocalFile) error {
 	// Remove anime from the local database that are not in the user's anime collections
 	for _, item := range trackedAnimeMap {
 		// If the anime is not in the user's anime collection, remove it from the local database
-		if _, found := m.animeCollection.MustGet().GetListEntryFromMediaId(item.MediaId); !found {
-			err := m.removeAnime(item.MediaId)
+		if _, found := m.animeCollection.MustGet().GetListEntryFromMediaId(item.MediaID); !found {
+			err := m.removeAnime(item.MediaID)
 			if err != nil {
-				return fmt.Errorf("local manager: Failed to remove anime %d from local database: %w", item.MediaId, err)
+				return fmt.Errorf("local manager: Failed to remove anime %d from local database: %w", item.MediaID, err)
 			}
 		}
 	}
@@ -418,7 +418,7 @@ func (m *ManagerImpl) synchronize(lfs []*dto.LocalFile) error {
 	// Create a map of the snapshots
 	animeSnapshotMap := make(map[int]*AnimeSnapshot)
 	for _, snapshot := range animeSnapshots {
-		animeSnapshotMap[snapshot.MediaId] = snapshot
+		animeSnapshotMap[snapshot.MediaID] = snapshot
 	}
 
 	m.syncer.runDiffs(trackedAnimeMap, animeSnapshotMap, m.localFiles)
@@ -501,7 +501,7 @@ func (m *ManagerImpl) loadTrackedMedia() (trackedAnimeMap map[int]*TrackedMedia)
 
 	trackedAnimeMap = make(map[int]*TrackedMedia)
 	for _, item := range trackedAnime {
-		trackedAnimeMap[item.MediaId] = item
+		trackedAnimeMap[item.MediaID] = item
 	}
 
 	m.GetSyncer().trackedAnimeMap = trackedAnimeMap
@@ -525,13 +525,13 @@ func (m *ManagerImpl) removeAnime(aId int) error {
 
 // removeMediaImages removes the images for the media with the given ID.
 //   - The images are stored in the local assets' directory.
-//   - e.g. datadir/local/assets/{mediaId}/*
-func (m *ManagerImpl) removeMediaImages(mediaId int) error {
-	m.logger.Trace().Msgf("local manager: Removing images for media %d", mediaId)
-	path := filepath.Join(m.localAssetsDir, fmt.Sprintf("%d", mediaId))
+//   - e.g. datadir/local/assets/{mediaID}/*
+func (m *ManagerImpl) removeMediaImages(mediaID int) error {
+	m.logger.Trace().Msgf("local manager: Removing images for media %d", mediaID)
+	path := filepath.Join(m.localAssetsDir, fmt.Sprintf("%d", mediaID))
 	_ = os.RemoveAll(path)
 	//if err != nil {
-	//	return fmt.Errorf("local manager: Failed to remove images for media %d: %w", mediaId, err)
+	//	return fmt.Errorf("local manager: Failed to remove images for media %d: %w", mediaID, err)
 	//}
 	return nil
 }

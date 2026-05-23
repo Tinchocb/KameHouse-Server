@@ -184,12 +184,12 @@ func NewEpisodeCollectionFromLocalFiles(ctx context.Context, opts NewEpisodeColl
 
 	// Make sure to keep the local files from the media only
 	opts.LocalFiles = lo.Filter(opts.LocalFiles, func(lf *LocalFile, i int) bool {
-		return lf.MediaId == int(opts.Media.ID)
+		return lf.MediaID == int(opts.Media.ID)
 	})
 
 	// Create a new media entry
 	entry, err := NewEntry(ctx, &NewEntryOptions{
-		MediaId:             int(opts.Media.ID),
+		MediaID:             int(opts.Media.ID),
 		LocalFiles:          opts.LocalFiles,
 		Database:            opts.Database,
 		PlatformRef:         opts.PlatformRef,

@@ -6,7 +6,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// HandleGetTheme
+// HandleGetTheme returns the theme settings.
 //
 //	@summary returns the theme settings.
 //	@route /api/v1/theme [GET]
@@ -19,7 +19,7 @@ func (h *Handler) HandleGetTheme(c echo.Context) error {
 	return h.RespondWithData(c, theme)
 }
 
-// HandleUpdateTheme
+// HandleUpdateTheme updates the theme settings.
 //
 //	@summary updates the theme settings.
 //	@desc The server status should be re-fetched after this on the client.

@@ -27,7 +27,7 @@ type (
 	ScanSummaryGroup struct {
 		ID                  string             `json:"id"`
 		Files               []*ScanSummaryFile `json:"files"`
-		MediaId             int                `json:"mediaId"`
+		MediaID             int                `json:"mediaID"`
 		MediaTitle          string             `json:"mediaTitle"`
 		MediaImage          string             `json:"mediaImage"`
 		MediaIsInCollection bool               `json:"mediaIsInCollection"` // Whether the media is in the user's collection

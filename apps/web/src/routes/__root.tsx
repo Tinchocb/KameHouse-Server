@@ -16,8 +16,16 @@ import { FaBars } from "react-icons/fa"
 import { useAppStore } from "@/lib/store"
 import { DynamicBackdrop } from "@/components/shared/dynamic-backdrop"
 
+import { VideoPlayer } from "@/components/video/player"
+
 function RootComponent() {
     const routerState = useRouterState()
+    const activeQueuePlayItem = useAppStore(state => state.activeQueuePlayItem)
+    const playlistQueue = useAppStore(state => state.playlistQueue)
+    const currentQueueIndex = useAppStore(state => state.currentQueueIndex)
+    const setCurrentQueueIndex = useAppStore(state => state.setCurrentQueueIndex)
+    const clearQueue = useAppStore(state => state.clearQueue)
+
     return (
         <AppLayout>
             <DynamicBackdrop />
@@ -41,6 +49,32 @@ function RootComponent() {
                 </AppLayoutContent>
                 <AppBottomNav />
             </WebsocketProvider>
+
+            {activeQueuePlayItem && (
+                <VideoPlayer
+                    streamUrl={activeQueuePlayItem.playableUrl}
+                    streamType="direct"
+                    title={activeQueuePlayItem.title}
+                    episodeLabel={activeQueuePlayItem.subtitle}
+                    episodeNumber={activeQueuePlayItem.episodeNumber}
+                    mediaId={activeQueuePlayItem.mediaId}
+                    malId={activeQueuePlayItem.malId}
+                    mediaFormat={activeQueuePlayItem.mediaFormat}
+                    marathonMode={false}
+                    onNextEpisode={() => {
+                        const nextIdx = currentQueueIndex + 1;
+                        if (nextIdx < playlistQueue.length) {
+                            setCurrentQueueIndex(nextIdx);
+                        } else {
+                            clearQueue();
+                        }
+                    }}
+                    hasNextEpisode={currentQueueIndex + 1 < playlistQueue.length}
+                    onClose={() => {
+                        useAppStore.setState({ activeQueuePlayItem: null, currentQueueIndex: -1 });
+                    }}
+                />
+            )}
         </AppLayout>
     )
 }

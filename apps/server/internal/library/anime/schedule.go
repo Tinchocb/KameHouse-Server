@@ -9,7 +9,7 @@ import (
 )
 
 type ScheduleItem struct {
-	MediaId int    `json:"mediaId"`
+	MediaID int    `json:"mediaID"`
 	Title   string `json:"title"`
 	// Time is in 15:04 format
 	Time string `json:"time"`
@@ -40,7 +40,7 @@ func GetScheduleItems(animeSchedule *platform.UnifiedAiringSchedule, animeCollec
 
 		t := time.Unix(int64(media.NextAiringEpisode.AiringAt), 0)
 		item := &ScheduleItem{
-			MediaId:        media.ID,
+			MediaID:        media.ID,
 			Title:          media.GetTitleSafe(),
 			Time:           t.UTC().Format("15:04"),
 			DateTime:       t.UTC(),
@@ -56,7 +56,7 @@ func GetScheduleItems(animeSchedule *platform.UnifiedAiringSchedule, animeCollec
 	}
 
 	ret := lo.UniqBy(allItems, func(item *ScheduleItem) string {
-		return fmt.Sprintf("%d-%d", item.MediaId, item.EpisodeNumber)
+		return fmt.Sprintf("%d-%d", item.MediaID, item.EpisodeNumber)
 	})
 
 	return ret

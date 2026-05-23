@@ -11,22 +11,22 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func (h *Handler) getAnimeEpisodeCollection(c echo.Context, mId int) (*anime.EpisodeCollection, error) {
+func (h *Handler) getAnimeEpisodeCollection(c echo.Context, mID int) (*anime.EpisodeCollection, error) {
 
 	h.App.AddOnRefreshAnimeCollectionFunc("HandleGetAnimeEpisodeCollection", func() {
 		anime.ClearEpisodeCollectionCache()
 	})
 
 	// For TMDB-only media (negative IDs), build episode collection from local LibraryEpisode data
-	if mId <= 0 {
-		return h.getTMDBEpisodeCollection(mId)
+	if mID <= 0 {
+		return h.getTMDBEpisodeCollection(mID)
 	}
 
-completeAnime, err := h.App.Metadata.Platform.GetAnime(c.Request().Context(), mId)
+completeAnime, err := h.App.Metadata.Platform.GetAnime(c.Request().Context(), mID)
 	if err != nil {
 		return nil, err
 	}
-	animeMetadata, err := h.App.Metadata.Provider.GetAnimeMetadata(mId)
+	animeMetadata, err := h.App.Metadata.Provider.GetAnimeMetadata(mID)
 	if err != nil {
 		return nil, err
 	}
@@ -46,24 +46,24 @@ completeAnime, err := h.App.Metadata.Platform.GetAnime(c.Request().Context(), mI
 		return nil, err
 	}
 
-	h.App.FillerManager.HydrateEpisodeFillerData(mId, ec.Episodes)
+	h.App.FillerManager.HydrateEpisodeFillerData(mID, ec.Episodes)
 
 	return ec, nil
 }
 
 // getTMDBEpisodeCollection builds an EpisodeCollection from local LibraryEpisode records.
 // Used for TMDB-only media that don't have Platform metadata.
-func (h *Handler) getTMDBEpisodeCollection(mId int) (*anime.EpisodeCollection, error) {
+func (h *Handler) getTMDBEpisodeCollection(mID int) (*anime.EpisodeCollection, error) {
 	// The TMDB ID is stored as the negative of the NormalizedMedia ID
-	tmdbId := -mId
+	tmdbID := -mID
 
 	// Look for LibraryMedia that has this TMDB ID
 	var libraryMedia *models.LibraryMedia
 	var err error
-	if tmdbId >= 1_000_000 {
-		libraryMedia, err = db.GetLibraryMediaByTmdbIdAndType(h.App.Database, tmdbId-1_000_000, "MOVIE")
+	if tmdbID >= 1_000_000 {
+		libraryMedia, err = db.GetLibraryMediaByTmdbIdAndType(h.App.Database, tmdbID-1_000_000, "MOVIE")
 	} else {
-		libraryMedia, err = db.GetLibraryMediaByTmdbIdAndType(h.App.Database, tmdbId, "SHOW")
+		libraryMedia, err = db.GetLibraryMediaByTmdbIdAndType(h.App.Database, tmdbID, "SHOW")
 	}
 	if err != nil || libraryMedia == nil {
 		return &anime.EpisodeCollection{
@@ -123,7 +123,7 @@ func (h *Handler) getTMDBEpisodeCollection(mId int) (*anime.EpisodeCollection, e
 	}, nil
 }
 
-// HandleGetAnimeEpisodeCollection
+// HandleGetAnimeEpisodeCollection ...
 //
 //	@summary gets list of main episodes
 //	@desc This returns a list of main episodes for the given anime media id (Platform or TMDB).
@@ -132,12 +132,12 @@ func (h *Handler) getTMDBEpisodeCollection(mId int) (*anime.EpisodeCollection, e
 //	@param id - int - true - "Anime media ID (positive=Platform, negative=TMDB)"
 //	@route /api/v1/anime/episode-collection/{id} [GET]
 func (h *Handler) HandleGetAnimeEpisodeCollection(c echo.Context) error {
-	mId, err := strconv.Atoi(c.Param("id"))
+	mID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
 
-	ec, err := h.getAnimeEpisodeCollection(c, mId)
+	ec, err := h.getAnimeEpisodeCollection(c, mID)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}

@@ -12,7 +12,7 @@ import (
 
 // TelemetryEvent represents a highly-frequent, transient playback progress tick
 type TelemetryEvent struct {
-	MediaId       int
+	MediaID       int
 	EpisodeNumber int
 	CurrentTime   float64
 	Duration      float64
@@ -86,16 +86,16 @@ func (tm *TelemetryManager) flush() {
 	// Parse keys back and run bulk DB Upsert outside the mutex payload
 	var records []models.WatchHistory
 	for key, seconds := range localBatch {
-		// Expects key format: "userId:mediaId:episodeNumber:duration"
+		// Expects key format: "userId:mediaID:episodeNumber:duration"
 		var userID uint
-		var mediaId, epNum int
+		var mediaID, epNum int
 		var duration float64
-		fmt.Sscanf(key, "%d:%d:%d:%f", &userID, &mediaId, &epNum, &duration)
+		fmt.Sscanf(key, "%d:%d:%d:%f", &userID, &mediaID, &epNum, &duration)
 
-		if mediaId > 0 {
+		if mediaID > 0 {
 			records = append(records, models.WatchHistory{
 				AccountID:     userID,
-				MediaID:       mediaId,
+				MediaID:       mediaID,
 				EpisodeNumber: epNum,
 				CurrentTime:   float64(seconds),
 				Duration:      duration,

@@ -368,9 +368,9 @@ func (l *LibraryExplorer) hydrateNode(node *FileTreeNode, localFileMap map[strin
 		// For file nodes, try to find associated LocalFile
 		if localFile, exists := localFileMap[node.NormalizedPath]; exists {
 			node.LocalFile = mo.Some(localFile)
-			if localFile.MediaId > 0 {
-				node.MediaIds = []int{localFile.MediaId}
-				mediaIdSet[localFile.MediaId] = struct{}{}
+			if localFile.MediaID > 0 {
+				node.MediaIds = []int{localFile.MediaID}
+				mediaIdSet[localFile.MediaID] = struct{}{}
 			}
 
 		} else {
@@ -381,8 +381,8 @@ func (l *LibraryExplorer) hydrateNode(node *FileTreeNode, localFileMap map[strin
 		for _, child := range node.Children {
 			l.hydrateNode(child, localFileMap)
 			// Collect media IDs from children
-			for _, mediaId := range child.MediaIds {
-				mediaIdSet[mediaId] = struct{}{}
+			for _, mediaID := range child.MediaIds {
+				mediaIdSet[mediaID] = struct{}{}
 			}
 			// Collect local files from children
 			for _, localFile := range child.LocalFiles {
@@ -396,8 +396,8 @@ func (l *LibraryExplorer) hydrateNode(node *FileTreeNode, localFileMap map[strin
 
 		// Convert set to slice and sort
 		node.MediaIds = make([]int, 0, len(mediaIdSet))
-		for mediaId := range mediaIdSet {
-			node.MediaIds = append(node.MediaIds, mediaId)
+		for mediaID := range mediaIdSet {
+			node.MediaIds = append(node.MediaIds, mediaID)
 		}
 		sort.Ints(node.MediaIds)
 
@@ -422,8 +422,8 @@ func (l *LibraryExplorer) hydrateDirectoryMediaIds(dirNode *FileTreeNode, localF
 	for localFilePath, localFile := range localFileMap {
 		// Check if this local file is under the current directory
 		if strings.HasPrefix(localFilePath, normalizedDirPath) {
-			if !localFile.Ignored && localFile.MediaId > 0 {
-				mediaIdSet[localFile.MediaId] = struct{}{}
+			if !localFile.Ignored && localFile.MediaID > 0 {
+				mediaIdSet[localFile.MediaID] = struct{}{}
 			}
 			if !localFile.Ignored {
 				localFileSet[localFilePath] = localFile
@@ -448,7 +448,7 @@ func (n *FileTreeNode) toJSON(explorer *LibraryExplorer) *FileTreeNodeJSON {
 	if n.Kind == DirectoryNode {
 		ret.LocalFileCount = len(n.LocalFiles)
 		for _, localFile := range n.LocalFiles {
-			if localFile.MediaId > 0 {
+			if localFile.MediaID > 0 {
 				ret.MatchedLocalFileCount++
 			}
 		}

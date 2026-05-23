@@ -8,7 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// HandleGetLibraryExplorerFileTree
+// HandleGetLibraryExplorerFileTree ...
 //
 //	@summary returns the file tree structure of the library directories.
 //	@desc This returns a hierarchical representation of all directories and media files in the library.
@@ -71,7 +71,7 @@ func (h *Handler) HandleGetLibraryExplorerFileTree(c echo.Context) error {
 	return h.RespondWithData(c, fileTree)
 }
 
-// HandleRefreshLibraryExplorerFileTree
+// HandleRefreshLibraryExplorerFileTree ...
 //
 //	@summary refreshes the file tree structure of the library directories.
 //	@desc This clears the cached file tree and rebuilds it from the current library state.
@@ -102,7 +102,7 @@ func (h *Handler) HandleRefreshLibraryExplorerFileTree(c echo.Context) error {
 	return h.RespondWithData(c, true)
 }
 
-// HandleLoadLibraryExplorerDirectoryChildren
+// HandleLoadLibraryExplorerDirectoryChildren ...
 //
 //	@summary loads the children of a specific directory into the file tree.
 //	@desc This endpoint loads directory children into the cached file tree. Frontend should re-fetch the tree afterwards.
