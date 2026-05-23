@@ -1,12 +1,10 @@
 package handlers
 
 import (
-	"bytes"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"html"
-	"io"
 	"net"
 	"net/http"
 	"os"
