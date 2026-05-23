@@ -396,8 +396,7 @@ export const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
                                         <p className="text-zinc-700 text-xs font-black uppercase tracking-[0.3em] mt-2">INTENTA ACTUALIZAR LA BIBLIOTECA</p>
                                     </div>
                                 ) : (
-                                    <motion.div
-                                        layout
+                                    <div
                                         className={cn(
                                             "w-full transition-all duration-500",
                                             layoutMode === "grid"
@@ -410,13 +409,12 @@ export const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
                                                 const epNum = ep.absoluteEpisodeNumber || ep.episodeNumber
                                                 return (
                                                     <motion.div
-                                                        layout
                                                         key={epNum}
                                                         initial={{ opacity: 0, scale: 0.95 }}
                                                         animate={{ opacity: 1, scale: 1 }}
                                                         exit={{ opacity: 0, scale: 0.95 }}
                                                         transition={{ duration: 0.25, ease: "easeInOut" }}
-                                                        className="w-full"
+                                                        className="w-full transform-gpu"
                                                     >
                                                         <EpisodeCard
                                                             episode={ep}
@@ -435,7 +433,7 @@ export const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
                                                 )
                                             })}
                                         </AnimatePresence>
-                                    </motion.div>
+                                    </div>
                                 )}
                             </>
                 </div>

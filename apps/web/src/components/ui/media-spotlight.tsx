@@ -163,7 +163,7 @@ function getEraFromItem(item: SwimlaneItem): EraId | null {
     return getEraFromTitle(item.title)
 }
 
-export function MediaSpotlight({ items, onNavigate, className }: MediaSpotlightProps) {
+export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavigate, className }: MediaSpotlightProps) {
     const [activeEraId, setActiveEraId] = React.useState<EraId>("db")
     const [selectedItemId, setSelectedItemId] = React.useState<string | null>(null)
 
@@ -488,4 +488,4 @@ export function MediaSpotlight({ items, onNavigate, className }: MediaSpotlightP
             </AnimatePresence>
         </section>
     )
-}
+})

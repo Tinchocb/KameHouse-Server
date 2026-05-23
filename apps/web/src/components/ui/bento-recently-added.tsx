@@ -55,7 +55,7 @@ export function BentoRecentlyAdded({ items, className }: BentoRecentlyAddedProps
                             src={item.image}
                             alt={item.title}
                             priority={isLarge}
-                            className="absolute inset-0 h-full w-full object-cover transition-all duration-[1200ms] [transition-timing-function:cubic-bezier(0.25,1,0.5,1)] group-hover:scale-[1.06] group-hover:brightness-[0.4] group-hover:saturate-[1.1] brightness-[0.5]"
+                            className="absolute inset-0 h-full w-full object-cover transition-all [transition-duration:1200ms] [transition-timing-function:cubic-bezier(0.25,1,0.5,1)] group-hover:scale-[1.06] group-hover:brightness-[0.4] group-hover:saturate-[1.1] brightness-[0.5]"
                         />
 
                         {/* Overlays */}

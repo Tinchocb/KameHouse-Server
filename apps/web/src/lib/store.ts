@@ -6,9 +6,15 @@ export interface UIState {
     sidebarOpen: boolean
     activeTheme: string
     searchQuery: string
+    isVideoActive: boolean
+    bgMusicEnabled: boolean
+    bgMusicVolume: number
     setSidebarOpen: (open: boolean) => void
     setActiveTheme: (theme: string) => void
     setSearchQuery: (query: string) => void
+    setVideoActive: (active: boolean) => void
+    setBgMusicEnabled: (enabled: boolean) => void
+    setBgMusicVolume: (volume: number) => void
 }
 
 import { type ScannerMessage } from "@/lib/server/ws-events"
@@ -55,9 +61,15 @@ export const createUISlice: StateCreator<UIState & PlayerState, [], [], UIState>
     sidebarOpen: true,
     activeTheme: "dark",
     searchQuery: "",
+    isVideoActive: false,
+    bgMusicEnabled: false,
+    bgMusicVolume: 0.25,
     setSidebarOpen: (open) => set({ sidebarOpen: open }),
     setActiveTheme: (theme) => set({ activeTheme: theme }),
     setSearchQuery: (query) => set({ searchQuery: query }),
+    setVideoActive: (active) => set({ isVideoActive: active }),
+    setBgMusicEnabled: (enabled) => set({ bgMusicEnabled: enabled }),
+    setBgMusicVolume: (volume) => set({ bgMusicVolume: volume }),
 })
 
 // --- Player Slice ---
@@ -149,6 +161,8 @@ export const useAppStore = create<UIState & PlayerState & ScannerState>()(
                 // Solo persistimos lo que queremos que sobreviva
                 sidebarOpen: state.sidebarOpen,
                 activeTheme: state.activeTheme,
+                bgMusicEnabled: state.bgMusicEnabled,
+                bgMusicVolume: state.bgMusicVolume,
                 autoSkipIntro: state.autoSkipIntro,
                 autoSkipOutro: state.autoSkipOutro,
                 playbackRate: state.playbackRate,

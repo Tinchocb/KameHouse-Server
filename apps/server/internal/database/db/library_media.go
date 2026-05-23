@@ -7,13 +7,19 @@ import (
 )
 
 // GetLibraryMediaByTmdbId retrieves a LibraryMedia by its TMDB ID.
+// Results are cached in memory after the first DB hit to avoid redundant
+// SQLite reads during scan-time enrichment loops.
 // Returns nil if no matching media is found.
 func GetLibraryMediaByTmdbId(d *Database, tmdbId int) (*models.LibraryMedia, error) {
+	if v, ok := d.LibraryMediaCache.Load(tmdbId); ok {
+		return v.(*models.LibraryMedia), nil
+	}
 	var media models.LibraryMedia
 	err := d.Gorm().Where("tmdb_id = ?", tmdbId).First(&media).Error
 	if err != nil {
 		return nil, err
 	}
+	d.LibraryMediaCache.Store(tmdbId, &media)
 	return &media, nil
 }
 
@@ -49,13 +55,18 @@ func GetMediaEntryListData(d *Database, libraryMediaId uint) (*models.MediaEntry
 
 // InsertLibraryMedia creates or updates a LibraryMedia record in the database.
 // If a record with the same TMDB ID exists, it updates it; otherwise it creates a new one.
+// The in-memory cache is invalidated so subsequent reads reflect the new state.
 func InsertLibraryMedia(d *Database, media *models.LibraryMedia) (*models.LibraryMedia, error) {
 	err := d.Gorm().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "tmdb_id"}},
+		Columns:   []clause.Column{{Name: "tmdb_id"}, {Name: "type"}}, // Must match uniqueIndex:idx_tmdb_id_type on the model
 		UpdateAll: true,
 	}).Create(media).Error
 	if err != nil {
 		return nil, err
+	}
+	// Invalidate cache entry so the next read fetches the authoritative DB record.
+	if media.TmdbId != 0 {
+		d.LibraryMediaCache.Delete(media.TmdbId)
 	}
 	return media, nil
 }
@@ -111,15 +122,26 @@ func GetLibraryMediaByExternalID(d *Database, externalId string) (*models.Librar
 }
 
 // UpsertLibraryMediaBatch inserts or updates a slice of LibraryMedia atomically in a single transaction.
+// All affected TMDB IDs are evicted from the in-memory cache after the write.
 func UpsertLibraryMediaBatch(d *Database, media []*models.LibraryMedia, batchSize int) error {
 	if len(media) == 0 {
 		return nil
 	}
 
-	return d.Gorm().Clauses(clause.OnConflict{
+	err := d.Gorm().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "tmdb_id"}, {Name: "type"}}, // Unique composite constraint
 		UpdateAll: true,
 	}).CreateInBatches(media, batchSize).Error
+
+	if err == nil {
+		// Evict stale cache entries for every record that was just written.
+		for _, m := range media {
+			if m.TmdbId != 0 {
+				d.LibraryMediaCache.Delete(m.TmdbId)
+			}
+		}
+	}
+	return err
 }
 // UpdateLibraryMediaMappings updates the external mappings (AniDB, MAL) for a LibraryMedia record.
 func UpdateLibraryMediaMappings(d *Database, id uint, anidbId, malId int) error {

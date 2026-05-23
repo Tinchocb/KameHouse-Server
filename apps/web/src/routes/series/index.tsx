@@ -379,12 +379,14 @@ function SeriesFullscreenIndex() {
             const totalEps = media?.totalEpisodes || 1;
             const progress = s.listData?.progress || 0;
             const progressPercent = Math.min(100, Math.round((progress / (totalEps > 0 ? totalEps : 1)) * 100));
+            const yearVal = getSeriesYear(title, media?.year, media?.startDate);
 
             return {
                 id: s.mediaId as number,
                 title,
                 eps: media?.totalEpisodes || 0,
-                year: getSeriesYear(title, media?.year, media?.startDate),
+                year: yearVal,
+                yearNum: yearVal === 'N/A' ? 9999 : Number(yearVal),
                 progress: progressPercent,
                 img: media?.bannerImage || media?.posterImage || '',
                 poster: media?.posterImage || media?.bannerImage || '',
@@ -393,11 +395,7 @@ function SeriesFullscreenIndex() {
         });
 
         // Sort chronologically by release year (ascending)
-        return mapped.sort((a, b) => {
-            const yearA = a.year === 'N/A' ? 9999 : Number(a.year);
-            const yearB = b.year === 'N/A' ? 9999 : Number(b.year);
-            return yearA - yearB;
-        });
+        return mapped.sort((a, b) => a.yearNum - b.yearNum);
     }, [collection]);
 
     useEffect(() => {

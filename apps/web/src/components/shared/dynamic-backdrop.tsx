@@ -1,6 +1,4 @@
 import * as React from "react"
-import { useGSAP } from "@gsap/react"
-import gsap from "gsap"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
 
 /**
@@ -11,7 +9,7 @@ import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
  * - The cross-fade is driven purely by CSS `opacity` + `will-change: opacity`
  *   so the browser handles it on the compositor thread (zero layout/paint cost).
  * - The blurred image is scaled to 115% to avoid transparent edge bleeding.
- * - Organic breathing uses GSAP for smooth 60fps animation on transform.
+ * - Organic breathing uses CSS keyframes for 100% GPU compositor-driven animation.
  * - The 150 ms hover debounce in `useIntelligenceStore` prevents flicker.
  */
 export function DynamicBackdrop() {
@@ -23,6 +21,9 @@ export function DynamicBackdrop() {
     const currentLayerRef = React.useRef<HTMLDivElement>(null)
     const nextLayerRef = React.useRef<HTMLDivElement>(null)
     const containerRef = React.useRef<HTMLDivElement>(null)
+    const backdropWrapperRef = React.useRef<HTMLDivElement>(null)
+    const orb1Ref = React.useRef<HTMLDivElement>(null)
+    const orb2Ref = React.useRef<HTMLDivElement>(null)
 
     // Handle global mouse move for orbital effect with smooth interpolation (lerping)
     React.useEffect(() => {
@@ -39,9 +40,14 @@ export function DynamicBackdrop() {
             if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) {
                 currentX += dx * 0.05
                 currentY += dy * 0.05
-                if (containerRef.current) {
-                    containerRef.current.style.setProperty('--mouse-x', String(currentX))
-                    containerRef.current.style.setProperty('--mouse-y', String(currentY))
+                if (backdropWrapperRef.current) {
+                    backdropWrapperRef.current.style.transform = `translate3d(${currentX * 0.1}px, ${currentY * 0.1}px, 0)`
+                }
+                if (orb1Ref.current) {
+                    orb1Ref.current.style.transform = `translate3d(${currentX * 0.5}px, ${currentY * 0.5}px, 0)`
+                }
+                if (orb2Ref.current) {
+                    orb2Ref.current.style.transform = `translate3d(${currentX * -0.3}px, ${currentY * -0.3}px, 0)`
                 }
                 rafId = requestAnimationFrame(updatePosition)
             } else {
@@ -67,34 +73,6 @@ export function DynamicBackdrop() {
             if (rafId) cancelAnimationFrame(rafId)
         }
     }, [])
-
-    // Organic breathing animation with GSAP (animating opacity to avoid heavy shader re-rasterization on scale/rotate)
-    useGSAP(() => {
-        if (!containerRef.current) return
-
-        const tl = gsap.timeline({
-            repeat: -1,
-            defaults: { ease: "sine.inOut" }
-        })
-
-        tl.to(containerRef.current, {
-            opacity: 0.92,
-            duration: 8,
-        })
-        .to(containerRef.current, {
-            opacity: 1.0,
-            duration: 10,
-        })
-        .to(containerRef.current, {
-            opacity: 0.95,
-            duration: 9,
-        })
-        .to(containerRef.current, {
-            opacity: 1.0,
-            duration: 8,
-        })
-
-    }, { scope: containerRef })
 
     // Orchestrate a smooth cross-fade without Framer Motion (pure CSS opacity)
     React.useEffect(() => {
@@ -125,13 +103,27 @@ export function DynamicBackdrop() {
         <div
             ref={containerRef}
             aria-hidden="true"
-            className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-zinc-950"
+            className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-zinc-950 animate-breathing"
         >
+            <style>{`
+                @keyframes breathing {
+                    0% { opacity: 1.0; }
+                    22.86% { opacity: 0.92; }
+                    51.43% { opacity: 1.0; }
+                    77.14% { opacity: 0.95; }
+                    100% { opacity: 1.0; }
+                }
+                .animate-breathing {
+                    animation: breathing 35s ease-in-out infinite;
+                    will-change: opacity;
+                }
+            `}</style>
             {/* Wrapper for the backdrop layers that receives the mouse translation without CSS transitions */}
             <div
+                ref={backdropWrapperRef}
                 className="absolute inset-0"
                 style={{
-                    transform: "translate(calc(var(--mouse-x, 0) * 0.1px), calc(var(--mouse-y, 0) * 0.1px))",
+                    transform: "translate3d(0px, 0px, 0px)",
                     willChange: "transform",
                 }}
             >
@@ -163,12 +155,20 @@ export function DynamicBackdrop() {
 
             {/* ── Orbital Orbs ── */}
             <div 
+                ref={orb1Ref}
                 className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full bg-primary/10 blur-[120px] mix-blend-screen"
-                style={{ transform: "translate(calc(var(--mouse-x, 0) * 0.5px), calc(var(--mouse-y, 0) * 0.5px))" }}
+                style={{
+                    transform: "translate3d(0px, 0px, 0px)",
+                    willChange: "transform",
+                }}
             />
             <div 
+                ref={orb2Ref}
                 className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full bg-blue-500/5 blur-[100px] mix-blend-screen"
-                style={{ transform: "translate(calc(var(--mouse-x, 0) * -0.3px), calc(var(--mouse-y, 0) * -0.3px))" }}
+                style={{
+                    transform: "translate3d(0px, 0px, 0px)",
+                    willChange: "transform",
+                }}
             />
 
             {/* ── Cinematic Grain Overlay ── */}

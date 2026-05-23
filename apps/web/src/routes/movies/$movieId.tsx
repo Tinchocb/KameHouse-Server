@@ -48,6 +48,16 @@ const formatFileSize = (bytes: number) => {
     return `${mb.toFixed(0)} MB`
 }
 
+const parseFrameRate = (fps: string | undefined | null): number => {
+    if (!fps) return 24
+    if (fps.includes("/")) {
+        const [num, den] = fps.split("/").map(Number)
+        if (num && den) return Math.round(num / den)
+    }
+    const val = Number(fps)
+    return isNaN(val) ? 24 : Math.round(val)
+}
+
 function MovieDetailClient({ movieId }: { movieId: string }) {
     const queryClient = useQueryClient()
     const navigate = useNavigate()
@@ -84,6 +94,34 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
     }
     
     const genres = useMemo(() => entry?.media ? parseGenres(entry.media.genres) : [], [entry])
+
+    const tech = useMemo(() => entry?.localFiles?.[0]?.technicalInfo as any, [entry])
+    const isMp4 = useMemo(() => entry?.localFiles?.[0]?.path?.toLowerCase().endsWith(".mp4"), [entry])
+
+    const audioLangs = useMemo(() => {
+        if (!tech?.audioStreams || tech.audioStreams.length === 0) return []
+        return (tech.audioStreams as any[])
+            .map((a: any) => {
+                const l = a.language?.toLowerCase() || ""
+                if (l.includes("spa") || l.includes("esp") || l.includes("lat")) return "ESPAÑOL"
+                if (l.includes("jpn") || l.includes("jap")) return "JAPONÉS"
+                if (l.includes("eng") || l.includes("ing")) return "INGLÉS"
+                return a.language?.toUpperCase() || a.title?.toUpperCase() || "AUD"
+            })
+            .filter((value: string, index: number, self: string[]) => self.indexOf(value) === index)
+    }, [tech])
+
+    const subtitleLangs = useMemo(() => {
+        if (!tech?.subtitleStreams || tech.subtitleStreams.length === 0) return []
+        return (tech.subtitleStreams as any[])
+            .map((s: any) => {
+                const l = s.language?.toLowerCase() || ""
+                if (l.includes("spa") || l.includes("esp") || l.includes("lat")) return "ESPAÑOL"
+                if (l.includes("eng") || l.includes("ing")) return "INGLÉS"
+                return s.language?.toUpperCase() || s.title?.toUpperCase() || "SUB"
+            })
+            .filter((value: string, index: number, self: string[]) => self.indexOf(value) === index)
+    }, [tech])
 
     const handlePlayLocalFile = (localFile: Anime_LocalFile) => {
         if (!localFile.path) {
@@ -141,7 +179,19 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
     }
 
     return (
-        <div className="min-h-screen bg-[#09090b] text-white pb-16">
+        <div className="h-full w-full flex flex-col overflow-y-auto bg-[#09090b] text-white pb-16 relative">
+            {/* Ambient page glow from poster cover */}
+            {(entry.media.posterImage || entry.media.bannerImage) && (
+                <div className="absolute top-[400px] inset-x-0 flex justify-center pointer-events-none z-0 opacity-25 select-none animate-fade-in">
+                    <div 
+                        className="w-[900px] h-[550px] rounded-full bg-cover bg-center blur-[130px] saturate-200 opacity-40 will-change-[filter,transform]"
+                        style={{
+                            backgroundImage: `url(${getHighResImage(entry.media.posterImage || entry.media.bannerImage)})`,
+                        }}
+                    />
+                </div>
+            )}
+
             <MovieHeroSection
                 seriesId={movieId}
                 directoryPath={entry.libraryData?.sharedPath || ""}
@@ -149,15 +199,15 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                 entry={entry}
                 onPlay={handlePlayDefault}
                 continuityItem={continuityData?.item}
-                className="cursor-pointer group/hero animate-fade-in"
+                className="md:w-[calc(100%+6rem)] md:-ml-24 cursor-pointer group/hero animate-fade-in"
             />
 
             {/* Custom 2-Column Layout */}
-            <div className="w-full max-w-[1800px] mx-auto px-6 sm:px-12 md:px-24 mt-16 pb-12 animate-fade-in">
+            <div className="w-full max-w-[1800px] mx-auto px-6 sm:px-12 mt-12 pb-12 animate-fade-in">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
                     
                     {/* Left Column: Synopsis, Tech specs capsules, Cast */}
-                    <div className="lg:col-span-8 flex flex-col gap-12">
+                    <div className="lg:col-span-8 flex flex-col gap-12 relative z-10">
                         {/* Synopsis section */}
                         <div className="flex flex-col gap-4">
                             <h3 className="text-2xl font-bebas tracking-[0.15em] text-white uppercase border-b border-white/5 pb-3">Sinopsis</h3>
@@ -166,49 +216,6 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                                 dangerouslySetInnerHTML={{ __html: cleanSynopsis }}
                             />
                         </div>
-
-                        {/* Technical Metadata Section */}
-                        {entry.localFiles && entry.localFiles.length > 0 && (
-                            <div className="flex flex-col gap-5 pt-4">
-                                <h3 className="text-2xl font-bebas tracking-[0.15em] text-white uppercase border-b border-white/5 pb-3">Especificaciones Técnicas</h3>
-                                {(() => {
-                                    const tech = entry.localFiles[0]?.technicalInfo;
-                                    const isMp4 = entry.localFiles[0]?.path?.toLowerCase().endsWith(".mp4");
-                                    return (
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 font-mono text-xs">
-                                            <div className="flex flex-col gap-1 p-4 bg-zinc-950/20 border border-white/5 rounded-2xl hover:border-white/10 hover:bg-zinc-900/10 transition-all duration-300">
-                                                <span className="font-sans font-black text-[9px] text-zinc-500 tracking-wider uppercase">Contenedor</span>
-                                                <span className="font-bold text-white text-sm uppercase tracking-widest mt-0.5">{isMp4 ? "MP4" : "MKV"}</span>
-                                            </div>
-                                            {tech?.videoStream && (
-                                                <>
-                                                    <div className="flex flex-col gap-1 p-4 bg-zinc-950/20 border border-white/5 rounded-2xl hover:border-white/10 hover:bg-zinc-900/10 transition-all duration-300">
-                                                        <span className="font-sans font-black text-[9px] text-zinc-500 tracking-wider uppercase">Resolución</span>
-                                                        <span className="font-bold text-white text-sm tracking-widest mt-0.5">{tech.videoStream.width}x{tech.videoStream.height}</span>
-                                                    </div>
-                                                    <div className="flex flex-col gap-1 p-4 bg-zinc-950/20 border border-white/5 rounded-2xl hover:border-white/10 hover:bg-zinc-900/10 transition-all duration-300">
-                                                        <span className="font-sans font-black text-[9px] text-zinc-500 tracking-wider uppercase">Video Códec</span>
-                                                        <span className="font-bold text-brand-orange text-sm tracking-widest uppercase mt-0.5">{tech.videoStream.codec || "AVC"}</span>
-                                                    </div>
-                                                    {tech.videoStream.frameRate && (
-                                                        <div className="flex flex-col gap-1 p-4 bg-zinc-950/20 border border-white/5 rounded-2xl hover:border-white/10 hover:bg-zinc-900/10 transition-all duration-300">
-                                                            <span className="font-sans font-black text-[9px] text-zinc-500 tracking-wider uppercase">Frames</span>
-                                                            <span className="font-bold text-white text-sm tracking-widest mt-0.5">{tech.videoStream.frameRate} FPS</span>
-                                                        </div>
-                                                    )}
-                                                </>
-                                            )}
-                                            {tech?.size && (
-                                                <div className="flex flex-col gap-1 p-4 bg-zinc-950/20 border border-white/5 rounded-2xl hover:border-white/10 hover:bg-zinc-900/10 transition-all duration-300">
-                                                    <span className="font-sans font-black text-[9px] text-zinc-500 tracking-wider uppercase">Tamaño</span>
-                                                    <span className="font-bold text-white text-sm tracking-widest mt-0.5">{formatFileSize(tech.size)}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })()}
-                            </div>
-                        )}
 
                         {/* Cast Grid (Reparto Principal) */}
                         {entry.media?.characters?.edges && entry.media.characters.edges.length > 0 && (
@@ -268,22 +275,105 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                         )}
                     </div>
 
-                    {/* Right Column: Metadata Panel */}
-                    <div className="lg:col-span-4 flex flex-col gap-8">
-                        {/* Info & Metadata Panel */}
-                        <div className="bg-zinc-950/25 backdrop-blur-md border border-white/5 rounded-3xl p-6 sm:p-8 flex flex-col gap-6 hover:border-white/10 transition-all duration-500 shadow-xl relative overflow-hidden">
-                            {/* Ambient accent inside card */}
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-orange/5 blur-3xl rounded-full pointer-events-none" />
+                    {/* Right Column: Premium Bento Grid Metadata */}
+                    <div className="lg:col-span-4 flex flex-col gap-6 relative z-10">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 pl-1">DATOS TÉCNICOS & ARCHIVO</h4>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                            
+                            {/* Bento Item 1: Calidad & Contenedor */}
+                            {tech?.videoStream && (
+                                <div className="col-span-1 bg-zinc-950/25 backdrop-blur-md border border-white/5 rounded-3xl p-5 hover:border-brand-orange/30 hover:bg-zinc-900/10 transition-all duration-500 shadow-xl relative overflow-hidden group/bento animate-fade-in">
+                                    <span className="text-[9px] font-black text-zinc-500 tracking-widest uppercase">Calidad</span>
+                                    <div className="flex flex-col mt-2">
+                                        <span className="text-sm font-bold text-white uppercase tracking-wider">
+                                            {tech.videoStream.width >= 1920 ? "1080P FHD" : "720P HD"}
+                                        </span>
+                                        <span className="text-[10px] font-black text-zinc-500 tracking-widest uppercase mt-0.5">
+                                            {isMp4 ? "MP4" : "MKV"}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
 
-                            <h4 className="text-xs font-black uppercase tracking-[0.25em] text-zinc-400">Información General</h4>
+                            {/* Bento Item 2: Códec & Cuadros */}
+                            {tech?.videoStream && (
+                                <div className="col-span-1 bg-zinc-950/25 backdrop-blur-md border border-white/5 rounded-3xl p-5 hover:border-white/10 hover:bg-zinc-900/10 transition-all duration-500 shadow-xl relative overflow-hidden group/bento animate-fade-in">
+                                    <span className="text-[9px] font-black text-zinc-500 tracking-widest uppercase">Formato Video</span>
+                                    <div className="flex flex-col mt-2">
+                                        <span className="text-sm font-bold text-brand-orange uppercase tracking-wider">
+                                            {tech.videoStream.codec || "H264"}
+                                        </span>
+                                        <span className="text-[10px] font-black text-zinc-500 tracking-widest uppercase mt-0.5">
+                                            {tech.videoStream.frameRate ? `${parseFrameRate(tech.videoStream.frameRate)} FPS` : "24 FPS"}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
 
-                            {/* Genres */}
+                            {/* Bento Item 3: Tamaño total de archivo */}
+                            {tech?.size && (
+                                <div className="col-span-1 bg-zinc-950/25 backdrop-blur-md border border-white/5 rounded-3xl p-5 hover:border-white/10 hover:bg-zinc-900/10 transition-all duration-500 shadow-xl relative overflow-hidden group/bento animate-fade-in">
+                                    <span className="text-[9px] font-black text-zinc-500 tracking-widest uppercase">Tamaño</span>
+                                    <div className="text-sm font-bold text-white mt-3">
+                                        {formatFileSize(tech.size)}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Bento Item 4: Estado de Reproducción */}
+                            <div className="col-span-1 bg-zinc-950/25 backdrop-blur-md border border-white/5 rounded-3xl p-5 hover:border-emerald-500/20 hover:bg-zinc-900/10 transition-all duration-500 shadow-xl relative overflow-hidden group/bento animate-fade-in">
+                                <span className="text-[9px] font-black text-zinc-500 tracking-widest uppercase">Estado</span>
+                                <div className="flex items-center gap-2 mt-3">
+                                    <span className="relative flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                    </span>
+                                    <span className="text-xs font-black text-emerald-400 uppercase tracking-widest">
+                                        {entry.media?.status || "LISTO"}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Bento Item 5: Pistas de Audio */}
+                            {audioLangs.length > 0 && (
+                                <div className="col-span-2 bg-zinc-950/25 backdrop-blur-md border border-white/5 rounded-3xl p-5 hover:border-white/10 hover:bg-zinc-900/10 transition-all duration-500 shadow-xl relative overflow-hidden group/bento animate-fade-in">
+                                    <span className="text-[9px] font-black text-zinc-500 tracking-widest uppercase block mb-3">Idiomas de Audio</span>
+                                    <div className="flex flex-wrap gap-2">
+                                        {audioLangs.map((lang: string) => (
+                                            <span key={lang} className="px-2.5 py-1 text-[9px] font-black uppercase tracking-widest bg-white/5 border border-white/10 text-white rounded-lg">
+                                                {lang}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Bento Item 6: Pistas de Subtítulos */}
+                            {subtitleLangs.length > 0 && (
+                                <div className="col-span-2 bg-zinc-950/25 backdrop-blur-md border border-white/5 rounded-3xl p-5 hover:border-white/10 hover:bg-zinc-900/10 transition-all duration-500 shadow-xl relative overflow-hidden group/bento animate-fade-in">
+                                    <span className="text-[9px] font-black text-zinc-500 tracking-widest uppercase block mb-3">Subtítulos Disponibles</span>
+                                    <div className="flex flex-wrap gap-2">
+                                        {subtitleLangs.map((lang: string) => (
+                                            <span key={lang} className="px-2.5 py-1 text-[9px] font-black uppercase tracking-widest bg-brand-orange/10 border border-brand-orange/20 text-brand-orange rounded-lg">
+                                                {lang}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Bento Item 7: Géneros */}
                             {genres.length > 0 && (
-                                <div className="flex flex-col gap-2">
-                                    <span className="text-[9px] font-black text-zinc-500 tracking-[0.2em] uppercase">Géneros</span>
-                                    <div className="flex flex-wrap gap-2 mt-1">
+                                <div className="col-span-2 bg-zinc-950/25 backdrop-blur-md border border-white/5 rounded-3xl p-6 hover:border-white/10 hover:bg-zinc-900/10 transition-all duration-500 shadow-xl relative overflow-hidden group/bento">
+                                    <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-white/[0.02] blur-xl rounded-full pointer-events-none" />
+                                    <span className="text-[9px] font-black text-zinc-500 tracking-widest uppercase block mb-3">Géneros Explorados</span>
+                                    <div className="flex flex-wrap gap-2">
                                         {genres.map((gen: string) => (
-                                            <span key={gen} className="px-2.5 py-1 text-[9px] font-black uppercase tracking-wider bg-white/5 border border-white/10 text-white/70 rounded-md">
+                                            <span 
+                                                key={gen} 
+                                                className="px-3 py-1.5 text-[9px] font-black uppercase tracking-widest bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/70 hover:text-white rounded-xl transition-all duration-300 cursor-pointer"
+                                            >
                                                 {gen}
                                             </span>
                                         ))}
@@ -291,25 +381,6 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                                 </div>
                             )}
 
-                            {/* Ratings, Date, Status */}
-                            <div className="grid grid-cols-2 gap-4 border-t border-white/5 pt-4">
-                                <div className="flex flex-col">
-                                    <span className="text-[9px] font-black text-zinc-500 tracking-wider uppercase">Calificación</span>
-                                    <span className="text-sm font-bold text-white mt-0.5">{score ? `${score} Ki` : "N/A"}</span>
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-[9px] font-black text-zinc-500 tracking-wider uppercase">Año</span>
-                                    <span className="text-sm font-bold text-white mt-0.5">{entry.media?.year || "Desconocido"}</span>
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-[9px] font-black text-zinc-500 tracking-wider uppercase">Estado</span>
-                                    <span className="text-sm font-bold text-emerald-500 mt-0.5 uppercase tracking-wide">{entry.media?.status || "LISTO"}</span>
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-[9px] font-black text-zinc-500 tracking-wider uppercase">Formato</span>
-                                    <span className="text-sm font-bold text-brand-orange mt-0.5 uppercase tracking-wide">{entry.media?.format || "PELÍCULA"}</span>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -317,7 +388,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
 
             {/* Related Content Horizontal Section (Full Width) */}
             {entry.media?.relations && entry.media.relations.length > 0 && (
-                <div className="w-full max-w-[1800px] mx-auto px-6 sm:px-12 md:px-24 mt-8 pb-16 animate-fade-in">
+                <div className="w-full max-w-[1800px] mx-auto px-6 sm:px-12 mt-8 pb-16 animate-fade-in">
                     <div className="flex flex-col gap-6">
                         <h3 className="text-2xl font-bebas tracking-[0.15em] text-white uppercase border-b border-white/5 pb-3">Contenido Relacionado</h3>
                         

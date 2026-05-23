@@ -68,7 +68,7 @@ export const AnimePosterCard = memo(function AnimePosterCard({
             onKeyDown={(e) => e.key === "Enter" && onClick?.()}
             className={cn(
                 "group relative cursor-pointer select-none outline-none",
-                "rounded-sm overflow-hidden",
+                "rounded-sm overflow-hidden transform-gpu will-change-transform",
                 "transition-transform duration-200 ease-out",
                 "hover:scale-[1.03] focus-visible:scale-[1.03]",
                 "focus-visible:ring-2 focus-visible:ring-white/30",
@@ -80,7 +80,7 @@ export const AnimePosterCard = memo(function AnimePosterCard({
                 <DeferredImage
                     src={posterUrl}
                     alt={title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 transform-gpu will-change-transform"
                 />
 
                 {/* Dark vignette — always present for text legibility */}

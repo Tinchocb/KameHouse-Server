@@ -412,7 +412,7 @@ export function SagaBrandHubs() {
                                 "bg-gradient-to-br from-[#0c0f1d]/90 to-[#070912]/95",
                                 "border border-white/5 rounded-2xl cursor-pointer",
                                 "shadow-[0_8px_24px_rgba(0,0,0,0.5)] select-none",
-                                "transition-all duration-500 ease-[0.25,1,0.5,1] group",
+                                "transition-all duration-500 [transition-timing-function:cubic-bezier(0.25,1,0.5,1)] group",
                                 hub.glowColor
                             )}
                             whileHover={{ 

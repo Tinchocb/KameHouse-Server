@@ -51,6 +51,8 @@ type Settings struct {
 	MediaPlayer    MediaPlayerSettings    `json:"mediaPlayer" gorm:"embedded;embeddedPrefix:media_player_"`
 	Torrent        TorrentSettings        `json:"torrent" gorm:"embedded;embeddedPrefix:torrent_"`
 	Torrentstream  TorrentstreamSettings  `json:"torrentstream" gorm:"embedded;embeddedPrefix:torrentstream_"`
+	Notifications  NotificationSettings   `json:"notifications" gorm:"embedded;embeddedPrefix:notifications_"`
+	Platform       PlatformSettings       `json:"Platform" gorm:"embedded;embeddedPrefix:platform_"`
 	// Separate tables
 	Mediastream   *MediastreamSettings   `json:"mediastream" gorm:"-"`
 	Theme         *Theme                 `json:"theme" gorm:"-"`
@@ -260,6 +262,12 @@ type ListSyncSettings struct {
 type NotificationSettings struct {
 	DisableNotifications               bool `gorm:"column:disable_notifications" json:"disableNotifications"`
 	DisableAutoScannerNotifications    bool `gorm:"column:disable_auto_scanner_notifications" json:"disableAutoScannerNotifications"`
+	DisableAutoDownloaderNotifications bool `gorm:"column:disable_auto_downloader_notifications" json:"disableAutoDownloaderNotifications"`
+}
+
+type PlatformSettings struct {
+	HideAudienceScore bool `gorm:"column:hide_audience_score" json:"hideAudienceScore"`
+	DisableCacheLayer bool `gorm:"column:disable_cache_layer" json:"disableCacheLayer"`
 }
 
 

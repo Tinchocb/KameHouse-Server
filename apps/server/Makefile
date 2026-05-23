@@ -78,7 +78,7 @@ build-web:
 ## dev: Start the Go server in development mode
 dev:
 	@echo "🚀 Starting dev server on port $(SERVER_PORT)..."
-	$(GO) run main.go --datadir="$(DATA_DIR)"
+	$(GO) run . --datadir="$(DATA_DIR)"
 
 ## dev-web: Start the web frontend development server
 dev-web:

@@ -3,7 +3,6 @@ module kamehouse
 go 1.24.0
 
 require (
-	fyne.io/systray v1.12.0
 	github.com/5rahim/go-astisub v0.2.1
 	github.com/5rahim/habari v0.1.12
 	github.com/5rahim/hls-m3u8 v0.1.0
@@ -18,11 +17,11 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/glebarez/sqlite v1.11.0
 	github.com/goccy/go-json v0.10.5
-	github.com/gonutz/w32/v2 v2.12.1
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/imroc/req/v3 v3.57.0
+	github.com/jchv/go-webview2 v0.0.0-20260205173254-56598839c808
 	github.com/kr/pretty v0.3.1
 	github.com/labstack/echo/v4 v4.15.0
 	github.com/mileusna/useragent v1.3.5
@@ -48,8 +47,10 @@ require (
 require (
 	github.com/anacrolix/btree v0.0.0-20251201064447-d86c3fa41bd8 // indirect
 	github.com/anacrolix/log v0.17.1-0.20251118025802-918f1157b7bb // indirect
+	github.com/gonutz/w32/v2 v2.12.1 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
+	github.com/jchv/go-winloader v0.0.0-20250406163304-c1995be93bd1 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	golang.org/x/crypto v0.47.0 // indirect
 	golang.org/x/net v0.49.0 // indirect
@@ -93,7 +94,6 @@ require (
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
-	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/google/btree v1.1.2 // indirect
 	github.com/google/pprof v0.0.0-20250423184734-337e5dd93bb4 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect

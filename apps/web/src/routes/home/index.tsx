@@ -57,6 +57,14 @@ function HomeClient() {
         [navigate, allEntries],
     )
 
+    const handleSpotlightNavigate = React.useCallback(
+        (item: { id: string }) => {
+            const numericId = Number(item.id.replace("media-", ""))
+            handleNavigate(numericId)
+        },
+        [handleNavigate],
+    )
+
     const spotlightItems = React.useMemo(() => {
         if (!allEntries.length) return []
         
@@ -90,7 +98,7 @@ function HomeClient() {
                     {spotlightItems.length > 0 && (
                         <MediaSpotlight 
                             items={spotlightItems} 
-                            onNavigate={(item) => handleNavigate(Number(item.id.replace("media-", "")))} 
+                            onNavigate={handleSpotlightNavigate} 
                         />
                     )}
                 </div>

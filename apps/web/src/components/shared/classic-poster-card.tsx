@@ -27,7 +27,7 @@ export const ClassicPosterCard = memo(function ClassicPosterCard({
         <div 
             onClick={onClick}
             className={cn(
-                "relative group select-none", 
+                "relative group select-none transform-gpu will-change-transform", 
                 onClick && "cursor-pointer",
                 className
             )}
@@ -38,7 +38,7 @@ export const ClassicPosterCard = memo(function ClassicPosterCard({
                 <DeferredImage
                     src={getHighResImage(posterUrlOverride || media.posterImage || "")}
                     alt={title}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 transform-gpu will-change-transform"
                     showSkeleton={false}
                     fallback={
                         <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center" style={{ background: `linear-gradient(to bottom right, #18181b, #09090b)` }}>

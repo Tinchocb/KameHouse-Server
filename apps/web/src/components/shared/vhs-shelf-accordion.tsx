@@ -88,12 +88,41 @@ const VHS_THEMES: Record<number, {
 
 const GENERIC_ACCENTS = ["#ff3e8b", "#00ffcc", "#10b981", "#f59e0b", "#818cf8", "#f43f5e"]
 
+const themeCache = new Map<string, { accent: string; labelBg: string; labelText: string; brandLabel: string; subtitle: string }>()
+
 function getTheme(tmdbId: number, title: string) {
     if (VHS_THEMES[tmdbId]) return VHS_THEMES[tmdbId]
+    const cacheKey = `${tmdbId}_${title}`
+    const cached = themeCache.get(cacheKey)
+    if (cached) return cached
     const hash = title.split("").reduce((a, c) => a + c.charCodeAt(0), 0)
     const accent = GENERIC_ACCENTS[hash % GENERIC_ACCENTS.length]
-    return { accent, labelBg: "#1a1b24", labelText: accent, brandLabel: "KAMEHOUSE", subtitle: "Anime Series" }
+    const theme = { accent, labelBg: "#1a1b24", labelText: accent, brandLabel: "KAMEHOUSE", subtitle: "Anime Series" }
+    themeCache.set(cacheKey, theme)
+    return theme
 }
+
+const RADIOS = [0, 72, 144, 216, 288].map(deg => {
+    const r = (deg * Math.PI) / 180
+    return {
+        deg,
+        x1: 10 + Math.cos(r) * 3.2,
+        y1: 10 + Math.sin(r) * 3.2,
+        x2: 10 + Math.cos(r) * 7.8,
+        y2: 10 + Math.sin(r) * 7.8,
+    }
+})
+
+const NOTCHES = [36, 108, 180, 252, 324].map(deg => {
+    const r = (deg * Math.PI) / 180
+    return {
+        deg,
+        x1: 10 + Math.cos(r) * 7.5,
+        y1: 10 + Math.sin(r) * 7.5,
+        x2: 10 + Math.cos(r) * 9,
+        y2: 10 + Math.sin(r) * 9,
+    }
+})
 
 // ─── VhsReel ──────────────────────────────────────────────────────────────────
 // Bobina SVG animada. isSpinning → rotación continua con framer-motion.
@@ -123,36 +152,32 @@ const VhsReel = memo(function VhsReel({
             <circle cx="10" cy="10" r="2.5" fill={`${accent}55`} />
             <circle cx="10" cy="10" r="1" fill={`${accent}88`} />
             {/* 5 radios */}
-            {[0, 72, 144, 216, 288].map(deg => {
-                const r = (deg * Math.PI) / 180
-                return (
-                    <line
-                        key={deg}
-                        x1={10 + Math.cos(r) * 3.2} y1={10 + Math.sin(r) * 3.2}
-                        x2={10 + Math.cos(r) * 7.8} y2={10 + Math.sin(r) * 7.8}
-                        stroke="rgba(140,140,165,0.35)"
-                        strokeWidth="0.8"
-                        strokeLinecap="round"
-                    />
-                )
-            })}
+            {RADIOS.map(radio => (
+                <line
+                    key={radio.deg}
+                    x1={radio.x1} y1={radio.y1}
+                    x2={radio.x2} y2={radio.y2}
+                    stroke="rgba(140,140,165,0.35)"
+                    strokeWidth="0.8"
+                    strokeLinecap="round"
+                />
+            ))}
             {/* Muescas exteriores */}
-            {[36, 108, 180, 252, 324].map(deg => {
-                const r = (deg * Math.PI) / 180
-                return (
-                    <line
-                        key={deg}
-                        x1={10 + Math.cos(r) * 7.5} y1={10 + Math.sin(r) * 7.5}
-                        x2={10 + Math.cos(r) * 9} y2={10 + Math.sin(r) * 9}
-                        stroke="rgba(120,120,145,0.25)"
-                        strokeWidth="0.6"
-                        strokeLinecap="round"
-                    />
-                )
-            })}
+            {NOTCHES.map(notch => (
+                <line
+                    key={notch.deg}
+                    x1={notch.x1} y1={notch.y1}
+                    x2={notch.x2} y2={notch.y2}
+                    stroke="rgba(120,120,145,0.25)"
+                    strokeWidth="0.6"
+                    strokeLinecap="round"
+                />
+            ))}
         </motion.svg>
     )
 })
+
+const CHASSIS_SLOTS = Array.from({ length: 8 })
 
 // ─── VhsChassis ───────────────────────────────────────────────────────────────
 // Bloque mecánico inferior del lomo. Scanlines + ventana de cinta + bobinas.
@@ -186,7 +211,7 @@ const VhsChassis = memo(function VhsChassis({
             />
             {/* Ranuras del cartucho */}
             <div className="absolute inset-x-2 top-1.5 bottom-1.5 flex gap-[3px] opacity-[0.13] pointer-events-none">
-                {Array.from({ length: 8 }).map((_, i) => (
+                {CHASSIS_SLOTS.map((_, i) => (
                     <div key={i} className="flex-1 rounded-[1px]" style={{ background: "rgba(200,200,220,0.5)" }} />
                 ))}
             </div>

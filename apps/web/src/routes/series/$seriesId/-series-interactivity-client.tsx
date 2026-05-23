@@ -165,7 +165,7 @@ const EpisodeCard = React.memo(function EpisodeCard({
                         src={thumb}
                         alt={epTitle}
                         className={cn(
-                            "w-full h-full object-cover transition-transform duration-1000 group-hover/thumb:scale-110",
+                            "w-full h-full object-cover transition-transform duration-1000 group-hover/thumb:scale-110 transform-gpu will-change-transform",
                             isWatched && "opacity-40 grayscale-[0.5]"
                         )}
                         showSkeleton={false}
@@ -374,7 +374,7 @@ const EpisodeCard = React.memo(function EpisodeCard({
         <div
             onClick={handlePlay}
             className={cn(
-                "group relative flex flex-col transition-all duration-500 overflow-hidden rounded-xl border border-white/[0.03]",
+                "group relative flex flex-col transition-all duration-500 overflow-hidden rounded-xl border border-white/[0.03] transform-gpu will-change-transform",
                 isCurrentlyPlaying 
                     ? "border-brand-orange/50 bg-brand-orange/[0.03] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)]" 
                     : "bg-zinc-950/40 hover:border-brand-orange/40 hover:shadow-2xl hover:-translate-y-1",
@@ -388,7 +388,7 @@ const EpisodeCard = React.memo(function EpisodeCard({
                     src={thumb}
                     alt={epTitle}
                     className={cn(
-                        "w-full h-full object-cover transition-all duration-700 group-hover:scale-110",
+                        "w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 transform-gpu will-change-transform",
                         isWatched && "opacity-40 grayscale-[0.5]"
                     )}
                     showSkeleton={false}

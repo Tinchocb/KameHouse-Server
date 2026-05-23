@@ -15,6 +15,42 @@ interface GlowingEffectProps {
     borderWidth?: number;
 }
 
+// ─── Shared Coordinator para Eventos Globales ──────────────────────────────────
+// Evita registrar múltiples listeners en window/document.body en grids con muchas cards.
+
+let globalMousePosition = { x: 0, y: 0 }
+const activeListeners = new Set<(mouse: { x: number; y: number }) => void>()
+let globalListenersRegistered = false
+
+const onGlobalPointerMove = (e: PointerEvent) => {
+    globalMousePosition = { x: e.clientX, y: e.clientY }
+    notifyListeners()
+}
+
+const onGlobalScroll = () => {
+    notifyListeners()
+}
+
+const notifyListeners = () => {
+    activeListeners.forEach((listener) => {
+        listener(globalMousePosition)
+    })
+}
+
+const registerGlobalListeners = () => {
+    if (globalListenersRegistered) return
+    window.addEventListener("scroll", onGlobalScroll, { passive: true })
+    document.body.addEventListener("pointermove", onGlobalPointerMove, { passive: true })
+    globalListenersRegistered = true
+}
+
+const unregisterGlobalListeners = () => {
+    if (!globalListenersRegistered || activeListeners.size > 0) return
+    window.removeEventListener("scroll", onGlobalScroll)
+    document.body.removeEventListener("pointermove", onGlobalPointerMove)
+    globalListenersRegistered = false
+}
+
 const GlowingEffect = memo(
     ({
         blur = 0,
@@ -31,10 +67,12 @@ const GlowingEffect = memo(
         const containerRef = useRef<HTMLDivElement>(null)
         const lastPosition = useRef({ x: 0, y: 0 })
         const animationFrameRef = useRef<number>(0)
+        const isVisibleRef = useRef(false)
+        const controlsRef = useRef<any>(null)
 
         const handleMove = useCallback(
-            (e?: MouseEvent | { x: number; y: number }) => {
-                if (!containerRef.current) return
+            (e?: { x: number; y: number }) => {
+                if (!containerRef.current || !isVisibleRef.current) return
 
                 if (animationFrameRef.current) {
                     cancelAnimationFrame(animationFrameRef.current)
@@ -45,12 +83,10 @@ const GlowingEffect = memo(
                     if (!element) return
 
                     const { left, top, width, height } = element.getBoundingClientRect()
-                    const mouseX = e?.x ?? lastPosition.current.x
-                    const mouseY = e?.y ?? lastPosition.current.y
+                    const mouseX = e?.x ?? globalMousePosition.x
+                    const mouseY = e?.y ?? globalMousePosition.y
 
-                    if (e) {
-                        lastPosition.current = { x: mouseX, y: mouseY }
-                    }
+                    lastPosition.current = { x: mouseX, y: mouseY }
 
                     const center = [left + width * 0.5, top + height * 0.5]
                     const distanceFromCenter = Math.hypot(
@@ -84,7 +120,11 @@ const GlowingEffect = memo(
                     const angleDiff = ((targetAngle - currentAngle + 180) % 360) - 180
                     const newAngle = currentAngle + angleDiff
 
-                    animate(currentAngle, newAngle, {
+                    if (controlsRef.current) {
+                        controlsRef.current.stop()
+                    }
+
+                    controlsRef.current = animate(currentAngle, newAngle, {
                         duration: movementDuration,
                         ease: [0.16, 1, 0.3, 1],
                         onUpdate: (value) => {
@@ -96,25 +136,57 @@ const GlowingEffect = memo(
             [inactiveZone, proximity, movementDuration],
         )
 
+        // 1. IntersectionObserver para limitar a las tarjetas visibles en pantalla
+        useEffect(() => {
+            if (disabled || !containerRef.current) return
+
+            const element = containerRef.current
+            const observer = new IntersectionObserver(
+                ([entry]) => {
+                    isVisibleRef.current = entry.isIntersecting
+                    if (!entry.isIntersecting) {
+                        element.style.setProperty("--active", "0")
+                    } else {
+                        handleMove(globalMousePosition)
+                    }
+                },
+                { threshold: 0 }
+            )
+
+            observer.observe(element)
+
+            return () => {
+                observer.disconnect()
+            }
+        }, [disabled, handleMove])
+
+        // 2. Suscribirse al Shared Coordinator de eventos si es visible
         useEffect(() => {
             if (disabled) return
 
-            const handleScroll = () => handleMove()
-            const handlePointerMove = (e: PointerEvent) => handleMove(e)
+            const listener = (mouse: { x: number; y: number }) => {
+                if (!isVisibleRef.current) return
+                handleMove(mouse)
+            }
 
-            window.addEventListener("scroll", handleScroll, { passive: true })
-            document.body.addEventListener("pointermove", handlePointerMove, {
-                passive: true,
-            })
+            registerGlobalListeners()
+            activeListeners.add(listener)
+
+            if (isVisibleRef.current) {
+                handleMove(globalMousePosition)
+            }
 
             return () => {
+                activeListeners.delete(listener)
+                unregisterGlobalListeners()
                 if (animationFrameRef.current) {
                     cancelAnimationFrame(animationFrameRef.current)
                 }
-                window.removeEventListener("scroll", handleScroll)
-                document.body.removeEventListener("pointermove", handlePointerMove)
+                if (controlsRef.current) {
+                    controlsRef.current.stop()
+                }
             }
-        }, [handleMove, disabled])
+        }, [disabled, handleMove])
 
         return (
             <>

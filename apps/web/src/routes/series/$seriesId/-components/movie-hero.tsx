@@ -30,6 +30,7 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
     className
 }: MovieHeroSectionProps) {
     const containerRef = useRef<HTMLElement>(null)
+    const backdropRef = useRef<HTMLDivElement>(null)
     const media = entry.media!
     const setBackdropUrl = useIntelligenceStore(s => s.setBackdropUrl)
 
@@ -42,6 +43,20 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
             setBackdropUrl(null)
         }
     }, [backdropUrl, setBackdropUrl])
+
+    // Smooth Parallax capture scroll listener (independent of window scroll)
+    React.useEffect(() => {
+        const handleScroll = (e: Event) => {
+            const target = e.target as HTMLElement
+            if (target && target.scrollHeight > target.clientHeight) {
+                if (!backdropRef.current) return
+                const scrolled = target.scrollTop
+                backdropRef.current.style.transform = `translate3d(0, ${scrolled * 0.45}px, 0)`
+            }
+        }
+        window.addEventListener("scroll", handleScroll, { capture: true, passive: true })
+        return () => window.removeEventListener("scroll", handleScroll, { capture: true })
+    }, [])
 
     useGSAP(() => {
         gsap.from(".movie-hero-animate", {
@@ -189,7 +204,8 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
             {/* High Res Crisp Backdrop */}
             {backdropUrl && (
                 <div 
-                    className="absolute inset-0 overflow-hidden cursor-pointer z-0"
+                    ref={backdropRef}
+                    className="absolute inset-0 overflow-hidden cursor-pointer z-0 will-change-transform"
                     onClick={onPlay}
                 >
                     <DeferredImage
@@ -206,7 +222,7 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
             <div className="absolute inset-0 bg-gradient-to-b from-[#09090b]/15 via-transparent to-transparent opacity-100 z-10 pointer-events-none" />
 
             {/* Content (Bottom Left) */}
-            <div className="relative z-20 flex flex-col justify-end items-start px-6 sm:px-12 md:px-24 pb-16 pt-48 max-w-[1500px] w-full gap-5">
+            <div className="relative z-20 flex flex-col justify-end items-start px-6 sm:px-12 md:pl-[240px] md:pr-24 pb-16 pt-48 max-w-[1500px] w-full gap-5">
                 
                 {/* Meta details (above title) */}
                 <div className="movie-hero-animate flex flex-wrap items-center gap-3">

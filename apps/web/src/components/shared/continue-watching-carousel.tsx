@@ -58,12 +58,12 @@ export function ContinueWatchingCarousel() {
         if (!history) return []
         return Object.values(history)
             .filter(isInProgress)
-            .sort((a, b) => {
-                // Most recently updated first
-                const ta = a.timeUpdated ? new Date(a.timeUpdated).getTime() : 0
-                const tb = b.timeUpdated ? new Date(b.timeUpdated).getTime() : 0
-                return tb - ta
-            })
+            .map(item => ({
+                item,
+                timestamp: item.timeUpdated ? new Date(item.timeUpdated).getTime() : 0
+            }))
+            .sort((a, b) => b.timestamp - a.timestamp)
+            .map(x => x.item)
             .slice(0, 20)
     }, [history])
 

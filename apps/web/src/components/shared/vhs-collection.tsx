@@ -71,6 +71,7 @@ const VhsTapeCard = memo(({
                 "h-full flex flex-col cursor-pointer border-r-[0.5px] border-black/40 transition-[flex,min-width] duration-300 ease-out min-w-[100px] sm:min-w-[140px] overflow-hidden shrink-0",
                 isSelected ? "flex-[2.5] min-w-[280px] sm:min-w-[360px]" : "flex-1"
             )}
+            style={{ willChange: "flex, min-width" }}
         >
             {/* 1. .vhs-poster */}
             <div className="flex-1 relative overflow-hidden bg-[#0d0f14] group">
@@ -81,7 +82,7 @@ const VhsTapeCard = memo(({
                             src={item.posterUrl || ""}
                             alt=""
                             className={cn(
-                                "w-full h-full object-cover transition-[filter,transform] duration-700",
+                                "w-full h-full object-cover transition-[filter,transform] duration-700 transform-gpu will-change-[filter,transform]",
                                 isSelected ? "brightness-100 scale-105" : "brightness-75 group-hover:brightness-90"
                             )}
                             showSkeleton={true}
@@ -96,7 +97,7 @@ const VhsTapeCard = memo(({
                 {/* Vertical title (hidden when selected) */}
                 <div
                     className={cn(
-                        "absolute inset-0 flex items-center justify-center transition-[opacity,transform] duration-300 z-10 px-2",
+                        "absolute inset-0 flex items-center justify-center transition-[opacity,transform] duration-300 z-10 px-2 transform-gpu will-change-[opacity,transform]",
                         isSelected ? "opacity-0 pointer-events-none scale-110" : "opacity-100 scale-100"
                     )}
                 >
@@ -111,7 +112,7 @@ const VhsTapeCard = memo(({
                 {/* Detail overlay (slides up when selected) */}
                 <div
                     className={cn(
-                        "absolute left-0 right-0 bottom-0 pt-20 pb-6 px-6 transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1) z-20 flex flex-col",
+                        "absolute left-0 right-0 bottom-0 pt-20 pb-6 px-6 transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1) z-20 flex flex-col transform-gpu will-change-transform",
                         isSelected ? "translate-y-0" : "translate-y-[120%]"
                     )}
                     style={{ background: "linear-gradient(transparent 0%, rgba(8,10,15,0.98) 40%)" }}
@@ -147,7 +148,7 @@ const VhsTapeCard = memo(({
 
                     <button
                         onClick={(e) => { e.stopPropagation(); onPlayClick(); }}
-                        className="w-full bg-brand-orange hover:bg-brand-orange-hover text-white rounded-xl text-[13px] sm:text-[14px] font-black tracking-widest uppercase py-4 transition-all flex items-center justify-center gap-3 shadow-[0_10px_25px_rgba(255,110,58,0.3)] active:scale-[0.97] hover:-translate-y-0.5"
+                        className="w-full bg-brand-orange hover:bg-brand-orange-hover text-white rounded-xl text-[13px] sm:text-[14px] font-black tracking-widest uppercase py-4 transition-all flex items-center justify-center gap-3 shadow-[0_10px_25px_rgba(255,110,58,0.3)] active:scale-[0.97] hover:-translate-y-0.5 transform-gpu"
                     >
                         <Play className="w-4 h-4 fill-current" />
                         Reproducir ahora

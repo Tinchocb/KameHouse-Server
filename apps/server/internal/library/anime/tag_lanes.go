@@ -52,10 +52,17 @@ type tagCount struct {
 // BuildDynamicTagLanes queries the database for all episode tags, aggregates them,
 // filters for tags associated with 50 or more episodes, and constructs swimlanes for them.
 func (s *IntelligenceService) BuildDynamicTagLanes() []*CuratedSwimlane {
+	if cached, ok := dynamicTagLanesCache.Get("dynamic_tag_lanes"); ok && cached != nil {
+		return cached
+	}
+
 	var results []struct {
 		Tags string `gorm:"column:tags"`
 	}
-	if err := s.db.Gorm().Table("library_episodes").Select("tags").Find(&results).Error; err != nil {
+	if err := s.db.Gorm().Table("library_episodes").
+		Select("tags").
+		Where("tags IS NOT NULL AND tags != '' AND tags != '[]' AND tags != 'null'").
+		Find(&results).Error; err != nil {
 		s.logger.Error().Err(err).Msg("tag_lanes: failed to fetch tags from library_episodes")
 		return nil
 	}
@@ -100,5 +107,6 @@ func (s *IntelligenceService) BuildDynamicTagLanes() []*CuratedSwimlane {
 		}
 	}
 
+	dynamicTagLanesCache.Set("dynamic_tag_lanes", lanes)
 	return lanes
 }

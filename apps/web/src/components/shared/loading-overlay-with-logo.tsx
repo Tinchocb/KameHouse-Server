@@ -21,13 +21,13 @@ export function LoadingOverlayWithLogo({ refetch, title }: { refetch?: () => voi
         <LoadingOverlay showSpinner={false} className="bg-zinc-950">
             {/* Cinematic Background Decoration - Spirit Bomb convergence */}
             <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,165,0,0.05)_0%,transparent_70%)] animate-pulse" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,165,0,0.05)_0%,transparent_70%)] animate-pulse transform-gpu" />
                 <div className="absolute inset-0 opacity-[0.03] mix-blend-overlay" style={{ backgroundImage: `url("https://grainy-gradients.vercel.app/noise.svg")` }} />
             </div>
             
             <div className="relative flex items-center justify-center">
                 {/* 7 Dragon Balls Orbiting */}
-                <div className="absolute w-48 h-48 animate-spin-slow">
+                <div className="absolute w-48 h-48 animate-spin-slow transform-gpu will-change-transform">
                     {Array.from({ length: 7 }).map((_, i) => (
                         <div
                             key={i}
@@ -45,12 +45,12 @@ export function LoadingOverlayWithLogo({ refetch, title }: { refetch?: () => voi
 
                 {/* Central Logo with aura */}
                 <div className="relative group">
-                    <div className="absolute inset-0 bg-brand-orange/20 blur-3xl rounded-full animate-pulse" />
+                    <div className="absolute inset-0 bg-brand-orange/20 blur-3xl rounded-full animate-pulse transform-gpu" />
                     <DeferredImage
                         src="/kamehouse-logo.png"
                         alt="Loading..."
                         priority
-                        className="w-24 h-24 z-[1] relative hover:scale-110 transition-transform duration-700 brightness-110"
+                        className="w-24 h-24 z-[1] relative hover:scale-110 transition-transform duration-700 brightness-110 transform-gpu will-change-transform"
                     />
                 </div>
             </div>

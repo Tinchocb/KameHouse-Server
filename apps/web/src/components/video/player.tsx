@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from "react"
+import React, { useMemo, useState, useEffect } from "react"
 import { useRequestMediastreamMediaContainer } from "@/api/hooks/mediastream.hooks"
 import { Loader2, AlertTriangle } from "lucide-react"
+import { useAppStore } from "@/lib/store"
 
 import { usePlayerCore } from "./player-core"
 import { PlayerUI } from "./player-ui"
@@ -47,6 +48,15 @@ function PlayerLoadingScreen() {
 }
 
 export function VideoPlayer(props: VideoPlayerProps) {
+    const setVideoActive = useAppStore(state => state.setVideoActive)
+
+    useEffect(() => {
+        setVideoActive(true)
+        return () => {
+            setVideoActive(false)
+        }
+    }, [setVideoActive])
+
     const isLocal = !props.isExternalStream && Boolean(props.streamUrl) && props.streamType !== "online"
 
     if (isLocal) {

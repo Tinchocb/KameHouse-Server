@@ -4,7 +4,9 @@ import gsap from "gsap"
 import { useGSAP } from "@gsap/react"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/components/ui/core/styling"
-import { Tv, Copy, Check, X, Info } from "lucide-react"
+import { Tv, Copy, Check, X, Info, RefreshCw, Loader2 } from "lucide-react"
+import { toast } from "sonner"
+import { buildSeaQuery } from "@/api/client/requests"
 import { PlayerTopBar } from "./player-topbar"
 import { PlayerBottomBar } from "./player-bottombar"
 import { LoadingErrorOverlay, CenterPlayFlash, SkipIntroOverlay, NextEpisodeOverlay, ResumeOverlay } from "./player-overlays"
@@ -81,6 +83,9 @@ export function PlayerUI(props: PlayerUIProps) {
     const [isEpisodesSidebarOpen, setIsEpisodesSidebarOpen] = React.useState(false)
     const [isCastModalOpen, setIsCastModalOpen] = React.useState(false)
     const [isCopied, setIsCopied] = React.useState(false)
+    const [discoveredTvs, setDiscoveredTvs] = React.useState<{ ip: string; name: string }[]>([])
+    const [isDiscovering, setIsDiscovering] = React.useState(false)
+    const [castingTvIp, setCastingTvIp] = React.useState<string | null>(null)
 
     const controlsVisible = state.controlsVisible || isEpisodesSidebarOpen || isCastModalOpen
 
@@ -127,6 +132,52 @@ export function PlayerUI(props: PlayerUIProps) {
             console.error("Failed to copy URL:", err)
         }
     }
+
+    const discoverTvs = React.useCallback(async () => {
+        setIsDiscovering(true)
+        try {
+            const result = await buildSeaQuery<{ ip: string; name: string }[]>({
+                endpoint: "/api/v1/cast/samsung/discover",
+                method: "GET",
+            })
+            setDiscoveredTvs(result || [])
+        } catch (err) {
+            console.error("Error discovering TVs:", err)
+            toast.error("Error al buscar Smart TVs en la red")
+        } finally {
+            setIsDiscovering(false)
+        }
+    }, [])
+
+    const handleCastToSamsung = async (ip: string, name: string) => {
+        setCastingTvIp(ip)
+        try {
+            const result = await buildSeaQuery<{ success: boolean }, { ip: string; url: string }>({
+                endpoint: "/api/v1/cast/samsung/launch",
+                method: "POST",
+                data: {
+                    ip,
+                    url: localServerUrl,
+                },
+            })
+            if (result?.success) {
+                toast.success(`Transmitiendo a ${name}`)
+            } else {
+                toast.error(`No se pudo iniciar la transmisión en ${name}`)
+            }
+        } catch (err: any) {
+            console.error("Error casting to Samsung TV:", err)
+            toast.error(err?.message || `Error al transmitir a ${name}`)
+        } finally {
+            setCastingTvIp(null)
+        }
+    }
+
+    useEffect(() => {
+        if (isCastModalOpen) {
+            discoverTvs()
+        }
+    }, [isCastModalOpen, discoverTvs])
 
     // Fetch video insights (heatmap)
     const { data: insightsData } = useGetVideoInsights({
@@ -576,23 +627,81 @@ export function PlayerUI(props: PlayerUIProps) {
                                     </div>
                                 </div>
 
-                                {/* Option 2: Smart TV Browser */}
-                                <div 
-                                    className="p-5 rounded-2xl bg-brand-orange/[0.02] border border-brand-orange/20 transition-all duration-300 flex flex-col gap-4"
-                                >
+                                {/* Option 2: Automatic Samsung TV Casting */}
+                                <div className="p-5 rounded-2xl bg-brand-orange/[0.02] border border-brand-orange/20 transition-all duration-300 flex flex-col gap-4">
+                                    <div className="flex justify-between items-center border-b border-white/5 pb-3">
+                                        <div className="flex gap-3 items-center">
+                                            <Tv className="w-4 h-4 text-brand-orange" />
+                                            <h4 className="text-xs font-bold text-white tracking-wider uppercase">
+                                                Samsung Smart TV
+                                            </h4>
+                                        </div>
+                                        <button
+                                            onClick={() => discoverTvs()}
+                                            disabled={isDiscovering}
+                                            className="p-1.5 text-zinc-500 hover:text-white hover:bg-white/5 rounded-lg transition-all disabled:opacity-50 cursor-pointer"
+                                            title="Buscar de nuevo"
+                                        >
+                                            <RefreshCw className={cn("w-3.5 h-3.5", isDiscovering && "animate-spin text-brand-orange")} />
+                                        </button>
+                                    </div>
+
+                                    {isDiscovering ? (
+                                        <div className="py-6 flex flex-col items-center justify-center gap-3">
+                                            <Loader2 className="w-6 h-6 text-brand-orange animate-spin" />
+                                            <p className="text-[10px] text-zinc-400 font-sans tracking-normal normal-case">
+                                                Buscando Smart TVs en la red local...
+                                            </p>
+                                        </div>
+                                    ) : discoveredTvs.length > 0 ? (
+                                        <div className="space-y-2">
+                                            {discoveredTvs.map((tv) => (
+                                                <div
+                                                    key={tv.ip}
+                                                    onClick={() => castingTvIp === null && handleCastToSamsung(tv.ip, tv.name)}
+                                                    className={cn(
+                                                        "p-3.5 rounded-xl border transition-all duration-300 flex justify-between items-center group cursor-pointer",
+                                                        castingTvIp === tv.ip
+                                                            ? "bg-brand-orange/10 border-brand-orange/40 text-brand-orange"
+                                                            : "bg-zinc-950/40 border-white/5 hover:border-brand-orange/30 hover:bg-brand-orange/[0.02] text-white"
+                                                    )}
+                                                >
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs font-bold tracking-wide">{tv.name}</span>
+                                                        <span className="text-[9px] text-zinc-500 font-mono tracking-tight">{tv.ip}</span>
+                                                    </div>
+                                                    {castingTvIp === tv.ip ? (
+                                                        <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-brand-orange">
+                                                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                            Transmitiendo...
+                                                        </div>
+                                                    ) : (
+                                                        <div className="px-2.5 py-1 bg-zinc-900 border border-white/10 group-hover:border-brand-orange/30 group-hover:bg-brand-orange/10 text-zinc-400 group-hover:text-brand-orange rounded-md transition-all text-[9px] font-black uppercase tracking-wider">
+                                                            Transmitir
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-[10px] text-zinc-500 leading-relaxed font-sans normal-case tracking-normal">
+                                            No se detectaron Smart TVs Samsung automáticamente. Asegúrate de que estén encendidos y conectados a la misma red Wi-Fi.
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Option 3: Manual Connection Fallback */}
+                                <div className="p-5 rounded-2xl bg-white/[0.01] border border-white/5 transition-all duration-300 flex flex-col gap-4">
                                     <div className="flex gap-4 items-start">
-                                        <div className="p-3 bg-brand-orange/10 rounded-xl text-brand-orange shrink-0">
+                                        <div className="p-3 bg-zinc-800/80 rounded-xl text-zinc-400 shrink-0">
                                             <Tv className="w-5 h-5" />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <h4 className="text-xs font-bold text-white tracking-wider uppercase mb-1 flex items-center gap-2">
-                                                Conectar Smart TV
-                                                <span className="text-[8px] bg-brand-orange/20 text-brand-orange px-2 py-0.5 rounded-full font-black tracking-normal uppercase">
-                                                    Recomendado
-                                                </span>
+                                            <h4 className="text-xs font-bold text-white tracking-wider uppercase mb-1">
+                                                Conexión Manual (Otras TVs / Fallback)
                                             </h4>
                                             <p className="text-[10px] text-zinc-400 leading-relaxed font-sans normal-case tracking-normal">
-                                                Ideal para Smart TVs (Samsung Tizen, LG webOS, etc.). Abre el navegador de tu televisor e introduce <strong className="text-white">exactamente</strong> esta dirección:
+                                                Si tienes otra marca (LG webOS, Sony, etc.) o falla el descubrimiento, abre el navegador de tu TV e introduce:
                                             </p>
                                         </div>
                                     </div>
@@ -621,13 +730,13 @@ export function PlayerUI(props: PlayerUIProps) {
                                         </button>
                                     </div>
 
-                                    {/* Advertencia HTTPS → Samsung TV auto-upgrade */}
+                                    {/* Advertencia HTTPS */}
                                     <div className="flex gap-2.5 items-start bg-amber-500/10 border border-amber-500/25 rounded-xl px-3.5 py-3">
                                         <svg className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="currentColor">
                                             <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
                                         </svg>
                                         <p className="text-[9px] text-amber-300/80 leading-relaxed font-sans normal-case tracking-normal">
-                                            <strong className="text-amber-300">¡Importante!</strong> Samsung TV puede convertir la dirección a <code className="text-red-400 font-mono">https://</code> automáticamente. Asegúrate de que diga <code className="text-amber-300 font-mono">http://</code> (sin la «s»), ya que el servidor local no usa cifrado SSL.
+                                            <strong className="text-amber-300">¡Importante!</strong> Las TVs de Samsung pueden forzar <code className="text-red-400 font-mono">https://</code>. Asegúrate de usar <code className="text-amber-300 font-mono">http://</code> (sin la «s»).
                                         </p>
                                     </div>
 

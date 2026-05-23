@@ -8,6 +8,7 @@ import * as React from "react"
 import { FaBook, FaCog, FaHome, FaFilm, FaTv, FaMoon, FaDownload, FaLayerGroup } from "react-icons/fa"
 import { cn } from "../core/styling"
 import { RandomPlayButton } from "./random-play-button"
+import { BackgroundMusicPlayer } from "./background-music"
 
 interface SidebarItem {
     to: string
@@ -19,7 +20,6 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
     { to: "/home", label: "Inicio", icon: <FaHome className="w-5 h-5" /> },
     { to: "/series", label: "Series", icon: <FaTv className="w-5 h-5" /> },
     { to: "/movies", label: "Películas", icon: <FaFilm className="w-5 h-5" /> },
-    { to: "/settings", label: "Configuración", icon: <FaCog className="w-5 h-5" /> },
 ]
 
 export function AppSidebar() {
@@ -88,13 +88,13 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                             title={item.label}
                             onClick={() => setSidebarOpen(false)}
                             activeProps={{
-                                className: "text-white bg-white/5 border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)]",
+                                className: "text-white bg-white/5 border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-md",
                             }}
                             inactiveProps={{
                                 className: "text-zinc-500 hover:text-white hover:bg-white/[0.02] border-transparent",
                             }}
                             className={cn(
-                                "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl border transition-all duration-500 group px-4 md:px-0 relative",
+                                "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl border transition-all duration-500 group px-4 md:px-0 relative backdrop-blur-md",
                                 "active:scale-90 font-bold"
                             )}
                         >
@@ -111,9 +111,39 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
             </nav>
 
             {/* Footer / Info */}
-            <div className="mt-auto pb-6 w-full flex flex-col items-center gap-6 pt-8">
+            <div className="mt-auto pb-6 w-full flex flex-col items-center gap-6 pt-8"> 
+                {/* Background Music */}
+                <BackgroundMusicPlayer />
+               
                 {/* Random Play */}
                 <RandomPlayButton />
+
+                {/* Settings (Always at the bottom) */}
+                <Magnetic>
+                    <Link
+                        to="/settings"
+                        title="Configuración"
+                        onClick={() => setSidebarOpen(false)}
+                        activeProps={{
+                            className: "text-white bg-white/5 border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-md",
+                        }}
+                        inactiveProps={{
+                            className: "text-zinc-500 hover:text-white hover:bg-white/[0.02] border-transparent",
+                        }}
+                        className={cn(
+                            "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl border transition-all duration-500 group px-4 md:px-0 relative backdrop-blur-md",
+                            "active:scale-90 font-bold"
+                        )}
+                    >
+                        {/* Active Indicator Dot */}
+                        <div className="absolute left-0 w-1 h-6 bg-brand-orange rounded-r-full opacity-0 scale-y-0 group-[.active]:opacity-100 group-[.active]:scale-y-100 transition-all duration-500 hidden md:block" />
+                        
+                        <span className="shrink-0 z-10 transition-transform duration-500 group-hover:scale-110">
+                            <FaCog className="w-5 h-5" />
+                        </span>
+                        <span className="md:hidden ml-6 flex-1 uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange">Configuración</span>
+                    </Link>
+                </Magnetic>
             </div>
         </div>
     )

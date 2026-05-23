@@ -376,8 +376,21 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 
 	if scn.ScanMode != "metadata" {
 		scn.Logger.Debug().Msg("scanner: Looking for local NFO metadata files")
-		// Track NFO folders already processed to avoid creating duplicate LibraryMedia
-		var nfoFolderMap sync.Map // folder path -> LibraryMedia ID (uint)
+
+		// nfoFolderMap stores the LibraryMedia ID for each folder that has been
+		// successfully processed. It is populated in the post-processing phase and
+		// used in step 3 to propagate IDs to sibling files in the same folder.
+		var nfoFolderMap sync.Map // folder path → LibraryMedia ID (uint)
+
+		// nfoEntry holds all parsed data for one NFO match. Workers produce these;
+		// the post-processing phase below is the sole consumer that writes to the DB.
+		type nfoEntry struct {
+			lf         *dto.LocalFile
+			media      *models.LibraryMedia
+			folderPath string
+			isPerFile  bool
+			tmdbID     int // 0 when the NFO contains no TMDB ID
+		}
 
 		// Bounded worker pool for NFO resolution
 		maxWorkers := runtime.NumCPU()
@@ -388,7 +401,12 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 			maxWorkers = 16
 		}
 
-		var nfoDbMu sync.Mutex
+		// nfoFolderClaimed prevents two workers from producing duplicate entries
+		// for the same folder-level NFO. LoadOrStore acts as a non-blocking mutex.
+		var nfoFolderClaimed sync.Map // folder path → true
+
+		var nfoEntriesMu sync.Mutex
+		var nfoEntries []*nfoEntry
 
 		nfoJobs := make(chan *dto.LocalFile, len(localFiles))
 		for _, lf := range localFiles {
@@ -396,23 +414,25 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		}
 		close(nfoJobs)
 
+		// ── Worker pool: pure CPU/IO — no DB calls ────────────────────────────
 		var nfoWg sync.WaitGroup
 		for i := 0; i < maxWorkers; i++ {
 			nfoWg.Add(1)
 			go func() {
 				defer nfoWg.Done()
 				for lf := range nfoJobs {
+					// Stop immediately if the scan context was cancelled
+					select {
+					case <-ctx.Done():
+						return
+					default:
+					}
+
 					if lf == nil || lf.LibraryMediaId != 0 || lf.MediaId != 0 {
 						continue
 					}
 
 					lfDir := filepath.Dir(lf.Path)
-
-					// 1. Check folder-level cache
-					if libMediaId, exists := nfoFolderMap.Load(lfDir); exists {
-						lf.LibraryMediaId = libMediaId.(uint)
-						continue
-					}
 
 					// 2. Typical Kodi NFO paths
 					nfoPaths := []string{
@@ -423,66 +443,149 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 					}
 
 					for _, nfoPath := range nfoPaths {
-						if filesystem.FileExists(nfoPath) {
-							nfo, err := ParseNfoFile(nfoPath)
-							if err == nil && nfo != nil {
-								// For per-file NFO ([filename].nfo), we don't cache it for the folder
-								isPerFileNfo := strings.HasSuffix(strings.ToLower(nfoPath), ".nfo") && !strings.HasSuffix(strings.ToLower(nfoPath), "tvshow.nfo") && !strings.HasSuffix(strings.ToLower(nfoPath), "anime.nfo") && !strings.HasSuffix(strings.ToLower(nfoPath), "movie.nfo")
+						if !filesystem.FileExists(nfoPath) {
+							continue
+						}
+						nfo, err := ParseNfoFile(nfoPath)
+						if err != nil || nfo == nil {
+							continue
+						}
 
-								// If it's a folder-level NFO, check cache again (double-checked locking pattern)
-								if !isPerFileNfo {
-									if libMediaId, exists := nfoFolderMap.Load(lfDir); exists {
-										lf.LibraryMediaId = libMediaId.(uint)
-										break
-									}
-								}
+						isPerFileNfo := strings.HasSuffix(strings.ToLower(nfoPath), ".nfo") &&
+							!strings.HasSuffix(strings.ToLower(nfoPath), "tvshow.nfo") &&
+							!strings.HasSuffix(strings.ToLower(nfoPath), "anime.nfo") &&
+							!strings.HasSuffix(strings.ToLower(nfoPath), "movie.nfo")
 
-								// Determine format
-								format := "TV"
-								if nfo.XMLName.Local == "movie" {
-									format = "MOVIE"
-								}
-
-								newMedia := &models.LibraryMedia{
-									Type:          "ANIME",
-									Format:        format,
-									TitleOriginal: nfo.OriginalTitle,
-									TitleRomaji:   nfo.Title,
-									TitleEnglish:  nfo.Title,
-									Description:   nfo.Plot,
-									Rating:        nfo.Rating,
-									Year:          nfo.Year,
-								}
-
-								if scn.Database != nil {
-									nfoDbMu.Lock()
-									saved, err := db.InsertLibraryMedia(scn.Database, newMedia)
-									nfoDbMu.Unlock()
-									
-									if err == nil && saved != nil {
-										lf.LibraryMediaId = saved.ID
-										if !isPerFileNfo {
-											nfoFolderMap.Store(lfDir, saved.ID)
-										}
-
-										if tmdbID := nfo.GetTmdbID(); tmdbID > 0 {
-											lf.MediaId = tmdbID
-										}
-
-										scn.Logger.Info().
-											Str("filename", lf.Name).
-											Uint("libraryMediaId", saved.ID).
-											Msg("scanner: Created LibraryMedia via local NFO")
-										break
-									}
-								}
+						// For folder-level NFOs, use LoadOrStore to claim the folder atomically.
+						// Only the worker that wins the race produces an entry; others skip.
+						if !isPerFileNfo {
+							if _, alreadyClaimed := nfoFolderClaimed.LoadOrStore(lfDir, true); alreadyClaimed {
+								break // another worker already claimed this folder
 							}
 						}
+
+						format := "TV"
+						if nfo.XMLName.Local == "movie" {
+							format = "MOVIE"
+						}
+
+						entry := &nfoEntry{
+							lf: lf,
+							media: &models.LibraryMedia{
+								Type:          "ANIME",
+								Format:        format,
+								TitleOriginal: nfo.OriginalTitle,
+								TitleRomaji:   nfo.Title,
+								TitleEnglish:  nfo.Title,
+								Description:   nfo.Plot,
+								Rating:        nfo.Rating,
+								Year:          nfo.Year,
+							},
+							folderPath: lfDir,
+							isPerFile:  isPerFileNfo,
+							tmdbID:     nfo.GetTmdbID(),
+						}
+
+						nfoEntriesMu.Lock()
+						nfoEntries = append(nfoEntries, entry)
+						nfoEntriesMu.Unlock()
+						break
 					}
 				}
 			}()
 		}
 		nfoWg.Wait()
+
+		// ── Post-processing: single DB write phase ────────────────────────────
+		// All workers have finished parsing. We now write to the DB in one shot:
+		// records with a TMDB ID go through UpsertLibraryMediaBatch; local-only
+		// records (tmdb_id = 0) are inserted individually to preserve uniqueness.
+		if scn.Database != nil && len(nfoEntries) > 0 {
+			var withTmdb, withoutTmdb []*nfoEntry
+			for _, e := range nfoEntries {
+				if e.tmdbID > 0 {
+					e.media.TmdbId = e.tmdbID
+					withTmdb = append(withTmdb, e)
+				} else {
+					withoutTmdb = append(withoutTmdb, e)
+				}
+			}
+
+			// 1. Batch upsert for entries that have a TMDB ID.
+			if len(withTmdb) > 0 {
+				mediaBatch := make([]*models.LibraryMedia, len(withTmdb))
+				for i, e := range withTmdb {
+					mediaBatch[i] = e.media
+				}
+				if batchErr := db.UpsertLibraryMediaBatch(scn.Database, mediaBatch, 20); batchErr != nil {
+					scn.Logger.Warn().Err(batchErr).Msg("scanner: NFO batch upsert failed, IDs may be missing")
+				}
+
+				// Query back the persisted records to retrieve their auto-generated IDs.
+				var persisted []*models.LibraryMedia
+				q := scn.Database.Gorm()
+				for i, e := range withTmdb {
+					if i == 0 {
+						q = q.Where("tmdb_id = ? AND type = ?", e.tmdbID, e.media.Type)
+					} else {
+						q = q.Or("tmdb_id = ? AND type = ?", e.tmdbID, e.media.Type)
+					}
+				}
+				q.Find(&persisted)
+
+				type tmdbTypeKey struct {
+					tmdbID    int
+					mediaType string
+				}
+				idMap := make(map[tmdbTypeKey]uint, len(persisted))
+				for _, m := range persisted {
+					idMap[tmdbTypeKey{m.TmdbId, m.Type}] = m.ID
+				}
+
+				for _, e := range withTmdb {
+					key := tmdbTypeKey{e.tmdbID, e.media.Type}
+					if id, ok := idMap[key]; ok {
+						e.lf.LibraryMediaId = id
+						e.lf.MediaId = e.tmdbID
+						if !e.isPerFile {
+							nfoFolderMap.Store(e.folderPath, id)
+						}
+						scn.Logger.Info().
+							Str("filename", e.lf.Name).
+							Uint("libraryMediaId", id).
+							Msg("scanner: Created LibraryMedia via local NFO (batch)")
+					}
+				}
+			}
+
+			// 2. Individual inserts for local-only NFO records (no TMDB ID).
+			// These can't be safely batched since they share tmdb_id = 0.
+			for _, e := range withoutTmdb {
+				saved, err := db.InsertLibraryMedia(scn.Database, e.media)
+				if err == nil && saved != nil {
+					e.lf.LibraryMediaId = saved.ID
+					if !e.isPerFile {
+						nfoFolderMap.Store(e.folderPath, saved.ID)
+					}
+					scn.Logger.Info().
+						Str("filename", e.lf.Name).
+						Uint("libraryMediaId", saved.ID).
+						Msg("scanner: Created LibraryMedia via local NFO (local-only)")
+				}
+			}
+
+			// 3. Propagate folder-level IDs to all local files in the same folder.
+			// Workers only tagged the "owning" file per folder; siblings need the same ID.
+			for _, lf := range localFiles {
+				if lf == nil || lf.LibraryMediaId != 0 {
+					continue
+				}
+				lfDir := filepath.Dir(lf.Path)
+				if id, exists := nfoFolderMap.Load(lfDir); exists {
+					lf.LibraryMediaId = id.(uint)
+				}
+			}
+		}
 	}
 
 	// +---------------------+

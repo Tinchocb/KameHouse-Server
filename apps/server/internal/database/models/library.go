@@ -41,7 +41,7 @@ type LibraryMedia struct {
 	Genres        json.RawMessage `gorm:"column:genres;type:text" json:"genres"` // JSON array of strings
 	Tags          json.RawMessage `gorm:"column:tags;type:text" json:"tags"`     // JSON array of strings or objects
 	DominantVibe  string          `gorm:"column:dominant_vibe" json:"dominantVibe"`
-	SuggestedSwimlane string      `gorm:"column:suggested_swimlane" json:"suggestedSwimlane"`
+	SuggestedSwimlane string      `gorm:"column:suggested_swimlane;index" json:"suggestedSwimlane"`
 	TotalEpisodes int    `gorm:"column:total_episodes" json:"totalEpisodes"`
 	Runtime       int    `gorm:"column:runtime" json:"runtime"`
 
@@ -148,7 +148,7 @@ type LibraryEpisode struct {
 
 	Tags              json.RawMessage `gorm:"column:tags;type:text" json:"tags"`
 	DominantVibe      string          `gorm:"column:dominant_vibe" json:"dominantVibe"`
-	SuggestedSwimlane string          `gorm:"column:suggested_swimlane" json:"suggestedSwimlane"`
+	SuggestedSwimlane string          `gorm:"column:suggested_swimlane;index" json:"suggestedSwimlane"`
 
 	AudioTracks    json.RawMessage `gorm:"column:audio_tracks;type:text" json:"audioTracks"`       // JSON array of strings
 	SubtitleTracks json.RawMessage `gorm:"column:subtitle_tracks;type:text" json:"subtitleTracks"` // JSON array of strings

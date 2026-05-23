@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useForm, type SubmitHandler, type FieldValues, type Resolver } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -156,6 +156,7 @@ function TabsTriggerActiveIndicator() {
 function SettingsPage() {
     const { data: serverSettings, isLoading } = useGetSettings()
     const { mutateAsync: saveSettings, isPending: isSaving } = useSaveSettings()
+    const [activeTab, setActiveTab] = useState<string>("library")
 
     const form = useForm<SettingsFormValues>({
         resolver: zodResolver(settingsSchema) as unknown as Resolver<SettingsFormValues>,
@@ -196,8 +197,8 @@ function SettingsPage() {
                 </div>
             </header>
 
-            <Tabs defaultValue="library" className="flex-1 flex h-full pt-16 relative">
-                <aside className="w-[280px] h-full border-r border-white/[0.02] bg-[#09090b]/40 flex flex-col p-6 space-y-8 z-10 overflow-y-auto relative pt-10">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex h-full pt-16 relative">
+                <aside className="w-[280px] h-full border-r border-white/[0.02] bg-[#09090b]/40 backdrop-blur-xl flex flex-col p-6 space-y-8 z-10 overflow-y-auto relative pt-10">
                     <div className="space-y-3 relative z-10">
                         <p className="text-[9px] font-black uppercase tracking-[0.25em] text-zinc-500 px-3">Configuración</p>
                         <TabsList className="bg-transparent border-0 flex flex-col items-stretch h-auto p-0 gap-1.5">
@@ -232,12 +233,12 @@ function SettingsPage() {
 
                 <main className="flex-1 h-full overflow-y-auto bg-black/5 scrollbar-hide py-8 px-10">
                     <form onSubmit={handleSubmit(onSubmit as unknown as SubmitHandler<FieldValues>)} className="w-full pb-36 max-w-5xl">
-                        <LibraryTab control={control} />
-                        <PlayerTab control={control} />
-                        <DownloadsTab control={control} />
-                        <ScannerTab />
-                        <IntegrationsTab control={control} />
-                        <SystemTab control={control} />
+                        {activeTab === "library" && <LibraryTab control={control} />}
+                        {activeTab === "player" && <PlayerTab control={control} />}
+                        {activeTab === "downloads" && <DownloadsTab control={control} />}
+                        {activeTab === "scanner" && <ScannerTab />}
+                        {activeTab === "integrations" && <IntegrationsTab control={control} />}
+                        {activeTab === "system" && <SystemTab control={control} />}
                     </form>
                 </main>
 

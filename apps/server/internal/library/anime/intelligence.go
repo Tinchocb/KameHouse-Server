@@ -494,56 +494,56 @@ func (s *IntelligenceService) GetCuratedSwimlanes(_ context.Context) (*CuratedHo
 	// Using LIKE '%substring%' queries so small encoding differences don't block results.
 	epNameLanes := []struct {
 		ID   string
-		Name string // unique substring of the suggestSwimlane() output
+		Name string // exact match with the suggestSwimlane() output
 	}{
 		// ── Combate y Transformaciones ──────────────────────────────────────────
-		{"capitulos_imperdibles", "Capítulos Imperdibles"},
-		{"eleva_tu_ki_ep", "Eleva tu Ki"},
-		{"transformaciones_saiyajin", "Transformaciones Saiyajin"},
-		{"forma_final_villano", "Forma Final"},
-		{"tecnicas_sacrificio", "Último Recurso"},
-		{"tecnicas_letales", "Sin Vuelta Atrás"},
-		{"fusion_ha", "Uniones Más Poderosas"},
-		{"espadachines", "Espadachines y Guerreros"},
+		{"capitulos_imperdibles", "Capítulos Imperdibles: Las Batallas Más Épicas"},
+		{"eleva_tu_ki_ep", "¡Eleva tu Ki!: Batallas que rompieron los límites"},
+		{"transformaciones_saiyajin", "Más Allá del Límite: Transformaciones Saiyajin"},
+		{"forma_final_villano", "Cuando el Villano Alcanza su Forma Final"},
+		{"tecnicas_sacrificio", "El Último Recurso: Técnicas de Sacrificio"},
+		{"tecnicas_letales", "Técnicas Letales: Sin Vuelta Atrás"},
+		{"fusion_ha", "¡Fusión HA!: Las Uniones Más Poderosas"},
+		{"espadachines", "Espadachines y Guerreros con Armas"},
 		// ── Torneos ─────────────────────────────────────────────────────────────
-		{"torneos_artes_marciales", "Grandes Torneos"},
-		{"torneo_uranai_baba", "Uranai Baba"},
-		{"juegos_cell", "Juegos de Cell"},
-		{"torneo_mas_alla", "Más Allá: Combates"},
-		{"torneo_poder", "Torneo del Poder"},
+		{"torneos_artes_marciales", "¡Fuera del Ring!: Los Grandes Torneos"},
+		{"torneo_uranai_baba", "El Misterioso Torneo de Uranai Baba"},
+		{"juegos_cell", "Los Juegos de Cell: El Torneo del Terror"},
+		{"torneo_mas_alla", "Torneo del Más Allá: Combates en el Otro Mundo"},
+		{"torneo_poder", "Torneo del Poder: Supervivencia Universal"},
 		// ── Sagas y Facciones ───────────────────────────────────────────────────
-		{"imperio_freezer", "Imperio de Freezer"},
-		{"patrulla_roja", "Patrulla Roja"},
-		{"saiyajins_legendarios", "Poder Berserker"},
-		{"los_saiyajins", "Raza Guerrera Más Poderosa"},
-		{"los_tsufurujin", "Venganza de Baby"},
-		{"dragones_malignos", "Amenaza Final de GT"},
-		{"dioses_destruccion", "Entidades Supremas del Universo"},
-		{"patrulla_galactica", "Policías del Cosmos"},
-		{"guerreras_poderosas", "Guerreras Indomables"},
-		{"nuevas_generaciones", "Nuevas Generaciones de Guerreros"},
-		{"los_namekuseijin", "Namekuseijin"},
+		{"imperio_freezer", "El Imperio de Freezer: El Tirano del Universo"},
+		{"patrulla_roja", "La Patrulla Roja: Androides y Cell"},
+		{"saiyajins_legendarios", "Saiyajins Legendarios: El Poder Berserker"},
+		{"los_saiyajins", "Los Saiyajins: La Raza Guerrera Más Poderosa"},
+		{"los_tsufurujin", "Los Tsufurujin: La Venganza de Baby"},
+		{"dragones_malignos", "Los Dragones Malignos: La Amenaza Final de GT"},
+		{"dioses_destruccion", "Dioses y Entidades Supremas del Universo"},
+		{"patrulla_galactica", "La Patrulla Galáctica: Policías del Cosmos"},
+		{"guerreras_poderosas", "Guerreras Indomables del Universo"},
+		{"nuevas_generaciones", "El Futuro: Las Nuevas Generaciones de Guerreros"},
+		{"los_namekuseijin", "Los Namekuseijin: Guardianes de las Esferas"},
 		// ── Sci-Fi y Aventura ───────────────────────────────────────────────────
-		{"guardianes_tiempo", "Guardianes del Tiempo"},
-		{"cronicas_supervivencia", "Futuro en Llamas"},
-		{"cruce_universos", "Cruce de Universos"},
-		{"invasion_tierra", "Tierra Bajo Ataque"},
-		{"viajes_espacio", "Aventura Espacial"},
-		{"busqueda_esferas", "Deseos Prohibidos"},
+		{"guardianes_tiempo", "Guardianes del Tiempo: Crónicas del Futuro"},
+		{"cronicas_supervivencia", "Crónicas de Supervivencia: El Futuro en Llamas"},
+		{"cruce_universos", "Multiverso: El Cruce de Universos"},
+		{"invasion_tierra", "¡La Tierra Bajo Ataque! Invasiones Alienígenas"},
+		{"viajes_espacio", "Más Allá de las Estrellas: Aventura Espacial"},
+		{"busqueda_esferas", "Deseos Prohibidos y Dragones Sagrados"},
 		// ── Magia y Sobrenatural ────────────────────────────────────────────────
-		{"artes_oscuras_ep", "Artes Oscuras"},
-		{"maldicion_mini", "Maldición Mini"},
+		{"artes_oscuras_ep", "Artes Oscuras: Magia y Demonios"},
+		{"maldicion_mini", "¡Encogidos! La Maldición Mini de Daima"},
 		// ── Drama y Emociones ───────────────────────────────────────────────────
-		{"sacrificio_heroico", "Héroes lo Dan Todo"},
-		{"tension_absoluta", "Borde del Abismo"},
-		{"romance_boda", "Amor en el Universo"},
-		{"gran_saiyaman", "Héroe Enmascarado"},
-		{"humor_relleno", "Lado Cómico"},
+		{"sacrificio_heroico", "Cuando los Héroes lo Dan Todo: Sacrificios"},
+		{"tension_absoluta", "Tensión Absoluta: Al Borde del Abismo"},
+		{"romance_boda", "Amor en el Universo Dragon Ball"},
+		{"gran_saiyaman", "Gran Saiyaman: El Héroe Enmascarado"},
+		{"humor_relleno", "Momentos para Reír: El Lado Cómico del Universo"},
 		// ── Entrenamiento ───────────────────────────────────────────────────────
-		{"entrenamiento_divino", "Camino de los Dioses"},
-		{"entrenamiento_extremo", "Camino del Guerrero"},
+		{"entrenamiento_divino", "Entrenamiento Divino: El Camino de los Dioses"},
+		{"entrenamiento_extremo", "El Camino del Guerrero: Entrenamientos"},
 		// ── Películas ───────────────────────────────────────────────────────────
-		{"esencia_cinema_ep", "Esencia de Cinema"},
+		{"esencia_cinema_ep", "Esencia de Cinema: Películas Legendarias"},
 	}
 
 	for _, l := range epNameLanes {
@@ -686,10 +686,12 @@ func (s *IntelligenceService) buildEpisodeTagLane(id, title, tag string) *Curate
 }
 
 var curatedHomeCache = cache.NewCache[*CuratedHomeResponse](30 * time.Minute)
+var dynamicTagLanesCache = cache.NewCache[[]*CuratedSwimlane](30 * time.Minute)
 
 // InvalidateCuratedHomeCache clears the thread-safe in-memory cache for the curated home swimlanes.
 func InvalidateCuratedHomeCache() {
 	curatedHomeCache.Clear()
+	dynamicTagLanesCache.Clear()
 }
 
 func GetCuratedHome(_ context.Context, database *db.Database) (*CuratedHomeResponse, error) {
@@ -778,12 +780,11 @@ func (s *IntelligenceService) buildEpisodeSwimlaneByTag(id, title, tag string) *
 }
 
 // buildEpisodeSwimlaneByName builds a swimlane of LibraryEpisodes whose suggested_swimlane
-// contains the given name substring. The lane title is derived from the first match.
+// matches the given name.
 func (s *IntelligenceService) buildEpisodeSwimlaneByName(id, name string) *CuratedSwimlane {
-	query := fmt.Sprintf(`%%%s%%`, name)
 	var episodes []models.LibraryEpisode
 	if err := s.db.Gorm().
-		Where("suggested_swimlane LIKE ?", query).
+		Where("suggested_swimlane = ?", name).
 		Order("episode_number ASC").
 		Limit(20).
 		Find(&episodes).Error; err != nil || len(episodes) == 0 {

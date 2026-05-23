@@ -151,7 +151,7 @@ export function RandomPlayButton() {
                     whileTap={{ scale: 0.92 }}
                     disabled={isLoading}
                     className={cn(
-                        "flex items-center justify-center w-12 h-12 rounded-2xl border transition-all duration-500 group",
+                        "flex items-center justify-center w-12 h-12 rounded-2xl border transition-all duration-500 group backdrop-blur-md",
                         isLoading
                             ? "border-brand-orange/40 bg-brand-orange/10 text-brand-orange cursor-wait"
                             : showPicker
@@ -187,23 +187,23 @@ export function RandomPlayButton() {
                             transition={{ type: "spring", stiffness: 380, damping: 28 }}
                             className={cn(
                                 "absolute left-full bottom-0 ml-4 z-[999]",
-                                "w-56 bg-surface-1/50 border border-white/[0.08] rounded-2xl",
-                                "shadow-[0_24px_80px_rgba(0,0,0,0.5)] backdrop-blur-3xl",
+                                "w-56 bg-zinc-950/90 border border-white/15 rounded-2xl",
+                                "shadow-[0_24px_80px_rgba(0,0,0,0.75)] backdrop-blur-xl",
                                 "p-1.5 overflow-hidden"
                             )}
                         >
                             {/* Header */}
                             <div className="px-3 pt-2.5 pb-2">
                                 <div className="flex items-center gap-2">
-                                    <Dices className="w-3 h-3 text-brand-orange opacity-70" />
-                                    <p className="text-[9px] font-black uppercase tracking-[0.4em] text-zinc-500">
+                                    <Dices className="w-3 h-3 text-brand-orange opacity-75" />
+                                    <p className="text-[9px] font-black uppercase tracking-[0.4em] text-zinc-400">
                                         ¿Qué quieres ver?
                                     </p>
                                 </div>
                             </div>
 
                             {/* Divider */}
-                            <div className="h-px bg-white/5 mx-2 mb-1" />
+                            <div className="h-px bg-white/10 mx-2 mb-1" />
 
                             {/* Movie option */}
                             <PickerOption
@@ -229,7 +229,7 @@ export function RandomPlayButton() {
 
                             {/* Tip */}
                             <div className="px-3 py-2.5">
-                                <p className="text-[9px] text-zinc-600 font-medium leading-tight">
+                                <p className="text-[9px] text-zinc-500 font-medium leading-tight">
                                     Solo se incluyen títulos con archivos descargados
                                 </p>
                             </div>
@@ -277,7 +277,7 @@ function PickerOption({ id, onClick, icon, iconBg, label, description, accentCol
             onClick={onClick}
             whileHover={{ x: 2 }}
             whileTap={{ scale: 0.97 }}
-            className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/[0.04] transition-all duration-200 text-left group"
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/[0.08] transition-all duration-200 text-left group"
         >
             {/* Icon badge */}
             <div className={cn(
@@ -296,14 +296,14 @@ function PickerOption({ id, onClick, icon, iconBg, label, description, accentCol
                 )}>
                     {label}
                 </p>
-                <p className="text-[10px] text-zinc-500 font-medium mt-0.5">
+                <p className="text-[10px] text-zinc-400 font-medium mt-0.5">
                     {description}
                 </p>
             </div>
 
             {/* Arrow hint */}
             <motion.span
-                className="ml-auto text-zinc-700 text-xs"
+                className="ml-auto text-zinc-500 text-xs"
                 animate={{ x: [0, 2, 0] }}
                 transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
             >

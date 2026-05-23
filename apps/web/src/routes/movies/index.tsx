@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { useState, useMemo, memo, useRef, useCallback } from "react"
+import { useState, useMemo, memo, useRef, useCallback, useEffect } from "react"
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion"
 import { Play, Clock, Star, ChevronDown, Check, Layers } from "lucide-react"
 import { EmptyState } from "@/components/shared/empty-state"
@@ -93,6 +93,7 @@ function MoviesPage() {
     const [sortBy, setSortBy] = useState<SortOption>("year_asc")
     const [sortOpen, setSortOpen] = useState(false)
     const [hoveredBackdrop, setHoveredBackdrop] = useState<string | null>(null)
+    const [debouncedBackdrop, setDebouncedBackdrop] = useState<string | null>(null)
     const heroRef = useRef<HTMLDivElement>(null)
     const navigate = useNavigate()
     const { data: collection, isLoading } = useGetLibraryCollection()
@@ -101,6 +102,14 @@ function MoviesPage() {
     const { scrollY } = useScroll()
     const heroOpacity = useTransform(scrollY, [0, 280], [1, 0])
     const heroScale = useTransform(scrollY, [0, 280], [1, 1.06])
+
+    // Debounce del backdrop para evitar renders e hipo de red en movimientos rápidos del cursor
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedBackdrop(hoveredBackdrop)
+        }, 200)
+        return () => clearTimeout(timer)
+    }, [hoveredBackdrop])
 
     const allMovies = useMemo(() => {
         if (!collection?.lists) return []
@@ -112,10 +121,15 @@ function MoviesPage() {
         })
         const unique = new Map<number, Anime_LibraryCollectionEntry>()
         rawMovies.forEach(m => { if (m.mediaId) unique.set(m.mediaId, m) })
-        return Array.from(unique.values()).map(entry => ({
-            ...entry,
-            era: getEntryEra(entry)
-        }))
+        return Array.from(unique.values()).map(entry => {
+            const startedAt = entry.listData?.startedAt
+            const startedAtTimestamp = startedAt ? new Date(startedAt).getTime() : 0
+            return {
+                ...entry,
+                era: getEntryEra(entry),
+                startedAtTimestamp
+            }
+        })
     }, [collection])
 
     const filteredSorted = useMemo(() => {
@@ -123,7 +137,7 @@ function MoviesPage() {
         switch (sortBy) {
             case "year_asc": return [...result].sort((a, b) => (a.media?.year || 0) - (b.media?.year || 0))
             case "year_desc": return [...result].sort((a, b) => (b.media?.year || 0) - (a.media?.year || 0))
-            case "recently_add": return [...result].sort((a, b) => new Date(b.listData?.startedAt || 0).getTime() - new Date(a.listData?.startedAt || 0).getTime())
+            case "recently_add": return [...result].sort((a, b) => b.startedAtTimestamp - a.startedAtTimestamp)
             case "alpha": return [...result].sort((a, b) => (a.media?.titleRomaji || "").localeCompare(b.media?.titleRomaji || ""))
         }
     }, [allMovies, activeEra, sortBy])
@@ -132,10 +146,10 @@ function MoviesPage() {
 
     // Hero backdrop: use hovered poster, else first movie with poster
     const backdropSrc = useMemo(() => {
-        if (hoveredBackdrop) return hoveredBackdrop
+        if (debouncedBackdrop) return debouncedBackdrop
         const first = filteredSorted.find(m => m.media?.bannerImage || m.media?.posterImage)
         return first?.media?.bannerImage || first?.media?.posterImage || null
-    }, [hoveredBackdrop, filteredSorted])
+    }, [debouncedBackdrop, filteredSorted])
 
     const handleMovieClick = useCallback((mediaId: number) => {
         navigate({ to: "/movies/$movieId", params: { movieId: String(mediaId) } })

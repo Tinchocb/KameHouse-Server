@@ -4,9 +4,17 @@ import { Section, Card, OsToggle, OsInput, OsSelect } from "../components"
 import { type Control, useWatch } from "react-hook-form"
 import { type SettingsFormValues } from "../index"
 import { motion, AnimatePresence } from "framer-motion"
+import { useAppStore } from "@/lib/store"
+import { Switch } from "@/components/ui/switch"
 
 export function PlayerTab({ control }: { control: Control<SettingsFormValues> }) {
     const defaultPlayer = useWatch({ control, name: "mediaPlayer.defaultPlayer" })
+    
+    // Background Music Store Preferences (Direct Zustand binding to prevent DB schema conflicts)
+    const bgMusicEnabled = useAppStore(state => state.bgMusicEnabled)
+    const setBgMusicEnabled = useAppStore(state => state.setBgMusicEnabled)
+    const bgMusicVolume = useAppStore(state => state.bgMusicVolume)
+    const setBgMusicVolume = useAppStore(state => state.setBgMusicVolume)
 
     return (
         <TabsContent value="player" className="m-0 space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700 outline-none">
@@ -202,7 +210,56 @@ export function PlayerTab({ control }: { control: Control<SettingsFormValues> })
                 </Section>
             </div>
 
-            {/* ── 4. Servidor Multimedia (FFmpeg) ── */}
+            {/* ── 4. Música de Fondo (Retro) ── */}
+            <Section label="Música de Fondo (Retro)">
+                <Card>
+                    <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.02] last:border-0 hover:bg-white/[0.01] transition-all duration-300 gap-10 group/toggle">
+                        <div className="space-y-1 flex-1">
+                            <p className="text-base font-bold text-zinc-100 group-hover/toggle:text-white transition-colors tracking-tight">Activar Música de Fondo</p>
+                            <p className="text-xs text-zinc-500 leading-relaxed font-medium">Reproducir banda sonora clásica en bucle mientras exploras tu biblioteca.</p>
+                        </div>
+                        <Switch
+                            value={bgMusicEnabled}
+                            onValueChange={setBgMusicEnabled}
+                            className="scale-110 origin-right transition-all duration-300 data-[state=checked]:bg-primary"
+                        />
+                    </div>
+                    {bgMusicEnabled && (
+                        <motion.div 
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="flex flex-col md:flex-row md:items-center justify-between px-6 py-5 hover:bg-white/[0.01] transition-all duration-300 gap-6 group/input border-t border-white/[0.02]"
+                        >
+                            <div className="space-y-1 flex-1 max-w-xl">
+                                <p className="text-base font-bold text-zinc-100 group-hover/input:text-white transition-colors tracking-tight">Volumen de la Música</p>
+                                <p className="text-xs text-zinc-500 leading-relaxed font-medium">Ajusta el nivel de ganancia del reproductor de fondo retro.</p>
+                            </div>
+                            <div className="flex items-center gap-4 w-full md:w-80">
+                                <span className="text-xs font-bold text-zinc-400 w-8 text-right tabular-nums">{Math.round(bgMusicVolume * 100)}%</span>
+                                <div className="flex-1 h-1.5 bg-white/10 rounded-full relative">
+                                    <div 
+                                        className="absolute left-0 h-full bg-brand-orange rounded-full transition-all duration-75"
+                                        style={{ width: `${bgMusicVolume * 100}%` }}
+                                    />
+                                    <input 
+                                        type="range" 
+                                        min="0" 
+                                        max="1" 
+                                        step="0.05"
+                                        value={bgMusicVolume}
+                                        onChange={(e) => setBgMusicVolume(Number(e.target.value))}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    />
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </Card>
+            </Section>
+
+            {/* ── 5. Servidor Multimedia (FFmpeg) ── */}
             <Section label="Optimización del Servidor Multimedia (FFmpeg)">
                 <Card>
                     <OsSelect

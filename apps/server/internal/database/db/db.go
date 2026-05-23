@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/glebarez/sqlite"
@@ -19,12 +20,14 @@ import (
 )
 
 type Database struct {
-	gormdb           *gorm.DB
-	Logger           *zerolog.Logger
-	CurrMediaFillers mo.Option[map[int]*MediaFillerItem]
-	cleanupManager   *CleanupManager
-	bufferedWriter   *BufferedWriter
-	OnError          func(error)
+	gormdb            *gorm.DB
+	Logger            *zerolog.Logger
+	CurrMediaFillers  mo.Option[map[int]*MediaFillerItem]
+	cleanupManager    *CleanupManager
+	bufferedWriter    *BufferedWriter
+	OnError           func(error)
+	LibraryMediaCache sync.Map // L1 read cache scoped to the database instance
+	slowTraceLogger   *SlowTraceLogger
 }
 
 func (db *Database) SetOnError(f func(error)) {
@@ -99,6 +102,14 @@ func NewDatabase(ctx context.Context, appDataDir, dbName string, logger *zerolog
 	database.cleanupManager = NewCleanupManager(database.gormdb, database.Logger)
 	database.bufferedWriter = NewBufferedWriter(database.gormdb, database.Logger, 50, 500*time.Millisecond)
 
+	logDir := appDataDir
+	if logDir == "" {
+		logDir = os.TempDir()
+	}
+	slowTraceLogger := NewSlowTraceLogger(logDir, 500*time.Millisecond)
+	slowTraceLogger.RegisterCallbacks(db)
+	database.slowTraceLogger = slowTraceLogger
+
 	// DML asíncrono: migración de datos legacy en segundo plano
 	go database.runDataMigrations()
 
@@ -123,6 +134,9 @@ func (db *Database) EnqueueWrite(op DbWriteOperation) {
 func (db *Database) Shutdown() {
 	if db.bufferedWriter != nil {
 		db.bufferedWriter.Shutdown()
+	}
+	if db.slowTraceLogger != nil {
+		db.slowTraceLogger.Flush()
 	}
 }
 

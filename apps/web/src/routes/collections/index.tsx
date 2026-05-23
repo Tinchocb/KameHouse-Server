@@ -64,6 +64,42 @@ function CollectionsPage() {
         })
     }, [collections, search])
 
+    const enrichedCollections = useMemo(() => {
+        if (!filtered.length) return []
+        
+        // Build a fast lookup map of mediaId to its library stats
+        const libraryMap = new Map<number, { isLocal: boolean; isWatched: boolean }>()
+        libraryEntries.forEach(entry => {
+            if (entry.mediaId) {
+                const isLocal = (entry.libraryData?.mainFileCount || 0) > 0
+                const isWatched = !!(entry.media?.watched || (entry.listData?.progress || 0) >= (entry.media?.totalEpisodes || 0))
+                libraryMap.set(entry.mediaId, { isLocal, isWatched })
+            }
+        })
+
+        return filtered.map(c => {
+            const memberIds = c.memberIds || []
+            const totalMembers = memberIds.length
+            let localMembers = 0
+            let watchedMembers = 0
+            
+            memberIds.forEach(mId => {
+                const stats = libraryMap.get(mId)
+                if (stats) {
+                    if (stats.isLocal) localMembers++
+                    if (stats.isWatched) watchedMembers++
+                }
+            })
+
+            return {
+                ...c,
+                totalMembers,
+                localMembers,
+                watchedMembers,
+            }
+        })
+    }, [filtered, libraryEntries])
+
     const handleNavigate = (id: number) => {
         navigate({ to: "/collections/$id", params: { id: String(id) } })
     }
@@ -101,7 +137,7 @@ function CollectionsPage() {
             <div className="relative w-full overflow-hidden min-h-[450px] flex items-center justify-center">
                 {isLoading ? (
                     <ShelfSkeleton />
-                ) : filtered.length === 0 ? (
+                ) : enrichedCollections.length === 0 ? (
                     <div className="px-16 py-24 w-full">
                         <EmptyState
                             title="No hay colecciones"
@@ -114,12 +150,11 @@ function CollectionsPage() {
                         className="flex flex-nowrap items-end overflow-x-auto no-scrollbar py-20 px-16 w-full justify-start md:justify-center"
                         style={{ perspective: "2400px" }}
                     >
-                        {filtered.map((coll, idx) => (
+                        {enrichedCollections.map((coll, idx) => (
                             <CollectionCassette
                                 key={coll.id}
                                 coll={coll}
                                 idx={idx}
-                                libraryEntries={libraryEntries}
                                 onNavigate={handleNavigate}
                             />
                         ))}
@@ -146,35 +181,19 @@ interface CollectionCassetteProps {
         posterPath?: string
         backdropPath?: string
         memberIds?: number[]
+        totalMembers: number
+        localMembers: number
+        watchedMembers: number
     }
     idx: number
-    libraryEntries: Anime_LibraryCollectionEntry[]
     onNavigate: (id: number) => void
 }
 
 const CollectionCassette = memo(function CollectionCassette({
-    coll, idx, libraryEntries, onNavigate
+    coll, idx, onNavigate
 }: CollectionCassetteProps) {
     const count = coll.memberIds?.length || 0
-    const totalMembers = coll.memberIds?.length || 0
-
-    const localMembers = useMemo(() => {
-        if (!coll.memberIds) return 0
-        return libraryEntries.filter(entry => 
-            entry.mediaId && 
-            coll.memberIds?.includes(entry.mediaId) && 
-            (entry.libraryData?.mainFileCount || 0) > 0
-        ).length
-    }, [coll.memberIds, libraryEntries])
-
-    const watchedMembers = useMemo(() => {
-        if (!coll.memberIds) return 0
-        return libraryEntries.filter(entry => 
-            entry.mediaId && 
-            coll.memberIds?.includes(entry.mediaId) && 
-            (entry.media?.watched || (entry.listData?.progress || 0) >= (entry.media?.totalEpisodes || 0))
-        ).length
-    }, [coll.memberIds, libraryEntries])
+    const { totalMembers, localMembers, watchedMembers } = coll
 
     const isFullyWatched = totalMembers > 0 && watchedMembers === totalMembers
     const isFullyLocal = totalMembers > 0 && localMembers === totalMembers
@@ -206,21 +225,10 @@ const CollectionCassette = memo(function CollectionCassette({
         >
             {/* 3D wrapper */}
             <div
-                className="relative transition-transform duration-500 ease-out [transform-style:preserve-3d]"
+                className="relative transition-transform duration-500 ease-out [transform-style:preserve-3d] [transform:rotateY(35deg)] group-hover/item:[transform:rotateY(0deg)_translateZ(80px)_translateY(-30px)] group-hover/item:duration-400"
                 style={{
                     width: CASSETTE_W + SPINE_W,
                     height: CASSETTE_H,
-                    transform: "rotateY(35deg)",
-                }}
-                onMouseEnter={e => {
-                    const el = e.currentTarget as HTMLElement
-                    el.style.transform = "rotateY(0deg) translateZ(80px) translateY(-30px)"
-                    el.style.transitionDuration = "400ms"
-                }}
-                onMouseLeave={e => {
-                    const el = e.currentTarget as HTMLElement
-                    el.style.transform = "rotateY(35deg)"
-                    el.style.transitionDuration = "500ms"
                 }}
             >
                 {/* Spine */}

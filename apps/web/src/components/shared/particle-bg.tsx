@@ -112,20 +112,30 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
     }
 
     const rgb = hexToRgb(color)
+    const rgbString = rgb.join(", ")
 
-    function drawCircle(circle: Circle, update = false) {
+    function resetCircle(circle: Circle) {
+        circle.x = Math.floor(Math.random() * canvasSize.current.w)
+        circle.y = Math.floor(Math.random() * canvasSize.current.h)
+        circle.translateX = 0
+        circle.translateY = 0
+        circle.size = Math.floor(Math.random() * 2) + size
+        circle.alpha = 0
+        circle.targetAlpha = parseFloat((Math.random() * 0.6 + 0.1).toFixed(1))
+        circle.dx = (Math.random() - 0.5) * 0.1
+        circle.dy = (Math.random() - 0.5) * 0.1
+        circle.magnetism = 0.1 + Math.random() * 4
+    }
+
+    function drawCircle(circle: Circle) {
         if (context.current) {
             const { x, y, translateX, translateY, size, alpha } = circle
             context.current.translate(translateX, translateY)
             context.current.beginPath()
             context.current.arc(x, y, size, 0, 2 * Math.PI)
-            context.current.fillStyle = `rgba(${rgb.join(", ")}, ${alpha})`
+            context.current.fillStyle = `rgba(${rgbString}, ${alpha})`
             context.current.fill()
             context.current.setTransform(dpr, 0, 0, dpr, 0, 0)
-
-            if (!update) {
-                circles.current.push(circle)
-            }
         }
     }
 
@@ -145,8 +155,10 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
     function drawParticleBackground() {
         clearContext()
         const particleCount = quantity
+        circles.current = []
         for (let i = 0; i < particleCount; i++) {
             const circle = circleParams()
+            circles.current.push(circle)
             drawCircle(circle)
         }
     }
@@ -159,7 +171,7 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
     function animate() {
         if (!isVisible.current) return
         clearContext()
-        circles.current.forEach((circle: Circle, i: number) => {
+        circles.current.forEach((circle: Circle) => {
             const edge0 = circle.x + circle.translateX - circle.size
             const edge1 = canvasSize.current.w - circle.x - circle.translateX - circle.size
             const edge2 = circle.y + circle.translateY - circle.size
@@ -185,7 +197,7 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
                 (mouse.current.y / (staticity / circle.magnetism) - circle.translateY) /
                 ease
 
-            drawCircle(circle, true)
+            drawCircle(circle)
 
             if (
                 circle.x < -circle.size ||
@@ -193,9 +205,7 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
                 circle.y < -circle.size ||
                 circle.y > canvasSize.current.h + circle.size
             ) {
-                circles.current.splice(i, 1)
-                const newCircle = circleParams()
-                drawCircle(newCircle)
+                resetCircle(circle)
             }
         })
         rafId.current = window.requestAnimationFrame(animate)

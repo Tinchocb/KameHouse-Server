@@ -146,6 +146,10 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	v1.POST("/directory-selector", h.HandleDirectorySelector)
 	v1.POST("/open-in-explorer", h.HandleOpenInExplorer)
 
+	// Samsung Tizen TV Cast
+	v1.GET("/cast/samsung/discover", h.HandleSamsungDiscover)
+	v1.POST("/cast/samsung/launch", h.HandleSamsungLaunch)
+
 	h.RegisterLibraryRoutes(v1)
 	h.RegisterStreamingRoutes(v1)
 	h.RegisterSettingsRoutes(v1)

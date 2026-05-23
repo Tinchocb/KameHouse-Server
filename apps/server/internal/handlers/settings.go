@@ -103,6 +103,8 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		Torrentstream *models.TorrentstreamSettings `json:"torrentstream"`
 		Mediastream   *models.MediastreamSettings   `json:"mediastream"`
 		Theme         *models.Theme                 `json:"theme"`
+		Notifications *models.NotificationSettings `json:"notifications"`
+		Platform      *models.PlatformSettings     `json:"Platform"`
 	}
 
 	var b body
@@ -173,16 +175,9 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 	merged.UpdatedAt = time.Now()
 
 	if b.Library != nil {
-		merged.Library.SeriesPaths = b.Library.SeriesPaths
-		merged.Library.MoviePaths = b.Library.MoviePaths
-		
-		merged.Library.AutoUpdateProgress = b.Library.AutoUpdateProgress
-		merged.Library.ScannerProvider = b.Library.ScannerProvider
-		merged.Library.DisableLocalScanning = b.Library.DisableLocalScanning
-
-		merged.Library.FanartApiKey = b.Library.FanartApiKey
-		merged.Library.OmdbApiKey = b.Library.OmdbApiKey
-		merged.Library.OpenSubsApiKey = b.Library.OpenSubsApiKey
+		lastScan := merged.Library.LastScanAt
+		merged.Library = *b.Library
+		merged.Library.LastScanAt = lastScan
 
 		// If a TMDB API key is provided and the primary provider is empty, set it to "tmdb"
 		if merged.Library.TmdbApiKey != "" && merged.Library.PrimaryMetadataProvider == "" {
@@ -190,17 +185,9 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		}
 	}
 
-	// Partial updates for Media Player Settings
+	// Media Player Settings
 	if b.MediaPlayer != nil {
-		if b.MediaPlayer.Default != "" {
-			merged.MediaPlayer.Default = b.MediaPlayer.Default
-		}
-		if b.MediaPlayer.VlcPath != "" {
-			merged.MediaPlayer.VlcPath = b.MediaPlayer.VlcPath
-		}
-		if b.MediaPlayer.MpvPath != "" {
-			merged.MediaPlayer.MpvPath = b.MediaPlayer.MpvPath
-		}
+		merged.MediaPlayer = *b.MediaPlayer
 	}
 
 	if b.Torrent != nil {
@@ -209,6 +196,14 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 	
 	if b.Torrentstream != nil {
 		merged.Torrentstream = *b.Torrentstream
+	}
+
+	if b.Notifications != nil {
+		merged.Notifications = *b.Notifications
+	}
+
+	if b.Platform != nil {
+		merged.Platform = *b.Platform
 	}
 
 	// ── 5. Single upsert for the main embedded settings ───────────────────────
