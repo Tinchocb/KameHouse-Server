@@ -202,30 +202,36 @@ func launchURLOnSamsungTV(ip string, targetURL string) error {
 		Params LaunchParams `json:"params"`
 	}
 
-	payload := WebSocketPayload{
-		Method: "ms.channel.emit",
-		Params: LaunchParams{
-			Event: "ed.apps.launch",
-			To:    "host",
-			Data: LaunchData{
-				AppID:      "org.tizen.browser",
-				ActionType: "DEEP_LINK",
-				Data: map[string]string{
-					"url": targetURL,
+	// Enviar comando para los 3 App IDs de navegador más comunes en Tizen
+	appIDs := []string{"org.tizen.browser", "3201907018784", "3202010022079"}
+	for _, appID := range appIDs {
+		payload := WebSocketPayload{
+			Method: "ms.channel.emit",
+			Params: LaunchParams{
+				Event: "ed.apps.launch",
+				To:    "host",
+				Data: LaunchData{
+					AppID:      appID,
+					ActionType: "DEEP_LINK",
+					Data: map[string]string{
+						"url": targetURL,
+					},
 				},
 			},
-		},
-	}
+		}
 
-	msgBytes, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
+		msgBytes, err := json.Marshal(payload)
+		if err != nil {
+			return err
+		}
 
-	fmt.Printf("[CAST DEBUG] Sending launch command: %s\n", string(msgBytes))
-	err = conn.WriteMessage(websocket.TextMessage, msgBytes)
-	if err != nil {
-		return fmt.Errorf("failed to send launch command: %w", err)
+		fmt.Printf("[CAST DEBUG] Sending launch command for %s...\n", appID)
+		err = conn.WriteMessage(websocket.TextMessage, msgBytes)
+		if err != nil {
+			return fmt.Errorf("failed to send launch command for %s: %w", appID, err)
+		}
+		// Breve retardo para que la cola de mensajes del TV procese cada petición
+		time.Sleep(150 * time.Millisecond)
 	}
 
 	// Wait 500ms to allow command transmission before closing socket
