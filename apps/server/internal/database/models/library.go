@@ -25,7 +25,7 @@ type LibraryMedia struct {
 	PosterImage string `gorm:"column:poster_image" json:"posterImage"` // Path or URL
 	BannerImage string `gorm:"column:banner_image" json:"bannerImage"` // Path or URL
 
-	TmdbID         int    `gorm:"column:tmdb_id;uniqueIndex:idx_tmdb_id_type" json:"tmdbID"`
+	TmdbID         int    `gorm:"column:tmdb_id;uniqueIndex:idx_tmdb_id_type" json:"tmdbId"`
 	AnidbId        int    `gorm:"column:anidb_id" json:"anidbId"`
 	MyanimelistId int    `gorm:"column:myanimelist_id" json:"myanimelistId"`
 

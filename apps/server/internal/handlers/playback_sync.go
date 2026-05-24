@@ -15,7 +15,7 @@ import (
 // ──────────────────────────────────────────────────────────────────────────────
 
 type PlaybackSyncPayload struct {
-	MediaID       int     `json:"mediaID"`
+	MediaID       int     `json:"mediaId"`
 	EpisodeNumber int     `json:"episodeNumber"`
 	Progress      float64 `json:"progress"`        // 0.0 - 1.0 percentage
 	CurrentTime   float64 `json:"currentTime"`     // seconds

@@ -107,7 +107,7 @@ type VideoInitialState struct {
 }
 
 type OnlinestreamParams struct {
-	MediaID       int    `json:"mediaID"`
+	MediaID       int    `json:"mediaId"`
 	EpisodeNumber int    `json:"episodeNumber"`
 	Provider      string `json:"provider"`
 	Server        string `json:"server"`

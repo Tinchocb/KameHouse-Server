@@ -45,7 +45,7 @@ func (h *Handler) HandleLocalGetTrackedMediaItems(c echo.Context) error {
 func (h *Handler) HandleLocalAddTrackedMedia(c echo.Context) error {
 	type body struct {
 		Media []struct {
-			MediaID int    `json:"mediaID"`
+			MediaID int    `json:"mediaId"`
 			Type    string `json:"type"`
 		} `json:"media"`
 	}
@@ -79,7 +79,7 @@ func (h *Handler) HandleLocalAddTrackedMedia(c echo.Context) error {
 //	@returns bool
 func (h *Handler) HandleLocalRemoveTrackedMedia(c echo.Context) error {
 	type body struct {
-		MediaID int    `json:"mediaID"`
+		MediaID int    `json:"mediaId"`
 		Type    string `json:"type"`
 	}
 

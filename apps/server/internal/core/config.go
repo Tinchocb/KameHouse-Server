@@ -447,6 +447,21 @@ func resolveCorsOrigins(cfg *Config) {
 		}
 	}
 
+	// Always add the server's own address (with port) so that direct-browser access
+	// (without a frontend dev proxy) is accepted by both the CORS middleware and
+	// the WebSocket CheckOrigin.
+	if cfg.Server.Port > 0 {
+		selfOrigins := []string{
+			fmt.Sprintf("http://localhost:%d", cfg.Server.Port),
+			fmt.Sprintf("http://127.0.0.1:%d", cfg.Server.Port),
+		}
+		for _, so := range selfOrigins {
+			if !containsString(origins, so) {
+				origins = append(origins, so)
+			}
+		}
+	}
+
 	cfg.Server.CorsOrigins = origins
 }
 

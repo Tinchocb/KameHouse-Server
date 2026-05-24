@@ -106,6 +106,7 @@ export interface PlayerCore {
         activeChapter: string | null
         isCastSupported: boolean
         castState: "disconnected" | "connecting" | "connected"
+        absoluteLanUrl?: string
         serverIPs?: string[]
         serverPort?: number
     }
@@ -1282,6 +1283,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             activeChapter,
             isCastSupported,
             castState,
+            absoluteLanUrl,
             serverIPs,
             serverPort,
         },

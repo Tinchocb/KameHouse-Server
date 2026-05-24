@@ -9,7 +9,7 @@ import (
 )
 
 type ScheduleItem struct {
-	MediaID int    `json:"mediaID"`
+	MediaID int    `json:"mediaId"`
 	Title   string `json:"title"`
 	// Time is in 15:04 format
 	Time string `json:"time"`

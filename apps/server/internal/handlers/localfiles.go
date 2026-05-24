@@ -195,7 +195,7 @@ func (h *Handler) HandleUpdateLocalFileData(c echo.Context) error {
 		Metadata *dto.LocalFileMetadata `json:"metadata"`
 		Locked   bool                   `json:"locked"`
 		Ignored  bool                   `json:"ignored"`
-		MediaID  int                    `json:"mediaID"`
+		MediaID  int                    `json:"mediaId"`
 	}
 
 	b := new(body)

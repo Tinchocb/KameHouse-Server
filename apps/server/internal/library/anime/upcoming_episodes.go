@@ -18,7 +18,7 @@ type (
 	}
 
 	UpcomingEpisode struct {
-		MediaID         int                    `json:"mediaID"`
+		MediaID         int                    `json:"mediaId"`
 		EpisodeNumber   int                    `json:"episodeNumber"`
 		AiringAt        int64                  `json:"airingAt"`
 		TimeUntilAiring int                    `json:"timeUntilAiring"`

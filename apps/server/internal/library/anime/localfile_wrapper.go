@@ -14,7 +14,7 @@ type (
 	}
 
 	LocalFileWrapperEntry struct {
-		MediaID    int          `json:"mediaID"`
+		MediaID    int          `json:"mediaId"`
 		LocalFiles []*LocalFile `json:"localFiles"`
 	}
 )

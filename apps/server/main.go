@@ -94,6 +94,17 @@ func run(ctx context.Context, stop context.CancelFunc) error {
 			Str("host", bindHost).
 			Msg("server: configured HTTP port unavailable; listening on alternate port")
 	}
+
+	// Add the actual listening address as an allowed origin so that direct-browser
+	// access (without the frontend dev proxy) doesn't get blocked by WebSocket
+	// CheckOrigin or HTTP CORS.
+	app.Config.Server.CorsOrigins = append(app.Config.Server.CorsOrigins, fmt.Sprintf("http://%s:%d", bindHost, bindPort))
+	if bindHost != "localhost" {
+		app.Config.Server.CorsOrigins = append(app.Config.Server.CorsOrigins, fmt.Sprintf("http://localhost:%d", bindPort))
+	}
+	if bindHost != "127.0.0.1" && bindHost != "localhost" {
+		app.Config.Server.CorsOrigins = append(app.Config.Server.CorsOrigins, fmt.Sprintf("http://127.0.0.1:%d", bindPort))
+	}
 	addr := fmt.Sprintf("%s:%d", bindHost, bindPort)
 	srv := &http.Server{
 		Addr:              addr,

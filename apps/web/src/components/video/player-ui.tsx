@@ -102,38 +102,30 @@ export function PlayerUI(props: PlayerUIProps) {
     }, [isEpisodesSidebarOpen, isCastModalOpen, isQueueSidebarOpen, actions])
 
     const localServerUrl = React.useMemo(() => {
-        if (typeof window === "undefined") return "http://localhost:43210"
+        if (typeof window === "undefined") return "http://localhost:43211"
 
-        const hostname = window.location.hostname
-        const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1"
-
-        // Si ya se accede desde una IP de red local, usar esa URL directamente.
-        // La TV solo necesita abrir la misma URL que ya está funcionando en este navegador.
-        if (!isLocalhost) {
-            return window.location.origin
-        }
-
-        // Fallback: si estamos en localhost, intentar con las IPs del backend
+        // Prefer backend IPs and Port provided by the server status
         if (state.serverIPs && state.serverIPs.length > 0) {
             const lanIp = state.serverIPs.find(ip =>
                 ip.startsWith("192.168.") ||
                 ip.startsWith("10.") ||
                 ip.startsWith("172.")
             ) || state.serverIPs[0]
-            const port = window.location.port || "43210"
+            const port = state.serverPort || 43211
             return `http://${lanIp}:${port}`
         }
 
-        // Último recurso
-        return window.location.origin
-    }, [state.serverIPs])
+        const hostname = window.location.hostname
+        const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1"
 
-    const targetUrl = React.useMemo(() => {
-        if (typeof window !== "undefined") {
-            return `${localServerUrl}${window.location.pathname}`
+        // Si ya se accede desde una IP de red local, usar esa URL directamente.
+        if (!isLocalhost) {
+            return window.location.origin
         }
-        return localServerUrl
-    }, [localServerUrl])
+
+        // Último recurso
+        return "http://localhost:43211"
+    }, [state.serverIPs, state.serverPort])
 
     const fetchPairedTvs = React.useCallback(async () => {
         try {
@@ -180,12 +172,19 @@ export function PlayerUI(props: PlayerUIProps) {
     const handleCastToSamsung = async (ip: string, name: string) => {
         setCastingTvIp(ip)
         try {
+            const absoluteStreamUrl = state.absoluteLanUrl || (playableUrl.startsWith("http")
+                ? playableUrl
+                : `${localServerUrl}${playableUrl}`)
+            const castUrl = `${localServerUrl}/api/v1/cast/player?url=${encodeURIComponent(absoluteStreamUrl)}&title=${encodeURIComponent(title || "KameHouse")}`
+
+            console.log("[CAST DEBUG] Sending cast URL to Samsung TV:", castUrl)
+
             const result = await buildSeaQuery<{ success: boolean }, { ip: string; url: string }>({
                 endpoint: "/api/v1/cast/samsung/launch",
                 method: "POST",
                 data: {
                     ip,
-                    url: targetUrl,
+                    url: castUrl,
                 },
             })
             if (result?.success) {
@@ -852,7 +851,28 @@ export function PlayerUI(props: PlayerUIProps) {
                                     )}
                                 </div>
 
-
+                                {/* Option 3: Manual Alternative Casting */}
+                                <div className="p-5 rounded-2xl bg-zinc-950/40 border border-white/5 transition-all duration-300 flex flex-col gap-4">
+                                    <div className="flex gap-3 items-center border-b border-white/5 pb-3">
+                                        <Tv className="w-4 h-4 text-zinc-400" />
+                                        <h4 className="text-xs font-bold text-white tracking-wider uppercase">
+                                            Método Alternativo (Cualquier TV)
+                                        </h4>
+                                    </div>
+                                    <p className="text-[10px] text-zinc-400 leading-relaxed font-sans normal-case tracking-normal">
+                                        Si la transmisión automática falla o usas otra marca de Smart TV:
+                                    </p>
+                                    <ol className="list-decimal pl-4 space-y-1.5 text-[10px] text-zinc-400 font-sans normal-case tracking-normal">
+                                        <li>Abre el navegador web de tu Smart TV.</li>
+                                        <li>Escribe la siguiente dirección directamente:</li>
+                                    </ol>
+                                    <div className="p-3.5 bg-zinc-950/60 border border-white/5 rounded-xl flex items-center justify-between gap-3 font-mono text-[11px] text-brand-orange select-all font-bold">
+                                        <span>{localServerUrl}/go</span>
+                                    </div>
+                                    <p className="text-[9px] text-zinc-500 leading-relaxed font-sans normal-case tracking-normal italic border-t border-white/5 pt-2">
+                                        Tip: Guarda esta dirección en los favoritos del navegador de tu TV. La próxima vez, solo inicia la reproducción de un video, abre el favorito en la TV y se reproducirá al instante.
+                                    </p>
+                                </div>
                             </div>
                         </motion.div>
                     </>

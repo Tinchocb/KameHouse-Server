@@ -8,7 +8,7 @@ import (
 )
 
 type SaveProgressRequest struct {
-	MediaID  int     `json:"mediaID"`
+	MediaID  int     `json:"mediaId"`
 	Status   string  `json:"status"`
 	Progress int     `json:"progress"`
 	Score    float64 `json:"score"`

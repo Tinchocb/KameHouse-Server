@@ -39,7 +39,7 @@ type MatchingConfig struct {
 type MatchingRule struct {
 	Pattern string `json:"pattern"`
 	// The Media ID to force match to
-	MediaID int `json:"mediaID"`
+	MediaID int `json:"mediaId"`
 }
 
 type HydrationConfig struct {
@@ -70,7 +70,7 @@ type HydrationRule struct {
 	// Regex pattern for the path
 	Pattern string `json:"pattern"`
 	// The Media ID
-	MediaID int `json:"mediaID"`
+	MediaID int `json:"mediaId"`
 	// Files represents a collection of files associated with a specific hydration rule.
 	Files []*HydrationFileRule `json:"files"`
 }

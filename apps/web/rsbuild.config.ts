@@ -196,17 +196,6 @@ const config: RsbuildConfig = {
                             },
                         },
                         {
-                            urlPattern: /\/api\//,
-                            handler: 'StaleWhileRevalidate',
-                            options: {
-                                cacheName: 'api-cache',
-                                expiration: {
-                                    maxEntries: 200,
-                                    maxAgeSeconds: 5 * 60, // 5 minutes TTL
-                                },
-                            },
-                        },
-                        {
                             urlPattern: /\.(?:png|jpg|jpeg|svg|webp|gif)$/,
                             handler: 'CacheFirst',
                             options: {

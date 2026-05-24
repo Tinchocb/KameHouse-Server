@@ -35,7 +35,7 @@ type (
 		Locked           bool                       `json:"locked"`
 		Ignored          bool                       `json:"ignored"` // Unused for now
 		LibraryMediaId   uint                       `json:"libraryMediaId"`
-		MediaID          int                        `json:"mediaID"`
+		MediaID          int                        `json:"mediaId"`
 	}
 
 	LocalFileEmbeddedMetadata struct {

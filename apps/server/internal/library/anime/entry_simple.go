@@ -16,7 +16,7 @@ import (
 
 type (
 	SimpleEntry struct {
-		MediaID             int                  `json:"mediaID"`
+		MediaID             int                  `json:"mediaId"`
 		Media               *models.LibraryMedia `json:"media"`
 		EntryListData       *EntryListData       `json:"listData"`
 		EntryLibraryData    *EntryLibraryData    `json:"libraryData"`

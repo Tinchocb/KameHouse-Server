@@ -29,7 +29,7 @@ type Account struct {
 type WatchHistory struct {
 	BaseModel
 	AccountID     uint    `gorm:"column:account_id;uniqueIndex:idx_media_episode" json:"accountId"`
-	MediaID       int     `gorm:"column:media_id;uniqueIndex:idx_media_episode" json:"mediaID"`
+	MediaID       int     `gorm:"column:media_id;uniqueIndex:idx_media_episode" json:"mediaId"`
 	EpisodeNumber int     `gorm:"column:episode_number;uniqueIndex:idx_media_episode" json:"episodeNumber"`
 	CurrentTime   float64 `gorm:"column:current_time" json:"currentTime"`
 	Duration      float64 `gorm:"column:duration" json:"duration"`
@@ -321,14 +321,14 @@ type GhostAssociatedMedia struct {
 
 type MediaMetadataParent struct {
 	BaseModel
-	MediaID       int `json:"mediaID"`
+	MediaID       int `json:"mediaId"`
 	ParentID      int `json:"parentId"`
 	SpecialOffset int `json:"specialOffset"`
 }
 
 type OnlinestreamMapping struct {
 	BaseModel
-	MediaID  int    `json:"mediaID"`
+	MediaID  int    `json:"mediaId"`
 	AnimeID  string `json:"animeId"`
 	Provider string `json:"provider"`
 }
@@ -342,7 +342,7 @@ type SilencedMediaEntry struct {
 type MediaFiller struct {
 	BaseModel
 	Data          []byte    `json:"data"`
-	MediaID       int       `json:"mediaID"`
+	MediaID       int       `json:"mediaId"`
 	Provider      string    `json:"provider"`
 	Slug          string    `json:"slug"`
 	LastFetchedAt time.Time `json:"lastFetchedAt"`
@@ -355,7 +355,7 @@ type MediaFiller struct {
 type UserMediaProgress struct {
 	BaseModel
 	AnonUserId string  `gorm:"column:anon_user_id;uniqueIndex:idx_anon_media" json:"anonUserId"`
-	MediaID    int     `gorm:"column:media_id;uniqueIndex:idx_anon_media" json:"mediaID"`
+	MediaID    int     `gorm:"column:media_id;uniqueIndex:idx_anon_media" json:"mediaId"`
 	Status     string  `gorm:"column:status" json:"status"`
 	Progress   int     `gorm:"column:progress" json:"progress"`
 	Score      float64 `gorm:"column:score" json:"score"`

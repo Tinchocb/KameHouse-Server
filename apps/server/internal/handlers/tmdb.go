@@ -1,4 +1,4 @@
-﻿package handlers
+package handlers
 
 import (
 	"context"
@@ -142,7 +142,7 @@ func (h *Handler) HandleTMDBGetDetails(c echo.Context) error {
 func (h *Handler) HandleTMDBAssign(c echo.Context) error {
 	type body struct {
 		Paths     []string `json:"paths"`
-		TmdbID    int      `json:"tmdbID"`
+		TmdbID    int      `json:"tmdbId"`
 		MediaType string   `json:"mediaType"` // "tv" or "movie"
 	}
 
@@ -155,7 +155,7 @@ func (h *Handler) HandleTMDBAssign(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "paths is required"})
 	}
 	if b.TmdbID == 0 {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "tmdbID is required"})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "tmdbId is required"})
 	}
 
 	// 1. Fetch full details from TMDB

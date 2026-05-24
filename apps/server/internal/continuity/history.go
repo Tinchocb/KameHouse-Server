@@ -31,7 +31,7 @@ type (
 		Kind Kind `json:"kind"`
 		// Used for MediastreamKind and ExternalPlayerKind.
 		Filepath      string `json:"filepath"`
-		MediaID       int    `json:"mediaID"`
+		MediaID       int    `json:"mediaId"`
 		EpisodeNumber int    `json:"episodeNumber"`
 		// The current playback time in seconds.
 		// Used to determine when to remove the item from the history.
@@ -54,7 +54,7 @@ type (
 	UpdateWatchHistoryItemOptions struct {
 		CurrentTime   float64 `json:"currentTime"`
 		Duration      float64 `json:"duration"`
-		MediaID       int     `json:"mediaID"`
+		MediaID       int     `json:"mediaId"`
 		EpisodeNumber int     `json:"episodeNumber"`
 		Filepath      string  `json:"filepath,omitempty"`
 		Predictive    bool    `json:"predictive"`

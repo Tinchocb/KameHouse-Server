@@ -150,12 +150,16 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	v1.GET("/cast/samsung/discover", h.HandleSamsungDiscover)
 	v1.GET("/cast/samsung/paired", h.HandleSamsungPaired)
 	v1.POST("/cast/samsung/launch", h.HandleSamsungLaunch)
+	v1.GET("/cast/player", h.HandleCastPlayer)
 
 	h.RegisterLibraryRoutes(v1)
 	h.RegisterStreamingRoutes(v1)
 	h.RegisterSettingsRoutes(v1)
 	h.RegisterLocalRoutes(v1)
 	h.RegisterTorrentClientRoutes(v1)
+
+	// Short link redirector for manual Smart TV casting
+	e.GET("/go", h.HandleCastGo)
 }
 
 func (h *Handler) JSON(c echo.Context, code int, i interface{}) error {

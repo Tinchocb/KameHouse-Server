@@ -13,7 +13,7 @@ type MediaFillerItem struct {
 	DbId           uint      `json:"dbId"`
 	Provider       string    `json:"provider"`
 	Slug           string    `json:"slug"`
-	MediaID        int       `json:"mediaID"`
+	MediaID        int       `json:"mediaId"`
 	LastFetchedAt  time.Time `json:"lastFetchedAt"`
 	FillerEpisodes []string  `json:"fillerEpisodes"`
 }

@@ -99,7 +99,7 @@ type (
 		RefreshPlatformCollectionsFunc func()
 	}
 	TrackedMediaItem struct {
-		MediaID    int                              `json:"mediaID"`
+		MediaID    int                              `json:"mediaId"`
 		Type       string                           `json:"type"`
 		AnimeEntry *platform.UnifiedCollectionEntry `json:"animeEntry,omitempty"`
 	}

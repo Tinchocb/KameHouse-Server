@@ -510,7 +510,7 @@ func (p *Pipeline) runHead(start int32) error {
 	}(headCtx)
 
 	// Goroutine: reap process and release governor slot.
-	go p.reapProcess(encoderID, cmd, &stderr, release, headCancel)
+	go p.reapProcess(headCtx, encoderID, cmd, &stderr, release, headCancel)
 
 	return nil
 }
@@ -563,7 +563,7 @@ func (p *Pipeline) readSegments(
 // reapProcess waits for the ffmpeg process to exit, marks its head as deleted,
 // and releases the governor slot. If a hardware acceleration failure is
 // detected, it logs actionable guidance.
-func (p *Pipeline) reapProcess(encoderID int, cmd *exec.Cmd, stderr *strings.Builder, release func(), headCancel context.CancelFunc) {
+func (p *Pipeline) reapProcess(ctx context.Context, encoderID int, cmd *exec.Cmd, stderr *strings.Builder, release func(), headCancel context.CancelFunc) {
 	defer p.activeHeadsWg.Done() // Signal that this head has completely exited
 	defer release()              // Always release the governor slot
 	defer headCancel()           // Cancel the head context to free the soft-close goroutine
@@ -581,6 +581,8 @@ func (p *Pipeline) reapProcess(encoderID int, cmd *exec.Cmd, stderr *strings.Bui
 	switch {
 	case errors.As(err, &exitErr) && exitErr.ExitCode() == 255:
 		p.logger.Trace().Int("eid", encoderID).Msg("cassette: ffmpeg process terminated")
+	case ctx.Err() != nil || p.ctx.Err() != nil:
+		p.logger.Trace().Int("eid", encoderID).Msg("cassette: ffmpeg process killed intentionally")
 	case err != nil && strings.Contains(err.Error(), "killed"):
 		p.logger.Trace().Int("eid", encoderID).Msg("cassette: ffmpeg process killed intentionally")
 	case err != nil:

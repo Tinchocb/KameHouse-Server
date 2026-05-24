@@ -51,7 +51,7 @@ type (
 	}
 
 	QueueMediaTask struct {
-		MediaID int    `json:"mediaID"`
+		MediaID int    `json:"mediaId"`
 		Image   string `json:"image"`
 		Title   string `json:"title"`
 		Type    string `json:"type"`

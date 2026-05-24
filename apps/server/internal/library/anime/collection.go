@@ -1,4 +1,4 @@
-﻿package anime
+package anime
 
 import (
 	"cmp"
@@ -66,7 +66,7 @@ type (
 	// It is a slimmed down version of Entry. It holds the media, media id, library data, and list data.
 	LibraryCollectionEntry struct {
 		Media                  *models.LibraryMedia    `json:"media"`
-		MediaID                int                     `json:"mediaID"`
+		MediaID                int                     `json:"mediaId"`
 		Episode                *models.LibraryEpisode  `json:"episode,omitempty"` // For episode-specific swimlanes
 		AvailabilityType       string                  `json:"availabilityType"`            // FULL_LOCAL, HYBRID, ONLY_ONLINE
 		EntryLibraryData       *EntryLibraryData       `json:"libraryData"`  // Library data
@@ -85,7 +85,7 @@ type (
 	// UnknownGroup holds the data for a group of local files whose media is not in the user's platform collection.
 	// The client will use this data to suggest media to the user, so they can add it to their platform collection.
 	UnknownGroup struct {
-		MediaID    int          `json:"mediaID"`
+		MediaID    int          `json:"mediaId"`
 		LocalFiles []*LocalFile `json:"localFiles"`
 	}
 )

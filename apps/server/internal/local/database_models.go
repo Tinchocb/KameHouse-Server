@@ -38,13 +38,13 @@ type LocalCollection struct {
 // TrackedMedia tracks media that should be stored locally.
 type TrackedMedia struct {
 	BaseModel
-	MediaID int    `gorm:"column:media_id" json:"mediaID"`
+	MediaID int    `gorm:"column:media_id" json:"mediaId"`
 	Type    string `gorm:"column:type" json:"type"` // "anime"
 }
 
 type AnimeSnapshot struct {
 	BaseModel
-	MediaID int `gorm:"column:media_id" json:"mediaID"`
+	MediaID int `gorm:"column:media_id" json:"mediaId"`
 	//ListEntry         LocalAnimeListEntry `gorm:"column:list_entry" json:"listEntry"`
 	AnimeMetadata     LocalAnimeMetadata `gorm:"column:anime_metadata" json:"animeMetadata"`
 	BannerImagePath   string             `gorm:"column:banner_image_path" json:"bannerImagePath"`

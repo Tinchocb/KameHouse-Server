@@ -20,7 +20,7 @@ type (
 	// Entry is a container for all data related to a media.
 	// It is the primary data structure used by the frontend.
 	Entry struct {
-		MediaID             int                     `json:"mediaID"`
+		MediaID             int                     `json:"mediaId"`
 		Media               *models.LibraryMedia    `json:"media"`
 		EntryListData       *EntryListData          `json:"listData"`
 		EntryLibraryData    *EntryLibraryData       `json:"libraryData"`

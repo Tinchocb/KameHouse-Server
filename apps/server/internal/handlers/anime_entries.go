@@ -509,7 +509,7 @@ func (h *Handler) HandleGetAnimeEntrySuggestions(c echo.Context) error {
 func (h *Handler) HandleUpdateAnimeEntryProgress(c echo.Context) error {
 
 	type body struct {
-		MediaID  int `json:"mediaID"`
+		MediaID  int `json:"mediaId"`
 		Progress int `json:"progress"`
 	}
 	b := new(body)
@@ -540,7 +540,7 @@ func (h *Handler) HandleUpdateAnimeEntryProgress(c echo.Context) error {
 func (h *Handler) HandleUpdateAnimeEntryRepeat(c echo.Context) error {
 
 	type body struct {
-		MediaID int `json:"mediaID"`
+		MediaID int `json:"mediaId"`
 		Repeat  int `json:"repeat"`
 	}
 	b := new(body)
@@ -564,7 +564,7 @@ func (h *Handler) HandleUpdateAnimeEntryRepeat(c echo.Context) error {
 // It will create a new scanner and run it for the selected files.
 func (h *Handler) HandleManualMatch(c echo.Context) error {
 	type body struct {
-		MediaID int      `json:"mediaID"`
+		MediaID int      `json:"mediaId"`
 		Paths   []string `json:"paths"`
 	}
 	b := new(body)
@@ -812,7 +812,7 @@ func normalizedMediaToLibraryMedia(media *dto.NormalizedMedia) *models.LibraryMe
 // HandleDeletePlatformEntry will delete the given media entry from Platform.
 func (h *Handler) HandleDeletePlatformEntry(c echo.Context) error {
 	type body struct {
-		MediaID int `json:"mediaID"`
+		MediaID int `json:"mediaId"`
 	}
 	b := new(body)
 	if err := c.Bind(b); err != nil {
@@ -857,7 +857,7 @@ func (h *Handler) HandleGetMissingEpisodes(c echo.Context) error {
 // HandleSilenceMissingEpisodes will silence the missing episodes for the given media.
 func (h *Handler) HandleSilenceMissingEpisodes(c echo.Context) error {
 	type body struct {
-		MediaID int `json:"mediaID"`
+		MediaID int `json:"mediaId"`
 	}
 	b := new(body)
 	if err := c.Bind(b); err != nil {
@@ -895,7 +895,7 @@ func (h *Handler) HandleGetUpcomingEpisodes(c echo.Context) error {
 
 func (h *Handler) HandleAnimeEntryBulkAction(c echo.Context) error {
 	type body struct {
-		MediaID int    `json:"mediaID"`
+		MediaID int    `json:"mediaId"`
 		Action  string `json:"action"`
 	}
 	var b body
@@ -944,7 +944,7 @@ func (h *Handler) HandleAnimeEntryBulkAction(c echo.Context) error {
 
 func (h *Handler) HandleOpenAnimeEntryInExplorer(c echo.Context) error {
 	type body struct {
-		MediaID int `json:"mediaID"`
+		MediaID int `json:"mediaId"`
 	}
 	var b body
 	if err := c.Bind(&b); err != nil {
@@ -995,7 +995,7 @@ func (h *Handler) HandleGetAnimeEntrySilenceStatus(c echo.Context) error {
 // HandleToggleAnimeEntrySilenceStatus toggles the silence flag (no-op until DB column exists).
 func (h *Handler) HandleToggleAnimeEntrySilenceStatus(c echo.Context) error {
 	type body struct {
-		MediaID int `json:"mediaID"`
+		MediaID int `json:"mediaId"`
 	}
 	var b body
 	if err := c.Bind(&b); err != nil {

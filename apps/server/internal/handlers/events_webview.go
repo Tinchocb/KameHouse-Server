@@ -7,7 +7,7 @@ import (
 // PlaybackHeartbeatPayload is the payload sent by the frontend every 5 seconds.
 type PlaybackHeartbeatPayload struct {
 	EventType     string  `json:"eventType"`
-	MediaID       int     `json:"mediaID"`
+	MediaID       int     `json:"mediaId"`
 	EpisodeNumber int     `json:"episodeNumber"`
 	CurrentTime   float64 `json:"currentTime"`
 	Duration      float64 `json:"duration"`

@@ -87,6 +87,9 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 					strings.HasPrefix(cUrl.RequestURI(), "/offline-assets") {
 					return true
 				}
+				if !strings.HasSuffix(cUrl.Path, ".html") && filepath.Ext(cUrl.Path) == "" {
+					cUrl.Path = "/index.html"
+				}
 				return false
 			},
 		}))

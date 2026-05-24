@@ -30,7 +30,7 @@ type (
 	}
 
 	PlaybackState struct {
-		MediaID int `json:"mediaID"` // The media ID
+		MediaID int `json:"mediaId"` // The media ID
 	}
 
 	MediaContainer struct {

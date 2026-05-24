@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"kamehouse/internal/events"
 	"net/http"
 	"strconv"
@@ -11,15 +12,6 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// allowedOrigins stores the allowed origins for WebSocket connections.
-// This should be kept in sync with the CORS allowed origins in routes.go.
-var allowedWSOrigins = map[string]bool{
-	"http://localhost:43210":   true,
-	"http://127.0.0.1:43210":   true,
-	"http://localhost":         true,
-	"http://127.0.0.1":       true,
-}
-
 // webSocketEventHandler creates a new websocket handler for real-time event communication.
 // The route is registered BEFORE the auth middleware group so the HTTP→WS upgrade
 // is never blocked by a missing Authorization header (browsers can't send one during WS connect).
@@ -29,17 +21,28 @@ func (h *Handler) webSocketEventHandler(c echo.Context) error {
 		CheckOrigin: func(r *http.Request) bool {
 			origin := r.Header.Get("Origin")
 			if origin == "" {
-				// No origin header - same-origin request, allow it
 				return true
 			}
+
 			// Allow if matches any config CORS origins
 			for _, o := range h.App.Config.Server.CorsOrigins {
 				if o == origin || o == "*" {
 					return true
 				}
 			}
-			// Fallback to static allowed origins
-			return allowedWSOrigins[origin]
+
+			// Allow if origin matches the request's own Host (same-origin direct access)
+			scheme := "http"
+			if r.TLS != nil {
+				scheme = "https"
+			}
+			requestOrigin := fmt.Sprintf("%s://%s", scheme, r.Host)
+			if origin == requestOrigin {
+				return true
+			}
+
+			h.App.Logger.Warn().Str("origin", origin).Str("host", r.Host).Msg("ws: rejected origin")
+			return false
 		},
 	}
 

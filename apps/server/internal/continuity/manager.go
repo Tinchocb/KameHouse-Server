@@ -36,7 +36,7 @@ type (
 	// Since the media player module only cares about the filepath, the PlaybackManager will store the episode number and media id here when playback starts.
 	ExternalPlayerEpisodeDetails struct {
 		EpisodeNumber int    `json:"episodeNumber"`
-		MediaID       int    `json:"mediaID"`
+		MediaID       int    `json:"mediaId"`
 		Filepath      string `json:"filepath"`
 	}
 

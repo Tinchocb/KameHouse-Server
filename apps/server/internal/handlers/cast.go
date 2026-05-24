@@ -234,23 +234,33 @@ func (h *Handler) HandleCastPlayer(c echo.Context) error {
 
 	// Detect stream type to decide which player to use
 	isHLS := strings.HasSuffix(streamURL, ".m3u8") || strings.Contains(streamURL, "/hls/")
+	var videoTag string
 	var playerScript string
 	if isHLS {
+		videoTag = `<video id="v" autoplay controls playsinline></video>`
 		// Use HLS.js for HLS streams (Samsung browser supports it)
-		playerScript = `
+		// We do NOT set the src attribute on the <video> tag directly to avoid conflicts with native media loader.
+		playerScript = fmt.Sprintf(`
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <script>
 var video = document.getElementById('v');
+var streamURL = %q;
 if (Hls.isSupported()) {
-  var hls = new Hls();
-  hls.loadSource(video.src);
+  var hls = new Hls({
+    maxMaxBufferLength: 10,
+    enableWorker: true,
+    lowLatencyMode: false
+  });
+  hls.loadSource(streamURL);
   hls.attachMedia(video);
   hls.on(Hls.Events.MANIFEST_PARSED, function() { video.play(); });
 } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+  video.src = streamURL;
   video.play();
 }
-</script>`
+</script>`, streamURL)
 	} else {
+		videoTag = fmt.Sprintf(`<video id="v" src="%s" autoplay controls playsinline></video>`, html.EscapeString(streamURL))
 		playerScript = `<script>document.getElementById('v').play();</script>`
 	}
 
@@ -267,14 +277,53 @@ video { width:100%%; height:100%%; object-fit:contain; }
 </style>
 </head>
 <body>
-<video id="v" src="%s" autoplay controls playsinline></video>
+%s
 %s
 </body>
-</html>`, html.EscapeString(title), html.EscapeString(streamURL), playerScript)
+</html>`, html.EscapeString(title), videoTag, playerScript)
 
 	c.Response().Header().Set("Content-Type", "text/html; charset=utf-8")
 	c.Response().Header().Set("Cache-Control", "no-cache")
 	return c.String(http.StatusOK, page)
+}
+
+var (
+	lastCastURLMu sync.RWMutex
+	lastCastURL   string
+)
+
+// HandleCastGo redirects to the last cast URL for easy manual TV entry
+func (h *Handler) HandleCastGo(c echo.Context) error {
+	lastCastURLMu.RLock()
+	url := lastCastURL
+	lastCastURLMu.RUnlock()
+
+	if url == "" {
+		page := `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>KameHouse Cast</title>
+<style>
+body { background:#0a0a0c; color:#fff; font-family:sans-serif; text-align:center; padding-top:20vh; margin:0; }
+.card { background:#16161a; border:1px solid #27272a; display:inline-block; padding:2rem; border-radius:1.5rem; max-width:400px; box-shadow:0 20px 40px rgba(0,0,0,0.5); }
+h1 { color:#ff6e3a; font-size:1.5rem; margin-top:0; letter-spacing:0.05em; }
+p { color:#a1a1aa; font-size:0.9rem; line-height:1.5; }
+</style>
+</head>
+<body>
+<div class="card">
+<h1>KameHouse Cast</h1>
+<p>No hay ninguna transmisión activa en este momento.</p>
+<p>Inicia la reproducción de un video en tu computadora o teléfono y haz clic en el botón de Transmitir.</p>
+</div>
+</body>
+</html>`
+		c.Response().Header().Set("Content-Type", "text/html; charset=utf-8")
+		return c.String(http.StatusOK, page)
+	}
+
+	return c.Redirect(http.StatusTemporaryRedirect, url)
 }
 
 // HandleSamsungLaunch launches a URL on Tizen browser via WebSocket
@@ -287,6 +336,11 @@ func (h *Handler) HandleSamsungLaunch(c echo.Context) error {
 	if payload.IP == "" || payload.URL == "" {
 		return h.RespondWithCodeError(c, http.StatusBadRequest, fmt.Errorf("ip and url are required"))
 	}
+
+	// Update the short link redirector URL
+	lastCastURLMu.Lock()
+	lastCastURL = payload.URL
+	lastCastURLMu.Unlock()
 
 	err := h.launchURLOnSamsungTV(payload.IP, payload.URL)
 	if err != nil {
@@ -543,6 +597,87 @@ func (h *Handler) launchURLOnSamsungTV(ip string, targetURL string) error {
 	// Reset read deadline
 	conn.SetReadDeadline(time.Time{})
 
+	type AppItem struct {
+		AppID string `json:"appId"`
+		Name  string `json:"name"`
+	}
+	var installedApps []AppItem
+
+	// Request list of installed apps to identify the correct browser ID
+	getAppsPayload := map[string]interface{}{
+		"method": "ms.channel.emit",
+		"params": map[string]interface{}{
+			"event": "ed.installedApp.get",
+			"to":    "host",
+		},
+	}
+	if getAppsBytes, err := json.Marshal(getAppsPayload); err == nil {
+		fmt.Println("[CAST DEBUG] Requesting installed apps list...")
+		_ = conn.WriteMessage(websocket.TextMessage, getAppsBytes)
+
+		// Set a short read deadline of 1.2 seconds to wait for response
+		conn.SetReadDeadline(time.Now().Add(1200 * time.Millisecond))
+		for {
+			_, msg, readErr := conn.ReadMessage()
+			if readErr != nil {
+				break
+			}
+			var appResp struct {
+				Event string    `json:"event"`
+				Data  []AppItem `json:"data"`
+			}
+			if json.Unmarshal(msg, &appResp) == nil && appResp.Event == "ed.installedApp.get" {
+				installedApps = appResp.Data
+				fmt.Printf("[CAST DEBUG] Retrieved %d installed apps from TV\n", len(installedApps))
+				break
+			}
+		}
+		// Reset read deadline
+		conn.SetReadDeadline(time.Time{})
+	}
+
+	// Try to match the browser App ID from the installed apps
+	var targetAppID string
+	possibleBrowserIDs := []string{"org.tizen.browser", "3201907018784", "3202010022079"}
+
+	if len(installedApps) > 0 {
+		// First pass: look for exact matches with our known browser IDs
+		for _, app := range installedApps {
+			idLower := strings.ToLower(app.AppID)
+			for _, pID := range possibleBrowserIDs {
+				if strings.ToLower(pID) == idLower {
+					targetAppID = app.AppID
+					fmt.Printf("[CAST DEBUG] Found matched browser App ID from installed apps: %s (%s)\n", targetAppID, app.Name)
+					break
+				}
+			}
+			if targetAppID != "" {
+				break
+			}
+		}
+
+		// Second pass: if no exact match, look for names containing "browser" or "internet"
+		if targetAppID == "" {
+			for _, app := range installedApps {
+				nameLower := strings.ToLower(app.Name)
+				if strings.Contains(nameLower, "browser") || strings.Contains(nameLower, "internet") {
+					targetAppID = app.AppID
+					fmt.Printf("[CAST DEBUG] Found browser app by name: %s (%s)\n", targetAppID, app.Name)
+					break
+				}
+			}
+		}
+	}
+
+	// Determine the list of App IDs to try launching
+	var appIDsToLaunch []string
+	if targetAppID != "" {
+		appIDsToLaunch = []string{targetAppID}
+	} else {
+		fmt.Println("[CAST DEBUG] TV did not return app list or no browser app matched. Fallback to trying all known browser IDs.")
+		appIDsToLaunch = possibleBrowserIDs
+	}
+
 	type LaunchData struct {
 		AppID      string            `json:"appId"`
 		ActionType string            `json:"action_type"`
@@ -561,66 +696,38 @@ func (h *Handler) launchURLOnSamsungTV(ip string, targetURL string) error {
 		Params LaunchParams `json:"params"`
 	}
 
-	// Enviar comandos con diferentes combinaciones para maximizar compatibilidad en todas las versiones de Tizen
-	appIDs := []string{"org.tizen.browser", "3201907018784", "3202010022079"}
-	for _, appID := range appIDs {
-		// Estilos de lanzamiento a enviar
-		payloads := []WebSocketPayload{
-			// Estilo 1: NATIVE_LAUNCH con metaTag (el más común para navegadores nativos)
-			{
-				Method: "ms.channel.emit",
-				Params: LaunchParams{
-					Event: "ed.apps.launch",
-					To:    "host",
-					Data: LaunchData{
-						AppID:      appID,
-						ActionType: "NATIVE_LAUNCH",
-						MetaTag:    targetURL,
-					},
-				},
-			},
-			// Estilo 2: DEEP_LINK con metaTag
-			{
-				Method: "ms.channel.emit",
-				Params: LaunchParams{
-					Event: "ed.apps.launch",
-					To:    "host",
-					Data: LaunchData{
-						AppID:      appID,
-						ActionType: "DEEP_LINK",
-						MetaTag:    targetURL,
-					},
-				},
-			},
-			// Estilo 3: DEEP_LINK con data.url (usado en algunos firmwares y reproductores de medios)
-			{
-				Method: "ms.channel.emit",
-				Params: LaunchParams{
-					Event: "ed.apps.launch",
-					To:    "host",
-					Data: LaunchData{
-						AppID:      appID,
-						ActionType: "DEEP_LINK",
-						Data: map[string]string{
-							"url": targetURL,
-						},
-					},
+	for idx, appID := range appIDsToLaunch {
+		// If we are fallback testing multiple app IDs, wait 2.5 seconds between different apps
+		// to allow the correct browser to open without being cancelled by the next command.
+		if idx > 0 {
+			fmt.Printf("[CAST DEBUG] Waiting 2.5 seconds before trying next App ID fallback (%s)...\n", appID)
+			time.Sleep(2500 * time.Millisecond)
+		}
+
+		// We only need NATIVE_LAUNCH for browser apps.
+		// Sending multiple launch styles in rapid succession (every 200ms) can crash or lock the Tizen app launcher.
+		p := WebSocketPayload{
+			Method: "ms.channel.emit",
+			Params: LaunchParams{
+				Event: "ed.apps.launch",
+				To:    "host",
+				Data: LaunchData{
+					AppID:      appID,
+					ActionType: "NATIVE_LAUNCH",
+					MetaTag:    targetURL,
 				},
 			},
 		}
 
-		for i, p := range payloads {
-			msgBytes, err := json.Marshal(p)
-			if err != nil {
-				return err
-			}
+		msgBytes, err := json.Marshal(p)
+		if err != nil {
+			return err
+		}
 
-			fmt.Printf("[CAST DEBUG] Sending launch command for %s (Style %d, %s)...\n", appID, i+1, p.Params.Data.ActionType)
-			err = conn.WriteMessage(websocket.TextMessage, msgBytes)
-			if err != nil {
-				return fmt.Errorf("failed to send launch command for %s style %d: %w", appID, i+1, err)
-			}
-			time.Sleep(150 * time.Millisecond)
+		fmt.Printf("[CAST DEBUG] Sending launch command for %s (NATIVE_LAUNCH)...\n", appID)
+		err = conn.WriteMessage(websocket.TextMessage, msgBytes)
+		if err != nil {
+			return fmt.Errorf("failed to send launch command for %s: %w", appID, err)
 		}
 	}
 

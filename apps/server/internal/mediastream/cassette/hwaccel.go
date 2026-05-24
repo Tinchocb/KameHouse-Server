@@ -65,7 +65,7 @@ func BuildHwAccelProfile(opts HwAccelOptions, ffmpegPath string, logger *zerolog
 		return vaApiProfile(defaultDevice)
 	case "qsv", "intel":
 		return qsvProfile(defaultDevice, preset)
-	case "nvidia":
+	case "nvidia", "cuda":
 		return nvidiaProfile(preset)
 	case "videotoolbox":
 		return videotoolboxProfile()
@@ -228,8 +228,8 @@ func nvidiaProfile(preset string) HwAccelProfile {
 			"-delay", "0",
 			"-no-scenecut", "1",
 		},
-		ScaleFilter:   "format=nv12|cuda,hwupload,scale_cuda=%d:%d:format=nv12",
-		NoScaleFilter: "format=nv12|cuda,hwupload",
+		ScaleFilter:   "scale_cuda=%d:%d:format=nv12",
+		NoScaleFilter: "scale_cuda=w=iw:h=ih:format=nv12",
 		ForcedIDR:     true,
 	}
 }

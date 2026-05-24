@@ -18,7 +18,7 @@ import (
 //	@route /api/v1/metadata-provider/filler [POST]
 func (h *Handler) HandlePopulateFillerData(c echo.Context) error {
 	type body struct {
-		MediaID int `json:"mediaID"`
+		MediaID int `json:"mediaId"`
 	}
 
 	var b body
@@ -73,7 +73,7 @@ func (h *Handler) HandlePopulateFillerData(c echo.Context) error {
 //	@route /api/v1/metadata-provider/filler [DELETE]
 func (h *Handler) HandleRemoveFillerData(c echo.Context) error {
 	type body struct {
-		MediaID int `json:"mediaID"`
+		MediaID int `json:"mediaId"`
 	}
 
 	var b body
@@ -154,7 +154,7 @@ func (h *Handler) HandleSaveMediaMetadataParent(c echo.Context) error {
 //	@returns bool
 func (h *Handler) HandleDeleteMediaMetadataParent(c echo.Context) error {
 	type body struct {
-		MediaID int `json:"mediaID"`
+		MediaID int `json:"mediaId"`
 	}
 
 	var b body
