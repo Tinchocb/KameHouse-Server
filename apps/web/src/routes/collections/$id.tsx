@@ -100,7 +100,7 @@ function CollectionDetailPage() {
         })
     }, [collection])
 
-    if (isLoading) {
+    if (isLoading && !collection) {
         return (
             <div className="min-h-screen bg-transparent text-white flex flex-col items-center justify-center">
                 <div className="flex flex-col items-center gap-4">

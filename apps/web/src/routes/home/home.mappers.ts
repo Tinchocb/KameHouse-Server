@@ -53,7 +53,9 @@ export function mapLibraryEntryToMediaCard(
         year: media.year || undefined,
         rating: media.score ? (media.score > 10 ? media.score / 10 : media.score) : undefined,
         onClick: () => onNavigate(media.id),
-        backdropUrl: getBackdrop(media) || undefined,
+        // Only set backdropUrl if there's a real landscape banner (bannerImage).
+        // If we fall back to posterImage, it's portrait and should NOT be used as a landscape hero image.
+        backdropUrl: media.bannerImage || undefined,
     }
 }
 

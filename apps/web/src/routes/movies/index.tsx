@@ -10,7 +10,7 @@ import { fetchAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import type { Anime_LibraryCollectionEntry, Continuity_WatchHistoryItem } from "@/api/generated/types"
 import { cn } from "@/components/ui/core/styling"
 import { DeferredImage } from "@/components/shared/deferred-image"
-import { getHighResImage } from "@/lib/helpers/images"
+import { getHighResImage, getMediumResImage, getLowResImage } from "@/lib/helpers/images"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 
@@ -170,7 +170,7 @@ function MoviesPage() {
                         {backdropSrc && (
                             <motion.img
                                 key={backdropSrc}
-                                src={getHighResImage(backdropSrc)}
+                                src={getLowResImage(backdropSrc)}
                                 alt=""
                                 aria-hidden
                                 initial={{ opacity: 0 }}
@@ -322,7 +322,7 @@ function MoviesPage() {
 
             {/* ── Movie Grid ─────────────────────────────────────────────── */}
             <div className="max-w-[1700px] mx-auto px-4 md:px-10 py-10 pb-32">
-                {isLoading ? (
+                {isLoading && allMovies.length === 0 ? (
                     <MovieGridSkeleton />
                 ) : filteredSorted.length === 0 ? (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-32">
@@ -342,7 +342,6 @@ function MoviesPage() {
                             {filteredSorted.map((entry) => (
                                 <motion.div
                                     key={entry.mediaId}
-                                    layout
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.9 }}
@@ -397,7 +396,7 @@ const MovieCard = memo(function MovieCard({
     const hasProgress = progressTime > 30 && totalDuration > 0 && progressTime < totalDuration
     const progressPercent = hasProgress ? Math.min(100, (progressTime / totalDuration) * 100) : 0
 
-    const posterUrl = getHighResImage(movie.posterImage || "")
+    const posterUrl = getMediumResImage(movie.posterImage || "")
     const backdropUrl = movie.bannerImage || movie.posterImage || ""
 
     return (
@@ -409,20 +408,22 @@ const MovieCard = memo(function MovieCard({
         >
             {/* ─ Poster ─ */}
             <div className={cn(
-                "relative aspect-[2/3] w-full overflow-hidden rounded-xl",
-                "border border-white/[0.06] transition-[border-color,box-shadow] duration-500 ease-out",
-                "group-hover:border-white/20 group-hover:shadow-2xl",
+                "relative aspect-[2/3] w-full overflow-hidden rounded-xl border border-white/[0.06] group-hover:border-white/20 group-hover:shadow-2xl",
                 !hasLocalFiles && "grayscale opacity-40",
             )}
                 style={{
                     boxShadow: "0 4px 24px rgba(0,0,0,0.6)",
+                    transition: "border-color 600ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 600ms cubic-bezier(0.16, 1, 0.3, 1)",
                 }}
             >
                 {/* Poster image */}
                 <DeferredImage
                     src={posterUrl}
                     alt={title}
-                    className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                    className="w-full h-full object-cover transform-gpu group-hover:scale-105"
+                    style={{
+                        transition: "transform 800ms cubic-bezier(0.16, 1, 0.3, 1)",
+                    }}
                     showSkeleton={false}
                     fallback={
                         <div
@@ -440,24 +441,33 @@ const MovieCard = memo(function MovieCard({
                 <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/70 to-transparent" />
 
                 {/* Bottom gradient — for play overlay */}
-                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
+                <div 
+                    className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100"
+                    style={{
+                        transition: "opacity 500ms cubic-bezier(0.16, 1, 0.3, 1)",
+                    }}
+                />
 
                 {/* Play & Add Queue buttons on hover */}
-                <div className="absolute inset-0 flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-all duration-300 z-30">
-                    <motion.div
-                        whileHover={{ scale: 1.12 }}
-                        whileTap={{ scale: 0.94 }}
+                <div 
+                    className="absolute inset-0 flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 scale-95 group-hover:scale-100 z-30"
+                    style={{
+                        transition: "opacity 500ms cubic-bezier(0.16, 1, 0.3, 1), transform 500ms cubic-bezier(0.16, 1, 0.3, 1)",
+                    }}
+                >
+                    <div
                         onClick={(e) => { e.stopPropagation(); handleCardClick(); }}
-                        className="w-12 h-12 rounded-full bg-white/15 backdrop-blur-md border border-white/30 flex items-center justify-center shadow-2xl cursor-pointer"
-                        style={{ boxShadow: `0 0 30px ${eraConfig.glow}` }}
+                        className="w-12 h-12 rounded-full bg-white/15 backdrop-blur-md border border-white/30 flex items-center justify-center shadow-2xl cursor-pointer active:scale-[0.94] transform-gpu"
+                        style={{ 
+                            boxShadow: `0 0 30px ${eraConfig.glow}`,
+                            transition: "transform 400ms cubic-bezier(0.16, 1, 0.3, 1), background-color 300ms",
+                        }}
                         title="Reproducir ahora"
                     >
                         <Play className="w-5 h-5 text-white fill-white ml-0.5" />
-                    </motion.div>
+                    </div>
                     {hasLocalFiles && (
-                        <motion.div
-                            whileHover={{ scale: 1.12 }}
-                            whileTap={{ scale: 0.94 }}
+                        <div
                             onClick={async (e) => {
                                 e.stopPropagation();
                                 try {
@@ -487,18 +497,24 @@ const MovieCard = memo(function MovieCard({
                                     toast.error("Error al obtener detalles del archivo.");
                                 }
                             }}
-                            className="w-10 h-10 rounded-full bg-black/40 hover:bg-brand-orange backdrop-blur-md border border-white/10 hover:border-brand-orange/30 flex items-center justify-center shadow-2xl text-zinc-300 hover:text-white transition-colors duration-300 cursor-pointer"
+                            className="w-10 h-10 rounded-full bg-black/40 hover:bg-brand-orange backdrop-blur-md border border-white/10 hover:border-brand-orange/30 flex items-center justify-center shadow-2xl text-zinc-300 hover:text-white active:scale-[0.94] transform-gpu cursor-pointer"
+                            style={{
+                                transition: "transform 400ms cubic-bezier(0.16, 1, 0.3, 1), background-color 300ms, border-color 300ms",
+                            }}
                             title="Añadir a la cola"
                         >
                             <ListPlus className="w-4 h-4" />
-                        </motion.div>
+                        </div>
                     )}
                 </div>
 
                 {/* Era accent line (bottom left corner) */}
                 <div
-                    className="absolute bottom-0 left-0 w-full h-0.5 opacity-70 scale-x-[0.12] origin-left transition-transform duration-500 ease-out group-hover:scale-x-100 transform-gpu"
-                    style={{ backgroundColor: eraConfig.color }}
+                    className="absolute bottom-0 left-0 w-full h-0.5 opacity-70 scale-x-[0.12] origin-left group-hover:scale-x-100 transform-gpu"
+                    style={{ 
+                        backgroundColor: eraConfig.color,
+                        transition: "transform 600ms cubic-bezier(0.16, 1, 0.3, 1)",
+                    }}
                 />
 
                 {/* Top badges */}

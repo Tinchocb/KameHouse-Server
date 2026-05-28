@@ -117,7 +117,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                
                 {/* Random Play */}
                 <RandomPlayButton />
-
+               
                 {/* Settings (Always at the bottom) */}
                 <Magnetic>
                     <Link

@@ -5,7 +5,7 @@ import { toast } from "sonner"
 import { useAppStore } from "@/lib/store"
 import { ListPlus } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
-import { getHighResImage } from "@/lib/helpers/images"
+import { getHighResImage, getLowResImage } from "@/lib/helpers/images"
 import { fetchAnimeEntry, useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import { useGetContinuityWatchHistoryItem } from "@/api/hooks/continuity.hooks"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
@@ -18,9 +18,9 @@ import { PremiumPosterCard } from "@/components/shared/premium-poster-card"
 import { DeferredImage } from "@/components/shared/deferred-image"
 
 export const Route = createFileRoute("/movies/$movieId")({
-    loader: async ({ params: { movieId }, context }) => {
+    loader: ({ params: { movieId }, context }) => {
         const qc = context.queryClient
-        await qc.prefetchQuery({
+        qc.prefetchQuery({
             queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, movieId],
             queryFn: () => fetchAnimeEntry(movieId),
         })
@@ -181,16 +181,94 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
         }
     }
 
-    if (isLoading) {
+    if (isLoading && !entry) {
         return (
-            <div className="min-h-screen bg-[#09090b] text-white flex items-center justify-center">
-                <div className="flex flex-col items-center gap-5">
-                    <div className="w-10 h-10 border-2 border-brand-orange border-t-transparent rounded-full animate-spin" />
-                    <span className="text-[9px] font-black uppercase tracking-[0.5em] text-zinc-500 animate-pulse">Cargando Película...</span>
+            <div className="h-full w-full flex flex-col overflow-y-auto bg-[#09090b] text-white pb-16 animate-pulse">
+                {/* Ambient glow */}
+                <div className="absolute top-[400px] inset-x-0 flex justify-center pointer-events-none z-0 opacity-15 select-none">
+                    <div className="w-[900px] h-[550px] rounded-full bg-zinc-800 blur-[130px]" />
+                </div>
+                {/* Hero Skeleton */}
+                <div className="relative w-full min-h-[75vh] flex flex-col justify-end overflow-hidden bg-[#09090b] select-none">
+                    <div className="absolute inset-0 bg-zinc-900/40" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#09090b] via-[#09090b]/50 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#09090b]/80 via-transparent to-transparent" />
+
+                    <div className="relative z-20 flex flex-col justify-end items-start px-6 sm:px-12 pb-16 pt-48 gap-5">
+                        <div className="flex items-center gap-3">
+                            <div className="h-6 w-16 bg-white/10 rounded-md" />
+                            <div className="h-6 w-12 bg-white/10 rounded-md" />
+                            <div className="h-6 w-20 bg-white/10 rounded-md" />
+                        </div>
+                        <div className="flex flex-col gap-3 w-full">
+                            <div className="h-20 md:h-28 w-2/3 bg-white/10 rounded-lg" />
+                        </div>
+                        <div className="flex items-center gap-6">
+                            <div className="h-4 w-10 bg-white/8 rounded" />
+                            <div className="h-5 w-20 bg-white/8 rounded-md" />
+                        </div>
+                        <div className="flex gap-4 mt-2">
+                            <div className="h-12 w-44 bg-brand-orange/20 rounded-xl border border-brand-orange/10" />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Two-column layout skeleton */}
+                <div className="w-full max-w-[1800px] mx-auto px-6 sm:px-12 mt-12 pb-12">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+
+                        {/* Left col: synopsis + cast */}
+                        <div className="lg:col-span-8 flex flex-col gap-10">
+                            {/* Section header */}
+                            <div className="h-7 w-32 bg-white/10 rounded border-b border-white/5" />
+                            {/* Synopsis lines */}
+                            <div className="flex flex-col gap-2 -mt-6">
+                                <div className="h-4 w-full bg-white/8 rounded" />
+                                <div className="h-4 w-full bg-white/8 rounded" />
+                                <div className="h-4 w-5/6 bg-white/8 rounded" />
+                                <div className="h-4 w-4/5 bg-white/8 rounded" />
+                                <div className="h-4 w-2/3 bg-white/8 rounded" />
+                            </div>
+                            {/* Cast skeleton */}
+                            <div className="flex flex-col gap-4">
+                                <div className="h-6 w-40 bg-white/10 rounded" />
+                                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
+                                    {Array.from({ length: 4 }).map((_, i) => (
+                                        <div key={i} className="flex items-center gap-3 p-3.5 bg-zinc-950/20 border border-white/5 rounded-2xl">
+                                            <div className="w-12 h-12 rounded-full bg-zinc-900 shrink-0" />
+                                            <div className="flex flex-col gap-1.5 flex-1">
+                                                <div className="h-3.5 w-full bg-white/10 rounded" />
+                                                <div className="h-2.5 w-2/3 bg-white/6 rounded" />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Right col: bento technical metadata */}
+                        <div className="lg:col-span-4 flex flex-col gap-6">
+                            <div className="h-4 w-36 bg-white/8 rounded" />
+                            <div className="grid grid-cols-2 gap-4">
+                                {Array.from({ length: 6 }).map((_, i) => (
+                                    <div
+                                        key={i}
+                                        className={`${i >= 4 ? 'col-span-2' : 'col-span-1'} bg-zinc-950/25 border border-white/5 rounded-3xl p-5`}
+                                        style={{ animationDelay: `${i * 60}ms` }}
+                                    >
+                                        <div className="h-2.5 w-16 bg-white/8 rounded mb-3" />
+                                        <div className="h-5 w-3/4 bg-white/12 rounded" />
+                                        <div className="h-3 w-1/2 bg-white/6 rounded mt-2" />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         )
     }
+
 
     if (!entry || !entry.media) {
         return (
@@ -211,7 +289,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                     <div 
                         className="w-[900px] h-[550px] rounded-full bg-cover bg-center blur-[130px] saturate-200 opacity-40 will-change-[filter,transform]"
                         style={{
-                            backgroundImage: `url(${getHighResImage(entry.media.posterImage || entry.media.bannerImage)})`,
+                            backgroundImage: `url(${getLowResImage(entry.media.posterImage || entry.media.bannerImage)})`,
                         }}
                     />
                 </div>

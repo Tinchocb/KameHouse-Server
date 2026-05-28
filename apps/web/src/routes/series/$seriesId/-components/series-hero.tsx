@@ -3,7 +3,7 @@ import { useRef, useState, useMemo } from "react"
 import { useGSAP } from "@gsap/react"
 import gsap from "gsap"
 import { cn } from "@/components/ui/core/styling"
-import { getHighResImage } from "@/lib/helpers/images"
+import { getHighResImage, getLowResImage } from "@/lib/helpers/images"
 import { Anime_Entry, Continuity_WatchHistoryItem } from "@/api/generated/types"
 import { MediaActionButtons } from "../-series-interactivity-client"
 import { sanitizeHtml } from "@/lib/helpers/sanitizer"
@@ -108,7 +108,7 @@ export const HeroSection = React.memo(function HeroSection({
                     <div
                         className="absolute left-1/2 top-0 -translate-x-1/2 w-full h-full opacity-35"
                         style={{
-                            backgroundImage: `url(${getHighResImage(media.posterImage)})`,
+                            backgroundImage: `url(${getLowResImage(media.posterImage)})`,
                             backgroundSize: "cover",
                             backgroundPosition: "center 20%",
                             filter: "blur(120px) saturate(150%) brightness(0.4)",

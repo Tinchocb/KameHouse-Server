@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/components/ui/core/styling';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ImageOff } from 'lucide-react';
@@ -18,13 +17,44 @@ interface DeferredImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageEleme
 
 const NO_COVER = "/no-cover.png"
 
+const observers = new Map<string, IntersectionObserver>();
+const observerCallbacks = new WeakMap<Element, () => void>();
+
+function getObserver(rootMargin: string, threshold: string): IntersectionObserver {
+    const key = `${rootMargin}_${threshold}`;
+    let observer = observers.get(key);
+    if (!observer) {
+        const thresholdVal = threshold.includes(',') 
+            ? threshold.split(',').map(Number) 
+            : Number(threshold);
+            
+        observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        const callback = observerCallbacks.get(entry.target);
+                        if (callback) {
+                            callback();
+                            observerCallbacks.delete(entry.target);
+                            observer?.unobserve(entry.target);
+                        }
+                    }
+                });
+            },
+            { rootMargin, threshold: thresholdVal }
+        );
+        observers.set(key, observer);
+    }
+    return observer;
+}
+
 export function DeferredImage(props: DeferredImageProps) {
     const {
         src,
         alt,
         className,
         placeholderColor = '#1A1A1A',
-        rootMargin = '200px',
+        rootMargin = '1000px',
         threshold = 0,
         priority = false,
         showSkeleton = true,
@@ -53,6 +83,7 @@ export function DeferredImage(props: DeferredImageProps) {
         setHasError(true);
         onError?.(e);
     }, [onError]);
+    const thresholdStr = Array.isArray(threshold) ? threshold.join(',') : String(threshold);
 
     useEffect(() => {
         if (!src) {
@@ -72,40 +103,28 @@ export function DeferredImage(props: DeferredImageProps) {
         }
 
         const currentElement = containerRef.current;
+        if (!currentElement) return;
 
-        const observer = new IntersectionObserver(
-            ([entry]) => {
-                if (entry.isIntersecting) {
-                    setIsIntersecting(true);
-                    if (currentElement) {
-                        observer.unobserve(currentElement);
-                    }
-                }
-            },
-            {
-                rootMargin,
-                threshold,
-            }
-        );
+        const observer = getObserver(rootMargin, thresholdStr);
 
-        if (currentElement) {
-            observer.observe(currentElement);
-        }
+        observerCallbacks.set(currentElement, () => {
+            setIsIntersecting(true);
+        });
+        observer.observe(currentElement);
 
         return () => {
             if (currentElement) {
+                observerCallbacks.delete(currentElement);
                 observer.unobserve(currentElement);
             }
         };
-    }, [rootMargin, threshold, priority]);
+    }, [src, rootMargin, thresholdStr, priority]);
 
-    // Only apply srcSet if it's a known image provider that supports it (like TMDB/Platform if they were proxied)
-    // For now, we'll keep it simple as we don't know the backend's image resizing capabilities for all sources
+    // Only apply srcSet if it's a known image provider that supports it
     const generateSrcSet = useCallback((url: string): string | undefined => {
         if (!url || url.startsWith('data:') || url.includes('localhost') || url.includes('127.0.0.1')) {
             return undefined;
         }
-        // If it's a TMDB image, we could potentially use their API, but we'll stick to a safer approach
         return undefined;
     }, []);
 
@@ -115,25 +134,15 @@ export function DeferredImage(props: DeferredImageProps) {
             style={{ backgroundColor: isLoaded ? 'transparent' : placeholderColor }}
             className={cn("relative overflow-hidden", className)}
         >
-            <AnimatePresence initial={false}>
-                {!isLoaded && !hasError && isIntersecting && showSkeleton && (
-                    <motion.div
-                        initial={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.8, ease: "easeInOut" }}
-                        className="absolute inset-0 z-10 overflow-hidden"
-                    >
-                        <div className="absolute inset-0 animate-pulse bg-zinc-800/80 backdrop-blur-md" />
-                        <Skeleton className="h-full w-full rounded-none bg-transparent opacity-50" />
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            {!isLoaded && !hasError && isIntersecting && showSkeleton && (
+                <div className="absolute inset-0 z-10 overflow-hidden">
+                    <div className="absolute inset-0 animate-pulse bg-zinc-800/80 backdrop-blur-md" />
+                    <Skeleton className="h-full w-full rounded-none bg-transparent opacity-50" />
+                </div>
+            )}
 
             {!hasError && isIntersecting && (
-                <motion.img
-                    initial={priority ? { opacity: 1 } : { opacity: 0 }}
-                    animate={isLoaded ? { opacity: 1 } : priority ? {} : { opacity: 0 }}
-                    transition={{ duration: 0.4, ease: "easeOut" }}
+                <img
                     src={src}
                     srcSet={generateSrcSet(src)}
                     alt={alt}
@@ -142,8 +151,8 @@ export function DeferredImage(props: DeferredImageProps) {
                     onLoad={handleLoad}
                     onError={handleError}
                     className={cn(
-                        "h-full w-full object-cover will-change-[opacity]",
-                        !isLoaded && "invisible"
+                        "h-full w-full object-cover transition-opacity duration-300 ease-out will-change-opacity",
+                        isLoaded ? "opacity-100" : "opacity-0"
                     )}
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     {...(restProps as any)}

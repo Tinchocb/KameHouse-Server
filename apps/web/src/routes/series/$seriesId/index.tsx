@@ -21,9 +21,9 @@ import { HeroSection } from "./-components/series-hero"
 import { SagaEpisodesSection } from "./-components/saga-episodes"
 
 export const Route = createFileRoute("/series/$seriesId/")({
-    loader: async ({ params: { seriesId }, context }) => {
+    loader: ({ params: { seriesId }, context }) => {
         const qc = context.queryClient
-        await qc.prefetchQuery({
+        qc.prefetchQuery({
             queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, seriesId],
             queryFn: () => fetchAnimeEntry(seriesId),
         })
@@ -279,18 +279,94 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         return idx >= 0 && idx < computedEpisodes.length - 1
     }, [computedEpisodes, playTarget])
 
-    if (isLoading || isMovie) {
+    if ((isLoading && !entry) || (entry && isMovie)) {
+        if (isMovie) {
+            return (
+                <div className="h-full w-full bg-[#09090b] text-white flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-5">
+                        <div className="w-10 h-10 border-2 border-brand-orange border-t-transparent rounded-full animate-spin" />
+                        <span className="text-[9px] font-black uppercase tracking-[0.5em] text-zinc-500 animate-pulse">
+                            Redirigiendo a Película...
+                        </span>
+                    </div>
+                </div>
+            )
+        }
         return (
-            <div className="h-full w-full bg-[#09090b] text-white flex items-center justify-center">
-                <div className="flex flex-col items-center gap-5">
-                    <div className="w-10 h-10 border-2 border-brand-orange border-t-transparent rounded-full animate-spin" />
-                    <span className="text-[9px] font-black uppercase tracking-[0.5em] text-zinc-500 animate-pulse">
-                        {isMovie ? "Redirigiendo a Película..." : "Cargando..."}
-                    </span>
+            <div className="h-full w-full flex flex-col overflow-y-auto bg-[#09090b] text-white pb-16 animate-pulse">
+                {/* Hero Skeleton */}
+                <div className="relative w-full min-h-[85vh] md:min-h-[90vh] flex flex-col justify-end overflow-hidden bg-[#09090b] select-none">
+                    {/* Ambient glow placeholder */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-zinc-900/60 via-transparent to-transparent" />
+                    <div className="absolute inset-0 bg-zinc-900/40 animate-pulse" />
+                    {/* Cinematic gradient masking */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#09090b] via-[#09090b]/60 to-transparent" />
+
+                    {/* Text content skeleton */}
+                    <div className="relative z-20 flex flex-col justify-end items-start px-6 sm:px-12 md:pl-[240px] md:pr-24 pb-20 pt-48 gap-5">
+                        {/* Tags row */}
+                        <div className="flex items-center gap-3">
+                            <div className="h-6 w-16 bg-white/10 rounded-md" />
+                            <div className="h-6 w-12 bg-white/10 rounded-md" />
+                            <div className="h-6 w-20 bg-white/10 rounded-md" />
+                            <div className="h-6 w-16 bg-white/10 rounded-md" />
+                        </div>
+                        {/* Title skeleton */}
+                        <div className="flex flex-col gap-3 w-full">
+                            <div className="h-16 md:h-24 w-3/4 bg-white/10 rounded-lg" />
+                            <div className="h-12 w-1/2 bg-white/8 rounded-lg" />
+                        </div>
+                        {/* Metadata strip */}
+                        <div className="flex items-center gap-6">
+                            <div className="h-4 w-10 bg-white/10 rounded" />
+                            <div className="h-6 w-28 bg-white/10 rounded-md" />
+                            <div className="h-4 w-16 bg-white/10 rounded" />
+                        </div>
+                        {/* Synopsis skeleton */}
+                        <div className="flex flex-col gap-2 max-w-3xl w-full">
+                            <div className="h-4 w-full bg-white/8 rounded" />
+                            <div className="h-4 w-full bg-white/8 rounded" />
+                            <div className="h-4 w-2/3 bg-white/8 rounded" />
+                        </div>
+                        {/* Action button skeleton */}
+                        <div className="flex gap-4 mt-2">
+                            <div className="h-12 w-44 bg-brand-orange/20 rounded-xl border border-brand-orange/10" />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Tabs + Episodes skeleton */}
+                <div className="w-full max-w-[1800px] mx-auto px-6 sm:px-12 mt-12">
+                    {/* Tabs navigation skeleton */}
+                    <div className="flex border-b border-white/5 pb-2 mb-8 gap-8">
+                        <div className="h-5 w-24 bg-white/15 rounded pb-3" />
+                        <div className="h-5 w-24 bg-white/8 rounded pb-3" />
+                        <div className="h-5 w-20 bg-white/8 rounded pb-3" />
+                    </div>
+                    {/* Episode cards grid skeleton */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+                        {Array.from({ length: 6 }).map((_, i) => (
+                            <div key={i} className="flex flex-col rounded-xl border border-white/[0.03] bg-zinc-950/40 overflow-hidden">
+                                {/* Thumbnail placeholder */}
+                                <div className="aspect-video w-full bg-zinc-900/70" style={{ animationDelay: `${i * 80}ms` }} />
+                                {/* Card info placeholder */}
+                                <div className="p-4 flex flex-col gap-2">
+                                    <div className="h-4 w-3/4 bg-white/10 rounded" />
+                                    <div className="h-3 w-full bg-white/6 rounded" />
+                                    <div className="h-3 w-2/3 bg-white/6 rounded" />
+                                    <div className="mt-2 flex gap-2">
+                                        <div className="h-3 w-10 bg-white/8 rounded" />
+                                        <div className="h-3 w-12 bg-white/8 rounded" />
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
         )
     }
+
 
     if (!entry || !entry.media) {
         return (

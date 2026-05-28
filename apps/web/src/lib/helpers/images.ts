@@ -17,3 +17,26 @@ export const getHighResImage = (url: string | null | undefined): string => {
 
     return url
 }
+
+export const getMediumResImage = (url: string | null | undefined): string => {
+    if (!url) return ""
+
+    // TMDB medium-res replacement (w500 is perfect for normal-sized cards and posters)
+    if (url.includes("tmdb.org") || url.includes("themoviedb.org")) {
+        return url.replace(/\/t\/p\/(?:original|w\d+)/, "/t/p/w500")
+    }
+
+    return url
+}
+
+export const getLowResImage = (url: string | null | undefined): string => {
+    if (!url) return ""
+
+    // TMDB low-res replacement (w185 is perfect for blurred background glows / placeholders)
+    if (url.includes("tmdb.org") || url.includes("themoviedb.org")) {
+        return url.replace(/\/t\/p\/(?:original|w\d+)/, "/t/p/w185")
+    }
+
+    return url
+}
+

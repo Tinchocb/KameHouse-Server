@@ -18,6 +18,8 @@ export const enum TORRENT_PROVIDER {
 export const _gettingStartedSchema = z.object({
     enableTranscode: z.boolean().optional().default(false),
     enableTorrentStreaming: z.boolean().optional().default(false),
+    debridProvider: z.string().optional().default("none"),
+    debridApiKey: z.string().optional().default(""),
 })
 
 export const settingsSchema = z.object({
@@ -114,8 +116,21 @@ export const settingsSchema = z.object({
         vcTranslateTargetLanguage: z.string().optional().default(""),
     }),
     torrent: z.object({
-        showBufferingStatus: z.boolean().optional().default(false),
-        showNetworkSpeed: z.boolean().optional().default(false),
+        defaultTorrentClient: z.string().optional().default("none"),
+        qbittorrentPath: z.string().optional().default(""),
+        qbittorrentHost: z.string().optional().default(""),
+        qbittorrentPort: z.number().optional().default(0),
+        qbittorrentUsername: z.string().optional().default(""),
+        qbittorrentPassword: z.string().optional().default(""),
+        qbittorrentTags: z.string().optional().default(""),
+        qbittorrentCategory: z.string().optional().default(""),
+        transmissionPath: z.string().optional().default(""),
+        transmissionHost: z.string().optional().default(""),
+        transmissionPort: z.number().optional().default(0),
+        transmissionUsername: z.string().optional().default(""),
+        transmissionPassword: z.string().optional().default(""),
+        showActiveTorrentCount: z.boolean().optional().default(false),
+        hideTorrentList: z.boolean().optional().default(false),
     }),
     mediastream: z.object({
         transcodeEnabled: z.boolean().default(false),
@@ -208,8 +223,8 @@ export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>): 
         refreshLibraryOnStart: false,
         autoPlayNextEpisode: false,
         enableWatchContinuity: data.library.enableWatchContinuity,
-        seriesPaths: [],
-        moviePaths: [],
+        seriesPaths: data.library.seriesPaths || [],
+        moviePaths: data.library.moviePaths || [],
         autoSyncOfflineLocalData: false,
         includeOnlineStreamingInLibrary: false,
         scannerMatchingThreshold: 0,
@@ -252,7 +267,23 @@ export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>): 
         vcTranslateProvider: "",
         vcTranslateTargetLanguage: "",
     },
-    torrent: {} as GettingStarted_Variables["torrent"],
+    torrent: {
+        defaultTorrentClient: data.torrent.defaultTorrentClient || "none",
+        qbittorrentPath: data.torrent.qbittorrentPath || "",
+        qbittorrentHost: data.torrent.qbittorrentHost || "",
+        qbittorrentPort: data.torrent.qbittorrentPort || 0,
+        qbittorrentUsername: data.torrent.qbittorrentUsername || "",
+        qbittorrentPassword: data.torrent.qbittorrentPassword || "",
+        qbittorrentTags: data.torrent.qbittorrentTags || "",
+        qbittorrentCategory: data.torrent.qbittorrentCategory || "",
+        transmissionPath: data.torrent.transmissionPath || "",
+        transmissionHost: data.torrent.transmissionHost || "",
+        transmissionPort: data.torrent.transmissionPort || 0,
+        transmissionUsername: data.torrent.transmissionUsername || "",
+        transmissionPassword: data.torrent.transmissionPassword || "",
+        showActiveTorrentCount: data.torrent.showActiveTorrentCount || false,
+        hideTorrentList: data.torrent.hideTorrentList || false,
+    },
     Platform: {
         hideAudienceScore: false,
 
@@ -265,8 +296,8 @@ export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>): 
         disableAutoDownloaderNotifications: data.notifications.disableAutoDownloaderNotifications,
         disableAutoScannerNotifications: data.notifications.disableAutoScannerNotifications,
     },
-    debridProvider: "none",
-    debridApiKey: "",
+    debridProvider: data.debridProvider || "none",
+    debridApiKey: data.debridApiKey || "",
 })
 
 

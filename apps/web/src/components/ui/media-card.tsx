@@ -2,8 +2,7 @@ import { cn } from "@/components/ui/core/styling"
 import type { CardAspect } from "@/api/types/intelligence.types"
 import { Play, Info, Sparkles, Plus, Check } from "lucide-react"
 import * as React from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { getHighResImage } from "@/lib/helpers/images"
+import { getHighResImage, getMediumResImage } from "@/lib/helpers/images"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { GlowingEffect } from "@/components/shared/glowing-effect"
 
@@ -95,12 +94,11 @@ export const MediaCard = React.memo(function MediaCard({
                     : "aspect-[16/9] w-[280px] md:w-[380px] lg:w-[440px]"
             )}
         >
-            <motion.div
-                layout
+            <div
                 onClick={onClick}
                 className={cn(
                     "absolute top-0 left-0 overflow-hidden flex flex-col origin-top",
-                    "transition-[border-color,box-shadow,background-color] duration-200 ease-out",
+                    "transition-all duration-300 cubic-bezier(0.25, 0.8, 0.25, 1)",
                     showPopup
                         ? cn(
                               "z-[100] bg-zinc-950/95 backdrop-blur-xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.85)]",
@@ -113,6 +111,9 @@ export const MediaCard = React.memo(function MediaCard({
                               isPoster ? "rounded-xl" : "rounded-2xl"
                           )
                 )}
+                style={{
+                    willChange: "transform, width, height, top, left, opacity",
+                }}
             >
                 {/* Glowing effect inside expanded card */}
                 {showPopup && (
@@ -122,7 +123,7 @@ export const MediaCard = React.memo(function MediaCard({
                 {/* Artwork Container */}
                 <div className={cn("relative w-full overflow-hidden shrink-0", showPopup ? "aspect-[16/9]" : "h-full")}>
                     <DeferredImage
-                        src={getHighResImage(artwork)}
+                        src={getMediumResImage(artwork)}
                         alt={title}
                         className="h-full w-full object-cover transition-transform duration-1000 [transition-timing-function:cubic-bezier(0.23,1,0.32,1)] group-hover:scale-[1.08]"
                     />
@@ -136,11 +137,11 @@ export const MediaCard = React.memo(function MediaCard({
                     {/* Glass sheen sweep */}
                     {!showPopup && (
                         <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden rounded-[inherit]">
-                            <motion.div 
-                                initial={{ x: "-150%" }}
-                                animate={isHovered ? { x: "150%" } : { x: "-150%" }}
-                                transition={{ duration: 0.9, ease: [0.25, 1, 0.5, 1] }}
-                                className="w-1/3 h-full bg-gradient-to-r from-transparent via-white/15 to-transparent -skew-x-12 absolute inset-y-0"
+                            <div 
+                                className={cn(
+                                    "w-1/3 h-full bg-gradient-to-r from-transparent via-white/15 to-transparent -skew-x-12 absolute inset-y-0 transition-transform duration-700 ease-out translate-x-[-150%]",
+                                    isHovered && "translate-x-[150%]"
+                                )}
                             />
                         </div>
                     )}
@@ -193,53 +194,58 @@ export const MediaCard = React.memo(function MediaCard({
                     )}
                 </div>
 
-                {/* Extended Details Body (only when popped up) */}
-                {showPopup && (
-                    <div className="flex-1 p-4 space-y-2 select-none flex flex-col justify-between overflow-hidden bg-zinc-950/90">
-                        <div className="space-y-2">
-                            <h3 className="font-bebas text-xl md:text-2xl leading-none text-white uppercase tracking-wide line-clamp-1">
-                                {title}
-                            </h3>
+                {/* Extended Details Body */}
+                <div
+                    className={cn(
+                        "p-4 space-y-2 select-none flex flex-col justify-between overflow-hidden bg-zinc-950/90 transition-all duration-300 ease-out transform-gpu",
+                        showPopup 
+                            ? "opacity-100 max-h-[220px] pointer-events-auto" 
+                            : "opacity-0 max-h-0 py-0 pointer-events-none"
+                    )}
+                >
+                    <div className="space-y-2">
+                        <h3 className="font-bebas text-xl md:text-2xl leading-none text-white uppercase tracking-wide line-clamp-1">
+                            {title}
+                        </h3>
 
-                            {/* Tags / Meta Information */}
-                            <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-                                {rating && (
-                                    <span className="text-emerald-400 font-extrabold flex items-center gap-1">
-                                        {(rating * 10).toFixed(0)}% COINCIDENCIA
-                                    </span>
-                                )}
-                                {year && <span className="text-zinc-300 font-medium">{year}</span>}
-                                {badge && (
-                                    <span className="border border-white/10 bg-white/5 backdrop-blur-md px-1.5 py-0.5 rounded text-zinc-300 text-[8px]">
-                                        {badge}
-                                    </span>
-                                )}
-                            </div>
-
-                            {/* Dynamic AI Vibes / Mood Badges */}
-                            {vibes.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5 pt-0.5">
-                                    {vibes.slice(0, 3).map((vibe, idx) => (
-                                        <span
-                                            key={idx}
-                                            className="text-[8px] font-bold tracking-widest uppercase bg-brand-orange/10 border border-brand-orange/20 text-brand-orange px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm"
-                                        >
-                                            <Sparkles size={8} className="animate-pulse" />
-                                            {vibe}
-                                        </span>
-                                    ))}
-                                </div>
+                        {/* Tags / Meta Information */}
+                        <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                            {rating && (
+                                <span className="text-emerald-400 font-extrabold flex items-center gap-1">
+                                    {(rating * 10).toFixed(0)}% COINCIDENCIA
+                                </span>
                             )}
-
-                            {/* Description/Synopsis */}
-                            {description && (
-                                <p className="line-clamp-3 text-[11px] leading-relaxed text-zinc-400 pt-1 font-medium select-none">
-                                    {description.replace(/<[^>]*>/g, '')}
-                                </p>
+                            {year && <span className="text-zinc-300 font-medium">{year}</span>}
+                            {badge && (
+                                <span className="border border-white/10 bg-white/5 backdrop-blur-md px-1.5 py-0.5 rounded text-zinc-300 text-[8px]">
+                                    {badge}
+                                </span>
                             )}
                         </div>
+
+                        {/* Dynamic AI Vibes / Mood Badges */}
+                        {vibes.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                {vibes.slice(0, 3).map((vibe, idx) => (
+                                    <span
+                                        key={idx}
+                                        className="text-[8px] font-bold tracking-widest uppercase bg-brand-orange/10 border border-brand-orange/20 text-brand-orange px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm"
+                                    >
+                                        <Sparkles size={8} className="animate-pulse" />
+                                        {vibe}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Description/Synopsis */}
+                        {description && (
+                            <p className="line-clamp-3 text-[11px] leading-relaxed text-zinc-400 pt-1 font-medium select-none">
+                                {description.replace(/<[^>]*>/g, '')}
+                            </p>
+                        )}
                     </div>
-                )}
+                </div>
 
                 {/* Progress Bar */}
                 {progress !== undefined && (
@@ -250,7 +256,7 @@ export const MediaCard = React.memo(function MediaCard({
                         />
                     </div>
                 )}
-            </motion.div>
+            </div>
         </div>
     )
 })

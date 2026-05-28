@@ -42,6 +42,7 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 	type body struct {
 		Library                models.LibrarySettings      `json:"library"`
 		MediaPlayer            models.MediaPlayerSettings  `json:"mediaPlayer"`
+		Torrent                models.TorrentSettings      `json:"torrent"`
 		EnableTranscode        bool                        `json:"enableTranscode"`
 	}
 
@@ -56,14 +57,12 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 	if b.Library.MoviePaths == nil {
 		b.Library.MoviePaths = []string{}
 	}
-	if b.Library.MoviePaths == nil {
-		b.Library.MoviePaths = []string{}
-	}
 
 	settings, err := h.App.Database.UpsertSettings(&models.Settings{
 		BaseModel:     models.BaseModel{ID: 1, UpdatedAt: time.Now()},
 		Library:       b.Library,
 		MediaPlayer:   b.MediaPlayer,
+		Torrent:       b.Torrent,
 	})
 	if err != nil {
 		return h.RespondWithError(c, err)

@@ -121,8 +121,8 @@ const config: RsbuildConfig = {
             root: "out",
         },
         filename: {
-            js: "[name].[contenthash:8].js",
-            css: "[name].[contenthash:8].css",
+            js: process.env.NODE_ENV === "production" ? "[name].[contenthash:8].js" : "[name].js",
+            css: process.env.NODE_ENV === "production" ? "[name].[contenthash:8].css" : "[name].css",
         },
     },
     html: {
@@ -150,7 +150,7 @@ const config: RsbuildConfig = {
                 // outputModule: true,
             },
             output: { // redundant?
-                chunkFilename: "static/js/async/[name].[contenthash:8].js",
+                chunkFilename: process.env.NODE_ENV === "production" ? "static/js/async/[name].[contenthash:8].js" : "static/js/async/[name].js",
             },
             optimization: {
                 chunkIds: !!process.env.RSDOCTOR ? "named" : undefined,

@@ -15,6 +15,7 @@ import { useGetVideoInsights } from "@/api/hooks/videocore.hooks"
 import { useAniSkipTimes } from "@/api/hooks/aniskip.hooks"
 import type { PlayerCore, PlayerStats } from "./player-core"
 import { useAppStore } from "@/lib/store"
+import { DeferredImage } from "@/components/shared/deferred-image"
 
 function StatsOverlay({ show, data }: { show: boolean, data: PlayerStats }) {
     if (!show || !data) return null
@@ -524,11 +525,11 @@ export function PlayerUI(props: PlayerUIProps) {
                                             {/* Thumbnail / Image container */}
                                             <div className="relative w-28 aspect-video bg-zinc-900 border border-white/5 rounded-lg overflow-hidden shrink-0 flex items-center justify-center">
                                                 {ep.thumbnail ? (
-                                                    <img
+                                                    <DeferredImage
                                                         src={ep.thumbnail}
                                                         alt={ep.title || `Episodio ${epNum}`}
                                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                                        loading="lazy"
+                                                        showSkeleton={false}
                                                     />
                                                 ) : (
                                                     <span className="text-[10px] font-black text-zinc-700">SIN IMAGEN</span>
@@ -645,11 +646,11 @@ export function PlayerUI(props: PlayerUIProps) {
                                                 {/* Thumbnail */}
                                                 <div className="relative w-28 aspect-video bg-zinc-900 border border-white/5 rounded-lg overflow-hidden shrink-0 flex items-center justify-center">
                                                     {item.thumbnail ? (
-                                                        <img
+                                                        <DeferredImage
                                                             src={item.thumbnail}
                                                             alt={item.title}
                                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                                            loading="lazy"
+                                                            showSkeleton={false}
                                                         />
                                                     ) : (
                                                         <span className="text-[10px] font-black text-zinc-700">SIN IMAGEN</span>

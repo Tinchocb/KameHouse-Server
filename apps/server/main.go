@@ -58,12 +58,7 @@ func run(ctx context.Context, stop context.CancelFunc) error {
 
 	isDev := os.Getenv("KAMEHOUSE_ENV") != "production"
 
-	desktopStr := os.Getenv("KAMEHOUSE_DESKTOP")
-	runDesktop := !hasConsole() // Default to true if compiled as GUI app (no console)
-	if desktopStr != "" {
-		runDesktop = desktopStr == "true"
-	}
-	
+
 	// Initialize robust arguments required by NewKameHouse inside KameHouse.
 	configOpts := &core.ConfigOptions{
 		Flags:        core.KameHouseFlags{Port: portStrVal, Host: hostStr, IsDesktopSidecar: !isDev},
@@ -131,29 +126,6 @@ func run(ctx context.Context, stop context.CancelFunc) error {
 		errCh <- srv.ListenAndServe()
 	}()
 
-	if runDesktop {
-		// Wait for server to start listening
-		app.Logger.Info().Msg("waiting for HTTP server to become ready...")
-		for i := 0; i < 50; i++ {
-			conn, err := net.DialTimeout("tcp", addr, 50*time.Millisecond)
-			if err == nil {
-				conn.Close()
-				break
-			}
-			time.Sleep(50 * time.Millisecond)
-		}
-
-		app.Logger.Info().Msg("launching native desktop window...")
-		url := fmt.Sprintf("http://%s", addr)
-		if app.Config.Server.Tls.Enabled {
-			url = fmt.Sprintf("https://%s", addr)
-		}
-
-		// Block main thread with WebView execution loop
-		if err := runWebView(url, ctx, stop); err != nil {
-			app.Logger.Error().Err(err).Msg("failed to run desktop window")
-		}
-	}
 
 	// Block for shutdown signal or fatal error
 	select {

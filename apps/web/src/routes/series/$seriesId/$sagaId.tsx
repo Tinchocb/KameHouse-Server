@@ -13,9 +13,9 @@ import { ProgressBar } from "@/components/ui/progress-bar"
 import { DeferredImage } from "@/components/shared/deferred-image"
 
 export const Route = createFileRoute("/series/$seriesId/$sagaId")({
-    loader: async ({ params: { seriesId }, context }) => {
+    loader: ({ params: { seriesId }, context }) => {
         const qc = context.queryClient
-        await qc.prefetchQuery({
+        qc.prefetchQuery({
             queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, seriesId],
             queryFn: () => fetchAnimeEntry(seriesId),
         })

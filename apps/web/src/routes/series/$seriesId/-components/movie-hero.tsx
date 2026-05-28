@@ -3,7 +3,7 @@ import { useRef, useMemo } from "react"
 import { useGSAP } from "@gsap/react"
 import gsap from "gsap"
 import { cn } from "@/components/ui/core/styling"
-import { getHighResImage } from "@/lib/helpers/images"
+import { getHighResImage, getMediumResImage, getLowResImage } from "@/lib/helpers/images"
 import { Anime_Entry, Continuity_WatchHistoryItem } from "@/api/generated/types"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
 import { Play, Sparkles, Star, Heart, Check, Film, ListPlus } from "lucide-react"
@@ -145,7 +145,7 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
                 id: entry.mediaId!,
                 title: title,
                 playableUrl: localFile.path || "",
-                thumbnail: getHighResImage(media.posterImage || ""),
+                thumbnail: getMediumResImage(media.posterImage || ""),
                 mediaId: entry.mediaId!,
                 episodeNumber: Number(epNum),
                 malId: media.idMal ?? null,
@@ -210,7 +210,7 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
                     <div
                         className="absolute left-1/2 top-0 -translate-x-1/2 w-full h-full opacity-30"
                         style={{
-                            backgroundImage: `url(${getHighResImage(media.posterImage)})`,
+                            backgroundImage: `url(${getLowResImage(media.posterImage)})`,
                             backgroundSize: "cover",
                             backgroundPosition: "center 20%",
                             filter: "blur(120px) saturate(150%) brightness(0.3)",

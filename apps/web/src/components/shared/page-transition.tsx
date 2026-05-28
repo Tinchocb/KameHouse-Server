@@ -26,7 +26,7 @@ export function PageTransition({ children, transitionKey, className }: PageTrans
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
-            transition={{ duration: 0.2, ease: "easeInOut" }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
             className={cn("h-full w-full flex flex-col", className)}
         >
             {children}

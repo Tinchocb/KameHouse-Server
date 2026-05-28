@@ -136,15 +136,12 @@ const VhsReel = memo(function VhsReel({
     accent: string
 }) {
     return (
-        <motion.svg
+        <svg
             viewBox="0 0 20 20"
-            className="w-[14px] h-[14px]"
-            animate={{ rotate: isSpinning ? 360 : 0 }}
-            transition={
-                isSpinning
-                    ? { duration: 1.4, repeat: Infinity, ease: "linear", repeatDelay: 0 }
-                    : { duration: 0.25 }
-            }
+            className={cn(
+                "w-[14px] h-[14px] transition-transform duration-300 ease-out",
+                isSpinning && "animate-[spin_1.4s_linear_infinite] will-change-transform"
+            )}
         >
             {/* Aro exterior */}
             <circle cx="10" cy="10" r="9" stroke="rgba(100,100,120,0.5)" strokeWidth="1" fill="rgba(12,12,20,0.96)" />
@@ -173,7 +170,7 @@ const VhsReel = memo(function VhsReel({
                     strokeLinecap="round"
                 />
             ))}
-        </motion.svg>
+        </svg>
     )
 })
 
@@ -388,7 +385,7 @@ export const VhsShelfAccordion = memo(function VhsShelfAccordion({
                         const subtitle = item.subtitle || theme.subtitle
 
                         return (
-                            <motion.div
+                            <div
                                 key={item.id}
                                 data-idx={index}
                                 // ── A11y
@@ -407,18 +404,10 @@ export const VhsShelfAccordion = memo(function VhsShelfAccordion({
                                     "outline-none",
                                     isExpanded ? "z-30" : "z-10 hover:z-20",
                                 )}
-                                // ── Animación (spring más apretado)
-                                animate={{
-                                    width: isExpanded ? 820 : 90,
-                                    rotateY: isExpanded ? 0 : 1.5,
-                                    scale: isExpanded ? 1 : 0.988,
-                                }}
-                                transition={springCfg}
                                 style={{
-                                    transformStyle: "preserve-3d",
-                                    transformOrigin: "left center",
-                                    // Fuerza compositor GPU para width + transform
-                                    willChange: "width, transform",
+                                    width: isExpanded ? 820 : 90,
+                                    transition: prefersReduced ? "none" : "width 320ms cubic-bezier(0.25, 0.8, 0.25, 1)",
+                                    willChange: "width",
                                     // focus-visible: ring temático via box-shadow (no rompe overflow)
                                     boxShadow: isExpanded
                                         ? `20px 0 60px rgba(0,0,0,0.9), -8px 0 30px rgba(0,0,0,0.6), 0 0 0 1px ${theme.accent}22`
@@ -437,17 +426,12 @@ export const VhsShelfAccordion = memo(function VhsShelfAccordion({
                                  * Razón: animar filter en N elementos simultáneos genera un repaint
                                  * de capa compuesta por cada frame. Un div con opacity en GPU es ~gratis.
                                  */}
-                                <AnimatePresence>
-                                    {anyHovered && !isExpanded && (
-                                        <motion.div
-                                            className="absolute inset-0 z-40 pointer-events-none bg-black"
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 0.42 }}
-                                            exit={{ opacity: 0 }}
-                                            transition={{ duration: 0.14 }}
-                                        />
+                                <div
+                                    className={cn(
+                                        "absolute inset-0 z-40 pointer-events-none bg-black transition-opacity duration-150 ease-out",
+                                        anyHovered && !isExpanded ? "opacity-[0.42]" : "opacity-0"
                                     )}
-                                </AnimatePresence>
+                                />
 
                                 {/* ════════════════════════════════════════
                                     LOMO (SPINE)
@@ -535,211 +519,212 @@ export const VhsShelfAccordion = memo(function VhsShelfAccordion({
                                 {/* ════════════════════════════════════════
                                     PANEL EXPANDIDO
                                 ════════════════════════════════════════ */}
-                                <AnimatePresence>
-                                    {isExpanded && (
-                                        <motion.div
-                                            initial={{ opacity: 0, x: -20 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            exit={{ opacity: 0, x: -12 }}
-                                            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-                                            className="flex-1 h-full relative overflow-hidden flex flex-row"
+                                <div
+                                    className={cn(
+                                        "flex-1 h-full relative overflow-hidden flex flex-row transition-all ease-out duration-300 will-change-[opacity,transform]",
+                                        isExpanded 
+                                            ? "opacity-100 translate-x-0 pointer-events-auto" 
+                                            : "opacity-0 -translate-x-4 pointer-events-none"
+                                    )}
+                                >
+                                    {/* Banner como fondo */}
+                                    <div className="absolute inset-0 z-0">
+                                        <DeferredImage
+                                            src={item.bannerUrl || item.posterUrl || ""}
+                                            alt=""
+                                            className="w-full h-full object-cover object-center"
+                                            style={{ filter: "brightness(0.3) saturate(1.2)" }}
+                                            showSkeleton={false}
+                                        />
+                                        <div className="absolute inset-0"
+                                            style={{ background: "linear-gradient(to right, rgba(5,7,12,0.99) 0%, rgba(5,7,12,0.9) 42%, rgba(5,7,12,0.15) 100%)" }} />
+                                        <div className="absolute inset-0"
+                                            style={{ background: "linear-gradient(to top, rgba(5,7,12,0.95) 0%, transparent 55%)" }} />
+                                        <div className="absolute inset-0 pointer-events-none"
+                                            style={{ background: `radial-gradient(ellipse at 18% 85%, ${theme.accent}20 0%, transparent 58%)` }} />
+                                    </div>
+
+                                    {/* Decoración: carrete SVG */}
+                                    <div className="absolute top-4 right-8 opacity-[0.055] pointer-events-none w-48 h-48">
+                                        <svg viewBox="0 0 100 100" className="w-full h-full">
+                                            <circle cx="50" cy="50" r="46" stroke="white" strokeWidth="1.5" fill="none" />
+                                            <circle cx="50" cy="50" r="30" stroke="white" strokeWidth="0.8" fill="none" />
+                                            <circle cx="50" cy="50" r="10" fill="white" />
+                                            <path d="M50 4 L50 20 M50 80 L50 96 M4 50 L20 50 M80 50 L96 50" stroke="white" strokeWidth="1.2" />
+                                            <path d="M17 17 L28 28 M72 72 L83 83 M83 17 L72 28 M28 72 L17 83" stroke="white" strokeWidth="0.8" />
+                                        </svg>
+                                    </div>
+
+                                    {/* Borde izquierdo del panel — continuación del lomo */}
+                                    <div className="absolute inset-y-0 left-0 w-1 z-20 pointer-events-none"
+                                        style={{ background: theme.accent }} />
+
+                                    {/* Layout: poster | info */}
+                                    <div className="relative z-10 flex flex-row w-full h-full">
+
+                                        {/* POSTER GRANDE */}
+                                        <div
+                                            className={cn(
+                                                "w-[170px] md:w-[200px] shrink-0 h-full flex items-end pl-6 pb-8 transition-all ease-out duration-300 will-change-[opacity,transform]",
+                                                isExpanded 
+                                                    ? "opacity-100 translate-y-0 delay-75" 
+                                                    : "opacity-0 translate-y-4"
+                                            )}
                                         >
-                                            {/* Banner como fondo */}
-                                            <div className="absolute inset-0 z-0">
+                                            <div
+                                                className="w-full aspect-[2/3] rounded-lg overflow-hidden relative"
+                                                style={{
+                                                    boxShadow: `0 24px 60px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.07), 0 0 40px ${theme.accent}1e`,
+                                                }}
+                                            >
                                                 <DeferredImage
-                                                    src={item.bannerUrl || item.posterUrl || ""}
-                                                    alt=""
-                                                    className="w-full h-full object-cover object-center"
-                                                    style={{ filter: "brightness(0.3) saturate(1.2)" }}
-                                                    showSkeleton={false}
+                                                    src={item.posterUrl || ""}
+                                                    alt={item.title}
+                                                    className="w-full h-full object-cover"
                                                 />
-                                                <div className="absolute inset-0"
-                                                    style={{ background: "linear-gradient(to right, rgba(5,7,12,0.99) 0%, rgba(5,7,12,0.9) 42%, rgba(5,7,12,0.15) 100%)" }} />
-                                                <div className="absolute inset-0"
-                                                    style={{ background: "linear-gradient(to top, rgba(5,7,12,0.95) 0%, transparent 55%)" }} />
-                                                <div className="absolute inset-0 pointer-events-none"
-                                                    style={{ background: `radial-gradient(ellipse at 18% 85%, ${theme.accent}20 0%, transparent 58%)` }} />
+                                                <div className="absolute inset-0 bg-gradient-to-b from-white/[0.03] via-transparent to-black/25 pointer-events-none" />
+                                                <div className="absolute bottom-0 inset-x-0 h-[3px]" style={{ background: theme.accent }} />
                                             </div>
+                                        </div>
 
-                                            {/* Decoración: carrete SVG */}
-                                            <div className="absolute top-4 right-8 opacity-[0.055] pointer-events-none w-48 h-48">
-                                                <svg viewBox="0 0 100 100" className="w-full h-full">
-                                                    <circle cx="50" cy="50" r="46" stroke="white" strokeWidth="1.5" fill="none" />
-                                                    <circle cx="50" cy="50" r="30" stroke="white" strokeWidth="0.8" fill="none" />
-                                                    <circle cx="50" cy="50" r="10" fill="white" />
-                                                    <path d="M50 4 L50 20 M50 80 L50 96 M4 50 L20 50 M80 50 L96 50" stroke="white" strokeWidth="1.2" />
-                                                    <path d="M17 17 L28 28 M72 72 L83 83 M83 17 L72 28 M28 72 L17 83" stroke="white" strokeWidth="0.8" />
-                                                </svg>
-                                            </div>
-
-                                            {/* Borde izquierdo del panel — continuación del lomo */}
-                                            <div className="absolute inset-y-0 left-0 w-1 z-20 pointer-events-none"
-                                                style={{ background: theme.accent }} />
-
-                                            {/* Layout: poster | info */}
-                                            <div className="relative z-10 flex flex-row w-full h-full">
-
-                                                {/* POSTER GRANDE */}
-                                                <motion.div
-                                                    initial={{ y: 20, opacity: 0 }}
-                                                    animate={{ y: 0, opacity: 1 }}
-                                                    transition={{ delay: 0.07, duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
-                                                    className="w-[170px] md:w-[200px] shrink-0 h-full flex items-end pl-6 pb-8"
-                                                >
+                                        {/* INFO */}
+                                        <div
+                                            className={cn(
+                                                "flex-1 flex flex-col justify-end gap-3 px-7 pb-8 pt-8 min-w-0 transition-all ease-out duration-300 will-change-[opacity,transform]",
+                                                isExpanded 
+                                                    ? "opacity-100 translate-y-0 delay-100" 
+                                                    : "opacity-0 translate-y-4"
+                                            )}
+                                        >
+                                            {/* Badges */}
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                {scoreStr && (
                                                     <div
-                                                        className="w-full aspect-[2/3] rounded-lg overflow-hidden relative"
+                                                        className="flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-black"
                                                         style={{
-                                                            boxShadow: `0 24px 60px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.07), 0 0 40px ${theme.accent}1e`,
+                                                            background: `${theme.accent}1a`,
+                                                            color: theme.accent,
+                                                            border: `1px solid ${theme.accent}30`,
                                                         }}
                                                     >
-                                                        <DeferredImage
-                                                            src={item.posterUrl || ""}
-                                                            alt={item.title}
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                        <div className="absolute inset-0 bg-gradient-to-b from-white/[0.03] via-transparent to-black/25 pointer-events-none" />
-                                                        <div className="absolute bottom-0 inset-x-0 h-[3px]" style={{ background: theme.accent }} />
+                                                        <Star className="w-3 h-3 fill-current" />
+                                                        <span className="tracking-widest">{scoreStr}</span>
                                                     </div>
-                                                </motion.div>
-
-                                                {/* INFO */}
-                                                <motion.div
-                                                    initial={{ y: 16, opacity: 0 }}
-                                                    animate={{ y: 0, opacity: 1 }}
-                                                    transition={{ delay: 0.11, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                                                    className="flex-1 flex flex-col justify-end gap-3 px-7 pb-8 pt-8 min-w-0"
-                                                >
-                                                    {/* Badges */}
-                                                    <div className="flex flex-wrap items-center gap-2">
-                                                        {scoreStr && (
-                                                            <div
-                                                                className="flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-black"
-                                                                style={{
-                                                                    background: `${theme.accent}1a`,
-                                                                    color: theme.accent,
-                                                                    border: `1px solid ${theme.accent}30`,
-                                                                }}
-                                                            >
-                                                                <Star className="w-3 h-3 fill-current" />
-                                                                <span className="tracking-widest">{scoreStr}</span>
-                                                            </div>
-                                                        )}
-                                                        {item.year && (
-                                                            <div className="flex items-center gap-1.5 bg-white/[0.06] text-zinc-300 px-3 py-1 rounded-md text-[11px] font-black border border-white/[0.08]">
-                                                                <Calendar className="w-3 h-3" />
-                                                                <span className="tracking-widest">{item.year}</span>
-                                                            </div>
-                                                        )}
-                                                        {item.format && (
-                                                            <div className="flex items-center gap-1.5 bg-white/[0.06] text-zinc-300 px-3 py-1 rounded-md text-[11px] font-black border border-white/[0.08]">
-                                                                <Tv className="w-3 h-3" />
-                                                                <span className="tracking-widest">{item.format}</span>
-                                                            </div>
-                                                        )}
+                                                )}
+                                                {item.year && (
+                                                    <div className="flex items-center gap-1.5 bg-white/[0.06] text-zinc-300 px-3 py-1 rounded-md text-[11px] font-black border border-white/[0.08]">
+                                                        <Calendar className="w-3 h-3" />
+                                                        <span className="tracking-widest">{item.year}</span>
                                                     </div>
-
-                                                    {/* Título + saga */}
-                                                    <div>
-                                                        <h2
-                                                            className="font-bebas uppercase leading-[0.88] text-white line-clamp-2"
-                                                            style={{
-                                                                fontSize: "clamp(34px, 4vw, 54px)",
-                                                                textShadow: "0 6px 28px rgba(0,0,0,0.65)",
-                                                            }}
-                                                        >
-                                                            {item.title}
-                                                        </h2>
-                                                        <div className="flex items-center gap-2.5 mt-2">
-                                                            <div className="h-[2px] w-10 rounded-full shrink-0" style={{ background: theme.accent }} />
-                                                            <span
-                                                                className="text-[10px] font-black uppercase tracking-[0.35em] font-mono"
-                                                                style={{ color: theme.accent }}
-                                                            >
-                                                                {subtitle}
-                                                            </span>
-                                                        </div>
+                                                )}
+                                                {item.format && (
+                                                    <div className="flex items-center gap-1.5 bg-white/[0.06] text-zinc-300 px-3 py-1 rounded-md text-[11px] font-black border border-white/[0.08]">
+                                                        <Tv className="w-3 h-3" />
+                                                        <span className="tracking-widest">{item.format}</span>
                                                     </div>
-
-                                                    {/* Descripción */}
-                                                    {item.description && (
-                                                        <p
-                                                            className="text-[13px] leading-[1.65] text-zinc-300/85 line-clamp-3 font-normal"
-                                                            style={{ maxWidth: "480px" }}
-                                                            dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.description) }}
-                                                        />
-                                                    )}
-
-                                                    {/* Géneros */}
-                                                    {item.genres && item.genres.length > 0 && (
-                                                        <div className="flex flex-wrap gap-1.5">
-                                                            {item.genres.slice(0, 5).map(g => (
-                                                                <span
-                                                                    key={g}
-                                                                    className="text-[9px] font-black uppercase tracking-widest px-2.5 py-[4px] rounded-full"
-                                                                    style={{
-                                                                        background: "rgba(255,255,255,0.05)",
-                                                                        border: "1px solid rgba(255,255,255,0.09)",
-                                                                        color: "rgba(195,195,208,0.8)",
-                                                                    }}
-                                                                >
-                                                                    {g}
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    )}
-
-                                                    {/* Stats + botón CTA */}
-                                                    <div
-                                                        className="pt-3 flex items-center justify-between gap-4"
-                                                        style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
-                                                    >
-                                                        <div className="flex items-center gap-5 text-[11px] font-mono font-black uppercase tracking-[0.15em]">
-                                                            {item.episodesCount != null && item.episodesCount > 0 && (
-                                                                <span className="flex items-center gap-2 text-zinc-400">
-                                                                    <Layers className="w-3.5 h-3.5" style={{ color: theme.accent }} />
-                                                                    <span className="text-white text-base font-black mr-0.5">{item.episodesCount}</span>
-                                                                    EPISODIOS
-                                                                </span>
-                                                            )}
-                                                            {item.runtime && (
-                                                                <span className="text-zinc-500">
-                                                                    RUN: <strong className="text-zinc-300">{item.runtime}</strong>
-                                                                </span>
-                                                            )}
-                                                        </div>
-
-                                                        <button
-                                                            onClick={e => { e.stopPropagation(); onItemClick(item) }}
-                                                            className="flex items-center gap-3 px-6 py-3 rounded-xl font-black text-[11px] tracking-[0.2em] uppercase transition-[background,color,box-shadow,transform] duration-200 hover:scale-[1.03] active:scale-[0.97] shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-                                                            style={{
-                                                                background: "white",
-                                                                color: "black",
-                                                                boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-                                                            }}
-                                                            onMouseEnter={e => {
-                                                                const btn = e.currentTarget
-                                                                btn.style.background = theme.accent
-                                                                btn.style.color = theme.labelText
-                                                                btn.style.boxShadow = `0 8px 32px ${theme.accent}55`
-                                                            }}
-                                                            onMouseLeave={e => {
-                                                                const btn = e.currentTarget
-                                                                btn.style.background = "white"
-                                                                btn.style.color = "black"
-                                                                btn.style.boxShadow = "0 8px 32px rgba(0,0,0,0.4)"
-                                                            }}
-                                                        >
-                                                            <Play className="w-4 h-4 fill-current shrink-0" />
-                                                            <span>{type === "series" ? "INICIAR REPRODUCCIÓN" : "SINTONIZAR ARCO"}</span>
-                                                            <ChevronRight className="w-4 h-4 ml-1 opacity-50" />
-                                                        </button>
-                                                    </div>
-                                                </motion.div>
+                                                )}
                                             </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </motion.div>
+
+                                            {/* Título + saga */}
+                                            <div>
+                                                <h2
+                                                    className="font-bebas uppercase leading-[0.88] text-white line-clamp-2"
+                                                    style={{
+                                                        fontSize: "clamp(34px, 4vw, 54px)",
+                                                        textShadow: "0 6px 28px rgba(0,0,0,0.65)",
+                                                    }}
+                                                >
+                                                    {item.title}
+                                                </h2>
+                                                <div className="flex items-center gap-2.5 mt-2">
+                                                    <div className="h-[2px] w-10 rounded-full shrink-0" style={{ background: theme.accent }} />
+                                                    <span
+                                                        className="text-[10px] font-black uppercase tracking-[0.35em] font-mono"
+                                                        style={{ color: theme.accent }}
+                                                    >
+                                                        {subtitle}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* Descripción */}
+                                            {item.description && (
+                                                <p
+                                                    className="text-[13px] leading-[1.65] text-zinc-300/85 line-clamp-3 font-normal"
+                                                    style={{ maxWidth: "480px" }}
+                                                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.description) }}
+                                                />
+                                            )}
+
+                                            {/* Géneros */}
+                                            {item.genres && item.genres.length > 0 && (
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {item.genres.slice(0, 5).map(g => (
+                                                        <span
+                                                            key={g}
+                                                            className="text-[9px] font-black uppercase tracking-widest px-2.5 py-[4px] rounded-full"
+                                                            style={{
+                                                                background: "rgba(255,255,255,0.05)",
+                                                                border: "1px solid rgba(255,255,255,0.09)",
+                                                                color: "rgba(195,195,208,0.8)",
+                                                            }}
+                                                        >
+                                                            {g}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Stats + botón CTA */}
+                                            <div
+                                                className="pt-3 flex items-center justify-between gap-4"
+                                                style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
+                                            >
+                                                <div className="flex items-center gap-5 text-[11px] font-mono font-black uppercase tracking-[0.15em]">
+                                                    {item.episodesCount != null && item.episodesCount > 0 && (
+                                                        <span className="flex items-center gap-2 text-zinc-400">
+                                                            <Layers className="w-3.5 h-3.5" style={{ color: theme.accent }} />
+                                                            <span className="text-white text-base font-black mr-0.5">{item.episodesCount}</span>
+                                                            EPISODIOS
+                                                        </span>
+                                                    )}
+                                                    {item.runtime && (
+                                                        <span className="text-zinc-500">
+                                                            RUN: <strong className="text-zinc-300">{item.runtime}</strong>
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <button
+                                                    onClick={e => { e.stopPropagation(); onItemClick(item) }}
+                                                    className="flex items-center gap-3 px-6 py-3 rounded-xl font-black text-[11px] tracking-[0.2em] uppercase transition-[background,color,box-shadow,transform] duration-200 hover:scale-[1.03] active:scale-[0.97] shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                                                    style={{
+                                                        background: "white",
+                                                        color: "black",
+                                                        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+                                                    }}
+                                                    onMouseEnter={e => {
+                                                        const btn = e.currentTarget
+                                                        btn.style.background = theme.accent
+                                                        btn.style.color = theme.labelText
+                                                        btn.style.boxShadow = `0 8px 32px ${theme.accent}55`
+                                                    }}
+                                                    onMouseLeave={e => {
+                                                        const btn = e.currentTarget
+                                                        btn.style.background = "white"
+                                                        btn.style.color = "black"
+                                                        btn.style.boxShadow = "0 8px 32px rgba(0,0,0,0.4)"
+                                                    }}
+                                                >
+                                                    <Play className="w-4 h-4 fill-current shrink-0" />
+                                                    <span>{type === "series" ? "INICIAR REPRODUCCIÓN" : "SINTONIZAR ARCO"}</span>
+                                                    <ChevronRight className="w-4 h-4 ml-1 opacity-50" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         )
                     })}
                 </div>

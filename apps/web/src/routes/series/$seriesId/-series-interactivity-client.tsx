@@ -230,7 +230,7 @@ const EpisodeCard = React.memo(function EpisodeCard({
                     <div className="flex items-start justify-between gap-4">
                         <div className="flex flex-col gap-2">
                             <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-[10px] font-black text-brand-orange tracking-[0.25em] uppercase">
+                                <span className="text-[10px] font-black text-brand-orange tracking-[0.25em] uppercase" style={{ fontFamily: "'Space Mono', monospace" }}>
                                     Episodio {episode.absoluteEpisodeNumber || episode.episodeNumber}
                                 </span>
                                 {episode.episodeMetadata?.isFiller && (
@@ -272,7 +272,7 @@ const EpisodeCard = React.memo(function EpisodeCard({
                             </div>
                             
                             <h4 className={cn(
-                                "text-2xl font-bold tracking-tight leading-tight",
+                                "text-[16px] font-bold leading-snug tracking-wide",
                                 isCurrentlyPlaying ? "text-brand-orange" : "text-white group-hover:text-brand-orange/80 transition-colors"
                             )}>
                                 {baseTitle}
@@ -344,7 +344,8 @@ const EpisodeCard = React.memo(function EpisodeCard({
                             <div className="flex flex-wrap items-center gap-3">
                                 <button 
                                     onClick={handlePlay}
-                                    className="flex items-center gap-2 px-5 py-2.5 bg-brand-orange text-white text-[10px] font-black uppercase tracking-[0.2em] hover:bg-brand-orange/80 transition-colors rounded-md font-bold"
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-brand-orange text-white text-[10px] font-black uppercase tracking-[0.2em] hover:bg-brand-orange/80 transition-colors rounded-md"
+                                    style={{ fontFamily: "'Space Mono', monospace" }}
                                 >
                                     Reproducir
                                 </button>
@@ -356,12 +357,12 @@ const EpisodeCard = React.memo(function EpisodeCard({
                                     <ListPlus className="w-3.5 h-3.5" />
                                 </button>
                                 {resolution && (
-                                    <span className="text-[9px] font-black text-zinc-400 border border-white/10 px-2 py-1 uppercase tracking-widest rounded bg-zinc-900/20">
+                                    <span className="text-[9px] font-black text-zinc-400 border border-white/10 px-2 py-1 uppercase tracking-widest rounded bg-zinc-900/20" style={{ fontFamily: "'Space Mono', monospace" }}>
                                         {resolution}
                                     </span>
                                 )}
                                 {codec && (
-                                    <span className="text-[9px] font-black text-zinc-400 border border-white/5 px-2 py-1 uppercase tracking-widest rounded bg-zinc-900/20">
+                                    <span className="text-[9px] font-black text-zinc-400 border border-white/5 px-2 py-1 uppercase tracking-widest rounded bg-zinc-900/20" style={{ fontFamily: "'Space Mono', monospace" }}>
                                         {codec}
                                     </span>
                                 )}
@@ -515,7 +516,7 @@ const EpisodeCard = React.memo(function EpisodeCard({
                 <div className="flex flex-col gap-1">
                     <div className="flex items-start justify-between gap-2">
                         <h4 className={cn(
-                            "text-base font-bebas leading-tight tracking-widest uppercase line-clamp-1 transition-colors duration-300",
+                            "text-sm font-bold leading-snug tracking-wide line-clamp-1 transition-colors duration-300",
                             isCurrentlyPlaying ? "text-brand-orange" : "text-white group-hover:text-brand-orange"
                         )}>
                             {epTitle}
@@ -580,7 +581,7 @@ const EpisodeCard = React.memo(function EpisodeCard({
                     )}
                 </div>
                 
-                <div className="mt-auto pt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[8px] font-black uppercase tracking-[0.15em] text-zinc-600">
+                <div className="mt-auto pt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[8px] font-black uppercase tracking-[0.15em] text-zinc-600" style={{ fontFamily: "'Space Mono', monospace" }}>
                     {duration && <span className="text-zinc-500">{duration}</span>}
                     {resolution && <span className="text-zinc-500 border-l border-white/10 pl-2.5">{resolution}</span>}
                     {codec && <span className="text-zinc-500 border-l border-white/10 pl-2.5">{codec}</span>}

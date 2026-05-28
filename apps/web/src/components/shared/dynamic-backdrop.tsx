@@ -13,10 +13,13 @@ import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
  * - The 150 ms hover debounce in `useIntelligenceStore` prevents flicker.
  */
 export function DynamicBackdrop() {
+    const isEnabled = localStorage.getItem("kamehouse:dynamic-backdrop-enabled") !== "false"
     const { currentBackdropUrl } = useIntelligenceStore()
     const [displayedUrl, setDisplayedUrl] = React.useState<string | null>(null)
     const [nextUrl, setNextUrl] = React.useState<string | null>(null)
     const [isCrossFading, setIsCrossFading] = React.useState(false)
+
+    if (!isEnabled) return null
 
     const currentLayerRef = React.useRef<HTMLDivElement>(null)
     const nextLayerRef = React.useRef<HTMLDivElement>(null)

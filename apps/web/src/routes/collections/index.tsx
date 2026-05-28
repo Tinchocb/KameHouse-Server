@@ -135,7 +135,7 @@ function CollectionsPage() {
 
             {/* Cassette Shelf */}
             <div className="relative w-full overflow-hidden min-h-[450px] flex items-center justify-center">
-                {isLoading ? (
+                {isLoading && collections.length === 0 ? (
                     <ShelfSkeleton />
                 ) : enrichedCollections.length === 0 ? (
                     <div className="px-16 py-24 w-full">
@@ -225,10 +225,12 @@ const CollectionCassette = memo(function CollectionCassette({
         >
             {/* 3D wrapper */}
             <div
-                className="relative transition-transform duration-500 ease-out [transform-style:preserve-3d] [transform:rotateY(35deg)] group-hover/item:[transform:rotateY(0deg)_translateZ(80px)_translateY(-30px)] group-hover/item:duration-400"
+                className="relative [transform-style:preserve-3d] [transform:rotateY(35deg)] group-hover/item:[transform:rotateY(0deg)_translateZ(80px)_translateY(-30px)]"
                 style={{
                     width: CASSETTE_W + SPINE_W,
                     height: CASSETTE_H,
+                    willChange: "transform",
+                    transition: "transform 600ms cubic-bezier(0.16, 1, 0.3, 1)",
                 }}
             >
                 {/* Spine */}
@@ -271,14 +273,24 @@ const CollectionCassette = memo(function CollectionCassette({
                     <DeferredImage
                         src={coll.posterPath || ""}
                         alt={coll.name}
-                        className="w-full h-full object-cover grayscale group-hover/item:grayscale-0 transition-[filter] duration-500"
+                        className="w-full h-full object-cover grayscale group-hover/item:grayscale-0"
+                        style={{
+                            transition: "filter 600ms cubic-bezier(0.16, 1, 0.3, 1)",
+                            willChange: "filter",
+                        }}
                     />
 
                     {/* Dark gradient base */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
 
                     {/* Hover info overlay */}
-                    <div className="absolute inset-0 flex flex-col justify-end p-5 opacity-0 group-hover/item:opacity-100 transition-opacity duration-400 bg-black/95">
+                    <div 
+                        className="absolute inset-0 flex flex-col justify-end p-5 opacity-0 group-hover/item:opacity-100 bg-black/95"
+                        style={{
+                            transition: "opacity 500ms cubic-bezier(0.16, 1, 0.3, 1)",
+                            willChange: "opacity",
+                        }}
+                    >
                         
                         {/* Sello Retro SAGA COMPLETADA */}
                         {isFullyWatched && (
@@ -339,7 +351,12 @@ const CollectionCassette = memo(function CollectionCassette({
                     </div>
 
                     {/* Always visible bottom title strip */}
-                    <div className="absolute bottom-0 left-0 right-0 px-3 py-3 group-hover/item:opacity-0 transition-opacity duration-300">
+                    <div 
+                        className="absolute bottom-0 left-0 right-0 px-3 py-3 group-hover/item:opacity-0"
+                        style={{
+                            transition: "opacity 400ms cubic-bezier(0.16, 1, 0.3, 1)",
+                        }}
+                    >
                         <p className="text-[11px] font-black text-white uppercase tracking-wider line-clamp-1">
                             {coll.name}
                         </p>
@@ -348,7 +365,10 @@ const CollectionCassette = memo(function CollectionCassette({
 
                 {/* Drop shadow beneath cassette */}
                 <div
-                    className="absolute -bottom-6 left-4 right-4 h-6 opacity-0 group-hover/item:opacity-100 transition-opacity duration-500 blur-xl bg-white/10"
+                    className="absolute -bottom-6 left-4 right-4 h-6 opacity-0 group-hover/item:opacity-100 blur-xl bg-white/10"
+                    style={{
+                        transition: "opacity 600ms cubic-bezier(0.16, 1, 0.3, 1)",
+                    }}
                 />
             </div>
         </div>

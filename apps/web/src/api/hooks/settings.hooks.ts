@@ -1,7 +1,7 @@
 import { useServerQuery, useServerMutation } from "@/api/client/requests"
 import { Models_Settings, Status } from "@/api/generated/types"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
-import { SaveSettings_Variables, SaveAutoDownloaderSettings_Variables, SaveMediaPlayerSettings_Variables } from "@/api/generated/endpoint.types"
+import { SaveSettings_Variables, SaveAutoDownloaderSettings_Variables, SaveMediaPlayerSettings_Variables, GettingStarted_Variables } from "@/api/generated/endpoint.types"
 import { useQueryClient } from "@tanstack/react-query"
 
 export function useGetStatus() {
@@ -57,4 +57,18 @@ export function useSaveMediaPlayerSettings() {
         },
     })
 }
+
+export function useGettingStarted() {
+    const queryClient = useQueryClient()
+    return useServerMutation<Status, GettingStarted_Variables>({
+        endpoint: API_ENDPOINTS.SETTINGS.GettingStarted.endpoint,
+        method: API_ENDPOINTS.SETTINGS.GettingStarted.methods[0],
+        mutationKey: [API_ENDPOINTS.SETTINGS.GettingStarted.key],
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.STATUS.GetStatus.key] })
+            await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.SETTINGS.GetSettings.key] })
+        },
+    })
+}
+
 

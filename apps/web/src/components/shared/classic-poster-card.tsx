@@ -1,8 +1,7 @@
 import { memo } from "react"
-import { motion } from "framer-motion"
 import { Anime_Entry } from "@/api/generated/types"
 import { DeferredImage } from "@/components/shared/deferred-image"
-import { getHighResImage } from "@/lib/helpers/images"
+import { getHighResImage, getMediumResImage } from "@/lib/helpers/images"
 import { cn } from "@/components/ui/core/styling"
 
 interface ClassicPosterCardProps {
@@ -36,7 +35,7 @@ export const ClassicPosterCard = memo(function ClassicPosterCard({
             <div className="relative aspect-[2/3] w-full overflow-hidden border border-white/10 bg-zinc-950 shadow-2xl rounded-2xl">
                 {/* Poster Image */}
                 <DeferredImage
-                    src={getHighResImage(posterUrlOverride || media.posterImage || "")}
+                    src={getMediumResImage(posterUrlOverride || media.posterImage || "")}
                     alt={title}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 transform-gpu will-change-transform"
                     showSkeleton={false}

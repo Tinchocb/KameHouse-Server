@@ -84,7 +84,7 @@ function HomeClient() {
     // ── Render Helpers ─────────────────────────────────────────────────────────
 
     if (error && !collection) return <ErrorBanner message="Hubo un problema al cargar tu biblioteca." />
-    if (isLoading) return <HomeSkeleton />
+    if (isLoading && !collection) return <HomeSkeleton />
     if (allEntries.length === 0) return <EmptyState />
 
     return (

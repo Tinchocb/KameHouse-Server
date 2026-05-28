@@ -15,8 +15,10 @@ import { WebsocketProvider } from "@/app/websocket-provider"
 import { FaBars } from "react-icons/fa"
 import { useAppStore } from "@/lib/store"
 import { DynamicBackdrop } from "@/components/shared/dynamic-backdrop"
-
+import { PerformanceMonitor } from "@/components/shared/performance-monitor"
 import { VideoPlayer } from "@/components/video/player"
+import { useGetStatus } from "@/api/hooks/settings.hooks"
+import { GettingStarted } from "@/components/shared/getting-started"
 
 function RootComponent() {
     const routerState = useRouterState()
@@ -26,9 +28,24 @@ function RootComponent() {
     const setCurrentQueueIndex = useAppStore(state => state.setCurrentQueueIndex)
     const clearQueue = useAppStore(state => state.clearQueue)
 
+    const { data: status, isLoading } = useGetStatus()
+
+    if (isLoading || !status) {
+        return <LoadingOverlayWithLogo />
+    }
+
+    if (!status.settings?.id) {
+        return (
+            <AppLayout>
+                <GettingStarted status={status} />
+            </AppLayout>
+        )
+    }
+
     return (
         <AppLayout>
             <DynamicBackdrop />
+            <PerformanceMonitor />
             <WebsocketProvider>
                 <AppSidebar />
                 <CommandPalette />
@@ -41,11 +58,9 @@ function RootComponent() {
                         <FaBars className="w-5 h-5" />
                     </button>
 
-                    <AnimatePresence mode="wait">
-                        <PageTransition transitionKey={routerState.location.pathname} className="flex-1 w-full">
-                            <Outlet />
-                        </PageTransition>
-                    </AnimatePresence>
+                    <PageTransition transitionKey={routerState.location.pathname} className="flex-1 w-full">
+                        <Outlet />
+                    </PageTransition>
                 </AppLayoutContent>
                 <AppBottomNav />
             </WebsocketProvider>

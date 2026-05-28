@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"kamehouse/internal/database/models"
 
 	"gorm.io/gorm/clause"
@@ -11,7 +12,8 @@ import (
 // SQLite reads during scan-time enrichment loops.
 // Returns nil if no matching media is found.
 func GetLibraryMediaByTmdbId(d *Database, tmdbID int) (*models.LibraryMedia, error) {
-	if v, ok := d.LibraryMediaCache.Load(tmdbID); ok {
+	cacheKey := fmt.Sprintf("id_%d", tmdbID)
+	if v, ok := d.LibraryMediaCache.Load(cacheKey); ok {
 		return v.(*models.LibraryMedia), nil
 	}
 	var media models.LibraryMedia
@@ -19,17 +21,22 @@ func GetLibraryMediaByTmdbId(d *Database, tmdbID int) (*models.LibraryMedia, err
 	if err != nil {
 		return nil, err
 	}
-	d.LibraryMediaCache.Store(tmdbID, &media)
+	d.LibraryMediaCache.Store(cacheKey, &media)
 	return &media, nil
 }
 
 // GetLibraryMediaByTmdbIdAndType retrieves a LibraryMedia by its TMDB ID and Type.
 func GetLibraryMediaByTmdbIdAndType(d *Database, tmdbID int, mediaType string) (*models.LibraryMedia, error) {
+	cacheKey := fmt.Sprintf("id_type_%d_%s", tmdbID, mediaType)
+	if v, ok := d.LibraryMediaCache.Load(cacheKey); ok {
+		return v.(*models.LibraryMedia), nil
+	}
 	var media models.LibraryMedia
 	err := d.Gorm().Where("tmdb_id = ? AND type = ?", tmdbID, mediaType).First(&media).Error
 	if err != nil {
 		return nil, err
 	}
+	d.LibraryMediaCache.Store(cacheKey, &media)
 	return &media, nil
 }
 
@@ -66,7 +73,8 @@ func InsertLibraryMedia(d *Database, media *models.LibraryMedia) (*models.Librar
 	}
 	// Invalidate cache entry so the next read fetches the authoritative DB record.
 	if media.TmdbID != 0 {
-		d.LibraryMediaCache.Delete(media.TmdbID)
+		d.LibraryMediaCache.Delete(fmt.Sprintf("id_%d", media.TmdbID))
+		d.LibraryMediaCache.Delete(fmt.Sprintf("id_type_%d_%s", media.TmdbID, media.Type))
 	}
 	return media, nil
 }
@@ -137,7 +145,8 @@ func UpsertLibraryMediaBatch(d *Database, media []*models.LibraryMedia, batchSiz
 		// Evict stale cache entries for every record that was just written.
 		for _, m := range media {
 			if m.TmdbID != 0 {
-				d.LibraryMediaCache.Delete(m.TmdbID)
+				d.LibraryMediaCache.Delete(fmt.Sprintf("id_%d", m.TmdbID))
+				d.LibraryMediaCache.Delete(fmt.Sprintf("id_type_%d_%s", m.TmdbID, m.Type))
 			}
 		}
 	}

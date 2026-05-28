@@ -182,7 +182,7 @@ function SettingsPage() {
         }
     }
 
-    if (isLoading) return <LoadingOverlayWithLogo />
+    if (isLoading && !serverSettings) return <LoadingOverlayWithLogo />
 
     return (
         <div className="flex h-full w-full bg-gradient-to-br from-[#09090b] via-[#121215] to-[#09090b] text-white selection:bg-primary/20 overflow-hidden relative">
