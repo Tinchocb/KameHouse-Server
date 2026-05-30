@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/shared/empty-state"
 import { VideoPlayer } from "@/components/video/player"
 import { RelationsTab, CharactersTab, TechnicalMetadataTab } from "./-series-bento-tabs"
 import { resolveSeriesSagas } from "@/lib/config/dragonball.config"
+import { startViewTransition } from "@/lib/helpers/transitions"
 
 // Modular Components
 import { HeroSection } from "./-components/series-hero"
@@ -59,6 +60,14 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
             navigate({ to: "/movies/$movieId", params: { movieId: String(seriesId) }, replace: true })
         }
     }, [isMovie, seriesId, navigate])
+
+    React.useEffect(() => {
+        if (entry && !isMovie) {
+            const audio = new Audio("/sounds/entrar detalle serie-peliculas.wav")
+            audio.volume = 0.4
+            audio.play().catch(() => {})
+        }
+    }, [entry?.media?.id, isMovie])
 
     const [playTarget, setPlayTarget] = useState<{
         path: string
@@ -129,9 +138,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         if (!entry) return
         updateProgress({
             mediaId: Number(seriesId),
-            episodeNumber: newProgress,
-            totalEpisodes: entry.media?.totalEpisodes || computedEpisodes.length || 0,
-            malId: entry.media?.idMal || undefined,
+            progress: newProgress,
         }, {
             onSuccess: () => {
                 refetchContinuity()
@@ -154,12 +161,14 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         const isMp4 = localFile.path.toLowerCase().endsWith(".mp4")
         const targetType = isMp4 ? "direct" : "transcode"
         const epNum = episode.absoluteEpisodeNumber || episode.episodeNumber
-        setPlayTarget({
-            path: localFile.path,
-            streamType: targetType as Mediastream_StreamType,
-            episodeLabel: episode.episodeTitle || episode.displayTitle || `Episodio ${epNum}`,
-            episodeNumber: epNum,
-            malId: entry?.media?.idMal ?? null,
+        startViewTransition(() => {
+            setPlayTarget({
+                path: localFile.path,
+                streamType: targetType as Mediastream_StreamType,
+                episodeLabel: episode.episodeTitle || episode.displayTitle || `Episodio ${epNum}`,
+                episodeNumber: epNum,
+                malId: entry?.media?.idMal ?? null,
+            })
         })
     }, [entry?.media?.idMal])
 
@@ -182,12 +191,14 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
 
         const isMp4 = localFile.path.toLowerCase().endsWith(".mp4")
         const targetType = isMp4 ? "direct" : "transcode"
-        setPlayTarget({
-            path: localFile.path,
-            streamType: targetType as Mediastream_StreamType,
-            episodeLabel: localFile.name,
-            episodeNumber: resolvedEpNum,
-            malId: entry?.media?.idMal ?? null,
+        startViewTransition(() => {
+            setPlayTarget({
+                path: localFile.path,
+                streamType: targetType as Mediastream_StreamType,
+                episodeLabel: localFile.name,
+                episodeNumber: resolvedEpNum,
+                malId: entry?.media?.idMal ?? null,
+            })
         })
     }, [computedEpisodes, entry?.media?.idMal])
     
@@ -245,7 +256,9 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         const currentEpIdx = computedEpisodes.findIndex(ep => (ep.absoluteEpisodeNumber || ep.episodeNumber) === playTarget.episodeNumber)
         if (currentEpIdx === -1 || currentEpIdx >= computedEpisodes.length - 1) {
             toast.info("Has llegado al final de la lista de episodios.")
-            setPlayTarget(null)
+            startViewTransition(() => {
+                setPlayTarget(null)
+            })
             return
         }
         const nextEp = computedEpisodes[currentEpIdx + 1]
@@ -260,7 +273,9 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         })
         if (!lf) {
             toast.error("El siguiente episodio no está disponible localmente.")
-            setPlayTarget(null)
+            startViewTransition(() => {
+                setPlayTarget(null)
+            })
             return
         }
         handlePlayEpisode(lf, nextEp)
@@ -542,7 +557,9 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                     onNextEpisode={handleNextEpisode}
                     hasNextEpisode={hasNextEpisode}
                     onClose={() => {
-                        setPlayTarget(null)
+                        startViewTransition(() => {
+                            setPlayTarget(null)
+                        })
                         refetchContinuity()
                         queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, String(seriesId)] })
                     }}

@@ -1,6 +1,6 @@
 import React, { useMemo } from "react"
 import { FaPlay, FaStar } from "react-icons/fa"
-import { ListPlus } from "lucide-react"
+import { ListPlus, Settings2 } from "lucide-react"
 import { useAppStore } from "@/lib/store"
 import { toast } from "sonner"
 import { Anime_Episode, Anime_LocalFile, Continuity_WatchHistoryItem } from "@/api/generated/types"
@@ -9,6 +9,7 @@ import { cn } from "@/components/ui/core/styling"
 import { sanitizeHtml } from "@/lib/helpers/sanitizer"
 import { motion } from "framer-motion"
 import { getDragonBallSpanishTitle } from "@/lib/config/dragonball.config"
+import { ManualMatchModal } from "@/components/shared/manual-match-modal"
 
 // ─── MediaActionButtons ───────────────────────────────────────────────────────
 
@@ -20,9 +21,13 @@ interface MediaActionButtonsProps {
 }
 
 const MediaActionButtons = React.memo(function MediaActionButtons({
+    seriesId,
+    directoryPath,
     onPlay,
     continuityItem,
 }: MediaActionButtonsProps) {
+    const [isMatchModalOpen, setIsMatchModalOpen] = React.useState(false)
+
     return (
         <div className="flex flex-wrap items-center gap-4 mt-8">
             {/* Play Button - Cinematic Glass */}
@@ -30,7 +35,7 @@ const MediaActionButtons = React.memo(function MediaActionButtons({
                 className={cn(
                     "group/play relative flex items-center gap-4 px-10 py-4 bg-brand-orange text-white transition-all duration-300",
                     "font-black text-[11px] uppercase tracking-[0.3em] rounded-xl overflow-hidden shadow-2xl shadow-brand-orange/20",
-                    "hover:bg-brand-orange/90 hover:scale-105 active:scale-95"
+                    "hover:bg-brand-orange/90 hover:scale-105 active:scale-95 cursor-pointer"
                 )}
                 onClick={onPlay}
             >
@@ -44,6 +49,29 @@ const MediaActionButtons = React.memo(function MediaActionButtons({
                     )}
                 </span>
             </button>
+
+            {/* Fix Match Button */}
+            {directoryPath && (
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        setIsMatchModalOpen(true)
+                    }}
+                    className={cn(
+                        "flex items-center justify-center p-4 rounded-xl border bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-[#ff6b00]/10 hover:border-[#ff6b00]/30 hover:text-[#ff6b00] transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer"
+                    )}
+                    title="Corregir Vinculación (Fix Match)"
+                >
+                    <Settings2 className="w-4 h-4" />
+                </button>
+            )}
+
+            <ManualMatchModal
+                isOpen={isMatchModalOpen}
+                onClose={() => setIsMatchModalOpen(false)}
+                directoryPath={directoryPath}
+                currentMediaId={seriesId ? Number(seriesId) : undefined}
+            />
         </div>
     )
 })
@@ -162,6 +190,12 @@ const EpisodeCard = React.memo(function EpisodeCard({
         if (onToggleWatched && episode) onToggleWatched(episode)
     }
 
+    const playHoverSound = () => {
+        const audio = new Audio("/sounds/seleccion de hover.wav")
+        audio.volume = 0.15
+        audio.play().catch(() => {})
+    }
+
     // Dynamic gradient fallback for thumb
     const baseColor = `hsl(${((episode?.absoluteEpisodeNumber || episode?.episodeNumber || 0) * 137.5) % 360}, 50%, 20%)`
 
@@ -171,6 +205,7 @@ const EpisodeCard = React.memo(function EpisodeCard({
         return (
             <div
                 onClick={hasLocalFile ? handlePlay : undefined}
+                onMouseEnter={playHoverSound}
                 className={cn(
                     "group relative flex flex-col md:flex-row gap-8 transition-all duration-500 py-6 border-b border-white/[0.03] last:border-0",
                     isCurrentlyPlaying ? "bg-white/[0.03] -mx-4 px-4 rounded-xl shadow-2xl" : "hover:bg-white/[0.01]",
@@ -280,117 +315,131 @@ const EpisodeCard = React.memo(function EpisodeCard({
                         </div>
 
                         {hasLocalFile && (
-                            <div className="flex items-center gap-1.5 shrink-0">
-                                {isWatched ? (
+                        <div className="flex items-center gap-2 shrink-0">
+                            {isWatched ? (
+                                <button 
+                                    onClick={handleToggleWatched}
+                                    className="p-2 text-brand-orange hover:text-red-400 hover:scale-110 active:scale-95 transition-all duration-300"
+                                    title="Marcar como no visto"
+                                >
+                                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="10" />
+                                    </svg>
+                                </button>
+                            ) : (
+                                <>
+                                    {/* Mark as watched (single) */}
                                     <button 
                                         onClick={handleToggleWatched}
-                                        className="p-2 text-brand-orange hover:text-red-400 transition-colors"
-                                        title="Marcar como no visto"
+                                        className="p-2 text-zinc-500 hover:text-white hover:scale-110 active:scale-95 transition-all duration-300"
+                                        title="Marcar como visto"
                                     >
-                                        <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                                        <svg className="w-5 h-5 fill-none stroke-current" strokeWidth="2" viewBox="0 0 24 24">
                                             <circle cx="12" cy="12" r="10" />
                                         </svg>
                                     </button>
-                                ) : (
-                                    <>
-                                        {/* Mark as watched (single) */}
+                                    
+                                    {/* Mark up to here (bulk) */}
+                                    {onUpdateProgress && (
                                         <button 
-                                            onClick={handleToggleWatched}
-                                            className="p-2 text-zinc-600 hover:text-white transition-colors"
-                                            title="Marcar como visto"
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                onUpdateProgress(episode.absoluteEpisodeNumber || episode.episodeNumber)
+                                            }}
+                                            className="p-2 text-zinc-500 hover:text-brand-orange hover:scale-110 active:scale-95 transition-all duration-300"
+                                            title="Marcar anteriores como vistos"
                                         >
                                             <svg className="w-5 h-5 fill-none stroke-current" strokeWidth="2" viewBox="0 0 24 24">
-                                                <circle cx="12" cy="12" r="10" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5M19.5 5.25l-7.5 7.5-3-3" />
                                             </svg>
                                         </button>
-                                        
-                                        {/* Mark up to here (bulk) */}
-                                        {onUpdateProgress && (
-                                            <button 
-                                                onClick={(e) => {
-                                                    e.stopPropagation()
-                                                    onUpdateProgress(episode.absoluteEpisodeNumber || episode.episodeNumber)
-                                                }}
-                                                className="p-2 text-zinc-600 hover:text-brand-orange transition-colors"
-                                                title="Marcar anteriores como vistos"
-                                            >
-                                                <svg className="w-5 h-5 fill-none stroke-current" strokeWidth="2" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5M19.5 5.25l-7.5 7.5-3-3" />
-                                                </svg>
-                                            </button>
-                                        )}
-                                    </>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                <div className="mt-4 flex-1">
+                    {cleanSynopsis ? (
+                        <p 
+                            className="text-[14px] text-zinc-400 leading-relaxed line-clamp-3 font-normal antialiased tracking-wide"
+                            dangerouslySetInnerHTML={{ __html: cleanSynopsis }}
+                        />
+                    ) : (
+                        <p className="text-[14px] text-white/30 italic">
+                            Sinopsis no disponible para este episodio.
+                        </p>
+                    )}
+                </div>
+
+                {/* Technical Badges */}
+                <div className="mt-6 flex flex-wrap items-center gap-4">
+                    {hasLocalFile ? (
+                        <div className="flex flex-wrap items-center gap-3">
+                            <button 
+                                onClick={handlePlay}
+                                className={cn(
+                                    "group/btn relative flex items-center gap-2 px-5 py-2.5 bg-brand-orange text-white",
+                                    "text-[10px] font-black uppercase tracking-[0.2em] rounded-xl overflow-hidden transition-all duration-300",
+                                    "hover:bg-brand-orange/90 hover:scale-105 active:scale-95 shadow-lg shadow-brand-orange/20"
                                 )}
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="mt-4 flex-1">
-                        {cleanSynopsis ? (
-                            <p 
-                                className="text-[14px] text-white/70 leading-relaxed line-clamp-3 font-medium antialiased tracking-wide"
-                                dangerouslySetInnerHTML={{ __html: cleanSynopsis }}
-                            />
-                        ) : (
-                            <p className="text-[14px] text-white/30 italic">
-                                Sinopsis no disponible para este episodio.
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Technical Badges */}
-                    <div className="mt-6 flex flex-wrap items-center gap-4">
-                        {hasLocalFile ? (
-                            <div className="flex flex-wrap items-center gap-3">
-                                <button 
-                                    onClick={handlePlay}
-                                    className="flex items-center gap-2 px-5 py-2.5 bg-brand-orange text-white text-[10px] font-black uppercase tracking-[0.2em] hover:bg-brand-orange/80 transition-colors rounded-md"
+                                style={{ fontFamily: "'Space Mono', monospace" }}
+                            >
+                                <FaPlay className="w-2.5 h-2.5 relative z-10 transition-transform group-hover/btn:translate-x-0.5" />
+                                <span className="relative z-10">Reproducir</span>
+                            </button>
+                            <button 
+                                onClick={handleAddToQueue}
+                                className={cn(
+                                    "flex items-center justify-center p-2.5 bg-white/5 border border-white/10 text-zinc-400 rounded-xl transition-all duration-300",
+                                    "hover:border-brand-orange hover:bg-brand-orange/10 hover:text-brand-orange hover:scale-105 active:scale-95"
+                                )}
+                                title="Agregar a la cola"
+                            >
+                                <ListPlus className="w-4 h-4" />
+                            </button>
+                            {resolution && (
+                                <span 
+                                    className="px-3 py-2 text-[9px] font-bold text-zinc-400 bg-white/[0.03] border border-white/[0.08] tracking-widest rounded-xl backdrop-blur-sm transition-colors hover:border-white/20 select-none" 
                                     style={{ fontFamily: "'Space Mono', monospace" }}
                                 >
-                                    Reproducir
-                                </button>
-                                <button 
-                                    onClick={handleAddToQueue}
-                                    className="flex items-center justify-center p-2.5 bg-white/5 border border-white/10 hover:border-brand-orange hover:bg-brand-orange/10 text-zinc-400 hover:text-brand-orange transition-colors rounded-md"
-                                    title="Agregar a la cola"
+                                    {resolution}
+                                </span>
+                            )}
+                            {codec && (
+                                <span 
+                                    className="px-3 py-2 text-[9px] font-bold text-zinc-400 bg-white/[0.03] border border-white/[0.08] tracking-widest rounded-xl backdrop-blur-sm transition-colors hover:border-white/20 select-none" 
+                                    style={{ fontFamily: "'Space Mono', monospace" }}
                                 >
-                                    <ListPlus className="w-3.5 h-3.5" />
-                                </button>
-                                {resolution && (
-                                    <span className="text-[9px] font-black text-zinc-400 border border-white/10 px-2 py-1 uppercase tracking-widest rounded bg-zinc-900/20" style={{ fontFamily: "'Space Mono', monospace" }}>
-                                        {resolution}
-                                    </span>
-                                )}
-                                {codec && (
-                                    <span className="text-[9px] font-black text-zinc-400 border border-white/5 px-2 py-1 uppercase tracking-widest rounded bg-zinc-900/20" style={{ fontFamily: "'Space Mono', monospace" }}>
-                                        {codec}
-                                    </span>
-                                )}
-                                {audioLangs.length > 1 ? (
-                                    <span className="px-2.5 py-0.5 bg-gradient-to-r from-brand-orange/20 to-amber-500/20 text-[8px] font-black text-brand-orange tracking-wider rounded border border-brand-orange/30 shadow-[0_0_8px_rgba(249,115,22,0.1)]">
-                                        DUAL AUDIO
-                                    </span>
-                                ) : (
-                                    audioLangs.map(lang => (
+                                    {codec}
+                                </span>
+                            )}
+                            {audioLangs.length > 1 ? (
+                                <span className="px-3 py-2 bg-gradient-to-r from-brand-orange/10 to-amber-500/10 text-[9px] font-bold text-brand-orange tracking-widest rounded-xl border border-brand-orange/20 shadow-[0_0_12px_rgba(249,115,22,0.05)] select-none">
+                                    DUAL AUDIO
+                                </span>
+                            ) : (
+                                audioLangs.map(lang => (
+                                    <span 
+                                        key={lang}
+                                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-white/[0.03] border border-white/[0.08] text-[9px] font-bold text-zinc-400 tracking-widest rounded-xl select-none"
+                                    >
                                         <span 
-                                            key={lang}
-                                            className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-zinc-900/80 border border-white/10 text-[8px] font-black text-zinc-300 rounded"
-                                        >
-                                            <span 
-                                                className={cn(
-                                                    "w-1.5 h-1.5 rounded-full shrink-0",
-                                                    lang === "JPN" ? "bg-red-500" :
-                                                    lang === "ESP" ? "bg-yellow-500" :
-                                                    lang === "ENG" ? "bg-blue-500" :
-                                                    "bg-zinc-500"
-                                                )}
-                                            />
-                                            {lang}
-                                        </span>
-                                    ))
-                                )}
-                            </div>
-                        ) : (
+                                            className={cn(
+                                                "w-1.5 h-1.5 rounded-full shrink-0",
+                                                lang === "JPN" ? "bg-red-500" :
+                                                lang === "ESP" ? "bg-yellow-500" :
+                                                lang === "ENG" ? "bg-blue-500" :
+                                                "bg-zinc-500"
+                                            )}
+                                        />
+                                        {lang}
+                                    </span>
+                                ))
+                            )}
+                        </div>
+                    ) : (
                             <span className="text-[10px] font-black text-red-500/50 uppercase tracking-[0.3em]">
                                 Archivo no disponible
                             </span>
@@ -404,6 +453,7 @@ const EpisodeCard = React.memo(function EpisodeCard({
     return (
         <div
             onClick={handlePlay}
+            onMouseEnter={playHoverSound}
             className={cn(
                 "group relative flex flex-col transition-all duration-500 overflow-hidden rounded-xl border border-white/[0.03] transform-gpu will-change-transform",
                 isCurrentlyPlaying 

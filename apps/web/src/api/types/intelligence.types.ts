@@ -31,7 +31,7 @@ export interface EpisodeIntelligence {
 /** 
  * An entry enriched with optional intelligence data.
  */
-export interface IntelligentEntry extends Anime_LibraryCollectionEntry {
+export interface IntelligentEntry extends Omit<Anime_LibraryCollectionEntry, "episode" | "dominantVibe" | "vibes" | "tags"> {
     /** Aggregated or specific intelligence for the item */
     intelligence?: EpisodeIntelligence
     /** AI-derived tags (Character, Technique, Lore) */

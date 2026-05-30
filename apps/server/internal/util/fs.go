@@ -31,14 +31,18 @@ func SafeJoinPath(baseDir, filename string) (string, error) {
 
 func DirSize(path string) (uint64, error) {
 	var size int64
-	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(path, func(_ string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() {
+		if !d.IsDir() {
+			info, err := d.Info()
+			if err != nil {
+				return err
+			}
 			size += info.Size()
 		}
-		return err
+		return nil
 	})
 	return uint64(size), err
 }

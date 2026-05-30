@@ -44,7 +44,12 @@ endif
 # Primary Targets
 # ======================================================================
 
-.PHONY: build build-server build-web dev dev-web vet test race lint clean tidy help
+.PHONY: build build-server build-web dev dev-web vet test race lint clean tidy help codegen
+
+## codegen: Run Go server and frontend TS codegen
+codegen:
+	@echo "🔨 Running codegen..."
+	cd codegen && $(GO) run main.go
 
 ## build: Full production build (web frontend + Go server)
 build: build-web build-server

@@ -37,6 +37,9 @@ export const SeriesCard = memo(function SeriesCard({
                     onNavigate(item?.id?.toString() || "");
                 } else {
                     onSelect(item.id);
+                    const audio = new Audio("/sounds/serie.wav")
+                    audio.volume = 0.4
+                    audio.play().catch(() => {})
                 }
             }}
             onDoubleClick={() => {
@@ -53,7 +56,7 @@ export const SeriesCard = memo(function SeriesCard({
                 <DeferredImage
                     src={item.img || item.poster}
                     alt={item.title}
-                    className={`absolute inset-0 w-full h-full object-cover transition-transform duration-[1200ms] ease-out transform-gpu ${isSelected
+                    className={`absolute inset-0 w-full h-full object-cover transition-transform duration-1000 ease-out transform-gpu ${isSelected
                         ? 'scale-[1.06]'
                         : 'scale-100'
                         }`}
@@ -62,7 +65,7 @@ export const SeriesCard = memo(function SeriesCard({
                 {/* Highly GPU-accelerated backdrop mask overlay to replace filter: brightness */}
                 <div
                     className={cn(
-                        "absolute inset-0 bg-black transition-opacity duration-[1200ms] ease-out pointer-events-none z-[1]",
+                        "absolute inset-0 bg-black transition-opacity duration-1000 ease-out pointer-events-none z-[1]",
                         isSelected ? "opacity-20" : "opacity-75 group-hover:opacity-65"
                     )}
                 />
@@ -75,26 +78,6 @@ export const SeriesCard = memo(function SeriesCard({
                         }`}
                 />
 
-                {/* Collapsed title */}
-                <div
-                    className={cn(
-                        "absolute inset-0 flex items-center justify-center z-10 px-2 transition-all duration-500 ease-out transform-gpu will-change-[opacity,transform]",
-                        isSelected 
-                            ? "opacity-0 pointer-events-none scale-90 translate-y-4" 
-                            : "opacity-100 scale-100 translate-y-0"
-                    )}
-                >
-                    <span
-                        className="text-xl md:text-2xl font-black tracking-[0.25em] text-white/80 uppercase drop-shadow-[0_4px_10px_rgba(0,0,0,0.9)] whitespace-nowrap select-none transition-colors group-hover/card:text-white"
-                        style={{
-                            writingMode: 'vertical-rl',
-                            textOrientation: 'mixed',
-                            transform: 'rotate(180deg)',
-                        }}
-                    >
-                        {item.title}
-                    </span>
-                </div>
 
                 {/* Expanded details panel (Cinematic slide up) */}
                 <div
@@ -332,11 +315,10 @@ export const SeriesCard = memo(function SeriesCard({
                         <div className="absolute w-2.5 h-[1.5px] bg-zinc-950 rotate-[35deg]" />
                     </div>
 
-                    {/* Etiqueta adhesiva del casete (Sticker) */}
                     <div
                         className={cn(
                             "h-[114px] relative flex flex-col rounded shadow-[3px_5px_12px_rgba(0,0,0,0.65),inset_0_1px_1.5px_rgba(255,255,255,0.3)] overflow-hidden transition-all duration-400 ease-out shrink-0",
-                            "w-[calc(100%-10px)] mx-auto group-hover/card:brightness-110 group-hover/card:scale-[1.02] bg-[#fbf9f1] border border-black/10"
+                            "w-[calc(100%-10px)] mx-auto bg-[#fbf9f1] border border-black/10"
                         )}
                     >
                         {/* Textura de papel mate granulado sobre el color crema */}

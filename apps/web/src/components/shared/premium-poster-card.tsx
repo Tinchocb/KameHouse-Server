@@ -30,11 +30,18 @@ export const PremiumPosterCard = React.memo(({
         ? (rating > 10 ? rating / 10 : rating).toFixed(1) 
         : null
 
+    const playHoverSound = () => {
+        const audio = new Audio("/sounds/seleccion de hover.wav")
+        audio.volume = 0.15
+        audio.play().catch(() => {})
+    }
+
     return (
         <div 
             onClick={onClick}
             role={onClick ? "button" : undefined}
             tabIndex={onClick ? 0 : undefined}
+            onMouseEnter={playHoverSound}
             onKeyDown={(e) => {
                 if (onClick && (e.key === "Enter" || e.key === " ")) {
                     e.preventDefault();

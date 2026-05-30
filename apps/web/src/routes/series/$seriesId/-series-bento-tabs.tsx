@@ -33,20 +33,20 @@ export const RelationsTab = React.memo(function RelationsTab({ media }: { media?
                 <div 
                     key={idx} 
                     onClick={() => {
-                        if (relation.node?.id) {
+                        if (relation.media?.id) {
                             navigate({
                                 to: "/series/$seriesId",
-                                params: { seriesId: String(relation.node.id) }
+                                params: { seriesId: String(relation.media.id) }
                             })
                         }
                     }}
                     className="flex gap-4 p-4 bg-zinc-950/20 backdrop-blur-md border border-white/5 hover:border-brand-orange/30 hover:bg-zinc-900/40 rounded-xl hover:shadow-[0_0_25px_rgba(255,110,58,0.12)] transition-all duration-500 group cursor-pointer"
                 >
                     <div className="w-16 h-24 shrink-0 bg-zinc-950 overflow-hidden relative rounded-lg border border-white/10 group-hover:border-brand-orange/30 transition-colors duration-500">
-                        {relation.node?.posterImage && (
+                        {(relation.media?.coverImage?.large || relation.media?.coverImage?.medium) && (
                             <DeferredImage
-                                src={relation.node.posterImage}
-                                alt={relation.node.titleRomaji || "Relacion"}
+                                src={relation.media.coverImage?.large || relation.media.coverImage?.medium || ""}
+                                alt={relation.media.title?.romaji || "Relacion"}
                                 showSkeleton={false}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                             />
@@ -54,8 +54,8 @@ export const RelationsTab = React.memo(function RelationsTab({ media }: { media?
                     </div>
                     <div className="flex flex-col flex-1 justify-center">
                         <span className="text-[8px] font-black text-brand-orange tracking-[0.18em] uppercase mb-1">{relation.relationType}</span>
-                        <h4 className="text-sm font-bold leading-tight line-clamp-2 text-white group-hover:text-brand-orange transition-colors duration-300">{relation.node?.titleSpanish || relation.node?.titleRomaji || relation.node?.titleEnglish}</h4>
-                        <span className="text-[9px] font-black text-white/30 mt-2 tracking-[0.2em] uppercase">{relation.node?.format}</span>
+                        <h4 className="text-sm font-bold leading-tight line-clamp-2 text-white group-hover:text-brand-orange transition-colors duration-300">{relation.media?.title?.spanish || relation.media?.title?.romaji || relation.media?.title?.english}</h4>
+                        <span className="text-[9px] font-black text-white/30 mt-2 tracking-[0.2em] uppercase">{relation.media?.format}</span>
                     </div>
                 </div>
             ))}
@@ -80,17 +80,17 @@ export const CharactersTab = React.memo(function CharactersTab({ characters }: {
             {characters.slice(0, 24).map((char, idx) => (
                 <div key={idx} className="flex flex-col items-center text-center gap-3 group cursor-pointer">
                     <div className="w-24 h-24 rounded-full overflow-hidden bg-zinc-950/40 border-2 border-white/5 group-hover:border-brand-orange/60 group-hover:shadow-[0_0_20px_rgba(255,110,58,0.25)] transition-all duration-500 shadow-xl">
-                        {char.node?.image && (
+                        {char.node?.image?.large && (
                             <DeferredImage
-                                src={char.node.image}
-                                alt={char.node.name}
+                                src={char.node.image.large}
+                                alt={char.node.name?.full || "Character"}
                                 showSkeleton={false}
                                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                             />
                         )}
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-xs font-bold text-white group-hover:text-brand-orange uppercase tracking-wider transition-colors duration-300">{char.node?.name}</span>
+                        <span className="text-xs font-bold text-white group-hover:text-brand-orange uppercase tracking-wider transition-colors duration-300">{char.node?.name?.full}</span>
                         <span className="text-[9px] font-black text-white/35 tracking-[0.15em] uppercase mt-1 group-hover:text-brand-orange/60 transition-colors duration-300">{char.role}</span>
                     </div>
                 </div>
@@ -163,7 +163,7 @@ export const TechnicalMetadataTab = React.memo(function TechnicalMetadataTab({ l
                     </div>
                     <div className="flex flex-col gap-1 border border-white/[0.02] bg-black/20 p-3 rounded-xl hover:border-white/5 transition-colors">
                         <span className="text-[8px] font-black text-zinc-500 tracking-[0.15em] uppercase">Tamaño</span>
-                        <span className="text-xs font-bold text-white tracking-widest uppercase">{formatFileSize(tech.size)}</span>
+                        <span className="text-xs font-bold text-white tracking-widest uppercase">{formatFileSize(tech.size || 0)}</span>
                     </div>
                     <div className="flex flex-col gap-1 col-span-2 border border-white/[0.02] bg-black/20 p-3 rounded-xl hover:border-white/5 transition-colors">
                         <span className="text-[8px] font-black text-zinc-500 tracking-[0.15em] uppercase">Pistas de Audio</span>

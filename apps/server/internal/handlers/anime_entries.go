@@ -560,9 +560,13 @@ func (h *Handler) HandleUpdateAnimeEntryRepeat(c echo.Context) error {
 	return h.RespondWithData(c, true)
 }
 
-// HandleManualMatch is used to manually match a group of local files to a media.
-// It will create a new scanner and run it for the selected files.
-func (h *Handler) HandleManualMatch(c echo.Context) error {
+// HandleAnimeEntryManualMatch is used to manually match a group of local files to a media.
+//
+//	@summary manually match a group of local files to a media.
+//	@desc It will create a new scanner and run it for the selected files.
+//	@route /api/v1/library/anime-entry/manual-match [POST]
+//	@returns bool
+func (h *Handler) HandleAnimeEntryManualMatch(c echo.Context) error {
 	type body struct {
 		MediaID int      `json:"mediaId"`
 		Paths   []string `json:"paths"`
@@ -620,9 +624,13 @@ func (h *Handler) HandleManualMatch(c echo.Context) error {
 	return h.RespondWithData(c, true)
 }
 
-// HandleUnmatchFiles will unmatch the given local files.
-// It will set the mediaID of the files to 0 and remove the metadata.
-func (h *Handler) HandleUnmatchFiles(c echo.Context) error {
+// HandleAnimeEntryUnmatch will unmatch the given local files.
+//
+//	@summary unmatch the given local files.
+//	@desc It will set the mediaID of the files to 0 and remove the metadata.
+//	@route /api/v1/library/anime-entry/unmatch [POST]
+//	@returns bool
+func (h *Handler) HandleAnimeEntryUnmatch(c echo.Context) error {
 	type body struct {
 		Paths []string `json:"paths"`
 	}
@@ -985,6 +993,11 @@ func (h *Handler) HandleOpenAnimeEntryInExplorer(c echo.Context) error {
 }
 
 // HandleGetAnimeEntrySilenceStatus returns a stable no-op silence status.
+//
+//	@summary returns the silence status.
+//	@param id - int - true - "Anime media ID"
+//	@route /api/v1/library/anime-entry/silence/{id} [GET]
+//	@returns bool
 func (h *Handler) HandleGetAnimeEntrySilenceStatus(c echo.Context) error {
 	return h.RespondWithData(c, map[string]interface{}{
 		"mediaID":  c.Param("id"),
@@ -993,6 +1006,10 @@ func (h *Handler) HandleGetAnimeEntrySilenceStatus(c echo.Context) error {
 }
 
 // HandleToggleAnimeEntrySilenceStatus toggles the silence flag (no-op until DB column exists).
+//
+//	@summary toggles the silence flag.
+//	@route /api/v1/library/anime-entry/silence [POST]
+//	@returns bool
 func (h *Handler) HandleToggleAnimeEntrySilenceStatus(c echo.Context) error {
 	type body struct {
 		MediaID int `json:"mediaId"`

@@ -1,0 +1,16 @@
+{
+  "name": "kamehouse-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:web": "pnpm --filter kamehouse-web dev",
+    "dev:desktop": "pnpm --filter kamehouse-desktop dev",
+    "build:web": "pnpm --filter kamehouse-web build",
+    "build:desktop": "pnpm --filter kamehouse-desktop build",
+    "build:all": "pnpm build:web && pnpm build:desktop",
+    "clean": "pnpm --recursive exec rimraf node_modules && rimraf node_modules"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

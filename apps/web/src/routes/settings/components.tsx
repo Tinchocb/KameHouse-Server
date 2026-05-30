@@ -14,7 +14,7 @@ export function ScanButton({ variant, onClick, loading }: { variant: "delta" | "
             className={cn(
                 "flex-1 flex items-center justify-between p-6 rounded-2xl border transition-all duration-500 relative overflow-hidden group/scanbtn",
                 isDelta 
-                    ? "bg-primary/5 border-primary/10 hover:bg-primary/10 hover:border-primary/20 text-primary shadow-[0_0_30px_rgba(235,94,40,0.02)]" 
+                    ? "bg-brand-orange/5 border-brand-orange/10 hover:bg-brand-orange/10 hover:border-brand-orange/20 text-brand-orange shadow-[0_0_30px_rgba(235,94,40,0.02)]" 
                     : "bg-white/[0.01] border-white/5 hover:bg-white/[0.04] hover:border-white/10 text-white shadow-sm",
                 loading && "opacity-50 cursor-not-allowed"
             )}
@@ -30,7 +30,7 @@ export function ScanButton({ variant, onClick, loading }: { variant: "delta" | "
                     size={16} 
                     className={cn(
                         "transition-all duration-700",
-                        isDelta ? "text-primary" : "text-white/75 group-hover/scanbtn:text-white",
+                        isDelta ? "text-brand-orange" : "text-white/75 group-hover/scanbtn:text-white",
                         loading ? "animate-spin" : "group-hover/scanbtn:rotate-180"
                     )} 
                 />
@@ -49,7 +49,7 @@ export function IntegrationCard({ name, status, connected, disabled }: { name: s
         )}>
             <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-white/[0.03] border border-white/5 flex items-center justify-center group-hover/intcard:bg-white/[0.05] transition-colors duration-500">
-                    <LucideCloud size={20} className={cn("transition-colors duration-500", connected ? "text-primary" : "text-zinc-500 group-hover/intcard:text-zinc-300")} />
+                    <LucideCloud size={20} className={cn("transition-colors duration-500", connected ? "text-brand-orange" : "text-zinc-500 group-hover/intcard:text-zinc-300")} />
                 </div>
                 <div className="text-left">
                     <p className="font-bebas text-2xl tracking-wider uppercase text-white/90 group-hover/intcard:text-white transition-colors">{name}</p>
@@ -101,7 +101,7 @@ export function Section({ label, children, right }: { label: string; children: R
         <div className="space-y-6 w-full">
             <div className="flex items-center justify-between px-1">
                  <div className="flex items-center gap-3">
-                    <div className="h-3 w-[3px] rounded-full bg-primary/70" />
+                    <div className="h-3 w-[3px] rounded-full bg-brand-orange/70" />
                     <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">{label}</p>
                 </div>
                 {right}
@@ -128,16 +128,20 @@ export interface OsToggleProps<T extends FieldValues> {
     name: Path<T>
     label: string
     desc?: string
+    disabled?: boolean
     onSave?: () => void
 }
 
-export function OsToggle<T extends FieldValues>({ control, name, label, desc, onSave }: OsToggleProps<T>) {
+export function OsToggle<T extends FieldValues>({ control, name, label, desc, disabled, onSave }: OsToggleProps<T>) {
     return (
         <Controller
             control={control}
             name={name}
             render={({ field }) => (
-                <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.02] last:border-0 hover:bg-white/[0.01] transition-all duration-300 gap-10 group/toggle">
+                <div className={cn(
+                    "flex items-center justify-between px-6 py-5 border-b border-white/[0.02] last:border-0 hover:bg-white/[0.01] transition-all duration-300 gap-10 group/toggle",
+                    disabled && "opacity-40 cursor-not-allowed pointer-events-none"
+                )}>
                     <div className="space-y-1 flex-1">
                         <p className="text-base font-bold text-zinc-100 group-hover/toggle:text-white transition-colors tracking-tight">{label}</p>
                         {desc && <p className="text-xs text-zinc-500 leading-relaxed font-medium">{desc}</p>}
@@ -145,10 +149,12 @@ export function OsToggle<T extends FieldValues>({ control, name, label, desc, on
                     <Switch
                         value={!!field.value}
                         onValueChange={(v: boolean) => {
+                            if (disabled) return
                             field.onChange(v)
                             onSave?.()
                         }}
-                        className="scale-110 origin-right transition-all duration-300 data-[state=checked]:bg-primary"
+                        disabled={disabled}
+                        className="scale-110 origin-right transition-all duration-300 data-[state=checked]:bg-brand-orange"
                     />
                 </div>
             )}
@@ -202,7 +208,7 @@ export function PathList<T extends FieldValues>({ control, name, label, placehol
                                 paths.map((path: string, idx: number) => (
                                     <div key={idx} className="flex items-center justify-between bg-white/[0.01] border border-white/5 px-5 py-3.5 rounded-xl hover:bg-white/[0.03] hover:border-white/10 transition-all duration-300 group/pathitem">
                                         <div className="flex items-center gap-4 min-w-0">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-primary/40 group-hover/pathitem:bg-primary transition-colors shrink-0" />
+                                            <div className="w-1.5 h-1.5 rounded-full bg-brand-orange/40 group-hover/pathitem:bg-brand-orange transition-colors shrink-0" />
                                             <span className="font-mono text-xs text-zinc-400 truncate group-hover/pathitem:text-zinc-200 transition-colors tracking-tight">{path}</span>
                                         </div>
                                         <button
@@ -283,7 +289,7 @@ export function OsInput<T extends FieldValues>({
                     </div>
                     <div className={cn(
                         "flex items-center gap-3 bg-black/40 border border-white/5 rounded-xl px-4 py-2.5 w-full md:w-80 transition-all relative",
-                        "focus-within:border-primary/20 focus-within:shadow-[0_0_20px_rgba(235,94,40,0.05)] hover:border-white/10"
+                        "focus-within:border-brand-orange/20 focus-within:shadow-[0_0_20px_rgba(235,94,40,0.05)] hover:border-white/10"
                     )}>
                         <input
                             type={isSecure ? (showSecure ? "text" : "password") : type}
@@ -341,7 +347,7 @@ export function OsSelect<T extends FieldValues>({
                     </div>
                     <div className={cn(
                         "flex items-center gap-3 bg-black/40 border border-white/5 rounded-xl px-4 py-2.5 w-full md:w-80 transition-all relative cursor-pointer",
-                        "focus-within:border-primary/20 focus-within:shadow-[0_0_20px_rgba(235,94,40,0.05)] hover:border-white/10"
+                        "focus-within:border-brand-orange/20 focus-within:shadow-[0_0_20px_rgba(235,94,40,0.05)] hover:border-white/10"
                     )}>
                         <select
                             value={field.value ?? ""}

@@ -284,20 +284,7 @@ export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>): 
         showActiveTorrentCount: data.torrent.showActiveTorrentCount || false,
         hideTorrentList: data.torrent.hideTorrentList || false,
     },
-    Platform: {
-        hideAudienceScore: false,
-
-        disableCacheLayer: false,
-    },
-    enableTorrentStreaming: data.enableTorrentStreaming,
     enableTranscode: data.enableTranscode,
-    notifications: {
-        disableNotifications: data.notifications.disableNotifications,
-        disableAutoDownloaderNotifications: data.notifications.disableAutoDownloaderNotifications,
-        disableAutoScannerNotifications: data.notifications.disableAutoScannerNotifications,
-    },
-    debridProvider: data.debridProvider || "none",
-    debridApiKey: data.debridApiKey || "",
 })
 
 

@@ -50,11 +50,11 @@ type WatchLibraryFilesOptions struct {
 func (w *Watcher) InitLibraryFileWatcher(opts *WatchLibraryFilesOptions) error {
 	// Define a function to add directories and their subdirectories to the watcher
 	watchDir := func(dir string) error {
-		err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 			if err != nil {
 				return nil
 			}
-			if info.IsDir() {
+			if d.IsDir() {
 				return w.Watcher.Add(path)
 			}
 			return nil
@@ -121,11 +121,11 @@ func (w *Watcher) StartWatching(
 				if event.Op&fsnotify.Create == fsnotify.Create {
 					// If a new directory is created, register it and its subdirectories for watching
 					if info, statErr := os.Stat(event.Name); statErr == nil && info.IsDir() {
-						_ = filepath.Walk(event.Name, func(p string, fi os.FileInfo, walkErr error) error {
+						_ = filepath.WalkDir(event.Name, func(p string, d os.DirEntry, walkErr error) error {
 							if walkErr != nil {
 								return nil
 							}
-							if fi.IsDir() {
+							if d.IsDir() {
 								if addErr := w.Watcher.Add(p); addErr != nil {
 									// 4. OS Limit Mitigation
 									if strings.Contains(addErr.Error(), "too many open files") || strings.Contains(addErr.Error(), "no space left on device") {

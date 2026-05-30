@@ -88,7 +88,7 @@ export function useUpdateAnimeEntryProgress(id: Nullish<string | number>, episod
                     ...previousEntry,
                     listData: {
                         ...previousEntry.listData,
-                        progress: variables.episodeNumber,
+                        progress: variables.progress,
                     }
                 })
             }
@@ -101,7 +101,6 @@ export function useUpdateAnimeEntryProgress(id: Nullish<string | number>, episod
             }
         },
         onSettled: async () => {
-            await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.PLATFORM.GetCollection.key] })
             await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key] })
             if (id) {
                 await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, String(id)] })

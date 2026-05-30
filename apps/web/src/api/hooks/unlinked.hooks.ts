@@ -18,16 +18,16 @@ interface ResolveUnlinkedFileVariables {
 
 export function useGetUnlinkedFiles() {
     return useServerQuery<UnlinkedFile[], void, UnlinkedFile[]>({
-        endpoint: API_ENDPOINTS.LOCALFILES.GetUnlinkedFiles.endpoint,
-        method: API_ENDPOINTS.LOCALFILES.GetUnlinkedFiles.methods[0],
-        queryKey: [API_ENDPOINTS.LOCALFILES.GetUnlinkedFiles.key],
+        endpoint: API_ENDPOINTS.SCAN.GetUnlinkedFiles.endpoint,
+        method: API_ENDPOINTS.SCAN.GetUnlinkedFiles.methods[0],
+        queryKey: [API_ENDPOINTS.SCAN.GetUnlinkedFiles.key],
         refetchOnWindowFocus: false,
     })
 }
 
 export function useResolveUnlinkedFile() {
     return useServerMutation<void, ResolveUnlinkedFileVariables>({
-        endpoint: API_ENDPOINTS.LOCALFILES.ResolveUnlinkedFile.endpoint,
-        method: API_ENDPOINTS.LOCALFILES.ResolveUnlinkedFile.methods[0],
+        endpoint: API_ENDPOINTS.SCAN.ResolveUnlinkedFile.endpoint,
+        method: API_ENDPOINTS.SCAN.ResolveUnlinkedFile.methods[0],
     })
 }

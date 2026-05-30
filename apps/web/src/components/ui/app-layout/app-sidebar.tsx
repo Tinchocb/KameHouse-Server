@@ -8,7 +8,6 @@ import * as React from "react"
 import { FaBook, FaCog, FaHome, FaFilm, FaTv, FaMoon, FaDownload, FaLayerGroup } from "react-icons/fa"
 import { cn } from "../core/styling"
 import { RandomPlayButton } from "./random-play-button"
-import { BackgroundMusicPlayer } from "./background-music"
 
 interface SidebarItem {
     to: string
@@ -64,11 +63,20 @@ export function AppSidebar() {
 function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) => void }) {
     const activeTheme = useAppStore(state => state.activeTheme)
     const setActiveTheme = useAppStore(state => state.setActiveTheme)
+    const playlistQueue = useAppStore(state => state.playlistQueue)
+    const globalQueueOpen = useAppStore(state => state.globalQueueOpen)
+    const setGlobalQueueOpen = useAppStore(state => state.setGlobalQueueOpen)
+
+    const playChangeSound = () => {
+        const audio = new Audio("/sounds/cambiar categoria.wav")
+        audio.volume = 0.4
+        audio.play().catch(() => {})
+    }
 
     return (
         <div className="flex flex-col h-full py-10 px-4 md:px-0 w-full items-center bg-transparent">
             {/* Header / Logo */}
-            <div className="mb-14 px-2 flex justify-center group cursor-pointer" onClick={() => setSidebarOpen(false)}>
+            <div className="mb-14 px-2 flex justify-center group cursor-pointer" onClick={() => { setSidebarOpen(false); playChangeSound(); }}>
                 <div className="relative">
                     <img 
                         src="/kamehouse-logo.png" 
@@ -86,7 +94,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                         <Link
                             to={item.to}
                             title={item.label}
-                            onClick={() => setSidebarOpen(false)}
+                            onClick={() => { setSidebarOpen(false); playChangeSound(); }}
                             activeProps={{
                                 className: "text-white bg-white/5 border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-md",
                             }}
@@ -108,13 +116,48 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                         </Link>
                     </Magnetic>
                 ))}
+
+                {/* Queue Toggle Button - Shown conditionally */}
+                {playlistQueue.length > 0 && (
+                    <Magnetic>
+                        <button
+                            onClick={() => {
+                                setGlobalQueueOpen(!globalQueueOpen)
+                                setSidebarOpen(false)
+                                playChangeSound()
+                            }}
+                            title="Cola de Reproducción"
+                            className={cn(
+                                "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl border transition-all duration-500 group px-4 md:px-0 relative backdrop-blur-md",
+                                globalQueueOpen
+                                    ? "text-brand-orange bg-brand-orange/10 border-brand-orange/30 shadow-[0_8px_32px_rgba(255,110,58,0.15)]"
+                                    : "text-zinc-500 hover:text-white hover:bg-white/[0.02] border-transparent",
+                                "active:scale-90 font-bold"
+                            )}
+                        >
+                            {/* Active Indicator Dot */}
+                            <div className={cn(
+                                "absolute left-0 w-1 h-6 bg-brand-orange rounded-r-full transition-all duration-500 hidden md:block",
+                                globalQueueOpen ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
+                            )} />
+                            
+                            <span className="shrink-0 z-10 transition-transform duration-500 group-hover:scale-110 relative">
+                                <FaLayerGroup className="w-5 h-5" />
+                                {/* Badge count */}
+                                <span className="absolute -top-2.5 -right-2.5 bg-brand-orange text-white text-[8px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center border border-zinc-950 shadow-md">
+                                    {playlistQueue.length}
+                                </span>
+                            </span>
+                            <span className="md:hidden ml-6 flex-1 uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange">
+                                Cola ({playlistQueue.length})
+                            </span>
+                        </button>
+                    </Magnetic>
+                )}
             </nav>
 
             {/* Footer / Info */}
             <div className="mt-auto pb-6 w-full flex flex-col items-center gap-6 pt-8"> 
-                {/* Background Music */}
-                <BackgroundMusicPlayer />
-               
                 {/* Random Play */}
                 <RandomPlayButton />
                
@@ -123,7 +166,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                     <Link
                         to="/settings"
                         title="Configuración"
-                        onClick={() => setSidebarOpen(false)}
+                        onClick={() => { setSidebarOpen(false); playChangeSound(); }}
                         activeProps={{
                             className: "text-white bg-white/5 border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-md",
                         }}

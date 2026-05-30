@@ -1,4 +1,4 @@
-const { app, dialog, ipcMain, net } = require("electron")
+const { app, dialog, ipcMain, net, clipboard } = require("electron")
 const path = require("path")
 const log = require("electron-log/main")
 log.initialize()
@@ -215,7 +215,7 @@ app.whenReady().then(async () => {
 
     ipcMain.handle("clipboard:writeText", (_, text) => {
         if (text) {
-            require("electron").clipboard.writeText(text)
+            clipboard.writeText(text)
             return true
         }
         return false

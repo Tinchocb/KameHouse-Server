@@ -791,6 +791,9 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		}
 		close(mIdChan)
 
+		// Define a global semaphore to limit concurrent OpenSubtitles API calls
+		openSubsSem := make(chan struct{}, 2)
+
 		var enrichWg sync.WaitGroup
 		for i := 0; i < enrichWorkers; i++ {
 			enrichWg.Add(1)
@@ -855,6 +858,14 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 							fileWg.Add(1)
 							go func(lf *dto.LocalFile, s, e int) {
 								defer fileWg.Done()
+
+								select {
+								case openSubsSem <- struct{}{}:
+									defer func() { <-openSubsSem }()
+								case <-ctx.Done():
+									return
+								}
+
 								_ = scn.OpenSubsEnricher.EnrichLocalFile(ctx, lf, matchedMedia, s, e)
 							}(lf, season, episode)
 						}

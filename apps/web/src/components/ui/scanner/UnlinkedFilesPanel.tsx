@@ -50,9 +50,10 @@ function useResolveUnlinkedFileAction() {
 const FileCard = React.forwardRef<HTMLDivElement, { file: GhostFile }>(function FileCard({ file }, ref) {
     const [expanded, setExpanded] = useState(false)
     const [searchQuery, setSearchQuery] = useState("")
+    const [searchType, setSearchType] = useState<"multi" | "tv" | "movie">("multi")
     const [debouncedQuery, setDebouncedQuery] = useState("")
     const debounceRef = React.useRef<NodeJS.Timeout | null>(null)
-    const { data: results = [], isFetching } = useTMDBSearch(debouncedQuery)
+    const { data: results = [], isFetching } = useTMDBSearch(debouncedQuery, searchType)
     const resolve = useResolveUnlinkedFileAction()
 
     const filename = file.path.split(/[\\/]/).pop() ?? file.path
@@ -78,7 +79,7 @@ const FileCard = React.forwardRef<HTMLDivElement, { file: GhostFile }>(function 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97 }}
-            className="border border-white/5 rounded-none overflow-hidden bg-white/[0.01] hover:bg-white/[0.03] transition-all duration-500 group"
+            className="border border-white/5 rounded-2xl overflow-hidden bg-[#0a0a0d] hover:border-white/10 transition-all duration-500 shadow-xl group"
         >
             {/* ─── Header row ─── */}
             <button
@@ -91,27 +92,27 @@ const FileCard = React.forwardRef<HTMLDivElement, { file: GhostFile }>(function 
                         setDebouncedQuery(base)
                     }
                 }}
-                className="w-full flex items-center gap-6 px-8 py-6 text-left"
+                className="w-full flex items-center gap-6 px-8 py-6 text-left hover:bg-white/[0.01] transition-all"
             >
-                <div className="w-12 h-12 bg-white/5 border border-white/10 flex items-center justify-center shrink-0 group-hover:bg-white/10 transition-colors">
-                    <LucideFileVideo size={20} className="text-zinc-500 group-hover:text-white transition-colors" />
+                <div className="w-12 h-12 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-white/10 transition-colors">
+                    <LucideFileVideo size={20} className="text-zinc-400 group-hover:text-white transition-colors" />
                 </div>
                 <div className="flex-1 min-w-0 space-y-1">
-                    <p className="text-base font-bold text-zinc-200 truncate group-hover:text-white transition-colors">{filename}</p>
-                    <p className="text-xs font-mono text-zinc-600 truncate">{file.path}</p>
+                    <p className="text-base font-bold text-zinc-100 truncate group-hover:text-white transition-colors">{filename}</p>
+                    <p className="text-xs font-mono text-zinc-500 truncate">{file.path}</p>
                 </div>
                 <div className="flex items-center gap-6 shrink-0">
                     <div className="flex flex-col items-end">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600 mb-1">Confianza</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Confianza</span>
                         <span className={cn(
-                            "text-sm font-black px-3 py-1 border font-mono",
-                            confidence >= 70 ? "border-primary/40 bg-primary/5 text-primary" : "border-white/10 text-zinc-500"
+                            "text-xs font-black px-2.5 py-0.5 border font-mono rounded-lg",
+                            confidence >= 70 ? "border-[#ff6b00]/30 bg-[#ff6b00]/10 text-[#ff6b00]" : "border-white/5 bg-white/5 text-zinc-400"
                         )}>
                             {confidence}%
                         </span>
                     </div>
-                    <div className="w-10 h-10 flex items-center justify-center border border-white/5 group-hover:border-white/20 transition-all">
-                        {expanded ? <LucideChevronUp size={18} className="text-zinc-500" /> : <LucideChevronDown size={18} className="text-zinc-500" />}
+                    <div className="w-10 h-10 flex items-center justify-center border border-white/5 rounded-xl group-hover:border-white/20 transition-all">
+                        {expanded ? <LucideChevronUp size={18} className="text-zinc-400" /> : <LucideChevronDown size={18} className="text-zinc-400" />}
                     </div>
                 </div>
             </button>
@@ -124,62 +125,104 @@ const FileCard = React.forwardRef<HTMLDivElement, { file: GhostFile }>(function 
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-                        className="overflow-hidden border-t border-white/[0.05] bg-black/20"
+                        className="overflow-hidden border-t border-white/[0.04] bg-black/20"
                     >
                         <div className="p-8 space-y-6">
-                            {/* Search input */}
-                            <div className="relative">
-                                <LucideSearch size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500" />
-                                <input
-                                    type="text"
-                                    value={searchQuery}
-                                    onChange={e => handleSearch(e.target.value)}
-                                    placeholder="Buscar en TMDB (Película o Serie)..."
-                                    className="w-full bg-white/[0.03] border border-white/10 rounded-none pl-14 pr-6 py-4 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-white/30 focus:bg-white/[0.05] transition-all"
-                                />
-                                {isFetching && (
-                                    <LucideLoader2 size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-500 animate-spin" />
-                                )}
+                            {/* Search bar & Type Toggles */}
+                            <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
+                                <div className="relative flex-1">
+                                    <LucideSearch size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500" />
+                                    <input
+                                        type="text"
+                                        value={searchQuery}
+                                        onChange={e => handleSearch(e.target.value)}
+                                        placeholder="Buscar en TMDB..."
+                                        className="w-full bg-white/[0.02] border border-white/5 rounded-xl pl-14 pr-12 py-3.5 text-sm text-zinc-200 placeholder:text-zinc-700 focus:outline-none focus:border-white/20 focus:bg-white/[0.04] transition-all font-bold uppercase tracking-wider"
+                                    />
+                                    {isFetching && (
+                                        <LucideLoader2 size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-500 animate-spin" />
+                                    )}
+                                </div>
+                                <div className="flex gap-2">
+                                    {[
+                                        { id: "multi", label: "TODO" },
+                                        { id: "tv", label: "SERIES" },
+                                        { id: "movie", label: "PELÍCULAS" }
+                                    ].map((type) => (
+                                        <button
+                                            key={type.id}
+                                            type="button"
+                                            onClick={() => setSearchType(type.id as any)}
+                                            className={`px-4 py-2 text-[10px] font-black tracking-[0.1em] transition-all border rounded-xl ${
+                                                searchType === type.id 
+                                                ? "bg-white text-black border-white" 
+                                                : "bg-transparent text-zinc-500 border-white/5 hover:border-white/10 hover:text-zinc-300"
+                                            }`}
+                                        >
+                                            {type.label}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
 
                             {/* Results */}
                             {results.length > 0 && (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                                    {results.slice(0, 10).map(r => (
-                                        <button
-                                            key={r.id}
-                                            type="button"
-                                            disabled={resolve.isPending}
-                                            onClick={() => handleLink(r)}
-                                            className="w-full flex items-center gap-4 px-4 py-3 rounded-none bg-white/[0.02] hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all text-left group/result"
-                                        >
-                                            <div className="relative shrink-0 overflow-hidden">
-                                                {r.poster_path ? (
-                                                    <img
-                                                        src={`https://image.tmdb.org/t/p/w92${r.poster_path}`}
-                                                        alt=""
-                                                        className="w-12 h-18 rounded-none object-cover transition-transform duration-700 group-hover/result:scale-110"
-                                                    />
-                                                ) : (
-                                                    <div className="w-12 h-18 rounded-none bg-white/5 flex items-center justify-center">
-                                                        <LucideFileVideo size={16} className="text-zinc-700" />
+                                <div className="grid grid-cols-1 gap-4 max-h-[450px] overflow-y-auto pr-2 custom-scrollbar">
+                                    {results.slice(0, 10).map(r => {
+                                        const year = (r.release_date ?? r.first_air_date ?? "").slice(0, 4)
+                                        return (
+                                            <button
+                                                key={r.id}
+                                                type="button"
+                                                disabled={resolve.isPending}
+                                                onClick={() => handleLink(r)}
+                                                className="w-full flex items-center gap-6 p-4 rounded-2xl bg-white/[0.01] hover:bg-white/[0.03] border border-white/5 hover:border-white/10 transition-all text-left group/result relative overflow-hidden"
+                                            >
+                                                <div className="relative w-16 h-24 shrink-0 overflow-hidden rounded-xl bg-black/40 border border-white/5 group-hover/result:border-white/20 transition-colors">
+                                                    {r.poster_path ? (
+                                                        <img
+                                                            src={`https://image.tmdb.org/t/p/w185${r.poster_path}`}
+                                                            alt=""
+                                                            className="w-full h-full object-cover transition-transform duration-700 group-hover/result:scale-110"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center">
+                                                            <LucideFileVideo size={20} className="text-zinc-700" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="flex-1 min-w-0 space-y-2">
+                                                    <div className="flex items-center gap-3 flex-wrap">
+                                                        <p className="text-[15px] font-black text-zinc-100 group-hover/result:text-white tracking-wide uppercase truncate max-w-[400px]">
+                                                            {r.title ?? r.name}
+                                                        </p>
+                                                        {r.vote_average !== undefined && r.vote_average > 0 && (
+                                                            <span className="px-1.5 py-0.5 rounded bg-[#ff6b00] text-black text-[9px] font-black leading-none">
+                                                                ★ {r.vote_average.toFixed(1)}
+                                                            </span>
+                                                        )}
                                                     </div>
-                                                )}
-                                                <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover/result:opacity-100 transition-opacity" />
-                                            </div>
-                                            <div className="flex-1 min-w-0 space-y-1">
-                                                <p className="text-sm font-bold text-zinc-200 truncate group-hover/result:text-white">
-                                                    {r.title ?? r.name}
-                                                </p>
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-600">
-                                                    {r.media_type === "movie" ? "🎬 Movie" : "📺 TV Show"} · {(r.release_date ?? r.first_air_date ?? "").slice(0, 4)}
-                                                </p>
-                                            </div>
-                                            <div className="w-8 h-8 rounded-none border border-white/5 flex items-center justify-center opacity-0 group-hover/result:opacity-100 transition-all">
-                                                <LucideLink size={14} className="text-white" />
-                                            </div>
-                                        </button>
-                                    ))}
+                                                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[#ff6b00] flex items-center gap-2">
+                                                        <span>{r.media_type === "movie" ? "🎬 Película" : "📺 Serie"}</span>
+                                                        {year && (
+                                                            <>
+                                                                <span className="w-1 h-1 rounded-full bg-zinc-700" />
+                                                                <span className="text-zinc-500">{year}</span>
+                                                            </>
+                                                        )}
+                                                    </p>
+                                                    {r.overview && (
+                                                        <p className="text-xs text-zinc-500 line-clamp-2 leading-relaxed font-normal antialiased">
+                                                            {r.overview}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <div className="w-10 h-10 rounded-xl border border-white/5 flex items-center justify-center opacity-0 group-hover/result:opacity-100 transition-all shrink-0 hover:bg-white hover:text-black">
+                                                    <LucideLink size={16} />
+                                                </div>
+                                            </button>
+                                        )
+                                    })}
                                 </div>
                             )}
 

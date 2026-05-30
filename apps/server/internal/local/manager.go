@@ -1,4 +1,4 @@
-﻿package local
+package local
 
 import (
 	"context"
@@ -548,9 +548,11 @@ func (m *ManagerImpl) GetLocalStorageSize() int64 {
 	}
 
 	var size int64
-	_ = filepath.Walk(m.localDir, func(path string, info os.FileInfo, err error) error {
-		if info != nil {
-			size += info.Size()
+	_ = filepath.WalkDir(m.localDir, func(path string, d os.DirEntry, err error) error {
+		if d != nil && !d.IsDir() {
+			if info, err := d.Info(); err == nil {
+				size += info.Size()
+			}
 		}
 		return nil
 	})

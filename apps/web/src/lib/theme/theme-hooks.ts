@@ -82,7 +82,39 @@ export const ThemeMediaPageInfoBoxSizeOptions = [
     },
 ]
 
-export type ThemeSettings = Omit<Models_Theme, "id">
+export type ThemeSettings = Omit<Models_Theme, "id"> & {
+    animeEntryScreenLayout?: string
+    smallerEpisodeCarouselSize?: boolean
+    expandSidebarOnHover?: boolean
+    hideTopNavbar?: boolean
+    enableMediaCardBlurredBackground?: boolean
+    libraryScreenBannerType?: string
+    libraryScreenCustomBannerImage?: string
+    libraryScreenCustomBannerPosition?: string
+    libraryScreenCustomBannerOpacity?: number
+    libraryScreenCustomBackgroundImage?: string
+    libraryScreenCustomBackgroundOpacity?: number
+    disableLibraryScreenGenreSelector?: boolean
+    libraryScreenCustomBackgroundBlur?: string
+    enableMediaPageBlurredBackground?: boolean
+    disableSidebarTransparency?: boolean
+    useLegacyEpisodeCard?: boolean
+    disableCarouselAutoScroll?: boolean
+    mediaPageBannerType?: string
+    mediaPageBannerSize?: string
+    mediaPageBannerInfoBoxSize?: string
+    showEpisodeCardAnimeInfo?: boolean
+    continueWatchingDefaultSorting?: string
+    animeLibraryCollectionDefaultSorting?: string
+    showAnimeUnwatchedCount?: boolean
+    hideEpisodeCardDescription?: boolean
+    hideDownloadedEpisodeCardFilename?: boolean
+    customCSS?: string
+    mobileCustomCSS?: string
+    unpinnedMenuItems?: string[]
+    enableBlurringEffects?: boolean
+    enableEpisodeCardHoverEffects?: boolean
+}
 export const THEME_DEFAULT_VALUES: ThemeSettings = {
     enableColorSettings: false,
     animeEntryScreenLayout: "stacked",

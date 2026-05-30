@@ -259,6 +259,14 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
     const [activeEraId, setActiveEraId] = React.useState<EraId>("db")
     const [selectedItemId, setSelectedItemId] = React.useState<string | null>(null)
 
+
+
+    const playHoverSound = () => {
+        const audio = new Audio("/sounds/seleccion de hover.wav")
+        audio.volume = 0.15
+        audio.play().catch(() => {})
+    }
+
     // Classify all library items into eras
     const categorizedData = React.useMemo(() => {
         const result: Record<EraId, { series: SwimlaneItem | null; movies: SwimlaneItem[] }> = {
@@ -486,6 +494,7 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                                     <button
                                         key={era.id}
                                         onClick={() => handleEraSelect(era.id)}
+                                        onMouseEnter={playHoverSound}
                                         className={cn(
                                             "group relative flex items-center justify-between px-4 py-3 rounded-2xl border text-left transition-all duration-500 w-full overflow-hidden",
                                             isEraActive
@@ -552,6 +561,7 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                                     <div
                                         key={movie.id}
                                         onClick={() => setSelectedItemId(movie.id)}
+                                        onMouseEnter={playHoverSound}
                                         className={cn(
                                             "group relative w-full aspect-[16/9] rounded-2xl overflow-hidden cursor-pointer border select-none transition-all duration-500 shrink-0",
                                             isMovieSelected

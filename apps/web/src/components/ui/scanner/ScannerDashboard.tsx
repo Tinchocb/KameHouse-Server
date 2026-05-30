@@ -19,15 +19,15 @@ export function ScannerDashboard() {
     const { data: summaries } = useGetScanSummaries()
 
     const startMetadataImprovement = useCallback(() => {
-        scan({ enhanced: true, enhanceWithOfflineDatabase: true, skipLockedFiles: false, skipIgnoredFiles: false, fullScan: false, mode: "metadata" })
+        scan({ mode: "metadata", skipLockedFiles: false, skipIgnoredFiles: false })
     }, [scan])
 
     const startFastScan = useCallback(() => {
-        scan({ enhanced: false, enhanceWithOfflineDatabase: false, skipLockedFiles: false, skipIgnoredFiles: false, fullScan: false, mode: "fast" })
+        scan({ mode: "fast", skipLockedFiles: false, skipIgnoredFiles: false })
     }, [scan])
 
     const startDeepScan = useCallback(() => {
-        scan({ enhanced: true, enhanceWithOfflineDatabase: true, skipLockedFiles: false, skipIgnoredFiles: false, fullScan: true, mode: "deep" })
+        scan({ mode: "deep", skipLockedFiles: false, skipIgnoredFiles: false })
     }, [scan])
 
     const recentSummaries = useMemo(() => (summaries ?? []).slice().reverse().slice(0, 8), [summaries])

@@ -6,6 +6,10 @@
   "author": "KameHouse",
   "scripts": {
     "dev": "cross-env NODE_ENV=development electron .",
+    "prebuild": "node sync-web.js",
+    "prebuild:mac": "node sync-web.js",
+    "prebuild:win": "node sync-web.js",
+    "prebuild:linux": "node sync-web.js",
     "build": "electron-builder build",
     "build:mac": "electron-builder build --mac --arm64",
     "build:win": "electron-builder build --win --x64",

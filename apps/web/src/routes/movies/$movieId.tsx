@@ -13,6 +13,7 @@ import { Anime_LocalFile, Mediastream_StreamType } from "@/api/generated/types"
 import { EmptyState } from "@/components/shared/empty-state"
 import { VideoPlayer } from "@/components/video/player"
 import { sanitizeHtml } from "@/lib/helpers/sanitizer"
+import { startViewTransition } from "@/lib/helpers/transitions"
 import { MovieHeroSection } from "../series/$seriesId/-components/movie-hero"
 import { PremiumPosterCard } from "@/components/shared/premium-poster-card"
 import { DeferredImage } from "@/components/shared/deferred-image"
@@ -65,6 +66,14 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
     const { data: entry, isLoading } = useGetAnimeEntry(movieId)
     const { data: continuityData, refetch: refetchContinuity } = useGetContinuityWatchHistoryItem(Number(movieId))
 
+    React.useEffect(() => {
+        if (entry) {
+            const audio = new Audio("/sounds/entrar detalle serie-peliculas.wav")
+            audio.volume = 0.4
+            audio.play().catch(() => {})
+        }
+    }, [entry?.media?.id])
+
     const [playTarget, setPlayTarget] = useState<{
         path: string
         streamType: Mediastream_StreamType
@@ -79,7 +88,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
     const title = entry?.media?.titleSpanish || entry?.media?.titleEnglish || entry?.media?.titleRomaji || "Título Desconocido"
     const score = entry?.media?.score ? (entry.media.score / 10).toFixed(1) : null
 
-    const parseGenres = (g: string | string[] | undefined | null): string[] => {
+    const parseGenres = (g: any): string[] => {
         if (!g) return []
         if (Array.isArray(g)) return g as string[]
         if (typeof g === "string") {
@@ -132,12 +141,14 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
         const epNum = localFile.parsedInfo?.episode || localFile.metadata?.episode || 1
         const isMp4 = localFile.path.toLowerCase().endsWith(".mp4")
         const targetType = isMp4 ? "direct" : "transcode"
-        setPlayTarget({
-            path: localFile.path,
-            streamType: targetType as Mediastream_StreamType,
-            episodeLabel: localFile.name,
-            episodeNumber: Number(epNum),
-            malId: entry?.media?.idMal ?? null,
+        startViewTransition(() => {
+            setPlayTarget({
+                path: localFile.path,
+                streamType: targetType as Mediastream_StreamType,
+                episodeLabel: localFile.name,
+                episodeNumber: Number(epNum),
+                malId: entry?.media?.idMal ?? null,
+            })
         })
     }
 
@@ -331,21 +342,21 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                                             className="flex items-center gap-3.5 p-3.5 bg-zinc-950/20 border border-white/5 rounded-2xl hover:border-brand-orange/30 hover:bg-zinc-900/10 transition-all duration-300 group cursor-pointer"
                                         >
                                             <div className="w-12 h-12 rounded-full overflow-hidden bg-zinc-900 border border-white/10 shrink-0 shadow-lg group-hover:border-brand-orange/50 transition-colors">
-                                                {edge.node?.image ? (
+                                                {edge.node?.image?.large ? (
                                                     <DeferredImage
-                                                        src={edge.node.image}
-                                                        alt={edge.node.name}
+                                                        src={edge.node.image.large}
+                                                        alt={edge.node.name?.full || "Character"}
                                                         showSkeleton={false}
                                                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                                     />
                                                 ) : (
                                                     <div className="w-full h-full bg-zinc-950 flex items-center justify-center text-[10px] text-zinc-600 font-bold uppercase">
-                                                        {edge.node?.name ? edge.node.name.slice(0, 2) : "C"}
+                                                        {edge.node?.name?.full ? edge.node.name.full.slice(0, 2) : "C"}
                                                     </div>
                                                 )}
                                             </div>
                                             <div className="flex flex-col truncate">
-                                                <span className="text-[13px] font-bold text-white group-hover:text-brand-orange transition-colors truncate">{edge.node?.name}</span>
+                                                <span className="text-[13px] font-bold text-white group-hover:text-brand-orange transition-colors truncate">{edge.node?.name?.full}</span>
                                                 <span className="text-[9px] font-black text-zinc-500 tracking-wider uppercase truncate mt-0.5">{edge.role === "MAIN" ? "Principal" : "Secundario"}</span>
                                             </div>
                                         </div>
@@ -506,9 +517,9 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                         
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
                             {entry.media.relations.map((relation, idx) => {
-                                if (!relation.node) return null;
-                                const node = relation.node;
-                                const title = node.titleSpanish || node.titleRomaji || node.titleEnglish || "Título Desconocido";
+                                if (!relation.media) return null;
+                                const node = relation.media;
+                                const title = node.title?.spanish || node.title?.romaji || node.title?.english || "Título Desconocido";
                                 const isMovie = node.format === "MOVIE" || node.format === "SPECIAL" || node.format === "OVA";
                                 const relationGenres = parseGenres(node.genres);
                                 
@@ -517,9 +528,9 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                                         <PremiumPosterCard
                                             id={node.id}
                                             title={title}
-                                            posterUrl={node.posterImage || ""}
+                                            posterUrl={node.coverImage?.large || node.coverImage?.medium || ""}
                                             rating={node.score}
-                                            year={node.year}
+                                            year={node.startDate?.year}
                                             format={node.format}
                                             genres={relationGenres}
                                             onClick={() => {
@@ -554,7 +565,9 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                     onNextEpisode={() => {}}
                     hasNextEpisode={false}
                     onClose={() => {
-                        setPlayTarget(null)
+                        startViewTransition(() => {
+                            setPlayTarget(null)
+                        })
                         refetchContinuity()
                         queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, String(movieId)] })
                     }}

@@ -11,7 +11,6 @@ import { CommandPalette } from "@/components/ui/search/command-palette"
 import { AnimatePresence } from "framer-motion"
 import { useRouterState } from "@tanstack/react-router"
 import { PageTransition } from "@/components/shared/page-transition"
-import { WebsocketProvider } from "@/app/websocket-provider"
 import { FaBars } from "react-icons/fa"
 import { useAppStore } from "@/lib/store"
 import { DynamicBackdrop } from "@/components/shared/dynamic-backdrop"
@@ -19,6 +18,8 @@ import { PerformanceMonitor } from "@/components/shared/performance-monitor"
 import { VideoPlayer } from "@/components/video/player"
 import { useGetStatus } from "@/api/hooks/settings.hooks"
 import { GettingStarted } from "@/components/shared/getting-started"
+import { GlobalQueueSidebar } from "@/components/shared/global-queue-sidebar"
+import { startViewTransition } from "@/lib/helpers/transitions"
 
 function RootComponent() {
     const routerState = useRouterState()
@@ -46,24 +47,23 @@ function RootComponent() {
         <AppLayout>
             <DynamicBackdrop />
             <PerformanceMonitor />
-            <WebsocketProvider>
-                <AppSidebar />
-                <CommandPalette />
-                <AppLayoutContent>
-                    {/* Mobile Menu Trigger */}
-                    <button 
-                        onClick={() => useAppStore.getState().setSidebarOpen(true)}
-                        className="md:hidden fixed top-6 left-6 z-[60] p-3 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 text-white/70 hover:text-white transition-all active:scale-90"
-                    >
-                        <FaBars className="w-5 h-5" />
-                    </button>
+            <AppSidebar />
+            <CommandPalette />
+            <GlobalQueueSidebar />
+            <AppLayoutContent>
+                {/* Mobile Menu Trigger */}
+                <button 
+                    onClick={() => useAppStore.getState().setSidebarOpen(true)}
+                    className="md:hidden fixed top-6 left-6 z-[60] p-3 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 text-white/70 hover:text-white transition-all active:scale-90"
+                >
+                    <FaBars className="w-5 h-5" />
+                </button>
 
-                    <PageTransition transitionKey={routerState.location.pathname} className="flex-1 w-full">
-                        <Outlet />
-                    </PageTransition>
-                </AppLayoutContent>
-                <AppBottomNav />
-            </WebsocketProvider>
+                <PageTransition transitionKey={routerState.location.pathname} className="flex-1 w-full">
+                    <Outlet />
+                </PageTransition>
+            </AppLayoutContent>
+            <AppBottomNav />
 
             {activeQueuePlayItem && (
                 <VideoPlayer
@@ -78,15 +78,19 @@ function RootComponent() {
                     marathonMode={false}
                     onNextEpisode={() => {
                         const nextIdx = currentQueueIndex + 1;
-                        if (nextIdx < playlistQueue.length) {
-                            setCurrentQueueIndex(nextIdx);
-                        } else {
-                            clearQueue();
-                        }
+                        startViewTransition(() => {
+                            if (nextIdx < playlistQueue.length) {
+                                setCurrentQueueIndex(nextIdx);
+                            } else {
+                                clearQueue();
+                            }
+                        })
                     }}
                     hasNextEpisode={currentQueueIndex + 1 < playlistQueue.length}
                     onClose={() => {
-                        useAppStore.setState({ activeQueuePlayItem: null, currentQueueIndex: -1 });
+                        startViewTransition(() => {
+                            useAppStore.setState({ activeQueuePlayItem: null, currentQueueIndex: -1 });
+                        })
                     }}
                 />
             )}

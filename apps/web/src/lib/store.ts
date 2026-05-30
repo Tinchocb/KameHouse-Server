@@ -9,12 +9,14 @@ export interface UIState {
     isVideoActive: boolean
     bgMusicEnabled: boolean
     bgMusicVolume: number
+    globalQueueOpen: boolean
     setSidebarOpen: (open: boolean) => void
     setActiveTheme: (theme: string) => void
     setSearchQuery: (query: string) => void
     setVideoActive: (active: boolean) => void
     setBgMusicEnabled: (enabled: boolean) => void
     setBgMusicVolume: (volume: number) => void
+    setGlobalQueueOpen: (open: boolean) => void
 }
 
 import { type ScannerMessage } from "@/lib/server/ws-events"
@@ -64,12 +66,14 @@ export const createUISlice: StateCreator<UIState & PlayerState, [], [], UIState>
     isVideoActive: false,
     bgMusicEnabled: false,
     bgMusicVolume: 0.25,
+    globalQueueOpen: false,
     setSidebarOpen: (open) => set({ sidebarOpen: open }),
     setActiveTheme: (theme) => set({ activeTheme: theme }),
     setSearchQuery: (query) => set({ searchQuery: query }),
     setVideoActive: (active) => set({ isVideoActive: active }),
     setBgMusicEnabled: (enabled) => set({ bgMusicEnabled: enabled }),
     setBgMusicVolume: (volume) => set({ bgMusicVolume: volume }),
+    setGlobalQueueOpen: (open) => set({ globalQueueOpen: open }),
 })
 
 export interface PlaylistItem {
@@ -173,8 +177,11 @@ export const createPlayerSlice: StateCreator<UIState & PlayerState, [], [], Play
     activeQueuePlayItem: null,
     addToQueue: (item) => set((state) => {
         const exists = state.playlistQueue.some(i => i.id === item.id && i.episodeNumber === item.episodeNumber);
-        if (exists) return {};
-        return { playlistQueue: [...state.playlistQueue, item] };
+        if (exists) return { globalQueueOpen: true };
+        return { 
+            playlistQueue: [...state.playlistQueue, item],
+            globalQueueOpen: true
+        };
     }),
     removeFromQueue: (index) => set((state) => {
         const nextQueue = state.playlistQueue.filter((_, i) => i !== index);
@@ -252,8 +259,6 @@ export const useAppStore = create<UIState & PlayerState & ScannerState>()(
                 marathonMode: state.marathonMode,
                 playerVolume: state.playerVolume,
                 tvMode: state.tvMode,
-                playlistQueue: state.playlistQueue,
-                currentQueueIndex: state.currentQueueIndex,
             }),
         }
     )

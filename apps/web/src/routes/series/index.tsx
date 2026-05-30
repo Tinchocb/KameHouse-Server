@@ -3,12 +3,13 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useGetLibraryCollection, fetchLibraryCollection } from '@/api/hooks/anime_collection.hooks';
 import { HydrationBoundary, dehydrate } from '@tanstack/react-query';
 import { API_ENDPOINTS } from '@/api/generated/endpoints';
-import { SeriesCard, getVhsColor } from './SeriesCard';
+import { SeriesCard, getVhsColor } from './-SeriesCard';
+import { getLargeResImage } from '@/lib/helpers/images';
 
 export const Route = createFileRoute('/series/')({
-    loader: async ({ context }) => {
+    loader: ({ context }) => {
         const qc = context.queryClient
-        await qc.prefetchQuery({
+        qc.prefetchQuery({
             queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key],
             queryFn: fetchLibraryCollection,
         })
@@ -95,8 +96,8 @@ function SeriesFullscreenIndex() {
                 year: yearVal,
                 yearNum: yearVal === 'N/A' ? 9999 : Number(yearVal),
                 progress: progressPercent,
-                img: media?.bannerImage || media?.posterImage || '',
-                poster: media?.posterImage || media?.bannerImage || '',
+                img: getLargeResImage(media?.bannerImage || media?.posterImage || ''),
+                poster: getLargeResImage(media?.posterImage || media?.bannerImage || ''),
                 desc: media?.description?.replace(/<[^>]*>?/gm, '') || 'Sin descripción',
             };
         });

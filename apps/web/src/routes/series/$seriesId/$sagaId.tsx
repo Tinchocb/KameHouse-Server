@@ -11,6 +11,7 @@ import { toast } from "sonner"
 import { PageHeader } from "@/components/ui/page-header"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { DeferredImage } from "@/components/shared/deferred-image"
+import { startViewTransition } from "@/lib/helpers/transitions"
 
 export const Route = createFileRoute("/series/$seriesId/$sagaId")({
     loader: ({ params: { seriesId }, context }) => {
@@ -469,22 +470,25 @@ function DetailPage() {
     // When user clicks an episode → play if local
     const handleEpisodePlay = useCallback((ep: Episode) => {
         const fullEp = libraryEntry?.episodes?.find(e => e.episodeNumber === ep.number)
-        if (!fullEp?.localFile?.path) {
+        const filePath = fullEp?.localFile?.path
+        if (!filePath) {
             toast.error("Archivo local no disponible.")
             return
         }
 
-        const isMp4 = fullEp.localFile.path.toLowerCase().endsWith(".mp4")
+        const isMp4 = filePath.toLowerCase().endsWith(".mp4")
         const targetType = isMp4 ? "direct" : "transcode"
 
-        setPlayTarget({
-            path: fullEp.localFile.path,
-            streamType: targetType as Mediastream_StreamType,
-            episodeLabel: ep.title,
-            episodeNumber: ep.number,
-            seriesId: Number(seriesId)
+        startViewTransition(() => {
+            setPlayTarget({
+                path: filePath,
+                streamType: targetType as Mediastream_StreamType,
+                episodeLabel: ep.title,
+                episodeNumber: ep.number,
+                seriesId: Number(seriesId)
+            })
+            setIsPlayerOpen(true)
         })
-        setIsPlayerOpen(true)
     }, [libraryEntry, seriesId])
 
     if (!series || !saga || saga.episodes.length === 0) {
@@ -543,7 +547,11 @@ function DetailPage() {
                     episodeNumber={playTarget.episodeNumber}
                     isExternalStream={false}
                     marathonMode={false}
-                    onClose={() => setIsPlayerOpen(false)}
+                    onClose={() => {
+                        startViewTransition(() => {
+                            setIsPlayerOpen(false)
+                        })
+                    }}
                 />
             )}
         </div>

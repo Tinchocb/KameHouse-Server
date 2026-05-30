@@ -1,23 +1,16 @@
-build-all:
-	rm -rf ../web
-	rm -rf ../web-denshi
-	pnpm build
-	cp -r out ../web
-	pnpm build:denshi
-	cp -r out-denshi ../web-denshi
-	rm -rf ../kamehouse-denshi/web-denshi
-	cp -r ../web-denshi ../kamehouse-denshi/web-denshi
+build-all: build-web build-desktop
 
 build-web:
-	rm -rf ../web
 	pnpm build
-	cp -r out ../web
+	rm -rf ../server/web
+	mkdir -p ../server/web
+	cp -r out/* ../server/web/
 
-build-denshi:
-	rm -rf ../web-denshi
-	pnpm build:denshi
-	cp -r out-denshi ../web-denshi
-	rm -rf ../kamehouse-denshi/web-denshi
-	cp -r ../web-denshi ../kamehouse-denshi/web-denshi
+build-desktop:
+	pnpm build
+	rm -rf ../desktop/web
+	mkdir -p ../desktop/web
+	cp -r out/* ../desktop/web/
 
-.PHONY: build-all build-web build-denshi
+.PHONY: build-all build-web build-desktop
+

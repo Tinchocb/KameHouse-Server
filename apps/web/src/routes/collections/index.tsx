@@ -10,11 +10,12 @@ import { DeferredImage } from "@/components/shared/deferred-image"
 import { HeroSection } from "@/components/shared/hero-section"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
+import { getMediumResImage } from "@/lib/helpers/images"
 
 export const Route = createFileRoute("/collections/")({
-    loader: async ({ context }) => {
+    loader: ({ context }) => {
         const qc = context.queryClient
-        await Promise.all([
+        Promise.all([
             qc.prefetchQuery({
                 queryKey: ["collections-list"],
                 queryFn: fetchMediaCollections,
@@ -271,7 +272,7 @@ const CollectionCassette = memo(function CollectionCassette({
                 >
                     {/* Poster */}
                     <DeferredImage
-                        src={coll.posterPath || ""}
+                        src={getMediumResImage(coll.posterPath || "")}
                         alt={coll.name}
                         className="w-full h-full object-cover grayscale group-hover/item:grayscale-0"
                         style={{

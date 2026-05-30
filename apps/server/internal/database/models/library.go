@@ -2,7 +2,10 @@ package models
 
 import (
 	"encoding/json"
+	"kamehouse/internal/platforms/platform"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 // LibraryMedia represents a local TV show, Anime, or Movie.
@@ -52,6 +55,36 @@ type LibraryMedia struct {
 	LogoImage     string `gorm:"column:logo_image" json:"logoImage"`
 	ThumbImage    string `gorm:"column:thumb_image" json:"thumbImage"`
 	ClearArtImage string `gorm:"column:clear_art_image" json:"clearArtImage"`
+
+	// Frontend compatibility fields (ignored by GORM)
+	IDMal      int                              `gorm:"-" json:"idMal,omitempty"`
+	Relations  []*platform.UnifiedMediaRelation `gorm:"-" json:"relations,omitempty"`
+	Characters *LibraryMediaCharacterConnection `gorm:"-" json:"characters,omitempty"`
+	Watched    bool                             `gorm:"-" json:"watched,omitempty"`
+}
+
+type LibraryMediaCharacterConnection struct {
+	Edges []*LibraryMediaCharacterEdge `json:"edges"`
+}
+type LibraryMediaCharacterEdge struct {
+	Role string                 `json:"role"`
+	Node *LibraryMediaCharacter `json:"node"`
+}
+type LibraryMediaCharacter struct {
+	Name  *LibraryMediaCharacterName  `json:"name"`
+	Image *LibraryMediaCharacterImage `json:"image"`
+}
+type LibraryMediaCharacterName struct {
+	Full string `json:"full"`
+}
+type LibraryMediaCharacterImage struct {
+	Large string `json:"large"`
+}
+
+// AfterFind GORM hook to populate compatibility fields automatically
+func (m *LibraryMedia) AfterFind(tx *gorm.DB) (err error) {
+	m.IDMal = m.MyanimelistId
+	return nil
 }
 
 // IsMovieOrSingleEpisode returns true if the media is a movie or a single episode special

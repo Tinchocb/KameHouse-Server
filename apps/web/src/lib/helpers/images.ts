@@ -40,3 +40,13 @@ export const getLowResImage = (url: string | null | undefined): string => {
     return url
 }
 
+export const getLargeResImage = (url: string | null | undefined): string => {
+    if (!url) return ""
+
+    // TMDB large-res replacement (w1280 is sharp on large display panels without the raw overhead of 'original')
+    if (url.includes("tmdb.org") || url.includes("themoviedb.org")) {
+        return url.replace(/\/t\/p\/(?:original|w\d+)/, "/t/p/w1280")
+    }
+
+    return url
+}

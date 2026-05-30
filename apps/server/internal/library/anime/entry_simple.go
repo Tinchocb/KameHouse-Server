@@ -1,4 +1,4 @@
-﻿package anime
+package anime
 
 import (
 	"context"
@@ -203,6 +203,14 @@ func (e *SimpleEntry) hydrateEntryEpisodeData(amw metadata_provider.AnimeMetadat
 		return episodes[i].EpisodeNumber < episodes[j].EpisodeNumber
 	})
 	e.Episodes = episodes
+
+	progress := 0
+	if e.EntryListData != nil {
+		progress = e.EntryListData.Progress
+	}
+	for _, ep := range e.Episodes {
+		ep.Watched = progress > 0 && ((ep.AbsoluteEpisodeNumber > 0 && ep.AbsoluteEpisodeNumber <= progress) || (ep.EpisodeNumber > 0 && ep.EpisodeNumber <= progress))
+	}
 
 	nextEp, found := e.FindNextEpisode()
 	if found {

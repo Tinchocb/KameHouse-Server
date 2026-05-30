@@ -101,6 +101,7 @@ const config: RsbuildConfig = {
                 target: devBackendTarget,
                 changeOrigin: true,
                 ws: true,
+                logLevel: 'silent',
                 onError: (err, req, res) => {
                     const code = (err as any).code || '';
                     if (code === 'ECONNRESET' || code === 'ECONNABORTED' || code === 'EPIPE') {
@@ -137,6 +138,13 @@ const config: RsbuildConfig = {
                 "lucide": /lucide-react/,
                 "tanstack-query": /@tanstack\/react-query/,
                 "tanstack-router": /@tanstack\/react-router/,
+                "framer-motion": /framer-motion/,
+                "gsap": /gsap/,
+                "recharts": /recharts/,
+                "codemirror": /codemirror/,
+                "react-icons": /react-icons/,
+                "zod": /zod/,
+                "axios": /axios/,
             },
         },
     },

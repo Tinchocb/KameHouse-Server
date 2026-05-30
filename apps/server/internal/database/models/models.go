@@ -96,6 +96,15 @@ type LibrarySettings struct {
 	OmdbApiKey                      string       `gorm:"column:omdb_api_key" json:"omdbApiKey"`
 	OpenSubsApiKey                  string       `gorm:"column:opensubs_api_key" json:"openSubsApiKey"`
 	LastScanAt                      time.Time    `gorm:"column:last_scan_at" json:"lastScanAt"`
+	TorrentProvider                 string       `gorm:"-" json:"torrentProvider"`
+	AutoScan                        bool         `gorm:"-" json:"autoScan"`
+	OpenTorrentClientOnStart        bool         `gorm:"-" json:"openTorrentClientOnStart"`
+	AutoSelectTorrentProvider       string       `gorm:"-" json:"autoSelectTorrentProvider"`
+	EnableOnlinestream              bool         `gorm:"-" json:"enableOnlinestream"`
+	IncludeOnlineStreamingInLibrary bool         `gorm:"-" json:"includeOnlineStreamingInLibrary"`
+	DisableTorrentStreaming         bool         `gorm:"-" json:"disableTorrentStreaming"`
+	DisableDebridService            bool         `gorm:"-" json:"disableDebridService"`
+	DisableTorrentProvider          bool         `gorm:"-" json:"disableTorrentProvider"`
 }
 
 func (s *LibrarySettings) GetAllPaths() []string {

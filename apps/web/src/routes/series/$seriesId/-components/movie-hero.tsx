@@ -6,11 +6,12 @@ import { cn } from "@/components/ui/core/styling"
 import { getHighResImage, getMediumResImage, getLowResImage } from "@/lib/helpers/images"
 import { Anime_Entry, Continuity_WatchHistoryItem } from "@/api/generated/types"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
-import { Play, Sparkles, Star, Heart, Check, Film, ListPlus } from "lucide-react"
+import { Play, Sparkles, Star, Heart, Check, Film, ListPlus, Settings2 } from "lucide-react"
 import { useUpdateAnimeEntryProgress } from "@/api/hooks/anime_entries.hooks"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { useAppStore } from "@/lib/store"
 import { toast } from "sonner"
+import { ManualMatchModal } from "@/components/shared/manual-match-modal"
 
 interface MovieHeroSectionProps {
     seriesId: string
@@ -24,6 +25,7 @@ interface MovieHeroSectionProps {
 
 export const MovieHeroSection = React.memo(function MovieHeroSection({
     seriesId,
+    directoryPath,
     backdropUrl,
     entry,
     onPlay,
@@ -34,6 +36,7 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
     const backdropRef = useRef<HTMLDivElement>(null)
     const media = entry.media!
     const setBackdropUrl = useIntelligenceStore(s => s.setBackdropUrl)
+    const [isMatchModalOpen, setIsMatchModalOpen] = React.useState(false)
 
     // Sync current backdrop with global DynamicBackdrop blur background
     React.useEffect(() => {
@@ -96,6 +99,7 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
     const qualityBadge = useMemo(() => {
         if (!tech?.videoStream) return null
         const w = tech.videoStream.width
+        if (w === undefined) return null
         if (w >= 3840) return "4K ULTRA HD"
         if (w >= 1920) return "1080P FHD"
         if (w >= 1280) return "720P HD"
@@ -114,7 +118,7 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
         if (!tech?.audioStreams || tech.audioStreams.length === 0) return null
         const langs = tech.audioStreams.map(a => a.language?.toLowerCase() || "")
         const hasSpa = langs.some(l => l.includes("spa") || l.includes("esp") || l.includes("lat"))
-        const hasJpn = langs.some(l => l.includes("jpn") || l.includes("jap"))
+        const hasJpn = langs.some(l => l.includes("jap") || l.includes("jpn"))
         const labels: string[] = []
         if (hasSpa) labels.push("ESPAÑOL")
         if (hasJpn) labels.push("JAPONÉS")
@@ -164,9 +168,7 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
         
         updateProgress({
             mediaId: Number(seriesId),
-            episodeNumber: nextState ? 1 : 0,
-            totalEpisodes: 1,
-            malId: entry.media?.idMal || undefined
+            progress: nextState ? 1 : 0,
         })
         
         toast.success(nextState ? "Marcada como vista" : "Quitada de vistas")
@@ -371,6 +373,20 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
                     >
                         <Check className={cn("w-5 h-5", isWatched && "stroke-[3px]")} />
                     </button>
+
+                    {/* Secondary: Corregir Vinculación (Fix Match) */}
+                    {directoryPath && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                setIsMatchModalOpen(true)
+                            }}
+                            className="flex items-center justify-center p-4 rounded-2xl border bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-[#ff6b00]/10 hover:border-[#ff6b00]/30 hover:text-[#ff6b00] transition-all duration-300 hover:scale-105 active:scale-95"
+                            title="Corregir Vinculación (Fix Match)"
+                        >
+                            <Settings2 className="w-5 h-5" />
+                        </button>
+                    )}
                 </div>
 
                 {/* Progress bar underneath if in progress */}
@@ -383,6 +399,13 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
                     </div>
                 )}
             </div>
+
+            <ManualMatchModal
+                isOpen={isMatchModalOpen}
+                onClose={() => setIsMatchModalOpen(false)}
+                directoryPath={directoryPath}
+                currentMediaId={entry.mediaId ?? Number(seriesId)}
+            />
         </section>
     )
 })

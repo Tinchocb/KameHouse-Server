@@ -30,6 +30,8 @@ type (
 		SagaId                string               `json:"sagaId,omitempty"`
 		BaseAnime             *models.LibraryMedia `json:"baseAnime,omitempty"`
 		Intelligence          *EpisodeIntelligence `json:"intelligence,omitempty"`
+		Watched               bool                 `json:"watched"`
+		TitleSpanish          string               `json:"titleSpanish,omitempty"`
 	}
 
 	// EpisodeMetadata represents the metadata of an Episode.

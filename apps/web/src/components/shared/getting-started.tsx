@@ -202,8 +202,8 @@ function LibraryStep() {
 }
 
 function FeaturesStep({ kamehouseFeatures, setKamehouseFeatures }: { 
-    kamehouseFeatures: { dynamicBackdrop: boolean; bgMusic: boolean },
-    setKamehouseFeatures: React.Dispatch<React.SetStateAction<{ dynamicBackdrop: boolean; bgMusic: boolean }>>
+    kamehouseFeatures: { dynamicBackdrop: boolean },
+    setKamehouseFeatures: React.Dispatch<React.SetStateAction<{ dynamicBackdrop: boolean }>>
 }) {
     return (
         <motion.div
@@ -216,49 +216,28 @@ function FeaturesStep({ kamehouseFeatures, setKamehouseFeatures }: {
             <motion.div variants={itemVariants} className="text-center space-y-3">
                 <h2 className="text-3xl font-bebas tracking-wide text-white uppercase">Características Visuales</h2>
                 <p className="text-zinc-400 text-sm max-w-lg mx-auto leading-relaxed">
-                    Elige qué características visuales y música ambiental quieres habilitar en tu experiencia inicial de KameHouse.
+                    Elige qué características visuales quieres habilitar en tu experiencia inicial de KameHouse.
                 </p>
             </motion.div>
 
             {/* KameHouse unique features section */}
-            <div className="max-w-4xl mx-auto pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Dynamic Backdrop */}
-                    <div 
-                        onClick={() => setKamehouseFeatures(prev => ({ ...prev, dynamicBackdrop: !prev.dynamicBackdrop }))}
-                        className={cn(
-                            "cursor-pointer p-6 rounded-2xl bg-zinc-900/40 hover:bg-zinc-800/40 border transition-all duration-200 text-left flex items-start space-x-5",
-                            kamehouseFeatures.dynamicBackdrop ? "bg-zinc-900/80 border-brand-orange/40" : "border-white/5"
-                        )}
-                    >
-                        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center shrink-0">
-                            <LuSparkles className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                            <h4 className="font-semibold text-sm text-white">Fondo Dinámico Animado</h4>
-                            <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
-                                Efecto ambiental inmersivo en el fondo con animación de respiración orgánica basado en la portada del anime activo.
-                            </p>
-                        </div>
+            <div className="max-w-2xl mx-auto pt-6">
+                {/* Dynamic Backdrop */}
+                <div 
+                    onClick={() => setKamehouseFeatures(prev => ({ ...prev, dynamicBackdrop: !prev.dynamicBackdrop }))}
+                    className={cn(
+                        "cursor-pointer p-6 rounded-2xl bg-zinc-900/40 hover:bg-zinc-800/40 border transition-all duration-200 text-left flex items-start space-x-5",
+                        kamehouseFeatures.dynamicBackdrop ? "bg-zinc-900/80 border-brand-orange/40" : "border-white/5"
+                    )}
+                >
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center shrink-0">
+                        <LuSparkles className="w-6 h-6 text-white" />
                     </div>
-
-                    {/* Background Music */}
-                    <div 
-                        onClick={() => setKamehouseFeatures(prev => ({ ...prev, bgMusic: !prev.bgMusic }))}
-                        className={cn(
-                            "cursor-pointer p-6 rounded-2xl bg-zinc-900/40 hover:bg-zinc-800/40 border transition-all duration-200 text-left flex items-start space-x-5",
-                            kamehouseFeatures.bgMusic ? "bg-zinc-900/80 border-brand-orange/40" : "border-white/5"
-                        )}
-                    >
-                        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-pink-500 to-brand-orange flex items-center justify-center shrink-0">
-                            <BiPlay className="w-6 h-6 text-white animate-spin-slow" />
-                        </div>
-                        <div>
-                            <h4 className="font-semibold text-sm text-white">Música Ambiental de Fondo</h4>
-                            <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
-                                Reproduce suave melodía ambiental (Lofi/Anime) en el catálogo de inicio para una experiencia inmersiva.
-                            </p>
-                        </div>
+                    <div>
+                        <h4 className="font-semibold text-sm text-white">Fondo Dinámico Animado</h4>
+                        <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
+                            Efecto ambiental inmersivo en el fondo con animación de respiración orgánica basado en la portada del anime activo.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -272,12 +251,9 @@ export function GettingStarted({ status }: { status: Status }) {
     const [currentStep, setCurrentStep] = React.useState(0)
     const [direction, setDirection] = React.useState(0)
 
-    const setBgMusicEnabled = useAppStore(state => state.setBgMusicEnabled)
-
     // Local states for KameHouse special features (perfMonitor removed)
     const [kamehouseFeatures, setKamehouseFeatures] = React.useState({
         dynamicBackdrop: true,
-        bgMusic: false,
     })
 
     const nextStep = () => {
@@ -319,7 +295,6 @@ export function GettingStarted({ status }: { status: Status }) {
                             // Apply KameHouse features
                             localStorage.setItem("kamehouse:perf-monitor-enabled", "false")
                             localStorage.setItem("kamehouse:dynamic-backdrop-enabled", kamehouseFeatures.dynamicBackdrop ? "true" : "false")
-                            setBgMusicEnabled(kamehouseFeatures.bgMusic)
 
                             // Submit to server endpoint
                             const payload = getDefaultSettings(data)

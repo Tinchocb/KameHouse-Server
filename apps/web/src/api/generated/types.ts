@@ -2,1207 +2,27 @@
 
 export type Nullish<T> = T | null | undefined
 
-/**
- * Strict Enums synchronized from media_enums.go
- */
-export type Models_MediaFormat = "TV" | "TV_SHORT" | "MOVIE" | "SPECIAL" | "OVA" | "ONA" | "MUSIC"
-export type Models_MediaStatus = "FINISHED" | "RELEASING" | "NOT_YET_RELEASED" | "CANCELLED" | "HIATUS"
-export type Models_MediaSeason = "WINTER" | "SPRING" | "SUMMER" | "FALL"
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Platform
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
-export type Platform_MediaTitle = {
-    romaji?: string
-    english?: string
-    native?: string
-}
-
-export type Platform_MediaCoverImage = {
-    extraLarge?: string
-    large?: string
-    medium?: string
-    color?: string
-}
-
-export type Platform_FuzzyDate = {
-    year?: number
-    month?: number
-    day?: number
-}
-
-export type Platform_UnifiedMedia = {
-    id: number
-    type?: string
-    format: Platform_MediaFormat
-    status: Platform_MediaStatus
-    title?: Platform_MediaTitle
-    episodes?: number
-    coverImage?: Platform_MediaCoverImage
-    bannerImage?: string
-    startDate?: Platform_FuzzyDate
-    endDate?: Platform_FuzzyDate
-    season?: string
-    seasonYear?: number
-    isAdult?: boolean
-    genres?: string[]
-    nextAiringEpisode?: {
-        airingAt: number
-        timeUntilAiring: number
-        episode: number
-    }
-}
-
-export type Platform_UnifiedCollectionEntry = {
-    id: number
-    media?: Platform_UnifiedMedia
-    status: Platform_MediaListStatus
-    score?: number
-    progress?: number
-    repeat?: number
-    startedAt?: Platform_FuzzyDate
-    completedAt?: Platform_FuzzyDate
-}
-
-export type Platform_UnifiedCollectionList = {
-    name: string
-    status: Platform_MediaListStatus
-    entries: Array<Platform_UnifiedCollectionEntry>
-}
-
-export type Platform_UnifiedCollection = {
-    lists: Array<Platform_UnifiedCollectionList>
-}
-
-export type Platform_UnifiedMediaList = {
-    media: Array<Platform_UnifiedMedia>
-}
-
-export type Platform_UnifiedViewerStats = {
-    animeCount: number
-}
-
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Platform Alias section removed as it is now redundant.
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Platform
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * - Filepath: internal/api/Platform/models_gen.go
- * - Filename: models_gen.go
- * - Package: Platform
- * @description
- *  Airing schedule sort enums
- */
-export type Platform_AiringSort = "ID" |
-    "ID_DESC" |
-    "MEDIA_ID" |
-    "MEDIA_ID_DESC" |
-    "TIME" |
-    "TIME_DESC" |
-    "EPISODE" |
-    "EPISODE_DESC"
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeCollection = {
-    MediaListCollection?: Platform_AnimeCollection_MediaListCollection
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeCollection_MediaListCollection = {
-    lists?: Array<Platform_AnimeCollection_MediaListCollection_Lists>
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeCollection_MediaListCollection_Lists = {
-    status?: Platform_MediaListStatus
-    name?: string
-    isCustomList?: boolean
-    entries?: Array<Platform_AnimeCollection_MediaListCollection_Lists_Entries>
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeCollection_MediaListCollection_Lists_Entries = {
-    id: number
-    score?: number
-    progress?: number
-    status?: Platform_MediaListStatus
-    notes?: string
-    repeat?: number
-    private?: boolean
-    startedAt?: Platform_AnimeCollection_MediaListCollection_Lists_Entries_StartedAt
-    completedAt?: Platform_AnimeCollection_MediaListCollection_Lists_Entries_CompletedAt
-    media?: Platform_BaseAnime
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeCollection_MediaListCollection_Lists_Entries_CompletedAt = {
-    year?: number
-    month?: number
-    day?: number
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeCollection_MediaListCollection_Lists_Entries_StartedAt = {
-    year?: number
-    month?: number
-    day?: number
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeDetailsById_Media = {
-    siteUrl?: string
-    id: number
-    duration?: number
-    genres?: Array<string>
-    averageScore?: number
-    popularity?: number
-    meanScore?: number
-    description?: string
-    trailer?: Platform_AnimeDetailsById_Media_Trailer
-    startDate?: Platform_AnimeDetailsById_Media_StartDate
-    endDate?: Platform_AnimeDetailsById_Media_EndDate
-    studios?: Platform_AnimeDetailsById_Media_Studios
-    characters?: Platform_AnimeDetailsById_Media_Characters
-    staff?: Platform_AnimeDetailsById_Media_Staff
-    rankings?: Array<Platform_AnimeDetailsById_Media_Rankings>
-    recommendations?: Platform_AnimeDetailsById_Media_Recommendations
-    relations?: Platform_AnimeDetailsById_Media_Relations
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeDetailsById_Media_Characters = {
-    edges?: Array<Platform_AnimeDetailsById_Media_Characters_Edges>
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeDetailsById_Media_Characters_Edges = {
-    id?: number
-    role?: Platform_CharacterRole
-    name?: string
-    node?: Platform_BaseCharacter
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeDetailsById_Media_EndDate = {
-    year?: number
-    month?: number
-    day?: number
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeDetailsById_Media_Rankings = {
-    context: string
-    type: Platform_MediaRankType
-    rank: number
-    year?: number
-    format: Platform_MediaFormat
-    allTime?: boolean
-    season?: Platform_MediaSeason
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeDetailsById_Media_Recommendations = {
-    edges?: Array<Platform_AnimeDetailsById_Media_Recommendations_Edges>
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeDetailsById_Media_Recommendations_Edges = {
-    node?: Platform_AnimeDetailsById_Media_Recommendations_Edges_Node
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeDetailsById_Media_Recommendations_Edges_Node = {
-    mediaRecommendation?: Platform_AnimeDetailsById_Media_Recommendations_Edges_Node_MediaRecommendation
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeDetailsById_Media_Recommendations_Edges_Node_MediaRecommendation = {
-    id: number
-    idMal?: number
-    siteUrl?: string
-    status?: Platform_MediaStatus
-    isAdult?: boolean
-    season?: Platform_MediaSeason
-    type?: Platform_MediaType
-    format?: Platform_MediaFormat
-    meanScore?: number
-    description?: string
-    episodes?: number
-    trailer?: Platform_AnimeDetailsById_Media_Recommendations_Edges_Node_MediaRecommendation_Trailer
-    startDate?: Platform_AnimeDetailsById_Media_Recommendations_Edges_Node_MediaRecommendation_StartDate
-    coverImage?: Platform_AnimeDetailsById_Media_Recommendations_Edges_Node_MediaRecommendation_CoverImage
-    bannerImage?: string
-    title?: Platform_AnimeDetailsById_Media_Recommendations_Edges_Node_MediaRecommendation_Title
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeDetailsById_Media_Recommendations_Edges_Node_MediaRecommendation_CoverImage = {
-    extraLarge?: string
-    large?: string
-    medium?: string
-    color?: string
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeDetailsById_Media_Recommendations_Edges_Node_MediaRecommendation_StartDate = {
-    year?: number
-    month?: number
-    day?: number
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeDetailsById_Media_Recommendations_Edges_Node_MediaRecommendation_Title = {
-    romaji?: string
-    english?: string
-    native?: string
-    userPreferred?: string
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeDetailsById_Media_Recommendations_Edges_Node_MediaRecommendation_Trailer = {
-    id?: string
-    site?: string
-    thumbnail?: string
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeDetailsById_Media_Relations = {
-    edges?: Array<Platform_AnimeDetailsById_Media_Relations_Edges>
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeDetailsById_Media_Relations_Edges = {
-    relationType?: Platform_MediaRelation
-    node?: Platform_BaseAnime
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeDetailsById_Media_Staff = {
-    edges?: Array<Platform_AnimeDetailsById_Media_Staff_Edges>
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeDetailsById_Media_Staff_Edges = {
-    role?: string
-    node?: Platform_AnimeDetailsById_Media_Staff_Edges_Node
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeDetailsById_Media_Staff_Edges_Node = {
-    name?: Platform_AnimeDetailsById_Media_Staff_Edges_Node_Name
-    id: number
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeDetailsById_Media_Staff_Edges_Node_Name = {
-    full?: string
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeDetailsById_Media_StartDate = {
-    year?: number
-    month?: number
-    day?: number
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeDetailsById_Media_Studios = {
-    nodes?: Array<Platform_AnimeDetailsById_Media_Studios_Nodes>
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeDetailsById_Media_Studios_Nodes = {
-    name: string
-    id: number
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_AnimeDetailsById_Media_Trailer = {
-    id?: string
-    site?: string
-    thumbnail?: string
-}
-
-/**
- * - Filepath: internal/api/Platform/collection_helper.go
- * - Filename: collection_helper.go
- * - Package: Platform
- */
-export type Platform_AnimeListEntry = Platform_AnimeCollection_MediaListCollection_Lists_Entries
-
-/**
- * - Filepath: internal/api/Platform/stats.go
- * - Filename: stats.go
- * - Package: Platform
- */
-export type Platform_AnimeStats = {
-    count: number
-    minutesWatched: number
-    episodesWatched: number
-    meanScore: number
-    genres?: Array<Platform_UserGenreStats>
-    formats?: Array<Platform_UserFormatStats>
-    statuses?: Array<Platform_UserStatusStats>
-    studios?: Array<Platform_UserStudioStats>
-    scores?: Array<Platform_UserScoreStats>
-    startYears?: Array<Platform_UserStartYearStats>
-    releaseYears?: Array<Platform_UserReleaseYearStats>
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_BaseAnime = {
-    id: number
-    idMal?: number
-    siteUrl?: string
-    status?: Platform_MediaStatus
-    season?: Platform_MediaSeason
-    type?: Platform_MediaType
-    format?: Platform_MediaFormat
-    seasonYear?: number
-    bannerImage?: string
-    episodes?: number
-    synonyms?: Array<string>
-    isAdult?: boolean
-    countryOfOrigin?: string
-    meanScore?: number
-    description?: string
-    genres?: Array<string>
-    duration?: number
-    trailer?: Platform_BaseAnime_Trailer
-    title?: Platform_BaseAnime_Title
-    coverImage?: Platform_BaseAnime_CoverImage
-    startDate?: Platform_BaseAnime_StartDate
-    endDate?: Platform_BaseAnime_EndDate
-    nextAiringEpisode?: Platform_BaseAnime_NextAiringEpisode
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_BaseAnime_CoverImage = {
-    extraLarge?: string
-    large?: string
-    medium?: string
-    color?: string
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_BaseAnime_EndDate = {
-    year?: number
-    month?: number
-    day?: number
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_BaseAnime_NextAiringEpisode = {
-    airingAt: number
-    timeUntilAiring: number
-    episode: number
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_BaseAnime_StartDate = {
-    year?: number
-    month?: number
-    day?: number
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_BaseAnime_Title = {
-    userPreferred?: string
-    romaji?: string
-    english?: string
-    native?: string
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_BaseAnime_Trailer = {
-    id?: string
-    site?: string
-    thumbnail?: string
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_BaseCharacter = {
-    id: number
-    isFavourite: boolean
-    gender?: string
-    age?: string
-    dateOfBirth?: Platform_BaseCharacter_DateOfBirth
-    name?: Platform_BaseCharacter_Name
-    image?: Platform_BaseCharacter_Image
-    description?: string
-    siteUrl?: string
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_BaseCharacter_DateOfBirth = {
-    year?: number
-    month?: number
-    day?: number
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_BaseCharacter_Image = {
-    large?: string
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_BaseCharacter_Name = {
-    full?: string
-    native?: string
-    alternative?: Array<string>
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-
-/**
- * - Filepath: internal/api/Platform/models_gen.go
- * - Filename: models_gen.go
- * - Package: Platform
- * @description
- *  The role the character plays in the media
- */
-export type Platform_CharacterRole = "MAIN" | "SUPPORTING" | "BACKGROUND"
-
-/**
- * - Filepath: internal/api/Platform/models_gen.go
- * - Filename: models_gen.go
- * - Package: Platform
- * @description
- *  Date object that allows for incomplete date values (fuzzy)
- */
-export type Platform_FuzzyDateInput = {
-    year?: number
-    month?: number
-    day?: number
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_GetViewer_Viewer = {
-    name: string
-    avatar?: Platform_GetViewer_Viewer_Avatar
-    bannerImage?: string
-    isBlocked?: boolean
-    options?: Platform_GetViewer_Viewer_Options
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_GetViewer_Viewer_Avatar = {
-    large?: string
-    medium?: string
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_GetViewer_Viewer_Options = {
-    displayAdultContent?: boolean
-    airingNotifications?: boolean
-    profileColor?: string
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_ListAnime = {
-    Page?: Platform_ListAnime_Page
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_ListAnime_Page = {
-    pageInfo?: Platform_ListAnime_Page_PageInfo
-    media?: Array<Platform_BaseAnime>
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_ListAnime_Page_PageInfo = {
-    hasNextPage?: boolean
-    total?: number
-    perPage?: number
-    currentPage?: number
-    lastPage?: number
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_ListRecentAnime = {
-    Page?: Platform_ListRecentAnime_Page
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_ListRecentAnime_Page = {
-    pageInfo?: Platform_ListRecentAnime_Page_PageInfo
-    airingSchedules?: Array<Platform_ListRecentAnime_Page_AiringSchedules>
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_ListRecentAnime_Page_AiringSchedules = {
-    id: number
-    airingAt: number
-    episode: number
-    timeUntilAiring: number
-    media?: Platform_BaseAnime
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_ListRecentAnime_Page_PageInfo = {
-    hasNextPage?: boolean
-    total?: number
-    perPage?: number
-    currentPage?: number
-    lastPage?: number
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-
-/**
- * - Filepath: internal/api/Platform/stats.go
- * - Filename: stats.go
- * - Package: Platform
- */
-
-/**
- * - Filepath: internal/api/Platform/models_gen.go
- * - Filename: models_gen.go
- * - Package: Platform
- * @description
- *  The format the media was released in
- */
-export type Platform_MediaFormat = "TV" |
-    "TV_SHORT" |
-    "MOVIE" |
-    "SPECIAL" |
-    "OVA" |
-    "ONA" |
-    "MUSIC"
-
-/**
- * - Filepath: internal/api/Platform/models_gen.go
- * - Filename: models_gen.go
- * - Package: Platform
- * @description
- *  Media list watching/reading status enum.
- */
-export type Platform_MediaListStatus = "CURRENT" |
-    "PLANNING" |
-    "COMPLETED" |
-    "DROPPED" |
-    "PAUSED" |
-    "REPEATING"
-
-/**
- * - Filepath: internal/api/Platform/models_gen.go
- * - Filename: models_gen.go
- * - Package: Platform
- * @description
- *  The type of ranking
- */
-export type Platform_MediaRankType = "RATED" | "POPULAR"
-
-/**
- * - Filepath: internal/api/Platform/models_gen.go
- * - Filename: models_gen.go
- * - Package: Platform
- * @description
- *  Type of relation media has to its parent.
- */
-export type Platform_MediaRelation = "ADAPTATION" |
-    "PREQUEL" |
-    "SEQUEL" |
-    "PARENT" |
-    "SIDE_STORY" |
-    "CHARACTER" |
-    "SUMMARY" |
-    "ALTERNATIVE" |
-    "SPIN_OFF" |
-    "OTHER" |
-    "SOURCE" |
-    "COMPILATION" |
-    "CONTAINS"
-
-/**
- * - Filepath: internal/api/Platform/models_gen.go
- * - Filename: models_gen.go
- * - Package: Platform
- */
-export type Platform_MediaSeason = "WINTER" | "SPRING" | "SUMMER" | "FALL"
-
-/**
- * - Filepath: internal/api/Platform/models_gen.go
- * - Filename: models_gen.go
- * - Package: Platform
- * @description
- *  Media sort enums
- */
-export type Platform_MediaSort = "ID" |
-    "ID_DESC" |
-    "TITLE_ROMAJI" |
-    "TITLE_ROMAJI_DESC" |
-    "TITLE_ENGLISH" |
-    "TITLE_ENGLISH_DESC" |
-    "TITLE_NATIVE" |
-    "TITLE_NATIVE_DESC" |
-    "TYPE" |
-    "TYPE_DESC" |
-    "FORMAT" |
-    "FORMAT_DESC" |
-    "START_DATE" |
-    "START_DATE_DESC" |
-    "END_DATE" |
-    "END_DATE_DESC" |
-    "SCORE" |
-    "SCORE_DESC" |
-    "POPULARITY" |
-    "POPULARITY_DESC" |
-    "TRENDING" |
-    "TRENDING_DESC" |
-    "EPISODES" |
-    "EPISODES_DESC" |
-    "DURATION" |
-    "DURATION_DESC" |
-    "STATUS" |
-    "STATUS_DESC" |
-    "CHAPTERS" |
-    "CHAPTERS_DESC" |
-    "VOLUMES" |
-    "VOLUMES_DESC" |
-    "UPDATED_AT" |
-    "UPDATED_AT_DESC" |
-    "SEARCH_MATCH" |
-    "FAVOURITES" |
-    "FAVOURITES_DESC"
-
-/**
- * - Filepath: internal/api/Platform/models_gen.go
- * - Filename: models_gen.go
- * - Package: Platform
- * @description
- *  The current releasing status of the media
- */
-export type Platform_MediaStatus = "FINISHED" | "RELEASING" | "NOT_YET_RELEASED" | "CANCELLED" | "HIATUS"
-
-/**
- * - Filepath: internal/api/Platform/models_gen.go
- * - Filename: models_gen.go
- * - Package: Platform
- * @description
- *  Media type enum, anime.
- */
-export type Platform_MediaType = "ANIME"
-
-/**
- * - Filepath: internal/api/Platform/stats.go
- * - Filename: stats.go
- * - Package: Platform
- */
-export type Platform_Stats = {
-    animeStats?: Platform_AnimeStats
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_StudioDetails = {
-    Studio?: Platform_StudioDetails_Studio
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_StudioDetails_Studio = {
-    id: number
-    isAnimationStudio: boolean
-    name: string
-    media?: Platform_StudioDetails_Studio_Media
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_StudioDetails_Studio_Media = {
-    nodes?: Array<Platform_BaseAnime>
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_UserFormatStats = {
-    format?: Platform_MediaFormat
-    meanScore: number
-    count: number
-    minutesWatched: number
-    mediaIds?: Array<number>
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_UserGenreStats = {
-    genre?: string
-    meanScore: number
-    count: number
-    minutesWatched: number
-    mediaIds?: Array<number>
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_UserReleaseYearStats = {
-    releaseYear?: number
-    meanScore: number
-    count: number
-    minutesWatched: number
-    mediaIds?: Array<number>
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_UserScoreStats = {
-    score?: number
-    meanScore: number
-    count: number
-    minutesWatched: number
-    mediaIds?: Array<number>
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_UserStartYearStats = {
-    startYear?: number
-    meanScore: number
-    count: number
-    minutesWatched: number
-    mediaIds?: Array<number>
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_UserStatusStats = {
-    status?: Platform_MediaListStatus
-    meanScore: number
-    count: number
-    minutesWatched: number
-    mediaIds?: Array<number>
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_UserStudioStats = {
-    studio?: Platform_UserStudioStats_Studio
-    meanScore: number
-    count: number
-    minutesWatched: number
-    mediaIds?: Array<number>
-    chaptersRead: number
-}
-
-/**
- * - Filepath: internal/api/Platform/client_gen.go
- * - Filename: client_gen.go
- * - Package: Platform
- */
-export type Platform_UserStudioStats_Studio = {
-    id: number
-    name: string
-    isAnimationStudio: boolean
-}
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Anime
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
- * - Filepath: internal/library/anime/autodownloader_types.go
- * - Filename: autodownloader_types.go
+ * - Filepath: internal/library/anime/intelligence.go
+ * - Filename: intelligence.go
  * - Package: anime
+ * @description
+ *  ArcName is the narrative saga an episode belongs to.
  */
-export type Anime_AutoDownloaderCondition = {
-    id: string
-    term: string
-    isRegex: boolean
-    action: Anime_AutoDownloaderProfileRuleFormatAction
-    /**
-     * Only used if Action == "score"
-     */
-    score: number
-}
+export type Anime_ArcName = string
 
 /**
- * - Filepath: internal/library/anime/autodownloader_types.go
- * - Filename: autodownloader_types.go
+ * - Filepath: internal/library/anime/intelligence.go
+ * - Filename: intelligence.go
  * - Package: anime
+ * @description
+ *  ContentTag classifies an episode's narrative role.
  */
-export type Anime_AutoDownloaderProfile = {
-    dbId: number
-    name: string
-    global: boolean
-    releaseGroups?: Array<string>
-    resolutions?: Array<string>
-    conditions?: Array<Anime_AutoDownloaderCondition>
-    minimumScore: number
-    minSeeders?: number
-    minSize?: string
-    maxSize?: string
-    delayMinutes: number
-    skipDelayScore: number
-    providers?: Array<string>
-}
-
-/**
- * - Filepath: internal/library/anime/autodownloader_types.go
- * - Filename: autodownloader_types.go
- * - Package: anime
- */
-export type Anime_AutoDownloaderProfileRuleFormatAction = "score" | "block" | "require"
-
-/**
- * - Filepath: internal/library/anime/autodownloader_types.go
- * - Filename: autodownloader_types.go
- * - Package: anime
- */
-export type Anime_AutoDownloaderRule = {
-    dbId: number
-    enabled: boolean
-    mediaId: number
-    destination: string
-    profileId?: number
-    releaseGroups?: Array<string>
-    resolutions?: Array<string>
-    episodeNumbers?: Array<number>
-    episodeType: Anime_AutoDownloaderRuleEpisodeType
-    comparisonTitle: string
-    titleComparisonType: Anime_AutoDownloaderRuleTitleComparisonType
-    additionalTerms: Array<string>
-    excludeTerms: Array<string>
-    minSeeders: number
-    minSize: string
-    maxSize: string
-    customEpisodeNumberAbsoluteOffset?: number
-    providers: Array<string>
-}
-
-/**
- * - Filepath: internal/library/anime/autodownloader_types.go
- * - Filename: autodownloader_types.go
- * - Package: anime
- */
-export type Anime_AutoDownloaderRuleEpisodeType = "recent" | "selected"
-
-/**
- * - Filepath: internal/library/anime/autodownloader_types.go
- * - Filename: autodownloader_types.go
- * - Package: anime
- */
-export type Anime_AutoDownloaderRuleTitleComparisonType = "contains" | "likely"
-
-/**
- * - Filepath: internal/library/anime/autoselect_types.go
- * - Filename: autoselect_types.go
- * - Package: anime
- */
-export type Anime_AutoSelectPreference = "neutral" | "prefer" | "avoid" | "only" | "never"
-
-/**
- * - Filepath: internal/library/anime/autoselect_types.go
- * - Filename: autoselect_types.go
- * - Package: anime
- */
-export type Anime_AutoSelectProfile = {
-    dbId: number
-    /**
-     * Ordered list of preferred providers (max 3)
-     */
-    providers: Array<string>
-    /**
-     * Preferred groups (e.g., ["SubsPlease", "Erai-raws"])
-     */
-    releaseGroups: Array<string>
-    /**
-     * Preferred resolutions (e.g., ["1080p", "720p"])
-     */
-    resolutions: Array<string>
-    /**
-     * Can exclude terms like "CamRip"
-     */
-    excludeTerms: Array<string>
-    /**
-     * Ordered list, e.g. ["jp", "en"]
-     */
-    preferredLanguages: Array<string>
-    /**
-     * Ordered list, e.g. ["HEVC, x265, H.265", "AVC, x264"]
-     */
-    preferredCodecs: Array<string>
-    /**
-     * Ordered list, e.g. ["BDRip, BD RIP", "AT-X"]
-     */
-    preferredSources: Array<string>
-    multipleAudioPreference: Anime_AutoSelectPreference
-    multipleSubsPreference: Anime_AutoSelectPreference
-    batchPreference: Anime_AutoSelectPreference
-    bestReleasePreference: Anime_AutoSelectPreference
-    /**
-     * Reject if no preferred language is found
-     */
-    requireLanguage: boolean
-    /**
-     * Reject if no preferred codec is found
-     */
-    requireCodec: boolean
-    /**
-     * Reject if no preferred source is found
-     */
-    requireSource: boolean
-    minSeeders?: number
-    minSize?: string
-    maxSize?: string
-}
+export type Anime_ContentTag = "FILLER" | "EPIC" | "CANON" | "SPECIAL"
 
 /**
  * - Filepath: internal/library/anime/entry.go
@@ -1219,9 +39,10 @@ export type Anime_Entry = {
     nextEpisode?: Anime_Episode
     localFiles?: Array<Anime_LocalFile>
     anidbId: number
+    malId: number
     currentEpisodeCount: number
     seasons?: Array<Models_LibrarySeason>
-    vibes?: string[]
+    vibes?: Array<string>
 }
 
 /**
@@ -1290,7 +111,6 @@ export type Anime_Episode = {
      * e.g, "Shibuya Incident - Gate, Open"
      */
     episodeTitle: string
-    titleSpanish?: string
     episodeNumber: number
     seasonNumber?: number
     /**
@@ -1299,10 +119,14 @@ export type Anime_Episode = {
     aniDBEpisode?: string
     absoluteEpisodeNumber: number
     /**
-     * Usually the same as EpisodeNumber, unless there is a discrepancy between Platform and AniDB
+     * Usually the same as EpisodeNumber, unless there is a discrepancy between platform and metadata provider
      */
     progressNumber: number
     localFile?: Anime_LocalFile
+    /**
+     * Multiple versions of the same episode
+     */
+    additionalFiles?: Array<Anime_LocalFile>
     /**
      * Is in the local files
      */
@@ -1320,24 +144,15 @@ export type Anime_Episode = {
      */
     isInvalid: boolean
     /**
-     * Alerts the user that there is a discrepancy between Platform and AniDB
+     * Alerts the user that there is a discrepancy between platform and metadata provider
      */
     metadataIssue?: string
     sagaName?: string
     sagaId?: string
     baseAnime?: Models_LibraryMedia
-    watched?: boolean
     intelligence?: Anime_EpisodeIntelligence
-}
-
-export type Anime_ContentTag = "FILLER" | "EPIC" | "CANON" | "SPECIAL"
-
-export type Anime_EpisodeIntelligence = {
-    rating: number
-    isFiller: boolean
-    arcName: string
-    tag: Anime_ContentTag
-    vibes: string[]
+    watched: boolean
+    titleSpanish?: string
 }
 
 /**
@@ -1349,6 +164,30 @@ export type Anime_EpisodeCollection = {
     hasMappingError: boolean
     episodes?: Array<Anime_Episode>
     metadata?: Metadata_AnimeMetadata
+}
+
+/**
+ * - Filepath: internal/library/anime/intelligence.go
+ * - Filename: intelligence.go
+ * - Package: anime
+ * @description
+ *  EpisodeIntelligence carries computed intelligence about a single episode.
+ */
+export type Anime_EpisodeIntelligence = {
+    /**
+     * 0–10 (derived from LibraryMedia.Score ÷ 10)
+     */
+    rating: number
+    isFiller: boolean
+    /**
+     * Empty string when unknown
+     */
+    arcName: Anime_ArcName
+    tag: Anime_ContentTag
+    /**
+     * Emotional or thematic tags (e.g., "EPIC", "CHILL", "TEARS")
+     */
+    vibes?: Array<string>
 }
 
 /**
@@ -1398,7 +237,14 @@ export type Anime_LibraryCollection = {
 export type Anime_LibraryCollectionEntry = {
     media?: Models_LibraryMedia
     mediaId: number
-    availabilityType?: "FULL_LOCAL" | "HYBRID" | "ONLY_ONLINE"
+    /**
+     * For episode-specific swimlanes
+     */
+    episode?: Models_LibraryEpisode
+    /**
+     * FULL_LOCAL, HYBRID, ONLY_ONLINE
+     */
+    availabilityType: string
     /**
      * Library data
      */
@@ -1407,6 +253,18 @@ export type Anime_LibraryCollectionEntry = {
      * Local list data
      */
     listData?: Anime_EntryListData
+    /**
+     * Emotional or thematic tags
+     */
+    vibes?: Array<string>
+    /**
+     * AI-derived intelligence tags
+     */
+    tags?: Array<string>
+    /**
+     * Primary AI-derived vibe
+     */
+    dominantVibe: string
 }
 
 /**
@@ -1435,79 +293,6 @@ export type Anime_LibraryCollectionStats = {
 }
 
 /**
- * - Filepath: internal/library/anime/localfile.go
- * - Filename: localfile.go
- * - Package: anime
- */
-export type Anime_LocalFile = {
-    path: string
-    name: string
-    parsedInfo: Anime_LocalFileParsedData | null
-    parsedFolderInfo: Array<Anime_LocalFileParsedData> | null
-    metadata: Anime_LocalFileMetadata | null
-    locked: boolean
-    /**
-     * Unused for now
-     */
-    ignored: boolean
-    libraryMediaId: number
-    mediaId: number
-    tags?: string[]
-    technicalInfo?: {
-        format: string
-        size: number
-        videoStream?: {
-            width: number
-            height: number
-            codec: string
-            colorSpace?: string
-            frameRate?: string
-        }
-        audioStreams?: Array<{
-            language?: string
-            codec: string
-        }>
-    }
-}
-
-/**
- * - Filepath: internal/library/anime/localfile.go
- * - Filename: localfile.go
- * - Package: anime
- */
-export type Anime_LocalFileMetadata = {
-    episode: number
-    aniDBEpisode: string
-    type: Anime_LocalFileType
-}
-
-/**
- * - Filepath: internal/library/anime/localfile.go
- * - Filename: localfile.go
- * - Package: anime
- */
-export type Anime_LocalFileParsedData = {
-    original: string
-    title?: string
-    releaseGroup?: string
-    season?: string
-    seasonRange?: Array<string>
-    part?: string
-    partRange?: Array<string>
-    episode?: string
-    episodeRange?: Array<string>
-    episodeTitle?: string
-    year?: string
-}
-
-/**
- * - Filepath: internal/library/anime/localfile.go
- * - Filename: localfile.go
- * - Package: anime
- */
-export type Anime_LocalFileType = "main" | "special" | "nc"
-
-/**
  * - Filepath: internal/library/anime/missing_episodes.go
  * - Filename: missing_episodes.go
  * - Package: anime
@@ -1515,35 +300,6 @@ export type Anime_LocalFileType = "main" | "special" | "nc"
 export type Anime_MissingEpisodes = {
     episodes?: Array<Anime_Episode>
     silencedEpisodes?: Array<Anime_Episode>
-}
-
-
-/**
- * - Filepath: internal/library/anime/playlist.go
- * - Filename: playlist.go
- * - Package: anime
- */
-export type Anime_Playlist = {
-    /**
-     * DbId is the database ID of the models.Playlist
-     */
-    dbId: number
-    /**
-     * Name is the name of the playlist
-     */
-    name: string
-    episodes?: Array<Anime_PlaylistEpisode>
-}
-
-/**
- * - Filepath: internal/library/anime/playlist.go
- * - Filename: playlist.go
- * - Package: anime
- */
-export type Anime_PlaylistEpisode = {
-    episode?: Anime_Episode
-    isCompleted: boolean
-    watchType: Anime_WatchType
 }
 
 /**
@@ -1604,7 +360,7 @@ export type Anime_UpcomingEpisode = {
     episodeNumber: number
     airingAt: number
     timeUntilAiring: number
-    baseAnime?: Platform_BaseAnime
+    baseAnime?: UnifiedMedia
     episodeMetadata?: Anime_EpisodeMetadata
 }
 
@@ -1617,35 +373,6 @@ export type Anime_UpcomingEpisodes = {
     episodes?: Array<Anime_UpcomingEpisode>
 }
 
-/**
- * - Filepath: internal/library/anime/playlist.go
- * - Filename: playlist.go
- * - Package: anime
- */
-export type Anime_WatchType = "localfile" | "debrid" | "torrent" | "online"
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Autodownloader
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * - Filepath: internal/library/autodownloader/autodownloader.go
- * - Filename: autodownloader.go
- * - Package: autodownloader
- */
-export type AutoDownloader_SimulationResult = {
-    ruleId: number
-    mediaId: number
-    episode: number
-    link: string
-    hash: string
-    torrentName: string
-    score: number
-    extensionId: string
-    isDelayed: boolean
-}
-
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Continuity
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1655,7 +382,7 @@ export type AutoDownloader_SimulationResult = {
  * - Filename: manager.go
  * - Package: continuity
  */
-export type Continuity_Kind = "onlinestream" | "mediastream" | "externPlatform_player"
+export type Continuity_Kind = "onlinestream" | "mediastream" | "external_player"
 
 /**
  * - Filepath: internal/continuity/history.go
@@ -1668,8 +395,8 @@ export type Continuity_UpdateWatchHistoryItemOptions = {
     mediaId: number
     episodeNumber: number
     filepath?: string
+    predictive: boolean
     kind: Continuity_Kind
-    predictive?: boolean
 }
 
 /**
@@ -1714,636 +441,354 @@ export type Continuity_WatchHistoryItemResponse = {
  * - Filename: feature_flags.go
  * - Package: core
  */
-export type INTERNPlatform_FeatureFlags = {
-    MainServerTorrentStreaming: boolean
-}
+export type INTERNAL_FeatureFlags = Record<string, never>
 
 /**
  * - Filepath: internal/core/feature_flags.go
  * - Filename: feature_flags.go
  * - Package: core
  */
-export type INTERNPlatform_FeatureKey = "ManageOfflineMode" |
+export type INTERNAL_FeatureKey = "ManageOfflineMode" |
     "ViewSettings" |
     "ViewLogs" |
     "UpdateSettings" |
-    "ManagePlaylist" |
     "ManageLocalAnimeLibrary" |
     "ManageAccount" |
     "ViewAccount" |
     "ManageLists" |
     "RefreshMetadata" |
-
     "WatchingLocalAnime" |
-    "TorrentStreaming" |
-    "DebridStreaming" |
-    "OnlineStreaming" |
-    "Transcode" |
-    "Reading" |
-    "ViewAutoDownloader" |
-    "ManageAutoDownloader" |
-    "ViewScanSummaries" |
-    "ViewExtensions" |
-    "ManageExtensions" |
-    "ManageHomeScreen" |
-    "OpenInExplorer" |
-    "PluginTray" |
-    "ManageDebrid" |
     "Proxy" |
-
-    "PushRequests" |
-    "TorrentProvider"
+    "PushRequests"
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Debrid
+// Dto
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
- * - Filepath: internal/debrid/debrid/debrid.go
- * - Filename: debrid.go
- * - Package: debrid
+ * - Filepath: internal/database/models/dto/localfile.go
+ * - Filename: localfile.go
+ * - Package: dto
  */
-export type Debrid_CachedFile = {
-    size: number
-    name: string
+export type AudioStreamInfo = {
+    /**
+     * e.g. aac, flac
+     */
+    codec?: string
+    /**
+     * e.g. jpn, eng
+     */
+    language?: string
+    /**
+     * e.g. Japanese 5.1
+     */
+    title?: string
 }
 
 /**
- * - Filepath: internal/debrid/debrid/debrid.go
- * - Filename: debrid.go
- * - Package: debrid
+ * - Filepath: internal/database/models/dto/localfile.go
+ * - Filename: localfile.go
+ * - Package: dto
  */
-export type Debrid_TorrentInfo = {
+export type ExternalAudioFile = {
     /**
-     * ID of the torrent if added to the debrid service
+     * Absolute path to the audio file
      */
-    id?: string
-    name: string
-    hash: string
-    size: number
-    files?: Array<Debrid_TorrentItemFile>
-}
-
-/**
- * - Filepath: internal/debrid/debrid/debrid.go
- * - Filename: debrid.go
- * - Package: debrid
- */
-export type Debrid_TorrentItem = {
-    id: string
-    /**
-     * Name of the torrent or file
-     */
-    name: string
-    /**
-     * SHA1 hash of the torrent
-     */
-    hash: string
-    /**
-     * Size of the selected files (size in bytes)
-     */
-    size: number
-    /**
-     * Formatted size of the selected files
-     */
-    formattedSize: string
-    /**
-     * Progress percentage (0 to 100)
-     */
-    completionPercentage: number
-    /**
-     * Formatted estimated time remaining
-     */
-    eta: string
-    /**
-     * Current download status
-     */
-    status: Debrid_TorrentItemStatus
-    /**
-     * Date when the torrent was added, RFC3339 format
-     */
-    added: string
-    /**
-     * Current download speed (optional, present in downloading state)
-     */
-    speed?: string
-    /**
-     * Number of seeders (optional, present in downloading state)
-     */
-    seeders?: number
-    /**
-     * Whether the torrent is ready to be downloaded
-     */
-    isReady: boolean
-    /**
-     * List of files in the torrent (optional)
-     */
-    files?: Array<Debrid_TorrentItemFile>
-}
-
-/**
- * - Filepath: internal/debrid/debrid/debrid.go
- * - Filename: debrid.go
- * - Package: debrid
- */
-export type Debrid_TorrentItemFile = {
-    /**
-     * ID of the file, usually the index
-     */
-    id: string
-    index: number
-    name: string
     path: string
-    size: number
-}
-
-/**
- * - Filepath: internal/debrid/debrid/debrid.go
- * - Filename: debrid.go
- * - Package: debrid
- */
-export type Debrid_TorrentItemInstantAvailability = {
     /**
-     * Key is the file ID (or index)
+     * Base filename
      */
-    cachedFiles?: Record<string, Debrid_CachedFile>
+    filename: string
+    /**
+     * File extension: dts, ac3, truehd, etc.
+     */
+    format: string
+    /**
+     * ISO 639-1 code
+     */
+    language?: string
 }
 
 /**
- * - Filepath: internal/debrid/debrid/debrid.go
- * - Filename: debrid.go
- * - Package: debrid
+ * - Filepath: internal/database/models/dto/localfile.go
+ * - Filename: localfile.go
+ * - Package: dto
  */
-export type Debrid_TorrentItemStatus = "downloading" |
-    "completed" |
-    "seeding" |
-    "error" |
-    "stalled" |
-    "paused" |
-    "other"
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// DebridClient
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * - Filepath: internal/debrid/client/stream.go
- * - Filename: stream.go
- * - Package: debrid_client
- */
-export type DebridClient_CancelStreamOptions = {
-    removeTorrent: boolean
-}
-
-/**
- * - Filepath: internal/debrid/client/previews.go
- * - Filename: previews.go
- * - Package: debrid_client
- */
-export type DebridClient_FilePreview = {
+export type ExternalSubtitle = {
+    /**
+     * Absolute path to the subtitle file
+     */
     path: string
-    displayPath: string
-    displayTitle: string
-    episodeNumber: number
-    relativeEpisodeNumber: number
-    isLikely: boolean
-    index: number
-    fileId: string
+    /**
+     * Base filename
+     */
+    filename: string
+    /**
+     * File extension: srt, ass, vtt, sup, etc.
+     */
+    format: string
+    /**
+     * ISO 639-1 code (e.g. "es", "en", "ja")
+     */
+    language?: string
+    /**
+     * True if "forced" flag present in filename
+     */
+    isForced?: boolean
+    /**
+     * True if "sdh" or "hi" flag present (Hearing Impaired)
+     */
+    isSDH?: boolean
+    /**
+     * True if "cc" flag present (Closed Captions)
+     */
+    isCC?: boolean
 }
 
 /**
- * - Filepath: internal/debrid/client/stream.go
- * - Filename: stream.go
- * - Package: debrid_client
+ * - Filepath: internal/database/models/dto/localfile.go
+ * - Filename: localfile.go
+ * - Package: dto
  */
-export type DebridClient_StreamPlaybackType = "none" | "noneAndAwait" | "default" | "nativeplayer" | "externalPlayerLink"
+export type FileTechnicalInfo = {
+    duration?: number
+    size?: number
+    bitrate?: number
+    format?: string
+    videoStream?: VideoStreamInfo
+    audioStreams?: Array<AudioStreamInfo>
+    /**
+     * Reusing Audio structure since they share basic properties
+     */
+    subtitleStreams?: Array<AudioStreamInfo>
+    /**
+     * External .srt/.ass files (Jellyfin-style)
+     */
+    externalSubtitles?: Array<ExternalSubtitle>
+    /**
+     * External .dts/.ac3 files
+     */
+    externalAudioFiles?: Array<ExternalAudioFile>
+    /**
+     * Available remote subtitles (e.g. OpenSubtitles)
+     */
+    remoteSubtitles?: Array<RemoteSubtitle>
+}
 
 /**
- * - Filepath: internal/debrid/client/stream.go
- * - Filename: stream.go
- * - Package: debrid_client
+ * - Filepath: internal/database/models/dto/localfile.go
+ * - Filename: localfile.go
+ * - Package: dto
  */
-export type DebridClient_StreamState = {
-    status: DebridClient_StreamStatus
-    torrentName: string
+export type LocalFile = {
+    path: string
+    name: string
+    fileHash?: string
+    fileSize?: number
+    fileModTime?: number
+    parsedInfo?: LocalFileParsedData
+    parsedFolderInfo?: Array<LocalFileParsedData>
+    embeddedMetadata?: LocalFileEmbeddedMetadata
+    metadata?: LocalFileMetadata
+    technicalInfo?: FileTechnicalInfo
+    locked: boolean
+    /**
+     * Unused for now
+     */
+    ignored: boolean
+    libraryMediaId: number
+    mediaId: number
+}
+
+/**
+ * - Filepath: internal/database/models/dto/localfile.go
+ * - Filename: localfile.go
+ * - Package: dto
+ */
+export type LocalFileEmbeddedMetadata = {
+    title?: string
+    season?: number
+    episode?: number
+    source?: string
+}
+
+/**
+ * - Filepath: internal/database/models/dto/localfile.go
+ * - Filename: localfile.go
+ * - Package: dto
+ */
+export type LocalFileMetadata = {
+    /**
+     * Multi-episode support for files like "01-03"
+     */
+    episodes?: Array<number>
+    aniDBEpisode: string
+    type: LocalFileType
+    episode: number
+}
+
+/**
+ * - Filepath: internal/database/models/dto/localfile.go
+ * - Filename: localfile.go
+ * - Package: dto
+ */
+export type LocalFileParsedData = {
+    original: string
+    title?: string
+    releaseGroup?: string
+    season?: string
+    seasonRange?: Array<string>
+    part?: string
+    partRange?: Array<string>
+    episode?: string
+    episodeRange?: Array<string>
+    episodeTitle?: string
+    year?: string
+}
+
+/**
+ * - Filepath: internal/database/models/dto/localfile.go
+ * - Filename: localfile.go
+ * - Package: dto
+ */
+export type LocalFileType = "main" | "special" | "nc"
+
+/**
+ * - Filepath: internal/database/models/dto/localfile.go
+ * - Filename: localfile.go
+ * - Package: dto
+ */
+export type RemoteSubtitle = {
+    /**
+     * e.g. "opensubtitles"
+     */
+    providerId: string
+    /**
+     * OpenSubtitles file_id for download
+     */
+    fileId: number
+    /**
+     * ISO 639-1 code
+     */
+    language?: string
+    /**
+     * "srt", "ass", etc.
+     */
+    format?: string
+    /**
+     * Popularity signal
+     */
+    downloadCount?: number
+    /**
+     * Release name or episode title
+     */
+    release?: string
+}
+
+/**
+ * - Filepath: internal/database/models/dto/scan_summary_dto.go
+ * - Filename: scan_summary_dto.go
+ * - Package: dto
+ */
+export type ScanSummary = {
+    id: string
+    groups?: Array<ScanSummaryGroup>
+    unmatchedFiles?: Array<ScanSummaryFile>
+}
+
+/**
+ * - Filepath: internal/database/models/dto/scan_summary_dto.go
+ * - Filename: scan_summary_dto.go
+ * - Package: dto
+ */
+export type ScanSummaryFile = {
+    id: string
+    localFile?: LocalFile
+    logs?: Array<ScanSummaryLog>
+}
+
+/**
+ * - Filepath: internal/database/models/dto/scan_summary_dto.go
+ * - Filename: scan_summary_dto.go
+ * - Package: dto
+ */
+export type ScanSummaryGroup = {
+    id: string
+    files?: Array<ScanSummaryFile>
+    mediaId: number
+    mediaTitle: string
+    mediaImage: string
+    /**
+     * Whether the media is in the user's collection
+     */
+    mediaIsInCollection: boolean
+}
+
+/**
+ * - Filepath: internal/database/models/dto/scan_summary_dto.go
+ * - Filename: scan_summary_dto.go
+ * - Package: dto
+ */
+export type ScanSummaryItem = {
+    createdAt?: string
+    scanSummary?: ScanSummary
+}
+
+/**
+ * - Filepath: internal/database/models/dto/scan_summary_dto.go
+ * - Filename: scan_summary_dto.go
+ * - Package: dto
+ */
+export type ScanSummaryLog = {
+    id: string
+    filePath: string
+    level: string
     message: string
 }
 
 /**
- * - Filepath: internal/debrid/client/stream.go
- * - Filename: stream.go
- * - Package: debrid_client
+ * - Filepath: internal/database/models/dto/localfile.go
+ * - Filename: localfile.go
+ * - Package: dto
  */
-export type DebridClient_StreamStatus = "downloading" | "ready" | "failed" | "started"
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Extension
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * - Filepath: internal/extension/plugin.go
- * - Filename: plugin.go
- * - Package: extension
- * @description
- *  CommandArg represents an argument for a command
- */
-export type Extension_CommandArg = {
-    value?: string
-    validator?: string
-}
-
-/**
- * - Filepath: internal/extension/plugin.go
- * - Filename: plugin.go
- * - Package: extension
- * @description
- *  CommandScope defines a specific command or set of commands that can be executed
- *  with specific arguments and validation rules.
- */
-export type Extension_CommandScope = {
-    description?: string
-    command: string
-    args?: Array<Extension_CommandArg>
-}
-
-/**
- * - Filepath: internal/extension/extension.go
- * - Filename: extension.go
- * - Package: extension
- */
-export type Extension_ConfigField = {
-    type: Extension_ConfigFieldType
-    name: string
-    label: string
-    options?: Array<Extension_ConfigFieldSelectOption>
-    default?: string
-}
-
-/**
- * - Filepath: internal/extension/extension.go
- * - Filename: extension.go
- * - Package: extension
- */
-export type Extension_ConfigFieldSelectOption = {
-    value: string
-    label: string
-}
-
-/**
- * - Filepath: internal/extension/extension.go
- * - Filename: extension.go
- * - Package: extension
- */
-export type Extension_ConfigFieldType = "text" | "switch" | "select"
-
-/**
- * - Filepath: internal/extension/extension.go
- * - Filename: extension.go
- * - Package: extension
- */
-export type Extension_Extension = {
+export type VideoStreamInfo = {
     /**
-     * e.g. "extension-example"
+     * e.g. h264, hevc
      */
-    id: string
+    codec?: string
     /**
-     * e.g. "Extension"
+     * e.g. High 10, Main
      */
-    name: string
+    profile?: string
     /**
-     * e.g. "1.0.0"
+     * 1920
      */
-    version: string
-    semverConstraint?: string
+    width?: number
     /**
-     * e.g. "http://cdn.something.app/extensions/extension-example/manifest.json"
+     * 1080
      */
-    manifestURI: string
+    height?: number
     /**
-     * e.g. "go"
+     * 24000/1001
      */
-    language: Extension_Language
+    frameRate?: string
     /**
-     * e.g. "anime-torrent-provider"
+     * e.g. bt2020nc
      */
-    type: Extension_Type
+    colorSpace?: string
     /**
-     * e.g. "This extension provides torrents"
+     * e.g. smpte2084
      */
-    description: string
+    colorTransfer?: string
     /**
-     * e.g. "KameHouse"
+     * e.g. bt2020
      */
-    author: string
-    icon: string
-    website: string
-    readme: string
-    notes?: string
-    lang: string
-    /**
-     * NOT IMPLEMENTED
-     */
-    permissions?: Array<string>
-    userConfig?: Extension_UserConfig
-    payload: string
-    payloadURI?: string
-    plugin?: Extension_PluginManifest
-    isDevelopment?: boolean
-}
-
-/**
- * - Filepath: internal/extension/extension.go
- * - Filename: extension.go
- * - Package: extension
- */
-export type Extension_InvalidExtension = {
-    id: string
-    path: string
-    extension: Extension_Extension
-    reason: string
-    code: Extension_InvalidExtensionErrorCode
-    pluginPermissionDescription?: string
-}
-
-/**
- * - Filepath: internal/extension/extension.go
- * - Filename: extension.go
- * - Package: extension
- */
-export type Extension_InvalidExtensionErrorCode = "invalid_manifest" |
-    "invalid_payload" |
-    "user_config_error" |
-    "invalid_authorization" |
-    "plugin_permissions_not_granted" |
-    "invalid_semver_constraint"
-
-/**
- * - Filepath: internal/extension/extension.go
- * - Filename: extension.go
- * - Package: extension
- */
-export type Extension_Language = "javascript" | "typescript" | "go"
-
-/**
- * - Filepath: internal/extension/plugin.go
- * - Filename: plugin.go
- * - Package: extension
- * @description
- *  PluginAllowlist is a list of system permissions that the plugin is asking for.
- *  
- *  The user must acknowledge these permissions before the plugin can be loaded.
- */
-export type Extension_PluginAllowlist = {
-    networkAccess: Extension_PluginNetworkAcess
-    unsafeFlags?: Array<Extension_PluginUnsafe>
-    readPaths?: Array<string>
-    writePaths?: Array<string>
-    commandScopes?: Array<Extension_CommandScope>
-}
-
-/**
- * - Filepath: internal/extension/plugin.go
- * - Filename: plugin.go
- * - Package: extension
- */
-export type Extension_PluginManifest = {
-    version: string
-    permissions?: Extension_PluginPermissions
-}
-
-/**
- * - Filepath: internal/extension/plugin.go
- * - Filename: plugin.go
- * - Package: extension
- */
-export type Extension_PluginNetworkAcess = {
-    allowedDomains?: Array<string>
-    reasoning?: string
-}
-
-/**
- * - Filepath: internal/extension/extension.go
- * - Filename: extension.go
- * - Package: extension
- */
-export type Extension_PluginPermissionScope = string
-
-/**
- * - Filepath: internal/extension/plugin.go
- * - Filename: plugin.go
- * - Package: extension
- */
-export type Extension_PluginPermissions = {
-    scopes?: Array<Extension_PluginPermissionScope>
-    allow: Extension_PluginAllowlist
-}
-
-/**
- * - Filepath: internal/extension/plugin.go
- * - Filename: plugin.go
- * - Package: extension
- */
-export type Extension_PluginUnsafe = {
-    flag: Extension_PluginUnsafeFlag
-    reason: string
-}
-
-/**
- * - Filepath: internal/extension/plugin.go
- * - Filename: plugin.go
- * - Package: extension
- */
-export type Extension_PluginUnsafeFlag = "dom-script-manipulation" | "dom-link-manipulation"
-
-/**
- * - Filepath: internal/extension/extension.go
- * - Filename: extension.go
- * - Package: extension
- */
-export type Extension_SavedUserConfig = {
-    version: number
-    values?: Record<string, string>
-}
-
-/**
- * - Filepath: internal/extension/extension.go
- * - Filename: extension.go
- * - Package: extension
- */
-export type Extension_Type = "anime-torrent-provider" | "onlinestream-provider" | "custom-source" | "plugin"
-
-/**
- * - Filepath: internal/extension/extension.go
- * - Filename: extension.go
- * - Package: extension
- */
-export type Extension_UserConfig = {
-    version: number
-    requiresConfig: boolean
-    fields?: Array<Extension_ConfigField>
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// ExtensionPlayground
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * - Filepath: internal/extension_playground/playground.go
- * - Filename: playground.go
- * - Package: extension_playground
- */
-export type RunPlaygroundCodeParams = {
-    type?: Extension_Type
-    language?: Extension_Language
-    code: string
-    inputs?: Record<string, any>
-    function: string
-}
-
-/**
- * - Filepath: internal/extension_playground/playground.go
- * - Filename: playground.go
- * - Package: extension_playground
- */
-export type RunPlaygroundCodeResponse = {
-    logs: string
-    value: string
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// ExtensionRepo
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * - Filepath: internal/extension_repo/repository.go
- * - Filename: repository.go
- * - Package: extension_repo
- */
-export type ExtensionRepo_AllExtensions = {
-    extensions?: Array<Extension_Extension>
-    invalidExtensions?: Array<Extension_InvalidExtension>
-    invalidUserConfigExtensions?: Array<Extension_InvalidExtension>
-    hasUpdate?: Array<ExtensionRepo_UpdateData>
-    unsafeExtensions?: Record<string, boolean>
-}
-
-/**
- * - Filepath: internal/extension_repo/repository.go
- * - Filename: repository.go
- * - Package: extension_repo
- */
-export type ExtensionRepo_AnimeTorrentProviderExtensionItem = {
-    id: string
-    name: string
-    /**
-     * ISO 639-1 language code
-     */
-    lang: string
-    settings?: HibikeTorrent_AnimeProviderSettings
-}
-
-/**
- * - Filepath: internal/extension_repo/repository.go
- * - Filename: repository.go
- * - Package: extension_repo
- */
-export type ExtensionRepo_CustomSourceExtensionItem = {
-    id: string
-    extensionIdentifier: number
-    name: string
-    /**
-     * ISO 639-1 language code
-     */
-    lang: string
-    settings?: HibikeCustomSource_Settings
-}
-
-/**
- * - Filepath: internal/extension_repo/external.go
- * - Filename: external.go
- * - Package: extension_repo
- */
-export type ExtensionRepo_ExtensionInstallResponse = {
-    message: string
-}
-
-/**
- * - Filepath: internal/extension_repo/userconfig.go
- * - Filename: userconfig.go
- * - Package: extension_repo
- */
-export type ExtensionRepo_ExtensionUserConfig = {
-    userConfig?: Extension_UserConfig
-    savedUserConfig?: Extension_SavedUserConfig
-}
-
-
-
-/**
- * - Filepath: internal/extension_repo/repository.go
- * - Filename: repository.go
- * - Package: extension_repo
- */
-export type ExtensionRepo_OnlinestreamProviderExtensionItem = {
-    id: string
-    name: string
-    /**
-     * ISO 639-1 language code
-     */
-    lang: string
-    episodeServers?: Array<string>
-    supportsDub: boolean
-}
-
-/**
- * - Filepath: internal/extension_repo/external.go
- * - Filename: external.go
- * - Package: extension_repo
- */
-export type ExtensionRepo_RepositoryInstallResponse = {
-    extensions?: Array<Extension_Extension>
-    message: string
-}
-
-/**
- * - Filepath: internal/extension_repo/externPlatform_plugin.go
- * - Filename: externPlatform_plugin.go
- * - Package: extension_repo
- */
-export type ExtensionRepo_StoredPluginSettingsData = {
-    pinnedTrayPluginIds?: Array<string>
-    /**
-     * Extension ID -> Permission Hash
-     */
-    pluginGrantedPermissions?: Record<string, string>
-}
-
-/**
- * - Filepath: internal/extension_repo/repository.go
- * - Filename: repository.go
- * - Package: extension_repo
- */
-export type ExtensionRepo_UpdateData = {
-    extensionID: string
-    manifestURI: string
-    version: string
-    payload: string
+    colorPrimaries?: string
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Handlers
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * - Filepath: internal/handlers/docs.go
- * - Filename: docs.go
- * - Package: handlers
- */
-export type ApiDocsGroup = {
-    filename: string
-    name: string
-    handlers?: Array<RouteHandler>
-}
 
 /**
  * - Filepath: internal/handlers/directory_selector.go
@@ -2369,212 +814,22 @@ export type DirectorySelectorResponse = {
 }
 
 /**
- * - Filepath: internal/handlers/download.go
- * - Filename: download.go
- * - Package: handlers
- */
-export type DownloadReleaseResponse = {
-    destination: string
-    error?: string
-}
-
-/**
- * - Filepath: internal/handlers/mal.go
- * - Filename: mal.go
- * - Package: handlers
- */
-export type MalAuthResponse = {
-    access_token: string
-    refresh_token: string
-    expires_in: number
-    token_type: string
-}
-
-/**
  * - Filepath: internal/handlers/status.go
  * - Filename: status.go
  * - Package: handlers
  */
 export type MemoryStatsResponse = {
-    /**
-     * bytes allocated and not yet freed
-     */
     alloc: number
-    /**
-     * bytes allocated (even if freed)
-     */
     totalAlloc: number
-    /**
-     * bytes obtained from system
-     */
     sys: number
-    /**
-     * number of pointer lookups
-     */
-    lookups: number
-    /**
-     * number of mallocs
-     */
-    mallocs: number
-    /**
-     * number of frees
-     */
-    frees: number
-    /**
-     * bytes allocated and not yet freed
-     */
     heapAlloc: number
-    /**
-     * bytes obtained from system
-     */
     heapSys: number
-    /**
-     * bytes in idle spans
-     */
     heapIdle: number
-    /**
-     * bytes in non-idle span
-     */
     heapInuse: number
-    /**
-     * bytes released to OS
-     */
-    heapReleased: number
-    /**
-     * total number of allocated objects
-     */
     heapObjects: number
-    /**
-     * bytes used by stack allocator
-     */
-    stackInuse: number
-    /**
-     * bytes obtained from system for stack allocator
-     */
-    stackSys: number
-    /**
-     * bytes used by mspan structures
-     */
-    mSpanInuse: number
-    /**
-     * bytes obtained from system for mspan structures
-     */
-    mSpanSys: number
-    /**
-     * bytes used by mcache structures
-     */
-    mCacheInuse: number
-    /**
-     * bytes obtained from system for mcache structures
-     */
-    mCacheSys: number
-    /**
-     * bytes used by the profiling bucket hash table
-     */
-    buckHashSys: number
-    /**
-     * bytes used for garbage collection system metadata
-     */
-    gcSys: number
-    /**
-     * bytes used for other system allocations
-     */
-    otherSys: number
-    /**
-     * next collection will happen when HeapAlloc ≥ this amount
-     */
-    nextGC: number
-    /**
-     * time the last garbage collection finished
-     */
-    lastGC: number
-    /**
-     * cumulative nanoseconds in GC stop-the-world pauses
-     */
-    pauseTotalNs: number
-    /**
-     * nanoseconds in recent GC stop-the-world pause
-     */
-    pauseNs: number
-    /**
-     * number of completed GC cycles
-     */
     numGC: number
-    /**
-     * number of GC cycles that were forced by the application calling the GC function
-     */
-    numForcedGC: number
-    /**
-     * fraction of this program's available CPU time used by the GC since the program started
-     */
     gcCPUFraction: number
-    /**
-     * boolean that indicates GC is enabled
-     */
-    enableGC: boolean
-    /**
-     * boolean that indicates GC debug mode is enabled
-     */
-    debugGC: boolean
-    /**
-     * number of goroutines
-     */
     numGoroutine: number
-}
-
-/**
- * - Filepath: internal/handlers/docs.go
- * - Filename: docs.go
- * - Package: handlers
- */
-export type RouteHandler = {
-    name: string
-    trimmedName: string
-    comments?: Array<string>
-    filepath: string
-    filename: string
-    api?: RouteHandlerApi
-}
-
-/**
- * - Filepath: internal/handlers/docs.go
- * - Filename: docs.go
- * - Package: handlers
- */
-export type RouteHandlerApi = {
-    summary: string
-    descriptions?: Array<string>
-    endpoint: string
-    methods?: Array<string>
-    params?: Array<RouteHandlerParam>
-    bodyFields?: Array<RouteHandlerParam>
-    returns: string
-    returnGoType: string
-    returnTypescriptType: string
-}
-
-/**
- * - Filepath: internal/handlers/docs.go
- * - Filename: docs.go
- * - Package: handlers
- */
-export type RouteHandlerParam = {
-    name: string
-    jsonName: string
-    /**
-     * e.g., []models.User
-     */
-    goType: string
-    /**
-     * e.g., models.User
-     */
-    usedStructType: string
-    /**
-     * e.g., Array<User>
-     */
-    typescriptType: string
-    required: boolean
-    descriptions?: Array<string>
 }
 
 /**
@@ -2598,9 +853,6 @@ export type Status = {
     themeSettings?: Models_Theme
     isOffline: boolean
     mediastreamSettings?: Models_MediastreamSettings
-    torrentstreamSettings?: Models_TorrentstreamSettings
-    debridSettings?: Models_DebridSettings
-    PlatformClientId: string
     /**
      * If true, a new screen will be displayed
      */
@@ -2609,154 +861,13 @@ export type Status = {
      * The server is running as a desktop sidecar
      */
     isDesktopSidecar: boolean
-    featureFlags?: INTERNPlatform_FeatureFlags
-    disabledFeatures?: Array<INTERNPlatform_FeatureKey>
+    featureFlags?: INTERNAL_FeatureFlags
+    disabledFeatures?: Array<INTERNAL_FeatureKey>
     serverReady: boolean
     serverHasPassword: boolean
     showChangelogTour: string
     serverIPs?: Array<string>
-    serverPort?: number
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Hibikecustomsource
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * - Filepath: internal/extension/hibike/customsource/types.go
- * - Filename: types.go
- * - Package: hibikecustomsource
- */
-export type HibikeCustomSource_ListAnimeResponse = {
-    media?: Array<Platform_BaseAnime>
-    page: number
-    totalPages: number
-    total: number
-}
-
-/**
- * - Filepath: internal/extension/hibike/customsource/types.go
- * - Filename: types.go
- * - Package: hibikecustomsource
- */
-
-/**
- * - Filepath: internal/extension/hibike/customsource/types.go
- * - Filename: types.go
- * - Package: hibikecustomsource
- */
-export type HibikeCustomSource_Settings = {
-    supportsAnime: boolean
-}
-
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Hibikeonlinestream
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * - Filepath: internal/extension/hibike/onlinestream/types.go
- * - Filename: types.go
- * - Package: hibikeonlinestream
- */
-export type HibikeOnlinestream_SearchResult = {
-    id: string
-    title: string
-    url: string
-    subOrDub: HibikeOnlinestream_SubOrDub
-}
-
-/**
- * - Filepath: internal/extension/hibike/onlinestream/types.go
- * - Filename: types.go
- * - Package: hibikeonlinestream
- */
-export type HibikeOnlinestream_SubOrDub = "sub" | "dub" | "both"
-
-/**
- * - Filepath: internal/extension/hibike/onlinestream/types.go
- * - Filename: types.go
- * - Package: hibikeonlinestream
- */
-export type HibikeOnlinestream_VideoSourceType = "mp4" | "m3u8" | "unknown"
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Hibiketorrent
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * - Filepath: internal/extension/hibike/torrent/types.go
- * - Filename: types.go
- * - Package: hibiketorrent
- */
-export type HibikeTorrent_AnimeProviderSettings = {
-    canSmartSearch: boolean
-    smartSearchFilters?: Array<HibikeTorrent_AnimeProviderSmartSearchFilter>
-    supportsAdult: boolean
-    type: HibikeTorrent_AnimeProviderType
-}
-
-/**
- * - Filepath: internal/extension/hibike/torrent/types.go
- * - Filename: types.go
- * - Package: hibiketorrent
- */
-export type HibikeTorrent_AnimeProviderSmartSearchFilter = "batch" | "episodeNumber" | "resolution" | "query" | "bestReleases"
-
-/**
- * - Filepath: internal/extension/hibike/torrent/types.go
- * - Filename: types.go
- * - Package: hibiketorrent
- */
-export type HibikeTorrent_AnimeProviderType = "main" | "special"
-
-/**
- * - Filepath: internal/extension/hibike/torrent/types.go
- * - Filename: types.go
- * - Package: hibiketorrent
- */
-export type HibikeTorrent_AnimeTorrent = {
-    provider?: string
-    name: string
-    date: string
-    size: number
-    formattedSize: string
-    seeders: number
-    leechers: number
-    downloadCount: number
-    link: string
-    downloadUrl: string
-    magnetLink?: string
-    infoHash?: string
-    resolution?: string
-    isBatch?: boolean
-    episodeNumber?: number
-    releaseGroup?: string
-    isBestRelease: boolean
-    confirmed: boolean
-}
-
-/**
- * - Filepath: internal/extension/hibike/torrent/types.go
- * - Filename: types.go
- * - Package: hibiketorrent
- */
-export type HibikeTorrent_AnimeTorrentFile = {
-    index: number
-    path: string
-    name: string
-}
-
-/**
- * - Filepath: internal/extension/hibike/torrent/types.go
- * - Filename: types.go
- * - Package: hibiketorrent
- */
-export type HibikeTorrent_BatchEpisodeFiles = {
-    current: number
-    currentEpisodeNumber: number
-    currentAniDBEpisode: string
-    files?: Array<HibikeTorrent_AnimeTorrentFile>
+    serverPort: number
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2770,7 +881,7 @@ export type HibikeTorrent_BatchEpisodeFiles = {
  */
 export type LibraryExplorer_FileTreeJSON = {
     root?: LibraryExplorer_FileTreeNodeJSON
-    localFiles?: Record<string, Anime_LocalFile>
+    localFiles?: Record<string, LocalFile>
 }
 
 /**
@@ -2785,7 +896,7 @@ export type LibraryExplorer_FileTreeNodeJSON = {
     kind: LibraryExplorer_NodeKind
     children?: Array<LibraryExplorer_FileTreeNodeJSON>
     size?: number
-    localFile?: Anime_LocalFile
+    localFile?: LocalFile
     mediaIds?: Array<number>
     localFileCount?: number
     matchedLocalFileCount?: number
@@ -2806,7 +917,7 @@ export type LibraryExplorer_NodeKind = "directory" | "file"
 export type LibraryExplorer_SuperUpdateFileOptions = {
     path: string
     newName?: string
-    metadata?: Anime_LocalFileMetadata
+    metadata?: LocalFileMetadata
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2818,7 +929,7 @@ export type LibraryExplorer_SuperUpdateFileOptions = {
  * - Filename: sync.go
  * - Package: local
  */
-export type LocPlatform_QueueMediaTask = {
+export type Local_QueueMediaTask = {
     mediaId: number
     image: string
     title: string
@@ -2830,8 +941,8 @@ export type LocPlatform_QueueMediaTask = {
  * - Filename: sync.go
  * - Package: local
  */
-export type LocPlatform_QueueState = {
-    animeTasks?: Record<number, LocPlatform_QueueMediaTask>
+export type Local_QueueState = {
+    animeTasks?: Record<number, Local_QueueMediaTask>
 }
 
 /**
@@ -2839,12 +950,11 @@ export type LocPlatform_QueueState = {
  * - Filename: manager.go
  * - Package: local
  */
-export type LocPlatform_TrackedMediaItem = {
+export type Local_TrackedMediaItem = {
     mediaId: number
     type: string
-    animeEntry?: Platform_AnimeListEntry
+    animeEntry?: UnifiedCollectionEntry
 }
-
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Mediastream
@@ -2888,9 +998,7 @@ export type Mediastream_StreamType = "transcode" | "optimized" | "direct"
 export type Metadata_AnimeMappings = {
     animeplanetId?: string
     kitsuId?: number
-    malId?: number
     type?: string
-    PlatformId?: number
     anisearchId?: number
     anidbId?: number
     notifymoeId?: string
@@ -2898,6 +1006,8 @@ export type Metadata_AnimeMappings = {
     thetvdbId?: number
     imdbId?: string
     themoviedbId?: string
+    anilistId?: number
+    myanimelistId?: number
 }
 
 /**
@@ -2907,6 +1017,7 @@ export type Metadata_AnimeMappings = {
  */
 export type Metadata_AnimeMetadata = {
     titles?: Record<string, string>
+    description: string
     episodes?: Record<string, Metadata_EpisodeMetadata>
     episodeCount: number
     specialCount: number
@@ -2936,6 +1047,12 @@ export type Metadata_EpisodeMetadata = {
      * Indicates if the episode has a real image
      */
     hasImage: boolean
+    /**
+     * Indicates if this is a filler episode
+     */
+    isFiller?: boolean
+    sagaId?: string
+    sagaName?: string
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -3007,43 +1124,6 @@ export type MKVParser_ChapterInfo = {
 }
 
 /**
- * - Filepath: internal/mkvparser/structs.go
- * - Filename: structs.go
- * - Package: mkvparser
- * @description
- *  ContentCompression describes how the track data is compressed
- */
-export type MKVParser_ContentCompression = {
-    ContentCompAlgo: number
-    ContentCompSettings?: Array<string>
-}
-
-/**
- * - Filepath: internal/mkvparser/structs.go
- * - Filename: structs.go
- * - Package: mkvparser
- * @description
- *  ContentEncoding describes a single encoding applied to the track data
- */
-export type MKVParser_ContentEncoding = {
-    ContentEncodingOrder: number
-    ContentEncodingScope: number
-    ContentEncodingType: number
-    ContentCompression?: MKVParser_ContentCompression
-}
-
-/**
- * - Filepath: internal/mkvparser/structs.go
- * - Filename: structs.go
- * - Package: mkvparser
- * @description
- *  ContentEncodings contains information about how the track data is encoded
- */
-export type MKVParser_ContentEncodings = {
-    ContentEncoding?: Array<MKVParser_ContentEncoding>
-}
-
-/**
  * - Filepath: internal/mkvparser/metadata.go
  * - Filename: metadata.go
  * - Package: mkvparser
@@ -3068,6 +1148,7 @@ export type MKVParser_Metadata = {
     subtitleTracks?: Array<MKVParser_TrackInfo>
     chapters?: Array<MKVParser_ChapterInfo>
     attachments?: Array<MKVParser_AttachmentInfo>
+    tags?: Record<string, Array<string>>
     /**
      * RFC 6381 codec string
      */
@@ -3173,88 +1254,18 @@ export type MKVParser_VideoTrack = {
  * - Filename: models.go
  * - Package: models
  */
-export type Models_PlatformSettings = {
-    hideAudienceScore: boolean
-    disableCacheLayer: boolean
-}
-
-/**
- * - Filepath: internal/database/models/models.go
- * - Filename: models.go
- * - Package: models
- */
-export type Models_AutoDownloaderItem = {
-    libraryMediaId?: number
-    ruleId: number
-    mediaId: number
-    episode: number
-    link: string
-    hash: string
-    magnet: string
-    torrentName: string
-    downloaded: boolean
-    isDelayed: boolean
-    delayUntil?: string
-    score: number
+export type Models_GhostAssociatedMedia = {
+    path: string
+    targetMediaId: number
+    ghostMatchCount: number
+    algorithmScore: number
+    userResolved: boolean
+    originalTitle: string
+    confidence: number
     id: number
     createdAt?: string
     updatedAt?: string
 }
-
-/**
- * - Filepath: internal/database/models/models.go
- * - Filename: models.go
- * - Package: models
- */
-export type Models_AutoDownloaderSettings = {
-    provider: string
-    interval: number
-    enabled: boolean
-    downloadAutomatically: boolean
-    enableEnhancedQueries: boolean
-    enableSeasonCheck: boolean
-    useDebrid: boolean
-}
-
-/**
- * - Filepath: internal/database/models/models.go
- * - Filename: models.go
- * - Package: models
- */
-export type Models_ChapterDownloadQueueItem = {
-    libraryMediaId?: number
-    provider: string
-    mediaId: number
-    chapterId: string
-    chapterNumber: string
-    /**
-     * Contains map of page index to page details
-     */
-    pageData?: Array<string>
-    status: string
-    id: number
-    createdAt?: string
-    updatedAt?: string
-}
-
-/**
- * - Filepath: internal/database/models/models.go
- * - Filename: models.go
- * - Package: models
- */
-export type Models_DebridSettings = {
-    enabled: boolean
-    provider: string
-    apiKey: string
-    includeDebridStreamInLibrary: boolean
-    streamAutoSelect: boolean
-    streamPreferredResolution: string
-    torrentioUrl: string
-    id: number
-    createdAt?: string
-    updatedAt?: string
-}
-
 
 /**
  * - Filepath: internal/database/models/models.go
@@ -3264,35 +1275,57 @@ export type Models_DebridSettings = {
 export type Models_HomeItem = {
     id: string
     type: string
-    /**
-     * options chosen by the user
-     */
-    options?: any
-    /**
-     * checks if it's still valid on the client
-     */
-    schemaVersion: number
 }
 
 /**
- * - Filepath: ..\internal\database\models\models.go
- * - Filename: models.go
+ * - Filepath: internal/database/models/library.go
+ * - Filename: library.go
  * - Package: models
+ * @description
+ *  LibraryEpisode represents a single episode of a LibraryMedia.
  */
-export type Models_IntSlice = Array<number>
+export type Models_LibraryEpisode = {
+    libraryMediaId: number
+    episodeNumber: number
+    absoluteNumber: number
+    seasonNumber: number
+    /**
+     * "REGULAR", "SPECIAL"
+     */
+    type: string
+    title: string
+    description: string
+    /**
+     * Thumbnail path/URL
+     */
+    image: string
+    airDate?: string
+    runtimeMinutes: number
+    sagaName: string
+    sagaId: string
+    tags?: Record<string, any>
+    dominantVibe: string
+    suggestedSwimlane: string
+    /**
+     * JSON array of strings
+     */
+    audioTracks?: Record<string, any>
+    /**
+     * JSON array of strings
+     */
+    subtitleTracks?: Record<string, any>
+    id: number
+    createdAt?: string
+    updatedAt?: string
+}
 
-/**
- * - Filepath: internal/database/models/models.go
- * - Filename: models.go
- * - Package: models
- */
 /**
  * - Filepath: internal/database/models/library.go
  * - Filename: library.go
  * - Package: models
  * @description
  *  LibraryMedia represents a local TV show, Anime, or Movie.
- *  It is decoupled from Platform and uses its own primary key.
+ *  It is decoupled from third-party platforms and uses its own primary key.
  */
 export type Models_LibraryMedia = {
     /**
@@ -3302,18 +1335,20 @@ export type Models_LibraryMedia = {
     /**
      * e.g., "TV", "TV_SHORT", "MOVIE", "OVA", "SPECIAL"
      */
-    format: Models_MediaFormat
-    status: Models_MediaStatus
+    format: string
+    status: string
+    /**
+     * "COMPLETE", "MISSING", "LOCAL"
+     */
+    metadataStatus: string
     titleOriginal: string
     titleRomaji: string
     titleEnglish: string
-    titleSpanish?: string
-    runtime?: number
-    watched?: boolean
+    titleSpanish: string
     /**
      * JSON array of strings
      */
-    synonyms?: Array<string>
+    synonyms?: Record<string, any>
     description: string
     /**
      * Path or URL
@@ -3323,28 +1358,9 @@ export type Models_LibraryMedia = {
      * Path or URL
      */
     bannerImage: string
-    coverImage?: {
-        large: string
-        medium: string
-        color?: string
-    }
-
     tmdbId: number
-    idMal?: number
-    logoImage?: string
-    characters?: {
-        edges: Array<{
-            role: string
-            node: {
-                name: string
-                image: string
-            }
-        }>
-    }
-    relations?: Array<{
-        relationType: string
-        node: Models_LibraryMedia
-    }>
+    anidbId: number
+    myanimelistId: number
     seasonNumber: number
     startDate?: string
     endDate?: string
@@ -3355,15 +1371,80 @@ export type Models_LibraryMedia = {
     /**
      * JSON array of strings
      */
-    genres?: Array<string>
+    genres?: Record<string, any>
     /**
-     * JSON array of objects
+     * JSON array of strings or objects
      */
-    tags?: Array<string>
+    tags?: Record<string, any>
+    dominantVibe: string
+    suggestedSwimlane: string
     totalEpisodes: number
+    runtime: number
+    /**
+     * JSON array of strings
+     */
+    audioTracks?: Record<string, any>
+    /**
+     * JSON array of strings
+     */
+    subtitleTracks?: Record<string, any>
+    logoImage: string
+    thumbImage: string
+    clearArtImage: string
+    idMal?: number
+    relations?: Array<UnifiedMediaRelation>
+    characters?: Models_LibraryMediaCharacterConnection
+    watched?: boolean
     id: number
     createdAt?: string
     updatedAt?: string
+}
+
+/**
+ * - Filepath: internal/database/models/library.go
+ * - Filename: library.go
+ * - Package: models
+ */
+export type Models_LibraryMediaCharacter = {
+    name?: Models_LibraryMediaCharacterName
+    image?: Models_LibraryMediaCharacterImage
+}
+
+/**
+ * - Filepath: internal/database/models/library.go
+ * - Filename: library.go
+ * - Package: models
+ */
+export type Models_LibraryMediaCharacterConnection = {
+    edges?: Array<Models_LibraryMediaCharacterEdge>
+}
+
+/**
+ * - Filepath: internal/database/models/library.go
+ * - Filename: library.go
+ * - Package: models
+ */
+export type Models_LibraryMediaCharacterEdge = {
+    role: string
+    node?: Models_LibraryMediaCharacter
+}
+
+/**
+ * - Filepath: internal/database/models/library.go
+ * - Filename: library.go
+ * - Package: models
+ */
+export type Models_LibraryMediaCharacterImage = {
+    large: string
+}
+
+/**
+ * - Filepath: internal/database/models/library.go
+ * - Filename: library.go
+ * - Package: models
+ */
+export type Models_LibraryMediaCharacterName = {
+    full: string
 }
 
 /**
@@ -3403,14 +1484,8 @@ export type Models_LibrarySettings = {
     seriesPaths: Models_LibraryPaths
     moviePaths: Models_LibraryPaths
     autoUpdateProgress: boolean
-    torrentProvider: string
-    autoSelectTorrentProvider: string
-    autoScan: boolean
-    enableOnlinestream: boolean
-    includeOnlineStreamingInLibrary: boolean
     disableAnimeCardTrailers: boolean
     dohProvider: string
-    openTorrentClientOnStart: boolean
     openWebURLOnStart: boolean
     refreshLibraryOnStart: boolean
     autoPlayNextEpisode: boolean
@@ -3421,33 +1496,27 @@ export type Models_LibrarySettings = {
     autoSyncToLocalAccount: boolean
     autoSaveCurrentMediaOffline: boolean
     useFallbackMetadataProvider: boolean
+    primaryMetadataProvider: string
     tmdbApiKey: string
-    /**
-     * BCP 47 language tag, e.g. "es-ES"
-     */
     tmdbLanguage: string
-    scannerUseLegacyMatching: boolean
-    scannerConfig: string
     scannerStrictStructure: boolean
+    scannerConfig: string
     scannerProvider: string
     disableLocalScanning: boolean
-    disableTorrentStreaming: boolean
-    disableDebridService: boolean
-    disableTorrentProvider: boolean
-    primaryMetadataProvider: string
+    scannerUseLegacyMatching: boolean
     fanartApiKey: string
     omdbApiKey: string
     openSubsApiKey: string
-}
-
-/**
- * - Filepath: internal/database/models/models.go
- * - Filename: models.go
- * - Package: models
- */
-export type Models_ListSyncSettings = {
-    automatic: boolean
-    origin: string
+    lastScanAt?: string
+    torrentProvider: string
+    autoScan: boolean
+    openTorrentClientOnStart: boolean
+    autoSelectTorrentProvider: string
+    enableOnlinestream: boolean
+    includeOnlineStreamingInLibrary: boolean
+    disableTorrentStreaming: boolean
+    disableDebridService: boolean
+    disableTorrentProvider: boolean
 }
 
 /**
@@ -3456,8 +1525,6 @@ export type Models_ListSyncSettings = {
  * - Package: models
  */
 export type Models_MediaMetadataParent = {
-    libraryMediaId?: number
-    libraryParentId?: number
     mediaId: number
     parentId: number
     specialOffset: number
@@ -3472,9 +1539,6 @@ export type Models_MediaMetadataParent = {
  * - Package: models
  */
 export type Models_MediaPlayerSettings = {
-    /**
-     * "vlc" or "mpc-hc"
-     */
     defaultPlayer: string
     host: string
     vlcUsername: string
@@ -3490,9 +1554,9 @@ export type Models_MediaPlayerSettings = {
     iinaPath: string
     iinaArgs: string
     vcTranslate: boolean
-    vcTranslateTargetLanguage: string
     vcTranslateProvider: string
     vcTranslateApiKey: string
+    vcTranslateTargetLanguage: string
 }
 
 /**
@@ -3502,21 +1566,19 @@ export type Models_MediaPlayerSettings = {
  */
 export type Models_MediastreamSettings = {
     transcodeEnabled: boolean
-    transcodeHwAccel: string
-    transcodeThreads: number
-    transcodePreset: string
-    disableAutoSwitchToDirectPlay: boolean
-    directPlayOnly: boolean
-    preTranscodeEnabled: boolean
-    preTranscodeLibraryDir: string
     ffmpegPath: string
     ffprobePath: string
+    preTranscodeLibraryDir: string
+    transcodeHwAccel: string
+    transcodePreset: string
     transcodeHwAccelCustomSettings: string
+    preTranscodeEnabled: boolean
+    transcodeThreads: number
+    directPlayOnly: boolean
     id: number
     createdAt?: string
     updatedAt?: string
 }
-
 
 /**
  * - Filepath: internal/database/models/models.go
@@ -3525,8 +1587,18 @@ export type Models_MediastreamSettings = {
  */
 export type Models_NotificationSettings = {
     disableNotifications: boolean
-    disableAutoDownloaderNotifications: boolean
     disableAutoScannerNotifications: boolean
+    disableAutoDownloaderNotifications: boolean
+}
+
+/**
+ * - Filepath: internal/database/models/models.go
+ * - Filename: models.go
+ * - Package: models
+ */
+export type Models_PlatformSettings = {
+    hideAudienceScore: boolean
+    disableCacheLayer: boolean
 }
 
 /**
@@ -3535,40 +1607,19 @@ export type Models_NotificationSettings = {
  * - Package: models
  */
 export type Models_Settings = {
-    library?: Models_LibrarySettings
-    mediaPlayer?: Models_MediaPlayerSettings
-    torrent?: Models_TorrentSettings
-    Platform?: Models_PlatformSettings
-    listSync?: Models_ListSyncSettings
-    autoDownloader?: Models_AutoDownloaderSettings
-    notifications?: Models_NotificationSettings
-
+    library: Models_LibrarySettings
+    mediaPlayer: Models_MediaPlayerSettings
+    torrent: Models_TorrentSettings
+    torrentstream: Models_TorrentstreamSettings
+    notifications: Models_NotificationSettings
+    Platform: Models_PlatformSettings
     mediastream?: Models_MediastreamSettings
-    torrentstream?: Models_TorrentstreamSettings
-    debrid?: Models_DebridSettings
     theme?: Models_Theme
+    updated: boolean
     id: number
     createdAt?: string
     updatedAt?: string
 }
-
-/**
- * - Filepath: internal/database/models/models.go
- * - Filename: models.go
- * - Package: models
- */
-export type Models_SilencedMediaEntry = {
-    id: number
-    createdAt?: string
-    updatedAt?: string
-}
-
-/**
- * - Filepath: ..\internal\database\models\models.go
- * - Filename: models.go
- * - Package: models
- */
-export type Models_StringSlice = Array<string>
 
 /**
  * - Filepath: internal/database/models/models.go
@@ -3579,48 +1630,8 @@ export type Models_Theme = {
     enableColorSettings: boolean
     backgroundColor: string
     accentColor: string
-    /**
-     * DEPRECATED
-     */
     sidebarBackgroundColor: string
-    /**
-     * DEPRECATED
-     */
-    animeEntryScreenLayout: string
-    expandSidebarOnHover: boolean
-    hideTopNavbar: boolean
-    enableMediaCardBlurredBackground: boolean
-    libraryScreenCustomBackgroundImage: string
-    libraryScreenCustomBackgroundOpacity: number
-    smallerEpisodeCarouselSize: boolean
-    libraryScreenBannerType: string
-    libraryScreenCustomBannerImage: string
-    libraryScreenCustomBannerPosition: string
-    libraryScreenCustomBannerOpacity: number
-    disableLibraryScreenGenreSelector: boolean
-    libraryScreenCustomBackgroundBlur: string
-    enableMediaPageBlurredBackground: boolean
-    disableSidebarTransparency: boolean
-    /**
-     * DEPRECATED
-     */
-    useLegacyEpisodeCard: boolean
-    disableCarouselAutoScroll: boolean
-    mediaPageBannerType: string
-    mediaPageBannerSize: string
-    mediaPageBannerInfoBoxSize: string
-    showEpisodeCardAnimeInfo: boolean
-    continueWatchingDefaultSorting: string
-    animeLibraryCollectionDefaultSorting: string
-    showAnimeUnwatchedCount: boolean
-    hideEpisodeCardDescription: boolean
-    hideDownloadedEpisodeCardFilename: boolean
-    customCSS: string
-    mobileCustomCSS: string
-    unpinnedMenuItems: Models_StringSlice
     homeItems?: Array<string>
-    enableBlurringEffects: boolean
-    enableEpisodeCardHoverEffects: boolean
     id: number
     createdAt?: string
     updatedAt?: string
@@ -3656,425 +1667,201 @@ export type Models_TorrentSettings = {
  */
 export type Models_TorrentstreamSettings = {
     enabled: boolean
-    autoSelect: boolean
-    preferredResolution: string
-    disableIPV6: boolean
-    downloadDir: string
-    addToLibrary: boolean
-    torrentClientHost: string
-    torrentClientPort: number
-    streamingServerHost: string
-    streamingServerPort: number
-    includeInLibrary: boolean
-    streamUrlAddress: string
-    slowSeeding: boolean
-    preloadNextStream: boolean
-    id: number
-    createdAt?: string
-    updatedAt?: string
-}
-
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Nativeplayer
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * - Filepath: internal/nativeplayer/nativeplayer.go
- * - Filename: nativeplayer.go
- * - Package: nativeplayer
- */
-export type NativePlayer_PlaybackInfo = {
-    id: string
-    streamType: NativePlayer_StreamType
-    streamPath: string
-    /**
-     * e.g. "video/mp4", "video/webm"
-     */
-    mimeType: string
-    /**
-     * URL of the stream
-     */
-    streamUrl: string
-    /**
-     * Size of the stream in bytes
-     */
-    contentLength: number
-    /**
-     * nil if not ebml
-     */
-    mkvMetadata?: MKVParser_Metadata
-    /**
-     * nil if not in list
-     */
-    entryListData?: Anime_EntryListData
-    episode?: Anime_Episode
-    media?: Platform_BaseAnime
-    localFile?: Anime_LocalFile
-}
-
-/**
- * - Filepath: internal/nativeplayer/events.go
- * - Filename: events.go
- * - Package: nativeplayer
- */
-export type NativePlayer_ServerEvent = "open-and-await" |
-    "abort-open" |
-    "watch" |
-    "subtitle-event" |
-    "set-tracks" |
-    "error"
-
-/**
- * - Filepath: internal/nativeplayer/nativeplayer.go
- * - Filename: nativeplayer.go
- * - Package: nativeplayer
- */
-export type NativePlayer_StreamType = "torrent" | "localfile" | "debrid"
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Onlinestream
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * - Filepath: internal/onlinestream/repository.go
- * - Filename: repository.go
- * - Package: onlinestream
- */
-export type Onlinestream_Episode = {
-    number: number
-    title?: string
-    image?: string
-    description?: string
-    isFiller?: boolean
-    metadata?: Anime_Episode
-}
-
-/**
- * - Filepath: internal/onlinestream/repository.go
- * - Filename: repository.go
- * - Package: onlinestream
- */
-export type Onlinestream_EpisodeListResponse = {
-    episodes?: Array<Onlinestream_Episode>
-    media?: Platform_BaseAnime
-}
-
-/**
- * - Filepath: internal/onlinestream/repository.go
- * - Filename: repository.go
- * - Package: onlinestream
- */
-export type Onlinestream_EpisodeSource = {
-    number: number
-    videoSources?: Array<Onlinestream_VideoSource>
-}
-
-/**
- * - Filepath: internal/onlinestream/manuPlatform_mapping.go
- * - Filename: manuPlatform_mapping.go
- * - Package: onlinestream
- */
-export type Onlinestream_MappingResponse = {
-    animeId?: string
-}
-
-/**
- * - Filepath: internal/onlinestream/repository.go
- * - Filename: repository.go
- * - Package: onlinestream
- */
-export type Onlinestream_Subtitle = {
-    url: string
-    language: string
-}
-
-/**
- * - Filepath: internal/onlinestream/repository.go
- * - Filename: repository.go
- * - Package: onlinestream
- */
-export type Onlinestream_VideoSource = {
-    server: string
-    headers?: Record<string, string>
-    url: string
-    label?: string
-    quality: string
-    type?: HibikeOnlinestream_VideoSourceType
-    subtitles?: Array<Onlinestream_Subtitle>
+    torrentioUrl: string
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// PluginUi
+// Platform
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
- * - Filepath: internal/plugin/ui/webview.go
- * - Filename: webview.go
- * - Package: plugin_ui
+ * - Filepath: internal/platforms/platform/models.go
+ * - Filename: models.go
+ * - Package: platform
  */
-export type PluginUI_WebviewOptions = {
-    className?: string
-    style?: string
-    width?: string
-    height?: string
-    maxWidth?: string
-    maxHeight?: string
-    zIndex?: number
-    window?: PluginUI_WebviewWindowOptions
-    autoHeight?: boolean
-    fullWidth?: boolean
-    sidebar?: PluginUI_WebviewSidebarOptions
-    hidden?: boolean
+export type FuzzyDate = {
+    year?: number
+    month?: number
+    day?: number
 }
 
 /**
- * - Filepath: internal/plugin/ui/webview.go
- * - Filename: webview.go
- * - Package: plugin_ui
+ * - Filepath: internal/platforms/platform/models.go
+ * - Filename: models.go
+ * - Package: platform
  */
-export type PluginUI_WebviewSidebarOptions = {
-    label?: string
-    icon?: string
+export type MediaCoverImage = {
+    extraLarge?: string
+    large?: string
+    medium?: string
+    color?: string
 }
 
 /**
- * - Filepath: internal/plugin/ui/webview.go
- * - Filename: webview.go
- * - Package: plugin_ui
+ * - Filepath: internal/platforms/platform/models.go
+ * - Filename: models.go
+ * - Package: platform
  */
-export type PluginUI_WebviewSlot = "screen" |
-    "fixed" |
-    "after-home-screen-toolbar" |
-    "home-screen-bottom" |
-    "schedule-screen-top" |
-    "schedule-screen-bottom" |
-    "anime-screen-bottom" |
-    "after-anime-entry-episode-list" |
-    "before-anime-entry-episode-list" |
-    "after-media-entry-details" |
-    "after-media-entry-form"
+export type MediaFormat = "TV" |
+    "MOVIE" |
+    "SPECIAL" |
+    "OVA" |
+    "ONA" |
+    "MUSIC"
 
 /**
- * - Filepath: internal/plugin/ui/webview.go
- * - Filename: webview.go
- * - Package: plugin_ui
- */
-export type PluginUI_WebviewWindowOptions = {
-    draggable?: boolean
-    defaultX?: number
-    defaultY?: number
-    frameless?: boolean
-    defaultPosition?: string
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Report
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * - Filepath: internal/report/report.go
- * - Filename: report.go
- * - Package: report
- */
-export type Report_ClickLog = {
-    timestamp?: string
-    element: string
-    pageUrl: string
-    text?: string
-    className?: string
-}
-
-/**
- * - Filepath: internal/report/report.go
- * - Filename: report.go
- * - Package: report
- */
-export type Report_ConsoleLog = {
-    type: string
-    content: string
-    pageUrl: string
-    timestamp?: string
-}
-
-/**
- * - Filepath: internal/report/report.go
- * - Filename: report.go
- * - Package: report
- */
-export type Report_IssueReport = {
-    createdAt?: string
-    userAgent: string
-    appVersion: string
-    os: string
-    arch: string
-    description?: string
-    clickLogs?: Array<Report_ClickLog>
-    networkLogs?: Array<Report_NetworkLog>
-    reactQueryLogs?: Array<Report_ReactQueryLog>
-    consoleLogs?: Array<Report_ConsoleLog>
-    navigationLogs?: Array<Report_NavigationLog>
-    screenshots?: Array<Report_Screenshot>
-    websocketLogs?: Array<Report_WebSocketLog>
-    rrwebEvents?: Array<Record<string, any>>
-    unlockedLocalFiles?: Array<Report_UnlockedLocalFile>
-    scanLogs?: Array<string>
-    serverLogs?: string
-    status?: string
-    viewportWidth?: number
-    viewportHeight?: number
-    recordingDurationMs?: number
-}
-
-/**
- * - Filepath: internal/report/report.go
- * - Filename: report.go
- * - Package: report
- */
-export type Report_NavigationLog = {
-    from: string
-    to: string
-    timestamp?: string
-}
-
-/**
- * - Filepath: internal/report/report.go
- * - Filename: report.go
- * - Package: report
- */
-export type Report_NetworkLog = {
-    type: string
-    method: string
-    url: string
-    pageUrl: string
-    status: number
-    duration: number
-    dataPreview: string
-    body: string
-    timestamp?: string
-}
-
-/**
- * - Filepath: internal/report/report.go
- * - Filename: report.go
- * - Package: report
- */
-export type Report_ReactQueryLog = {
-    type: string
-    pageUrl: string
-    status: string
-    hash: string
-    error: any
-    dataPreview: string
-    dataType: string
-    timestamp?: string
-}
-
-/**
- * - Filepath: internal/report/report.go
- * - Filename: report.go
- * - Package: report
- */
-export type Report_Screenshot = {
-    /**
-     * base64 encoded image
-     */
-    data: string
-    caption?: string
-    pageUrl: string
-    timestamp?: string
-}
-
-/**
- * - Filepath: internal/report/report.go
- * - Filename: report.go
- * - Package: report
- */
-export type Report_UnlockedLocalFile = {
-    path: string
-    mediaId: number
-}
-
-/**
- * - Filepath: internal/report/report.go
- * - Filename: report.go
- * - Package: report
+ * - Filepath: internal/platforms/platform/models.go
+ * - Filename: models.go
+ * - Package: platform
  * @description
- *  WebSocketLog represents a captured WebSocket message during recording
+ *  MediaKind distinguishes the content category independently of MediaType.
+ *  Anime = Japanese animation (AniList-sourced or manually flagged)
+ *  General = western series, movies, documentaries, etc.
  */
-export type Report_WebSocketLog = {
+export type MediaKind = "ANIME" | "GENERAL"
+
+/**
+ * - Filepath: internal/platforms/platform/models.go
+ * - Filename: models.go
+ * - Package: platform
+ */
+export type MediaListStatus = "CURRENT" |
+    "PLANNING" |
+    "COMPLETED" |
+    "DROPPED" |
+    "PAUSED" |
+    "REPEATING"
+
+/**
+ * - Filepath: internal/platforms/platform/models.go
+ * - Filename: models.go
+ * - Package: platform
+ */
+export type MediaRelationType = "PREQUEL" |
+    "SEQUEL" |
+    "SPIN_OFF" |
+    "SIDE_STORY" |
+    "ALTERNATIVE" |
+    "PARENT" |
+    "SUMMARY" |
+    "OTHER"
+
+/**
+ * - Filepath: internal/platforms/platform/models.go
+ * - Filename: models.go
+ * - Package: platform
+ */
+export type MediaSeason = string
+
+/**
+ * - Filepath: internal/platforms/platform/models.go
+ * - Filename: models.go
+ * - Package: platform
+ */
+export type MediaStatus = "FINISHED" | "RELEASING" | "NOT_YET_RELEASED" | "CANCELLED" | "HIATUS"
+
+/**
+ * - Filepath: internal/platforms/platform/models.go
+ * - Filename: models.go
+ * - Package: platform
+ */
+export type MediaTitle = {
+    romaji?: string
+    english?: string
+    spanish?: string
+    native?: string
+}
+
+/**
+ * - Filepath: internal/platforms/platform/models.go
+ * - Filename: models.go
+ * - Package: platform
+ */
+export type MediaType = string
+
+/**
+ * - Filepath: internal/platforms/platform/models.go
+ * - Filename: models.go
+ * - Package: platform
+ */
+export type NextAiringEpisode = {
+    airingAt: number
+    timeUntilAiring: number
+    episode: number
+}
+
+/**
+ * - Filepath: internal/platforms/platform/models.go
+ * - Filename: models.go
+ * - Package: platform
+ */
+export type PlatformUser = {
+    id: number
+    name: string
+    avatar?: string
+    bannerImage?: string
+}
+
+/**
+ * - Filepath: internal/platforms/platform/models.go
+ * - Filename: models.go
+ * - Package: platform
+ */
+export type UnifiedCollectionEntry = {
+    id: number
+    media?: UnifiedMedia
+    status: MediaListStatus
+    score?: number
+    progress?: number
+    repeat?: number
+    startedAt?: FuzzyDate
+    completedAt?: FuzzyDate
+}
+
+/**
+ * - Filepath: internal/platforms/platform/models.go
+ * - Filename: models.go
+ * - Package: platform
+ */
+export type UnifiedMedia = {
+    id: number
+    type: MediaType
+    format: MediaFormat
+    status: MediaStatus
+    title?: MediaTitle
+    episodes?: number
+    coverImage?: MediaCoverImage
+    bannerImage?: string
+    overview?: string
+    startDate?: FuzzyDate
+    endDate?: FuzzyDate
+    season?: MediaSeason
+    seasonYear?: number
+    isAdult: boolean
+    genres?: Array<string>
+    nextAiringEpisode?: NextAiringEpisode
+    relations?: Array<UnifiedMediaRelation>
     /**
-     * "incoming" or "outgoing"
+     * "ANIME" or "GENERAL"
      */
-    direction: string
-    eventType: string
-    payload?: Record<string, any>
-    timestamp?: string
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Summary
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * - Filepath: internal/library/summary/scan_summary.go
- * - Filename: scan_summary.go
- * - Package: summary
- */
-export type Summary_ScanSummary = {
-    id: string
-    groups: Array<Summary_ScanSummaryGroup> | null
-    unmatchedFiles: Array<Summary_ScanSummaryFile> | null
+    kind: MediaKind
+    description?: string
+    score?: number
+    imdbId?: string
+    collectionId?: number
+    collectionName?: string
+    runtime?: number
 }
 
 /**
- * - Filepath: internal/library/summary/scan_summary.go
- * - Filename: scan_summary.go
- * - Package: summary
+ * - Filepath: internal/platforms/platform/models.go
+ * - Filename: models.go
+ * - Package: platform
  */
-export type Summary_ScanSummaryFile = {
-    id: string
-    localFile: Anime_LocalFile
-    logs: Array<Summary_ScanSummaryLog>
-}
-
-/**
- * - Filepath: internal/library/summary/scan_summary.go
- * - Filename: scan_summary.go
- * - Package: summary
- */
-export type Summary_ScanSummaryGroup = {
-    id: string
-    files: Array<Summary_ScanSummaryFile> | null
-    mediaId: number
-    mediaTitle: string
-    mediaImage: string
-    /**
-     * Whether the media is in the user's Platform collection
-     */
-    mediaIsInCollection: boolean
-}
-
-/**
- * - Filepath: internal/library/summary/scan_summary.go
- * - Filename: scan_summary.go
- * - Package: summary
- */
-export type Summary_ScanSummaryItem = {
-    createdAt: string
-    scanSummary: Summary_ScanSummary
-}
-
-/**
- * - Filepath: internal/library/summary/scan_summary.go
- * - Filename: scan_summary.go
- * - Package: summary
- */
-export type Summary_ScanSummaryLog = {
-    id: string
-    filePath: string
-    level: string
-    message: string
+export type UnifiedMediaRelation = {
+    id: number
+    relationType: MediaRelationType
+    media?: UnifiedMedia
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -4082,8 +1869,8 @@ export type Summary_ScanSummaryLog = {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
- * - Filepath: internal/api/tmdb/tmdb.go
- * - Filename: tmdb.go
+ * - Filepath: internal/api/tmdb/types.go
+ * - Filename: types.go
  * - Package: tmdb
  * @description
  *  SearchResult represents a single search result from TMDb.
@@ -4101,12 +1888,12 @@ export type SearchResult = {
     /**
      * For TV shows
      */
-    originPlatform_name: string
+    original_name: string
     /**
      * For movies
      */
-    originPlatform_title: string
-    originPlatform_language: string
+    original_title: string
+    original_language: string
     overview: string
     /**
      * For TV shows
@@ -4120,323 +1907,8 @@ export type SearchResult = {
     origin_country?: Array<string>
     poster_path: string
     backdrop_path: string
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Torrent
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * - Filepath: internal/torrents/torrent/search.go
- * - Filename: search.go
- * - Package: torrent
- */
-export type Torrent_Preview = {
-    /**
-     * nil if batch
-     */
-    episode?: Anime_Episode
-    torrent?: HibikeTorrent_AnimeTorrent
-}
-
-/**
- * - Filepath: internal/torrents/torrent/search.go
- * - Filename: search.go
- * - Package: torrent
- */
-export type Torrent_SearchData = {
-    /**
-     * Torrents found
-     */
-    torrents?: Array<HibikeTorrent_AnimeTorrent>
-    /**
-     * TorrentPreview for each torrent
-     */
-    previews?: Array<Torrent_Preview>
-    /**
-     * Torrent metadata
-     */
-    torrentMetadata?: Record<string, Torrent_TorrentMetadata>
-    /**
-     * Debrid instant availability
-     */
-    debridInstantAvailability?: Record<string, Debrid_TorrentItemInstantAvailability>
-    /**
-     * Animap media
-     */
-    animeMetadata?: Metadata_AnimeMetadata
-    includedSpecialProviders?: Array<string>
-}
-
-/**
- * - Filepath: internal/torrents/torrent/search.go
- * - Filename: search.go
- * - Package: torrent
- */
-export type Torrent_TorrentMetadata = {
-    distance: number
-    metadata?: Habari_Metadata
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// TorrentClient
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * - Filepath: internal/torrent_clients/torrent_client/torrent.go
- * - Filename: torrent.go
- * - Package: torrent_client
- */
-export type TorrentClient_Torrent = {
-    name: string
-    hash: string
-    seeds: number
-    upSpeed: string
-    downSpeed: string
-    progress: number
-    size: string
-    eta: string
-    status: TorrentClient_TorrentStatus
-    contentPath: string
-}
-
-/**
- * - Filepath: internal/torrent_clients/torrent_client/torrent.go
- * - Filename: torrent.go
- * - Package: torrent_client
- */
-export type TorrentClient_TorrentStatus = "downloading" | "seeding" | "paused" | "other" | "stopped"
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Torrentstream
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * - Filepath: internal/torrentstream/history.go
- * - Filename: history.go
- * - Package: torrentstream
- */
-export type Torrentstream_BatchHistoryResponse = {
-    torrent?: HibikeTorrent_AnimeTorrent
-    metadata?: Habari_Metadata
-    batchEpisodeFiles?: HibikeTorrent_BatchEpisodeFiles
-}
-
-/**
- * - Filepath: internal/torrentstream/previews.go
- * - Filename: previews.go
- * - Package: torrentstream
- */
-export type Torrentstream_FilePreview = {
-    path: string
-    displayPath: string
-    displayTitle: string
-    episodeNumber: number
-    relativeEpisodeNumber: number
-    isLikely: boolean
-    index: number
-}
-
-/**
- * - Filepath: internal/torrentstream/stream.go
- * - Filename: stream.go
- * - Package: torrentstream
- */
-export type Torrentstream_PlaybackType = "default" | "externalPlayerLink" | "nativeplayer" | "none" | "noneAndAwait"
-
-/**
- * - Filepath: internal/torrentstream/stream.go
- * - Filename: stream.go
- * - Package: torrentstream
- */
-export type Torrentstream_StartStreamOptions = {
-    MediaId: number
-    /**
-     * RELATIVE Episode number to identify the file
-     */
-    EpisodeNumber: number
-    /**
-     * Animap episode
-     */
-    AniDBEpisode: string
-    /**
-     * Automatically select the best file to stream
-     */
-    AutoSelect: boolean
-    /**
-     * Selected torrent (Manual selection)
-     */
-    Torrent?: HibikeTorrent_AnimeTorrent
-    /**
-     * Index of the file to stream (Manual selection)
-     */
-    FileIndex?: number
-    UserAgent: string
-    ClientId: string
-    PlaybackType: Torrentstream_PlaybackType
-    BatchEpisodeFiles?: HibikeTorrent_BatchEpisodeFiles
-}
-
-/**
- * - Filepath: internal/torrentstream/client.go
- * - Filename: client.go
- * - Package: torrentstream
- */
-export type Torrentstream_TorrentStatus = {
-    uploadProgress: number
-    downloadProgress: number
-    progressPercentage: number
-    downloadSpeed: string
-    uploadSpeed: string
-    size: string
-    seeders: number
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Updater
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * - Filepath: internal/updater/announcement.go
- * - Filename: announcement.go
- * - Package: updater
- */
-export type Updater_Announcement = {
-    /**
-     * Unique identifier for tracking
-     */
-    id: string
-    /**
-     * Title for dialogs/banners
-     */
-    title?: string
-    /**
-     * The message to display
-     */
-    message: string
-    /**
-     * The type of announcement
-     */
-    type: Updater_AnnouncementType
-    /**
-     * Severity level
-     */
-    severity: Updater_AnnouncementSeverity
-    /**
-     * Date of the announcement
-     */
-    date: any
-    /**
-     * Can user dismiss it
-     */
-    notDismissible: boolean
-    /**
-     * Advanced targeting
-     */
-    conditions?: Updater_AnnouncementConditions
-    /**
-     * Action buttons
-     */
-    actions?: Array<Updater_AnnouncementAction>
-    priority: number
-}
-
-/**
- * - Filepath: internal/updater/announcement.go
- * - Filename: announcement.go
- * - Package: updater
- */
-export type Updater_AnnouncementAction = {
-    label: string
-    url: string
-    type: string
-}
-
-/**
- * - Filepath: internal/updater/announcement.go
- * - Filename: announcement.go
- * - Package: updater
- */
-export type Updater_AnnouncementConditions = {
-    /**
-     * ["windows", "darwin", "linux"]
-     */
-    os?: Array<string>
-    /**
-     * ["web", "denshi"]
-     */
-    platform?: Array<string>
-    /**
-     * e.g. "<= 2.9.0", "2.9.0"
-     */
-    versionConstraint?: string
-    /**
-     * JSON path to check in user settings
-     */
-    userSettingsPath?: string
-    /**
-     * Expected values at that path
-     */
-    userSettingsValue?: Array<string>
-}
-
-/**
- * - Filepath: internal/updater/announcement.go
- * - Filename: announcement.go
- * - Package: updater
- */
-export type Updater_AnnouncementSeverity = "info" | "warning" | "error" | "critical"
-
-/**
- * - Filepath: internal/updater/announcement.go
- * - Filename: announcement.go
- * - Package: updater
- */
-export type Updater_AnnouncementType = "toast" | "dialog" | "banner"
-
-/**
- * - Filepath: internal/updater/check.go
- * - Filename: check.go
- * - Package: updater
- */
-export type Updater_Release = {
-    url: string
-    html_url: string
-    node_id: string
-    tag_name: string
-    name: string
-    body: string
-    published_at: string
-    released: boolean
-    version: string
-    assets?: Array<Updater_ReleaseAsset>
-}
-
-/**
- * - Filepath: internal/updater/check.go
- * - Filename: check.go
- * - Package: updater
- */
-export type Updater_ReleaseAsset = {
-    url: string
-    id: number
-    node_id: string
-    name: string
-    content_type: string
-    uploaded: boolean
-    size: number
-    browser_download_url: string
-}
-
-/**
- * - Filepath: internal/updater/updater.go
- * - Filename: updater.go
- * - Package: updater
- */
-export type Updater_Update = {
-    release?: Updater_Release
-    current_version?: string
-    type: string
+    number_of_episodes: number
+    vote_average: number
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -4449,45 +1921,9 @@ export type Updater_Update = {
  * - Package: user
  */
 export type User = {
-    viewer?: Platform_GetViewer_Viewer
+    viewer?: PlatformUser
     token: string
     isSimulated: boolean
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// VendorHabari
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * - Filepath: internal/vendor_habari/vendor_habari.go
- * - Filename: vendor_habari.go
- * - Package: vendor_habari
- */
-export type Habari_Metadata = {
-    season_number?: Array<string>
-    part_number?: Array<string>
-    title?: string
-    formatted_title?: string
-    anime_type?: Array<string>
-    year?: string
-    audio_term?: Array<string>
-    device_compatibility?: Array<string>
-    episode_number?: Array<string>
-    other_episode_number?: Array<string>
-    episode_number_alt?: Array<string>
-    episode_title?: string
-    file_checksum?: string
-    file_extension?: string
-    file_name?: string
-    language?: Array<string>
-    release_group?: string
-    release_information?: Array<string>
-    release_version?: Array<string>
-    source?: Array<string>
-    subtitles?: Array<string>
-    video_resolution?: string
-    video_term?: Array<string>
-    volume_number?: Array<string>
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -4519,7 +1955,6 @@ export type VideoCore_ClientEventType = "video-loaded" |
     "video-terminated" |
     "video-playback-state" |
     "subtitle-file-uploaded" |
-    "video-playlist" |
     "video-text-tracks" |
     "translate-text" |
     "translate-subtitle-file-track"
@@ -4529,84 +1964,9 @@ export type VideoCore_ClientEventType = "video-loaded" |
  * - Filename: insight.go
  * - Package: videocore
  */
-export type VideoCore_InSightCharacter = {
-    mPlatform_id: number
-    url: string
-    images: VideoCore_InSightCharacter_Images
-    name: string
-    role: string
-    favorites: number
-}
-
-/**
- * - Filepath: internal/videocore/insight.go
- * - Filename: insight.go
- * - Package: videocore
- */
-export type VideoCore_InSightCharacterDetails = {
-    mPlatform_id: number
-    url: string
-    images: VideoCore_InSightCharacterDetails_Images
-    name: string
-    name_kanji: string
-    nicknames?: Array<string>
-    favorites: number
-    about: string
-}
-
-/**
- * - Filepath: internal/videocore/insight.go
- * - Filename: insight.go
- * - Package: videocore
- */
-export type VideoCore_InSightCharacterDetails_Images = {
-    jpg: { image_url: string; }
-    webp: { image_url: string; small_image_url: string; }
-}
-
-/**
- * - Filepath: internal/videocore/insight.go
- * - Filename: insight.go
- * - Package: videocore
- */
-export type VideoCore_InSightCharacter_Images = {
-    jpg: { image_url: string; }
-    webp: { image_url: string; small_image_url: string; }
-}
-
-/**
- * - Filepath: internal/videocore/insight.go
- * - Filename: insight.go
- * - Package: videocore
- */
-export type VideoCore_InSightData = {
-    characters?: Array<VideoCore_InSightCharacter>
-    suggestions?: Array<VideoCore_InSightSegment>
-}
-
-/**
- * - Filepath: internal/videocore/insight.go
- * - Filename: insight.go
- * - Package: videocore
- */
-export type VideoCore_InSightSegment = {
-    characterId: number
-    startTime: number
-    endTime: number
-}
-
-/**
- * - Filepath: internal/videocore/types.go
- * - Filename: types.go
- * - Package: videocore
- */
-export type VideoCore_OnlinestreamParams = {
-    mediaId: number
-    episodeNumber: number
-    provider: string
-    server: string
-    quality: string
-    dubbed: boolean
+export type VideoCore_InsightNode = {
+    timestamp: number
+    intensity: number
 }
 
 /**
@@ -4615,7 +1975,7 @@ export type VideoCore_OnlinestreamParams = {
  * - Package: videocore
  */
 export type VideoCore_PlaybackState = {
-    clientId: string
+    clientID: string
     playerType: VideoCore_PlayerType
     playbackInfo?: VideoCore_VideoPlaybackInfo
 }
@@ -4657,7 +2017,6 @@ export type VideoCore_ServerEvent = "pause" |
     "start-onlinestream-watch-party" |
     "get-status" |
     "show-message" |
-    "play-playlist-episode" |
     "get-text-tracks" |
     "request-play-episode" |
     "translated-text" |
@@ -4669,30 +2028,7 @@ export type VideoCore_ServerEvent = "pause" |
     "get-subtitle-track-content" |
     "get-audio-track" |
     "get-media-caption-track" |
-    "get-playback-state" |
-    "get-playlist"
-
-/**
- * - Filepath: internal/videocore/types.go
- * - Filename: types.go
- * - Package: videocore
- * @description
- *  VideoInitialState specifies the initial state for the player.
- */
-export type VideoCore_VideoInitialState = {
-    currentTime?: number
-    paused?: boolean
-}
-
-/**
- * - Filepath: internal/videocore/types.go
- * - Filename: types.go
- * - Package: videocore
- */
-export type VideoCore_VideoLibassFont = {
-    name?: string
-    src: string
-}
+    "get-playback-state"
 
 /**
  * - Filepath: internal/videocore/types.go
@@ -4714,60 +2050,9 @@ export type VideoCore_VideoPlaybackInfo = {
      * NativePlayer only
      */
     mkvMetadata?: MKVParser_Metadata
-    localFile?: Anime_LocalFile
-    onlinestreamParams?: VideoCore_OnlinestreamParams
-    subtitleTracks?: Array<VideoCore_VideoSubtitleTrack>
-    libassFonts?: Array<VideoCore_VideoLibassFont>
-    videoSources?: Array<VideoCore_VideoSource>
-    /**
-     * index of VideoSource
-     */
-    selectedVideoSource?: number
-    playlistExternalEpisodeNumbers?: Array<number>
-    disableRestoreFromContinuity?: boolean
-    initialState?: VideoCore_VideoInitialState
-    media?: Platform_BaseAnime
+    localFile?: LocalFile
+    media: any
     episode?: Anime_Episode
-    /**
-     * "native" | "hls" | "unknown"
-     */
-    streamType: string
-}
-
-/**
- * - Filepath: internal/videocore/types.go
- * - Filename: types.go
- * - Package: videocore
- * @description
- *  VideoSource is an alternative video stream source (e.g., resolution options).
- */
-export type VideoCore_VideoSource = {
-    index: number
-    resolution: string
-    url?: string
-    label?: string
-    moreInfo?: string
-}
-
-/**
- * - Filepath: internal/videocore/types.go
- * - Filename: types.go
- * - Package: videocore
- * @description
- *  VideoSubtitleTrack is an external subtitle track.
- */
-export type VideoCore_VideoSubtitleTrack = {
-    index: number
-    src?: string
-    content?: string
-    label: string
-    language: string
-    /**
-     * "srt" | "vtt" | "ass" | "ssa"
-     */
-    type?: string
-    default?: boolean
-    useLibassRenderer?: boolean
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -4799,6 +2084,7 @@ export type Chapter = {
     startTime: number
     endTime: number
     name: string
+    type: string
 }
 
 /**
@@ -4807,7 +2093,6 @@ export type Chapter = {
  * - Package: videofile
  */
 export type MediaInfo = {
-    ready: any
     sha: string
     path: string
     extension: string
@@ -4868,5 +2153,19 @@ export type Video = {
     width: number
     height: number
     bitrate: number
+    pixFmt: string
 }
 
+// Compatibility aliases
+export type Anime_LocalFile = LocalFile
+export type Anime_LocalFileType = LocalFileType
+export type Anime_LocalFileMetadata = LocalFileMetadata
+export type Summary_ScanSummaryItem = ScanSummaryItem
+export type Summary_ScanSummaryGroup = ScanSummaryGroup
+export type Summary_ScanSummaryFile = ScanSummaryFile
+export type Summary_ScanSummary = ScanSummary
+export type Platform_MediaStatus = MediaStatus
+export type Platform_MediaFormat = MediaFormat
+export type Platform_UnifiedMedia = UnifiedMedia
+export type Platform_BaseAnime = UnifiedMedia
+export type Platform_UnifiedCollectionEntry = UnifiedCollectionEntry

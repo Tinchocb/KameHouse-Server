@@ -166,10 +166,8 @@ export function ScanHistory({ summaries }: { summaries: Summary_ScanSummaryItem[
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {summaries.map((s, idx) => {
-                const summary = s.scanSummary ?? s
-
-                const groups: Summary_ScanSummaryGroup[] = summary?.groups ?? []
-                const unmatched: Summary_ScanSummaryFile[] = summary?.unmatchedFiles ?? []
+                const groups: Summary_ScanSummaryGroup[] = s.scanSummary?.groups ?? []
+                const unmatched: Summary_ScanSummaryFile[] = s.scanSummary?.unmatchedFiles ?? []
                 const matchedCount = groups.reduce((acc: number, g: Summary_ScanSummaryGroup) => acc + (g.files?.length ?? 0), 0)
                 const totalCount = matchedCount + unmatched.length
 

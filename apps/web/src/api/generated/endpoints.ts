@@ -7,46 +7,6 @@ export type ApiEndpoints = Record<string, Record<string, {
 }>>
 
 export const API_ENDPOINTS = {
-    PLATFORM: {
-        /**
-         *  @description
-         *  Route returns the user's media collection from the active platform.
-         */
-        GetCollection: {
-            key: "PLATFORM-get-collection",
-            methods: ["GET", "POST"],
-            endpoint: "/api/v1/platform/collection",
-        },
-        /**
-         *  @description
-         *  Route returns a list of media based on the search parameters.
-         *  This is used by the "Discover" and "Advanced Search".
-         */
-        ListAnime: {
-            key: "PLATFORM-list-anime",
-            methods: ["POST"],
-            endpoint: "/api/v1/platform/list-anime",
-        },
-        /**
-         *  @description
-         *  Route returns a list of recently aired media.
-         *  This is used by the "Schedule" page.
-         */
-        ListRecentAiringAnime: {
-            key: "PLATFORM-list-recent-airing-anime",
-            methods: ["POST"],
-            endpoint: "/api/v1/platform/list-recent-anime",
-        },
-        /**
-         *  @description
-         *  Route returns the platform stats.
-         */
-        GetStats: {
-            key: "PLATFORM-get-stats",
-            methods: ["GET"],
-            endpoint: "/api/v1/platform/stats",
-        },
-    },
     ANIME: {
         /**
          *  @description
@@ -63,11 +23,11 @@ export const API_ENDPOINTS = {
     ANIME_COLLECTION: {
         /**
          *  @description
-         *  Route returns the main local anime collection.
+         *  Route returns the main local anime anime collection.
          *  This creates a new LibraryCollection struct and returns it.
          *  This is used to get the main anime collection of the user.
-         *  It uses the cached Platform anime collection for the GET method.
-         *  It refreshes the Platform anime collection if the POST method is used.
+         *  It uses the cached platform anime collection for the GET method.
+         *  It refreshes the platform anime collection if the POST method is used.
          */
         GetLibraryCollection: {
             key: "ANIME-COLLECTION-get-library-collection",
@@ -99,9 +59,9 @@ export const API_ENDPOINTS = {
     ANIME_ENTRIES: {
         /**
          *  @description
-         *  Route return a media entry for the given Platform anime media id.
+         *  Route return a media entry for the given anime media id.
          *  This is used by the anime media entry pages to get all the data about the anime.
-         *  This includes episodes and metadata (if any), Platform list data, download info...
+         *  This includes episodes and metadata (if any), list data, download info...
          */
         GetAnimeEntry: {
             key: "ANIME-ENTRIES-get-anime-entry",
@@ -110,49 +70,50 @@ export const API_ENDPOINTS = {
         },
         /**
          *  @description
-         *  Route perform given action on all the local files for the given media id.
-         *  This is used to unmatch or toggle the lock status of all the local files for a specific media entry
-         *  The response is not used in the frontend. The client should just refetch the entire media entry data.
+         *  Route returns anime suggestions for the given local files.
+         *  Accepts either a directory path (dir) or explicit file paths (paths[]).
+         *  The frontend codegen contract sends dir; the legacy backend contract sends paths.
          */
-        AnimeEntryBulkAction: {
-            key: "ANIME-ENTRIES-anime-entry-bulk-action",
-            methods: ["PATCH"],
-            endpoint: "/api/v1/library/anime-entry/bulk-action",
-        },
-        /**
-         *  @description
-         *  Route opens the directory of a media entry in the file explorer.
-         *  This finds a common directory for all media entry local files and opens it in the file explorer.
-         *  Returns 'true' whether the operation was successful or not, errors are ignored.
-         */
-        OpenAnimeEntryInExplorer: {
-            key: "ANIME-ENTRIES-open-anime-entry-in-explorer",
-            methods: ["POST"],
-            endpoint: "/api/v1/library/anime-entry/open-in-explorer",
-        },
-        /**
-         *  @description
-         *  Route returns a list of media suggestions for files in the given directory.
-         *  This is used by the "Resolve unmatched media" feature to suggest media entries for the local files in the given directory.
-         *  If some matches files are found in the directory, it will ignore them and base the suggestions on the remaining files.
-         */
-        FetchAnimeEntrySuggestions: {
-            key: "ANIME-ENTRIES-fetch-anime-entry-suggestions",
+        GetAnimeEntrySuggestions: {
+            key: "ANIME-ENTRIES-get-anime-entry-suggestions",
             methods: ["POST"],
             endpoint: "/api/v1/library/anime-entry/suggestions",
         },
         /**
          *  @description
-         *  Route matches un-matched local files in the given directory to the given media.
-         *  It is used by the "Resolve unmatched media" feature to manually match local files to a specific media entry.
-         *  Matching involves the use of scanner.FileHydrator. It will also lock the files.
-         *  The response is not used in the frontend. The client should just refetch the entire library collection.
+         *  Route updates the progress of an anime entry.
+         *  This is used when the user manually updates the progress of an anime.
+         */
+        UpdateAnimeEntryProgress: {
+            key: "ANIME-ENTRIES-update-anime-entry-progress",
+            methods: ["POST"],
+            endpoint: "/api/v1/library/anime-entry/progress",
+        },
+        /**
+         *  @description
+         *  Route updates the repeat count of an anime entry.
+         *  This is used when the user manually updates the repeat count of an anime.
+         */
+        UpdateAnimeEntryRepeat: {
+            key: "ANIME-ENTRIES-update-anime-entry-repeat",
+            methods: ["POST"],
+            endpoint: "/api/v1/library/anime-entry/repeat",
+        },
+        /**
+         *  @description
+         *  Route manually match a group of local files to a media.
+         *  It will create a new scanner and run it for the selected files.
          */
         AnimeEntryManualMatch: {
             key: "ANIME-ENTRIES-anime-entry-manual-match",
             methods: ["POST"],
             endpoint: "/api/v1/library/anime-entry/manual-match",
         },
+        /**
+         *  @description
+         *  Route unmatch the given local files.
+         *  It will set the mediaID of the files to 0 and remove the metadata.
+         */
         AnimeEntryUnmatch: {
             key: "ANIME-ENTRIES-anime-entry-unmatch",
             methods: ["POST"],
@@ -160,9 +121,8 @@ export const API_ENDPOINTS = {
         },
         /**
          *  @description
-         *  Route returns a list of episodes missing from the user's library collection
-         *  It detects missing episodes by comparing the user's Platform collection 'next airing' data with the local files.
-         *  This route can be called multiple times, as it does not bypass the cache.
+         *  Route returns a list of missing episodes.
+         *  This is used by the "Missing episodes" page to display the missing episodes.
          */
         GetMissingEpisodes: {
             key: "ANIME-ENTRIES-get-missing-episodes",
@@ -171,9 +131,8 @@ export const API_ENDPOINTS = {
         },
         /**
          *  @description
-         *  Route returns a list of upcoming episodes based on the user's anime collection
-         *  It uses the Platform 'next airing episode' data to determine upcoming episodes.
-         *  This route can be called multiple times, as it does not bypass the cache.
+         *  Route returns a list of upcoming episodes.
+         *  This is used by the "Upcoming" page to display the upcoming episodes.
          */
         GetUpcomingEpisodes: {
             key: "ANIME-ENTRIES-get-upcoming-episodes",
@@ -185,190 +144,27 @@ export const API_ENDPOINTS = {
             methods: ["GET"],
             endpoint: "/api/v1/library/anime-entry/silence/{id}",
         },
-        /**
-         *  @description
-         *  Route toggles the silence status of a media entry.
-         *  The missing episodes should be re-fetched after this.
-         */
         ToggleAnimeEntrySilenceStatus: {
             key: "ANIME-ENTRIES-toggle-anime-entry-silence-status",
             methods: ["POST"],
             endpoint: "/api/v1/library/anime-entry/silence",
-        },
-        /**
-         *  @description
-         *  Route update the progress of the given anime media entry.
-         *  This is used to update the progress of the given anime media entry on Platform.
-         *  The response is not used in the frontend, the client should just refetch the entire media entry data.
-         *  NOTE: This is currently only used by the 'Online streaming' feature since anime progress updates are handled by the Playback Manager.
-         */
-        UpdateAnimeEntryProgress: {
-            key: "ANIME-ENTRIES-update-anime-entry-progress",
-            methods: ["POST"],
-            endpoint: "/api/v1/library/anime-entry/update-progress",
-        },
-        /**
-         *  @description
-         *  Route update the repeat value of the given anime media entry.
-         *  This is used to update the repeat value of the given anime media entry on Platform.
-         *  The response is not used in the frontend, the client should just refetch the entire media entry data.
-         */
-        UpdateAnimeEntryRepeat: {
-            key: "ANIME-ENTRIES-update-anime-entry-repeat",
-            methods: ["POST"],
-            endpoint: "/api/v1/library/anime-entry/update-repeat",
         },
     },
     AUTH: {
         /**
          *  @description
          *  Route logs in the user by saving the JWT token in the database.
-         *  This is called when the JWT token is obtained from Platform after logging in with redirection on the client.
-         *  It also fetches the Viewer data from Platform and saves it in the database.
-         *  It creates a new handlers.Status and refreshes App modules.
+         *  This is called when the JWT token is obtained after logging in with redirection on the client.
          */
         Login: {
             key: "AUTH-login",
             methods: ["POST"],
             endpoint: "/api/v1/auth/login",
         },
-        /**
-         *  @description
-         *  Route logs out the user by removing JWT token from the database.
-         *  It removes JWT token and Viewer data from the database.
-         *  It creates a new handlers.Status and refreshes App modules.
-         */
         Logout: {
             key: "AUTH-logout",
             methods: ["POST"],
             endpoint: "/api/v1/auth/logout",
-        },
-    },
-    AUTO_DOWNLOADER: {
-        /**
-         *  @description
-         *  Route tells the AutoDownloader to check for new episodes if enabled.
-         *  This will run the AutoDownloader if it is enabled.
-         *  It does nothing if the AutoDownloader is disabled.
-         */
-        RunAutoDownloader: {
-            key: "AUTO-DOWNLOADER-run-auto-downloader",
-            methods: ["POST"],
-            endpoint: "/api/v1/auto-downloader/run",
-        },
-        /**
-         *  @description
-         *  Route runs the AutoDownloader in simulation mode and returns the results.
-         *  It does nothing if the AutoDownloader is disabled.
-         */
-        RunAutoDownloaderSimulation: {
-            key: "AUTO-DOWNLOADER-run-auto-downloader-simulation",
-            methods: ["POST"],
-            endpoint: "/api/v1/auto-downloader/run/simulation",
-        },
-        /**
-         *  @description
-         *  Route returns the rule with the given DB id.
-         *  This is used to get a specific rule, useful for editing.
-         */
-        GetAutoDownloaderRule: {
-            key: "AUTO-DOWNLOADER-get-auto-downloader-rule",
-            methods: ["GET"],
-            endpoint: "/api/v1/auto-downloader/rule/{id}",
-        },
-        GetAutoDownloaderRulesByAnime: {
-            key: "AUTO-DOWNLOADER-get-auto-downloader-rules-by-anime",
-            methods: ["GET"],
-            endpoint: "/api/v1/auto-downloader/rule/anime/{id}",
-        },
-        /**
-         *  @description
-         *  Route returns all rules.
-         *  This is used to list all rules. It returns an empty slice if there are no rules.
-         */
-        GetAutoDownloaderRules: {
-            key: "AUTO-DOWNLOADER-get-auto-downloader-rules",
-            methods: ["GET"],
-            endpoint: "/api/v1/auto-downloader/rules",
-        },
-        /**
-         *  @description
-         *  Route creates a new rule.
-         *  The body should contain the same fields as entities.AutoDownloaderRule.
-         *  It returns the created rule.
-         */
-        CreateAutoDownloaderRule: {
-            key: "AUTO-DOWNLOADER-create-auto-downloader-rule",
-            methods: ["POST"],
-            endpoint: "/api/v1/auto-downloader/rule",
-        },
-        /**
-         *  @description
-         *  Route updates a rule.
-         *  The body should contain the same fields as entities.AutoDownloaderRule.
-         *  It returns the updated rule.
-         */
-        UpdateAutoDownloaderRule: {
-            key: "AUTO-DOWNLOADER-update-auto-downloader-rule",
-            methods: ["PATCH"],
-            endpoint: "/api/v1/auto-downloader/rule",
-        },
-        /**
-         *  @description
-         *  Route deletes a rule.
-         *  It returns 'true' if the rule was deleted.
-         */
-        DeleteAutoDownloaderRule: {
-            key: "AUTO-DOWNLOADER-delete-auto-downloader-rule",
-            methods: ["DELETE"],
-            endpoint: "/api/v1/auto-downloader/rule/{id}",
-        },
-        GetAutoDownloaderProfiles: {
-            key: "AUTO-DOWNLOADER-get-auto-downloader-profiles",
-            methods: ["GET"],
-            endpoint: "/api/v1/auto-downloader/profiles",
-        },
-        GetAutoDownloaderProfile: {
-            key: "AUTO-DOWNLOADER-get-auto-downloader-profile",
-            methods: ["GET"],
-            endpoint: "/api/v1/auto-downloader/profile/{id}",
-        },
-        CreateAutoDownloaderProfile: {
-            key: "AUTO-DOWNLOADER-create-auto-downloader-profile",
-            methods: ["POST"],
-            endpoint: "/api/v1/auto-downloader/profile",
-        },
-        UpdateAutoDownloaderProfile: {
-            key: "AUTO-DOWNLOADER-update-auto-downloader-profile",
-            methods: ["PATCH"],
-            endpoint: "/api/v1/auto-downloader/profile",
-        },
-        DeleteAutoDownloaderProfile: {
-            key: "AUTO-DOWNLOADER-delete-auto-downloader-profile",
-            methods: ["DELETE"],
-            endpoint: "/api/v1/auto-downloader/profile/{id}",
-        },
-        /**
-         *  @description
-         *  Route returns all queued items.
-         *  Queued items are episodes that are downloaded but not scanned or not yet downloaded.
-         *  The AutoDownloader uses these items in order to not download the same episode twice.
-         */
-        GetAutoDownloaderItems: {
-            key: "AUTO-DOWNLOADER-get-auto-downloader-items",
-            methods: ["GET"],
-            endpoint: "/api/v1/auto-downloader/items",
-        },
-        /**
-         *  @description
-         *  Route delete a queued item.
-         *  This is used to remove a queued item from the list.
-         *  Returns 'true' if the item was deleted.
-         */
-        DeleteAutoDownloaderItem: {
-            key: "AUTO-DOWNLOADER-delete-auto-downloader-item",
-            methods: ["DELETE"],
-            endpoint: "/api/v1/auto-downloader/item",
         },
     },
     CONTINUITY: {
@@ -404,126 +200,6 @@ export const API_ENDPOINTS = {
             endpoint: "/api/v1/continuity/history",
         },
     },
-    CUSTOM_SOURCE: {
-        /**
-         *  @description
-         *  Route returns a paginated list of anime from the provider.
-         *  This will search for media from the provider.
-         */
-        CustomSourceListAnime: {
-            key: "CUSTOM-SOURCE-custom-source-list-anime",
-            methods: ["POST"],
-            endpoint: "/api/v1/custom-source/provider/list/anime",
-        },
-    },
-    DEBRID: {
-        /**
-         *  @description
-         *  Route get debrid settings.
-         *  This returns the debrid settings.
-         */
-        GetDebridSettings: {
-            key: "DEBRID-get-debrid-settings",
-            methods: ["GET"],
-            endpoint: "/api/v1/debrid/settings",
-        },
-        /**
-         *  @description
-         *  Route save debrid settings.
-         *  This saves the debrid settings.
-         *  The client should refetch the server status.
-         */
-        SaveDebridSettings: {
-            key: "DEBRID-save-debrid-settings",
-            methods: ["PATCH"],
-            endpoint: "/api/v1/debrid/settings",
-        },
-        /**
-         *  @description
-         *  Route add torrent to debrid.
-         *  This adds a torrent to the debrid service.
-         */
-        DebridAddTorrents: {
-            key: "DEBRID-debrid-add-torrents",
-            methods: ["POST"],
-            endpoint: "/api/v1/debrid/torrents",
-        },
-        /**
-         *  @description
-         *  Route download torrent from debrid.
-         *  Manually downloads a torrent from the debrid service locally.
-         */
-        DebridDownloadTorrent: {
-            key: "DEBRID-debrid-download-torrent",
-            methods: ["POST"],
-            endpoint: "/api/v1/debrid/torrents/download",
-        },
-        /**
-         *  @description
-         *  Route cancel download from debrid.
-         *  This cancels a download from the debrid service.
-         */
-        DebridCancelDownload: {
-            key: "DEBRID-debrid-cancel-download",
-            methods: ["POST"],
-            endpoint: "/api/v1/debrid/torrents/cancel",
-        },
-        /**
-         *  @description
-         *  Route remove torrent from debrid.
-         *  This removes a torrent from the debrid service.
-         */
-        DebridDeleteTorrent: {
-            key: "DEBRID-debrid-delete-torrent",
-            methods: ["DELETE"],
-            endpoint: "/api/v1/debrid/torrent",
-        },
-        /**
-         *  @description
-         *  Route get torrents from debrid.
-         *  This gets the torrents from the debrid service.
-         */
-        DebridGetTorrents: {
-            key: "DEBRID-debrid-get-torrents",
-            methods: ["GET"],
-            endpoint: "/api/v1/debrid/torrents",
-        },
-        /**
-         *  @description
-         *  Route get torrent info from debrid.
-         *  This gets the torrent info from the debrid service.
-         */
-        DebridGetTorrentInfo: {
-            key: "DEBRID-debrid-get-torrent-info",
-            methods: ["POST"],
-            endpoint: "/api/v1/debrid/torrents/info",
-        },
-        DebridGetTorrentFilePreviews: {
-            key: "DEBRID-debrid-get-torrent-file-previews",
-            methods: ["POST"],
-            endpoint: "/api/v1/debrid/torrents/file-previews",
-        },
-        /**
-         *  @description
-         *  Route start stream from debrid.
-         *  This starts streaming a torrent from the debrid service.
-         */
-        DebridStartStream: {
-            key: "DEBRID-debrid-start-stream",
-            methods: ["POST"],
-            endpoint: "/api/v1/debrid/stream/start",
-        },
-        /**
-         *  @description
-         *  Route cancel stream from debrid.
-         *  This cancels a stream from the debrid service.
-         */
-        DebridCancelStream: {
-            key: "DEBRID-debrid-cancel-stream",
-            methods: ["POST"],
-            endpoint: "/api/v1/debrid/stream/cancel",
-        },
-    },
     DIRECTORY_SELECTOR: {
         /**
          *  @description
@@ -538,56 +214,6 @@ export const API_ENDPOINTS = {
             endpoint: "/api/v1/directory-selector",
         },
     },
-    DIRECTSTREAM: {
-        /**
-         *  @description
-         *  Route request local file stream.
-         *  This requests a local file stream and returns the media container to start the playback.
-         */
-        DirectstreamPlayLocalFile: {
-            key: "DIRECTSTREAM-directstream-play-local-file",
-            methods: ["POST"],
-            endpoint: "/api/v1/directstream/play/localfile",
-        },
-        DirectstreamConvertSubs: {
-            key: "DIRECTSTREAM-directstream-convert-subs",
-            methods: ["POST"],
-            endpoint: "/api/v1/directstream/subs/convert-subs",
-        },
-    },
-
-    DOCS: {
-        GetDocs: {
-            key: "DOCS-get-docs",
-            methods: ["GET"],
-            endpoint: "/api/v1/internal/docs",
-        },
-    },
-    DOWNLOAD: {
-        DownloadTorrentFile: {
-            key: "DOWNLOAD-download-torrent-file",
-            methods: ["POST"],
-            endpoint: "/api/v1/download-torrent-file",
-        },
-        /**
-         *  @description
-         *  Route downloads selected release asset to the destination folder.
-         *  Downloads the selected release asset to the destination folder and extracts it if possible.
-         *  If the extraction fails, the error message will be returned in the successful response.
-         *  The successful response will contain the destination path of the extracted files.
-         *  It only returns an error if the download fails.
-         */
-        DownloadRelease: {
-            key: "DOWNLOAD-download-release",
-            methods: ["POST"],
-            endpoint: "/api/v1/download-release",
-        },
-        DownloadMacDenshiUpdate: {
-            key: "DOWNLOAD-download-mac-denshi-update",
-            methods: ["POST"],
-            endpoint: "/api/v1/download-mac-denshi-update",
-        },
-    },
     EXPLORER: {
         /**
          *  @description
@@ -598,123 +224,6 @@ export const API_ENDPOINTS = {
             key: "EXPLORER-open-in-explorer",
             methods: ["POST"],
             endpoint: "/api/v1/open-in-explorer",
-        },
-    },
-    EXTENSIONS: {
-        FetchExternalExtensionData: {
-            key: "EXTENSIONS-fetch-external-extension-data",
-            methods: ["POST"],
-            endpoint: "/api/v1/extensions/external/fetch",
-        },
-        InstallExternalExtension: {
-            key: "EXTENSIONS-install-external-extension",
-            methods: ["POST"],
-            endpoint: "/api/v1/extensions/external/install",
-        },
-        InstallExternalExtensionRepository: {
-            key: "EXTENSIONS-install-external-extension-repository",
-            methods: ["POST"],
-            endpoint: "/api/v1/extensions/external/install-repository",
-        },
-        UninstallExternalExtension: {
-            key: "EXTENSIONS-uninstall-external-extension",
-            methods: ["POST"],
-            endpoint: "/api/v1/extensions/external/uninstall",
-        },
-        UpdateExtensionCode: {
-            key: "EXTENSIONS-update-extension-code",
-            methods: ["POST"],
-            endpoint: "/api/v1/extensions/external/edit-payload",
-        },
-        ReloadExternalExtensions: {
-            key: "EXTENSIONS-reload-external-extensions",
-            methods: ["POST"],
-            endpoint: "/api/v1/extensions/external/reload",
-        },
-        ReloadExternalExtension: {
-            key: "EXTENSIONS-reload-external-extension",
-            methods: ["POST"],
-            endpoint: "/api/v1/extensions/external/reload",
-        },
-        ListExtensionData: {
-            key: "EXTENSIONS-list-extension-data",
-            methods: ["GET"],
-            endpoint: "/api/v1/extensions/list",
-        },
-        GetExtensionPayload: {
-            key: "EXTENSIONS-get-extension-payload",
-            methods: ["GET"],
-            endpoint: "/api/v1/extensions/payload/{id}",
-        },
-        ListDevelopmentModeExtensions: {
-            key: "EXTENSIONS-list-development-mode-extensions",
-            methods: ["GET"],
-            endpoint: "/api/v1/extensions/list/development",
-        },
-        GetAllExtensions: {
-            key: "EXTENSIONS-get-all-extensions",
-            methods: ["POST"],
-            endpoint: "/api/v1/extensions/all",
-        },
-        GetExtensionUpdateData: {
-            key: "EXTENSIONS-get-extension-update-data",
-            methods: ["GET"],
-            endpoint: "/api/v1/extensions/updates",
-        },
-        ListOnlinestreamProviderExtensions: {
-            key: "EXTENSIONS-list-onlinestream-provider-extensions",
-            methods: ["GET"],
-            endpoint: "/api/v1/extensions/list/onlinestream-provider",
-        },
-        ListAnimeTorrentProviderExtensions: {
-            key: "EXTENSIONS-list-anime-torrent-provider-extensions",
-            methods: ["GET"],
-            endpoint: "/api/v1/extensions/list/anime-torrent-provider",
-        },
-        ListCustomSourceExtensions: {
-            key: "EXTENSIONS-list-custom-source-extensions",
-            methods: ["GET"],
-            endpoint: "/api/v1/extensions/list/custom-source",
-        },
-        GetPluginSettings: {
-            key: "EXTENSIONS-get-plugin-settings",
-            methods: ["GET"],
-            endpoint: "/api/v1/extensions/plugin-settings",
-        },
-        SetPluginSettingsPinnedTrays: {
-            key: "EXTENSIONS-set-plugin-settings-pinned-trays",
-            methods: ["POST"],
-            endpoint: "/api/v1/extensions/plugin-settings/pinned-trays",
-        },
-        GrantPluginPermissions: {
-            key: "EXTENSIONS-grant-plugin-permissions",
-            methods: ["POST"],
-            endpoint: "/api/v1/extensions/plugin-permissions/grant",
-        },
-        /**
-         *  @description
-         *  Route runs the code in the extension playground.
-         *  Returns the logs
-         */
-        RunExtensionPlaygroundCode: {
-            key: "EXTENSIONS-run-extension-playground-code",
-            methods: ["POST"],
-            endpoint: "/api/v1/extensions/playground/run",
-        },
-        GetExtensionUserConfig: {
-            key: "EXTENSIONS-get-extension-user-config",
-            methods: ["GET"],
-            endpoint: "/api/v1/extensions/user-config/{id}",
-        },
-        SaveExtensionUserConfig: {
-            key: "EXTENSIONS-save-extension-user-config",
-            methods: ["POST"],
-            endpoint: "/api/v1/extensions/user-config",
-        },
-        GetMarketplaceExtensions: {
-            key: "EXTENSIONS-get-marketplace-extensions",
-            methods: ["GET"],
-            endpoint: "/api/v1/extensions/marketplace",
         },
     },
     FILECACHE: {
@@ -847,7 +356,7 @@ export const API_ENDPOINTS = {
             endpoint: "/api/v1/local/queue",
         },
         LocalSyncPlatformData: {
-            key: "LOCAL-local-sync-Platform-data",
+            key: "LOCAL-local-sync-platform-data",
             methods: ["POST"],
             endpoint: "/api/v1/local/Platform",
         },
@@ -867,7 +376,7 @@ export const API_ENDPOINTS = {
             endpoint: "/api/v1/local/storage/size",
         },
         LocalSyncSimulatedDataToPlatform: {
-            key: "LOCAL-local-sync-simulated-data-to-Platform",
+            key: "LOCAL-local-sync-simulated-data-to-platform",
             methods: ["POST"],
             endpoint: "/api/v1/local/sync-simulated-to-Platform",
         },
@@ -957,70 +466,6 @@ export const API_ENDPOINTS = {
             methods: ["DELETE"],
             endpoint: "/api/v1/library/empty-directories",
         },
-        /**
-         *  @description
-         *  Route returns all unlinked files.
-         *  Unlinked files are local files that are not matched to any media entry.
-         */
-        GetUnlinkedFiles: {
-            key: "LOCALFILES-get-unlinked-files",
-            methods: ["GET"],
-            endpoint: "/api/v1/library/unlinked",
-        },
-        /**
-         *  @description
-         *  Route resolves an unlinked file to a specific media ID.
-         *  This matches an unlinked local file to a media entry.
-         */
-        ResolveUnlinkedFile: {
-            key: "LOCALFILES-resolve-unlinked-file",
-            methods: ["POST"],
-            endpoint: "/api/v1/library/unlinked/resolve",
-        },
-    },
-    MAL: {
-        /**
-         *  @description
-         *  Route fetches the access and refresh tokens for the given code.
-         *  This is used to authenticate the user with MyAnimeList.
-         *  It will save the info in the database, effectively logging the user in.
-         *  The client should re-fetch the server status after this.
-         */
-        MALAuth: {
-            key: "MAL-mal-auth",
-            methods: ["POST"],
-            endpoint: "/api/v1/mal/auth",
-        },
-        EditMALListEntryProgress: {
-            key: "MAL-edit-mal-list-entry-progress",
-            methods: ["POST"],
-            endpoint: "/api/v1/mal/list-entry/progress",
-        },
-        /**
-         *  @description
-         *  Route logs the user out of MyAnimeList.
-         *  This will delete the MAL info from the database, effectively logging the user out.
-         *  The client should re-fetch the server status after this.
-         */
-        MALLogout: {
-            key: "MAL-mal-logout",
-            methods: ["POST"],
-            endpoint: "/api/v1/mal/logout",
-        },
-    },
-    MANUAL_DUMP: {
-        TestDump: {
-            key: "MANUAL-DUMP-test-dump",
-            methods: ["POST"],
-            endpoint: "/api/v1/test-dump",
-        },
-    },
-    MEDIAPLAYER: {
-        StartDefaultMediaPlayer: {
-            key: "MEDIAPLAYER-start-default-media-player",
-            methods: ["POST"],
-            endpoint: "/api/v1/media-player/start",
-        },
     },
     MEDIASTREAM: {
         /**
@@ -1065,7 +510,7 @@ export const API_ENDPOINTS = {
         },
         /**
          *  @description
-         *  Route shuts down the transcode stream
+         *  Route shuts down the transcode stream.
          *  This requests the transcoder to shut down. It should be called when unmounting the player (playback is no longer needed).
          *  This will also send an events.MediastreamShutdownStream event.
          *  It will not return any error and is safe to call multiple times.
@@ -1128,286 +573,28 @@ export const API_ENDPOINTS = {
             endpoint: "/api/v1/metadata/parent",
         },
     },
-    ONLINESTREAM: {
+    PLAYBACK_SYNC: {
         /**
          *  @description
-         *  Route returns the episode list for the given media and provider.
-         *  It returns the episode list for the given media and provider.
-         *  The episodes are cached using a file cache.
-         *  The episode list is just a list of episodes with no video sources, it's what the client uses to display the episodes and subsequently fetch the sources.
-         *  The episode list might be nil or empty if nothing could be found, but the media will always be returned.
+         *  Route receives playback telemetry from the frontend.
+         *  Updates continuity watch history and, when progress >= 85%,
          */
-        GetOnlineStreamEpisodeList: {
-            key: "ONLINESTREAM-get-online-stream-episode-list",
+        PlaybackSync: {
+            key: "PLAYBACK-SYNC-playback-sync",
             methods: ["POST"],
-            endpoint: "/api/v1/onlinestream/episode-list",
-        },
-        GetOnlineStreamEpisodeSource: {
-            key: "ONLINESTREAM-get-online-stream-episode-source",
-            methods: ["POST"],
-            endpoint: "/api/v1/onlinestream/episode-source",
-        },
-        OnlineStreamEmptyCache: {
-            key: "ONLINESTREAM-online-stream-empty-cache",
-            methods: ["DELETE"],
-            endpoint: "/api/v1/onlinestream/cache",
-        },
-        /**
-         *  @description
-         *  Route returns search results for a manual search.
-         *  Returns search results for a manual search.
-         */
-        OnlinestreamManualSearch: {
-            key: "ONLINESTREAM-onlinestream-manual-search",
-            methods: ["POST"],
-            endpoint: "/api/v1/onlinestream/search",
-        },
-        /**
-         *  @description
-         *  Route manually maps an anime entry to an anime ID from the provider.
-         *  This is used to manually map an anime entry to an anime ID from the provider.
-         *  The client should re-fetch the chapter container after this.
-         */
-        OnlinestreamManualMapping: {
-            key: "ONLINESTREAM-onlinestream-manual-mapping",
-            methods: ["POST"],
-            endpoint: "/api/v1/onlinestream/manual-mapping",
-        },
-        /**
-         *  @description
-         *  Route returns the mapping for an anime entry.
-         *  This is used to get the mapping for an anime entry.
-         *  An empty string is returned if there's no manual mapping. If there is, the anime ID will be returned.
-         */
-        GetOnlinestreamMapping: {
-            key: "ONLINESTREAM-get-onlinestream-mapping",
-            methods: ["POST"],
-            endpoint: "/api/v1/onlinestream/get-mapping",
-        },
-        /**
-         *  @description
-         *  Route removes the mapping for an anime entry.
-         *  This is used to remove the mapping for an anime entry.
-         *  The client should re-fetch the chapter container after this.
-         */
-        RemoveOnlinestreamMapping: {
-            key: "ONLINESTREAM-remove-onlinestream-mapping",
-            methods: ["POST"],
-            endpoint: "/api/v1/onlinestream/remove-mapping",
+            endpoint: "/api/v1/playback/sync",
         },
     },
-    PLAYBACK_MANAGER: {
+    RESOLVER: {
         /**
          *  @description
-         *  Route plays the video with the given path using the default media player.
-         *  This tells the Playback Manager to play the video using the default media player and start tracking progress.
-         *  This returns 'true' if the video was successfully played.
+         *  Route Resolve all playback sources for an episode
+         *  Returns a list of ResolvedSource objects. Only local files
          */
-        PlaybackPlayVideo: {
-            key: "PLAYBACK-MANAGER-playback-play-video",
-            methods: ["POST"],
-            endpoint: "/api/v1/playback-manager/play",
-        },
-        /**
-         *  @description
-         *  Route plays a random, unwatched video using the default media player.
-         *  This tells the Playback Manager to play a random, unwatched video using the media player and start tracking progress.
-         *  It respects the user's progress data and will prioritize "current" and "repeating" media if they are many of them.
-         *  This returns 'true' if the video was successfully played.
-         */
-        PlaybackPlayRandomVideo: {
-            key: "PLAYBACK-MANAGER-playback-play-random-video",
-            methods: ["POST"],
-            endpoint: "/api/v1/playback-manager/play-random",
-        },
-        /**
-         *  @description
-         *  Route updates the Platform progress of the currently playing media.
-         *  This is called after 'Update progress' is clicked when watching a media.
-         *  This route returns the media ID of the currently playing media, so the client can refetch the media entry data.
-         */
-        PlaybackSyncCurrentProgress: {
-            key: "PLAYBACK-MANAGER-playback-sync-current-progress",
-            methods: ["POST"],
-            endpoint: "/api/v1/playback-manager/sync-current-progress",
-        },
-        /**
-         *  @description
-         *  Route plays the next episode of the currently playing media.
-         *  This will play the next episode of the currently playing media.
-         *  This is non-blocking so the client should prevent multiple calls until the next status is received.
-         */
-        PlaybackPlayNextEpisode: {
-            key: "PLAYBACK-MANAGER-playback-play-next-episode",
-            methods: ["POST"],
-            endpoint: "/api/v1/playback-manager/next-episode",
-        },
-        /**
-         *  @description
-         *  Route gets the next episode of the currently playing media.
-         *  This is used by the client's autoplay feature
-         */
-        PlaybackGetNextEpisode: {
-            key: "PLAYBACK-MANAGER-playback-get-next-episode",
+        ResolveStreams: {
+            key: "RESOLVER-resolve-streams",
             methods: ["GET"],
-            endpoint: "/api/v1/playback-manager/next-episode",
-        },
-        /**
-         *  @description
-         *  Route plays the next episode of the currently playing media.
-         *  This will play the next episode of the currently playing media.
-         */
-        PlaybackAutoPlayNextEpisode: {
-            key: "PLAYBACK-MANAGER-playback-auto-play-next-episode",
-            methods: ["POST"],
-            endpoint: "/api/v1/playback-manager/autoplay-next-episode",
-        },
-        /**
-         *  @description
-         *  Route starts playing a playlist.
-         *  The client should refetch playlists.
-         */
-        PlaybackStartPlaylist: {
-            key: "PLAYBACK-MANAGER-playback-start-playlist",
-            methods: ["POST"],
-            endpoint: "/api/v1/playback-manager/start-playlist",
-        },
-        /**
-         *  @description
-         *  Route ends the current playlist.
-         *  This will stop the current playlist. This is non-blocking.
-         */
-        PlaybackCancelCurrentPlaylist: {
-            key: "PLAYBACK-MANAGER-playback-cancel-current-playlist",
-            methods: ["POST"],
-            endpoint: "/api/v1/playback-manager/cancel-playlist",
-        },
-        /**
-         *  @description
-         *  Route moves to the next item in the current playlist.
-         *  This is non-blocking so the client should prevent multiple calls until the next status is received.
-         */
-        PlaybackPlaylistNext: {
-            key: "PLAYBACK-MANAGER-playback-playlist-next",
-            methods: ["POST"],
-            endpoint: "/api/v1/playback-manager/playlist-next",
-        },
-        /**
-         *  @description
-         *  Route starts manual tracking of a media.
-         *  Used for tracking progress of media that is not played through any integrated media player.
-         *  This should only be used for trackable episodes (episodes that count towards progress).
-         *  This returns 'true' if the tracking was successfully started.
-         */
-        PlaybackStartManualTracking: {
-            key: "PLAYBACK-MANAGER-playback-start-manual-tracking",
-            methods: ["POST"],
-            endpoint: "/api/v1/playback-manager/manual-tracking/start",
-        },
-        /**
-         *  @description
-         *  Route cancels manual tracking of a media.
-         *  This will stop the server from expecting progress updates for the media.
-         */
-        PlaybackCancelManualTracking: {
-            key: "PLAYBACK-MANAGER-playback-cancel-manual-tracking",
-            methods: ["POST"],
-            endpoint: "/api/v1/playback-manager/manual-tracking/cancel",
-        },
-    },
-    PLAYLIST: {
-        /**
-         *  @description
-         *  Route creates a new playlist.
-         *  This will create a new playlist with the given name and episodes.
-         *  The response is ignored, the client should re-fetch the playlists after this.
-         */
-        CreatePlaylist: {
-            key: "PLAYLIST-create-playlist",
-            methods: ["POST"],
-            endpoint: "/api/v1/playlist",
-        },
-        GetPlaylists: {
-            key: "PLAYLIST-get-playlists",
-            methods: ["GET"],
-            endpoint: "/api/v1/playlists",
-        },
-        /**
-         *  @description
-         *  Route updates a playlist.
-         *  The response is ignored, the client should re-fetch the playlists after this.
-         */
-        UpdatePlaylist: {
-            key: "PLAYLIST-update-playlist",
-            methods: ["PATCH"],
-            endpoint: "/api/v1/playlist",
-        },
-        DeletePlaylist: {
-            key: "PLAYLIST-delete-playlist",
-            methods: ["DELETE"],
-            endpoint: "/api/v1/playlist",
-        },
-        GetPlaylistEpisodes: {
-            key: "PLAYLIST-get-playlist-episodes",
-            methods: ["GET"],
-            endpoint: "/api/v1/playlist/episodes/{id}",
-        },
-    },
-    RELEASES: {
-        /**
-         *  @description
-         *  Route installs the latest update.
-         *  This will install the latest update and launch the new version.
-         */
-        InstallLatestUpdate: {
-            key: "RELEASES-install-latest-update",
-            methods: ["POST"],
-            endpoint: "/api/v1/install-update",
-        },
-        /**
-         *  @description
-         *  Route returns the latest update.
-         *  This will return the latest update.
-         *  If an error occurs, it will return an empty update.
-         */
-        GetLatestUpdate: {
-            key: "RELEASES-get-latest-update",
-            methods: ["GET"],
-            endpoint: "/api/v1/latest-update",
-        },
-        GetChangelog: {
-            key: "RELEASES-get-changelog",
-            methods: ["GET"],
-            endpoint: "/api/v1/changelog",
-        },
-    },
-    PROGRESS: {
-        GetProgress: {
-            key: "PROGRESS-get-progress",
-            methods: ["GET"],
-            endpoint: "/api/v1/progress",
-        },
-        SaveProgress: {
-            key: "PROGRESS-save-progress",
-            methods: ["POST"],
-            endpoint: "/api/v1/progress",
-        },
-    },
-    REPORT: {
-        SaveIssueReport: {
-            key: "REPORT-save-issue-report",
-            methods: ["POST"],
-            endpoint: "/api/v1/report/issue",
-        },
-        DownloadIssueReport: {
-            key: "REPORT-download-issue-report",
-            methods: ["GET"],
-            endpoint: "/api/v1/report/issue/download",
-        },
-        DecompressIssueReport: {
-            key: "REPORT-decompress-issue-report",
-            methods: ["POST"],
-            endpoint: "/api/v1/report/issue/decompress",
+            endpoint: "/api/v1/resolver/streams",
         },
     },
     SCAN: {
@@ -1421,6 +608,38 @@ export const API_ENDPOINTS = {
             key: "SCAN-scan-local-files",
             methods: ["POST"],
             endpoint: "/api/v1/library/scan",
+        },
+        /**
+         *  @description
+         *  Route returns the latest scan summary.
+         *  Returns metadata about the most recent library scan:
+         *  - timestamp, duration, matched/unmatched file counts, errors.
+         *  Clients can poll this endpoint instead of relying solely on WebSocket events.
+         */
+        GetScanStatus: {
+            key: "SCAN-get-scan-status",
+            methods: ["GET"],
+            endpoint: "/api/v1/library/scan/status",
+        },
+        /**
+         *  @description
+         *  Route returns all files the scanner failed to identify.
+         *  These are files stored as GhostAssociations in the database.
+         */
+        GetUnlinkedFiles: {
+            key: "SCAN-get-unlinked-files",
+            methods: ["GET"],
+            endpoint: "/api/v1/library/unlinked",
+        },
+        /**
+         *  @description
+         *  Route manually links an unrecognized file to a media ID.
+         *  Persists the user's choice as a Ghost Association so the next scan picks it up.
+         */
+        ResolveUnlinkedFile: {
+            key: "SCAN-resolve-unlinked-file",
+            methods: ["POST"],
+            endpoint: "/api/v1/library/unlinked/resolve",
         },
     },
     SCAN_SUMMARY: {
@@ -1438,7 +657,7 @@ export const API_ENDPOINTS = {
         },
         /**
          *  @description
-         *  Route updates the app settings.
+         *  Route initial setup – save base settings on first run.
          *  This will update the app settings.
          *  The client should re-fetch the server status after this.
          */
@@ -1450,18 +669,15 @@ export const API_ENDPOINTS = {
         /**
          *  @description
          *  Route updates the app settings.
-         *  This will update the app settings.
-         *  The client should re-fetch the server status after this.
+         *  Applies a PATCH-style merge: the incoming payload's non-nil sub-objects
+         *  replace the stored ones; AutoDownloader is always merged from the DB to
+         *  preserve scheduler state. Separate-table settings (Mediastream,
+         *  Torrentstream, Debrid, Theme) are upserted only when present in payload.
          */
         SaveSettings: {
             key: "SETTINGS-save-settings",
             methods: ["PATCH"],
             endpoint: "/api/v1/settings",
-        },
-        SaveAutoDownloaderSettings: {
-            key: "SETTINGS-save-auto-downloader-settings",
-            methods: ["PATCH"],
-            endpoint: "/api/v1/settings/auto-downloader",
         },
         SaveMediaPlayerSettings: {
             key: "SETTINGS-save-media-player-settings",
@@ -1482,46 +698,6 @@ export const API_ENDPOINTS = {
             key: "STATUS-get-status",
             methods: ["GET"],
             endpoint: "/api/v1/status",
-        },
-        /**
-         *  @description
-         *  Route returns the log filenames.
-         *  This returns the filenames of all log files in the logs directory.
-         */
-        GetLogFilenames: {
-            key: "STATUS-get-log-filenames",
-            methods: ["GET"],
-            endpoint: "/api/v1/logs/filenames",
-        },
-        /**
-         *  @description
-         *  Route deletes certain log files.
-         *  This deletes the log files with the given filenames.
-         */
-        DeleteLogs: {
-            key: "STATUS-delete-logs",
-            methods: ["DELETE"],
-            endpoint: "/api/v1/logs",
-        },
-        /**
-         *  @description
-         *  Route returns the content of the latest server log file.
-         *  This returns the content of the most recent KameHouse- log file after flushing logs.
-         */
-        GetLatestLogContent: {
-            key: "STATUS-get-latest-log-content",
-            methods: ["GET"],
-            endpoint: "/api/v1/logs/latest",
-        },
-        /**
-         *  @description
-         *  Route returns the server announcements.
-         *  This returns the announcements for the server.
-         */
-        GetAnnouncements: {
-            key: "STATUS-get-announcements",
-            methods: ["POST"],
-            endpoint: "/api/v1/announcements",
         },
         /**
          *  @description
@@ -1637,173 +813,15 @@ export const API_ENDPOINTS = {
             methods: ["POST"],
             endpoint: "/api/v1/tmdb/details",
         },
-    },
-    TORRENT_CLIENT: {
         /**
          *  @description
-         *  Route returns all active torrents.
-         *  This handler is used by the client to display the active torrents.
+         *  Route manually assign a TMDB ID to a set of local files.
+         *  Fetches full TMDB details, upserts LibraryMedia, and updates the local files.
          */
-        GetActiveTorrentList: {
-            key: "TORRENT-CLIENT-get-active-torrent-list",
-            methods: ["GET"],
-            endpoint: "/api/v1/torrent-client/list",
-        },
-        /**
-         *  @description
-         *  Route performs an action on a torrent.
-         *  This handler is used to pause, resume or remove a torrent.
-         */
-        TorrentClientAction: {
-            key: "TORRENT-CLIENT-torrent-client-action",
+        TMDBAssign: {
+            key: "TMDB-t-m-d-b-assign",
             methods: ["POST"],
-            endpoint: "/api/v1/torrent-client/action",
-        },
-        /**
-         *  @description
-         *  Route gets the files of a torrent.
-         *  This handler is used to get the files of a torrent.
-         */
-        TorrentClientGetFiles: {
-            key: "TORRENT-CLIENT-torrent-client-get-files",
-            methods: ["POST"],
-            endpoint: "/api/v1/torrent-client/get-files",
-        },
-        /**
-         *  @description
-         *  Route adds torrents to the torrent client.
-         *  It fetches the magnets from the provided URLs and adds them to the torrent client.
-         *  If smart select is enabled, it will try to select the best torrent based on the missing episodes.
-         */
-        TorrentClientDownload: {
-            key: "TORRENT-CLIENT-torrent-client-download",
-            methods: ["POST"],
-            endpoint: "/api/v1/torrent-client/download",
-        },
-        /**
-         *  @description
-         *  Route adds magnets to the torrent client based on the AutoDownloader item.
-         *  This is used to download torrents that were queued by the AutoDownloader.
-         *  The item will be removed from the queue if the magnet was added successfully.
-         *  The AutoDownloader items should be re-fetched after this.
-         */
-        TorrentClientAddMagnetFromRule: {
-            key: "TORRENT-CLIENT-torrent-client-add-magnet-from-rule",
-            methods: ["POST"],
-            endpoint: "/api/v1/torrent-client/rule-magnet",
-        },
-    },
-    TORRENT_SEARCH: {
-        /**
-         *  @description
-         *  Route searches torrents and returns a list of torrents and their previews.
-         *  This will search for torrents and return a list of torrents with previews.
-         *  If smart search is enabled, it will filter the torrents based on search parameters.
-         */
-        SearchTorrent: {
-            key: "TORRENT-SEARCH-search-torrent",
-            methods: ["POST"],
-            endpoint: "/api/v1/torrent/search",
-        },
-        /**
-         *  @description
-         *  Route returns the autoselect profile.
-         *  This returns the single autoselect profile if it exists.
-         */
-        GetAutoSelectProfile: {
-            key: "TORRENT-SEARCH-get-auto-select-profile",
-            methods: ["GET"],
-            endpoint: "/api/v1/auto-select/profile",
-        },
-        /**
-         *  @description
-         *  Route creates or updates the autoselect profile.
-         *  Since there's only one profile at all time, this will create or update it.
-         */
-        SaveAutoSelectProfile: {
-            key: "TORRENT-SEARCH-save-auto-select-profile",
-            methods: ["POST"],
-            endpoint: "/api/v1/auto-select/profile",
-        },
-        DeleteAutoSelectProfile: {
-            key: "TORRENT-SEARCH-delete-auto-select-profile",
-            methods: ["DELETE"],
-            endpoint: "/api/v1/auto-select/profile",
-        },
-    },
-    TORRENTSTREAM: {
-        /**
-         *  @description
-         *  Route get torrentstream settings.
-         *  This returns the torrentstream settings.
-         */
-        GetTorrentstreamSettings: {
-            key: "TORRENTSTREAM-get-torrentstream-settings",
-            methods: ["GET"],
-            endpoint: "/api/v1/torrentstream/settings",
-        },
-        /**
-         *  @description
-         *  Route save torrentstream settings.
-         *  This saves the torrentstream settings.
-         *  The client should refetch the server status.
-         */
-        SaveTorrentstreamSettings: {
-            key: "TORRENTSTREAM-save-torrentstream-settings",
-            methods: ["PATCH"],
-            endpoint: "/api/v1/torrentstream/settings",
-        },
-        /**
-         *  @description
-         *  Route get list of torrent files from a batch
-         *  This returns a list of file previews from the torrent
-         */
-        GetTorrentstreamTorrentFilePreviews: {
-            key: "TORRENTSTREAM-get-torrentstream-torrent-file-previews",
-            methods: ["POST"],
-            endpoint: "/api/v1/torrentstream/torrent-file-previews",
-        },
-        /**
-         *  @description
-         *  Route starts a torrent stream.
-         *  This starts the entire streaming process.
-         */
-        TorrentstreamStartStream: {
-            key: "TORRENTSTREAM-torrentstream-start-stream",
-            methods: ["POST"],
-            endpoint: "/api/v1/torrentstream/start",
-        },
-        /**
-         *  @description
-         *  Route stop a torrent stream.
-         *  This stops the entire streaming process and drops the torrent if it's below a threshold.
-         *  This is made to be used while the stream is running.
-         */
-        TorrentstreamStopStream: {
-            key: "TORRENTSTREAM-torrentstream-stop-stream",
-            methods: ["POST"],
-            endpoint: "/api/v1/torrentstream/stop",
-        },
-        /**
-         *  @description
-         *  Route drops a torrent stream.
-         *  This stops the entire streaming process and drops the torrent completely.
-         *  This is made to be used to force drop a torrent.
-         */
-        TorrentstreamDropTorrent: {
-            key: "TORRENTSTREAM-torrentstream-drop-torrent",
-            methods: ["POST"],
-            endpoint: "/api/v1/torrentstream/drop",
-        },
-        /**
-         *  @description
-         *  Route returns the most recent batch selected.
-         *  This returns the most recent batch selected.
-         */
-        GetTorrentstreamBatchHistory: {
-            key: "TORRENTSTREAM-get-torrentstream-batch-history",
-            methods: ["POST"],
-            endpoint: "/api/v1/torrentstream/batch-history",
+            endpoint: "/api/v1/library/local-files/tmdb-assign",
         },
     },
     VIDEOCORE: {
@@ -1812,32 +830,6 @@ export const API_ENDPOINTS = {
             methods: ["GET"],
             endpoint: "/api/v1/videocore/insights/{episodeId}",
         },
-        VideoCoreInSightGetCharacterDetails: {
-            key: "VIDEOCORE-video-core-in-sight-get-character-details",
-            methods: ["GET"],
-            endpoint: "/api/v1/videocore/insight/character/{malId}",
-        },
     },
-    HOME: {
-        GetHomeCurated: {
-            key: "HOME-get-home-curated",
-            methods: ["GET"],
-            endpoint: "/api/v1/home/curated",
-        },
-    },
-    RESOLVER: {
-        ResolveStreams: {
-            key: "RESOLVER-resolve-streams",
-            methods: ["GET"],
-            endpoint: "/api/v1/resolver/streams",
-        },
-    },
-    TORRENTIO: {
-        GetTorrentioStreams: {
-            key: "TORRENTIO-get-torrentio-streams",
-            methods: ["GET"],
-            endpoint: "/api/v1/torrentio/streams",
-        },
-    },
-} as ApiEndpoints
+} satisfies ApiEndpoints
 

@@ -44,6 +44,7 @@ export function usePlayerProgressSync({
                     duration,
                     filepath,
                     kind: "mediastream",
+                    predictive: false,
                 },
             })
             lastSavedTimeRef.current = currentTime

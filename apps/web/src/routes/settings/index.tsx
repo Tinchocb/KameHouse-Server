@@ -18,7 +18,6 @@ import type { SaveSettings_Variables } from "@/api/generated/endpoint.types"
 // Import extracted tabs
 import { LibraryTab } from "./tabs/library-tab"
 import { PlayerTab } from "./tabs/player-tab"
-import { DownloadsTab } from "./tabs/downloads-tab"
 import { ScannerTab } from "./tabs/scanner-tab"
 import { IntegrationsTab } from "./tabs/integrations-tab"
 import { SystemTab } from "./tabs/system-tab"
@@ -137,7 +136,6 @@ export const Route = createFileRoute("/settings/")({
 const NAV_ITEMS = [
     { id: "library", label: "Biblioteca", icon: LucideRadar },
     { id: "player", label: "Reproducción", icon: LucidePlay },
-    { id: "downloads", label: "Descargas", icon: LucideHardDrive },
     { id: "scanner", label: "Escáner", icon: LucideRefreshCw },
     { id: "integrations", label: "Integraciones", icon: LucideCloud },
     { id: "system", label: "Sistema", icon: LucideSettings },
@@ -147,9 +145,11 @@ function TabsTriggerActiveIndicator() {
     return (
         <motion.div 
             layoutId="active-nav-bg"
-            className="absolute inset-y-1.5 inset-x-0 border-l-[3px] border-primary bg-white/[0.02] -z-10 shadow-[inset_1px_0_0_rgba(255,255,255,0.02)]"
+            className="absolute inset-0 rounded-xl bg-white/5 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-md -z-10"
             transition={{ type: "spring", stiffness: 350, damping: 30 }}
-        />
+        >
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-brand-orange shadow-[0_0_8px_#EB5E28]" />
+        </motion.div>
     )
 }
 
@@ -185,20 +185,20 @@ function SettingsPage() {
     if (isLoading && !serverSettings) return <LoadingOverlayWithLogo />
 
     return (
-        <div className="flex h-full w-full bg-gradient-to-br from-[#09090b] via-[#121215] to-[#09090b] text-white selection:bg-primary/20 overflow-hidden relative">
+        <div className="flex h-full w-full bg-gradient-to-br from-[#09090b] via-[#121215] to-[#09090b] text-white selection:bg-brand-orange/20 overflow-hidden relative">
             <header className="fixed top-0 left-0 lg:left-24 right-0 h-16 border-b border-white/[0.02] bg-[#09090b]/85 backdrop-blur-xl z-40 flex items-center justify-between px-8">
                 <div className="flex items-center gap-3">
                     <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center p-1.5 shadow-md">
                         <LucideHardDrive className="text-black" size={14} />
                     </div>
                     <span className="text-[11px] font-black tracking-[0.25em] uppercase text-white/90 font-mono">
-                        KAMEHOUSE <span className="text-primary font-bold">AJUSTES</span>
+                        KAMEHOUSE <span className="text-brand-orange font-bold">AJUSTES</span>
                     </span>
                 </div>
             </header>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex h-full pt-16 relative">
-                <aside className="w-[280px] h-full border-r border-white/[0.02] bg-[#09090b]/40 backdrop-blur-xl flex flex-col p-6 space-y-8 z-10 overflow-y-auto relative pt-10">
+                <aside className="w-[280px] h-full border-r border-white/5 bg-zinc-950/40 backdrop-blur-2xl flex flex-col p-6 space-y-8 z-10 overflow-y-auto relative pt-10">
                     <div className="space-y-3 relative z-10">
                         <p className="text-[9px] font-black uppercase tracking-[0.25em] text-zinc-500 px-3">Configuración</p>
                         <TabsList className="bg-transparent border-0 flex flex-col items-stretch h-auto p-0 gap-1.5">
@@ -207,14 +207,14 @@ function SettingsPage() {
                                     key={item.id}
                                     value={item.id}
                                     className={cn(
-                                        "relative flex items-center justify-start gap-4 px-4 py-3 rounded-xl text-sm font-bold text-zinc-500",
+                                        "relative flex items-center justify-start gap-4 pl-8 pr-4 py-3 rounded-xl text-sm font-bold text-zinc-500",
                                         "transition-all duration-300 group/nav outline-none hover:text-zinc-300 hover:bg-white/[0.01]",
                                         "data-[state=active]:text-white border border-transparent"
                                     )}
                                 >
                                     <item.icon size={18} className="shrink-0 transition-transform duration-300 group-hover/nav:scale-105 group-hover/nav:text-white data-[state=active]:text-white" />
                                     <span className="relative z-10 tracking-tight font-medium">{item.label}</span>
-                                    <TabsTriggerActiveIndicator />
+                                    {activeTab === item.id && <TabsTriggerActiveIndicator />}
                                 </TabsTrigger>
                             ))}
                         </TabsList>
@@ -235,7 +235,6 @@ function SettingsPage() {
                     <form onSubmit={handleSubmit(onSubmit as unknown as SubmitHandler<FieldValues>)} className="w-full pb-36 max-w-5xl">
                         {activeTab === "library" && <LibraryTab control={control} />}
                         {activeTab === "player" && <PlayerTab control={control} />}
-                        {activeTab === "downloads" && <DownloadsTab control={control} />}
                         {activeTab === "scanner" && <ScannerTab />}
                         {activeTab === "integrations" && <IntegrationsTab control={control} />}
                         {activeTab === "system" && <SystemTab control={control} />}
@@ -254,8 +253,8 @@ function SettingsPage() {
                             <div className="bg-[#09090b]/80 border border-white/10 backdrop-blur-md px-6 py-3.5 rounded-2xl shadow-[0_15px_50px_rgba(0,0,0,0.6),0_0_30px_rgba(235,94,40,0.05)] flex items-center gap-10 min-w-[480px]">
                                 <div className="flex items-center gap-3">
                                     <span className="relative flex h-2 w-2">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-orange opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-orange"></span>
                                     </span>
                                     <span className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">Ajustes Modificados</span>
                                 </div>
@@ -271,7 +270,7 @@ function SettingsPage() {
                                         type="button"
                                         disabled={isSaving}
                                         onClick={handleSubmit(onSubmit as unknown as SubmitHandler<FieldValues>)}
-                                        className="bg-primary text-black hover:bg-primary/90 px-6 py-2 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] disabled:opacity-50 flex items-center gap-2 transition-all font-bold active:scale-95 shadow-[0_4px_15px_rgba(235,94,40,0.15)]"
+                                        className="bg-brand-orange text-black hover:bg-brand-orange/90 px-6 py-2 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] disabled:opacity-50 flex items-center gap-2 transition-all font-bold active:scale-95 shadow-[0_4px_15px_rgba(235,94,40,0.15)]"
                                     >
                                         {isSaving ? <LucideRefreshCw className="animate-spin" size={12} /> : <LucideSave size={12} />}
                                         {isSaving ? "Guardando..." : "Guardar Cambios"}

@@ -10,7 +10,8 @@ import useWebSocket from "react-use-websocket"
 
 export function WebsocketProvider({ children }: { children: React.ReactNode }) {
     const queryClient = useQueryClient()
-    const { setEvents, setScannerState } = useAppStore()
+    const setEvents = useAppStore(state => state.setEvents)
+    const setScannerState = useAppStore(state => state.setScannerState)
 
     // Batching queues for throttling updates to at most once per 500ms
     const eventQueue = useRef<ScanEvent[]>([])
@@ -174,12 +175,21 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
             case WSEvents.SCAN_STATUS: {
                 const statusStr = msg.payload as string
                 let newStageIdx = stateUpdateRef.current.activeStageIdx ?? useAppStore.getState().activeStageIdx
-                if (statusStr.toLowerCase().includes("walk") || statusStr.toLowerCase().includes("escanear") || statusStr.toLowerCase().includes("scanning")) newStageIdx = 0
-                else if (statusStr.toLowerCase().includes("parse") || statusStr.toLowerCase().includes("parsing")) newStageIdx = 1
-                else if (statusStr.toLowerCase().includes("resolve") || statusStr.toLowerCase().includes("fetching") || statusStr.toLowerCase().includes("metadata") || statusStr.toLowerCase().includes("mejorar")) newStageIdx = 2
-                else if (statusStr.toLowerCase().includes("probe") || statusStr.toLowerCase().includes("probing")) newStageIdx = 3
-                else if (statusStr.toLowerCase().includes("persist") || statusStr.toLowerCase().includes("saving")) newStageIdx = 4
-                else if (statusStr.toLowerCase().includes("prune") || statusStr.toLowerCase().includes("cleaning")) newStageIdx = 5
+                const lowerStatus = statusStr.toLowerCase();
+                const STAGE_KEYWORDS = [
+                    ["walk", "escanear", "scanning"],
+                    ["parse", "parsing"],
+                    ["resolve", "fetching", "metadata", "mejorar"],
+                    ["probe", "probing"],
+                    ["persist", "saving"],
+                    ["prune", "cleaning"],
+                ];
+                const matchedIdx = STAGE_KEYWORDS.findIndex(keywords =>
+                    keywords.some(keyword => lowerStatus.includes(keyword))
+                );
+                if (matchedIdx !== -1) {
+                    newStageIdx = matchedIdx;
+                }
 
                 const evt: ScanEvent = {
                     status: statusStr.toLowerCase().includes("completed") || statusStr.toLowerCase().includes("finished") ? "FINISH" : "PROCESSING",

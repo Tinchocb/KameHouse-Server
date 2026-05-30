@@ -12,7 +12,7 @@ import (
 // It ignores errors.
 func RemoveEmptyDirectories(root string, logger *zerolog.Logger) {
 
-	_ = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -22,7 +22,7 @@ func RemoveEmptyDirectories(root string, logger *zerolog.Logger) {
 			return nil
 		}
 
-		if info.IsDir() {
+		if d.IsDir() {
 			// Check if the directory is empty
 			isEmpty, err := isDirectoryEmpty(path)
 			if err != nil {

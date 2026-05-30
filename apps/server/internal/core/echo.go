@@ -24,6 +24,17 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 	e.JSONSerializer = &CustomJSONSerializer{}
 	e.StdLogger = log.Default()
 
+	// Set long-lived Cache-Control headers for static web assets
+	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			path := c.Request().URL.Path
+			if strings.HasPrefix(path, "/assets/") || strings.HasPrefix(path, "/offline-assets/") || strings.HasPrefix(path, "/static/") {
+				c.Response().Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+			}
+			return next(c)
+		}
+	})
+
 	// NOTE: Recover() and CORS middleware are registered in handlers.InitRoutes
 	// to avoid duplication and ensure the most complete CORS config is used.
 

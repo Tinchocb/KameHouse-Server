@@ -1,4 +1,4 @@
-﻿package anime
+package anime
 
 import (
 	"context"
@@ -420,16 +420,20 @@ func (e *Entry) hydrateEntryEpisodeData(
 	})
 	e.Episodes = episodes
 
-	// +---------------------+
-	// |    Download Info    |
-	// +---------------------+
-
 	progress := 0
 	status := ""
 	if listData != nil {
 		progress = listData.Progress
 		status = listData.Status
 	}
+
+	for _, ep := range e.Episodes {
+		ep.Watched = progress > 0 && ((ep.AbsoluteEpisodeNumber > 0 && ep.AbsoluteEpisodeNumber <= progress) || (ep.EpisodeNumber > 0 && ep.EpisodeNumber <= progress))
+	}
+
+	// +---------------------+
+	// |    Download Info    |
+	// +---------------------+
 
 	info, err := NewEntryDownloadInfo(&NewEntryDownloadInfoOptions{
 		LocalFiles:          e.LocalFiles,

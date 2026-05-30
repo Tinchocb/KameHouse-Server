@@ -96,7 +96,7 @@ function VideoPlayerOrchestrator(props: OrchestratorProps) {
     const { data, isLoading, error } = useRequestMediastreamMediaContainer({
         path: props.streamUrl,
         streamType: streamType as Mediastream_StreamType,
-        clientId: clientId,
+        clientID: clientId,
     }, isLocal)
 
     const playableUrl = useMemo(() => {

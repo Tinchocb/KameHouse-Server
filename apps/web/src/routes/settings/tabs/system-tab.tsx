@@ -58,12 +58,6 @@ export function SystemTab({ control }: { control: Control<SettingsFormValues> })
                         label="Desactivar Avisos del Escáner"
                         desc="No mostrar notificaciones toast en tiempo real cuando se encuentren, indexen o enriquezcan archivos nuevos."
                     />
-                    <OsToggle
-                        control={control}
-                        name="notifications.disableAutoDownloaderNotifications"
-                        label="Desactivar Avisos de Descarga"
-                        desc="No notificar cuando los torrents o episodios terminen de descargarse en segundo plano."
-                    />
                 </Card>
             </Section>
 

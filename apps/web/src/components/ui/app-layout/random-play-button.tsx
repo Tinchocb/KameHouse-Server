@@ -39,6 +39,12 @@ export function RandomPlayButton() {
         return collection.lists.flatMap(list => list.entries ?? [])
     }, [collection])
 
+    const playRandomSound = () => {
+        const audio = new Audio("/sounds/serie-pelicula random.wav")
+        audio.volume = 0.5
+        audio.play().catch(() => {})
+    }
+
     // Close picker on outside click
     React.useEffect(() => {
         if (!showPicker) return
@@ -48,21 +54,31 @@ export function RandomPlayButton() {
                 btnRef.current && !btnRef.current.contains(e.target as Node)
             ) {
                 setShowPicker(false)
+                playRandomSound()
             }
         }
         document.addEventListener("mousedown", handler)
         return () => document.removeEventListener("mousedown", handler)
     }, [showPicker])
 
-    // Close picker on Escape
+    const showPickerRef = React.useRef(showPicker)
+    React.useEffect(() => { showPickerRef.current = showPicker }, [showPicker])
+
+    // Close picker on Escape (only when open)
     React.useEffect(() => {
-        const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setShowPicker(false) }
+        const handler = (e: KeyboardEvent) => {
+            if (e.key === "Escape" && showPickerRef.current) {
+                setShowPicker(false)
+                playRandomSound()
+            }
+        }
         document.addEventListener("keydown", handler)
         return () => document.removeEventListener("keydown", handler)
     }, [])
 
     const pick = async (type: "movie" | "episode") => {
         setShowPicker(false)
+        playRandomSound()
         setIsLoading(true)
 
         try {
@@ -145,7 +161,12 @@ export function RandomPlayButton() {
                 <motion.button
                     ref={btnRef}
                     id="random-play-btn"
-                    onClick={() => !isLoading && setShowPicker(p => !p)}
+                    onClick={() => {
+                        if (!isLoading) {
+                            setShowPicker(p => !p)
+                            playRandomSound()
+                        }
+                    }}
                     title="Reproducir Aleatorio"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.92 }}

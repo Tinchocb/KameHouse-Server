@@ -1,7 +1,7 @@
 import { useServerQuery, useServerMutation } from "@/api/client/requests"
 import { Models_Settings, Status } from "@/api/generated/types"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
-import { SaveSettings_Variables, SaveAutoDownloaderSettings_Variables, SaveMediaPlayerSettings_Variables, GettingStarted_Variables } from "@/api/generated/endpoint.types"
+import { SaveSettings_Variables, /* SaveAutoDownloaderSettings_Variables, */ SaveMediaPlayerSettings_Variables, GettingStarted_Variables } from "@/api/generated/endpoint.types"
 import { useQueryClient } from "@tanstack/react-query"
 
 export function useGetStatus() {
@@ -34,6 +34,7 @@ export function useSaveSettings() {
     })
 }
 
+/*
 export function useSaveAutoDownloaderSettings() {
     const queryClient = useQueryClient()
     return useServerMutation<Models_Settings, SaveAutoDownloaderSettings_Variables>({
@@ -45,6 +46,7 @@ export function useSaveAutoDownloaderSettings() {
         },
     })
 }
+*/
 
 export function useSaveMediaPlayerSettings() {
     const queryClient = useQueryClient()

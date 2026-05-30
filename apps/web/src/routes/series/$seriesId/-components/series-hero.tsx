@@ -11,7 +11,7 @@ import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
 import { DeferredImage } from "@/components/shared/deferred-image"
 
 // Pure helpers — defined outside component to avoid recreation on every render
-const parseGenres = (g: string | string[] | undefined | null): string[] => {
+const parseGenres = (g: any): string[] => {
     if (!g) return []
     if (Array.isArray(g)) return g as string[]
     if (typeof g === "string") {

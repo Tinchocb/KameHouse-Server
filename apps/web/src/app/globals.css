@@ -1046,3 +1046,35 @@ media-preview-chapter-display {
     border-bottom-color: black !important;
     background: #3a3a3a !important;
 }
+
+/* ── View Transitions para el Reproductor de Video ────────────────── */
+@keyframes video-fade-in {
+  from { opacity: 0; }
+}
+@keyframes video-fade-out {
+  to { opacity: 0; }
+}
+@keyframes video-scale-up {
+  from { transform: scale(0.96); }
+}
+@keyframes video-scale-down {
+  to { transform: scale(0.96); }
+}
+
+/* Transición por defecto de root más corta para que la UI se sienta veloz */
+::view-transition-old(root) {
+  animation: 90ms cubic-bezier(0.4, 0, 1, 1) both video-fade-out;
+}
+::view-transition-new(root) {
+  animation: 180ms cubic-bezier(0, 0, 0.2, 1) both video-fade-in;
+}
+
+/* Transición específica del reproductor de video */
+::view-transition-old(video-player) {
+  animation: 120ms cubic-bezier(0.4, 0, 1, 1) both video-fade-out,
+             120ms cubic-bezier(0.4, 0, 0.2, 1) both video-scale-down;
+}
+::view-transition-new(video-player) {
+  animation: 220ms cubic-bezier(0, 0, 0.2, 1) both video-fade-in,
+             220ms cubic-bezier(0.34, 1.56, 0.64, 1) both video-scale-up;
+}
