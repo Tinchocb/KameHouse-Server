@@ -6,12 +6,16 @@ const sfxPool: Record<string, HTMLAudioElement> = {};
 export type SfxType = 
     | "hover"    // /sounds/seleccion de hover.wav
     | "series"   // /sounds/serie.wav
-    | "detail";  // /sounds/entrar detalle serie-peliculas.wav
+    | "detail"   // /sounds/entrar detalle serie-peliculas.wav
+    | "random"   // /sounds/serie-pelicula random.wav
+    | "category"; // /sounds/cambiar categoria.wav
 
 const SFX_PATHS: Record<SfxType, string> = {
     hover: "/sounds/seleccion de hover.wav",
     series: "/sounds/serie.wav",
-    detail: "/sounds/entrar detalle serie-peliculas.wav"
+    detail: "/sounds/entrar detalle serie-peliculas.wav",
+    random: "/sounds/serie-pelicula random.wav",
+    category: "/sounds/cambiar categoria.wav"
 };
 
 export function useSound() {

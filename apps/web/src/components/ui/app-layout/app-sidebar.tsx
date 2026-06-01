@@ -8,6 +8,7 @@ import * as React from "react"
 import { FaBook, FaCog, FaHome, FaFilm, FaTv, FaMoon, FaDownload, FaLayerGroup } from "react-icons/fa"
 import { cn } from "../core/styling"
 import { RandomPlayButton } from "./random-play-button"
+import { useSound } from "@/hooks/use-sound"
 
 interface SidebarItem {
     to: string
@@ -61,6 +62,7 @@ export function AppSidebar() {
 }
 
 function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) => void }) {
+    const { playSound } = useSound()
     const activeTheme = useAppStore(state => state.activeTheme)
     const setActiveTheme = useAppStore(state => state.setActiveTheme)
     const playlistQueue = useAppStore(state => state.playlistQueue)
@@ -68,9 +70,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
     const setGlobalQueueOpen = useAppStore(state => state.setGlobalQueueOpen)
 
     const playChangeSound = () => {
-        const audio = new Audio("/sounds/cambiar categoria.wav")
-        audio.volume = 0.4
-        audio.play().catch(() => {})
+        playSound("category", 0.4)
     }
 
     return (

@@ -9,6 +9,7 @@ import { cn } from "@/components/ui/core/styling"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { fetchAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import { VideoPlayer } from "@/components/video/player"
+import { useSound } from "@/hooks/use-sound"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -25,6 +26,7 @@ interface PlayTarget {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function RandomPlayButton() {
+    const { playSound } = useSound()
     const [showPicker, setShowPicker] = React.useState(false)
     const [isLoading, setIsLoading] = React.useState(false)
     const [playTarget, setPlayTarget] = React.useState<PlayTarget | null>(null)
@@ -40,9 +42,7 @@ export function RandomPlayButton() {
     }, [collection])
 
     const playRandomSound = () => {
-        const audio = new Audio("/sounds/serie-pelicula random.wav")
-        audio.volume = 0.5
-        audio.play().catch(() => {})
+        playSound("random", 0.5)
     }
 
     // Close picker on outside click

@@ -1,6 +1,7 @@
 import React, { useMemo } from "react"
 import { FaPlay, FaStar } from "react-icons/fa"
 import { ListPlus, Settings2 } from "lucide-react"
+import { useSound } from "@/hooks/use-sound"
 import { useAppStore } from "@/lib/store"
 import { toast } from "sonner"
 import { Anime_Episode, Anime_LocalFile, Continuity_WatchHistoryItem } from "@/api/generated/types"
@@ -108,6 +109,7 @@ const EpisodeCard = React.memo(function EpisodeCard({
     priority = false,
     mediaId,
 }: EpisodeCardProps) {
+    const { playSound } = useSound()
     const thumb = episode?.episodeMetadata?.image || fallbackThumb
     
     const epNum = episode?.absoluteEpisodeNumber || episode?.episodeNumber || 0
@@ -191,9 +193,7 @@ const EpisodeCard = React.memo(function EpisodeCard({
     }
 
     const playHoverSound = () => {
-        const audio = new Audio("/sounds/seleccion de hover.wav")
-        audio.volume = 0.15
-        audio.play().catch(() => {})
+        playSound("hover")
     }
 
     // Dynamic gradient fallback for thumb

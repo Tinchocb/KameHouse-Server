@@ -3,6 +3,7 @@ import { Play, Star, Info, Calendar } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 import { DeferredImage } from "./deferred-image"
 import { getHighResImage, getMediumResImage } from "@/lib/helpers/images"
+import { useSound } from "@/hooks/use-sound"
 
 interface PremiumPosterCardProps {
     id: number
@@ -26,14 +27,14 @@ export const PremiumPosterCard = React.memo(({
     onClick,
     className
 }: PremiumPosterCardProps) => {
+    const { playSound } = useSound()
+
     const formattedRating = rating 
         ? (rating > 10 ? rating / 10 : rating).toFixed(1) 
         : null
 
     const playHoverSound = () => {
-        const audio = new Audio("/sounds/seleccion de hover.wav")
-        audio.volume = 0.15
-        audio.play().catch(() => {})
+        playSound("hover")
     }
 
     return (

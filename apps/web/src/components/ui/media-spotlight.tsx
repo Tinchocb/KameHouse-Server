@@ -7,6 +7,7 @@ import { cn } from "@/components/ui/core/styling"
 import { getHighResImage, getMediumResImage, getLowResImage } from "@/lib/helpers/images"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
+import { useSound } from "@/hooks/use-sound"
 import type { SwimlaneItem } from "./swimlane"
 import { HorizontalDraggableScroll } from "@/components/ui/horizontal-draggable-scroll/horizontal-draggable-scroll"
 
@@ -255,6 +256,7 @@ function getEraFromItem(item: SwimlaneItem): EraId | null {
 }
 
 export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavigate, className }: MediaSpotlightProps) {
+    const { playSound } = useSound()
     const { setBackdropUrl } = useIntelligenceStore()
     const [activeEraId, setActiveEraId] = React.useState<EraId>("db")
     const [selectedItemId, setSelectedItemId] = React.useState<string | null>(null)
@@ -262,9 +264,7 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
 
 
     const playHoverSound = () => {
-        const audio = new Audio("/sounds/seleccion de hover.wav")
-        audio.volume = 0.15
-        audio.play().catch(() => {})
+        playSound("hover")
     }
 
     // Classify all library items into eras
