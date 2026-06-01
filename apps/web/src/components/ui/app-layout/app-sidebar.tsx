@@ -9,6 +9,7 @@ import { FaBook, FaCog, FaHome, FaFilm, FaTv, FaMoon, FaDownload, FaLayerGroup }
 import { cn } from "../core/styling"
 import { RandomPlayButton } from "./random-play-button"
 import { useSound } from "@/hooks/use-sound"
+import { BackgroundMusicPlayer } from "./background-music"
 
 interface SidebarItem {
     to: string
@@ -158,6 +159,9 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
 
             {/* Footer / Info */}
             <div className="mt-auto pb-6 w-full flex flex-col items-center gap-6 pt-8"> 
+                {/* Background Music */}
+                <BackgroundMusicPlayer />
+
                 {/* Random Play */}
                 <RandomPlayButton />
                
