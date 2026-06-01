@@ -1,0 +1,131 @@
+import React, { useMemo, useState, useEffect } from "react"
+import { useRequestMediastreamMediaContainer } from "@/api/hooks/mediastream.hooks"
+import { usePlayerCore } from "./player-core"
+import { PlayerUI } from "./player-ui"
+import type { EpisodeSource } from "@/api/types/unified.types"
+import type { Mediastream_StreamType, Audio, Subtitle } from "@/api/generated/types"
+import type { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
+import type { VideoPlayerProps } from "./player"
+
+export interface Chapter {
+    startTime: number
+    endTime: number
+    name: string
+    type?: string
+}
+
+export interface OrchestratorProps extends VideoPlayerProps {
+    playableUrl?: string
+    backendTracks?: {
+        audioTracks: AudioTrack[]
+        subtitleTracks: SubtitleTrack[]
+        chapters: Chapter[]
+    }
+}
+
+export function VideoPlayerOrchestrator(props: OrchestratorProps) {
+    const [streamType, setStreamType] = useState<string>(props.streamType || "direct")
+    const [clientId] = useState(() => Math.random().toString(36).substring(2, 11))
+    
+    // Sync streamType state when prop changes externally
+    useEffect(() => {
+        if (props.streamType) {
+            setStreamType(props.streamType)
+        }
+    }, [props.streamType])
+
+    const isLocal = !props.isExternalStream && Boolean(props.streamUrl) && streamType !== "online"
+
+    const { data, isLoading, error } = useRequestMediastreamMediaContainer({
+        path: props.streamUrl,
+        streamType: streamType as Mediastream_StreamType,
+        clientID: clientId,
+    }, isLocal)
+
+    const playableUrl = useMemo(() => {
+        if (!isLocal) return props.playableUrl || props.streamUrl
+        return data?.streamUrl || ""
+    }, [isLocal, props.playableUrl, props.streamUrl, data?.streamUrl])
+
+    const backendTracks = useMemo(() => {
+        if (!data?.mediaInfo) return undefined
+        return {
+            audioTracks: data.mediaInfo.audios?.map((a: Audio, i: number) => ({
+                index: a.index ?? i,
+                language: a.language ?? "und",
+                title: a.title || a.language || `Audio ${i + 1}`,
+                codec: a.codec,
+                channels: a.channels,
+                default: a.isDefault
+            })) || [],
+            subtitleTracks: data.mediaInfo.subtitles?.map((s: Subtitle, i: number) => ({
+                index: s.index ?? i,
+                language: s.language ?? "und",
+                title: s.title || s.language || `Subtitle ${i + 1}`,
+                codec: s.codec,
+                default: s.isDefault,
+                forced: s.isForced,
+                url: `/api/v1/mediastream/subtitles?path=${encodeURIComponent(props.streamUrl)}&trackIndex=${s.index ?? i}&clientId=${clientId}`
+            })) || [],
+            chapters: data.mediaInfo.chapters?.map((c: any) => ({
+                startTime: c.startTime || 0,
+                endTime: c.endTime || 0,
+                name: c.name || "",
+                type: c.type
+            })) || []
+        }
+    }, [data, props.streamUrl, clientId])
+
+    const core = usePlayerCore({
+        ...props,
+        playableUrl,
+        backendTracks,
+        clientId,
+        mediaFormat: props.mediaFormat,
+    })
+
+    const episodeSources = useMemo<EpisodeSource[]>(() => [
+        {
+            title: "Original",
+            quality: "Original",
+            url: props.streamUrl,
+            type: "direct",
+            path: props.streamUrl,
+            priority: 1,
+        },
+        {
+            title: "Transcodificado",
+            quality: "Auto",
+            url: props.streamUrl,
+            type: "transcode",
+            path: props.streamUrl,
+            priority: 2,
+        }
+    ], [props.streamUrl])
+
+    const handleSourceSwitch = (source: EpisodeSource) => {
+        if (source.type) {
+            setStreamType(source.type)
+        }
+    }
+
+    return (
+        <PlayerUI
+            title={props.title}
+            episodeLabel={props.episodeLabel}
+            onClose={props.onClose}
+            onNextEpisode={props.onNextEpisode}
+            playableUrl={playableUrl}
+            streamType={streamType as "local" | "online" | "direct" | "transcode" | "optimized"}
+            episodeSources={episodeSources}
+            onSourceSwitch={handleSourceSwitch}
+            core={core}
+            clientId={clientId}
+            mediaId={props.mediaId}
+            episodeNumber={props.episodeNumber}
+            malId={props.malId}
+            episodes={props.episodes}
+            onSelectEpisode={props.onSelectEpisode}
+        />
+    )
+}

@@ -11,6 +11,7 @@ import {
 } from "./home.mappers"
 import { ErrorBanner, EmptyState } from "./home.components"
 import { MediaSpotlight } from "@/components/ui/media-spotlight"
+import { isTmdbId } from "@/lib/helpers/type-guards"
 
 export const Route = createFileRoute("/home/")({
     loader: ({ context }) => {
@@ -47,7 +48,7 @@ function HomeClient() {
     const handleNavigate = React.useCallback(
         (mediaId: number) => {
             const entry = allEntries.find(e => e.mediaId === mediaId)
-            const isMovie = entry?.media?.format === "MOVIE" || entry?.media?.format === "SPECIAL" || entry?.media?.format === "OVA" || (entry?.mediaId && entry.mediaId >= 1000000)
+            const isMovie = entry?.media?.format === "MOVIE" || entry?.media?.format === "SPECIAL" || entry?.media?.format === "OVA" || isTmdbId(entry?.mediaId)
             if (isMovie) {
                 navigate({ to: "/movies/$movieId", params: { movieId: String(mediaId) } })
             } else {

@@ -11,6 +11,7 @@ import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { MovieCard, ERA_TABS, EraTab, cleanMovieTitle } from "./-MovieCard"
 import { useWindowVirtualizer } from "@tanstack/react-virtual"
+import { isTmdbId } from "@/lib/helpers/type-guards"
 
 export const Route = createFileRoute("/movies/")({
     loader: ({ context }) => {
@@ -57,7 +58,7 @@ function getEntryEra(entry: Anime_LibraryCollectionEntry): EraTab {
     if (zTmdbIds.has(tmdbId)) return "Dragon Ball Z"
     if (gtTmdbIds.has(tmdbId)) return "Dragon Ball GT"
     if (superTmdbIds.has(tmdbId)) return "Dragon Ball Super"
-    if (tmdbId >= 1000000) return "Especiales y OVAs"
+    if (isTmdbId(tmdbId)) return "Especiales y OVAs"
     const allTitles = [media.titleRomaji, media.titleEnglish, media.titleOriginal, media.titleSpanish]
         .filter(Boolean).join(" ").toLowerCase()
     if (!allTitles.includes("dragon ball")) return "Especiales y OVAs"
@@ -99,7 +100,7 @@ function MoviesPage() {
         const rawMovies = allEntries.filter(e => {
             const fmt = e.media?.format
             const type = e.media?.type
-            return fmt === "MOVIE" || fmt === "OVA" || fmt === "SPECIAL" || type?.toUpperCase() === "MOVIE" || (e.mediaId && e.mediaId >= 1000000)
+            return fmt === "MOVIE" || fmt === "OVA" || fmt === "SPECIAL" || type?.toUpperCase() === "MOVIE" || isTmdbId(e.mediaId)
         })
         const unique = new Map<number, Anime_LibraryCollectionEntry>()
         rawMovies.forEach(m => { if (m.mediaId) unique.set(m.mediaId, m) })

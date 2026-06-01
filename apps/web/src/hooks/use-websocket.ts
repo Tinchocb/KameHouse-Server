@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import useReactUseWebSocket from 'react-use-websocket'
 
 import { WebSocketMessage } from '@/lib/server/ws-events'
@@ -12,7 +12,7 @@ export interface UseWebSocketReturn {
 export function useWebSocket(url: string, onMessage?: (data: WebSocketMessage) => void): UseWebSocketReturn {
     const onMessageRef = useRef(onMessage)
     
-    useEffect(() => {
+    useLayoutEffect(() => {
         onMessageRef.current = onMessage
     }, [onMessage])
 
