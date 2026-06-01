@@ -229,7 +229,13 @@ export const HeroSection = React.memo(function HeroSection({
 
                 {/* Actions */}
                 <div className="mt-2">
-                    <MediaActionButtons seriesId={seriesId} directoryPath={directoryPath} onPlay={onPlay} continuityItem={continuityItem} />
+                    <MediaActionButtons 
+                        seriesId={seriesId} 
+                        directoryPath={directoryPath} 
+                        onPlay={onPlay} 
+                        continuityItem={continuityItem} 
+                        malId={media.idMal}
+                    />
                 </div>
             </div>
         </section>

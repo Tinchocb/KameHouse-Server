@@ -1,6 +1,6 @@
 import React, { useMemo } from "react"
 import { FaPlay, FaStar } from "react-icons/fa"
-import { ListPlus, Settings2 } from "lucide-react"
+import { ListPlus, Settings2, ExternalLink } from "lucide-react"
 import { useSound } from "@/hooks/use-sound"
 import { useAppStore } from "@/lib/store"
 import { toast } from "sonner"
@@ -19,6 +19,7 @@ interface MediaActionButtonsProps {
     directoryPath?: string
     onPlay?: () => void
     continuityItem?: Continuity_WatchHistoryItem | null
+    malId?: number | null
 }
 
 const MediaActionButtons = React.memo(function MediaActionButtons({
@@ -26,6 +27,7 @@ const MediaActionButtons = React.memo(function MediaActionButtons({
     directoryPath,
     onPlay,
     continuityItem,
+    malId,
 }: MediaActionButtonsProps) {
     const [isMatchModalOpen, setIsMatchModalOpen] = React.useState(false)
 
@@ -50,6 +52,22 @@ const MediaActionButtons = React.memo(function MediaActionButtons({
                     )}
                 </span>
             </button>
+
+            {/* MyAnimeList Link */}
+            {malId && (
+                <a
+                    href={`https://myanimelist.net/anime/${malId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                        "flex items-center justify-center gap-2 px-5 py-4 rounded-xl border bg-[#2e51a2]/15 border-[#2e51a2]/30 text-blue-400 hover:text-white hover:bg-[#2e51a2]/25 hover:border-[#2e51a2]/55 transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer text-[11px] font-black uppercase tracking-[0.2em]"
+                    )}
+                    title="Ver en MyAnimeList"
+                >
+                    <span>MyAnimeList</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+            )}
 
             {/* Fix Match Button */}
             {directoryPath && (

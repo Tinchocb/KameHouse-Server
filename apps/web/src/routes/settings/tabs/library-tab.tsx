@@ -101,7 +101,7 @@ export function LibraryTab({ control }: { control: Control<SettingsFormValues> }
                                 control={control}
                                 name="library.autoUpdateProgress"
                                 label="Sincronizar Progreso de Tracking"
-                                desc="Envía automáticamente los capítulos vistos a servicios como AniList."
+                                desc="Envía automáticamente los capítulos vistos a servicios externos de tracking."
                             />
                             <OsToggle
                                 control={control}

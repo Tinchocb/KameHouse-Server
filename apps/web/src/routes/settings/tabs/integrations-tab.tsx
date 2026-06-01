@@ -30,8 +30,6 @@ export function IntegrationsTab({ control }: { control: Control<SettingsFormValu
              </header>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <IntegrationCard name="AniList" status="Disponible" connected={false} />
-                <IntegrationCard name="MyAnimeList" status="Próximamente" connected={false} disabled />
                 <IntegrationCard name="TMDB" status="Conectado" connected={true} />
             </div>
 

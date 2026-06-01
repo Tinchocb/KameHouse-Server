@@ -6,7 +6,7 @@ import { cn } from "@/components/ui/core/styling"
 import { getHighResImage, getMediumResImage, getLowResImage } from "@/lib/helpers/images"
 import { Anime_Entry, Continuity_WatchHistoryItem } from "@/api/generated/types"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
-import { Play, Sparkles, Star, Heart, Check, Film, ListPlus, Settings2 } from "lucide-react"
+import { Play, Sparkles, Star, Heart, Check, Film, ListPlus, Settings2, ExternalLink } from "lucide-react"
 import { useUpdateAnimeEntryProgress } from "@/api/hooks/anime_entries.hooks"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { useAppStore } from "@/lib/store"
@@ -373,6 +373,20 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
                     >
                         <Check className={cn("w-5 h-5", isWatched && "stroke-[3px]")} />
                     </button>
+
+                    {/* Secondary: MyAnimeList Link */}
+                    {media.idMal && (
+                        <a
+                            href={`https://myanimelist.net/anime/${media.idMal}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 px-6 py-4 rounded-2xl border bg-[#2e51a2]/15 border-[#2e51a2]/30 text-blue-400 hover:text-white hover:bg-[#2e51a2]/25 hover:border-[#2e51a2]/55 transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer text-[11px] font-black uppercase tracking-[0.2em]"
+                            title="Ver en MyAnimeList"
+                        >
+                            <span>MyAnimeList</span>
+                            <ExternalLink size={14} />
+                        </a>
+                    )}
 
                     {/* Secondary: Corregir Vinculación (Fix Match) */}
                     {directoryPath && (

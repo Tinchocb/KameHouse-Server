@@ -32,7 +32,6 @@ type Matcher struct { // Keep struct name 'Matcher' for backwards compatibility
 	Threshold         float64
 	MatchingAlgorithm string
 	StrictStructure   bool
-	AnilistResolver   *AnilistResolver
 }
 
 func NewMatcher(localFiles []*dto.LocalFile, mediaContainer *MediaContainer, logger *zerolog.Logger, db *db.Database) *Matcher {
@@ -42,7 +41,6 @@ func NewMatcher(localFiles []*dto.LocalFile, mediaContainer *MediaContainer, log
 		Logger:          logger,
 		Database:        db,
 		Threshold:       0.70, // Optimized threshold for movies and Spanish titles
-		AnilistResolver: NewAnilistResolver(),
 	}
 }
 
@@ -210,21 +208,7 @@ func (m *Matcher) BayesianResolve(lf *dto.LocalFile) {
 verdict:
 	// 3. Verdict
 	if bestMatch != nil && bestConfidence >= threshold {
-		// --- ANILIST ABSOLUTE RESOLVER INTEGRATION ---
-		if bestMatch.ExplicitProvider == "anilist" && len(pm.Episodes) == 1 {
-			// Determine if this might be an absolute episode number
-			absEp := pm.Episodes[0]
-			// We only resolve if the episode is reasonably high or if we know we want strict absolute mapping
-			resolvedMedia, relativeEp, err := m.AnilistResolver.ResolveAbsoluteMapping(context.Background(), bestMatch.ID, absEp)
-			if err == nil {
-				bestMatch = resolvedMedia
-				pm.Episodes = []int{relativeEp}
-				m.Logger.Debug().Msgf("AgentMatcher: AnilistResolver mapped Absolute Ep %d -> Media %d, Relative Ep %d", absEp, resolvedMedia.ID, relativeEp)
-			} else {
-				m.Logger.Debug().Err(err).Msgf("AgentMatcher: AnilistResolver failed to map absolute episode %d", absEp)
-			}
-		}
-		// ---------------------------------------------
+
 
 		lf.MediaID = bestMatch.ID
 

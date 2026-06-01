@@ -44,7 +44,7 @@ export function SystemTab({ control }: { control: Control<SettingsFormValues> })
                         control={control}
                         name="Platform.hideAudienceScore"
                         label="Ocultar Calificaciones Públicas"
-                        desc="Oculta las puntuaciones y valoraciones promedio de TMDB o AniList en las tarjetas de anime, series y películas."
+                        desc="Oculta las puntuaciones y valoraciones promedio de TMDB en las tarjetas de anime, series y películas."
                     />
                     <OsToggle
                         control={control}
@@ -92,7 +92,7 @@ export function SystemTab({ control }: { control: Control<SettingsFormValues> })
                         <div className="flex flex-col md:flex-row md:items-center justify-between py-4 gap-4 first:pt-0 last:pb-0">
                             <div className="space-y-1">
                                 <h4 className="text-sm font-semibold text-white/90">Restablecer Caché de Metadatos</h4>
-                                <p className="text-xs text-zinc-500">Elimina las portadas y sinopsis cacheadas localmente, forzando una nueva descarga limpia desde TMDB/AniList.</p>
+                                <p className="text-xs text-zinc-500">Elimina las portadas y sinopsis cacheadas localmente, forzando una nueva descarga limpia desde TMDB.</p>
                             </div>
                             <button
                                 type="button"

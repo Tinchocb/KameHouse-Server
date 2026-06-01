@@ -3,7 +3,7 @@ import { cn } from "@/components/ui/core/styling"
 import {
     LucideRefreshCw, LucidePlus, LucideTrash2, LucideFolder,
     LucideEye, LucideEyeOff, LucideChevronDown, LucideCheck,
-    LucideWifi, LucideWifiOff, LucideZap
+    LucideWifi, LucideWifiOff
 } from "lucide-react"
 import { Controller, type Control, type Path, type FieldValues } from "react-hook-form"
 import { Switch } from "@/components/ui/switch"
@@ -20,14 +20,14 @@ export function ScanButton({ variant, onClick, loading }: { variant: "delta" | "
             className={cn(
                 "flex-1 flex items-center justify-between p-6 rounded-2xl border transition-all duration-500 relative overflow-hidden group/scanbtn",
                 isDelta
-                    ? "bg-brand-orange/5 border-brand-orange/15 hover:bg-brand-orange/10 hover:border-brand-orange/30 text-brand-orange shadow-[0_0_30px_rgba(235,94,40,0.03)]"
+                    ? "bg-cyan-500/5 border-cyan-500/15 hover:bg-cyan-500/10 hover:border-cyan-500/30 text-cyan-400 shadow-[0_0_30px_rgba(6,182,212,0.03)]"
                     : "bg-white/[0.01] border-white/[0.06] hover:bg-white/[0.04] hover:border-white/15 text-white",
                 loading && "opacity-50 cursor-not-allowed"
             )}
         >
             {/* Subtle background glow */}
             {isDelta && (
-                <div className="absolute inset-0 opacity-0 group-hover/scanbtn:opacity-100 transition-opacity duration-700 bg-[radial-gradient(ellipse_at_left_bottom,rgba(235,94,40,0.06),transparent_60%)] pointer-events-none" />
+                <div className="absolute inset-0 opacity-0 group-hover/scanbtn:opacity-100 transition-opacity duration-700 bg-[radial-gradient(ellipse_at_left_bottom,rgba(6,182,212,0.06),transparent_60%)] pointer-events-none" />
             )}
             <div className="text-left relative z-10">
                 <p className="text-[10px] font-black uppercase tracking-[0.25em] opacity-40 mb-1 group-hover/scanbtn:opacity-70 transition-opacity">
@@ -38,14 +38,14 @@ export function ScanButton({ variant, onClick, loading }: { variant: "delta" | "
             <div className={cn(
                 "w-10 h-10 rounded-xl border flex items-center justify-center transition-all duration-300",
                 isDelta
-                    ? "bg-brand-orange/10 border-brand-orange/20 group-hover/scanbtn:bg-brand-orange/20"
+                    ? "bg-cyan-500/10 border-cyan-500/20 group-hover/scanbtn:bg-cyan-500/20"
                     : "bg-white/[0.02] border-white/5 group-hover/scanbtn:bg-white/[0.06]"
             )}>
                 <LucideRefreshCw
                     size={16}
                     className={cn(
                         "transition-all duration-700",
-                        isDelta ? "text-brand-orange" : "text-white/75 group-hover/scanbtn:text-white",
+                        isDelta ? "text-cyan-400" : "text-white/75 group-hover/scanbtn:text-white",
                         loading ? "animate-spin" : "group-hover/scanbtn:rotate-180"
                     )}
                 />
@@ -57,7 +57,6 @@ export function ScanButton({ variant, onClick, loading }: { variant: "delta" | "
 // ─── IntegrationCard ──────────────────────────────────────────────────────────
 
 const SERVICE_COLORS: Record<string, string> = {
-    AniList: "#02A9FF",
     MyAnimeList: "#2E51A2",
     TMDB: "#01B4E4",
 }
@@ -132,8 +131,8 @@ export function IntegrationCard({ name, status, connected, disabled }: { name: s
 export function StatusCard({ label, value, icon: Icon }: { label: string; value: string; icon: React.ElementType }) {
     return (
         <div className="p-5 border border-white/[0.05] bg-white/[0.02] backdrop-blur-md rounded-2xl flex items-center gap-4 transition-all duration-300 hover:bg-white/[0.04] hover:border-white/10 group/statuscard relative overflow-hidden">
-            <div className="absolute inset-0 opacity-0 group-hover/statuscard:opacity-100 transition-opacity duration-700 bg-[radial-gradient(ellipse_at_left,rgba(235,94,40,0.04),transparent_70%)] pointer-events-none" />
-            <div className="w-11 h-11 rounded-xl bg-brand-orange/5 border border-brand-orange/10 flex items-center justify-center text-brand-orange/60 group-hover/statuscard:text-brand-orange group-hover/statuscard:bg-brand-orange/10 transition-all duration-300 relative z-10">
+            <div className="absolute inset-0 opacity-0 group-hover/statuscard:opacity-100 transition-opacity duration-700 bg-[radial-gradient(ellipse_at_left,rgba(6,182,212,0.04),transparent_70%)] pointer-events-none" />
+            <div className="w-11 h-11 rounded-xl bg-cyan-500/5 border border-cyan-500/10 flex items-center justify-center text-cyan-400/60 group-hover/statuscard:text-cyan-400 group-hover/statuscard:bg-cyan-500/10 transition-all duration-300 relative z-10">
                 <Icon size={18} />
             </div>
             <div className="relative z-10">
@@ -151,7 +150,7 @@ export function Section({ label, children, right }: { label: string; children: R
         <div className="space-y-5 w-full">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="h-[1px] w-4 bg-gradient-to-r from-brand-orange/60 to-transparent" />
+                    <div className="h-[1px] w-4 bg-gradient-to-r from-cyan-500/60 to-transparent" />
                     <p className="text-[9px] font-black uppercase tracking-[0.35em] text-zinc-500">{label}</p>
                     <div className="h-[1px] flex-1 bg-gradient-to-r from-white/5 to-transparent min-w-[60px]" />
                 </div>
@@ -167,8 +166,7 @@ export function Section({ label, children, right }: { label: string; children: R
 export function Card({ children, className }: { children: React.ReactNode; className?: string }) {
     return (
         <div className={cn(
-            "overflow-hidden bg-zinc-950/60 backdrop-blur-md border border-white/[0.06] rounded-2xl",
-            "transition-all duration-300 hover:border-white/[0.10] hover:shadow-[0_8px_32px_rgba(0,0,0,0.3),0_0_0_1px_rgba(255,255,255,0.04)]",
+            "overflow-hidden rounded-2xl glass-panel",
             className
         )}>
             {children}
@@ -195,7 +193,7 @@ export function OsToggle<T extends FieldValues>({ control, name, label, desc, di
             render={({ field }) => (
                 <div className={cn(
                     "flex items-center justify-between px-6 py-4 border-b border-white/[0.03] last:border-0 transition-all duration-200 gap-8 group/toggle relative",
-                    field.value && "bg-brand-orange/[0.02]",
+                    field.value && "bg-cyan-500/[0.02]",
                     disabled
                         ? "opacity-40 cursor-not-allowed pointer-events-none"
                         : "hover:bg-white/[0.02] cursor-pointer"
@@ -209,7 +207,7 @@ export function OsToggle<T extends FieldValues>({ control, name, label, desc, di
                     {/* Left active accent */}
                     <div className={cn(
                         "absolute left-0 top-1/2 -translate-y-1/2 w-[2px] rounded-r-full transition-all duration-300",
-                        field.value ? "h-6 bg-brand-orange shadow-[0_0_8px_rgba(235,94,40,0.6)]" : "h-0 bg-transparent"
+                        field.value ? "h-6 bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.6)]" : "h-0 bg-transparent"
                     )} />
 
                     <div className="space-y-0.5 flex-1 pl-2">
@@ -227,7 +225,7 @@ export function OsToggle<T extends FieldValues>({ control, name, label, desc, di
                             onSave?.()
                         }}
                         disabled={disabled}
-                        className="scale-[0.9] origin-right transition-all duration-300 data-[state=checked]:bg-brand-orange shrink-0"
+                        className="scale-[0.9] origin-right transition-all duration-300 data-[state=checked]:bg-cyan-500 shrink-0"
                         onClick={(e) => e.stopPropagation()}
                     />
                 </div>
@@ -263,8 +261,8 @@ export function PathList<T extends FieldValues>({ control, name, label, placehol
                     <div className="p-7 space-y-5">
                         <div className="space-y-1.5">
                             <div className="flex items-center gap-3">
-                                <div className="w-7 h-7 rounded-lg bg-brand-orange/5 border border-brand-orange/10 flex items-center justify-center">
-                                    <LucideFolder size={13} className="text-brand-orange/60" />
+                                <div className="w-7 h-7 rounded-lg bg-cyan-500/5 border border-cyan-500/10 flex items-center justify-center">
+                                    <LucideFolder size={13} className="text-cyan-400/60" />
                                 </div>
                                 <p className="text-base font-bebas tracking-wider text-white uppercase">{label}</p>
                             </div>
@@ -285,7 +283,7 @@ export function PathList<T extends FieldValues>({ control, name, label, placehol
                                 paths.map((path: string, idx: number) => (
                                     <div key={idx} className="flex items-center justify-between bg-white/[0.01] border border-white/[0.05] px-4 py-3 rounded-xl hover:bg-white/[0.03] hover:border-white/10 transition-all duration-200 group/pathitem">
                                         <div className="flex items-center gap-3 min-w-0">
-                                            <LucideCheck size={12} className="text-brand-orange/60 shrink-0" />
+                                            <LucideCheck size={12} className="text-cyan-400/60 shrink-0" />
                                             <span className="font-mono text-xs text-zinc-400 truncate group-hover/pathitem:text-zinc-200 transition-colors">{path}</span>
                                         </div>
                                         <button
@@ -301,7 +299,7 @@ export function PathList<T extends FieldValues>({ control, name, label, placehol
                         </div>
 
                         {/* Input to add path */}
-                        <div className="flex gap-2 bg-black/50 border border-white/[0.06] focus-within:border-brand-orange/20 focus-within:shadow-[0_0_20px_rgba(235,94,40,0.04)] rounded-xl p-1.5 transition-all">
+                        <div className="flex gap-2 bg-black/50 border border-white/[0.06] focus-within:border-cyan-500/20 focus-within:shadow-[0_0_20px_rgba(6,182,212,0.04)] rounded-xl p-1.5 transition-all">
                             <input
                                 type="text"
                                 value={inputValue}
@@ -318,7 +316,7 @@ export function PathList<T extends FieldValues>({ control, name, label, placehol
                             <button
                                 type="button"
                                 onClick={handleAdd}
-                                className="bg-brand-orange hover:bg-brand-orange/90 text-black px-5 py-2 rounded-lg font-black uppercase text-[9px] tracking-[0.2em] transition-all shrink-0 flex items-center gap-1.5 active:scale-95"
+                                className="bg-cyan-500 hover:bg-cyan-400 text-black px-5 py-2 rounded-lg font-black uppercase text-[9px] tracking-[0.2em] transition-all shrink-0 flex items-center gap-1.5 active:scale-95"
                             >
                                 <LucidePlus size={12} />
                                 AGREGAR
@@ -368,7 +366,7 @@ export function OsInput<T extends FieldValues>({
                     </div>
                     <div className={cn(
                         "flex items-center gap-2 bg-black/50 border border-white/[0.06] rounded-xl px-4 py-2.5 w-full md:w-72 transition-all relative",
-                        "focus-within:border-brand-orange/30 focus-within:shadow-[0_0_16px_rgba(235,94,40,0.07)] hover:border-white/10"
+                        "focus-within:border-cyan-500/30 focus-within:shadow-[0_0_16px_rgba(6,182,212,0.07)] hover:border-white/10"
                     )}>
                         <input
                             type={isSecure ? (showSecure ? "text" : "password") : type}
@@ -428,7 +426,7 @@ export function OsSelect<T extends FieldValues>({
                     </div>
                     <div className={cn(
                         "flex items-center bg-black/50 border border-white/[0.06] rounded-xl px-4 py-2.5 w-full md:w-72 transition-all relative cursor-pointer",
-                        "focus-within:border-brand-orange/30 focus-within:shadow-[0_0_16px_rgba(235,94,40,0.07)] hover:border-white/10"
+                        "focus-within:border-cyan-500/30 focus-within:shadow-[0_0_16px_rgba(6,182,212,0.07)] hover:border-white/10"
                     )}>
                         <select
                             value={field.value ?? ""}

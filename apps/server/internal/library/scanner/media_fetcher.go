@@ -13,7 +13,6 @@ import (
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/limiter"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -232,22 +231,7 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 				}
 			}
 
-			mu.Lock()
-			anilistMatch, ok := findAniListExactMatch(mf.AllMedia, titleGroup)
-			mu.Unlock()
 
-			if ok {
-				if mf.ScanLogger != nil {
-					mf.ScanLogger.LogMediaFetcher(zerolog.InfoLevel).
-						Str("title", titleGroup).
-						Int("anilist_id", anilistMatch.ID).
-						Msg("anilist_resolver: Matched title strictly with offline AniList collection")
-				}
-				mu.Lock()
-				mf.AllMedia = append(mf.AllMedia, anilistMatch)
-				mu.Unlock()
-				return nil
-			}
 
 			// ── Persistent Cache + Provider Fetch ────────────────────────────────
 			result, err := metaCache.FetchOnce(egCtx, titleGroup, opts.MetadataProviders, tmdbLimiter, hint)
@@ -274,33 +258,7 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 
 	_ = eg.Wait()
 
-	// ── Synopsis Fallback Enrichment via AniList ──────────────────────────
-	anilistFallback := librarymetadata.NewAniListProvider()
-	for _, m := range mf.AllMedia {
-		if m != nil && (m.Description == nil || *m.Description == "") && m.Title != nil {
-			var query string
-			if m.Title.Romaji != nil && *m.Title.Romaji != "" {
-				query = *m.Title.Romaji
-			} else if m.Title.English != nil && *m.Title.English != "" {
-				query = *m.Title.English
-			} else if m.Title.UserPreferred != nil && *m.Title.UserPreferred != "" {
-				query = *m.Title.UserPreferred
-			}
 
-			if query != "" {
-				if opts.Logger != nil {
-					opts.Logger.Debug().Str("title", query).Msg("scanner: Description missing, querying AniList fallback provider")
-				}
-				res, err := anilistFallback.SearchMedia(ctx, query)
-				if err == nil && len(res) > 0 && res[0].Description != nil && *res[0].Description != "" {
-					m.Description = res[0].Description
-					if opts.Logger != nil {
-						opts.Logger.Info().Str("title", query).Msg("scanner: Successfully enriched missing description from AniList")
-					}
-				}
-			}
-		}
-	}
 
 	return mf, nil
 }
@@ -309,39 +267,3 @@ func (mf *MediaFetcher) GetCollectionMediaIds() []int {
 	return mf.CollectionMediaIds
 }
 
-var anilistIdRegex = regexp.MustCompile(`(?i)(?:\[|\()(\d{1,6})(?:\]|\))`)
-
-func findAniListExactMatch(collection []*dto.NormalizedMedia, title string) (*dto.NormalizedMedia, bool) {
-	if match := anilistIdRegex.FindStringSubmatch(title); match != nil {
-		if id, err := strconv.Atoi(match[1]); err == nil {
-			for _, m := range collection {
-				if m.ID == id {
-					return m, true
-				}
-			}
-		}
-	}
-
-	cleanCompare := func(a *string, b string) bool {
-		if a == nil || *a == "" {
-			return false
-		}
-		cleanVal := anilistIdRegex.ReplaceAllString(b, "")
-		cleanVal = strings.TrimSpace(cleanVal)
-		return strings.EqualFold(strings.TrimSpace(*a), cleanVal)
-	}
-
-	for _, m := range collection {
-		if m.Title != nil {
-			if cleanCompare(m.Title.Romaji, title) || cleanCompare(m.Title.English, title) || cleanCompare(m.Title.Native, title) {
-				return m, true
-			}
-		}
-		for _, syn := range m.Synonyms {
-			if cleanCompare(syn, title) {
-				return m, true
-			}
-		}
-	}
-	return nil, false
-}
