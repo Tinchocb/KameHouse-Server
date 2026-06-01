@@ -8,23 +8,24 @@ import { LucidePlay, LucideZap, LucideSliders, LucideCpu } from "lucide-react"
 export function PlayerTab({ control }: { control: Control<SettingsFormValues> }) {
 
     return (
-        <TabsContent value="player" className="m-0 space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700 outline-none">
+        <TabsContent value="player" className="m-0 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 outline-none">
             {/* ── Header ── */}
-            <header className="space-y-2">
-                <div className="flex items-center gap-5">
-                    <div className="w-14 h-14 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.01)]">
-                        <LucidePlay className="w-6 h-6 text-white/80" />
+            <header className="space-y-3 pt-2">
+                <div className="flex items-center gap-3 mb-1">
+                    <div className="flex items-center justify-center p-1 rounded bg-brand-orange/10 border border-brand-orange/15">
+                        <LucidePlay className="h-3.5 w-3.5 text-brand-orange" strokeWidth={2.5} />
                     </div>
-                    <div className="space-y-1">
-                        <h1 className="text-5xl font-black tracking-wider text-white font-bebas leading-none">
-                            MOTOR DE <span className="text-zinc-500">REPRODUCCIÓN</span>
-                        </h1>
-                        <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.25em]">
-                            Optimiza la fluidez de tus transmisiones y automatizaciones del reproductor
-                        </p>
-                    </div>
+                    <span className="text-[9px] font-black uppercase tracking-[0.35em] text-zinc-600 font-mono">REPRODUCCIÓN · STREAMING</span>
+                    <span className="relative flex h-1.5 w-1.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-orange/60 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-brand-orange"></span>
+                    </span>
                 </div>
-                <p className="text-zinc-400 text-base font-medium leading-relaxed max-w-3xl pt-2">
+                <h1 className="text-5xl font-bebas tracking-wider text-white leading-none">
+                    MOTOR DE <span className="text-zinc-600">REPRODUCCIÓN</span>
+                </h1>
+                <div className="h-[2px] w-12 bg-gradient-to-r from-brand-orange/50 to-transparent rounded-full" />
+                <p className="text-zinc-500 text-sm font-medium leading-relaxed max-w-2xl">
                     Ajusta los parámetros de reproducción en tiempo real, acelera el procesamiento de tus videos por hardware y configura la automatización del reproductor integrado.
                 </p>
             </header>

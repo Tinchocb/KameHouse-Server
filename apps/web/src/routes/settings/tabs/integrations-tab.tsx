@@ -3,18 +3,31 @@ import { TabsContent } from "@/components/ui/tabs/tabs"
 import { IntegrationCard, Section, Card, OsInput, OsSelect } from "../components"
 import { type Control } from "react-hook-form"
 import { type SettingsFormValues } from "../index"
+import { LucideGlobe } from "lucide-react"
 
 export function IntegrationsTab({ control }: { control: Control<SettingsFormValues> }) {
     return (
-        <TabsContent value="integrations" className="m-0 space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700 outline-none">
-             <header className="space-y-2">
-                <h1 className="text-5xl font-black tracking-wider text-white font-bebas leading-none">
-                    ECOSISTEMA <span className="text-zinc-500">EXTERNO</span>
-                </h1>
-                <p className="text-zinc-400 text-base font-medium leading-relaxed max-w-3xl">
-                    Conecta con servicios externos de metadatos, subtítulos y tracking de series en la nube.
-                </p>
-            </header>
+        <TabsContent value="integrations" className="m-0 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 outline-none">
+             {/* ── Header ── */}
+             <header className="space-y-3 pt-2">
+                 <div className="flex items-center gap-3 mb-1">
+                     <div className="flex items-center justify-center p-1 rounded bg-brand-orange/10 border border-brand-orange/15">
+                         <LucideGlobe className="h-3.5 w-3.5 text-brand-orange" strokeWidth={2.5} />
+                     </div>
+                     <span className="text-[9px] font-black uppercase tracking-[0.35em] text-zinc-600 font-mono">ECOSISTEMA · SERVICIOS EN LA NUBE</span>
+                     <span className="relative flex h-1.5 w-1.5">
+                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-orange/60 opacity-75"></span>
+                         <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-brand-orange"></span>
+                     </span>
+                 </div>
+                 <h1 className="text-5xl font-bebas tracking-wider text-white leading-none">
+                     ECOSISTEMA <span className="text-zinc-600">EXTERNO</span>
+                 </h1>
+                 <div className="h-[2px] w-12 bg-gradient-to-r from-brand-orange/50 to-transparent rounded-full" />
+                 <p className="text-zinc-500 text-sm font-medium leading-relaxed max-w-2xl">
+                     Conecta con servicios externos de metadatos, subtítulos y tracking de series en la nube.
+                 </p>
+             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <IntegrationCard name="AniList" status="Disponible" connected={false} />

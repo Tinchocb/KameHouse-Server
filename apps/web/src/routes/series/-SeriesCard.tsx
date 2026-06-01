@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { Play } from 'lucide-react';
 import { DeferredImage } from '@/components/shared/deferred-image';
 import { cn } from '@/components/ui/core/styling';
+import { useSound } from '@/hooks/use-sound';
 
 export interface SeriesItem {
     id: number
@@ -30,6 +31,7 @@ export const SeriesCard = memo(function SeriesCard({
     onNavigate: (id: string) => void
     onSelect: (id: number) => void
 }) {
+    const { playSound } = useSound();
     return (
         <div
             onClick={() => {
@@ -37,9 +39,7 @@ export const SeriesCard = memo(function SeriesCard({
                     onNavigate(item?.id?.toString() || "");
                 } else {
                     onSelect(item.id);
-                    const audio = new Audio("/sounds/serie.wav")
-                    audio.volume = 0.4
-                    audio.play().catch(() => {})
+                    playSound("series", 0.4);
                 }
             }}
             onDoubleClick={() => {

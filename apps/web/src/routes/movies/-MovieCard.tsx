@@ -2,6 +2,7 @@ import { memo, useState } from "react"
 import { Play, ListPlus } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 import { DeferredImage } from "@/components/shared/deferred-image"
+import { useSound } from "@/hooks/use-sound"
 import { getHighResImage, getMediumResImage } from "@/lib/helpers/images"
 import { fetchAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import { useAppStore } from "@/lib/store"
@@ -35,7 +36,9 @@ export const MovieCard = memo(function MovieCard({
     watchHistoryItem?: Continuity_WatchHistoryItem | null
     onClick: (id: number) => void
     onHoverCard: (entry: (Anime_LibraryCollectionEntry & { era: EraTab; startedAtTimestamp: number }) | null) => void
-}) {    const movie = entry.media
+}) {
+    const { playSound } = useSound()
+    const movie = entry.media
     if (!movie || !entry.mediaId) return null
  
     const handleCardClick = () => {
@@ -63,9 +66,7 @@ export const MovieCard = memo(function MovieCard({
             onMouseEnter={() => {
                 setIsHovered(true)
                 onHoverCard(entry as any)
-                const audio = new Audio("/sounds/seleccion de hover.wav")
-                audio.volume = 0.15
-                audio.play().catch(() => {})
+                playSound("hover", 0.15)
             }}
             onMouseLeave={() => {
                 setIsHovered(false)

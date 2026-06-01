@@ -112,43 +112,45 @@ function SeriesFullscreenIndex() {
         }
     }, [seriesList]);
 
+    const selectedIndex = useMemo(() => {
+        return seriesList.findIndex(item => item.id === selectedId);
+    }, [seriesList, selectedId]);
+    const selectedItem = seriesList[selectedIndex] ?? null;
 
     return (
         <div
             className="w-full h-full flex flex-col bg-[#06080d] text-white font-sans overflow-hidden relative"
         >
-            {/* Ambient Background Glow — one static div per series, only opacity transitions (GPU-composited) */}
-            {seriesList.map((item, i) => (
+            {/* Ambient Background Glow — Single dynamic div transitioning position & color (GPU-composited) */}
+            {selectedItem && (
                 <div
-                    key={item.id}
                     className="absolute top-1/2 left-0 w-[800px] h-[800px] pointer-events-none blur-[120px] z-0"
                     style={{
-                        opacity: item.id === selectedId ? 0.08 : 0,
-                        background: `radial-gradient(circle, ${getVhsColor(item.id)} 0%, transparent 70%)`,
-                        transform: `translate3d(calc(${(i / Math.max(seriesList.length - 1, 1)) * 80 + 10}% - 400px), -50%, 0)`,
-                        transition: 'opacity 700ms ease-out',
+                        opacity: 0.08,
+                        background: `radial-gradient(circle, ${getVhsColor(selectedItem.id)} 0%, transparent 70%)`,
+                        transform: `translate3d(calc(${(selectedIndex / Math.max(seriesList.length - 1, 1)) * 80 + 10}% - 400px), -50%, 0)`,
+                        transition: 'transform 700ms cubic-bezier(0.16, 1, 0.3, 1), background 700ms ease-out',
                     }}
                 />
-            ))}
+            )}
 
             {/* CRT scanlines overlay filter */}
             <div className="absolute inset-0 pointer-events-none z-[49] opacity-[0.015] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,6px_100%]" />
 
             {/* Main Shelf Container */}
             <main className="flex-1 min-h-0 flex bg-[#0c0e12]/95 overflow-x-auto overflow-y-hidden no-scrollbar relative z-10 border-t-8 border-b-8 border-zinc-950 shadow-[inset_0_20px_40px_rgba(0,0,0,0.85),inset_0_-20px_40px_rgba(0,0,0,0.85)]">
-                {/* Backlight Glow inside shelf — static per-item, opacity-only transition */}
-                {seriesList.map((item, i) => (
+                {/* Backlight Glow inside shelf — Single dynamic div transitioning position & color */}
+                {selectedItem && (
                     <div
-                        key={item.id}
                         className="absolute top-1/2 left-0 w-[600px] h-[600px] pointer-events-none blur-[100px] z-0"
                         style={{
-                            opacity: item.id === selectedId ? 0.14 : 0,
-                            background: `radial-gradient(circle, ${getVhsColor(item.id)} 0%, transparent 60%)`,
-                            transform: `translate3d(calc(${(i / Math.max(seriesList.length - 1, 1)) * 80 + 10}% - 300px), -50%, 0)`,
-                            transition: 'opacity 700ms ease-out',
+                            opacity: 0.14,
+                            background: `radial-gradient(circle, ${getVhsColor(selectedItem.id)} 0%, transparent 60%)`,
+                            transform: `translate3d(calc(${(selectedIndex / Math.max(seriesList.length - 1, 1)) * 80 + 10}% - 300px), -50%, 0)`,
+                            transition: 'transform 700ms cubic-bezier(0.16, 1, 0.3, 1), background 700ms ease-out',
                         }}
                     />
-                ))}
+                )}
                 
                 {isLoading && seriesList.length === 0 ? (
                     <div className="w-full h-full flex items-center justify-center relative z-10">

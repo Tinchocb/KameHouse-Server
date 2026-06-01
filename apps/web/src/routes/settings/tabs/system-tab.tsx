@@ -1,22 +1,34 @@
 import React from "react"
 import { TabsContent } from "@/components/ui/tabs/tabs"
 import { StatusCard, Section, Card, OsToggle } from "../components"
-import { LucideCrown, LucideHardDrive, LucideCheckCircle2, LucideAlertTriangle } from "lucide-react"
+import { LucideCrown, LucideHardDrive, LucideCheckCircle2, LucideAlertTriangle, LucideCpu } from "lucide-react"
 import { type Control } from "react-hook-form"
 import { type SettingsFormValues } from "../index"
 import { toast } from "sonner"
 
 export function SystemTab({ control }: { control: Control<SettingsFormValues> }) {
     return (
-        <TabsContent value="system" className="m-0 space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700 outline-none">
-             <header className="space-y-2">
-                <h1 className="text-5xl font-black tracking-wider text-white font-bebas leading-none">
-                    NÚCLEO DEL <span className="text-zinc-500">SISTEMA</span>
-                </h1>
-                <p className="text-zinc-400 text-base font-medium leading-relaxed max-w-3xl">
-                    Información técnica sobre el servidor, estado de los recursos de la base de datos y opciones de red.
-                </p>
-            </header>
+        <TabsContent value="system" className="m-0 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 outline-none">
+             {/* ── Header ── */}
+             <header className="space-y-3 pt-2">
+                 <div className="flex items-center gap-3 mb-1">
+                     <div className="flex items-center justify-center p-1 rounded bg-brand-orange/10 border border-brand-orange/15">
+                         <LucideCpu className="h-3.5 w-3.5 text-brand-orange" strokeWidth={2.5} />
+                     </div>
+                     <span className="text-[9px] font-black uppercase tracking-[0.35em] text-zinc-600 font-mono">NÚCLEO · PARÁMETROS DEL SISTEMA</span>
+                     <span className="relative flex h-1.5 w-1.5">
+                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-orange/60 opacity-75"></span>
+                         <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-brand-orange"></span>
+                     </span>
+                 </div>
+                 <h1 className="text-5xl font-bebas tracking-wider text-white leading-none">
+                     NÚCLEO DEL <span className="text-zinc-600">SISTEMA</span>
+                 </h1>
+                 <div className="h-[2px] w-12 bg-gradient-to-r from-brand-orange/50 to-transparent rounded-full" />
+                 <p className="text-zinc-500 text-sm font-medium leading-relaxed max-w-2xl">
+                     Información técnica sobre el servidor, estado de los recursos de la base de datos y opciones de red.
+                 </p>
+             </header>
 
             {/* ── 1. Información Técnica ── */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

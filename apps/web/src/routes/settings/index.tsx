@@ -129,29 +129,17 @@ const settingsSchema = z.object({
 
 export type SettingsFormValues = z.infer<typeof settingsSchema>
 
-export const Route = createFileRoute("/settings/")({
+export const Route = createFileRoute("/settings/")(({
     component: SettingsPage,
-})
+}))
 
 const NAV_ITEMS = [
-    { id: "library", label: "Biblioteca", icon: LucideRadar },
-    { id: "player", label: "Reproducción", icon: LucidePlay },
-    { id: "scanner", label: "Escáner", icon: LucideRefreshCw },
-    { id: "integrations", label: "Integraciones", icon: LucideCloud },
-    { id: "system", label: "Sistema", icon: LucideSettings },
+    { id: "library",      label: "Biblioteca",   sublabel: "ALMACENAMIENTO",  icon: LucideRadar },
+    { id: "player",       label: "Reproducción", sublabel: "MULTIMEDIA",       icon: LucidePlay },
+    { id: "scanner",      label: "Escáner",      sublabel: "INDEXACIÓN",       icon: LucideRefreshCw },
+    { id: "integrations", label: "Integraciones",sublabel: "SERVICIOS EXT.",   icon: LucideCloud },
+    { id: "system",       label: "Sistema",      sublabel: "PLATAFORMA",       icon: LucideSettings },
 ]
-
-function TabsTriggerActiveIndicator() {
-    return (
-        <motion.div 
-            layoutId="active-nav-bg"
-            className="absolute inset-0 rounded-xl bg-white/5 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-md -z-10"
-            transition={{ type: "spring", stiffness: 350, damping: 30 }}
-        >
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-brand-orange shadow-[0_0_8px_#EB5E28]" />
-        </motion.div>
-    )
-}
 
 function SettingsPage() {
     const { data: serverSettings, isLoading } = useGetSettings()
@@ -185,84 +173,213 @@ function SettingsPage() {
     if (isLoading && !serverSettings) return <LoadingOverlayWithLogo />
 
     return (
-        <div className="flex h-full w-full bg-gradient-to-br from-[#09090b] via-[#121215] to-[#09090b] text-white selection:bg-brand-orange/20 overflow-hidden relative">
-            <header className="fixed top-0 left-0 lg:left-24 right-0 h-16 border-b border-white/[0.02] bg-[#09090b]/85 backdrop-blur-xl z-40 flex items-center justify-between px-8">
-                <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center p-1.5 shadow-md">
-                        <LucideHardDrive className="text-black" size={14} />
+        <div className="flex h-full w-full bg-[#06080d] text-white selection:bg-brand-orange/20 overflow-hidden relative">
+
+            {/* CRT scanlines overlay — matches Series page */}
+            <div className="absolute inset-0 pointer-events-none z-[49] opacity-[0.012] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,6px_100%]" />
+
+            {/* Global ambient glow behind active tab */}
+            <div className="absolute top-0 left-[280px] right-0 h-[300px] pointer-events-none z-0 opacity-30">
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(235,94,40,0.06),transparent_60%)]" />
+            </div>
+
+            {/* ── Topbar ─────────────────────────────────────────────────────── */}
+            <header className="fixed top-0 left-0 lg:left-24 right-0 h-14 border-b border-white/[0.04] bg-[#06080d]/90 backdrop-blur-xl z-40 flex items-center justify-between px-8">
+                <div className="flex items-center gap-4">
+                    {/* Icon badge */}
+                    <div className="w-7 h-7 rounded-lg bg-brand-orange/10 border border-brand-orange/20 flex items-center justify-center shadow-[0_0_12px_rgba(235,94,40,0.15)]">
+                        <LucideHardDrive className="text-brand-orange" size={13} />
                     </div>
-                    <span className="text-[11px] font-black tracking-[0.25em] uppercase text-white/90 font-mono">
-                        KAMEHOUSE <span className="text-brand-orange font-bold">AJUSTES</span>
-                    </span>
+                    <div className="flex items-baseline gap-2">
+                        <span className="text-[10px] font-black tracking-[0.3em] uppercase text-white/60 font-mono">KAMEHOUSE</span>
+                        <span className="text-[10px] font-black tracking-[0.3em] uppercase text-brand-orange font-mono">AJUSTES</span>
+                    </div>
+                </div>
+
+                {/* Version pill */}
+                <div className="flex items-center gap-2 px-3 py-1 bg-white/[0.02] border border-white/[0.05] rounded-full">
+                    <LucideCrown size={10} className="text-brand-orange/60" />
+                    <span className="text-[9px] font-black tracking-[0.2em] text-zinc-500 font-mono uppercase">ALPHA 3.5.0</span>
                 </div>
             </header>
 
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex h-full pt-16 relative">
-                <aside className="w-[280px] h-full border-r border-white/5 bg-zinc-950/40 backdrop-blur-2xl flex flex-col p-6 space-y-8 z-10 overflow-y-auto relative pt-10">
-                    <div className="space-y-3 relative z-10">
-                        <p className="text-[9px] font-black uppercase tracking-[0.25em] text-zinc-500 px-3">Configuración</p>
-                        <TabsList className="bg-transparent border-0 flex flex-col items-stretch h-auto p-0 gap-1.5">
-                            {NAV_ITEMS.map((item) => (
-                                <TabsTrigger
-                                    key={item.id}
-                                    value={item.id}
-                                    className={cn(
-                                        "relative flex items-center justify-start gap-4 pl-8 pr-4 py-3 rounded-xl text-sm font-bold text-zinc-500",
-                                        "transition-all duration-300 group/nav outline-none hover:text-zinc-300 hover:bg-white/[0.01]",
-                                        "data-[state=active]:text-white border border-transparent"
-                                    )}
-                                >
-                                    <item.icon size={18} className="shrink-0 transition-transform duration-300 group-hover/nav:scale-105 group-hover/nav:text-white data-[state=active]:text-white" />
-                                    <span className="relative z-10 tracking-tight font-medium">{item.label}</span>
-                                    {activeTab === item.id && <TabsTriggerActiveIndicator />}
-                                </TabsTrigger>
-                            ))}
-                        </TabsList>
-                    </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex h-full pt-14 relative">
 
-                    <div className="pt-6 space-y-4 border-t border-white/[0.03] mt-auto relative z-10">
-                        <div className="glass-panel-premium mx-1 p-5 rounded-2xl bg-white/[0.01] border border-white/5 relative overflow-hidden group/premium transition-all hover:bg-white/[0.02] hover:border-white/10">
-                            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover/premium:opacity-20 transition-all duration-700 ease-spring group-hover/premium:scale-110 group-hover/premium:rotate-6">
-                                <LucideCrown size={36} className="text-white" />
+                {/* ── Sidebar ──────────────────────────────────────────────── */}
+                <aside className="w-[260px] h-full border-r border-white/[0.04] bg-[#0a0c10]/80 backdrop-blur-2xl flex flex-col z-10 overflow-hidden relative shrink-0">
+
+                    {/* Subtle side texture */}
+                    <div className="absolute inset-0 bg-[radial-gradient(#1a1a1a_1px,transparent_1px)] [background-size:4px_4px] opacity-[0.12] pointer-events-none" />
+                    <div className="absolute right-0 top-0 bottom-0 w-[1px] bg-gradient-to-b from-transparent via-brand-orange/10 to-transparent pointer-events-none" />
+
+                    <div className="flex flex-col h-full relative z-10 py-8 px-4 space-y-1">
+
+                        {/* Section label */}
+                        <p className="text-[8px] font-black uppercase tracking-[0.35em] text-zinc-700 px-3 mb-4 font-mono">
+                            — CONFIGURACIÓN —
+                        </p>
+
+                        <TabsList className="bg-transparent border-0 flex flex-col items-stretch h-auto p-0 gap-0.5">
+                            {NAV_ITEMS.map((item) => {
+                                const isActive = activeTab === item.id
+                                return (
+                                    <TabsTrigger
+                                        key={item.id}
+                                        value={item.id}
+                                        className={cn(
+                                            "relative flex items-center gap-3.5 px-3 py-3 rounded-xl text-left transition-all duration-200 group/nav outline-none border",
+                                            isActive
+                                                ? "text-white border-brand-orange/10 bg-brand-orange/[0.06]"
+                                                : "text-zinc-500 border-transparent hover:text-zinc-300 hover:bg-white/[0.025]"
+                                        )}
+                                    >
+                                        {/* Left accent bar */}
+                                        <div className={cn(
+                                            "absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full transition-all duration-300",
+                                            isActive
+                                                ? "h-8 bg-brand-orange shadow-[0_0_10px_rgba(235,94,40,0.7)]"
+                                                : "h-0"
+                                        )} />
+
+                                        {/* Icon */}
+                                        <div className={cn(
+                                            "w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 transition-all duration-200",
+                                            isActive
+                                                ? "bg-brand-orange/10 border-brand-orange/25 text-brand-orange"
+                                                : "bg-white/[0.02] border-white/[0.04] text-zinc-600 group-hover/nav:text-zinc-400 group-hover/nav:border-white/[0.07]"
+                                        )}>
+                                            <item.icon size={14} />
+                                        </div>
+
+                                        {/* Text */}
+                                        <div className="flex flex-col min-w-0">
+                                            <span className={cn(
+                                                "text-xs font-bold tracking-tight leading-none transition-colors",
+                                                isActive ? "text-white" : "text-zinc-400 group-hover/nav:text-zinc-200"
+                                            )}>
+                                                {item.label}
+                                            </span>
+                                            <span className="text-[8px] font-black tracking-[0.2em] text-zinc-700 mt-0.5 font-mono leading-none">
+                                                {item.sublabel}
+                                            </span>
+                                        </div>
+
+                                        {/* Active glow */}
+                                        {isActive && (
+                                            <motion.div
+                                                layoutId="nav-glow"
+                                                className="absolute inset-0 rounded-xl bg-brand-orange/[0.03] -z-10"
+                                                transition={{ type: "spring", stiffness: 400, damping: 35 }}
+                                            />
+                                        )}
+                                    </TabsTrigger>
+                                )
+                            })}
+                        </TabsList>
+
+                        {/* Spacer */}
+                        <div className="flex-1" />
+
+                        {/* Bottom: divider + info */}
+                        <div className="border-t border-white/[0.04] pt-5 space-y-3 mx-1">
+                            {/* VHS-style info panel */}
+                            <div className="relative rounded-xl border border-white/[0.05] bg-black/40 p-4 overflow-hidden group/info">
+                                <div className="absolute inset-0 bg-[radial-gradient(#1a1a1a_1px,transparent_1px)] [background-size:3px_3px] opacity-20 pointer-events-none" />
+                                <div className="absolute inset-0 opacity-0 group-hover/info:opacity-100 transition-opacity duration-700 bg-[radial-gradient(ellipse_at_bottom_right,rgba(235,94,40,0.04),transparent_70%)] pointer-events-none" />
+
+                                <p className="text-[7px] text-zinc-700 uppercase tracking-[0.3em] font-black font-mono relative z-10">KAME-ENGINE</p>
+                                <p className="text-[10px] font-black text-white/40 font-mono mt-0.5 relative z-10 tracking-wider">SYS · HG · T-128</p>
+
+                                {/* Barcode SVG */}
+                                <svg className="mt-3 w-full h-3 text-zinc-800 relative z-10" viewBox="0 0 200 20" fill="currentColor">
+                                    <rect x="0"   y="0" width="3"  height="20" />
+                                    <rect x="6"   y="0" width="1"  height="20" />
+                                    <rect x="10"  y="0" width="4"  height="20" />
+                                    <rect x="17"  y="0" width="2"  height="20" />
+                                    <rect x="22"  y="0" width="1"  height="20" />
+                                    <rect x="26"  y="0" width="3"  height="20" />
+                                    <rect x="32"  y="0" width="2"  height="20" />
+                                    <rect x="37"  y="0" width="1"  height="20" />
+                                    <rect x="41"  y="0" width="5"  height="20" />
+                                    <rect x="49"  y="0" width="1"  height="20" />
+                                    <rect x="53"  y="0" width="2"  height="20" />
+                                    <rect x="58"  y="0" width="3"  height="20" />
+                                    <rect x="64"  y="0" width="1"  height="20" />
+                                    <rect x="68"  y="0" width="4"  height="20" />
+                                    <rect x="75"  y="0" width="2"  height="20" />
+                                    <rect x="80"  y="0" width="1"  height="20" />
+                                    <rect x="84"  y="0" width="3"  height="20" />
+                                    <rect x="90"  y="0" width="2"  height="20" />
+                                    <rect x="95"  y="0" width="5"  height="20" />
+                                    <rect x="103" y="0" width="1"  height="20" />
+                                    <rect x="107" y="0" width="3"  height="20" />
+                                    <rect x="113" y="0" width="2"  height="20" />
+                                    <rect x="118" y="0" width="4"  height="20" />
+                                    <rect x="125" y="0" width="1"  height="20" />
+                                    <rect x="129" y="0" width="5"  height="20" />
+                                    <rect x="137" y="0" width="2"  height="20" />
+                                    <rect x="142" y="0" width="1"  height="20" />
+                                    <rect x="146" y="0" width="3"  height="20" />
+                                    <rect x="152" y="0" width="2"  height="20" />
+                                    <rect x="157" y="0" width="4"  height="20" />
+                                    <rect x="164" y="0" width="1"  height="20" />
+                                    <rect x="168" y="0" width="3"  height="20" />
+                                    <rect x="174" y="0" width="2"  height="20" />
+                                    <rect x="179" y="0" width="5"  height="20" />
+                                    <rect x="187" y="0" width="1"  height="20" />
+                                    <rect x="191" y="0" width="3"  height="20" />
+                                    <rect x="196" y="0" width="4"  height="20" />
+                                </svg>
                             </div>
-                            <p className="text-[9px] text-zinc-500 uppercase tracking-widest font-black">KameHouse Engine</p>
-                            <p className="text-xs text-white/80 mt-1 font-mono tracking-tight">ALPHA VERSION 3.5.0</p>
                         </div>
                     </div>
                 </aside>
 
-                <main className="flex-1 h-full overflow-y-auto bg-black/5 scrollbar-hide py-8 px-10">
-                    <form onSubmit={handleSubmit(onSubmit as unknown as SubmitHandler<FieldValues>)} className="w-full pb-36 max-w-5xl">
-                        {activeTab === "library" && <LibraryTab control={control} />}
-                        {activeTab === "player" && <PlayerTab control={control} />}
-                        {activeTab === "scanner" && <ScannerTab />}
+                {/* ── Main content ─────────────────────────────────────────── */}
+                <main className="flex-1 h-full overflow-y-auto scrollbar-hide relative">
+                    {/* Subtle top vignette */}
+                    <div className="sticky top-0 left-0 right-0 h-8 bg-gradient-to-b from-[#06080d] to-transparent z-20 pointer-events-none" />
+
+                    <form
+                        onSubmit={handleSubmit(onSubmit as unknown as SubmitHandler<FieldValues>)}
+                        className="w-full px-10 pb-36 max-w-5xl -mt-8"
+                    >
+                        {activeTab === "library"      && <LibraryTab control={control} />}
+                        {activeTab === "player"       && <PlayerTab control={control} />}
+                        {activeTab === "scanner"      && <ScannerTab control={control} />}
                         {activeTab === "integrations" && <IntegrationsTab control={control} />}
-                        {activeTab === "system" && <SystemTab control={control} />}
+                        {activeTab === "system"       && <SystemTab control={control} />}
                     </form>
                 </main>
 
+                {/* ── Floating Save Bar ────────────────────────────────────── */}
                 <AnimatePresence>
                     {isDirty && (
-                         <motion.div
+                        <motion.div
                             initial={{ opacity: 0, y: 40, x: "-50%" }}
                             animate={{ opacity: 1, y: 0, x: "-50%" }}
                             exit={{ opacity: 0, y: 40, x: "-50%" }}
                             transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                            className="fixed bottom-8 left-[calc(50%_+_140px)] -translate-x-1/2 z-50"
+                            className="fixed bottom-7 left-[calc(50%_+_130px)] -translate-x-1/2 z-50"
                         >
-                            <div className="bg-[#09090b]/80 border border-white/10 backdrop-blur-md px-6 py-3.5 rounded-2xl shadow-[0_15px_50px_rgba(0,0,0,0.6),0_0_30px_rgba(235,94,40,0.05)] flex items-center gap-10 min-w-[480px]">
-                                <div className="flex items-center gap-3">
+                            <div className="relative bg-[#0c0e12]/95 border border-white/[0.08] backdrop-blur-xl px-5 py-3 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.7),0_0_0_1px_rgba(255,255,255,0.04)] flex items-center gap-8 overflow-hidden">
+                                {/* Scanline micro-texture on bar */}
+                                <div className="absolute inset-0 pointer-events-none opacity-[0.04] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.4)_50%)] bg-[size:100%_3px]" />
+                                <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_left,rgba(235,94,40,0.06),transparent_60%)]" />
+
+                                <div className="flex items-center gap-2.5 relative z-10">
                                     <span className="relative flex h-2 w-2">
                                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-orange opacity-75"></span>
                                         <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-orange"></span>
                                     </span>
-                                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">Ajustes Modificados</span>
+                                    <span className="text-[8px] font-black uppercase tracking-[0.25em] text-zinc-400 font-mono">Cambios sin guardar</span>
                                 </div>
-                                <div className="flex gap-2 ml-auto">
+
+                                <div className="flex gap-2 relative z-10">
                                     <button
                                         type="button"
                                         onClick={() => reset()}
-                                        className="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 hover:text-white hover:bg-white/5 border border-transparent transition-all active:scale-95"
+                                        className="px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-[0.2em] text-zinc-500 hover:text-white hover:bg-white/[0.05] border border-transparent hover:border-white/[0.06] transition-all active:scale-95 font-mono"
                                     >
                                         Descartar
                                     </button>
@@ -270,10 +387,10 @@ function SettingsPage() {
                                         type="button"
                                         disabled={isSaving}
                                         onClick={handleSubmit(onSubmit as unknown as SubmitHandler<FieldValues>)}
-                                        className="bg-brand-orange text-black hover:bg-brand-orange/90 px-6 py-2 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] disabled:opacity-50 flex items-center gap-2 transition-all font-bold active:scale-95 shadow-[0_4px_15px_rgba(235,94,40,0.15)]"
+                                        className="bg-brand-orange text-black hover:bg-brand-orange/90 px-5 py-2 rounded-xl text-[8px] font-black uppercase tracking-[0.2em] disabled:opacity-50 flex items-center gap-2 transition-all active:scale-95 shadow-[0_4px_20px_rgba(235,94,40,0.3)] font-mono"
                                     >
-                                        {isSaving ? <LucideRefreshCw className="animate-spin" size={12} /> : <LucideSave size={12} />}
-                                        {isSaving ? "Guardando..." : "Guardar Cambios"}
+                                        {isSaving ? <LucideRefreshCw className="animate-spin" size={11} /> : <LucideSave size={11} />}
+                                        {isSaving ? "Guardando..." : "Guardar"}
                                     </button>
                                 </div>
                             </div>

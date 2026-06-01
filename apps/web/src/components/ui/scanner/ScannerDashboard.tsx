@@ -44,21 +44,21 @@ export function ScannerDashboard() {
                     <div className="space-y-6">
                         <div className="flex items-center gap-6">
                             <div className="relative group">
-                                <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl group-hover:bg-primary/40 transition-all duration-500" />
+                                <div className="absolute inset-0 bg-brand-orange/20 rounded-full blur-xl group-hover:bg-brand-orange/40 transition-all duration-500" />
                                 <LucideRadar className={cn(
                                     "w-16 h-16 relative z-10 transition-colors duration-500",
-                                    isScanning ? "text-primary animate-pulse" : "text-white/40"
+                                    isScanning ? "text-brand-orange animate-pulse" : "text-white/40"
                                 )} />
                                 {isScanning && (
                                     <span className="absolute -top-1 -right-1 flex h-5 w-5 z-20">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-                                        <span className="relative inline-flex rounded-full h-5 w-5 bg-primary shadow-[0_0_15px_rgba(255,110,58,0.5)]" />
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-orange opacity-75" />
+                                        <span className="relative inline-flex rounded-full h-5 w-5 bg-brand-orange shadow-[0_0_15px_rgba(235,94,40,0.5)]" />
                                     </span>
                                 )}
                             </div>
                             <div className="space-y-1">
                                 <h1 className="text-8xl font-black tracking-tighter text-white uppercase italic leading-none">
-                                    Scanner<span className="text-primary">.</span>
+                                    Scanner<span className="text-brand-orange">.</span>
                                 </h1>
                                 <div className="flex items-center gap-3">
                                     <span className="h-px w-8 bg-white/20" />
@@ -93,7 +93,7 @@ export function ScannerDashboard() {
                     className={cn(
                         "col-span-12 lg:col-span-8 overflow-hidden relative group",
                         "border border-white/10 bg-white/[0.03] backdrop-blur-xl p-1",
-                        isScanning ? "ring-1 ring-primary/20" : ""
+                        isScanning ? "ring-1 ring-brand-orange/20" : ""
                     )}
                 >
                     <div className="absolute inset-0 bg-gradient-to-br from-white/[0.05] to-transparent pointer-events-none" />
@@ -102,7 +102,7 @@ export function ScannerDashboard() {
                         <div className="flex items-start justify-between mb-12">
                             <div className="space-y-2">
                                 <div className="flex items-center gap-3">
-                                    <LucideFlame className={cn("w-6 h-6", isScanning ? "text-primary animate-pulse" : "text-zinc-600")} />
+                                    <LucideFlame className={cn("w-6 h-6", isScanning ? "text-brand-orange animate-pulse" : "text-zinc-600")} />
                                     <span className="font-black text-white text-3xl tracking-tight uppercase">
                                         {isScanning ? "Processing Pipeline" : "Scan Overview"}
                                     </span>
@@ -137,7 +137,7 @@ export function ScannerDashboard() {
                             {/* Progress Bar */}
                             <div className="relative h-2 w-full bg-white/5 overflow-hidden group/bar">
                                 <motion.div
-                                    className="absolute inset-y-0 left-0 bg-primary shadow-[0_0_20px_rgba(255,110,58,0.5)]"
+                                    className="absolute inset-y-0 left-0 bg-brand-orange shadow-[0_0_20px_rgba(235,94,40,0.5)]"
                                     initial={{ width: 0 }}
                                     animate={{ width: `${scanProgress}%` }}
                                     transition={{ type: "spring", stiffness: 50, damping: 20 }}

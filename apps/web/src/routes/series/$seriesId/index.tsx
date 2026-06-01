@@ -4,6 +4,7 @@ import React, { useMemo, useState, useCallback } from "react"
 import { toast } from "sonner"
 import { useAppStore } from "@/lib/store"
 import { motion, AnimatePresence } from "framer-motion"
+import { useSound } from "@/hooks/use-sound"
 
 import { cn } from "@/components/ui/core/styling"
 import { getHighResImage } from "@/lib/helpers/images"
@@ -45,6 +46,7 @@ function SeriesDetailPage() {
 }
 
 export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
+    const { playSound } = useSound()
     const queryClient = useQueryClient()
     const navigate = useNavigate()
     const { data: entry, isLoading } = useGetAnimeEntry(seriesId)
@@ -63,11 +65,9 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
 
     React.useEffect(() => {
         if (entry && !isMovie) {
-            const audio = new Audio("/sounds/entrar detalle serie-peliculas.wav")
-            audio.volume = 0.4
-            audio.play().catch(() => {})
+            playSound("detail", 0.4)
         }
-    }, [entry?.media?.id, isMovie])
+    }, [entry?.media?.id, isMovie, playSound])
 
     const [playTarget, setPlayTarget] = useState<{
         path: string

@@ -17,6 +17,7 @@ import { startViewTransition } from "@/lib/helpers/transitions"
 import { MovieHeroSection } from "../series/$seriesId/-components/movie-hero"
 import { PremiumPosterCard } from "@/components/shared/premium-poster-card"
 import { DeferredImage } from "@/components/shared/deferred-image"
+import { useSound } from "@/hooks/use-sound"
 
 export const Route = createFileRoute("/movies/$movieId")({
     loader: ({ params: { movieId }, context }) => {
@@ -61,6 +62,7 @@ const parseFrameRate = (fps: string | undefined | null): number => {
 }
 
 function MovieDetailClient({ movieId }: { movieId: string }) {
+    const { playSound } = useSound()
     const queryClient = useQueryClient()
     const navigate = useNavigate()
     const { data: entry, isLoading } = useGetAnimeEntry(movieId)
@@ -68,11 +70,9 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
 
     React.useEffect(() => {
         if (entry) {
-            const audio = new Audio("/sounds/entrar detalle serie-peliculas.wav")
-            audio.volume = 0.4
-            audio.play().catch(() => {})
+            playSound("detail", 0.4)
         }
-    }, [entry?.media?.id])
+    }, [entry?.media?.id, playSound])
 
     const [playTarget, setPlayTarget] = useState<{
         path: string
