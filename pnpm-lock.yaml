@@ -20,12 +20,6 @@ importers:
       electron-updater:
         specifier: ^6.7.3
         version: 6.8.3
-      mime-types:
-        specifier: ^2.1.35
-        version: 2.1.35
-      strip-ansi:
-        specifier: ^7.1.0
-        version: 7.2.0
     devDependencies:
       cross-env:
         specifier: ^7.0.3
