@@ -20,6 +20,7 @@ import { LibraryTab } from "./tabs/library-tab"
 import { ScannerTab } from "./tabs/scanner-tab"
 import { IntegrationsTab } from "./tabs/integrations-tab"
 import { SystemTab } from "./tabs/system-tab"
+import { PlayerTab } from "./tabs/player-tab"
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -133,16 +134,17 @@ export const Route = createFileRoute("/settings/")(({
 }))
 
 const NAV_ITEMS = [
-    { id: "library",      label: "Biblioteca",   sublabel: "ALMACENAMIENTO",  icon: LucideRadar },
-    { id: "scanner",      label: "Escáner",      sublabel: "INDEXACIÓN",       icon: LucideRefreshCw },
-    { id: "integrations", label: "Integraciones",sublabel: "SERVICIOS EXT.",   icon: LucideCloud },
-    { id: "system",       label: "Sistema",      sublabel: "PLATAFORMA",       icon: LucideSettings },
+    { id: "system",       label: "System Config",   sublabel: "SISTEMA",          icon: LucideSettings },
+    { id: "library",      label: "Library Paths",   sublabel: "DIRECTORIOS",      icon: LucideHardDrive },
+    { id: "player",       label: "Cassette Engine",  sublabel: "VIDEO ENGINE",     icon: LucidePlay },
+    { id: "scanner",      label: "Scouter (Scanner)",sublabel: "INDEXACIÓN",       icon: LucideRadar },
+    { id: "integrations", label: "Integraciones",    sublabel: "SERVICIOS EXT.",   icon: LucideCloud },
 ]
 
 function SettingsPage() {
     const { data: serverSettings, isLoading } = useGetSettings()
     const { mutateAsync: saveSettings, isPending: isSaving } = useSaveSettings()
-    const [activeTab, setActiveTab] = useState<string>("library")
+    const [activeTab, setActiveTab] = useState<string>("system")
 
     const form = useForm<SettingsFormValues>({
         resolver: zodResolver(settingsSchema) as unknown as Resolver<SettingsFormValues>,
@@ -171,17 +173,19 @@ function SettingsPage() {
     if (isLoading && !serverSettings) return <LoadingOverlayWithLogo />
 
     return (
-        <div className="flex flex-col h-full w-full pt-12 md:pt-20 px-6 md:px-12 lg:px-16 bg-zinc-950 text-white selection:bg-brand-orange/30 overflow-y-auto">
-            <div className="w-full flex flex-col min-h-full">
+        <div className="flex flex-col h-full w-full pt-12 md:pt-20 px-6 md:px-12 lg:px-16 bg-[#050506] text-zinc-300 selection:bg-[#ff6e3a]/30 overflow-y-auto relative">
+            <div className="absolute top-0 left-1/2 w-[600px] h-[600px] bg-[#ff6e3a]/5 rounded-full blur-[200px] -translate-y-1/2 -translate-x-1/2 pointer-events-none" />
+
+            <div className="w-full flex flex-col min-h-full relative z-10">
                 <header className="mb-10 flex flex-col gap-2 relative z-10">
-                    <h1 className="font-bebas text-5xl md:text-6xl tracking-wider text-white">Configuración</h1>
-                    <p className="text-sm text-zinc-400">Gestiona las preferencias y el comportamiento del servidor KameHouse.</p>
+                    <span className="text-[9px] font-black uppercase tracking-[0.20em] text-zinc-550 font-mono">Configuración Avanzada</span>
+                    <h1 className="font-bebas text-5xl md:text-6xl tracking-wider text-white">KameHouse_Core<span className="text-[#ff6e3a]">.</span>conf</h1>
                 </header>
 
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col md:flex-row gap-8 lg:gap-12 pb-32">
-                    {/* ── Lightweight Sidebar Nav ─────────────────────────────── */}
-                    <aside className="w-full md:w-56 shrink-0 md:border-r md:border-white/5 md:pr-6">
-                        <TabsList className="bg-transparent border-0 flex flex-col items-stretch h-auto p-0 gap-1">
+                    {/* ── Immersive Sidebar Nav ─────────────────────────────── */}
+                    <aside className="w-full md:w-64 shrink-0 bg-white/[0.01] border border-white/5 backdrop-blur-[64px] rounded-3xl p-5 shadow-[0_20px_40px_rgba(0,0,0,0.5)] h-fit">
+                        <TabsList className="bg-transparent border-0 flex flex-col items-stretch h-auto p-0 gap-1.5">
                             {NAV_ITEMS.map((item) => {
                                 const isActive = activeTab === item.id
                                 return (
@@ -189,17 +193,20 @@ function SettingsPage() {
                                         key={item.id}
                                         value={item.id}
                                         className={cn(
-                                            "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-left font-medium text-xs transition-all relative group outline-none",
+                                            "w-full flex items-center justify-start gap-3.5 px-4 py-3 rounded-xl text-left font-bold text-xs uppercase tracking-wider transition-all relative group outline-none border border-transparent settings-nav-btn",
                                             isActive 
-                                                ? "text-brand-orange bg-brand-orange/[0.06] border border-brand-orange/10" 
-                                                : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.02] border border-transparent"
+                                                ? "active bg-white/[0.01] border-y-transparent border-r-transparent border-l-[3px] border-l-[#ff6e3a] text-[#ff6e3a] shadow-inner data-[state=active]:border-y-transparent data-[state=active]:border-r-transparent data-[state=active]:border-l-[#ff6e3a]" 
+                                                : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.01]"
                                         )}
                                     >
                                         <item.icon className={cn(
                                             "w-4 h-4 relative z-10 transition-colors", 
-                                            isActive ? "text-brand-orange" : "text-zinc-400 group-hover:text-zinc-300"
+                                            isActive ? "text-[#ff6e3a]" : "text-zinc-500 group-hover:text-zinc-350"
                                         )} />
-                                        <span className="relative z-10 font-semibold">{item.label}</span>
+                                        <div className="flex flex-col text-left">
+                                            <span className="relative z-10 leading-none">{item.label}</span>
+                                            <span className="text-[8px] font-mono text-zinc-600 font-bold mt-0.5 tracking-wider">{item.sublabel}</span>
+                                        </div>
                                     </TabsTrigger>
                                 )
                             })}
@@ -217,6 +224,7 @@ function SettingsPage() {
                             {activeTab === "scanner"      && <ScannerTab control={control} register={register} />}
                             {activeTab === "integrations" && <IntegrationsTab control={control} register={register} />}
                             {activeTab === "system"       && <SystemTab control={control} />}
+                            {activeTab === "player"       && <PlayerTab control={control} />}
                         </form>
                     </div>
 
@@ -228,20 +236,20 @@ function SettingsPage() {
                                 animate={{ opacity: 1, y: 0, x: "-50%" }}
                                 exit={{ opacity: 0, y: 40, x: "-50%" }}
                                 transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                                className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-8 bg-zinc-900/90 border border-white/5 shadow-[0_20px_50px_rgba(0,0,0,0.7)] rounded-xl px-6 py-3 backdrop-blur-md"
+                                className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-8 bg-[#050506]/90 border border-white/5 shadow-[0_20px_50px_rgba(0,0,0,0.8)] rounded-xl px-6 py-4.5 backdrop-blur-[32px]"
                             >
                                 <div className="flex items-center gap-3 pl-1">
                                     <span className="relative flex h-2 w-2">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-orange opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-orange"></span>
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ff6e3a] opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-[#ff6e3a] shadow-[0_0_6px_#ff6e3a]"></span>
                                     </span>
-                                    <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest font-semibold">Cambios sin guardar</span>
+                                    <span className="text-[10px] font-mono text-zinc-550 uppercase tracking-widest font-bold">Cambios locales detectados</span>
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <button
                                         type="button"
                                         onClick={() => reset()}
-                                        className="text-xs font-bold text-zinc-400 hover:text-white transition-colors"
+                                        className="text-xs font-bold text-zinc-400 hover:text-white transition-colors mr-2"
                                     >
                                         Descartar
                                     </button>
@@ -249,9 +257,9 @@ function SettingsPage() {
                                         type="submit"
                                         form="settings-form"
                                         disabled={isSaving}
-                                        className="bg-brand-orange hover:bg-brand-orange/95 text-white px-5 py-2 rounded-lg text-xs font-bold transition-all shadow-[0_0_15px_rgba(255,110,58,0.25)] disabled:opacity-50"
+                                        className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-zinc-950 px-6 py-3 rounded-xl text-xs font-bold transition-all shadow-[0_0_15px_rgba(255,110,58,0.25)] disabled:opacity-50 font-black uppercase tracking-wider"
                                     >
-                                        {isSaving ? "Guardando..." : "Guardar cambios"}
+                                        {isSaving ? "Guardando..." : "Guardar Configuración"}
                                     </button>
                                 </div>
                             </motion.div>

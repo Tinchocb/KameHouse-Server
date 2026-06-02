@@ -9,6 +9,7 @@ export interface UIState {
     isVideoActive: boolean
     bgMusicEnabled: boolean
     bgMusicVolume: number
+    uiSoundsEnabled: boolean
     globalQueueOpen: boolean
     setSidebarOpen: (open: boolean) => void
     setActiveTheme: (theme: string) => void
@@ -16,6 +17,7 @@ export interface UIState {
     setVideoActive: (active: boolean) => void
     setBgMusicEnabled: (enabled: boolean) => void
     setBgMusicVolume: (volume: number) => void
+    setUiSoundsEnabled: (enabled: boolean) => void
     setGlobalQueueOpen: (open: boolean) => void
 }
 
@@ -66,6 +68,7 @@ export const createUISlice: StateCreator<UIState & PlayerState, [], [], UIState>
     isVideoActive: false,
     bgMusicEnabled: false,
     bgMusicVolume: 0.25,
+    uiSoundsEnabled: true,
     globalQueueOpen: false,
     setSidebarOpen: (open) => set({ sidebarOpen: open }),
     setActiveTheme: (theme) => set({ activeTheme: theme }),
@@ -73,6 +76,7 @@ export const createUISlice: StateCreator<UIState & PlayerState, [], [], UIState>
     setVideoActive: (active) => set({ isVideoActive: active }),
     setBgMusicEnabled: (enabled) => set({ bgMusicEnabled: enabled }),
     setBgMusicVolume: (volume) => set({ bgMusicVolume: volume }),
+    setUiSoundsEnabled: (enabled) => set({ uiSoundsEnabled: enabled }),
     setGlobalQueueOpen: (open) => set({ globalQueueOpen: open }),
 })
 
@@ -245,6 +249,7 @@ export const useAppStore = create<UIState & PlayerState & ScannerState>()(
                 activeTheme: state.activeTheme,
                 bgMusicEnabled: state.bgMusicEnabled,
                 bgMusicVolume: state.bgMusicVolume,
+                uiSoundsEnabled: state.uiSoundsEnabled,
                 autoSkipIntro: state.autoSkipIntro,
                 autoSkipOutro: state.autoSkipOutro,
                 playbackRate: state.playbackRate,

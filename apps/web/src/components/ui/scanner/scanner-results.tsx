@@ -257,6 +257,7 @@ export function ScanHistory({ summaries }: { summaries: Summary_ScanSummaryItem[
                 const createdAt = s.createdAt ? new Date(s.createdAt).toLocaleDateString("es-AR", {
                     day: "2-digit",
                     month: "short",
+                    year: "numeric"
                 }) : "—"
                 
                 const timeAt = s.createdAt ? new Date(s.createdAt).toLocaleTimeString("es-AR", {
@@ -264,42 +265,68 @@ export function ScanHistory({ summaries }: { summaries: Summary_ScanSummaryItem[
                     minute: "2-digit",
                 }) : ""
 
+                const hasUnlinked = unmatched.length > 0
+                const reportId = `REP_${hasUnlinked ? "FAST" : "FULL"}_${(summaries.length - idx).toString().padStart(3, '0')}`
+
                 return (
                     <motion.div 
                         key={idx} 
-                        whileHover={{ y: -4 }}
-                        className="p-8 rounded-none border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/10 transition-all space-y-6 group relative overflow-hidden"
+                        whileHover={{ y: -6, scale: 1.01 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                        className="bg-[#111113] border border-zinc-800/85 rounded-xl p-3 flex flex-col gap-3 shadow-2xl select-none group cursor-pointer relative overflow-hidden"
                     >
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-zinc-500">
-                                <LucideHistory size={12} className="text-primary" />
-                                {createdAt} <span className="opacity-30">/</span> {timeAt}
+                        {/* Spine of the VHS Tape */}
+                        <div className="w-full h-4 bg-[#0a0a0c] rounded border-b border-black/40 flex items-center justify-between px-2">
+                            <span className="text-[7px] font-mono font-black text-zinc-700">KAME - VHS</span>
+                            <div className="flex gap-0.5">
+                                <div className="w-1.5 h-1.5 bg-zinc-800 rounded-full" />
+                                <div className="w-1.5 h-1.5 bg-zinc-800 rounded-full" />
                             </div>
                         </div>
 
-                        <div className="space-y-1">
-                            <div className="flex items-baseline gap-2">
-                                <span className="font-bebas text-6xl text-white leading-none">{files}</span>
-                                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600 italic">Files</span>
-                            </div>
-                            <div className="flex items-center gap-3 pt-2">
-                                <div className="h-1 flex-1 bg-white/5 rounded-full overflow-hidden">
-                                    <div 
-                                        className="h-full bg-primary" 
-                                        style={{ width: `${totalCount > 0 ? (matchedCount / totalCount) * 100 : 0}%` }} 
-                                    />
+                        {/* Adhesive white sticker label */}
+                        <div className="rounded bg-[#faf9f5] border border-zinc-300 p-4 flex flex-col justify-between h-36 text-zinc-900 transition-colors">
+                            <div className="flex justify-between items-start">
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] font-black font-mono text-black leading-none tracking-tight">
+                                        {reportId}
+                                    </span>
+                                    <span className="text-[8px] font-bold text-zinc-400 mt-1.5 font-mono">
+                                        {createdAt} · {timeAt}
+                                    </span>
                                 </div>
-                                <span className="text-[10px] font-bold text-zinc-400">{matched} match</span>
+                                <span className={cn(
+                                    "text-[8px] font-black font-mono px-2 py-0.5 rounded border leading-none",
+                                    hasUnlinked
+                                        ? "bg-orange-500/10 text-orange-700 border-orange-500/20"
+                                        : "bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
+                                )}>
+                                    {hasUnlinked ? "UNLINKED" : "FINISH"}
+                                </span>
+                            </div>
+
+                            <div className="flex justify-between items-end border-t border-zinc-200/85 pt-2">
+                                <div className="flex flex-col min-w-0 pr-2">
+                                    <span className="text-sm font-black font-bebas tracking-wide text-zinc-800 uppercase leading-none truncate group-hover:text-[#ff6e3a] transition-colors">
+                                        {groups[0]?.mediaTitle || "Delta Scan Execution"}
+                                    </span>
+                                    <span className="text-[10px] font-bold text-zinc-500 font-mono mt-0.5 truncate">
+                                        {files} files · {matched} match
+                                    </span>
+                                </div>
+                                
+                                {/* Simulated Barcode */}
+                                <div className="flex items-end gap-[1.5px] h-6 opacity-75 shrink-0 pl-1">
+                                    <div className="w-[1px] h-full bg-zinc-900" />
+                                    <div className="w-[2px] h-full bg-zinc-900" />
+                                    <div className="w-[1px] h-[75%] bg-zinc-900" />
+                                    <div className="w-[3px] h-full bg-zinc-900" />
+                                    <div className="w-[1px] h-full bg-zinc-900" />
+                                    <div className="w-[2px] h-[60%] bg-zinc-900" />
+                                    <div className="w-[1.5px] h-full bg-zinc-900" />
+                                </div>
                             </div>
                         </div>
-
-                        {unmatched.length > 0 && (
-                            <div className="text-[9px] font-black uppercase tracking-widest text-rose-500/60 bg-rose-500/5 px-2 py-1 inline-block border border-rose-500/10">
-                                {unmatched.length} Missing Info
-                            </div>
-                        )}
-                        
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
                     </motion.div>
                 )
             })}

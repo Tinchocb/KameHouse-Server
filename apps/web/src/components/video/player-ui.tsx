@@ -232,7 +232,11 @@ export function PlayerUI(props: PlayerUIProps) {
                             <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/>
                         </svg>
                         <span className="text-[10px] font-black tracking-[0.25em] text-white uppercase">
-                            {state.showAutoSkipToast === "intro" ? "AUTO-SALTANDO INTRO" : "AUTO-SALTANDO ENDING"}
+                            {state.showAutoSkipToast === "intro" 
+                                ? "AUTO-SALTANDO INTRO" 
+                                : state.showAutoSkipToast === "outro" 
+                                ? "AUTO-SALTANDO ENDING" 
+                                : "AUTO-SALTANDO PAUSA/INTERMEDIO"}
                         </span>
                     </div>
                 </div>

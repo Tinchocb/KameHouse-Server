@@ -40,6 +40,17 @@ export const getLowResImage = (url: string | null | undefined): string => {
     return url
 }
 
+export const getTinyResImage = (url: string | null | undefined): string => {
+    if (!url) return ""
+
+    // TMDB tiny-res replacement (w92 is perfect for instant LQIP blur placeholders)
+    if (url.includes("tmdb.org") || url.includes("themoviedb.org")) {
+        return url.replace(/\/t\/p\/(?:original|w\d+)/, "/t/p/w92")
+    }
+
+    return url
+}
+
 export const getLargeResImage = (url: string | null | undefined): string => {
     if (!url) return ""
 

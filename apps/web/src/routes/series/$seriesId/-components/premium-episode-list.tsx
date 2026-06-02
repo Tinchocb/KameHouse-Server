@@ -1,19 +1,36 @@
 import { Play, Check } from "lucide-react"
 import type { PremiumEpisode } from "@/api/types/series.types"
+import { cn } from "@/components/ui/core/styling"
 
 interface PremiumEpisodeListProps {
   episodes: PremiumEpisode[]
+  activeSubSagaStart?: number
+  activeSubSagaEnd?: number
 }
 
-export function PremiumEpisodeList({ episodes }: PremiumEpisodeListProps) {
+export function PremiumEpisodeList({ 
+  episodes,
+  activeSubSagaStart,
+  activeSubSagaEnd
+}: PremiumEpisodeListProps) {
   return (
     <div className="flex flex-col gap-4 mt-6">
-      {episodes.map((ep) => (
-        <div 
-          key={ep.id}
-          id={`episode-${ep.number}`}
-          className="group flex gap-6 p-4 rounded-xl hover:bg-white/5 transition-all duration-300 border border-transparent hover:border-white/10"
-        >
+      {episodes.map((ep) => {
+        const isHighlighted = activeSubSagaStart != null && 
+                            activeSubSagaEnd != null && 
+                            ep.number >= activeSubSagaStart && 
+                            ep.number <= activeSubSagaEnd;
+        return (
+          <div 
+            key={ep.id}
+            id={`episode-${ep.number}`}
+            className={cn(
+              "group flex gap-6 p-4 rounded-xl transition-all duration-300 border",
+              isHighlighted
+                ? "bg-brand-orange/[0.02] border-brand-orange/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_24px_rgba(255,110,58,0.03)] border-l-[3.5px] border-l-brand-orange hover:bg-brand-orange/[0.04]"
+                : "bg-transparent border-transparent hover:bg-white/5 hover:border-white/10"
+            )}
+          >
           {/* Thumbnail */}
           <div className="relative w-64 aspect-video rounded-lg overflow-hidden flex-shrink-0 bg-gray-900 shadow-md">
             <img 
@@ -84,7 +101,7 @@ export function PremiumEpisodeList({ episodes }: PremiumEpisodeListProps) {
             </div>
           </div>
         </div>
-      ))}
+      )})}
     </div>
   )
 }

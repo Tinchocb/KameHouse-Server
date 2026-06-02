@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { useAppStore } from "@/lib/store";
 
 // Static global pool to cache HTMLAudioElement instances and prevent GC thrashing
 const sfxPool: Record<string, HTMLAudioElement> = {};
@@ -19,7 +20,10 @@ const SFX_PATHS: Record<SfxType, string> = {
 };
 
 export function useSound() {
+    const uiSoundsEnabled = useAppStore((state) => state.uiSoundsEnabled);
+
     const playSound = useCallback((type: SfxType, volume = 0.15) => {
+        if (!uiSoundsEnabled) return;
         try {
             const path = SFX_PATHS[type];
             if (!path) return;
@@ -44,7 +48,7 @@ export function useSound() {
         } catch (e) {
             console.warn("Could not play UI sound effect:", e);
         }
-    }, []);
+    }, [uiSoundsEnabled]);
 
     return { playSound };
 }

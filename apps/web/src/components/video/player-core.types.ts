@@ -86,7 +86,7 @@ export interface PlayerCore {
         /** AniSkip intervals exposed to child components for rendering timeline markers */
         skipTimesOp?: { startTime: number; endTime: number }
         skipTimesEd?: { startTime: number; endTime: number }
-        showAutoSkipToast: "intro" | "outro" | null
+        showAutoSkipToast: "intro" | "outro" | "pause" | null
         chapters: { startTime: number; endTime: number; name: string; type?: string }[]
         activeChapter: string | null
         isCastSupported: boolean

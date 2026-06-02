@@ -82,6 +82,14 @@ export function usePlayerHls({
     }, [backendTracks, playableUrl, setAudioTracks, setSubtitleTracks])
 
     useEffect(() => {
+        if (!playableUrl) {
+            Promise.resolve().then(() => {
+                setStatus("loading")
+                setIsBuffering(true)
+            })
+            return
+        }
+
         const video = videoRef.current
         if (!video) return
 

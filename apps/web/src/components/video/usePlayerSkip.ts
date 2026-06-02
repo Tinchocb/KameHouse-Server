@@ -56,7 +56,7 @@ export function usePlayerSkip({
     const [segmentProgress, setSegmentProgress] = useState(0)
     const [showNextEpisode, setShowNextEpisode] = useState(false)
     const [countdownSeconds, setCountdownSeconds] = useState(10)
-    const [showAutoSkipToast, setShowAutoSkipToast] = useState<"intro" | "outro" | null>(null)
+    const [showAutoSkipToast, setShowAutoSkipToast] = useState<"intro" | "outro" | "pause" | null>(null)
     const [activeChapter, setActiveChapter] = useState<string | null>(null)
 
     const { data: skipTimes } = useAniSkipTimes({
@@ -84,7 +84,7 @@ export function usePlayerSkip({
         return undefined
     }, [skipTimes, chapters])
 
-    const triggerToast = useCallback((type: "intro" | "outro") => {
+    const triggerToast = useCallback((type: "intro" | "outro" | "pause") => {
         setShowAutoSkipToast(type)
         if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
         toastTimerRef.current = setTimeout(() => setShowAutoSkipToast(null), 3000)
@@ -264,6 +264,54 @@ export function usePlayerSkip({
             if (activeChapter !== name) {
                 setActiveChapter(name)
             }
+
+            // TV Mode intermediate pause auto-skip
+            if (tvMode) {
+                const skippable = chapters.find(c => {
+                    if (curr >= c.startTime && curr < c.endTime - 0.5) {
+                        const n = c.name.toLowerCase();
+                        return (
+                            n.includes("eyecatch") ||
+                            n.includes("eye-catch") ||
+                            n.includes("commercial") ||
+                            n.includes("sponsor") ||
+                            n.includes("recap") ||
+                            n.includes("preview") ||
+                            n.includes("title card") ||
+                            n.includes("titlecard") ||
+                            n.includes("avance") ||
+                            n.includes("adelanto") ||
+                            n.includes("publicidad") ||
+                            n.includes("patrocinio") ||
+                            n.includes("resumen") ||
+                            n.includes("intermedio") ||
+                            n.includes("prologue") ||
+                            n.includes("prólogo") ||
+                            n.includes("credits") ||
+                            n.includes("créditos") ||
+                            n.includes("op") ||
+                            n.includes("ed") ||
+                            n.includes("opening") ||
+                            n.includes("ending") ||
+                            n.includes("sponsors") ||
+                            n.includes("title") ||
+                            n.includes("título") ||
+                            c.type === "sponsor" ||
+                            c.type === "recap" ||
+                            c.type === "preview" ||
+                            c.type === "opening" ||
+                            c.type === "ending"
+                        );
+                    }
+                    return false;
+                });
+
+                if (skippable) {
+                    video.currentTime = skippable.endTime;
+                    triggerToast("pause");
+                    return;
+                }
+            }
         }
 
         // Reset the auto-skip flags when outside the respective windows
@@ -304,7 +352,7 @@ export function usePlayerSkip({
         if (activeOp) {
             const { startTime, endTime } = activeOp
             const inOpWindow = curr >= startTime && curr < endTime
-            if (autoSkipIntroPref && inOpWindow && !hasAutoSkippedIntroRef.current) {
+            if ((tvMode || autoSkipIntroPref) && inOpWindow && !hasAutoSkippedIntroRef.current) {
                 hasAutoSkippedIntroRef.current = true
                 video.currentTime = endTime
                 setSkipMode(null)
@@ -331,7 +379,7 @@ export function usePlayerSkip({
         if (activeEd) {
             const { startTime, endTime } = activeEd
             const inEdWindow = curr >= startTime && curr < endTime
-            if (autoSkipOutroPref && inEdWindow && !hasAutoSkippedOutroRef.current) {
+            if ((tvMode || autoSkipOutroPref) && inEdWindow && !hasAutoSkippedOutroRef.current) {
                 hasAutoSkippedOutroRef.current = true
                 video.currentTime = endTime
                 setSkipMode(null)
@@ -368,7 +416,7 @@ export function usePlayerSkip({
         } else {
             if (showNextEpisode) setShowNextEpisode(false)
         }
-    }, [videoRef, skipTimesOp, skipTimesEd, autoSkipIntroPref, autoSkipOutroPref, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, hasNextEpisode, mediaFormat, chapters, activeChapter, triggerToast])
+    }, [videoRef, skipTimesOp, skipTimesEd, autoSkipIntroPref, autoSkipOutroPref, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, hasNextEpisode, mediaFormat, chapters, activeChapter, triggerToast, tvMode])
 
     useEffect(() => {
         if (!showNextEpisode) {

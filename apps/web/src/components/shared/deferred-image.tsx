@@ -2,10 +2,12 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { cn } from '@/components/ui/core/styling';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ImageOff } from 'lucide-react';
+import { getTinyResImage } from '@/lib/helpers/images';
 
 interface DeferredImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageElement>, "onDrag"> {
     src: string;
     alt: string;
+    lowResSrc?: string;
     placeholderColor?: string;
     rootMargin?: string;
     threshold?: number | number[];
@@ -52,6 +54,7 @@ export function DeferredImage(props: DeferredImageProps) {
     const {
         src,
         alt,
+        lowResSrc,
         className,
         placeholderColor = '#1A1A1A',
         rootMargin = '1000px',
@@ -66,11 +69,15 @@ export function DeferredImage(props: DeferredImageProps) {
 
     const [isIntersecting, setIsIntersecting] = useState(priority);
     const [isLoaded, setIsLoaded] = useState(false);
+    const [isLowResLoaded, setIsLowResLoaded] = useState(false);
     const [hasError, setHasError] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
+    const lqipSrc = lowResSrc || getTinyResImage(src);
+
     useEffect(() => {
         setIsLoaded(false);
+        setIsLowResLoaded(false);
         setHasError(false);
     }, [src]);
 
@@ -126,13 +133,30 @@ export function DeferredImage(props: DeferredImageProps) {
             style={{ backgroundColor: isLoaded ? 'transparent' : placeholderColor }}
             className={cn("relative overflow-hidden", className)}
         >
-            {!isLoaded && !hasError && isIntersecting && showSkeleton && (
+            {/* Pulse Skeleton: shown only while low-res image is NOT loaded and high-res is NOT loaded */}
+            {!isLoaded && !isLowResLoaded && !hasError && isIntersecting && showSkeleton && (
                 <div className="absolute inset-0 z-10 overflow-hidden">
                     <div className="absolute inset-0 animate-pulse bg-zinc-800/80 backdrop-blur-md" />
                     <Skeleton className="h-full w-full rounded-none bg-transparent opacity-50" />
                 </div>
             )}
 
+            {/* Low-res blurred placeholder (LQIP) */}
+            {!hasError && isIntersecting && lqipSrc && (
+                <img
+                    src={lqipSrc}
+                    alt=""
+                    aria-hidden="true"
+                    decoding="async"
+                    onLoad={() => setIsLowResLoaded(true)}
+                    className={cn(
+                        "absolute inset-0 h-full w-full object-cover scale-[1.08] filter blur-[12px] transition-opacity duration-500 ease-out",
+                        isLowResLoaded ? "opacity-100" : "opacity-0"
+                    )}
+                />
+            )}
+
+            {/* Main high-res image */}
             {!hasError && isIntersecting && (
                 <img
                     src={src}
@@ -142,7 +166,7 @@ export function DeferredImage(props: DeferredImageProps) {
                     onLoad={handleLoad}
                     onError={handleError}
                     className={cn(
-                        "h-full w-full object-cover transition-opacity duration-300 ease-out will-change-opacity",
+                        "relative h-full w-full object-cover transition-opacity duration-500 ease-out will-change-opacity",
                         isLoaded ? "opacity-100" : "opacity-0"
                     )}
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -151,7 +175,7 @@ export function DeferredImage(props: DeferredImageProps) {
             )}
 
             {hasError && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 text-zinc-600">
+                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-zinc-900 text-zinc-600">
                     {fallback ? (
                         fallback
                     ) : (

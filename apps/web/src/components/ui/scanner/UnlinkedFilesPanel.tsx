@@ -247,36 +247,41 @@ export function UnlinkedFilesPanel() {
     if (isLoading) return null
 
     if (unresolved.length === 0) return (
-        <div className="flex items-center gap-6 px-8 py-8 rounded-none bg-white/[0.02] border border-white/5">
-            <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0">
+        <div className="flex items-center gap-6 p-8 rounded-3xl bg-white/[0.01] border border-white/5 backdrop-blur-xl shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
+            <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-center text-emerald-400 shrink-0">
                 <LucideCheck size={24} />
             </div>
             <div className="space-y-1">
-                <p className="text-lg font-bold text-white">Librería Impecable</p>
-                <p className="text-sm text-zinc-500 font-medium">Todos los archivos han sido identificados y vinculados correctamente.</p>
+                <p className="text-lg font-bold text-white tracking-tight uppercase">Librería Impecable</p>
+                <p className="text-xs text-zinc-500 font-medium">Todos los archivos han sido identificados y vinculados correctamente al catálogo.</p>
             </div>
         </div>
     )
 
     return (
         <div className="space-y-8">
-            {/* ─── Header ─── */}
-            <div className="flex items-center justify-between">
+            {/* ─── Header Bento ─── */}
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-8 rounded-3xl bg-white/[0.01] border border-white/5 backdrop-blur-xl relative overflow-hidden group shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
+                <div className="absolute top-0 right-0 w-[200px] h-[200px] bg-[#ff6e3a]/5 rounded-full blur-[60px] pointer-events-none" />
+                
                 <div className="flex items-center gap-6">
-                    <div className="w-14 h-14 bg-white/5 border border-white/10 flex items-center justify-center text-white shrink-0">
-                        <LucideAlertTriangle size={24} />
+                    <div className="font-bebas text-7xl text-[#ff6e3a] leading-none select-none tracking-wider shrink-0 bg-[#ff6e3a]/5 border border-[#ff6e3a]/20 px-5 py-2.5 rounded-2xl shadow-[0_0_15px_rgba(255,110,58,0.1)] font-bold">
+                        {unresolved.length}
                     </div>
                     <div>
-                        <p className="text-2xl font-black text-white tracking-tighter uppercase font-bebas">FALTA VINCULACIÓN</p>
-                        <p className="text-zinc-500 text-sm font-medium">
-                            <span className="text-white font-bold">{unresolved.length}</span> archivo{unresolved.length !== 1 ? "s" : ""} requieren atención manual
+                        <p className="text-2xl font-black text-white tracking-tight uppercase font-bebas flex items-center gap-2">
+                            <span>VINCULACIÓN PENDIENTE</span>
+                            <span className="w-2 h-2 rounded-full bg-[#ff6e3a] animate-pulse shadow-[0_0_6px_#ff6e3a]" />
+                        </p>
+                        <p className="text-zinc-500 text-xs font-mono max-w-md mt-1 leading-relaxed">
+                            El motor de KameHouse no pudo emparejar automáticamente {unresolved.length === 1 ? "este archivo huérfano" : "estos archivos huérfanos"}. Requieren resolución manual.
                         </p>
                     </div>
                 </div>
                 <button
                     type="button"
                     onClick={() => refetch()}
-                    className="bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-black uppercase tracking-widest text-zinc-400 hover:text-white px-6 py-3 transition-all"
+                    className="bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 hover:border-white/10 text-[10px] font-black uppercase tracking-widest text-zinc-300 hover:text-white px-6 py-4 rounded-xl transition-all active:scale-[0.98] shrink-0 self-stretch md:self-auto flex items-center justify-center gap-2"
                 >
                     Refrescar Lista
                 </button>

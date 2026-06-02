@@ -83,11 +83,13 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     const [activeTab, setActiveTab] = useState<"episodes" | "movie" | "relations" | "characters" | "technical">("episodes")
     const [prevEntryId, setPrevEntryId] = useState<number | null>(null)
     const [activeSagaId, setActiveSagaId] = useState<string>("")
+    const [activeSubSagaId, setActiveSubSagaId] = useState<string>("")
 
     if (entry?.media && entry.media.id !== prevEntryId) {
         setPrevEntryId(entry.media.id)
         setActiveTab("episodes")
         setActiveSagaId("") // Reset saga on change
+        setActiveSubSagaId("") // Reset subSaga on change
     }
 
     const baseSagas = useMemo(() => entry?.media ? resolveSeriesSagas(entry.media) : [], [entry])
@@ -118,6 +120,12 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
             })) || []
         }))
     }, [baseSagas, entry])
+
+    const activeSubSaga = useMemo(() => {
+        if (!activeSagaId || !activeSubSagaId) return null
+        const currentSaga = sagas.find(s => s.id === activeSagaId)
+        return currentSaga?.subSagas?.find(ss => ss.id === activeSubSagaId) || null
+    }, [sagas, activeSagaId, activeSubSagaId])
 
     React.useEffect(() => {
         if (sagas.length > 0 && !activeSagaId) {
@@ -527,10 +535,15 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                                     <SagaSelector 
                                         sagas={sagas}
                                         activeSagaId={activeSagaId}
-                                        onSelectSaga={setActiveSagaId}
+                                        onSelectSaga={(sagaId) => {
+                                            setActiveSagaId(sagaId)
+                                            setActiveSubSagaId("")
+                                        }}
+                                        activeSubSagaId={activeSubSagaId}
+                                        onSelectSubSaga={setActiveSubSagaId}
                                     />
                                 </div>
-                                
+
                                 {/* Right Column: Characters & Episodes */}
                                 <div className="flex-grow flex flex-col min-w-0">
                                     {/* Mapped Characters from active saga */}
@@ -560,6 +573,8 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                                                     audioCodec: lf?.technicalInfo?.audioStreams?.[0]?.codec || "AAC"
                                                 }
                                             })}
+                                        activeSubSagaStart={activeSubSaga?.startEp}
+                                        activeSubSagaEnd={activeSubSaga?.endEp}
                                     />
                                 </div>
                             </motion.div>

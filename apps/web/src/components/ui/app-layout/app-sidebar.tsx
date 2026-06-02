@@ -3,13 +3,18 @@
 import { useAppStore } from "@/lib/store"
 import { Vaul, VaulContent } from "@/components/vaul"
 import { Link } from "@tanstack/react-router"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import * as React from "react"
 import { FaBook, FaCog, FaHome, FaFilm, FaTv, FaMoon, FaDownload, FaLayerGroup } from "react-icons/fa"
 import { cn } from "../core/styling"
 import { RandomPlayButton } from "./random-play-button"
 import { useSound } from "@/hooks/use-sound"
 import { BackgroundMusicPlayer } from "./background-music"
+import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
+import { fetchAnimeEntry } from "@/api/hooks/anime_entries.hooks"
+import { VideoPlayer } from "@/components/video/player"
+import { toast } from "sonner"
+import { Loader2 } from "lucide-react"
 
 interface SidebarItem {
     to: string
@@ -43,7 +48,7 @@ export function AppSidebar() {
     return (
         <>
             {/* Desktop Fixed Sidebar */}
-            <aside className="hidden md:flex flex-col shrink-0 h-full w-24 border-r border-white/5 bg-zinc-950/40 backdrop-blur-2xl z-50">
+            <aside className="hidden md:flex flex-col shrink-0 h-full w-24 border-r border-white/5 bg-zinc-950/40 backdrop-blur-[64px] z-50">
                 <SidebarContent setSidebarOpen={setSidebarOpen} />
             </aside>
 
@@ -51,7 +56,7 @@ export function AppSidebar() {
             {isMobile && (
                 <Vaul open={sidebarOpen} onOpenChange={setSidebarOpen} direction="left">
                     <VaulContent
-                        className="md:hidden fixed inset-y-0 left-0 z-50 flex h-full w-[280px] flex-col border-r border-white/5 bg-zinc-950/60 backdrop-blur-2xl shadow-2xl"
+                        className="md:hidden fixed inset-y-0 left-0 z-50 flex h-full w-[280px] flex-col border-r border-white/5 bg-zinc-950/60 backdrop-blur-[64px] shadow-2xl"
                         overlayClass="md:hidden bg-black/60 backdrop-blur-sm"
                     >
                         <SidebarContent setSidebarOpen={setSidebarOpen} />
@@ -69,9 +74,147 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
     const playlistQueue = useAppStore(state => state.playlistQueue)
     const globalQueueOpen = useAppStore(state => state.globalQueueOpen)
     const setGlobalQueueOpen = useAppStore(state => state.setGlobalQueueOpen)
+    const tvMode = useAppStore(state => state.tvMode)
+    const setTvMode = useAppStore(state => state.setTvMode)
 
     const playChangeSound = () => {
         playSound("category", 0.4)
+    }
+
+    const [playTarget, setPlayTarget] = React.useState<{
+        path: string
+        streamType: "direct" | "transcode"
+        title: string
+        episodeLabel: string
+        episodeNumber: number
+        mediaId: number
+        malId?: number | null
+    } | null>(null)
+    const [isLoadingTarget, setIsLoadingTarget] = React.useState(false)
+
+    const { data: collection } = useGetLibraryCollection()
+
+    const allEntries = React.useMemo(() => {
+        if (!collection?.lists) return []
+        return collection.lists.flatMap(list => list.entries ?? [])
+    }, [collection])
+
+    const playTvModeRandom = async () => {
+        if (isLoadingTarget) return
+        setIsLoadingTarget(true)
+        setTvMode(true)
+        playSound("category", 0.4)
+
+        try {
+            const candidates = allEntries.filter(e => {
+                if (!e?.media || (e.libraryData?.mainFileCount ?? 0) === 0) return false
+                return e.media.format === "TV" || e.media.format === "TV_SHORT"
+            })
+
+            if (candidates.length === 0) {
+                toast.error("No hay series en tu biblioteca para iniciar el Modo TV")
+                setIsLoadingTarget(false)
+                return
+            }
+
+            const randomEntry = candidates[Math.floor(Math.random() * candidates.length)]
+            const fullEntry = await fetchAnimeEntry(randomEntry.mediaId)
+            const localFiles = (fullEntry?.localFiles ?? []).filter(f => !!f.path)
+
+            if (localFiles.length === 0) {
+                toast.error("No se encontraron archivos locales para esta serie")
+                setIsLoadingTarget(false)
+                return
+            }
+
+            const selectedFile = localFiles[Math.floor(Math.random() * localFiles.length)]
+            if (!selectedFile?.path) {
+                toast.error("Archivo no disponible")
+                setIsLoadingTarget(false)
+                return
+            }
+
+            const rawEp = selectedFile.metadata?.episode || Number(selectedFile.parsedInfo?.episode)
+            const epNum = typeof rawEp === "number" ? rawEp : Number(rawEp) || 1
+
+            const isMp4 = selectedFile.path.toLowerCase().endsWith(".mp4")
+            const seriesTitle =
+                randomEntry.media?.titleSpanish ||
+                randomEntry.media?.titleRomaji ||
+                randomEntry.media?.titleEnglish ||
+                "Sin título"
+
+            setPlayTarget({
+                path: selectedFile.path,
+                streamType: isMp4 ? "direct" : "transcode",
+                title: seriesTitle,
+                episodeLabel: `Episodio ${epNum}`,
+                episodeNumber: epNum,
+                mediaId: randomEntry.mediaId,
+                malId: randomEntry.media?.idMal ?? null,
+            })
+
+            toast.success(`📺 Modo TV sintonizado: reproduciendo episodio aleatorio`, {
+                description: `${seriesTitle} — Ep. ${epNum}`,
+                duration: 3500,
+            })
+        } catch (err) {
+            console.error("[TvModeRandom] error:", err)
+            toast.error("Ocurrió un error al sintonizar el canal")
+        } finally {
+            setIsLoadingTarget(false)
+        }
+    }
+
+    const playTvModeNext = async (currentMediaId: number, currentEpisodeNumber: number) => {
+        setIsLoadingTarget(true)
+        try {
+            const fullEntry = await fetchAnimeEntry(currentMediaId)
+            const localFiles = (fullEntry?.localFiles ?? []).filter(f => !!f.path)
+
+            if (localFiles.length === 0) {
+                playTvModeRandom()
+                return
+            }
+
+            const nextEpNum = currentEpisodeNumber + 1
+            const nextFile = localFiles.find(f => {
+                const rawEp = f.metadata?.episode || Number(f.parsedInfo?.episode)
+                const epNum = typeof rawEp === "number" ? rawEp : Number(rawEp)
+                return epNum === nextEpNum
+            })
+
+            if (nextFile) {
+                const isMp4 = nextFile.path.toLowerCase().endsWith(".mp4")
+                const seriesTitle =
+                    fullEntry?.media?.titleSpanish ||
+                    fullEntry?.media?.titleRomaji ||
+                    fullEntry?.media?.titleEnglish ||
+                    "Sin título"
+
+                setPlayTarget({
+                    path: nextFile.path,
+                    streamType: isMp4 ? "direct" : "transcode",
+                    title: seriesTitle,
+                    episodeLabel: `Episodio ${nextEpNum}`,
+                    episodeNumber: nextEpNum,
+                    mediaId: currentMediaId,
+                    malId: fullEntry?.media?.idMal ?? null,
+                })
+
+                toast.success(`📺 Siguiente episodio cargado`, {
+                    description: `${seriesTitle} — Ep. ${nextEpNum}`,
+                    duration: 3000,
+                })
+            } else {
+                playTvModeRandom()
+            }
+        } catch (err) {
+            console.error("[TvModeNext] error:", err)
+            playTvModeRandom()
+        } finally {
+            setIsLoadingTarget(false)
+        }
     }
 
     return (
@@ -155,6 +298,48 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                         </button>
                     </Magnetic>
                 )}
+
+                {/* TV Mode Toggle Button */}
+                <Magnetic>
+                    <button
+                        onClick={playTvModeRandom}
+                        title="Sintonizar Modo TV (Aleatorio 24h)"
+                        disabled={isLoadingTarget}
+                        className={cn(
+                            "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl border transition-all duration-500 group px-4 md:px-0 relative backdrop-blur-md",
+                            isLoadingTarget
+                                ? "border-brand-orange/40 bg-brand-orange/10 text-brand-orange cursor-wait"
+                                : tvMode
+                                    ? "text-brand-orange bg-brand-orange/10 border-brand-orange/30"
+                                    : "text-zinc-500 hover:text-white hover:bg-white/[0.02] border-transparent",
+                            "active:scale-90 font-bold"
+                        )}
+                    >
+                        {/* Active Indicator Dot */}
+                        <div className={cn(
+                            "absolute left-0 w-1 h-6 bg-brand-orange rounded-r-full transition-all duration-500 hidden md:block",
+                            tvMode ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
+                        )} />
+                        
+                        <span className="shrink-0 z-10 transition-transform duration-500 group-hover:scale-110 relative">
+                            {isLoadingTarget ? (
+                                <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                >
+                                    <Loader2 className="w-5 h-5" />
+                                </motion.div>
+                            ) : (
+                                <>
+                                    <FaTv className="w-5 h-5" />
+                                </>
+                            )}
+                        </span>
+                        <span className="md:hidden ml-6 flex-1 uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange">
+                            Modo TV {tvMode ? "(24H)" : ""}
+                        </span>
+                    </button>
+                </Magnetic>
             </nav>
 
             {/* Footer / Info */}
@@ -192,6 +377,24 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                     </Link>
                 </Magnetic>
             </div>
+
+            {/* Video Player overlay */}
+            <AnimatePresence>
+                {playTarget && (
+                    <VideoPlayer
+                        streamUrl={playTarget.path}
+                        streamType={playTarget.streamType}
+                        title={playTarget.title}
+                        episodeLabel={playTarget.episodeLabel}
+                        episodeNumber={playTarget.episodeNumber}
+                        mediaId={playTarget.mediaId}
+                        malId={playTarget.malId}
+                        onClose={() => setPlayTarget(null)}
+                        onNextEpisode={() => playTvModeNext(playTarget.mediaId, playTarget.episodeNumber)}
+                        hasNextEpisode={true}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     )
 }

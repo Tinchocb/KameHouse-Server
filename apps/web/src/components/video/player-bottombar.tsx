@@ -1,5 +1,5 @@
 import React from "react"
-import { Play, Pause, ChevronLeft, ChevronRight, Volume2, VolumeX, Maximize, Minimize, SkipForward, PictureInPicture, SkipBack, ListVideo } from "lucide-react"
+import { Play, Pause, ChevronLeft, ChevronRight, Volume2, VolumeX, Maximize, Minimize, SkipForward, PictureInPicture, SkipBack, ListVideo, Tv } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 
 const CastIcon = ({ className }: { className?: string }) => (
@@ -414,6 +414,23 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                             title="Siguiente episodio [N]"
                             className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8">
                             <SkipForward className="w-3.5 h-3.5" />
+                        </button>
+                    )}
+
+                    {/* TV Mode Button */}
+                    {onTvModeChange && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onTvModeChange(!tvMode); }}
+                            aria-label="Alternar Modo TV / Maratón"
+                            title="Modo TV / Maratón"
+                            className={cn(
+                                "transition-all duration-300 flex items-center justify-center w-8 h-8 rounded-full",
+                                tvMode
+                                    ? "text-brand-orange"
+                                    : "text-zinc-500 hover:text-white"
+                            )}
+                        >
+                            <Tv className="w-3.5 h-3.5" fill={tvMode ? "currentColor" : "none"} />
                         </button>
                     )}
 

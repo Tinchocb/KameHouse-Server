@@ -13,8 +13,6 @@ export interface PipelineStage {
     shortLabel: string
     description: string
     icon: React.ReactNode
-    color: string
-    glowColor: string
 }
 
 export const PIPELINE_STAGES: PipelineStage[] = [
@@ -24,26 +22,20 @@ export const PIPELINE_STAGES: PipelineStage[] = [
         shortLabel: "Walk",
         description: "Recorre el sistema de archivos buscando videos",
         icon: <LucideSearch size={18} />,
-        color: "text-blue-400",
-        glowColor: "rgba(59,130,246,0.4)",
     },
     {
         id: "parse",
-        label: "Parseo",
+        label: "Parseo Títulos",
         shortLabel: "Parse",
         description: "Extrae metadata de nombre de archivo y carpetas",
         icon: <LucideClipboardList size={18} />,
-        color: "text-violet-400",
-        glowColor: "rgba(139,92,246,0.4)",
     },
     {
         id: "resolve",
-        label: "Identificación",
+        label: "Identificación Bayesiana",
         shortLabel: "Bayesian",
         description: "Motor Bayesiano con scoring Dice-coefficient",
         icon: <LucideShield size={18} />,
-        color: "text-white",
-        glowColor: "rgba(255,255,255,0.1)",
     },
     {
         id: "probe",
@@ -51,8 +43,6 @@ export const PIPELINE_STAGES: PipelineStage[] = [
         shortLabel: "FFprobe",
         description: "FFprobe + detección de subtítulos externos",
         icon: <LucideActivity size={18} />,
-        color: "text-emerald-400",
-        glowColor: "rgba(16,185,129,0.4)",
     },
     {
         id: "persist",
@@ -60,17 +50,13 @@ export const PIPELINE_STAGES: PipelineStage[] = [
         shortLabel: "Persist",
         description: "Guarda snapshot JSON en la base de datos",
         icon: <LucideDatabase size={18} />,
-        color: "text-sky-400",
-        glowColor: "rgba(14,165,233,0.4)",
     },
     {
         id: "prune",
-        label: "Limpieza",
+        label: "Limpieza DB",
         shortLabel: "Prune",
         description: "Elimina archivos borrados del disco de la DB",
         icon: <LucideScissors size={18} />,
-        color: "text-rose-400",
-        glowColor: "rgba(244,63,94,0.4)",
     },
 ]
 
@@ -83,15 +69,19 @@ export function PipelineStageCard({ stage, isActive, isDone }: {
         <motion.div
             whileHover={{ y: -4, scale: 1.02 }}
             animate={isActive ? {
-                boxShadow: [`0 0 0 rgba(255,110,58,0)`, `0 0 30px ${stage.glowColor}`, `0 0 0 rgba(255,110,58,0)`],
+                boxShadow: [
+                    "0 0 0 rgba(255, 110, 58, 0)",
+                    "0 0 30px rgba(255, 110, 58, 0.15)",
+                    "0 0 0 rgba(255, 110, 58, 0)"
+                ],
             } : {}}
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
             className={cn(
                 "relative p-5 rounded-2xl border transition-all duration-500 overflow-hidden group",
                 isActive
-                    ? "border-primary/40 bg-primary/[0.04] shadow-2xl shadow-primary/20"
+                    ? "border-[#ff6e3a]/45 bg-[#ff6e3a]/[0.03] shadow-[0_0_30px_rgba(255,110,58,0.05)]"
                     : isDone
-                        ? "border-emerald-500/25 bg-emerald-500/[0.02]"
+                        ? "border-emerald-500/20 bg-emerald-500/[0.01]"
                         : "border-white/5 bg-white/[0.01] hover:border-white/10 hover:bg-white/[0.02]"
             )}
         >
@@ -107,9 +97,9 @@ export function PipelineStageCard({ stage, isActive, isDone }: {
                 <div className={cn(
                     "w-10 h-10 rounded-xl flex items-center justify-center border transition-all duration-500",
                     isActive
-                        ? "text-primary border-primary/30 bg-primary/10 shadow-[0_0_15px_rgba(255,110,58,0.25)]"
+                        ? "text-[#ff6e3a] border-[#ff6e3a]/30 bg-[#ff6e3a]/10 shadow-[0_0_15px_rgba(255,110,58,0.25)]"
                         : isDone
-                            ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/10"
+                            ? "text-[#34d399] border-emerald-500/20 bg-emerald-500/5 shadow-[0_0_10px_rgba(52,211,153,0.1)]"
                             : "text-zinc-500 border-white/5 bg-white/[0.02] group-hover:border-zinc-700"
                 )}>
                     {isDone && !isActive ? <LucideCheck size={18} strokeWidth={3} /> : stage.icon}
@@ -118,7 +108,7 @@ export function PipelineStageCard({ stage, isActive, isDone }: {
                 <div>
                     <p className={cn(
                         "text-[9px] font-black uppercase tracking-[0.25em] transition-colors duration-500",
-                        isActive ? "text-primary" : isDone ? "text-emerald-500/60" : "text-zinc-500"
+                        isActive ? "text-[#ff6e3a]" : isDone ? "text-emerald-500/60" : "text-zinc-500"
                     )}>
                         {stage.shortLabel}
                     </p>
@@ -128,7 +118,7 @@ export function PipelineStageCard({ stage, isActive, isDone }: {
                 {isActive && (
                     <div className="absolute bottom-0 left-0 right-0 h-[2px] overflow-hidden">
                         <motion.div 
-                            className="h-full bg-primary shadow-[0_0_8px_rgba(255,110,58,0.8)]"
+                            className="h-full bg-[#ff6e3a] shadow-[0_0_8px_rgba(255,110,58,0.8)]"
                             animate={{ 
                                 x: ["-100%", "200%"],
                             }}
@@ -172,7 +162,7 @@ export function ProgressRing({ progress, size, stroke }: { progress: number; siz
                 />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="font-bebas text-3xl text-white leading-none">{Math.round(progress)}</span>
+                <span className="font-bebas text-5xl text-white leading-none">{Math.round(progress)}</span>
                 <span className="text-[10px] font-black text-zinc-500 uppercase tracking-tighter">%</span>
             </div>
         </div>
