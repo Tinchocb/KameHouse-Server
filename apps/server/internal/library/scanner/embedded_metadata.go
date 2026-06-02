@@ -166,6 +166,9 @@ func parsedMediaFromLocalFile(lf *dto.LocalFile) parser.ParsedMedia {
 		name = filepath.Base(lf.Path)
 	}
 	pm := parser.Parse(filepath.Base(name))
+	if parsedTitle := lf.GetParsedTitle(); parsedTitle != "" {
+		pm.Title = parsedTitle
+	}
 
 	if lf.EmbeddedMetadata == nil {
 		return pm

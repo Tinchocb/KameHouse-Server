@@ -20,6 +20,7 @@ func MockHydratedLocalFile(opts MockHydratedLocalFileOptions) *LocalFile {
 	lf.Metadata = &LocalFileMetadata{
 		AniDBEpisode: opts.MetadataAniDbEpisode,
 		Episode:      opts.MetadataEpisode,
+		Episodes:     []int{opts.MetadataEpisode},
 		Type:         opts.MetadataType,
 	}
 	return lf

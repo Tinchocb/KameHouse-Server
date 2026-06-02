@@ -37,6 +37,7 @@ func TestWatcher_DynamicDirRegistration(t *testing.T) {
 	w, err := NewWatcher(&NewWatcherOptions{
 		Logger:         &logger,
 		WSEventManager: wsEvents,
+		DebounceDelay:  50 * time.Millisecond,
 	})
 	if err != nil {
 		t.Fatal("failed to create watcher:", err)

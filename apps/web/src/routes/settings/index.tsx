@@ -149,10 +149,10 @@ function SettingsPage() {
     const form = useForm<SettingsFormValues>({
         resolver: zodResolver(settingsSchema) as unknown as Resolver<SettingsFormValues>,
         defaultValues: (serverSettings || {}) as unknown as SettingsFormValues,
-        mode: "onChange",
+        mode: "onTouched",
     })
 
-    const { control, handleSubmit, formState: { isDirty }, reset } = form
+    const { control, handleSubmit, register, formState: { isDirty }, reset } = form
 
     useEffect(() => {
         if (serverSettings) {
@@ -413,13 +413,14 @@ function SettingsPage() {
                     </section>
 
                     <form
+                        id="settings-form"
                         onSubmit={handleSubmit(onSubmit as unknown as SubmitHandler<FieldValues>)}
                         className="w-full relative z-10"
                     >
                         {activeTab === "library"      && <LibraryTab control={control} />}
-                        {activeTab === "player"       && <PlayerTab control={control} />}
-                        {activeTab === "scanner"      && <ScannerTab control={control} />}
-                        {activeTab === "integrations" && <IntegrationsTab control={control} />}
+                        {activeTab === "player"       && <PlayerTab control={control} register={register} />}
+                        {activeTab === "scanner"      && <ScannerTab control={control} register={register} />}
+                        {activeTab === "integrations" && <IntegrationsTab control={control} register={register} />}
                         {activeTab === "system"       && <SystemTab control={control} />}
                     </form>
                 </main>
@@ -432,9 +433,9 @@ function SettingsPage() {
                             animate={{ opacity: 1, y: 0, x: "-50%" }}
                             exit={{ opacity: 0, y: 40, x: "-50%" }}
                             transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                            className="fixed bottom-7 left-[calc(50%_+_130px)] -translate-x-1/2 z-50"
+                            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50"
                         >
-                            <div className="relative bg-[#0c0e12]/95 border border-cyan-500/10 backdrop-blur-xl px-5 py-3 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.7),0_0_0_1px_rgba(6,182,212,0.04)] flex items-center gap-8 overflow-hidden">
+                            <div className="relative bg-[#000000]/95 border border-cyan-500/10 backdrop-blur-xl px-5 py-3 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.9),0_0_0_1px_rgba(6,182,212,0.04)] flex items-center gap-8 overflow-hidden">
                                 <div className="absolute inset-0 pointer-events-none opacity-[0.04] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.4)_50%)] bg-[size:100%_3px]" />
                                 <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_left,rgba(6,182,212,0.06),transparent_60%)]" />
 
@@ -455,12 +456,23 @@ function SettingsPage() {
                                         Descartar
                                     </button>
                                     <button
-                                        type="button"
+                                        type="submit"
+                                        form="settings-form"
                                         disabled={isSaving}
-                                        onClick={handleSubmit(onSubmit as unknown as SubmitHandler<FieldValues>)}
                                         className="bg-cyan-500 text-black hover:bg-cyan-400 px-5 py-2 rounded-xl text-[8px] font-black uppercase tracking-[0.2em] disabled:opacity-50 flex items-center gap-2 transition-all active:scale-95 shadow-[0_4px_20px_rgba(6,182,212,0.3)] font-mono font-bold"
                                     >
-                                        {isSaving ? <LucideRefreshCw className="animate-spin" size={11} /> : <LucideSave size={11} />}
+                                        {isSaving ? (
+                                            <svg className="animate-spin h-3 w-3 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                        ) : (
+                                            <svg className="h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                                                <polyline points="17 21 17 13 7 13 7 21" />
+                                                <polyline points="7 3 7 8 15 8" />
+                                            </svg>
+                                        )}
                                         {isSaving ? "Guardando..." : "Guardar"}
                                     </button>
                                 </div>

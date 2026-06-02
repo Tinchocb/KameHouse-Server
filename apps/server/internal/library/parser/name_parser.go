@@ -92,6 +92,7 @@ func Parse(filename string) ParsedMedia {
 		pm.Season, _ = strconv.Atoi(sStr)
 		epNum, _ := strconv.Atoi(eStr)
 		pm.Episodes = []int{epNum}
+		pm.Episode = epNum // Backwards compatibility
 		return pm
 	}
 

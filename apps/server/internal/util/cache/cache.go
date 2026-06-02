@@ -17,12 +17,14 @@ type Cache[T any] struct {
 	mu      sync.RWMutex
 	entries map[string]*CacheEntry[T]
 	ttl     time.Duration
+	stop    chan struct{}
 }
 
 func NewCache[T any](ttl time.Duration) *Cache[T] {
 	c := &Cache[T]{
 		entries: make(map[string]*CacheEntry[T]),
 		ttl:     ttl,
+		stop:    make(chan struct{}),
 	}
 
 	// Background reaper: periodically prune expired entries to prevent
@@ -34,12 +36,28 @@ func NewCache[T any](ttl time.Duration) *Cache[T] {
 		}
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
-		for range ticker.C {
-			c.Cleanup()
+		for {
+			select {
+			case <-ticker.C:
+				c.Cleanup()
+			case <-c.stop:
+				return
+			}
 		}
 	}()
 
 	return c
+}
+
+func (c *Cache[T]) Close() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	select {
+	case <-c.stop:
+		// already closed
+	default:
+		close(c.stop)
+	}
 }
 
 func (c *Cache[T]) Get(key string) (T, bool) {

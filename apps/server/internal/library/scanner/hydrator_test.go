@@ -2,10 +2,12 @@ package scanner
 
 import (
 	"context"
+	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/library/summary"
+	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/test_utils"
 	"kamehouse/internal/util"
 	"testing"
@@ -13,7 +15,57 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type mockMetadataProvider struct {
+	metadata_provider.Provider
+}
+
+func (m *mockMetadataProvider) GetAnimeMetadata(id int) (*metadata.AnimeMetadata, error) {
+	switch id {
+	case 155211: // Danmachi IV Part 2
+		return &metadata.AnimeMetadata{
+			EpisodeCount: 11,
+			Episodes: map[string]*metadata.EpisodeMetadata{
+				"1": {
+					EpisodeNumber:         12,
+					AbsoluteEpisodeNumber: 34,
+					Episode:               "12",
+				},
+			},
+		}, nil
+	case 131586: // 86 Part 2
+		return &metadata.AnimeMetadata{
+			EpisodeCount: 12,
+			Episodes: map[string]*metadata.EpisodeMetadata{
+				"1": {
+					EpisodeNumber:         12,
+					AbsoluteEpisodeNumber: 30,
+					Episode:               "12",
+				},
+			},
+		}, nil
+	case 199112: // Muri ja Nakatta!
+		return &metadata.AnimeMetadata{
+			EpisodeCount: 14,
+			Episodes: map[string]*metadata.EpisodeMetadata{
+				"1": {
+					EpisodeNumber:         1,
+					AbsoluteEpisodeNumber: 1,
+					Episode:               "1",
+				},
+			},
+		}, nil
+	}
+	return nil, nil
+}
+
+func (m *mockMetadataProvider) GetAnimeMetadataWrapper(baseAnime *platform.UnifiedMedia, animeMetadata *metadata.AnimeMetadata) metadata_provider.AnimeMetadataWrapper {
+	return metadata_provider.NewSimpleAnimeMetadataWrapper(animeMetadata)
+}
+
 func TestFileHydrator_HydrateMetadata(t *testing.T) {
+	ptrStr := func(s string) *string { return &s }
+	ptrInt := func(i int) *int { return &i }
+	ptrFormat := func(f dto.MediaFormat) *dto.MediaFormat { return &f }
 
 	logger := util.NewLogger()
 	test_utils.InitTestProvider(t)
@@ -22,8 +74,57 @@ func TestFileHydrator_HydrateMetadata(t *testing.T) {
 		t.Fatalf("Failed to connect to database: %v", err)
 	}
 	_ = database
-	metadataProvider := metadata_provider.GetFakeProvider(t, database)
-	allMedia := make([]*dto.NormalizedMedia, 0)
+	metadataProvider := &mockMetadataProvider{}
+	allMedia := []*dto.NormalizedMedia{
+		{
+			ID: 131586,
+			Title: &dto.NormalizedMediaTitle{
+				Romaji:  ptrStr("86: Eighty Six Part 2"),
+				English: ptrStr("86 EIGHTY-SIX Part 2"),
+			},
+			Synonyms: []*string{ptrStr("86 - Eighty Six"), ptrStr("86"), ptrStr("86 - Eighty Six - Never-Ending")},
+			Format:   ptrFormat(dto.MediaFormatTV),
+			Episodes: ptrInt(12),
+		},
+		{
+			ID: 155211,
+			Title: &dto.NormalizedMediaTitle{
+				Romaji:  ptrStr("Dungeon ni Deai wo Motomeru no wa Machigatteiru Darou ka IV: Fuka Shou - Yakusou-hen"),
+				English: ptrStr("Is It Wrong to Try to Pick Up Girls in a Dungeon? IV Part 2"),
+			},
+			Synonyms: []*string{ptrStr("Danmachi"), ptrStr("Danmachi IV"), ptrStr("Danmachi S4"), ptrStr("Danmachi S4 Part 2")},
+			Format:   ptrFormat(dto.MediaFormatTV),
+			Episodes: ptrInt(11),
+		},
+		{
+			ID: 199112,
+			Title: &dto.NormalizedMediaTitle{
+				Romaji:  ptrStr("Watashi ga Koibito ni Nareru Wake Naijan, Murimuri! (※Muri ja Nakatta!)"),
+				English: ptrStr("There's No Freaking Way I'll Be Your Lover, Unless..."),
+			},
+			Synonyms: []*string{ptrStr("Muri ja Nakatta!"), ptrStr("Watashi ga Koibito ni Nareru Wake Naijan, Murimuri!")},
+			Format:   ptrFormat(dto.MediaFormatTV),
+			Episodes: ptrInt(14),
+		},
+		{
+			ID: 113024,
+			Title: &dto.NormalizedMediaTitle{
+				Romaji:  ptrStr("Shoujo☆Kageki Revue Starlight Movie"),
+				English: ptrStr("Revue Starlight The Movie"),
+			},
+			Format:   ptrFormat(dto.MediaFormatMovie),
+			Episodes: ptrInt(1),
+		},
+		{
+			ID: 166240,
+			Title: &dto.NormalizedMediaTitle{
+				Romaji:  ptrStr("Kimetsu no Yaiba: Hashira Geiko-hen"),
+				English: ptrStr("Demon Slayer: Kimetsu no Yaiba Hashira Training Arc"),
+			},
+			Format:   ptrFormat(dto.MediaFormatTV),
+			Episodes: ptrInt(8),
+		},
+	}
 
 	tests := []struct {
 		name            string

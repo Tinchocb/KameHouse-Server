@@ -3462,8 +3462,8 @@ func TestParseSegmentInfo_Rich(t *testing.T) {
 	segInfo.Write([]byte{0x3E, 0x83, 0xBB, 0x85, 'n', '.', 'm', 'k', 'v'})
 	// TimestampScale 1,000,000
 	segInfo.Write([]byte{0x2A, 0xD7, 0xB1, 0x83, 0x0F, 0x42, 0x40})
-	// Duration = 123 (as uint)
-	segInfo.Write([]byte{0x44, 0x89, 0x81, 0x7B})
+	// Duration = 123.0 (as float32)
+	segInfo.Write([]byte{0x44, 0x89, 0x84, 0x42, 0xF6, 0x00, 0x00})
 	// DateUTC (int64 as signed vint stored in ReadInt path via element.ReadInt; here emulate 8-byte int 0)
 	// We will skip setting DateUTC to keep test simple and stable.
 	// Title
@@ -3489,7 +3489,7 @@ func TestParseSegmentInfo_Rich(t *testing.T) {
 	if fi == nil || fi.Title != "Rich Title" || fi.Filename != "a.mkv" || fi.PrevFilename != "p.mkv" || fi.NextFilename != "n.mkv" {
 		t.Fatalf("Unexpected file info: %+v", fi)
 	}
-	if fi.TimecodeScale != 1000000 || fi.Duration != 123 {
+	if fi.TimecodeScale != 1000000 || fi.Duration != 123*fi.TimecodeScale {
 		t.Errorf("Unexpected scale/duration: %+v", fi)
 	}
 }

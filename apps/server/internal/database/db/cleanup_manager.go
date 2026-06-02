@@ -91,7 +91,7 @@ func (cm *CleanupManager) trimLocalFileEntries() {
 		}
 
 		if len(idsToDelete) > 0 {
-			err = cm.gormdb.Table("local_files").Delete(nil, idsToDelete).Error
+			err = cm.gormdb.Delete(&models.LocalFiles{}, idsToDelete).Error
 			if err != nil {
 				cm.logger.Error().Err(err).Msg("database: Failed to delete old legacy local file entries")
 				return

@@ -287,6 +287,9 @@ func TestMetadataParser_Torrent(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
+	if testMagnet == "" {
+		t.Skip("Skipping integration test because testMagnet is empty")
+	}
 
 	tempDir := t.TempDir()
 	client, tor, file := getTestTorrentFile(t, testMagnet, tempDir)

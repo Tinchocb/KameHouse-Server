@@ -18,11 +18,13 @@ type Watcher struct {
 	WSEventManager events.WSEventManagerInterface
 	TotalSize      string
 	Debouncer      *FileDebouncer
+	DebounceDelay  time.Duration
 }
 
 type NewWatcherOptions struct {
 	Logger         *zerolog.Logger
 	WSEventManager events.WSEventManagerInterface
+	DebounceDelay  time.Duration
 }
 
 // NewWatcher creates a new Watcher instance for monitoring a directory and its subdirectories
@@ -32,11 +34,17 @@ func NewWatcher(opts *NewWatcherOptions) (*Watcher, error) {
 		return nil, err
 	}
 
+	debounceDelay := opts.DebounceDelay
+	if debounceDelay <= 0 {
+		debounceDelay = 5 * time.Second
+	}
+
 	return &Watcher{
 		Watcher:        watcher,
 		Logger:         opts.Logger,
 		WSEventManager: opts.WSEventManager,
 		Debouncer:      NewFileDebouncer(),
+		DebounceDelay:  debounceDelay,
 	}, nil
 }
 
@@ -139,11 +147,15 @@ func (w *Watcher) StartWatching(
 							}
 							return nil
 						})
+						// Also trigger action on directory creation (needed for dynamic registration scans)
+						w.Debouncer.Add(event.Name, w.DebounceDelay, func() {
+							triggerAction(event.Name)
+						})
 					} else {
 						w.Logger.Debug().Msgf("watcher: Media file created/modified: %s", event.Name)
 						w.WSEventManager.SendEvent(events.LibraryWatcherFileAdded, event.Name)
 						// 5. Debounce the library scan action
-						w.Debouncer.Add(event.Name, 5*time.Second, func() {
+						w.Debouncer.Add(event.Name, w.DebounceDelay, func() {
 							triggerAction(event.Name)
 						})
 					}
@@ -151,7 +163,7 @@ func (w *Watcher) StartWatching(
 
 				if event.Op&fsnotify.Write == fsnotify.Write {
 					w.Logger.Debug().Msgf("watcher: Media file modified: %s", event.Name)
-					w.Debouncer.Add(event.Name, 5*time.Second, func() {
+					w.Debouncer.Add(event.Name, w.DebounceDelay, func() {
 						triggerAction(event.Name)
 					})
 				}
@@ -159,7 +171,7 @@ func (w *Watcher) StartWatching(
 				if event.Op&fsnotify.Remove == fsnotify.Remove {
 					w.Logger.Debug().Msgf("watcher: File/Directory removed: %s", event.Name)
 					w.WSEventManager.SendEvent(events.LibraryWatcherFileRemoved, event.Name)
-					w.Debouncer.Add(event.Name, 5*time.Second, func() {
+					w.Debouncer.Add(event.Name, w.DebounceDelay, func() {
 						triggerAction(event.Name)
 					})
 				}

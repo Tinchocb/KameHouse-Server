@@ -1,12 +1,86 @@
 import React from "react"
 import { cn } from "@/components/ui/core/styling"
-import {
-    LucideRefreshCw, LucidePlus, LucideTrash2, LucideFolder,
-    LucideEye, LucideEyeOff, LucideChevronDown, LucideCheck,
-    LucideWifi, LucideWifiOff
-} from "lucide-react"
-import { Controller, type Control, type Path, type FieldValues } from "react-hook-form"
 import { Switch } from "@/components/ui/switch"
+
+// ─── Inline SVGs ──────────────────────────────────────────────────────────────
+
+export const RefreshIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+        <path d="M3 3v5h5" />
+        <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+        <path d="M16 16h5v5" />
+    </svg>
+)
+
+export const PlusIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M5 12h14" />
+        <path d="M12 5v14" />
+    </svg>
+)
+
+export const TrashIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M3 6h18" />
+        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+    </svg>
+)
+
+export const FolderIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+    </svg>
+)
+
+export const EyeIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+        <circle cx="12" cy="12" r="3" />
+    </svg>
+)
+
+export const EyeOffIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+        <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+        <path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+        <line x1="2" x2="22" y1="2" y2="22" />
+    </svg>
+)
+
+export const ChevronDownIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="m6 9 6 6 6-6" />
+    </svg>
+)
+
+export const CheckIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M20 6 9 17l-5-5" />
+    </svg>
+)
+
+export const WifiIcon = ({ className, style }: { className?: string, style?: React.CSSProperties }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+        <path d="M12 20h.01" />
+        <path d="M8.5 16.5a5 5 0 0 1 7 0" />
+        <path d="M5 13a10 10 0 0 1 14 0" />
+        <path d="M1.5 9.5a15 15 0 0 1 21 0" />
+    </svg>
+)
+
+export const WifiOffIcon = ({ className, style }: { className?: string, style?: React.CSSProperties }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+        <path d="M1 1l22 22" />
+        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 13" />
+        <path d="M5 13a10.94 10.94 0 0 1 5.83-2.84" />
+        <path d="M12 20h.01" />
+        <path d="M8.5 16.5a5 5 0 0 1 7 0" />
+        <path d="M21.3 4.7a15 15 0 0 0-18.6 0" />
+    </svg>
+)
 
 // ─── ScanButton ────────────────────────────────────────────────────────────────
 
@@ -25,7 +99,6 @@ export function ScanButton({ variant, onClick, loading }: { variant: "delta" | "
                 loading && "opacity-50 cursor-not-allowed"
             )}
         >
-            {/* Subtle background glow */}
             {isDelta && (
                 <div className="absolute inset-0 opacity-0 group-hover/scanbtn:opacity-100 transition-opacity duration-700 bg-[radial-gradient(ellipse_at_left_bottom,rgba(6,182,212,0.06),transparent_60%)] pointer-events-none" />
             )}
@@ -41,8 +114,7 @@ export function ScanButton({ variant, onClick, loading }: { variant: "delta" | "
                     ? "bg-cyan-500/10 border-cyan-500/20 group-hover/scanbtn:bg-cyan-500/20"
                     : "bg-white/[0.02] border-white/5 group-hover/scanbtn:bg-white/[0.06]"
             )}>
-                <LucideRefreshCw
-                    size={16}
+                <RefreshIcon
                     className={cn(
                         "transition-all duration-700",
                         isDelta ? "text-cyan-400" : "text-white/75 group-hover/scanbtn:text-white",
@@ -57,7 +129,6 @@ export function ScanButton({ variant, onClick, loading }: { variant: "delta" | "
 // ─── IntegrationCard ──────────────────────────────────────────────────────────
 
 const SERVICE_COLORS: Record<string, string> = {
-    MyAnimeList: "#2E51A2",
     TMDB: "#01B4E4",
 }
 
@@ -73,7 +144,6 @@ export function IntegrationCard({ name, status, connected, disabled }: { name: s
                     ? "border-white/[0.08] bg-white/[0.02] hover:border-white/15 hover:bg-white/[0.04]"
                     : "border-white/[0.05] bg-white/[0.01] hover:border-white/10 hover:bg-white/[0.02]"
         )}>
-            {/* Color glow for connected */}
             {connected && (
                 <div
                     className="absolute inset-0 opacity-0 group-hover/intcard:opacity-100 transition-opacity duration-700 pointer-events-none"
@@ -81,7 +151,6 @@ export function IntegrationCard({ name, status, connected, disabled }: { name: s
                 />
             )}
 
-            {/* Logo icon */}
             <div
                 className="w-11 h-11 rounded-xl border flex items-center justify-center shrink-0 transition-all duration-300 group-hover/intcard:scale-105"
                 style={{
@@ -91,8 +160,8 @@ export function IntegrationCard({ name, status, connected, disabled }: { name: s
                 }}
             >
                 {connected
-                    ? <LucideWifi size={18} style={{ color }} />
-                    : <LucideWifiOff size={18} className="text-zinc-500" />
+                    ? <WifiIcon style={{ color }} />
+                    : <WifiOffIcon className="text-zinc-500" />
                 }
             </div>
 
@@ -133,7 +202,7 @@ export function StatusCard({ label, value, icon: Icon }: { label: string; value:
         <div className="p-5 border border-white/[0.05] bg-white/[0.02] backdrop-blur-md rounded-2xl flex items-center gap-4 transition-all duration-300 hover:bg-white/[0.04] hover:border-white/10 group/statuscard relative overflow-hidden">
             <div className="absolute inset-0 opacity-0 group-hover/statuscard:opacity-100 transition-opacity duration-700 bg-[radial-gradient(ellipse_at_left,rgba(6,182,212,0.04),transparent_70%)] pointer-events-none" />
             <div className="w-11 h-11 rounded-xl bg-cyan-500/5 border border-cyan-500/10 flex items-center justify-center text-cyan-400/60 group-hover/statuscard:text-cyan-400 group-hover/statuscard:bg-cyan-500/10 transition-all duration-300 relative z-10">
-                <Icon size={18} />
+                <Icon className="w-[18px] h-[18px]" />
             </div>
             <div className="relative z-10">
                 <p className="text-[9px] font-black uppercase tracking-[0.25em] text-zinc-500 mb-0.5">{label}</p>
@@ -176,324 +245,243 @@ export function Card({ children, className }: { children: React.ReactNode; class
 
 // ─── OsToggle ─────────────────────────────────────────────────────────────────
 
-export interface OsToggleProps<T extends FieldValues> {
-    control: Control<T>
-    name: Path<T>
+export interface OsToggleProps {
+    name?: string
     label: string
-    desc?: string
+    description?: string
+    checked: boolean
+    onChange: (checked: boolean) => void
     disabled?: boolean
-    onSave?: () => void
 }
 
-export function OsToggle<T extends FieldValues>({ control, name, label, desc, disabled, onSave }: OsToggleProps<T>) {
+export function OsToggle({ label, description, checked, onChange, disabled }: OsToggleProps) {
     return (
-        <Controller
-            control={control}
-            name={name}
-            render={({ field }) => (
-                <div className={cn(
-                    "flex items-center justify-between px-6 py-4 border-b border-white/[0.03] last:border-0 transition-all duration-200 gap-8 group/toggle relative",
-                    field.value && "bg-cyan-500/[0.02]",
-                    disabled
-                        ? "opacity-40 cursor-not-allowed pointer-events-none"
-                        : "hover:bg-white/[0.02] cursor-pointer"
-                )}
-                    onClick={() => {
-                        if (disabled) return
-                        field.onChange(!field.value)
-                        onSave?.()
-                    }}
-                >
-                    {/* Left active accent */}
-                    <div className={cn(
-                        "absolute left-0 top-1/2 -translate-y-1/2 w-[2px] rounded-r-full transition-all duration-300",
-                        field.value ? "h-6 bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.6)]" : "h-0 bg-transparent"
-                    )} />
+        <div className={cn(
+            "flex items-center justify-between px-6 py-4 border-b border-white/[0.03] last:border-0 transition-all duration-200 gap-8 group/toggle relative",
+            checked && "bg-cyan-500/[0.02]",
+            disabled
+                ? "opacity-40 cursor-not-allowed pointer-events-none"
+                : "hover:bg-white/[0.02] cursor-pointer"
+        )}
+            onClick={() => {
+                if (disabled) return
+                onChange(!checked)
+            }}
+        >
+            <div className={cn(
+                "absolute left-0 top-1/2 -translate-y-1/2 w-[2px] rounded-r-full transition-all duration-300",
+                checked ? "h-6 bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.6)]" : "h-0 bg-transparent"
+            )} />
 
-                    <div className="space-y-0.5 flex-1 pl-2">
-                        <p className={cn(
-                            "text-sm font-semibold tracking-tight transition-colors duration-200",
-                            field.value ? "text-white" : "text-zinc-300 group-hover/toggle:text-white"
-                        )}>{label}</p>
-                        {desc && <p className="text-xs text-zinc-600 leading-relaxed font-medium group-hover/toggle:text-zinc-500 transition-colors">{desc}</p>}
-                    </div>
-                    <Switch
-                        value={!!field.value}
-                        onValueChange={(v: boolean) => {
-                            if (disabled) return
-                            field.onChange(v)
-                            onSave?.()
-                        }}
-                        disabled={disabled}
-                        className="scale-[0.9] origin-right transition-all duration-300 data-[state=checked]:bg-cyan-500 shrink-0"
-                        onClick={(e) => e.stopPropagation()}
-                    />
-                </div>
-            )}
-        />
+            <div className="space-y-0.5 flex-1 pl-2">
+                <p className={cn(
+                    "text-sm font-semibold tracking-tight transition-colors duration-200",
+                    checked ? "text-white" : "text-zinc-300 group-hover/toggle:text-white"
+                )}>{label}</p>
+                {description && <p className="text-xs text-zinc-600 leading-relaxed font-medium group-hover/toggle:text-zinc-500 transition-colors">{description}</p>}
+            </div>
+            <Switch
+                value={checked}
+                onValueChange={(v: boolean) => {
+                    if (disabled) return
+                    onChange(v)
+                }}
+                disabled={disabled}
+                className="scale-[0.9] origin-right transition-all duration-300 data-[state=checked]:bg-cyan-500 shrink-0"
+                onClick={(e) => e.stopPropagation()}
+            />
+        </div>
     )
 }
 
 // ─── PathList ─────────────────────────────────────────────────────────────────
 
-export function PathList<T extends FieldValues>({ control, name, label, placeholder }: { control: Control<T>, name: Path<T>, label: string, placeholder?: string }) {
+export interface PathListProps {
+    directories: string[]
+    onAdd: (path: string) => void
+    onRemove: (path: string) => void
+    label: string
+    placeholder?: string
+}
+
+export function PathList({ directories = [], onAdd, onRemove, label, placeholder }: PathListProps) {
     const [inputValue, setInputValue] = React.useState("")
 
+    const handleAdd = () => {
+        if (inputValue.trim() && !directories.includes(inputValue.trim())) {
+            onAdd(inputValue.trim())
+            setInputValue("")
+        }
+    }
+
     return (
-        <Controller
-            control={control}
-            name={name}
-            render={({ field }) => {
-                const paths = (Array.isArray(field.value) ? field.value : []) as string[]
+        <div className="p-7 space-y-5">
+            <div className="space-y-1.5">
+                <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-lg bg-cyan-500/5 border border-cyan-500/10 flex items-center justify-center">
+                        <FolderIcon className="text-cyan-400/60" />
+                    </div>
+                    <p className="text-base font-bebas tracking-wider text-white uppercase">{label}</p>
+                </div>
+                <p className="text-xs text-zinc-600 font-medium leading-relaxed max-w-xl pl-10">
+                    Directorios locales vinculados a este motor. El escáner analizará estos directorios de forma recursiva.
+                </p>
+            </div>
 
-                const handleAdd = () => {
-                    if (inputValue.trim() && !paths.includes(inputValue.trim())) {
-                        field.onChange([...paths, inputValue.trim()])
-                        setInputValue("")
-                    }
-                }
-
-                const handleRemove = (indexToRemove: number) => {
-                    field.onChange(paths.filter((_, idx) => idx !== indexToRemove))
-                }
-
-                return (
-                    <div className="p-7 space-y-5">
-                        <div className="space-y-1.5">
-                            <div className="flex items-center gap-3">
-                                <div className="w-7 h-7 rounded-lg bg-cyan-500/5 border border-cyan-500/10 flex items-center justify-center">
-                                    <LucideFolder size={13} className="text-cyan-400/60" />
-                                </div>
-                                <p className="text-base font-bebas tracking-wider text-white uppercase">{label}</p>
+            <div className="space-y-2">
+                {directories.length === 0 ? (
+                    <div className="border border-dashed border-white/[0.04] bg-white/[0.005] p-6 rounded-xl text-center space-y-1">
+                        <FolderIcon className="mx-auto mb-2 text-zinc-700" />
+                        <p className="text-zinc-600 text-xs font-medium">No hay directorios configurados</p>
+                        <p className="text-zinc-700 text-[10px] uppercase tracking-[0.2em]">Agrega uno con el campo de abajo</p>
+                    </div>
+                ) : (
+                    directories.map((path, idx) => (
+                        <div key={idx} className="flex items-center justify-between bg-white/[0.01] border border-white/[0.05] px-4 py-3 rounded-xl hover:bg-white/[0.03] hover:border-white/10 transition-all duration-200 group/pathitem">
+                            <div className="flex items-center gap-3 min-w-0">
+                                <CheckIcon className="text-cyan-400/60 shrink-0" />
+                                <span className="font-mono text-xs text-zinc-400 truncate group-hover/pathitem:text-zinc-200 transition-colors">{path}</span>
                             </div>
-                            <p className="text-xs text-zinc-600 font-medium leading-relaxed max-w-xl pl-10">
-                                Directorios locales vinculados a este motor. El escáner analizará estos directorios de forma recursiva.
-                            </p>
-                        </div>
-
-                        {/* List of paths */}
-                        <div className="space-y-2">
-                            {paths.length === 0 ? (
-                                <div className="border border-dashed border-white/[0.04] bg-white/[0.005] p-6 rounded-xl text-center space-y-1">
-                                    <LucideFolder size={20} className="text-zinc-700 mx-auto mb-2" />
-                                    <p className="text-zinc-600 text-xs font-medium">No hay directorios configurados</p>
-                                    <p className="text-zinc-700 text-[10px] uppercase tracking-[0.2em]">Agrega uno con el campo de abajo</p>
-                                </div>
-                            ) : (
-                                paths.map((path: string, idx: number) => (
-                                    <div key={idx} className="flex items-center justify-between bg-white/[0.01] border border-white/[0.05] px-4 py-3 rounded-xl hover:bg-white/[0.03] hover:border-white/10 transition-all duration-200 group/pathitem">
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            <LucideCheck size={12} className="text-cyan-400/60 shrink-0" />
-                                            <span className="font-mono text-xs text-zinc-400 truncate group-hover/pathitem:text-zinc-200 transition-colors">{path}</span>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleRemove(idx)}
-                                            className="text-zinc-700 hover:text-red-400 p-1.5 hover:bg-red-500/10 rounded-lg border border-transparent hover:border-red-500/10 transition-all ml-3 shrink-0"
-                                        >
-                                            <LucideTrash2 size={13} />
-                                        </button>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-
-                        {/* Input to add path */}
-                        <div className="flex gap-2 bg-black/50 border border-white/[0.06] focus-within:border-cyan-500/20 focus-within:shadow-[0_0_20px_rgba(6,182,212,0.04)] rounded-xl p-1.5 transition-all">
-                            <input
-                                type="text"
-                                value={inputValue}
-                                onChange={(e) => setInputValue(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                        e.preventDefault()
-                                        handleAdd()
-                                    }
-                                }}
-                                placeholder={placeholder || "Ej. C:\\Media\\Peliculas"}
-                                className="flex-1 bg-transparent px-4 py-2 text-white placeholder-zinc-700 text-xs font-mono focus:outline-none"
-                            />
                             <button
                                 type="button"
-                                onClick={handleAdd}
-                                className="bg-cyan-500 hover:bg-cyan-400 text-black px-5 py-2 rounded-lg font-black uppercase text-[9px] tracking-[0.2em] transition-all shrink-0 flex items-center gap-1.5 active:scale-95"
+                                onClick={() => onRemove(path)}
+                                className="text-zinc-700 hover:text-red-400 p-1.5 hover:bg-red-500/10 rounded-lg border border-transparent hover:border-red-500/10 transition-all ml-3 shrink-0"
                             >
-                                <LucidePlus size={12} />
-                                AGREGAR
+                                <TrashIcon />
                             </button>
                         </div>
-                    </div>
-                )
-            }}
-        />
+                    ))
+                )}
+            </div>
+
+            <div className="flex gap-2 bg-black/50 border border-white/[0.06] focus-within:border-cyan-500/20 focus-within:shadow-[0_0_20px_rgba(6,182,212,0.04)] rounded-xl p-1.5 transition-all">
+                <input
+                    type="text"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault()
+                            handleAdd()
+                        }
+                    }}
+                    placeholder={placeholder || "Ej. C:\\Media\\Peliculas"}
+                    className="flex-1 bg-transparent px-4 py-2 text-white placeholder-zinc-700 text-xs font-mono focus:outline-none"
+                />
+                <button
+                    type="button"
+                    onClick={handleAdd}
+                    className="bg-cyan-500 hover:bg-cyan-400 text-black px-5 py-2 rounded-lg font-black uppercase text-[9px] tracking-[0.2em] transition-all shrink-0 flex items-center gap-1.5 active:scale-95"
+                >
+                    <PlusIcon />
+                    AGREGAR
+                </button>
+            </div>
+        </div>
     )
 }
 
 // ─── OsInput ─────────────────────────────────────────────────────────────────
 
-export interface OsInputProps<T extends FieldValues> {
-    control: Control<T>
-    name: Path<T>
+export interface OsInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
     label: string
-    desc?: string
-    placeholder?: string
+    description?: string
     isSecure?: boolean
     isMono?: boolean
-    type?: "text" | "number"
 }
 
-export function OsInput<T extends FieldValues>({
-    control,
-    name,
+export const OsInput = React.forwardRef<HTMLInputElement, OsInputProps>(({
     label,
-    desc,
+    description,
     placeholder,
     isSecure = false,
     isMono = false,
-    type = "text"
-}: OsInputProps<T>) {
+    type = "text",
+    className,
+    ...props
+}, ref) => {
     const [showSecure, setShowSecure] = React.useState(false)
 
     return (
-        <Controller
-            control={control}
-            name={name}
-            render={({ field }) => (
-                <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 border-b border-white/[0.03] last:border-0 hover:bg-white/[0.015] transition-all duration-200 gap-5 group/input">
-                    <div className="space-y-0.5 flex-1 max-w-xl">
-                        <p className="text-sm font-semibold text-zinc-200 group-hover/input:text-white transition-colors tracking-tight">{label}</p>
-                        {desc && <p className="text-xs text-zinc-600 leading-relaxed font-medium">{desc}</p>}
-                    </div>
-                    <div className={cn(
-                        "flex items-center gap-2 bg-black/50 border border-white/[0.06] rounded-xl px-4 py-2.5 w-full md:w-72 transition-all relative",
-                        "focus-within:border-cyan-500/30 focus-within:shadow-[0_0_16px_rgba(6,182,212,0.07)] hover:border-white/10"
-                    )}>
-                        <input
-                            type={isSecure ? (showSecure ? "text" : "password") : type}
-                            placeholder={placeholder}
-                            value={field.value ?? ""}
-                            onChange={(e) => {
-                                const val = type === "number" ? (e.target.value === "" ? 0 : Number(e.target.value)) : e.target.value
-                                field.onChange(val)
-                            }}
-                            className={cn(
-                                "flex-1 bg-transparent text-white placeholder-zinc-700 text-xs focus:outline-none pr-5",
-                                isMono && "font-mono text-[11px] tracking-tight"
-                            )}
-                        />
-                        {isSecure && (
-                            <button
-                                type="button"
-                                onClick={() => setShowSecure(!showSecure)}
-                                className="absolute right-3 text-zinc-600 hover:text-zinc-300 transition-colors"
-                            >
-                                {showSecure ? <LucideEyeOff size={13} /> : <LucideEye size={13} />}
-                            </button>
-                        )}
-                    </div>
-                </div>
-            )}
-        />
+        <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 border-b border-white/[0.03] last:border-0 hover:bg-white/[0.015] transition-all duration-200 gap-5 group/input">
+            <div className="space-y-0.5 flex-1 max-w-xl">
+                <p className="text-sm font-semibold text-zinc-200 group-hover/input:text-white transition-colors tracking-tight">{label}</p>
+                {description && <p className="text-xs text-zinc-600 leading-relaxed font-medium">{description}</p>}
+            </div>
+            <div className={cn(
+                "flex items-center gap-2 bg-black/50 border border-white/[0.06] rounded-xl px-4 py-2.5 w-full md:w-72 transition-all relative",
+                "focus-within:border-cyan-500/30 focus-within:shadow-[0_0_16px_rgba(6,182,212,0.07)] hover:border-white/10",
+                className
+            )}>
+                <input
+                    ref={ref}
+                    type={isSecure ? (showSecure ? "text" : "password") : type}
+                    placeholder={placeholder}
+                    className={cn(
+                        "flex-1 bg-transparent text-white placeholder-zinc-700 text-xs focus:outline-none pr-5",
+                        isMono && "font-mono text-[11px] tracking-tight"
+                    )}
+                    {...props}
+                />
+                {isSecure && (
+                    <button
+                        type="button"
+                        onClick={() => setShowSecure(!showSecure)}
+                        className="absolute right-3 text-zinc-600 hover:text-zinc-300 transition-colors"
+                    >
+                        {showSecure ? <EyeOffIcon /> : <EyeIcon />}
+                    </button>
+                )}
+            </div>
+        </div>
     )
-}
+})
+
+OsInput.displayName = "OsInput"
 
 // ─── OsSelect ─────────────────────────────────────────────────────────────────
 
-export interface OsSelectProps<T extends FieldValues> {
-    control: Control<T>
-    name: Path<T>
+export interface OsSelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
     label: string
-    desc?: string
+    description?: string
     options: { value: string; label: string }[]
 }
 
-export function OsSelect<T extends FieldValues>({
-    control,
-    name,
+export const OsSelect = React.forwardRef<HTMLSelectElement, OsSelectProps>(({
     label,
-    desc,
-    options
-}: OsSelectProps<T>) {
+    description,
+    options,
+    className,
+    ...props
+}, ref) => {
     return (
-        <Controller
-            control={control}
-            name={name}
-            render={({ field }) => (
-                <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 border-b border-white/[0.03] last:border-0 hover:bg-white/[0.015] transition-all duration-200 gap-5 group/select">
-                    <div className="space-y-0.5 flex-1 max-w-xl">
-                        <p className="text-sm font-semibold text-zinc-200 group-hover/select:text-white transition-colors tracking-tight">{label}</p>
-                        {desc && <p className="text-xs text-zinc-600 leading-relaxed font-medium">{desc}</p>}
-                    </div>
-                    <div className={cn(
-                        "flex items-center bg-black/50 border border-white/[0.06] rounded-xl px-4 py-2.5 w-full md:w-72 transition-all relative cursor-pointer",
-                        "focus-within:border-cyan-500/30 focus-within:shadow-[0_0_16px_rgba(6,182,212,0.07)] hover:border-white/10"
-                    )}>
-                        <select
-                            value={field.value ?? ""}
-                            onChange={(e) => field.onChange(e.target.value)}
-                            className="flex-1 bg-transparent text-white text-xs focus:outline-none appearance-none cursor-pointer pr-6 font-medium [&>option]:bg-zinc-950 [&>option]:text-white"
-                        >
-                            {options.map((opt) => (
-                                <option key={opt.value} value={opt.value}>
-                                    {opt.label}
-                                </option>
-                            ))}
-                        </select>
-                        <div className="absolute right-3.5 pointer-events-none text-zinc-500 group-hover/select:text-zinc-300 transition-colors">
-                            <LucideChevronDown size={13} />
-                        </div>
-                    </div>
-                </div>
-            )}
-        />
-    )
-}
-
-// ─── CardHeader (helper reutilizable para headers de cards con icono) ──────────
-
-export function CardHeader({ icon: Icon, title, desc, iconColor = "text-zinc-400" }: {
-    icon: React.ElementType
-    title: string
-    desc?: string
-    iconColor?: string
-}) {
-    return (
-        <div className="px-6 pt-6 pb-4 border-b border-white/[0.04] space-y-3">
-            <div className="flex items-center gap-3">
-                <div className={cn(
-                    "w-8 h-8 rounded-lg bg-white/[0.03] border border-white/[0.06] flex items-center justify-center",
-                    iconColor
-                )}>
-                    <Icon size={15} />
-                </div>
-                <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">{title}</h3>
+        <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 border-b border-white/[0.03] last:border-0 hover:bg-white/[0.015] transition-all duration-200 gap-5 group/select">
+            <div className="space-y-0.5 flex-1 max-w-xl">
+                <p className="text-sm font-semibold text-zinc-200 group-hover/select:text-white transition-colors tracking-tight">{label}</p>
+                {description && <p className="text-xs text-zinc-600 leading-relaxed font-medium">{description}</p>}
             </div>
-            {desc && <p className="text-xs text-zinc-600 leading-relaxed font-medium">{desc}</p>}
+            <div className={cn(
+                "flex items-center bg-black/50 border border-white/[0.06] rounded-xl px-4 py-2.5 w-full md:w-72 transition-all relative cursor-pointer",
+                "focus-within:border-cyan-500/30 focus-within:shadow-[0_0_16px_rgba(6,182,212,0.07)] hover:border-white/10",
+                className
+            )}>
+                <select
+                    ref={ref}
+                    className="flex-1 bg-transparent text-white text-xs focus:outline-none appearance-none cursor-pointer pr-6 font-medium [&>option]:bg-zinc-950 [&>option]:text-white"
+                    {...props}
+                >
+                    {options.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                        </option>
+                    ))}
+                </select>
+                <div className="absolute right-3.5 pointer-events-none text-zinc-500 group-hover/select:text-zinc-300 transition-colors">
+                    <ChevronDownIcon />
+                </div>
+            </div>
         </div>
     )
-}
+})
 
-// ─── DangerRow (helper para filas de zona de peligro) ────────────────────────
-
-export function DangerRow({ title, desc, buttonLabel, onClick }: {
-    title: string
-    desc: string
-    buttonLabel: string
-    onClick: () => void
-}) {
-    return (
-        <div className="flex flex-col md:flex-row md:items-center justify-between py-4 gap-4 border-b border-white/[0.03] last:border-0">
-            <div className="space-y-0.5">
-                <h4 className="text-sm font-semibold text-white/90">{title}</h4>
-                <p className="text-xs text-zinc-600 leading-relaxed">{desc}</p>
-            </div>
-            <button
-                type="button"
-                onClick={onClick}
-                className="px-4 py-2 border border-red-900/40 hover:border-red-700/50 bg-red-500/[0.04] hover:bg-red-500/10 text-red-500/80 hover:text-red-400 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 active:scale-95 shrink-0"
-            >
-                {buttonLabel}
-            </button>
-        </div>
-    )
-}
+OsSelect.displayName = "OsSelect"

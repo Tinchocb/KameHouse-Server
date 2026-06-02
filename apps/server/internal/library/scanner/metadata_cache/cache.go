@@ -56,9 +56,15 @@ func (mc *MetadataCache) Clear(provider string) {
 	defer mc.mu.Unlock()
 
 	if provider == "" {
+		for _, c := range mc.provider {
+			c.Close()
+		}
 		mc.provider = make(map[string]*cache.Cache[any])
 	} else {
-		delete(mc.provider, provider)
+		if c, ok := mc.provider[provider]; ok {
+			c.Close()
+			delete(mc.provider, provider)
+		}
 	}
 }
 

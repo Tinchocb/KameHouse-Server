@@ -319,7 +319,7 @@ type MediastreamSettings struct {
 
 type GhostAssociatedMedia struct {
 	BaseModel
-	Path            string  `json:"path"`
+	Path            string  `gorm:"column:path;index" json:"path"`
 	TargetMediaID   int     `json:"targetMediaId"`
 	GhostMatchCount int     `json:"ghostMatchCount"`
 	AlgorithmScore  float64 `json:"algorithmScore"`
@@ -330,16 +330,16 @@ type GhostAssociatedMedia struct {
 
 type MediaMetadataParent struct {
 	BaseModel
-	MediaID       int `json:"mediaId"`
+	MediaID       int `gorm:"column:media_id;uniqueIndex" json:"mediaId"`
 	ParentID      int `json:"parentId"`
 	SpecialOffset int `json:"specialOffset"`
 }
 
 type OnlinestreamMapping struct {
 	BaseModel
-	MediaID  int    `json:"mediaId"`
+	MediaID  int    `gorm:"column:media_id;uniqueIndex:idx_provider_media" json:"mediaId"`
 	AnimeID  string `json:"animeId"`
-	Provider string `json:"provider"`
+	Provider string `gorm:"column:provider;uniqueIndex:idx_provider_media" json:"provider"`
 }
 
 type SilencedMediaEntry struct {

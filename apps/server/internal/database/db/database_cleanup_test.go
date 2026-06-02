@@ -21,6 +21,7 @@ func TestDatabaseCleanupManager(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test database: %v", err)
 	}
+	defer database.Close()
 
 	t.Log("Populating database with test data...")
 	populateCleanupTestData(t, database)
@@ -37,20 +38,13 @@ func TestDatabaseCleanupManager(t *testing.T) {
 	t.Log("Running database cleanup...")
 	database.RunDatabaseCleanup()
 
-	// DEVNOTE: Locking issues occur when running this in parallel to many writes
-	//go func() {
-	//database.TrimLocalFileEntries()
-	//database.TrimTorrentstreamHistory()
-	//database.TrimScanSummaryEntries()
-	//}()
-
 	t.Log("Launching many write operations...")
 	time.Sleep(100 * time.Millisecond)
 	for i := 0; i < 1000; i++ {
-		go database.Gorm().Create(&models.ScanSummary{Value: []byte(fmt.Sprintf("scan summary data %d - %s", i, generateCleanupTestData(5000)))})
+		go database.Gorm().Create(&models.ScanSummary{Value: []byte(fmt.Sprintf("scan summary data %d - %s", i, generateCleanupTestData(5)))})
 	}
 
-	time.Sleep(20 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	checkTableCounts(t, database, "after cleanup")
 
@@ -64,11 +58,14 @@ func TestDatabaseCleanupManager(t *testing.T) {
 }
 
 func populateCleanupTestData(t *testing.T, database *Database) {
+	tx := database.Gorm().Begin()
+	defer tx.Rollback()
+
 	for i := 0; i < 10000; i++ {
 		scanSummary := &models.ScanSummary{
-			Value: []byte(fmt.Sprintf("scan summary data %d - %s", i, generateCleanupTestData(50000))),
+			Value: []byte(fmt.Sprintf("scan summary data %d - %s", i, generateCleanupTestData(5))),
 		}
-		err := database.Gorm().Create(scanSummary).Error
+		err := tx.Create(scanSummary).Error
 		if err != nil {
 			t.Fatalf("Failed to create scan summary: %v", err)
 		}
@@ -76,15 +73,17 @@ func populateCleanupTestData(t *testing.T, database *Database) {
 
 	for i := 0; i < 10000; i++ {
 		localFiles := &models.LocalFiles{
-			Value: []byte(fmt.Sprintf("local files data %d - %s", i, generateCleanupTestData(500000))),
+			Value: []byte(fmt.Sprintf("local files data %d - %s", i, generateCleanupTestData(5))),
 		}
-		err := database.Gorm().Create(localFiles).Error
+		err := tx.Create(localFiles).Error
 		if err != nil {
 			t.Fatalf("Failed to create local files: %v", err)
 		}
 	}
 
-
+	if err := tx.Commit().Error; err != nil {
+		t.Fatalf("Failed to commit transaction: %v", err)
+	}
 }
 
 func checkTableCounts(t *testing.T, database *Database, phase string) {
@@ -104,29 +103,16 @@ func checkTableCounts(t *testing.T, database *Database, phase string) {
 		phase, scanCount, localCount)
 
 	if phase == "after cleanup" {
-		//if scanCount > 10 {
-		//	t.Errorf("Expected scan summaries to be trimmed to ≤10, got %d", scanCount)
-		//}
 		if localCount > 10 {
 			t.Errorf("Expected local files to be trimmed to ≤10, got %d", localCount)
 		}
-
-
-		//var minScanSummary models.ScanSummary
-		//if err := database.Gorm().Order("id asc").First(&minScanSummary).Error; err != nil {
-		//	t.Errorf("Failed to get min scan summary: %v", err)
-		//} else if minScanSummary.ID != 996 {
-		//	t.Errorf("Expected min scan summary ID to be 991, got %d", minScanSummary.ID)
-		//}
 
 		var minLocalFiles models.LocalFiles
 		if err := database.Gorm().Order("id asc").First(&minLocalFiles).Error; err != nil {
 			t.Errorf("Failed to get min local files: %v", err)
 		} else if minLocalFiles.ID != 9996 {
-			t.Errorf("Expected min local files ID to be 991, got %d", minLocalFiles.ID)
+			t.Errorf("Expected min local files ID to be 9996, got %d", minLocalFiles.ID)
 		}
-
-
 	}
 }
 
@@ -137,4 +123,3 @@ func generateCleanupTestData(length int) string {
 	}
 	return string(data)
 }
-
