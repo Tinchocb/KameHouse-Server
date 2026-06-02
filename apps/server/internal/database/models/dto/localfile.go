@@ -114,6 +114,7 @@ type (
 		Episodes     []int        `json:"episodes"` // Multi-episode support for files like "01-03"
 		AniDBEpisode string      `json:"aniDBEpisode"`
 		Type         LocalFileType `json:"type"`
+		EpisodeType  EpisodeType `json:"episodeType,omitempty"` // Canon, Filler, Hyped
 
 		// Deprecated: Use Episodes instead. Kept for backwards compatibility.
 		Episode int `json:"episode"`

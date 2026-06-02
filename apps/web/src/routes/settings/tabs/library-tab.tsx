@@ -1,6 +1,6 @@
 import React from "react"
 import { TabsContent } from "@/components/ui/tabs/tabs"
-import { Section, Card, PathList, OsToggle } from "../components"
+import { Section, Card, PathList, OsToggle, OsSelect } from "../components"
 import { type Control, Controller } from "react-hook-form"
 import { type SettingsFormValues } from "../index"
 
@@ -83,17 +83,46 @@ export function LibraryTab({ control }: LibraryTabProps) {
                 </div>
             </Section>
 
-            {/* 2. Sincronización & Trailers */}
-            <Section label="Preferencia & Sincronización">
+            {/* 2. Escáner y Metadatos */}
+            <Section label="Escáner y Metadatos">
                 <Card className="divide-y divide-white/[0.03]">
                     <Controller
                         control={control}
-                        name="library.autoSyncOfflineLocalData"
+                        name="library.autoScan"
                         render={({ field }) => (
                             <OsToggle
-                                label="Sincronización Offline"
-                                description="Sincroniza y guarda localmente tus datos de visualización y progreso para su uso sin conexión."
+                                label="Escaneo Automático"
+                                description="Escanear la biblioteca automáticamente cuando se detecten cambios en las carpetas."
                                 checked={!!field.value}
+                                onChange={field.onChange}
+                            />
+                        )}
+                    />
+                    <Controller
+                        control={control}
+                        name="library.scannerStrictStructure"
+                        render={({ field }) => (
+                            <OsToggle
+                                label="Estructura Estricta"
+                                description="Requiere que las carpetas sigan un formato estricto (ej. ShowName/Season 1/Episode 1.mkv) para mejorar la coincidencia."
+                                checked={!!field.value}
+                                onChange={field.onChange}
+                            />
+                        )}
+                    />
+                    <Controller
+                        control={control}
+                        name="library.tmdbLanguage"
+                        render={({ field }) => (
+                            <OsSelect
+                                label="Idioma de Metadatos"
+                                description="Idioma preferido para descargar sinopsis, títulos y metadatos desde TMDB."
+                                options={[
+                                    { value: "es-MX", label: "Español (Latinoamérica)" },
+                                    { value: "es-ES", label: "Español (España)" },
+                                    { value: "en-US", label: "Inglés" }
+                                ]}
+                                value={field.value || "es-MX"}
                                 onChange={field.onChange}
                             />
                         )}

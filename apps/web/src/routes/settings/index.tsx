@@ -17,7 +17,6 @@ import type { SaveSettings_Variables } from "@/api/generated/endpoint.types"
 
 // Import extracted tabs
 import { LibraryTab } from "./tabs/library-tab"
-import { PlayerTab } from "./tabs/player-tab"
 import { ScannerTab } from "./tabs/scanner-tab"
 import { IntegrationsTab } from "./tabs/integrations-tab"
 import { SystemTab } from "./tabs/system-tab"
@@ -135,7 +134,6 @@ export const Route = createFileRoute("/settings/")(({
 
 const NAV_ITEMS = [
     { id: "library",      label: "Biblioteca",   sublabel: "ALMACENAMIENTO",  icon: LucideRadar },
-    { id: "player",       label: "Reproducción", sublabel: "MULTIMEDIA",       icon: LucidePlay },
     { id: "scanner",      label: "Escáner",      sublabel: "INDEXACIÓN",       icon: LucideRefreshCw },
     { id: "integrations", label: "Integraciones",sublabel: "SERVICIOS EXT.",   icon: LucideCloud },
     { id: "system",       label: "Sistema",      sublabel: "PLATAFORMA",       icon: LucideSettings },
@@ -224,26 +222,7 @@ function SettingsPage() {
             <div className="ambient-glow bg-orange-600/15 w-[800px] h-[800px] top-[25%] right-[-15%]" style={{ animationDelay: "-4s" }} />
             <div className="ambient-glow bg-zinc-800/40 w-[1000px] h-[600px] bottom-[-15%] left-[10%]" style={{ animationDelay: "-8s" }} />
 
-            {/* ── Topbar ─────────────────────────────────────────────────────── */}
-            <header className="fixed top-0 left-0 lg:left-24 right-0 h-14 border-b border-white/[0.04] bg-[#000000]/80 backdrop-blur-xl z-40 flex items-center justify-between px-8">
-                <div className="flex items-center gap-4">
-                    {/* CC Logo badge */}
-                    <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center font-black text-xs tracking-tighter shrink-0 select-none bg-zinc-950 shadow-[0_0_10px_rgba(255,255,255,0.05)]">
-                        <span className="text-white">C</span><span className="text-cyan-400 -ml-0.5">C</span>
-                    </div>
-                    <div className="flex items-baseline gap-2">
-                        <span className="text-[9px] font-black tracking-[0.3em] uppercase text-white/50 font-mono">CAPSULE CORP</span>
-                        <span className="text-[9px] font-black tracking-[0.3em] uppercase text-cyan-400 font-mono">CONTROL PANEL</span>
-                    </div>
-                </div>
-
-                {/* Status indicator */}
-                <div className="flex items-center gap-3">
-                    <span className="text-[8px] font-mono tracking-widest text-zinc-500 uppercase bg-zinc-950/80 px-2.5 py-1 rounded border border-white/5">SYS_STATUS: NOMINAL</span>
-                </div>
-            </header>
-
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex h-full pt-14 relative z-10">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex h-full relative z-10">
 
                 {/* ── Sidebar ──────────────────────────────────────────────── */}
                 <aside className="w-[260px] h-full border-r border-white/[0.04] bg-zinc-950/40 backdrop-blur-2xl flex flex-col z-10 overflow-hidden relative shrink-0">
@@ -315,37 +294,7 @@ function SettingsPage() {
 
                         <div className="flex-1" />
 
-                        {/* Bottom Barcode */}
-                        <div className="border-t border-white/[0.04] pt-5 space-y-3 mx-1">
-                            <div className="relative rounded-xl border border-white/[0.05] bg-black/40 p-4 overflow-hidden group/info">
-                                <p className="text-[7px] text-zinc-600 uppercase tracking-[0.3em] font-black font-mono">CC_OS_SYS_LINK</p>
-                                <p className="text-[10px] font-black text-white/30 font-mono mt-0.5 tracking-wider">CC-908_OS // ENG</p>
-                                <svg className="mt-3 w-full h-3 text-zinc-800" viewBox="0 0 200 20" fill="currentColor">
-                                    <rect x="0"   y="0" width="3"  height="20" />
-                                    <rect x="6"   y="0" width="1"  height="20" />
-                                    <rect x="10"  y="0" width="4"  height="20" />
-                                    <rect x="17"  y="0" width="2"  height="20" />
-                                    <rect x="22"  y="0" width="1"  height="20" />
-                                    <rect x="26"  y="0" width="3"  height="20" />
-                                    <rect x="32"  y="0" width="2"  height="20" />
-                                    <rect x="41"  y="0" width="5"  height="20" />
-                                    <rect x="49"  y="0" width="1"  height="20" />
-                                    <rect x="58"  y="0" width="3"  height="20" />
-                                    <rect x="68"  y="0" width="4"  height="20" />
-                                    <rect x="80"  y="0" width="1"  height="20" />
-                                    <rect x="84"  y="0" width="3"  height="20" />
-                                    <rect x="95"  y="0" width="5"  height="20" />
-                                    <rect x="107" y="0" width="3"  height="20" />
-                                    <rect x="118" y="0" width="4"  height="20" />
-                                    <rect x="129" y="0" width="5"  height="20" />
-                                    <rect x="142" y="0" width="1"  height="20" />
-                                    <rect x="157" y="0" width="4"  height="20" />
-                                    <rect x="168" y="0" width="3"  height="20" />
-                                    <rect x="179" y="0" width="5"  height="20" />
-                                    <rect x="191" y="0" width="3"  height="20" />
-                                </svg>
-                            </div>
-                        </div>
+
                     </div>
                 </aside>
 
@@ -375,42 +324,7 @@ function SettingsPage() {
                         </div>
                     </div>
 
-                    {/* Capsule Corp Metric Cards */}
-                    <section className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10 relative z-10">
-                        <div className="glass-panel p-6 rounded-2xl relative overflow-hidden">
-                            <div className="flex justify-between items-start">
-                                <span className="text-[9px] font-mono text-cyan-500 uppercase tracking-widest">Capsule Storage Vol.04</span>
-                                <span className="px-2 py-0.5 text-[8px] font-mono tracking-widest uppercase bg-cyan-500/10 text-cyan-400 rounded border border-cyan-500/20">INDEX_OK</span>
-                            </div>
-                            <div className="font-bebas text-4xl text-white tracking-wide mt-3">1.240 CAPÍTULOS</div>
-                            <p className="text-[11px] text-zinc-500 mt-1 font-mono">Hash rate allocation: HEAD/TAIL O(1)</p>
-                        </div>
-                        
-                        <div className="glass-panel p-6 rounded-2xl relative overflow-hidden">
-                            <div className="flex justify-between items-start">
-                                <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">Memory Matrix Allocation</span>
-                                <span className="text-[10px] font-mono font-bold text-cyan-400">4.2 / 5.0 TB</span>
-                            </div>
-                            <div className="w-full bg-zinc-900/40 rounded-full h-1 mt-5 overflow-hidden border border-white/5">
-                                <div className="bg-cyan-500 h-full rounded-full shadow-[0_0_10px_#06b6d4]" style={{ width: "84%" }}></div>
-                            </div>
-                            <p className="text-[9px] font-mono text-zinc-600 mt-3 uppercase tracking-wider">Storage efficiency at 98.4%</p>
-                        </div>
-
-                        <div className="glass-panel p-6 rounded-2xl relative overflow-hidden">
-                            <div className="flex justify-between items-start">
-                                <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">External Data Link</span>
-                                <span className="px-2 py-0.5 text-[8px] font-mono tracking-widest uppercase bg-cyan-500/10 text-cyan-400 rounded border border-cyan-500/20">CONNECTED</span>
-                            </div>
-                            <div className="flex items-center gap-3 mt-3">
-                                <div className="w-8 h-8 rounded-xl bg-zinc-900/60 flex items-center justify-center font-bold text-xs text-cyan-400 border border-white/5">T</div>
-                                <div>
-                                    <div className="text-xs font-bold text-zinc-300">TMDB API Connection</div>
-                                    <p className="text-[10px] font-mono text-zinc-500">ID Node: Connected</p>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
+                   
 
                     <form
                         id="settings-form"
@@ -418,7 +332,6 @@ function SettingsPage() {
                         className="w-full relative z-10"
                     >
                         {activeTab === "library"      && <LibraryTab control={control} />}
-                        {activeTab === "player"       && <PlayerTab control={control} register={register} />}
                         {activeTab === "scanner"      && <ScannerTab control={control} register={register} />}
                         {activeTab === "integrations" && <IntegrationsTab control={control} register={register} />}
                         {activeTab === "system"       && <SystemTab control={control} />}

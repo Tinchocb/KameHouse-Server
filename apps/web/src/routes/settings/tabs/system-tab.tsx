@@ -48,32 +48,9 @@ export function SystemTab({ control }: SystemTabProps) {
 
     return (
         <TabsContent value="system" className="m-0 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 outline-none">
-             {/* Header */}
-             <header className="space-y-3 pt-2">
-                 <div className="flex items-center gap-3 mb-1">
-                     <div className="flex items-center justify-center p-1 rounded bg-cyan-500/10 border border-cyan-500/15">
-                         <svg className="h-3.5 w-3.5 text-cyan-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                             <circle cx="12" cy="12" r="3" />
-                             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                         </svg>
-                     </div>
-                     <span className="text-[9px] font-black uppercase tracking-[0.35em] text-zinc-600 font-mono">NÚCLEO · PARÁMETROS DEL SISTEMA</span>
-                 </div>
-                 <h1 className="text-5xl font-bebas tracking-wider text-white leading-none">
-                     NÚCLEO DEL <span className="text-zinc-600">SISTEMA</span>
-                 </h1>
-                 <div className="h-[2px] w-12 bg-gradient-to-r from-cyan-500/50 to-transparent rounded-full" />
-                 <p className="text-zinc-500 text-sm font-medium leading-relaxed max-w-2xl">
-                     Información técnica sobre el servidor, estado de los recursos de la base de datos y opciones de red.
-                 </p>
-             </header>
+           
 
-            {/* Información Técnica */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <StatusCard label="Versión" value="3.5.0-ALPHA" icon={CrownIcon} />
-                <StatusCard label="Database" value="SQLite (WAL)" icon={HardDriveIcon} />
-                <StatusCard label="Entorno" value="Producción" icon={CheckCircleIcon} />
-            </div>
+         
 
             {/* Gestión de Notificaciones */}
             <Section label="Notificaciones de la Aplicación">
@@ -105,6 +82,8 @@ export function SystemTab({ control }: SystemTabProps) {
                 </Card>
             </Section>
 
+           
+
             {/* Zona de Peligro */}
             <Section label="Zona de Peligro">
                 <div className="border border-red-950/40 bg-red-950/[0.03] backdrop-blur-md rounded-2xl p-6 space-y-6 relative overflow-hidden group/danger shadow-[inset_0_0_20px_rgba(239,68,68,0.01)]">
@@ -117,22 +96,6 @@ export function SystemTab({ control }: SystemTabProps) {
                             <p className="text-xs text-zinc-500 leading-relaxed font-medium">
                                 Operaciones administrativas destructivas que alteran permanentemente los datos del servidor.
                             </p>
-                        </div>
-                    </div>
-
-                    <div className="divide-y divide-white/[0.02]">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between py-4 gap-4 first:pt-0 last:pb-0">
-                            <div className="space-y-1">
-                                <h4 className="text-sm font-semibold text-white/90">Restablecer Caché de Metadatos</h4>
-                                <p className="text-xs text-zinc-500">Elimina las portadas y sinopsis cacheadas localmente, forzando una nueva descarga limpia desde TMDB.</p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={handleResetCache}
-                                className="text-red-400 hover:text-red-300 font-bold uppercase text-xs tracking-wider transition-all duration-300 active:scale-95 shrink-0 px-4 py-2 border border-red-950/40 hover:border-red-900/60 bg-red-500/5 hover:bg-red-500/10 rounded-xl"
-                            >
-                                Limpiar Caché
-                            </button>
                         </div>
                     </div>
                 </div>
