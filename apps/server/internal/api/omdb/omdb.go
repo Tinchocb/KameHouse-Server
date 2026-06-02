@@ -9,6 +9,8 @@ import (
 	"sync"
 
 	httputil "kamehouse/internal/util/http"
+
+	"golang.org/x/time/rate"
 )
 
 const baseURL = "https://www.omdbapi.com"
@@ -16,16 +18,18 @@ const baseURL = "https://www.omdbapi.com"
 // Client handles OMDb API requests.
 // Free API key (1,000 req/day): https://www.omdbapi.com/apikey.aspx
 type Client struct {
-	apiKey string
-	client *http.Client
-	cache  sync.Map
+	apiKey  string
+	client  *http.Client
+	cache   sync.Map
+	limiter *rate.Limiter
 }
 
 // NewClient creates a new OMDb client.
 func NewClient(apiKey string) *Client {
 	return &Client{
-		apiKey: apiKey,
-		client: httputil.NewFastClient(),
+		apiKey:  apiKey,
+		client:  httputil.NewFastClient(),
+		limiter: rate.NewLimiter(rate.Limit(5), 5), // 5 req/sec
 	}
 }
 
@@ -104,6 +108,9 @@ func (c *Client) GetByTitle(ctx context.Context, title string, year int) (*Movie
 }
 
 func (c *Client) doRequest(ctx context.Context, params url.Values) (*MovieInfo, error) {
+	if err := c.limiter.Wait(ctx); err != nil {
+		return nil, err
+	}
 	req, err := http.NewRequestWithContext(ctx, "GET", baseURL+"/?"+params.Encode(), nil)
 	if err != nil {
 		return nil, err

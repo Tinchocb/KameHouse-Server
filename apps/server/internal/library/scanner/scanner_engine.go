@@ -75,6 +75,7 @@ type Scanner struct {
 	ScanMode         string
 	TargetPaths      []string
 	FFprobePath      string
+	BackgroundQueue  *BackgroundQueue
 }
 
 // Scan will scan the directory and return a list of dto.LocalFile.
@@ -153,7 +154,6 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	skippedLfs := make(map[string]*dto.LocalFile)
 	var libraryPaths []string
 	var sortedLibraryPaths []string
-	var hashDoneChan <-chan struct{}
 
 	if scn.ScanMode == "metadata" {
 		scn.Logger.Info().Msg("scanner: Running in metadata improvement mode. Skipping file matching and probing.")
@@ -271,14 +271,11 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 
 		localFiles = scn.createLocalFiles(ctx, paths, libraryPaths, skippedLfs)
 
-		// Start background hashing (I/O light, only reads 128KB per file)
-		hashDoneChan = StartFileHashing(ctx, localFiles, scn.Logger)
-		defer func() {
-			// Ensure hashing workers clean up if scan fails
-			if hashDoneChan != nil {
-				<-hashDoneChan
+		if scn.BackgroundQueue != nil {
+			for _, lf := range localFiles {
+				scn.BackgroundQueue.Enqueue(lf)
 			}
-		}()
+		}
 
 		if scn.ScanLogger != nil {
 			scn.ScanLogger.logger.Debug().
@@ -306,13 +303,6 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		if scn.ScanLogger != nil {
 			scn.ScanLogger.logger.Debug().
 				Msg("===========================================================================================================")
-		}
-
-		// ── Probing Phase (Technical Info) ────────────────────────────────────────
-		if len(localFiles) > 0 {
-			telemetry.Send(events.EventScanStatus, "Extracting file information...")
-			prober := NewFileProber(scn.FFprobePath, scn.Logger)
-			prober.ProbeFiles(ctx, localFiles)
 		}
 	}
 
@@ -501,7 +491,8 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		// records with a TMDB ID go through UpsertLibraryMediaBatch; local-only
 		// records (tmdb_id = 0) are inserted individually to preserve uniqueness.
 		if scn.Database != nil && len(nfoEntries) > 0 {
-			var withTmdb, withoutTmdb []*nfoEntry
+			withTmdb := make([]*nfoEntry, 0, len(nfoEntries))
+			withoutTmdb := make([]*nfoEntry, 0, len(nfoEntries))
 			for _, e := range nfoEntries {
 				if e.tmdbID > 0 {
 					e.media.TmdbID = e.tmdbID
@@ -523,15 +514,11 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 
 				// Query back the persisted records to retrieve their auto-generated IDs.
 				var persisted []*models.LibraryMedia
-				q := scn.Database.Gorm()
+				tmdbIDs := make([]int, len(withTmdb))
 				for i, e := range withTmdb {
-					if i == 0 {
-						q = q.Where("tmdb_id = ? AND type = ?", e.tmdbID, e.media.Type)
-					} else {
-						q = q.Or("tmdb_id = ? AND type = ?", e.tmdbID, e.media.Type)
-					}
+					tmdbIDs[i] = e.tmdbID
 				}
-				q.Find(&persisted)
+				scn.Database.Gorm().Where("tmdb_id IN ? AND type = ?", tmdbIDs, "ANIME").Find(&persisted)
 
 				type tmdbTypeKey struct {
 					tmdbID    int
@@ -737,12 +724,6 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	// |    FileHydrator     |
 	// +---------------------+
 
-	// Ensure hashing is complete before moving to hydration (needed for some enrichers)
-	if hashDoneChan != nil {
-		telemetry.Send(events.EventScanStatus, "Completing file hashing...")
-		<-hashDoneChan
-		hashDoneChan = nil // mark as done
-	}
 
 	// Create a new hydrator
 	hydrator := &FileHydrator{

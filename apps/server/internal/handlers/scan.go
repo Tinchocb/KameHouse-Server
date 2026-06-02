@@ -1,4 +1,4 @@
-﻿package handlers
+package handlers
 
 import (
 	"context"
@@ -142,6 +142,7 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		OMDbEnricher:               h.App.Metadata.OMDb,
 		OpenSubsEnricher:           h.App.Metadata.OpenSubs,
 		FFprobePath:                ffprobePath,
+		BackgroundQueue:            h.App.BackgroundQueue,
 	}
 
 	// EXECUTE ASYNCHRONOUSLY to prevent HTTP Timeout & 504 errors on massive scans
@@ -182,6 +183,9 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 
 		// Save the scan summary
 		_ = db.InsertScanSummary(h.App.Database, scanSummaryLogger.GenerateSummary())
+
+		// Force WAL checkpoint to consolidate WAL changes to main DB
+		h.App.Database.Gorm().Exec("PRAGMA wal_checkpoint(PASSIVE);")
 
 		// Background maintenance tasks
 		go func() {

@@ -135,7 +135,17 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     const computedEpisodes = useMemo(() => {
         if (!entry) return []
         if (entry.episodes && entry.episodes.length > 0) {
-            return entry.episodes.filter(ep => ep && typeof ep.episodeNumber === 'number');
+            const eps = entry.episodes.filter(ep => ep && typeof ep.episodeNumber === 'number');
+            eps.forEach(ep => {
+                if (!ep.sagaId && sagas.length > 0) {
+                    const epNum = ep.absoluteEpisodeNumber || ep.episodeNumber;
+                    const matchingSaga = baseSagas.find(s => epNum >= s.startEp && epNum <= s.endEp);
+                    if (matchingSaga) {
+                        ep.sagaId = matchingSaga.id;
+                    }
+                }
+            });
+            return eps;
         }
         
         if (entry.localFiles && entry.localFiles.length > 0) {

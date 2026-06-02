@@ -1,4 +1,4 @@
-﻿package core
+package core
 
 import (
 	"context"
@@ -63,6 +63,7 @@ type (
 		AutoScanner         *autoscanner.AutoScanner
 		LibraryExplorer     *library_explorer.LibraryExplorer
 		IntelligenceService *anime.IntelligenceService
+		BackgroundQueue     *scanner.BackgroundQueue
 	}
 
 	KameHouse struct {
@@ -183,6 +184,7 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 			FillerManager:   nil,
 			AutoScanner:     nil,
 			LibraryExplorer: nil,
+			BackgroundQueue: nil,
 		},
 		Flags:          configOpts.Flags,
 		FeatureManager: NewFeatureManager(logger, configOpts.Flags),

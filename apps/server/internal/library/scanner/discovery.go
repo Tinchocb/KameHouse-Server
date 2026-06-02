@@ -42,7 +42,7 @@ func (scn *Scanner) discoverFilePaths(ctx context.Context, _ time.Time) ([]strin
 	}
 
 	retrievedPathMap := make(map[string]struct{})
-	paths := make([]string, 0)
+	paths := make([]string, 0, len(scn.ExistingLocalFiles))
 	var mu sync.Mutex
 	var logMu sync.Mutex
 

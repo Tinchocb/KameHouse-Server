@@ -1,6 +1,6 @@
 module kamehouse
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/5rahim/go-astisub v0.2.1
@@ -38,7 +38,7 @@ require (
 	golang.org/x/image v0.35.0
 	golang.org/x/term v0.39.0
 	golang.org/x/text v0.33.0
-	golang.org/x/time v0.14.0
+	golang.org/x/time v0.15.0
 	gopkg.in/vansante/go-ffprobe.v2 v2.3.0
 	gorm.io/gorm v1.31.1
 )

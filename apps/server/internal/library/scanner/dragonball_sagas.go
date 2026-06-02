@@ -42,7 +42,14 @@ func GetDragonBallSagas(tmdbID int) []sagaResolution {
 			{id: "trunks-futuro", name: "Saga de Trunks del Futuro (Goku Black)", startEp: 47, endEp: 76},
 			{id: "supervivencia-universal", name: "Saga del Supervivencia Universal (Torneo del Poder)", startEp: 77, endEp: 131},
 		}
-	case 240411: // Dragon Ball Daima
+	case 61709: // Dragon Ball Z Kai
+		return []sagaResolution{
+			{id: "saiyajin", name: "Saga Saiyajin", startEp: 1, endEp: 18},
+			{id: "freezer", name: "Saga de Freezer", startEp: 19, endEp: 54},
+			{id: "cell", name: "Saga de Cell", startEp: 55, endEp: 98},
+			{id: "majin_buu", name: "Saga de Majin Buu", startEp: 99, endEp: 167},
+		}
+	case 236994: // Dragon Ball Daima
 		return []sagaResolution{
 			{id: "daima-misterio", name: "El Misterio del Mundo Demonio", startEp: 1, endEp: 10},
 			{id: "daima-travesia", name: "La Travesía en el Mundo Demonio", startEp: 11, endEp: 20},

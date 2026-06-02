@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/library/parser"
@@ -60,6 +61,24 @@ func readEmbeddedMediaIdentity(ctx context.Context, path string, lf *dto.LocalFi
 
 	if lf.TechnicalInfo == nil {
 		lf.TechnicalInfo = &dto.FileTechnicalInfo{}
+	}
+
+	lf.TechnicalInfo.Duration = time.Duration(metadata.Duration * float64(time.Second))
+	lf.TechnicalInfo.Size = lf.FileSize
+	lf.TechnicalInfo.Format = "Matroska / WebM"
+
+	if len(metadata.VideoTracks) > 0 {
+		vTrack := metadata.VideoTracks[0]
+		w, h := 0, 0
+		if vTrack.Video != nil {
+			w = int(vTrack.Video.PixelWidth)
+			h = int(vTrack.Video.PixelHeight)
+		}
+		lf.TechnicalInfo.VideoStream = &dto.VideoStreamInfo{
+			Codec:  vTrack.CodecID,
+			Width:  w,
+			Height: h,
+		}
 	}
 
 	for _, track := range metadata.AudioTracks {

@@ -154,7 +154,6 @@ const MEDIA_ID_TO_ERA: Record<number, EraId> = {
 
     // Daima (Dragon Ball Daima)
     236994: "dbdaima",
-    240411: "dbdaima",
 
     // Daima Local Database IDs
     236: "dbdaima",

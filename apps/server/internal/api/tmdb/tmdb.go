@@ -12,6 +12,8 @@ import (
 	"time"
 
 	httputil "kamehouse/internal/util/http"
+
+	"golang.org/x/time/rate"
 )
 
 // Cache defines the interface for persistent caching of TMDb API responses.
@@ -26,7 +28,7 @@ type Client struct {
 	language        string
 	cache           sync.Map // simple in-memory cache for search results
 	persistentCache Cache    // persistent SQL-backed cache
-	rateLimiter     chan struct{}
+	limiter         *rate.Limiter
 	httpClient      *http.Client
 }
 
@@ -39,7 +41,7 @@ func NewClient(bearerToken string, language ...string) *Client {
 	return &Client{
 		bearerToken: bearerToken,
 		language:    lang,
-		rateLimiter: make(chan struct{}, 4), // max 4 concurrent requests
+		limiter:     rate.NewLimiter(rate.Limit(30), 10), // 30 req/sec, burst of 10
 		httpClient:  httputil.NewFastClient(),
 	}
 }
@@ -111,9 +113,10 @@ func executeWithRetry[T any](ctx context.Context, c *Client, endpoint string) (*
 			}
 		}
 
-		c.rateLimiter <- struct{}{}
+		if err := c.limiter.Wait(ctx); err != nil {
+			return nil, err
+		}
 		resp, err := client.Do(req)
-		<-c.rateLimiter
 
 		if err != nil {
 			lastErr = err

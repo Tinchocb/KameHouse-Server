@@ -35,6 +35,13 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 		}
 	})
 
+	e.Use(middleware.GzipWithConfig(middleware.GzipConfig{
+		Skipper: func(c echo.Context) bool {
+			path := c.Request().URL.Path
+			return strings.HasPrefix(path, "/api/v1/mediastream")
+		},
+	}))
+
 	// NOTE: Recover() and CORS middleware are registered in handlers.InitRoutes
 	// to avoid duplication and ensure the most complete CORS config is used.
 

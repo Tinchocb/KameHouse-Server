@@ -1,4 +1,4 @@
-﻿package core
+package core
 
 import (
 	"os"
@@ -13,6 +13,7 @@ import (
 	"kamehouse/internal/library/anime"
 	"kamehouse/internal/library/autoscanner"
 	"kamehouse/internal/library/fillermanager"
+	"kamehouse/internal/library/scanner"
 	"kamehouse/internal/library_explorer"
 	"kamehouse/internal/mediastream"
 	"kamehouse/internal/api/tmdb"
@@ -28,6 +29,21 @@ import (
 func (a *App) initModulesOnce() {
 
 	// +---------------------+
+	// |  Background Queue   |
+	// +---------------------+
+	mSettings, ok := a.Database.GetMediastreamSettings()
+	ffprobePath := "ffprobe"
+	if ok && mSettings.FfprobePath != "" {
+		ffprobePath = mSettings.FfprobePath
+	}
+	a.BackgroundQueue = scanner.NewBackgroundQueue(a.Database, a.WSEventManager, a.Logger, ffprobePath)
+	a.BackgroundQueue.Start(4)
+
+	a.AddCleanupFunction(func() {
+		a.BackgroundQueue.Stop()
+	})
+
+	// +---------------------+
 	// |       Filler        |
 	// +---------------------+
 
@@ -40,15 +56,13 @@ func (a *App) initModulesOnce() {
 	// |    Media Stream     |
 	// +---------------------+
 
-
-
 	a.MediastreamRepository = mediastream.NewRepository(&mediastream.NewRepositoryOptions{
 		Logger:         a.Logger,
 		WSEventManager: a.WSEventManager,
 		FileCacher:     a.FileCacher,
 	})
 
-a.AddCleanupFunction(func() {
+	a.AddCleanupFunction(func() {
 		a.MediastreamRepository.OnCleanup()
 	})
 
@@ -63,8 +77,6 @@ a.AddCleanupFunction(func() {
 			cleanupTranscodeDirs(a.Logger)
 		}
 	}()
-
-
 
 	// +---------------------+
 	// |    Auto Scanner     |
@@ -81,6 +93,7 @@ a.AddCleanupFunction(func() {
 		OnRefreshCollection: func() {
 		},
 		EventDispatcher: a.WSEventManager.Dispatcher(),
+		BackgroundQueue: a.BackgroundQueue,
 	})
 
 	// +---------------------+
@@ -95,7 +108,6 @@ a.AddCleanupFunction(func() {
 	// |    Intelligence     |
 	// +---------------------+
 	a.IntelligenceService = anime.NewIntelligenceService(a.Database, a.FillerManager, a.Logger)
-
 }
 
 // HandleNewDatabaseEntries initializes essential database collections.

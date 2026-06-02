@@ -23,7 +23,7 @@ type ClientOptions struct {
 func DefaultClientOptions() *ClientOptions {
 	return &ClientOptions{
 		MaxIdleConns:        100,
-		MaxIdleConnsPerHost: 10,
+		MaxIdleConnsPerHost: 20,
 		IdleConnTimeout:     90 * time.Second,
 		Timeout:             30 * time.Second,
 		DisableKeepAlives:   false,
@@ -79,7 +79,7 @@ func NewStreamingClient() *http.Client {
 func NewFastClient() *http.Client {
 	opts := DefaultClientOptions()
 	opts.Timeout = 10 * time.Second
-	opts.MaxIdleConns = 50
-	opts.MaxIdleConnsPerHost = 5
+	opts.MaxIdleConns = 100
+	opts.MaxIdleConnsPerHost = 20
 	return NewClient(opts)
 }

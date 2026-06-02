@@ -11,6 +11,12 @@ import (
 	"github.com/rs/zerolog"
 )
 
+var bufferPool = sync.Pool{
+	New: func() interface{} {
+		return make([]byte, 32*1024)
+	},
+}
+
 type piece struct {
 	start int64
 	end   int64
@@ -73,7 +79,10 @@ func (fs *FileStream) WriteAndFlush(src io.Reader, dst io.Writer, offset int64) 
 	}
 	fs.mu.Unlock()
 
-	buffer := make([]byte, 32*1024) // 32KB buffer
+	bufVal := bufferPool.Get()
+	buffer := bufVal.([]byte)
+	defer bufferPool.Put(bufVal)
+
 	currentOffset := offset
 
 	for {

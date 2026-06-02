@@ -50,7 +50,7 @@ var dragonBallSagaDefinitions = map[int][]SagaRange{
 		{Id: "cell", Title: "Saga de Cell", StartEp: 55, EndEp: 98},
 		{Id: "majin_buu", Title: "Saga de Majin Buu", StartEp: 99, EndEp: 167},
 	},
-	240411: { // Daima
+	236994: { // Daima
 		{Id: "daima-misterio", Title: "El Misterio del Mundo Demonio", StartEp: 1, EndEp: 10},
 		{Id: "daima-travesia", Title: "La Travesía en el Mundo Demonio", StartEp: 11, EndEp: 20},
 	},

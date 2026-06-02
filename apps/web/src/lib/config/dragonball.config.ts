@@ -6,7 +6,7 @@ export const DRAGON_BALL_SERIES = {
     GT: 12697,
     KAI: 61709,
     SUPER: 62715,
-    DAIMA: 240411,
+    DAIMA: 236994,
     HEROES: 80629,
 }
 

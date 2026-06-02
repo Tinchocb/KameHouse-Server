@@ -113,6 +113,20 @@ func NewDatabase(ctx context.Context, appDataDir, dbName string, logger *zerolog
 	// DML asíncrono: migración de datos legacy en segundo plano
 	go database.runDataMigrations()
 
+	// Start background WAL checkpointing ticker (every 5 minutes)
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				database.gormdb.Exec("PRAGMA wal_checkpoint(PASSIVE);")
+			}
+		}
+	}()
+
 	return database, nil
 }
 
@@ -138,6 +152,8 @@ func (db *Database) Shutdown() {
 	if db.slowTraceLogger != nil {
 		db.slowTraceLogger.Flush()
 	}
+	// Consolidate WAL
+	db.gormdb.Exec("PRAGMA wal_checkpoint(PASSIVE);")
 }
 
 // Close libera el pool de conexiones subyacente.

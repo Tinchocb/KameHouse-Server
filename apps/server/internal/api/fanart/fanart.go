@@ -8,6 +8,8 @@ import (
 	"sync"
 
 	httputil "kamehouse/internal/util/http"
+
+	"golang.org/x/time/rate"
 )
 
 const baseURL = "https://webservice.fanart.tv/v3"
@@ -18,13 +20,15 @@ type Client struct {
 	apiKey  string
 	client  *http.Client
 	cache   sync.Map
+	limiter *rate.Limiter
 }
 
 // NewClient creates a new FanArt.tv client.
 func NewClient(apiKey string) *Client {
 	return &Client{
-		apiKey: apiKey,
-		client: httputil.NewFastClient(),
+		apiKey:  apiKey,
+		client:  httputil.NewFastClient(),
+		limiter: rate.NewLimiter(rate.Limit(5), 5), // 5 req/sec
 	}
 }
 
@@ -70,6 +74,9 @@ func (c *Client) GetTVImages(ctx context.Context, tvdbID string) (*TVImages, err
 		return &v, nil
 	}
 
+	if err := c.limiter.Wait(ctx); err != nil {
+		return nil, err
+	}
 	url := fmt.Sprintf("%s/tv/%s?api_key=%s", baseURL, tvdbID, c.apiKey)
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
@@ -107,6 +114,9 @@ func (c *Client) GetMovieImages(ctx context.Context, tmdbID string) (*MovieImage
 		return &v, nil
 	}
 
+	if err := c.limiter.Wait(ctx); err != nil {
+		return nil, err
+	}
 	url := fmt.Sprintf("%s/movies/%s?api_key=%s", baseURL, tmdbID, c.apiKey)
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {

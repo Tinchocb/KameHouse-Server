@@ -6,6 +6,7 @@ import (
 	"kamehouse/internal/database/db"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/events"
@@ -42,6 +43,7 @@ type (
 		animeCollection     *platform.UnifiedCollection
 		eventDispatcher     events.Dispatcher
 		pendingPaths        []string
+		backgroundQueue     *scanner.BackgroundQueue
 	}
 	NewAutoScannerOptions struct {
 		Database            *db.Database
@@ -54,6 +56,7 @@ type (
 		LogsDir             string
 		OnRefreshCollection func()
 		EventDispatcher     events.Dispatcher
+		BackgroundQueue     *scanner.BackgroundQueue
 	}
 )
 
@@ -79,6 +82,7 @@ func New(opts *NewAutoScannerOptions) *AutoScanner {
 		logsDir:             opts.LogsDir,
 		onRefreshCollection: opts.OnRefreshCollection,
 		eventDispatcher:     opts.EventDispatcher,
+		backgroundQueue:     opts.BackgroundQueue,
 	}
 }
 
@@ -218,6 +222,7 @@ func (as *AutoScanner) TriggerScan(targets []string) {
 		WithShelving:          true,
 		TargetPaths:           targets,
 		FFprobePath:           ffprobePath,
+		BackgroundQueue:       as.backgroundQueue,
 	}
 
 	allLfs, err := scn.Scan(context.Background())
@@ -237,6 +242,9 @@ func (as *AutoScanner) TriggerScan(targets []string) {
 		as.logger.Error().Err(err).Msg("autoscanner: Failed to insert local files")
 		return
 	}
+
+	// Consolidate WAL changes
+	as.db.Gorm().Exec("PRAGMA wal_checkpoint(PASSIVE);")
 
 	as.logger.Info().Msg("autoscanner: Library scan completed")
 
