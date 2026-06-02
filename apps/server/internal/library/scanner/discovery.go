@@ -148,6 +148,9 @@ func (scn *Scanner) createLocalFiles(ctx context.Context, paths []string, librar
 					lf.LibraryMediaId = existing.LibraryMediaId
 					lf.Locked = existing.Locked
 					lf.Ignored = existing.Ignored
+					if lf.FileSize == existing.FileSize && lf.FileModTime == existing.FileModTime {
+						lf.FileHash = existing.FileHash
+					}
 					// Copy metadata if it was already matched
 					if lf.MediaID != 0 {
 						lf.Metadata = existing.Metadata

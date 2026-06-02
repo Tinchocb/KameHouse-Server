@@ -83,55 +83,54 @@ export function PipelineStageCard({ stage, isActive, isDone }: {
         <motion.div
             whileHover={{ y: -4, scale: 1.02 }}
             animate={isActive ? {
-                boxShadow: [`0 0 0 rgba(255,110,58,0)`, `0 0 40px ${stage.glowColor}`, `0 0 0 rgba(255,110,58,0)`],
+                boxShadow: [`0 0 0 rgba(255,110,58,0)`, `0 0 30px ${stage.glowColor}`, `0 0 0 rgba(255,110,58,0)`],
             } : {}}
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
             className={cn(
-                "relative p-6 rounded-none border transition-all duration-500 overflow-hidden group",
+                "relative p-5 rounded-2xl border transition-all duration-500 overflow-hidden group",
                 isActive
-                    ? "border-primary/40 bg-primary/5 shadow-2xl shadow-primary/20"
+                    ? "border-primary/40 bg-primary/[0.04] shadow-2xl shadow-primary/20"
                     : isDone
-                        ? "border-emerald-500/20 bg-emerald-500/5"
-                        : "border-white/5 bg-white/[0.02] hover:border-white/20"
+                        ? "border-emerald-500/25 bg-emerald-500/[0.02]"
+                        : "border-white/5 bg-white/[0.01] hover:border-white/10 hover:bg-white/[0.02]"
             )}
         >
             {/* Ambient Background Gradient */}
             <div 
                 className={cn(
                     "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-1000",
-                    "bg-[radial-gradient(circle_at_50%_-20%,rgba(255,255,255,0.05),transparent_70%)]"
+                    "bg-[radial-gradient(circle_at_50%_-20%,rgba(255,255,255,0.02),transparent_70%)]"
                 )}
             />
 
             <div className="relative space-y-4">
                 <div className={cn(
-                    "w-12 h-12 rounded-none flex items-center justify-center border transition-all duration-500",
+                    "w-10 h-10 rounded-xl flex items-center justify-center border transition-all duration-500",
                     isActive
-                        ? "text-primary border-primary/40 bg-primary/10 shadow-[0_0_20px_rgba(255,110,58,0.3)]"
+                        ? "text-primary border-primary/30 bg-primary/10 shadow-[0_0_15px_rgba(255,110,58,0.25)]"
                         : isDone
-                            ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10"
-                            : "text-zinc-600 border-white/5 bg-white/[0.02]"
+                            ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/10"
+                            : "text-zinc-500 border-white/5 bg-white/[0.02] group-hover:border-zinc-700"
                 )}>
-                    {isDone && !isActive ? <LucideCheck size={20} strokeWidth={3} /> : stage.icon}
+                    {isDone && !isActive ? <LucideCheck size={18} strokeWidth={3} /> : stage.icon}
                 </div>
 
                 <div>
                     <p className={cn(
-                        "text-[10px] font-black uppercase tracking-[0.2em] transition-colors duration-500",
-                        isActive ? "text-primary" : isDone ? "text-emerald-500/60" : "text-zinc-600"
+                        "text-[9px] font-black uppercase tracking-[0.25em] transition-colors duration-500",
+                        isActive ? "text-primary" : isDone ? "text-emerald-500/60" : "text-zinc-500"
                     )}>
                         {stage.shortLabel}
                     </p>
-                    <p className="text-sm font-bold text-white mt-0.5 tracking-tight">{stage.label}</p>
+                    <p className="text-xs font-bold text-white mt-0.5 tracking-tight leading-tight">{stage.label}</p>
                 </div>
 
                 {isActive && (
-                    <div className="absolute -bottom-6 -left-6 right-0 h-1">
+                    <div className="absolute bottom-0 left-0 right-0 h-[2px] overflow-hidden">
                         <motion.div 
-                            className="h-full bg-primary"
+                            className="h-full bg-primary shadow-[0_0_8px_rgba(255,110,58,0.8)]"
                             animate={{ 
                                 x: ["-100%", "200%"],
-                                opacity: [0, 1, 0]
                             }}
                             transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                         />

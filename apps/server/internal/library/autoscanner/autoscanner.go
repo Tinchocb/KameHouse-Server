@@ -99,10 +99,21 @@ func (as *AutoScanner) Notify(path string) {
 	as.mu.Lock()
 	defer as.mu.Unlock()
 
-	// Add path to pending (only if it's a directory or parent directory)
+	// Add path to pending (only if it's a directory, or a valid media file)
 	if path != "" {
+		stat, err := os.Stat(path)
+		isDir := err == nil && stat.IsDir()
+		
+		if !isDir {
+			ext := strings.ToLower(filepath.Ext(path))
+			if !util.IsValidVideoExtension(ext) {
+				// Ignore non-video files (temporary files, nfos, txt, etc.)
+				return
+			}
+		}
+
 		dir := path
-		if info, err := os.Stat(path); err == nil && !info.IsDir() {
+		if !isDir {
 			dir = filepath.Dir(path)
 		}
 		as.pendingPaths = append(as.pendingPaths, dir)

@@ -37,43 +37,43 @@ export function ScanActionCard({
 
     const colors: Record<string, { border: string; bg: string; glow: string; text: string; iconBg: string }> = {
         white: { 
-            border: "border-white/10 hover:border-primary/40", 
-            bg: "bg-white/[0.02] hover:bg-primary/[0.02]", 
-            glow: "hover:shadow-[0_0_40px_-10px_rgba(255,110,58,0.1)]", 
-            text: "text-primary",
-            iconBg: "bg-white/5 group-hover:bg-primary/10"
+            border: "border-white/5 hover:border-brand-orange/45", 
+            bg: "bg-white/[0.02] hover:bg-brand-orange/[0.01]", 
+            glow: "hover:shadow-[0_0_40px_-10px_rgba(255,110,58,0.15)]", 
+            text: "text-brand-orange",
+            iconBg: "bg-white/5 group-hover:bg-brand-orange/15 group-hover:border-brand-orange/20"
         },
         zinc: { 
             border: "border-white/5 hover:border-white/20", 
-            bg: "bg-white/[0.01] hover:bg-white/[0.04]", 
-            glow: "", 
-            text: "text-zinc-600",
-            iconBg: "bg-white/[0.02] group-hover:bg-white/[0.05]"
+            bg: "bg-white/[0.01] hover:bg-white/[0.03]", 
+            glow: "hover:shadow-[0_0_40px_-10px_rgba(255,255,255,0.03)]", 
+            text: "text-zinc-500",
+            iconBg: "bg-white/[0.01] group-hover:bg-white/[0.04] group-hover:border-white/10"
         },
     }
     const c = colors[accentColor]
 
     const baseClasses = cn(
-        "group relative block p-8 rounded-none border transition-all duration-500 text-left overflow-hidden backdrop-blur-md",
+        "group relative block p-7 rounded-2xl border transition-all duration-500 text-left overflow-hidden backdrop-blur-md shadow-[0_15px_30px_rgba(0,0,0,0.2)]",
         c.border, c.bg, c.glow,
         disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer active:scale-[0.98]"
     )
 
     const content = (
-        <div className="relative z-10 space-y-8">
+        <div className="relative z-10 space-y-6">
             <div className="flex items-center justify-between">
-                <div className={cn("w-14 h-14 rounded-none flex items-center justify-center border border-white/5 transition-all duration-500", c.iconBg)}>
-                    {loading ? <LucideRefreshCw size={24} className={cn("animate-spin", c.text)} /> : icon}
+                <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center border border-white/5 transition-all duration-500 shadow-inner", c.iconBg)}>
+                    {loading ? <LucideRefreshCw size={20} className={cn("animate-spin", c.text)} /> : icon}
                 </div>
-                <LucideChevronRight size={20} className="text-zinc-800 group-hover:text-primary group-hover:translate-x-1 transition-all duration-500" />
+                <LucideChevronRight size={18} className="text-zinc-700 group-hover:text-brand-orange group-hover:translate-x-1.5 transition-all duration-500" />
             </div>
-            <div className="space-y-2">
-                <p className="font-bebas text-5xl text-white tracking-wider uppercase leading-none">{label}</p>
-                <p className="text-zinc-500 group-hover:text-zinc-400 text-sm leading-relaxed transition-colors duration-500">{desc}</p>
+            <div className="space-y-1.5">
+                <p className="font-bebas text-4xl text-white tracking-wider uppercase leading-none">{label}</p>
+                <p className="text-zinc-500 group-hover:text-zinc-400 text-xs leading-relaxed transition-colors duration-500 font-medium">{desc}</p>
             </div>
             
             {/* Background Gradient Pulse */}
-            <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-primary/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+            <div className="absolute -bottom-12 -right-12 w-36 h-36 bg-brand-orange/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none" />
         </div>
     )
 
@@ -100,6 +100,17 @@ export function ScanActionCard({
 
 export function EventFeed({ events }: { events: ScanEvent[] }) {
     const listRef = useRef<HTMLDivElement>(null)
+    const [searchQuery, setSearchQuery] = React.useState("")
+    const [selectedStatus, setSelectedStatus] = React.useState<string>("ALL")
+    const [isPaused, setIsPaused] = React.useState(false)
+    const [frozenEvents, setFrozenEvents] = React.useState<ScanEvent[]>([])
+
+    // Sync or freeze events
+    React.useEffect(() => {
+        if (!isPaused) {
+            setFrozenEvents(events)
+        }
+    }, [events, isPaused])
 
     const getEventColor = (status: ScannerMessage["status"]) => {
         switch (status) {
@@ -128,35 +139,104 @@ export function EventFeed({ events }: { events: ScanEvent[] }) {
         }
     }
 
-    const visibleEvents = events.filter(e => e.status !== "PROCESSING" || events.indexOf(e) < 3)
-        .slice(0, 50)
+    const filteredEvents = React.useMemo(() => {
+        return frozenEvents.filter(evt => {
+            const label = getEventLabel(evt).toLowerCase()
+            const matchesSearch = label.includes(searchQuery.toLowerCase())
+            const matchesStatus = selectedStatus === "ALL" || evt.status === selectedStatus
+            return matchesSearch && matchesStatus
+        })
+    }, [frozenEvents, searchQuery, selectedStatus])
+
+    const visibleEvents = filteredEvents.slice(0, 100)
 
     return (
-        <div className="rounded-none overflow-hidden border border-white/5 bg-black/20">
-            <div
-                ref={listRef}
-                className="max-h-80 overflow-y-auto divide-y divide-white/[0.03]"
-            >
-                {visibleEvents.map((evt: ScanEvent & { id?: string; timestamp: number }) => (
-                    <motion.div
-                        key={evt.id || `${evt.timestamp}`}
-                        initial={{ opacity: 0, x: -8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="flex items-center gap-5 px-8 py-4"
+        <div className="space-y-4">
+            {/* Filter and Search Bar */}
+            <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
+                {/* macOS style Pill Selector */}
+                <div className="flex bg-white/[0.02] border border-white/5 rounded-full p-1 self-start gap-1">
+                    {["ALL", "START", "PROCESSING", "PRUNED", "FINISH"].map((status) => (
+                        <button
+                            key={status}
+                            onClick={() => setSelectedStatus(status)}
+                            className={cn(
+                                "px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all duration-300",
+                                selectedStatus === status
+                                    ? "bg-brand-orange text-white shadow-[0_2px_10px_rgba(255,110,58,0.3)]"
+                                    : "text-zinc-500 hover:text-zinc-300"
+                            )}
+                        >
+                            {status === "ALL" ? "Todos" : status}
+                        </button>
+                    ))}
+                </div>
+                
+                <div className="flex items-center gap-3">
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Buscar en logs..."
+                        className="bg-white/[0.02] border border-white/5 focus:border-brand-orange/40 rounded-xl px-4 py-2 text-xs text-white placeholder-zinc-700 focus:outline-none w-full sm:w-56 font-mono transition-all duration-300 focus:shadow-[0_0_15px_rgba(255,110,58,0.08)]"
+                    />
+                    <button
+                        onClick={() => setIsPaused(!isPaused)}
+                        className={cn(
+                            "px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border duration-300 active:scale-95",
+                            isPaused
+                                ? "bg-amber-500/10 border-amber-500/30 text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.1)]"
+                                : "bg-white/[0.02] border-white/5 text-zinc-400 hover:text-white hover:bg-white/[0.06]"
+                        )}
                     >
-                        <div className={cn("w-2 h-2 rounded-none shrink-0", {
-                            "bg-white": evt.status === "START" || evt.status === "FINISH",
-                            "bg-zinc-600": evt.status === "PROCESSING",
-                            "bg-zinc-400": evt.status === "PRUNED",
-                        })} />
-                        <span className={cn("text-sm font-mono truncate flex-1", getEventColor(evt.status))}>
-                            {getEventLabel(evt)}
-                        </span>
-                        <span className="text-xs text-zinc-600 shrink-0">
-                            {new Date(evt.timestamp).toLocaleTimeString()}
-                        </span>
-                    </motion.div>
-                ))}
+                        {isPaused ? "Reanudar" : "Pausar"}
+                    </button>
+                </div>
+            </div>
+
+            {/* Event List Container */}
+            <div className="rounded-2xl overflow-hidden border border-white/5 bg-white/[0.01] backdrop-blur-md relative shadow-[0_20px_40px_rgba(0,0,0,0.3)]">
+                {isPaused && (
+                    <div className="absolute top-3 right-4 z-20 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[8px] font-black tracking-widest uppercase px-2.5 py-1 rounded-full animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.15)]">
+                        FROZEN FEED
+                    </div>
+                )}
+                <div
+                    ref={listRef}
+                    className="max-h-80 overflow-y-auto divide-y divide-white/[0.02]"
+                >
+                    {visibleEvents.length === 0 ? (
+                        <div className="p-12 text-center text-zinc-600 uppercase font-black tracking-widest text-[10px]">
+                            No se encontraron logs coincidentes
+                        </div>
+                    ) : (
+                        visibleEvents.map((evt: ScanEvent & { id?: string; timestamp: number }) => {
+                            const color = getEventColor(evt.status)
+                            return (
+                                <motion.div
+                                    key={evt.id || `${evt.timestamp}`}
+                                    initial={{ opacity: 0, x: -8 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    className="flex items-center gap-5 px-8 py-3.5 hover:bg-white/[0.005] transition-colors"
+                                >
+                                    <div 
+                                        className={cn("w-1.5 h-1.5 rounded-full shrink-0")} 
+                                        style={{ 
+                                            backgroundColor: evt.status === "START" || evt.status === "FINISH" ? "rgb(255,110,58)" : evt.status === "PRUNED" ? "#f43f5e" : "#71717a",
+                                            boxShadow: evt.status === "START" || evt.status === "FINISH" ? "0 0 6px rgb(255,110,58)" : "none"
+                                        }}
+                                    />
+                                    <span className={cn("text-xs font-mono truncate flex-1 leading-normal", color)}>
+                                        {getEventLabel(evt)}
+                                    </span>
+                                    <span className="text-[10px] font-mono text-zinc-600 shrink-0">
+                                        {new Date(evt.timestamp).toLocaleTimeString()}
+                                    </span>
+                                </motion.div>
+                            )
+                        })
+                    )}
+                </div>
             </div>
         </div>
     )

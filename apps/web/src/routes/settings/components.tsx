@@ -235,7 +235,7 @@ export function Section({ label, children, right }: { label: string; children: R
 export function Card({ children, className }: { children: React.ReactNode; className?: string }) {
     return (
         <div className={cn(
-            "overflow-hidden rounded-2xl glass-panel",
+            "bg-white/[0.02] backdrop-blur-md border border-white/5 rounded-2xl overflow-hidden divide-y divide-white/[0.02]",
             className
         )}>
             {children}
@@ -257,8 +257,8 @@ export interface OsToggleProps {
 export function OsToggle({ label, description, checked, onChange, disabled }: OsToggleProps) {
     return (
         <div className={cn(
-            "flex items-center justify-between px-6 py-4 border-b border-white/[0.03] last:border-0 transition-all duration-200 gap-8 group/toggle relative",
-            checked && "bg-cyan-500/[0.02]",
+            "flex items-center justify-between p-5 hover:bg-white/[0.02] transition-colors cursor-pointer group/toggle relative",
+            checked && "bg-brand-orange/[0.02]",
             disabled
                 ? "opacity-40 cursor-not-allowed pointer-events-none"
                 : "hover:bg-white/[0.02] cursor-pointer"
@@ -270,7 +270,7 @@ export function OsToggle({ label, description, checked, onChange, disabled }: Os
         >
             <div className={cn(
                 "absolute left-0 top-1/2 -translate-y-1/2 w-[2px] rounded-r-full transition-all duration-300",
-                checked ? "h-6 bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.6)]" : "h-0 bg-transparent"
+                checked ? "h-6 bg-brand-orange shadow-[0_0_8px_rgba(255,110,58,0.6)]" : "h-0 bg-transparent"
             )} />
 
             <div className="space-y-0.5 flex-1 pl-2">
@@ -287,7 +287,7 @@ export function OsToggle({ label, description, checked, onChange, disabled }: Os
                     onChange(v)
                 }}
                 disabled={disabled}
-                className="scale-[0.9] origin-right transition-all duration-300 data-[state=checked]:bg-cyan-500 shrink-0"
+                className="scale-[0.9] origin-right transition-all duration-300 data-[state=checked]:bg-brand-orange shrink-0"
                 onClick={(e) => e.stopPropagation()}
             />
         </div>
@@ -315,11 +315,11 @@ export function PathList({ directories = [], onAdd, onRemove, label, placeholder
     }
 
     return (
-        <div className="p-7 space-y-5">
+        <div className="bg-white/[0.02] backdrop-blur-md border border-white/5 rounded-2xl overflow-hidden p-6 space-y-6">
             <div className="space-y-1.5">
                 <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 rounded-lg bg-cyan-500/5 border border-cyan-500/10 flex items-center justify-center">
-                        <FolderIcon className="text-cyan-400/60" />
+                    <div className="w-7 h-7 rounded-lg bg-brand-orange/5 border border-brand-orange/10 flex items-center justify-center">
+                        <FolderIcon className="text-brand-orange/60" />
                     </div>
                     <p className="text-base font-bebas tracking-wider text-white uppercase">{label}</p>
                 </div>
@@ -330,16 +330,16 @@ export function PathList({ directories = [], onAdd, onRemove, label, placeholder
 
             <div className="space-y-2">
                 {directories.length === 0 ? (
-                    <div className="border border-dashed border-white/[0.04] bg-white/[0.005] p-6 rounded-xl text-center space-y-1">
+                    <div className="border border-dashed border-white/10 bg-black/20 p-6 rounded-xl text-center space-y-1">
                         <FolderIcon className="mx-auto mb-2 text-zinc-700" />
                         <p className="text-zinc-600 text-xs font-medium">No hay directorios configurados</p>
                         <p className="text-zinc-700 text-[10px] uppercase tracking-[0.2em]">Agrega uno con el campo de abajo</p>
                     </div>
                 ) : (
                     directories.map((path, idx) => (
-                        <div key={idx} className="flex items-center justify-between bg-white/[0.01] border border-white/[0.05] px-4 py-3 rounded-xl hover:bg-white/[0.03] hover:border-white/10 transition-all duration-200 group/pathitem">
+                        <div key={idx} className="flex items-center justify-between bg-black/20 border border-white/5 px-4 py-2.5 rounded-xl transition-all duration-200 group/pathitem">
                             <div className="flex items-center gap-3 min-w-0">
-                                <CheckIcon className="text-cyan-400/60 shrink-0" />
+                                <CheckIcon className="text-brand-orange/60 shrink-0" />
                                 <span className="font-mono text-xs text-zinc-400 truncate group-hover/pathitem:text-zinc-200 transition-colors">{path}</span>
                             </div>
                             <button
@@ -354,7 +354,7 @@ export function PathList({ directories = [], onAdd, onRemove, label, placeholder
                 )}
             </div>
 
-            <div className="flex gap-2 bg-black/50 border border-white/[0.06] focus-within:border-cyan-500/20 focus-within:shadow-[0_0_20px_rgba(6,182,212,0.04)] rounded-xl p-1.5 transition-all">
+            <div className="flex gap-2 bg-black/50 border border-white/[0.06] focus-within:border-brand-orange/20 focus-within:shadow-[0_0_20px_rgba(255,110,58,0.04)] rounded-xl p-1.5 transition-all">
                 <input
                     type="text"
                     value={inputValue}
@@ -371,7 +371,7 @@ export function PathList({ directories = [], onAdd, onRemove, label, placeholder
                 <button
                     type="button"
                     onClick={handleAdd}
-                    className="bg-cyan-500 hover:bg-cyan-400 text-black px-5 py-2 rounded-lg font-black uppercase text-[9px] tracking-[0.2em] transition-all shrink-0 flex items-center gap-1.5 active:scale-95"
+                    className="bg-brand-orange hover:bg-brand-orange/90 text-white px-5 py-2 rounded-lg font-black uppercase text-[9px] tracking-[0.2em] transition-all shrink-0 flex items-center gap-1.5 active:scale-95"
                 >
                     <PlusIcon />
                     AGREGAR
@@ -409,8 +409,8 @@ export const OsInput = React.forwardRef<HTMLInputElement, OsInputProps>(({
                 {description && <p className="text-xs text-zinc-600 leading-relaxed font-medium">{description}</p>}
             </div>
             <div className={cn(
-                "flex items-center gap-2 bg-black/50 border border-white/[0.06] rounded-xl px-4 py-2.5 w-full md:w-72 transition-all relative",
-                "focus-within:border-cyan-500/30 focus-within:shadow-[0_0_16px_rgba(6,182,212,0.07)] hover:border-white/10",
+                "flex items-center gap-2 bg-white/[0.02] border border-white/5 rounded-xl px-4 py-2.5 w-full md:w-72 transition-all relative",
+                "focus-within:border-brand-orange/30 focus-within:shadow-[0_0_16px_rgba(255,110,58,0.07)] hover:border-white/10",
                 className
             )}>
                 <input
@@ -461,8 +461,8 @@ export const OsSelect = React.forwardRef<HTMLSelectElement, OsSelectProps>(({
                 {description && <p className="text-xs text-zinc-600 leading-relaxed font-medium">{description}</p>}
             </div>
             <div className={cn(
-                "flex items-center bg-black/50 border border-white/[0.06] rounded-xl px-4 py-2.5 w-full md:w-72 transition-all relative cursor-pointer",
-                "focus-within:border-cyan-500/30 focus-within:shadow-[0_0_16px_rgba(6,182,212,0.07)] hover:border-white/10",
+                "flex items-center bg-white/[0.02] border border-white/5 rounded-xl px-4 py-2.5 w-full md:w-72 transition-all relative cursor-pointer",
+                "focus-within:border-brand-orange/30 focus-within:shadow-[0_0_16px_rgba(255,110,58,0.07)] hover:border-white/10",
                 className
             )}>
                 <select
