@@ -31,15 +31,7 @@ const AlertIcon = () => (
 
 export function SystemTab({ control }: SystemTabProps) {
     const { data: status } = useGetStatus()
-    const [selectedIp, setSelectedIp] = useState<string>("")
 
-    const [prevServerIps, setPrevServerIps] = useState<string[] | undefined>(status?.serverIPs)
-    if (status?.serverIPs !== prevServerIps) {
-        setPrevServerIps(status?.serverIPs)
-        if (status?.serverIPs && status.serverIPs.length > 0) {
-            setSelectedIp(status.serverIPs[0])
-        }
-    }
 
     const {
         bgMusicEnabled,
@@ -47,7 +39,9 @@ export function SystemTab({ control }: SystemTabProps) {
         bgMusicVolume,
         setBgMusicVolume,
         uiSoundsEnabled,
-        setUiSoundsEnabled
+        setUiSoundsEnabled,
+        uiSoundsVolume,
+        setUiSoundsVolume
     } = useAppStore()
 
     const handleBackup = () => {
@@ -58,14 +52,7 @@ export function SystemTab({ control }: SystemTabProps) {
         toast.success("Caché de imágenes restablecida con éxito")
     }
 
-    const frontendPort = window.location.port || String(status?.serverPort || 43210)
-    const mobileUrl = selectedIp ? `http://${selectedIp}:${frontendPort}` : ""
 
-    const copyToClipboard = () => {
-        if (!mobileUrl) return
-        navigator.clipboard.writeText(mobileUrl)
-        toast.success("URL copiada al portapapeles")
-    }
 
     return (
         <TabsContent value="system" className="m-0 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 outline-none">
@@ -158,83 +145,7 @@ export function SystemTab({ control }: SystemTabProps) {
                 </div>
             </div>
 
-            {/* Acceso Móvil */}
-            <Section label="Acceso desde Dispositivos Móviles (LAN)">
-                <div className="bg-white/[0.01] border border-white/5 backdrop-blur-xl rounded-3xl p-6 shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
-                    <div className="flex flex-col md:flex-row gap-8 items-center">
-                        {/* QR Code Container */}
-                        <div className="shrink-0 flex flex-col items-center gap-3">
-                            <div className="p-3 bg-white rounded-2xl shadow-[0_0_20px_rgba(255,255,255,0.05)] border border-white/10 relative group">
-                                {mobileUrl ? (
-                                    <img
-                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(mobileUrl)}`}
-                                        alt="QR Code de Acceso Móvil"
-                                        className="w-[180px] h-[180px] object-contain rounded-lg transition-transform duration-300 group-hover:scale-[1.02]"
-                                    />
-                                ) : (
-                                    <div className="w-[180px] h-[180px] bg-zinc-900 rounded-lg flex items-center justify-center text-zinc-600 text-xs font-mono text-center px-4">
-                                        Generando código...
-                                    </div>
-                                )}
-                            </div>
-                            <span className="text-[9px] font-bold text-zinc-500 tracking-wider uppercase font-mono">Escanear con tu cámara</span>
-                        </div>
 
-                        {/* Instructions and Details */}
-                        <div className="flex-1 space-y-5 w-full">
-                            <div className="space-y-1.5">
-                                <h3 className="text-lg font-bebas tracking-wider text-white uppercase">Sintonizar en tu Celular</h3>
-                                <p className="text-xs text-zinc-500 font-medium leading-relaxed">
-                                    Conecta tu teléfono a la **misma red Wi-Fi** que esta computadora y escanea el código QR o introduce la dirección URL manualmente en tu navegador móvil.
-                                </p>
-                            </div>
-
-                            {status?.serverIPs && status.serverIPs.length > 0 ? (
-                                <div className="space-y-4">
-                                    {/* IP Select */}
-                                    <div className="flex flex-col gap-2 max-w-sm">
-                                        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">Seleccionar Dirección IP de Red (LAN)</label>
-                                        <div className="relative flex items-center bg-black/40 border border-white/5 rounded-xl px-4 py-2.5 transition-all focus-within:border-[#ff6e3a]/30 hover:border-white/10">
-                                            <select
-                                                value={selectedIp}
-                                                onChange={(e) => setSelectedIp(e.target.value)}
-                                                className="w-full bg-transparent text-white text-xs focus:outline-none appearance-none cursor-pointer pr-6 font-medium [&>option]:bg-zinc-950 [&>option]:text-white"
-                                            >
-                                                {status.serverIPs.map((ip) => (
-                                                    <option key={ip} value={ip}>
-                                                        {ip} (Red Local)
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            <div className="absolute right-3.5 pointer-events-none text-zinc-500">
-                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* URL display and Copy Button */}
-                                    <div className="flex items-center gap-2 bg-black/50 border border-white/5 rounded-2xl p-1.5 max-w-lg transition-all focus-within:border-[#ff6e3a]/30">
-                                        <span className="flex-1 px-4 py-2 text-white placeholder-zinc-700 text-xs font-mono select-all truncate">
-                                            {mobileUrl}
-                                        </span>
-                                        <button
-                                            type="button"
-                                            onClick={copyToClipboard}
-                                            className="bg-white/[0.02] hover:bg-white/[0.08] text-white px-5 py-2.5 rounded-xl font-bold uppercase text-[9px] tracking-[0.2em] transition-all shrink-0 flex items-center gap-1.5 active:scale-95 border border-white/5"
-                                        >
-                                            Copiar URL
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="border border-red-500/10 bg-red-500/5 p-4 rounded-xl text-xs text-red-400 font-mono">
-                                    No se detectaron interfaces de red locales activas. Asegúrate de estar conectado a tu red local (Wi-Fi o cable).
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </Section>
 
             {/* Gestión de Notificaciones */}
             <Section label="Notificaciones de la Aplicación">
@@ -275,6 +186,28 @@ export function SystemTab({ control }: SystemTabProps) {
                         checked={uiSoundsEnabled}
                         onChange={setUiSoundsEnabled}
                     />
+                    {uiSoundsEnabled && (
+                        <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 hover:bg-white/[0.015] transition-all duration-200 gap-5 border-t border-white/[0.03]">
+                            <div className="space-y-0.5 flex-1 max-w-xl">
+                                <p className="text-sm font-semibold text-zinc-200">Volumen de los Efectos</p>
+                                <p className="text-xs text-zinc-500 font-medium">Ajusta el volumen general de los efectos de sonido de la interfaz.</p>
+                            </div>
+                            <div className="flex items-center gap-3 w-full md:w-72">
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="1"
+                                    step="0.05"
+                                    value={uiSoundsVolume}
+                                    onChange={(e) => setUiSoundsVolume(parseFloat(e.target.value))}
+                                    className="w-full accent-[#ff6e3a] bg-zinc-800 h-1 rounded-lg appearance-none cursor-pointer"
+                                />
+                                <span className="text-xs font-mono text-zinc-400 w-8 text-right shrink-0">
+                                    {Math.round(uiSoundsVolume * 100)}%
+                                </span>
+                            </div>
+                        </div>
+                    )}
                     <OsToggle
                         label="Música de Fondo"
                         description="Habilita la reproducción de música ambiental de fondo mientras navegas por KameHouse."

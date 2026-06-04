@@ -101,7 +101,7 @@ export function PlayerTab({ control }: PlayerTabProps) {
                             )}
                         />
 
-                        <div className="border-t border-white/5 pt-4">
+                        <div className="border-t border-white/5 pt-4 space-y-4">
                             <Controller
                                 control={control}
                                 name="mediastream.transcodeEnabled"
@@ -114,19 +114,45 @@ export function PlayerTab({ control }: PlayerTabProps) {
                                     />
                                 )}
                             />
+
+                            <Controller
+                                control={control}
+                                name="library.autoPlayNextEpisode"
+                                render={({ field }) => (
+                                    <OsToggle
+                                        label="Reproducción Automática"
+                                        description="Inicia automáticamente el siguiente episodio de la cola al finalizar el actual."
+                                        checked={!!field.value}
+                                        onChange={field.onChange}
+                                    />
+                                )}
+                            />
+
+                            <Controller
+                                control={control}
+                                name="library.enableWatchContinuity"
+                                render={({ field }) => (
+                                    <OsToggle
+                                        label="Habilitar Continuidad de Reproducción"
+                                        description="Guarda el progreso en segundo plano para continuar viendo desde donde lo dejaste."
+                                        checked={!!field.value}
+                                        onChange={field.onChange}
+                                    />
+                                )}
+                            />
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* FFMPEG Paths */}
+            {/* FFMPEG / FFPROBE Paths */}
             <Section label="Parámetros del Sistema">
-                <Card>
+                <Card className="divide-y divide-white/[0.03]">
                     <Controller
                         control={control}
                         name="mediastream.ffmpegPath"
                         render={({ field }) => (
-                            <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 border-b border-white/[0.03] last:border-0 hover:bg-white/[0.015] transition-all duration-205 gap-5 group/input">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 hover:bg-white/[0.015] transition-all duration-205 gap-5 group/input">
                                 <div className="space-y-0.5 flex-1 max-w-xl">
                                     <p className="text-sm font-semibold text-zinc-200 group-hover/input:text-white transition-colors tracking-tight">Ruta Ejecutable FFmpeg</p>
                                     <p className="text-xs text-zinc-500 leading-relaxed font-medium">Ubicación del binario ffmpeg en el sistema local.</p>
@@ -134,6 +160,25 @@ export function PlayerTab({ control }: PlayerTabProps) {
                                 <input
                                     type="text"
                                     placeholder="Ej. /usr/bin/ffmpeg o C:\ffmpeg\ffmpeg.exe"
+                                    value={field.value || ""}
+                                    onChange={field.onChange}
+                                    className="bg-black/40 border border-white/5 rounded-xl px-4 py-2.5 w-full md:w-72 text-white placeholder-zinc-700 text-xs focus:outline-none focus:border-[#ff6e3a]/30 font-mono"
+                                />
+                            </div>
+                        )}
+                    />
+                    <Controller
+                        control={control}
+                        name="mediastream.ffprobePath"
+                        render={({ field }) => (
+                            <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 hover:bg-white/[0.015] transition-all duration-205 gap-5 group/input">
+                                <div className="space-y-0.5 flex-1 max-w-xl">
+                                    <p className="text-sm font-semibold text-zinc-200 group-hover/input:text-white transition-colors tracking-tight">Ruta Ejecutable FFprobe</p>
+                                    <p className="text-xs text-zinc-500 leading-relaxed font-medium">Ubicación del binario ffprobe en el sistema local.</p>
+                                </div>
+                                <input
+                                    type="text"
+                                    placeholder="Ej. /usr/bin/ffprobe o C:\ffmpeg\ffprobe.exe"
                                     value={field.value || ""}
                                     onChange={field.onChange}
                                     className="bg-black/40 border border-white/5 rounded-xl px-4 py-2.5 w-full md:w-72 text-white placeholder-zinc-700 text-xs focus:outline-none focus:border-[#ff6e3a]/30 font-mono"

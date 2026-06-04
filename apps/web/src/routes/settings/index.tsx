@@ -134,11 +134,11 @@ export const Route = createFileRoute("/settings/")(({
 }))
 
 const NAV_ITEMS = [
-    { id: "system",       label: "System Config",   sublabel: "SISTEMA",          icon: LucideSettings },
-    { id: "library",      label: "Library Paths",   sublabel: "DIRECTORIOS",      icon: LucideHardDrive },
-    { id: "player",       label: "Cassette Engine",  sublabel: "VIDEO ENGINE",     icon: LucidePlay },
-    { id: "scanner",      label: "Scouter (Scanner)",sublabel: "INDEXACIÓN",       icon: LucideRadar },
-    { id: "integrations", label: "Integraciones",    sublabel: "SERVICIOS EXT.",   icon: LucideCloud },
+    { id: "system",       label: "Configuración",  icon: LucideSettings },
+    { id: "library",      label: "Archivos",      icon: LucideHardDrive },
+    { id: "player",       label: "Reproductor", icon: LucidePlay },
+    { id: "scanner",      label: "Escáner",   icon: LucideRadar },
+    { id: "integrations", label: "Integraciones",  icon: LucideCloud },
 ]
 
 function SettingsPage() {
@@ -178,8 +178,7 @@ function SettingsPage() {
 
             <div className="w-full flex flex-col min-h-full relative z-10">
                 <header className="mb-10 flex flex-col gap-2 relative z-10">
-                    <span className="text-[9px] font-black uppercase tracking-[0.20em] text-zinc-550 font-mono">Configuración Avanzada</span>
-                    <h1 className="font-bebas text-5xl md:text-6xl tracking-wider text-white">KameHouse_Core<span className="text-[#ff6e3a]">.</span>conf</h1>
+                    <h1 className="font-bebas text-5xl md:text-6xl tracking-wider text-white">Configuración</h1>
                 </header>
 
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col md:flex-row gap-8 lg:gap-12 pb-32">
@@ -205,7 +204,6 @@ function SettingsPage() {
                                         )} />
                                         <div className="flex flex-col text-left">
                                             <span className="relative z-10 leading-none">{item.label}</span>
-                                            <span className="text-[8px] font-mono text-zinc-600 font-bold mt-0.5 tracking-wider">{item.sublabel}</span>
                                         </div>
                                     </TabsTrigger>
                                 )

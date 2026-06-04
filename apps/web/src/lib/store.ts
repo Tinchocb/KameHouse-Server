@@ -10,6 +10,7 @@ export interface UIState {
     bgMusicEnabled: boolean
     bgMusicVolume: number
     uiSoundsEnabled: boolean
+    uiSoundsVolume: number
     globalQueueOpen: boolean
     setSidebarOpen: (open: boolean) => void
     setActiveTheme: (theme: string) => void
@@ -18,6 +19,7 @@ export interface UIState {
     setBgMusicEnabled: (enabled: boolean) => void
     setBgMusicVolume: (volume: number) => void
     setUiSoundsEnabled: (enabled: boolean) => void
+    setUiSoundsVolume: (volume: number) => void
     setGlobalQueueOpen: (open: boolean) => void
 }
 
@@ -69,6 +71,7 @@ export const createUISlice: StateCreator<UIState & PlayerState, [], [], UIState>
     bgMusicEnabled: false,
     bgMusicVolume: 0.25,
     uiSoundsEnabled: true,
+    uiSoundsVolume: 1.0,
     globalQueueOpen: false,
     setSidebarOpen: (open) => set({ sidebarOpen: open }),
     setActiveTheme: (theme) => set({ activeTheme: theme }),
@@ -77,6 +80,7 @@ export const createUISlice: StateCreator<UIState & PlayerState, [], [], UIState>
     setBgMusicEnabled: (enabled) => set({ bgMusicEnabled: enabled }),
     setBgMusicVolume: (volume) => set({ bgMusicVolume: volume }),
     setUiSoundsEnabled: (enabled) => set({ uiSoundsEnabled: enabled }),
+    setUiSoundsVolume: (volume) => set({ uiSoundsVolume: volume }),
     setGlobalQueueOpen: (open) => set({ globalQueueOpen: open }),
 })
 
@@ -127,6 +131,9 @@ export interface PlayerState {
     tvMode: boolean
     setTvMode: (enabled: boolean) => void
 
+    seriesSkipTimes: Record<string, { opStart?: number; opEnd?: number; edOffset?: number }>
+    saveSeriesSkipTimes: (malId: number, opStart: number, opEnd: number, edOffset: number) => void
+
     playlistQueue: PlaylistItem[]
     currentQueueIndex: number
     activeQueuePlayItem: PlaylistItem | null
@@ -171,6 +178,14 @@ export const createPlayerSlice: StateCreator<UIState & PlayerState, [], [], Play
     setAmbilightEnabled: (ambilightEnabled) => set({ ambilightEnabled }),
     tvMode: false,
     setTvMode: (tvMode) => set({ tvMode }),
+
+    seriesSkipTimes: {},
+    saveSeriesSkipTimes: (malId, opStart, opEnd, edOffset) => set((state) => ({
+        seriesSkipTimes: {
+            ...state.seriesSkipTimes,
+            [String(malId)]: { opStart, opEnd, edOffset }
+        }
+    })),
 
     playlistQueue: [],
     currentQueueIndex: -1,
@@ -246,6 +261,7 @@ export const useAppStore = create<UIState & PlayerState & ScannerState>()(
                 bgMusicEnabled: state.bgMusicEnabled,
                 bgMusicVolume: state.bgMusicVolume,
                 uiSoundsEnabled: state.uiSoundsEnabled,
+                uiSoundsVolume: state.uiSoundsVolume,
                 autoSkipIntro: state.autoSkipIntro,
                 autoSkipOutro: state.autoSkipOutro,
                 playbackRate: state.playbackRate,
@@ -259,6 +275,7 @@ export const useAppStore = create<UIState & PlayerState & ScannerState>()(
                 ambilightEnabled: state.ambilightEnabled,
                 playerVolume: state.playerVolume,
                 tvMode: state.tvMode,
+                seriesSkipTimes: state.seriesSkipTimes,
             }),
         }
     )

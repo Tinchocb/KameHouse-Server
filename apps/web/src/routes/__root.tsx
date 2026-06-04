@@ -79,13 +79,11 @@ function RootComponent() {
                     mediaFormat={activeQueuePlayItem.mediaFormat}
                     onNextEpisode={() => {
                         const nextIdx = currentQueueIndex + 1;
-                        startViewTransition(() => {
-                            if (nextIdx < playlistQueue.length) {
-                                setCurrentQueueIndex(nextIdx);
-                            } else {
-                                clearQueue();
-                            }
-                        })
+                        if (nextIdx < playlistQueue.length) {
+                            setCurrentQueueIndex(nextIdx);
+                        } else {
+                            clearQueue();
+                        }
                     }}
                     hasNextEpisode={currentQueueIndex + 1 < playlistQueue.length}
                     onClose={() => {

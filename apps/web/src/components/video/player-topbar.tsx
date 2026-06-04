@@ -66,26 +66,24 @@ export function PlayerTopBar({ title, episodeLabel, episodeNumber, mediaFormat, 
             "bg-[#09090b] border border-white/5 rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.6)] px-4 py-2.5",
             "z-[100]"
         )}>
-            <div className="flex gap-3 items-center">
-                <button
-                    onClick={(e) => { e.stopPropagation(); onClose(); }}
-                    aria-label="Cerrar reproductor"
-                    className="flex items-center justify-center w-7 h-7 text-white/40 hover:text-white hover:bg-white/10 border border-white/5 hover:border-white/20 rounded-lg transition-all duration-300 group"
-                >
-                    <FiX className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                </button>
-                
-                <div className="flex flex-col gap-0.5">
-                    <h1 className="text-white font-bebas text-lg md:text-xl tracking-[0.02em] uppercase leading-none truncate max-w-[50vw]">
-                        {displayTitle}
-                    </h1>
-                    {!isMovie && (
-                        <span className="text-zinc-500 font-bold tracking-[0.1em] uppercase text-[8px] md:text-[9px] flex items-center gap-2 opacity-80">
-                            {cleanTitle} {episodeNumber ? `• Episodio ${episodeNumber}` : ""}
-                        </span>
-                    )}
-                </div>
+            <div className="flex flex-col gap-0.5">
+                <h1 className="text-white font-bebas text-lg md:text-xl tracking-[0.02em] uppercase leading-none truncate max-w-[65vw]">
+                    {displayTitle}
+                </h1>
+                {!isMovie && (
+                    <span className="text-zinc-500 font-bold tracking-[0.1em] uppercase text-[8px] md:text-[9px] flex items-center gap-2 opacity-80">
+                        {cleanTitle} {episodeNumber ? `• Episodio ${episodeNumber}` : ""}
+                    </span>
+                )}
             </div>
+
+            <button
+                onClick={(e) => { e.stopPropagation(); onClose(); }}
+                aria-label="Cerrar reproductor"
+                className="flex items-center justify-center w-7 h-7 text-white/40 hover:text-white hover:bg-white/10 border border-white/5 hover:border-white/20 rounded-lg transition-all duration-300 group shrink-0"
+            >
+                <FiX className="w-4 h-4 group-hover:scale-110 transition-transform" />
+            </button>
         </div>
     )
 }

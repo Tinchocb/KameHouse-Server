@@ -1,23 +1,22 @@
 import React, { useCallback, useMemo } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { useScannerEvents } from "@/hooks/use-scanner-events"
-import { useScanLocalFiles, useGetScanSummaries } from "@/api/hooks/scan.hooks"
+import { useScanLocalFiles } from "@/api/hooks/scan.hooks"
+import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
+import { getLargeResImage } from "@/lib/helpers/images"
 import {
-    LucideActivity, LucideCheck,
-    LucideFlame, LucideHistory,
-    LucideRadar, LucideRefreshCw,
-    LucideFilter, LucideZap, LucideSparkles,
+    LucideFlame, LucideRefreshCw,
+    LucideZap, LucideSparkles,
 } from "lucide-react"
 
 import { cn } from "@/components/ui/core/styling"
 import { PIPELINE_STAGES, PipelineStageCard, ProgressRing } from "./scanner-progress"
-import { SectionHeader, ScanActionCard, EventFeed, ScanHistory } from "./scanner-results"
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
+import { ScanActionCard } from "./scanner-results"
 
 export function ScannerDashboard() {
-    const { isScanning, scanProgress, scanningFile, events, activeStageIdx, lastFinish, pruneCount } = useScannerEvents()
+    const { isScanning, scanProgress, scanningFile, activeStageIdx, lastFinish } = useScannerEvents()
     const { mutate: scan, isPending: scanPending } = useScanLocalFiles()
-    const { data: summaries } = useGetScanSummaries()
+    const { data: collection } = useGetLibraryCollection()
 
     const startMetadataImprovement = useCallback(() => {
         scan({ mode: "metadata", skipLockedFiles: false, skipIgnoredFiles: false })
@@ -31,46 +30,32 @@ export function ScannerDashboard() {
         scan({ mode: "deep", skipLockedFiles: false, skipIgnoredFiles: false })
     }, [scan])
 
-    const recentSummaries = useMemo(() => (summaries ?? []).slice().reverse().slice(0, 8), [summaries])
-
-    const chartData = useMemo(() => {
-        return (summaries ?? []).slice(-10).map((s) => {
-            const groups = s.scanSummary?.groups ?? []
-            const unmatched = s.scanSummary?.unmatchedFiles ?? []
-            const matchedCount = groups.reduce((acc, g) => acc + (g.files?.length ?? 0), 0)
-            const totalCount = matchedCount + unmatched.length
-            const dateStr = s.createdAt ? new Date(s.createdAt).toLocaleDateString("es-AR", {
-                day: "2-digit",
-                month: "short",
-                hour: "2-digit",
-                minute: "2-digit"
-            }) : ""
+    const mediaItems = useMemo(() => {
+        if (!collection?.lists) return []
+        const raw = collection.lists.flatMap(list => list.entries || [])
+        const unique = new Map<number, typeof raw[0]>()
+        raw.forEach(s => { if (s.mediaId) unique.set(s.mediaId, s) })
+        return Array.from(unique.values()).map(s => {
+            const media = s.media
+            const title = media?.titleEnglish || media?.titleRomaji || media?.titleSpanish || media?.titleOriginal || "Sin título"
+            const type = media?.type || "ANIME"
+            const format = media?.format || "TV"
+            const totalEps = media?.totalEpisodes || 0
+            const poster = media?.posterImage ? getLargeResImage(media.posterImage) : ""
+            const year = media?.year || (media?.startDate ? new Date(media.startDate).getFullYear() : null)
 
             return {
-                name: dateStr,
-                Archivos: totalCount,
-                Coincidentes: matchedCount,
+                id: s.mediaId,
+                title,
+                type,
+                format,
+                totalEps,
+                poster,
+                year,
+                score: media?.score || 0,
             }
-        })
-    }, [summaries])
-
-    const averageMatchingRate = useMemo(() => {
-        if (!summaries || summaries.length === 0) return 0
-        let total = 0
-        let matched = 0
-        summaries.forEach((s) => {
-            const groups = s.scanSummary?.groups ?? []
-            const unmatched = s.scanSummary?.unmatchedFiles ?? []
-            const mCount = groups.reduce((acc, g) => acc + (g.files?.length ?? 0), 0)
-            const tCount = mCount + unmatched.length
-            if (tCount > 0) {
-                total += tCount
-                matched += mCount
-            }
-        })
-        if (total === 0) return 0
-        return Math.round((matched / total) * 100)
-    }, [summaries])
+        }).sort((a, b) => a.title.localeCompare(b.title))
+    }, [collection])
 
     return (
         <div className="max-w-[1600px] mx-auto space-y-12 pb-20 text-zinc-300">
@@ -223,168 +208,84 @@ export function ScannerDashboard() {
                         accentColor="white"
                     />
                 </div>
+            </div>
 
-                {/* --- 2.5 ANALYTICS CHART & KPI --- */}
-                {chartData.length > 0 && (
-                    <>
-                        <div className="col-span-12 lg:col-span-8 overflow-hidden relative border border-white/5 bg-white/[0.01] backdrop-blur-[64px] p-8 rounded-3xl flex flex-col justify-between space-y-6 shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
-                            <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-[#ff6e3a]/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-                            <div className="flex items-center justify-between z-10">
-                                <div className="space-y-1">
-                                    <h3 className="text-xl font-bold text-white tracking-tight uppercase">Métricas de Ejecución</h3>
-                                    <p className="text-xs text-zinc-500">Historial de cantidad de archivos descubiertos por escaneo</p>
-                                </div>
-                            </div>
-                            <div className="h-64 w-full z-10">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                        <defs>
-                                            <linearGradient id="colorFiles" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#ff6e3a" stopOpacity={0.15} />
-                                                <stop offset="95%" stopColor="#ff6e3a" stopOpacity={0} />
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.01)" />
-                                        <XAxis dataKey="name" stroke="#52525b" fontSize={9} tickLine={false} />
-                                        <YAxis stroke="#52525b" fontSize={9} tickLine={false} axisLine={false} />
-                                        <Tooltip
-                                            content={({ active, payload, label }) => {
-                                                if (active && payload && payload.length) {
-                                                    return (
-                                                        <div className="bg-[#050506]/95 border border-white/10 p-4 backdrop-blur-xl shadow-2xl space-y-2 rounded-xl">
-                                                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{label}</p>
-                                                            <div className="space-y-1">
-                                                                {payload.map((p: any) => (
-                                                                    <div key={p.name} className="flex items-center gap-6 justify-between text-xs font-mono">
-                                                                        <span className="flex items-center gap-1.5 text-zinc-400">
-                                                                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: p.stroke || p.color }} />
-                                                                            {p.name}:
-                                                                        </span>
-                                                                        <span className="font-bold text-white">{p.value}</span>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )
-                                                }
-                                                return null
-                                            }}
-                                        />
-                                        <Area type="monotone" name="Archivos" dataKey="Archivos" stroke="#ff6e3a" strokeWidth={2} fillOpacity={1} fill="url(#colorFiles)" />
-                                    </AreaChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
+            {/* --- INDEXED LIBRARY GRID --- */}
+            {mediaItems.length > 0 && (
+                <div className="space-y-6 px-4">
+                    <div className="space-y-2 border-t border-white/5 pt-8">
+                        <h3 className="text-xl font-bold text-white tracking-tight uppercase flex items-center gap-3">
+                            <span>Mediateca Indexada</span>
+                            <span className="text-xs font-mono font-black text-[#ff6e3a] bg-[#ff6e3a]/10 px-2.5 py-1 rounded-xl border border-[#ff6e3a]/15 shadow-[0_0_15px_rgba(255,110,58,0.05)]">
+                                {mediaItems.length} TÍTULOS
+                            </span>
+                        </h3>
+                        <p className="text-xs text-zinc-550 font-medium">Contenidos de películas y series que han sido emparejados exitosamente por el backend.</p>
+                    </div>
 
-                        <div className="col-span-12 lg:col-span-4 border border-white/5 bg-white/[0.01] p-8 rounded-3xl backdrop-blur-[64px] flex flex-col justify-between relative overflow-hidden group shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
-                            {/* Glowing radial backdrop */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-white/[0.01] to-transparent pointer-events-none" />
-                            <div className="absolute -bottom-16 -right-16 w-48 h-48 bg-[#ff6e3a]/10 rounded-full blur-[60px] group-hover:scale-110 transition-transform duration-1000" />
-
-                            <div className="space-y-2 z-10">
-                                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-zinc-500 block">Eficiencia General</span>
-                                <h3 className="text-3xl font-bebas tracking-wide text-white uppercase">Éxito de Coincidencia</h3>
-                            </div>
-
-                            <div className="my-8 relative z-10 flex items-center justify-between">
-                                <div>
-                                    <span className="text-8xl font-black text-white leading-none block font-bebas select-none">
-                                        {averageMatchingRate}
-                                        <span className="text-3xl text-zinc-500 ml-1">%</span>
-                                    </span>
-                                    <span className="text-xs text-zinc-500 mt-2 block font-medium max-w-[200px] font-mono leading-relaxed">
-                                        Asociados automáticamente por el motor bayesiano.
-                                    </span>
-                                </div>
-                                <div className="relative w-24 h-24 flex items-center justify-center shrink-0">
-                                    {/* Circular Progress Ring Visual */}
-                                    <svg className="w-full h-full -rotate-90">
-                                        <circle cx="48" cy="48" r="38" stroke="rgba(255,255,255,0.02)" strokeWidth="6" fill="none" />
-                                        <circle
-                                            cx="48"
-                                            cy="48"
-                                            r="38"
-                                            stroke="#ff6e3a"
-                                            strokeWidth="6"
-                                            fill="none"
-                                            strokeDasharray={2 * Math.PI * 38}
-                                            strokeDashoffset={2 * Math.PI * 38 * (1 - averageMatchingRate / 100)}
-                                            strokeLinecap="round"
-                                            className="transition-all duration-1000 ease-out"
-                                            style={{ filter: "drop-shadow(0 0 6px rgba(255,110,58,0.4))" }}
-                                        />
-                                    </svg>
-                                    <span className="absolute font-bebas text-2xl text-white">{averageMatchingRate}%</span>
-                                </div>
-                            </div>
-
-                            <div className="h-1 bg-white/5 rounded-full overflow-hidden z-10 relative">
-                                <div
-                                    className="h-full bg-[#ff6e3a] shadow-[0_0_10px_rgba(255,110,58,0.8)] transition-all duration-1000 ease-out"
-                                    style={{ width: `${averageMatchingRate}%` }}
-                                />
-                            </div>
-                        </div>
-                    </>
-                )}
-
-                {/* 3. FEED */}
-                <div className="col-span-12 lg:col-span-7 space-y-6">
-                    <SectionHeader label="Realtime Logs" icon={<LucideActivity size={16} />} />
-                    <EventFeed events={events} />
-                </div>
-
-                {/* 4. RECENT FINISH / SUMMARY */}
-                <div className="col-span-12 lg:col-span-5 space-y-6">
-                    <SectionHeader label="System Report" icon={<LucideCheck size={16} />} />
-                    <AnimatePresence mode="wait">
-                        {lastFinish ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                        {mediaItems.map(item => (
                             <motion.div
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                className="h-full border border-white/5 bg-white/[0.01] backdrop-blur-[64px] p-8 space-y-8 rounded-3xl shadow-[0_30px_60px_rgba(0,0,0,0.5)]"
+                                key={item.id}
+                                whileHover={{ y: -6 }}
+                                className="group relative flex flex-col bg-[#0b0b0d] border border-white/5 rounded-2xl overflow-hidden hover:border-[#ff6e3a]/30 transition-all duration-300 shadow-lg"
                             >
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                                        <LucideCheck className="text-emerald-400" size={24} />
-                                    </div>
-                                    <div>
-                                        <p className="text-2xl font-black text-white uppercase tracking-tighter">Cycle Complete</p>
-                                        <p className="text-sm text-zinc-500 font-mono">Last run: {new Date().toLocaleTimeString()}</p>
-                                    </div>
-                                </div>
+                                {/* Poster Image Container */}
+                                <div className="relative aspect-[2/3] w-full overflow-hidden bg-black/40 border-b border-white/5">
+                                    {item.poster ? (
+                                        <img
+                                            src={item.poster}
+                                            alt={item.title}
+                                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-zinc-700 text-xs uppercase font-black font-mono">
+                                            Sin Poster
+                                        </div>
+                                    )}
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-white/[0.02] p-6 border border-white/5 rounded-2xl">
-                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-2">Processed</p>
-                                        <p className="text-4xl font-bebas text-white leading-none">{lastFinish.total_processed || 0}</p>
+                                    {/* Format Badge */}
+                                    <div className="absolute top-2.5 left-2.5">
+                                        <span className="text-[9px] font-black tracking-wider uppercase font-mono px-2 py-0.5 bg-black/80 backdrop-blur border border-white/10 rounded-md text-zinc-300">
+                                            {item.type === "MOVIE" || item.format === "MOVIE" ? "🎬 MOVIE" : `📺 ${item.format}`}
+                                        </span>
                                     </div>
-                                    <div className="bg-white/[0.02] p-6 border border-white/5 rounded-2xl">
-                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-2">Duration</p>
-                                        <p className="text-4xl font-bebas text-white leading-none">{(lastFinish.duration_seconds || 0).toFixed(1)}s</p>
-                                    </div>
-                                    {pruneCount > 0 && (
-                                        <div className="col-span-2 bg-rose-500/5 p-6 border border-rose-500/10 rounded-2xl">
-                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-400 mb-2">Pruned Entries</p>
-                                            <p className="text-4xl font-bebas text-white leading-none">{pruneCount}</p>
+
+                                    {/* Rating */}
+                                    {item.score > 0 && (
+                                        <div className="absolute top-2.5 right-2.5">
+                                            <span className="text-[9px] font-black tracking-wider font-mono px-2 py-0.5 bg-[#ff6e3a] text-zinc-950 rounded-md">
+                                                ★ {(item.score / 10).toFixed(1)}
+                                            </span>
                                         </div>
                                     )}
                                 </div>
-                            </motion.div>
-                        ) : (
-                            <div className="h-full border border-dashed border-white/10 flex items-center justify-center p-12 text-zinc-600 uppercase font-black tracking-widest text-xs rounded-3xl min-h-[220px]">
-                                No recent execution data
-                            </div>
-                        )}
-                    </AnimatePresence>
-                </div>
 
-                {/* 5. HISTORY (Full Width Bottom) */}
-                <div className="col-span-12 space-y-8 mt-12">
-                    <SectionHeader label="Execution History" icon={<LucideHistory size={16} />} />
-                    <ScanHistory summaries={recentSummaries} />
+                                {/* Details */}
+                                <div className="p-4 flex-1 flex flex-col justify-between gap-2">
+                                    <div className="space-y-1">
+                                        <p className="text-xs font-bold text-zinc-150 group-hover:text-[#ff6e3a] transition-colors line-clamp-2 leading-snug uppercase tracking-wide">
+                                            {item.title}
+                                        </p>
+                                        <p className="text-[10px] font-mono text-zinc-550">
+                                            {item.year ? `${item.year}` : "—"}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center justify-between border-t border-white/[0.03] pt-2 text-[10px] text-zinc-500 font-mono">
+                                        <span>
+                                            {item.totalEps > 0 ? `${item.totalEps} EPs` : "Único"}
+                                        </span>
+                                        <span className="text-emerald-500 font-bold flex items-center gap-1">
+                                            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                                            Activo
+                                        </span>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     )
 }

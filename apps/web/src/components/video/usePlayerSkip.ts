@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { useAniSkipTimes } from "@/api/hooks/aniskip.hooks"
+import { useAppStore } from "@/lib/store"
+import { useShallow } from "zustand/react/shallow"
 import type { PlayerCoreProps } from "./player-core.types"
 
 interface UsePlayerSkipProps {
@@ -46,6 +48,13 @@ export function usePlayerSkip({
     setTvMode,
     triggerControlsVisibility
 }: UsePlayerSkipProps) {
+    const { seriesSkipTimes, saveSeriesSkipTimes } = useAppStore(
+        useShallow(state => ({
+            seriesSkipTimes: state.seriesSkipTimes,
+            saveSeriesSkipTimes: state.saveSeriesSkipTimes
+        }))
+    )
+
     const hasAutoSkippedIntroRef = useRef(false)
     const hasAutoSkippedOutroRef = useRef(false)
     const toastTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -63,6 +72,15 @@ export function usePlayerSkip({
     // Synchronize video ended and current time into state to avoid accessing ref during render
     const [videoTime, setVideoTime] = useState(0)
     const [videoEnded, setVideoEnded] = useState(false)
+
+    useEffect(() => {
+        hasAutoSkippedIntroRef.current = false
+        hasAutoSkippedOutroRef.current = false
+        hasTriggeredNextEpisodeRef.current = false
+        setShowNextEpisode(false)
+        setCountdownSeconds(3)
+        setSkipMode(null)
+    }, [episodeNumber, playableUrl])
 
     useEffect(() => {
         const video = videoRef.current
@@ -112,8 +130,14 @@ export function usePlayerSkip({
         if (opChap) {
             return { startTime: opChap.startTime, endTime: opChap.endTime }
         }
+        if (malId) {
+            const cached = seriesSkipTimes[String(malId)]
+            if (cached && typeof cached.opStart === "number" && typeof cached.opEnd === "number") {
+                return { startTime: cached.opStart, endTime: cached.opEnd }
+            }
+        }
         return undefined
-    }, [skipTimes, chapters])
+    }, [skipTimes, chapters, malId, seriesSkipTimes])
 
     const skipTimesEd = useMemo(() => {
         if (skipTimes?.ed) return skipTimes.ed
@@ -121,8 +145,54 @@ export function usePlayerSkip({
         if (edChap) {
             return { startTime: edChap.startTime, endTime: edChap.endTime }
         }
+        if (malId && duration > 0) {
+            const cached = seriesSkipTimes[String(malId)]
+            if (cached && typeof cached.edOffset === "number") {
+                return { startTime: duration - cached.edOffset, endTime: duration }
+            }
+        }
         return undefined
-    }, [skipTimes, chapters])
+    }, [skipTimes, chapters, malId, duration, seriesSkipTimes])
+
+    // Auto-learning: save resolved skip times to the series cache
+    useEffect(() => {
+        if (!malId || duration <= 0) return
+
+        const cached = seriesSkipTimes[String(malId)]
+        
+        let opStart = cached?.opStart
+        let opEnd = cached?.opEnd
+        let edOffset = cached?.edOffset
+
+        // Resolve opening
+        if (skipTimes?.op) {
+            opStart = skipTimes.op.startTime
+            opEnd = skipTimes.op.endTime
+        } else {
+            const opChap = chapters.find(c => c.type === "opening" || c.name.toLowerCase().includes("op") || c.name.toLowerCase().includes("opening"))
+            if (opChap) {
+                opStart = opChap.startTime
+                opEnd = opChap.endTime
+            }
+        }
+
+        // Resolve ending
+        if (skipTimes?.ed) {
+            edOffset = duration - skipTimes.ed.startTime
+        } else {
+            const edChap = chapters.find(c => c.type === "ending" || c.name.toLowerCase().includes("ed") || c.name.toLowerCase().includes("ending") || c.name.toLowerCase().includes("outro"))
+            if (edChap) {
+                edOffset = duration - edChap.startTime
+            }
+        }
+
+        if (typeof opStart === "number" && typeof opEnd === "number" && typeof edOffset === "number") {
+            // Only update if something changed to avoid infinite loop
+            if (cached?.opStart !== opStart || cached?.opEnd !== opEnd || cached?.edOffset !== edOffset) {
+                saveSeriesSkipTimes(malId, opStart, opEnd, edOffset)
+            }
+        }
+    }, [malId, duration, skipTimes, chapters, seriesSkipTimes, saveSeriesSkipTimes])
 
     const triggerToast = useCallback((type: "intro" | "outro" | "pause") => {
         setShowAutoSkipToast(type)
@@ -142,7 +212,7 @@ export function usePlayerSkip({
                 hasAutoSkippedIntroRef.current = true
             }
         } else if (isTvSeries) {
-            if (target >= 0 && target < 120) {
+            if (target >= 0 && target < 90) {
                 hasAutoSkippedIntroRef.current = true
             }
         }
@@ -153,7 +223,7 @@ export function usePlayerSkip({
                 hasAutoSkippedOutroRef.current = true
             }
         } else if (isTvSeries && total > 300) {
-            if (target >= total - 120 && target < total - 5) {
+            if (target >= total - 95 && target < total - 5) {
                 hasAutoSkippedOutroRef.current = true
             }
         }
@@ -211,7 +281,7 @@ export function usePlayerSkip({
                     return
                 }
             } else if (isTvSeries) {
-                const introTarget = curr < 30 ? 90 : 120
+                const introTarget = 90
                 if (curr >= 0 && curr < introTarget) {
                     setVideoCurrentTime(video, introTarget)
                     setSkipMode(null)
@@ -239,9 +309,9 @@ export function usePlayerSkip({
                     }
                 }
             } else if (isTvSeries && total > 300) {
-                const outroStart = total - 120
+                const outroStart = total - 95
                 const outroEnd = total - 5
-                const opEndTime = skipTimesOp ? skipTimesOp.endTime : 120
+                const opEndTime = skipTimesOp ? skipTimesOp.endTime : 90
                 if (curr >= opEndTime) {
                     if (curr >= outroStart && curr < outroEnd) {
                         setVideoCurrentTime(video, outroEnd)
@@ -436,7 +506,7 @@ export function usePlayerSkip({
         } else {
             const isTvSeries = !mediaFormat || mediaFormat === "TV" || mediaFormat === "TV_SHORT"
             if (isTvSeries) {
-                if (curr < 0 || curr >= 120) {
+                if (curr < 0 || curr >= 90) {
                     hasAutoSkippedIntroRef.current = false
                 }
             }
@@ -449,7 +519,7 @@ export function usePlayerSkip({
         } else {
             const isTvSeries = !mediaFormat || mediaFormat === "TV" || mediaFormat === "TV_SHORT"
             if (isTvSeries && total > 300) {
-                if (curr < total - 120 || curr >= total - 5) {
+                if (curr < total - 95 || curr >= total - 5) {
                     hasAutoSkippedOutroRef.current = false
                 }
             }
@@ -460,7 +530,7 @@ export function usePlayerSkip({
         // OP / Intro window
         let activeOp = skipTimesOp
         if (!activeOp && isTvSeries) {
-            activeOp = { startTime: 0, endTime: 120 }
+            activeOp = { startTime: 0, endTime: 90 }
         }
 
         if (activeOp) {
@@ -487,7 +557,7 @@ export function usePlayerSkip({
         // ED / Outro window
         let activeEd = skipTimesEd
         if (!activeEd && isTvSeries && total > 300) {
-            activeEd = { startTime: total - 120, endTime: total - 5 }
+            activeEd = { startTime: total - 95, endTime: total - 5 }
         }
 
         if (activeEd) {
@@ -544,7 +614,9 @@ export function usePlayerSkip({
         tvMode &&
         isVideoPlayingOrEnded &&
         hasNextEpisode &&
-        (autoSkipOutroPref ? (skipTimesEd ? videoTime >= skipTimesEd.startTime : false) : isVideoEnded)
+        (isVideoEnded || 
+         (autoSkipOutroPref && skipTimesEd ? videoTime >= skipTimesEd.startTime : false) ||
+         (duration > 0 && duration - videoTime <= 15))
 
     useEffect(() => {
         if (showNextEpisode && countdownSeconds > 0 && showCountdown) {

@@ -1,7 +1,6 @@
 import React from "react"
 import { TabsContent } from "@/components/ui/tabs/tabs"
 import { ScannerDashboard } from "@/components/ui/scanner/ScannerDashboard"
-import { UnlinkedFilesPanel } from "@/components/ui/scanner/UnlinkedFilesPanel"
 import { Section, Card, OsSelect, OsToggle } from "../components"
 import { type Control, Controller, type UseFormRegister } from "react-hook-form"
 import { type SettingsFormValues } from "../index"
@@ -82,32 +81,42 @@ export function ScannerTab({ control, register }: ScannerTabProps) {
 
                 <hr className="border-white/5" />
 
-                <div className="space-y-4">
-                    <Controller
-                        control={control}
-                        name="library.scannerStrictStructure"
-                        render={({ field }) => (
-                            <OsToggle
-                                label="Detección Inteligente de Relleno (Manga Canon Filter)"
-                                description="Cruza la información histórica para marcar automáticamente sagas fuera del canon original."
-                                checked={!!field.value}
-                                onChange={field.onChange}
-                            />
-                        )}
-                    />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Matching Algorithm */}
+                    <div className="flex flex-col gap-2">
+                        <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Algoritmo de Emparejamiento</label>
+                        <Controller
+                            control={control}
+                            name="library.scannerMatchingAlgorithm"
+                            render={({ field }) => (
+                                <select
+                                    value={field.value || "dice"}
+                                    onChange={field.onChange}
+                                    className="w-full bg-black/40 ring-1 ring-white/10 rounded-xl px-4 py-2.5 text-xs text-zinc-350 focus:outline-none focus:ring-[#ff6e3a]/40 focus:border-transparent transition-all cursor-pointer [&>option]:bg-zinc-950 [&>option]:text-white mt-1.5"
+                                >
+                                    <option value="dice">Coeficiente Dice (Recomendado)</option>
+                                    <option value="levenshtein">Distancia de Levenshtein</option>
+                                    <option value="stringMatch">Coincidencia de Cadenas Simple</option>
+                                </select>
+                            )}
+                        />
+                    </div>
 
-                    <Controller
-                        control={control}
-                        name="library.autoSyncOfflineLocalData"
-                        render={({ field }) => (
-                            <OsToggle
-                                label='Insignias "Hyped Episodes" Automáticas'
-                                description="Coloca una medalla destacada sobre los episodios que contienen clímax argumentales históricos de la franquicia."
-                                checked={!!field.value}
-                                onChange={field.onChange}
-                            />
-                        )}
-                    />
+                    {/* Fallback Metadata */}
+                    <div className="flex flex-col justify-center pt-2">
+                        <Controller
+                            control={control}
+                            name="library.useFallbackMetadataProvider"
+                            render={({ field }) => (
+                                <OsToggle
+                                    label="Proveedor de Metadatos de Respaldo"
+                                    description="Habilita fuentes de metadatos secundarias si falla la consulta del servidor principal."
+                                    checked={!!field.value}
+                                    onChange={field.onChange}
+                                />
+                            )}
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -115,13 +124,6 @@ export function ScannerTab({ control, register }: ScannerTabProps) {
             <Section label="Diagnóstico en Vivo">
                 <div className="pt-2">
                     <ScannerDashboard />
-                </div>
-            </Section>
-
-            {/* Archivos sin identificar */}
-            <Section label="Archivos no Identificados">
-                <div className="bg-white/[0.01] border border-white/5 rounded-3xl overflow-hidden p-6 shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
-                    <UnlinkedFilesPanel />
                 </div>
             </Section>
         </TabsContent>

@@ -31,6 +31,7 @@ function getOrAddAudio(path: string): HTMLAudioElement {
 
 export function useSound() {
     const uiSoundsEnabled = useAppStore((state) => state.uiSoundsEnabled);
+    const uiSoundsVolume = useAppStore((state) => state.uiSoundsVolume);
 
     const playSound = useCallback((type: SfxType, volume = 0.15) => {
         if (!uiSoundsEnabled) return;
@@ -45,7 +46,7 @@ export function useSound() {
                 audio.currentTime = 0;
             }
 
-            audio.volume = volume;
+            audio.volume = volume * uiSoundsVolume;
             
             // Play safely handling the promise returned by modern browsers
             audio.play().catch(() => {
@@ -54,7 +55,7 @@ export function useSound() {
         } catch (e) {
             console.warn("Could not play UI sound effect:", e);
         }
-    }, [uiSoundsEnabled]);
+    }, [uiSoundsEnabled, uiSoundsVolume]);
 
     return { playSound };
 }

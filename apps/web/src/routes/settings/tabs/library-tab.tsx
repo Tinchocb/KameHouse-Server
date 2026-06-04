@@ -100,11 +100,23 @@ export function LibraryTab({ control }: LibraryTabProps) {
                     />
                     <Controller
                         control={control}
-                        name="library.scannerStrictStructure"
+                        name="library.refreshLibraryOnStart"
                         render={({ field }) => (
                             <OsToggle
-                                label="Estructura Estricta"
-                                description="Requiere que las carpetas sigan un formato estricto (ej. ShowName/Season 1/Episode 1.mkv) para mejorar la coincidencia bayesiana."
+                                label="Escanear al Iniciar"
+                                description="Realizar un escaneo automático de las carpetas de biblioteca al arrancar la aplicación."
+                                checked={!!field.value}
+                                onChange={field.onChange}
+                            />
+                        )}
+                    />
+                    <Controller
+                        control={control}
+                        name="library.disableLocalScanning"
+                        render={({ field }) => (
+                            <OsToggle
+                                label="Desactivar Escaneo Local"
+                                description="Pausa temporalmente el escaneo de directorios locales si utilizas únicamente streaming externo."
                                 checked={!!field.value}
                                 onChange={field.onChange}
                             />
@@ -119,27 +131,13 @@ export function LibraryTab({ control }: LibraryTabProps) {
                                 description="Idioma preferido para descargar sinopsis, títulos y metadatos desde TMDB."
                                 options={[
                                     { value: "es-MX", label: "Español Latino (Intertrack)" },
-                                    { value: "es-ES", label: "Español (España)" },
+                                    { value: "ja-JP", label: "Japonés" },
                                     { value: "en-US", label: "Inglés" }
                                 ]}
                                 value={field.value || "es-MX"}
                                 onChange={field.onChange}
                             />
                         )}
-                    />
-                    <Controller
-                        control={control}
-                        name="library.disableAnimeCardTrailers"
-                        render={({ field }) => {
-                            return (
-                                <OsToggle
-                                    label="Descarga Automatizada de Trailers"
-                                    description="Descarga y reproduce automáticamente vistas previas de anime en las portadas."
-                                    checked={!field.value}
-                                    onChange={(v) => field.onChange(!v)}
-                                />
-                            )
-                        }}
                     />
                 </Card>
             </Section>
