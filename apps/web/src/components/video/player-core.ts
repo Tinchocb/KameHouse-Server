@@ -17,12 +17,16 @@ import type { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
 import type { PlayerCoreProps, PlayerCore, PlayerStats } from "./player-core.types"
 import { usePlayerCast } from "./usePlayerCast"
 import { usePlayerSkip } from "./usePlayerSkip"
+import { __DEV_SERVER_PORT } from "@/lib/server/config"
+import { buildSeaQuery } from "@/api/client/requests"
+
 
 export type { PlayerStats, PlayerCoreProps, PlayerCore }
 
 function getAbsoluteLanUrl(playableUrl: string, serverIPs?: string[], serverPort?: number): string {
     if (!playableUrl) return ""
     let lanIp = "127.0.0.1"
+
     if (serverIPs && serverIPs.length > 0) {
         const preferredIp = serverIPs.find(ip => 
             ip.startsWith("192.168.") || 
@@ -36,7 +40,7 @@ function getAbsoluteLanUrl(playableUrl: string, serverIPs?: string[], serverPort
             lanIp = hn
         }
     }
-    const port = serverPort || 43211
+    const port = serverPort || __DEV_SERVER_PORT
 
     if (playableUrl.startsWith("/")) {
         return `http://${lanIp}:${port}${playableUrl}`
@@ -79,6 +83,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         malId,
         clientId,
         mediaFormat,
+        title,
     } = props
 
     const { data: statusQuery } = useGetStatus()
@@ -88,6 +93,33 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const absoluteLanUrl = useMemo(() => {
         return getAbsoluteLanUrl(playableUrl, serverIPs, serverPort)
     }, [playableUrl, serverIPs, serverPort])
+
+    useEffect(() => {
+        if (!playableUrl) return
+
+        const localServerUrl = (() => {
+            if (serverIPs && serverIPs.length > 0) {
+                const lanIp = serverIPs.find(ip =>
+                    ip.startsWith("192.168.") ||
+                    ip.startsWith("10.") ||
+                    ip.startsWith("172.")
+                ) || serverIPs[0]
+                const port = serverPort || __DEV_SERVER_PORT
+                return `http://${lanIp}:${port}`
+            }
+            return typeof window !== "undefined" ? window.location.origin : `http://localhost:${__DEV_SERVER_PORT}`
+        })()
+        const castUrl = `${localServerUrl}/api/v1/cast/player?url=${encodeURIComponent(absoluteLanUrl)}&title=${encodeURIComponent(title || "KameHouse")}`
+
+        buildSeaQuery({
+            endpoint: "/api/v1/cast/samsung/launch",
+            method: "POST",
+            data: {
+                ip: "",
+                url: castUrl,
+            }
+        }).catch(err => console.error("Error registering manual cast URL:", err))
+    }, [playableUrl, absoluteLanUrl, serverIPs, serverPort, title])
 
     const videoRef = useRef<HTMLVideoElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
@@ -155,8 +187,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         loopEnabled: loopEnabledPref,
         setLoopEnabled: setLoopEnabledPref,
         autoDisableSubtitlesWhenDubbed,
-        marathonMode,
-        setMarathonMode,
         tvMode,
         setTvMode,
         ambilightEnabled,
@@ -183,8 +213,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             loopEnabled: state.loopEnabled,
             setLoopEnabled: state.setLoopEnabled,
             autoDisableSubtitlesWhenDubbed: state.autoDisableSubtitlesWhenDubbed,
-            marathonMode: state.marathonMode,
-            setMarathonMode: state.setMarathonMode,
             tvMode: state.tvMode,
             setTvMode: state.setTvMode,
             ambilightEnabled: state.ambilightEnabled,
@@ -250,9 +278,9 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         skipToPrevChapter,
         handleSetAutoSkipIntro,
         handleSetAutoSkipOutro,
-        handleSetMarathonMode,
         handleSetTvMode,
         handleSkipIntro,
+        showCountdown,
         processTimeUpdates,
         checkManualSkipOverrides
     } = usePlayerSkip({
@@ -266,13 +294,11 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         mediaFormat,
         autoSkipIntroPref,
         autoSkipOutroPref,
-        marathonMode,
         tvMode,
         hasNextEpisode,
         onNextEpisode,
         setAutoSkipIntro,
         setAutoSkipOutro,
-        setMarathonMode,
         setTvMode,
         triggerControlsVisibility
     })
@@ -668,7 +694,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             timeTextElement: timeTextRef,
         },
         state: {
-            isPlaying, duration, volume, isMuted, isFullscreen, controlsVisible, status, errorMsg, isBuffering, flash, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, countdownSeconds, marathonMode, tvMode, audioTracks, activeAudioIndex, subtitleTracks, activeSubtitleIndex, isJassubLoading, isJassubActive, isSettingsOpen, remainingProgress, showAutoSkipToast,
+            isPlaying, duration, volume, isMuted, isFullscreen, controlsVisible, status, errorMsg, isBuffering, flash, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, countdownSeconds, showCountdown, tvMode, audioTracks, activeAudioIndex, subtitleTracks, activeSubtitleIndex, isJassubLoading, isJassubActive, isSettingsOpen, remainingProgress, showAutoSkipToast,
             autoSkipIntro: autoSkipIntroPref,
             autoSkipOutro: autoSkipOutroPref,
             playbackRate: playbackRatePref,
@@ -708,7 +734,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             setSubtitleSize: setSubtitleSizePref,
             setLoopEnabled: setLoopEnabledPref,
             setAmbilightEnabled,
-            setMarathonMode: handleSetMarathonMode,
             setTvMode: handleSetTvMode,
             handleResume,
             setShowResume,

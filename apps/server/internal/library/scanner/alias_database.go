@@ -8,19 +8,6 @@ import (
 // customIDOverrides maps normalized fan-edit/custom release titles directly to Platform IDs.
 // Matched titles short-circuit the Bayesian engine and skip external API calls entirely.
 var customIDOverrides = map[string]int{
-	// Dragon Ball Kai fan-edits
-	"dragon ball kai ultimate":         6033,
-	"dragon ball kai seldion":          6033,
-	"dragon ball kai ultimate seldion": 6033,
-	"dragon ball z kai":                6033,
-	"dragon ball kai saga saiyajin":    6033,
-	"dragon ball kai saga saiyan":      6033,
-	"dragon ball kai saga bu":          6033,
-	"dragon ball kai saga buu":         6033,
-	"dragon ball kai saga cell":        6033,
-	"dragon ball kai saga freezer":     6033,
-	"dragon ball kai saga frieza":      6033,
-	"dragon ball kai saga namek":       6033,
 	// Dragon Ball GT
 	"dragon ball gt": 534,
 }
@@ -68,9 +55,7 @@ var animeAliases = map[string][]string{
 	"dragon ball z":     {"dbz", "dragonball z", "dragon ball zet"},
 	"dragon ball super": {"dbs", "dragonball super"},
 	"dragon ball gt":    {"dbgt", "dragonball gt"},
-	"dragon ball kai":   {"dbk", "dbkai", "dragon ball z kai", "dragonball kai"},
 	"dragon ball daima": {"db daima", "dragonball daima"},
-	"dragon ball z kai": {"dbz kai", "dragonball z kai"},
 
 	// Naruto franchise
 	"naruto":                         {"naruto original"},

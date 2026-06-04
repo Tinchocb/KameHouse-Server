@@ -12,6 +12,7 @@ import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { MovieCard, ERA_TABS, EraTab, cleanMovieTitle } from "./-MovieCard"
 import { useWindowVirtualizer } from "@tanstack/react-virtual"
 import { isTmdbId } from "@/lib/helpers/type-guards"
+import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
 
 export const Route = createFileRoute("/movies/")({
     loader: ({ context }) => {
@@ -80,6 +81,7 @@ function MoviesPage() {
     const [isHeroHovered, setIsHeroHovered] = useState(false)
     const heroRef = useRef<HTMLDivElement>(null)
     const navigate = useNavigate()
+    const setBackdropUrl = useIntelligenceStore(s => s.setBackdropUrl)
 
     const { data: collection, isLoading } = useGetLibraryCollection()
     const { data: watchHistory } = useGetContinuityWatchHistory()
@@ -136,19 +138,34 @@ function MoviesPage() {
 
     const activeEraConfig = ERA_TABS.find(t => t.value === activeEra) || ERA_TABS[0]
 
-    // Reset state on era change
-    useEffect(() => {
+    // Reset state on era change (synchronized in render phase to avoid cascading renders)
+    const [prevActiveEra, setPrevActiveEra] = useState<EraTab>("all")
+    if (activeEra !== prevActiveEra) {
+        setPrevActiveEra(activeEra)
         setHoveredMovie(null)
         setDebouncedMovie(null)
         setFeaturedIndex(0)
-    }, [activeEra])
+    }
 
     const featuredList = useMemo(() => filteredSorted.filter(m => m.media?.bannerImage), [filteredSorted])
     
     // Select recommendations: stable shuffle of 8 movies for 'all', top 5 for specific eras
     const topFeatured = useMemo(() => {
         if (activeEra === "all" && featuredList.length > 0) {
-            return [...featuredList].sort(() => 0.5 - Math.random()).slice(0, 8)
+            // Seeded deterministic shuffle to keep useMemo pure and prevent React Compiler warnings
+            const shuffled = [...featuredList]
+            let seed = 42
+            const random = () => {
+                const x = Math.sin(seed++) * 10000
+                return x - Math.floor(x)
+            }
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(random() * (i + 1))
+                const temp = shuffled[i]
+                shuffled[i] = shuffled[j]
+                shuffled[j] = temp
+            }
+            return shuffled.slice(0, 8)
         }
         return featuredList.slice(0, 5)
     }, [featuredList, activeEra])
@@ -165,6 +182,16 @@ function MoviesPage() {
     const displayMedia = currentMovie?.media
     const currentEraConfig = ERA_TABS.find(t => t.value === currentMovie?.era) ?? activeEraConfig
 
+    useEffect(() => {
+        const bg = currentMovie?.media?.bannerImage || currentMovie?.media?.posterImage || null
+        if (bg) {
+            setBackdropUrl(bg)
+        }
+        return () => {
+            setBackdropUrl(null)
+        }
+    }, [currentMovie, setBackdropUrl])
+
     const backdropSrc = displayMedia?.bannerImage ?? null
 
     const handleMovieClick = useCallback((mediaId: number) => {
@@ -175,42 +202,54 @@ function MoviesPage() {
     const handleHoverCard = useCallback((entry: (Anime_LibraryCollectionEntry & { era: EraTab; startedAtTimestamp: number }) | null) => {
         setHoveredMovie(entry)
     }, [])
-
+    
     // Real-time VHS tape running counter logic
     const [counterSeconds, setCounterSeconds] = useState(0)
-    useEffect(() => {
+    const [prevMediaId, setPrevMediaId] = useState<number | undefined>(undefined)
+    if (currentMovie?.mediaId !== prevMediaId) {
+        setPrevMediaId(currentMovie?.mediaId)
         setCounterSeconds(0)
+    }
+
+    useEffect(() => {
         const intervalId = setInterval(() => {
             setCounterSeconds(prev => prev + 1)
         }, 1000)
         return () => clearInterval(intervalId)
     }, [currentMovie?.mediaId])
-
+ 
     const formattedCounter = useMemo(() => {
         const hrs = String(Math.floor(counterSeconds / 3600)).padStart(2, "0")
         const mins = String(Math.floor((counterSeconds % 3600) / 60)).padStart(2, "0")
         const secs = String(counterSeconds % 60).padStart(2, "0")
         return `${hrs}:${mins}:${secs}`
     }, [counterSeconds])
-
+ 
     // Responsive grid columns measuring
     const gridRef = useRef<HTMLDivElement>(null)
     const [columns, setColumns] = useState(5)
-
+    const [gridWidth, setGridWidth] = useState(1200)
+    const [scrollMargin, setScrollMargin] = useState(500)
+ 
     useEffect(() => {
         if (!gridRef.current) return
+        setScrollMargin(gridRef.current.offsetTop)
         const observer = new ResizeObserver((entries) => {
             for (const entry of entries) {
                 const width = entry.contentRect.width
-                // minmax(190px, 1fr) with gap 24px
-                const colCount = Math.floor((width + 24) / (190 + 24))
+                setGridWidth(width)
+                // minmax(230px, 1fr) with gap 24px
+                const colCount = Math.floor((width + 24) / (230 + 24))
                 setColumns(Math.max(1, colCount))
+            }
+            if (gridRef.current) {
+                setScrollMargin(gridRef.current.offsetTop)
             }
         })
         observer.observe(gridRef.current)
         return () => observer.disconnect()
     }, [])
-
+ 
     const rows = useMemo(() => {
         const r = []
         for (let i = 0; i < filteredSorted.length; i += columns) {
@@ -218,16 +257,24 @@ function MoviesPage() {
         }
         return r
     }, [filteredSorted, columns])
+ 
+    const rowHeight = useMemo(() => {
+        const cardWidth = Math.max(230, (gridWidth - (columns - 1) * 24) / columns)
+        const posterHeight = cardWidth * 1.5
+        // Card title block is 36px (title) + 14px (info) + 14px (gap) = 64px
+        // Row pb-10 is 40px
+        return Math.ceil(posterHeight + 64 + 40)
+    }, [gridWidth, columns])
 
     const virtualizer = useWindowVirtualizer({
         count: rows.length,
-        estimateSize: () => 350,
+        estimateSize: () => rowHeight,
         overscan: 2,
-        scrollMargin: gridRef.current?.offsetTop ?? 500,
+        scrollMargin: scrollMargin,
     })
 
     return (
-        <div className="min-h-screen bg-[#07070a] text-white overflow-x-hidden selection:bg-orange-500/20 relative">
+        <div className="min-h-screen bg-[#07070a]/40 backdrop-blur-[64px] text-white overflow-x-hidden selection:bg-orange-500/20 relative">
 
             {/* Capa estática CRT global */}
             <div 
@@ -437,19 +484,26 @@ function MoviesPage() {
                                     onClick={() => setActiveEra(tab.value)}
                                     whileTap={{ scale: 0.95 }}
                                     className={cn(
-                                        "relative inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[10px] font-mono font-black tracking-widest uppercase shrink-0 border transition-all duration-300",
+                                        "relative inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[10px] font-mono font-black tracking-widest uppercase shrink-0 border transition-colors duration-300",
                                         isActive
-                                            ? "text-white"
+                                            ? "border-transparent"
                                             : "text-white/30 border-transparent hover:text-white/60 bg-transparent"
                                     )}
-                                    style={isActive ? {
-                                        borderColor: tab.color + "40",
-                                        backgroundColor: tab.color + "12",
-                                        color: tab.color,
-                                    } : {}}
+                                    style={isActive ? { color: tab.color } : {}}
                                 >
-                                    <span>{tab.label}</span>
-                                    <span className="text-[8px] opacity-40 font-bold px-1 rounded bg-white/5">
+                                    {isActive && (
+                                        <motion.div
+                                            layoutId="activeEraPill"
+                                            className="absolute inset-0 rounded-full border z-0"
+                                            style={{
+                                                borderColor: tab.color + "40",
+                                                backgroundColor: tab.color + "12",
+                                            } as any}
+                                            transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                        />
+                                    )}
+                                    <span className="relative z-10">{tab.label}</span>
+                                    <span className="relative z-10 text-[8px] opacity-40 font-bold px-1 rounded bg-white/5">
                                         {count}
                                     </span>
                                 </motion.button>
@@ -564,10 +618,10 @@ function MoviesPage() {
                                     {rowItems.map((entry) => (
                                         <motion.div
                                             key={entry.mediaId}
-                                            initial={{ opacity: 0, y: 14 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, scale: 0.9 }}
-                                            transition={{ duration: 0.28 }}
+                                            initial={{ opacity: 0, y: 24, scale: 0.96 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.94, y: 12 }}
+                                            transition={{ type: "spring", stiffness: 100, damping: 15 }}
                                         >
                                             <MovieCard
                                                 entry={entry}
@@ -590,7 +644,7 @@ function MoviesPage() {
 
 function MovieGridSkeleton() {
     return (
-        <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))" }}>
+        <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))" }}>
             {Array.from({ length: 18 }).map((_, i) => (
                 <div key={i} className="space-y-3">
                     <div className="aspect-[2/3] rounded-2xl bg-white/[0.03] animate-pulse" />

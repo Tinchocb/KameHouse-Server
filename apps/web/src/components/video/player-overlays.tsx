@@ -135,7 +135,7 @@ export function SkipIntroOverlay({
 
     return (
         <div className={cn(
-            "absolute bottom-32 left-10 md:left-12 z-30 transition-all duration-300 pointer-events-auto",
+            "absolute bottom-36 left-10 md:left-12 z-30 transition-all duration-300 pointer-events-auto",
             show ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
         )}>
             <button
@@ -206,7 +206,8 @@ export function SkipIntroOverlay({
 
 export function NextEpisodeOverlay({
     show,
-    marathonMode,
+    tvMode,
+    showCountdown,
     countdownSeconds,
     nextEpisodeTitle,
     nextEpisodeImage,
@@ -216,7 +217,8 @@ export function NextEpisodeOverlay({
     remainingProgress
 }: {
     show: boolean
-    marathonMode: boolean
+    tvMode: boolean
+    showCountdown: boolean
     countdownSeconds: number
     nextEpisodeTitle?: string
     nextEpisodeImage?: string
@@ -244,7 +246,7 @@ export function NextEpisodeOverlay({
                             loading="lazy"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                        {marathonMode && (
+                        {tvMode && showCountdown && (
                             <div className="absolute top-3 right-3 bg-black/70 text-[9px] font-black uppercase tracking-widest text-white px-2 py-1">
                                 AUTO: {countdownSeconds}S
                             </div>
@@ -262,7 +264,7 @@ export function NextEpisodeOverlay({
                         <span className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.3em]">
                             {nextEpisodeNumber ? `EPISODIO ${nextEpisodeNumber}` : "SIGUIENTE"}
                         </span>
-                        {!nextEpisodeImage && marathonMode && (
+                        {!nextEpisodeImage && tvMode && showCountdown && (
                             <span className="text-white text-[10px] font-black tabular-nums tracking-widest">
                                 AUTO: {countdownSeconds}S
                             </span>
@@ -276,8 +278,8 @@ export function NextEpisodeOverlay({
                         </p>
                     )}
 
-                    {/* Marathon progress bar */}
-                    {marathonMode && (
+                    {/* Auto transition progress bar */}
+                    {tvMode && showCountdown && (
                         <div className="w-full h-1 bg-white/5 overflow-hidden">
                             <div
                                 className="h-full bg-white transition-all duration-1000 ease-linear"

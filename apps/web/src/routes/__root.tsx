@@ -59,9 +59,11 @@ function RootComponent() {
                     <FaBars className="w-5 h-5" />
                 </button>
 
-                <PageTransition transitionKey={routerState.location.pathname} className="flex-1 w-full">
-                    <Outlet />
-                </PageTransition>
+                <AnimatePresence mode="wait" initial={false}>
+                    <PageTransition key={routerState.location.pathname} transitionKey={routerState.location.pathname} className="flex-1 w-full">
+                        <Outlet />
+                    </PageTransition>
+                </AnimatePresence>
             </AppLayoutContent>
             <AppBottomNav />
 
@@ -75,7 +77,6 @@ function RootComponent() {
                     mediaId={activeQueuePlayItem.mediaId}
                     malId={activeQueuePlayItem.malId}
                     mediaFormat={activeQueuePlayItem.mediaFormat}
-                    marathonMode={false}
                     onNextEpisode={() => {
                         const nextIdx = currentQueueIndex + 1;
                         startViewTransition(() => {

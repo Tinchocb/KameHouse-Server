@@ -55,9 +55,16 @@ export function HeroBanner({
 
     const activeItem = items[activeIndex]
 
+    const [prevActiveIndex, setPrevActiveIndex] = React.useState(activeIndex)
+    const [prevTrailerId, setPrevTrailerId] = React.useState(activeItem?.youtubeTrailerId)
+    if (activeIndex !== prevActiveIndex || activeItem?.youtubeTrailerId !== prevTrailerId) {
+        setPrevActiveIndex(activeIndex)
+        setPrevTrailerId(activeItem?.youtubeTrailerId)
+        setPlayVideo(false)
+    }
+
     // Activate YouTube trailer backdrop after 2.5s delay
     React.useEffect(() => {
-        setPlayVideo(false)
         if (!activeItem?.youtubeTrailerId) return
 
         const timer = setTimeout(() => {

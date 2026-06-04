@@ -149,6 +149,15 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>((props, r
         isFirst.current = false
     }, [controlledValue, defaultValue])
 
+    const setRefs = React.useCallback((node: HTMLButtonElement | null) => {
+        (buttonRef as React.MutableRefObject<HTMLButtonElement | null>).current = node
+        if (typeof ref === "function") {
+            ref(node)
+        } else if (ref) {
+            (ref as React.MutableRefObject<HTMLButtonElement | null>).current = node
+        }
+    }, [ref])
+
     return (
         <BasicField {...basicFieldProps}>
             <InputContainer {...inputContainerProps}>
@@ -164,7 +173,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>((props, r
                 >
 
                     <SelectPrimitive.Trigger
-                        ref={mergeRefs([buttonRef, ref])}
+                        ref={setRefs}
                         id={basicFieldProps.id}
                         className={cn(
                             InputAnatomy.root({

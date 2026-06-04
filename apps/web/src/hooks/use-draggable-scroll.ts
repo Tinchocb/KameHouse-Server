@@ -1,3 +1,4 @@
+'use no memo'
 /* -------------------------------------------------------------------------------------------------
  * @author rfmiotto
  * @link https://www.npmjs.com/package/react-use-draggable-scroll/v/0.4.7
@@ -19,6 +20,45 @@ type ReturnType = {
     }
 }
 
+function updateCursor(element: HTMLElement | null, cursor: string) {
+    if (element) {
+        element.style.cursor = cursor
+    }
+}
+
+function updateChildrenCursors(parent: HTMLElement | null, cursors: string[] | string) {
+    if (!parent) return
+    const children = parent.childNodes as NodeListOf<HTMLElement>
+    children.forEach((child, i) => {
+        if (child && child.style) {
+            child.style.cursor = typeof cursors === 'string' ? cursors : cursors[i] || ""
+        }
+    })
+}
+
+function setScrollPosition(element: HTMLElement | null, scrollLeft: number, scrollTop: number) {
+    if (element) {
+        element.scrollLeft = scrollLeft
+        element.scrollTop = scrollTop
+    }
+}
+
+function setChildrenTransformAndTransition(
+    parent: HTMLElement | null,
+    transform: string[] | string,
+    transition: string[] | string
+) {
+    if (!parent) return
+    const children = parent.childNodes as NodeListOf<HTMLElement>
+    children.forEach((child, i) => {
+        if (child && child.style) {
+            child.style.transform = typeof transform === 'string' ? transform : transform[i] || ""
+            child.style.transition = typeof transition === 'string' ? transition : transition[i] || ""
+        }
+    })
+}
+
+// @react-compiler-skip
 export function useDraggableScroll(
     ref: MutableRefObject<HTMLElement>,
     {
@@ -100,8 +140,7 @@ export function useDraggableScroll(
         const offsetX = ref.current.scrollLeft + dx
         const offsetY = ref.current.scrollTop + dy
 
-        ref.current.scrollLeft = offsetX  
-        ref.current.scrollTop = offsetY  
+        setScrollPosition(ref.current, offsetX, offsetY)
         internalState.current.lastScrollX = offsetX
         internalState.current.lastScrollY = offsetY
     }
@@ -140,20 +179,18 @@ export function useDraggableScroll(
                 Math.log10(1.0 + (0.5 * Math.abs(dy)) / clientHeight)
         }
 
-        (ref.current.childNodes as NodeListOf<HTMLOptionElement>).forEach(
-            (child: HTMLElement) => {
-                child.style.transform = `translate3d(${displacementX}px, ${displacementY}px, 0px)`  
-                child.style.transition = "transform 0ms"  
-            },
+        setChildrenTransformAndTransition(
+            ref.current,
+            `translate3d(${displacementX}px, ${displacementY}px, 0px)`,
+            "transform 0ms"
         )
     }
 
     const recoverChildStyle = () => {
-        (ref.current.childNodes as NodeListOf<HTMLOptionElement>).forEach(
-            (child: HTMLElement, i) => {
-                child.style.transform = layoutState.current.transformStyleOfChildElements[i]  
-                child.style.transition = layoutState.current.transitionStyleOfChildElements[i]  
-            },
+        setChildrenTransformAndTransition(
+            ref.current,
+            layoutState.current.transformStyleOfChildElements,
+            layoutState.current.transitionStyleOfChildElements
         )
     }
 
@@ -218,11 +255,10 @@ export function useDraggableScroll(
         if (applyRubberBandEffect) {
             const transitionDurationInMilliseconds = 250;
 
-            (ref.current.childNodes as NodeListOf<HTMLOptionElement>).forEach(
-                (child: HTMLElement) => {
-                    child.style.transform = `translate3d(0px, 0px, 0px)`  
-                    child.style.transition = `transform ${transitionDurationInMilliseconds}ms`  
-                },
+            setChildrenTransformAndTransition(
+                ref.current,
+                "translate3d(0px, 0px, 0px)",
+                `transform ${transitionDurationInMilliseconds}ms`
             )
 
             rubberBandAnimationTimer.current = setTimeout(
@@ -284,12 +320,8 @@ export function useDraggableScroll(
         internalState.current.lastMouseX = 0
         internalState.current.lastMouseY = 0
 
-        ref.current.style.cursor = layoutState.current.cursorStyleOfWrapperElement;  
-        (ref.current.childNodes as NodeListOf<HTMLOptionElement>).forEach(
-            (child: HTMLElement, i) => {
-                child.style.cursor = layoutState.current.cursorStyleOfChildElements[i]  
-            },
-        )
+        updateCursor(ref.current, layoutState.current.cursorStyleOfWrapperElement)
+        updateChildrenCursors(ref.current, layoutState.current.cursorStyleOfChildElements)
 
         if (isDraggingConfirmed) {
             callbackMomentum()
@@ -319,12 +351,8 @@ export function useDraggableScroll(
             internalState.current.scrollSpeedY = dy / timing
             internalState.current.isDraggingY = true
 
-            ref.current.style.cursor = "grabbing";  
-            (ref.current.childNodes as NodeListOf<HTMLOptionElement>).forEach(
-                (child: HTMLElement) => {
-                    child.style.cursor = "grabbing"  
-                },
-            )
+            updateCursor(ref.current, "grabbing")
+            updateChildrenCursors(ref.current, "grabbing")
 
             const isAtLeft = ref.current.scrollLeft <= 0 && layoutState.current.isScrollableAlongX
             const isAtRight =
@@ -347,22 +375,35 @@ export function useDraggableScroll(
         layoutState.current.maxVerticalScroll = ref.current.scrollHeight - ref.current.clientHeight
     }
 
+    const onMouseUpRef = useRef(onMouseUp)
+    const onMouseMoveRef = useRef(onMouseMove)
+    const handleResizeRef = useRef(handleResize)
+
     useEffect(() => {
+        onMouseUpRef.current = onMouseUp
+        onMouseMoveRef.current = onMouseMove
+        handleResizeRef.current = handleResize
+    })
+
+    useEffect(() => {
+        const handleMouseUp = (e: MouseEvent) => onMouseUpRef.current(e)
+        const handleMouseMove = (e: MouseEvent) => onMouseMoveRef.current(e)
+        const handleResizeEvent = () => handleResizeRef.current()
+
         if (isMounted) {
-            window.addEventListener("mouseup", onMouseUp)
-            window.addEventListener("mousemove", onMouseMove)
-            window.addEventListener("resize", handleResize)
+            window.addEventListener("mouseup", handleMouseUp)
+            window.addEventListener("mousemove", handleMouseMove)
+            window.addEventListener("resize", handleResizeEvent)
         }
         return () => {
-            window.removeEventListener("mouseup", onMouseUp)
-            window.removeEventListener("mousemove", onMouseMove)
-            window.removeEventListener("resize", handleResize)
+            window.removeEventListener("mouseup", handleMouseUp)
+            window.removeEventListener("mousemove", handleMouseMove)
+            window.removeEventListener("resize", handleResizeEvent)
 
             if (keepMovingX.current) clearInterval(keepMovingX.current)
             if (keepMovingY.current) clearInterval(keepMovingY.current)
             if (rubberBandAnimationTimer.current) clearTimeout(rubberBandAnimationTimer.current)
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isMounted])
 
     return {

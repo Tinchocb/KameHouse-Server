@@ -66,6 +66,7 @@ export interface PlayerUIProps {
         watched?: boolean
     }[]
     onSelectEpisode?: (episodeNumber: number) => void
+    mediaFormat?: string | null
 }
 
 export function PlayerUI(props: PlayerUIProps) {
@@ -73,7 +74,7 @@ export function PlayerUI(props: PlayerUIProps) {
         title, episodeLabel, onClose, onNextEpisode, playableUrl,
         streamType, episodeSources, onSourceSwitch, core,
         mediaId, episodeNumber, malId,
-        episodes, onSelectEpisode
+        episodes, onSelectEpisode, mediaFormat
     } = props
 
     const {
@@ -112,27 +113,25 @@ export function PlayerUI(props: PlayerUIProps) {
     // Cinematic Controls Animation Layer
     useGSAP(() => {
         if (controlsVisible) {
-            gsap.to(".player-top-bar", { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" })
-            gsap.to(".player-bottom-bar", { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" })
-            gsap.to(".player-overlays-bg", { opacity: 1, duration: 0.4 })
+            gsap.to(".player-top-bar", { y: 0, scale: 1, opacity: 1, duration: 0.55, ease: "power4.out" })
+            gsap.to(".player-bottom-bar", { y: 0, scale: 1, opacity: 1, duration: 0.55, ease: "power4.out" })
+            gsap.to(".player-overlays-bg", { opacity: 1, duration: 0.45 })
         } else {
-            gsap.to(".player-top-bar", { y: -20, opacity: 0, duration: 0.4, ease: "power3.in" })
-            gsap.to(".player-bottom-bar", { y: 20, opacity: 0, duration: 0.4, ease: "power3.in" })
-            gsap.to(".player-overlays-bg", { opacity: 0, duration: 0.6 })
+            gsap.to(".player-top-bar", { y: -15, scale: 0.97, opacity: 0, duration: 0.35, ease: "power2.inOut" })
+            gsap.to(".player-bottom-bar", { y: 15, scale: 0.97, opacity: 0, duration: 0.35, ease: "power2.inOut" })
+            gsap.to(".player-overlays-bg", { opacity: 0, duration: 0.5 })
         }
     }, { dependencies: [controlsVisible], scope: domElements.containerElement })
 
     useEffect(() => {
         if (!state.ambilightEnabled || !state.isPlaying) return
 
-        let animId: number
-        const video = domElements.videoElement.current
+        let handle: number
+        const video = domElements.videoElement.current as any
         const canvas = ambilightCanvasRef.current
-        let lastDrawTime = 0
 
-        const renderAmbilight = () => {
-            const now = Date.now()
-            if (video && canvas && !video.paused && (now - lastDrawTime >= 60)) {
+        const drawFrame = () => {
+            if (video && canvas && !video.paused) {
                 const ctx = canvas.getContext("2d")
                 if (ctx) {
                     if (canvas.width !== 32) {
@@ -141,13 +140,33 @@ export function PlayerUI(props: PlayerUIProps) {
                     }
                     ctx.drawImage(video, 0, 0, 32, 18)
                 }
-                lastDrawTime = now
             }
-            animId = requestAnimationFrame(renderAmbilight)
         }
 
-        animId = requestAnimationFrame(renderAmbilight)
-        return () => cancelAnimationFrame(animId)
+        if (video && "requestVideoFrameCallback" in video) {
+            const updateCallback = () => {
+                drawFrame()
+                handle = video.requestVideoFrameCallback(updateCallback)
+            }
+            handle = video.requestVideoFrameCallback(updateCallback)
+            return () => {
+                if (video && "cancelVideoFrameCallback" in video) {
+                    video.cancelVideoFrameCallback(handle)
+                }
+            }
+        } else {
+            let lastDrawTime = 0
+            const renderLoop = () => {
+                const now = Date.now()
+                if (video && !video.paused && (now - lastDrawTime >= 60)) {
+                    drawFrame()
+                    lastDrawTime = now
+                }
+                handle = requestAnimationFrame(renderLoop)
+            }
+            handle = requestAnimationFrame(renderLoop)
+            return () => cancelAnimationFrame(handle)
+        }
     }, [state.ambilightEnabled, state.isPlaying, domElements.videoElement])
 
     return (
@@ -182,9 +201,7 @@ export function PlayerUI(props: PlayerUIProps) {
                 onWaiting={() => actions.setIsBuffering(true)}
                 onPlaying={() => actions.setIsBuffering(false)}
                 onEnded={() => {
-                    if (state.marathonMode && onNextEpisode) {
-                        onNextEpisode()
-                    }
+                    actions.handleTimeUpdate()
                 }}
                 className="w-full h-full bg-black relative z-10"
                 style={{
@@ -257,7 +274,8 @@ export function PlayerUI(props: PlayerUIProps) {
 
             <NextEpisodeOverlay
                 show={state.showNextEpisode}
-                marathonMode={state.marathonMode}
+                tvMode={state.tvMode}
+                showCountdown={state.showCountdown}
                 countdownSeconds={state.countdownSeconds}
                 nextEpisodeTitle="Siguiente Episodio"
                 nextEpisodeNumber={undefined}
@@ -283,6 +301,7 @@ export function PlayerUI(props: PlayerUIProps) {
                     episodeLabel={episodeLabel}
                     episodeNumber={episodeNumber}
                     onClose={onClose}
+                    mediaFormat={mediaFormat}
                 />
             </div>
 
@@ -342,8 +361,6 @@ export function PlayerUI(props: PlayerUIProps) {
                     onAutoDisableSubtitlesWhenDubbedChange={actions.setAutoDisableSubtitlesWhenDubbed}
                     ambilightEnabled={state.ambilightEnabled}
                     onAmbilightChange={actions.setAmbilightEnabled}
-                    marathonMode={state.marathonMode}
-                    onMarathonModeChange={actions.setMarathonMode}
                     tvMode={state.tvMode}
                     onTvModeChange={actions.setTvMode}
                     onNextEpisode={onNextEpisode}

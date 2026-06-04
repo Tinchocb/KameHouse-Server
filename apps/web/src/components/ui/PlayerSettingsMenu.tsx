@@ -57,8 +57,6 @@ export function PlayerSettingsMenu({
     onAutoDisableSubtitlesWhenDubbedChange,
     ambilightEnabled = true,
     onAmbilightChange,
-    marathonMode = true,
-    onMarathonModeChange,
     tvMode = false,
     onTvModeChange,
 }: PlayerSettingsMenuProps) {
@@ -152,7 +150,7 @@ export function PlayerSettingsMenu({
                 aria-label="Configuración [O]"
                 title="Configuración [O]"
                 className={cn(
-                    "relative flex items-center justify-center w-8 h-8",
+                    "relative flex items-center justify-center w-7 h-7",
                     "text-zinc-500 hover:text-white",
                     "transition-all duration-200",
                     isOpen && "text-white"
@@ -356,8 +354,6 @@ export function PlayerSettingsMenu({
                                     onAutoDisableSubtitlesWhenDubbedChange={onAutoDisableSubtitlesWhenDubbedChange ?? (() => {})}
                                     ambilightEnabled={ambilightEnabled}
                                     onAmbilightChange={onAmbilightChange ?? (() => {})}
-                                    marathonMode={marathonMode}
-                                    onMarathonModeChange={onMarathonModeChange ?? (() => {})}
                                     tvMode={tvMode}
                                     onTvModeChange={onTvModeChange}
                                     showSeparator={false}

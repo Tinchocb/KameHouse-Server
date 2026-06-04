@@ -108,7 +108,10 @@ export function EventFeed({ events }: { events: ScanEvent[] }) {
     // Sync or freeze events
     React.useEffect(() => {
         if (!isPaused) {
-            setFrozenEvents(events)
+            const timer = setTimeout(() => {
+                setFrozenEvents(events)
+            }, 0)
+            return () => clearTimeout(timer)
         }
     }, [events, isPaused])
 

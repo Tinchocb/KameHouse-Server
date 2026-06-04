@@ -240,6 +240,21 @@
     "dominantVibe": "Épico",
     "suggestedSwimlane": "¡Fuera del Ring!: Los Grandes Torneos"
   },
+  "gran-saiyaman": {
+    "id": "gran-saiyaman",
+    "title": "Saga del Gran Saiyaman",
+    "seriesId": 12971,
+    "description": "Han pasado 7 años desde la derrota de Cell. Gohan, ahora estudiante universitario, adopta el alter-ego del Gran Saiyaman para combatir el crimen en la ciudad mientras lleva una doble vida.",
+    "tags": [
+      "Vida Cotidiana",
+      "Los Guerreros Z",
+      "Nuevas Generaciones",
+      "Shonen Clásico",
+      "Artes Marciales"
+    ],
+    "dominantVibe": "Relajado",
+    "suggestedSwimlane": "Aventuras en el Universo Dragon Ball"
+  },
   "majin-buu": {
     "id": "majin-buu",
     "title": "Saga Majin Buu",
@@ -255,69 +270,8 @@
     "dominantVibe": "Aventura",
     "suggestedSwimlane": "Más Allá del Límite: Transformaciones Saiyajin"
   },
-  "kai-saiyajin": {
-    "id": "kai-saiyajin",
-    "title": "Saga Saiyajin (Kai)",
-    "seriesId": 61709,
-    "description": "La versión remasterizada de la saga Saiyajin. Raditz llega a la Tierra revelando el origen de Goku, desencadenando una cadena de eventos que llevará a los guerreros Z a enfrentarse a Vegeta y Nappa.",
-    "tags": [
-      "Los Guerreros Z",
-      "Los Saiyajins",
-      "Shonen Clásico",
-      "Artes Marciales",
-      "Acción"
-    ],
-    "dominantVibe": "Emocionante",
-    "suggestedSwimlane": "Los Saiyajins: La Raza Guerrera Más Poderosa"
-  },
-  "kai-freezer": {
-    "id": "kai-freezer",
-    "title": "Saga Freezer (Kai)",
-    "seriesId": 61709,
-    "description": "La batalla en el planeta Namek remasterizada. Los guerreros Z se enfrentan al tirano Freezer en una lucha épica que despertará el poder del legendario Super Saiyajin.",
-    "tags": [
-      "Batalla Épica",
-      "Súper Saiyajin",
-      "Viajes por el Espacio",
-      "Los Namekuseijin",
-      "Los Saiyajins",
-      "El Imperio de Freezer"
-    ],
-    "dominantVibe": "Aventura",
-    "suggestedSwimlane": "Capítulos Imperdibles: Las Batallas Más Épicas"
-  },
-  "kai-cell": {
-    "id": "kai-cell",
-    "title": "Saga Androides y Cell (Kai)",
-    "seriesId": 61709,
-    "description": "Los androides de la Patrulla Roja y la amenaza de Cell en version remasterizada sin relleno. Gohan alcanzará un poder que superará a su padre.",
-    "tags": [
-      "Humor y Relleno",
-      "Los Guerreros Z",
-      "La Patrulla Roja",
-      "Shonen Clásico",
-      "Artes Marciales"
-    ],
-    "dominantVibe": "Relajado",
-    "suggestedSwimlane": "La Patrulla Roja: Androides y Cell"
-  },
-  "kai-buu": {
-    "id": "kai-buu",
-    "title": "Saga Majin Buu (Kai)",
-    "seriesId": 61709,
-    "description": "La saga final de Kai: el mago Babidi despierta al temible Majin Buu. Los guerreros Z deberán unir fuerzas con antiguos enemigos para salvar el universo.",
-    "tags": [
-      "Supervivencia Universal",
-      "Magia y Hechizos",
-      "Mundo de los Demonios",
-      "Shonen Clásico",
-      "Artes Marciales"
-    ],
-    "dominantVibe": "Tensión Absoluta",
-    "suggestedSwimlane": "Crónicas de Supervivencia: El Futuro en Llamas"
-  },
-  "dioses": {
-    "id": "dioses",
+  "batalla-dioses": {
+    "id": "batalla-dioses",
     "title": "La Batalla de los Dioses",
     "seriesId": 62715,
     "description": "El Dios de la Destrucción Bills despierta tras décadas de sueño buscando al Super Saiyajin Dios de una antigua profecía.",
@@ -331,8 +285,8 @@
     "dominantVibe": "Tensión Absoluta",
     "suggestedSwimlane": "Capítulos Imperdibles: Las Batallas Más Épicas"
   },
-  "resurreccion": {
-    "id": "resurreccion",
+  "resurreccion-f": {
+    "id": "resurreccion-f",
     "title": "La Resurrección de 'F'",
     "seriesId": 62715,
     "description": "Restos del ejército de Freezer logran reunir las Esferas del Dragón y revivir a su amo, quien entrenará para vengarse de Goku.",
@@ -346,8 +300,8 @@
     "dominantVibe": "Aventura",
     "suggestedSwimlane": "El Imperio de Freezer: El Tirano del Universo"
   },
-  "champa": {
-    "id": "champa",
+  "universo-6": {
+    "id": "universo-6",
     "title": "Torneo del Universo 6",
     "seriesId": 62715,
     "description": "Un torneo de artes marciales amistoso entre el Universo 6 de Champa y el Universo 7 de Bills por el control de las Súper Esferas del Dragón.",
@@ -361,8 +315,8 @@
     "dominantVibe": "Aventura",
     "suggestedSwimlane": "¡Fuera del Ring!: Los Grandes Torneos"
   },
-  "goku-black": {
-    "id": "goku-black",
+  "trunks-futuro": {
+    "id": "trunks-futuro",
     "title": "Saga de Goku Black",
     "seriesId": 62715,
     "description": "Trunks del futuro regresa al presente pidiendo ayuda tras la devastación de su línea temporal a manos de un misterioso enemigo con el rostro de Goku.",
@@ -376,8 +330,8 @@
     "dominantVibe": "Emocionante",
     "suggestedSwimlane": "Espadachines y Guerreros con Armas"
   },
-  "supervivencia": {
-    "id": "supervivencia",
+  "supervivencia-universal": {
+    "id": "supervivencia-universal",
     "title": "Saga Supervivencia Universal",
     "seriesId": 62715,
     "description": "Zeno-Sama organiza el Torneo del Poder donde 8 universos batallarán. El universo perdedor será aniquilado inmediatamente.",
@@ -429,7 +383,7 @@
     "tags": [
       "Película",
       "Búsqueda de las Esferas",
-      "Los Guerreros Z",
+      "Goku Niño",
       "Shonen Clásico",
       "Artes Marciales"
     ],
@@ -445,7 +399,7 @@
     "tags": [
       "Película",
       "Entrenamiento Extremo",
-      "Los Guerreros Z",
+      "Goku Niño",
       "Shonen Clásico",
       "Artes Marciales"
     ],
@@ -461,7 +415,7 @@
     "tags": [
       "Película",
       "Artes Marciales Clásicas",
-      "Los Guerreros Z",
+      "Goku Niño",
       "Shonen Clásico",
       "Artes Marciales"
     ],
@@ -477,7 +431,7 @@
     "tags": [
       "Película",
       "Técnicas de Ki",
-      "Los Guerreros Z",
+      "Goku Niño",
       "La Patrulla Roja",
       "Shonen Clásico"
     ],
@@ -510,7 +464,7 @@
     "tags": [
       "Película",
       "Batalla Épica",
-      "Supervivencia Universal",
+      "Combate de Ki",
       "Los Guerreros Z",
       "Shonen Clásico"
     ],
@@ -539,7 +493,7 @@
     "id": "movie-39102",
     "title": "El Súper Guerrero Goku (Lord Slug)",
     "tmdbId": 39102,
-    "description": "Lord Slug, un anciano y despiadado Namekuseijin supermago, llega a la Tierra para rejuvenecer con las esferas y conquistarla. Goku despierta una transformación de ki legendaria.",
+    "description": "Lord Slug, un anciano y despiadado Namekuseijin supermago, llega a la Tierra para rejuvenecer con las esferas y conquistarla. Goku despierta una transformation de ki legendaria.",
     "tags": [
       "Película",
       "Técnicas de Ki",
@@ -630,7 +584,7 @@
       "Poderes Ocultos",
       "Artes Marciales Clásicas",
       "Los Juegos de Cell",
-      "Supervivencia Universal"
+      "Torneo"
     ],
     "dominantVibe": "Tensión Absoluta",
     "suggestedSwimlane": "Esencia de Cinema: Películas Legendarias",
@@ -662,7 +616,7 @@
       "Película",
       "Batalla Épica",
       "Saiyajins Legendarios",
-      "La Patrulla Roja",
+      "Combate",
       "Nuevas Generaciones",
       "Villanos de Películas"
     ],
@@ -713,7 +667,7 @@
       "Batalla Épica",
       "Técnicas de Ki",
       "Súper Saiyajin",
-      "Supervivencia Universal",
+      "Ki Divino",
       "Entrenamiento Divino"
     ],
     "dominantVibe": "Tensión Absoluta",
@@ -731,7 +685,7 @@
       "Súper Saiyajin",
       "Búsqueda de las Esferas",
       "Invasión a la Tierra",
-      "Los Saiyajins"
+      "El Imperio de Freezer"
     ],
     "dominantVibe": "Aventura",
     "suggestedSwimlane": "Esencia de Cinema: Películas Legendarias",
@@ -780,9 +734,8 @@
       "Película",
       "Batalla Épica",
       "Viajes por el Espacio",
-      "Viajes en el Tiempo",
-      "Los Guerreros Z",
-      "Los Saiyajins"
+      "Los Saiyajins",
+      "Orígenes"
     ],
     "dominantVibe": "Aventura",
     "suggestedSwimlane": "Esencia de Cinema: Películas Legendarias",
@@ -795,7 +748,6 @@
     "description": "En un futuro postapocalíptico, los androides 17 y 18 han exterminado a los Guerreros Z. Gohan y Trunks son la última línea de defensa contra los cyborgs asesinos.",
     "tags": [
       "Película",
-      "Viajes en el Tiempo",
       "Los Guerreros Z",
       "La Patrulla Roja",
       "Shonen Clásico"
@@ -812,9 +764,9 @@
     "tags": [
       "Película",
       "Búsqueda de las Esferas",
-      "Los Guerreros Z",
       "Nuevas Generaciones",
-      "Shonen Clásico"
+      "Shonen Clásico",
+      "Goku Jr."
     ],
     "dominantVibe": "Aventura",
     "suggestedSwimlane": "Esencia de Cinema: Películas Legendarias",
@@ -827,10 +779,9 @@
     "description": "Una divertida aventura de reencuentro dos años después de Majin Buu. El hermano menor de Vegeta, Tarble, llega pidiendo auxilio para enfrentar a remanentes de Freezer.",
     "tags": [
       "Película",
-      "Magia y Hechizos",
-      "Mundo de los Demonios",
       "Los Guerreros Z",
-      "El Imperio de Freezer"
+      "El Imperio de Freezer",
+      "Reencuentro"
     ],
     "dominantVibe": "Aventura",
     "suggestedSwimlane": "El Imperio de Freezer: El Tirano del Universo",
@@ -844,7 +795,7 @@
     "tags": [
       "Película",
       "Vida Cotidiana",
-      "Los Guerreros Z",
+      "Goku Niño",
       "Shonen Clásico",
       "Artes Marciales"
     ],

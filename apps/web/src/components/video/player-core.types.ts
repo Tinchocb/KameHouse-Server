@@ -26,6 +26,7 @@ export interface PlayerCoreProps {
     malId?: number | null
     clientId?: string
     onClose: () => void
+    title?: string
     /** e.g. "TV", "TV_SHORT", "MOVIE", "OVA", "SPECIAL" — used to decide fallback skip window */
     mediaFormat?: string | null
 }
@@ -58,7 +59,7 @@ export interface PlayerCore {
         segmentProgress: number
         showNextEpisode: boolean
         countdownSeconds: number
-        marathonMode: boolean
+        showCountdown: boolean
         tvMode: boolean
         remainingProgress: number
         audioTracks: AudioTrack[]
@@ -112,7 +113,7 @@ export interface PlayerCore {
         onSelectSubtitle: (track: SubtitleTrack | null) => void
         toggleFullscreen: () => void
         handleSkipIntro: () => void
-        handleTimeUpdate: (e: React.SyntheticEvent<HTMLVideoElement>) => void
+        handleTimeUpdate: (e?: React.SyntheticEvent<HTMLVideoElement>) => void
         takeScreenshot: () => void
         togglePip: () => void
         changePlaybackRate: (rate: number) => void
@@ -125,7 +126,6 @@ export interface PlayerCore {
         setSubtitleSize: (val: number) => void
         setLoopEnabled: (val: boolean) => void
         setAmbilightEnabled: (val: boolean) => void
-        setMarathonMode: (val: boolean) => void
         setTvMode: (val: boolean) => void
         handleResume: () => void
         setShowResume: (val: boolean) => void

@@ -77,18 +77,22 @@ func (p *JikanProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata
 
 	var media *models.LibraryMedia
 	var err error
-	if id >= 1_000_000 {
-		media, err = db.GetLibraryMediaByTmdbIdAndType(p.db, id-1_000_000, "MOVIE")
+	if m, errGet := db.GetLibraryMediaByID(p.db, uint(id)); errGet == nil && m != nil {
+		media = m
 	} else {
-		media, err = db.GetLibraryMediaByTmdbIdAndType(p.db, id, "SHOW")
+		if id >= 1_000_000 {
+			media, err = db.GetLibraryMediaByTmdbIdAndType(p.db, id-1_000_000, "MOVIE")
+		} else {
+			media, err = db.GetLibraryMediaByTmdbIdAndType(p.db, id, "SHOW")
+		}
 	}
 	if err != nil || media == nil {
 		return nil, fmt.Errorf("media not found in library for ID %d", id)
 	}
 
-	titleToSearch := media.TitleOriginal
+	titleToSearch := media.TitleEnglish
 	if titleToSearch == "" {
-		titleToSearch = media.TitleEnglish
+		titleToSearch = media.TitleOriginal
 	}
 	if titleToSearch == "" {
 		titleToSearch = media.TitleRomaji
@@ -182,10 +186,10 @@ func (p *JikanProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata
 	}
 
 	// Apply Dragon Ball specific enrichments (reusing the same logic as TMDB)
-	EnrichWithLatinTitles(id, result)
-	EnrichWithSagas(id, result)
-	EnrichWithFiller(id, result)
-	EnrichWithSeriesTitles(id, result)
+	EnrichWithLatinTitles(media.TmdbID, result)
+	EnrichWithSagas(media.TmdbID, result)
+	EnrichWithFiller(media.TmdbID, result)
+	EnrichWithSeriesTitles(media.TmdbID, result)
 
 	// Fallback to TMDB for Images and Synopsis
 	if p.tmdbClient != nil && len(result.Episodes) > 0 {

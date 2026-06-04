@@ -17,8 +17,6 @@ interface PlaybackSettingsProps {
     onAutoDisableSubtitlesWhenDubbedChange?: (enabled: boolean) => void
     ambilightEnabled?: boolean
     onAmbilightChange?: (enabled: boolean) => void
-    marathonMode?: boolean
-    onMarathonModeChange?: (enabled: boolean) => void
     tvMode?: boolean
     onTvModeChange?: (enabled: boolean) => void
     showSeparator?: boolean
@@ -69,8 +67,6 @@ export function PlaybackSettings({
     onAutoDisableSubtitlesWhenDubbedChange = () => {},
     ambilightEnabled = true,
     onAmbilightChange = () => {},
-    marathonMode = true,
-    onMarathonModeChange = () => {},
     tvMode = false,
     onTvModeChange = () => {},
     showSeparator = true,
@@ -113,7 +109,6 @@ export function PlaybackSettings({
             <ToggleRow label="Modo TV (Reproducción Continua)" enabled={tvMode} onChange={onTvModeChange} />
             <ToggleRow label="Saltar Intro Automáticamente" enabled={autoSkipIntro} onChange={onAutoSkipIntroChange} />
             <ToggleRow label="Saltar Outro Automáticamente" enabled={autoSkipOutro} onChange={onAutoSkipOutroChange} />
-            <ToggleRow label="Modo Maratón (Auto-Next al terminar)" enabled={marathonMode} onChange={onMarathonModeChange} />
 
             {/* Misc section */}
             <div className="mx-6 h-px bg-white/10 my-4" />

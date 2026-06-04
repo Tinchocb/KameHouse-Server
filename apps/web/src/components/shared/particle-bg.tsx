@@ -29,6 +29,31 @@ function hexToRgb(hex: string): number[] {
     return [red, green, blue]
 }
 
+function remapValue(
+    value: number,
+    start1: number,
+    end1: number,
+    start2: number,
+    end2: number,
+): number {
+    const remapped =
+        ((value - start1) * (end2 - start2)) / (end1 - start1) + start2
+    return remapped > 0 ? remapped : 0
+}
+
+type Circle = {
+    x: number;
+    y: number;
+    translateX: number;
+    translateY: number;
+    size: number;
+    alpha: number;
+    targetAlpha: number;
+    dx: number;
+    dy: number;
+    magnetism: number;
+};
+
 export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
     className = "",
     quantity = 200,
@@ -50,32 +75,7 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
     const rafId = useRef<number | null>(null)
     const isVisible = useRef(true)
 
-    type Circle = {
-        x: number;
-        y: number;
-        translateX: number;
-        translateY: number;
-        size: number;
-        alpha: number;
-        targetAlpha: number;
-        dx: number;
-        dy: number;
-        magnetism: number;
-    };
-
-    function remapValue(
-        value: number,
-        start1: number,
-        end1: number,
-        start2: number,
-        end2: number,
-    ): number {
-        const remapped =
-            ((value - start1) * (end2 - start2)) / (end1 - start1) + start2
-        return remapped > 0 ? remapped : 0
-    }
-
-    function clearContext() {
+    const clearContext = React.useCallback(() => {
         if (context.current) {
             context.current.clearRect(
                 0,
@@ -84,9 +84,9 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
                 canvasSize.current.h,
             )
         }
-    }
+    }, [])
 
-    function circleParams(): Circle {
+    const circleParams = React.useCallback((): Circle => {
         const x = Math.floor(Math.random() * canvasSize.current.w)
         const y = Math.floor(Math.random() * canvasSize.current.h)
         const translateX = 0
@@ -109,12 +109,12 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
             dy,
             magnetism,
         }
-    }
+    }, [size])
 
-    const rgb = hexToRgb(color)
-    const rgbString = rgb.join(", ")
+    const rgb = React.useMemo(() => hexToRgb(color), [color])
+    const rgbString = React.useMemo(() => rgb.join(", "), [rgb])
 
-    function resetCircle(circle: Circle) {
+    const resetCircle = React.useCallback((circle: Circle) => {
         circle.x = Math.floor(Math.random() * canvasSize.current.w)
         circle.y = Math.floor(Math.random() * canvasSize.current.h)
         circle.translateX = 0
@@ -125,9 +125,9 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
         circle.dx = (Math.random() - 0.5) * 0.1
         circle.dy = (Math.random() - 0.5) * 0.1
         circle.magnetism = 0.1 + Math.random() * 4
-    }
+    }, [size])
 
-    function drawCircle(circle: Circle) {
+    const drawCircle = React.useCallback((circle: Circle) => {
         if (context.current) {
             const { x, y, translateX, translateY, size, alpha } = circle
             context.current.translate(translateX, translateY)
@@ -137,9 +137,9 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
             context.current.fill()
             context.current.setTransform(dpr, 0, 0, dpr, 0, 0)
         }
-    }
+    }, [rgbString, dpr])
 
-    function resizeCanvas() {
+    const resizeCanvas = React.useCallback(() => {
         if (canvasRef.current && context.current) {
             circles.current.length = 0
             canvasSize.current.w = canvasContainerRef.current?.offsetWidth || window.innerWidth
@@ -150,9 +150,9 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
             canvasRef.current.style.height = `${canvasSize.current.h}px`
             context.current.scale(dpr, dpr)
         }
-    }
+    }, [dpr])
 
-    function drawParticleBackground() {
+    const drawParticleBackground = React.useCallback(() => {
         clearContext()
         const particleCount = quantity
         circles.current = []
@@ -161,14 +161,14 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
             circles.current.push(circle)
             drawCircle(circle)
         }
-    }
+    }, [clearContext, quantity, circleParams, drawCircle])
 
-    function initCanvas() {
+    const initCanvas = React.useCallback(() => {
         resizeCanvas()
         drawParticleBackground()
-    }
+    }, [resizeCanvas, drawParticleBackground])
 
-    function animate() {
+    const animate = React.useCallback(function animateFn() {
         if (!isVisible.current) return
         clearContext()
         circles.current.forEach((circle: Circle) => {
@@ -208,8 +208,8 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
                 resetCircle(circle)
             }
         })
-        rafId.current = window.requestAnimationFrame(animate)
-    }
+        rafId.current = window.requestAnimationFrame(animateFn)
+    }, [clearContext, drawCircle, ease, resetCircle, staticity, vx, vy])
 
     useEffect(() => {
         if (canvasRef.current) {
@@ -247,8 +247,7 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
                 rafId.current = null
             }
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [color])
+    }, [initCanvas, animate])
 
     useEffect(() => {
         const handleMouseMove = (event: MouseEvent) => {
@@ -269,13 +268,11 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
         return () => {
             window.removeEventListener("mousemove", handleMouseMove)
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     useEffect(() => {
         initCanvas()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [refresh])
+    }, [initCanvas, refresh])
 
     return (
         <div className={className} ref={canvasContainerRef} aria-hidden="true">

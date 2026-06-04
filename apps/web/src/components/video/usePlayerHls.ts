@@ -1,3 +1,4 @@
+'use no memo'
 import { useEffect, useRef } from "react"
 import Hls from "hls.js"
 import { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
@@ -22,6 +23,14 @@ interface UsePlayerHlsProps {
     setResumeTime: (time: number) => void
     setShowResume: (show: boolean) => void
     setIsPlaying: (playing: boolean) => void
+}
+
+function setRefValue<T>(ref: React.MutableRefObject<T>, value: T) {
+    ref.current = value
+}
+
+function setVideoSrc(video: HTMLVideoElement, src: string) {
+    video.src = src
 }
 
 export function usePlayerHls({
@@ -102,7 +111,7 @@ export function usePlayerHls({
 
         if (hlsRef.current) {
             hlsRef.current.destroy()
-            hlsRef.current = null
+            setRefValue(hlsRef, null)
         }
 
         const isHlsUrl = playableUrl.includes(".m3u8")
@@ -131,16 +140,34 @@ export function usePlayerHls({
             setErrorMsg(video.error?.message || "Ocurrió un error al cargar el archivo de video.")
         }
 
+        const resolvedUrl = (() => {
+            if (!playableUrl) return ""
+            if (typeof window !== "undefined") {
+                if (playableUrl.startsWith("/")) {
+                    return `${window.location.origin}${playableUrl}`
+                }
+                try {
+                    const url = new URL(playableUrl)
+                    if (url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "[::1]") {
+                        url.protocol = window.location.protocol
+                        url.host = window.location.host
+                        return url.toString()
+                    }
+                } catch (e) {}
+            }
+            return playableUrl
+        })()
+
         if (isHlsUrl && Hls.isSupported()) {
             const hls = new Hls({
                 enableWorker: true,
                 lowLatencyMode: true,
                 backBufferLength: 90,
             })
-            hlsRef.current = hls
+            setRefValue(hlsRef, hls)
             hlsInstance = hls
 
-            hls.loadSource(playableUrl)
+            hls.loadSource(resolvedUrl)
             hls.attachMedia(video)
 
             hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
@@ -195,7 +222,7 @@ export function usePlayerHls({
                 }
             })
         } else {
-            video.src = absoluteLanUrl
+            setVideoSrc(video, resolvedUrl)
             video.load()
 
             video.addEventListener("canplay", handleCanPlay)
@@ -213,7 +240,7 @@ export function usePlayerHls({
             if (hlsInstance) {
                 hlsInstance.destroy()
                 if (hlsRef.current === hlsInstance) {
-                    hlsRef.current = null
+                    setRefValue(hlsRef, null)
                 }
             }
             video.removeEventListener("canplay", handleCanPlay)

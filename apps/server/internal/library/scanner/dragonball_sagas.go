@@ -25,7 +25,8 @@ func GetDragonBallSagas(tmdbID int) []sagaResolution {
 			{id: "androides", name: "Saga de los Androides", startEp: 118, endEp: 139},
 			{id: "cell", name: "Saga de Cell", startEp: 140, endEp: 194},
 			{id: "torneo-otro-mundo", name: "Torneo del Otro Mundo", startEp: 195, endEp: 199},
-			{id: "majin-buu", name: "Saga de Majin Buu", startEp: 200, endEp: 291},
+			{id: "gran-saiyaman", name: "Saga del Gran Saiyaman", startEp: 200, endEp: 209},
+			{id: "majin-buu", name: "Saga de Majin Buu", startEp: 210, endEp: 291},
 		}
 	case 12697: // Dragon Ball GT
 		return []sagaResolution{
@@ -41,13 +42,6 @@ func GetDragonBallSagas(tmdbID int) []sagaResolution {
 			{id: "universo-6", name: "Saga del Torneo del Universo 6 (Champa)", startEp: 28, endEp: 46},
 			{id: "trunks-futuro", name: "Saga de Trunks del Futuro (Goku Black)", startEp: 47, endEp: 76},
 			{id: "supervivencia-universal", name: "Saga del Supervivencia Universal (Torneo del Poder)", startEp: 77, endEp: 131},
-		}
-	case 61709: // Dragon Ball Z Kai
-		return []sagaResolution{
-			{id: "saiyajin", name: "Saga Saiyajin", startEp: 1, endEp: 18},
-			{id: "freezer", name: "Saga de Freezer", startEp: 19, endEp: 54},
-			{id: "cell", name: "Saga de Cell", startEp: 55, endEp: 98},
-			{id: "majin_buu", name: "Saga de Majin Buu", startEp: 99, endEp: 167},
 		}
 	case 236994: // Dragon Ball Daima
 		return []sagaResolution{

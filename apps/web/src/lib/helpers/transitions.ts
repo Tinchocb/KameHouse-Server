@@ -4,7 +4,6 @@
  */
 export function startViewTransition(callback: () => void) {
     if (typeof document !== 'undefined' && 'startViewTransition' in document) {
-        // @ts-ignore
         document.startViewTransition(callback);
     } else {
         callback();

@@ -34,7 +34,7 @@ function SagaDetailPage() {
     )
 }
 
-import { resolveSeriesSagas } from "@/lib/config/dragonball.config"
+import { resolveSeriesSagas, getDragonBallSpanishTitle } from "@/lib/config/dragonball.config"
 
 interface Episode {
     id: string
@@ -409,17 +409,25 @@ function DetailPage() {
 
         // Filter those belonging inside saga boundaries
         const arcEpisodes = allEpisodes
-            .filter(ep => ep.episodeNumber >= rawSaga.startEp && ep.episodeNumber <= rawSaga.endEp)
-            .sort((a, b) => a.episodeNumber - b.episodeNumber)
+            .filter(ep => {
+                const epNum = ep.absoluteEpisodeNumber || ep.episodeNumber
+                return epNum >= rawSaga.startEp && epNum <= rawSaga.endEp
+            })
+            .sort((a, b) => (a.absoluteEpisodeNumber || a.episodeNumber) - (b.absoluteEpisodeNumber || b.episodeNumber))
 
         // Map to expected UI layout
-        const mappedEpisodes: Episode[] = arcEpisodes.map(ep => ({
-            id: ep?.absoluteEpisodeNumber?.toString() ?? ep?.episodeNumber?.toString() ?? "0",
-            number: ep.episodeNumber,
-            title: ep.episodeTitle || ep.displayTitle || `Episodio ${ep.episodeNumber}`,
-            description: ep.episodeMetadata?.overview || ep.episodeMetadata?.summary || "Sin descripción disponible.",
-            duration: ep.episodeMetadata?.length ? `${ep.episodeMetadata.length} min` : "24 min"
-        }))
+        const mappedEpisodes: Episode[] = arcEpisodes.map(ep => {
+            const epNum = ep.absoluteEpisodeNumber || ep.episodeNumber;
+            const localizedTitle = getDragonBallSpanishTitle(libraryEntry?.media?.tmdbId, epNum);
+            const resolvedTitle = localizedTitle || ep.titleSpanish || ep.episodeMetadata?.title || ep.episodeTitle || ep.displayTitle || `Episodio ${epNum}`;
+            return {
+                id: epNum.toString(),
+                number: epNum,
+                title: resolvedTitle,
+                description: ep.episodeMetadata?.overview || ep.episodeMetadata?.summary || "Sin descripción disponible.",
+                duration: ep.episodeMetadata?.length ? `${ep.episodeMetadata.length} min` : "24 min"
+            }
+        })
 
         // If the library returns fewer episodes than the saga needs, we generate mock ones so the user 
         // can still see Torrentio streams for them!
@@ -489,7 +497,7 @@ function DetailPage() {
             })
             setIsPlayerOpen(true)
         })
-    }, [libraryEntry, seriesId])
+    }, [libraryEntry, seriesId, setIsPlayerOpen, setPlayTarget])
 
     if (!series || !saga || saga.episodes.length === 0) {
         return (
@@ -546,7 +554,6 @@ function DetailPage() {
                     mediaId={playTarget.seriesId}
                     episodeNumber={playTarget.episodeNumber}
                     isExternalStream={false}
-                    marathonMode={false}
                     onClose={() => {
                         startViewTransition(() => {
                             setIsPlayerOpen(false)

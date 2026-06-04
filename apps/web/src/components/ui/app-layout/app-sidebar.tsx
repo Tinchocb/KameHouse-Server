@@ -5,7 +5,7 @@ import { Vaul, VaulContent } from "@/components/vaul"
 import { Link } from "@tanstack/react-router"
 import { motion, AnimatePresence } from "framer-motion"
 import * as React from "react"
-import { FaBook, FaCog, FaHome, FaFilm, FaTv, FaMoon, FaDownload, FaLayerGroup } from "react-icons/fa"
+import { FaBook, FaCog, FaHome, FaFilm, FaTv, FaMoon, FaDownload, FaLayerGroup, FaBroadcastTower } from "react-icons/fa"
 import { cn } from "../core/styling"
 import { RandomPlayButton } from "./random-play-button"
 import { useSound } from "@/hooks/use-sound"
@@ -23,9 +23,9 @@ interface SidebarItem {
 }
 
 const SIDEBAR_ITEMS: SidebarItem[] = [
-    { to: "/home", label: "Inicio", icon: <FaHome className="w-5 h-5" /> },
-    { to: "/series", label: "Series", icon: <FaTv className="w-5 h-5" /> },
-    { to: "/movies", label: "Películas", icon: <FaFilm className="w-5 h-5" /> },
+    { to: "/home", label: "Inicio", icon: <FaHome className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" /> },
+    { to: "/series", label: "Series", icon: <FaTv className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" /> },
+    { to: "/movies", label: "Películas", icon: <FaFilm className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" /> },
 ]
 
 export function AppSidebar() {
@@ -76,6 +76,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
     const setGlobalQueueOpen = useAppStore(state => state.setGlobalQueueOpen)
     const tvMode = useAppStore(state => state.tvMode)
     const setTvMode = useAppStore(state => state.setTvMode)
+    const isVideoActive = useAppStore(state => state.isVideoActive)
 
     const playChangeSound = () => {
         playSound("category", 0.4)
@@ -239,24 +240,37 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                             to={item.to}
                             title={item.label}
                             onClick={() => { setSidebarOpen(false); playChangeSound(); }}
-                            activeProps={{
-                                className: "text-white bg-white/5 border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-md",
-                            }}
-                            inactiveProps={{
-                                className: "text-zinc-500 hover:text-white hover:bg-white/[0.02] border-transparent",
-                            }}
-                            className={cn(
-                                "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl border transition-all duration-500 group px-4 md:px-0 relative backdrop-blur-md",
-                                "active:scale-90 font-bold"
-                            )}
                         >
-                            {/* Active Indicator Dot */}
-                            <div className="absolute left-0 w-1 h-6 bg-brand-orange rounded-r-full opacity-0 scale-y-0 group-[.active]:opacity-100 group-[.active]:scale-y-100 transition-all duration-500 hidden md:block" />
-                            
-                            <span className="shrink-0 z-10 transition-transform duration-500 group-hover:scale-110">
-                                {item.icon}
-                            </span>
-                            <span className="md:hidden ml-6 flex-1 uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange">{item.label}</span>
+                            {({ isActive }) => (
+                                <div className={cn(
+                                    "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl border transition-all duration-300 group px-4 md:px-0 relative backdrop-blur-md",
+                                    "active:scale-90 font-bold",
+                                    isActive 
+                                        ? "text-white border-transparent" 
+                                        : "text-zinc-500 hover:text-white hover:bg-white/[0.02] border-transparent"
+                                )}>
+                                    {/* Active Indicator Sliding Dot/Bar */}
+                                    {isActive && (
+                                        <motion.div
+                                            layoutId="sidebarActiveIndicator"
+                                            className="absolute left-0 w-1 h-6 bg-brand-orange rounded-r-full hidden md:block z-10"
+                                            transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                        />
+                                    )}
+                                    {/* Active Background Sliding Pill */}
+                                    {isActive && (
+                                        <motion.div
+                                            layoutId="sidebarActiveBackground"
+                                            className="absolute inset-0 bg-white/5 border border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-0"
+                                            transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                        />
+                                    )}
+                                    <span className="shrink-0 z-10">
+                                        {item.icon}
+                                    </span>
+                                    <span className="md:hidden ml-6 flex-1 uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange">{item.label}</span>
+                                </div>
+                            )}
                         </Link>
                     </Magnetic>
                 ))}
@@ -285,8 +299,8 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                                 globalQueueOpen ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
                             )} />
                             
-                            <span className="shrink-0 z-10 transition-transform duration-500 group-hover:scale-110 relative">
-                                <FaLayerGroup className="w-5 h-5" />
+                            <span className="shrink-0 z-10 relative">
+                                <FaLayerGroup className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
                                 {/* Badge count */}
                                 <span className="absolute -top-2.5 -right-2.5 bg-brand-orange text-white text-[8px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center border border-zinc-950 shadow-md">
                                     {playlistQueue.length}
@@ -309,7 +323,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                             "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl border transition-all duration-500 group px-4 md:px-0 relative backdrop-blur-md",
                             isLoadingTarget
                                 ? "border-brand-orange/40 bg-brand-orange/10 text-brand-orange cursor-wait"
-                                : tvMode
+                                : (isVideoActive && tvMode)
                                     ? "text-brand-orange bg-brand-orange/10 border-brand-orange/30"
                                     : "text-zinc-500 hover:text-white hover:bg-white/[0.02] border-transparent",
                             "active:scale-90 font-bold"
@@ -318,10 +332,10 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                         {/* Active Indicator Dot */}
                         <div className={cn(
                             "absolute left-0 w-1 h-6 bg-brand-orange rounded-r-full transition-all duration-500 hidden md:block",
-                            tvMode ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
+                            (isVideoActive && tvMode) ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
                         )} />
                         
-                        <span className="shrink-0 z-10 transition-transform duration-500 group-hover:scale-110 relative">
+                        <span className="shrink-0 z-10 relative">
                             {isLoadingTarget ? (
                                 <motion.div
                                     animate={{ rotate: 360 }}
@@ -331,12 +345,12 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                                 </motion.div>
                             ) : (
                                 <>
-                                    <FaTv className="w-5 h-5" />
+                                    <FaBroadcastTower className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
                                 </>
                             )}
                         </span>
                         <span className="md:hidden ml-6 flex-1 uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange">
-                            Modo TV {tvMode ? "(24H)" : ""}
+                            Modo TV {(isVideoActive && tvMode) ? "(24H)" : ""}
                         </span>
                     </button>
                 </Magnetic>
@@ -356,27 +370,42 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                         to="/settings"
                         title="Configuración"
                         onClick={() => { setSidebarOpen(false); playChangeSound(); }}
-                        activeProps={{
-                            className: "text-white bg-white/5 border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-md",
-                        }}
-                        inactiveProps={{
-                            className: "text-zinc-500 hover:text-white hover:bg-white/[0.02] border-transparent",
-                        }}
-                        className={cn(
-                            "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl border transition-all duration-500 group px-4 md:px-0 relative backdrop-blur-md",
-                            "active:scale-90 font-bold"
-                        )}
                     >
-                        {/* Active Indicator Dot */}
-                        <div className="absolute left-0 w-1 h-6 bg-brand-orange rounded-r-full opacity-0 scale-y-0 group-[.active]:opacity-100 group-[.active]:scale-y-100 transition-all duration-500 hidden md:block" />
-                        
-                        <span className="shrink-0 z-10 transition-transform duration-500 group-hover:scale-110">
-                            <FaCog className="w-5 h-5" />
-                        </span>
-                        <span className="md:hidden ml-6 flex-1 uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange">Configuración</span>
+                        {({ isActive }) => (
+                            <div className={cn(
+                                "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl border transition-all duration-300 group px-4 md:px-0 relative backdrop-blur-md",
+                                "active:scale-90 font-bold",
+                                isActive 
+                                    ? "text-white border-transparent" 
+                                    : "text-zinc-500 hover:text-white hover:bg-white/[0.02] border-transparent"
+                            )}>
+                                {/* Active Indicator Sliding Dot/Bar */}
+                                {isActive && (
+                                    <motion.div
+                                        layoutId="sidebarActiveIndicator"
+                                        className="absolute left-0 w-1 h-6 bg-brand-orange rounded-r-full hidden md:block z-10"
+                                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                    />
+                                )}
+                                {/* Active Background Sliding Pill */}
+                                {isActive && (
+                                    <motion.div
+                                        layoutId="sidebarActiveBackground"
+                                        className="absolute inset-0 bg-white/5 border border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-0"
+                                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                    />
+                                )}
+                                <span className="shrink-0 z-10">
+                                    <FaCog className="w-5 h-5 transition-transform duration-500 group-hover:rotate-45 group-hover:scale-110" />
+                                </span>
+                                <span className="md:hidden ml-6 flex-1 uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange">Configuración</span>
+                            </div>
+                        )}
                     </Link>
                 </Magnetic>
             </div>
+
+
 
             {/* Video Player overlay */}
             <AnimatePresence>
@@ -389,7 +418,10 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                         episodeNumber={playTarget.episodeNumber}
                         mediaId={playTarget.mediaId}
                         malId={playTarget.malId}
-                        onClose={() => setPlayTarget(null)}
+                        onClose={() => {
+                            setPlayTarget(null);
+                            setTvMode(false);
+                        }}
                         onNextEpisode={() => playTvModeNext(playTarget.mediaId, playTarget.episodeNumber)}
                         hasNextEpisode={true}
                     />
@@ -400,39 +432,9 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
 }
 
 /**
- * Magnetic component to give a "physical" feel to the icons.
+ * Magnetic component (disabled to remove physical hover effect).
  */
 function Magnetic({ children }: { children: React.ReactNode }) {
-    const ref = React.useRef<HTMLDivElement>(null)
-    const [position, setPosition] = React.useState({ x: 0, y: 0 })
-
-    const rafId = React.useRef<number | null>(null)
-
-    const handleMouseMove = (e: React.MouseEvent) => {
-        if (!ref.current) return
-        const { clientX, clientY } = e
-        const { left, top, width, height } = ref.current.getBoundingClientRect()
-        const middleX = clientX - (left + width / 2)
-        const middleY = clientY - (top + height / 2)
-        
-        if (rafId.current) cancelAnimationFrame(rafId.current)
-        rafId.current = requestAnimationFrame(() => {
-            setPosition({ x: middleX * 0.35, y: middleY * 0.35 })
-        })
-    }
-
-    const reset = () => setPosition({ x: 0, y: 0 })
-
-    return (
-        <motion.div
-            ref={ref}
-            onMouseMove={handleMouseMove}
-            onMouseLeave={reset}
-            animate={{ x: position.x, y: position.y }}
-            transition={{ type: "spring", stiffness: 150, damping: 15, mass: 0.1 }}
-        >
-            {children}
-        </motion.div>
-    )
+    return <>{children}</>
 }
 

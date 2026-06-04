@@ -1,3 +1,4 @@
+'use no memo'
 import chalk from "chalk"
 import React from "react"
 
@@ -38,8 +39,20 @@ export const useEffectDebugger = (
     dependencyNames: string[] = [],
 ) => {
     const previousDeps = React.useRef(dependencies)
+    const effectRef = React.useRef(effectHook)
+    const cleanupRef = React.useRef<void | (() => void)>(undefined)
+    const isFirstRun = React.useRef(true)
 
     React.useEffect(() => {
+        effectRef.current = effectHook
+    })
+
+    React.useEffect(() => {
+        const isFirst = isFirstRun.current
+        if (isFirst) {
+            isFirstRun.current = false
+        }
+
         const changedDeps = dependencies.reduce((accum: Record<string, unknown>, dependency, index) => {
             if (dependency !== previousDeps.current[index]) {
                 const keyName = dependencyNames[index] || `Dependency #${index}`
@@ -54,15 +67,27 @@ export const useEffectDebugger = (
             return accum
         }, {} as Record<string, unknown>)
 
-        if (Object.keys(changedDeps).length) {
-            console.log("[useEffectDebugger] Changed dependencies:", changedDeps)
+        const hasChanged = isFirst || Object.keys(changedDeps).length > 0 || previousDeps.current.length !== dependencies.length
+
+        if (hasChanged) {
+            if (!isFirst && Object.keys(changedDeps).length) {
+                console.log("[useEffectDebugger] Changed dependencies:", changedDeps)
+            }
+            previousDeps.current = dependencies
+            if (cleanupRef.current) {
+                cleanupRef.current()
+            }
+            cleanupRef.current = effectRef.current()
         }
+    })
 
-        previousDeps.current = dependencies
-
-        return effectHook()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, dependencies) // Pass the original dependencies to useEffect
+    React.useEffect(() => {
+        return () => {
+            if (cleanupRef.current) {
+                cleanupRef.current()
+            }
+        }
+    }, [])
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

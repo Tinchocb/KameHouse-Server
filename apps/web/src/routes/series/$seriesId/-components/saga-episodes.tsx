@@ -69,10 +69,7 @@ export const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
         return "grid"
     })
 
-    // Keep fallbackThumb stable across renders so visibleEpisodes memo
-    // doesn't invalidate just because the parent re-renders with the same URL string
-    const fallbackThumbRef = React.useRef(fallbackThumb)
-    React.useEffect(() => { fallbackThumbRef.current = fallbackThumb }, [fallbackThumb])
+
 
     const handleLayoutChange = useCallback((mode: "grid" | "horizontal") => {
         setLayoutMode(mode)
@@ -159,13 +156,13 @@ export const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
                     isInvalid: false,
                     episodeMetadata: {
                         episodeNumber: i,
-                        image: fallbackThumbRef.current || "",
+                        image: fallbackThumb || "",
                     }
                 } as unknown as Anime_Episode)
             }
         }
         return paddedEpisodes
-    }, [episodes, generatedSagas, activeSagaId, activeSubSagaId])
+    }, [episodes, generatedSagas, activeSagaId, activeSubSagaId, fallbackThumb])
 
     // Precalculate a Map for O(1) lookup instead of O(n) per episode
     const localFilesByEpisode = useMemo(() => {

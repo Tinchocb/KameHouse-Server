@@ -229,7 +229,7 @@ export const MediaCard = React.memo(function MediaCard({
                                 {vibes.slice(0, 3).map((vibe, idx) => (
                                     <span
                                         key={idx}
-                                        className="text-[8px] font-bold tracking-widest uppercase bg-brand-orange/10 border border-brand-orange/20 text-brand-orange px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm"
+                                        className="text-[8px] font-bold tracking-widest uppercase bg-gradient-to-r from-brand-orange/15 via-amber-500/15 to-brand-orange/15 border border-brand-orange/30 text-brand-orange px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm animate-ki-shimmer"
                                     >
                                         <Sparkles size={8} className="animate-pulse" />
                                         {vibe}

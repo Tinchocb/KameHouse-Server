@@ -26,6 +26,14 @@ interface UsePlayerShortcutsProps {
     skipToPrevChapter?: () => void
 }
 
+function setVideoVolume(video: HTMLVideoElement, vol: number) {
+    video.volume = vol
+}
+
+function setVideoMuted(video: HTMLVideoElement, muted: boolean) {
+    video.muted = muted
+}
+
 export function usePlayerShortcuts({
     videoRef,
     isPlaying,
@@ -102,10 +110,10 @@ export function usePlayerShortcuts({
                     const videoUp = videoRef.current
                     if (videoUp) {
                         const newVol = Math.min(videoUp.volume + 0.1, 1)
-                        videoUp.volume = newVol
+                        setVideoVolume(videoUp, newVol)
                         setVolume(newVol)
                         setIsMuted(false)
-                        videoUp.muted = false
+                        setVideoMuted(videoUp, false)
                     }
                     break
                 case "arrowdown":
@@ -113,10 +121,10 @@ export function usePlayerShortcuts({
                     const videoDown = videoRef.current
                     if (videoDown) {
                         const newVol = Math.max(videoDown.volume - 0.1, 0)
-                        videoDown.volume = newVol
+                        setVideoVolume(videoDown, newVol)
                         setVolume(newVol)
                         setIsMuted(newVol === 0)
-                        videoDown.muted = newVol === 0
+                        setVideoMuted(videoDown, newVol === 0)
                     }
                     break
                 case "m":

@@ -19,6 +19,12 @@ export function DynamicBackdrop() {
         }
         return true
     })
+    const [isMotionEnabled] = React.useState(() => {
+        if (typeof window !== "undefined") {
+            return localStorage.getItem("kamehouse:dynamic-backdrop-motion-disabled") !== "true"
+        }
+        return true
+    })
     const { currentBackdropUrl } = useIntelligenceStore()
     const [displayedUrl, setDisplayedUrl] = React.useState<string | null>(null)
     const [nextUrl, setNextUrl] = React.useState<string | null>(null)
@@ -33,7 +39,7 @@ export function DynamicBackdrop() {
 
     // Handle global mouse move for orbital effect with smooth interpolation (lerping)
     React.useEffect(() => {
-        if (!isEnabled) return
+        if (!isEnabled || !isMotionEnabled) return
         let rafId: number | null = null
         let targetX = 0
         let targetY = 0

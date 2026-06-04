@@ -3,7 +3,6 @@ package metadata_provider
 import (
 	"embed"
 	"encoding/json"
-	"strconv"
 	apiMetadata "kamehouse/internal/api/metadata"
 )
 
@@ -38,11 +37,7 @@ func EnrichWithLatinTitles(tmdbID int, metadata *apiMetadata.AnimeMetadata) {
 		return
 	}
 	for _, ep := range metadata.Episodes {
-		epNumStr := ep.Episode
-		if tmdbID == 61709 && ep.SeasonNumber == 2 {
-			epNumStr = strconv.Itoa(ep.EpisodeNumber + 98)
-		}
-		if title, ok := GetLatinTitle(tmdbID, epNumStr); ok {
+		if title, ok := GetLatinTitle(tmdbID, ep.Episode); ok {
 			ep.Title = title
 		}
 	}

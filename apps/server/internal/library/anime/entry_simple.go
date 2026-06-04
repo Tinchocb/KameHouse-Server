@@ -143,7 +143,16 @@ func NewSimpleEntry(ctx context.Context, opts *NewSimpleAnimeEntryOptions) (*Sim
 	// |       Episodes      |
 	// +---------------------+
 
-	amw := opts.MetadataProviderRef.GetAnimeMetadataWrapper(nil, nil)
+	// Fetch anime metadata so episode images, titles, saga info, etc. are available
+	// even in the simple (no-AniDB) path.
+	var fetchedAnimeMetadata *metadata.AnimeMetadata
+	if opts.MetadataProviderRef != nil {
+		if am, err := opts.MetadataProviderRef.GetAnimeMetadata(int(fetchedMedia.ID)); err == nil && am != nil {
+			fetchedAnimeMetadata = am
+		}
+	}
+
+	amw := opts.MetadataProviderRef.GetAnimeMetadataWrapper(nil, fetchedAnimeMetadata)
 
 	// Create episode entities
 	entry.hydrateEntryEpisodeData(amw, opts.LibraryEpisodes)

@@ -100,7 +100,7 @@ type (
 		previousVersion    string
 		moduleMu           sync.Mutex
 		ServerReady        bool
-		isOffline          atomic.Bool
+		isOffline          *atomic.Bool
 		ServerPasswordHash string
 
 		shutdownCtx    context.Context
@@ -157,12 +157,12 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 	// DynamicPlatform envuelve la plataforma activa con conmutación atómica
 	dynamicPlatform := platform.NewDynamicPlatform(resolveInitialPlatform(cfg, offlinePlatform, simulatedPlatform))
 
-	isOffline := atomic.Bool{}
+	isOffline := &atomic.Bool{}
 	isOffline.Store(cfg.Server.Offline)
 
 	continuityManager := initContinuityManager(fileCacher, logger, database)
 
-	videoCore := initVideoCore(wsEventManager, logger, dynamicProvider, continuityManager, dynamicPlatform, &isOffline)
+	videoCore := initVideoCore(wsEventManager, logger, dynamicProvider, continuityManager, dynamicPlatform, isOffline)
 	thumbnailCache := initThumbnailCache(logger)
 
 	shutdownCtx, shutdownCancel := context.WithCancel(context.Background())

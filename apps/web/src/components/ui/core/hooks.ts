@@ -59,13 +59,17 @@ export const useIsomorphicLayoutEffect = typeof window !== "undefined" ? React.u
 
 export function useUpdateEffect(effect: React.EffectCallback, deps?: React.DependencyList) {
     const isInitialMount = React.useRef(true)
+    const effectRef = React.useRef(effect)
+
+    React.useEffect(() => {
+        effectRef.current = effect
+    })
 
     React.useEffect(() => {
         if (isInitialMount.current) {
             isInitialMount.current = false
         } else {
-            return effect()
+            return effectRef.current()
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, deps)
 }

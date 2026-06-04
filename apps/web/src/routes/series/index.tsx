@@ -106,11 +106,13 @@ function SeriesFullscreenIndex() {
         return mapped.sort((a, b) => a.yearNum - b.yearNum);
     }, [collection]);
 
-    useEffect(() => {
+    const [prevSeriesList, setPrevSeriesList] = useState(seriesList);
+    if (seriesList !== prevSeriesList) {
+        setPrevSeriesList(seriesList);
         if (seriesList.length > 0) {
             setSelectedId(prev => prev ?? seriesList[0].id);
         }
-    }, [seriesList]);
+    }
 
     const selectedIndex = useMemo(() => {
         return seriesList.findIndex(item => item.id === selectedId);

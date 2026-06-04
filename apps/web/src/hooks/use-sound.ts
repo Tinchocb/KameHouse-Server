@@ -19,6 +19,16 @@ const SFX_PATHS: Record<SfxType, string> = {
     category: "/sounds/cambiar categoria.wav"
 };
 
+// Helper function to manage cache without mutating global state inside render/callbacks of hook
+function getOrAddAudio(path: string): HTMLAudioElement {
+    let audio = sfxPool[path];
+    if (!audio) {
+        audio = new Audio(path);
+        sfxPool[path] = audio;
+    }
+    return audio;
+}
+
 export function useSound() {
     const uiSoundsEnabled = useAppStore((state) => state.uiSoundsEnabled);
 
@@ -28,11 +38,7 @@ export function useSound() {
             const path = SFX_PATHS[type];
             if (!path) return;
 
-            let audio = sfxPool[path];
-            if (!audio) {
-                audio = new Audio(path);
-                sfxPool[path] = audio;
-            }
+            const audio = getOrAddAudio(path);
 
             // If already playing, rewind to the start
             if (!audio.paused) {

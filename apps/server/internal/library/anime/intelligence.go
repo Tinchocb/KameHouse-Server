@@ -69,62 +69,49 @@ type arcRange struct {
 }
 
 // dragonBallArcs maps TMDB media IDs to their ordered arc slices.
-// IDs: Dragon Ball (12609), Dragon Ball Z (12971), Dragon Ball GT (12695)
-// Dragon Ball Super (62715), Dragon Ball Z Kai (61709), Dragon Ball Daima (236825)
+// IDs: Dragon Ball (12609), Dragon Ball Z (12971), Dragon Ball GT (12697)
+// Dragon Ball Super (62715), Dragon Ball Daima (236994)
 var dragonBallArcs = map[int][]arcRange{
-	// ─── Dragon Ball (12609) ─────────────────────────────────────────
+	// ─── Dragon Ball (12609) ──────────────────────────────────────────
 	12609: {
-		{1, 13, "Saga de la Búsqueda de las Dragon Balls"},
-		{14, 28, "Saga del Torneo de Artes Malciales"},
-		{29, 45, "Saga del Ejercito del General Blue (Red Ribbon)"},
-		{46, 68, "Saga de la Búsqueda del Mar Rojo"},
-		{69, 83, "Saga del 22° Torneo"},
-		{84, 101, "Saga de Piccolo Daimao"},
-		{102, 123, "Saga del 23° Torneo"},
-		{124, 153, "Saga de Garlic Jr. (Relleno)"},
+		{1, 13, "Saga de Pilaf"},
+		{14, 28, "21° Torneo de Artes Marciales"},
+		{29, 68, "Saga de la Patrulla Roja"},
+		{69, 82, "Saga de Uranai Baba"},
+		{83, 101, "22° Torneo de Artes Marciales"},
+		{102, 122, "Saga de Piccolo Daimaku"},
+		{123, 153, "Saga de Piccolo Jr."},
 	},
-	// ─── Dragon Ball Z (12971) ───────────────────────────────────────
+	// ─── Dragon Ball Z (12971) ────────────────────────────────────────
 	12971: {
 		{1, 35, "Saga de los Saiyajin"},
-		{36, 74, "Saga de Namek"},
-		{75, 107, "Saga de Freezer"},
-		{108, 139, "Saga de Garlic Jr. (Relleno)"},
-		{140, 165, "Saga de los Androides"},
-		{166, 194, "Saga de Imperfect Cell"},
-		{195, 221, "Saga de Cell Perfect"},
-		{222, 253, "Saga de Cell Games"},
-		{254, 288, "Saga de los Kioshin (Relleno)"},
-		{289, 291, "Saga del Torneo de los 25°"},
-		{292, 330, "Saga del Mundo de Babidi"},
-		{331, 373, "Saga de Majin Buu"},
-		{374, 391, "Saga de Fusión"},
-		{392, 421, "Saga de Kid Buu"},
+		{36, 107, "Saga de Freezer"},
+		{108, 117, "Saga de Garlic Jr."},
+		{118, 139, "Saga de los Androides"},
+		{140, 194, "Saga de Cell"},
+		{195, 199, "Torneo del Otro Mundo"},
+		{200, 209, "Saga del Gran Saiyaman"},
+		{210, 291, "Saga de Majin Buu"},
 	},
-	// ─── Dragon Ball Z Kai (61709) ───────────────────────────────────
-	61709: {
-		{1, 26, "Saga de los Saiyajin"},
-		{27, 54, "Saga de Frieza"},
-		{55, 77, "Saga de Cell"},
-		{78, 98, "Saga de Majin Buu"},
+	// ─── Dragon Ball GT (12697) ───────────────────────────────────────
+	12697: {
+		{1, 16, "Saga de las Esferas Definitivas"},
+		{17, 40, "Saga de Baby"},
+		{41, 47, "Saga de Super 17"},
+		{48, 64, "Saga de los Dragones Malignos"},
 	},
-	// ─── Dragon Ball Super (62715) ───────────────────────────────────
+	// ─── Dragon Ball Super (62715) ────────────────────────────────────
 	62715: {
-		{1, 14, "Saga del Dios de la Destrucción Beerus"},
-		{15, 27, "Saga de la Resurrección F"},
-		{28, 46, "Saga de Universe 6"},
-		{47, 76, "Saga de Future Trunks"},
-		{77, 96, "Saga del Torneo de la Fuerza"},
-		{97, 131, "Saga del Torneo del Poder"},
+		{1, 14, "Saga de la Batalla de los Dioses"},
+		{15, 27, "Saga de la Resurrección de F"},
+		{28, 46, "Saga del Universo 6"},
+		{47, 76, "Saga de Goku Black"},
+		{77, 131, "Saga de Supervivencia Universal"},
 	},
-	// ─── Dragon Ball GT (12695) ──────────────────────────────────────
-	12695: {
-		{1, 16, "Saga de Baby"},
-		{17, 40, "Saga de Super 17"},
-		{41, 64, "Saga de los Dragon Balls de la Sombra"},
-	},
-	// ─── Dragon Ball Daima (236825) ──────────────────────────────────
-	236825: {
-		{1, 20, "Saga de la Conspiración del Reino Demoniaco"},
+	// ─── Dragon Ball Daima (236994) ───────────────────────────────────
+	236994: {
+		{1, 10, "El Misterio del Mundo Demonio"},
+		{11, 20, "La Travesía en el Mundo Demonio"},
 	},
 }
 

@@ -54,7 +54,6 @@ const MEDIA_ID_TO_ERA: Record<number, EraId> = {
 
     // DBZ (Dragon Ball Z)
     12971: "dbz",
-    61709: "dbz", // Dragon Ball Z Kai
     1015448: "dbz",
     1015449: "dbz",
     1015450: "dbz",

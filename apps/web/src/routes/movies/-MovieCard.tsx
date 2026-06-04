@@ -38,6 +38,7 @@ export const MovieCard = memo(function MovieCard({
     onHoverCard: (entry: (Anime_LibraryCollectionEntry & { era: EraTab; startedAtTimestamp: number }) | null) => void
 }) {
     const { playSound } = useSound()
+    const [isHovered, setIsHovered] = useState(false)
     const movie = entry.media
     if (!movie || !entry.mediaId) return null
  
@@ -45,7 +46,6 @@ export const MovieCard = memo(function MovieCard({
         onClick(entry.mediaId!)
     }
  
-    const [isHovered, setIsHovered] = useState(false)
     const eraConfig = ERA_TABS.find(t => t.value === era) || ERA_TABS[0]
     const title = cleanMovieTitle(movie.titleSpanish || movie.titleEnglish || movie.titleRomaji || "Sin título")
     const hasLocalFiles = (entry.libraryData?.mainFileCount || 0) > 0

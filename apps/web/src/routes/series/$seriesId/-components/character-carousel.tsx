@@ -14,11 +14,14 @@ export function CharacterCarousel({ characters }: CharacterCarouselProps) {
       <div className="flex overflow-x-auto gap-6 pb-4 scrollbar-hide snap-x">
         {characters.map((char, idx) => (
           <div key={idx} className="flex flex-col items-center gap-3 snap-start min-w-[100px] group cursor-pointer">
-            <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-transparent group-hover:border-amber-500 transition-colors duration-300 relative shadow-lg">
+            <div 
+              className="w-24 h-24 rounded-full overflow-hidden border-2 border-transparent group-hover:border-amber-500 transition-all relative shadow-lg group-hover:-translate-y-1 transform-gpu"
+              style={{ transition: "all 600ms cubic-bezier(0.16, 1, 0.3, 1)" }}
+            >
               <img 
                 src={char.avatarUrl} 
                 alt={char.name}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out transform-gpu"
               />
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </div>

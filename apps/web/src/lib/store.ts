@@ -124,8 +124,6 @@ export interface PlayerState {
     setAutoDisableSubtitlesWhenDubbed: (auto: boolean) => void
     ambilightEnabled: boolean
     setAmbilightEnabled: (enabled: boolean) => void
-    marathonMode: boolean
-    setMarathonMode: (enabled: boolean) => void
     tvMode: boolean
     setTvMode: (enabled: boolean) => void
 
@@ -171,8 +169,6 @@ export const createPlayerSlice: StateCreator<UIState & PlayerState, [], [], Play
     setAutoDisableSubtitlesWhenDubbed: (autoDisableSubtitlesWhenDubbed) => set({ autoDisableSubtitlesWhenDubbed }),
     ambilightEnabled: true,
     setAmbilightEnabled: (ambilightEnabled) => set({ ambilightEnabled }),
-    marathonMode: true,
-    setMarathonMode: (marathonMode) => set({ marathonMode }),
     tvMode: false,
     setTvMode: (tvMode) => set({ tvMode }),
 
@@ -261,7 +257,6 @@ export const useAppStore = create<UIState & PlayerState & ScannerState>()(
                 loopEnabled: state.loopEnabled,
                 autoDisableSubtitlesWhenDubbed: state.autoDisableSubtitlesWhenDubbed,
                 ambilightEnabled: state.ambilightEnabled,
-                marathonMode: state.marathonMode,
                 playerVolume: state.playerVolume,
                 tvMode: state.tvMode,
             }),

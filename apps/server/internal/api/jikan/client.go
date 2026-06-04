@@ -46,8 +46,7 @@ type AnimeSearchResponse struct {
 
 type AnimeEpisodesResponse struct {
 	Data []struct {
-		MalID         int    `json:"mal_id"`
-		Episode       int    `json:"episode"`
+		Episode       int    `json:"mal_id"`
 		Title         string `json:"title"`
 		TitleJapanese string `json:"title_japanese"`
 		TitleRomaji   string `json:"title_romanji"`

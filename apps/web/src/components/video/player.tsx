@@ -1,4 +1,5 @@
-import React, { useEffect, Suspense, lazy } from "react"
+import React, { useEffect, Suspense, lazy, useState } from "react"
+import { createPortal } from "react-dom"
 import { Loader2, AlertTriangle } from "lucide-react"
 import { useAppStore } from "@/lib/store"
 
@@ -16,7 +17,6 @@ export type VideoPlayerProps = {
     mediaId?: number
     episodeNumber?: number
     malId?: number | null
-    marathonMode?: boolean
     /** Media format ("TV", "MOVIE", "OVA", etc.) — passed to player core to control fallback skip window */
     mediaFormat?: string | null
     episodes?: {
@@ -46,8 +46,10 @@ const VideoPlayerOrchestrator = lazy(() =>
 
 export function VideoPlayer(props: VideoPlayerProps) {
     const setVideoActive = useAppStore(state => state.setVideoActive)
+    const [mounted, setMounted] = useState(false)
 
     useEffect(() => {
+        setMounted(true)
         setVideoActive(true)
         return () => {
             setVideoActive(false)
@@ -65,10 +67,15 @@ export function VideoPlayer(props: VideoPlayerProps) {
         />
     )
 
-    return (
+    if (!mounted || typeof document === "undefined") {
+        return null
+    }
+
+    return createPortal(
         <Suspense fallback={<PlayerLoadingScreen />}>
             {playerContent}
-        </Suspense>
+        </Suspense>,
+        document.body
     )
 }
 

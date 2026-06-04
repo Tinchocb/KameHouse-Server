@@ -44,12 +44,6 @@ var dragonBallSagaDefinitions = map[int][]SagaRange{
 		{Id: "trunks-futuro", Title: "Saga de Trunks del Futuro", StartEp: 47, EndEp: 76},
 		{Id: "supervivencia-universal", Title: "Saga de la Supervivencia Universal", StartEp: 77, EndEp: 131},
 	},
-	61709: { // Kai
-		{Id: "saiyajin", Title: "Saga Saiyajin", StartEp: 1, EndEp: 18},
-		{Id: "freezer", Title: "Saga de Freezer", StartEp: 19, EndEp: 54},
-		{Id: "cell", Title: "Saga de Cell", StartEp: 55, EndEp: 98},
-		{Id: "majin_buu", Title: "Saga de Majin Buu", StartEp: 99, EndEp: 167},
-	},
 	236994: { // Daima
 		{Id: "daima-misterio", Title: "El Misterio del Mundo Demonio", StartEp: 1, EndEp: 10},
 		{Id: "daima-travesia", Title: "La Travesía en el Mundo Demonio", StartEp: 11, EndEp: 20},
@@ -89,10 +83,40 @@ func EnrichWithSagas(mediaID int, metadata *apiMetadata.AnimeMetadata) {
 			continue // Skip specials for now
 		}
 
-		// Handle absolute episode number for DBZ Kai if it's Season 2
-		// Season 1: 1-98, Season 2: 1-69 (starts at 99)
-		if mediaID == 61709 && ep.SeasonNumber == 2 {
-			epNum += 98
+		// Handle absolute episode number for Dragon Ball Z (12971)
+		if mediaID == 12971 {
+			switch ep.SeasonNumber {
+			case 2:
+				epNum += 39
+			case 3:
+				epNum += 74
+			case 4:
+				epNum += 107
+			case 5:
+				epNum += 139
+			case 6:
+				epNum += 165
+			case 7:
+				epNum += 194
+			case 8:
+				epNum += 219
+			case 9:
+				epNum += 253
+			}
+		}
+
+		// Handle absolute episode number for Dragon Ball Super (62715)
+		if mediaID == 62715 {
+			switch ep.SeasonNumber {
+			case 2:
+				epNum += 14
+			case 3:
+				epNum += 27
+			case 4:
+				epNum += 46
+			case 5:
+				epNum += 76
+			}
 		}
 
 		for _, saga := range sagas {

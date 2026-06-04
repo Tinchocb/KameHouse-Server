@@ -24,15 +24,25 @@ export function SeriesHero({
   return (
     <div className="relative w-full h-[60vh] min-h-[500px] flex items-end">
       {/* Background Image with absolute positioning */}
-      <div className="absolute inset-0 z-0">
+      <div className="absolute inset-0 z-0 overflow-hidden">
         <img
           src={backdropUrl}
           alt={title}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover opacity-75"
         />
-        {/* Gradients to blend into the background (#050506) */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#050506] via-[#050506]/60 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#050506]/90 via-[#050506]/40 to-transparent" />
+        {/* Cinematic blend gradients with luxury non-linear falloff */}
+        <div 
+          className="absolute inset-0 z-[1]" 
+          style={{
+            background: 'linear-gradient(to right, #050506 0%, #050506 20%, rgba(5, 5, 6, 0.95) 35%, rgba(5, 5, 6, 0.7) 50%, rgba(5, 5, 6, 0.2) 75%, transparent 100%)'
+          }}
+        />
+        <div 
+          className="absolute inset-0 z-[1]" 
+          style={{
+            background: 'linear-gradient(to top, #050506 0%, rgba(5, 5, 6, 0.9) 15%, rgba(5, 5, 6, 0.4) 40%, transparent 80%)'
+          }}
+        />
       </div>
 
       {/* Content Container */}

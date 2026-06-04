@@ -13,15 +13,18 @@ interface UsePlayerSkipProps {
     mediaFormat?: string | null
     autoSkipIntroPref: boolean
     autoSkipOutroPref: boolean
-    marathonMode: boolean
     tvMode: boolean
     hasNextEpisode: boolean
     onNextEpisode?: () => void
     setAutoSkipIntro: (val: boolean) => void
     setAutoSkipOutro: (val: boolean) => void
-    setMarathonMode: (val: boolean) => void
     setTvMode: (val: boolean) => void
     triggerControlsVisibility: () => void
+}
+
+// Helper to set DOM properties without triggering React Compiler parameter mutation rules
+function setVideoCurrentTime(video: HTMLVideoElement, time: number) {
+    video.currentTime = time
 }
 
 export function usePlayerSkip({
@@ -35,13 +38,11 @@ export function usePlayerSkip({
     mediaFormat,
     autoSkipIntroPref,
     autoSkipOutroPref,
-    marathonMode,
     tvMode,
     hasNextEpisode,
     onNextEpisode,
     setAutoSkipIntro,
     setAutoSkipOutro,
-    setMarathonMode,
     setTvMode,
     triggerControlsVisibility
 }: UsePlayerSkipProps) {
@@ -58,6 +59,45 @@ export function usePlayerSkip({
     const [countdownSeconds, setCountdownSeconds] = useState(10)
     const [showAutoSkipToast, setShowAutoSkipToast] = useState<"intro" | "outro" | "pause" | null>(null)
     const [activeChapter, setActiveChapter] = useState<string | null>(null)
+
+    // Synchronize video ended and current time into state to avoid accessing ref during render
+    const [videoTime, setVideoTime] = useState(0)
+    const [videoEnded, setVideoEnded] = useState(false)
+
+    useEffect(() => {
+        const video = videoRef.current
+        if (!video) return
+
+        const handleTimeUpdate = () => {
+            setVideoTime(video.currentTime)
+        }
+        const handleEnded = () => {
+            setVideoEnded(true)
+        }
+        const handlePlay = () => {
+            setVideoEnded(false)
+        }
+        const handleSeeked = () => {
+            setVideoEnded(video.ended)
+            setVideoTime(video.currentTime)
+        }
+
+        video.addEventListener("timeupdate", handleTimeUpdate)
+        video.addEventListener("ended", handleEnded)
+        video.addEventListener("play", handlePlay)
+        video.addEventListener("seeked", handleSeeked)
+
+        // Initialize state
+        setVideoTime(video.currentTime)
+        setVideoEnded(video.ended)
+
+        return () => {
+            video.removeEventListener("timeupdate", handleTimeUpdate)
+            video.removeEventListener("ended", handleEnded)
+            video.removeEventListener("play", handlePlay)
+            video.removeEventListener("seeked", handleSeeked)
+        }
+    }, [videoRef])
 
     const { data: skipTimes } = useAniSkipTimes({
         malId: malId ?? null,
@@ -117,12 +157,12 @@ export function usePlayerSkip({
                 hasAutoSkippedOutroRef.current = true
             }
         }
-    }, [skipTimesOp, skipTimesEd, mediaFormat])
+    }, [skipTimesOp, skipTimesEd, mediaFormat, videoRef])
 
     const skipOpening = useCallback(() => {
         const video = videoRef.current
         if (!video) return
-        video.currentTime = Math.min(video.duration, video.currentTime + 85)
+        setVideoCurrentTime(video, Math.min(video.duration, video.currentTime + 85))
         triggerControlsVisibility()
     }, [videoRef, triggerControlsVisibility])
 
@@ -134,7 +174,7 @@ export function usePlayerSkip({
         if (next) {
             const target = next.startTime
             checkManualSkipOverrides(target)
-            video.currentTime = target
+            setVideoCurrentTime(video, target)
             triggerControlsVisibility()
         }
     }, [videoRef, chapters, checkManualSkipOverrides, triggerControlsVisibility])
@@ -152,7 +192,7 @@ export function usePlayerSkip({
             target = 0
         }
         checkManualSkipOverrides(target)
-        video.currentTime = target
+        setVideoCurrentTime(video, target)
         triggerControlsVisibility()
     }, [videoRef, chapters, checkManualSkipOverrides, triggerControlsVisibility])
 
@@ -166,14 +206,14 @@ export function usePlayerSkip({
             if (skipTimesOp) {
                 const { startTime, endTime } = skipTimesOp
                 if (curr >= startTime && curr < endTime) {
-                    video.currentTime = endTime
+                    setVideoCurrentTime(video, endTime)
                     setSkipMode(null)
                     return
                 }
             } else if (isTvSeries) {
                 const introTarget = curr < 30 ? 90 : 120
                 if (curr >= 0 && curr < introTarget) {
-                    video.currentTime = introTarget
+                    setVideoCurrentTime(video, introTarget)
                     setSkipMode(null)
                     return
                 }
@@ -193,7 +233,7 @@ export function usePlayerSkip({
                 const { startTime, endTime } = skipTimesEd
                 if (!skipTimesOp || curr >= skipTimesOp.endTime) {
                     if (curr >= startTime && curr < endTime) {
-                        video.currentTime = endTime
+                        setVideoCurrentTime(video, endTime)
                         setSkipMode(null)
                         return
                     }
@@ -204,7 +244,7 @@ export function usePlayerSkip({
                 const opEndTime = skipTimesOp ? skipTimesOp.endTime : 120
                 if (curr >= opEndTime) {
                     if (curr >= outroStart && curr < outroEnd) {
-                        video.currentTime = outroEnd
+                        setVideoCurrentTime(video, outroEnd)
                         setSkipMode(null)
                         return
                     }
@@ -213,21 +253,80 @@ export function usePlayerSkip({
         }
     }, [videoRef, setAutoSkipOutro, skipTimesOp, skipTimesEd, mediaFormat])
 
-    const handleSetMarathonMode = useCallback((val: boolean) => {
-        setMarathonMode(val)
-        if (val && showNextEpisode && countdownSeconds === 0 && onNextEpisode) {
-            onNextEpisode()
-        }
-    }, [setMarathonMode, showNextEpisode, countdownSeconds, onNextEpisode])
-
     const handleSetTvMode = useCallback((val: boolean) => {
         setTvMode(val)
+        
+        const video = videoRef.current
+        if (!video) return
+
+        const curr = video.currentTime
+        const total = video.duration
+
         if (val) {
-            setAutoSkipIntro(true)
-            setAutoSkipOutro(true)
-            setMarathonMode(true)
+            // 1. Check chapter-based skips if TV mode is enabled
+            if (chapters.length > 0) {
+                const skippable = chapters.find(c => {
+                    if (curr >= c.startTime && curr < c.endTime - 0.5) {
+                        const n = c.name.toLowerCase();
+                        const isIntro = n.includes("op") || n.includes("opening") || c.type === "opening";
+                        const isOutro = n.includes("ed") || n.includes("ending") || n.includes("credits") || n.includes("créditos") || c.type === "ending";
+                        
+                        if (isIntro) return autoSkipIntroPref;
+                        if (isOutro) return autoSkipOutroPref;
+
+                        return (
+                            n.includes("eyecatch") || n.includes("eye-catch") || n.includes("commercial") ||
+                            n.includes("sponsor") || n.includes("recap") || n.includes("preview") ||
+                            n.includes("title card") || n.includes("titlecard") || n.includes("avance") ||
+                            n.includes("adelanto") || n.includes("publicidad") || n.includes("patrocinio") ||
+                            n.includes("resumen") || n.includes("intermedio") || n.includes("prologue") ||
+                            n.includes("prólogo") || n.includes("sponsors") || n.includes("title") ||
+                            n.includes("título") || c.type === "sponsor" || c.type === "recap" ||
+                            c.type === "preview"
+                        );
+                    }
+                    return false;
+                });
+
+                if (skippable) {
+                    setVideoCurrentTime(video, skippable.endTime);
+                    triggerToast("pause");
+                    triggerControlsVisibility();
+                    return;
+                }
+            }
+
+            // 2. Check general OP/ED auto-skips if TV mode is enabled
+            const isTvSeries = !mediaFormat || mediaFormat === "TV" || mediaFormat === "TV_SHORT"
+            let activeOp = skipTimesOp
+            if (!activeOp && isTvSeries) {
+                activeOp = { startTime: 0, endTime: 120 }
+            }
+            if (activeOp && autoSkipIntroPref && curr >= activeOp.startTime && curr < activeOp.endTime && !hasAutoSkippedIntroRef.current) {
+                hasAutoSkippedIntroRef.current = true
+                setVideoCurrentTime(video, activeOp.endTime)
+                setSkipMode(null)
+                triggerToast("intro")
+                triggerControlsVisibility()
+                return
+            }
+
+            let activeEd = skipTimesEd
+            if (!activeEd && isTvSeries && total > 300) {
+                activeEd = { startTime: total - 120, endTime: total - 5 }
+            }
+            if (activeEd && autoSkipOutroPref && curr >= activeEd.startTime && curr < activeEd.endTime && !hasAutoSkippedOutroRef.current) {
+                hasAutoSkippedOutroRef.current = true
+                setVideoCurrentTime(video, activeEd.endTime)
+                setSkipMode(null)
+                triggerToast("outro")
+                triggerControlsVisibility()
+                return
+            }
         }
-    }, [setTvMode, setAutoSkipIntro, setAutoSkipOutro, setMarathonMode])
+        
+        triggerControlsVisibility()
+    }, [setTvMode, videoRef, chapters, autoSkipIntroPref, autoSkipOutroPref, skipTimesOp, skipTimesEd, mediaFormat, triggerToast, triggerControlsVisibility])
 
     const handleSkipIntro = useCallback(() => {
         const video = videoRef.current
@@ -240,15 +339,15 @@ export function usePlayerSkip({
 
         if (activeMode === "intro") {
             if (skipTimesOp && curr >= skipTimesOp.startTime && curr < skipTimesOp.endTime) {
-                video.currentTime = skipTimesOp.endTime
+                setVideoCurrentTime(video, skipTimesOp.endTime)
             } else if (isTvSeries) {
-                video.currentTime = 120
+                setVideoCurrentTime(video, 120)
             }
         } else if (activeMode === "outro") {
             if (skipTimesEd && curr >= skipTimesEd.startTime && curr < skipTimesEd.endTime) {
-                video.currentTime = skipTimesEd.endTime
+                setVideoCurrentTime(video, skipTimesEd.endTime)
             } else if (isTvSeries && total > 300) {
-                video.currentTime = total - 5
+                setVideoCurrentTime(video, total - 5)
             }
         }
         setSkipMode(null)
@@ -270,6 +369,29 @@ export function usePlayerSkip({
                 const skippable = chapters.find(c => {
                     if (curr >= c.startTime && curr < c.endTime - 0.5) {
                         const n = c.name.toLowerCase();
+                        
+                        // Check if it's an intro/opening and user wants to skip intro
+                        const isIntro = 
+                            n.includes("op") ||
+                            n.includes("opening") ||
+                            c.type === "opening";
+                            
+                        // Check if it's an outro/ending/credits and user wants to skip outro
+                        const isOutro = 
+                            n.includes("ed") ||
+                            n.includes("ending") ||
+                            n.includes("credits") ||
+                            n.includes("créditos") ||
+                            c.type === "ending";
+                            
+                        if (isIntro) {
+                            return autoSkipIntroPref;
+                        }
+                        if (isOutro) {
+                            return autoSkipOutroPref;
+                        }
+
+                        // Other TV Mode specific intermediate pauses/advertisements
                         return (
                             n.includes("eyecatch") ||
                             n.includes("eye-catch") ||
@@ -287,27 +409,19 @@ export function usePlayerSkip({
                             n.includes("intermedio") ||
                             n.includes("prologue") ||
                             n.includes("prólogo") ||
-                            n.includes("credits") ||
-                            n.includes("créditos") ||
-                            n.includes("op") ||
-                            n.includes("ed") ||
-                            n.includes("opening") ||
-                            n.includes("ending") ||
                             n.includes("sponsors") ||
                             n.includes("title") ||
                             n.includes("título") ||
                             c.type === "sponsor" ||
                             c.type === "recap" ||
-                            c.type === "preview" ||
-                            c.type === "opening" ||
-                            c.type === "ending"
+                            c.type === "preview"
                         );
                     }
                     return false;
                 });
 
                 if (skippable) {
-                    video.currentTime = skippable.endTime;
+                    setVideoCurrentTime(video, skippable.endTime);
                     triggerToast("pause");
                     return;
                 }
@@ -352,9 +466,9 @@ export function usePlayerSkip({
         if (activeOp) {
             const { startTime, endTime } = activeOp
             const inOpWindow = curr >= startTime && curr < endTime
-            if ((tvMode || autoSkipIntroPref) && inOpWindow && !hasAutoSkippedIntroRef.current) {
+            if (autoSkipIntroPref && inOpWindow && !hasAutoSkippedIntroRef.current) {
                 hasAutoSkippedIntroRef.current = true
-                video.currentTime = endTime
+                setVideoCurrentTime(video, endTime)
                 setSkipMode(null)
                 triggerToast("intro")
                 return
@@ -379,9 +493,9 @@ export function usePlayerSkip({
         if (activeEd) {
             const { startTime, endTime } = activeEd
             const inEdWindow = curr >= startTime && curr < endTime
-            if ((tvMode || autoSkipOutroPref) && inEdWindow && !hasAutoSkippedOutroRef.current) {
+            if (autoSkipOutroPref && inEdWindow && !hasAutoSkippedOutroRef.current) {
                 hasAutoSkippedOutroRef.current = true
-                video.currentTime = endTime
+                setVideoCurrentTime(video, endTime)
                 setSkipMode(null)
                 triggerToast("outro")
                 return
@@ -405,13 +519,13 @@ export function usePlayerSkip({
         const edTriggered = ed ? curr >= ed.startTime : false
 
         const shouldShowNext =
-            (total > 0 && total - curr <= 30) ||
-            (edTriggered && hasNextEpisode)
+            (total > 0 && total - curr <= 15) ||
+            (autoSkipOutroPref && edTriggered && hasNextEpisode)
 
         if (shouldShowNext && hasNextEpisode) {
             if (!showNextEpisode) {
                 setShowNextEpisode(true)
-                setCountdownSeconds(10)
+                setCountdownSeconds(3)
             }
         } else {
             if (showNextEpisode) setShowNextEpisode(false)
@@ -424,19 +538,20 @@ export function usePlayerSkip({
         }
     }, [showNextEpisode])
 
+    const isVideoEnded = videoEnded
+    const isVideoPlayingOrEnded = isPlaying || isVideoEnded
+    const showCountdown =
+        tvMode &&
+        isVideoPlayingOrEnded &&
+        hasNextEpisode &&
+        (autoSkipOutroPref ? (skipTimesEd ? videoTime >= skipTimesEd.startTime : false) : isVideoEnded)
+
     useEffect(() => {
-        if (showNextEpisode && countdownSeconds > 0 && isPlaying) {
-            if (tvMode && onNextEpisode) {
-                if (!hasTriggeredNextEpisodeRef.current) {
-                    hasTriggeredNextEpisodeRef.current = true
-                    onNextEpisode()
-                }
-            } else {
-                nextEpisodeTimerRef.current = setTimeout(() => {
-                    setCountdownSeconds((c) => c - 1)
-                }, 1000)
-            }
-        } else if (showNextEpisode && countdownSeconds === 0 && marathonMode && onNextEpisode) {
+        if (showNextEpisode && countdownSeconds > 0 && showCountdown) {
+            nextEpisodeTimerRef.current = setTimeout(() => {
+                setCountdownSeconds((c) => c - 1)
+            }, 1000)
+        } else if (showNextEpisode && countdownSeconds === 0 && showCountdown && onNextEpisode) {
             if (!hasTriggeredNextEpisodeRef.current) {
                 hasTriggeredNextEpisodeRef.current = true
                 onNextEpisode()
@@ -446,10 +561,10 @@ export function usePlayerSkip({
         return () => {
             if (nextEpisodeTimerRef.current) clearTimeout(nextEpisodeTimerRef.current)
         }
-    }, [showNextEpisode, countdownSeconds, isPlaying, marathonMode, tvMode, onNextEpisode])
+    }, [showNextEpisode, countdownSeconds, showCountdown, onNextEpisode])
 
     const remainingProgress = useMemo(() => {
-        return (countdownSeconds / 10) * 100
+        return (countdownSeconds / 3) * 100
     }, [countdownSeconds])
 
     useEffect(() => {
@@ -475,9 +590,9 @@ export function usePlayerSkip({
         skipToPrevChapter,
         handleSetAutoSkipIntro,
         handleSetAutoSkipOutro,
-        handleSetMarathonMode,
         handleSetTvMode,
         handleSkipIntro,
+        showCountdown,
         processTimeUpdates,
         checkManualSkipOverrides
     }

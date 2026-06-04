@@ -4,6 +4,7 @@ import { Tv, X, RefreshCw, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/components/ui/core/styling"
 import { buildSeaQuery } from "@/api/client/requests"
+import { __DEV_SERVER_PORT } from "@/lib/server/config"
 
 interface PlayerCastModalProps {
     isOpen: boolean
@@ -30,7 +31,7 @@ export function PlayerCastModal({
     const [castingTvIp, setCastingTvIp] = React.useState<string | null>(null)
 
     const localServerUrl = React.useMemo(() => {
-        if (typeof window === "undefined") return "http://localhost:43211"
+        if (typeof window === "undefined") return `http://localhost:${__DEV_SERVER_PORT}`
 
         // Prefer backend IPs and Port provided by the server status
         if (serverIPs && serverIPs.length > 0) {
@@ -39,7 +40,7 @@ export function PlayerCastModal({
                 ip.startsWith("10.") ||
                 ip.startsWith("172.")
             ) || serverIPs[0]
-            const port = serverPort || 43211
+            const port = serverPort || __DEV_SERVER_PORT
             return `http://${lanIp}:${port}`
         }
 
@@ -52,7 +53,7 @@ export function PlayerCastModal({
         }
 
         // Último recurso
-        return "http://localhost:43211"
+        return `http://localhost:${__DEV_SERVER_PORT}`
     }, [serverIPs, serverPort])
 
     const fetchPairedTvs = React.useCallback(async () => {
@@ -84,6 +85,8 @@ export function PlayerCastModal({
         }
     }, [fetchPairedTvs])
 
+    const [verifiedOnlineIps, setVerifiedOnlineIps] = React.useState<Set<string>>(new Set())
+
     const allTvs = React.useMemo(() => {
         const list: { ip: string; name: string; isOnline: boolean }[] = []
         discoveredTvs.forEach(tv => {
@@ -91,11 +94,40 @@ export function PlayerCastModal({
         })
         pairedTvs.forEach(ptv => {
             if (!list.some(tv => tv.ip === ptv.ip)) {
-                list.push({ ip: ptv.ip, name: ptv.name, isOnline: false })
+                list.push({ ip: ptv.ip, name: ptv.name, isOnline: verifiedOnlineIps.has(ptv.ip) })
             }
         })
         return list
-    }, [discoveredTvs, pairedTvs])
+    }, [discoveredTvs, pairedTvs, verifiedOnlineIps])
+
+    // Secondary direct verification for paired TVs not found by SSDP
+    React.useEffect(() => {
+        if (isDiscovering || pairedTvs.length === 0) return
+
+        const offlinePaired = pairedTvs.filter(
+            ptv => !discoveredTvs.some(d => d.ip === ptv.ip)
+        )
+        if (offlinePaired.length === 0) return
+
+        // Try pinging each offline paired TV directly via the server's proxy check
+        offlinePaired.forEach(async (ptv) => {
+            try {
+                const res = await buildSeaQuery<{ online: boolean }>({
+                    endpoint: `/api/v1/cast/samsung/ping?ip=${encodeURIComponent(ptv.ip)}`,
+                    method: "GET",
+                })
+                if (res?.online) {
+                    setVerifiedOnlineIps(prev => {
+                        const next = new Set(prev)
+                        next.add(ptv.ip)
+                        return next
+                    })
+                }
+            } catch {
+                // TV is truly offline
+            }
+        })
+    }, [isDiscovering, pairedTvs, discoveredTvs])
 
     const handleCastToSamsung = async (ip: string, name: string) => {
         setCastingTvIp(ip)
@@ -130,7 +162,10 @@ export function PlayerCastModal({
 
     useEffect(() => {
         if (isOpen) {
-            discoverTvs()
+            const timer = setTimeout(() => {
+                discoverTvs()
+            }, 0)
+            return () => clearTimeout(timer)
         }
     }, [isOpen, discoverTvs])
 

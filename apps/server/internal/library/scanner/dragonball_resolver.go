@@ -165,8 +165,6 @@ func ResolveDragonBallID(title string) (int, bool, bool) {
 			resId, found = 236994, true
 		case strings.Contains(ct, " gt "):
 			resId, found = 12697, true
-		case franchiseHasWord(ct, "kai"):
-			resId, found = 61709, true
 		case strings.Contains(ct, " dragon ball super ") || franchiseHasWord(ct, "dbs"):
 			resId, found = 62715, true
 		case franchiseHasWord(ct, "dbz"),

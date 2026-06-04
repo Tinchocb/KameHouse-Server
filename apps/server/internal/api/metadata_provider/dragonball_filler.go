@@ -63,11 +63,7 @@ var dragonBallSeriesTitles = map[int]map[string]string{
 		"es": "Dragon Ball Super",
 		"ja": "ドラゴンボール超",
 	},
-	61709: {
-		"en": "Dragon Ball Z Kai",
-		"es": "Dragon Ball Kai",
-		"ja": "ドラゴンボール改",
-	},
+
 	236994: {
 		"en": "Dragon Ball Daima",
 		"es": "Dragon Ball Daima",

@@ -17,15 +17,15 @@ export function SagaSelector({
   onSelectSubSaga
 }: SagaSelectorProps) {
   return (
-    <div className="w-80 flex-shrink-0 flex flex-col gap-2 p-5 border-l border-white/5 bg-zinc-950/20 backdrop-blur-2xl">
-      <h3 className="font-bebas text-2xl tracking-[0.15em] text-white/95 mb-5 px-1 uppercase flex items-center justify-between">
+    <div className="w-full h-full flex flex-col p-5 border border-white/5 bg-zinc-950/40 backdrop-blur-md rounded-2xl overflow-hidden">
+      <h3 className="font-bebas text-2xl tracking-[0.15em] text-white/95 mb-5 px-1 uppercase flex items-center justify-between flex-shrink-0">
         <span>Sagas</span>
         <span className="text-[10px] font-mono font-bold tracking-normal text-zinc-500 lowercase">
           {sagas.length} sagas
         </span>
       </h3>
       
-      <div className="flex flex-col gap-2.5 overflow-y-auto pr-1 no-scrollbar">
+      <div className="flex flex-col gap-2.5 overflow-y-auto pr-1 no-scrollbar flex-1 min-h-0">
         {sagas.map((saga) => {
           const isActive = saga.id === activeSagaId
           
@@ -36,14 +36,14 @@ export function SagaSelector({
               className={cn(
                 "relative flex flex-col text-left p-4 rounded-xl transition-all duration-300 ease-out border select-none group/saga",
                 isActive 
-                  ? "bg-gradient-to-r from-brand-orange/[0.08] to-transparent border-brand-orange/20 shadow-[0_8px_32px_rgba(0,0,0,0.35)]" 
+                  ? "bg-zinc-900/40 border-brand-orange/30 shadow-[0_8px_32px_rgba(0,0,0,0.4)]" 
                   : "bg-transparent border-transparent hover:bg-white/[0.02] hover:border-white/5",
                 saga.isFiller && !isActive && "opacity-50 hover:opacity-90"
               )}
             >
               {/* Active Indicator Line with shadow glow */}
               {isActive && (
-                <div className="absolute left-0 top-0 bottom-0 w-[3.5px] bg-brand-orange rounded-r-full shadow-[0_0_12px_rgba(255,110,58,0.6)]" />
+                <div className="absolute left-[1px] top-4 bottom-4 w-[3px] bg-brand-orange rounded-r-full shadow-[0_0_8px_rgba(255,110,58,0.5)]" />
               )}
               
               <div className="flex justify-between items-start mb-1.5 w-full">

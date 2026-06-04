@@ -131,6 +131,18 @@ export const RadioGroup = React.forwardRef<HTMLButtonElement, RadioGroupProps>((
 
     const buttonRef = React.useRef<HTMLButtonElement>(null)
 
+    const mergedRef = React.useCallback(
+        (node: HTMLButtonElement | null) => {
+            (buttonRef as any).current = node
+            if (typeof ref === "function") {
+                ref(node)
+            } else if (ref) {
+                (ref as any).current = node
+            }
+        },
+        [ref],
+    )
+
     const [_value, _setValue] = React.useState<string | undefined>(controlledValue ?? defaultValue)
 
     const handleOnValueChange = (value: string) => {
@@ -173,7 +185,7 @@ export const RadioGroup = React.forwardRef<HTMLButtonElement, RadioGroupProps>((
                                 data-state={_value === option.value ? "checked" : "unchecked"}
                             >
                                 <RadioGroupPrimitive.Item
-                                    ref={mergeRefs([buttonRef, ref])}
+                                    ref={mergedRef}
                                     id={id + option.value}
                                     key={option.value}
                                     value={option.value}

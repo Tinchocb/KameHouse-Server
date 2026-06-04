@@ -41,7 +41,6 @@ export function withControlledInput<T extends FieldBaseProps>(InputComponent: Re
     const ControlledComponent = forwardRef<FieldProps, T>(
         (inputProps, ref) => {
             const { control, formState } = useFormContext()
-            // eslint-disable-next-line react-hooks/rules-of-hooks
             useFormSchema()
 
             return (

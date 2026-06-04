@@ -7,6 +7,7 @@ import (
 	"kamehouse/internal/constants"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -37,6 +38,9 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 
 	e.Use(middleware.GzipWithConfig(middleware.GzipConfig{
 		Skipper: func(c echo.Context) bool {
+			if app.Flags.IsDesktopSidecar || os.Getenv("KAMEHOUSE_ENV") != "production" {
+				return true
+			}
 			path := c.Request().URL.Path
 			return strings.HasPrefix(path, "/api/v1/mediastream")
 		},

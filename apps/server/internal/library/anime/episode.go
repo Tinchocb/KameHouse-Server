@@ -415,6 +415,7 @@ func NewSimpleEpisode(opts *NewSimpleEpisodeOptions) *Episode {
 	}
 	entryEp.SagaId = epMetadata.SagaId
 	entryEp.SagaName = epMetadata.SagaName
+	entryEp.AbsoluteEpisodeNumber = epMetadata.AbsoluteEpisodeNumber
 
 	// Override with Local Database LibraryEpisode if available
 	dbEp := opts.LibraryEpisode

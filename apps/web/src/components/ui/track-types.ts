@@ -162,9 +162,6 @@ export interface PlayerSettingsMenuProps {
     ambilightEnabled?: boolean
     onAmbilightChange?: (enabled: boolean) => void
 
-    marathonMode?: boolean
-    onMarathonModeChange?: (enabled: boolean) => void
-
     tvMode?: boolean
     onTvModeChange?: (enabled: boolean) => void
 

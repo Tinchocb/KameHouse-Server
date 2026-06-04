@@ -1,3 +1,4 @@
+'use no memo'
 import { useEffect } from "react"
 import JASSUB from "jassub"
 import { SubtitleTrack } from "@/components/ui/track-types"
@@ -11,6 +12,17 @@ interface UsePlayerJassubProps {
     subtitleSizePref: number
     setIsJassubLoading: (loading: boolean) => void
     setIsJassubActive: (active: boolean) => void
+}
+
+function setRefValue<T>(ref: React.MutableRefObject<T>, value: T) {
+    ref.current = value
+}
+
+function setCanvasDimensions(canvas: HTMLCanvasElement, width: number, height: number) {
+    canvas.width = width
+    canvas.height = height
+    canvas.style.width = "100%"
+    canvas.style.height = "100%"
 }
 
 export function usePlayerJassub({
@@ -28,7 +40,7 @@ export function usePlayerJassub({
         if (!video || activeSubtitleIndex === null) {
             if (jassubRef.current) {
                 jassubRef.current.destroy()
-                jassubRef.current = null
+                setRefValue(jassubRef, null)
                 Promise.resolve().then(() => {
                     setIsJassubLoading(false)
                     setIsJassubActive(false)
@@ -41,7 +53,7 @@ export function usePlayerJassub({
         if (!track?.url) {
             if (jassubRef.current) {
                 jassubRef.current.destroy()
-                jassubRef.current = null
+                setRefValue(jassubRef, null)
                 Promise.resolve().then(() => {
                     setIsJassubLoading(false)
                     setIsJassubActive(false)
@@ -55,7 +67,7 @@ export function usePlayerJassub({
         if (!isAss) {
             if (jassubRef.current) {
                 jassubRef.current.destroy()
-                jassubRef.current = null
+                setRefValue(jassubRef, null)
                 Promise.resolve().then(() => {
                     setIsJassubLoading(false)
                     setIsJassubActive(false)
@@ -75,7 +87,7 @@ export function usePlayerJassub({
 
                 if (jassubRef.current) {
                     jassubRef.current.destroy()
-                    jassubRef.current = null
+                    setRefValue(jassubRef, null)
                     setIsJassubActive(false)
                 }
 
@@ -92,7 +104,7 @@ export function usePlayerJassub({
                     height: video.videoHeight || 1080,
                 })
 
-                jassubRef.current = jassub
+                setRefValue(jassubRef, jassub)
                 setIsJassubActive(true)
                 setIsJassubLoading(false)
             } catch (err) {
@@ -107,7 +119,7 @@ export function usePlayerJassub({
         return () => {
             if (jassubRef.current) {
                 jassubRef.current.destroy()
-                jassubRef.current = null
+                setRefValue(jassubRef, null)
                 setIsJassubLoading(false)
                 setIsJassubActive(false)
             }
@@ -121,10 +133,7 @@ export function usePlayerJassub({
 
         const updateCanvasSize = () => {
             if (canvasRef.current && video.videoWidth > 0) {
-                canvasRef.current.width = video.videoWidth
-                canvasRef.current.height = video.videoHeight
-                canvasRef.current.style.width = "100%"
-                canvasRef.current.style.height = "100%"
+                setCanvasDimensions(canvasRef.current, video.videoWidth, video.videoHeight)
             }
         }
 

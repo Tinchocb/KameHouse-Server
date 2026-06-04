@@ -28,7 +28,7 @@ export function CollectionSwimlane({ collectionId, collectionName, movies, onMov
           <div 
             key={movie.id} 
             onClick={() => onMovieSelect(movie.id)}
-            className="flex-shrink-0 w-36 sm:w-44 snap-start group cursor-pointer"
+            className="flex-shrink-0 w-44 sm:w-56 snap-start group cursor-pointer"
           >
             <div className="w-full aspect-[2/3] rounded-xl overflow-hidden relative shadow-lg bg-zinc-900 border border-transparent group-hover:border-amber-500/50 transition-colors duration-300">
               <img 

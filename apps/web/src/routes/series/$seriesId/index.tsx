@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import { useAppStore } from "@/lib/store"
 import { motion, AnimatePresence } from "framer-motion"
 import { useSound } from "@/hooks/use-sound"
+import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
 
 import { cn } from "@/components/ui/core/styling"
 import { getHighResImage } from "@/lib/helpers/images"
@@ -15,7 +16,7 @@ import { Anime_Episode, Anime_LocalFile, Mediastream_StreamType } from "@/api/ge
 import { EmptyState } from "@/components/shared/empty-state"
 import { VideoPlayer } from "@/components/video/player"
 import { RelationsTab, CharactersTab, TechnicalMetadataTab } from "./-series-bento-tabs"
-import { resolveSeriesSagas } from "@/lib/config/dragonball.config"
+import { resolveSeriesSagas, getDragonBallSpanishTitle } from "@/lib/config/dragonball.config"
 import { startViewTransition } from "@/lib/helpers/transitions"
 
 // Modular Components
@@ -54,6 +55,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     const navigate = useNavigate()
     const { data: entry, isLoading } = useGetAnimeEntry(seriesId)
     const { data: continuityData, refetch: refetchContinuity } = useGetContinuityWatchHistoryItem(Number(seriesId))
+    const setBackdropUrl = useIntelligenceStore(s => s.setBackdropUrl)
 
     const isMovie = React.useMemo(() => {
         if (!entry?.media) return false
@@ -97,11 +99,11 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     // Convert config sagas to DTO format
     const sagas: SagaDTO[] = useMemo(() => {
         const allChars = (entry?.media?.characters?.edges || [])
-            .filter(edge => edge.node?.image?.large || edge.node?.image?.medium)
+            .filter(edge => edge.node?.image?.large)
             .map(edge => ({
                 name: edge.node?.name?.full || "Unknown",
                 roleTag: (edge.role === "MAIN" ? "Protagonist" : "Supporting") as any,
-                avatarUrl: edge.node?.image?.large || edge.node?.image?.medium || ""
+                avatarUrl: edge.node?.image?.large || ""
             }));
 
         return baseSagas.map((s, idx) => ({
@@ -127,17 +129,22 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         return currentSaga?.subSagas?.find(ss => ss.id === activeSubSagaId) || null
     }, [sagas, activeSagaId, activeSubSagaId])
 
-    React.useEffect(() => {
-        if (sagas.length > 0 && !activeSagaId) {
+    // Sync activeSagaId in render phase to avoid cascading renders
+    const [prevSagas, setPrevSagas] = useState<SagaDTO[]>([])
+    if (sagas !== prevSagas) {
+        setPrevSagas(sagas)
+        if (sagas.length > 0 && !sagas.find(s => s.id === activeSagaId)) {
             setActiveSagaId(sagas[0].id)
         }
-    }, [sagas, activeSagaId])
+    } else if (sagas.length > 0 && !activeSagaId) {
+        setActiveSagaId(sagas[0].id)
+    }
     const computedEpisodes = useMemo(() => {
         if (!entry) return []
         if (entry.episodes && entry.episodes.length > 0) {
             const eps = entry.episodes.filter(ep => ep && typeof ep.episodeNumber === 'number');
             eps.forEach(ep => {
-                if (!ep.sagaId && sagas.length > 0) {
+                if (sagas.length > 0) {
                     const epNum = ep.absoluteEpisodeNumber || ep.episodeNumber;
                     const matchingSaga = baseSagas.find(s => epNum >= s.startEp && epNum <= s.endEp);
                     if (matchingSaga) {
@@ -216,16 +223,19 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         const isMp4 = localFile.path.toLowerCase().endsWith(".mp4")
         const targetType = isMp4 ? "direct" : "transcode"
         const epNum = episode.absoluteEpisodeNumber || episode.episodeNumber
+        const localizedTitle = getDragonBallSpanishTitle(entry?.media?.tmdbId, epNum)
+        const resolvedTitle = localizedTitle || episode.titleSpanish || episode.episodeMetadata?.title || episode.episodeTitle || episode.displayTitle || `Episodio ${epNum}`
+        
         startViewTransition(() => {
             setPlayTarget({
                 path: localFile.path,
                 streamType: targetType as Mediastream_StreamType,
-                episodeLabel: episode.episodeTitle || episode.displayTitle || `Episodio ${epNum}`,
+                episodeLabel: resolvedTitle,
                 episodeNumber: epNum,
                 malId: entry?.media?.idMal ?? null,
             })
         })
-    }, [entry?.media?.idMal])
+    }, [entry?.media?.idMal, entry?.media?.tmdbId])
 
     const handlePlayLocalFile = useCallback((localFile: Anime_LocalFile) => {
         if (!localFile.path) {
@@ -237,6 +247,9 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         
         // Try to find the matching episode in computedEpisodes to resolve absoluteEpisodeNumber
         const matchedEp = computedEpisodes.find(ep => {
+            if (ep.absoluteEpisodeNumber === Number(epNum)) {
+                return true
+            }
             if (typeof ep.seasonNumber === 'number' && seasonNum != null) {
                 return ep.episodeNumber === Number(epNum) && ep.seasonNumber === Number(seasonNum)
             }
@@ -288,6 +301,9 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
             const fEp = f.metadata?.episode || f.parsedInfo?.episode
             const fSeason = f.parsedInfo?.season
             if (fEp == null) return false
+            if (Number(fEp) === targetEp.absoluteEpisodeNumber) {
+                return true
+            }
             if (typeof targetEp.seasonNumber === 'number' && fSeason != null) {
                 return Number(fEp) === targetEp.episodeNumber && Number(fSeason) === targetEp.seasonNumber
             }
@@ -304,7 +320,32 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         }
     }, [entry, computedEpisodes, continuityData?.item, handlePlayLocalFile, handlePlayEpisode])
 
-    const marathonModeStore = useAppStore(s => s.marathonMode)
+    const handlePlayByNumber = useCallback((episodeNumber: number) => {
+        const targetEp = computedEpisodes.find(ep => (ep.absoluteEpisodeNumber || ep.episodeNumber) === episodeNumber)
+        if (!targetEp) {
+            toast.error("Episodio no encontrado en la base de datos.")
+            return
+        }
+        const lf = targetEp.localFile || (entry?.localFiles || []).find(f => {
+            const fEp = f.metadata?.episode || f.parsedInfo?.episode
+            const fSeason = f.parsedInfo?.season
+            if (fEp == null) return false
+            if (Number(fEp) === targetEp.absoluteEpisodeNumber) {
+                return true
+            }
+            if (typeof targetEp.seasonNumber === 'number' && fSeason != null) {
+                return Number(fEp) === targetEp.episodeNumber && Number(fSeason) === targetEp.seasonNumber
+            }
+            return Number(fEp) === targetEp.episodeNumber
+        })
+        if (lf) {
+            handlePlayEpisode(lf, targetEp)
+        } else {
+            toast.error("Archivo local no disponible para este episodio.")
+        }
+    }, [computedEpisodes, entry?.localFiles, handlePlayEpisode])
+
+
 
     const handleNextEpisode = () => {
         if (!computedEpisodes || !playTarget) return
@@ -321,6 +362,9 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
             const fEp = f.metadata?.episode || f.parsedInfo?.episode
             const fSeason = f.parsedInfo?.season
             if (fEp == null) return false
+            if (Number(fEp) === nextEp.absoluteEpisodeNumber) {
+                return true
+            }
             if (typeof nextEp.seasonNumber === 'number' && fSeason != null) {
                 return Number(fEp) === nextEp.episodeNumber && Number(fSeason) === nextEp.seasonNumber
             }
@@ -340,6 +384,12 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         () => getHighResImage(entry?.media?.bannerImage || entry?.media?.posterImage || ""),
         [entry?.media?.bannerImage, entry?.media?.posterImage]
     )
+
+    React.useEffect(() => {
+        if (heroBackdrop) {
+            setBackdropUrl(heroBackdrop)
+        }
+    }, [heroBackdrop, setBackdropUrl])
 
     const hasNextEpisode = useMemo(() => {
         if (!computedEpisodes || !playTarget) return false
@@ -456,7 +506,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     const hasTechnical = entry.localFiles && entry.localFiles.length > 0
 
     return (
-        <div className="h-full w-full flex flex-col overflow-y-auto bg-[#050506] text-white pb-16">
+        <div className="h-full w-full flex flex-col overflow-y-auto bg-[#050506]/35 backdrop-blur-[64px] text-white pb-16">
             <SeriesHero
                 title={title}
                 romajiTitle={entry.media.titleRomaji || ""}
@@ -541,18 +591,21 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                                 className="mt-8 flex flex-col lg:flex-row gap-8"
                             >
                                 {/* Left Column: Saga Selector */}
-                                <div className="lg:w-80 flex-shrink-0">
-                                    <SagaSelector 
-                                        sagas={sagas}
-                                        activeSagaId={activeSagaId}
-                                        onSelectSaga={(sagaId) => {
-                                            setActiveSagaId(sagaId)
-                                            setActiveSubSagaId("")
-                                        }}
-                                        activeSubSagaId={activeSubSagaId}
-                                        onSelectSubSaga={setActiveSubSagaId}
-                                    />
-                                </div>
+                                {sagas.length > 0 && (
+                                    <div className="lg:w-80 flex-shrink-0 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-7rem)]">
+                                        <SagaSelector 
+                                            sagas={sagas}
+                                            activeSagaId={activeSagaId}
+                                            onSelectSaga={(sagaId) => {
+                                                setActiveSagaId(sagaId)
+                                                setActiveSubSagaId("")
+                                                window.scrollTo({ top: 0, behavior: "smooth" })
+                                            }}
+                                            activeSubSagaId={activeSubSagaId}
+                                            onSelectSubSaga={setActiveSubSagaId}
+                                        />
+                                    </div>
+                                )}
 
                                 {/* Right Column: Characters & Episodes */}
                                 <div className="flex-grow flex flex-col min-w-0">
@@ -564,16 +617,32 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                                     {/* Mapped Premium Episodes */}
                                     <PremiumEpisodeList 
                                         episodes={computedEpisodes
-                                            .filter(ep => ep.sagaId === activeSagaId)
+                                            .filter(ep => sagas.length === 0 ? true : ep.sagaId === activeSagaId)
                                             .map(ep => {
-                                                const lf = entry.localFiles?.find(f => {
+                                                const epNum = ep.absoluteEpisodeNumber || ep.episodeNumber;
+                                                const lf = ep.localFile || entry.localFiles?.find(f => {
                                                     const fEp = f.metadata?.episode || f.parsedInfo?.episode;
+                                                    const fSeason = f.parsedInfo?.season;
+                                                    
+                                                    // Prioritize absolute episode number match
+                                                    if (ep.absoluteEpisodeNumber && Number(fEp) === ep.absoluteEpisodeNumber) {
+                                                        return true;
+                                                    }
+                                                    // Otherwise, match episode number and season if available
+                                                    if (fSeason != null && ep.seasonNumber != null) {
+                                                        return Number(fEp) === ep.episodeNumber && Number(fSeason) === ep.seasonNumber;
+                                                    }
+                                                    // Fallback to simple episode number match
                                                     return Number(fEp) === ep.episodeNumber;
                                                 });
+                                                
+                                                const localizedTitle = getDragonBallSpanishTitle(entry.media?.tmdbId, epNum);
+                                                const resolvedTitle = localizedTitle || ep.titleSpanish || ep.episodeMetadata?.title || ep.episodeTitle || ep.displayTitle || `Episodio ${epNum}`;
+                                                
                                                 return {
-                                                    id: ep.episodeNumber.toString(),
-                                                    title: ep.displayTitle || ep.episodeTitle || `Episodio ${ep.episodeNumber}`,
-                                                    number: ep.episodeNumber,
+                                                    id: epNum.toString(),
+                                                    title: resolvedTitle,
+                                                    number: epNum,
                                                     description: ep.episodeMetadata?.summary || ep.episodeMetadata?.overview || "",
                                                     thumbnailUrl: ep.episodeMetadata?.image || heroBackdrop,
                                                     episodeType: (lf?.metadata as any)?.episodeType || "Canon",
@@ -585,6 +654,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                                             })}
                                         activeSubSagaStart={activeSubSaga?.startEp}
                                         activeSubSagaEnd={activeSubSaga?.endEp}
+                                        onPlay={handlePlayByNumber}
                                     />
                                 </div>
                             </motion.div>
@@ -642,7 +712,6 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                     mediaId={Number(seriesId)}
                     malId={playTarget.malId}
                     mediaFormat={entry.media?.format ?? null}
-                    marathonMode={marathonModeStore}
                     onNextEpisode={handleNextEpisode}
                     hasNextEpisode={hasNextEpisode}
                     onClose={() => {

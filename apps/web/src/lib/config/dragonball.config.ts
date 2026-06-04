@@ -4,7 +4,6 @@ export const DRAGON_BALL_SERIES = {
     ORIGINAL: 12609,
     Z: 12971,
     GT: 12697,
-    KAI: 61709,
     SUPER: 62715,
     DAIMA: 236994,
     HEROES: 80629,
@@ -87,15 +86,22 @@ export const DRAGON_BALL_SAGAS: Record<number, SagaDefinition[]> = {
             image: "https://image.tmdb.org/t/p/w1280/4pBjYo4lJXOSEneevIlbTJSdqyt.jpg"
         },
         {
+            id: "gran-saiyaman",
+            title: "Saga del Gran Saiyaman",
+            description: "Han pasado 7 años desde la derrota de Cell. Gohan, ahora adolescente, asiste a la escuela secundaria y adopta el alter-ego del Gran Saiyaman para combatir el crimen.",
+            startEp: 200,
+            endEp: 209,
+            image: "https://image.tmdb.org/t/p/w1280/4pBjYo4lJXOSEneevIlbTJSdqyt.jpg"
+        },
+        {
             id: "majin-buu",
             title: "Saga Majin Buu",
             description: "Siete años después del juego de Cell, el malvado mago Babidi busca despertar al monstruo más temible que jamás haya existido en el universo: Majin Buu.",
-            startEp: 200,
+            startEp: 210,
             endEp: 291,
             image: "https://image.tmdb.org/t/p/w1280/aGEPZs4UYGULNdCmaMU05LNCO6W.jpg",
             subSagas: [
-                { id: "gran-saiyaman", title: "El Gran Saiyaman", startEp: 200, endEp: 219 },
-                { id: "torneo-artes", title: "El 25° Torneo de Artes Marciales", startEp: 220, endEp: 231 },
+                { id: "torneo-artes", title: "El 25° Torneo de Artes Marciales", startEp: 210, endEp: 231 },
                 { id: "despertar-buu", title: "El Despertar de Majin Buu", startEp: 232, endEp: 253 },
                 { id: "super-buu", title: "La Amenaza de Super Buu", startEp: 254, endEp: 275 },
                 { id: "kid-buu", title: "Batalla Final (Kid Buu)", startEp: 276, endEp: 291 }
@@ -104,7 +110,7 @@ export const DRAGON_BALL_SAGAS: Record<number, SagaDefinition[]> = {
     ],
     [DRAGON_BALL_SERIES.SUPER]: [
         {
-            id: "dioses",
+            id: "batalla-dioses",
             title: "La Batalla de los Dioses",
             description: "El Dios de la Destrucción Bills despierta tras décadas de sueño buscando al Super Saiyajin Dios de una antigua profecía.",
             startEp: 1,
@@ -112,7 +118,7 @@ export const DRAGON_BALL_SAGAS: Record<number, SagaDefinition[]> = {
             image: "https://image.tmdb.org/t/p/w1280/lIf71qU1T8rQ2Xn4M7Y5xM8A5R4.jpg"
         },
         {
-            id: "resurreccion",
+            id: "resurreccion-f",
             title: "La Resurrección de 'F'",
             description: "Restos del ejército de Freezer logran reunir las Esferas del Dragón y revivir a su amo, quien entrenará para vengarse de Goku.",
             startEp: 15,
@@ -120,7 +126,7 @@ export const DRAGON_BALL_SAGAS: Record<number, SagaDefinition[]> = {
             image: "https://image.tmdb.org/t/p/w1280/lG7p7R2E3T3a0Ym3F4r2nQ1nZ0X.jpg"
         },
         {
-            id: "champa",
+            id: "universo-6",
             title: "Torneo del Universo 6",
             description: "Un torneo de artes marciales amistoso entre el Universo 6 de Champa y el Universo 7 de Bills por el control de las Súper Esferas del Dragón.",
             startEp: 28,
@@ -128,7 +134,7 @@ export const DRAGON_BALL_SAGAS: Record<number, SagaDefinition[]> = {
             image: "https://image.tmdb.org/t/p/w1280/m9D4W1O8A2S7rU2vB3T4Q1P2R5V.jpg"
         },
         {
-            id: "goku-black",
+            id: "trunks-futuro",
             title: "Saga de Goku Black",
             description: "Trunks del futuro regresa al presente pidiendo ayuda tras la devastación de su línea temporal a manos de un misterioso enemigo con el rostro de Goku.",
             startEp: 47,
@@ -136,7 +142,7 @@ export const DRAGON_BALL_SAGAS: Record<number, SagaDefinition[]> = {
             image: "https://image.tmdb.org/t/p/w1280/xG0L5Y2w9P8uX2A6Z1rT4N1D0X1.jpg"
         },
         {
-            id: "supervivencia",
+            id: "supervivencia-universal",
             title: "Saga Supervivencia Universal",
             description: "Zeno-Sama organiza el Torneo del Poder donde 8 universos batallarán. El universo perdedor será aniquilado inmediatamente.",
             startEp: 77,
@@ -247,40 +253,6 @@ export const DRAGON_BALL_SAGAS: Record<number, SagaDefinition[]> = {
             image: "https://image.tmdb.org/t/p/w1280/v7J7q0yMAPbocBgiv39hpAMEcRf.jpg"
         }
     ],
-    [DRAGON_BALL_SERIES.KAI]: [
-        {
-            id: "kai-saiyajin",
-            title: "Saga Saiyajin (Kai)",
-            description: "La versión remasterizada de la saga Saiyajin. Raditz llega a la Tierra revelando el origen de Goku, desencadenando una cadena de eventos que llevará a los guerreros Z a enfrentarse a Vegeta y Nappa.",
-            startEp: 1,
-            endEp: 35,
-            image: "https://image.tmdb.org/t/p/w1280/ydf1CeiBLfdxiyNTpskM0802TKl.jpg"
-        },
-        {
-            id: "kai-freezer",
-            title: "Saga Freezer (Kai)",
-            description: "La batalla en el planeta Namek remasterizada. Los guerreros Z se enfrentan al tirano Freezer en una lucha épica que despertará el poder del legendario Super Saiyajin.",
-            startEp: 36,
-            endEp: 54,
-            image: "https://image.tmdb.org/t/p/w1280/v7J7q0yMAPbocBgiv39hpAMEcRf.jpg"
-        },
-        {
-            id: "kai-cell",
-            title: "Saga Androides y Cell (Kai)",
-            description: "Los androides de la Patrulla Roja y la amenaza de Cell en version remasterizada sin relleno. Gohan alcanzará un poder que superará a su padre.",
-            startEp: 55,
-            endEp: 98,
-            image: "https://image.tmdb.org/t/p/w1280/zOz6DeXeOhKRVGUuiK3WufLXQIB.jpg"
-        },
-        {
-            id: "kai-buu",
-            title: "Saga Majin Buu (Kai)",
-            description: "La saga final de Kai: el mago Babidi despierta al temible Majin Buu. Los guerreros Z deberán unir fuerzas con antiguos enemigos para salvar el universo.",
-            startEp: 99,
-            endEp: 167,
-            image: "https://image.tmdb.org/t/p/w1280/aGEPZs4UYGULNdCmaMU05LNCO6W.jpg"
-        }
-    ],
     [DRAGON_BALL_SERIES.DAIMA]: [
         {
             id: "daima-misterio",
@@ -344,8 +316,6 @@ export function resolveSeriesSagas(media: MediaForSagaResolution | null | undefi
         resolved = DRAGON_BALL_SAGAS[DRAGON_BALL_SERIES.GT]
     } else if (searchTitle.includes("dragonballsuper")) {
         resolved = DRAGON_BALL_SAGAS[DRAGON_BALL_SERIES.SUPER]
-    } else if (searchTitle.includes("dragonballkai")) {
-        resolved = DRAGON_BALL_SAGAS[DRAGON_BALL_SERIES.KAI]
     } else if (searchTitle.includes("dragonballdaima")) {
         resolved = DRAGON_BALL_SAGAS[DRAGON_BALL_SERIES.DAIMA]
     } else if (searchTitle === "dragonball") {
@@ -373,7 +343,6 @@ export function getDragonBallSpanishTitle(tmdbId: number | undefined | null, epi
         case DRAGON_BALL_SERIES.ORIGINAL: seriesKey = "original"; break;
         case DRAGON_BALL_SERIES.Z: seriesKey = "z"; break;
         case DRAGON_BALL_SERIES.GT: seriesKey = "gt"; break;
-        case DRAGON_BALL_SERIES.KAI: seriesKey = "kai"; break;
         case DRAGON_BALL_SERIES.SUPER: seriesKey = "super"; break;
         case DRAGON_BALL_SERIES.DAIMA: seriesKey = "daima"; break;
     }

@@ -14,7 +14,6 @@ export function PerformanceMonitor() {
     const [smoothFrames, setSmoothFrames] = useState(0)
     const [memory, setMemory] = useState<{ used: number; total: number } | null>(null)
     const [routeLatency, setRouteLatency] = useState<number | null>(null)
-    const [currentPath, setCurrentPath] = useState("")
 
     const routerState = useRouterState()
     const rafIdRef = useRef<number | null>(null)
@@ -54,11 +53,7 @@ export function PerformanceMonitor() {
 
     // Track route change transition latency
     useEffect(() => {
-        const path = routerState.location.pathname
-        if (path !== currentPath) {
-            routeStartTimeRef.current = performance.now()
-            setCurrentPath(path)
-        }
+        routeStartTimeRef.current = performance.now()
         
         // Measure time taken to render/layout after path updates
         const timer = requestAnimationFrame(() => {
@@ -70,7 +65,7 @@ export function PerformanceMonitor() {
         })
 
         return () => cancelAnimationFrame(timer)
-    }, [routerState.location.pathname, currentPath])
+    }, [routerState.location.pathname])
 
     // Performance loop (RAF)
     useEffect(() => {

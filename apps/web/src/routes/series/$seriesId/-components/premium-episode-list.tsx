@@ -1,17 +1,18 @@
 import { Play, Check } from "lucide-react"
 import type { PremiumEpisode } from "@/api/types/series.types"
 import { cn } from "@/components/ui/core/styling"
-
 interface PremiumEpisodeListProps {
   episodes: PremiumEpisode[]
   activeSubSagaStart?: number
   activeSubSagaEnd?: number
+  onPlay?: (episodeNumber: number) => void
 }
 
 export function PremiumEpisodeList({ 
   episodes,
   activeSubSagaStart,
-  activeSubSagaEnd
+  activeSubSagaEnd,
+  onPlay
 }: PremiumEpisodeListProps) {
   return (
     <div className="flex flex-col gap-4 mt-6">
@@ -24,15 +25,16 @@ export function PremiumEpisodeList({
           <div 
             key={ep.id}
             id={`episode-${ep.number}`}
+            onClick={() => onPlay?.(ep.number)}
             className={cn(
-              "group flex gap-6 p-4 rounded-xl transition-all duration-300 border",
+              "group flex gap-6 p-4 rounded-xl transition-all duration-300 border cursor-pointer",
               isHighlighted
                 ? "bg-brand-orange/[0.02] border-brand-orange/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_24px_rgba(255,110,58,0.03)] border-l-[3.5px] border-l-brand-orange hover:bg-brand-orange/[0.04]"
                 : "bg-transparent border-transparent hover:bg-white/5 hover:border-white/10"
             )}
           >
           {/* Thumbnail */}
-          <div className="relative w-64 aspect-video rounded-lg overflow-hidden flex-shrink-0 bg-gray-900 shadow-md">
+          <div className="relative w-72 md:w-80 aspect-video rounded-lg overflow-hidden flex-shrink-0 bg-gray-900 shadow-md">
             <img 
               src={ep.thumbnailUrl} 
               alt={ep.title}
@@ -68,11 +70,6 @@ export function PremiumEpisodeList({
               {ep.episodeType === 'Hyped' && (
                 <span className="text-[10px] font-mono uppercase bg-amber-900/40 text-amber-400 border border-amber-900/50 px-2 py-0.5 rounded shadow-[0_0_8px_rgba(245,158,11,0.2)]">
                   Premium
-                </span>
-              )}
-              {ep.episodeType === 'Canon' && (
-                <span className="text-[10px] font-mono uppercase bg-blue-900/40 text-blue-400 border border-blue-900/50 px-2 py-0.5 rounded">
-                  Canon
                 </span>
               )}
             </div>

@@ -9,6 +9,14 @@ interface UsePlayerCastProps {
     status: "loading" | "ready" | "error"
 }
 
+function setVideoSrc(video: HTMLVideoElement, src: string) {
+    video.src = src
+}
+
+function setVideoCurrentTime(video: HTMLVideoElement, time: number) {
+    video.currentTime = time
+}
+
 export function usePlayerCast({
     videoRef,
     hlsRef,
@@ -68,9 +76,9 @@ export function usePlayerCast({
         const timeLocal = castingSavedStateRef.current.currentTime
         const targetUrl = absoluteLanUrlRef.current
         console.log("Preparing Cast: Swapping source to absolute LAN URL:", targetUrl)
-        video.src = targetUrl
+        setVideoSrc(video, targetUrl)
         video.load()
-        video.currentTime = timeLocal
+        setVideoCurrentTime(video, timeLocal)
     }, [videoRef, hlsRef])
 
     const restoreLocalPlayback = useCallback(() => {
@@ -88,10 +96,10 @@ export function usePlayerCast({
             video.removeAttribute("src")
             video.load()
             hlsRef.current.attachMedia(video)
-            hlsRef.current.loadSource(playableUrlRef.current)
+            hlsRef.current.loadSource(absoluteLanUrlRef.current)
 
             const handleManifestParsed = () => {
-                video.currentTime = restoreTime
+                setVideoCurrentTime(video, restoreTime)
                 if (saved.wasPlaying) {
                     video.play().catch(e => console.error("Error playing local video:", e))
                 }
@@ -99,9 +107,9 @@ export function usePlayerCast({
             }
             hlsRef.current.on(Hls.Events.MANIFEST_PARSED, handleManifestParsed)
         } else {
-            video.src = saved.src
+            setVideoSrc(video, saved.src)
             video.load()
-            video.currentTime = restoreTime
+            setVideoCurrentTime(video, restoreTime)
             if (saved.wasPlaying) {
                 video.play().catch(e => console.error("Error playing local video:", e))
             }

@@ -242,8 +242,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                     episodeNumber={playTarget.episodeNumber}
                     mediaId={Number(movieId)}
                     malId={playTarget.malId}
-                    mediaFormat={entry.media?.format ?? null}
-                    marathonMode={false}
+                    mediaFormat={entry.media?.format ?? "MOVIE"}
                     onNextEpisode={() => {}}
                     hasNextEpisode={false}
                     onClose={() => {

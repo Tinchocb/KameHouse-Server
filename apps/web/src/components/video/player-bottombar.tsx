@@ -107,8 +107,6 @@ export interface PlayerBottomBarProps {
     ambilightEnabled?: boolean
     onAmbilightChange?: (enabled: boolean) => void
 
-    marathonMode?: boolean
-    onMarathonModeChange?: (enabled: boolean) => void
 
     tvMode?: boolean
     onTvModeChange?: (enabled: boolean) => void
@@ -139,6 +137,13 @@ export interface PlayerBottomBarProps {
     hasQueue?: boolean
 }
 
+const SkipNextChapterIcon = () => (
+    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" className="fill-current">
+        <polygon points="5 4 15 12 5 20 5 4" fill="currentColor"/>
+        <line x1="19" y1="5" x2="19" y2="19" />
+    </svg>
+)
+
 export const PlayerBottomBar = React.memo(function PlayerBottomBar({
     duration, insights, progressBarRef, progressInputRef, handleSeek,
     isPlaying, togglePlay, skipTime,
@@ -161,7 +166,6 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
     loopEnabled = false, onLoopEnabledChange,
     autoDisableSubtitlesWhenDubbed = true, onAutoDisableSubtitlesWhenDubbedChange,
     ambilightEnabled = true, onAmbilightChange,
-    marathonMode = true, onMarathonModeChange,
     tvMode = false, onTvModeChange,
     skipTimesOp,
     skipTimesEd,
@@ -180,30 +184,23 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
     hasQueue,
 }: PlayerBottomBarProps) {
 
-    const SkipNextChapterIcon = () => (
-        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" className="fill-current">
-            <polygon points="5 4 15 12 5 20 5 4" fill="currentColor"/>
-            <line x1="19" y1="5" x2="19" y2="19" />
-        </svg>
-    )
-
     return (
         <div className={cn(
-            "absolute bottom-0 inset-x-0 w-full flex flex-col pointer-events-auto select-none",
-            "bg-zinc-950/45 backdrop-blur-2xl border-t border-white/[0.02] pt-6 pb-3 px-6",
+            "absolute bottom-4 inset-x-4 md:bottom-5 md:inset-x-5 max-w-5xl mx-auto flex flex-col pointer-events-auto select-none",
+            "bg-[#09090b] border border-white/5 rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.6)] px-4 py-2.5 z-30",
         )}>
 
             {/* Progress Timeline */}
-            <div className="relative group/progress flex items-center h-4 cursor-pointer w-full mb-3">
+            <div className="relative group/progress flex items-center h-3 cursor-pointer w-full mb-2">
                 {showHeatmap && (
                     <TimelineHeatmap
                         duration={duration}
                         insights={insights}
-                        className="absolute bottom-0 inset-x-0 w-full h-4 opacity-15 pointer-events-none group-hover/progress:opacity-35 transition-all duration-300"
+                        className="absolute bottom-0 inset-x-0 w-full h-3 opacity-15 pointer-events-none group-hover/progress:opacity-35 transition-all duration-300"
                     />
                 )}
                 {/* Track background */}
-                <div className="w-full h-[3px] group-hover/progress:h-[5px] bg-white/10 rounded-full transition-all duration-200 relative flex items-center">
+                <div className="w-full h-[2.5px] group-hover/progress:h-[4px] bg-white/10 rounded-full transition-all duration-200 relative flex items-center">
 
                     {/* Skip segment markers — rendered behind the playback bar */}
                     {duration > 0 && skipTimesOp && (
@@ -248,7 +245,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                         style={{ width: '0%' }}
                     >
                         {/* Thumb indicator - sleek and shows on hover with scale transition */}
-                        <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 rounded-full bg-brand-orange border-2 border-white opacity-0 group-hover/progress:opacity-100 scale-90 group-hover/progress:scale-100 transition-all duration-200 shadow-md ring-2 ring-zinc-950/40 pointer-events-none" />
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 rounded-full bg-brand-orange border-2 border-white opacity-0 group-hover/progress:opacity-100 scale-90 group-hover/progress:scale-100 transition-all duration-200 shadow-md ring-2 ring-zinc-950/40 pointer-events-none" />
                     </div>
                 </div>
                 <input
@@ -266,16 +263,16 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
             <div className="flex items-center justify-between w-full">
 
                 {/* Left Wing */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
 
                     {/* Play/Pause */}
                     <button
                         onClick={(e) => { e.stopPropagation(); togglePlay(); }}
                         aria-label={isPlaying ? "Pausar" : "Reproducir"}
-                        className="text-white hover:text-brand-orange transition-all duration-300 flex items-center justify-center w-8 h-8 bg-white/5 rounded-full hover:bg-white/10">
+                        className="text-white hover:text-brand-orange transition-all duration-300 flex items-center justify-center w-7 h-7 bg-white/5 rounded-full hover:bg-white/10">
                         {isPlaying
-                            ? <Pause className="w-3.5 h-3.5 fill-current" />
-                            : <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                            ? <Pause className="w-3 h-3 fill-current" />
+                            : <Play className="w-3 h-3 fill-current ml-0.5" />
                         }
                     </button>
 
@@ -365,7 +362,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                             onClick={(e) => { e.stopPropagation(); onTogglePip(); }}
                             aria-label="Picture in Picture [I]"
                             title="Picture in Picture [I]"
-                            className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8">
+                            className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-7 h-7">
                             <PictureInPicture className="w-3.5 h-3.5" />
                         </button>
                     )}
@@ -377,7 +374,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                             aria-label="Transmitir a TV"
                             title="Transmitir a TV"
                             className={cn(
-                                "transition-all duration-300 flex items-center justify-center w-8 h-8 rounded-full",
+                                "transition-all duration-300 flex items-center justify-center w-7 h-7 rounded-full",
                                 castState === "connected"
                                     ? "text-brand-orange bg-brand-orange/10 shadow-[0_0_12px_rgba(249,115,22,0.4)] animate-pulse"
                                     : castState === "connecting"
@@ -396,7 +393,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                             aria-label="Ver cola de reproducción"
                             title="Ver cola de reproducción"
                             className={cn(
-                                "transition-all duration-300 flex items-center justify-center w-8 h-8 rounded-full",
+                                "transition-all duration-300 flex items-center justify-center w-7 h-7 rounded-full",
                                 isQueueSidebarOpen
                                     ? "text-brand-orange bg-brand-orange/10 shadow-[0_0_12px_rgba(249,115,22,0.4)] animate-pulse"
                                     : "text-zinc-500 hover:text-white"
@@ -412,7 +409,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                             onClick={(e) => { e.stopPropagation(); onNextEpisode(); }}
                             aria-label="Siguiente episodio [N]"
                             title="Siguiente episodio [N]"
-                            className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8">
+                            className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-7 h-7">
                             <SkipForward className="w-3.5 h-3.5" />
                         </button>
                     )}
@@ -424,7 +421,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                             aria-label="Alternar Modo TV / Maratón"
                             title="Modo TV / Maratón"
                             className={cn(
-                                "transition-all duration-300 flex items-center justify-center w-8 h-8 rounded-full",
+                                "transition-all duration-300 flex items-center justify-center w-7 h-7 rounded-full",
                                 tvMode
                                     ? "text-brand-orange"
                                     : "text-zinc-500 hover:text-white"
@@ -469,8 +466,6 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                         onAutoDisableSubtitlesWhenDubbedChange={onAutoDisableSubtitlesWhenDubbedChange}
                         ambilightEnabled={ambilightEnabled}
                         onAmbilightChange={onAmbilightChange}
-                        marathonMode={marathonMode}
-                        onMarathonModeChange={onMarathonModeChange}
                         tvMode={tvMode}
                         onTvModeChange={onTvModeChange}
                     />
@@ -480,7 +475,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                         onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
                         aria-label={isFullscreen ? "Salir de pantalla completa [F]" : "Pantalla completa [F]"}
                         title={isFullscreen ? "Salir de pantalla completa [F]" : "Pantalla completa [F]"}
-                        className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8">
+                        className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-7 h-7">
                         {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
                     </button>
                 </div>

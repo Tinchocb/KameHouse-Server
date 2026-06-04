@@ -73,13 +73,15 @@ export function DeferredImage(props: DeferredImageProps) {
     const [hasError, setHasError] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    const lqipSrc = lowResSrc || getTinyResImage(src);
-
-    useEffect(() => {
+    const [prevSrc, setPrevSrc] = useState(src);
+    if (src !== prevSrc) {
+        setPrevSrc(src);
         setIsLoaded(false);
         setIsLowResLoaded(false);
         setHasError(false);
-    }, [src]);
+    }
+
+    const lqipSrc = lowResSrc || getTinyResImage(src);
 
     const handleLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
         setIsLoaded(true);
@@ -166,7 +168,7 @@ export function DeferredImage(props: DeferredImageProps) {
                     onLoad={handleLoad}
                     onError={handleError}
                     className={cn(
-                        "relative h-full w-full object-cover transition-opacity duration-500 ease-out will-change-opacity",
+                        "relative h-full w-full object-cover transition-opacity duration-500 ease-out will-change-[opacity]",
                         isLoaded ? "opacity-100" : "opacity-0"
                     )}
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any

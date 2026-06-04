@@ -171,6 +171,15 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>((prop
             : <span className={cn(ComboboxAnatomy.placeholder(), placeholderClass)}>{placeholder}</span>
     )
 
+    const setRefs = React.useCallback((node: HTMLButtonElement | null) => {
+        (buttonRef as React.MutableRefObject<HTMLButtonElement | null>).current = node
+        if (typeof ref === "function") {
+            ref(node)
+        } else if (ref) {
+            (ref as React.MutableRefObject<HTMLButtonElement | null>).current = node
+        }
+    }, [ref])
+
     return (
         <BasicField {...basicFieldProps}>
             <InputContainer {...inputContainerProps}>
@@ -183,7 +192,7 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>((prop
                     className={cn(ComboboxAnatomy.popover(), popoverClass)}
                     trigger={
                         <button
-                            ref={mergeRefs([buttonRef, ref])}
+                            ref={setRefs}
                             id={basicFieldProps.id}
                             role="combobox"
                             aria-expanded={open}

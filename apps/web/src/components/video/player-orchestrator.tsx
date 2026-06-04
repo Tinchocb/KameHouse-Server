@@ -27,12 +27,11 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
     const [streamType, setStreamType] = useState<string>(props.streamType || "direct")
     const [clientId] = useState(() => Math.random().toString(36).substring(2, 11))
     
-    // Sync streamType state when prop changes externally
-    useEffect(() => {
-        if (props.streamType) {
-            setStreamType(props.streamType)
-        }
-    }, [props.streamType])
+    const [prevStreamTypeProp, setPrevStreamTypeProp] = useState(props.streamType)
+    if (props.streamType !== prevStreamTypeProp) {
+        setPrevStreamTypeProp(props.streamType)
+        setStreamType(props.streamType || "direct")
+    }
 
     const isLocal = !props.isExternalStream && Boolean(props.streamUrl) && streamType !== "online"
 
@@ -126,6 +125,7 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
             malId={props.malId}
             episodes={props.episodes}
             onSelectEpisode={props.onSelectEpisode}
+            mediaFormat={props.mediaFormat}
         />
     )
 }

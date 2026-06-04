@@ -46,8 +46,9 @@ export const SeriesCard = memo(function SeriesCard({
                 onNavigate(item?.id?.toString() || "");
             }}
             style={{
-                flex: isSelected ? '4 0 25%' : '1 0 80px',
-                transition: 'flex 320ms cubic-bezier(0.16, 1, 0.3, 1)',
+                flex: isSelected ? '4 0 25%' : '1 0 160px',
+                transition: 'flex 550ms cubic-bezier(0.16, 1, 0.3, 1)',
+                willChange: "flex-grow",
                 '--tape-color': getVhsColor(item.id)
             } as React.CSSProperties}
             className="h-full flex flex-col cursor-pointer overflow-hidden relative group/card border-r border-zinc-950/40"
