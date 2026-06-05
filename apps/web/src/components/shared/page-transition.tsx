@@ -1,3 +1,5 @@
+"use no memo"
+
 import { motion } from "framer-motion"
 import React from "react"
 import { cn } from "@/components/ui/core/styling"

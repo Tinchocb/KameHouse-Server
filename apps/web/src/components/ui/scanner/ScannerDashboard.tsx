@@ -106,10 +106,10 @@ export function ScannerDashboard() {
                                     onClick={startFastScan}
                                     disabled={isScanning || scanPending}
                                     className={cn(
-                                        "bg-gradient-to-r text-zinc-950 font-black px-6 py-3.5 rounded-xl text-xs tracking-widest uppercase transition-all shadow-lg transform active:scale-95 w-full lg:w-auto",
+                                        "text-zinc-950 font-black px-6 py-3.5 rounded-xl text-xs tracking-widest uppercase transition-all duration-300 shadow-lg transform active:scale-95 w-full lg:w-auto",
                                         isScanning
-                                            ? "from-zinc-800 to-zinc-900 text-zinc-500 cursor-not-allowed border border-white/5 shadow-none"
-                                            : "from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 hover:shadow-[#ff6e3a]/15"
+                                            ? "bg-zinc-900 text-zinc-500 cursor-not-allowed border border-white/5 shadow-none"
+                                            : "bg-[#ff6e3a] hover:bg-[#ff7d4b] hover:shadow-[#ff6e3a]/15"
                                     )}
                                 >
                                     {isScanning ? "ESCANEANDO..." : "INICIAR DELTA SCAN"}
@@ -227,56 +227,62 @@ export function ScannerDashboard() {
                         {mediaItems.map(item => (
                             <motion.div
                                 key={item.id}
-                                whileHover={{ y: -6 }}
-                                className="group relative flex flex-col bg-[#0b0b0d] border border-white/5 rounded-2xl overflow-hidden hover:border-[#ff6e3a]/30 transition-all duration-300 shadow-lg"
+                                whileHover={{ 
+                                    y: -8,
+                                    scale: 1.02,
+                                    boxShadow: "0 25px 50px -12px rgba(255, 110, 58, 0.15)"
+                                }}
+                                transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                                className="group relative flex flex-col bg-[#070709] border border-white/[0.03] rounded-xl overflow-hidden transition-all duration-500"
                             >
-                                {/* Poster Image Container */}
-                                <div className="relative aspect-[2/3] w-full overflow-hidden bg-black/40 border-b border-white/5">
+                                {/* Poster Image Container - Photography First */}
+                                <div className="relative aspect-[2/3] w-full overflow-hidden bg-black/50">
                                     {item.poster ? (
                                         <img
                                             src={item.poster}
                                             alt={item.title}
                                             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                            loading="lazy"
                                         />
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-zinc-700 text-xs uppercase font-black font-mono">
+                                        <div className="w-full h-full flex items-center justify-center text-zinc-800 text-[10px] uppercase font-black font-mono">
                                             Sin Poster
                                         </div>
                                     )}
 
-                                    {/* Format Badge */}
-                                    <div className="absolute top-2.5 left-2.5">
-                                        <span className="text-[9px] font-black tracking-wider uppercase font-mono px-2 py-0.5 bg-black/80 backdrop-blur border border-white/10 rounded-md text-zinc-300">
+                                    {/* Format Badge (Apple style minimal chip) */}
+                                    <div className="absolute top-3 left-3 opacity-90 group-hover:opacity-100 transition-opacity">
+                                        <span className="text-[8px] font-bold tracking-widest uppercase font-mono px-2 py-0.5 bg-[#0e0e11]/90 backdrop-blur-md border border-white/[0.08] rounded-md text-zinc-350">
                                             {item.type === "MOVIE" || item.format === "MOVIE" ? "🎬 MOVIE" : `📺 ${item.format}`}
                                         </span>
                                     </div>
 
                                     {/* Rating */}
                                     {item.score > 0 && (
-                                        <div className="absolute top-2.5 right-2.5">
-                                            <span className="text-[9px] font-black tracking-wider font-mono px-2 py-0.5 bg-[#ff6e3a] text-zinc-950 rounded-md">
+                                        <div className="absolute top-3 right-3 opacity-90 group-hover:opacity-100 transition-opacity">
+                                            <span className="text-[8px] font-black tracking-wider font-mono px-2 py-0.5 bg-[#ff6e3a] text-zinc-950 rounded-md">
                                                 ★ {(item.score / 10).toFixed(1)}
                                             </span>
                                         </div>
                                     )}
                                 </div>
 
-                                {/* Details */}
-                                <div className="p-4 flex-1 flex flex-col justify-between gap-2">
+                                {/* Details - Clean Typography with Negative Tracking */}
+                                <div className="p-4 flex-1 flex flex-col justify-between gap-3 bg-[#08080a]">
                                     <div className="space-y-1">
-                                        <p className="text-xs font-bold text-zinc-150 group-hover:text-[#ff6e3a] transition-colors line-clamp-2 leading-snug uppercase tracking-wide">
+                                        <p className="text-[11px] font-bold text-zinc-200 group-hover:text-[#ff6e3a] transition-colors line-clamp-2 leading-snug uppercase tracking-tight">
                                             {item.title}
                                         </p>
-                                        <p className="text-[10px] font-mono text-zinc-550">
+                                        <p className="text-[9px] font-mono text-zinc-600 font-medium">
                                             {item.year ? `${item.year}` : "—"}
                                         </p>
                                     </div>
-                                    <div className="flex items-center justify-between border-t border-white/[0.03] pt-2 text-[10px] text-zinc-500 font-mono">
+                                    <div className="flex items-center justify-between border-t border-white/[0.03] pt-2.5 text-[9px] text-zinc-650 font-mono">
                                         <span>
                                             {item.totalEps > 0 ? `${item.totalEps} EPs` : "Único"}
                                         </span>
                                         <span className="text-emerald-500 font-bold flex items-center gap-1">
-                                            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                                            <span className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse" />
                                             Activo
                                         </span>
                                     </div>

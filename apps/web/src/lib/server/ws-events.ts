@@ -93,4 +93,5 @@ export type WebSocketMessage =
     | { type: WSEvents.ERROR_TOAST; payload: string }
     | { type: WSEvents.INFO_TOAST; payload: string }
     | { type: WSEvents.WARNING_TOAST; payload: string }
+    | { type: WSEvents.REFRESHED_ANIME_COLLECTION; payload: null }
 

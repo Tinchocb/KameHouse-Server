@@ -137,15 +137,8 @@ export function Modal(props: ModalProps) {
                         onEscapeKeyDown={onEscapeKeyDown}
                         onPointerDownCapture={onPointerDownCapture}
                         onInteractOutside={onInteractOutside}
-                        aria-describedby={description ? undefined : "modal-hidden-desc"}
+                        aria-describedby={undefined}
                     >
-                        {/* Always render a hidden description when no visible description is provided,
-                            so aria-describedby="modal-hidden-desc" always resolves. */}
-                        {!description && (
-                            <VisuallyHidden>
-                                <DialogPrimitive.Description id="modal-hidden-desc">Dialog content</DialogPrimitive.Description>
-                            </VisuallyHidden>
-                        )}
 
                         {(title || description) && (
                             <div className={cn(ModalAnatomy.header(), headerClass)}>

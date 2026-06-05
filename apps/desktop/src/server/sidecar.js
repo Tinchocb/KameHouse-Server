@@ -205,6 +205,9 @@ async function launchkamehouseServer(opts = {}) {
                 KAMEHOUSE_PORT: String(getDesktopServerPort()),
                 KAMEHOUSE_ENV: "production", // Force sidecar mode
             }
+            if (isDevelopment()) {
+                spawnEnv.KAMEHOUSE_DEV_CORS_ORIGINS = "http://localhost:43210,http://127.0.0.1:43210,http://localhost,http://127.0.0.1"
+            }
             serverProcess = spawn(binaryPath, args, { env: spawnEnv })
         } catch (spawnError) {
             log.error("[Sidecar] Failed to spawn server process synchronously:", spawnError)

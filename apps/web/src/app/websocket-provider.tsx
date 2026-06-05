@@ -76,8 +76,21 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
             case WSEvents.AUTO_SCAN_COMPLETED:
             case WSEvents.LIBRARY_WATCHER_FILE_ADDED:
             case WSEvents.LIBRARY_WATCHER_FILE_REMOVED:
+            case WSEvents.REFRESHED_ANIME_COLLECTION:
                 queryClient.invalidateQueries({
                     queryKey: [API_ENDPOINTS.LOCALFILES.GetLocalFiles.key]
+                })
+                queryClient.invalidateQueries({
+                    queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key]
+                })
+                queryClient.invalidateQueries({
+                    queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key]
+                })
+                queryClient.invalidateQueries({
+                    queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetMissingEpisodes.key]
+                })
+                queryClient.invalidateQueries({
+                    queryKey: [API_ENDPOINTS.LIBRARY_EXPLORER.GetLibraryExplorerFileTree.key]
                 })
                 break
                 
@@ -153,7 +166,7 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
                 }
                 if (!flushTimeout.current) flushTimeout.current = setTimeout(flushUpdates, 500)
                 break
-
+ 
             case WSEvents.SCAN_PROGRESS_DETAILED: {
                 const payload = msg.payload
                 const evt: ScanEvent = {
@@ -171,7 +184,7 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
                 if (!flushTimeout.current) flushTimeout.current = setTimeout(flushUpdates, 500)
                 break
             }
-
+ 
             case WSEvents.SCAN_STATUS: {
                 const statusStr = msg.payload as string
                 let newStageIdx = stateUpdateRef.current.activeStageIdx ?? useAppStore.getState().activeStageIdx
@@ -190,7 +203,7 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
                 if (matchedIdx !== -1) {
                     newStageIdx = matchedIdx;
                 }
-
+ 
                 const evt: ScanEvent = {
                     status: statusStr.toLowerCase().includes("completed") || statusStr.toLowerCase().includes("finished") ? "FINISH" : "PROCESSING",
                     file: statusStr,
@@ -198,7 +211,7 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
                     id: `status-${Math.random().toString(36).substring(2, 9)}`
                 }
                 eventQueue.current.unshift(evt)
-
+ 
                 if (statusStr.toLowerCase().includes("completed") || statusStr.toLowerCase().includes("finished")) {
                     stateUpdateRef.current = {
                         ...stateUpdateRef.current,
@@ -206,6 +219,10 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
                         scanProgress: 100,
                         activeStageIdx: -1
                     }
+                    queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key] })
+                    queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key] })
+                    queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetMissingEpisodes.key] })
+                    queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.LIBRARY_EXPLORER.GetLibraryExplorerFileTree.key] })
                 } else {
                     stateUpdateRef.current = {
                         ...stateUpdateRef.current,

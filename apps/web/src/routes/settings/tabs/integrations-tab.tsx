@@ -163,7 +163,7 @@ export function IntegrationsTab({ control, register }: IntegrationsTabProps) {
                             <button
                                 type="button"
                                 onClick={handleLinkAniList}
-                                className="px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-zinc-950 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all active:scale-95 font-bold shadow-lg shadow-orange-500/10"
+                                className="px-4 py-2.5 bg-[#ff6e3a] hover:bg-[#ff7d4b] text-zinc-955 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all duration-300 active:scale-95 font-bold shadow-lg shadow-orange-500/10"
                             >
                                 Re-Vincular
                             </button>

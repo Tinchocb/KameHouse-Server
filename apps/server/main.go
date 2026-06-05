@@ -33,7 +33,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	if err := run(ctx, stop); err != nil && !errors.Is(err, http.ErrServerClosed) {
+	if err := run(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Printf("ERROR: server application failed: %v", err)
 		os.Exit(1)
 	}
@@ -41,7 +41,7 @@ func main() {
 
 
 
-func run(ctx context.Context, stop context.CancelFunc) error {
+func run(ctx context.Context) error {
 	loadEnvFile()
 
 	portStr := os.Getenv("KAMEHOUSE_PORT")
@@ -72,7 +72,7 @@ func run(ctx context.Context, stop context.CancelFunc) error {
 	e := core.NewEchoApp(app, &WebFS)
 	handlers.InitRoutes(app, e)
 
-	bindHost, bindPort, err := resolveBindableAddress(hostStr, portStrVal)
+	bindHost, bindPort, err := resolveBindableAddress(hostStr, portStrVal, app.Flags.IsDesktopSidecar)
 	if err != nil {
 		return err
 	}
@@ -158,7 +158,7 @@ func run(ctx context.Context, stop context.CancelFunc) error {
 	}
 }
 
-func resolveBindableAddress(host string, port int) (string, int, error) {
+func resolveBindableAddress(host string, port int, isDesktopSidecar bool) (string, int, error) {
 	addr := fmt.Sprintf("%s:%d", host, port)
 
 	// Retry binding to the requested port a few times (helps clear TIME_WAIT from rapid restarts in dev)
@@ -180,6 +180,10 @@ func resolveBindableAddress(host string, port int) (string, int, error) {
 			log.Printf("Port %d is busy (another instance may be running). Retrying in 1s... (Attempt %d/%d)", port, i+1, maxRetries)
 			time.Sleep(1 * time.Second)
 		}
+	}
+
+	if isDesktopSidecar {
+		return "", 0, fmt.Errorf("port %d is busy and fallback is disabled in desktop sidecar mode", port)
 	}
 
 	// If still busy, log a final warning before falling back to ephemeral port (port 0)

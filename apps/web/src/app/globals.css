@@ -5,6 +5,12 @@
   100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
 }
 
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -21,6 +27,15 @@
     }
     .glass-morphism {
         @apply bg-zinc-950/40 backdrop-blur-xl border border-white/5 shadow-2xl;
+    }
+    .transition-premium-fast {
+        transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .transition-premium-normal {
+        transition: all 350ms cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+    .transition-premium-slow {
+        transition: all 550ms cubic-bezier(0.16, 1, 0.3, 1);
     }
     .mask-cinematic {
         mask-image: linear-gradient(to bottom, black 50%, transparent 95%), linear-gradient(to right, black 80%, transparent 100%);

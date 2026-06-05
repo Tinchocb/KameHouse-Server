@@ -50,10 +50,10 @@ export function PlayerTab({ control }: PlayerTabProps) {
                                 ].map((gpu) => (
                                     <label
                                         key={gpu.id}
-                                        className={`flex items-start gap-4 p-4 bg-black/40 rounded-2xl border transition-all cursor-pointer ${
+                                        className={`flex items-start gap-4 p-4 bg-[#050507]/45 rounded-xl border transition-all duration-300 cursor-pointer ${
                                             (field.value === gpu.id || (!field.value && gpu.id === "none"))
-                                                ? "border-[#ff6e3a]/40 bg-[#ff6e3a]/[0.02]"
-                                                : "border-white/5 hover:border-white/10"
+                                                ? "border-[#ff6e3a]/30 bg-[#ff6e3a]/[0.01]"
+                                                : "border-white/[0.04] hover:border-white/10"
                                         }`}
                                     >
                                         <input
@@ -65,8 +65,8 @@ export function PlayerTab({ control }: PlayerTabProps) {
                                             className="mt-1 accent-[#ff6e3a]"
                                         />
                                         <div className="-mt-0.5">
-                                            <span className="text-xs font-bold text-white block">{gpu.label}</span>
-                                            <span className="text-[10px] text-zinc-500 block mt-0.5">{gpu.desc}</span>
+                                            <span className="text-xs font-bold text-white block tracking-tight">{gpu.label}</span>
+                                            <span className="text-[10px] text-zinc-550 block mt-0.5">{gpu.desc}</span>
                                         </div>
                                     </label>
                                 ))}

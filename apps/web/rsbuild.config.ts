@@ -131,6 +131,10 @@ const config: RsbuildConfig = {
         title: "KameHouse",
     },
     performance: {
+        preload: {
+            type: "initial",
+            include: [/woff2$/],
+        },
         chunkSplit: {
             forceSplitting: {
                 "hls": /hls\.js/,

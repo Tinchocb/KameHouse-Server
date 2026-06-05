@@ -13,8 +13,10 @@ export function AppErrorBoundary({ error, resetErrorBoundary }: AppErrorBoundary
     const queryClient = useQueryClient()
     const location = useLocation()
 
+    const initialPathname = React.useRef(location.pathname)
+
     React.useEffect(() => {
-        if (resetErrorBoundary) {
+        if (location.pathname !== initialPathname.current && resetErrorBoundary) {
             resetErrorBoundary()
         }
     }, [location.pathname, resetErrorBoundary])

@@ -189,6 +189,7 @@ export function PlayerUI(props: PlayerUIProps) {
                     "absolute inset-0 w-full h-full scale-110 blur-3xl opacity-75 z-0 pointer-events-none transition-all duration-700",
                     state.ambilightEnabled && state.isPlaying ? "opacity-75" : "opacity-0"
                 )}
+                style={{ willChange: "transform, opacity" }}
             />
 
             <video

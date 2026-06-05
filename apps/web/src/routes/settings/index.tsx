@@ -145,6 +145,19 @@ function SettingsPage() {
     const { data: serverSettings, isLoading } = useGetSettings()
     const { mutateAsync: saveSettings, isPending: isSaving } = useSaveSettings()
     const [activeTab, setActiveTab] = useState<string>("system")
+    const [sidebarSpotlight, setSidebarSpotlight] = useState<React.CSSProperties>({
+        opacity: 0,
+    })
+
+    const handleSidebarMouseMove = (e: React.MouseEvent<HTMLElement>) => {
+        const rect = e.currentTarget.getBoundingClientRect()
+        const x = e.clientX - rect.left
+        const y = e.clientY - rect.top
+        setSidebarSpotlight({
+            opacity: 1,
+            background: `radial-gradient(180px circle at ${x}px ${y}px, rgba(255, 110, 58, 0.08), transparent 80%)`,
+        })
+    }
 
     const form = useForm<SettingsFormValues>({
         resolver: zodResolver(settingsSchema) as unknown as Resolver<SettingsFormValues>,
@@ -183,8 +196,18 @@ function SettingsPage() {
 
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col md:flex-row gap-8 lg:gap-12 pb-32">
                     {/* ── Immersive Sidebar Nav ─────────────────────────────── */}
-                    <aside className="w-full md:w-64 shrink-0 bg-white/[0.01] border border-white/5 backdrop-blur-[64px] rounded-3xl p-5 shadow-[0_20px_40px_rgba(0,0,0,0.5)] h-fit">
-                        <TabsList className="bg-transparent border-0 flex flex-col items-stretch h-auto p-0 gap-1.5">
+                    <aside 
+                        onMouseMove={handleSidebarMouseMove}
+                        onMouseLeave={() => setSidebarSpotlight({ opacity: 0 })}
+                        className="w-full md:w-64 shrink-0 bg-white/[0.01] border border-white/5 backdrop-blur-[64px] rounded-3xl p-5 shadow-[0_20px_40px_rgba(0,0,0,0.5)] h-fit relative overflow-hidden"
+                    >
+                        {/* Cursor spotlight overlay */}
+                        <div 
+                            className="absolute inset-0 pointer-events-none z-0 transition-opacity duration-300"
+                            style={sidebarSpotlight}
+                        />
+
+                        <TabsList className="bg-transparent border-0 flex flex-col items-stretch h-auto p-0 gap-1.5 relative z-10">
                             {NAV_ITEMS.map((item) => {
                                 const isActive = activeTab === item.id
                                 return (
@@ -192,10 +215,10 @@ function SettingsPage() {
                                         key={item.id}
                                         value={item.id}
                                         className={cn(
-                                            "w-full flex items-center justify-start gap-3.5 px-4 py-3 rounded-xl text-left font-bold text-xs uppercase tracking-wider transition-all relative group outline-none border border-transparent settings-nav-btn",
+                                            "w-full flex items-center justify-start gap-3.5 px-4 py-3 rounded-xl text-left font-bold text-xs uppercase tracking-wider transition-all duration-300 relative group outline-none border border-transparent settings-nav-btn select-none",
                                             isActive 
-                                                ? "active bg-white/[0.01] border-y-transparent border-r-transparent border-l-[3px] border-l-[#ff6e3a] text-[#ff6e3a] shadow-inner data-[state=active]:border-y-transparent data-[state=active]:border-r-transparent data-[state=active]:border-l-[#ff6e3a]" 
-                                                : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.01]"
+                                                ? "active bg-gradient-to-r from-[#ff6e3a]/12 to-[#ff6e3a]/3 border-[#ff6e3a]/15 border-l-[3px] border-l-[#ff6e3a] text-[#ff6e3a] shadow-[0_4px_12px_rgba(255,110,58,0.04)] data-[state=active]:border-y-[#ff6e3a]/15 data-[state=active]:border-r-[#ff6e3a]/15 data-[state=active]:border-l-[#ff6e3a] data-[state=active]:text-[#ff6e3a]" 
+                                                : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.02] hover:-translate-x-0.5"
                                         )}
                                     >
                                         <item.icon className={cn(
@@ -255,7 +278,7 @@ function SettingsPage() {
                                         type="submit"
                                         form="settings-form"
                                         disabled={isSaving}
-                                        className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-zinc-950 px-6 py-3 rounded-xl text-xs font-bold transition-all shadow-[0_0_15px_rgba(255,110,58,0.25)] disabled:opacity-50 font-black uppercase tracking-wider"
+                                        className="bg-[#ff6e3a] hover:bg-[#ff7d4b] text-zinc-950 px-6 py-3 rounded-xl text-xs font-bold transition-all duration-300 disabled:opacity-50 font-black uppercase tracking-wider active:scale-95 shadow-lg shadow-orange-500/10"
                                     >
                                         {isSaving ? "Guardando..." : "Guardar Configuración"}
                                     </button>

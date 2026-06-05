@@ -30,7 +30,7 @@ export function useGetLibraryCollection({ enabled }: { enabled?: boolean } = { e
         queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key],
         enabled: enabled,
         refetchOnWindowFocus: false,
-        staleTime: 1000 * 60 * 5,
+        staleTime: 0,
         select: (data: Anime_LibraryCollection | undefined): ExtendedLibraryCollection => {
             if (!data) return {} as ExtendedLibraryCollection;
             return {
