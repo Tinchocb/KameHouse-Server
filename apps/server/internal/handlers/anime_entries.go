@@ -362,7 +362,7 @@ func (h *Handler) HandleGetAnimeEntry(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	lfs, _, err := db.GetLocalFiles(h.App.Database)
+	lfs, err := db.GetLocalFilesByMediaID(h.App.Database, mID)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
@@ -914,23 +914,15 @@ func (h *Handler) HandleAnimeEntryBulkAction(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, NewErrorResponse(fmt.Errorf("mediaID is required")))
 	}
 
-	lfs, lfsID, err := db.GetLocalFiles(h.App.Database)
+	lfs, err := db.GetLocalFilesByMediaID(h.App.Database, b.MediaID)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
-
-	mediaFiles := lo.Filter(lfs, func(lf *dto.LocalFile, _ int) bool {
-		return lf.MediaID == b.MediaID
-	})
-	if len(mediaFiles) == 0 {
+	if len(lfs) == 0 {
 		return h.RespondWithData(c, true) // no-op
 	}
 
-	paths := lo.Map(mediaFiles, func(lf *dto.LocalFile, _ int) string { return lf.Path })
 	for _, lf := range lfs {
-		if !lo.Contains(paths, lf.Path) {
-			continue
-		}
 		switch b.Action {
 		case "lock":
 			lf.Locked = true
@@ -944,7 +936,7 @@ func (h *Handler) HandleAnimeEntryBulkAction(c echo.Context) error {
 		}
 	}
 
-	if _, err := db.SaveLocalFiles(h.App.Database, lfsID, lfs); err != nil {
+	if _, err := db.SaveLocalFiles(h.App.Database, 0, lfs); err != nil {
 		return h.RespondWithError(c, err)
 	}
 	return h.RespondWithData(c, true)
@@ -959,7 +951,7 @@ func (h *Handler) HandleOpenAnimeEntryInExplorer(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	lfs, _, err := db.GetLocalFiles(h.App.Database)
+	lfs, err := db.GetLocalFilesByMediaID(h.App.Database, b.MediaID)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}

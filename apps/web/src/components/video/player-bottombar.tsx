@@ -1,5 +1,5 @@
 import React from "react"
-import { Play, Pause, ChevronLeft, ChevronRight, Volume2, VolumeX, Maximize, Minimize, SkipForward, PictureInPicture, SkipBack, ListVideo, Tv } from "lucide-react"
+import { Play, Pause, ChevronLeft, ChevronRight, Volume2, VolumeX, Maximize, Minimize, SkipForward, SkipBack, ListVideo, Tv } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 
 const CastIcon = ({ className }: { className?: string }) => (
@@ -42,6 +42,8 @@ const formatTime = (secs: number) => {
 }
 
 export interface PlayerBottomBarProps {
+    episodeNumber?: number
+    episodeLabel?: string
     duration: number
     insights: InsightNode[]
     progressBarRef: React.RefObject<HTMLDivElement>
@@ -110,6 +112,8 @@ export interface PlayerBottomBarProps {
 
     tvMode?: boolean
     onTvModeChange?: (enabled: boolean) => void
+    marathonMode?: boolean
+    onMarathonModeChange?: (enabled: boolean) => void
 
     /** AniSkip intervals for rendering visual markers on the timeline */
     skipTimesOp?: { startTime: number; endTime: number }
@@ -145,6 +149,7 @@ const SkipNextChapterIcon = () => (
 )
 
 export const PlayerBottomBar = React.memo(function PlayerBottomBar({
+    episodeNumber, episodeLabel,
     duration, insights, progressBarRef, progressInputRef, handleSeek,
     isPlaying, togglePlay, skipTime,
     isMuted, toggleMute, volume, handleVolume,
@@ -167,6 +172,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
     autoDisableSubtitlesWhenDubbed = true, onAutoDisableSubtitlesWhenDubbedChange,
     ambilightEnabled = true, onAmbilightChange,
     tvMode = false, onTvModeChange,
+    marathonMode = false, onMarathonModeChange,
     skipTimesOp,
     skipTimesEd,
     chapters = [],
@@ -186,8 +192,8 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
 
     return (
         <div className={cn(
-            "absolute bottom-4 inset-x-4 md:bottom-5 md:inset-x-5 max-w-5xl mx-auto flex flex-col pointer-events-auto select-none",
-            "bg-[#09090b] border border-white/5 rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.6)] px-4 py-2.5 z-30",
+            "absolute bottom-4 inset-x-4 md:bottom-6 md:inset-x-6 flex flex-col pointer-events-auto select-none",
+            "bg-zinc-950/55 backdrop-blur-[32px] border border-white/[0.08] rounded-2xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)] px-5 py-3.5 z-30",
         )}>
 
             {/* Progress Timeline */}
@@ -245,7 +251,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                         style={{ width: '0%' }}
                     >
                         {/* Thumb indicator - sleek and shows on hover with scale transition */}
-                        <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 rounded-full bg-brand-orange border-2 border-white opacity-0 group-hover/progress:opacity-100 scale-90 group-hover/progress:scale-100 transition-all duration-200 shadow-md ring-2 ring-zinc-950/40 pointer-events-none" />
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 rounded-full bg-brand-orange border-2 border-white opacity-0 group-hover/progress:opacity-100 scale-90 group-hover/progress:scale-100 transition-all duration-200 shadow-md ring-2 ring-zinc-950/40 pointer-events-none" />
                     </div>
                 </div>
                 <input
@@ -269,10 +275,10 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                     <button
                         onClick={(e) => { e.stopPropagation(); togglePlay(); }}
                         aria-label={isPlaying ? "Pausar" : "Reproducir"}
-                        className="text-white hover:text-brand-orange transition-all duration-300 flex items-center justify-center w-7 h-7 bg-white/5 rounded-full hover:bg-white/10">
+                        className="text-white hover:text-brand-orange transition-all duration-300 flex items-center justify-center w-8 h-8 bg-white/5 rounded-full hover:bg-white/10 active:scale-90">
                         {isPlaying
-                            ? <Pause className="w-3 h-3 fill-current" />
-                            : <Play className="w-3 h-3 fill-current ml-0.5" />
+                            ? <Pause className="w-3.5 h-3.5 fill-current" />
+                            : <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
                         }
                     </button>
 
@@ -280,13 +286,13 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                     <button
                         onClick={(e) => { e.stopPropagation(); skipTime(-10); }}
                         aria-label="Retroceder 10 segundos"
-                        className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-7 h-7">
+                        className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 active:scale-90 duration-300">
                         <ChevronLeft className="w-4 h-4" />
                     </button>
                     <button
                         onClick={(e) => { e.stopPropagation(); skipTime(10); }}
                         aria-label="Adelantar 10 segundos"
-                        className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-7 h-7">
+                        className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 active:scale-90 duration-300">
                         <ChevronRight className="w-4 h-4" />
                     </button>
 
@@ -297,14 +303,14 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                                 onClick={(e) => { e.stopPropagation(); skipToPrevChapter?.(); }}
                                 aria-label="Capítulo anterior"
                                 title="Capítulo anterior [[ ]"
-                                className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-7 h-7">
+                                className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 active:scale-90 duration-300">
                                 <SkipBack className="w-3.5 h-3.5 fill-current" />
                             </button>
                             <button
                                 onClick={(e) => { e.stopPropagation(); skipToNextChapter?.(); }}
                                 aria-label="Siguiente capítulo"
                                 title="Siguiente capítulo [ ] ]"
-                                className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-7 h-7">
+                                className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 active:scale-90 duration-300">
                                 <SkipNextChapterIcon />
                             </button>
                         </div>
@@ -315,7 +321,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                         <button
                             onClick={(e) => { e.stopPropagation(); toggleMute(); }}
                             aria-label={isMuted || volume === 0 ? "Activar sonido" : "Silenciar"}
-                            className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-7 h-7">
+                            className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 active:scale-90 duration-300">
                             {isMuted || volume === 0 ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
                         </button>
                         <div className="w-0 overflow-hidden group-hover/volume:w-16 transition-all duration-300 flex items-center h-5 pl-1">
@@ -351,21 +357,18 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                     </div>
                 </div>
 
+                {/* Middle Area: Episode Title & Number */}
+                <div className="flex flex-col items-center justify-center text-center max-w-[35%] select-none px-4 flex-1 min-w-0">
+                    <span className="text-[10px] font-black text-brand-orange uppercase tracking-[0.25em] font-mono leading-none">
+                        {episodeNumber ? `Episodio ${episodeNumber}` : ""}
+                    </span>
+                    <span className="text-xs font-bold text-white tracking-wide truncate max-w-full mt-1.5" title={episodeLabel}>
+                        {episodeLabel || ""}
+                    </span>
+                </div>
+
                 {/* Right Wing */}
                 <div className="flex items-center gap-0.5">
-
-
-
-                    {/* PiP */}
-                    {onTogglePip && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onTogglePip(); }}
-                            aria-label="Picture in Picture [I]"
-                            title="Picture in Picture [I]"
-                            className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-7 h-7">
-                            <PictureInPicture className="w-3.5 h-3.5" />
-                        </button>
-                    )}
 
                     {/* Casting to TV */}
                     {onPromptCast && (
@@ -374,12 +377,12 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                             aria-label="Transmitir a TV"
                             title="Transmitir a TV"
                             className={cn(
-                                "transition-all duration-300 flex items-center justify-center w-7 h-7 rounded-full",
+                                "transition-all duration-300 flex items-center justify-center w-8 h-8 rounded-full active:scale-90",
                                 castState === "connected"
                                     ? "text-brand-orange bg-brand-orange/10 shadow-[0_0_12px_rgba(249,115,22,0.4)] animate-pulse"
                                     : castState === "connecting"
                                     ? "text-brand-orange animate-bounce"
-                                    : "text-zinc-500 hover:text-white"
+                                    : "text-zinc-500 hover:text-white hover:bg-white/5"
                             )}
                         >
                             <CastIcon className="w-3.5 h-3.5" />
@@ -393,10 +396,10 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                             aria-label="Ver cola de reproducción"
                             title="Ver cola de reproducción"
                             className={cn(
-                                "transition-all duration-300 flex items-center justify-center w-7 h-7 rounded-full",
+                                "transition-all duration-300 flex items-center justify-center w-8 h-8 rounded-full active:scale-90",
                                 isQueueSidebarOpen
                                     ? "text-brand-orange bg-brand-orange/10 shadow-[0_0_12px_rgba(249,115,22,0.4)] animate-pulse"
-                                    : "text-zinc-500 hover:text-white"
+                                    : "text-zinc-500 hover:text-white hover:bg-white/5"
                             )}
                         >
                             <ListVideo className="w-3.5 h-3.5" />
@@ -409,7 +412,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                             onClick={(e) => { e.stopPropagation(); onNextEpisode(); }}
                             aria-label="Siguiente episodio [N]"
                             title="Siguiente episodio [N]"
-                            className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-7 h-7">
+                            className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 active:scale-90 duration-300">
                             <SkipForward className="w-3.5 h-3.5" />
                         </button>
                     )}
@@ -421,10 +424,10 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                             aria-label="Alternar Modo TV / Maratón"
                             title="Modo TV / Maratón"
                             className={cn(
-                                "transition-all duration-300 flex items-center justify-center w-7 h-7 rounded-full",
+                                "transition-all duration-300 flex items-center justify-center w-8 h-8 rounded-full active:scale-90",
                                 tvMode
-                                    ? "text-brand-orange"
-                                    : "text-zinc-500 hover:text-white"
+                                    ? "text-brand-orange bg-brand-orange/10"
+                                    : "text-zinc-500 hover:text-white hover:bg-white/5"
                             )}
                         >
                             <Tv className="w-3.5 h-3.5" fill={tvMode ? "currentColor" : "none"} />
@@ -468,6 +471,8 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                         onAmbilightChange={onAmbilightChange}
                         tvMode={tvMode}
                         onTvModeChange={onTvModeChange}
+                        marathonMode={marathonMode}
+                        onMarathonModeChange={onMarathonModeChange}
                     />
 
                     {/* Fullscreen */}
@@ -475,7 +480,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                         onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
                         aria-label={isFullscreen ? "Salir de pantalla completa [F]" : "Pantalla completa [F]"}
                         title={isFullscreen ? "Salir de pantalla completa [F]" : "Pantalla completa [F]"}
-                        className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-7 h-7">
+                        className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 active:scale-90 duration-300">
                         {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
                     </button>
                 </div>

@@ -191,6 +191,8 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         setTvMode,
         ambilightEnabled,
         setAmbilightEnabled,
+        marathonMode,
+        setMarathonMode,
     } = useAppStore(
         useShallow(state => ({
             setFullscreen: state.setFullscreen,
@@ -217,6 +219,8 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             setTvMode: state.setTvMode,
             ambilightEnabled: state.ambilightEnabled,
             setAmbilightEnabled: state.setAmbilightEnabled,
+            marathonMode: state.marathonMode,
+            setMarathonMode: state.setMarathonMode,
         }))
     )
 
@@ -713,6 +717,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             showResume,
             resumeTime,
             autoDisableSubtitlesWhenDubbed,
+            marathonMode,
             skipTimesOp,
             skipTimesEd,
             chapters,
@@ -735,6 +740,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             setLoopEnabled: setLoopEnabledPref,
             setAmbilightEnabled,
             setTvMode: handleSetTvMode,
+            setMarathonMode,
             handleResume,
             setShowResume,
             setAutoDisableSubtitlesWhenDubbed: (val: boolean) => { useAppStore.setState(s => ({ ...s, autoDisableSubtitlesWhenDubbed: val })) },

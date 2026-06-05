@@ -1,5 +1,6 @@
 import * as React from "react"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
+import { useLocation } from "@tanstack/react-router"
 
 /**
  * DynamicBackdrop — global fixed layer behind the entire home page.
@@ -13,6 +14,18 @@ import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
  * - The 150 ms hover debounce in `useIntelligenceStore` prevents flicker.
  */
 export function DynamicBackdrop() {
+    const location = useLocation()
+    const isHomePage =
+        location.pathname === "/home" ||
+        location.pathname === "/home/"
+    const isStaticPage =
+        isHomePage ||
+        location.pathname === "/movies" ||
+        location.pathname === "/movies/" ||
+        location.pathname === "/series" ||
+        location.pathname === "/series/" ||
+        location.pathname.startsWith("/settings")
+
     const [isEnabled] = React.useState(() => {
         if (typeof window !== "undefined") {
             return localStorage.getItem("kamehouse:dynamic-backdrop-enabled") !== "false"
@@ -26,6 +39,11 @@ export function DynamicBackdrop() {
         return true
     })
     const { currentBackdropUrl } = useIntelligenceStore()
+    const activeBackdropUrl = isStaticPage ? "/kamehouse-bg.png" : currentBackdropUrl
+    // Home uses a more subtle opacity to avoid competing with content
+    // Home uses a more subtle opacity to avoid competing with content
+    const baseOpacity = isHomePage ? 0.65 : isStaticPage ? 0.75 : 0.30
+
     const [displayedUrl, setDisplayedUrl] = React.useState<string | null>(null)
     const [nextUrl, setNextUrl] = React.useState<string | null>(null)
     const [isCrossFading, setIsCrossFading] = React.useState(false)
@@ -45,11 +63,11 @@ export function DynamicBackdrop() {
         let targetY = 0
         let currentX = 0
         let currentY = 0
-        
+
         const updatePosition = () => {
             const dx = targetX - currentX
             const dy = targetY - currentY
-            
+
             if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) {
                 currentX += dx * 0.05
                 currentY += dy * 0.05
@@ -72,7 +90,7 @@ export function DynamicBackdrop() {
             const { clientX, clientY } = e
             targetX = (clientX / window.innerWidth - 0.5) * 100
             targetY = (clientY / window.innerHeight - 0.5) * 100
-            
+
             if (!rafId) {
                 rafId = requestAnimationFrame(updatePosition)
             }
@@ -90,28 +108,28 @@ export function DynamicBackdrop() {
     // Orchestrate a smooth cross-fade without Framer Motion (pure CSS opacity)
     React.useEffect(() => {
         if (!isEnabled) return
-        if (!currentBackdropUrl || currentBackdropUrl === displayedUrl) return
+        if (!activeBackdropUrl || activeBackdropUrl === displayedUrl) return
 
         if (!displayedUrl) {
             // First image — just show it
-            setTimeout(() => setDisplayedUrl(currentBackdropUrl), 0)
+            setTimeout(() => setDisplayedUrl(activeBackdropUrl), 0)
             return
         }
 
         // Cross-fade: load next into a hidden layer, then swap
         setTimeout(() => {
-            setNextUrl(currentBackdropUrl)
+            setNextUrl(activeBackdropUrl)
             setIsCrossFading(true)
         }, 0)
 
         const timer = setTimeout(() => {
-            setDisplayedUrl(currentBackdropUrl)
+            setDisplayedUrl(activeBackdropUrl)
             setNextUrl(null)
             setIsCrossFading(false)
         }, 520) // slightly longer than the CSS transition (500ms)
 
         return () => clearTimeout(timer)
-    }, [currentBackdropUrl, displayedUrl, isEnabled])
+    }, [activeBackdropUrl, displayedUrl, isEnabled])
 
     if (!isEnabled) return null
 
@@ -149,7 +167,7 @@ export function DynamicBackdrop() {
                     className="absolute inset-0 scale-115 bg-cover bg-center bg-no-repeat blur-3xl saturate-150"
                     style={{
                         backgroundImage: displayedUrl ? `url(${displayedUrl})` : undefined,
-                        opacity: isCrossFading ? 0 : 0.2,
+                        opacity: isCrossFading ? 0 : baseOpacity,
                         transition: "opacity 500ms ease-in-out",
                         willChange: "opacity",
                     }}
@@ -161,7 +179,7 @@ export function DynamicBackdrop() {
                     className="absolute inset-0 bg-cover bg-center bg-no-repeat blur-3xl saturate-150"
                     style={{
                         backgroundImage: nextUrl ? `url(${nextUrl})` : undefined,
-                        opacity: isCrossFading ? 0.2 : 0,
+                        opacity: isCrossFading ? baseOpacity : 0,
                         transform: isCrossFading ? "scale(1.05)" : "scale(1.2)",
                         transition: "opacity 500ms ease-in-out, transform 600ms cubic-bezier(0.4, 0, 0.2, 1)",
                         willChange: "opacity, transform",
@@ -169,19 +187,21 @@ export function DynamicBackdrop() {
                 />
             </div>
 
-            {/* ── Orbital Orbs ── */}
-            <div 
+            {/* ── Orbital Orbs — more subtle on home/static pages ── */}
+            <div
                 ref={orb1Ref}
-                className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full bg-primary/10 blur-[120px] mix-blend-screen"
+                className="absolute top-1/4 left-1/4 w-[400px] h-[400px] rounded-full blur-[120px] mix-blend-screen"
                 style={{
+                    background: isHomePage ? 'rgba(255,110,58,0.06)' : 'rgba(255,110,58,0.12)',
                     transform: "translate3d(0px, 0px, 0px)",
                     willChange: "transform",
                 }}
             />
-            <div 
+            <div
                 ref={orb2Ref}
-                className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full bg-blue-500/5 blur-[100px] mix-blend-screen"
+                className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] rounded-full blur-[100px] mix-blend-screen"
                 style={{
+                    background: isHomePage ? 'rgba(59,130,246,0.03)' : 'rgba(59,130,246,0.06)',
                     transform: "translate3d(0px, 0px, 0px)",
                     willChange: "transform",
                 }}
@@ -194,8 +214,14 @@ export function DynamicBackdrop() {
 
             {/* ── Vignette stack — ensures text is always legible ───────── */}
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_120%_80%_at_50%_0%,rgba(255,255,255,0.04),transparent_60%)]" />
-            <div className="absolute inset-0 bg-gradient-to-r from-background via-background/40 to-transparent opacity-90" />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-100" />
+            <div
+                className="absolute inset-0 bg-gradient-to-r from-background via-background/30 to-transparent transition-opacity duration-500"
+                style={{ opacity: isStaticPage ? 0.20 : 0.65 }}
+            />
+            <div
+                className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent transition-opacity duration-500"
+                style={{ opacity: isStaticPage ? 0.25 : 0.70 }}
+            />
         </div>
     )
 }

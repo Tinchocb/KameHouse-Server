@@ -126,7 +126,6 @@ func getOrExtractKeyframes(
 	ki.ready.Wait()
 	return ki
 }
-
 // extractKeyframes probes the file for keyframes
 func extractKeyframes(
 	ffprobePath string,
@@ -142,11 +141,13 @@ func extractKeyframes(
 		probeBin = "ffprobe"
 	}
 
+	// Optimize keyframe extraction using -skip_frame nokey which skips decoding non-keyframes
 	cmd := util.NewCmd(
 		probeBin,
 		"-loglevel", "error",
+		"-skip_frame", "nokey",
 		"-select_streams", "v:0",
-		"-show_entries", "packet=pts_time,flags",
+		"-show_entries", "frame=pkt_pts_time",
 		"-of", "csv=print_section=0",
 		path,
 	)
@@ -188,16 +189,17 @@ func extractKeyframes(
 		if line == "" {
 			continue
 		}
-		parts := strings.SplitN(line, ",", 2)
-		if len(parts) < 2 {
-			continue
+		// Support both raw PTS (new) and "PTS,flags" (legacy)
+		pts := line
+		if idx := strings.IndexByte(line, ','); idx != -1 {
+			pts = line[:idx]
+			flags := line[idx+1:]
+			if len(flags) == 0 || flags[0] != 'K' {
+				continue
+			}
 		}
-		pts, flags := parts[0], parts[1]
 		if pts == "N/A" {
 			break
-		}
-		if len(flags) == 0 || flags[0] != 'K' {
-			continue
 		}
 		fpts, err := strconv.ParseFloat(pts, 64)
 		if err != nil {
@@ -222,7 +224,6 @@ func extractKeyframes(
 	ki.IsDone = true
 	return nil
 }
-
 // makeDummyKeyframes at 2s intervals
 func makeDummyKeyframes(ffprobePath, path, hash string) ([]float64, error) {
 	const interval = 2.0

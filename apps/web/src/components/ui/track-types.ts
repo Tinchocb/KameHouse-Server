@@ -165,6 +165,9 @@ export interface PlayerSettingsMenuProps {
     tvMode?: boolean
     onTvModeChange?: (enabled: boolean) => void
 
+    marathonMode?: boolean
+    onMarathonModeChange?: (enabled: boolean) => void
+
     open?: boolean
     onOpenChange?: (open: boolean) => void
     className?: string

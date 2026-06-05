@@ -67,7 +67,7 @@ export const SeriesCard = memo(function SeriesCard({
                 <div
                     className={cn(
                         "absolute inset-0 bg-black transition-opacity duration-1000 ease-out pointer-events-none z-[1]",
-                        isSelected ? "opacity-20" : "opacity-75 group-hover:opacity-65"
+                        isSelected ? "opacity-10" : "opacity-60 group-hover:opacity-45"
                     )}
                 />
 
@@ -88,7 +88,7 @@ export const SeriesCard = memo(function SeriesCard({
                     )}
                 >
                     <div className={cn(
-                        "glass-panel-strong border border-white/10 p-5 md:p-6 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] bg-slate-950/75 max-w-lg transition-[opacity,transform] duration-500 ease-out transform-gpu delay-75",
+                        "bg-black/70 backdrop-blur-md border border-white/[0.08] p-5 md:p-6 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.06)] max-w-lg transition-[opacity,transform] duration-500 ease-out transform-gpu delay-75",
                         isSelected ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-8 scale-95"
                     )}>
                         {/* Category Tag & Year */}
@@ -160,14 +160,17 @@ export const SeriesCard = memo(function SeriesCard({
                 </div>
             </div>
 
-            {/* Lomo del casete VHS (3D Tactile Container) */}
+            {/* VHS Spine bottom bar */}
             <div 
                 className={cn(
-                    "relative shrink-0 bg-[#0d0d0d] flex items-center justify-between px-4 shadow-[0_-12px_25px_rgba(0,0,0,0.85),inset_0_3px_5px_rgba(255,255,255,0.06),inset_0_-3px_5px_rgba(0,0,0,0.8)] z-20 h-[130px] w-full min-w-0 select-none overflow-hidden transition-all duration-500 ease-out transform-gpu vhs-spine-glow",
-                    "border-t-2 border-[#ff6e3a]"
+                    "relative shrink-0 bg-[#0d0d0d] flex items-center justify-between px-4 z-20 h-[110px] w-full min-w-0 select-none overflow-hidden transition-all duration-500 ease-out transform-gpu vhs-spine-glow",
+                    "border-t border-[#ff6e3a]/40"
                 )}
                 style={{
-                    boxShadow: !isSelected ? '0 -10px 25px rgba(0,0,0,0.65), inset 0 3px 5px rgba(255,255,255,0.06), inset 0 -3px 5px rgba(0,0,0,0.8)' : undefined
+                    boxShadow: isSelected
+                        ? `0 -8px 30px ${getVhsColor(item.id)}22, inset 0 3px 5px rgba(255,255,255,0.06), inset 0 -3px 5px rgba(0,0,0,0.8)`
+                        : '0 -6px 20px rgba(0,0,0,0.65), inset 0 3px 5px rgba(255,255,255,0.04), inset 0 -3px 5px rgba(0,0,0,0.8)',
+                    borderImage: isSelected ? `linear-gradient(90deg, ${getVhsColor(item.id)}80, #ff6e3a60, ${getVhsColor(item.id)}80) 1` : undefined,
                 }}
             >
                 {/* Textura rugosa de plástico de la carcasa */}

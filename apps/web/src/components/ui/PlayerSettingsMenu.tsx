@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { IoSettingsSharp } from "react-icons/io5"
 import { FaVolumeUp } from "react-icons/fa"
 import { MdSubtitles } from "react-icons/md"
-import { Loader2, Zap, Gauge, Check, Monitor } from "lucide-react"
+import { Loader2, Zap, FastForward, Check, Monitor } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 
 import type { PlayerSettingsMenuProps } from "./track-types"
@@ -59,6 +59,8 @@ export function PlayerSettingsMenu({
     onAmbilightChange,
     tvMode = false,
     onTvModeChange,
+    marathonMode = false,
+    onMarathonModeChange,
 }: PlayerSettingsMenuProps) {
     const [internalOpen, setInternalOpen] = React.useState(false)
     const [view, setView] = React.useState<SettingsView>("main")
@@ -203,9 +205,9 @@ export function PlayerSettingsMenu({
                                     onClick={() => setView("image")}
                                 />
                                 <MenuButton
-                                    icon={<Gauge className="w-4 h-4" />}
+                                    icon={<FastForward className="w-4 h-4" />}
                                     label="Reproducción"
-                                    value={`${playbackRate}x · Skip ${autoSkipLabel}`}
+                                    value={`Skip ${autoSkipLabel}`}
                                     onClick={() => setView("playback")}
                                 />
                             </SettingsLayout>
@@ -356,6 +358,8 @@ export function PlayerSettingsMenu({
                                     onAmbilightChange={onAmbilightChange ?? (() => {})}
                                     tvMode={tvMode}
                                     onTvModeChange={onTvModeChange}
+                                    marathonMode={marathonMode}
+                                    onMarathonModeChange={onMarathonModeChange}
                                     showSeparator={false}
                                 />
                             </SettingsLayout>

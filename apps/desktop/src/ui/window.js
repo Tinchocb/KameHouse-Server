@@ -163,6 +163,7 @@ function createMainWindow(isDev, localPort) {
         show: isDev ? true : false,
         backgroundColor: "#111111",
         acceptFirstMouse: false,
+        icon: path.join(__dirname, "../../assets/icon.png"),
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
@@ -348,6 +349,7 @@ function createSplashScreen(isDev) {
         resizable: false,
         show: !settings.openInBackground,
         backgroundColor: "#0c0c0c",
+        icon: path.join(__dirname, "../../assets/icon.png"),
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
@@ -373,6 +375,7 @@ function createCrashScreen(isDev) {
         frame: false,
         resizable: false,
         show: false,
+        icon: path.join(__dirname, "../../assets/icon.png"),
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,

@@ -27,6 +27,16 @@ func GetLocalFiles(d *Database) ([]*dto.LocalFile, uint, error) {
 	return lfs, 0, nil
 }
 
+// GetLocalFilesByMediaID will return the local files for the given media ID.
+func GetLocalFilesByMediaID(d *Database, mediaID int) ([]*dto.LocalFile, error) {
+	lfs, err := GetLocalFilesByMediaIDRelational(d, mediaID)
+	if err != nil {
+		return nil, err
+	}
+	d.Logger.Debug().Int("mediaID", mediaID).Int("count", len(lfs)).Msg("db: Local files retrieved from relational storage by media ID")
+	return lfs, nil
+}
+
 // SaveLocalFiles will save the local files in the database.
 func SaveLocalFiles(d *Database, _ uint, lfs []*dto.LocalFile) ([]*dto.LocalFile, error) {
 	err := UpsertLocalFileRelationalBatch(d, lfs)

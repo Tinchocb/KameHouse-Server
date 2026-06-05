@@ -7,6 +7,14 @@ import { useShallow } from "zustand/react/shallow"
 import { FaMusic, FaVolumeMute } from "react-icons/fa"
 import { cn } from "@/components/ui/core/styling"
 
+
+const PLAYLIST = [
+    "/sounds/music/Dragon ball dvd.m4a",
+    "/sounds/music/Dragon ball dvd 2.m4a",
+    "/sounds/music/the-meteor.flac"
+    //aca agrego mas musica
+]
+
 export function BackgroundMusicPlayer() {
     const { bgMusicEnabled, setBgMusicEnabled, bgMusicVolume, isVideoActive } = useAppStore(
         useShallow((state) => ({
@@ -19,6 +27,10 @@ export function BackgroundMusicPlayer() {
     
     const audioRef = React.useRef<HTMLAudioElement | null>(null)
     const [isPlaying, setIsPlaying] = React.useState(false)
+    const [currentTrackIndex, setCurrentTrackIndex] = React.useState(() => {
+        // Start with a random track
+        return Math.floor(Math.random() * PLAYLIST.length)
+    })
 
     // Sync volume when bgMusicVolume changes (using quadratic curve for natural logarithmic hearing)
     React.useEffect(() => {
@@ -27,15 +39,30 @@ export function BackgroundMusicPlayer() {
         }
     }, [bgMusicVolume])
 
-    // Sync audio state with store preferences and video active state
+    // Sync audio state with store preferences, video active state, and current track
     React.useEffect(() => {
         if (!audioRef.current) {
-            audioRef.current = new Audio("/sounds/the-meteor.flac")
-            audioRef.current.loop = true
+            audioRef.current = new Audio(PLAYLIST[currentTrackIndex])
             audioRef.current.volume = Math.pow(bgMusicVolume, 2)
+        } else {
+            // Update source if track changed
+            const currentSrc = audioRef.current.src
+            const expectedSrc = PLAYLIST[currentTrackIndex]
+            if (!currentSrc.endsWith(encodeURI(expectedSrc))) {
+                audioRef.current.src = expectedSrc
+                audioRef.current.load()
+                audioRef.current.volume = Math.pow(bgMusicVolume, 2)
+            }
         }
 
         const audio = audioRef.current
+
+        // Handle track ending to automatically switch to the next one
+        const handleEnded = () => {
+            setCurrentTrackIndex((prevIndex) => (prevIndex + 1) % PLAYLIST.length)
+        }
+
+        audio.addEventListener("ended", handleEnded)
 
         const playAudio = () => {
             audio.play()
@@ -53,18 +80,42 @@ export function BackgroundMusicPlayer() {
             setIsPlaying(false)
         }
 
-        // If enabled and no video is playing, start background music
+        let playTimeout: NodeJS.Timeout | null = null
+
+        // If enabled and no video is playing, start background music with a debounce to prevent pops during transitions
         if (bgMusicEnabled && !isVideoActive) {
-            playAudio()
+            playTimeout = setTimeout(() => {
+                playAudio()
+            }, 1000)
         } else {
             pauseAudio()
         }
 
-        // Clean up on unmount (keep instance but pause)
+        // Clean up on unmount or track change
         return () => {
+            if (playTimeout) clearTimeout(playTimeout)
+            audio.removeEventListener("ended", handleEnded)
             audio.pause()
         }
-    }, [bgMusicEnabled, isVideoActive])
+    }, [bgMusicEnabled, isVideoActive, currentTrackIndex])
+
+    // Listen to any other video/audio playing on the page to automatically pause background music
+    React.useEffect(() => {
+        const handleGlobalPlay = (e: Event) => {
+            const target = e.target as HTMLMediaElement
+            if (target && target !== audioRef.current) {
+                if (audioRef.current && !audioRef.current.paused) {
+                    audioRef.current.pause()
+                    setIsPlaying(false)
+                }
+            }
+        }
+
+        document.addEventListener("play", handleGlobalPlay, true)
+        return () => {
+            document.removeEventListener("play", handleGlobalPlay, true)
+        }
+    }, [])
 
     // Handle user interaction click to override browser autoplay blocks
     React.useEffect(() => {

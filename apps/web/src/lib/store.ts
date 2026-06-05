@@ -130,6 +130,8 @@ export interface PlayerState {
     setAmbilightEnabled: (enabled: boolean) => void
     tvMode: boolean
     setTvMode: (enabled: boolean) => void
+    marathonMode: boolean
+    setMarathonMode: (enabled: boolean) => void
 
     seriesSkipTimes: Record<string, { opStart?: number; opEnd?: number; edOffset?: number }>
     saveSeriesSkipTimes: (malId: number, opStart: number, opEnd: number, edOffset: number) => void
@@ -174,10 +176,12 @@ export const createPlayerSlice: StateCreator<UIState & PlayerState, [], [], Play
     setLoopEnabled: (loopEnabled) => set({ loopEnabled }),
     autoDisableSubtitlesWhenDubbed: true,
     setAutoDisableSubtitlesWhenDubbed: (autoDisableSubtitlesWhenDubbed) => set({ autoDisableSubtitlesWhenDubbed }),
-    ambilightEnabled: true,
+    ambilightEnabled: false,
     setAmbilightEnabled: (ambilightEnabled) => set({ ambilightEnabled }),
     tvMode: false,
     setTvMode: (tvMode) => set({ tvMode }),
+    marathonMode: false,
+    setMarathonMode: (marathonMode) => set({ marathonMode }),
 
     seriesSkipTimes: {},
     saveSeriesSkipTimes: (malId, opStart, opEnd, edOffset) => set((state) => ({
@@ -275,6 +279,7 @@ export const useAppStore = create<UIState & PlayerState & ScannerState>()(
                 ambilightEnabled: state.ambilightEnabled,
                 playerVolume: state.playerVolume,
                 tvMode: state.tvMode,
+                marathonMode: state.marathonMode,
                 seriesSkipTimes: state.seriesSkipTimes,
             }),
         }

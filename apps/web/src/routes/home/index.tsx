@@ -47,8 +47,15 @@ function HomeClient() {
 
     const handleNavigate = React.useCallback(
         (mediaId: number) => {
-            const entry = allEntries.find(e => e.mediaId === mediaId)
-            const isMovie = entry?.media?.format === "MOVIE" || entry?.media?.format === "SPECIAL" || entry?.media?.format === "OVA" || isTmdbId(entry?.mediaId)
+            const entry = allEntries.find(e => e.mediaId === mediaId || e.media?.id === mediaId)
+            const isMovie = 
+                entry?.media?.format === "MOVIE" || 
+                entry?.media?.format === "SPECIAL" || 
+                entry?.media?.format === "OVA" || 
+                entry?.media?.type?.toUpperCase() === "MOVIE" ||
+                isTmdbId(entry?.mediaId) || 
+                isTmdbId(mediaId)
+                
             if (isMovie) {
                 navigate({ to: "/movies/$movieId", params: { movieId: String(mediaId) } })
             } else {

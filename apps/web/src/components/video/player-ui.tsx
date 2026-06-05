@@ -312,6 +312,8 @@ export function PlayerUI(props: PlayerUIProps) {
                 )}
             >
                 <PlayerBottomBar
+                    episodeNumber={episodeNumber}
+                    episodeLabel={episodeLabel}
                     duration={state.duration}
                     insights={insights}
                     progressBarRef={domElements.progressBarElement as any}
@@ -364,6 +366,8 @@ export function PlayerUI(props: PlayerUIProps) {
                     onAmbilightChange={actions.setAmbilightEnabled}
                     tvMode={state.tvMode}
                     onTvModeChange={actions.setTvMode}
+                    marathonMode={state.marathonMode}
+                    onMarathonModeChange={actions.setMarathonMode}
                     onNextEpisode={onNextEpisode}
                     skipTimesOp={state.skipTimesOp}
                     skipTimesEd={state.skipTimesEd}

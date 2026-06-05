@@ -35,9 +35,13 @@ export function usePlayerJassub({
     setIsJassubLoading,
     setIsJassubActive,
 }: UsePlayerJassubProps) {
+    const activeTrack = activeSubtitleIndex !== null && subtitleTracks ? subtitleTracks[activeSubtitleIndex] : null
+    const trackUrl = activeTrack?.url
+    const trackCodec = activeTrack?.codec
+
     useEffect(() => {
         const video = videoRef.current
-        if (!video || activeSubtitleIndex === null) {
+        if (!video || activeSubtitleIndex === null || !trackUrl) {
             if (jassubRef.current) {
                 jassubRef.current.destroy()
                 setRefValue(jassubRef, null)
@@ -49,20 +53,7 @@ export function usePlayerJassub({
             return
         }
 
-        const track = subtitleTracks[activeSubtitleIndex]
-        if (!track?.url) {
-            if (jassubRef.current) {
-                jassubRef.current.destroy()
-                setRefValue(jassubRef, null)
-                Promise.resolve().then(() => {
-                    setIsJassubLoading(false)
-                    setIsJassubActive(false)
-                })
-            }
-            return
-        }
-
-        const isAss = track.codec?.toLowerCase() === "ass" || track.codec?.toLowerCase() === "ssa"
+        const isAss = trackCodec?.toLowerCase() === "ass" || trackCodec?.toLowerCase() === "ssa"
 
         if (!isAss) {
             if (jassubRef.current) {
@@ -82,7 +73,7 @@ export function usePlayerJassub({
 
         const initJassub = async () => {
             try {
-                const res = await fetch(track.url!)
+                const res = await fetch(trackUrl)
                 const assContent = await res.text()
 
                 if (jassubRef.current) {
@@ -124,7 +115,7 @@ export function usePlayerJassub({
                 setIsJassubActive(false)
             }
         }
-    }, [activeSubtitleIndex, subtitleTracks, subtitleSizePref, videoRef, canvasRef, jassubRef, setIsJassubLoading, setIsJassubActive])
+    }, [activeSubtitleIndex, trackUrl, trackCodec, subtitleSizePref, videoRef, canvasRef, jassubRef, setIsJassubLoading, setIsJassubActive])
 
     // Canvas size updating
     useEffect(() => {

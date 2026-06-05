@@ -133,7 +133,7 @@ const config: RsbuildConfig = {
     performance: {
         preload: {
             type: "initial",
-            include: [/woff2$/],
+            include: [/(?:latin|bebas-neue).*\.woff2$/],
         },
         chunkSplit: {
             forceSplitting: {

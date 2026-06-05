@@ -25,11 +25,10 @@ export function PageTransition({ children, transitionKey, className }: PageTrans
     return (
         <motion.div
             key={transitionKey}
-            initial={{ opacity: 0, scale: 0.985, y: 6 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.985, y: -6 }}
-            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            style={{ willChange: "transform, opacity" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
             className={cn("h-full w-full flex flex-col", className)}
         >
             {children}

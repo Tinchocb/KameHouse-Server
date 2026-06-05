@@ -3,12 +3,14 @@ import { TabsContent } from "@/components/ui/tabs/tabs"
 import { Section, Card, OsToggle, OsSelect } from "../components"
 import { type Control, Controller } from "react-hook-form"
 import { type SettingsFormValues } from "../index"
+import { useAppStore } from "@/lib/store"
 
 interface PlayerTabProps {
     control: Control<SettingsFormValues>
 }
 
 export function PlayerTab({ control }: PlayerTabProps) {
+    const { marathonMode, setMarathonMode } = useAppStore()
     return (
         <TabsContent value="player" className="m-0 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 outline-none">
             {/* Header */}
@@ -120,12 +122,19 @@ export function PlayerTab({ control }: PlayerTabProps) {
                                 name="library.autoPlayNextEpisode"
                                 render={({ field }) => (
                                     <OsToggle
-                                        label="Reproducción Automática"
+                                        label="Reproducción Continua"
                                         description="Inicia automáticamente el siguiente episodio de la cola al finalizar el actual."
                                         checked={!!field.value}
                                         onChange={field.onChange}
                                     />
                                 )}
+                            />
+
+                            <OsToggle
+                                label="Modo Maratón"
+                                description="Saltea intros, endings y baches de manera automática para ver todos los episodios continuos como una película."
+                                checked={marathonMode}
+                                onChange={setMarathonMode}
                             />
 
                             <Controller

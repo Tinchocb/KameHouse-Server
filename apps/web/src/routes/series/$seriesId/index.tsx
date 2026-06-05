@@ -511,11 +511,13 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                 title={title}
                 romajiTitle={entry.media.titleRomaji || ""}
                 backdropUrl={heroBackdrop}
+                posterUrl={entry.media.posterImage || ""}
                 rating={entry.media.score ? entry.media.score / 10 : undefined}
                 year={entry.media.year}
                 ageRating={entry.media.isNsfw ? "18+" : "PG-13"}
                 sagaCount={sagas.length}
                 synopsis={entry.media.description || ""}
+                onPlay={handlePlayDefault}
             />
             <div className="w-full max-w-[1800px] mx-auto px-6 sm:px-12 mt-12">
                 {/* Custom Glassmorphic Tabs Navigation for Series/Shows */}

@@ -186,7 +186,7 @@ function SettingsPage() {
     if (isLoading && !serverSettings) return <LoadingOverlayWithLogo />
 
     return (
-        <div className="flex flex-col h-full w-full pt-12 md:pt-20 px-6 md:px-12 lg:px-16 bg-[#050506] text-zinc-300 selection:bg-[#ff6e3a]/30 overflow-y-auto relative">
+        <div className="flex flex-col h-full w-full pt-12 md:pt-20 px-6 md:px-12 lg:px-16 bg-transparent text-zinc-300 selection:bg-[#ff6e3a]/30 overflow-y-auto relative">
             <div className="absolute top-0 left-1/2 w-[600px] h-[600px] bg-[#ff6e3a]/5 rounded-full blur-[200px] -translate-y-1/2 -translate-x-1/2 pointer-events-none" />
 
             <div className="w-full flex flex-col min-h-full relative z-10">

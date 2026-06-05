@@ -121,26 +121,42 @@ function SeriesFullscreenIndex() {
 
     return (
         <div
-            className="w-full h-full flex flex-col bg-[#06080d] text-white font-sans overflow-hidden relative"
+            className="w-full h-full flex flex-col text-white font-sans overflow-hidden relative"
         >
-            {/* Ambient Background Glow — Single dynamic div transitioning position & color (GPU-composited) */}
+            {/* Subtle ambient glow that follows selected item — GPU-composited */}
             {selectedItem && (
                 <div
-                    className="absolute top-1/2 left-0 w-[800px] h-[800px] pointer-events-none blur-[120px] z-0"
+                    className="absolute top-1/2 left-0 w-[600px] h-[600px] pointer-events-none blur-[80px] z-0"
                     style={{
-                        opacity: 0.08,
+                        opacity: 0.05,
                         background: `radial-gradient(circle, ${getVhsColor(selectedItem.id)} 0%, transparent 70%)`,
-                        transform: `translate3d(calc(${(selectedIndex / Math.max(seriesList.length - 1, 1)) * 80 + 10}% - 400px), -50%, 0)`,
+                        transform: `translate3d(calc(${(selectedIndex / Math.max(seriesList.length - 1, 1)) * 80 + 10}% - 300px), -50%, 0)`,
                         transition: 'transform 700ms cubic-bezier(0.16, 1, 0.3, 1), background 700ms ease-out',
                     }}
                 />
             )}
 
+            {/* Top header label strip */}
+            <div className="relative z-20 shrink-0 h-10 flex items-center px-6 border-b border-white/[0.04] bg-black/30 backdrop-blur-sm">
+                <span className="text-[9px] font-black uppercase tracking-[0.4em] text-zinc-600 font-mono">KAME · VHS · COLLECTION</span>
+                {selectedItem && (
+                    <div className="ml-auto flex items-center gap-3">
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-600 font-mono">
+                            {selectedIndex + 1} / {seriesList.length}
+                        </span>
+                        <div className="h-3 w-[1px] bg-white/10" />
+                        <span className="text-[9px] font-black uppercase tracking-widest font-mono" style={{ color: getVhsColor(selectedItem.id) }}>
+                            {selectedItem.title}
+                        </span>
+                    </div>
+                )}
+            </div>
+
             {/* CRT scanlines overlay filter */}
-            <div className="absolute inset-0 pointer-events-none z-[49] opacity-[0.015] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,6px_100%]" />
+            <div className="absolute inset-0 pointer-events-none z-[49] opacity-[0.012] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,6px_100%]" />
 
             {/* Main Shelf Container */}
-            <main className="flex-1 min-h-0 flex bg-[#0c0e12]/95 overflow-x-auto overflow-y-hidden no-scrollbar relative z-10 border-t-8 border-b-8 border-zinc-950 shadow-[inset_0_20px_40px_rgba(0,0,0,0.85),inset_0_-20px_40px_rgba(0,0,0,0.85)]">
+            <main className="flex-1 min-h-0 flex bg-black/60 overflow-x-auto overflow-y-hidden no-scrollbar relative z-10 border-t-4 border-b-4 border-zinc-950/80 shadow-[inset_0_12px_30px_rgba(0,0,0,0.7),inset_0_-12px_30px_rgba(0,0,0,0.7)] backdrop-blur-[2px]">
                 {/* Backlight Glow inside shelf — Single dynamic div transitioning position & color */}
                 {selectedItem && (
                     <div

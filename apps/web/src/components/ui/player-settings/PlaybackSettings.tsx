@@ -19,6 +19,8 @@ interface PlaybackSettingsProps {
     onAmbilightChange?: (enabled: boolean) => void
     tvMode?: boolean
     onTvModeChange?: (enabled: boolean) => void
+    marathonMode?: boolean
+    onMarathonModeChange?: (enabled: boolean) => void
     showSeparator?: boolean
 }
 
@@ -69,44 +71,21 @@ export function PlaybackSettings({
     onAmbilightChange = () => {},
     tvMode = false,
     onTvModeChange = () => {},
+    marathonMode = false,
+    onMarathonModeChange = () => {},
     showSeparator = true,
 }: PlaybackSettingsProps) {
     return (
         <div className="py-4">
             {showSeparator && <div className="mx-6 h-px bg-white/10 mb-4" />}
 
-            {/* Speed */}
-            <div className="flex items-center gap-2 px-6 mb-3">
-                <Gauge className="w-3.5 h-3.5 text-zinc-600" />
-                <span className="text-[9px] font-black uppercase tracking-[0.4em] text-zinc-600">Velocidad</span>
-            </div>
-            <div className="flex flex-row px-6 gap-2 flex-wrap mb-6">
-                {[0.5, 0.75, 1, 1.25, 1.5, 2].map((rate) => {
-                    const isActive = playbackRate === rate
-                    return (
-                        <button
-                            key={rate}
-                            onClick={() => onPlaybackRateChange(rate)}
-                            className={cn(
-                                "flex-1 min-w-[50px] py-2 text-center text-[10px] font-black tracking-widest transition-all duration-300 border rounded-lg active:scale-95",
-                                isActive
-                                    ? "bg-brand-orange text-white border-brand-orange shadow-md shadow-brand-orange/15"
-                                    : "text-zinc-500 border-white/5 hover:border-white/20 hover:text-white bg-white/[0.02]"
-                            )}
-                        >
-                            {rate}x
-                        </button>
-                    )
-                })}
-            </div>
-
             {/* Auto-skip section */}
-            <div className="mx-6 h-px bg-white/10 mb-4" />
             <div className="flex items-center gap-2 px-6 mb-3">
                 <FastForward className="w-3.5 h-3.5 text-zinc-600" />
                 <span className="text-[9px] font-black uppercase tracking-[0.4em] text-zinc-600">Skip Automático</span>
             </div>
-            <ToggleRow label="Modo TV (Reproducción Continua)" enabled={tvMode} onChange={onTvModeChange} />
+            <ToggleRow label="Modo Maratón" enabled={marathonMode} onChange={onMarathonModeChange} />
+            <ToggleRow label="Modo TV" enabled={tvMode} onChange={onTvModeChange} />
             <ToggleRow label="Saltar Intro Automáticamente" enabled={autoSkipIntro} onChange={onAutoSkipIntroChange} />
             <ToggleRow label="Saltar Outro Automáticamente" enabled={autoSkipOutro} onChange={onAutoSkipOutroChange} />
 
@@ -116,7 +95,6 @@ export function PlaybackSettings({
                 <Repeat className="w-3.5 h-3.5 text-zinc-600" />
                 <span className="text-[9px] font-black uppercase tracking-[0.4em] text-zinc-600">Opciones</span>
             </div>
-            <ToggleRow label="Iluminación Inmersiva Ambilight" enabled={ambilightEnabled} onChange={onAmbilightChange} />
             <ToggleRow label="Mapa de Calor (timeline)" enabled={showHeatmap} onChange={onShowHeatmapChange} />
             <ToggleRow label="Repetir Episodio (Loop)" enabled={loopEnabled} onChange={onLoopEnabledChange} />
             <ToggleRow label="Desactivar subs con Audio Español (Dub)" enabled={autoDisableSubtitlesWhenDubbed} onChange={onAutoDisableSubtitlesWhenDubbedChange} />

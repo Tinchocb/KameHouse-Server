@@ -9,8 +9,11 @@ import React from "react"
 import { AppLayout, AppLayoutContent } from "@/components/ui/app-layout/app-layout"
 import { AppBottomNav } from "@/components/ui/app-layout/app-topnav"
 import { AppSidebar } from "@/components/ui/app-layout/app-sidebar"
-import { CommandPalette } from "@/components/ui/search/command-palette"
 import { AnimatePresence } from "framer-motion"
+
+const CommandPalette = React.lazy(() =>
+    import("@/components/ui/search/command-palette").then((m) => ({ default: m.CommandPalette }))
+)
 import { useRouterState } from "@tanstack/react-router"
 import { PageTransition } from "@/components/shared/page-transition"
 import { FaBars } from "react-icons/fa"
@@ -51,7 +54,9 @@ function RootComponent() {
             <DynamicBackdrop />
             <PerformanceMonitor />
             <AppSidebar />
-            <CommandPalette />
+            <React.Suspense fallback={null}>
+                <CommandPalette />
+            </React.Suspense>
             <GlobalQueueSidebar />
             <AppLayoutContent>
                 {/* Mobile Menu Trigger */}
@@ -64,11 +69,9 @@ function RootComponent() {
                     <FaBars className="w-5 h-5" />
                 </button>
 
-                <AnimatePresence mode="wait" initial={false}>
-                    <PageTransition key={routerState.location.pathname} transitionKey={routerState.location.pathname} className="flex-1 w-full">
-                        <Outlet />
-                    </PageTransition>
-                </AnimatePresence>
+                <PageTransition key={routerState.location.pathname} transitionKey={routerState.location.pathname} className="flex-1 w-full">
+                    <Outlet />
+                </PageTransition>
             </AppLayoutContent>
             <AppBottomNav />
 

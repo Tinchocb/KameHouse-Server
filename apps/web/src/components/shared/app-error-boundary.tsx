@@ -16,6 +16,10 @@ export function AppErrorBoundary({ error, resetErrorBoundary }: AppErrorBoundary
     const initialPathname = React.useRef(location.pathname)
 
     React.useEffect(() => {
+        console.error("AppErrorBoundary caught error:", error);
+    }, [error])
+
+    React.useEffect(() => {
         if (location.pathname !== initialPathname.current && resetErrorBoundary) {
             resetErrorBoundary()
         }
@@ -28,9 +32,9 @@ export function AppErrorBoundary({ error, resetErrorBoundary }: AppErrorBoundary
         
         // Detect chunk loading errors (Failed to fetch dynamically imported module)
         const err = error as Error | undefined;
-        const isChunkLoadError = err?.message?.toLowerCase().includes("failed to fetch dynamically imported module") || 
-                                 err?.name === "ChunkLoadError" ||
-                                 err?.message?.toLowerCase().includes("import");
+        const isChunkLoadError = err?.name === "ChunkLoadError" ||
+                                 err?.message?.toLowerCase().includes("failed to fetch dynamically imported module") ||
+                                 err?.message?.toLowerCase().includes("dynamically imported module");
         
         if (isChunkLoadError) {
             window.location.reload();
@@ -42,9 +46,9 @@ export function AppErrorBoundary({ error, resetErrorBoundary }: AppErrorBoundary
     }
 
     const err = error as Error | undefined;
-    const isChunkLoadError = err?.message?.toLowerCase().includes("failed to fetch dynamically imported module") || 
-                             err?.name === "ChunkLoadError" ||
-                             err?.message?.toLowerCase().includes("import");
+    const isChunkLoadError = err?.name === "ChunkLoadError" ||
+                             err?.message?.toLowerCase().includes("failed to fetch dynamically imported module") ||
+                             err?.message?.toLowerCase().includes("dynamically imported module");
 
     return (
         <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center bg-black border border-zinc-800">

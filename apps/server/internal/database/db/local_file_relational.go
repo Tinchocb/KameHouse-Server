@@ -25,6 +25,21 @@ func GetAllLocalFilesRelational(d *Database) ([]*dto.LocalFile, error) {
 	return res, nil
 }
 
+// GetLocalFilesByMediaIDRelational retrieves all local files for a specific media ID.
+func GetLocalFilesByMediaIDRelational(d *Database, mediaID int) ([]*dto.LocalFile, error) {
+	var dbFiles []*models.LocalFile
+	err := d.gormdb.Where("media_id = ?", mediaID).Find(&dbFiles).Error
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]*dto.LocalFile, len(dbFiles))
+	for i, dbf := range dbFiles {
+		res[i] = LocalFileModelToDto(dbf)
+	}
+	return res, nil
+}
+
 // UpsertLocalFileRelationalBatch inserts or updates a slice of LocalFiles in the relational table.
 func UpsertLocalFileRelationalBatch(d *Database, files []*dto.LocalFile) error {
 	if len(files) == 0 {

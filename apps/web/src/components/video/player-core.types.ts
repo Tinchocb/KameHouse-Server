@@ -84,6 +84,7 @@ export interface PlayerCore {
         showResume: boolean
         resumeTime: number
         autoDisableSubtitlesWhenDubbed: boolean
+        marathonMode: boolean
         /** AniSkip intervals exposed to child components for rendering timeline markers */
         skipTimesOp?: { startTime: number; endTime: number }
         skipTimesEd?: { startTime: number; endTime: number }
@@ -127,6 +128,7 @@ export interface PlayerCore {
         setLoopEnabled: (val: boolean) => void
         setAmbilightEnabled: (val: boolean) => void
         setTvMode: (val: boolean) => void
+        setMarathonMode: (val: boolean) => void
         handleResume: () => void
         setShowResume: (val: boolean) => void
         setAutoDisableSubtitlesWhenDubbed: (val: boolean) => void

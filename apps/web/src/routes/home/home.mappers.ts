@@ -19,7 +19,7 @@ export function mapEpisodeToMediaCard(
     onNavigate: (mediaId: number) => void,
 ): SwimlaneItem {
     return {
-        id: `cw-${media.id}`,
+        id: `cw-${media.tmdbId || media.id}`,
         image: episode.episodeMetadata?.image || getBackdrop(media) || "",
         title: getTitle(media),
         subtitle: episode.displayTitle || `Episodio ${episode.episodeNumber}`,
@@ -29,7 +29,7 @@ export function mapEpisodeToMediaCard(
         aspect: "wide",
         year: media.year || undefined,
         rating: media.score ? (media.score > 10 ? media.score / 10 : media.score) : undefined,
-        onClick: () => onNavigate(media.id),
+        onClick: () => onNavigate(media.tmdbId || media.id),
         backdropUrl: getBackdrop(media) || undefined,
     }
 }
@@ -42,8 +42,9 @@ export function mapLibraryEntryToMediaCard(
     onNavigate: (mediaId: number) => void,
 ): SwimlaneItem {
     const media = entry.media!
+    const targetId = entry.mediaId || media.tmdbId || media.id
     return {
-        id: `media-${media.id}`,
+        id: `media-${targetId}`,
         image: media.posterImage || getBackdrop(media) || "",
         title: getTitle(media),
         subtitle: `${media.year || ""} · ${media.format || ""}`,
@@ -52,7 +53,7 @@ export function mapLibraryEntryToMediaCard(
         aspect: "poster",
         year: media.year || undefined,
         rating: media.score ? (media.score > 10 ? media.score / 10 : media.score) : undefined,
-        onClick: () => onNavigate(media.id),
+        onClick: () => onNavigate(targetId),
         // Only set backdropUrl if there's a real landscape banner (bannerImage).
         // If we fall back to posterImage, it's portrait and should NOT be used as a landscape hero image.
         backdropUrl: media.bannerImage || undefined,
@@ -85,8 +86,10 @@ export function mapToHeroItem(
         }
     }
 
+    const targetId = media.tmdbId || media.id
+
     return {
-        id: `hero-${media.id}`,
+        id: `hero-${targetId}`,
         title: getTitle(media),
         synopsis: synopsis || media.description || "",
         backdropUrl: getBackdrop(media) || "",
@@ -94,9 +97,9 @@ export function mapToHeroItem(
         year: media.year || undefined,
         format: media.format,
         rating: media.score ? (media.score > 10 ? media.score / 10 : media.score) : undefined,
-        mediaId: media.id,
+        mediaId: targetId,
         youtubeTrailerId,
-        onPlay: () => onNavigate(media.id),
-        onMoreInfo: () => onNavigate(media.id),
+        onPlay: () => onNavigate(targetId),
+        onMoreInfo: () => onNavigate(targetId),
     }
 }
