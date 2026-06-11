@@ -3,7 +3,6 @@ package core
 import (
 	"errors"
 	"fmt"
-	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -303,7 +302,8 @@ func createConfigFile(path string) error {
 		if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 			return err
 		}
-		return os.WriteFile(path, []byte(defaultConfigTemplate), 0600)
+		template := fmt.Sprintf(defaultConfigTemplate, constants.Version)
+		return os.WriteFile(path, []byte(template), 0600)
 	}
 	return nil
 }
@@ -345,7 +345,7 @@ func (cfg *Config) GetServerURI(df ...string) string {
 }
 
 const defaultConfigTemplate = `# KameHouse Configuration
-version = "3.5.0"
+version = "%s"
 
 [server]
 host = "127.0.0.1"
@@ -432,7 +432,7 @@ func resolveCorsOrigins(cfg *Config) {
 	}
 
 	// Always add local IPv4 addresses to allowed origins so clients on the local network (like Smart TVs) can fetch resources
-	localIPs := getLocalIPv4Addresses()
+	localIPs := util.GetLocalIPv4Addresses()
 	for _, ip := range localIPs {
 		ipOrigins := []string{
 			fmt.Sprintf("http://%s:43210", ip),
@@ -463,41 +463,6 @@ func resolveCorsOrigins(cfg *Config) {
 	}
 
 	cfg.Server.CorsOrigins = origins
-}
-
-func getLocalIPv4Addresses() []string {
-	var ipAddresses []string
-	interfaces, err := net.Interfaces()
-	if err != nil {
-		return ipAddresses
-	}
-	for _, iface := range interfaces {
-		if iface.Flags&net.FlagLoopback != 0 || iface.Flags&net.FlagUp == 0 {
-			continue
-		}
-		addrs, err := iface.Addrs()
-		if err != nil {
-			continue
-		}
-		for _, addr := range addrs {
-			var ip net.IP
-			switch v := addr.(type) {
-			case *net.IPNet:
-				ip = v.IP
-			case *net.IPAddr:
-				ip = v.IP
-			}
-			if ip == nil || ip.IsLoopback() {
-				continue
-			}
-			ip = ip.To4()
-			if ip == nil {
-				continue
-			}
-			ipAddresses = append(ipAddresses, ip.String())
-		}
-	}
-	return ipAddresses
 }
 
 func containsString(slice []string, s string) bool {

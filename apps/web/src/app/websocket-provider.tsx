@@ -1,4 +1,3 @@
-"use client"
 
 import { getApiWebSocketUrl } from "@/api/client/server-url"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
@@ -12,6 +11,9 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
     const queryClient = useQueryClient()
     const setEvents = useAppStore(state => state.setEvents)
     const setScannerState = useAppStore(state => state.setScannerState)
+    const activeStageIdx = useAppStore(state => state.activeStageIdx)
+    const activeStageIdxRef = useRef(activeStageIdx)
+    activeStageIdxRef.current = activeStageIdx
 
     // Batching queues for throttling updates to at most once per 500ms
     const eventQueue = useRef<ScanEvent[]>([])
@@ -187,7 +189,7 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
  
             case WSEvents.SCAN_STATUS: {
                 const statusStr = msg.payload as string
-                let newStageIdx = stateUpdateRef.current.activeStageIdx ?? useAppStore.getState().activeStageIdx
+                let newStageIdx = stateUpdateRef.current.activeStageIdx ?? activeStageIdxRef.current
                 const lowerStatus = statusStr.toLowerCase();
                 const STAGE_KEYWORDS = [
                     ["walk", "escanear", "scanning"],

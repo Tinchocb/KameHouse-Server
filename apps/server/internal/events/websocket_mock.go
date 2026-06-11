@@ -61,13 +61,7 @@ func (m *MockWSEventManager) SubscribeToClientNativePlayerEvents(id string) *Cli
 	return subscriber
 }
 
-func (m *MockWSEventManager) SubscribeToTorrentTelemetryEvents(id string) *ClientEventSubscriber {
-	subscriber := &ClientEventSubscriber{
-		Channel: make(chan *WebsocketClientEvent),
-	}
-	m.ClientEventSubscribers.Set(id, subscriber)
-	return subscriber
-}
+
 
 
 

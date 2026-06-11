@@ -34,7 +34,7 @@ console.log = log.info
 console.error = log.error
 
 const _development = process.env.NODE_ENV === "development"
-const DEFAULT_UPDATE_FEED_URL = "https://github.com/5rahim/kamehouse/releases/latest/download"
+const DEFAULT_UPDATE_FEED_URL = process.env.DEFAULT_UPDATE_FEED_URL || "https://github.com/5rahim/kamehouse/releases/latest/download"
 let updateDownloaded = false
 
 // Call configuration setup before app.whenReady
@@ -287,7 +287,6 @@ app.whenReady().then(async () => {
         }
         const mainWindow = getMainWindow()
         if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.close()
             mainWindow.destroy()
         }
         const crashScreen = getCrashScreen()

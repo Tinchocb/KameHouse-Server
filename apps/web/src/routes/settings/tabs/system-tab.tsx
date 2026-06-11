@@ -7,6 +7,9 @@ import { toast } from "sonner"
 import { useAppStore } from "@/lib/store"
 import { useGetStatus } from "@/api/hooks/settings.hooks"
 
+import { useSound } from "@/hooks/use-sound"
+import { cn } from "@/components/ui/core/styling"
+
 interface SystemTabProps {
     control: Control<SettingsFormValues>
 }
@@ -31,7 +34,7 @@ const AlertIcon = () => (
 
 export function SystemTab({ control }: SystemTabProps) {
     const { data: status } = useGetStatus()
-
+    const { playSound } = useSound()
 
     const {
         bgMusicEnabled,
@@ -41,7 +44,13 @@ export function SystemTab({ control }: SystemTabProps) {
         uiSoundsEnabled,
         setUiSoundsEnabled,
         uiSoundsVolume,
-        setUiSoundsVolume
+        setUiSoundsVolume,
+        activeTheme,
+        setActiveTheme,
+        dynamicBackdropEnabled,
+        setDynamicBackdropEnabled,
+        dynamicBackdropMotionEnabled,
+        setDynamicBackdropMotionEnabled
     } = useAppStore()
 
     const handleBackup = () => {
@@ -145,7 +154,43 @@ export function SystemTab({ control }: SystemTabProps) {
                 </div>
             </div>
 
-
+            {/* Tema de la Interfaz */}
+            <Section label="Tema de la Interfaz">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {[
+                        { id: "dark", name: "Cine Oscuro", desc: "El clásico fondo azul noche con acento naranja", color: "bg-[#0B0F19]", accent: "bg-[#ff6e3a]" },
+                        { id: "amoled", name: "Negro AMOLED", desc: "Negro absoluto para pantallas OLED con acento carmesí", color: "bg-black", accent: "bg-[#ff1e56]" },
+                        { id: "cyberpunk", name: "Cyberpunk", desc: "Ambiente obsidian con acentos cian brillante", color: "bg-[#07050e]", accent: "bg-[#00f3ff]" }
+                    ].map(t => {
+                        const isThemeActive = activeTheme === t.id
+                        return (
+                            <button
+                                key={t.id}
+                                type="button"
+                                onClick={() => {
+                                    setActiveTheme(t.id)
+                                    playSound("category")
+                                }}
+                                className={cn(
+                                    "flex flex-col text-left p-5 rounded-2xl border transition-all duration-300 relative overflow-hidden group active:scale-95",
+                                    isThemeActive
+                                        ? "bg-white/[0.03] border-[#ff6e3a] shadow-[0_8px_30px_rgba(255,110,58,0.1)]"
+                                        : "bg-white/[0.01] border-white/5 hover:border-white/10 hover:bg-white/[0.02]"
+                                )}
+                            >
+                                <div className="flex items-center justify-between w-full mb-3">
+                                    <span className="text-xs font-bold text-white uppercase tracking-wider">{t.name}</span>
+                                    <div className="flex gap-1">
+                                        <div className={cn("w-3 h-3 rounded-full border border-white/10", t.color)} />
+                                        <div className={cn("w-3 h-3 rounded-full", t.accent)} />
+                                    </div>
+                                </div>
+                                <p className="text-[11px] text-zinc-550 leading-relaxed font-medium">{t.desc}</p>
+                            </button>
+                        )
+                    })}
+                </div>
+            </Section>
 
             {/* Gestión de Notificaciones */}
             <Section label="Notificaciones de la Aplicación">
@@ -189,8 +234,17 @@ export function SystemTab({ control }: SystemTabProps) {
                     {uiSoundsEnabled && (
                         <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 hover:bg-white/[0.015] transition-all duration-200 gap-5 border-t border-white/[0.03]">
                             <div className="space-y-0.5 flex-1 max-w-xl">
-                                <p className="text-sm font-semibold text-zinc-200">Volumen de los Efectos</p>
-                                <p className="text-xs text-zinc-500 font-medium">Ajusta el volumen general de los efectos de sonido de la interfaz.</p>
+                                <div className="flex items-center gap-3">
+                                    <p className="text-sm font-semibold text-zinc-200">Volumen de los Efectos</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => playSound("hover")}
+                                        className="px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-[#ff6e3a]/10 hover:bg-[#ff6e3a]/20 text-[#ff6e3a] border border-[#ff6e3a]/20 rounded-md transition-all active:scale-95"
+                                    >
+                                        Probar Sonido
+                                    </button>
+                                </div>
+                                <p className="text-xs text-zinc-550 font-medium mt-1">Ajusta el volumen general de los efectos de sonido de la interfaz.</p>
                             </div>
                             <div className="flex items-center gap-3 w-full md:w-72">
                                 <input
@@ -235,6 +289,26 @@ export function SystemTab({ control }: SystemTabProps) {
                                 </span>
                             </div>
                         </div>
+                    )}
+                </Card>
+            </Section>
+
+            {/* Rendimiento Gráfico */}
+            <Section label="Rendimiento Gráfico">
+                <Card className="divide-y divide-white/[0.03]">
+                    <OsToggle
+                        label="Fondo Dinámico Difuminado"
+                        description="Habilita el fondo artístico con desenfoque de color y orbes de luces. Desactivar esto mejora drásticamente el rendimiento de la GPU en ordenadores menos potentes."
+                        checked={dynamicBackdropEnabled}
+                        onChange={setDynamicBackdropEnabled}
+                    />
+                    {dynamicBackdropEnabled && (
+                        <OsToggle
+                            label="Efecto de Movimiento del Ratón"
+                            description="Permite que el fondo y las orbes se desplacen sutilmente al mover el cursor en la pantalla."
+                            checked={dynamicBackdropMotionEnabled}
+                            onChange={setDynamicBackdropMotionEnabled}
+                        />
                     )}
                 </Card>
             </Section>

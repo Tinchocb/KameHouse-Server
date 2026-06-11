@@ -42,7 +42,6 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 	type body struct {
 		Library                models.LibrarySettings      `json:"library"`
 		MediaPlayer            models.MediaPlayerSettings  `json:"mediaPlayer"`
-		Torrent                models.TorrentSettings      `json:"torrent"`
 		EnableTranscode        bool                        `json:"enableTranscode"`
 	}
 
@@ -62,7 +61,6 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 		BaseModel:     models.BaseModel{ID: 1, UpdatedAt: time.Now()},
 		Library:       b.Library,
 		MediaPlayer:   b.MediaPlayer,
-		Torrent:       b.Torrent,
 	})
 	if err != nil {
 		return h.RespondWithError(c, err)
@@ -98,8 +96,6 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 	type body struct {
 		Library       *models.LibrarySettings       `json:"library"`
 		MediaPlayer   *models.MediaPlayerSettings   `json:"mediaPlayer"`
-		Torrent       *models.TorrentSettings       `json:"torrent"`
-		Torrentstream *models.TorrentstreamSettings `json:"torrentstream"`
 		Mediastream   *models.MediastreamSettings   `json:"mediastream"`
 		Theme         *models.Theme                 `json:"theme"`
 		Notifications *models.NotificationSettings `json:"notifications"`
@@ -189,13 +185,6 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		merged.MediaPlayer = *b.MediaPlayer
 	}
 
-	if b.Torrent != nil {
-		merged.Torrent = *b.Torrent
-	}
-	
-	if b.Torrentstream != nil {
-		merged.Torrentstream = *b.Torrentstream
-	}
 
 	if b.Notifications != nil {
 		merged.Notifications = *b.Notifications

@@ -4,6 +4,7 @@ import { useWindowVirtualizer } from "@tanstack/react-virtual"
 import type { Anime_LibraryCollectionEntry } from "@/api/generated/types"
 import { EmptyState } from "@/components/shared/empty-state"
 import { MovieCard, EraTab } from "../-MovieCard"
+import { PosterGridSkeleton } from "@/components/ui/shimmer-skeleton"
 
 interface MoviesGridProps {
     filteredSorted: (Anime_LibraryCollectionEntry & { era: EraTab; startedAtTimestamp: number })[]
@@ -73,7 +74,7 @@ export function MoviesGrid({
     return (
         <div className="max-w-[1700px] mx-auto px-6 md:px-14 py-12 pb-32 z-10 relative">
             {isLoading && allMoviesLength === 0 ? (
-                <MovieGridSkeleton />
+                <PosterGridSkeleton count={18} />
             ) : filteredSorted.length === 0 ? (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-32">
                     <EmptyState
@@ -122,22 +123,6 @@ export function MoviesGrid({
                     })}
                 </div>
             )}
-        </div>
-    )
-}
-
-function MovieGridSkeleton() {
-    return (
-        <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))" }}>
-            {Array.from({ length: 18 }).map((_, i) => (
-                <div key={i} className="space-y-3">
-                    <div className="aspect-[2/3] rounded-2xl bg-white/[0.03] animate-pulse" />
-                    <div className="space-y-1.5">
-                        <div className="h-2.5 w-3/4 bg-white/[0.03] rounded animate-pulse" />
-                        <div className="h-2 w-1/2 bg-white/[0.02] rounded animate-pulse" />
-                    </div>
-                </div>
-            ))}
         </div>
     )
 }

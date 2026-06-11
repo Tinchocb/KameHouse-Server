@@ -131,7 +131,7 @@
 }
 
 @layer base {
-    :root {
+    :root, [data-theme="dark"] {
         /* Core UI Scale (Premium Dark Sky & Vibrant Orange) */
         --background: 225 35% 4%; /* Deep midnight blue OLED, #0B0F19 */
         --surface-1: 225 30% 6%;  /* Navy glass, #0a0d16 */
@@ -176,6 +176,34 @@
         /* Dynamic Extracted Colors (Customized for premium glow) */
         --extracted-vibrant: var(--brand-orange);
         --extracted-bg-gradient: linear-gradient(to bottom, transparent, var(--background));
+    }
+
+    [data-theme="amoled"] {
+        --background: 0 0% 0%; /* Pure Black */
+        --surface-1: 0 0% 4%;
+        --surface-2: 0 0% 8%;
+        --overlay: 0 0% 0% / 0.9;
+        --border-subtle: 0 0% 100% / 0.08;
+        --border-strong: 0 0% 100% / 0.15;
+        --brand-orange: 350 100% 55%; /* Neo Crimson */
+        --brand-orange-hover: 350 100% 63%;
+        --ring: var(--brand-orange);
+        --primary: var(--brand-orange);
+        --extracted-vibrant: var(--brand-orange);
+    }
+
+    [data-theme="cyberpunk"] {
+        --background: 260 40% 4%; /* Purple Obsidian */
+        --surface-1: 260 30% 6%;
+        --surface-2: 260 25% 10%;
+        --overlay: 260 40% 3% / 0.85;
+        --border-subtle: 180 100% 50% / 0.1;
+        --border-strong: 180 100% 50% / 0.25;
+        --brand-orange: 180 100% 50%; /* Cyber Cyan */
+        --brand-orange-hover: 180 100% 60%;
+        --ring: var(--brand-orange);
+        --primary: var(--brand-orange);
+        --extracted-vibrant: var(--brand-orange);
     }
 
     body {

@@ -256,20 +256,17 @@ async function restartkamehouseServer(opts = {}) {
     }
 
     serverRestartPromise = (async () => {
-        if (await isDesktopServerReachable()) {
-            log.info("[Sidecar] Restart skipped because the desktop server is already reachable")
-            return
-        }
-
         const currentServerProcess = serverProcess
         if (currentServerProcess && !currentServerProcess.killed) {
             log.info("[Sidecar] Waiting for existing server process to exit before relaunching")
 
             await new Promise((resolve) => {
                 let settled = false
+                let killTimeout = null
                 function finish() {
                     if (settled) return
                     settled = true
+                    if (killTimeout) clearTimeout(killTimeout)
                     currentServerProcess.removeListener("close", finish)
                     currentServerProcess.removeListener("error", finish)
                     if (serverProcess === currentServerProcess) {
@@ -289,8 +286,13 @@ async function restartkamehouseServer(opts = {}) {
                     return
                 }
 
-                setTimeout(() => {
-                    log.warn("[Sidecar] Timed out waiting for server process to exit during restart")
+                killTimeout = setTimeout(() => {
+                    log.warn("[Sidecar] Timed out waiting for server process to exit, sending SIGKILL")
+                    try {
+                        currentServerProcess.kill("SIGKILL")
+                    } catch (e) {
+                        log.error("[Sidecar] Failed to send SIGKILL:", e)
+                    }
                     finish()
                 }, 3000)
             })

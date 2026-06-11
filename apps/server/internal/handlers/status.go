@@ -9,7 +9,6 @@ import (
 	"kamehouse/internal/user"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/result"
-	"net"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -51,41 +50,6 @@ type Status struct {
 }
 
 var clientInfoCache = result.NewMap[string, util.ClientInfo]()
-
-func getLocalIPv4Addresses() []string {
-	var ipAddresses []string
-	interfaces, err := net.Interfaces()
-	if err != nil {
-		return ipAddresses
-	}
-	for _, iface := range interfaces {
-		if iface.Flags&net.FlagLoopback != 0 || iface.Flags&net.FlagUp == 0 {
-			continue
-		}
-		addrs, err := iface.Addrs()
-		if err != nil {
-			continue
-		}
-		for _, addr := range addrs {
-			var ip net.IP
-			switch v := addr.(type) {
-			case *net.IPNet:
-				ip = v.IP
-			case *net.IPAddr:
-				ip = v.IP
-			}
-			if ip == nil || ip.IsLoopback() {
-				continue
-			}
-			ip = ip.To4()
-			if ip == nil {
-				continue
-			}
-			ipAddresses = append(ipAddresses, ip.String())
-		}
-	}
-	return ipAddresses
-}
 
 // NewStatus returns a new Status struct.
 // It uses the RouteCtx to get the App instance containing the Database instance.
@@ -145,7 +109,7 @@ func (h *Handler) NewStatus(c echo.Context) *Status {
 		ServerHasPassword:     h.App.Config.Server.Password != "",
 		DisabledFeatures:      h.App.FeatureManager.DisabledFeatures,
 		ShowChangelogTour:     h.App.ShowTour,
-		ServerIPs:             getLocalIPv4Addresses(),
+		ServerIPs:             util.GetLocalIPv4Addresses(),
 		ServerPort:            h.App.Config.Server.Port,
 	}
 
@@ -213,7 +177,6 @@ func (h *Handler) HandleGetLogContent(c echo.Context) error {
 	return h.RespondWithData(c, content)
 }
 
-var newestLogFilename = ""
 
 func (h *Handler) HandleGetLogFilenames(c echo.Context) error {
 	if h.App.Config == nil || h.App.Config.Logs.Dir == "" {
@@ -231,12 +194,6 @@ func (h *Handler) HandleGetLogFilenames(c echo.Context) error {
 
 	if len(filenames) > 0 {
 		slices.SortStableFunc(filenames, func(i, j string) int { return strings.Compare(j, i) })
-		for _, f := range filenames {
-			if strings.HasPrefix(strings.ToLower(f), "kamehouse-") {
-				newestLogFilename = f
-				break
-			}
-		}
 	}
 
 	return h.RespondWithData(c, filenames)

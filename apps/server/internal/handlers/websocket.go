@@ -70,6 +70,16 @@ func (h *Handler) webSocketEventHandler(c echo.Context) error {
 	// Add connection to manager
 	h.App.WSEventManager.AddConn(id, ws)
 
+	// Set handlers to reset read deadline upon receiving control frames
+	ws.SetPingHandler(func(appData string) error {
+		_ = ws.SetReadDeadline(time.Now().Add(60 * time.Second))
+		return ws.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(5*time.Second))
+	})
+	ws.SetPongHandler(func(string) error {
+		_ = ws.SetReadDeadline(time.Now().Add(60 * time.Second))
+		return nil
+	})
+
 	for {
 		// Strict drop policy: Reap the goroutine if client vanishes without closing TCP socket
 		ws.SetReadDeadline(time.Now().Add(60 * time.Second))

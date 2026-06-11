@@ -170,6 +170,8 @@ function createMainWindow(isDev, localPort) {
             sandbox: false,
             preload: path.join(__dirname, "../preload.js"),
             webSecurity: true,
+            // allowRunningInsecureContent is enabled to allow streaming local network media content
+            // (e.g. from local DLNA servers or HTTP-only NAS devices) when the app runs in a secure context.
             allowRunningInsecureContent: true,
             enableBlinkFeatures: "FontAccess, AudioVideoTracks",
             backgroundThrottling: true,
@@ -265,6 +267,7 @@ function createMainWindow(isDev, localPort) {
         webPreferences.contextIsolation = true
         webPreferences.sandbox = true
         webPreferences.webSecurity = true
+        // Allow running insecure content in webview tag to support HTTP-only local media streams
         webPreferences.allowRunningInsecureContent = true
 
         params.allowpopups = false

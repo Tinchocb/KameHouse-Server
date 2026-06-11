@@ -62,13 +62,9 @@ const (
 	PluginUnloaded        = "plugin-unloaded"
 	PluginLoaded          = "plugin-loaded"
 
-	ActiveTorrentCountUpdated = "active-torrent-count-updated"
-
 	SyncLocalQueueState = "sync-local-queue-state"
 	SyncLocalFinished   = "sync-local-finished"
 	SyncPlatformFinished = "sync-platform-finished"
-
-	TorrentStreamState = "torrentstream-state"
 
 	DebridDownloadProgress = "debrid-download-progress"
 	DebridStreamState      = "debrid-stream-state"

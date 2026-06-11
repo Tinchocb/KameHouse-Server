@@ -1,23 +1,10 @@
 import { GettingStarted_Variables } from "@/api/generated/endpoint.types"
 import { z } from "zod"
 
-export const DEFAULT_TORRENT_PROVIDER = ""
-
 export const DEFAULT_DOH_PROVIDER = ""
-
-export const DEFAULT_MPV_TYPE = "socket"
-
-export const enum TORRENT_CLIENT {
-    NONE = "none",
-}
-
-export const enum TORRENT_PROVIDER {
-    NONE = "none",
-}
 
 export const _gettingStartedSchema = z.object({
     enableTranscode: z.boolean().optional().default(false),
-    enableTorrentStreaming: z.boolean().optional().default(false),
     debridProvider: z.string().optional().default("none"),
     debridApiKey: z.string().optional().default(""),
 })
@@ -26,7 +13,6 @@ export const settingsSchema = z.object({
     library: z.object({
         libraryPath: z.string().optional().default(""),
         defaultPlayer: z.string(),
-        torrentProvider: z.string().default(DEFAULT_TORRENT_PROVIDER),
         autoScan: z.boolean().optional().default(false),
         mediaPlayerHost: z.string(),
         vlcUsername: z.string().optional().default(""),
@@ -41,8 +27,6 @@ export const settingsSchema = z.object({
         iinaSocket: z.string().optional().default(""),
         iinaPath: z.string().optional().default(""),
         iinaArgs: z.string().optional().default(""),
-        defaultTorrentClient: z.string().optional().default("none"),
-        hideTorrentList: z.boolean().optional().default(false),
         tmdbApiKey: z.string().optional().default(""),
         tmdbLanguage: z.string().optional().default("es-MX"),
         hideAudienceScore: z.boolean().optional().default(false),
@@ -57,7 +41,6 @@ export const settingsSchema = z.object({
 
 
         dohProvider: z.string().optional().default(""),
-        openTorrentClientOnStart: z.boolean().optional().default(false),
         openWebURLOnStart: z.boolean().optional().default(false),
         refreshLibraryOnStart: z.boolean().optional().default(false),
         richPresenceHideKameHouseRepositoryButton: z.boolean().optional().default(false),
@@ -66,7 +49,6 @@ export const settingsSchema = z.object({
         richPresenceUseMediaTitleStatus: z.boolean().optional().default(true),
 
         autoPlayNextEpisode: z.boolean().optional().default(false),
-        showActiveTorrentCount: z.boolean().optional().default(false),
         enableWatchContinuity: z.boolean().optional().default(false),
         seriesPaths: z.array(z.string()).optional().default([]),
         moviePaths: z.array(z.string()).optional().default([]),
@@ -76,7 +58,6 @@ export const settingsSchema = z.object({
         autoSyncToLocalAccount: z.boolean().optional().default(false),
         autoSaveCurrentMediaOffline: z.boolean().optional().default(false),
         disableCacheLayer: z.boolean().optional().default(false),
-        autoSelectTorrentProvider: z.string().optional().default(""),
         useFallbackMetadataProvider: z.boolean().optional().default(false),
         vcTranslate: z.boolean().optional().default(false),
         vcTranslateApiKey: z.string().optional().default(""),
@@ -88,8 +69,6 @@ export const settingsSchema = z.object({
         scannerProvider: z.string().optional().default("tmdb"),
         // Service toggles
         disableLocalScanning: z.boolean().optional().default(false),
-        disableTorrentStreaming: z.boolean().optional().default(false),
-        disableTorrentProvider: z.boolean().optional().default(false),
         primaryMetadataProvider: z.string().optional().default("tmdb"),
         fanartApiKey: z.string().optional().default(""),
         omdbApiKey: z.string().optional().default(""),
@@ -115,23 +94,6 @@ export const settingsSchema = z.object({
         vcTranslateProvider: z.string().optional().default(""),
         vcTranslateTargetLanguage: z.string().optional().default(""),
     }),
-    torrent: z.object({
-        defaultTorrentClient: z.string().optional().default("none"),
-        qbittorrentPath: z.string().optional().default(""),
-        qbittorrentHost: z.string().optional().default(""),
-        qbittorrentPort: z.number().optional().default(0),
-        qbittorrentUsername: z.string().optional().default(""),
-        qbittorrentPassword: z.string().optional().default(""),
-        qbittorrentTags: z.string().optional().default(""),
-        qbittorrentCategory: z.string().optional().default(""),
-        transmissionPath: z.string().optional().default(""),
-        transmissionHost: z.string().optional().default(""),
-        transmissionPort: z.number().optional().default(0),
-        transmissionUsername: z.string().optional().default(""),
-        transmissionPassword: z.string().optional().default(""),
-        showActiveTorrentCount: z.boolean().optional().default(false),
-        hideTorrentList: z.boolean().optional().default(false),
-    }),
     mediastream: z.object({
         transcodeEnabled: z.boolean().default(false),
         transcodeHwAccel: z.string().default("cpu"),
@@ -141,23 +103,6 @@ export const settingsSchema = z.object({
         transcodeFfmpegPath: z.string().default(""),
         transcodeFfprobePath: z.string().default(""),
         transcodeHwAccelCustomSettings: z.string().default(""),
-    }),
-    torrentstream: z.object({
-        enabled: z.boolean().default(false),
-        autoSelect: z.boolean().default(false),
-        preferredResolution: z.string().default("-"),
-        disableIPV6: z.boolean().default(false),
-        downloadDir: z.string().default(""),
-        addToLibrary: z.boolean().default(false),
-        includeInLibrary: z.boolean().default(false),
-        torrentioUrl: z.string().default(""),
-        cacheLimitGB: z.number().default(5),
-        cachePath: z.string().default(""),
-        torrentClientHost: z.string().default(""),
-        torrentClientPort: z.number().default(43213),
-        streamUrlAddress: z.string().default(""),
-        slowSeeding: z.boolean().default(false),
-        preloadNextStream: z.boolean().default(false),
     }),
     theme: z.object({
         themeAnimeEntryScreenLayout: z.string().min(0).optional(),
@@ -210,15 +155,11 @@ export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>): 
     library: {
         // libraryPath: data.library.libraryPath, // Deprecated in backend schema
         autoUpdateProgress: true,
-
-        torrentProvider: data.library.torrentProvider || DEFAULT_TORRENT_PROVIDER,
-        autoSelectTorrentProvider: "",
         autoScan: false,
         disableAnimeCardTrailers: false,
 
         enableOnlinestream: data.library.enableOnlinestream,
         dohProvider: DEFAULT_DOH_PROVIDER,
-        openTorrentClientOnStart: false,
         openWebURLOnStart: false,
         refreshLibraryOnStart: false,
         autoPlayNextEpisode: false,
@@ -237,9 +178,7 @@ export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>): 
         scannerProvider: data.library.scannerProvider || "tmdb",
         scannerConfig: "",
         disableLocalScanning: data.library.disableLocalScanning,
-        disableTorrentStreaming: data.library.disableTorrentStreaming,
         disableDebridService: true,
-        disableTorrentProvider: data.library.disableTorrentProvider,
         tmdbApiKey: data.library.tmdbApiKey,
         tmdbLanguage: "es-MX",
         primaryMetadataProvider: data.library.primaryMetadataProvider || "tmdb",
@@ -266,23 +205,6 @@ export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>): 
         vcTranslateApiKey: "",
         vcTranslateProvider: "",
         vcTranslateTargetLanguage: "",
-    },
-    torrent: {
-        defaultTorrentClient: data.torrent.defaultTorrentClient || "none",
-        qbittorrentPath: data.torrent.qbittorrentPath || "",
-        qbittorrentHost: data.torrent.qbittorrentHost || "",
-        qbittorrentPort: data.torrent.qbittorrentPort || 0,
-        qbittorrentUsername: data.torrent.qbittorrentUsername || "",
-        qbittorrentPassword: data.torrent.qbittorrentPassword || "",
-        qbittorrentTags: data.torrent.qbittorrentTags || "",
-        qbittorrentCategory: data.torrent.qbittorrentCategory || "",
-        transmissionPath: data.torrent.transmissionPath || "",
-        transmissionHost: data.torrent.transmissionHost || "",
-        transmissionPort: data.torrent.transmissionPort || 0,
-        transmissionUsername: data.torrent.transmissionUsername || "",
-        transmissionPassword: data.torrent.transmissionPassword || "",
-        showActiveTorrentCount: data.torrent.showActiveTorrentCount || false,
-        hideTorrentList: data.torrent.hideTorrentList || false,
     },
     enableTranscode: data.enableTranscode,
 })

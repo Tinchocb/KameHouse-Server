@@ -19,6 +19,7 @@ import (
 	"kamehouse/internal/core"
 	"kamehouse/internal/handlers"
 
+	"github.com/rs/zerolog"
 	"github.com/subosito/gotenv"
 )
 
@@ -38,8 +39,6 @@ func main() {
 		os.Exit(1)
 	}
 }
-
-
 
 func run(ctx context.Context) error {
 	loadEnvFile()
@@ -72,7 +71,7 @@ func run(ctx context.Context) error {
 	e := core.NewEchoApp(app, &WebFS)
 	handlers.InitRoutes(app, e)
 
-	bindHost, bindPort, err := resolveBindableAddress(hostStr, portStrVal, app.Flags.IsDesktopSidecar)
+	bindHost, bindPort, err := resolveBindableAddress(hostStr, portStrVal, app.Flags.IsDesktopSidecar, app.Logger)
 	if err != nil {
 		return err
 	}
@@ -158,7 +157,7 @@ func run(ctx context.Context) error {
 	}
 }
 
-func resolveBindableAddress(host string, port int, isDesktopSidecar bool) (string, int, error) {
+func resolveBindableAddress(host string, port int, isDesktopSidecar bool, logger *zerolog.Logger) (string, int, error) {
 	addr := fmt.Sprintf("%s:%d", host, port)
 
 	// Retry binding to the requested port a few times (helps clear TIME_WAIT from rapid restarts in dev)
@@ -177,7 +176,11 @@ func resolveBindableAddress(host string, port int, isDesktopSidecar bool) (strin
 		}
 
 		if i < maxRetries-1 {
-			log.Printf("Port %d is busy (another instance may be running). Retrying in 1s... (Attempt %d/%d)", port, i+1, maxRetries)
+			logger.Warn().
+				Int("port", port).
+				Int("attempt", i+1).
+				Int("max", maxRetries).
+				Msg("Port is busy (another instance may be running). Retrying in 1s...")
 			time.Sleep(1 * time.Second)
 		}
 	}
@@ -187,7 +190,10 @@ func resolveBindableAddress(host string, port int, isDesktopSidecar bool) (strin
 	}
 
 	// If still busy, log a final warning before falling back to ephemeral port (port 0)
-	log.Printf("WARNING: Port %d is still busy after %d attempts. Falling back to an ephemeral port.", port, maxRetries)
+	logger.Warn().
+		Int("port", port).
+		Int("attempts", maxRetries).
+		Msg("Port is still busy after all attempts. Falling back to an ephemeral port.")
 	l2, err2 := net.Listen("tcp", fmt.Sprintf("%s:%d", host, 0))
 	if err2 != nil {
 		return "", 0, err2

@@ -1,6 +1,7 @@
 import * as React from "react"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
 import { useLocation } from "@tanstack/react-router"
+import { useAppStore } from "@/lib/store"
 
 /**
  * DynamicBackdrop — global fixed layer behind the entire home page.
@@ -26,18 +27,8 @@ export function DynamicBackdrop() {
         location.pathname === "/series/" ||
         location.pathname.startsWith("/settings")
 
-    const [isEnabled] = React.useState(() => {
-        if (typeof window !== "undefined") {
-            return localStorage.getItem("kamehouse:dynamic-backdrop-enabled") !== "false"
-        }
-        return true
-    })
-    const [isMotionEnabled] = React.useState(() => {
-        if (typeof window !== "undefined") {
-            return localStorage.getItem("kamehouse:dynamic-backdrop-motion-disabled") !== "true"
-        }
-        return true
-    })
+    const isEnabled = useAppStore(state => state.dynamicBackdropEnabled)
+    const isMotionEnabled = useAppStore(state => state.dynamicBackdropMotionEnabled)
     const { currentBackdropUrl } = useIntelligenceStore()
     const activeBackdropUrl = isStaticPage ? "/kamehouse-bg.png" : currentBackdropUrl
     // Home uses a more subtle opacity to avoid competing with content

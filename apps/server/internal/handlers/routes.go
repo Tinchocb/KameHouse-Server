@@ -93,7 +93,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 				newCookie.Name = "KameHouse-Client-Id"
 				newCookie.Value = u
 				newCookie.HttpOnly = false
-				newCookie.Expires = time.Now().Add(24 * time.Hour)
+				newCookie.Expires = time.Now().Add(30 * 24 * time.Hour)
 				newCookie.Path = "/"
 				newCookie.Domain = ""
 				newCookie.SameSite = http.SameSiteDefaultMode
@@ -157,7 +157,6 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	h.RegisterStreamingRoutes(v1)
 	h.RegisterSettingsRoutes(v1)
 	h.RegisterLocalRoutes(v1)
-	h.RegisterTorrentClientRoutes(v1)
 
 	// Short link redirector for manual Smart TV casting
 	e.GET("/go", h.HandleCastGo)

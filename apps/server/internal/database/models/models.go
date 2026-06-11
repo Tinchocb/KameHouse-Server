@@ -49,8 +49,6 @@ type Settings struct {
 	BaseModel
 	Library        LibrarySettings        `json:"library" gorm:"embedded;embeddedPrefix:library_"`
 	MediaPlayer    MediaPlayerSettings    `json:"mediaPlayer" gorm:"embedded;embeddedPrefix:media_player_"`
-	Torrent        TorrentSettings        `json:"torrent" gorm:"embedded;embeddedPrefix:torrent_"`
-	Torrentstream  TorrentstreamSettings  `json:"torrentstream" gorm:"embedded;embeddedPrefix:torrentstream_"`
 	Notifications  NotificationSettings   `json:"notifications" gorm:"embedded;embeddedPrefix:notifications_"`
 	Platform       PlatformSettings       `json:"Platform" gorm:"embedded;embeddedPrefix:platform_"`
 	// Separate tables
@@ -96,15 +94,10 @@ type LibrarySettings struct {
 	OmdbApiKey                      string       `gorm:"column:omdb_api_key" json:"omdbApiKey"`
 	OpenSubsApiKey                  string       `gorm:"column:opensubs_api_key" json:"openSubsApiKey"`
 	LastScanAt                      time.Time    `gorm:"column:last_scan_at" json:"lastScanAt"`
-	TorrentProvider                 string       `gorm:"-" json:"torrentProvider"`
 	AutoScan                        bool         `gorm:"-" json:"autoScan"`
-	OpenTorrentClientOnStart        bool         `gorm:"-" json:"openTorrentClientOnStart"`
-	AutoSelectTorrentProvider       string       `gorm:"-" json:"autoSelectTorrentProvider"`
 	EnableOnlinestream              bool         `gorm:"-" json:"enableOnlinestream"`
 	IncludeOnlineStreamingInLibrary bool         `gorm:"-" json:"includeOnlineStreamingInLibrary"`
-	DisableTorrentStreaming         bool         `gorm:"-" json:"disableTorrentStreaming"`
 	DisableDebridService            bool         `gorm:"-" json:"disableDebridService"`
-	DisableTorrentProvider          bool         `gorm:"-" json:"disableTorrentProvider"`
 }
 
 func (s *LibrarySettings) GetAllPaths() []string {
@@ -237,28 +230,6 @@ type MediaPlayerSettings struct {
 
 
 
-type TorrentSettings struct {
-	DefaultTorrentClient   string `gorm:"column:default_torrent_client" json:"defaultTorrentClient"`
-	QbittorrentPath        string `gorm:"column:qbittorrent_path" json:"qbittorrentPath"`
-	QbittorrentHost        string `gorm:"column:qbittorrent_host" json:"qbittorrentHost"`
-	QbittorrentPort        int    `gorm:"column:qbittorrent_port" json:"qbittorrentPort"`
-	QbittorrentUsername    string `gorm:"column:qbittorrent_username" json:"qbittorrentUsername"`
-	QbittorrentPassword    string `gorm:"column:qbittorrent_password" json:"qbittorrentPassword"`
-	QbittorrentTags        string `gorm:"column:qbittorrent_tags" json:"qbittorrentTags"`
-	QbittorrentCategory    string `gorm:"column:qbittorrent_category" json:"qbittorrentCategory"`
-	TransmissionPath       string `gorm:"column:transmission_path" json:"transmissionPath"`
-	TransmissionHost       string `gorm:"column:transmission_host" json:"transmissionHost"`
-	TransmissionPort       int    `gorm:"column:transmission_port" json:"transmissionPort"`
-	TransmissionUsername   string `gorm:"column:transmission_username" json:"transmissionUsername"`
-	TransmissionPassword   string `gorm:"column:transmission_password" json:"transmissionPassword"`
-	ShowActiveTorrentCount bool   `gorm:"column:show_active_torrent_count" json:"showActiveTorrentCount"`
-	HideTorrentList        bool   `gorm:"column:hide_torrent_list" json:"hideTorrentList"`
-}
-
-type TorrentstreamSettings struct {
-	Enabled      bool   `gorm:"column:torrentstream_enabled" json:"enabled"`
-	TorrentioUrl string `gorm:"column:torrentio_url" json:"torrentioUrl"`
-}
 
 
 

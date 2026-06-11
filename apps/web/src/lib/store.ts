@@ -12,6 +12,8 @@ export interface UIState {
     uiSoundsEnabled: boolean
     uiSoundsVolume: number
     globalQueueOpen: boolean
+    dynamicBackdropEnabled: boolean
+    dynamicBackdropMotionEnabled: boolean
     setSidebarOpen: (open: boolean) => void
     setActiveTheme: (theme: string) => void
     setSearchQuery: (query: string) => void
@@ -21,6 +23,8 @@ export interface UIState {
     setUiSoundsEnabled: (enabled: boolean) => void
     setUiSoundsVolume: (volume: number) => void
     setGlobalQueueOpen: (open: boolean) => void
+    setDynamicBackdropEnabled: (enabled: boolean) => void
+    setDynamicBackdropMotionEnabled: (enabled: boolean) => void
 }
 
 import { type ScannerMessage } from "@/lib/server/ws-events"
@@ -73,6 +77,8 @@ export const createUISlice: StateCreator<UIState & PlayerState, [], [], UIState>
     uiSoundsEnabled: true,
     uiSoundsVolume: 1.0,
     globalQueueOpen: false,
+    dynamicBackdropEnabled: true,
+    dynamicBackdropMotionEnabled: true,
     setSidebarOpen: (open) => set({ sidebarOpen: open }),
     setActiveTheme: (theme) => set({ activeTheme: theme }),
     setSearchQuery: (query) => set({ searchQuery: query }),
@@ -82,6 +88,8 @@ export const createUISlice: StateCreator<UIState & PlayerState, [], [], UIState>
     setUiSoundsEnabled: (enabled) => set({ uiSoundsEnabled: enabled }),
     setUiSoundsVolume: (volume) => set({ uiSoundsVolume: volume }),
     setGlobalQueueOpen: (open) => set({ globalQueueOpen: open }),
+    setDynamicBackdropEnabled: (enabled) => set({ dynamicBackdropEnabled: enabled }),
+    setDynamicBackdropMotionEnabled: (enabled) => set({ dynamicBackdropMotionEnabled: enabled }),
 })
 
 export interface PlaylistItem {
@@ -281,6 +289,8 @@ export const useAppStore = create<UIState & PlayerState & ScannerState>()(
                 tvMode: state.tvMode,
                 marathonMode: state.marathonMode,
                 seriesSkipTimes: state.seriesSkipTimes,
+                dynamicBackdropEnabled: state.dynamicBackdropEnabled,
+                dynamicBackdropMotionEnabled: state.dynamicBackdropMotionEnabled,
             }),
         }
     )

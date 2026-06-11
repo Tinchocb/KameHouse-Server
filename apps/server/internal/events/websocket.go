@@ -19,7 +19,6 @@ type WSEventManagerInterface interface {
 	SubscribeToClientNativePlayerEvents(id string) *ClientEventSubscriber
 	SubscribeToClientVideoCoreEvents(id string) *ClientEventSubscriber
 
-	SubscribeToTorrentTelemetryEvents(id string) *ClientEventSubscriber
 	UnsubscribeFromClientEvents(id string)
 }
 
@@ -73,7 +72,6 @@ type (
 		clientNativePlayerEventSubscribers *result.Map[string, *ClientEventSubscriber]
 		clientVideoCoreEventSubscribers    *result.Map[string, *ClientEventSubscriber]
 
-		torrentTelemetrySubscribers *result.Map[string, *ClientEventSubscriber]
 		dispatcher                  Dispatcher
 	}
 
@@ -112,7 +110,6 @@ func NewWSEventManager(logger *zerolog.Logger, dispatcher Dispatcher) *WSEventMa
 		clientEventSubscribers:             result.NewMap[string, *ClientEventSubscriber](),
 		clientNativePlayerEventSubscribers: result.NewMap[string, *ClientEventSubscriber](),
 		clientVideoCoreEventSubscribers:    result.NewMap[string, *ClientEventSubscriber](),
-		torrentTelemetrySubscribers:        result.NewMap[string, *ClientEventSubscriber](),
 		dispatcher:                         dispatcher,
 	}
 
@@ -138,13 +135,14 @@ func NewWSEventManager(logger *zerolog.Logger, dispatcher Dispatcher) *WSEventMa
 	return ret
 }
 
-// ExitIfNoConnsAsDesktopSidecar monitors the websocket connection as a desktop sidecar.
-// It checks for a connection every 5 seconds. If a connection is lost, it starts a countdown a waits for 15 seconds.
-// If a connection is not established within 15 seconds, it will exit the app.
+// Dispatcher returns the event dispatcher.
 func (m *WSEventManager) Dispatcher() Dispatcher {
 	return m.dispatcher
 }
 
+// ExitIfNoConnsAsDesktopSidecar monitors the websocket connection as a desktop sidecar.
+// It checks for a connection every 5 seconds. If a connection is lost, it starts a countdown and waits for 15 seconds.
+// If a connection is not established within 15 seconds, it will exit the app.
 func (m *WSEventManager) ExitIfNoConnsAsDesktopSidecar() {
 	go func() {
 		defer util.HandlePanicInModuleThen("events/ExitIfNoConnsAsDesktopSidecar", func() {})
@@ -367,13 +365,6 @@ func (m *WSEventManager) SubscribeToClientVideoCoreEvents(id string) *ClientEven
 	return subscriber
 }
 
-func (m *WSEventManager) SubscribeToTorrentTelemetryEvents(id string) *ClientEventSubscriber {
-	subscriber := &ClientEventSubscriber{
-		Channel: make(chan *WebsocketClientEvent, 100),
-	}
-	m.torrentTelemetrySubscribers.Set(id, subscriber)
-	return subscriber
-}
 
 func (m *WSEventManager) UnsubscribeFromClientEvents(id string) {
 	m.eventMu.Lock()
@@ -400,10 +391,7 @@ func (m *WSEventManager) UnsubscribeFromClientEvents(id string) {
 		m.clientVideoCoreEventSubscribers.Delete(id)
 		toClose = append(toClose, s)
 	}
-	if s, found := m.torrentTelemetrySubscribers.Get(id); found {
-		m.torrentTelemetrySubscribers.Delete(id)
-		toClose = append(toClose, s)
-	}
+
 
 	for _, subscriber := range toClose {
 		subscriber.mu.Lock()

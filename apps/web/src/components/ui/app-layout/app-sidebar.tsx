@@ -12,7 +12,9 @@ import { useSound } from "@/hooks/use-sound"
 import { BackgroundMusicPlayer } from "./background-music"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { fetchAnimeEntry } from "@/api/hooks/anime_entries.hooks"
-import { VideoPlayer } from "@/components/video/player"
+const VideoPlayer = React.lazy(() =>
+    import("@/components/video/player").then((m) => ({ default: m.VideoPlayer }))
+)
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
 
@@ -410,21 +412,23 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
             {/* Video Player overlay */}
             <AnimatePresence>
                 {playTarget && (
-                    <VideoPlayer
-                        streamUrl={playTarget.path}
-                        streamType={playTarget.streamType}
-                        title={playTarget.title}
-                        episodeLabel={playTarget.episodeLabel}
-                        episodeNumber={playTarget.episodeNumber}
-                        mediaId={playTarget.mediaId}
-                        malId={playTarget.malId}
-                        onClose={() => {
-                            setPlayTarget(null);
-                            setTvMode(false);
-                        }}
-                        onNextEpisode={() => playTvModeNext(playTarget.mediaId, playTarget.episodeNumber)}
-                        hasNextEpisode={true}
-                    />
+                    <React.Suspense fallback={null}>
+                        <VideoPlayer
+                            streamUrl={playTarget.path}
+                            streamType={playTarget.streamType}
+                            title={playTarget.title}
+                            episodeLabel={playTarget.episodeLabel}
+                            episodeNumber={playTarget.episodeNumber}
+                            mediaId={playTarget.mediaId}
+                            malId={playTarget.malId}
+                            onClose={() => {
+                                setPlayTarget(null);
+                                setTvMode(false);
+                            }}
+                            onNextEpisode={() => playTvModeNext(playTarget.mediaId, playTarget.episodeNumber)}
+                            hasNextEpisode={true}
+                        />
+                    </React.Suspense>
                 )}
             </AnimatePresence>
         </div>

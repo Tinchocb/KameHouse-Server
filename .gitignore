@@ -35,6 +35,7 @@ out/
 build/
 bin/
 *.exe
+*.exe~
 *.tsbuildinfo
 apps/web/.next/
 apps/web/.tanstack/

@@ -267,5 +267,3 @@ func (h *Handler) HandleResolveUnlinkedFile(c echo.Context) error {
 	}
 	return h.RespondWithData(c, map[string]any{"ok": true})
 }
-
-

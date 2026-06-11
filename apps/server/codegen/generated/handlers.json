@@ -842,7 +842,29 @@
     "name": "HandleSamsungDiscover",
     "trimmedName": "SamsungDiscover",
     "comments": [
-      "HandleSamsungDiscover scans the local network for Tizen Smart TVs",
+      "HandleSamsungDiscover scans the local network for Tizen Smart TVs using SSDP",
+      "and falls back to HTTP health checks for previously paired TVs.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast.go",
+    "filename": "cast.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "HandleSamsungPing",
+    "trimmedName": "SamsungPing",
+    "comments": [
+      "HandleSamsungPing checks if a specific Samsung TV is reachable via HTTP.",
       ""
     ],
     "filepath": "internal/handlers/cast.go",
@@ -863,50 +885,7 @@
     "name": "HandleSamsungPaired",
     "trimmedName": "SamsungPaired",
     "comments": [
-      "HandleSamsungPaired returns the list of previously paired Samsung TVs",
-      ""
-    ],
-    "filepath": "internal/handlers/cast.go",
-    "filename": "cast.go",
-    "api": {
-      "summary": "",
-      "descriptions": [],
-      "endpoint": "",
-      "methods": null,
-      "params": [],
-      "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "HandleCastPlayer",
-    "trimmedName": "CastPlayer",
-    "comments": [
-      "HandleCastPlayer serves a minimal HTML5 video player page for Smart TVs",
-      "The TV browser opens this page to play the stream directly.",
-      ""
-    ],
-    "filepath": "internal/handlers/cast.go",
-    "filename": "cast.go",
-    "api": {
-      "summary": "",
-      "descriptions": [],
-      "endpoint": "",
-      "methods": null,
-      "params": [],
-      "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "HandleCastGo",
-    "trimmedName": "CastGo",
-    "comments": [
-      "HandleCastGo redirects to the last cast URL for easy manual TV entry",
+      "HandleSamsungPaired returns the list of previously paired Samsung TVs.",
       ""
     ],
     "filepath": "internal/handlers/cast.go",
@@ -927,11 +906,629 @@
     "name": "HandleSamsungLaunch",
     "trimmedName": "SamsungLaunch",
     "comments": [
-      "HandleSamsungLaunch launches a URL on Tizen browser via WebSocket",
+      "HandleSamsungLaunch launches a URL on a TV (via DLNA if supported, otherwise falling back to Samsung WebSocket browser launch).",
       ""
     ],
     "filepath": "internal/handlers/cast.go",
     "filename": "cast.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "getSSDPHeader",
+    "trimmedName": "getSSDPHeader",
+    "comments": [
+      "Helper to extract a header value from SSDP response",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_discovery.go",
+    "filename": "cast_discovery.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "resolveDLNADevice",
+    "trimmedName": "resolveDLNADevice",
+    "comments": [
+      "resolveDLNADevice fetches and parses the device description XML to find friendly name and AVTransport control URL.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_discovery.go",
+    "filename": "cast_discovery.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "discoverSamsungTVs",
+    "trimmedName": "discoverSamsungTVs",
+    "comments": [
+      "discoverSamsungTVs performs SSDP multicast discovery across all network interfaces",
+      "to find Samsung Smart TVs and generic DLNA Media Renderers on the local network.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_discovery.go",
+    "filename": "cast_discovery.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "scanInterfaceForTVs",
+    "trimmedName": "scanInterfaceForTVs",
+    "comments": [
+      "scanInterfaceForTVs sends SSDP M-SEARCH packets from a specific local IP",
+      "and collects DLNA Media Renderer / Samsung TV responses.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_discovery.go",
+    "filename": "cast_discovery.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "isCastableDeviceResponse",
+    "trimmedName": "isCastableDeviceResponse",
+    "comments": [
+      "isCastableDeviceResponse checks if an SSDP response belongs to a Samsung TV or DLNA Media Renderer.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_discovery.go",
+    "filename": "cast_discovery.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "enrichWithPairedTVs",
+    "trimmedName": "enrichWithPairedTVs",
+    "comments": [
+      "enrichWithPairedTVs checks previously paired TVs via HTTP and adds any",
+      "that are online but were missed by SSDP discovery.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_discovery.go",
+    "filename": "cast_discovery.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "loadPairedTVs",
+    "trimmedName": "loadPairedTVs",
+    "comments": [
+      "loadPairedTVs reads all previously paired TVs from the token file.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_discovery.go",
+    "filename": "cast_discovery.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "fetchTVInfo",
+    "trimmedName": "fetchTVInfo",
+    "comments": [
+      "fetchTVInfo queries the Samsung TV HTTP API for its name and MAC addresses.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_discovery.go",
+    "filename": "cast_discovery.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "isTVReachable",
+    "trimmedName": "isTVReachable",
+    "comments": [
+      "isTVReachable performs a quick HTTP health check against the TV's API.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_discovery.go",
+    "filename": "cast_discovery.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "containsIP",
+    "trimmedName": "containsIP",
+    "comments": [
+      "containsIP checks if a device list already contains a TV with the given IP.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_discovery.go",
+    "filename": "cast_discovery.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "FetchDLNADeviceInfo",
+    "trimmedName": "FetchDLNADeviceInfo",
+    "comments": [
+      "FetchDLNADeviceInfo retrieves and parses the device description XML from a LOCATION URL.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_dlna.go",
+    "filename": "cast_dlna.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "ResolveURL",
+    "trimmedName": "ResolveURL",
+    "comments": [
+      "ResolveURL helper resolves relative URLs based on the base location URL.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_dlna.go",
+    "filename": "cast_dlna.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "BuildDIDLMetadata",
+    "trimmedName": "BuildDIDLMetadata",
+    "comments": [
+      "BuildDIDLMetadata generates escaped DIDL-Lite metadata for media player renderers.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_dlna.go",
+    "filename": "cast_dlna.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "SendDLNASOAPAction",
+    "trimmedName": "SendDLNASOAPAction",
+    "comments": [
+      "SendDLNASOAPAction sends a SOAP XML request to the DLNA renderer.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_dlna.go",
+    "filename": "cast_dlna.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "DLNASetAVTransportURI",
+    "trimmedName": "DLNASetAVTransportURI",
+    "comments": [
+      "DLNASetAVTransportURI sends the media URL to the DLNA renderer.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_dlna.go",
+    "filename": "cast_dlna.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "DLNAPlay",
+    "trimmedName": "DLNAPlay",
+    "comments": [
+      "DLNAPlay sends the play command to the DLNA renderer.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_dlna.go",
+    "filename": "cast_dlna.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "DLNAStop",
+    "trimmedName": "DLNAStop",
+    "comments": [
+      "DLNAStop sends the stop command to the DLNA renderer.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_dlna.go",
+    "filename": "cast_dlna.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "HandleCastPlayer",
+    "trimmedName": "CastPlayer",
+    "comments": [
+      "HandleCastPlayer serves a minimal HTML5 video player page for Smart TVs.",
+      "The TV browser opens this page to play the stream directly.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_player.go",
+    "filename": "cast_player.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "HandleCastGo",
+    "trimmedName": "CastGo",
+    "comments": [
+      "HandleCastGo redirects to the last cast URL for easy manual TV entry.",
+      "Users can bookmark this URL on their TV browser for instant playback.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_player.go",
+    "filename": "cast_player.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "buildPlayerHTML",
+    "trimmedName": "buildPlayerHTML",
+    "comments": [
+      "buildPlayerHTML returns the \u003cvideo\u003e tag and player script for the given stream URL.",
+      "HLS streams use HLS.js; direct files use native \u003cvideo\u003e.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_player.go",
+    "filename": "cast_player.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "sendWakeOnLAN",
+    "trimmedName": "sendWakeOnLAN",
+    "comments": [
+      "sendWakeOnLAN sends a magic packet to wake a TV from standby.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_samsung.go",
+    "filename": "cast_samsung.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "connectToTV",
+    "trimmedName": "connectToTV",
+    "comments": [
+      "connectToTV establishes a WebSocket connection to the Samsung TV.",
+      "It tries WSS (port 8002) first, then falls back to WS (port 8001),",
+      "and finally attempts Wake-on-LAN if the TV is unreachable.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_samsung.go",
+    "filename": "cast_samsung.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "connectWithWoL",
+    "trimmedName": "connectWithWoL",
+    "comments": [
+      "connectWithWoL sends WoL packets and retries the WebSocket connection.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_samsung.go",
+    "filename": "cast_samsung.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "getMACsForTV",
+    "trimmedName": "getMACsForTV",
+    "comments": [
+      "getMACsForTV reads stored MAC addresses for a given TV IP.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_samsung.go",
+    "filename": "cast_samsung.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "waitForAuthorization",
+    "trimmedName": "waitForAuthorization",
+    "comments": [
+      "waitForAuthorization reads WebSocket messages until the TV authorizes or rejects the connection.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_samsung.go",
+    "filename": "cast_samsung.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "fetchInstalledApps",
+    "trimmedName": "fetchInstalledApps",
+    "comments": [
+      "fetchInstalledApps requests the list of installed apps from the TV.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_samsung.go",
+    "filename": "cast_samsung.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "findBrowserAppID",
+    "trimmedName": "findBrowserAppID",
+    "comments": [
+      "findBrowserAppID determines the correct browser app ID from installed apps.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_samsung.go",
+    "filename": "cast_samsung.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "sendLaunchCommands",
+    "trimmedName": "sendLaunchCommands",
+    "comments": [
+      "sendLaunchCommands tries multiple strategies to open the browser on the TV.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_samsung.go",
+    "filename": "cast_samsung.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "launchURLOnSamsungTV",
+    "trimmedName": "launchURLOnSamsungTV",
+    "comments": [
+      "launchURLOnSamsungTV connects to the TV via WebSocket, authorizes,",
+      "detects the browser app, and launches the target URL.",
+      ""
+    ],
+    "filepath": "internal/handlers/cast_samsung.go",
+    "filename": "cast_samsung.go",
     "api": {
       "summary": "",
       "descriptions": [],
@@ -3532,15 +4129,6 @@
           "descriptions": []
         },
         {
-          "name": "Torrent",
-          "jsonName": "torrent",
-          "goType": "models.TorrentSettings",
-          "usedStructType": "models.TorrentSettings",
-          "typescriptType": "Models_TorrentSettings",
-          "required": true,
-          "descriptions": []
-        },
-        {
           "name": "EnableTranscode",
           "jsonName": "enableTranscode",
           "goType": "bool",
@@ -3601,24 +4189,6 @@
           "goType": "models.MediaPlayerSettings",
           "usedStructType": "models.MediaPlayerSettings",
           "typescriptType": "Models_MediaPlayerSettings",
-          "required": false,
-          "descriptions": []
-        },
-        {
-          "name": "Torrent",
-          "jsonName": "torrent",
-          "goType": "models.TorrentSettings",
-          "usedStructType": "models.TorrentSettings",
-          "typescriptType": "Models_TorrentSettings",
-          "required": false,
-          "descriptions": []
-        },
-        {
-          "name": "Torrentstream",
-          "jsonName": "torrentstream",
-          "goType": "models.TorrentstreamSettings",
-          "usedStructType": "models.TorrentstreamSettings",
-          "typescriptType": "Models_TorrentstreamSettings",
           "required": false,
           "descriptions": []
         },

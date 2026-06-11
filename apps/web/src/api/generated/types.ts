@@ -486,6 +486,15 @@ export type AudioStreamInfo = {
 }
 
 /**
+ * - Filepath: internal/database/models/dto/media_metadata.go
+ * - Filename: media_metadata.go
+ * - Package: dto
+ * @description
+ *  EpisodeType defines the classification of an episode.
+ */
+export type EpisodeType = "Canon" | "Filler" | "Hyped"
+
+/**
  * - Filepath: internal/database/models/dto/localfile.go
  * - Filename: localfile.go
  * - Package: dto
@@ -624,6 +633,10 @@ export type LocalFileMetadata = {
     episodes?: Array<number>
     aniDBEpisode: string
     type: LocalFileType
+    /**
+     * Canon, Filler, Hyped
+     */
+    episodeType?: EpisodeType
     episode: number
 }
 
@@ -1508,15 +1521,10 @@ export type Models_LibrarySettings = {
     omdbApiKey: string
     openSubsApiKey: string
     lastScanAt?: string
-    torrentProvider: string
     autoScan: boolean
-    openTorrentClientOnStart: boolean
-    autoSelectTorrentProvider: string
     enableOnlinestream: boolean
     includeOnlineStreamingInLibrary: boolean
-    disableTorrentStreaming: boolean
     disableDebridService: boolean
-    disableTorrentProvider: boolean
 }
 
 /**
@@ -1609,8 +1617,6 @@ export type Models_PlatformSettings = {
 export type Models_Settings = {
     library: Models_LibrarySettings
     mediaPlayer: Models_MediaPlayerSettings
-    torrent: Models_TorrentSettings
-    torrentstream: Models_TorrentstreamSettings
     notifications: Models_NotificationSettings
     Platform: Models_PlatformSettings
     mediastream?: Models_MediastreamSettings
@@ -1635,39 +1641,6 @@ export type Models_Theme = {
     id: number
     createdAt?: string
     updatedAt?: string
-}
-
-/**
- * - Filepath: internal/database/models/models.go
- * - Filename: models.go
- * - Package: models
- */
-export type Models_TorrentSettings = {
-    defaultTorrentClient: string
-    qbittorrentPath: string
-    qbittorrentHost: string
-    qbittorrentPort: number
-    qbittorrentUsername: string
-    qbittorrentPassword: string
-    qbittorrentTags: string
-    qbittorrentCategory: string
-    transmissionPath: string
-    transmissionHost: string
-    transmissionPort: number
-    transmissionUsername: string
-    transmissionPassword: string
-    showActiveTorrentCount: boolean
-    hideTorrentList: boolean
-}
-
-/**
- * - Filepath: internal/database/models/models.go
- * - Filename: models.go
- * - Package: models
- */
-export type Models_TorrentstreamSettings = {
-    enabled: boolean
-    torrentioUrl: string
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -8,7 +8,6 @@ import { cn } from "@/components/ui/core/styling"
 import { Field, Form } from "@/components/ui/form"
 import { useAppStore } from "@/lib/store"
 import {
-    DEFAULT_TORRENT_PROVIDER,
     getDefaultIinaSocket,
     getDefaultMpvSocket,
     getDefaultSettings,
@@ -22,7 +21,7 @@ import { FaBook, FaDiscord } from "react-icons/fa"
 import { HiEye, HiGlobeAlt, HiServerStack } from "react-icons/hi2"
 import { LuSparkles } from "react-icons/lu"
 import { MdOutlineBroadcastOnHome } from "react-icons/md"
-import { SiMpv, SiQbittorrent, SiTransmission, SiVlcmediaplayer } from "react-icons/si"
+import { SiMpv, SiVlcmediaplayer } from "react-icons/si"
 import { IoPlayForwardCircleSharp } from "react-icons/io5"
 import { HiOutlineDesktopComputer } from "react-icons/hi"
 import { ImDownload } from "react-icons/im"
@@ -315,35 +314,16 @@ export function GettingStarted({ status }: { status: Status }) {
                             iinaSocket: "",
                         },
                         library: {
-                            torrentProvider: "",
                             enableOnlinestream: false,
                             enableRichPresence: false,
                             enableWatchContinuity: true,
                             seriesPaths: [],
                             moviePaths: [],
                             disableLocalScanning: false,
-                            disableTorrentStreaming: true,
-                            disableTorrentProvider: true,
                             tmdbApiKey: "",
                             scannerProvider: "tmdb",
                             primaryMetadataProvider: "tmdb",
                         },
-                        torrent: {
-                            defaultTorrentClient: "none",
-                            qbittorrentPath: "",
-                            qbittorrentHost: "127.0.0.1",
-                            qbittorrentPort: 8081,
-                            qbittorrentUsername: "",
-                            qbittorrentPassword: "",
-                            transmissionPath: "",
-                            transmissionHost: "127.0.0.1",
-                            transmissionPort: 9091,
-                            transmissionUsername: "",
-                            transmissionPassword: "",
-                            showActiveTorrentCount: false,
-                            hideTorrentList: true,
-                        },
-                        enableTorrentStreaming: false,
                         enableTranscode: false,
                         debridProvider: "none",
                         debridApiKey: "",

@@ -14,13 +14,15 @@ import { AnimatePresence } from "framer-motion"
 const CommandPalette = React.lazy(() =>
     import("@/components/ui/search/command-palette").then((m) => ({ default: m.CommandPalette }))
 )
+const VideoPlayer = React.lazy(() =>
+    import("@/components/video/player").then((m) => ({ default: m.VideoPlayer }))
+)
 import { useRouterState } from "@tanstack/react-router"
 import { PageTransition } from "@/components/shared/page-transition"
 import { FaBars } from "react-icons/fa"
 import { useAppStore } from "@/lib/store"
 import { DynamicBackdrop } from "@/components/shared/dynamic-backdrop"
 import { PerformanceMonitor } from "@/components/shared/performance-monitor"
-import { VideoPlayer } from "@/components/video/player"
 import { useGetStatus } from "@/api/hooks/settings.hooks"
 import { GettingStarted } from "@/components/shared/getting-started"
 import { GlobalQueueSidebar } from "@/components/shared/global-queue-sidebar"
@@ -33,9 +35,14 @@ function RootComponent() {
     const currentQueueIndex = useAppStore(state => state.currentQueueIndex)
     const setCurrentQueueIndex = useAppStore(state => state.setCurrentQueueIndex)
     const clearQueue = useAppStore(state => state.clearQueue)
+    const activeTheme = useAppStore(state => state.activeTheme)
 
     const sidebarOpen = useAppStore(state => state.sidebarOpen)
     const { data: status, isLoading } = useGetStatus()
+
+    React.useEffect(() => {
+        document.documentElement.dataset.theme = activeTheme || "dark"
+    }, [activeTheme])
 
     if (isLoading || !status) {
         return <LoadingOverlayWithLogo />
@@ -76,30 +83,32 @@ function RootComponent() {
             <AppBottomNav />
 
             {activeQueuePlayItem && (
-                <VideoPlayer
-                    streamUrl={activeQueuePlayItem.playableUrl}
-                    streamType="direct"
-                    title={activeQueuePlayItem.title}
-                    episodeLabel={activeQueuePlayItem.subtitle}
-                    episodeNumber={activeQueuePlayItem.episodeNumber}
-                    mediaId={activeQueuePlayItem.mediaId}
-                    malId={activeQueuePlayItem.malId}
-                    mediaFormat={activeQueuePlayItem.mediaFormat}
-                    onNextEpisode={() => {
-                        const nextIdx = currentQueueIndex + 1;
-                        if (nextIdx < playlistQueue.length) {
-                            setCurrentQueueIndex(nextIdx);
-                        } else {
-                            clearQueue();
-                        }
-                    }}
-                    hasNextEpisode={currentQueueIndex + 1 < playlistQueue.length}
-                    onClose={() => {
-                        startViewTransition(() => {
-                            useAppStore.setState({ activeQueuePlayItem: null, currentQueueIndex: -1 });
-                        })
-                    }}
-                />
+                <React.Suspense fallback={null}>
+                    <VideoPlayer
+                        streamUrl={activeQueuePlayItem.playableUrl}
+                        streamType="direct"
+                        title={activeQueuePlayItem.title}
+                        episodeLabel={activeQueuePlayItem.subtitle}
+                        episodeNumber={activeQueuePlayItem.episodeNumber}
+                        mediaId={activeQueuePlayItem.mediaId}
+                        malId={activeQueuePlayItem.malId}
+                        mediaFormat={activeQueuePlayItem.mediaFormat}
+                        onNextEpisode={() => {
+                            const nextIdx = currentQueueIndex + 1;
+                            if (nextIdx < playlistQueue.length) {
+                                setCurrentQueueIndex(nextIdx);
+                            } else {
+                                clearQueue();
+                            }
+                        }}
+                        hasNextEpisode={currentQueueIndex + 1 < playlistQueue.length}
+                        onClose={() => {
+                            startViewTransition(() => {
+                                useAppStore.setState({ activeQueuePlayItem: null, currentQueueIndex: -1 });
+                            })
+                        }}
+                    />
+                </React.Suspense>
             )}
         </AppLayout>
     )

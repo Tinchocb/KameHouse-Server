@@ -33,21 +33,9 @@ type (
 	}
 
 	FlagsConfig struct {
-		EnableTorrentClientTests bool `mapstructure:"enable_torrent_client_tests"`
-		EnableTorrentstreamTests bool `mapstructure:"enable_torrentstream_tests"`
 	}
 
 	ProviderConfig struct {
-		QbittorrentHost      string `mapstructure:"qbittorrent_host"`
-		QbittorrentPort      int    `mapstructure:"qbittorrent_port"`
-		QbittorrentUsername  string `mapstructure:"qbittorrent_username"`
-		QbittorrentPassword  string `mapstructure:"qbittorrent_password"`
-		QbittorrentPath      string `mapstructure:"qbittorrent_path"`
-		TransmissionHost     string `mapstructure:"transmission_host"`
-		TransmissionPort     int    `mapstructure:"transmission_port"`
-		TransmissionPath     string `mapstructure:"transmission_path"`
-		TransmissionUsername string `mapstructure:"transmission_username"`
-		TransmissionPassword string `mapstructure:"transmission_password"`
 		MpcHost              string `mapstructure:"mpc_host"`
 		MpcPort              int    `mapstructure:"mpc_port"`
 		MpcPath              string `mapstructure:"mpc_path"`
@@ -72,19 +60,6 @@ type (
 
 	FlagFunc func() bool
 )
-
-
-
-func TorrentClient() FlagFunc {
-	return func() bool {
-		return ConfigData.Flags.EnableTorrentClientTests
-	}
-}
-func Torrentstream() FlagFunc {
-	return func() bool {
-		return ConfigData.Flags.EnableTorrentstreamTests
-	}
-}
 
 // InitTestProvider populates the ConfigData and skips the test if the given flags are not set
 func InitTestProvider(t *testing.T, args ...FlagFunc) {
