@@ -1,7 +1,7 @@
 import { Models_Theme } from "@/api/generated/types"
 
 import React from "react"
-import { useWindowSize } from "react-use"
+
 
 export const enum ThemeLibraryScreenBannerType {
     Dynamic = "dynamic",
@@ -172,7 +172,9 @@ export function useThemeSettings(): ThemeSettingsHook {
 
 
 
+import { useResponsive } from "@/hooks/use-responsive"
+
 export function useIsMobile(): { isMobile: boolean } {
-    const { width } = useWindowSize()
-    return { isMobile: React.useMemo(() => width < 1024, [width]) }
+    const { isMobile, isTablet } = useResponsive()
+    return { isMobile: isMobile || isTablet }
 }

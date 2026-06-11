@@ -9,6 +9,7 @@ import { FaBook, FaCog, FaHome, FaFilm, FaTv, FaMoon, FaDownload, FaLayerGroup, 
 import { cn } from "../core/styling"
 import { RandomPlayButton } from "./random-play-button"
 import { useSound } from "@/hooks/use-sound"
+import { useResponsive } from "@/hooks/use-responsive"
 import { BackgroundMusicPlayer } from "./background-music"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { fetchAnimeEntry } from "@/api/hooks/anime_entries.hooks"
@@ -34,16 +35,7 @@ export function AppSidebar() {
     const sidebarOpen = useAppStore(state => state.sidebarOpen)
     const setSidebarOpen = useAppStore(state => state.setSidebarOpen)
     const isFullscreen = useAppStore(state => state.isFullscreen)
-    const [isMobile, setIsMobile] = React.useState(false)
-
-    React.useEffect(() => {
-        const checkMobile = () => {
-            setIsMobile(window.innerWidth < 768) // 768px is the 'md' breakpoint
-        }
-        checkMobile()
-        window.addEventListener("resize", checkMobile)
-        return () => window.removeEventListener("resize", checkMobile)
-    }, [])
+    const { isMobile } = useResponsive()
 
     if (isFullscreen) return null
 

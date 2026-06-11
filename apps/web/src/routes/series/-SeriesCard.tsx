@@ -3,6 +3,7 @@ import { Play } from 'lucide-react';
 import { DeferredImage } from '@/components/shared/deferred-image';
 import { cn } from '@/components/ui/core/styling';
 import { useSound } from '@/hooks/use-sound';
+import { useResponsive } from '@/hooks/use-responsive';
 
 export interface SeriesItem {
     id: number
@@ -32,6 +33,7 @@ export const SeriesCard = memo(function SeriesCard({
     onSelect: (id: number) => void
 }) {
     const { playSound } = useSound();
+    const { isMobile, isTablet } = useResponsive();
     return (
         <div
             onClick={() => {
@@ -46,7 +48,9 @@ export const SeriesCard = memo(function SeriesCard({
                 onNavigate(item?.id?.toString() || "");
             }}
             style={{
-                flex: isSelected ? '4 0 25%' : '1 0 160px',
+                flex: isSelected
+                    ? (isMobile ? '1 0 82%' : (isTablet ? '1 0 60%' : '4 0 25%'))
+                    : (isMobile ? '0 0 52px' : (isTablet ? '0 0 80px' : '1 0 160px')),
                 transition: 'flex 550ms cubic-bezier(0.16, 1, 0.3, 1)',
                 willChange: "flex-grow",
                 '--tape-color': getVhsColor(item.id)
@@ -187,7 +191,7 @@ export const SeriesCard = memo(function SeriesCard({
                     )}
                 >
                     {/* --- LADO IZQUIERDO: Carrete e Identificación VHS --- */}
-                    <div className="flex items-center gap-4">
+                    <div className="hidden lg:flex items-center gap-4">
                         {/* Carrete Izquierdo Animado */}
                         <div className="relative w-14 h-14 rounded-full bg-black/90 border border-zinc-800 shadow-[inset_0_4px_8px_rgba(0,0,0,0.8)] flex items-center justify-center shrink-0">
                             <div className="w-full h-full animate-spin-slow flex items-center justify-center">
@@ -214,10 +218,10 @@ export const SeriesCard = memo(function SeriesCard({
                     </div>
 
                     {/* Separador Izquierdo */}
-                    <div className="h-12 w-[1px] bg-zinc-800/80 mx-2" />
+                    <div className="hidden lg:block h-12 w-[1px] bg-zinc-800/80 mx-2" />
 
                     {/* --- CENTRO: Label Card en Crema --- */}
-                    <div className="flex-1 max-w-xl mx-4 bg-[#fbf9f1] text-[#1c1917] h-[98px] rounded shadow-[0_4px_15px_rgba(0,0,0,0.55),inset_0_1px_2px_rgba(255,255,255,0.9)] border border-amber-950/10 p-3.5 flex justify-between items-center relative overflow-hidden">
+                    <div className="flex-1 max-w-xl mx-1 md:mx-4 bg-[#fbf9f1] text-[#1c1917] h-[98px] rounded shadow-[0_4px_15px_rgba(0,0,0,0.55),inset_0_1px_2px_rgba(255,255,255,0.9)] border border-amber-950/10 p-3.5 flex justify-between items-center relative overflow-hidden">
                         {/* Textura de papel crema mate */}
                         <div className="absolute inset-0 opacity-[0.06] bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] mix-blend-multiply pointer-events-none" />
                         
@@ -241,7 +245,7 @@ export const SeriesCard = memo(function SeriesCard({
                         {/* Código de Barras y Año */}
                         <div className="flex flex-col items-end justify-between h-full shrink-0 pl-4 border-l border-zinc-200/80">
                             {/* Código de Barras SVG */}
-                            <svg className="w-16 h-8 text-zinc-950" viewBox="0 0 100 40" fill="currentColor">
+                            <svg className="hidden md:block w-16 h-8 text-zinc-950" viewBox="0 0 100 40" fill="currentColor">
                                 <rect x="0" y="0" width="3" height="40" />
                                 <rect x="5" y="0" width="1" height="40" />
                                 <rect x="8" y="0" width="4" height="40" />
@@ -277,10 +281,10 @@ export const SeriesCard = memo(function SeriesCard({
                     </div>
 
                     {/* Separador Derecho */}
-                    <div className="h-12 w-[1px] bg-zinc-800/80 mx-2" />
+                    <div className="hidden lg:block h-12 w-[1px] bg-zinc-800/80 mx-2" />
 
                     {/* --- LADO DERECHO: Badges y Carrete Derecho --- */}
-                    <div className="flex items-center gap-4">
+                    <div className="hidden lg:flex items-center gap-4">
                         {/* Badges tipo Píldora stacked */}
                         <div className="flex flex-col gap-1.5 justify-center items-end">
                             <div className="bg-[#bc0054] text-white text-[8px] font-black uppercase px-2.5 py-0.5 rounded-full tracking-widest text-center shadow-sm select-none" style={{ fontFamily: "'Space Mono', monospace" }}>
@@ -314,99 +318,100 @@ export const SeriesCard = memo(function SeriesCard({
                         !isSelected ? "opacity-100 scale-100 pointer-events-auto" : "opacity-0 scale-95 pointer-events-none"
                     )}
                 >
-                    {/* Tornillos laterales colapsados en los bordes */}
-                    <div className="absolute left-[-7px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-gradient-to-br from-zinc-600 via-zinc-700 to-zinc-900 border border-zinc-950 shadow-inner flex items-center justify-center opacity-40 shrink-0 z-20">
-                        <div className="absolute w-2.5 h-[1.5px] bg-zinc-950 rotate-[35deg]" />
-                    </div>
-
-                    <div
-                        className={cn(
-                            "h-[114px] relative flex flex-col rounded shadow-[3px_5px_12px_rgba(0,0,0,0.65),inset_0_1px_1.5px_rgba(255,255,255,0.3)] overflow-hidden transition-all duration-400 ease-out shrink-0",
-                            "w-[calc(100%-10px)] mx-auto bg-[#fbf9f1] border border-black/10"
-                        )}
-                    >
-                        {/* Textura de papel mate granulado sobre el color crema */}
-                        <div className="absolute inset-0 opacity-[0.06] bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] mix-blend-multiply pointer-events-none" />
-                        {/* Brillo 3D sutil arriba */}
-                        <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-b from-white/20 to-transparent pointer-events-none z-10" />
-                        
-                        {/* Cabecera del Sticker Oscura */}
-                        <div className="relative z-10 bg-[#0d0d0d] flex items-center justify-between px-1.5 py-1 select-none border-b border-black/20">
-                            <span className="font-extrabold text-[#ff6e3a] text-[8px] uppercase tracking-wider leading-none" style={{ fontFamily: "'Space Mono', monospace" }}>
-                               KAME-VHS
-                            </span>
-                            <div className="flex items-center gap-1">
-                                <span className="text-[7px] font-bold text-zinc-500 leading-none" style={{ fontFamily: "'Space Mono', monospace" }}>
-                                    HG
-                                </span>
+                    {(isMobile || isTablet) ? (
+                        <div className="w-full h-full flex flex-col items-center justify-center relative select-none">
+                            {/* Un sticker vertical muy minimalista con el número de la cinta */}
+                            <div className="h-[90px] w-5 rounded bg-[#fbf9f1] border border-black/10 flex flex-col items-center justify-between py-2 shadow-inner">
+                                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: getVhsColor(item.id) }} />
                                 <span 
-                                    className="text-[7px] font-black px-1.5 py-0.5 text-white rounded-full leading-none shrink-0" 
-                                    style={{ 
-                                        fontFamily: "'Space Mono', monospace",
-                                        backgroundColor: getVhsColor(item.id)
-                                    }}
-                                >
-                                    T-128
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Bloque Crema de la etiqueta (mismo formato que expandido) */}
-                        <div className="relative flex-1 text-[#1c1917] p-1.5 flex flex-col justify-between overflow-hidden">
-                            {/* Metadata en Space Mono */}
-                            <div 
-                                className="text-[6px] text-zinc-400 font-bold uppercase tracking-wider flex justify-between items-center select-none"
-                                style={{ fontFamily: "'Space Mono', monospace" }}
-                            >
-                                <span>COLLECTION</span>
-                                <span>#{String(item.id % 100).padStart(2, '0')}</span>
-                            </div>
-
-                            {/* Título en Cormorant Garamond italic, horizontal y centrado */}
-                            <div className="flex-1 flex items-center justify-center min-w-0 py-0.5">
-                                <span 
-                                    className="font-serif italic text-zinc-900 leading-tight text-center font-light break-words w-full"
-                                    style={{ 
-                                        fontFamily: "'Cormorant Garamond', serif",
-                                        fontSize: item.title.length > 15 ? '10px' : '11px'
-                                    }}
-                                >
-                                    {item.title}
-                                </span>
-                            </div>
-
-                            {/* Barcode y Año en la parte inferior */}
-                            <div className="flex items-center justify-between pt-1 border-t border-zinc-200/60 gap-1">
-                                {/* Barcode SVG miniaturizado */}
-                                <svg className="w-8 h-4 text-zinc-950 shrink-0" viewBox="0 0 100 40" fill="currentColor">
-                                    <rect x="0" y="0" width="3" height="40" />
-                                    <rect x="8" y="0" width="4" height="40" />
-                                    <rect x="18" y="0" width="2" height="40" />
-                                    <rect x="26" y="0" width="3" height="40" />
-                                    <rect x="33" y="0" width="5" height="40" />
-                                    <rect x="43" y="0" width="2" height="40" />
-                                    <rect x="52" y="0" width="1" height="40" />
-                                    <rect x="61" y="0" width="3" height="40" />
-                                    <rect x="68" y="0" width="2" height="40" />
-                                    <rect x="77" y="0" width="5" height="40" />
-                                    <rect x="87" y="0" width="3" height="40" />
-                                    <rect x="96" y="0" width="4" height="40" />
-                                </svg>
-                                {/* Año Boxed */}
-                                <div 
-                                    className="border border-zinc-300 rounded px-1 py-0.1 text-[7px] font-bold text-zinc-500 tracking-wider bg-white/50 leading-none shrink-0"
+                                    className="font-mono text-[8px] font-black text-zinc-850 rotate-90 leading-none my-auto"
                                     style={{ fontFamily: "'Space Mono', monospace" }}
                                 >
-                                    {item.year}
-                                </div>
+                                    {String(item.id % 100).padStart(2, '0')}
+                                </span>
+                                <div className="w-1.5 h-0.5 bg-zinc-400/50 rounded-xs" />
                             </div>
                         </div>
-                    </div>
+                    ) : (
+                        <>
+                            {/* Tornillos laterales colapsados en los bordes */}
+                            <div className="absolute left-[-7px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-gradient-to-br from-zinc-650 via-zinc-750 to-zinc-900 border border-zinc-950 shadow-[0_1px_4px_rgba(0,0,0,0.6)] flex items-center justify-center opacity-60 shrink-0 z-20">
+                                <div className="absolute w-2.5 h-[1.5px] bg-zinc-950 rotate-[35deg]" />
+                            </div>
 
-                    {/* Tornillo derecho colapsado */}
-                    <div className="absolute right-[-7px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-gradient-to-br from-zinc-600 via-zinc-700 to-zinc-900 border border-zinc-950 shadow-inner flex items-center justify-center opacity-40 shrink-0 z-20">
-                        <div className="absolute w-2.5 h-[1.5px] bg-zinc-950 rotate-[-20deg]" />
-                    </div>
+                            <div
+                                className={cn(
+                                    "h-[90px] relative flex flex-col rounded shadow-[0_4px_12px_rgba(0,0,0,0.75),inset_0_1px_1px_rgba(255,255,255,0.4)] overflow-hidden transition-all duration-400 ease-out shrink-0",
+                                    "w-[calc(100%-12px)] mx-auto bg-[#faf8f5] border border-black/20"
+                                )}
+                            >
+                                {/* Retro Brand Accent Strip (TDK / Maxell style horizontal color stripes) */}
+                                <div className="h-2 w-full flex shrink-0">
+                                    <div className="flex-1 h-full bg-[#e63946]" />
+                                    <div className="flex-1 h-full bg-[#f4a261]" />
+                                    <div className="flex-1 h-full bg-[#e9c46a]" />
+                                    <div className="flex-1 h-full bg-[#2a9d8f]" />
+                                    <div className="flex-1 h-full bg-[#264653]" />
+                                </div>
+
+                                {/* Sticker Body */}
+                                <div className="flex-1 p-2 flex flex-col justify-between relative bg-[#faf8f5] text-zinc-900">
+                                    {/* Textura de papel mate granulado sobre el sticker */}
+                                    <div className="absolute inset-0 opacity-[0.06] bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] mix-blend-multiply pointer-events-none" />
+                                    
+                                    {/* Top Header metadata */}
+                                    <div className="flex justify-between items-center text-[7px] font-black uppercase tracking-wider text-zinc-500 font-mono">
+                                        <span>VHS T-120</span>
+                                        <span className="text-zinc-400">NO. {String(item.id % 100).padStart(2, '0')}</span>
+                                        <span>SP MODE</span>
+                                    </div>
+
+                                    {/* Título en tipografía monoespaciada tipo máquina de escribir */}
+                                    <div className="flex-1 flex items-center justify-center py-1">
+                                        <span 
+                                            className="font-mono text-zinc-900 font-bold tracking-tight text-center truncate max-w-full px-1 uppercase text-[10px]"
+                                            style={{ 
+                                                fontFamily: "'Courier New', Courier, monospace",
+                                            }}
+                                        >
+                                            {item.title}
+                                        </span>
+                                    </div>
+
+                                    {/* Barcode y Año en la parte inferior */}
+                                    <div className="flex items-center justify-between pt-1 border-t border-zinc-200/60 gap-1">
+                                        {/* Barcode SVG miniaturizado */}
+                                        <svg className="w-10 h-3.5 text-zinc-900 shrink-0 opacity-80" viewBox="0 0 100 40" fill="currentColor">
+                                            <rect x="0" y="0" width="3" height="40" />
+                                            <rect x="8" y="0" width="4" height="40" />
+                                            <rect x="18" y="0" width="2" height="40" />
+                                            <rect x="28" y="0" width="1" height="40" />
+                                            <rect x="34" y="0" width="5" height="40" />
+                                            <rect x="46" y="0" width="2" height="40" />
+                                            <rect x="54" y="0" width="3" height="40" />
+                                            <rect x="64" y="0" width="1" height="40" />
+                                            <rect x="72" y="0" width="4" height="40" />
+                                            <rect x="82" y="0" width="2" height="40" />
+                                            <rect x="90" y="0" width="5" height="40" />
+                                        </svg>
+                                        
+                                        {/* Sello de año tipo alquiler */}
+                                        <div 
+                                            className="border border-[#e63946]/30 text-[#e63946] rounded px-1.5 py-0.2 text-[8px] font-black tracking-widest bg-white/50 leading-none shrink-0"
+                                            style={{ fontFamily: "'Space Mono', monospace" }}
+                                        >
+                                            {item.year}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Tornillo derecho colapsado */}
+                            <div className="absolute right-[-7px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-gradient-to-br from-zinc-650 via-zinc-750 to-zinc-900 border border-zinc-950 shadow-[0_1px_4px_rgba(0,0,0,0.6)] flex items-center justify-center opacity-60 shrink-0 z-20">
+                                <div className="absolute w-2.5 h-[1.5px] bg-zinc-950 rotate-[-20deg]" />
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
         </div>
