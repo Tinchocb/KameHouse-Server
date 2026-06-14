@@ -127,6 +127,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	v1.GET("/proxy", h.VideoProxy)
 	v1.HEAD("/proxy", h.VideoProxy)
 	v1.GET("/status", h.HandleGetStatus)
+	v1.GET("/lore/dragonball", h.HandleGetDragonBallLore)
 	v1.GET("/status/home-items", h.HandleGetHomeItems)
 	v1.POST("/status/home-items", h.HandleUpdateHomeItems)
 	v1.GET("/home/curated", h.HandleGetHomeCurated)

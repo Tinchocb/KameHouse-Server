@@ -88,7 +88,7 @@ export function SystemTab({ control }: SystemTabProps) {
             {/* User preferences & Core DB Bento Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
                 {/* Preferencias de Usuario */}
-                <div className="bg-white/[0.01] border border-white/5 backdrop-blur-xl rounded-3xl p-6 md:col-span-2 space-y-5 shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
+                <div className="liquid-glass-frosted rounded-3xl p-6 md:col-span-2 space-y-5">
                     <h4 className="text-xs font-bold text-[#ff6e3a] uppercase tracking-wide">Preferencias de Usuario</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <Controller
@@ -128,7 +128,7 @@ export function SystemTab({ control }: SystemTabProps) {
                 </div>
 
                 {/* Base de Datos Core */}
-                <div className="bg-white/[0.01] border border-white/5 backdrop-blur-xl rounded-3xl p-6 flex flex-col justify-between shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
+                <div className="liquid-glass-frosted rounded-3xl p-6 flex flex-col justify-between">
                     <div className="space-y-1">
                         <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wide flex items-center gap-2">
                             <HardDriveIcon /> Base de Datos Core
@@ -175,7 +175,7 @@ export function SystemTab({ control }: SystemTabProps) {
                                     "flex flex-col text-left p-5 rounded-2xl border transition-all duration-300 relative overflow-hidden group active:scale-95",
                                     isThemeActive
                                         ? "bg-white/[0.03] border-[#ff6e3a] shadow-[0_8px_30px_rgba(255,110,58,0.1)]"
-                                        : "bg-white/[0.01] border-white/5 hover:border-white/10 hover:bg-white/[0.02]"
+                                        : "liquid-glass-frosted-subtle hover:bg-white/[0.04] hover:border-white/12"
                                 )}
                             >
                                 <div className="flex items-center justify-between w-full mb-3">
@@ -315,7 +315,7 @@ export function SystemTab({ control }: SystemTabProps) {
 
             {/* Zona de Peligro */}
             <Section label="Zona de Peligro">
-                <div className="border border-red-950/30 bg-red-950/[0.01] backdrop-blur-xl rounded-3xl p-6 space-y-6 relative overflow-hidden group/danger shadow-[0_20px_40px_rgba(0,0,0,0.3)]">
+                <div className="border border-red-950/30 liquid-glass-frosted-subtle rounded-3xl p-6 space-y-6 relative overflow-hidden group/danger">
                     <div className="flex items-start gap-4">
                         <div className="w-10 h-10 rounded-xl bg-red-500/5 border border-red-500/10 flex items-center justify-center text-red-500/80">
                             <AlertIcon />

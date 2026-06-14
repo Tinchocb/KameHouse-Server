@@ -375,6 +375,28 @@ func (h *Handler) HandleGetAnimeEntry(c echo.Context) error {
 	return h.RespondWithData(c, entry)
 }
 
+// HandleGetAnimeEntryLocalFiles returns only the local files for the given anime media id.
+//
+//	@summary return local files for the given anime media id.
+//	@desc Used for fast fetching of playable files (like random play or TV mode).
+//	@route /api/v1/library/anime-entry/{id}/local-files [GET]
+//	@param id - int - true - "Anime media ID"
+//	@returns []dto.LocalFile
+func (h *Handler) HandleGetAnimeEntryLocalFiles(c echo.Context) error {
+	idParam := c.Param("id")
+	mID, err := strconv.Atoi(idParam)
+	if err != nil {
+		return h.RespondWithError(c, err)
+	}
+
+	lfs, err := db.GetLocalFilesByMediaID(h.App.Database, mID)
+	if err != nil {
+		return h.RespondWithError(c, err)
+	}
+
+	return h.RespondWithData(c, lfs)
+}
+
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 
 var entriesSuggestionsCache = result.NewCache[string, []*platform.UnifiedMedia]()

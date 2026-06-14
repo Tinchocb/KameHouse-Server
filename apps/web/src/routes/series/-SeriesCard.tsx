@@ -92,8 +92,8 @@ export const SeriesCard = memo(function SeriesCard({
                     )}
                 >
                     <div className={cn(
-                        "bg-black/70 backdrop-blur-md border border-white/[0.08] p-5 md:p-6 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.06)] max-w-lg transition-[opacity,transform] duration-500 ease-out transform-gpu delay-75",
-                        isSelected ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-8 scale-95"
+                        "liquid-glass-frosted p-5 md:p-6 rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.85)] max-w-lg transition-[opacity,transform] duration-500 ease-out transform-gpu delay-75",
+                        isSelected ? "opacity-100 scale-100" : "opacity-0 translate-y-8 scale-95"
                     )}>
                         {/* Category Tag & Year */}
                         <div className={cn(
@@ -135,7 +135,7 @@ export const SeriesCard = memo(function SeriesCard({
                                 </span>
                                 <span className="text-[10px] font-black text-brand-orange">{item.progress}%</span>
                             </div>
-                            <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden border border-white/5 shadow-inner">
+                            <div className="h-1.5 w-full liquid-glass-frosted-subtle rounded-full overflow-hidden shadow-inner">
                                 <div
                                     className="h-full bg-gradient-to-r from-brand-orange to-[#ff9d5c] rounded-full shadow-[0_0_10px_rgba(255,110,58,0.5)] transition-all duration-1000 ease-out origin-left"
                                     style={{ width: isSelected ? `${item.progress}%` : '0%' }}
@@ -223,7 +223,7 @@ export const SeriesCard = memo(function SeriesCard({
                     {/* --- CENTRO: Label Card en Crema --- */}
                     <div className="flex-1 max-w-xl mx-1 md:mx-4 bg-[#fbf9f1] text-[#1c1917] h-[98px] rounded shadow-[0_4px_15px_rgba(0,0,0,0.55),inset_0_1px_2px_rgba(255,255,255,0.9)] border border-amber-950/10 p-3.5 flex justify-between items-center relative overflow-hidden">
                         {/* Textura de papel crema mate */}
-                        <div className="absolute inset-0 opacity-[0.06] bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] mix-blend-multiply pointer-events-none" />
+                        <div className="absolute inset-0 opacity-[0.06] bg-[url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E')] mix-blend-multiply pointer-events-none" />
                         
                         {/* Metadatos y Título */}
                         <div className="flex flex-col justify-between h-full flex-1 min-w-0 pr-4">
@@ -272,7 +272,7 @@ export const SeriesCard = memo(function SeriesCard({
                             </svg>
                             {/* Año Boxed */}
                             <div 
-                                className="border border-zinc-300 rounded px-1.5 py-0.2 text-[9px] font-bold text-zinc-500 tracking-wider bg-white/50"
+                                className="border border-zinc-300 rounded px-1.5 py-[1px] text-[9px] font-bold text-zinc-500 tracking-wider bg-white/50"
                                 style={{ fontFamily: "'Space Mono', monospace" }}
                             >
                                 {item.year}
@@ -335,13 +335,13 @@ export const SeriesCard = memo(function SeriesCard({
                     ) : (
                         <>
                             {/* Tornillos laterales colapsados en los bordes */}
-                            <div className="absolute left-[-7px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-gradient-to-br from-zinc-650 via-zinc-750 to-zinc-900 border border-zinc-950 shadow-[0_1px_4px_rgba(0,0,0,0.6)] flex items-center justify-center opacity-60 shrink-0 z-20">
+                            <div className="absolute left-[-7px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-gradient-to-br from-zinc-500 via-zinc-700 to-zinc-900 border border-zinc-950 shadow-[0_1px_4px_rgba(0,0,0,0.6)] flex items-center justify-center opacity-60 shrink-0 z-20">
                                 <div className="absolute w-2.5 h-[1.5px] bg-zinc-950 rotate-[35deg]" />
                             </div>
 
                             <div
                                 className={cn(
-                                    "h-[90px] relative flex flex-col rounded shadow-[0_4px_12px_rgba(0,0,0,0.75),inset_0_1px_1px_rgba(255,255,255,0.4)] overflow-hidden transition-all duration-400 ease-out shrink-0",
+                                    "h-[90px] relative flex flex-col rounded shadow-[0_4px_12px_rgba(0,0,0,0.75),inset_0_1px_1px_rgba(255,255,255,0.4)] overflow-hidden transition-all duration-300 ease-out shrink-0",
                                     "w-[calc(100%-12px)] mx-auto bg-[#faf8f5] border border-black/20"
                                 )}
                             >
@@ -357,10 +357,13 @@ export const SeriesCard = memo(function SeriesCard({
                                 {/* Sticker Body */}
                                 <div className="flex-1 p-2 flex flex-col justify-between relative bg-[#faf8f5] text-zinc-900">
                                     {/* Textura de papel mate granulado sobre el sticker */}
-                                    <div className="absolute inset-0 opacity-[0.06] bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] mix-blend-multiply pointer-events-none" />
+                                    <div className="absolute inset-0 opacity-[0.06] bg-[url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E')] mix-blend-multiply pointer-events-none" />
                                     
                                     {/* Top Header metadata */}
-                                    <div className="flex justify-between items-center text-[7px] font-black uppercase tracking-wider text-zinc-500 font-mono">
+                                    <div 
+                                        className="flex justify-between items-center text-[8.5px] font-black uppercase tracking-wider text-zinc-500"
+                                        style={{ fontFamily: "'Space Mono', monospace" }}
+                                    >
                                         <span>VHS T-120</span>
                                         <span className="text-zinc-400">NO. {String(item.id % 100).padStart(2, '0')}</span>
                                         <span>SP MODE</span>
@@ -369,9 +372,9 @@ export const SeriesCard = memo(function SeriesCard({
                                     {/* Título en tipografía monoespaciada tipo máquina de escribir */}
                                     <div className="flex-1 flex items-center justify-center py-1">
                                         <span 
-                                            className="font-mono text-zinc-900 font-bold tracking-tight text-center truncate max-w-full px-1 uppercase text-[10px]"
+                                            className="text-zinc-900 font-bold tracking-tight text-center truncate max-w-full px-1 uppercase text-[10.5px]"
                                             style={{ 
-                                                fontFamily: "'Courier New', Courier, monospace",
+                                                fontFamily: "'Space Mono', monospace",
                                             }}
                                         >
                                             {item.title}
@@ -397,7 +400,7 @@ export const SeriesCard = memo(function SeriesCard({
                                         
                                         {/* Sello de año tipo alquiler */}
                                         <div 
-                                            className="border border-[#e63946]/30 text-[#e63946] rounded px-1.5 py-0.2 text-[8px] font-black tracking-widest bg-white/50 leading-none shrink-0"
+                                            className="border border-[#e63946]/30 text-[#e63946] rounded px-1.5 py-[1px] text-[8px] font-black tracking-widest bg-white/50 leading-none shrink-0"
                                             style={{ fontFamily: "'Space Mono', monospace" }}
                                         >
                                             {item.year}
@@ -407,7 +410,7 @@ export const SeriesCard = memo(function SeriesCard({
                             </div>
 
                             {/* Tornillo derecho colapsado */}
-                            <div className="absolute right-[-7px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-gradient-to-br from-zinc-650 via-zinc-750 to-zinc-900 border border-zinc-950 shadow-[0_1px_4px_rgba(0,0,0,0.6)] flex items-center justify-center opacity-60 shrink-0 z-20">
+                            <div className="absolute right-[-7px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-gradient-to-br from-zinc-500 via-zinc-700 to-zinc-900 border border-zinc-950 shadow-[0_1px_4px_rgba(0,0,0,0.6)] flex items-center justify-center opacity-60 shrink-0 z-20">
                                 <div className="absolute w-2.5 h-[1.5px] bg-zinc-950 rotate-[-20deg]" />
                             </div>
                         </>

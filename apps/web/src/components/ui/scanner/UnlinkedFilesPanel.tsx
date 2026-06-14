@@ -79,7 +79,7 @@ const FileCard = React.forwardRef<HTMLDivElement, { file: GhostFile }>(function 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97 }}
-            className="border border-white/5 rounded-2xl overflow-hidden bg-[#0a0a0d] hover:border-white/10 transition-all duration-500 shadow-xl group"
+            className="liquid-glass-frosted liquid-glass-frosted-interactive rounded-2xl overflow-hidden group"
         >
             {/* ─── Header row ─── */}
             <button
@@ -176,7 +176,7 @@ const FileCard = React.forwardRef<HTMLDivElement, { file: GhostFile }>(function 
                                                 type="button"
                                                 disabled={resolve.isPending}
                                                 onClick={() => handleLink(r)}
-                                                className="w-full flex items-center gap-6 p-4 rounded-2xl bg-white/[0.01] hover:bg-white/[0.03] border border-white/5 hover:border-white/10 transition-all text-left group/result relative overflow-hidden"
+                                                className="w-full flex items-center gap-6 p-4 rounded-2xl liquid-glass-frosted-subtle hover:bg-white/[0.04] hover:border-white/12 transition-all text-left group/result relative overflow-hidden"
                                             >
                                                 <div className="relative w-16 h-24 shrink-0 overflow-hidden rounded-xl bg-black/40 border border-white/5 group-hover/result:border-white/20 transition-colors">
                                                     {r.poster_path ? (
@@ -247,7 +247,7 @@ export function UnlinkedFilesPanel() {
     if (isLoading) return null
 
     if (unresolved.length === 0) return (
-        <div className="flex items-center gap-6 p-8 rounded-3xl bg-white/[0.01] border border-white/5 backdrop-blur-xl shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
+        <div className="flex items-center gap-6 p-8 rounded-3xl liquid-glass-frosted">
             <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-center text-emerald-400 shrink-0">
                 <LucideCheck size={24} />
             </div>
@@ -261,7 +261,7 @@ export function UnlinkedFilesPanel() {
     return (
         <div className="space-y-8">
             {/* ─── Header Bento ─── */}
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-8 rounded-3xl bg-white/[0.01] border border-white/5 backdrop-blur-xl relative overflow-hidden group shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-8 rounded-3xl liquid-glass-frosted relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-[200px] h-[200px] bg-[#ff6e3a]/5 rounded-full blur-[60px] pointer-events-none" />
                 
                 <div className="flex items-center gap-6">

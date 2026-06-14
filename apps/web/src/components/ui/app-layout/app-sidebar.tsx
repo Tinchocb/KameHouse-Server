@@ -12,7 +12,7 @@ import { useSound } from "@/hooks/use-sound"
 import { useResponsive } from "@/hooks/use-responsive"
 import { BackgroundMusicPlayer } from "./background-music"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
-import { fetchAnimeEntry } from "@/api/hooks/anime_entries.hooks"
+import { fetchAnimeEntryLocalFiles } from "@/api/hooks/anime_entries.hooks"
 const VideoPlayer = React.lazy(() =>
     import("@/components/video/player").then((m) => ({ default: m.VideoPlayer }))
 )
@@ -42,7 +42,7 @@ export function AppSidebar() {
     return (
         <>
             {/* Desktop Fixed Sidebar */}
-            <aside className="hidden md:flex flex-col shrink-0 h-full w-24 border-r border-white/5 bg-zinc-950/40 backdrop-blur-[64px] z-50">
+            <aside className="hidden md:flex flex-col shrink-0 h-full w-24 border-r border-white/5 liquid-glass-frosted !border-y-0 !border-l-0 !rounded-none z-50">
                 <SidebarContent setSidebarOpen={setSidebarOpen} />
             </aside>
 
@@ -50,7 +50,7 @@ export function AppSidebar() {
             {isMobile && (
                 <Vaul open={sidebarOpen} onOpenChange={setSidebarOpen} direction="left">
                     <VaulContent
-                        className="md:hidden fixed inset-y-0 left-0 z-50 flex h-full w-[280px] flex-col border-r border-white/5 bg-zinc-950/60 backdrop-blur-[64px] shadow-2xl"
+                        className="md:hidden fixed inset-y-0 left-0 z-50 flex h-full w-[280px] flex-col border-r border-white/5 liquid-glass-frosted !border-y-0 !border-l-0 !rounded-none shadow-2xl"
                         overlayClass="md:hidden bg-black/60 backdrop-blur-sm"
                     >
                         <SidebarContent setSidebarOpen={setSidebarOpen} />
@@ -84,6 +84,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
         episodeNumber: number
         mediaId: number
         malId?: number | null
+        mediaFormat?: string | null
     } | null>(null)
     const [isLoadingTarget, setIsLoadingTarget] = React.useState(false)
 
@@ -113,10 +114,9 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
             }
 
             const randomEntry = candidates[Math.floor(Math.random() * candidates.length)]
-            const fullEntry = await fetchAnimeEntry(randomEntry.mediaId)
-            const localFiles = (fullEntry?.localFiles ?? []).filter(f => !!f.path)
+            const localFiles = await fetchAnimeEntryLocalFiles(randomEntry.mediaId)
 
-            if (localFiles.length === 0) {
+            if (!localFiles || localFiles.length === 0) {
                 toast.error("No se encontraron archivos locales para esta serie")
                 setIsLoadingTarget(false)
                 return
@@ -147,6 +147,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                 episodeNumber: epNum,
                 mediaId: randomEntry.mediaId,
                 malId: randomEntry.media?.idMal ?? null,
+                mediaFormat: randomEntry.media?.format,
             })
 
             toast.success(`📺 Modo TV sintonizado: reproduciendo episodio aleatorio`, {
@@ -164,10 +165,9 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
     const playTvModeNext = async (currentMediaId: number, currentEpisodeNumber: number) => {
         setIsLoadingTarget(true)
         try {
-            const fullEntry = await fetchAnimeEntry(currentMediaId)
-            const localFiles = (fullEntry?.localFiles ?? []).filter(f => !!f.path)
+            const localFiles = await fetchAnimeEntryLocalFiles(currentMediaId)
 
-            if (localFiles.length === 0) {
+            if (!localFiles || localFiles.length === 0) {
                 playTvModeRandom()
                 return
             }
@@ -181,10 +181,11 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
 
             if (nextFile) {
                 const isMp4 = nextFile.path.toLowerCase().endsWith(".mp4")
+                const series = allEntries.find(e => e.mediaId === currentMediaId)
                 const seriesTitle =
-                    fullEntry?.media?.titleSpanish ||
-                    fullEntry?.media?.titleRomaji ||
-                    fullEntry?.media?.titleEnglish ||
+                    series?.media?.titleSpanish ||
+                    series?.media?.titleRomaji ||
+                    series?.media?.titleEnglish ||
                     "Sin título"
 
                 setPlayTarget({
@@ -194,7 +195,8 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                     episodeLabel: `Episodio ${nextEpNum}`,
                     episodeNumber: nextEpNum,
                     mediaId: currentMediaId,
-                    malId: fullEntry?.media?.idMal ?? null,
+                    malId: series?.media?.idMal ?? null,
+                    mediaFormat: series?.media?.format,
                 })
 
                 toast.success(`📺 Siguiente episodio cargado`, {
@@ -237,11 +239,11 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                         >
                             {({ isActive }) => (
                                 <div className={cn(
-                                    "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl border transition-all duration-300 group px-4 md:px-0 relative backdrop-blur-md",
+                                    "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl transition-all duration-300 group px-4 md:px-0 relative liquid-glass-frosted-subtle",
                                     "active:scale-90 font-bold",
                                     isActive 
-                                        ? "text-white border-transparent" 
-                                        : "text-zinc-500 hover:text-white hover:bg-white/[0.02] border-transparent"
+                                        ? "text-white" 
+                                        : "text-zinc-500 hover:text-white hover:!border-white/15"
                                 )}>
                                     {/* Active Indicator Sliding Dot/Bar */}
                                     {isActive && (
@@ -255,7 +257,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                                     {isActive && (
                                         <motion.div
                                             layoutId="sidebarActiveBackground"
-                                            className="absolute inset-0 bg-white/5 border border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-0"
+                                            className="absolute inset-0 bg-brand-orange/[0.06] border border-brand-orange/30 rounded-2xl shadow-[0_8px_32px_rgba(255,110,58,0.15)] z-0"
                                             transition={{ type: "spring", stiffness: 380, damping: 30 }}
                                         />
                                     )}
@@ -280,10 +282,10 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                             }}
                             title="Cola de Reproducción"
                             className={cn(
-                                "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl border transition-all duration-500 group px-4 md:px-0 relative backdrop-blur-md",
+                                "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl transition-all duration-500 group px-4 md:px-0 relative liquid-glass-frosted-subtle",
                                 globalQueueOpen
-                                    ? "text-brand-orange bg-brand-orange/10 border-brand-orange/30 shadow-[0_8px_32px_rgba(255,110,58,0.15)]"
-                                    : "text-zinc-500 hover:text-white hover:bg-white/[0.02] border-transparent",
+                                    ? "text-brand-orange !bg-brand-orange/[0.06] !border-brand-orange/30 shadow-[0_8px_32px_rgba(255,110,58,0.15)]"
+                                    : "text-zinc-500 hover:text-white hover:!border-white/15",
                                 "active:scale-90 font-bold"
                             )}
                         >
@@ -296,7 +298,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                             <span className="shrink-0 z-10 relative">
                                 <FaLayerGroup className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
                                 {/* Badge count */}
-                                <span className="absolute -top-2.5 -right-2.5 bg-brand-orange text-white text-[8px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center border border-zinc-950 shadow-md">
+                                <span className="absolute -top-2.5 -right-2.5 bg-brand-orange text-white text-[8px] font-black min-w-[18px] h-[18px] rounded-full flex items-center justify-center border border-zinc-950 shadow-md px-[3px]">
                                     {playlistQueue.length}
                                 </span>
                             </span>
@@ -314,12 +316,12 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                         title="Sintonizar Modo TV (Aleatorio 24h)"
                         disabled={isLoadingTarget}
                         className={cn(
-                            "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl border transition-all duration-500 group px-4 md:px-0 relative backdrop-blur-md",
+                            "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl transition-all duration-500 group px-4 md:px-0 relative liquid-glass-frosted-subtle",
                             isLoadingTarget
-                                ? "border-brand-orange/40 bg-brand-orange/10 text-brand-orange cursor-wait"
+                                ? "!border-brand-orange/40 !bg-brand-orange/[0.06] text-brand-orange cursor-wait"
                                 : (isVideoActive && tvMode)
-                                    ? "text-brand-orange bg-brand-orange/10 border-brand-orange/30"
-                                    : "text-zinc-500 hover:text-white hover:bg-white/[0.02] border-transparent",
+                                    ? "text-brand-orange !bg-brand-orange/[0.06] !border-brand-orange/30 shadow-[0_8px_32px_rgba(255,110,58,0.15)]"
+                                    : "text-zinc-500 hover:text-white hover:!border-white/15",
                             "active:scale-90 font-bold"
                         )}
                     >
@@ -331,12 +333,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                         
                         <span className="shrink-0 z-10 relative">
                             {isLoadingTarget ? (
-                                <motion.div
-                                    animate={{ rotate: 360 }}
-                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                >
-                                    <Loader2 className="w-5 h-5" />
-                                </motion.div>
+                                <Loader2 className="w-5 h-5 animate-spin" />
                             ) : (
                                 <>
                                     <FaBroadcastTower className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
@@ -367,16 +364,16 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                     >
                         {({ isActive }) => (
                             <div className={cn(
-                                "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl border transition-all duration-300 group px-4 md:px-0 relative backdrop-blur-md",
+                                "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl transition-all duration-300 group px-4 md:px-0 relative liquid-glass-frosted-subtle",
                                 "active:scale-90 font-bold",
                                 isActive 
-                                    ? "text-white border-transparent" 
-                                    : "text-zinc-500 hover:text-white hover:bg-white/[0.02] border-transparent"
+                                    ? "text-white" 
+                                    : "text-zinc-500 hover:text-white hover:!border-white/15"
                             )}>
                                 {/* Active Indicator Sliding Dot/Bar */}
                                 {isActive && (
                                     <motion.div
-                                        layoutId="sidebarActiveIndicator"
+                                        layoutId="sidebarSettingsIndicator"
                                         className="absolute left-0 w-1 h-6 bg-brand-orange rounded-r-full hidden md:block z-10"
                                         transition={{ type: "spring", stiffness: 380, damping: 30 }}
                                     />
@@ -384,8 +381,8 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                                 {/* Active Background Sliding Pill */}
                                 {isActive && (
                                     <motion.div
-                                        layoutId="sidebarActiveBackground"
-                                        className="absolute inset-0 bg-white/5 border border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-0"
+                                        layoutId="sidebarSettingsBackground"
+                                        className="absolute inset-0 bg-brand-orange/[0.06] border border-brand-orange/30 rounded-2xl shadow-[0_8px_32px_rgba(255,110,58,0.15)] z-0"
                                         transition={{ type: "spring", stiffness: 380, damping: 30 }}
                                     />
                                 )}
@@ -413,6 +410,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                             episodeNumber={playTarget.episodeNumber}
                             mediaId={playTarget.mediaId}
                             malId={playTarget.malId}
+                            mediaFormat={playTarget.mediaFormat}
                             onClose={() => {
                                 setPlayTarget(null);
                                 setTvMode(false);

@@ -120,22 +120,53 @@ func (cm *CleanupManager) removeOrphanedAndCollidedMedia() {
 		return
 	}
 
+	var collidedShows []models.LibraryMedia
+	var collidedShowIds []uint
 	for _, s := range shows {
 		if movieTmdbIds[s.TmdbID] {
-			// Check if this show actually has any local files linked
-			var localFileCount int64
-			if err := cm.gormdb.Model(&models.LocalFile{}).Where("library_media_id = ?", s.ID).Count(&localFileCount).Error; err == nil && localFileCount == 0 {
-				cm.logger.Warn().Uint("id", s.ID).Int("tmdbID", s.TmdbID).Str("title", s.TitleEnglish).Msg("database cleanup: Found collided show with no local files. Deleting.")
+			collidedShows = append(collidedShows, s)
+			collidedShowIds = append(collidedShowIds, s.ID)
+		}
+	}
 
-				// Start a transaction to delete show and its children safely
-				_ = cm.gormdb.Transaction(func(tx *gorm.DB) error {
-					_ = tx.Where("library_media_id = ?", s.ID).Delete(&models.LibraryEpisode{})
-					_ = tx.Where("library_media_id = ?", s.ID).Delete(&models.LibrarySeason{})
-					_ = tx.Where("library_media_id = ?", s.ID).Delete(&models.MediaEntryListData{})
-					_ = tx.Delete(&s)
-					return nil
-				})
-			}
+	if len(collidedShowIds) == 0 {
+		return
+	}
+
+	// Bulk check local file associations
+	type Result struct {
+		LibraryMediaId uint
+		Count          int64
+	}
+	var results []Result
+	if err := cm.gormdb.Model(&models.LocalFile{}).
+		Select("library_media_id, count(*) as count").
+		Where("library_media_id IN ?", collidedShowIds).
+		Group("library_media_id").
+		Find(&results).Error; err != nil {
+		cm.logger.Error().Err(err).Msg("database cleanup: Failed to fetch local file counts")
+		return
+	}
+
+	hasFilesMap := make(map[uint]bool)
+	for _, r := range results {
+		if r.Count > 0 {
+			hasFilesMap[r.LibraryMediaId] = true
+		}
+	}
+
+	for _, s := range collidedShows {
+		if !hasFilesMap[s.ID] {
+			cm.logger.Warn().Uint("id", s.ID).Int("tmdbID", s.TmdbID).Str("title", s.TitleEnglish).Msg("database cleanup: Found collided show with no local files. Deleting.")
+
+			// Start a transaction to delete show and its children safely
+			_ = cm.gormdb.Transaction(func(tx *gorm.DB) error {
+				_ = tx.Where("library_media_id = ?", s.ID).Delete(&models.LibraryEpisode{})
+				_ = tx.Where("library_media_id = ?", s.ID).Delete(&models.LibrarySeason{})
+				_ = tx.Where("library_media_id = ?", s.ID).Delete(&models.MediaEntryListData{})
+				_ = tx.Delete(&s)
+				return nil
+			})
 		}
 	}
 }

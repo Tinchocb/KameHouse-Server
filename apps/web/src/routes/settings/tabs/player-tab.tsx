@@ -34,7 +34,7 @@ export function PlayerTab({ control }: PlayerTabProps) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Hardware Transcoding */}
-                <div className="bg-white/[0.01] border border-white/5 backdrop-blur-xl rounded-3xl p-6 space-y-4 shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
+                <div className="liquid-glass-frosted rounded-3xl p-6 space-y-4">
                     <h3 className="text-sm font-bold text-[#ff6e3a] uppercase tracking-wide">Transcodificación por Hardware</h3>
                     <p className="text-xs text-zinc-500 leading-relaxed">
                         Asigna el procesamiento de codecs pesados (como HEVC 10-bit x265) directo al chip de video de tu tarjeta gráfica.
@@ -78,7 +78,7 @@ export function PlayerTab({ control }: PlayerTabProps) {
                 </div>
 
                 {/* Buffer Settings and direct play */}
-                <div className="bg-white/[0.01] border border-white/5 backdrop-blur-xl rounded-3xl p-6 space-y-6 shadow-[0_20px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between">
+                <div className="liquid-glass-frosted rounded-3xl p-6 space-y-6 flex flex-col justify-between">
                     <div className="space-y-5">
                         <h3 className="text-sm font-bold text-zinc-400 uppercase tracking-wide">Búfer y Reproducción</h3>
                         

@@ -1,0 +1,239 @@
+{
+  "universe": "Dragon Ball",
+  "creator": "Akira Toriyama",
+  "cosmology": {
+    "structure": "El multiverso de Dragon Ball estaba compuesto originalmente por 18 universos, pero Zeno-sama destruyó 6 de ellos en un ataque de ira, dejando 12 universos activos en la actualidad. Los universos están organizados en parejas cuya suma da 13 (ej. Universo 6 y Universo 7 son gemelos). Cada universo cuenta con su propia jerarquía celestial y planetaria.",
+    "realms": [
+      {
+        "name": "Mundo de los Vivos",
+        "description": "El plano físico que contiene galaxias, planetas y estrellas. Está dividido en cuatro cuadrantes cardinales (Norte, Sur, Este, Oeste), cada uno vigilado por un Kaio."
+      },
+      {
+        "name": "El Otro Mundo (Mundo de los Muertos)",
+        "description": "El reino celestial al que van las almas tras morir. Incluye el Palacio de Enma Daioh (juez de las almas), el Camino de la Serpiente, el planeta de Kaio-sama y el Paraíso/Infierno."
+      },
+      {
+        "name": "Reino de los Kaioshin (Sagrado)",
+        "description": "Un reino sagrado ubicado fuera del macrocosmos de cada universo, donde habitan los Dioses de la Creación (Kaioshin) vigilando el destino del universo."
+      },
+      {
+        "name": "Reino Demoniaco",
+        "description": "Un espacio dimensional oscuro al final del universo, gobernado por la magia oscura, hechiceros y demonios, independiente del control de los Kaioshin."
+      },
+      {
+        "name": "Palacio de Zeno-sama",
+        "description": "Ubicado en la cima de todo el multiverso, fuera de los 12 universos. Es el hogar del Rey del Todo."
+      }
+    ]
+  },
+  "hierarchy": {
+    "gods": [
+      {
+        "title": "Zeno-sama (Rey del Todo)",
+        "role": "Gobernante supremo del multiverso, con poder absoluto para borrar de la existencia universos enteros de manera instantánea. No es un guerrero, sino la encarnación del poder de destrucción existencial."
+      },
+      {
+        "title": "Daishinkan (Gran Sacerdote)",
+        "role": "El ángel de mayor rango y padre de todos los ángeles guías de los universos. Asiste directamente a Zeno-sama y es uno de los 5 seres más poderosos de todo el multiverso."
+      },
+      {
+        "title": "Ángeles Guías",
+        "role": "Seres divinos asignados a cada Universo para guiar, entrenar y vigilar a los Dioses de la Destrucción. Viven en un estado permanente de Ultra Instinto y tienen prohibido intervenir directamente en los combates mortales bajo pena de desaparecer."
+      },
+      {
+        "title": "Hakaishin (Dioses de la Destrucción)",
+        "role": "Deidades encargadas de destruir planetas y civilizaciones para mantener el equilibrio del desarrollo cósmico en sus respectivos universos. Usan la energía de la destrucción (Hakai)."
+      },
+      {
+        "title": "Kaioshin (Dioses de la Creación)",
+        "role": "Deidades benévolas encargadas de crear vida y poblar los planetas de sus universos. Su vida está ligada directamente a la del Dios de la Destrucción de su universo; si uno muere, el otro también."
+      }
+    ]
+  },
+  "races": [
+    {
+      "name": "Saiyajins",
+      "origin": "Originarios del Planeta Sadala (Universo 6 y Universo 7). En el Universo 7, migraron al Planeta Plant tras una guerra civil, lo rebautizaron como Planeta Vegeta y exterminaron a los Tsufurus. Es una raza guerrera caracterizada por su cabello negro que no cambia de forma, su cola (que les permite transformarse en Ozaru con la luna llena) y las células S que les permiten transformarse en Super Saiyajin.",
+      "notable_members": [
+        "Goku (Kakarotto)",
+        "Vegeta",
+        "Broly",
+        "Gohan",
+        "Trunks",
+        "Goten",
+        "Kyabe",
+        "Caulifla",
+        "Kale"
+      ]
+    },
+    {
+      "name": "Namekuseijins",
+      "origin": "Provenientes del Planeta Namek. Son seres pacíficos de piel verde, antenas y capacidades regenerativas. No tienen género y se reproducen asexualmente poniendo huevos. Se dividen en la estirpe guerrera y el clan dragón (capaces de crear las Esferas del Dragón).",
+      "notable_members": [
+        "Piccolo",
+        "Kami-sama",
+        "Dende",
+        "Gran Patriarca",
+        "Nail"
+      ]
+    },
+    {
+      "name": "Raza de Freezer (Demonios del Frío)",
+      "origin": "Una raza mutante extremadamente rara y poderosa del Universo 7, capaz de sobrevivir en el vacío del espacio. Tienen la capacidad de involucionar su cuerpo en distintas formas para controlar su inmenso poder destructivo.",
+      "notable_members": [
+        "Freezer",
+        "Rey Cold",
+        "Cooler",
+        "Chilled"
+      ]
+    },
+    {
+      "name": "Majins",
+      "origin": "Seres mágicos y caóticos creados o despertados por el mago Bibidi desde tiempos inmemoriales. Poseen cuerpos elásticos de color rosa con capacidades de regeneración casi infinitas y absorción de oponentes para adquirir sus poderes y rasgos físicos.",
+      "notable_members": [
+        "Majin Buu",
+        "Super Buu",
+        "Kid Buu",
+        "Uub (reencarnación humana)"
+      ]
+    }
+  ],
+  "lore_details": {
+    "dragon_balls": [
+      {
+        "creator": "Kami-sama (Tierra)",
+        "features": "Conceden un deseo (luego tres gracias a Dende). No pueden revivir a una persona más de una vez ni conceder deseos que superen el poder del creador."
+      },
+      {
+        "creator": "Gran Patriarca (Namek)",
+        "features": "Conceden tres deseos. Permiten revivir a la misma persona múltiples veces. Su invocación requiere hablar el idioma de Namek."
+      },
+      {
+        "creator": "Zalama (Dios Dragón Supremo)",
+        "features": "Creadas en el año 41 del Calendario Divino. Tienen el tamaño de planetas y conceden cualquier deseo sin restricciones de ningún tipo. El dragón invocado se llama Super Shenlong."
+      }
+    ],
+    "transformations": [
+      {
+        "name": "Super Saiyajin (Fases 1, 2 y 3)",
+        "description": "Multiplicadores de fuerza basados en la ira y la liberación de células S. La fase 3 consume una enorme cantidad de energía."
+      },
+      {
+        "name": "Super Saiyajin Dios / Blue",
+        "description": "Formas que utilizan el Ki divino (sentido solo por deidades). El Blue es la versión Super Saiyajin de la forma Dios."
+      },
+      {
+        "name": "Ultra Instinto (Migatte no Gokui)",
+        "description": "El estado de los ángeles. Permite al cuerpo reaccionar de forma autónoma sin necesidad de pensar los movimientos."
+      },
+      {
+        "name": "Ultra Ego (Wagami no Gokui)",
+        "description": "El estado de los Dioses de la Destrucción aprendido por Vegeta. El poder del usuario aumenta a medida que recibe daño y se sumerge en el instinto de combate."
+      }
+    ]
+  },
+  "chronology": [
+    {
+      "era": "Dragon Ball Original",
+      "events": [
+        {
+          "title": "Búsqueda de las Esferas del Dragón",
+          "description": "Bulma encuentra al joven Goku en las montañas y juntos inician una travesía para reunir las siete Esferas del Dragón, enfrentándose al Emperador Pilaf."
+        },
+        {
+          "title": "Entrenamiento con el Maestro Roshi",
+          "description": "Goku y Krilin entrenan bajo la Escuela Tortuga del Maestro Roshi, culminando en su participación en el 21° Torneo de Artes Marciales."
+        },
+        {
+          "title": "Guerra contra la Patrulla Roja (Red Ribbon)",
+          "description": "Goku desmantela por sí solo a la organización militar más peligrosa del mundo en su búsqueda de la esfera de 4 estrellas de su abuelo."
+        },
+        {
+          "title": "Enfrentamiento contra Piccolo Daimaku",
+          "description": "El Rey Demonio Piccolo despierta y asesina a la mayoría de los guerreros Z. Goku bebe el Agua Ultrasagrada y lo derrota, pero Piccolo engendra un hijo antes de morir."
+        },
+        {
+          "title": "23° Torneo de Artes Marciales",
+          "description": "Goku, ahora adulto, derrota a Piccolo Jr. en una reñida final, perdonándole la vida y consolidándose como el guerrero más fuerte de la Tierra."
+        }
+      ]
+    },
+    {
+      "era": "Dragon Ball Z",
+      "events": [
+        {
+          "title": "Saga Saiyajin",
+          "description": "Raditz llega a la Tierra revelando el origen de Goku. Goku muere y entrena con Kaio-sama, mientras Gohan entrena con Piccolo. Los guerreros Z detienen la invasión de Nappa y Vegeta tras una sangrienta batalla."
+        },
+        {
+          "title": "Saga de Freezer",
+          "description": "Los sobrevivientes viajan a Namek para buscar sus esferas. Goku alcanza el legendario estado de Super Saiyajin tras ver morir a Krilin y derrota al tirano Freezer antes de la explosión del planeta."
+        },
+        {
+          "title": "Saga de Cell y los Androides",
+          "description": "Trunks del futuro advierte sobre androides de la Patrulla Roja. Cell organiza sus propios juegos de artes marciales. Gohan despierta el Super Saiyajin 2 y destruye a Cell tras el sacrificio de Goku."
+        },
+        {
+          "title": "Saga de Majin Buu",
+          "description": "Siete años después, el mago Babidi despierta al demonio Majin Buu. Tras múltiples fusiones (Vegito, Gotenks) y transformaciones (Super Saiyajin 3), Goku destruye a Kid Buu usando una Genkidama universal."
+        }
+      ]
+    },
+    {
+      "era": "Dragon Ball Super",
+      "events": [
+        {
+          "title": "La Batalla de los Dioses",
+          "description": "El Dios de la Destrucción Beerus llega a la Tierra. Goku alcanza la transformación del Super Saiyajin Dios mediante el ritual de 6 Saiyajins puros."
+        },
+        {
+          "title": "La Resurrección de Freezer",
+          "description": "Freezer resucita gracias a sus soldados y entrena para alcanzar su forma Golden. Goku y Vegeta demuestran el poder del Super Saiyajin Blue."
+        },
+        {
+          "title": "Torneo del Universo 6 vs Universo 7",
+          "description": "Un torneo organizado por Beerus y Champa donde Goku utiliza por primera vez el Super Saiyajin Blue combinado con el Kaio-ken contra Hit."
+        },
+        {
+          "title": "Saga de Goku Black y Zamasu",
+          "description": "Zamasu roba el cuerpo de Goku en otra línea temporal para erradicar a los mortales. Trunks del Futuro y los guerreros Z logran detenerlo con la ayuda de Zeno-sama del futuro."
+        },
+        {
+          "title": "Torneo del Poder (Supervivencia Universal)",
+          "description": "Los 8 universos con menor nivel de desarrollo compiten en un Battle Royale de supervivencia. Goku rompe sus límites y domina el Ultra Instinto para derrotar a Jiren del Universo 11, resultando el Universo 7 vencedor."
+        },
+        {
+          "title": "Saga del Prisionero de la Patrulla Galáctica (Moro)",
+          "description": "El devorador de planetas Moro escapa tras 10 millones de años de encierro. Vegeta viaja a Yadrat para aprender la Partición Espiritual, y Goku perfecciona el Ultra Instinto Señal."
+        },
+        {
+          "title": "Saga de Granola el Sobreviviente",
+          "description": "Granola pide un deseo a las esferas de Cereal para convertirse en el más fuerte a cambio de su esperanza de vida. Vegeta despierta el Ultra Ego (poder de destrucción)."
+        },
+        {
+          "title": "Saga de Super Hero",
+          "description": "La Patrulla Roja resurge con los androides Gamma 1 y Gamma 2, y el colosal Cell Max. Gohan desbloquea la transformación Gohan Bestia y Piccolo obtiene la forma Orange Piccolo."
+        }
+      ]
+    }
+  ],
+  "legendary_artifacts": [
+    {
+      "name": "Báculo Sagrado (Nyoibō)",
+      "origin": "Creado por Karin-sama. Originalmente servía para conectar la Torre de Karin con el Templo Sagrado de Kami-sama en el cielo.",
+      "owner": "Son Goku",
+      "properties": "Capacidad de extenderse y encogerse a voluntad del usuario, alcanzando longitudes ilimitadas sin perder resistencia."
+    },
+    {
+      "name": "Nube Voladora (Kinto'un)",
+      "origin": "Una nube mística obsequiada por el Maestro Roshi a Goku. Solo las personas de corazón puro y libre de maldad pueden montarla.",
+      "owner": "Son Goku / Goten / Uub",
+      "properties": "Vuela a altas velocidades obedeciendo las órdenes mentales del jinete. Inmune a la mayoría de las armas físicas."
+    },
+    {
+      "name": "Semillas del Ermitaño (Senzu Bean)",
+      "origin": "Semillas cultivadas únicamente por el gato místico Karin en su torre celestial.",
+      "properties": "Una sola semilla recupera instantáneamente toda la energía física, cura heridas mortales y sacia el hambre de una persona durante diez días enteros."
+    }
+  ]
+}

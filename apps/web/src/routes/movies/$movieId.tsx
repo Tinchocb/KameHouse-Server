@@ -3,9 +3,7 @@ import { HydrationBoundary, dehydrate, useQueryClient } from "@tanstack/react-qu
 import React, { useMemo, useState } from "react"
 import { toast } from "sonner"
 import { useAppStore } from "@/lib/store"
-import { ListPlus, Play } from "lucide-react"
-import { cn } from "@/components/ui/core/styling"
-import { getHighResImage, getLowResImage } from "@/lib/helpers/images"
+import { getHighResImage } from "@/lib/helpers/images"
 import { fetchAnimeEntry, useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import { useGetContinuityWatchHistoryItem } from "@/api/hooks/continuity.hooks"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
@@ -14,14 +12,13 @@ import { EmptyState } from "@/components/shared/empty-state"
 import { VideoPlayer } from "@/components/video/player"
 import { sanitizeHtml } from "@/lib/helpers/sanitizer"
 import { startViewTransition } from "@/lib/helpers/transitions"
-import { MovieHeroWidescreen } from "./-components/movie-hero-widescreen"
+import { MovieHeroSection } from "../series/$seriesId/-components/movie-hero"
 import { MovieBentoSpecs } from "./-components/movie-bento-specs"
 import { ChronologyWidget } from "./-components/chronology-widget"
 import { MovieAudioSubs } from "./-components/movie-audio-subs"
 import { CollectionSwimlane } from "./-components/collection-swimlane"
-import { PremiumPosterCard } from "@/components/shared/premium-poster-card"
-import { DeferredImage } from "@/components/shared/deferred-image"
 import { useSound } from "@/hooks/use-sound"
+import { cn } from "@/components/ui/core/styling"
 
 export const Route = createFileRoute("/movies/$movieId")({
     loader: ({ params: { movieId }, context }) => {
@@ -65,6 +62,9 @@ const parseFrameRate = (fps: string | undefined | null): number => {
     return isNaN(val) ? 24 : Math.round(val)
 }
 
+type TabKey = "SUGGESTED" | "EXTRAS" | "VERSIONS" | "DETAILS"
+const TABS: TabKey[] = ["SUGGESTED", "EXTRAS", "VERSIONS", "DETAILS"]
+
 function MovieDetailClient({ movieId }: { movieId: string }) {
     const { playSound } = useSound()
     const queryClient = useQueryClient()
@@ -84,13 +84,11 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
         malId?: number | null
     } | null>(null)
 
-    const synopsis = entry?.media?.description || "Sin descripción disponible."
-    const cleanSynopsis = useMemo(() => sanitizeHtml(synopsis), [synopsis])
-    
-    const title = entry?.media?.titleSpanish || entry?.media?.titleEnglish || entry?.media?.titleRomaji || "Título Desconocido"
-    const score = entry?.media?.score ? (entry.media.score / 10).toFixed(1) : null
+    const [activeTab, setActiveTab] = useState<TabKey>("SUGGESTED")
 
-    // Mock technical data based on local file for now (until Go backend sends exact format)
+    const title = entry?.media?.titleSpanish || entry?.media?.titleEnglish || entry?.media?.titleRomaji || "Título Desconocido"
+
+    // Mock technical data based on local file for now
     const techInfo = entry?.localFiles?.[0]?.technicalInfo as any
     const technicalData = useMemo(() => {
         if (!techInfo) return null
@@ -106,7 +104,6 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
     }, [techInfo])
 
     const chronologyData = useMemo(() => {
-        // Mock chronology logic. For production, the Go backend will send this.
         return {
             startEpisodeContext: 120,
             endEpisodeContext: 125,
@@ -151,86 +148,104 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
     }
 
     return (
-        <div className="h-full w-full flex flex-col overflow-y-auto bg-[#050506] text-white pb-16 relative">
+        <div className="h-full w-full flex flex-col overflow-y-auto bg-[#07070a] text-white pb-24 relative">
             
-            <MovieHeroWidescreen 
-                title={title}
-                romajiTitle={entry.media.titleRomaji || ""}
+            <MovieHeroSection 
+                seriesId={movieId}
+                directoryPath={entry.libraryData?.sharedPath || ""}
                 backdropUrl={getHighResImage(entry.media.bannerImage || entry.media.posterImage)}
-                rating={Number(score)}
+                entry={entry}
+                onPlay={handlePlayDefault}
+                continuityItem={continuityData?.item}
+                className="mb-0"
             />
 
-            {/* Immersive 2-Column Layout */}
-            <div className="w-full max-w-[1800px] mx-auto px-6 sm:px-12 mt-8 pb-12 animate-fade-in z-10 relative">
-                <div className="flex flex-col lg:flex-row gap-12 items-start">
-                    
-                    {/* Left Column (Poster & Specs) */}
-                    <div className="hidden lg:flex flex-col w-80 flex-shrink-0 gap-6">
-                        <div className="w-full aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl border border-white/5 bg-zinc-900">
-                            <img src={getHighResImage(entry.media.posterImage || "")} alt="Poster" className="w-full h-full object-cover" />
-                        </div>
-                        <MovieBentoSpecs technical={technicalData} />
-                    </div>
-
-                    {/* Right Column (Actions, Chronology, Content) */}
-                    <div className="flex-grow flex flex-col min-w-0">
-                        
-                        {/* Action Bar */}
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pb-8 border-b border-white/5">
-                            <div className="flex items-center gap-4 text-sm font-bold text-gray-400 uppercase tracking-widest">
-                                <span>{entry.media.year}</span>
-                                <span className="w-1.5 h-1.5 rounded-full bg-white/20" />
-                                <span>{entry.media.isNsfw ? "18+" : "PG-13"}</span>
-                                <span className="w-1.5 h-1.5 rounded-full bg-white/20" />
-                                <span>PELÍCULA</span>
-                            </div>
-
-                            <button 
-                                onClick={handlePlayDefault}
-                                className="w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white font-black text-lg uppercase tracking-widest rounded-xl shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:shadow-[0_0_30px_rgba(245,158,11,0.6)] hover:scale-105 transition-all duration-300 flex items-center justify-center gap-3"
-                            >
-                                <Play className="w-6 h-6 fill-current" />
-                                VER PELÍCULA NOW
-                            </button>
-                        </div>
-
-                        {/* Synopsis */}
-                        <div className="mt-8">
-                            <h3 className="text-xl font-bebas tracking-[0.15em] text-white uppercase mb-4">Sinopsis</h3>
-                            <p className="text-[17px] text-zinc-300 leading-relaxed font-normal tracking-wide antialiased" dangerouslySetInnerHTML={{ __html: cleanSynopsis }} />
-                        </div>
-
-                        {/* Chronology Widget */}
-                        <ChronologyWidget chronology={chronologyData} />
-
-                        {/* Audio & Subs Blocks */}
-                        {technicalData && (
-                            <MovieAudioSubs audioTracks={technicalData.audioTracks} subtitles={technicalData.subtitles} />
-                        )}
-
-                    </div>
+            {/* Navigation Tabs (Disney+ Style) */}
+            <div className="w-full max-w-[1800px] mx-auto px-6 sm:px-12 -mt-4 relative z-20">
+                <div className="flex items-center gap-8 border-b border-white/10 pb-4">
+                    {TABS.map((tab) => (
+                        <button
+                            key={tab}
+                            onClick={() => startViewTransition(() => setActiveTab(tab))}
+                            className={cn(
+                                "relative font-sans text-xs md:text-[14px] uppercase tracking-widest font-extrabold transition-colors duration-300",
+                                activeTab === tab ? "text-white" : "text-zinc-500 hover:text-white"
+                            )}
+                        >
+                            {tab}
+                            {/* Active indicator line */}
+                            {activeTab === tab && (
+                                <div className="absolute -bottom-[17px] left-0 w-full h-[3px] bg-white rounded-t-full shadow-[0_0_10px_rgba(255,255,255,0.5)]" />
+                            )}
+                        </button>
+                    ))}
                 </div>
             </div>
 
-            {/* Collection Swimlane */}
-            {entry.media.relations && entry.media.relations.length > 0 && (
-                <div className="w-full max-w-[1800px] mx-auto px-6 sm:px-12">
-                    <CollectionSwimlane 
-                        collectionId="related"
-                        collectionName="Universo Expandido"
-                        movies={entry.media.relations
-                            .filter(r => r.media && (r.media.format === "MOVIE" || r.media.format === "SPECIAL" || r.media.format === "OVA"))
-                            .map(r => ({
-                                id: String(r.media!.id),
-                                title: r.media!.title?.spanish || r.media!.title?.romaji || "Desconocida",
-                                posterUrl: r.media!.coverImage?.large || "",
-                                year: r.media!.startDate?.year
-                            }))
-                        }
-                        onMovieSelect={(id) => navigate({ to: "/movies/$movieId", params: { movieId: id } })}
-                    />
-                </div>
-            )}
+            {/* Tab Content Area */}
+            <div className="w-full max-w-[1800px] mx-auto px-6 sm:px-12 mt-8 animate-fade-in z-10 relative min-h-[40vh]">
+                
+                {/* SUGGESTED TAB */}
+                {activeTab === "SUGGESTED" && (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        {entry.media.relations && entry.media.relations.length > 0 ? (
+                            <CollectionSwimlane 
+                                collectionId="related"
+                                collectionName=""
+                                movies={entry.media.relations
+                                    .filter(r => r.media && (r.media.format === "MOVIE" || r.media.format === "SPECIAL" || r.media.format === "OVA"))
+                                    .map(r => ({
+                                        id: String(r.media!.id),
+                                        title: r.media!.title?.spanish || r.media!.title?.romaji || "Desconocida",
+                                        posterUrl: r.media!.coverImage?.large || "",
+                                        year: r.media!.startDate?.year
+                                    }))
+                                }
+                                onMovieSelect={(id) => navigate({ to: "/movies/$movieId", params: { movieId: id } })}
+                            />
+                        ) : (
+                            <div className="flex items-center justify-center h-48 text-zinc-500 text-sm font-medium tracking-wide">
+                                NO HAY CONTENIDO SUGERIDO DISPONIBLE
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* DETAILS TAB */}
+                {activeTab === "DETAILS" && (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col lg:flex-row gap-12 items-start mt-4">
+                        {/* Left Column (Specs) */}
+                        <div className="flex flex-col w-full lg:w-80 flex-shrink-0 gap-6">
+                            <MovieBentoSpecs technical={technicalData} />
+                        </div>
+
+                        {/* Right Column (Chronology, Audio/Subs) */}
+                        <div className="flex-grow flex flex-col min-w-0">
+                            <ChronologyWidget chronology={chronologyData} />
+                            {technicalData && (
+                                <div className="mt-8">
+                                    <MovieAudioSubs audioTracks={technicalData.audioTracks} subtitles={technicalData.subtitles} />
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* EXTRAS TAB */}
+                {activeTab === "EXTRAS" && (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex items-center justify-center h-48 text-zinc-500 text-sm font-medium tracking-wide">
+                        NO HAY EXTRAS DISPONIBLES
+                    </div>
+                )}
+
+                {/* VERSIONS TAB */}
+                {activeTab === "VERSIONS" && (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex items-center justify-center h-48 text-zinc-500 text-sm font-medium tracking-wide">
+                        SÓLO UNA VERSIÓN DISPONIBLE
+                    </div>
+                )}
+
+            </div>
 
             {/* Video Player */}
             {playTarget && (

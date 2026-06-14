@@ -137,12 +137,12 @@ export function IntegrationCard({ name, status, connected, disabled }: { name: s
 
     return (
         <div className={cn(
-            "p-5 border rounded-2xl backdrop-blur-md flex items-center gap-4 transition-all duration-500 relative overflow-hidden group/intcard",
+            "p-5 rounded-2xl flex items-center gap-4 relative overflow-hidden group/intcard",
             disabled
-                ? "opacity-30 grayscale border-white/5 bg-white/[0.01]"
+                ? "opacity-30 grayscale liquid-glass-frosted-subtle border-white/5"
                 : connected
-                    ? "border-white/[0.08] bg-white/[0.02] hover:border-white/15 hover:bg-white/[0.04]"
-                    : "border-white/[0.05] bg-white/[0.01] hover:border-white/10 hover:bg-white/[0.02]"
+                    ? "liquid-glass-frosted liquid-glass-frosted-interactive border-white/10"
+                    : "liquid-glass-frosted-subtle hover:bg-white/[0.04] hover:border-white/12"
         )}>
             {connected && (
                 <div
@@ -199,7 +199,7 @@ export function IntegrationCard({ name, status, connected, disabled }: { name: s
 
 export function StatusCard({ label, value, icon: Icon }: { label: string; value: string; icon: React.ElementType }) {
     return (
-        <div className="p-5 border border-white/[0.05] bg-white/[0.02] backdrop-blur-md rounded-2xl flex items-center gap-4 transition-all duration-300 hover:bg-white/[0.04] hover:border-white/10 group/statuscard relative overflow-hidden">
+        <div className="p-5 liquid-glass-frosted liquid-glass-frosted-interactive rounded-2xl flex items-center gap-4 group/statuscard relative overflow-hidden">
             <div className="absolute inset-0 opacity-0 group-hover/statuscard:opacity-100 transition-opacity duration-700 bg-[radial-gradient(ellipse_at_left,rgba(6,182,212,0.04),transparent_70%)] pointer-events-none" />
             <div className="w-11 h-11 rounded-xl bg-cyan-500/5 border border-cyan-500/10 flex items-center justify-center text-cyan-400/60 group-hover/statuscard:text-cyan-400 group-hover/statuscard:bg-cyan-500/10 transition-all duration-300 relative z-10">
                 <Icon className="w-[18px] h-[18px]" />
@@ -235,7 +235,7 @@ export function Section({ label, children, right }: { label: string; children: R
 export function Card({ children, className }: { children: React.ReactNode; className?: string }) {
     return (
         <div className={cn(
-            "bg-[#09090b]/40 backdrop-blur-2xl border border-white/[0.03] rounded-2xl overflow-hidden divide-y divide-white/[0.02] shadow-[0_15px_30px_rgba(0,0,0,0.3)]",
+            "liquid-glass-frosted rounded-2xl overflow-hidden divide-y divide-white/[0.02]",
             className
         )}>
             {children}
@@ -315,7 +315,7 @@ export function PathList({ directories = [], onAdd, onRemove, label, placeholder
     }
 
     return (
-        <div className="bg-[#09090b]/40 backdrop-blur-2xl border border-white/[0.03] rounded-2xl overflow-hidden p-6 space-y-5 shadow-[0_15px_30px_rgba(0,0,0,0.3)]">
+        <div className="liquid-glass-frosted rounded-2xl overflow-hidden p-6 space-y-5">
             <div className="space-y-1">
                 <div className="flex items-center gap-3">
                     <div className="w-7 h-7 rounded-lg bg-[#ff6e3a]/5 border border-[#ff6e3a]/10 flex items-center justify-center">

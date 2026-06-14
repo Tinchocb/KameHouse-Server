@@ -1,0 +1,1757 @@
+{
+  "series_id": "dragon_ball_z",
+  "title": "Dragon Ball Z",
+  "total_episodes": 291,
+  "broadcast_details": {
+    "release_year": 1889,
+    "episodes_type": "Batallas de alta escala, orígenes Saiyajin y salvación intergaláctica."
+  },
+  "episodes": [
+    {
+      "num": 1,
+      "title": "«Aparece un mini Gokū! Son Gohan!»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 2,
+      "title": "«¡El guerrero más fuerte de la historia era el hermano de Gokū!»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 3,
+      "title": "«¡Lo hemos conseguido! Este es el mejor dúo del mundo»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 4,
+      "title": "«¡La carta de triunfo de Piccolo! Gohan es un pequeño llorón»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 5,
+      "title": "«¡Gokū está muerto! Sólo tienes una última oportunidad»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 6,
+      "title": "«Enma-Sama también se sorprende. Una pelea en el más allá»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 7,
+      "title": "«¡Dinosaurios y supervivencia! El duro entrenamiento de Gohan»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 8,
+      "title": "«¡La gran transformación de la noche de luna llena! El poder secreto de Gohan»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 9,
+      "title": "«Lo siento, Sr. Robot. Caen lágrimas en el desierto»",
+      "saga": "Saga Saiyajin",
+      "type": "Relleno"
+    },
+    {
+      "num": 10,
+      "title": "«¡No llores Gohan! Comienza la batalla!»",
+      "saga": "Saga Saiyajin",
+      "type": "Relleno"
+    },
+    {
+      "num": 11,
+      "title": "«Despiertan los saiyajin, los guerreros más fuertes del universo»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 12,
+      "title": "«Siesta en el camino de la serpiente. Gokū falla»",
+      "saga": "Saga Saiyajin",
+      "type": "Relleno"
+    },
+    {
+      "num": 13,
+      "title": "«¡Las manos fuera! La fruta prohibida de Enma-Daio-Sama»",
+      "saga": "Saga Saiyajin",
+      "type": "Relleno"
+    },
+    {
+      "num": 14,
+      "title": "«¡Dulce tentación! La hospitalidad de la Princesa Serpiente»",
+      "saga": "Saga Saiyajin",
+      "type": "Relleno"
+    },
+    {
+      "num": 15,
+      "title": "«¡Hay que escapar de Piccolo! Gohan convoca una tormenta»",
+      "saga": "Saga Saiyajin",
+      "type": "Relleno"
+    },
+    {
+      "num": 16,
+      "title": "«¡Corre Gohan! Chichi te espera en el monte Paozu»",
+      "saga": "Saga Saiyajin",
+      "type": "Relleno"
+    },
+    {
+      "num": 17,
+      "title": "«¡La ciudad sin futuro! El largo camino hacia la victoria»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 18,
+      "title": "«¡El final del Camino de la Serpiente! ¿Tú eres Kaio-sama?»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 19,
+      "title": "«¡Lucha contra la gravedad! Atrapa a Buubbles-kun»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 20,
+      "title": "«¡Revive la leyenda de los saiyajin! Las raíces de Gokū»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 21,
+      "title": "«¡Aparece, Shenlong! Los saiyajin llegan a la Tierra»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 22,
+      "title": "«¡Imposible! Los Saibaiman surgen de la tierra»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 23,
+      "title": "«¡Yamcha muere! Los temibles Saibaiman»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 24,
+      "title": "«¡Adiós, Ten! La estrategia suicida de Chaos»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 25,
+      "title": "«Ten Shin Han grita! Este es mi último Kikoho»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 26,
+      "title": "«¡La intensa espera de tres horas! El tren bala Kinton»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 27,
+      "title": "«¡Déjenmelo a mí! La gran explosión de rabia de Gohan»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 28,
+      "title": "«¡La crueldad de los saiyajin! Kami-sama y Pikoro mueren»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 29,
+      "title": "«¡Papá es increíble! La técnica mortal definitiva, el Kaio-Ken»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 30,
+      "title": "«¡Batalla ardiente sin límites! Gokū contra Vegeta»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 31,
+      "title": "«¡Ahora Gokū! La técnica final de la que depende todo»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 32,
+      "title": "«¡Fuerza de combate x 10! La gran transformación de Vegeta»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 33,
+      "title": "«¡No mueras, papá! Este es el poder latente de Gohan»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 34,
+      "title": "«¡Ataca, Krilin! La Genkidama repleta de esperanza»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 35,
+      "title": "«¡Haz un milagro! Son Gohan, el Super Saiyajin»",
+      "saga": "Saga Saiyajin",
+      "type": "Canon"
+    },
+    {
+      "num": 36,
+      "title": "«¡Volamos hacia el espacio! El planeta de la esperanza es el hogar de Piccolo...»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 37,
+      "title": "«¡El misterio de Yunzabit! La búsqueda de la nave espacial de Dios.»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 38,
+      "title": "«¡Despegue hacia Namekusei! El terror que espera a Gohan y a sus amigos.»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 39,
+      "title": "«¿Amigos o enemigos? El misterio de los niños de la nave espacial gigante»",
+      "saga": "Saga de Freezer",
+      "type": "Relleno"
+    },
+    {
+      "num": 40,
+      "title": "«¿En serio, de verdad? Este es el planeta de la esperanza, Namekusei»",
+      "saga": "Saga de Freezer",
+      "type": "Relleno"
+    },
+    {
+      "num": 41,
+      "title": "«Los alienígenas amables. La bola de cinco estrellas aparece de repente»",
+      "saga": "Saga de Freezer",
+      "type": "Relleno"
+    },
+    {
+      "num": 42,
+      "title": "«Planeta Freeza número 79. ¡La recuperación de Vegeta!»",
+      "saga": "Saga de Freezer",
+      "type": "Relleno"
+    },
+    {
+      "num": 43,
+      "title": "«¡Aquí están todas las bolas de dragón! Piccolo volverá a la vida»",
+      "saga": "Saga de Freezer",
+      "type": "Relleno"
+    },
+    {
+      "num": 44,
+      "title": "«¡Un nuevo enemigo terrorífico! El tirano espacial Freeza»",
+      "saga": "Saga de Freezer",
+      "type": "Relleno"
+    },
+    {
+      "num": 45,
+      "title": "«¡La ambición de Vegeta! Yo soy el guerrero más poderoso del Universo»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 46,
+      "title": "«¡Gokū al máximo de poder! 6 días hasta el otro extremo de la Galaxia»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 47,
+      "title": "«¡Ataque por sorpresa! El objetivo del anciano son los scouters»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 48,
+      "title": "«¡Gohan en peligro! La persecución del mortífero Dodoria»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 49,
+      "title": "«¡Dodoria explota! La temible onda de choque de Vegeta»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 50,
+      "title": "«¡Huida del planeta en llamas! Un desesperado Kamehameha»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 51,
+      "title": "«¡Coraje x 100! Los guerreros se reúnen con Kaio!»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 52,
+      "title": "«¡Escúchame, Gokū! Mantente alejado de Freeza»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 53,
+      "title": "«¡Escalofrío! La diabólica transformación del apuesto guerrero Zaabon»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 54,
+      "title": "«¡Defiendan la estrella de la esperanza! El aumento de poder de Krilin»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 55,
+      "title": "«Resurrección a las puertas de la muerte. El hombre milagroso, Vegeta»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 56,
+      "title": "«¡Una fuerza de combate inmensa! Los planes de Freeza se desmoronan»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 57,
+      "title": "«¡He recuperado las fuerzas! Gokū se enfrenta a una gravedad de 100»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 58,
+      "title": "«¡El arma secreta de Freeza! Las diabólicas Fuerzas Especiales Ginyu»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 59,
+      "title": "«¡Bulma está en peligro! La bola de cuatro estrellas cae en las manos de Freeza»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 60,
+      "title": "«¡Colisión frontal! El Kame Hame Ha y el Kaioh Ken»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 61,
+      "title": "«¡La batalla definitiva se aproxima! ¡Llegan las Fuerzas Especiales Ginyu!»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 62,
+      "title": "«¡Gokū se aproxima a toda velocidad! Hay que escapar de las redes de Freeza»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 63,
+      "title": "«¿Truco o supermagia? El Sr. Gourd se enfada»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 64,
+      "title": "«El salvaje Recoom. Es malo, brutal y extravagante»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 65,
+      "title": "«¡No mueras, Gohan! Gokū llega finalmente al campo de batalla»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 66,
+      "title": "«¡Una fuerza fuera de lo normal! Gokū, el Super Saiyajin de la leyenda»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 67,
+      "title": "«¡Una bola relámpago azul y roja! Jeese y Buurtta atacan a Gokū»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 68,
+      "title": "«¡Al fin una confrontación directa! El capitán Ginyu entra en combate»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 69,
+      "title": "«¡Qué fuerza más increíble! Has visto todo el poder de Gokū»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 70,
+      "title": "«¿Cuál será el resultado de la batalla? La diabólica mano de Freeza se cierra sobre el Saichoro»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 71,
+      "title": "«¡Sorpresa! Gokū es Ginyu y Ginyu es Gokū»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 72,
+      "title": "«¡Aparece, Super Shenlong! Concédeme mi deseo»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 73,
+      "title": "«¡Ése no soy yo! ¡Gohan tienes que golpear a tu padre!»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 74,
+      "title": "«¡Conmoción! Ginyu se convierte en rana»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 75,
+      "title": "«Tú que has reunido las siete bolas... di la contraseña»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 76,
+      "title": "«¡Dios también vuelve a la vida! Piccolo es resucitado por Súper Shenlong»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 77,
+      "title": "«¿El nacimiento del guerrero definitivo? Piccolo y Nail se fusionan»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 78,
+      "title": "«¡La supertransformación de pesadilla! La fuerza de combate de un millón de Freeza»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 79,
+      "title": "«¿Éste es el fin? Gohan es atacado por un poder descomunal»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 80,
+      "title": "«¡La marea cambia de golpe! Piccolo, el guerrero rezagado»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 81,
+      "title": "«¡La confianza de Piccolo! Yo seré el que derrote a Freeza»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 82,
+      "title": "«¡Ataca, Gokū! La segunda transformación de un Freeza enfurecido»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 83,
+      "title": "«¡Temedme! El desafío de la tercera transformación de Freeza»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 84,
+      "title": "«La muerte de Dende... ¡Surge, formidable Poder Zenkai!»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 85,
+      "title": "«¡Cómo he esperado este momento! Son Gokū se recupera»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 86,
+      "title": "«¡No...! Vegeta, el orgullo de los saiyajins, muere»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 87,
+      "title": "«¡Se levanta el telón de la batalla definitiva! Yo voy a derrotarte»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 88,
+      "title": "«¡Los dos superpoderes chocan! Llega el momento de luchar en serio»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 89,
+      "title": "«¡La terrible declaración de Freeza! Te derrotaré sin utilizar las manos»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 90,
+      "title": "«¡No es un alarde! Son Gokū, un tipo audaz y asombroso»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 91,
+      "title": "«¡La hora de la verdad! Un Kame Hame Ha con potencia de Kaioh Ken x 20»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 92,
+      "title": "«La Súper-Genkidama. ¡Ésta es mi última carta!»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 93,
+      "title": "«¡Hay que mantener viva la esperanza! El ataque suicida de Piccolo»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 94,
+      "title": "«¡La increíble energía de la Genkidama! ¿Quién puede sobrevivir a ella?»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 95,
+      "title": "«¡Al fin se transforma! Son Gokū, el Super Saiyajin legendario»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 96,
+      "title": "«¡Explosión de rabia! Gokū venga las muertes de todos»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 97,
+      "title": "«¿La destrucción del planeta Namek? El rayo de luz que perfora el suelo»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 98,
+      "title": "«Yo seré el que gane... Un ataque final que pone en peligro la supervivencia»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 99,
+      "title": "«¡Aparece Shenlong! El momento de la destrucción de Namek se aproxima»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 100,
+      "title": "«¡Soy el hijo de Gokū! Gohan regresa al campo de batalla»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 101,
+      "title": "«¡Me quedo en este planeta! Un deseo final para la victoria!»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 102,
+      "title": "«¡Acabemos de una vez! Dos luchadores permanecen en el planeta condenado»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 103,
+      "title": "«¡El patetismo de Freeza! ¡Una vez comienza a temblar, es imparable!»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 104,
+      "title": "«¡La declaración de victoria de Gokū! Freeza se destruye a sí mismo...»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 105,
+      "title": "«¡Freeza derrotado! Un último ataque que concentra toda la rabia»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 106,
+      "title": "«¡La gran explosión del Planeta Namek! Gokū desaparece en el espacio»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 107,
+      "title": "«Gokū ha sobrevivido ¡Todos los Guerreros Z resucitan!»",
+      "saga": "Saga de Freezer",
+      "type": "Canon"
+    },
+    {
+      "num": 108,
+      "title": "«¡El extraño templo! ¿Garlic Junior se convierte en dios?»",
+      "saga": "Saga de Garlic Jr.",
+      "type": "Relleno"
+    },
+    {
+      "num": 109,
+      "title": "«¡La niebla oscura del terror...! Todos se alían a la tribu del Demonio»",
+      "saga": "Saga de Garlic Jr.",
+      "type": "Relleno"
+    },
+    {
+      "num": 110,
+      "title": "«¡El templo es el campo de batalla! Piccolo cae en la tribu del Demonio»",
+      "saga": "Saga de Garlic Jr.",
+      "type": "Relleno"
+    },
+    {
+      "num": 111,
+      "title": "«¡Piccolo y la Super confrontación! El Masenko de la ira en el templo»",
+      "saga": "Saga de Garlic Jr.",
+      "type": "Relleno"
+    },
+    {
+      "num": 112,
+      "title": "«¡Vuelve al corazón de todos! La Super agua sagrada duerme en el templo»",
+      "saga": "Saga de Garlic Jr.",
+      "type": "Relleno"
+    },
+    {
+      "num": 113,
+      "title": "«¡No pares hasta el mañana! Decisión mortal para la preparación de dios»",
+      "saga": "Saga de Garlic Jr.",
+      "type": "Relleno"
+    },
+    {
+      "num": 114,
+      "title": "«¡Reto Super radical! Las normas del dios derrotado»",
+      "saga": "Saga de Garlic Jr.",
+      "type": "Relleno"
+    },
+    {
+      "num": 115,
+      "title": "«¡El agua Super sagrada es efectiva! El mundo despierta de la pesadilla»",
+      "saga": "Saga de Garlic Jr.",
+      "type": "Relleno"
+    },
+    {
+      "num": 116,
+      "title": "«¡Oportunidad de combatir para Gohan! Ataca al planeta diabólico de la desgracia»",
+      "saga": "Saga de Garlic Jr.",
+      "type": "Relleno"
+    },
+    {
+      "num": 117,
+      "title": "«Eres un hombre ¿no?... La proposición 101° de Krilin»",
+      "saga": "Saga de Garlic Jr.",
+      "type": "Relleno"
+    },
+    {
+      "num": 118,
+      "title": "«Esa es la Tierra papá... El contraataque del padre de Freezer»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 119,
+      "title": "«Yo derrotaré a Freezer... El misterioso chico espera a Gokū»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 120,
+      "title": "«¡Una brizna espera a Freezer! Otro Súper Saiyajin»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 121,
+      "title": "«¡Ossu! Cuanto tiempo... Son Gokū ha vuelto»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 122,
+      "title": "«Mi padre es Vegeta... La confesión del misterioso chico»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 123,
+      "title": "«¿La nueva técnica devastadora de Gokū? ¡Míralo, mi Movimiento Instantáneo!»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 124,
+      "title": "«¡Superando... a Gokū! El príncipe de la raza agresiva Saiyana»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Relleno"
+    },
+    {
+      "num": 125,
+      "title": "«¿Inicio autorizado? La nueva prueba de Gokū»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Relleno"
+    },
+    {
+      "num": 126,
+      "title": "«Las señales de un asesinato. ¿Quiénes son los androides?»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 127,
+      "title": "«¡La traición a sangre fría del inhumano N°20! Gokū: la Super transformación de la ira»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 128,
+      "title": "«¡El doble shock de Gokū! La enfermedad y el ataque de los enemigos»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 129,
+      "title": "«¡El poderoso Vegeta! Despierta la sangre del Super Saiyajin»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 130,
+      "title": "«La risa atrevida del N°20... El secreto del Dr. Gero»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 131,
+      "title": "«¿La realidad es más espantosa que el futuro? La duda de Trunks»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 132,
+      "title": "«¡Persecución! Buuscad el misterioso laboratorio del Dr. Gero»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 133,
+      "title": "«Y continúa el terror en la actualidad... ¡Despiertan el N°17 y el N°18!»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 134,
+      "title": "«¿Todo se retrasa? El arma definitiva para matar a Gokū»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 135,
+      "title": "«¿El superpoder de un rostro precioso? Las habilidades de N°18»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 136,
+      "title": "«Nadie puede detenerles... ¿Los guerreros Z serán fulminados?»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 137,
+      "title": "«¡La decisión de Piccolo! No dejes escapar la última oportunidad»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 138,
+      "title": "«¡El arma Super destructiva! Los androides se acercan a Gokū»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 139,
+      "title": "«¡Presentimiento desfavorable! Bulma informa del misterio»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 140,
+      "title": "«¡Descubierto el huevo del mal! Trunks está aterrorizado»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 141,
+      "title": "«Contra un enemigo nunca visto... ¡Nace el Super Namekkuseijin!»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 142,
+      "title": "«¿Kamehameha? El monstruo que tiene el poder de Gokū»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 143,
+      "title": "«¡El cuerpo viviente de la destrucción y el odio! Se llama Androide Cell»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 144,
+      "title": "«¡El gran fallo de Piccolo! Cell huye a la ciudad»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 145,
+      "title": "«¡El secreto del nacimiento de Cell! ¿Qué hay bajo el laboratorio?»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 146,
+      "title": "«¡Gokū despierta para luchar! ¡¡Sobrepasa al Super Saiyan!!»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 147,
+      "title": "«¡Acelera tu entrenamiento, Sayajin! En la Sala del Espíritu y el Tiempo...»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 148,
+      "title": "«¡¡El Gekiretsu Kodan que parte en 2 el cielo!! Piccolo contra el Androide N.º 17»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 149,
+      "title": "«¡Esperaba este día! Cell: Preludio a la perfección del cuerpo»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 150,
+      "title": "«¡No te arriesgues en atacarle! ¡Piccolo arde!»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 151,
+      "title": "«La única esperanza... el silencioso guerrero N°16 persiste»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 152,
+      "title": "«Absorbe a N°17... Cell, el super gourmet se transforma»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 153,
+      "title": "«¡El mañana está en tus manos! El desafío de Gokū»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 154,
+      "title": "«¡Yo pondré todo en su sitio! Aparece el renacido papá Vegeta»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 155,
+      "title": "«¡Regeneración repentino! Luz brillante, El Super poder de Vegeta»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 156,
+      "title": "«¡Arrodíllate Cell! Yo soy Super Vegeta»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 157,
+      "title": "«¡Orgullo peligroso! Un reto hacia el Cell perfecto»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 158,
+      "title": "«¡No sufras por mi! Krilin sabotea a N°18»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 159,
+      "title": "«¡Choque en el espacio! La asombrosa evolución al cuerpo perfecto de Cell»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 160,
+      "title": "«¡Poder de combate infinito! Nace el Dios de la destrucción llamado Cell»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 161,
+      "title": "«¡Super Vegeta en peligro! ¡El terror de la perfección se aproxima!»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 162,
+      "title": "«¡Los límites de un Super Saiyajin! Trunks llama a la tormenta»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 163,
+      "title": "«¡Salva a papá! La ira de Trunks también arde en el cielo»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 164,
+      "title": "«¡El futuro desesperante! Trunks, el hombre que sobrevive al infierno»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 165,
+      "title": "«¡El punto débil de Super Trunks! Cell, La bomba de Choque»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 166,
+      "title": "«¡El gran combate definitivo se acerca a Gokū! El misterio del Nuevo Torneo de Artes Marciales»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 167,
+      "title": "«¡100% de audiencia! El juego de Cell llama a la muerte»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 168,
+      "title": "«Gokū y Gohan... El máximo nivel definitivo de los héroes fraternales»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 169,
+      "title": "«¿La habitación de Gokū? Esperemos el juego de Cell»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 170,
+      "title": "«El descanso de los guerreros... La chica, las mentiras y la decisión de Gohan»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Relleno"
+    },
+    {
+      "num": 171,
+      "title": "«¡El poder ha sido ocultado! La época en la que Gohan fue un bebé»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Relleno"
+    },
+    {
+      "num": 172,
+      "title": "«¡Buuscando a un dios! Gokū, el gran movimiento instantáneo»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 173,
+      "title": "«¡El primer trabajo de Dendé! Las Dragon Ball reviven»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 174,
+      "title": "«¿El difícil problema de Gokū? A por las Dragon Ball»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Relleno"
+    },
+    {
+      "num": 175,
+      "title": "«¡Aquellos que desafían a Cell! Preludio de la batalla decisiva»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 176,
+      "title": "«¡Espera un momento! La violenta tropa de Satán»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 177,
+      "title": "«¡El Desafió de Gokū! El juego extremadamente tenso de Cell»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 178,
+      "title": "«¡La bomba terrestre! El enorme Kame Hame Ha de Cell»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 179,
+      "title": "«¿Derrota o muerte? Gokū, el secreto de la reversión»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 180,
+      "title": "«¡Decisión en el combate mortal! ¿La rendición de Gokū?»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 181,
+      "title": "«La persona que sucede al más poderoso... Se llama Gohan»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 182,
+      "title": "«¡Enfurécete, Gohan! Llama al poder dormido»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 183,
+      "title": "«¡La pequeña amenaza! El ataque de los Cell Juniors»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 184,
+      "title": "«¡La bondad de N°16! La ira de Gohan comienza a surgir»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 185,
+      "title": "«¡El nuevo poder sacude! La pulverización de los Cell Juniors»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 186,
+      "title": "«¡K.O. a Cell! El superpuño de hierro golpea una vez»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 187,
+      "title": "«¡El accidente de Cell! El cuerpo perfecto es destrozado»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 188,
+      "title": "«Adiós a todos, el último movimiento instantáneo de Gokū»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 189,
+      "title": "«¡Pesadilla a la luz del día! El terror de la perfección»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 190,
+      "title": "«De Gokū para Gohan... El alma de papá es transferida»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 191,
+      "title": "«La lucha termina... Gracias, Son Gokū»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 192,
+      "title": "«¡Entrenamiento en el otro mundo! Sonriente separación»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 193,
+      "title": "«¡Un nuevo día... Padre! Soy perseverante»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 194,
+      "title": "«¡Otra decisión! Yo protegeré el futuro»",
+      "saga": "Saga de Androides y Cell",
+      "type": "Canon"
+    },
+    {
+      "num": 195,
+      "title": "«¡Gran emoción! ¡Eso es! El luchador del Otro Mundo»",
+      "saga": "Saga del Torneo del Otro Mundo",
+      "type": "Relleno"
+    },
+    {
+      "num": 196,
+      "title": "«El Otro Mundo, Yo soy el gran héroe de la generación venidera»",
+      "saga": "Saga del Torneo del Otro Mundo",
+      "type": "Relleno"
+    },
+    {
+      "num": 197,
+      "title": "«¡Entusiasmo en el Gran planeta Kaiō! El torbellino de Gokū»",
+      "saga": "Saga del Torneo del Otro Mundo",
+      "type": "Relleno"
+    },
+    {
+      "num": 198,
+      "title": "«¡La decisión de las llamas! ¿Gokū o Paikuhan?»",
+      "saga": "Saga del Torneo del Otro Mundo",
+      "type": "Relleno"
+    },
+    {
+      "num": 199,
+      "title": "«¡La victoria no se me escapará! Decidámoslo, el Kamehameha superveloz»",
+      "saga": "Saga del Torneo del Otro Mundo",
+      "type": "Relleno"
+    },
+    {
+      "num": 200,
+      "title": "«¡Han pasado 7 años! Desde hoy soy estudiante»",
+      "saga": "Saga del Gran Saiyaman",
+      "type": "Canon"
+    },
+    {
+      "num": 201,
+      "title": "«Aparece el Gran Saiyaman del amor y la justicia»",
+      "saga": "Saga del Gran Saiyaman",
+      "type": "Canon"
+    },
+    {
+      "num": 202,
+      "title": "«¿La primera cita caótica de Gohan?»",
+      "saga": "Saga del Gran Saiyaman",
+      "type": "Canon"
+    },
+    {
+      "num": 203,
+      "title": "«¡Es urgente Gohan! ¡Salva a Videl!»",
+      "saga": "Saga del Gran Saiyaman",
+      "type": "Canon"
+    },
+    {
+      "num": 204,
+      "title": "«¡Los acontecimientos de un robo! ¿El ladrón es Saiyaman?»",
+      "saga": "Saga del Gran Saiyaman",
+      "type": "Canon"
+    },
+    {
+      "num": 205,
+      "title": "«¿Gokū también resucita? ¡El campeonato Mundial de Artes Marciales!»",
+      "saga": "Saga del Gran Saiyaman",
+      "type": "Canon"
+    },
+    {
+      "num": 206,
+      "title": "«¡Gohan también se sorprende! El poder explosivo de Goten»",
+      "saga": "Saga del Gran Saiyaman",
+      "type": "Canon"
+    },
+    {
+      "num": 207,
+      "title": "«¡A volar! La técnica de la danza celestial de Videl»",
+      "saga": "Saga del Gran Saiyaman",
+      "type": "Canon"
+    },
+    {
+      "num": 208,
+      "title": "«¡Gokū vuelve! La pandilla de guerreros Z»",
+      "saga": "Saga del Gran Saiyaman",
+      "type": "Canon"
+    },
+    {
+      "num": 209,
+      "title": "«¡Saiyaman en peligro! ¿Cuidado con la copia?»",
+      "saga": "Saga del Gran Saiyaman",
+      "type": "Canon"
+    },
+    {
+      "num": 210,
+      "title": "«¡No soy pequeño! Chibi Trunks»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 211,
+      "title": "«¡Es mi turno! Goten, Gran batalla intensa»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 212,
+      "title": "«¡Un millón de veces! ¡Decidido el chico ganador!»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 213,
+      "title": "«¿Qué vas a hacer Satán? El mayor problema de la historia»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 214,
+      "title": "«¡La decisión de los oponentes! Deprisa, que empiece el juego»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 215,
+      "title": "«¿Qué ocurre Piccolo? La increíble renuncia»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 216,
+      "title": "«¿El extraño invencible? El misterio de Spopobitch»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 217,
+      "title": "«¡La crueldad de Videl! ¿Podrá Super Gohan encolerizarse?»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 218,
+      "title": "«¡Ahí está! Saiyaman es Son Gohan»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 219,
+      "title": "«¡Sacude la conspiración! El poder de Gohan es robado»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 220,
+      "title": "«¡Aparece el mago oscuro! Babidi, el demonio del mal»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 221,
+      "title": "«¡La trampa te espera! Super batalla desde el infierno»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 222,
+      "title": "«¡No lo hagas! La primera batalla de la cólera de Vegeta»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 223,
+      "title": "«¡El poder regenerativo de Gokū! Yakon vuela»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 224,
+      "title": "«¡Gran error! ¿Satán contra los tres Super guerreros?»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 225,
+      "title": "«¡Los poderosos pequeños! ¿La gran batalla de N°18?»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 226,
+      "title": "«¡Demonio desvinculado! ¡El turno de Gohan!»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 227,
+      "title": "«¡Se mostró el corazón perverso! La idea de Dabra»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 228,
+      "title": "«¡Renace Vegeta el príncipe de la destrucción! Intrusión de guerra»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 229,
+      "title": "«¡El Super duelo del destino! Choque entre Gokū y Vegeta»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 230,
+      "title": "«¡Espera Babidi! No permitiré tu ambición»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 231,
+      "title": "«¡El sello se ha roto! Llega el brutal y malvado Buu»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 232,
+      "title": "«¡No dejes que resucite! El resistente KameHameHa»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 233,
+      "title": "«¿En línea recta hacia la desesperación? Kaioshin suspira»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 234,
+      "title": "«¡El temible Malvado! El terror de la muerte se acerca a Gohan»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 235,
+      "title": "«¡A comer! El estómago Superpoderoso del Malvado»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 236,
+      "title": "«¡La decisión del guerrero! Yo mataré al Malvado»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 237,
+      "title": "«Por aquellos que amas...¡Vegeta fallece!»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 238,
+      "title": "«¡Retorna la pesadilla! El Malvado Buu sigue vivo»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 239,
+      "title": "«¡La lucha de Videl y compañía! Buuscad las Dragon Ball»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 240,
+      "title": "«¡Enorme esperanza! La nueva técnica devastadora de los pequeños»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 241,
+      "title": "«Goten y Trunks, la esperanza para salvar el mundo»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 242,
+      "title": "«¡La resurrección de Gohan! ¿El arma secreta de Kaioshin?»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 243,
+      "title": "«¡Ahí está! La legendaria espada Z»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 244,
+      "title": "«¡La ciudad del Oeste es el objetivo! ¡Detente Malvado Buu!»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 245,
+      "title": "«¡Qué sorpresa, gran transformación! Super Saiyajin 3»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 246,
+      "title": "«¡Bye bye Babidi! La rebelión del malvado Buu»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 247,
+      "title": "«¿Una mala confusión? Entrenamiento especial de la pose de transformación»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 248,
+      "title": "«¡No están todos! Gokū vuelve al Otro Mundo»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 249,
+      "title": "«¿Dónde está Gohan? Entrenamiento intenso en el Planeta Kaioshin»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 250,
+      "title": "«¿Es mentira? La espada Z se ha roto»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 251,
+      "title": "«¡Nace la unión del Super hombre! Se llama Gotenks»",
+      "saga": "Saga de Majin Buu",
+      "type": "Relleno"
+    },
+    {
+      "num": 252,
+      "title": "«¿El último arma? Satán salva a la Tierra»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 253,
+      "title": "«¡Ha dejado de matar! El malvado Buu se convierte en un niño bueno»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 254,
+      "title": "«¡Huye Satán! Aparece el malvado Buu encolerizado»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 255,
+      "title": "«¿Quién vencerá? Duelo entre Buu bueno y Buu malo»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 256,
+      "title": "«¡La catástrofe no volverá! La exterminación de los humanos de la Tierra»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 257,
+      "title": "«¡Exitoso entrenamiento intensivo! Este es el fin del malvado Buu»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 258,
+      "title": "«¡La hora de la verdad! Super Gotenks Zenkai»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 259,
+      "title": "«¡Lo conseguimos! ¿Aplacaremos exitosamente a Buu con los fantasmas?»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 260,
+      "title": "«¡Huida desde la otra dimensión! Super Gotenks 3»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 261,
+      "title": "«¿Extralimitación? El voleibol de Buu Buu»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 262,
+      "title": "«¡Grandioso! El renacido Gohan va a la Tierra»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 263,
+      "title": "«¡Aplasta a Buu! El poder milagroso de Gohan»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 264,
+      "title": "«¿Ya está? La gran explosión del malvado Buu»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 265,
+      "title": "«¡La peor fechoría de Buu! Gotenks es absorbido»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 266,
+      "title": "«Por todo el universo... Son Gokū regresa»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 267,
+      "title": "«Los milagros solo ocurren una vez... La Super unión con Gohan»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 268,
+      "title": "«¡Unión! El orgullo de Vegeta y la ira de Gokū»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 269,
+      "title": "«¡Poder heroico! Vegeto supera los límites»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 270,
+      "title": "«¡Grieta en otra dimensión! ¿Buu es cortado?»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 271,
+      "title": "«¡Las manos del interior de Buu! Conviértete en caramelo»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 272,
+      "title": "«¿El héroe ha perdido? Vegeto es absorbido»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 273,
+      "title": "«¡El laberinto del mal! ¿Qué hay en el estómago de Buu?»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 274,
+      "title": "«¿Pesadilla o ilusión? Duelo fraternal entre Gokū y Gohan»",
+      "saga": "Saga de Majin Buu",
+      "type": "Relleno"
+    },
+    {
+      "num": 275,
+      "title": "«¡El secreto del malvado! Dos Buu dentro de Buu»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 276,
+      "title": "«¿Dónde está la salida? Huida del malogrado Buu»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 277,
+      "title": "«¡La desaparición de la Tierra! La transformación reversible hacia un Buu malévolo»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 278,
+      "title": "«¡El ataque de Buu! Conclusión en el planeta Kaioshin»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 279,
+      "title": "«¡Atrapa el futuro! La gran batalla arriesgando el universo»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 280,
+      "title": "«¡Vegeta desprotegido! Gokū. tú eres el número 1»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 281,
+      "title": "«¡Resiste Vegeta! 1 minuto arriesgando la vida»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 282,
+      "title": "«¡No molestes a Satán! El creador de Buu resucita»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 283,
+      "title": "«¡El secreto de Vegeta! Polunga y los dos deseos»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 284,
+      "title": "«¡La última esperanza! Sobrevivir con la enorme Bola Genki»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 285,
+      "title": "«¡Super emoción! Todos pueden hacer la Genkidama»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 286,
+      "title": "«¡Lo sabía, Son Gokū es el más fuerte! El malvado Buu desaparece»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 287,
+      "title": "«¡Vuelve la tranquilidad! ¿El malvado Buu es un aliado de la justicia?»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 288,
+      "title": "«¡Gokū es lento! ¡Todos en la fiesta!»",
+      "saga": "Saga de Majin Buu",
+      "type": "Relleno"
+    },
+    {
+      "num": 289,
+      "title": "«¡Abuelo Gokū! ¡Yo soy Pan!»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 290,
+      "title": "«¡Soy Uub! ¿El origen del malvado 10 años después?»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    },
+    {
+      "num": 291,
+      "title": "«¡El más fuerte! El sueño de Gokū se cumple»",
+      "saga": "Saga de Majin Buu",
+      "type": "Canon"
+    }
+  ]
+}

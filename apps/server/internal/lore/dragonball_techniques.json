@@ -1,0 +1,287 @@
+{
+  "universe": "Dragon Ball",
+  "catalog_description": "Catálogo completo de técnicas, ataques y habilidades del universo Dragon Ball",
+  "techniques": [
+    {
+      "id": "kamehameha",
+      "name": "Kamehameha",
+      "name_kanji": "亀派気功",
+      "pronunciation": "ka-me-ha-me-ha",
+      "type": "Onda de ki",
+      "users": ["Son Goku", "Krilin", "Maestro Roshi", "Son Gohan", "Son Goten", "Cell", "Android 18", "Yamcha (parcial)"],
+      "origin": "Inventada por el Maestro Roshi tras 50 años de perfeccionamiento.",
+      "description": "La técnica de ki más icónica del universo Dragon Ball. El usuario concentra su energía en las manos juntas a un costado del cuerpo y la libera en un potente rayo de energía azul. El nombre proviene del rey hawaiano Kamehameha I.",
+      "variations": [
+        {
+          "name": "Super Kamehameha",
+          "user": "Son Goku",
+          "description": "Versión potenciada del Kamehameha básico."
+        },
+        {
+          "name": "10x Kamehameha",
+          "user": "Son Goku (SSJ4 en GT)",
+          "description": "Diez veces más poderoso que el Super Kamehameha."
+        },
+        {
+          "name": "Father-Son Kamehameha",
+          "user": "Son Gohan + Espíritu de Goku",
+          "description": "El ataque combinado que destruyó a Cell. El espíritu de Goku guía el Kamehameha de Gohan."
+        },
+        {
+          "name": "God Kamehameha",
+          "user": "Son Goku (SSJG/SSJB)",
+          "description": "Versión potenciada con ki divino."
+        },
+        {
+          "name": "Kamehameha de Punto de Retorno",
+          "user": "Son Goku",
+          "description": "Disparado hacia el suelo para redirigir la trayectoria de caída."
+        },
+        {
+          "name": "Kamehameha a Quemarropa",
+          "user": "Son Goku",
+          "description": "Disparado en contacto directo con el enemigo."
+        },
+        {
+          "name": "Scatter Kamehameha",
+          "user": "Krilin",
+          "description": "Versión múltiple que divide el rayo en varios proyectiles."
+        },
+        {
+          "name": "True Kamehameha",
+          "user": "Son Goku (True UI)",
+          "description": "El Kamehameha potenciado con las emociones del True Ultra Instinct."
+        }
+      ],
+      "first_appearance": "Capítulo 8, Dragon Ball (1984)"
+    },
+    {
+      "id": "kienzan",
+      "name": "Kienzan",
+      "alias": ["Disco Destructivo", "Destructo Disk"],
+      "name_kanji": "気円斬",
+      "type": "Disco de ki cortante",
+      "users": ["Krilin", "Cell (copiado)", "Android 18"],
+      "description": "Un disco de energía extremadamente afilado con capacidad de cortar casi cualquier cosa. Krilin lo usa lanzándolo como un frisbee. Tiene la característica especial de que puede cortar incluso a guerreros mucho más poderosos que el usuario, ya que no depende del nivel de ki del atacante sino de la concentración del disco.",
+      "variations": [
+        {
+          "name": "Heat Disc",
+          "user": "Krilin",
+          "description": "Versión mejorada con mayor poder de corte."
+        },
+        {
+          "name": "Kienzan x100",
+          "user": "Krilin",
+          "description": "Cien discos simultáneos."
+        }
+      ],
+      "first_appearance": "Capítulo 229, Dragon Ball (1990)"
+    },
+    {
+      "id": "makankosappo",
+      "name": "Makankosappo",
+      "alias": ["Cañón Especial de Rayos", "Special Beam Cannon"],
+      "name_kanji": "魔貫光殺砲",
+      "type": "Rayo perforante de ki",
+      "users": ["Piccolo", "Cell (ADN de Piccolo)"],
+      "description": "El ataque más poderoso de Piccolo. Requiere 5 minutos de concentración para cargarse. El rayo gira en espiral perforando a través de casi cualquier defensa. Su primera versión mató a Goku y Raditz al mismo tiempo. Con práctica, Piccolo puede cargarlo más rápido.",
+      "first_appearance": "Capítulo 196, Dragon Ball Z (1989)"
+    },
+    {
+      "id": "genkidama",
+      "name": "Genkidama",
+      "alias": ["Esfera Espiritual", "Spirit Bomb"],
+      "name_kanji": "元気玉",
+      "type": "Esfera de ki colectivo",
+      "users": ["Son Goku"],
+      "description": "La técnica definitiva de ki colectivo. Goku levanta las manos al cielo para recolectar la energía vital de todos los seres del planeta (plantas, animales, personas). Solo puede ser usada por personas de corazón puro. Puede ser potenciada con la energía de todos los universos. Fue la técnica que finalmente destruyó a Kid Buu.",
+      "notable_uses": [
+        "Contra Vegeta en su primera visita a la Tierra (ayudado por Gohan y Krilin)",
+        "Contra Freezer en el Planeta Namek (enorme pero insuficiente)",
+        "Contra Kid Buu (con energía de todo el universo vivo)"
+      ],
+      "first_appearance": "Capítulo 276, Dragon Ball (1991)"
+    },
+    {
+      "id": "kaio_ken",
+      "name": "Kaio-ken",
+      "name_kanji": "界王拳",
+      "type": "Técnica multiplicadora",
+      "users": ["Son Goku"],
+      "description": "Técnica enseñada por Kaio del Norte. Multiplica temporalmente el ki y las capacidades físicas del usuario (velocidad, fuerza, ki). El cuerpo sufre un enorme estrés proporcional al multiplicador usado. Goku la combinó con el SSJB en el Torneo del U6 (KKx10 y KKx20).",
+      "multipliers": ["x1", "x2", "x3", "x4 (máximo original)", "x10", "x20 (combinado con SSJB)"],
+      "first_appearance": "Capítulo 248, Dragon Ball (1991)"
+    },
+    {
+      "id": "shunkan_ido",
+      "name": "Teletransportación Instantánea",
+      "alias": ["Instant Transmission", "Shunkan Idō"],
+      "name_kanji": "瞬間移動",
+      "type": "Técnica de teletransporte",
+      "users": ["Son Goku", "Cell (ADN)", "Kibito"],
+      "description": "Goku la aprendió en el planeta Yadrat. Permite al usuario teletransportarse instantáneamente a cualquier lugar del universo detectando el ki del destino con los dos dedos en la frente. A diferencia del movimiento ultraveloz, es una teletransportación real.",
+      "first_appearance": "Capítulo 349, Dragon Ball (1992)"
+    },
+    {
+      "id": "galick_ho",
+      "name": "Cañón Galick",
+      "alias": ["Galick Ho", "Galick Gun"],
+      "name_kanji": "ギャリック砲",
+      "type": "Onda de ki",
+      "users": ["Vegeta"],
+      "description": "El equivalente del Kamehameha para Vegeta. Un potente rayo de ki morado oscuro que Vegeta dispara con las manos en posición lateral. En su primer duelo contra Goku, el Cañón Galick y el Kamehameha colisionaron en un duelo de poder puro.",
+      "first_appearance": "Capítulo 237, Dragon Ball (1991)"
+    },
+    {
+      "id": "big_bang_attack",
+      "name": "Big Bang Attack",
+      "name_kanji": "ビッグバンアタック",
+      "type": "Esfera de ki explosiva",
+      "users": ["Vegeta"],
+      "description": "Vegeta lanza una esfera de ki de un solo dedo que al impactar genera una explosión masiva. Es uno de sus ataques más devastadores.",
+      "first_appearance": "Capítulo 364, Dragon Ball (1992)"
+    },
+    {
+      "id": "final_flash",
+      "name": "Final Flash",
+      "name_kanji": "ファイナルフラッシュ",
+      "type": "Rayo de ki masivo",
+      "users": ["Vegeta"],
+      "description": "El ataque definitivo de Vegeta con sus dos manos. Requiere carga y genera un rayo dorado masivo que aplastó el brazo y parte del torso de Cell Perfecto. Una de las explosiones de ki más poderosas mostradas en el anime.",
+      "first_appearance": "Capítulo 375, Dragon Ball (1992)"
+    },
+    {
+      "id": "hakai",
+      "name": "Hakai",
+      "alias": ["Destrucción", "Destroy"],
+      "name_kanji": "破壊",
+      "type": "Energía Divina de Destrucción",
+      "users": ["Beerus", "Vegeta", "Champa", "Toppo", "Mosco", "otros Hakaishin"],
+      "description": "La técnica sagrada de los Dioses de la Destrucción. Permite borrar de la existencia completamente a un ser vivo, incluyendo su alma. No puede aplicarse a seres que sean significativamente más poderosos que el usuario. Vegeta la aprendió de Beerus durante el Torneo del Poder.",
+      "first_appearance": "Dragon Ball Super (película La Batalla de los Dioses, 2013)"
+    },
+    {
+      "id": "masenko",
+      "name": "Masenko",
+      "name_kanji": "魔閃光",
+      "type": "Rayo de ki",
+      "users": ["Son Gohan", "Piccolo"],
+      "description": "Técnica de ki de color amarillo/naranja enseñada por Piccolo a Gohan. Las manos se colocan superpuestas sobre la cabeza antes de disparar el rayo. Fue el primer ataque que Gohan usó consciente en el anime.",
+      "first_appearance": "Episodio 31, Dragon Ball Z (1990)"
+    },
+    {
+      "id": "taiyoken",
+      "name": "Taiyoken",
+      "alias": ["Destello Solar", "Solar Flare"],
+      "name_kanji": "太陽拳",
+      "type": "Técnica de cegamiento",
+      "users": ["Krilin", "Tenshinhan", "Cell", "Android 16"],
+      "description": "El usuario pone los dedos en la frente y genera un destello de luz cegadora e instantánea equivalente a varios soles. No daña físicamente pero ciega temporalmente al oponente, permitiendo escapar o contratacar.",
+      "first_appearance": "Capítulo 113, Dragon Ball (1987)"
+    },
+    {
+      "id": "fusion_metamor",
+      "name": "Fusión Metamor",
+      "alias": ["Danza de la Fusión", "Fusion Dance"],
+      "type": "Técnica de fusión",
+      "users": ["Son Goten + Trunks = Gotenks", "Son Goku + Vegeta = Gogeta"],
+      "description": "Técnica de fusión desarrollada por los habitantes del Planeta Metamor. Dos guerreros de poder y altura similar realizan una danza sincronizada que los fusiona en un ser combinado. La fusión dura 30 minutos y puede fallarse si los movimientos no son perfectamente idénticos, resultando en fusiones defectuosas.",
+      "fusion_results": [
+        {
+          "users": ["Goten", "Trunks"],
+          "result": "Gotenks",
+          "description": "Guerrero increíblemente poderoso que alcanza SSJ3. Extremadamente poderoso pero arrogante e impulsivo."
+        },
+        {
+          "users": ["Goku", "Vegeta"],
+          "result": "Gogeta",
+          "description": "La fusión más poderosa. Alcanza SSJ4 en GT y SSJB en DBS. Su carácter es despreocupado pero extremadamente poderoso."
+        }
+      ],
+      "first_appearance": "Episodio 247, Dragon Ball Z (1995)"
+    },
+    {
+      "id": "potara",
+      "name": "Fusión Potara",
+      "alias": ["Anillos del Kaioshin"],
+      "type": "Técnica de fusión",
+      "users": ["Cualquier par que use los aretes Potara"],
+      "description": "Fusión mediante el uso de los aretes sagrados Potara de los Kaioshin. Originalmente se creyó permanente para los mortales, pero en Super se reveló que dura 1 hora para no-dioses. La fusión resultante es generalmente más poderosa que la fusión Metamor.",
+      "fusion_results": [
+        {
+          "users": ["Goku", "Vegeta"],
+          "result": "Vegito / Vegetto",
+          "description": "La fusión más poderosa del universo 7. Altamente confiado en su poder, muy calculador. Alcanzó SSJ Blue Vegito en el arco de Zamasu."
+        },
+        {
+          "users": ["Old Kaioshin", "Kibito"],
+          "result": "Kibito Kai",
+          "description": "Fusión accidental de los Kaioshin."
+        }
+      ],
+      "first_appearance": "Capítulo 484, Dragon Ball (1995)"
+    },
+    {
+      "id": "death_beam",
+      "name": "Death Beam",
+      "alias": ["Rayo de la Muerte", "Dodon Ray mejorado"],
+      "name_kanji": "デスビーム",
+      "type": "Rayo de ki fino y penetrante",
+      "users": ["Freezer", "Cooler", "Rey Cold"],
+      "description": "Un fino rayo de ki morado que Freezer dispara con un dedo. A pesar de parecer pequeño, tiene una fuerza de penetración enorme. Freezer lo dispara a velocidades casi invisibles. Fue con este ataque que mató a Vegeta en Namek.",
+      "first_appearance": "Capítulo 293, Dragon Ball (1991)"
+    },
+    {
+      "id": "death_ball",
+      "name": "Death Ball",
+      "alias": ["Supernova", "Boule Mortelle"],
+      "type": "Esfera de energía masiva",
+      "users": ["Freezer", "Cooler"],
+      "description": "La técnica más destructiva de Freezer. Una enorme esfera de ki morado oscuro que crece hasta alcanzar el tamaño de un pequeño planeta. Con ella destruyó el Planeta Vegeta y luego el Planeta Namek. La versión completa puede destruir planetas instantáneamente.",
+      "first_appearance": "Capítulo 305, Dragon Ball (1991)"
+    },
+    {
+      "id": "ultra_instinct",
+      "name": "Migatte no Gokui",
+      "alias": ["Ultra Instinto", "Ultra Instinct", "Silver"],
+      "name_kanji": "身勝手の極意",
+      "type": "Estado de trascendencia marcial",
+      "users": ["Whis", "Gran Sacerdote", "Merus", "Son Goku (temporal)", "Moro (copiado parcialmente)"],
+      "description": "El estado más elevado de las artes marciales, dominado naturalmente por los ángeles. El cuerpo actúa y reacciona de forma completamente autónoma sin que la mente consciente deba procesar el movimiento. La diferencia entre Señal y Completo es que Señal solo libera la defensa autónoma, mientras que Completo incluye el ataque autónomo. El True Ultra Instinct de Goku usa las emociones como catalizador.",
+      "levels": [
+        "Ultra Instinto Señal (Imperfecto) - solo defensa autónoma",
+        "Ultra Instinto Completo - defensa y ataque autónomos",
+        "True Ultra Instinct - las emociones potencian el estado"
+      ],
+      "first_appearance": "Episodio 110, Dragon Ball Super (2017)"
+    },
+    {
+      "id": "ultra_ego",
+      "name": "Wagami no Gokui",
+      "alias": ["Ultra Ego", "Ultra Ego"],
+      "name_kanji": "我儘の極意",
+      "type": "Estado de trascendencia marcial",
+      "users": ["Beerus", "Vegeta (aprendido)"],
+      "description": "El equivalente del Ultra Instinto pero para los Hakaishin. A diferencia del UI que suprime las emociones, el Ultra Ego las abraza. El poder del usuario aumenta con cada golpe que recibe y con su instinto de destrucción. Vegeta lo aprendió entrenando con Beerus.",
+      "first_appearance": "Capítulo 74, Dragon Ball Super (manga, 2021)"
+    },
+    {
+      "id": "power_impact",
+      "name": "Power Impact",
+      "alias": ["Bola de fuego de Jiren"],
+      "type": "Esfera de ki condensada",
+      "users": ["Jiren"],
+      "description": "La técnica más poderosa de Jiren. Condensa su ki hasta el punto más pequeño posible y lo lanza. La explosión resultante es devastadora y puede superar a ataques mucho más grandes. Su variante cargada puede destruir un universo entero.",
+      "first_appearance": "Episodio 109, Dragon Ball Super (2017)"
+    },
+    {
+      "id": "hakai_bola_dragon",
+      "name": "Erasure of Dragon Balls",
+      "alias": ["Borramiento de las Esferas del Dragón"],
+      "type": "Poder divino",
+      "users": ["Zeno-sama"],
+      "description": "Zeno puede borrar universamente cualquier cosa con un simple gesto. Sin preparación, sin cargar ki. Borró 6 universos de la existencia en un momento de ira. También borró el Universo 6 y el Universo 7 (antes de ser revertido por el deseo) al Zeno del futuro.",
+      "first_appearance": "Episodio 67, Dragon Ball Super (2016)"
+    }
+  ]
+}

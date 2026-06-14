@@ -3,10 +3,10 @@ import { useRef, useMemo } from "react"
 import { useGSAP } from "@gsap/react"
 import gsap from "gsap"
 import { cn } from "@/components/ui/core/styling"
-import { getHighResImage, getMediumResImage, getLowResImage } from "@/lib/helpers/images"
+import { getHighResImage, getLowResImage } from "@/lib/helpers/images"
 import { Anime_Entry, Continuity_WatchHistoryItem } from "@/api/generated/types"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
-import { Play, Sparkles, Star, Heart, Check, Film, ListPlus, Settings2, ExternalLink } from "lucide-react"
+import { Play, Check, Plus, Users } from "lucide-react"
 import { useUpdateAnimeEntryProgress } from "@/api/hooks/anime_entries.hooks"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { useAppStore } from "@/lib/store"
@@ -51,11 +51,15 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
     // Smooth Parallax capture scroll listener (independent of window scroll)
     React.useEffect(() => {
         const handleScroll = (e: Event) => {
-            const target = e.target as HTMLElement
-            if (target && target.scrollHeight > target.clientHeight) {
-                if (!backdropRef.current) return
+            const target = e.target
+            if (!backdropRef.current || !containerRef.current) return
+
+            if (target === document || target === window) {
+                const scrolled = window.scrollY || document.documentElement.scrollTop
+                backdropRef.current.style.transform = `translate3d(0, ${scrolled * 0.4}px, 0)`
+            } else if (target instanceof HTMLElement && target.contains(containerRef.current)) {
                 const scrolled = target.scrollTop
-                backdropRef.current.style.transform = `translate3d(0, ${scrolled * 0.45}px, 0)`
+                backdropRef.current.style.transform = `translate3d(0, ${scrolled * 0.4}px, 0)`
             }
         }
         window.addEventListener("scroll", handleScroll, { capture: true, passive: true })
@@ -71,11 +75,19 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
             ease: "power4.out",
             delay: 0.1
         })
-    }, { scope: containerRef })
+    }, { scope: containerRef, dependencies: [] })
     
     const title = media.titleSpanish || media.titleEnglish || media.titleRomaji || "Título Desconocido"
     const year = media.year?.toString() || ""
-    const score = media.score ? (media.score / 10).toFixed(1) : null
+
+    const genres = useMemo(() => {
+        return (media?.genres as string[]) || []
+    }, [media])
+
+    const synopsis = useMemo(() => {
+        const raw = media.description || ""
+        return raw.replace(/<[^>]*>/g, "")
+    }, [media.description])
 
     // 1. Duration Calculation & Formatting
     const durationMins = useMemo(() => {
@@ -96,33 +108,11 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
     // 2. Technical details from files
     const tech = entry.localFiles?.[0]?.technicalInfo
     
-    const qualityBadge = useMemo(() => {
-        if (!tech?.videoStream) return null
+    const is4K = useMemo(() => {
+        if (!tech?.videoStream) return false
         const w = tech.videoStream.width
-        if (w === undefined) return null
-        if (w >= 3840) return "4K ULTRA HD"
-        if (w >= 1920) return "1080P FHD"
-        if (w >= 1280) return "720P HD"
-        return null
-    }, [tech])
-
-    const codecBadge = useMemo(() => {
-        if (!tech?.videoStream?.codec) return null
-        const c = tech.videoStream.codec.toLowerCase()
-        if (c.includes("hevc") || c.includes("x265") || c.includes("h265")) return "HEVC"
-        if (c.includes("avc") || c.includes("x264") || c.includes("h264")) return "AVC"
-        return c.toUpperCase()
-    }, [tech])
-
-    const audioBadge = useMemo(() => {
-        if (!tech?.audioStreams || tech.audioStreams.length === 0) return null
-        const langs = tech.audioStreams.map(a => a.language?.toLowerCase() || "")
-        const hasSpa = langs.some(l => l.includes("spa") || l.includes("esp") || l.includes("lat"))
-        const hasJpn = langs.some(l => l.includes("jap") || l.includes("jpn"))
-        const labels: string[] = []
-        if (hasSpa) labels.push("ESPAÑOL")
-        if (hasJpn) labels.push("JAPONÉS")
-        return labels.length > 0 ? labels.join(" / ") : null
+        if (w === undefined) return false
+        return w >= 3840
     }, [tech])
 
     // 3. User actions state & progress mutation
@@ -136,30 +126,6 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
 
     const [isFavorite, setIsFavorite] = React.useState(false)
     const { mutate: updateProgress } = useUpdateAnimeEntryProgress(Number(seriesId), 1, false)
-
-    const addToQueue = useAppStore(state => state.addToQueue)
-
-    const handleAddToQueue = (e: React.MouseEvent) => {
-        e.stopPropagation()
-        if (entry.localFiles && entry.localFiles.length > 0) {
-            const localFile = entry.localFiles[0]
-            const epNum = localFile.parsedInfo?.episode || localFile.metadata?.episode || 1
-            
-            addToQueue({
-                id: entry.mediaId!,
-                title: title,
-                playableUrl: localFile.path || "",
-                thumbnail: getMediumResImage(media.posterImage || ""),
-                mediaId: entry.mediaId!,
-                episodeNumber: Number(epNum),
-                malId: media.idMal ?? null,
-                mediaFormat: media.format ?? "MOVIE"
-            })
-            toast.success("Añadido a la cola de reproducción")
-        } else {
-            toast.error("No hay archivos locales disponibles para reproducir.")
-        }
-    }
 
     const handleToggleWatched = (e: React.MouseEvent) => {
         e.stopPropagation()
@@ -185,233 +151,172 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
         return (continuityItem.currentTime / continuityItem.duration) * 100
     }, [continuityItem])
 
-    // Dynamic gradient fallback if no backdrop
-    const stringToColor = (str: string) => {
-        let hash = 0
-        for (let i = 0; i < str.length; i++) {
-            hash = str.charCodeAt(i) + ((hash << 5) - hash)
-        }
-        const h = Math.abs(hash % 360)
-        return `hsl(${h}, 60%, 12%)`
-    }
-    const accentColor = stringToColor(title)
-
     return (
         <section 
             ref={containerRef}
-            className={cn("relative w-full min-h-[75vh] md:min-h-[85vh] flex flex-col justify-end overflow-hidden bg-[#09090b] select-none", className)}
+            className={cn("relative w-full h-[85vh] lg:h-[90vh] flex flex-col justify-end overflow-hidden bg-[#07070a] select-none", className)}
         >
-            {/* Cinematic Grain Overlay */}
-            <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay z-20"
-                style={{ backgroundImage: `url("https://grainy-gradients.vercel.app/noise.svg")` }}
-            />
-
             {/* Ambient Blur Background */}
-            <div className="absolute inset-0 overflow-hidden bg-[#09090b] z-0">
-                {media.posterImage ? (
+            <div className="absolute inset-0 overflow-hidden bg-[#07070a] z-0">
+                {media.posterImage && (
                     <div
-                        className="absolute left-1/2 top-0 -translate-x-1/2 w-full h-full opacity-30"
+                        className="absolute left-1/2 top-0 -translate-x-1/2 w-full h-full opacity-35"
                         style={{
                             backgroundImage: `url(${getLowResImage(media.posterImage)})`,
                             backgroundSize: "cover",
                             backgroundPosition: "center 20%",
-                            filter: "blur(120px) saturate(150%) brightness(0.3)",
-                        }}
-                    />
-                ) : (
-                    <div 
-                        className="absolute inset-0 opacity-40 blur-[150px]"
-                        style={{ 
-                            background: `radial-gradient(circle at 50% 30%, ${accentColor}, transparent 80%)` 
+                            filter: "blur(130px) saturate(160%) brightness(0.2)",
                         }}
                     />
                 )}
             </div>
 
-            {/* High Res Crisp Backdrop */}
+            {/* High Res Crisp Backdrop with Ken Burns */}
             {backdropUrl && (
                 <div 
                     ref={backdropRef}
-                    className="absolute inset-0 overflow-hidden cursor-pointer z-0 will-change-transform"
+                    className="absolute inset-0 overflow-hidden cursor-pointer z-0 will-change-transform group/backdrop"
                     onClick={onPlay}
                 >
                     <DeferredImage
                         src={backdropUrl}
                         alt={title}
-                        className="w-full h-full object-cover object-center opacity-45 grayscale-[0.05] transition-all duration-1000 scale-[1.01] group-hover/hero:scale-105 group-hover/hero:opacity-60"
+                        priority={true}
+                        className="w-full h-full object-cover object-center md:object-[center_15%] opacity-90 transition-all duration-[20s] ease-out group-hover/backdrop:scale-[1.03] animate-ken-burns"
                     />
                 </div>
             )}
 
-            {/* Cinematic Gradient Masking */}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#09090b] via-[#09090b]/50 to-transparent opacity-100 z-10 pointer-events-none" />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#09090b]/90 via-transparent to-transparent opacity-100 z-10 pointer-events-none" />
-            <div className="absolute inset-0 bg-gradient-to-b from-[#09090b]/15 via-transparent to-transparent opacity-100 z-10 pointer-events-none" />
+            {/* Disney+ Style Deep Cinematic Gradient Vignette Masking */}
+            <div className="absolute inset-x-0 bottom-0 h-[60vh] bg-gradient-to-t from-[#050506] via-[#050506]/90 to-transparent opacity-100 z-10 pointer-events-none" />
+            <div className="absolute inset-y-0 left-0 w-full md:w-[60%] bg-gradient-to-r from-[#050506] via-[#050506]/85 to-transparent opacity-100 z-10 pointer-events-none" />
 
-            {/* Content (Bottom Left) */}
-            <div className="relative z-20 flex flex-col justify-end items-start px-6 sm:px-12 md:pl-[240px] md:pr-24 pb-16 pt-48 max-w-[1500px] w-full gap-5">
-                
-                {/* Meta details (above title) */}
-                <div className="movie-hero-animate flex flex-wrap items-center gap-3">
-                    {score && (
-                        <div className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-brand-orange to-amber-500 text-black font-black text-[10px] tracking-widest rounded shadow-md">
-                            <Star size={10} fill="currentColor" className="stroke-none" />
-                            {score} Ki
-                        </div>
-                    )}
-                    {year && (
-                        <div className="px-2.5 py-1 bg-white/5 backdrop-blur-md text-white/80 border border-white/10 rounded font-black text-[10px] tracking-widest uppercase">
-                            {year}
-                        </div>
-                    )}
-                    {formattedDuration && (
-                        <div className="px-2.5 py-1 bg-white/5 backdrop-blur-md text-white/80 border border-white/10 rounded font-black text-[10px] tracking-widest uppercase">
-                            {formattedDuration}
-                        </div>
-                    )}
-                    <span className="px-2.5 py-1 bg-gradient-to-r from-brand-orange/20 to-orange-500/20 backdrop-blur-md text-brand-orange border border-brand-orange/30 rounded font-black text-[10px] tracking-widest uppercase flex items-center gap-1 shadow-sm">
-                        <Film size={10} className="animate-pulse" />
-                        PELÍCULA
-                    </span>
+            {/* Content Container */}
+            <div className="relative z-20 w-full max-w-[1800px] mx-auto px-6 sm:px-12 pb-16 pt-32 flex flex-col pointer-events-none">
+                <div className="max-w-3xl space-y-5 pointer-events-auto w-full">
                     
-                    {/* Quality Badges */}
-                    {qualityBadge && (
-                        <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-950/20 border border-emerald-500/30 rounded">
-                            {qualityBadge}
-                        </span>
-                    )}
-                    {codecBadge && (
-                        <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-indigo-400 bg-indigo-950/20 border border-indigo-500/30 rounded">
-                            {codecBadge}
-                        </span>
-                    )}
-                    {audioBadge && (
-                        <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-zinc-400 bg-white/5 border border-white/10 rounded">
-                            {audioBadge}
-                        </span>
-                    )}
-                </div>
-
-                {/* Main Cinematic Title */}
-                <div className="movie-hero-animate flex flex-col gap-1">
-                    <h1 
-                        className="text-[clamp(2.5rem,6vw,7rem)] font-bebas font-normal leading-[0.9] tracking-wider text-white uppercase drop-shadow-[0_4px_30px_rgba(0,0,0,0.85)] cursor-pointer hover:text-brand-orange transition-colors duration-300"
-                        onClick={onPlay}
-                    >
-                        {title}
-                    </h1>
-                </div>
-
-                {/* Action Row */}
-                <div className="movie-hero-animate flex flex-wrap items-center gap-4 mt-3">
-                    
-                    {/* Main Play Button */}
-                    <button
-                        onClick={onPlay}
-                        className="group/play relative flex items-center gap-4 px-8 py-4 bg-gradient-to-r from-brand-orange via-orange-500 to-amber-500 text-white rounded-2xl overflow-hidden shadow-[0_10px_35px_rgba(255,110,58,0.3)] hover:shadow-[0_15px_45px_rgba(255,110,58,0.5)] transition-all duration-500 hover:scale-105 active:scale-95 border border-white/10 hover:border-brand-orange/40"
-                    >
-                        {/* Glossy shine */}
-                        <div className="absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-transparent opacity-0 group-hover/play:opacity-100 transition-opacity duration-500 z-0" />
-                        {/* Glow halo */}
-                        <div className="absolute -inset-10 bg-brand-orange/30 blur-xl group-hover/play:opacity-100 opacity-0 transition-opacity duration-500 -z-10 animate-pulse" />
-
-                        <div className="p-2.5 bg-black/40 backdrop-blur-xl rounded-xl border border-white/10 text-white group-hover/play:bg-white group-hover/play:text-black transition-all duration-300 shadow-inner z-10 shrink-0">
-                            <Play className="w-4 h-4 fill-current" />
-                        </div>
-                        
-                        <div className="flex flex-col items-start z-10 select-none text-left">
-                            <span className="font-bebas text-[16px] tracking-[0.2em] font-black uppercase text-white transition-colors">
-                                {continuityItem && continuityItem.currentTime ? "Reanudar Película" : "Reproducir Película"}
-                            </span>
-                            {continuityItem && continuityItem.currentTime ? (
-                                <span className="text-[9px] font-black text-white/60 tracking-[0.1em] uppercase transition-colors mt-0.5">
-                                    Minuto {Math.round(continuityItem.currentTime / 60)} ({Math.round(progressPercent)}%)
-                                </span>
-                            ) : (
-                                <span className="text-[9px] font-black text-white/60 tracking-[0.1em] uppercase transition-colors mt-0.5">
-                                    Comenzar desde el inicio
-                                </span>
-                            )}
-                        </div>
-                    </button>
-
-                    {/* Secondary: Agregar a la cola */}
-                    {entry.localFiles && entry.localFiles.length > 0 && (
-                        <button
-                            onClick={handleAddToQueue}
-                            className="flex items-center justify-center p-4 rounded-2xl border bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all duration-300 hover:scale-105 active:scale-95 animate-fade-in"
-                            title="Agregar a la cola de reproducción"
+                    {/* Main Cinematic Title */}
+                    <div className="movie-hero-animate flex flex-col gap-2">
+                        {/* Fake logo / Title text */}
+                        <h1 
+                            className="text-[clamp(2.5rem,5.5vw,4.5rem)] font-sans font-extrabold leading-[1.05] tracking-tight text-white drop-shadow-[0_4px_25px_rgba(0,0,0,0.85)] cursor-pointer hover:text-white/80 transition-colors duration-300"
+                            onClick={onPlay}
                         >
-                            <ListPlus className="w-5 h-5" />
-                        </button>
-                    )}
-
-                    {/* Secondary: Agregar a Favoritos */}
-                    <button
-                        onClick={handleToggleFavorite}
-                        className={cn(
-                            "flex items-center justify-center p-4 rounded-2xl border transition-all duration-300 hover:scale-105 active:scale-95",
-                            isFavorite
-                                ? "bg-red-500/10 border-red-500/40 text-red-500 hover:bg-red-500/20"
-                                : "bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-white/10 hover:border-white/20"
-                        )}
-                        title={isFavorite ? "Quitar de favoritos" : "Añadir a favoritos"}
-                    >
-                        <Heart className="w-5 h-5" fill={isFavorite ? "currentColor" : "none"} />
-                    </button>
-
-                    {/* Secondary: Marcar como vista */}
-                    <button
-                        onClick={handleToggleWatched}
-                        className={cn(
-                            "flex items-center justify-center p-4 rounded-2xl border transition-all duration-300 hover:scale-105 active:scale-95",
-                            isWatched
-                                ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/20"
-                                : "bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-white/10 hover:border-white/20"
-                        )}
-                        title={isWatched ? "Marcar como no vista" : "Marcar como vista"}
-                    >
-                        <Check className={cn("w-5 h-5", isWatched && "stroke-[3px]")} />
-                    </button>
-
-                    {/* Secondary: MyAnimeList Link */}
-                    {media.idMal && (
-                        <a
-                            href={`https://myanimelist.net/anime/${media.idMal}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center justify-center gap-2 px-6 py-4 rounded-2xl border bg-[#2e51a2]/15 border-[#2e51a2]/30 text-blue-400 hover:text-white hover:bg-[#2e51a2]/25 hover:border-[#2e51a2]/55 transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer text-[11px] font-black uppercase tracking-[0.2em]"
-                            title="Ver en MyAnimeList"
-                        >
-                            <span>MyAnimeList</span>
-                            <ExternalLink size={14} />
-                        </a>
-                    )}
-
-                    {/* Secondary: Corregir Vinculación (Fix Match) */}
-                    {directoryPath && (
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                setIsMatchModalOpen(true)
-                            }}
-                            className="flex items-center justify-center p-4 rounded-2xl border bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-[#ff6b00]/10 hover:border-[#ff6b00]/30 hover:text-[#ff6b00] transition-all duration-300 hover:scale-105 active:scale-95"
-                            title="Corregir Vinculación (Fix Match)"
-                        >
-                            <Settings2 className="w-5 h-5" />
-                        </button>
-                    )}
-                </div>
-
-                {/* Progress bar underneath if in progress */}
-                {continuityItem && continuityItem.currentTime && (
-                    <div className="movie-hero-animate w-full max-w-xs mt-1 h-[4px] bg-white/5 border border-white/10 rounded-full overflow-hidden shadow-inner relative z-10">
-                        <div 
-                            className="h-full bg-gradient-to-r from-brand-orange to-amber-500 shadow-[0_0_10px_rgba(255,110,58,0.8)] animate-pulse"
-                            style={{ width: `${progressPercent}%` }}
-                        />
+                            {title}
+                        </h1>
                     </div>
-                )}
+
+                    {/* IMAX / Enhanced row */}
+                    <div className="movie-hero-animate space-y-1 mt-2">
+                        <p className="text-[#E2B659] font-bold text-lg tracking-wide drop-shadow-md">
+                            Now Streaming in KameHouse Enhanced
+                        </p>
+                        <p className="text-zinc-400 text-[10px] uppercase font-semibold tracking-wider">
+                            {is4K ? "DISFRUTA DE LA VERSIÓN EN 4K ULTRA HD" : "DISFRUTA DE LA MEJOR CALIDAD DISPONIBLE"}
+                        </p>
+                    </div>
+
+                    {/* Disney+ Style Meta details */}
+                    <div className="movie-hero-animate flex flex-wrap items-center text-zinc-300/80 text-[11px] font-semibold tracking-wide gap-3">
+                        {/* Rating Badge */}
+                        <span className="flex items-center justify-center bg-zinc-800/80 border border-zinc-600/50 rounded-sm px-1.5 py-0.5 text-zinc-300 font-bold tracking-widest text-[9px]">
+                            {media.isNsfw ? "18+" : "PG-13"}
+                        </span>
+                        
+                        {/* IMAX Badge */}
+                        {is4K && (
+                            <span className="flex items-center gap-1 font-black text-white text-[11px] tracking-wide">
+                                4K <span className="font-normal text-zinc-400">ENHANCED</span>
+                            </span>
+                        )}
+                        
+                        {/* Audio / Sub Badges */}
+                        <span className="flex items-center justify-center bg-zinc-800/80 border border-zinc-600/50 rounded-sm px-1.5 py-0.5 text-zinc-300 font-bold text-[9px]">AD</span>
+                        <span className="flex items-center justify-center bg-zinc-800/80 border border-zinc-600/50 rounded-sm px-1.5 py-0.5 text-zinc-300 font-bold text-[9px]">CC</span>
+                        
+                        <div className="flex items-center gap-1.5 text-zinc-300 text-[11px] tracking-wide ml-1">
+                            {year && <span>{year}</span>}
+                            {year && formattedDuration && <span className="text-zinc-600">•</span>}
+                            {formattedDuration && <span>{formattedDuration}</span>}
+                        </div>
+                    </div>
+
+                    {/* Genres */}
+                    {genres.length > 0 && (
+                        <div className="movie-hero-animate text-zinc-300/90 text-[12px] font-medium tracking-wide">
+                            {genres.join(", ")}
+                        </div>
+                    )}
+
+                    {/* Action Row */}
+                    <div className="movie-hero-animate flex flex-wrap items-center gap-4 pt-4">
+                        
+                        {/* PLAY BUTTON (Disney+ style white) */}
+                        <button
+                            onClick={onPlay}
+                            className="group/play flex items-center gap-3 px-8 py-3.5 bg-white text-black hover:bg-white/80 rounded transition-all duration-300 font-extrabold uppercase tracking-widest text-sm"
+                        >
+                            <Play className="w-5 h-5 fill-current" />
+                            <span>
+                                {continuityItem && continuityItem.currentTime ? "REANUDAR" : "PLAY"}
+                            </span>
+                        </button>
+
+                        {/* TRAILER BUTTON (Transparent with border) */}
+                        <button
+                            onClick={() => {}}
+                            className="group/trailer flex items-center gap-3 px-8 py-3.5 bg-transparent border border-white/50 text-white hover:bg-white/10 hover:border-white/80 rounded transition-all duration-300 font-extrabold uppercase tracking-widest text-sm"
+                        >
+                            <span>TRAILER</span>
+                        </button>
+
+                        {/* Circular Action Buttons */}
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={handleToggleWatched}
+                                className={cn(
+                                    "flex items-center justify-center w-12 h-12 rounded-full border transition-all duration-300",
+                                    isWatched
+                                        ? "bg-white text-black border-white"
+                                        : "bg-black/40 border-white/50 text-white hover:bg-white/20 hover:border-white"
+                                )}
+                                title={isWatched ? "Marcar como no vista" : "Marcar como vista"}
+                            >
+                                {isWatched ? <Check className="w-6 h-6 stroke-[3px]" /> : <Plus className="w-6 h-6 stroke-[2px]" />}
+                            </button>
+
+                            <button
+                                onClick={handleToggleFavorite}
+                                className={cn(
+                                    "flex items-center justify-center w-12 h-12 rounded-full border transition-all duration-300",
+                                    isFavorite
+                                        ? "bg-white text-black border-white"
+                                        : "bg-black/40 border-white/50 text-white hover:bg-white/20 hover:border-white"
+                                )}
+                                title={isFavorite ? "Quitar de favoritos" : "Añadir a favoritos"}
+                            >
+                                <Users className="w-5 h-5" />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Progress bar underneath if in progress */}
+                    {continuityItem && continuityItem.currentTime && (
+                        <div className="movie-hero-animate w-full max-w-sm mt-3 h-[4px] bg-white/20 rounded-full overflow-hidden relative z-10">
+                            <div 
+                                className="h-full bg-brand-orange"
+                                style={{ width: `${progressPercent}%` }}
+                            />
+                        </div>
+                    )}
+
+                    {/* Synopsis */}
+                    {synopsis && (
+                        <p className="movie-hero-animate text-zinc-100 text-sm md:text-[15px] leading-relaxed font-medium select-none max-w-3xl pt-2">
+                            {synopsis}
+                        </p>
+                    )}
+                </div>
             </div>
 
             <ManualMatchModal

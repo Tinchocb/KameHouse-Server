@@ -1,9 +1,11 @@
 package db
 
 import (
+	"errors"
 	"fmt"
 	"kamehouse/internal/database/models"
 
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -14,11 +16,19 @@ import (
 func GetLibraryMediaByTmdbId(d *Database, tmdbID int) (*models.LibraryMedia, error) {
 	cacheKey := fmt.Sprintf("id_%d", tmdbID)
 	if v, ok := d.LibraryMediaCache.Load(cacheKey); ok {
-		return v.(*models.LibraryMedia), nil
+		if media, _ := v.(*models.LibraryMedia); media == nil {
+			return nil, nil
+		} else {
+			return media, nil
+		}
 	}
 	var media models.LibraryMedia
 	err := d.Gorm().Where("tmdb_id = ?", tmdbID).First(&media).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			d.LibraryMediaCache.Store(cacheKey, (*models.LibraryMedia)(nil))
+			return nil, nil
+		}
 		return nil, err
 	}
 	d.LibraryMediaCache.Store(cacheKey, &media)
@@ -29,11 +39,19 @@ func GetLibraryMediaByTmdbId(d *Database, tmdbID int) (*models.LibraryMedia, err
 func GetLibraryMediaByTmdbIdAndType(d *Database, tmdbID int, mediaType string) (*models.LibraryMedia, error) {
 	cacheKey := fmt.Sprintf("id_type_%d_%s", tmdbID, mediaType)
 	if v, ok := d.LibraryMediaCache.Load(cacheKey); ok {
-		return v.(*models.LibraryMedia), nil
+		if media, _ := v.(*models.LibraryMedia); media == nil {
+			return nil, nil
+		} else {
+			return media, nil
+		}
 	}
 	var media models.LibraryMedia
 	err := d.Gorm().Where("tmdb_id = ? AND type = ?", tmdbID, mediaType).First(&media).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			d.LibraryMediaCache.Store(cacheKey, (*models.LibraryMedia)(nil))
+			return nil, nil
+		}
 		return nil, err
 	}
 	d.LibraryMediaCache.Store(cacheKey, &media)

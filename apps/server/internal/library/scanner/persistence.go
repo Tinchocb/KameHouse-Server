@@ -137,15 +137,11 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 
 		var insertedMedia []*models.LibraryMedia
 		if scn.Database != nil {
-			query := scn.Database.Gorm()
+			tmdbIDs := make([]int, len(mediaBatch))
 			for i, m := range mediaBatch {
-				if i == 0 {
-					query = query.Where("tmdb_id = ? AND type = ?", m.TmdbID, m.Type)
-				} else {
-					query = query.Or("tmdb_id = ? AND type = ?", m.TmdbID, m.Type)
-				}
+				tmdbIDs[i] = m.TmdbID
 			}
-			query.Find(&insertedMedia)
+			scn.Database.Gorm().Where("tmdb_id IN ?", tmdbIDs).Find(&insertedMedia)
 			
 			scn.Logger.Debug().Int("insertedCount", len(insertedMedia)).Msg("scanner: Retrieved persisted LibraryMedia records")
 			

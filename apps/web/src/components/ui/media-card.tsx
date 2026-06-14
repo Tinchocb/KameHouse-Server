@@ -98,7 +98,7 @@ export const MediaCard = React.memo(function MediaCard({
                 onClick={onClick}
                 className={cn(
                     "absolute top-0 left-0 overflow-hidden flex flex-col origin-top",
-                    "transition-all duration-300 cubic-bezier(0.25, 0.8, 0.25, 1)",
+                    "transition-all duration-300",
                     showPopup
                         ? cn(
                               "z-[100] bg-zinc-950/95 backdrop-blur-xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.85)]",

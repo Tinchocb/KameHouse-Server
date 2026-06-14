@@ -100,7 +100,7 @@ func NewDatabase(ctx context.Context, appDataDir, dbName string, logger *zerolog
 	}
 
 	database.cleanupManager = NewCleanupManager(database.gormdb, database.Logger)
-	database.bufferedWriter = NewBufferedWriter(database.gormdb, database.Logger, 50, 500*time.Millisecond)
+	database.bufferedWriter = nil // Unused, disabled to avoid ticker daemon overhead
 
 	logDir := appDataDir
 	if logDir == "" {

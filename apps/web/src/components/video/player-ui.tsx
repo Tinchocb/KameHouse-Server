@@ -312,8 +312,10 @@ export function PlayerUI(props: PlayerUIProps) {
                 )}
             >
                 <PlayerBottomBar
+                    title={title}
                     episodeNumber={episodeNumber}
                     episodeLabel={episodeLabel}
+                    mediaFormat={mediaFormat}
                     duration={state.duration}
                     insights={insights}
                     progressBarRef={domElements.progressBarElement as any}

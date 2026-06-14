@@ -1,0 +1,271 @@
+{
+  "universe": "Dragon Ball",
+  "description": "Catálogo de todos los planetas, lugares, dimensiones y locaciones importantes del universo Dragon Ball",
+  "locations": [
+    {
+      "id": "tierra",
+      "name": "Tierra",
+      "alias": ["Chikyū"],
+      "universe": "Universo 7",
+      "type": "Planeta",
+      "description": "El planeta principal de la franquicia. Habita múltiples especies (humanos, animales antropomórficos) y es el hogar adoptivo de Goku. La Tierra es notoriamente frágil pero también notoriamente resistente gracias a los Guerreros Z y al poder de las Esferas del Dragón para revertir la destrucción.",
+      "notable_locations": [
+        {
+          "name": "Capital del Oeste (Ciudad Cápsula)",
+          "description": "La ciudad más grande y tecnológicamente avanzada de la Tierra. Sede de la Corporación Cápsula de la familia Brief. Bulma nació aquí."
+        },
+        {
+          "name": "Kame House (Casa Tortuga)",
+          "description": "La pequeña isla en el mar donde vive el Maestro Roshi. Centro de operaciones de los Guerreros Z en los primeros arcos."
+        },
+        {
+          "name": "Pradera de la Montaña Frypan",
+          "description": "Zona dominada por la familia de ChiChi y el rey Ox-Satan. Cerca del lugar donde creció Goku de niño."
+        },
+        {
+          "name": "Sala del Tiempo y el Espíritu (Hyperbolic Time Chamber)",
+          "description": "Sala mágica en el Palacio de los Dioses de Kami-sama. Un año dentro equivale a un día afuera. Goku y Gohan entrenaron aquí para enfrentar a Cell."
+        },
+        {
+          "name": "Estadio de Artes Marciales Tenkaichi (Papaya Island)",
+          "description": "Sede del famoso Torneo de las Artes Marciales. Localizado en una isla artificial. Usado en la saga de Majin Buu para el 25° Torneo."
+        },
+        {
+          "name": "Reserva Natural del Androide 17",
+          "description": "Una enorme reserva natural donde el Androide 17 trabaja como guardabosques. Aparece en Dragon Ball Super."
+        },
+        {
+          "name": "Mt. Paozu",
+          "description": "La montaña donde Goku creció con su abuelo adoptivo Son Gohan. Rodeada de bosque denso."
+        },
+        {
+          "name": "Laboratorio del Dr. Gero",
+          "description": "Escondite subterráneo donde el Dr. Gero creó a los androides. Destruido por el propio Gero para evitar que encontraran al perfecto."
+        },
+        {
+          "name": "Escuela de Artes Marciales del Maestro Roshi",
+          "description": "La famosa 'Escuela Tortuga' del Maestro Roshi. Entrenó a Goku, Krilin y Yamcha, entre otros."
+        }
+      ],
+      "dragon_balls": "Esferas del Dragón Terrestres (7 esferas). Dragon convocado: Shenlong."
+    },
+    {
+      "id": "namek",
+      "name": "Planeta Namek",
+      "alias": ["Nameksei"],
+      "universe": "Universo 7",
+      "type": "Planeta",
+      "description": "El planeta de origen de los Namekuseijins, incluyendo a Piccolo, Kami-sama, Dende y Nail. Tiene tres soles, lo que da un aspecto de cielo permanentemente azul. Fue destruido por la explosión de la Supernova de Freezer. Los supervivientes fueron transportados a la Tierra y luego a un nuevo Namek.",
+      "notable_features": [
+        "Tres soles: dia eterno",
+        "Hogar de las Esferas del Dragón Namekianas más poderosas",
+        "Las aldeas Namekianas son pacíficas y están regidas por el Gran Patriarca"
+      ],
+      "dragon_balls": "Esferas del Dragón Namekianas (7 esferas). Dragon convocado: Porunga. Concede 3 deseos y puede revivir múltiples veces.",
+      "status": "Destruido (explosión Freezer). Reemplazado por el Nuevo Namek.",
+      "distance_from_earth": "10,000 años luz (nave espacial estándar) / 6 días (nave modificada de Bulma)"
+    },
+    {
+      "id": "planeta_vegeta",
+      "name": "Planeta Vegeta",
+      "alias": ["Planet Vegeta", "Formerly Planeta Plant"],
+      "universe": "Universo 7",
+      "type": "Planeta (destruido)",
+      "description": "El planeta de origen de los Saiyajins del Universo 7. Originalmente llamado Planeta Plant, fue conquistado por los Saiyajins en una sangrienta guerra contra los Tsufurus. Renombrado Planeta Vegeta en honor al rey. Destruido por Freezer con una Supernova para prevenir la leyenda del Super Saiyajin.",
+      "history": "Los Saiyajins inmigraron desde el Planeta Sadala tras una guerra civil interna. Conquistaron el Planeta Plant y extinguieron a los Tsufurus para reclamarlo como suyo.",
+      "status": "Destruido (Age 737, por Freezer)",
+      "notable_events": [
+        "Nacimiento de Goku, Vegeta, Broly y Raditz",
+        "Massacre de los Tsufurus por los Saiyajins",
+        "Destrucción por Freezer para eliminar la amenaza del Super Saiyajin"
+      ]
+    },
+    {
+      "id": "kame_popo_kami",
+      "name": "Palacio de los Dioses",
+      "alias": ["Kami-sama no Shiro", "Templo de los Dioses", "Lookout"],
+      "universe": "Universo 7",
+      "type": "Estructura flotante",
+      "description": "El palacio flotante del Dios de la Tierra (Kami-sama), ubicado sobre las nubes a una altura inaccesible para los humanos normales. Residencia de Kami-sama y su asistente Mr. Popo. Contiene la Sala del Tiempo y el Espíritu. Actualmente en posesión de Dende como nuevo Dios de la Tierra.",
+      "inhabitants": ["Kami-sama (antiguo)", "Mr. Popo", "Dende (actual Dios de la Tierra)"],
+      "special_rooms": ["Sala del Tiempo y el Espíritu (Hyperbolic Time Chamber)"]
+    },
+    {
+      "id": "otro_mundo",
+      "name": "El Otro Mundo",
+      "alias": ["Mundo de los Muertos", "Afterlife", "Heavens"],
+      "universe": "Universo 7",
+      "type": "Dimensión",
+      "description": "El plano espiritual al que van las almas tras morir. Contiene tanto el paraíso como el infierno y múltiples niveles intermedios. Las almas puras pueden conservar su cuerpo y entrenar. Goku entrenó con Kaio-sama aquí mientras estaba muerto.",
+      "notable_locations": [
+        {
+          "name": "Palacio de Enma Daioh",
+          "description": "El enorme palacio del Rey Enma, juez supremo de las almas. Las almas llegan aquí para ser juzgadas y enviadas al paraíso, el infierno o a reencarnarse."
+        },
+        {
+          "name": "Camino de la Serpiente (Snake Way)",
+          "description": "Un camino sinuoso de un millón de kilómetros que lleva al planeta de Kaio del Norte. Goku tardó meses en recorrerlo."
+        },
+        {
+          "name": "Planeta de Kaio del Norte",
+          "description": "Un pequeño planeta de gravedad 10x mayor que la de la Tierra donde vive Kaio del Norte. Goku entrenó aquí para enfrentar a Nappa y Vegeta."
+        },
+        {
+          "name": "Paraíso",
+          "description": "El cielo del universo Dragon Ball. Un lugar sereno donde residen las almas puras. Goku fue enviado aquí para entrenar con Kaio-sama."
+        },
+        {
+          "name": "Infierno",
+          "description": "El lugar donde residen las almas malvadas. Cell, Freezer y otros villanos fueron enviados aquí tras su muerte. Tiene sectores especiales para los diferentes tipos de maldad."
+        },
+        {
+          "name": "Gran Planeta Kaio",
+          "description": "El planeta del Gran Kaio, gobernador de los 4 Kaios. Sede del torneo del Otro Mundo que aparece en los arcos de relleno de DBZ."
+        }
+      ]
+    },
+    {
+      "id": "universo_7",
+      "name": "Universo 7",
+      "type": "Universo completo",
+      "description": "Uno de los 12 universos del multiverso. Es el universo principal donde se desarrolla la historia. Tiene un nivel de mortales bajo en comparación con otros universos, lo que lo pone en riesgo constante en torneos de Zeno-sama.",
+      "gods": {
+        "hakaishin": "Beerus",
+        "angel": "Whis",
+        "kaioshin_mayor": "Anciano Kaioshin (absorbido por Buu, luego liberado)",
+        "kaioshin_este": "Kibito Kai (fusión de Kibito y Kaioshin Este)",
+        "kaio_norte": "Kaio del Norte (muerto por Cell, en el Otro Mundo)"
+      },
+      "paired_universe": "Universo 6",
+      "level_of_mortals": "2.87 (uno de los más bajos)"
+    },
+    {
+      "id": "universo_6",
+      "name": "Universo 6",
+      "type": "Universo completo",
+      "description": "El universo gemelo del Universo 7. Tienen las mismas bases de planetas (como la Tierra y el Planeta Sadala) pero con historias paralelas distintas. Las especies incluyen Saiyajins (que no perdieron sus colas) y Namekuseijins. El Dios de la Destrucción es Champa, hermano gemelo de Beerus.",
+      "gods": {
+        "hakaishin": "Champa",
+        "angel": "Vados",
+        "kaioshin": "Fuwa"
+      },
+      "paired_universe": "Universo 7",
+      "notable_planets": [
+        "Planeta Sadala (Saiyajins del U6, como Caulifla, Kale y Kyabe)",
+        "Una versión de la Tierra (arrasada en guerras, sin civilización)"
+      ]
+    },
+    {
+      "id": "universo_11",
+      "name": "Universo 11",
+      "type": "Universo completo",
+      "description": "El universo con el nivel de mortales más alto de todos (nivel 7.0). Hogar de Jiren y la Patrulla del Orgullo, el grupo de héroes más poderoso del multiverso. El Dios de la Destrucción Belmod es considerado uno de los Hakaishin más fuertes.",
+      "gods": {
+        "hakaishin": "Belmod",
+        "angel": "Marcarita",
+        "kaioshin": "Khai"
+      },
+      "notable_inhabitants": ["Jiren", "Toppo", "Dyspo", "Patrulla del Orgullo"],
+      "level_of_mortals": "7.0 (el más alto de todos los universos)"
+    },
+    {
+      "id": "futuro_trunks",
+      "name": "Línea Temporal del Futuro de Trunks",
+      "alias": ["Futuro Alternativo"],
+      "type": "Línea temporal alternativa",
+      "description": "Una línea temporal donde los Guerreros Z murieron ante los Androides y la humanidad fue devastada. Trunks del Futuro fue el único sobreviviente que pudo resistir. Más tarde esta línea fue destruida por Zeno del Futuro cuando Zamasu se fusionó con el universo. Los sobrevivientes (Mai y Trunks) fueron enviados a una tercera línea temporal de un futuro diferente.",
+      "key_events": [
+        "Goku muere de enfermedad cardíaca (no en combate)",
+        "Los Androides 17 y 18 matan a todos los Guerreros Z excepto a Gohan y Trunks",
+        "Gohan muere ante los Androides protegiendo a Trunks",
+        "Trunks alcanza el SSJ y viaja al pasado para advertir a los Z-fighters",
+        "Trunks regresa al futuro y derrota a los Androides y Cell",
+        "Goku Black y Zamasu invaden el futuro",
+        "Zeno del Futuro borra el universo de Goku Black/Zamasu, destruyendo esa línea temporal"
+      ]
+    },
+    {
+      "id": "reino_demonios",
+      "name": "Reino de los Demonios",
+      "alias": ["Makai"],
+      "type": "Dimensión",
+      "description": "Una dimensión oscura paralela al mundo de los vivos, gobernada por demonios. Tiene su propia jerarquía, leyes y sociedad. El punto de destino principal en Dragon Ball Daima, donde Goku y sus amigos deben ir para revertir el hechizo que los convirtió en niños.",
+      "notable_areas": [
+        "Palacio Demoniaco del Gran Demonio",
+        "Mini-Reino (región interior misteriosa)",
+        "El Submundo (capa más profunda, peligrosísima)"
+      ],
+      "appearances": ["Dragon Ball Daima (2024)"]
+    },
+    {
+      "id": "planetakami_kaioshin",
+      "name": "Reino Sagrado de los Kaioshin",
+      "alias": ["Sacred World of the Kais", "Planet of the Kais"],
+      "type": "Dimensión sagrada",
+      "description": "Un mundo sagrado fuera del alcance de los mortales, donde residen los Kaioshin. Contiene la Gran Espada Z, de la que Gohan extrajo la Espada Z. También contiene la sala donde el Kaioshin Mayor (Elder Kai) libera potenciales.",
+      "inhabitants": ["Kaioshin Mayor", "Kaioshin Este (Kibito Kai)", "Futura resurrección de Zamasu"],
+      "notable_artifacts": [
+        "Gran Espada Z (contenía al Antiguo Kaioshin sellado dentro)",
+        "Aretes Potara sagrados"
+      ]
+    },
+    {
+      "id": "palacio_zeno",
+      "name": "Palacio de Zeno-sama",
+      "alias": ["Royal Palace of Zeno", "The Center of Everything"],
+      "type": "Dimensión suprema",
+      "description": "La residencia del Rey del Todo, Zeno-sama. Ubicada en un espacio vacío más allá de todos los 12 universos. Solo los seres divinos de alto rango pueden llegar aquí normalmente. Sede de los torneos del multiverso organizados por Zeno.",
+      "inhabitants": ["Zeno (presente)", "Zeno (futuro)", "Gran Sacerdote (Daishinkan)", "Los 5 asistentes Zenkai"],
+      "events_held": [
+        "Torneo del Poder (Supervivencia Universal)",
+        "Reunión de los 12 Hakaishin",
+        "El Juego de los Dioses"
+      ]
+    },
+    {
+      "id": "yadrat",
+      "name": "Planeta Yadrat",
+      "alias": ["Yardrat"],
+      "universe": "Universo 7",
+      "type": "Planeta",
+      "description": "Un planeta pacífico habitado por los Yadratians, una raza de seres regordetes de piel rosa-gris. Son expertos en técnicas espirituales que permiten la manipulación del espacio y el tiempo a través del ki. Goku llegó aquí tras escapar de Namek y aprendió la Teletransportación Instantánea. En DBS, Vegeta viajó aquí para aprender la Partición Espiritual (Spirit Fission).",
+      "notable_techniques_taught": [
+        "Teletransportación Instantánea (Shunkan Idō) - Goku",
+        "Partición Espiritual (Spirit Fission) - Vegeta, permite separar absorciones"
+      ]
+    },
+    {
+      "id": "planeta_kanassa",
+      "name": "Planeta Kanassa",
+      "universe": "Universo 7",
+      "type": "Planeta (conquista Saiyajin)",
+      "description": "Planeta conquistado por el grupo de Bardock. Los Kanassans tenían el poder de la precognición (ver el futuro). Uno de los sobrevivientes transfirió este poder a Bardock antes de morir, lo que le permitió ver el futuro y la destrucción del Planeta Vegeta.",
+      "historical_significance": "Punto de partida de la historia de Bardock narrada en el especial de TV."
+    },
+    {
+      "id": "planeta_moro",
+      "name": "Planeta Neo Namek",
+      "alias": ["Nuevo Planeta Namek"],
+      "universe": "Universo 7",
+      "type": "Planeta",
+      "description": "El nuevo hogar de los Namekuseijins tras la destrucción del Planeta Namek original. Fue el epicentro del conflicto con Moro, quien atacó el planeta para absorber su energía vital. Vegeta llegó aquí para aprender técnicas Namekianas y desarrollar la Partición Espiritual.",
+      "events": [
+        "Hogar de los Namekuseijins tras DBZ",
+        "Objetivo del ataque de Moro en el arco de la Patrulla Galáctica"
+      ]
+    },
+    {
+      "id": "cereal",
+      "name": "Planeta Cereal",
+      "universe": "Universo 7",
+      "type": "Planeta",
+      "description": "El planeta de origen de Granola, el Sobreviviente. Fue devastado por los Saiyajins y Freezer años atrás, y los Cerealians fueron casi exterminados. Aquí viven Granola y Oatmeel (un pequeño ser que vive en su ojo). El planeta también contiene las Esferas del Dragón de Cereal, creadas por un Namekuseijin que vivió aquí.",
+      "events": [
+        "Masacre de los Cerealians por el Ejército de Freezer y los Saiyajins",
+        "Sobrevivencia de Granola (guardado por Bardock)",
+        "Granola pide el deseo de ser el más fuerte del universo a las esferas de Cereal"
+      ],
+      "saga": "Saga de Granola el Sobreviviente (Dragon Ball Super, Manga)"
+    }
+  ]
+}

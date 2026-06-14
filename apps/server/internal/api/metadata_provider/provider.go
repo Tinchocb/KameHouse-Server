@@ -1,3 +1,5 @@
+// Package metadata_provider provides client integrations for fetching, caching,
+// and wrapping anime metadata (e.g., from TMDB or Jikan).
 package metadata_provider
 
 import (
@@ -39,8 +41,7 @@ func (p *ProviderImpl) SetUseFallbackProvider(v bool) {}
 func (p *ProviderImpl) ClearCache()                   {}
 func (p *ProviderImpl) Close() error                  { return nil }
 
-// ─── SimpleAnimeMetadataWrapper ──────────────────────────────────────────────
-// A lightweight, flat wrapper that looks up episode metadata by plain episode number.
+// SimpleAnimeMetadataWrapper is a lightweight, flat wrapper that looks up episode metadata by plain episode number.
 // It is used by TMDB, Jikan, and AniList providers whose metadata map uses
 // plain string keys ("77") rather than composite keys.
 type SimpleAnimeMetadataWrapper struct {

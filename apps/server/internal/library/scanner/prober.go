@@ -20,6 +20,9 @@ type FileProber struct {
 }
 
 func NewFileProber(ffprobePath string, logger *zerolog.Logger) *FileProber {
+	if ffprobePath != "" {
+		ffprobe.SetFFProbeBinPath(ffprobePath)
+	}
 	return &FileProber{
 		FFprobePath: ffprobePath,
 		Logger:      logger,
@@ -88,8 +91,6 @@ func shouldFallbackToFFprobe(lf *dto.LocalFile) bool {
 }
 
 func (p *FileProber) probeWithFFprobe(ctx context.Context, lf *dto.LocalFile) {
-	ffprobe.SetFFProbeBinPath(p.FFprobePath)
-
 	ffprobeCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 

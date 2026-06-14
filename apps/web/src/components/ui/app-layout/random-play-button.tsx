@@ -7,7 +7,7 @@ import { toast } from "sonner"
 
 import { cn } from "@/components/ui/core/styling"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
-import { fetchAnimeEntry } from "@/api/hooks/anime_entries.hooks"
+import { fetchAnimeEntryLocalFiles } from "@/api/hooks/anime_entries.hooks"
 import { VideoPlayer } from "@/components/video/player"
 import { useSound } from "@/hooks/use-sound"
 
@@ -21,6 +21,7 @@ interface PlayTarget {
     episodeNumber: number
     mediaId: number
     malId?: number | null
+    mediaFormat?: string | null
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -101,10 +102,9 @@ export function RandomPlayButton() {
             const randomEntry = candidates[Math.floor(Math.random() * candidates.length)]
 
             // ── 3. Fetch full entry to get local file paths ────────────────
-            const fullEntry = await fetchAnimeEntry(randomEntry.mediaId)
-            const localFiles = (fullEntry?.localFiles ?? []).filter(f => !!f.path)
+            const localFiles = await fetchAnimeEntryLocalFiles(randomEntry.mediaId)
 
-            if (localFiles.length === 0) {
+            if (!localFiles || localFiles.length === 0) {
                 toast.error("No se encontraron archivos locales para reproducir")
                 return
             }
@@ -140,6 +140,7 @@ export function RandomPlayButton() {
                 episodeNumber: epNum,
                 mediaId: randomEntry.mediaId,
                 malId: randomEntry.media?.idMal ?? null,
+                mediaFormat: randomEntry.media?.format,
             })
 
             toast.success(`🎲 ${isMovie ? "Película" : "Episodio"} aleatorio seleccionado`, {
@@ -172,12 +173,12 @@ export function RandomPlayButton() {
                     whileTap={{ scale: 0.92 }}
                     disabled={isLoading}
                     className={cn(
-                        "flex items-center justify-center w-12 h-12 rounded-2xl border transition-all duration-500 group backdrop-blur-md",
+                        "flex items-center justify-center w-12 h-12 rounded-2xl transition-all duration-500 group liquid-glass-frosted-subtle",
                         isLoading
-                            ? "border-brand-orange/40 bg-brand-orange/10 text-brand-orange cursor-wait"
+                            ? "!border-brand-orange/40 !bg-brand-orange/[0.08] text-brand-orange cursor-wait"
                             : showPicker
-                                ? "border-brand-orange/30 bg-brand-orange/10 text-brand-orange"
-                                : "border-white/5 text-zinc-500 hover:bg-white/5 hover:text-white hover:border-white/20"
+                                ? "!border-brand-orange/30 !bg-brand-orange/[0.08] text-brand-orange shadow-[0_0_20px_rgba(255,110,58,0.1)]"
+                                : "text-zinc-500 hover:text-white hover:!border-white/15"
                     )}
                 >
                     {isLoading ? (
@@ -208,8 +209,7 @@ export function RandomPlayButton() {
                             transition={{ type: "spring", stiffness: 380, damping: 28 }}
                             className={cn(
                                 "absolute left-full bottom-0 ml-4 z-[999]",
-                                "w-56 bg-zinc-950/90 border border-white/15 rounded-2xl",
-                                "shadow-[0_24px_80px_rgba(0,0,0,0.75)] backdrop-blur-xl",
+                                "w-56 liquid-glass-frosted rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.75)]",
                                 "p-1.5 overflow-hidden"
                             )}
                         >
@@ -270,6 +270,7 @@ export function RandomPlayButton() {
                         episodeNumber={playTarget.episodeNumber}
                         mediaId={playTarget.mediaId}
                         malId={playTarget.malId}
+                        mediaFormat={playTarget.mediaFormat}
                         onClose={() => setPlayTarget(null)}
                     />
                 )}
@@ -298,7 +299,7 @@ function PickerOption({ id, onClick, icon, iconBg, label, description, accentCol
             onClick={onClick}
             whileHover={{ x: 2 }}
             whileTap={{ scale: 0.97 }}
-            className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/[0.08] transition-all duration-200 text-left group"
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:liquid-glass-frosted-subtle transition-all duration-200 text-left group"
         >
             {/* Icon badge */}
             <div className={cn(

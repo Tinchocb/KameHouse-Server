@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo, useRef } from "react"
-import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion"
-import { Clock, Star } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import { Star, Play } from "lucide-react"
 import type { Anime_LibraryCollectionEntry } from "@/api/generated/types"
 import { ERA_TABS, EraTab, cleanMovieTitle } from "../-MovieCard"
 import { cn } from "@/components/ui/core/styling"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
+import { getLowResImage, getHighResImage } from "@/lib/helpers/images"
 
 interface MoviesHeroProps {
     topFeatured: (Anime_LibraryCollectionEntry & { era: EraTab; startedAtTimestamp: number })[]
@@ -21,12 +22,23 @@ export function MoviesHero({
 }: MoviesHeroProps) {
     const [featuredIndex, setFeaturedIndex] = useState(0)
     const [isHeroHovered, setIsHeroHovered] = useState(false)
-    const heroRef = useRef<HTMLDivElement>(null)
+    const heroRef = useRef<HTMLElement>(null)
+    const backdropRef = useRef<HTMLDivElement>(null)
     const setBackdropUrl = useIntelligenceStore((s) => s.setBackdropUrl)
 
-    const { scrollY } = useScroll()
-    const heroOpacity = useTransform(scrollY, [0, 340], [1, 0])
-    const heroScale = useTransform(scrollY, [0, 340], [1, 1.05])
+    // Parallax effect for the backdrop
+    useEffect(() => {
+        const handleScroll = (e: Event) => {
+            if (!backdropRef.current) return
+            const target = e.target
+            if (target === document || target === window) {
+                const scrolled = window.scrollY || document.documentElement.scrollTop
+                backdropRef.current.style.transform = `translate3d(0, ${scrolled * 0.4}px, 0)`
+            }
+        }
+        window.addEventListener("scroll", handleScroll, { capture: true, passive: true })
+        return () => window.removeEventListener("scroll", handleScroll, { capture: true })
+    }, [])
 
     // Auto-rotate active slide every 8s when not hovering the Hero
     useEffect(() => {
@@ -44,7 +56,8 @@ export function MoviesHero({
     const currentMovie = debouncedMovie ?? defaultFeatured
     const displayMedia = currentMovie?.media
     const currentEraConfig = ERA_TABS.find((t) => t.value === currentMovie?.era) ?? activeEraConfig
-    const backdropSrc = displayMedia?.bannerImage ?? null
+    const backdropSrc = displayMedia?.bannerImage ?? displayMedia?.posterImage ?? null
+    const posterSrc = displayMedia?.posterImage ?? null
 
     useEffect(() => {
         const bg = currentMovie?.media?.bannerImage || currentMovie?.media?.posterImage || null
@@ -57,172 +70,204 @@ export function MoviesHero({
     }, [currentMovie, setBackdropUrl])
 
     return (
-        <div
+        <section
             ref={heroRef}
-            className="relative h-[40vh] md:h-[50vh] min-h-[300px] md:min-h-[380px] overflow-hidden border-b border-zinc-900"
+            className="relative w-full min-h-[45vh] md:min-h-[50vh] flex flex-col justify-center overflow-hidden bg-[#07070a] select-none"
             onMouseEnter={() => setIsHeroHovered(true)}
             onMouseLeave={() => setIsHeroHovered(false)}
         >
-            {/* Desktop: Dynamic Ambient Cover Glow behind the card */}
-            <div className="hidden md:block absolute right-14 top-[12.5%] h-[75%] md:aspect-[16/9] z-0 pointer-events-none select-none">
+            {/* Cinematic Grain Overlay */}
+            <div
+                className="absolute inset-0 opacity-[0.025] pointer-events-none mix-blend-overlay z-20"
+                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}
+            />
+
+            {/* Ambient Blur Background */}
+            <div className="absolute inset-0 overflow-hidden bg-[#07070a] z-0">
                 <AnimatePresence mode="wait">
                     {backdropSrc && (
-                        <motion.img
-                            key={backdropSrc}
-                            src={backdropSrc}
-                            alt=""
-                            initial={{ opacity: 0, scale: 1.1 }}
-                            animate={{ opacity: 0.35, scale: 1.25 }}
-                            exit={{ opacity: 0, scale: 1.1 }}
+                        <motion.div
+                            key={backdropSrc + "_blur"}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 0.35 }}
+                            exit={{ opacity: 0 }}
                             transition={{ duration: 0.8 }}
-                            className="w-full h-full object-cover filter blur-[32px] md:blur-[40px] rounded-2xl"
+                            className="absolute left-1/2 top-0 -translate-x-1/2 w-full h-full"
+                            style={{
+                                backgroundImage: `url(${getLowResImage(backdropSrc)})`,
+                                backgroundSize: "cover",
+                                backgroundPosition: "center 20%",
+                                filter: "blur(130px) saturate(160%) brightness(0.2)",
+                            }}
                         />
                     )}
                 </AnimatePresence>
             </div>
 
-            {/* Backdrop Banner / Floating Poster */}
-            <motion.div
-                className="absolute inset-0 md:inset-auto md:right-14 md:top-[12.5%] md:h-[75%] md:aspect-[16/9] z-0 md:z-10 flex flex-col items-center justify-center pointer-events-none"
-                style={{ scale: heroScale, opacity: heroOpacity }}
-            >
-                <div className="relative w-full h-full rounded-none md:rounded-2xl overflow-hidden md:border md:border-white/10 md:shadow-[0_25px_60px_rgba(0,0,0,0.85)] bg-[#0a0a0c]">
-                    <AnimatePresence mode="wait">
-                        {backdropSrc && (
-                            <motion.img
-                                key={backdropSrc}
-                                src={backdropSrc}
-                                alt={displayMedia?.titleSpanish || displayMedia?.titleEnglish || ""}
-                                initial={{ opacity: 0, scale: 0.96 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.96 }}
-                                transition={{ duration: 0.5 }}
-                                className="w-full h-full object-cover opacity-30 md:opacity-100"
-                            />
-                        )}
-                    </AnimatePresence>
-                </div>
-
-                {/* Desktop Slider Dots (Centered directly under the card) */}
-                {topFeatured.length > 1 && (
-                    <div className="hidden md:flex items-center gap-1.5 mt-4 pointer-events-auto">
-                        {topFeatured.map((_, i) => (
-                            <button
-                                key={i}
-                                onClick={() => setFeaturedIndex(i)}
-                                className={cn(
-                                    "h-1.5 rounded-full transition-all duration-300",
-                                    i === featuredIndex ? "w-8" : "w-2 bg-white/20 hover:bg-white/40"
-                                )}
-                                style={i === featuredIndex ? { backgroundColor: currentEraConfig.color } : {}}
-                            />
-                        ))}
-                    </div>
-                )}
-            </motion.div>
-
-            {/* Mobile: Bottom fade overlay for text readability over full background image */}
+            {/* High Res Crisp Parallax Backdrop with Ken Burns */}
             <div
-                className="block md:hidden absolute inset-0 z-10 pointer-events-none"
+                ref={backdropRef}
+                className="absolute inset-y-0 right-0 w-full md:w-[85%] overflow-hidden z-0 will-change-transform group/backdrop"
                 style={{
-                    background: "linear-gradient(to top, #07070a 0%, rgba(7,7,10,0.85) 50%, transparent 100%)",
+                    maskImage: "linear-gradient(to right, transparent 0%, black 35%, black 100%)",
+                    WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 35%, black 100%)"
                 }}
-            />
-            <div
-                className="absolute top-0 left-0 right-0 h-[1px] transition-colors duration-700 z-20"
-                style={{ background: `linear-gradient(90deg, transparent, ${currentEraConfig.color}60, transparent)` }}
-            />
+            >
+                <AnimatePresence mode="wait">
+                    {backdropSrc && (
+                        <motion.img
+                            key={backdropSrc + "_main"}
+                            src={getHighResImage(backdropSrc)}
+                            alt={displayMedia?.titleSpanish || ""}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 0.8 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 1.5 }}
+                            className="w-full h-full object-cover object-[center_15%] grayscale-[0.01] saturate-[115%] transition-all duration-700 ease-out group-hover/backdrop:opacity-90"
+                        />
+                    )}
+                </AnimatePresence>
+            </div>
 
-            {/* Hero content */}
-            <div className="relative h-full flex flex-col justify-center px-6 md:px-14 max-w-[1700px] mx-auto w-full z-20 pointer-events-none">
-                <div className="max-w-xs md:max-w-xl h-[230px] md:h-[270px] flex flex-col justify-between items-start pointer-events-auto">
-                    <div className="flex flex-col items-start w-full">
-                        {/* Título Cinematográfico */}
+            {/* Deep Cinematic Gradient Vignette Masking */}
+            <div className="absolute inset-y-0 left-0 w-full md:w-1/2 bg-gradient-to-r from-[#07070a] via-[#07070a]/90 to-transparent opacity-100 z-10 pointer-events-none" />
+            <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#07070a] via-[#07070a]/50 to-transparent opacity-100 z-10 pointer-events-none" />
+
+            {/* Content Container */}
+            <div className="relative z-20 w-full max-w-[1800px] mx-auto px-6 sm:px-12 flex flex-col pointer-events-none mt-8">
+                <div className="max-w-3xl space-y-3 pointer-events-auto w-full">
+                    
+                    {/* Metadata Row */}
+                    <div className="flex flex-wrap items-center text-zinc-300 text-[10px] font-semibold tracking-wide gap-y-1.5 min-h-[24px]">
+                        <AnimatePresence mode="wait">
+                            {displayMedia && (
+                                <motion.div
+                                    key={displayMedia.id + "_meta"}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    transition={{ duration: 0.3 }}
+                                    className="flex items-center flex-wrap"
+                                >
+                                    {displayMedia.score ? (
+                                        displayMedia.score > 0 && (
+                                            <span className="flex items-center gap-1">
+                                                <Star size={12} fill="currentColor" className="text-amber-500 stroke-none" />
+                                                {(displayMedia.score / 10).toFixed(1)} Ki
+                                            </span>
+                                        )
+                                    ) : null}
+                                    {displayMedia.year ? (
+                                        displayMedia.year > 0 && (
+                                            <>
+                                                {displayMedia.score && displayMedia.score > 0 && <span className="text-zinc-600 mx-2 select-none">|</span>}
+                                                <span>{displayMedia.year}</span>
+                                            </>
+                                        )
+                                    ) : null}
+                                    {displayMedia.runtime ? (
+                                        displayMedia.runtime > 0 && (
+                                            <>
+                                                {(displayMedia.score || displayMedia.year) && <span className="text-zinc-600 mx-2 select-none">|</span>}
+                                                <span className="flex items-center gap-1">
+                                                    {displayMedia.runtime} MIN
+                                                </span>
+                                            </>
+                                        )
+                                    ) : null}
+                                    <span className="font-bold flex items-center gap-1.5" style={{ color: currentEraConfig.color, marginLeft: (displayMedia.score || displayMedia.year || displayMedia.runtime) ? '0.5rem' : '0' }}>
+                                        {(displayMedia.score || displayMedia.year || displayMedia.runtime) && <span className="text-zinc-600 mr-2 select-none">|</span>}
+                                        {currentEraConfig.label.toUpperCase()}
+                                    </span>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+
+                    {/* Titles */}
+                    <div className="space-y-1 min-h-[40px]">
                         <AnimatePresence mode="wait">
                             <motion.h1
                                 key={displayMedia?.id ?? "default"}
-                                initial={{ opacity: 0, y: 12 }}
+                                initial={{ opacity: 0, y: 15 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -12 }}
-                                transition={{ duration: 0.3 }}
-                                className="font-bebas text-3xl md:text-5xl tracking-wider leading-tight text-white mb-2 uppercase drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]"
+                                exit={{ opacity: 0, y: -15 }}
+                                transition={{ duration: 0.4, ease: "easeOut" }}
+                                className="text-[clamp(1.2rem,2.5vw,2rem)] font-sans font-extrabold leading-[1.05] tracking-tight text-white drop-shadow-[0_4px_25px_rgba(0,0,0,0.85)] cursor-pointer transition-colors duration-500 z-10 relative select-none uppercase"
+                                style={{
+                                    textShadow: `0 4px 25px ${currentEraConfig.color}40`
+                                }}
+                                onClick={() => currentMovie && handleMovieClick(currentMovie.mediaId!)}
                             >
                                 {displayMedia
                                     ? cleanMovieTitle(displayMedia.titleSpanish ?? displayMedia.titleEnglish ?? displayMedia.titleRomaji)
                                     : "Películas"}
                             </motion.h1>
                         </AnimatePresence>
-
-                        {/* Metadatos de la Cinta seleccionada */}
-                        {displayMedia && (
-                            <AnimatePresence mode="wait">
-                                <motion.div
-                                    key={displayMedia.id}
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    transition={{ duration: 0.25 }}
-                                    className="flex flex-wrap items-center gap-3 mb-3 text-[11px] font-mono"
-                                >
-                                    {displayMedia.year ? (
-                                        displayMedia.year > 0 && (
-                                            <span className="bg-white/5 border border-white/10 rounded px-2.5 py-0.5 text-white/95">
-                                                {displayMedia.year}
-                                            </span>
-                                        )
-                                    ) : null}
-                                    {displayMedia.runtime ? (
-                                        displayMedia.runtime > 0 && (
-                                            <span className="flex items-center gap-1 text-white/50">
-                                                <Clock className="w-3.5 h-3.5" />
-                                                {displayMedia.runtime} MIN
-                                            </span>
-                                        )
-                                    ) : null}
-                                    {displayMedia.score ? (
-                                        displayMedia.score > 0 && (
-                                            <span className="flex items-center gap-1 text-amber-400">
-                                                <Star className="w-3.5 h-3.5 fill-current" />
-                                                {(displayMedia.score / 10).toFixed(1)} OUT OF 10
-                                            </span>
-                                        )
-                                    ) : null}
-                                </motion.div>
-                            </AnimatePresence>
-                        )}
-
-                        {/* Sinopsis */}
-                        {displayMedia?.description && (
-                            <AnimatePresence mode="wait">
-                                <motion.p
-                                    key={displayMedia.id}
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    transition={{ duration: 0.25 }}
-                                    className="text-xs md:text-sm leading-relaxed text-zinc-400 mb-4 line-clamp-2 max-w-xs md:max-w-lg font-sans text-justify"
-                                    dangerouslySetInnerHTML={{ __html: displayMedia.description }}
-                                />
-                            </AnimatePresence>
-                        )}
                     </div>
 
-                    <div className="flex flex-col items-start w-full">
-                        {/* Action Buttons (Netflix Style) */}
-                        {currentMovie && (
-                            <div className="flex items-center gap-3 mt-2">
-                                <button
-                                    onClick={() => handleMovieClick(currentMovie.mediaId!)}
-                                    className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-mono font-bold text-xs uppercase tracking-widest transition-all shadow-[0_4px_12px_rgba(234,88,12,0.3)] hover:scale-[1.02] active:scale-[0.98]"
-                                >
-                                    ▶ VER AHORA
-                                </button>
-                            </div>
-                        )}
+                    {/* Synopsis */}
+                    <div className="min-h-[36px]">
+                        <AnimatePresence mode="wait">
+                            {displayMedia?.description && (
+                                <motion.p
+                                    key={displayMedia.id + "_desc"}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.4, delay: 0.1 }}
+                                    className="text-zinc-300 text-[10px] md:text-xs leading-snug line-clamp-3 drop-shadow-md font-medium select-none max-w-xl border-l-[3px] pl-3 py-0.5 text-justify"
+                                    style={{ borderColor: `${currentEraConfig.color}60` }}
+                                    dangerouslySetInnerHTML={{ __html: displayMedia.description }}
+                                />
+                            )}
+                        </AnimatePresence>
+                    </div>
 
-                        {/* Puntos de Navegación del Slider (Sólo Móvil) */}
+                    {/* Action Buttons */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 pt-1">
+                        <AnimatePresence mode="wait">
+                            {currentMovie && (
+                                <motion.div
+                                    key={currentMovie.mediaId + "_btn"}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    transition={{ duration: 0.4, delay: 0.2 }}
+                                >
+                                    <button
+                                        onClick={() => handleMovieClick(currentMovie.mediaId!)}
+                                        className="group/play relative flex items-center gap-2.5 px-4 py-2 text-white rounded-2xl overflow-hidden transition-all duration-500 hover:scale-105 active:scale-95 border border-white/10 w-fit"
+                                        style={{
+                                            background: `linear-gradient(to right, ${currentEraConfig.color}, ${currentEraConfig.color}dd)`,
+                                            boxShadow: `0 12px 40px ${currentEraConfig.color}50`
+                                        }}
+                                    >
+                                        {/* Glossy shine */}
+                                        <div className="absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-transparent opacity-0 group-hover/play:opacity-100 transition-opacity duration-500 z-0" />
+                                        {/* Glow halo */}
+                                        <div className="absolute -inset-10 blur-xl group-hover/play:opacity-100 opacity-0 transition-opacity duration-500 -z-10 animate-pulse" style={{ backgroundColor: currentEraConfig.color }} />
+
+                                        <div className="p-2 bg-black/40 backdrop-blur-xl rounded-xl border border-white/10 text-white group-hover/play:bg-white group-hover/play:text-black transition-all duration-300 shadow-inner z-10 shrink-0">
+                                            <Play className="w-3 h-3 fill-current" />
+                                        </div>
+
+                                        <div className="flex flex-col items-start z-10 select-none text-left">
+                                            <span className="font-sans text-[10px] tracking-[0.15em] font-extrabold uppercase text-white transition-colors">
+                                                Ver Ahora
+                                            </span>
+                                            <span className="text-[7px] font-black text-white/80 tracking-[0.1em] uppercase transition-colors mt-0.5">
+                                                Película Completa
+                                            </span>
+                                        </div>
+                                    </button>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        {/* Slider Navigation Dots */}
                         {topFeatured.length > 1 && (
-                            <div className="flex md:hidden items-center gap-1.5 mt-4">
+                            <div className="flex items-center gap-2 mt-4 sm:mt-0">
                                 {topFeatured.map((_, i) => (
                                     <button
                                         key={i}
@@ -239,6 +284,6 @@ export function MoviesHero({
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
     )
 }

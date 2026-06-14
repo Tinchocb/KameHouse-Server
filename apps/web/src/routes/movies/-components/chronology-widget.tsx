@@ -8,7 +8,7 @@ export function ChronologyWidget({ chronology }: ChronologyWidgetProps) {
   if (!chronology || !chronology.startEpisodeContext) return null
 
   return (
-    <div className="bg-zinc-950/30 backdrop-blur border border-white/5 rounded-2xl p-6 mt-8">
+    <div className="liquid-glass-frosted liquid-glass-frosted-interactive rounded-2xl p-6 mt-8">
       <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-6">
         Ubicación Cronológica
       </h4>

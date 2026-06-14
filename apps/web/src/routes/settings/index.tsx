@@ -172,7 +172,7 @@ function SettingsPage() {
                     <aside 
                         onMouseMove={handleSidebarMouseMove}
                         onMouseLeave={() => setSidebarSpotlight({ opacity: 0 })}
-                        className="w-full md:w-64 shrink-0 bg-white/[0.01] border border-white/5 backdrop-blur-[64px] rounded-3xl p-5 shadow-[0_20px_40px_rgba(0,0,0,0.5)] h-fit relative overflow-hidden"
+                        className="w-full md:w-64 shrink-0 liquid-glass-frosted rounded-3xl p-5 h-fit relative overflow-hidden"
                     >
                         {/* Cursor spotlight overlay */}
                         <div 
@@ -230,7 +230,7 @@ function SettingsPage() {
                                 animate={{ opacity: 1, y: 0, x: "-50%" }}
                                 exit={{ opacity: 0, y: 40, x: "-50%" }}
                                 transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                                className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-8 bg-[#050506]/90 border border-white/5 shadow-[0_20px_50px_rgba(0,0,0,0.8)] rounded-xl px-6 py-4.5 backdrop-blur-[32px]"
+                                className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-8 liquid-glass-frosted rounded-xl px-6 py-4.5"
                             >
                                 <div className="flex items-center gap-3 pl-1">
                                     <span className="relative flex h-2 w-2">

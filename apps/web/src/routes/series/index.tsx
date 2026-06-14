@@ -136,21 +136,7 @@ function SeriesFullscreenIndex() {
                 />
             )}
 
-            {/* Top header label strip */}
-            <div className="relative z-20 shrink-0 h-10 flex items-center px-6 border-b border-white/[0.04] bg-black/30 backdrop-blur-sm">
-                <span className="text-[9px] font-black uppercase tracking-[0.4em] text-zinc-600 font-mono">KAME · VHS · COLLECTION</span>
-                {selectedItem && (
-                    <div className="ml-auto flex items-center gap-3">
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-600 font-mono">
-                            {selectedIndex + 1} / {seriesList.length}
-                        </span>
-                        <div className="h-3 w-[1px] bg-white/10" />
-                        <span className="text-[9px] font-black uppercase tracking-widest font-mono" style={{ color: getVhsColor(selectedItem.id) }}>
-                            {selectedItem.title}
-                        </span>
-                    </div>
-                )}
-            </div>
+
 
             {/* CRT scanlines overlay filter */}
             <div className="absolute inset-0 pointer-events-none z-[49] opacity-[0.012] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,6px_100%]" />

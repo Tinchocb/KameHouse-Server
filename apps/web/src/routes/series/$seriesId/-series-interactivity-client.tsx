@@ -77,7 +77,7 @@ const MediaActionButtons = React.memo(function MediaActionButtons({
                         setIsMatchModalOpen(true)
                     }}
                     className={cn(
-                        "flex items-center justify-center p-4 rounded-xl border bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-[#ff6b00]/10 hover:border-[#ff6b00]/30 hover:text-[#ff6b00] transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer"
+                        "flex items-center justify-center p-4 rounded-xl liquid-glass-frosted liquid-glass-frosted-interactive text-white/70 hover:text-[#ff6b00] hover:!bg-[#ff6b00]/10 hover:!border-[#ff6b00]/30 transition-all duration-300 cursor-pointer shadow-lg"
                     )}
                     title="Corregir Vinculación (Fix Match)"
                 >
@@ -225,8 +225,10 @@ const EpisodeCard = React.memo(function EpisodeCard({
                 onClick={hasLocalFile ? handlePlay : undefined}
                 onMouseEnter={playHoverSound}
                 className={cn(
-                    "group relative flex flex-col md:flex-row gap-8 transition-all duration-500 py-6 border-b border-white/[0.03] last:border-0",
-                    isCurrentlyPlaying ? "bg-white/[0.03] -mx-4 px-4 rounded-xl shadow-2xl" : "hover:bg-white/[0.01]",
+                    "group relative flex flex-col md:flex-row gap-8 transition-all duration-500 py-6 border-b border-white/[0.03] last:border-0 rounded-xl",
+                    isCurrentlyPlaying 
+                        ? "liquid-glass-frosted -mx-4 px-4 shadow-2xl border-brand-orange/30" 
+                        : "hover:liquid-glass-frosted hover:-mx-4 hover:px-4 hover:shadow-xl",
                     !hasLocalFile && "opacity-50",
                     hasLocalFile ? "cursor-pointer" : "cursor-default"
                 )}
@@ -410,8 +412,8 @@ const EpisodeCard = React.memo(function EpisodeCard({
                             <button 
                                 onClick={handleAddToQueue}
                                 className={cn(
-                                    "flex items-center justify-center p-2.5 bg-white/5 border border-white/10 text-zinc-400 rounded-xl transition-all duration-300",
-                                    "hover:border-brand-orange hover:bg-brand-orange/10 hover:text-brand-orange hover:scale-105 active:scale-95"
+                                    "flex items-center justify-center p-2.5 liquid-glass-frosted liquid-glass-frosted-interactive text-zinc-400 rounded-xl transition-all duration-300",
+                                    "hover:text-brand-orange"
                                 )}
                                 title="Agregar a la cola"
                             >
@@ -473,10 +475,10 @@ const EpisodeCard = React.memo(function EpisodeCard({
             onClick={handlePlay}
             onMouseEnter={playHoverSound}
             className={cn(
-                "group relative flex flex-col transition-all duration-500 overflow-hidden rounded-xl border border-white/[0.03] transform-gpu will-change-transform",
+                "group relative flex flex-col liquid-glass-frosted liquid-glass-frosted-interactive rounded-xl transform-gpu will-change-transform",
                 isCurrentlyPlaying 
-                    ? "border-brand-orange/50 bg-brand-orange/[0.03] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)]" 
-                    : "bg-zinc-950/40 hover:border-brand-orange/40 hover:shadow-2xl hover:-translate-y-1",
+                    ? "!border-brand-orange/50 !bg-brand-orange/[0.03] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)]" 
+                    : "",
                 !hasLocalFile && "opacity-60",
                 hasLocalFile ? "cursor-pointer" : "cursor-default"
             )}
@@ -594,7 +596,7 @@ const EpisodeCard = React.memo(function EpisodeCard({
                             <div className="flex items-center gap-2 shrink-0">
                                 <button 
                                     onClick={handleAddToQueue}
-                                    className="w-5 h-5 rounded-md border border-white/10 hover:border-brand-orange hover:bg-brand-orange/10 flex items-center justify-center transition-all text-white/40 hover:text-brand-orange"
+                                    className="w-5 h-5 rounded-md liquid-glass-frosted-subtle flex items-center justify-center transition-all text-white/40 hover:text-brand-orange"
                                     title="Agregar a la cola"
                                 >
                                     <ListPlus className="w-3.5 h-3.5" />
@@ -602,7 +604,7 @@ const EpisodeCard = React.memo(function EpisodeCard({
                                 {isWatched ? (
                                     <button 
                                         onClick={handleToggleWatched}
-                                        className="w-5 h-5 rounded-md bg-brand-orange/20 border border-brand-orange/40 hover:bg-red-500/20 hover:border-red-500/40 flex items-center justify-center transition-all text-brand-orange hover:text-red-400"
+                                        className="w-5 h-5 rounded-md liquid-glass-frosted-subtle !bg-brand-orange/20 !border-brand-orange/40 hover:!bg-red-500/20 hover:!border-red-500/40 flex items-center justify-center transition-all text-brand-orange hover:text-red-400"
                                         title="Marcar como no visto"
                                     >
                                         <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
@@ -614,7 +616,7 @@ const EpisodeCard = React.memo(function EpisodeCard({
                                         {/* Mark as watched (single) */}
                                         <button 
                                             onClick={handleToggleWatched}
-                                            className="w-5 h-5 rounded-md border border-white/10 hover:border-brand-orange hover:bg-brand-orange/10 flex items-center justify-center transition-all text-white/40 hover:text-brand-orange"
+                                            className="w-5 h-5 rounded-md liquid-glass-frosted-subtle flex items-center justify-center transition-all text-white/40 hover:text-brand-orange"
                                             title="Marcar como visto"
                                         >
                                             <div className="w-1.5 h-1.5 rounded-full bg-white/40 group-hover:bg-brand-orange" />
@@ -627,7 +629,7 @@ const EpisodeCard = React.memo(function EpisodeCard({
                                                     e.stopPropagation()
                                                     onUpdateProgress(episode.absoluteEpisodeNumber || episode.episodeNumber)
                                                 }}
-                                                className="w-5 h-5 rounded-md border border-white/10 hover:border-brand-orange hover:bg-brand-orange/10 flex items-center justify-center transition-all text-white/40 hover:text-brand-orange"
+                                                className="w-5 h-5 rounded-md liquid-glass-frosted-subtle flex items-center justify-center transition-all text-white/40 hover:text-brand-orange"
                                                 title="Marcar anteriores como vistos"
                                             >
                                                 <svg className="w-3.5 h-3.5 fill-none stroke-current" strokeWidth="2" viewBox="0 0 24 24">

@@ -1,0 +1,929 @@
+{
+  "series_id": "dragon_ball_original",
+  "title": "Dragon Ball Original",
+  "total_episodes": 153,
+  "broadcast_details": {
+    "release_year": 1986,
+    "episodes_type": "Infancia y juventud de Goku, aventuras ligeras y torneos tradicionales de artes marciales."
+  },
+  "episodes": [
+    {
+      "num": 1,
+      "title": "«Bulma y Son Gokū»",
+      "saga": "Saga de Pilaf",
+      "type": "Canon"
+    },
+    {
+      "num": 2,
+      "title": "«¡Aaaaargh! ¡No están las bolas!»",
+      "saga": "Saga de Pilaf",
+      "type": "Canon"
+    },
+    {
+      "num": 3,
+      "title": "«La Nube Kinto de Kame Sen'nin»",
+      "saga": "Saga de Pilaf",
+      "type": "Canon"
+    },
+    {
+      "num": 4,
+      "title": "«Oolong, el demonio secuestrador»",
+      "saga": "Saga de Pilaf",
+      "type": "Canon"
+    },
+    {
+      "num": 5,
+      "title": "«El malvado y poderoso Yamcha del desierto»",
+      "saga": "Saga de Pilaf",
+      "type": "Canon"
+    },
+    {
+      "num": 6,
+      "title": "«Los visitantes de medianoche»",
+      "saga": "Saga de Pilaf",
+      "type": "Canon"
+    },
+    {
+      "num": 7,
+      "title": "«Ox-Satán de la montaña Frypan»",
+      "saga": "Saga de Pilaf",
+      "type": "Canon"
+    },
+    {
+      "num": 8,
+      "title": "«El Kame Hame Ha del Kame Sen'nin»",
+      "saga": "Saga de Pilaf",
+      "type": "Canon"
+    },
+    {
+      "num": 9,
+      "title": "«La habilidad especial del Jefe Conejo»",
+      "saga": "Saga de Pilaf",
+      "type": "Canon"
+    },
+    {
+      "num": 10,
+      "title": "«¡Las bolas de dragón han sido robadas!»",
+      "saga": "Saga de Pilaf",
+      "type": "Canon"
+    },
+    {
+      "num": 11,
+      "title": "«¡Finalmente aparece el dragón!»",
+      "saga": "Saga de Pilaf",
+      "type": "Canon"
+    },
+    {
+      "num": 12,
+      "title": "«¡Un deseo a Shenlong!»",
+      "saga": "Saga de Pilaf",
+      "type": "Canon"
+    },
+    {
+      "num": 13,
+      "title": "«La gran transformación de Gokū»",
+      "saga": "Saga de Pilaf",
+      "type": "Canon"
+    },
+    {
+      "num": 14,
+      "title": "«¿El rival de Gokū? ¡Aparece!»",
+      "saga": "21° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 15,
+      "title": "«Lunch, una niña misteriosa»",
+      "saga": "21° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 16,
+      "title": "«Entrenamiento: Búsqueda de piedras»",
+      "saga": "21° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 17,
+      "title": "«¡Arriesgando la vida! Los repartidores de leche»",
+      "saga": "21° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 18,
+      "title": "«Entrenamiento inten~so al estilo de Kame Sen'nin»",
+      "saga": "21° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 19,
+      "title": "«¡Comienza el Tenkaichi Budōkai!»",
+      "saga": "21° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 20,
+      "title": "«¿Podrá? El poder del entrenamiento»",
+      "saga": "21° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 21,
+      "title": "«¡Cuidado! Krilin»",
+      "saga": "21° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 22,
+      "title": "«Yamcha contra Jackie Chun»",
+      "saga": "21° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 23,
+      "title": "«¡Aparece! Giran, el formidable enemigo»",
+      "saga": "21° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 24,
+      "title": "«La gran lucha ofensiva y defensiva desesperada de Krilin»",
+      "saga": "21° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 25,
+      "title": "«¡Levántate Gokū! El temible Tenkū Pekeji Ken»",
+      "saga": "21° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 26,
+      "title": "«¡Es la final! Kame Hame Ha»",
+      "saga": "21° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 27,
+      "title": "«Gokū - Grandísimo peligro»",
+      "saga": "21° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 28,
+      "title": "«¡Choque! Poder contra poder»",
+      "saga": "21° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 29,
+      "title": "«Retorna la aventura, el lago ambulante»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 30,
+      "title": "«Pilaf y el ejército misterioso»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Relleno"
+    },
+    {
+      "num": 31,
+      "title": "«¡Je je! ¡Aparece un falso Gokū!»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Relleno"
+    },
+    {
+      "num": 32,
+      "title": "«¡¿Ha desaparecido?! La fortaleza voladora»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Relleno"
+    },
+    {
+      "num": 33,
+      "title": "«La leyenda del dragón»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Relleno"
+    },
+    {
+      "num": 34,
+      "title": "«La despiadada Red Ribbon»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 35,
+      "title": "«Suno, la chica del Norte»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 36,
+      "title": "«El terror de la Muscle Tower»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 37,
+      "title": "«Aparece el Ninja Murasaki»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 38,
+      "title": "«¡Temible! El arte de la multiplicación»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 39,
+      "title": "«El misterioso Androide #8»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 40,
+      "title": "«¡¿Qué vas a hacer Gokū?! El temible Buyon»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 41,
+      "title": "«El final del Muscle Tower»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 42,
+      "title": "«¡Peligro inminente! Aguanta Hatchan»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 43,
+      "title": "«La casa de Bulma en la Capital del Oeste»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 44,
+      "title": "«Gokū, los amigos y mucho peligro»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 45,
+      "title": "«¡Tengamos cuidado! La trampa aérea»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Relleno"
+    },
+    {
+      "num": 46,
+      "title": "«El gran fracaso de Bulma»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 47,
+      "title": "«¡Kame House es descubierta!»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 48,
+      "title": "«¡El General Blue comienza el ataque!»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 49,
+      "title": "«Cuidado Lunch»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 50,
+      "title": "«La trampa de los piratas»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 51,
+      "title": "«El guardián del fondo del mar»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 52,
+      "title": "«¡Conseguido! El tesoro es descubierto»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 53,
+      "title": "«Los terribles ojos brillantes»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 54,
+      "title": "«¡Huyamos huyamos! El gran escape»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 55,
+      "title": "«¡N'cha! La lejana villa Pingüino»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 56,
+      "title": "«¡Jojojoi! Arale sube en la nube»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 57,
+      "title": "«¡Desafío! Arale contra Blue»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 58,
+      "title": "«La sagrada tierra encantada de Karin»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 59,
+      "title": "«¡Ha llegado! Tao Pai Pai, el mejor asesino del mundo»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 60,
+      "title": "«¡Reto! Kame Hame Ha VS Dodonpa»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 61,
+      "title": "«El señor Karin de la Torre Karin»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 62,
+      "title": "«¡¿Es de verdad?! Los efectos del Chōseisui»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 63,
+      "title": "«El contraataque de Son Gokū»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 64,
+      "title": "«El final Tao Pai Pai»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 65,
+      "title": "«¡Vamos Gokū! Comienza el ataque»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 66,
+      "title": "«La defensa y ofensa desesperada del Ejército Red Ribbon»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 67,
+      "title": "«¡El Comandante Red muere!»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 68,
+      "title": "«La última bola de dragón»",
+      "saga": "Saga de la Patrulla Roja",
+      "type": "Canon"
+    },
+    {
+      "num": 69,
+      "title": "«Guapa ¡¿eh?! Baba, la adivina»",
+      "saga": "Palacio de Uranai Baba",
+      "type": "Canon"
+    },
+    {
+      "num": 70,
+      "title": "«¡Ataque! Nuestros 5 guerreros»",
+      "saga": "Palacio de Uranai Baba",
+      "type": "Canon"
+    },
+    {
+      "num": 71,
+      "title": "«Gran batalla sangrienta a muerte»",
+      "saga": "Palacio de Uranai Baba",
+      "type": "Canon"
+    },
+    {
+      "num": 72,
+      "title": "«¡Encuentro con Son Gokū! El Váter del diablo»",
+      "saga": "Palacio de Uranai Baba",
+      "type": "Canon"
+    },
+    {
+      "num": 73,
+      "title": "«Rayo Akumigth, ¡¿Técnica mortal?!»",
+      "saga": "Palacio de Uranai Baba",
+      "type": "Canon"
+    },
+    {
+      "num": 74,
+      "title": "«El misterioso quinto hombre»",
+      "saga": "Palacio de Uranai Baba",
+      "type": "Canon"
+    },
+    {
+      "num": 75,
+      "title": "«¡Colisión! Poderoso contrincante»",
+      "saga": "Palacio de Uranai Baba",
+      "type": "Canon"
+    },
+    {
+      "num": 76,
+      "title": "«¡¿La verdadera identidad del hombre enmascarado...?!»",
+      "saga": "Palacio de Uranai Baba",
+      "type": "Canon"
+    },
+    {
+      "num": 77,
+      "title": "«La gran estrategia de Pilaf»",
+      "saga": "Palacio de Uranai Baba",
+      "type": "Canon"
+    },
+    {
+      "num": 78,
+      "title": "«Regresa Shenlong»",
+      "saga": "Palacio de Uranai Baba",
+      "type": "Canon"
+    },
+    {
+      "num": 79,
+      "title": "«La calabaza come hombres de Kinkaku y Ginkaku»",
+      "saga": "Palacio de Uranai Baba",
+      "type": "Relleno"
+    },
+    {
+      "num": 80,
+      "title": "«¡Antes de que empiece mi juego! Gokū contra Tenlong»",
+      "saga": "Palacio de Uranai Baba",
+      "type": "Relleno"
+    },
+    {
+      "num": 81,
+      "title": "«Gokū va al mundo de los Demonios»",
+      "saga": "Palacio de Uranai Baba",
+      "type": "Relleno"
+    },
+    {
+      "num": 82,
+      "title": "«El violento monstruo Inoshikachō»",
+      "saga": "Palacio de Uranai Baba",
+      "type": "Relleno"
+    },
+    {
+      "num": 83,
+      "title": "«¡Deprisa, Gokū! El Tenkaichi Budōkai»",
+      "saga": "22° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 84,
+      "title": "«¡Apunta a ser el mejor artista marcial!»",
+      "saga": "22° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 85,
+      "title": "«¡Concentrados en ganar! Sobrevivir en las preliminatorias»",
+      "saga": "22° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 86,
+      "title": "«¡Decidido! Los 8 valientes»",
+      "saga": "22° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 87,
+      "title": "«¡Desafío! Yamcha contra Ten Shin Han»",
+      "saga": "22° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 88,
+      "title": "«¡Cuidado, Yamcha! El temible Ten Shin Han»",
+      "saga": "22° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 89,
+      "title": "«¡Terror! El rencor de la Luna llena»",
+      "saga": "22° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 90,
+      "title": "«¿Qué? ¿Qué has dicho? ¿Dodonpa?»",
+      "saga": "22° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 91,
+      "title": "«¡Inversión! El plan matemático de Krilin.»",
+      "saga": "22° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 92,
+      "title": "«¡Espera! ¡Llamando a Gokū!»",
+      "saga": "22° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 93,
+      "title": "«¡Habilidades iguales! Ten Shin Han contra Jackie»",
+      "saga": "22° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 94,
+      "title": "«¡Gegege! Taiyōken, la nueva técnica sagrada»",
+      "saga": "22° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 95,
+      "title": "«¡Lucha! Gokū contra Krilin»",
+      "saga": "22° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 96,
+      "title": "«No puede ser, ¡¿Gokū?! La gran estrategia de Krilin»",
+      "saga": "22° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 97,
+      "title": "«¡Ronda final! ¡¿Quién será el artista marcial más fuerte bajo el cielo?!»",
+      "saga": "22° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 98,
+      "title": "«Higi・Haikyūke y el poder de la batalla»",
+      "saga": "22° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 99,
+      "title": "«¡La agonía de Ten Shin Han!»",
+      "saga": "22° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 100,
+      "title": "«¡¿La vida o la muerte?! La última alternativa»",
+      "saga": "22° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 101,
+      "title": "«¡El gran encuentro de artistas marciales termina! ¡Sin embargo...!»",
+      "saga": "22° Torneo de Artes Marciales",
+      "type": "Canon"
+    },
+    {
+      "num": 102,
+      "title": "«¡La muerte de Krilin, un complot horrible!»",
+      "saga": "Saga de Piccolo Daimaku",
+      "type": "Canon"
+    },
+    {
+      "num": 103,
+      "title": "«¡El terror de Piccolo Daimaō!»",
+      "saga": "Saga de Piccolo Daimaku",
+      "type": "Canon"
+    },
+    {
+      "num": 104,
+      "title": "«¡Regresa Son Gokū!»",
+      "saga": "Saga de Piccolo Daimaku",
+      "type": "Canon"
+    },
+    {
+      "num": 105,
+      "title": "«¡El chico misterioso: Aparece Yajirobe!»",
+      "saga": "Saga de Piccolo Daimaku",
+      "type": "Canon"
+    },
+    {
+      "num": 106,
+      "title": "«¡La bestia: Tanbourin ha llegado!»",
+      "saga": "Saga de Piccolo Daimaku",
+      "type": "Canon"
+    },
+    {
+      "num": 107,
+      "title": "«¡Son Gokū: Explosión de ira!»",
+      "saga": "Saga de Piccolo Daimaku",
+      "type": "Canon"
+    },
+    {
+      "num": 108,
+      "title": "«¡El aterrizaje de Piccolo Daimaō!»",
+      "saga": "Saga de Piccolo Daimaku",
+      "type": "Canon"
+    },
+    {
+      "num": 109,
+      "title": "«Son Gokū contra Piccolo Daimaō»",
+      "saga": "Saga de Piccolo Daimaku",
+      "type": "Canon"
+    },
+    {
+      "num": 110,
+      "title": "«¡Aguanta! ¡Son Gokū!»",
+      "saga": "Saga de Piccolo Daimaku",
+      "type": "Canon"
+    },
+    {
+      "num": 111,
+      "title": "«¡El último Mafūba de Kame Sen'nin!»",
+      "saga": "Saga de Piccolo Daimaku",
+      "type": "Canon"
+    },
+    {
+      "num": 112,
+      "title": "«¡¿Ha vuelto a la juventud?! Piccolo Daimaō»",
+      "saga": "Saga de Piccolo Daimaku",
+      "type": "Canon"
+    },
+    {
+      "num": 113,
+      "title": "«¡La defensa y ofensa del castillo del Rey!»",
+      "saga": "Saga de Piccolo Daimaku",
+      "type": "Canon"
+    },
+    {
+      "num": 114,
+      "title": "«¡El deseo de Gokū! El señor Karin también se preocupa»",
+      "saga": "Saga de Piccolo Daimaku",
+      "type": "Canon"
+    },
+    {
+      "num": 115,
+      "title": "«¡Ponla en mis manos! La misteriosa Chōshinsui»",
+      "saga": "Saga de Piccolo Daimaku",
+      "type": "Relleno"
+    },
+    {
+      "num": 116,
+      "title": "«¡¿Kame Sen'nin está vivo?!»",
+      "saga": "Saga de Piccolo Daimaku",
+      "type": "Relleno"
+    },
+    {
+      "num": 117,
+      "title": "«¡Son Gokū se lanza al fin!»",
+      "saga": "Saga de Piccolo Daimaku",
+      "type": "Canon"
+    },
+    {
+      "num": 118,
+      "title": "«¡La decisión de Ten Shin Han!»",
+      "saga": "Saga de Piccolo Daimaku",
+      "type": "Canon"
+    },
+    {
+      "num": 119,
+      "title": "«¡¿Funcionará?! El legendario Mafūba»",
+      "saga": "Saga de Piccolo Daimaku",
+      "type": "Canon"
+    },
+    {
+      "num": 120,
+      "title": "«¡Gokū: El máximo poder de la ira!»",
+      "saga": "Saga de Piccolo Daimaku",
+      "type": "Canon"
+    },
+    {
+      "num": 121,
+      "title": "«¡La más grande crisis de Son Gokū!»",
+      "saga": "Saga de Piccolo Daimaku",
+      "type": "Canon"
+    },
+    {
+      "num": 122,
+      "title": "«¡La última apuesta!»",
+      "saga": "Saga de Piccolo Daimaku",
+      "type": "Canon"
+    },
+    {
+      "num": 123,
+      "title": "«El secreto del Nyoibō»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Canon"
+    },
+    {
+      "num": 124,
+      "title": "«El templo sobre las nubes»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Canon"
+    },
+    {
+      "num": 125,
+      "title": "«¡Aparece Dios!»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Canon"
+    },
+    {
+      "num": 126,
+      "title": "«¡Shenlong revive!»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Canon"
+    },
+    {
+      "num": 127,
+      "title": "«¡Más rápido que un relámpago!»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Relleno"
+    },
+    {
+      "num": 128,
+      "title": "«Sereno como el cielo»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Relleno"
+    },
+    {
+      "num": 129,
+      "title": "«Gokū cruza el tiempo»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Relleno"
+    },
+    {
+      "num": 130,
+      "title": "«¡¿El enemigo de Gokū es... Gokū?!»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Relleno"
+    },
+    {
+      "num": 131,
+      "title": "«Comienza el camino de cada uno»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Relleno"
+    },
+    {
+      "num": 132,
+      "title": "«Más caliente que el magma»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Relleno"
+    },
+    {
+      "num": 133,
+      "title": "«Una reunión antes de la tormenta»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Canon"
+    },
+    {
+      "num": 134,
+      "title": "«El turbulento Tenkaichi Budōkai»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Canon"
+    },
+    {
+      "num": 135,
+      "title": "«Los 8 escogidos»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Canon"
+    },
+    {
+      "num": 136,
+      "title": "«El contraataque del asesino TaoPaiPai»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Canon"
+    },
+    {
+      "num": 137,
+      "title": "«La boda de Son Gokū»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Canon"
+    },
+    {
+      "num": 138,
+      "title": "«El misterioso hombre: Shen»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Canon"
+    },
+    {
+      "num": 139,
+      "title": "«¡Vuelve la intensa lucha! Gokū contra Ten Shin Han»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Canon"
+    },
+    {
+      "num": 140,
+      "title": "«El verdadero poder»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Canon"
+    },
+    {
+      "num": 141,
+      "title": "«Cuatro Ten Shin Han»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Canon"
+    },
+    {
+      "num": 142,
+      "title": "«¿¡Cuál es más fuerte!? Dios contra Piccolo Daimaō»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Canon"
+    },
+    {
+      "num": 143,
+      "title": "«¡Apostando por el destino de este mundo!»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Canon"
+    },
+    {
+      "num": 144,
+      "title": "«¡Ahí está! El último Super Kamehameha»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Canon"
+    },
+    {
+      "num": 145,
+      "title": "«La técnica de Supergigante de Piccolo Daimaō»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Canon"
+    },
+    {
+      "num": 146,
+      "title": "«La trampa de Son Gokū»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Canon"
+    },
+    {
+      "num": 147,
+      "title": "«¡Todo termina!»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Canon"
+    },
+    {
+      "num": 148,
+      "title": "«¡Ya está! El hombre más fuerte del mundo.»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Canon"
+    },
+    {
+      "num": 149,
+      "title": "«El vestido de novia dentro de las llamas»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Relleno"
+    },
+    {
+      "num": 150,
+      "title": "«El fantasmal ave traga fuego»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Relleno"
+    },
+    {
+      "num": 151,
+      "title": "«Gracias al entrenamiento de Chichi para ser buena esposa»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Relleno"
+    },
+    {
+      "num": 152,
+      "title": "«¡Deprisa Gokū! El misterio del monte de los cinco elementos»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Relleno"
+    },
+    {
+      "num": 153,
+      "title": "«¡Arde montaña Frypan! Una decisión de vida o muerte»",
+      "saga": "Saga de Piccolo Jr.",
+      "type": "Relleno"
+    }
+  ]
+}

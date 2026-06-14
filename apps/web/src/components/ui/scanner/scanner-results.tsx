@@ -198,7 +198,7 @@ export function EventFeed({ events }: { events: ScanEvent[] }) {
             </div>
 
             {/* Event List Container */}
-            <div className="rounded-2xl overflow-hidden border border-white/5 bg-white/[0.01] backdrop-blur-md relative shadow-[0_20px_40px_rgba(0,0,0,0.3)]">
+            <div className="rounded-2xl liquid-glass-frosted relative">
                 {isPaused && (
                     <div className="absolute top-3 right-4 z-20 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[8px] font-black tracking-widest uppercase px-2.5 py-1 rounded-full animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.15)]">
                         FROZEN FEED

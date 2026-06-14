@@ -24,6 +24,7 @@ import { TimelineHeatmap, type InsightNode } from "@/components/ui/timeline-heat
 import { PlayerSettingsMenu } from "@/components/ui/PlayerSettingsMenu"
 import type { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
 import type { EpisodeSource } from "@/api/types/unified.types"
+import { cleanMediaTitle } from "@/lib/helpers/media"
 
 export interface Chapter {
     startTime: number
@@ -42,8 +43,10 @@ const formatTime = (secs: number) => {
 }
 
 export interface PlayerBottomBarProps {
+    title?: string
     episodeNumber?: number
     episodeLabel?: string
+    mediaFormat?: string | null
     duration: number
     insights: InsightNode[]
     progressBarRef: React.RefObject<HTMLDivElement>
@@ -141,6 +144,18 @@ export interface PlayerBottomBarProps {
     hasQueue?: boolean
 }
 
+function getSeriesName(fullTitle?: string): string {
+    if (!fullTitle) return ""
+    if (fullTitle.includes(":")) {
+        return fullTitle.split(":")[0].trim()
+    }
+    const match = fullTitle.match(/^(dragon\s*ball\s*(z|gt|super|kai)?)/i)
+    if (match) {
+        return match[1].trim()
+    }
+    return fullTitle
+}
+
 const SkipNextChapterIcon = () => (
     <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" className="fill-current">
         <polygon points="5 4 15 12 5 20 5 4" fill="currentColor"/>
@@ -149,7 +164,7 @@ const SkipNextChapterIcon = () => (
 )
 
 export const PlayerBottomBar = React.memo(function PlayerBottomBar({
-    episodeNumber, episodeLabel,
+    title, episodeNumber, episodeLabel, mediaFormat,
     duration, insights, progressBarRef, progressInputRef, handleSeek,
     isPlaying, togglePlay, skipTime,
     isMuted, toggleMute, volume, handleVolume,
@@ -189,6 +204,10 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
     onToggleQueueSidebar,
     hasQueue,
 }: PlayerBottomBarProps) {
+    const isMovie = React.useMemo(() => {
+        const formatUpper = mediaFormat?.toUpperCase()
+        return formatUpper === "MOVIE" || formatUpper === "SPECIAL" || formatUpper === "OVA"
+    }, [mediaFormat])
 
     return (
         <div className={cn(
@@ -359,11 +378,22 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
 
                 {/* Middle Area: Episode Title & Number */}
                 <div className="flex flex-col items-center justify-center text-center max-w-[35%] select-none px-4 flex-1 min-w-0">
-                    <span className="text-[10px] font-black text-brand-orange uppercase tracking-[0.25em] font-mono leading-none">
-                        {episodeNumber ? `Episodio ${episodeNumber}` : ""}
+                    <span className="text-xs font-bold text-white tracking-wide truncate max-w-full mb-1" title={episodeLabel}>
+                        {cleanMediaTitle(episodeLabel, isMovie) || ""}
                     </span>
-                    <span className="text-xs font-bold text-white tracking-wide truncate max-w-full mt-1.5" title={episodeLabel}>
-                        {episodeLabel || ""}
+                    <span className="text-[9px] font-black text-brand-orange uppercase tracking-[0.2em] font-mono leading-none">
+                        {(() => {
+                            const formatUpper = mediaFormat?.toUpperCase()
+                            const isMovieFormat = formatUpper === "MOVIE" || formatUpper === "SPECIAL" || formatUpper === "OVA"
+                            if (isMovieFormat && title) {
+                                return getSeriesName(title)
+                            }
+                            if (formatUpper === "MOVIE") return "Película"
+                            if (formatUpper === "SPECIAL") return "Especial"
+                            if (formatUpper === "OVA") return "OVA"
+                            if (episodeNumber) return `Episodio ${episodeNumber}`
+                            return ""
+                        })()}
                     </span>
                 </div>
 

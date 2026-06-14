@@ -11,6 +11,7 @@ import { cn } from "@/components/ui/core/styling"
 import { getHighResImage } from "@/lib/helpers/images"
 import { fetchAnimeEntry, useGetAnimeEntry, useUpdateAnimeEntryProgress } from "@/api/hooks/anime_entries.hooks"
 import { useGetContinuityWatchHistoryItem } from "@/api/hooks/continuity.hooks"
+import { useServerQuery } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { Anime_Episode, Anime_LocalFile, Mediastream_StreamType } from "@/api/generated/types"
 import { EmptyState } from "@/components/shared/empty-state"
@@ -18,6 +19,7 @@ import { VideoPlayer } from "@/components/video/player"
 import { RelationsTab, CharactersTab, TechnicalMetadataTab } from "./-series-bento-tabs"
 import { resolveSeriesSagas, getDragonBallSpanishTitle } from "@/lib/config/dragonball.config"
 import { startViewTransition } from "@/lib/helpers/transitions"
+import { X, Sparkles, Trophy, Skull } from "lucide-react"
 
 // Modular Components
 import { SeriesHero } from "./-components/series-hero"
@@ -50,6 +52,27 @@ function SeriesDetailPage() {
     )
 }
 
+const getSeriesIdFromMedia = (media: any) => {
+    if (!media) return ""
+    const tmdbId = media.tmdbId || 0
+    const title = (media.titleRomaji || media.titleEnglish || media.titleOriginal || "").toLowerCase().replace(/\s+/g, "")
+    
+    if (tmdbId === 12971 || title.includes("dragonballz") || title === "dbz") return "dragon_ball_z"
+    if (tmdbId === 12697 || title.includes("dragonballgt")) return "dragon_ball_gt"
+    if (tmdbId === 62715 || title.includes("dragonballsuper")) return "dragon_ball_super"
+    if (tmdbId === 236994 || title.includes("dragonballdaima")) return "dragon_ball_daima"
+    if (tmdbId === 12609 || title === "dragonball") return "dragon_ball"
+    return ""
+}
+
+const parseEpisodeRange = (rangeStr: string) => {
+    if (!rangeStr) return { startEp: 1, endEp: 1 }
+    const parts = rangeStr.split("-")
+    const startEp = parseInt(parts[0], 10) || 1
+    const endEp = parseInt(parts[1], 10) || startEp
+    return { startEp, endEp }
+}
+
 export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     const { playSound } = useSound()
     const queryClient = useQueryClient()
@@ -57,6 +80,16 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     const { data: entry, isLoading } = useGetAnimeEntry(seriesId)
     const { data: continuityData, refetch: refetchContinuity } = useGetContinuityWatchHistoryItem(Number(seriesId))
     const setBackdropUrl = useIntelligenceStore(s => s.setBackdropUrl)
+
+    // Load rich Dragon Ball lore database
+    const { data: lore } = useServerQuery<any>({
+        endpoint: "/api/v1/lore/dragonball",
+        method: "GET",
+        queryKey: ["dragonball-lore"],
+        staleTime: 300000,
+    })
+
+    const [selectedCharacterName, setSelectedCharacterName] = useState<string | null>(null)
 
     const isMovie = React.useMemo(() => {
         if (!entry?.media) return false
@@ -97,8 +130,8 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
 
     const baseSagas = useMemo(() => entry?.media ? resolveSeriesSagas(entry.media) : [], [entry])
 
-    // Convert config sagas to DTO format
-    const sagas: SagaDTO[] = useMemo(() => {
+    // Convert config sagas to DTO format and enrich with wiki data
+    const sagas = useMemo(() => {
         const allChars = (entry?.media?.characters?.edges || [])
             .filter(edge => edge.node?.image?.large)
             .map(edge => ({
@@ -107,22 +140,51 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                 avatarUrl: edge.node?.image?.large || ""
             }));
 
-        return baseSagas.map((s, idx) => ({
-            id: s.id,
-            name: s.title,
-            episodeRange: `${s.startEp}-${s.endEp}`,
-            description: s.description || "",
-            isFiller: s.title.toLowerCase().includes("filler") || s.title.toLowerCase().includes("relleno"),
-            keyCharacters: allChars.slice(0, 15), // Mapeo temporal general
-            subSagas: s.subSagas?.map(ss => ({
-                id: ss.id,
-                name: ss.title,
-                episodeRange: `${ss.startEp}-${ss.endEp}`,
-                startEp: ss.startEp,
-                endEp: ss.endEp
-            })) || []
-        }))
-    }, [baseSagas, entry])
+        const seriesIdKey = getSeriesIdFromMedia(entry?.media)
+        const wikiSeries = lore?.sagas_wiki?.find((s: any) => s.series_id === seriesIdKey)
+
+        return baseSagas.map((s) => {
+            let richDesc = s.description || ""
+            let antagonists: string[] = []
+            let keyEvents: string[] = []
+            let newCharacters: string[] = []
+            let canonStatus: string | boolean = true
+
+            if (wikiSeries?.sagas) {
+                const matchingWiki = wikiSeries.sagas.find((ws: any) => {
+                    const { startEp, endEp } = parseEpisodeRange(ws.episodes)
+                    return (s.startEp >= startEp && s.startEp <= endEp) || (startEp >= s.startEp && startEp <= s.endEp)
+                })
+                if (matchingWiki) {
+                    richDesc = matchingWiki.description || richDesc
+                    antagonists = matchingWiki.antagonists || []
+                    keyEvents = matchingWiki.key_events || []
+                    newCharacters = matchingWiki.new_characters || []
+                    canonStatus = matchingWiki.canon
+                }
+            }
+
+            return {
+                id: s.id,
+                name: s.title,
+                episodeRange: `${s.startEp}-${s.endEp}`,
+                description: richDesc,
+                isFiller: s.title.toLowerCase().includes("filler") || s.title.toLowerCase().includes("relleno") || canonStatus === false || String(canonStatus).toLowerCase() === "relleno",
+                canonStatus: String(canonStatus),
+                antagonists,
+                keyEvents,
+                newCharacters,
+                keyCharacters: allChars.slice(0, 15),
+                subSagas: s.subSagas?.map(ss => ({
+                    id: ss.id,
+                    name: ss.title,
+                    episodeRange: `${ss.startEp}-${ss.endEp}`,
+                    startEp: ss.startEp,
+                    endEp: ss.endEp
+                })) || []
+            }
+        })
+    }, [baseSagas, entry, lore])
 
     const activeSubSaga = useMemo(() => {
         if (!activeSagaId || !activeSubSagaId) return null
@@ -441,15 +503,9 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     return (
         <div className="h-full w-full flex flex-col overflow-y-auto bg-[#050506]/35 backdrop-blur-[64px] text-white pb-16">
             <SeriesHero
-                title={title}
-                romajiTitle={entry.media.titleRomaji || ""}
+                entry={entry}
                 backdropUrl={heroBackdrop}
-                posterUrl={entry.media.posterImage || ""}
-                rating={entry.media.score ? entry.media.score / 10 : undefined}
-                year={entry.media.year}
-                ageRating={entry.media.isNsfw ? "18+" : "PG-13"}
                 sagaCount={sagas.length}
-                synopsis={entry.media.description || ""}
                 onPlay={handlePlayDefault}
             />
             <div className="w-full max-w-[1800px] mx-auto px-6 sm:px-12 mt-12">
@@ -544,9 +600,13 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
 
                                 {/* Right Column: Characters & Episodes */}
                                 <div className="flex-grow flex flex-col min-w-0">
+                                    {/* Saga Lore Info Card */}
+                                    <SagaLoreHeader saga={sagas.find(s => s.id === activeSagaId)} />
+
                                     {/* Mapped Characters from active saga */}
                                     <CharacterCarousel 
                                         characters={sagas.find(s => s.id === activeSagaId)?.keyCharacters || []}
+                                        onSelect={setSelectedCharacterName}
                                     />
                                     
                                     {/* Mapped Premium Episodes */}
@@ -617,7 +677,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                                 transition={{ duration: 0.2 }}
                                 className="py-4"
                             >
-                                <CharactersTab characters={entry.media?.characters?.edges || []} />
+                                <CharactersTab characters={entry.media?.characters?.edges || []} onSelectChar={setSelectedCharacterName} />
                             </motion.div>
                         )}
 
@@ -658,6 +718,233 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                     }}
                 />
             )}
+
+            {/* Character Lore Detail Modal overlay */}
+            {selectedCharacterName && (
+                <CharacterDetailModal 
+                    characterName={selectedCharacterName}
+                    entry={entry}
+                    loreData={lore}
+                    onClose={() => setSelectedCharacterName(null)}
+                />
+            )}
         </div>
+    )
+}
+
+// ─── LORE UI COMPONENTS ──────────────────────────────────────────────────────
+
+function SagaLoreHeader({ saga }: { saga: any }) {
+    if (!saga) return null
+
+    const hasRichDetails = saga.antagonists?.length > 0 || saga.keyEvents?.length > 0 || saga.newCharacters?.length > 0
+
+    return (
+        <div className="p-8 liquid-glass-frosted rounded-2xl mb-8 flex flex-col gap-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="space-y-1">
+                    <span className="text-[9px] font-black text-brand-orange uppercase tracking-[0.25em] bg-brand-orange/10 border border-brand-orange/20 px-2.5 py-0.5 rounded">Detalles del Arco</span>
+                    <h2 className="text-3xl font-black text-white tracking-wide uppercase mt-1.5">{saga.name}</h2>
+                </div>
+                {saga.canonStatus && (
+                    <span className={cn(
+                        "px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.15em] shadow-sm",
+                        saga.canonStatus === "true" || saga.canonStatus.toLowerCase() === "canon"
+                            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                            : saga.canonStatus.toLowerCase() === "relleno" || saga.canonStatus === "false"
+                            ? "bg-red-500/10 text-red-400 border border-red-500/20"
+                            : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                    )}>
+                        {saga.canonStatus === "true" || saga.canonStatus.toLowerCase() === "canon" ? "Canon" : saga.canonStatus.toLowerCase() === "relleno" ? "Relleno" : saga.canonStatus}
+                    </span>
+                )}
+            </div>
+
+            <p className="text-zinc-300 text-sm md:text-base leading-relaxed border-l-2 border-brand-orange/30 pl-4 py-1">{saga.description}</p>
+
+            {hasRichDetails && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-white/5 mt-2">
+                    {saga.antagonists?.length > 0 && (
+                        <div className="p-5 liquid-glass-frosted-subtle rounded-xl shadow-inner">
+                            <span className="flex items-center gap-2 text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-3 pb-2 border-b border-white/5">
+                                <Skull className="w-3.5 h-3.5 text-red-400" /> Antagonistas
+                            </span>
+                            <div className="flex flex-wrap gap-2">
+                                {saga.antagonists.map((ant: string, idx: number) => (
+                                    <span key={idx} className="px-2.5 py-1 bg-red-950/20 text-red-300 border border-red-500/10 text-[10px] rounded-lg font-bold">
+                                        {ant}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {saga.keyEvents?.length > 0 && (
+                        <div className="md:col-span-2 p-5 liquid-glass-frosted-subtle rounded-xl shadow-inner">
+                            <span className="flex items-center gap-2 text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-3 pb-2 border-b border-white/5">
+                                <Trophy className="w-3.5 h-3.5 text-amber-400" /> Hitos Clave
+                            </span>
+                            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-zinc-400">
+                                {saga.keyEvents.map((event: string, idx: number) => (
+                                    <li key={idx} className="flex items-start gap-2 leading-relaxed">
+                                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-orange/60 mt-1.5 shrink-0" />
+                                        <span className="text-zinc-300">{event}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    )
+}
+
+interface CharacterDetailModalProps {
+    characterName: string | null
+    entry: any
+    loreData: any
+    onClose: () => void
+}
+
+function CharacterDetailModal({ 
+    characterName, 
+    entry,
+    loreData, 
+    onClose 
+}: CharacterDetailModalProps) {
+    if (!characterName) return null
+
+    // Find the character info in local lore data
+    const charInfo = loreData?.characters_wiki?.find((c: any) => 
+        c.name.toLowerCase().includes(characterName.toLowerCase()) || 
+        characterName.toLowerCase().includes(c.name.toLowerCase())
+    )
+
+    if (!charInfo) return null
+
+    // Resolve avatar image from entry characters list
+    const charEdge = entry?.media?.characters?.edges?.find((e: any) => 
+        e.node?.name?.full?.toLowerCase().includes(characterName.toLowerCase()) || 
+        characterName.toLowerCase().includes(e.node?.name?.full?.toLowerCase())
+    )
+    const avatarUrl = charEdge?.node?.image?.large || ""
+
+    return (
+        <AnimatePresence>
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={onClose}
+                    className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                />
+
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                    className="relative w-full max-w-3xl max-h-[85vh] bg-zinc-950/90 border border-white/10 rounded-3xl overflow-y-auto shadow-2xl flex flex-col md:flex-row z-10 scrollbar-hide"
+                >
+                    <button 
+                        onClick={onClose}
+                        className="absolute top-4 right-4 z-20 p-2 rounded-full bg-white/5 border border-white/10 text-white/70 hover:text-white hover:bg-white/10 transition-all active:scale-95"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+
+                    {/* Left Column: Avatar & Quick Info */}
+                    <div className="w-full md:w-1/3 p-6 flex flex-col items-center border-b md:border-b-0 md:border-r border-white/5 shrink-0 bg-black/20">
+                        <div className="w-32 h-32 rounded-full overflow-hidden border-2 border-brand-orange shadow-[0_0_20px_rgba(255,110,58,0.25)] mb-4 shrink-0">
+                            {avatarUrl ? (
+                                <img src={avatarUrl} alt={charInfo.name} className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full bg-zinc-900 flex items-center justify-center text-zinc-500 font-bold uppercase">DB</div>
+                            )}
+                        </div>
+
+                        <h3 className="text-xl font-black text-center text-white tracking-wide uppercase">{charInfo.name}</h3>
+                        {charInfo.alias && charInfo.alias.length > 0 && (
+                            <p className="text-xs text-zinc-500 text-center mt-1">Alias: {charInfo.alias.join(", ")}</p>
+                        )}
+
+                        <div className="w-full mt-6 space-y-3 font-mono text-[10px] text-zinc-400">
+                            <div className="flex justify-between border-b border-white/5 pb-1">
+                                <span>Raza</span>
+                                <span className="font-bold text-white uppercase">{charInfo.race || "N/A"}</span>
+                            </div>
+                            <div className="flex justify-between border-b border-white/5 pb-1">
+                                <span>Origen</span>
+                                <span className="font-bold text-white uppercase">{charInfo.origin || "N/A"}</span>
+                            </div>
+                            {charInfo.height_cm && (
+                                <div className="flex justify-between border-b border-white/5 pb-1">
+                                    <span>Altura</span>
+                                    <span className="font-bold text-white">{charInfo.height_cm} cm</span>
+                                </div>
+                            )}
+                            {charInfo.weight_kg && (
+                                <div className="flex justify-between border-b border-white/5 pb-1">
+                                    <span>Peso</span>
+                                    <span className="font-bold text-white">{charInfo.weight_kg} kg</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Right Column: Bio, Techniques & Transformations */}
+                    <div className="flex-grow p-6 md:p-8 space-y-6 overflow-y-auto max-h-[85vh]">
+                        <div>
+                            <span className="text-[10px] font-black text-brand-orange uppercase tracking-[0.2em] mb-2 block">Biografía</span>
+                            <p className="text-zinc-300 text-sm leading-relaxed">{charInfo.biography}</p>
+                        </div>
+
+                        {charInfo.personality && (
+                            <div>
+                                <span className="text-[10px] font-black text-brand-orange uppercase tracking-[0.2em] mb-2 block">Personalidad</span>
+                                <p className="text-zinc-400 text-xs leading-relaxed">{charInfo.personality}</p>
+                            </div>
+                        )}
+
+                        {charInfo.techniques && charInfo.techniques.length > 0 && (
+                            <div>
+                                <span className="text-[10px] font-black text-brand-orange uppercase tracking-[0.2em] mb-2 block">Técnicas</span>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {charInfo.techniques.map((tech: string, i: number) => (
+                                        <span key={i} className="px-2.5 py-1 bg-white/5 border border-white/5 text-zinc-300 text-[10px] rounded-lg font-bold">
+                                            {tech}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {charInfo.transformations && charInfo.transformations.length > 0 && (
+                            <div>
+                                <span className="text-[10px] font-black text-brand-orange uppercase tracking-[0.2em] mb-3 block">Transformaciones / Estados</span>
+                                <div className="space-y-3">
+                                    {charInfo.transformations.map((trans: any, i: number) => (
+                                        <div key={i} className="p-3 bg-white/[0.02] border border-white/5 rounded-xl flex flex-col gap-1">
+                                            <div className="flex items-center justify-between gap-4">
+                                                <span className="font-bold text-xs text-white uppercase flex items-center gap-1">
+                                                    <Sparkles className="w-3.5 h-3.5 text-brand-orange" /> {trans.name}
+                                                </span>
+                                                {trans.multiplier && (
+                                                    <span className="font-mono text-[9px] font-bold text-brand-orange px-2 py-0.5 bg-brand-orange/10 border border-brand-orange/20 rounded">
+                                                        {trans.multiplier}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-zinc-400 text-[11px] leading-relaxed">{trans.description}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </motion.div>
+            </div>
+        </AnimatePresence>
     )
 }

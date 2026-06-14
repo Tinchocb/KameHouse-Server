@@ -26,13 +26,13 @@ export function IntegrationsTab({ control, register }: IntegrationsTabProps) {
                              <path d="M12 2a10 10 0 0 1 10 10h-10V2z" />
                          </svg>
                      </div>
-                     <span className="text-[9px] font-black uppercase tracking-[0.35em] text-zinc-655 font-mono">ECOSISTEMA · SERVICIOS EN LA NUBE</span>
+                     <span className="text-[9px] font-black uppercase tracking-[0.35em] text-zinc-600 font-mono">ECOSISTEMA · SERVICIOS EN LA NUBE</span>
                  </div>
                  <h1 className="text-5xl font-bebas tracking-wider text-white leading-none">
-                     EXTERNAL <span className="text-zinc-650">INTEGRATIONS</span>
+                     EXTERNAL <span className="text-zinc-600">INTEGRATIONS</span>
                  </h1>
                  <div className="h-[2px] w-12 bg-gradient-to-r from-[#ff6e3a]/50 to-transparent rounded-full" />
-                 <p className="text-zinc-550 text-sm font-medium leading-relaxed max-w-2xl">
+                 <p className="text-zinc-500 text-sm font-medium leading-relaxed max-w-2xl">
                      Conecta el núcleo de tu servidor KameHouse con los proveedores de APIs de metadatos más importantes del ecosistema.
                  </p>
              </header>
@@ -40,7 +40,7 @@ export function IntegrationsTab({ control, register }: IntegrationsTabProps) {
             {/* Bento grids for integrations */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* TMDB API Key */}
-                <div className="bg-white/[0.01] border border-white/5 backdrop-blur-[64px] p-6 space-y-4 rounded-3xl shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
+                <div className="liquid-glass-frosted rounded-3xl p-6 space-y-4">
                     <div className="flex items-center justify-between border-b border-white/5 pb-2">
                         <h4 className="text-xs font-bold text-white uppercase tracking-wide flex items-center gap-2">
                             The Movie Database (TMDB)
@@ -66,7 +66,7 @@ export function IntegrationsTab({ control, register }: IntegrationsTabProps) {
                 </div>
 
                 {/* Fanart.tv API Key */}
-                <div className="bg-white/[0.01] border border-white/5 backdrop-blur-[64px] p-6 space-y-4 rounded-3xl shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
+                <div className="liquid-glass-frosted rounded-3xl p-6 space-y-4">
                     <div className="flex items-center justify-between border-b border-white/5 pb-2">
                         <h4 className="text-xs font-bold text-white uppercase tracking-wide flex items-center gap-2">
                             Fanart.tv
@@ -92,7 +92,7 @@ export function IntegrationsTab({ control, register }: IntegrationsTabProps) {
                 </div>
 
                 {/* OMDb API Key */}
-                <div className="bg-white/[0.01] border border-white/5 backdrop-blur-[64px] p-6 space-y-4 rounded-3xl shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
+                <div className="liquid-glass-frosted rounded-3xl p-6 space-y-4">
                     <div className="flex items-center justify-between border-b border-white/5 pb-2">
                         <h4 className="text-xs font-bold text-white uppercase tracking-wide flex items-center gap-2">
                             OMDb Service
@@ -118,7 +118,7 @@ export function IntegrationsTab({ control, register }: IntegrationsTabProps) {
                 </div>
 
                 {/* OpenSubtitles API Key */}
-                <div className="bg-white/[0.01] border border-white/5 backdrop-blur-[64px] p-6 space-y-4 rounded-3xl shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
+                <div className="liquid-glass-frosted rounded-3xl p-6 space-y-4">
                     <div className="flex items-center justify-between border-b border-white/5 pb-2">
                         <h4 className="text-xs font-bold text-white uppercase tracking-wide flex items-center gap-2">
                             OpenSubtitles
@@ -144,7 +144,7 @@ export function IntegrationsTab({ control, register }: IntegrationsTabProps) {
                 </div>
 
                 {/* AniList Tracker (Client-side dummy / local state) */}
-                <div className="bg-white/[0.01] border border-white/5 backdrop-blur-[64px] p-6 space-y-4 rounded-3xl shadow-[0_20px_40px_rgba(0,0,0,0.5)] md:col-span-2">
+                <div className="liquid-glass-frosted rounded-3xl p-6 space-y-4 md:col-span-2">
                     <div className="flex items-center justify-between border-b border-white/5 pb-2">
                         <h4 className="text-xs font-bold text-white uppercase tracking-wide flex items-center gap-2">
                             AniList Tracker Connection
@@ -163,7 +163,7 @@ export function IntegrationsTab({ control, register }: IntegrationsTabProps) {
                             <button
                                 type="button"
                                 onClick={handleLinkAniList}
-                                className="px-4 py-2.5 bg-[#ff6e3a] hover:bg-[#ff7d4b] text-zinc-955 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all duration-300 active:scale-95 font-bold shadow-lg shadow-orange-500/10"
+                                className="px-4 py-2.5 bg-[#ff6e3a] hover:bg-[#ff7d4b] text-zinc-950 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all duration-300 active:scale-95 font-bold shadow-lg shadow-orange-500/10"
                             >
                                 Re-Vincular
                             </button>

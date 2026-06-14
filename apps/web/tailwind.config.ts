@@ -45,6 +45,8 @@ const config: Config = {
             fontFamily: {
                 sans: ["Inter Variable", "ui-sans-serif", "system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica Neue",
                     "Arial", "sans-serif"],
+                bebas: ["Bebas Neue", "cursive"],
+                mono: ["Space Mono", "ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", "monospace"],
             },
             screens: {
                 "3xl": "1600px",

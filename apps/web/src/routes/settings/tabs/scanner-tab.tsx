@@ -33,7 +33,7 @@ export function ScannerTab({ control, register }: ScannerTabProps) {
             </header>
 
             {/* Scouter engine parameters */}
-            <div className="bg-white/[0.01] border border-white/5 backdrop-blur-xl rounded-3xl p-6 space-y-6 shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
+            <div className="liquid-glass-frosted rounded-3xl p-6 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Range slider for scoring threshold */}
                     <Controller

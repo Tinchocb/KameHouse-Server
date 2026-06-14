@@ -175,6 +175,7 @@ function MoviesPage() {
                 watchHistory={watchHistory}
                 handleMovieClick={handleMovieClick}
                 handleHoverCard={handleHoverCard}
+                activeEra={activeEra}
             />
             
         </div>

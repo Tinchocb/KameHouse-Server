@@ -9,8 +9,8 @@ export function MovieBentoSpecs({ technical }: MovieBentoSpecsProps) {
   if (!technical) return null
 
   return (
-    <div className="bg-zinc-950/40 backdrop-blur-md border border-white/5 rounded-2xl p-5 shadow-2xl mt-6">
-      <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-500/80 mb-4 px-1">
+    <div className="liquid-glass-frosted liquid-glass-frosted-interactive rounded-2xl p-5 mt-6">
+      <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-orange mb-4 px-1">
         Ficha Técnica
       </h4>
       

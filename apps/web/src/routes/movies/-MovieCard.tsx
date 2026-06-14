@@ -134,12 +134,12 @@ export const MovieCard = memo(function MovieCard({
                 >
                     <div
                         onClick={(e) => { e.stopPropagation(); handleCardClick(); }}
-                        className="w-11 h-11 rounded-full flex items-center justify-center shadow-2xl active:scale-[0.93] transform-gpu border bg-white text-black border-white cursor-pointer hover:scale-115 transition-transform"
+                        className="w-11 h-11 rounded-full flex items-center justify-center shadow-2xl active:scale-[0.93] transform-gpu border bg-white text-black border-white cursor-pointer hover:scale-110 transition-transform"
                         style={{ 
                             boxShadow: `0 0 20px ${eraConfig.glow}`,
                         }}
                     >
-                        <Play className="w-4.5 h-4.5 fill-current ml-0.5 text-black" />
+                        <Play className="size-[18px] fill-current ml-0.5 text-black" />
                     </div>
  
                     {hasLocalFiles && (

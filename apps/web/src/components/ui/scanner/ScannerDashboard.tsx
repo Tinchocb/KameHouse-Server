@@ -66,8 +66,8 @@ export function ScannerDashboard() {
                 <motion.div
                     layout
                     className={cn(
-                        "col-span-12 lg:col-span-8 overflow-hidden relative group rounded-3xl",
-                        "border border-white/5 bg-white/[0.01] backdrop-blur-[64px] p-8 lg:p-10 shadow-[0_30px_60px_rgba(0,0,0,0.6)]",
+                        "col-span-12 lg:col-span-8 rounded-3xl",
+                        "liquid-glass-frosted p-8 lg:p-10",
                         isScanning ? "ring-1 ring-[#ff6e3a]/20" : ""
                     )}
                 >

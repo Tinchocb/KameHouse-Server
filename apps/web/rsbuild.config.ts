@@ -66,13 +66,13 @@ const config: RsbuildConfig = {
                 }
             },
         },
-        pluginBabel({
+        process.env.NODE_ENV === "production" ? pluginBabel({
             include: /\.(?:jsx|tsx)$/,
             babelLoaderOptions(opts) {
                 opts.plugins ??= []
                 opts.plugins.push(["babel-plugin-react-compiler", { target: "18" }])
             },
-        }),
+        }) : null,
     ].filter(Boolean),
     source: {
         entry: {

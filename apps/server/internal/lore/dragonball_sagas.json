@@ -1,0 +1,420 @@
+{
+  "universe": "Dragon Ball",
+  "description": "Guía enciclopédica detallada de todas las series, sagas y arcos argumentales del universo Dragon Ball. Incluye cronologías, canon oficial de Akira Toriyama, antagonistas clave, hitos de producción e impacto en la cultura pop.",
+  "series": [
+    {
+      "series_id": "dragon_ball",
+      "title": "Dragon Ball",
+      "years": "1986-1989",
+      "total_episodes": 153,
+      "total_sagas": 7,
+      "description": "La serie original adaptada del manga de Akira Toriyama (capítulos 1 al 194). Narra la infancia de Son Goku, su entrenamiento en artes marciales y su viaje por el mundo buscando las legendarias Esferas del Dragón. Destaca por su tono de aventura fantástica, comedia pícara y la transición gradual hacia combates de artes marciales de alto nivel que definirían el género Shōnen.",
+      "sagas": [
+        {
+          "id": "saga_pilaf",
+          "name": "Saga de Pilaf",
+          "episodes": "1-13",
+          "canon": true,
+          "description": "El inicio de todo. Goku y Bulma se conocen y buscan las Esferas del Dragón. El Emperador Pilaf intenta usarlas para dominar el mundo pero es frustrado por Goku transformado en Ozaru.",
+          "antagonists": ["Pilaf", "Shu", "Mai"],
+          "key_events": [
+            "Primer encuentro de Goku y Bulma",
+            "Primera convocación de Shenlong",
+            "Primera transformación Ozaru de Goku"
+          ],
+          "new_characters": ["Goku", "Bulma", "Oolong", "Yamcha", "Puar", "Pilaf"]
+        },
+        {
+          "id": "saga_torneo_21",
+          "name": "Saga del 21° Torneo de Artes Marciales",
+          "episodes": "14-28",
+          "canon": true,
+          "description": "Goku y Krilin entrenan con el Maestro Roshi. Participan en el Torneo de las Artes Marciales por primera vez. El Maestro Roshi gana disfrazado como Jackie Chun para evitar que sus alumnos se confíen con su poder.",
+          "antagonists": ["Giran", "Jackie Chun (final)"],
+          "key_events": [
+            "Primer uso del Kamehameha por Goku",
+            "Introducción de Krilin y el Maestro Roshi",
+            "Revelación de Jackie Chun como el Maestro Roshi"
+          ],
+          "new_characters": ["Krilin", "Maestro Roshi / Jackie Chun", "Tenshinhan", "Chiaotzu"]
+        },
+        {
+          "id": "saga_patrulla_roja",
+          "name": "Saga de la Patrulla Roja",
+          "episodes": "29-68",
+          "canon": "Mixto (algunos episodios de relleno)",
+          "description": "Goku busca la esfera de 4 estrellas de su abuelo, enfrentándose a la poderosa Patrulla Roja y su ejército. Escala la Torre Karin para beber el Agua Ultrasagrada y vence al asesino Tao Pai Pai.",
+          "antagonists": ["Comandante Red", "Tao Pai Pai", "General Blue", "Benkyo"],
+          "key_events": [
+            "Conquista de la Torre Karin",
+            "Derrota de Tao Pai Pai",
+            "Destrucción del cuartel general de la Patrulla Roja"
+          ],
+          "new_characters": ["Karin", "Arale (crossover)", "Tao Pai Pai"]
+        },
+        {
+          "id": "saga_palacio_baba",
+          "name": "Saga del Palacio de Uranai Baba",
+          "episodes": "69-83",
+          "canon": "Mixto",
+          "description": "Goku busca la última Esfera del Dragón yendo al palacio de Uranai Baba, la hermana del Maestro Roshi. Debe vencer a sus 5 guerreros para que ella use sus poderes de clarividencia.",
+          "antagonists": ["Los 5 guerreros de Baba", "Panputt (el Hombre Enmascarado)"],
+          "key_events": [
+            "Reencuentro de Goku con su abuelo Son Gohan (espíritu del Otro Mundo)",
+            "Goku gana su primera Esfera del Dragón en el palacio"
+          ],
+          "new_characters": ["Uranai Baba", "Panputt (Abuelo Gohan)"]
+        },
+        {
+          "id": "saga_torneo_22",
+          "name": "Saga del 22° Torneo de Artes Marciales",
+          "episodes": "83-101",
+          "canon": true,
+          "description": "El 22° Torneo. Tenshinhan y Chiaotzu se convierten en aliados. Goku y Krilin muestran su enorme crecimiento.",
+          "antagonists": ["Tenshinhan (inicialmente)", "Drum", "Piccolo Daimaku"],
+          "key_events": [
+            "Krilin es asesinado por Tambourine (post-torneo)",
+            "Piccolo Daimaku aparece",
+            "Goku bebe el Agua Ultrasagrada para derrotar a Piccolo"
+          ],
+          "new_characters": ["Tenshinhan", "Chiaotzu", "Piccolo Daimaku"]
+        },
+        {
+          "id": "saga_piccolo_daimaku",
+          "name": "Saga de Piccolo Daimaku",
+          "episodes": "102-122",
+          "canon": true,
+          "description": "El Gran Rey Demonio Piccolo siembra el terror. Goku se enfrenta a él en el enfrentamiento más duro de su vida hasta el momento.",
+          "antagonists": ["Piccolo Daimaku", "Tambourine", "Cymbal", "Piano"],
+          "key_events": [
+            "Asesinato de Krilin por Tambourine",
+            "Destrucción de los dragones de piedra",
+            "Goku derrota a Piccolo, quien engendra a Piccolo Jr. antes de morir"
+          ]
+        },
+        {
+          "id": "saga_torneo_23",
+          "name": "Saga del 23° Torneo de Artes Marciales",
+          "episodes": "123-153",
+          "canon": true,
+          "description": "5 años después. Goku es un adulto. Piccolo Jr. busca venganza en el Torneo. La batalla final entre Goku y Piccolo Jr. es la más épica de Dragon Ball original.",
+          "antagonists": ["Piccolo Jr."],
+          "key_events": [
+            "Goku adulto por primera vez",
+            "Goku y ChiChi se reencuentran y se comprometen",
+            "Goku derrota a Piccolo Jr. perdonándole la vida",
+            "Fin de Dragon Ball original"
+          ]
+        }
+      ]
+    },
+    {
+      "series_id": "dragon_ball_z",
+      "title": "Dragon Ball Z",
+      "years": "1989-1996",
+      "total_episodes": 291,
+      "total_sagas": 9,
+      "description": "La continuación directa de Dragon Ball que adapta los capítulos 195 al 519 del manga original. La serie da un giro radical hacia la ciencia ficción y la acción espacial, revelando los orígenes extraterrestres de Goku como un Saiyajin. Se centra en batallas de proporciones cósmicas contra poderosos tiranos y androides del espacio y la Tierra, introduciendo conceptos icónicos como las transformaciones de Super Saiyajin, fusiones de personajes y los niveles de poder medibles.",
+      "sagas": [
+        {
+          "id": "saga_saiyajin",
+          "name": "Saga Saiyajin",
+          "episodes": "1-35",
+          "canon": "Mixto",
+          "description": "Raditz llega a la Tierra revelando el origen Saiyajin de Goku. Después de la muerte de Goku, sus amigos entrenan para enfrentar a Nappa y Vegeta, quienes llegan un año después.",
+          "antagonists": ["Raditz", "Nappa", "Vegeta (primera visita)"],
+          "key_events": [
+            "Revelación del origen Saiyajin de Goku",
+            "Primera muerte de Goku",
+            "Entrenamiento de Goku con Kaio del Norte",
+            "Muerte de Yamcha, Chiaotzu, Tenshinhan y Piccolo",
+            "Primera victoria de los Saiyajins visitantes (parcial)",
+            "Primera transformación Ozaru de Gohan"
+          ],
+          "power_scale": "~8,000 (Goku) vs ~18,000 (Vegeta)"
+        },
+        {
+          "id": "saga_freezer",
+          "name": "Saga de Freezer en Namek",
+          "episodes": "36-107",
+          "canon": "Mixto",
+          "description": "La saga más larga y emblemática de DBZ. El viaje a Namek para revivir a los amigos se convierte en una guerra contra el Imperio de Freezer. Culmina con la primera transformación Super Saiyajin.",
+          "antagonists": ["Dodoria", "Zarbon", "Fuerza Ginyu", "Freezer"],
+          "key_events": [
+            "Revelación de las 4 formas de Freezer",
+            "Muerte del Gran Patriarca",
+            "Frieza mata a Krilin en el planeta Namek",
+            "PRIMERA TRANSFORMACIÓN SUPER SAIYAJIN DE GOKU",
+            "Explosión del Planeta Namek",
+            "Trunks mata a Freezer y al Rey Cold en la Tierra"
+          ],
+          "power_scale": "Hasta 120,000,000 (Freezer 100%)"
+        },
+        {
+          "id": "saga_garlic_jr_anime",
+          "name": "Saga de Garlic Jr. (Anime)",
+          "episodes": "108-117",
+          "canon": false,
+          "is_filler": true,
+          "description": "Arco de relleno exclusivo del anime. Garlic Jr. usa el Aguijón Negro para controlar a los humanos. Es completamente no canónico."
+        },
+        {
+          "id": "saga_trunks",
+          "name": "Saga de Trunks / Los Androides",
+          "episodes": "118-138",
+          "canon": true,
+          "description": "Trunks del Futuro viaja al pasado. Los Androides 19 y 20 atacan. Vegeta alcanza el SSJ. Cell emerge del futuro.",
+          "antagonists": ["Android 19", "Android 20 (Dr. Gero)", "Cell (inicial)"],
+          "key_events": [
+            "Primera aparición de Trunks del Futuro",
+            "Muerte de Goku por enfermedad cardíaca (en el futuro de Trunks)",
+            "Vegeta alcanza el SSJ",
+            "Activación de los Androides 17 y 18",
+            "Primera aparición de Cell"
+          ]
+        },
+        {
+          "id": "saga_androides_cell",
+          "name": "Saga de los Androides y Cell / Juegos de Cell",
+          "episodes": "139-194",
+          "canon": "Mixto",
+          "description": "Cell absorbe a los Androides para alcanzar su forma perfecta. Los guerreros Z entrenan en la Sala del Tiempo. Los Juegos de Cell culminan con el SSJ2 de Gohan y la muerte de Cell.",
+          "antagonists": ["Android 17", "Android 18", "Cell (todas sus formas)"],
+          "key_events": [
+            "Cell absorbe al Android 17 (Semi-Perfecto)",
+            "Cell absorbe al Android 18 (Perfecto)",
+            "Goku y Gohan entrenan en la Sala del Tiempo",
+            "Inicio de los Juegos de Cell",
+            "Muerte del Androide #16",
+            "GOHAN ALCANZA EL SUPER SAIYAJIN 2",
+            "Muerte de Goku (segunda vez)",
+            "Destrucción de Cell por el Kamehameha Padre-Hijo"
+          ],
+          "power_scale": "SSJ2 de Gohan supera a Cell Perfecto"
+        },
+        {
+          "id": "saga_gran_saiyaman",
+          "name": "Saga del Gran Saiyaman / 25° Torneo",
+          "episodes": "195-219",
+          "canon": "Mixto",
+          "description": "7 años después. Gohan en la preparatoria crea el alter ego del Gran Saiyaman. El 25° Torneo es organizado y Goku regresa del Otro Mundo por un día.",
+          "antagonists": ["Spopovich", "Yamu (enviados de Babidi)"],
+          "new_characters": ["Videl", "Goten (primer aparición)", "Trunks del Presente"]
+        },
+        {
+          "id": "saga_majin_buu",
+          "name": "Saga de Majin Buu",
+          "episodes": "220-253",
+          "canon": "Mixto",
+          "description": "Babidi despierta a Majin Buu. Goku revela el SSJ3. El conflicto entre Vegeta y Goku permite que Buu destruya la Tierra.",
+          "antagonists": ["Babidi", "Dabura", "Majin Buu (Gordo)", "Majin Buu (Malo)"],
+          "key_events": [
+            "Goku revela el SSJ3 por primera vez",
+            "Majin Vegeta se sacrifica contra Buu",
+            "Babidi y Dabura mueren",
+            "Majin Buu destruye la Tierra"
+          ]
+        },
+        {
+          "id": "saga_fusion",
+          "name": "Saga de la Fusión / Gotenks y Super Buu",
+          "episodes": "254-274",
+          "canon": "Mixto",
+          "description": "Super Buu absorboe múltiples guerreros Z. Gotenks y Ultimate Gohan son las principales esperanzas. Vegito/Vegetto es la última barrera.",
+          "antagonists": ["Super Buu", "Buuhan"],
+          "key_events": [
+            "Gotenks SSJ3 contra Super Buu",
+            "Liberación del potencial de Ultimate Gohan por el Kaioshin Mayor",
+            "Super Buu absorbe a Gohan, Gotenks y Piccolo",
+            "Fusión Potara de Goku y Vegeta = Vegito",
+            "Vegito entra en Buu para liberar a los absorbidos"
+          ]
+        },
+        {
+          "id": "saga_kid_buu",
+          "name": "Saga de Kid Buu",
+          "episodes": "274-291",
+          "canon": true,
+          "description": "Kid Buu, la forma más peligrosa, destruye la Tierra. La batalla final culmina con la Esfera Espiritual Universal de Goku.",
+          "antagonists": ["Kid Buu"],
+          "key_events": [
+            "Kid Buu destruye la Tierra",
+            "Goku y Vegeta pelean en el Planeta de los Kaio-shin",
+            "Mr. Satán convence a la humanidad de dar energía",
+            "La Esfera Espiritual destruye a Kid Buu",
+            "Reencarnación de Kid Buu como Uub",
+            "FIN DE DRAGON BALL Z"
+          ]
+        }
+      ]
+    },
+    {
+      "series_id": "dragon_ball_gt",
+      "title": "Dragon Ball GT",
+      "years": "1996-1997",
+      "total_episodes": 64,
+      "canon_status": "No canónico (secuela anime exclusiva de Toei Animation, Akira Toriyama solo contribuyó con diseños iniciales y el título)",
+      "total_sagas": 4,
+      "description": "Una continuación alternativa de Dragon Ball Z ambientada 5 años (o 10 en algunos doblajes) después del final de Z. Tras un deseo erróneo de Pilaf que vuelve a Goku niño, este se embarca en un viaje galáctico para recuperar las esferas oscuras que amenazan con destruir la Tierra. La serie presenta transformaciones populares como el Super Saiyajin 4 y un tono que mezcla la aventura espacial con intensos combates finales.",
+      "sagas": [
+        {
+          "id": "saga_esferas_super",
+          "name": "Saga de las Esferas del Dragón del Universo",
+          "episodes": "1-16",
+          "description": "Pilaf accidentalmente transforma a Goku en niño. El grupo viaja por el universo buscando las Super Esferas del Dragón.",
+          "antagonists": ["Pilaf", "Ledgic", "Don Kee"]
+        },
+        {
+          "id": "saga_baby",
+          "name": "Saga de Baby",
+          "episodes": "17-40",
+          "description": "Baby, un parásito Tsufuru-jin creado por los Tsufurus para vengarse de los Saiyajins, invade la Tierra controlando mentes. Goku alcanza el SSJ4.",
+          "antagonists": ["Baby", "Baby-Vegeta"],
+          "key_events": [
+            "Primera aparición del SSJ4",
+            "Goku recupera su cola",
+            "Ozaru Dorado de Goku"
+          ]
+        },
+        {
+          "id": "saga_super_17",
+          "name": "Saga de Super 17",
+          "episodes": "41-47",
+          "description": "Los villanos escapan del infierno. El Androide 17 del Infierno crea a Super 17 fusionándose con el 17 de la Tierra.",
+          "antagonists": ["Dr. Myu", "Super 17"]
+        },
+        {
+          "id": "saga_dragones_sombra",
+          "name": "Saga de los Dragones de las Sombras",
+          "episodes": "48-64",
+          "description": "Los abusos de las Esferas del Dragón generan impurezas que se convierten en los Dragones de las Sombras. Omega Shenlong es el más poderoso.",
+          "antagonists": ["7 Dragones de las Sombras", "Omega Shenlong"],
+          "key_events": [
+            "Gogeta SSJ4",
+            "Derrota de Omega Shenlong",
+            "Despedida de Goku que se fusiona con las Esferas del Dragón"
+          ]
+        }
+      ]
+    },
+    {
+      "series_id": "dragon_ball_super",
+      "title": "Dragon Ball Super",
+      "years": "2015-2018",
+      "total_episodes": 131,
+      "total_sagas": 5,
+      "description": "La secuela oficial y canónica de Dragon Ball Z escrita por Akira Toriyama e ilustrada por Toyotaro en el manga, y adaptada al anime por Toei. Situada tras la derrota de Majin Buu y antes del 28° Torneo de Artes Marciales, introduce la cosmología de los 12 Universos, los Dioses de la Destrucción, los Ángeles y el multiverso. La serie destaca por introducir el ki divino y estados como el Super Saiyajin Dios, Blue y el Ultra Instinto.",
+      "sagas": [
+        {
+          "id": "saga_beerus",
+          "name": "Saga de la Batalla de los Dioses",
+          "episodes": "1-27",
+          "canon": true,
+          "description": "Beerus despierta buscando al Super Saiyajin Dios. Goku alcanza esta forma con el ritual Saiyajin. Beerus destruye la mitad del pastel de cumpleaños de Bulma (lo más peligroso que hizo).",
+          "antagonists": ["Beerus (inicialmente)"],
+          "key_events": [
+            "Introducción de Beerus y Whis",
+            "PRIMERA APARICIÓN DEL SUPER SAIYAJIN DIOS",
+            "Goku alcanza implícitamente el SSJB durante la pelea con Beerus"
+          ]
+        },
+        {
+          "id": "saga_resurrection_f",
+          "name": "Saga de la Resurrección de 'F'",
+          "episodes": "18-46",
+          "canon": true,
+          "description": "Freezer resucita y entrena por primera vez. Regresa con la forma Golden Freezer. Goku y Vegeta revelan el SSJB.",
+          "antagonists": ["Freezer", "Tagoma", "Sorbet"],
+          "key_events": [
+            "PRIMERA APARICIÓN DEL SUPER SAIYAJIN BLUE",
+            "Golden Freezer revelado",
+            "Freezer destruye la Tierra (revertido por Whis)"
+          ]
+        },
+        {
+          "id": "saga_universo_6",
+          "name": "Saga del Torneo del Universo 6 vs Universo 7",
+          "episodes": "27-46",
+          "canon": true,
+          "description": "Beerus y Champa organizan un torneo entre universos gemelos. Se revelan las Super Esferas del Dragón.",
+          "antagonists": ["Hit", "Equipo Universo 6"],
+          "key_events": [
+            "SUPER SAIYAJIN BLUE + KAIO-KEN revelado",
+            "Introducción de Hit",
+            "Introducción de Kyabe, Caulifla, Kale",
+            "Super Esferas del Dragón reveladas"
+          ]
+        },
+        {
+          "id": "saga_zamasu",
+          "name": "Saga de Goku Black / Zamasu",
+          "episodes": "47-76",
+          "canon": true,
+          "description": "Goku Black (Zamasu en el cuerpo de Goku) y el Zamasu inmortal del futuro atacan el futuro de Trunks con el Plan de Cero Mortales.",
+          "antagonists": ["Goku Black", "Zamasu", "Zamasu Fusionado"],
+          "key_events": [
+            "Revelación de la identidad de Goku Black",
+            "SSJ Rose revelado",
+            "Vegito Blue revelado",
+            "Zeno del Futuro borra el universo fusionado con Zamasu"
+          ]
+        },
+        {
+          "id": "saga_torneo_poder",
+          "name": "Saga del Torneo del Poder",
+          "episodes": "77-131",
+          "canon": true,
+          "description": "El Torneo más importante del multiverso. 8 universos compiten, los perdedores son borrados. El Universo 7 gana con un deseo de Android 17.",
+          "antagonists": ["Jiren", "Toppo", "Ribrianne", "Dyspo"],
+          "key_events": [
+            "PRIMERA APARICIÓN DEL ULTRA INSTINTO SEÑAL",
+            "PRIMERA APARICIÓN DEL ULTRA INSTINTO COMPLETO",
+            "Frieza revela Golden Freezer mejorado",
+            "Android 17 es el último sobreviviente",
+            "Android 17 desea restaurar los 6 universos borrados",
+            "Fin de Dragon Ball Super (anime)"
+          ]
+        }
+      ]
+    },
+    {
+      "series_id": "dragon_ball_daima",
+      "title": "Dragon Ball Daima",
+      "years": "2024-2025",
+      "total_episodes": 20,
+      "canon_status": "Canónico (la última producción original completamente planificada, escrita y diseñada por Akira Toriyama antes de su fallecimiento en 2024)",
+      "total_sagas": 3,
+      "description": "Estrenada con motivo del 40° aniversario de Dragon Ball. Tras la derrota de Majin Buu, Goku y sus amigos son convertidos en niños (Chibi) debido a una conspiración procedente del Reino de los Demonios por el nuevo rey Gomah. Para revertir el hechizo, Goku viaja junto al supremo Kaioshin y nuevos aliados como Glorio y Masked Majin al misterioso Reino Demoniaco, volviendo a usar el Báculo Sagrado en combates de corte clásico.",
+      "sagas": [
+        {
+          "id": "saga_reino_demonios",
+          "name": "Saga del Reino de los Demonios",
+          "episodes": "1-8",
+          "description": "Goku, Vegeta y otros guerreros son convertidos en niños por la magia de Gomah. Viajan al Reino de los Demonios para encontrar la solución.",
+          "antagonists": ["Gomah", "Gran Demonio"]
+        },
+        {
+          "id": "saga_mini_reino",
+          "name": "Saga del Mini-Reino",
+          "episodes": "9-13",
+          "description": "El grupo explora regiones más profundas del Reino de los Demonios. Una fuerza oscura mayor comienza a manifestarse.",
+          "antagonists": ["Fuerza Oscura"]
+        },
+        {
+          "id": "saga_submundo",
+          "name": "Saga del Submundo",
+          "episodes": "14-20",
+          "description": "El grupo desciende al Submundo, la capa más profunda. El Señor del Submundo resulta ser el verdadero villano.",
+          "antagonists": ["Señor del Submundo"],
+          "key_events": [
+            "Goku despierta un poder único de su forma infantil",
+            "Derrota del Señor del Submundo",
+            "Reversión del hechizo",
+            "Regreso al mundo normal",
+            "Homenaje a Akira Toriyama"
+          ]
+        }
+      ]
+    }
+  ]
+}

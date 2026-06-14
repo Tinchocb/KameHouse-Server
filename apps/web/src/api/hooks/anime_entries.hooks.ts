@@ -16,6 +16,15 @@ export const fetchAnimeEntry = async (id: string | number) => {
     })
 }
 
+export const fetchAnimeEntryLocalFiles = async (id: string | number) => {
+    // Avoids generating endpoint types and uses the base path directly.
+    const endpoint = API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.endpoint.replace("{id}", String(id)) + "/local-files"
+    return buildSeaQuery<Anime_LocalFile[]>({
+        endpoint,
+        method: "GET",
+    })
+}
+
 export function useGetAnimeEntry(id: Nullish<string | number>) {
     return useServerQuery<Anime_Entry>({
         endpoint: API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.endpoint.replace("{id}", String(id)),

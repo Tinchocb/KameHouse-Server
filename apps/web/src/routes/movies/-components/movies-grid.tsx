@@ -13,6 +13,7 @@ interface MoviesGridProps {
     watchHistory: Record<number, any> | undefined
     handleMovieClick: (mediaId: number) => void
     handleHoverCard: (entry: (Anime_LibraryCollectionEntry & { era: EraTab; startedAtTimestamp: number }) | null) => void
+    activeEra: EraTab
 }
 
 export function MoviesGrid({
@@ -22,6 +23,7 @@ export function MoviesGrid({
     watchHistory,
     handleMovieClick,
     handleHoverCard,
+    activeEra,
 }: MoviesGridProps) {
     // Responsive grid columns measuring
     const gridRef = useRef<HTMLDivElement>(null)

@@ -1,0 +1,241 @@
+{
+  "universe": "Dragon Ball",
+  "description": "Catálogo de bandas sonoras, openings, endings y música de todas las series del universo Dragon Ball",
+  "soundtracks": [
+    {
+      "series": "Dragon Ball",
+      "years": "1986-1989",
+      "composer_japan": "Shunsuke Kikuchi",
+      "openings": [
+        {
+          "title": "Makafushigi Adventure! (Magical Adventure!)",
+          "artist": "Hiroki Takahashi",
+          "episodes": "1-153",
+          "lyrics_theme": "Goku viaja por el mundo buscando aventura"
+        }
+      ],
+      "endings": [
+        {
+          "title": "Romantic Ageru yo",
+          "artist": "Ushio Hashimoto",
+          "episodes": "1-28"
+        },
+        {
+          "title": "Hurray! Son Goku",
+          "artist": "Hibari Misora (con Shōichi Ikeda)",
+          "episodes": "29-45"
+        },
+        {
+          "title": "Me Me! Ponies",
+          "artist": "Ensemble",
+          "episodes": "46-113"
+        },
+        {
+          "title": "Detchi no Blue Sky",
+          "artist": "Hideki Fujiwara",
+          "episodes": "114-153"
+        }
+      ],
+      "notable_bgm": [
+        "Dragon Ball Main Theme",
+        "Battle Theme (Saikyō no Yūsha-tachi)",
+        "Piccolo Daimaku Theme"
+      ]
+    },
+    {
+      "series": "Dragon Ball Z",
+      "years": "1989-1996",
+      "composer_japan": "Shunsuke Kikuchi",
+      "composer_usa_ocean": "Ron Wasserman (versión Ocean/Funimation)",
+      "composer_usa_funimation": "Bruce Faulconer (doblaje Funimation, altamente popular)",
+      "openings": [
+        {
+          "title": "Cha-La Head-Cha-La",
+          "artist": "Hironobu Kageyama",
+          "episodes": "1-199",
+          "note": "El opening más icónico de DBZ. Reconocible instantáneamente en todo el mundo. La voz de Kageyama es emblemática del anime de los 90."
+        },
+        {
+          "title": "We Gotta Power",
+          "artist": "Hironobu Kageyama",
+          "episodes": "200-291",
+          "note": "Segunda opening de DBZ, igualmente icónica aunque menos conocida que la primera."
+        }
+      ],
+      "endings": [
+        {
+          "title": "De de Mouse",
+          "artist": "Funta",
+          "episodes": "1-54"
+        },
+        {
+          "title": "Bokutachi wa Tenshi Datta",
+          "artist": "Nagisa Shibuya",
+          "episodes": "55-99"
+        },
+        {
+          "title": "Yeah! Break! Care! Break!",
+          "artist": "Junear",
+          "episodes": "200-291",
+          "note": "Considerada una de las peores canciones por fans japoneses, pero creció en ironía y cariño con los años."
+        }
+      ],
+      "notable_bgm": [
+        "The Ginyu Force Theme",
+        "Freeza's Theme (Requiem)",
+        "Super Saiyan Theme (Dragon Ball Z Original OST)",
+        "Gohan's Anger Theme",
+        "Cell Theme",
+        "Majin Buu Theme",
+        "Vegeta's Theme (Pride/Vegeta's SSJ Theme - Bruce Faulconer)",
+        "Perfect Cell's Theme (Bruce Faulconer - versión americana muy popular)"
+      ]
+    },
+    {
+      "series": "Dragon Ball GT",
+      "years": "1996-1997",
+      "composer_japan": "Akihito Tokunaga",
+      "openings": [
+        {
+          "title": "Dan Dan Kokoro Hikareteku",
+          "artist": "ZARD",
+          "episodes": "1-64",
+          "note": "Considerado uno de los openings más bellos y emotivos del anime en general. Interpretado por ZARD, una banda legendaria de J-Pop. La cantante Izumi Sakai murió en 2007 añadiendo un halo de nostalgia."
+        }
+      ],
+      "endings": [
+        {
+          "title": "Hitori Janai",
+          "artist": "FIELD OF VIEW",
+          "episodes": "1-26"
+        },
+        {
+          "title": "Blue Velvet",
+          "artist": "Shizuka Kudō",
+          "episodes": "27-64"
+        }
+      ]
+    },
+    {
+      "series": "Dragon Ball Super",
+      "years": "2015-2018",
+      "composer_japan": "Norihito Sumitomo",
+      "openings": [
+        {
+          "title": "Chozetsu☆Dynamic!",
+          "artist": "Kazuya Yoshii",
+          "episodes": "1-76",
+          "note": "Opening energético con fuertes raíces de rock que captura el espíritu épico de Super."
+        },
+        {
+          "title": "Ultra Instinct -Kami- (instrumental opening teaser)",
+          "artist": "Norihito Sumitomo",
+          "note": "No es un opening oficial sino el tema épico que acompaña las transformaciones UI de Goku."
+        }
+      ],
+      "endings": [
+        {
+          "title": "Hello Hello Hello",
+          "artist": "Good Morning America",
+          "episodes": "1-25"
+        },
+        {
+          "title": "Starring Star",
+          "artist": "KEYTALK",
+          "episodes": "26-50"
+        },
+        {
+          "title": "Chasing After You",
+          "artist": "Lacco Tower",
+          "episodes": "51-76"
+        },
+        {
+          "title": "Forever Dreaming",
+          "artist": "Czecho No Republic",
+          "episodes": "77-131"
+        }
+      ],
+      "notable_bgm": [
+        "Limit Break X Survivor (Torneo del Poder theme)",
+        "Ultra Instinct Theme (Migatte no Gokui)",
+        "Jiren's Theme",
+        "The Awakening of Ultra Instinct",
+        "Beerus' Theme",
+        "Universe Survival Theme"
+      ]
+    },
+    {
+      "series": "Dragon Ball Daima",
+      "years": "2024-2025",
+      "composer_japan": "Norihito Sumitomo",
+      "openings": [
+        {
+          "title": "Enamel",
+          "artist": "SixTONES",
+          "episodes": "1-20",
+          "note": "Opening de la última serie supervisada por Akira Toriyama. SixTONES es un popular grupo de J-Pop de la agencia Johnny's."
+        }
+      ],
+      "endings": [
+        {
+          "title": "Dragon Soul (remake/tribute)",
+          "artist": "Ver. Daima",
+          "note": "La serie usa diferentes arreglos musicales para honrar el legado de Toriyama."
+        }
+      ]
+    }
+  ],
+  "movies_music": [
+    {
+      "movie": "Dragon Ball Super: Broly",
+      "year": 2018,
+      "composer": "Norihito Sumitomo",
+      "notable_tracks": [
+        "Blizzard (Daichi Miura)",
+        "Gogeta vs Broly Theme",
+        "Broly's Theme (Rage)",
+        "Broly's Power Crescendo"
+      ],
+      "note": "La banda sonora de Broly es considerada la mejor de todas las películas de Dragon Ball por su escala épica y el uso de voces corales."
+    },
+    {
+      "movie": "Dragon Ball Z: La Batalla de los Dioses",
+      "year": 2013,
+      "notable_tracks": [
+        "Beerus' Battle Theme",
+        "Hero - Battle of God (Masako Nozawa)"
+      ]
+    }
+  ],
+  "iconic_voice_actors": {
+    "japanese": [
+      { "character": "Son Goku", "voice_actor": "Masako Nozawa", "note": "La misma actriz ha interpretado a Goku desde 1986 hasta la actualidad. También interpreta a Gohan, Goten, Bardock y otros personajes relacionados con la familia." },
+      { "character": "Vegeta", "voice_actor": "Ryō Horikawa", "note": "Voz profunda y distinguida que se ha convertido en inseparable del personaje." },
+      { "character": "Piccolo", "voice_actor": "Toshio Furukawa" },
+      { "character": "Krilin", "voice_actor": "Mayumi Tanaka" },
+      { "character": "Bulma", "voice_actor": "Hiromi Tsuru (fallecida 2017) / Aya Hisakawa (actual)" },
+      { "character": "Freezer", "voice_actor": "Ryūsei Nakao", "note": "Su voz nasal y refinada se convirtió en definitoria del villano." },
+      { "character": "Gohan", "voice_actor": "Masako Nozawa (también!)" },
+      { "character": "Cell", "voice_actor": "Norio Wakamoto", "note": "Conocido por su estilo teatral y poderoso." },
+      { "character": "Majin Buu", "voice_actor": "Kōzō Shioya" },
+      { "character": "Beerus", "voice_actor": "Kōichi Yamadera" },
+      { "character": "Whis", "voice_actor": "Masakazu Morita" }
+    ],
+    "spanish_latin": [
+      { "character": "Son Goku (adulto)", "voice_actor": "Mario Castañeda", "note": "La voz más icónica del doblaje latinoamericano. Inconfundible y profundamente amado por la audiencia hispana." },
+      { "character": "Son Goku (niño)", "voice_actor": "Laura Torres" },
+      { "character": "Vegeta", "voice_actor": "René García", "note": "Da una profundidad y arrogancia perfectas al príncipe Saiyajin." },
+      { "character": "Piccolo", "voice_actor": "Carlos Íñigo" },
+      { "character": "Krilin", "voice_actor": "Carlos Segundo" },
+      { "character": "Freezer", "voice_actor": "Ricardo Tejedo" },
+      { "character": "Gohan (joven)", "voice_actor": "Laura Torres" },
+      { "character": "Gohan (adulto)", "voice_actor": "Jonatán López" },
+      { "character": "Bulma", "voice_actor": "Laura Torres (joven) / Rebeca Gómez (adulta)" },
+      { "character": "Beerus", "voice_actor": "Héctor Ireta" }
+    ],
+    "spanish_spain": [
+      { "character": "Son Goku", "voice_actor": "Manuel Boix" },
+      { "character": "Vegeta", "voice_actor": "Eduard Farelo" }
+    ]
+  }
+}

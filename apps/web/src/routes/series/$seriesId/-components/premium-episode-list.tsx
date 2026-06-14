@@ -27,10 +27,10 @@ export function PremiumEpisodeList({
             id={`episode-${ep.number}`}
             onClick={() => onPlay?.(ep.number)}
             className={cn(
-              "group flex gap-6 p-4 rounded-xl transition-all duration-300 border cursor-pointer",
+              "group flex gap-6 p-4 rounded-xl transition-all duration-300 cursor-pointer shadow-lg",
               isHighlighted
-                ? "bg-brand-orange/[0.02] border-brand-orange/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_24px_rgba(255,110,58,0.03)] border-l-[3.5px] border-l-brand-orange hover:bg-brand-orange/[0.04]"
-                : "bg-transparent border-transparent hover:bg-white/5 hover:border-white/10"
+                ? "liquid-glass-frosted liquid-glass-frosted-interactive !bg-brand-orange/[0.03] !border-brand-orange/20 border-l-[3.5px] !border-l-brand-orange shadow-[0_8px_24px_rgba(255,110,58,0.04)] hover:!bg-brand-orange/[0.06] hover:!border-brand-orange/30"
+                : "liquid-glass-frosted liquid-glass-frosted-interactive"
             )}
           >
           {/* Thumbnail */}
@@ -81,13 +81,13 @@ export function PremiumEpisodeList({
             {/* Technical Pills & Status */}
             <div className="flex items-center justify-between mt-auto">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono font-medium bg-white/10 text-gray-300 px-2 py-1 rounded-sm">
+                <span className="text-[10px] font-mono font-medium liquid-glass-frosted-subtle text-gray-300 px-2.5 py-1 rounded-md">
                   {ep.resolution}
                 </span>
-                <span className="text-[10px] font-mono font-medium bg-white/10 text-gray-300 px-2 py-1 rounded-sm">
+                <span className="text-[10px] font-mono font-medium liquid-glass-frosted-subtle text-gray-300 px-2.5 py-1 rounded-md">
                   {ep.videoCodec}
                 </span>
-                <span className="text-[10px] font-mono font-medium bg-white/10 text-gray-300 px-2 py-1 rounded-sm">
+                <span className="text-[10px] font-mono font-medium liquid-glass-frosted-subtle text-gray-300 px-2.5 py-1 rounded-md">
                   {ep.audioCodec}
                 </span>
               </div>

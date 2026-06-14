@@ -2,6 +2,8 @@ const { app } = require("electron")
 const log = require("electron-log/main")
 
 function setupChromiumFlags() {
+    // Suppress noisy Chromium/FFmpeg warnings and errors (like unsupported pixel formats) in console
+    app.commandLine.appendSwitch("log-level", "3")
     app.commandLine.appendSwitch("no-zygote")
     app.commandLine.appendSwitch("disable-gpu-sandbox")
     app.commandLine.appendSwitch("autoplay-policy", "no-user-gesture-required")

@@ -1,0 +1,85 @@
+{
+  "universe": "Dragon Ball",
+  "description": "Niveles de poder oficiales y estimados del universo Dragon Ball. Los primeros valores provienen del manga/Daizenshuu. Los valores de DBS son estimaciones comparativas ya que no se usan números oficiales.",
+  "note": "Los niveles de poder numéricos solo se usaron durante Dragon Ball y Dragon Ball Z hasta la saga de Freezer. A partir de los Androides, los personajes superaron las capacidades de los escáneres (Scouters/Rastreadores). Los valores listados para DBS son comparativos, no numéricos.",
+  "power_levels": {
+    "dragon_ball_original": [
+      { "character": "Goku (niño)", "level": 10, "context": "Al inicio de Dragon Ball" },
+      { "character": "Maestro Roshi (estado normal)", "level": 139, "context": "Torneo 21°" },
+      { "character": "Maestro Roshi (Maestro Jackie Chun)", "level": 180, "context": "Torneo 21°" },
+      { "character": "Goku (final del 22° Torneo)", "level": 180, "context": "Torneo 22°" },
+      { "character": "Piccolo Jr.", "level": 260, "context": "23° Torneo" },
+      { "character": "Goku (final del 23° Torneo)", "level": 260, "context": "23° Torneo" }
+    ],
+    "dragon_ball_z_saiyajin": [
+      { "character": "Krilin", "level": 206, "context": "Inicio DBZ" },
+      { "character": "Piccolo", "level": 322, "context": "Inicio DBZ" },
+      { "character": "Goku", "level": 416, "context": "Inicio DBZ" },
+      { "character": "Raditz", "level": 1500, "context": "Llegada a la Tierra" },
+      { "character": "Goku + Piccolo vs Raditz", "level": 924, "context": "Goku y Piccolo juntos" },
+      { "character": "Gohan (ira)", "level": 1307, "context": "Contra Raditz" },
+      { "character": "Goku (entrenado para Saiyajins)", "level": 8000, "context": "Llegada de Nappa y Vegeta" },
+      { "character": "Goku (Kaio-ken x2)", "level": 16000, "context": "Vs Vegeta" },
+      { "character": "Nappa", "level": 4000, "context": "Invasión de la Tierra" },
+      { "character": "Vegeta (primera visita)", "level": 18000, "context": "Batalla con Goku" },
+      { "character": "Vegeta (Ozaru)", "level": 180000, "context": "Vs Goku Kaio-ken x4" }
+    ],
+    "dragon_ball_z_namek": [
+      { "character": "Goku (llegada a Namek)", "level": 90000, "context": "Entrenamiento en camino a Namek" },
+      { "character": "Recoome (Ginyu Force)", "level": 71000, "context": "Vs Guerreros Z" },
+      { "character": "Burter + Jeice", "level": 85000, "context": "Vs Goku" },
+      { "character": "Ginyu", "level": 120000, "context": "Vs Goku" },
+      { "character": "Goku (Kaio-ken x10 en Namek)", "level": 900000, "context": "Vs Freezer Forma 2" },
+      { "character": "Freezer (Forma 2)", "level": 1000000, "context": "Vs Goku" },
+      { "character": "Freezer (Forma Final, 50%)", "level": 60000000, "context": "Vs Piccolo fusionado" },
+      { "character": "Freezer (Forma Final, 100%)", "level": 120000000, "context": "Vs Goku SSJ" },
+      { "character": "Goku (Super Saiyajin por primera vez)", "level": 150000000, "context": "Tras la muerte de Krilin" }
+    ],
+    "dragon_ball_z_cell": [
+      { "character": "Android 17", "level": "Infinito (no medible)", "context": "Ilimitado por Dr. Gero" },
+      { "character": "Android 18", "level": "Infinito (no medible)", "context": "Ilimitado por Dr. Gero" },
+      { "character": "Cell (imperfecto)", "level": "Supera a Piccolo fusionado", "context": "Absorbe humanos" },
+      { "character": "Cell (semi-perfecto)", "level": "Supera a Android 16", "context": "Absorbe Android 17" },
+      { "character": "Cell (perfecto)", "level": "Supera al SSJ2 de Vegeta", "context": "Absorbe Android 18" },
+      { "character": "Cell (super perfecto)", "level": "Supera a todo en la Tierra", "context": "Tras regenerarse" },
+      { "character": "Gohan (SSJ2)", "level": "Supera a Cell Perfecto", "context": "Al liberar su potencial ante Cell Jr." }
+    ],
+    "dragon_ball_z_buu": [
+      { "character": "SSJ3 Goku", "level": "Supera a Gotenks SSJ2", "context": "El más poderoso de la Tierra en ese momento" },
+      { "character": "Gotenks (SSJ3)", "level": "Casi iguala a Super Buu", "context": "En la Sala del Tiempo" },
+      { "character": "Ultimate Gohan (Mystic)", "level": "Supera ampliamente a Gotenks SSJ3", "context": "Liberación de potencial por Elder Kai" },
+      { "character": "Vegito (Potara Fusion)", "level": "El más poderoso de Z", "context": "Fusión Goku + Vegeta con Potara" },
+      { "character": "Majin Buu (Fat)", "level": "Supera a SSJ3", "context": "Despertar por Babidi" },
+      { "character": "Kid Buu", "level": "Menor que Super Buu pero más impredecible", "context": "Forma original pura" }
+    ],
+    "dragon_ball_super_comparative": {
+      "note": "Ordenados de menor a mayor poder aproximado en DBS",
+      "ranking": [
+        { "rank": 1, "character": "Guerreros Z (SSJ, SSJ2) base", "context": "Inicio de DBS" },
+        { "rank": 2, "character": "Golden Freezer (inicial)", "context": "Resurrección 'F'" },
+        { "rank": 3, "character": "Goku SSJB", "context": "Arco de la Resurrección de Freezer" },
+        { "rank": 4, "character": "Goku SSJB + Kaio-ken x20", "context": "Torneo U6 vs Hit" },
+        { "rank": 5, "character": "Hit (máximo)", "context": "Torneo U6" },
+        { "rank": 6, "character": "Vegeta SSBE", "context": "Torneo del Poder" },
+        { "rank": 7, "character": "Goku Ultra Instinto Señal", "context": "Torneo del Poder" },
+        { "rank": 8, "character": "Jiren (máximo)", "context": "Torneo del Poder" },
+        { "rank": 9, "character": "Goku Ultra Instinto Completo", "context": "Torneo del Poder" },
+        { "rank": 10, "character": "Beerus (estimado, nunca completamente demostrado)", "context": "Comparado con Goku UI" },
+        { "rank": 11, "character": "Vegeta Ultra Ego", "context": "Manga Arco de Granola" },
+        { "rank": 12, "character": "Goku True Ultra Instinct", "context": "Manga Arco de Granola" },
+        { "rank": 13, "character": "Vegito SSJB", "context": "Arco de Zamasu" },
+        { "rank": 14, "character": "Gogeta SSJB", "context": "DBS: Broly" },
+        { "rank": 15, "character": "Whis", "context": "Siempre más fuerte que Beerus" },
+        { "rank": 16, "character": "Gran Sacerdote", "context": "Uno de los 5 más fuertes del multiverso" },
+        { "rank": 17, "character": "Zeno-sama (par)", "context": "El ser más poderoso de la existencia. Puede borrar todo." }
+      ]
+    }
+  },
+  "power_scaling_mechanics": {
+    "saiyan_zenkai": "Los Saiyajins reciben un aumento permanente de poder después de recuperarse de heridas graves. Cuanto más cerca de la muerte, mayor el aumento.",
+    "gravity_training": "El entrenamiento en alta gravedad multiplica el poder. La sala Hiperbólica tiene gravedad 10x la de la Tierra.",
+    "hyperbolic_time_chamber": "Un año dentro = un día afuera. Los poderes obtenidos dentro son permanentes.",
+    "ki_sensing": "A partir de la saga de los Saiyajins, los guerreros aprendieron a ocultar y leer ki sin usar scouters. Los escáneres quedaron obsoletos.",
+    "divine_ki": "El ki divino es indetectable para los mortales. Solo los dioses y aquellos que lo han tocado pueden sentirlo."
+  }
+}

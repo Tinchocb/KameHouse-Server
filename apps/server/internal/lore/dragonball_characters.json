@@ -1,0 +1,828 @@
+{
+  "universe": "Dragon Ball",
+  "total_characters": 60,
+  "characters": [
+    {
+      "id": "son_goku",
+      "name": "Son Goku",
+      "alias": ["Kakarotto", "Kakarot", "El Guerrero del Espacio"],
+      "race": "Saiyajin",
+      "gender": "Masculino",
+      "birthdate": "Age 737",
+      "origin": "Planeta Vegeta",
+      "height_cm": 175,
+      "weight_kg": 62,
+      "eye_color": "Negro (normal) / Verde Esmeralda (SSJ) / Plateado (Ultra Instinto)",
+      "hair_color": "Negro (normal) / Dorado (SSJ) / Plateado (Ultra Instinto Completo)",
+      "affiliation": ["Guerreros Z", "Patrulla Galáctica (temporal)", "Equipo Universo 7"],
+      "family": {
+        "father": "Bardock",
+        "mother": "Gine",
+        "brother": "Raditz",
+        "wife": "ChiChi",
+        "sons": ["Gohan", "Goten"],
+        "granddaughter": "Pan",
+        "grandfather_adoptivo": "Abuelo Gohan",
+        "reencarnacion": "Uub"
+      },
+      "biography": "Nacido como Kakarotto en el Planeta Vegeta, fue enviado a la Tierra como bebé días antes de la destrucción del planeta por parte de Freezer. Criado por el anciano Son Gohan, quien lo llamó Goku, creció como un niño de corazón puro, ignorando completamente su origen extraterrestre. Un golpe en la cabeza de niño borró su naturaleza violenta innata de Saiyajin, convirtiéndole en un guerrero bondadoso. Se convirtió en el más poderoso guerrero del Universo 7 y posiblemente de los 12 universos, alcanzando estados divinos como el Ultra Instinto.",
+      "personality": "Extremadamente bondadoso, valiente y con un amor innato por la pelea y la mejora constante. Suele ser ingenuo en asuntos mundanos, pero posee una sabiduría instintiva en combate. Es conocido por perdonar a sus enemigos y ver el bien en cualquier persona.",
+      "transformations": [
+        {
+          "name": "Ozaru (Gran Mono)",
+          "multiplier": "10x",
+          "requirement": "Cola + Luna llena o luz lunar reflejada (1,765 Zenos)",
+          "description": "Forma bestial gigante. Con entrenamiento puede mantenerse consciente. Perdió la cola permanentemente."
+        },
+        {
+          "name": "Kaio-ken",
+          "multiplier": "Hasta x20",
+          "requirement": "Entrenamiento con Kaio-sama",
+          "description": "Técnica que multiplica el ki y el poder físico a costa de un enorme estrés en el cuerpo. Puede combinarse con Super Saiyajin Blue."
+        },
+        {
+          "name": "Super Saiyajin (SSJ)",
+          "multiplier": "50x",
+          "requirement": "Ira extrema + Células S",
+          "description": "Primera transformación Super Saiyajin. Cabello dorado parado, aura dorada. Alcanzada al ver morir a Krilin en Namek."
+        },
+        {
+          "name": "Super Saiyajin 2 (SSJ2)",
+          "multiplier": "100x",
+          "requirement": "Superar SSJ con ira extrema",
+          "description": "Segunda fase. Cabello más erguido, electricidad azul en el aura. Más rápido que SSJ3 pero consume menos energía."
+        },
+        {
+          "name": "Super Saiyajin 3 (SSJ3)",
+          "multiplier": "400x",
+          "requirement": "Superar SSJ2, requiere muerte o entrenamiento extremo",
+          "description": "Tercera fase. Cabello larguísimo, sin cejas, ki masivo. Consume enormes cantidades de energía y acorta el tiempo en vida."
+        },
+        {
+          "name": "Super Saiyajin Dios (SSJG)",
+          "multiplier": "No cuantificado (Ki Divino)",
+          "requirement": "Ritual con 6 Saiyajins de corazón puro",
+          "description": "Forma divina con cabello rojo. Usa ki divino en lugar de ki normal. Permite sentir y ver el ki divino."
+        },
+        {
+          "name": "Super Saiyajin Blue (SSJB / SSB)",
+          "multiplier": "Supera a SSJG",
+          "requirement": "SSJ + Ki divino dominado",
+          "description": "Combina la multiplicación del SSJ con el ki divino. Cabello azul brillante, aura azul con resplandor. La forma más versátil de Goku por mucho tiempo."
+        },
+        {
+          "name": "Super Saiyajin Blue Kaio-ken (SSBKKx20)",
+          "multiplier": "SSB x20",
+          "requirement": "Dominar SSB sin fugas de ki + Kaio-ken",
+          "description": "Aura roja sobre el azul del SSB. Extremadamente peligrosa para el cuerpo. Usada contra Hit en el Torneo del U6."
+        },
+        {
+          "name": "Ultra Instinto Señal (MUI)",
+          "multiplier": "Supera SSB",
+          "requirement": "Liberar el cuerpo de los pensamientos conscientes",
+          "description": "Estado de movimiento instintivo defensivo. Cabello plateado puntiagudo, aura blanca y plateada. El cuerpo reacciona sin que la mente intervenga."
+        },
+        {
+          "name": "Ultra Instinto Completo (Migatte no Gokui)",
+          "multiplier": "Cúspide del poder de Goku",
+          "requirement": "Dominar MUI ofensiva y defensivamente",
+          "description": "Dominio total del Ultra Instinto. Cabello plateado largo, ojos plateados. Superó momentáneamente incluso al poder de Beerus."
+        },
+        {
+          "name": "True Ultra Instinct (Verdadero Ultra Instinto)",
+          "multiplier": "Supera al UI Completo",
+          "requirement": "Canalizar las emociones en lugar de suprimirlas",
+          "description": "Versión del Ultra Instinto exclusiva de Goku que utiliza sus emociones como catalizador en lugar de suprimirlas, contrario al método angélico."
+        }
+      ],
+      "techniques": [
+        "Kamehameha (龜派氣功)",
+        "Genkidama (Esfera Espiritual)",
+        "Teletransportación Instantánea (Shunkan Idō)",
+        "Kaio-ken",
+        "Fist of the Dragon God",
+        "10x Kamehameha",
+        "God Kamehameha",
+        "True Dragon Fist (Shen Long Fist)",
+        "Limit Breaker Kamehameha"
+      ],
+      "rivals": ["Vegeta", "Piccolo", "Freezer", "Cell", "Majin Buu", "Jiren", "Moro", "Granola"],
+      "masters": ["Abuelo Gohan", "Maestro Roshi", "Karin-sama", "Kami-sama", "Kaio del Norte", "Kaio-shin Este", "Whis"],
+      "series_appearances": ["Dragon Ball", "Dragon Ball Z", "Dragon Ball GT", "Dragon Ball Super", "Dragon Ball Daima"],
+      "debut": {
+        "manga": "Capítulo 1, Dragon Ball (1984)",
+        "anime": "Episodio 1, Dragon Ball (1986)"
+      }
+    },
+    {
+      "id": "vegeta",
+      "name": "Vegeta",
+      "alias": ["El Príncipe de los Saiyajins", "El Orgulloso Príncipe", "Majin Vegeta", "Super Vegeta"],
+      "race": "Saiyajin",
+      "gender": "Masculino",
+      "birthdate": "Age 732",
+      "origin": "Planeta Vegeta",
+      "height_cm": 164,
+      "weight_kg": 56,
+      "eye_color": "Negro oscuro (normal) / Verde turquesa (SSJ)",
+      "hair_color": "Negro pico de viuda (normal) / Dorado (SSJ) / Azul (SSJB) / Violeta-Azul (Ultra Ego)",
+      "affiliation": ["Ejército de Freezer (pasado)", "Guerreros Z", "Equipo Universo 7"],
+      "family": {
+        "father": "Rey Vegeta",
+        "wife": "Bulma",
+        "sons": ["Trunks", "Trunks del Futuro"],
+        "daughter": "Bra/Bulla",
+        "ancestro": "Saiyajin del Universo 6 (Kyabe)"
+      },
+      "biography": "Príncipe de la raza Saiyajin y uno de los guerreros más poderosos del Universo 7. Trabajó durante años como soldado élite del ejército de Freezer antes de ser derrotado por Goku en la Tierra. Con el tiempo pasó de ser un villano a uno de los héroes más importantes de la Tierra, motivado inicialmente por el orgullo y luego por el amor a su familia. Su arco de redención es uno de los más celebrados de la franquicia.",
+      "personality": "Extremadamente orgulloso, competitivo y con un fuerte sentido del honor guerrero Saiyajin. Aunque comenzó como un antagonista frío y calculador, gradualmente mostró un profundo amor por su familia y sus compañeros. Su arrogancia es su mayor defecto pero también su mayor fortaleza.",
+      "transformations": [
+        {
+          "name": "Ozaru (Gran Mono)",
+          "multiplier": "10x",
+          "description": "Forma bestial gigante. Vegeta la usó deliberadamente al atacar la Tierra, siendo la primera vez que Goku vio un Saiyajin transformado."
+        },
+        {
+          "name": "Super Saiyajin (SSJ)",
+          "multiplier": "50x",
+          "description": "Alcanzada durante la saga de Namek/Cell. Vegeta se entrenó con solitario y fuerza de voluntad para alcanzarla."
+        },
+        {
+          "name": "Super Saiyajin 2 (SSJ2)",
+          "multiplier": "100x",
+          "description": "Alcanzada durante el arco de Majin Buu, especialmente al convertirse en Majin Vegeta."
+        },
+        {
+          "name": "Majin Vegeta",
+          "multiplier": "Potenciado por Babidi",
+          "description": "Estado especial cuando Babidi despertó el mal de Vegeta. Le dio una ventaja de poder temporal pero fue temporal."
+        },
+        {
+          "name": "Super Saiyajin Blue (SSJB)",
+          "multiplier": "Igual que Goku en SSJB",
+          "description": "Versión de Vegeta del SSJB. Aunque similar en nivel base, Vegeta desarrolló técnicas únicas como el Royal Blue."
+        },
+        {
+          "name": "Super Saiyajin Blue Evolved (SSBE)",
+          "multiplier": "Supera al SSJB estándar",
+          "description": "Versión evolucionada exclusiva de Vegeta. Alcanzada en el Torneo del Poder al empujar sus límites más allá del SSJB."
+        },
+        {
+          "name": "Ultra Ego (Wagami no Gokui)",
+          "multiplier": "Comparable al UI de Goku",
+          "description": "El estado de los Hakaishin aprendido de Beerus. A diferencia del Ultra Instinto, el poder aumenta cuanto más daño recibe Vegeta. Aura violeta oscura."
+        }
+      ],
+      "techniques": [
+        "Galick Ho (Cañón Galick)",
+        "Big Bang Attack",
+        "Final Flash",
+        "Hakai (Energía de Destrucción)",
+        "Final Explosion",
+        "Atomic Burst",
+        "Gamma Burst Flash",
+        "Dirty Fireworks",
+        "Energy Shield",
+        "Partición Espiritual (aprendida en Yadrat)"
+      ],
+      "rivals": ["Goku", "Freezer", "Cell", "Majin Buu", "Hit", "Jiren", "Moro", "Granola", "Gas"],
+      "masters": ["Whis", "Beerus (parcialmente)"],
+      "series_appearances": ["Dragon Ball Z", "Dragon Ball GT", "Dragon Ball Super", "Dragon Ball Daima"],
+      "debut": {
+        "manga": "Capítulo 204, Dragon Ball (1989)",
+        "anime": "Episodio 5, Dragon Ball Z (1989)"
+      }
+    },
+    {
+      "id": "gohan",
+      "name": "Son Gohan",
+      "alias": ["Gran Saiyaman", "Ultimate Gohan", "Gohan Bestia"],
+      "race": "Mitad Saiyajin, Mitad Humano",
+      "gender": "Masculino",
+      "birthdate": "Age 757",
+      "origin": "Tierra",
+      "height_cm": 176,
+      "weight_kg": 68,
+      "affiliation": ["Guerreros Z", "Equipo Universo 7"],
+      "family": {
+        "father": "Goku",
+        "mother": "ChiChi",
+        "brother": "Goten",
+        "wife": "Videl",
+        "daughter": "Pan",
+        "abuelo_paterno": "Bardock",
+        "abuelo_adoptivo": "Abuelo Gohan"
+      },
+      "biography": "Hijo mayor de Goku y ChiChi, Gohan posee el mayor potencial latente de cualquier personaje de la franquicia. Desde niño mostró un poder descomunal liberado solo en situaciones de extrema tensión. Fue el primer personaje en alcanzar el Super Saiyajin 2 al matar a Cell. Aunque abandonó el entrenamiento durante años para enfocarse en sus estudios, regresó a la lucha en Dragon Ball Super con formas completamente nuevas.",
+      "personality": "Inteligente, estudioso y pacífico por naturaleza. A diferencia de su padre, no disfruta naturalmente del combate. Sin embargo, posee un poder devastador cuando protege a sus seres queridos. Su mayor deseo es vivir en paz con Videl y Pan.",
+      "transformations": [
+        {
+          "name": "Super Saiyajin (SSJ)",
+          "description": "Alcanzada en la Sala del Tiempo y el Espíritu junto a Goku."
+        },
+        {
+          "name": "Super Saiyajin 2 (SSJ2)",
+          "description": "Primera persona en alcanzar esta forma. Desbloqueada al ver morir al Androide #16 y liberó una ira que destruyó a todos los Cell Jr. de un solo golpe."
+        },
+        {
+          "name": "Mystic Gohan / Ultimate Gohan",
+          "description": "El Kaioshin Mayor liberó todo el potencial latente de Gohan sin necesidad de transformación. En este estado superaba ampliamente al SSJ3."
+        },
+        {
+          "name": "Gohan Beast (Bestia Liberada)",
+          "description": "La transformación más poderosa de Gohan, desbloqueada en la película Super Hero. Cabello blanco hacia atrás, aura carmesí. Supera al SSB de Goku según los creadores."
+        }
+      ],
+      "techniques": [
+        "Masenko (Rayo Demoníaco)",
+        "Kamehameha",
+        "Father-Son Kamehameha",
+        "Soaring Dragon Strike (Hirudegarn attack)",
+        "Special Beam Cannon (aprendido de Piccolo)",
+        "Explosive Demon Impact"
+      ],
+      "series_appearances": ["Dragon Ball Z", "Dragon Ball GT", "Dragon Ball Super"],
+      "debut": {
+        "manga": "Capítulo 196, Dragon Ball (1988)",
+        "anime": "Episodio 1, Dragon Ball Z (1989)"
+      }
+    },
+    {
+      "id": "piccolo",
+      "name": "Piccolo",
+      "alias": ["Piccolo Jr.", "El Dios Demonio", "Capitán Universe"],
+      "race": "Namekuseijin",
+      "gender": "Sin género (masculino en apariencia)",
+      "birthdate": "Age 753",
+      "origin": "Tierra (reencarnación del Gran Rey Demonio Piccolo Daimaku, originalmente de Namek)",
+      "height_cm": 226,
+      "weight_kg": 116,
+      "eye_color": "Morado",
+      "skin_color": "Verde",
+      "affiliation": ["Guerreros Z", "Equipo Universo 7"],
+      "family": {
+        "origen_espiritial": "Piccolo Daimaku (padre/reencarnación)",
+        "fusionado_con": ["Nail", "Dios (Kami-sama)"],
+        "pupilo": "Gohan"
+      },
+      "biography": "Reencarnación del Gran Demonio Piccolo, nació con los recuerdos de su 'padre' y un deseo de venganza contra Goku. Sin embargo, al entrenar a Gohan desarrolló lazos paternales que cambiaron su naturaleza. Se fusionó con Nail en Namek y luego con Kami-sama en la Tierra, aumentando enormemente su poder. Es el mentor más importante de Gohan.",
+      "personality": "Serio, estoico y calculador. Aunque aparentemente frío, posee una profunda preocupación por sus compañeros, especialmente por Gohan, a quien considera prácticamente un hijo.",
+      "transformations": [
+        {
+          "name": "Fusión con Nail",
+          "description": "Absorbió al guerrero Namekuseijin Nail en el Planeta Namek, aumentando significativamente su poder."
+        },
+        {
+          "name": "Fusión con Kami-sama",
+          "description": "Reunificó con su ser superior. Esto le trajo un enorme aumento de poder, rivalizando con los Androides de la época."
+        },
+        {
+          "name": "Orange Piccolo",
+          "description": "Forma desbloqueada por Shenlong tras el deseo de Piccolo de liberar su potencial latente. Piel naranja, tamaño gigantesco, supera enormemente al Piccolo estándar."
+        },
+        {
+          "name": "Giant Form (Forma Gigante)",
+          "description": "Piccolo puede crecer a un tamaño colosal sin perder velocidad ni poder, una habilidad Namekuseijin."
+        }
+      ],
+      "techniques": [
+        "Makankosappo (Cañón Especial de Rayos)",
+        "Masenko",
+        "Hellzone Grenade",
+        "Light Grenade",
+        "Destructive Wind",
+        "Eye Lasers",
+        "Regeneración (capacidad Namekuseijin)",
+        "Stretch Arms (Brazos elásticos)",
+        "Explosive Demon Wave"
+      ],
+      "series_appearances": ["Dragon Ball", "Dragon Ball Z", "Dragon Ball GT", "Dragon Ball Super"],
+      "debut": {
+        "manga": "Capítulo 135, Dragon Ball (1988)",
+        "anime": "Episodio 83, Dragon Ball (1988)"
+      }
+    },
+    {
+      "id": "bulma",
+      "name": "Bulma Brief",
+      "alias": ["La Chica Genio", "Bulma la Inventora"],
+      "race": "Humana",
+      "gender": "Femenino",
+      "birthdate": "Age 733",
+      "origin": "Tierra (Ciudad Oeste)",
+      "affiliation": ["Guerreros Z", "Capsule Corporation"],
+      "family": {
+        "father": "Dr. Brief",
+        "mother": "Panchy",
+        "husband": "Vegeta",
+        "sons": ["Trunks"],
+        "daughter": "Bra/Bulla"
+      },
+      "biography": "La segunda persona más importante de la franquicia. Hija del Dr. Brief, fundador de la Corporación Cápsula, heredó su genio científico y lo superó ampliamente. Fue quien descubrió las Esferas del Dragón e inventó el radar para rastrearlas. Sin tener poderes de combate, ha sido crucial en la defensa de la Tierra como inventora e ingeniera.",
+      "personality": "Inteligente, directa, mandona y emocionalmente volátil. Su temperamento explosivo no discrimina ni siquiera a Vegeta o Beerus, al que regañó memorable en la película 'La Batalla de los Dioses'. A pesar de su personalidad, es profundamente leal a sus amigos.",
+      "inventions": [
+        "Radar de Esferas del Dragón",
+        "Nave espacial modificada (viaje a Namek en 6 días)",
+        "Dragon Radar mejorado",
+        "Máquina del Tiempo (para Trunks del Futuro)",
+        "Dragon Ball Radar de bolsillo",
+        "Traje de combate mejorado para los Guerreros Z"
+      ],
+      "series_appearances": ["Dragon Ball", "Dragon Ball Z", "Dragon Ball GT", "Dragon Ball Super"],
+      "debut": {
+        "manga": "Capítulo 1, Dragon Ball (1984)",
+        "anime": "Episodio 1, Dragon Ball (1986)"
+      }
+    },
+    {
+      "id": "krilin",
+      "name": "Krilin",
+      "alias": ["El Mejor Amigo de Goku", "El Guerrero Humano más Fuerte de la Tierra"],
+      "race": "Humano",
+      "gender": "Masculino",
+      "birthdate": "Age 736",
+      "origin": "Tierra",
+      "height_cm": 153,
+      "weight_kg": 50,
+      "eye_color": "Sin pupilas visibles (característica de diseño)",
+      "hair_color": "Negro (de adulto, en DBZ es calvo por entrenamiento)",
+      "affiliation": ["Guerreros Z", "Policía (después de la saga de Buu)"],
+      "family": {
+        "wife": "Androide #18",
+        "daughter": "Marron"
+      },
+      "biography": "El mejor amigo de toda la vida de Goku, desde que ambos entrenaron juntos con el Maestro Roshi. A pesar de ser humano, alcanzó niveles de poder extraordinarios mediante el entrenamiento y el ki. Su muerte a manos de Tambourine y luego en Namek por Freezer fueron catalizadores para que Goku alcanzara el Super Saiyajin. Se casó con la ex-Androide #18.",
+      "personality": "Alegre, cómico, valiente aunque reconoce sus límites. Es profundamente leal y emotivo. Suele ser el primero en morir en combate pero siempre regresa.",
+      "transformations": [
+        {
+          "name": "Potencial Liberado",
+          "description": "El Gran Patriarca de Namek liberó el potencial de Krilin en Namek, aumentando significativamente su poder."
+        }
+      ],
+      "techniques": [
+        "Kienzan (Disco Destructivo)",
+        "Kamehameha",
+        "Taiyoken (Destello Solar)",
+        "Scatter Kamehameha (Múltiples Kamehamehas dispersos)",
+        "Spirit Bomb (asistencia)"
+      ],
+      "series_appearances": ["Dragon Ball", "Dragon Ball Z", "Dragon Ball GT", "Dragon Ball Super"],
+      "debut": {
+        "manga": "Capítulo 25, Dragon Ball (1985)",
+        "anime": "Episodio 14, Dragon Ball (1986)"
+      }
+    },
+    {
+      "id": "trunks",
+      "name": "Trunks",
+      "alias": ["Trunks del Futuro", "Trunks del Presente", "Trunks Espada"],
+      "race": "Mitad Saiyajin, Mitad Humano",
+      "gender": "Masculino",
+      "birthdate": "Age 766 (presente) / Age 766 (futuro)",
+      "origin": "Tierra",
+      "height_cm": 170,
+      "weight_kg": 58,
+      "affiliation": ["Guerreros Z", "Equipo Universo 7"],
+      "family": {
+        "father": "Vegeta",
+        "mother": "Bulma",
+        "sister": "Bra/Bulla",
+        "amigo_cercano": "Goten"
+      },
+      "biography": "Existen dos versiones de Trunks: el del presente, hijo de Vegeta y Bulma criado con vida cómoda, y el del futuro, que viajó al pasado para advertir sobre los Androides. Trunks del Futuro creció en un mundo devastado donde los Androides 17 y 18 habían matado a todos los Guerreros Z. Se convirtió en Super Saiyajin a temprana edad de su línea temporal. Es quien llevó el aviso que permitió prepararse para la saga de los Androides.",
+      "personality": "El Trunks del presente es arrogante y algo mimado, pero bondadoso. El Trunks del futuro es serio, melancólico y forjado por el sufrimiento. Ambos comparten valentía y determinación.",
+      "transformations": [
+        {
+          "name": "Super Saiyajin (SSJ)",
+          "description": "Primera generación SSJ. Fue el primero en revelar esta forma al público cuando viajó al pasado."
+        },
+        {
+          "name": "Super Saiyajin 2 (SSJ2)",
+          "description": "Trunks del futuro lo alcanzó en su línea temporal."
+        },
+        {
+          "name": "Super Saiyajin Rage (Ira)",
+          "description": "Forma exclusiva de Trunks del Futuro. Combina el SSJ2 con un ki similar al divino potenciado por la ira extrema. Surge durante la batalla contra Goku Black."
+        },
+        {
+          "name": "Trunks Pequeño SSJ",
+          "description": "El Trunks pequeño del presente alcanzó el SSJ durante su entrenamiento junto a Goten."
+        }
+      ],
+      "techniques": [
+        "Burning Attack",
+        "Buster Cannon",
+        "Finish Buster",
+        "Big Tree Cannon",
+        "Heat Dome Attack",
+        "Final Hope Slash",
+        "Sword of Hope (Espada de la Esperanza)",
+        "Masenko"
+      ],
+      "series_appearances": ["Dragon Ball Z", "Dragon Ball GT", "Dragon Ball Super"],
+      "debut": {
+        "manga": "Capítulo 331, Dragon Ball (1992)",
+        "anime": "Episodio 119, Dragon Ball Z (1992)"
+      }
+    },
+    {
+      "id": "freezer",
+      "name": "Freezer",
+      "alias": ["El Señor Freezer", "El Tirano del Universo", "Black Freezer"],
+      "race": "Raza de Freezer (Demonios del Frío)",
+      "gender": "Masculino (apariencia andrógina)",
+      "birthdate": "Desconocido (muy antiguo)",
+      "origin": "Desconocido (su raza no tiene planeta oficial de origen conocido)",
+      "height_cm": 153,
+      "weight_kg": "Unknown",
+      "eye_color": "Rojo",
+      "affiliation": ["Ejército de Freezer (propio)", "Equipo Universo 7 (Torneo del Poder, forzado)"],
+      "biography": "El mayor tirano del Universo 7. Hijo del Rey Cold y hermano de Cooler. Gobernó el cosmos con mano de hierro durante décadas, usando su ejército para conquistar y vender planetas. Destruyó el Planeta Vegeta y casi exterminó a los Saiyajins por miedo a la leyenda del Super Saiyajin. Fue derrotado por Goku en Namek, luego por Trunks del Futuro en la Tierra y posteriormente resucitado varias veces. Entrenó por primera vez en su vida para la película de Resurrección 'F'.",
+      "personality": "Extremadamente arrogante, sádico y refinado. Habla en un tono aristocrático y nunca pierde la compostura incluso en la derrota. Es meticuloso, rencoroso y nunca olvida una humillación.",
+      "transformations": [
+        {
+          "name": "Primera Forma",
+          "description": "Forma comprimida de baja estatura. Parece débil pero es su forma de control de poder."
+        },
+        {
+          "name": "Segunda Forma",
+          "description": "Más alta y musculosa. Supera al Gran Patriarca de Namek."
+        },
+        {
+          "name": "Tercera Forma",
+          "description": "Forma intermedia alienígena. Más poderosa pero aún no su nivel máximo."
+        },
+        {
+          "name": "Forma Final (100%)",
+          "description": "Su verdadera forma. Compacta, blanca y morada. Al 100% de su poder destruyó el Planeta Namek."
+        },
+        {
+          "name": "Mecha Freezer",
+          "description": "Forma cibernética después de ser destruido en Namek y reconstruido por el Dr. Brief."
+        },
+        {
+          "name": "Golden Freezer",
+          "description": "Resultado de 4 meses de entrenamiento. Versión Super Saiyajin de su especie. Dorado brillante con un poder astronómico."
+        },
+        {
+          "name": "Black Freezer",
+          "description": "Obtenida después de 10 años de entrenamiento en el centro del Universo. Supera al Ultra Instinto de Goku y al Ultra Ego de Vegeta."
+        }
+      ],
+      "techniques": [
+        "Death Beam (Rayo de la Muerte)",
+        "Death Ball",
+        "Nova Strike",
+        "Supernova",
+        "Barrera de ki",
+        "Telekinesis",
+        "Golden Death Ball",
+        "Death Comet",
+        "Cage of Light"
+      ],
+      "series_appearances": ["Dragon Ball Z", "Dragon Ball GT", "Dragon Ball Super"],
+      "debut": {
+        "manga": "Capítulo 247, Dragon Ball (1991)",
+        "anime": "Episodio 36, Dragon Ball Z (1990)"
+      }
+    },
+    {
+      "id": "cell",
+      "name": "Cell",
+      "alias": ["Cell Perfecto", "Cell Jr.", "Android Cell"],
+      "race": "Androide Biológico (contiene ADN de Goku, Vegeta, Piccolo, Freezer, Rey Cold y más)",
+      "gender": "Masculino",
+      "birthdate": "Age 786 (línea temporal alternativa del Dr. Gero)",
+      "origin": "Laboratorio del Dr. Gero (futuro)",
+      "height_cm": 200,
+      "weight_kg": "Unknown",
+      "affiliation": ["Creación del Dr. Gero"],
+      "biography": "La creación definitiva del Dr. Gero, diseñada para superar a todo ser vivo. Creado con células de los guerreros más poderosos de la historia, Cell viajó al pasado desde el futuro de Trunks para absorber a los Androides 17 y 18 y alcanzar su forma perfecta. Organizó los Juegos de Cell como un espectáculo de artes marciales para demostrar su supremacía antes de destruir la Tierra. Fue destruido por Gohan con el Super Kamehameha del Hijo y Padre.",
+      "personality": "Narcisista, arrogante y teatral. Considera que al poseer las células de todos los mejores guerreros es la perfección misma. Disfruta del sufrimiento ajeno y organiza combates para su entretenimiento.",
+      "transformations": [
+        {
+          "name": "Forma Larval / Imperfecta",
+          "description": "Primera forma insectoide. Necesita absorber energía de humanos para crecer. Viajó al pasado en esta forma."
+        },
+        {
+          "name": "Semi-Perfecto",
+          "description": "Tras absorber al Androide 17. Más humanoide y poderoso, pero obsesionado con absorber al 18."
+        },
+        {
+          "name": "Perfecto",
+          "description": "Tras absorber al Androide 18. Alcanza la perfección absoluta. Torneó él mismo los Juegos de Cell en esta forma."
+        },
+        {
+          "name": "Super Perfecto",
+          "description": "Después de explotar y regenerarse, sus células Saiyajin le hicieron regresar más poderoso. Superó su límite previo."
+        }
+      ],
+      "techniques": [
+        "Kamehameha (copiado de Goku)",
+        "Spirit Bomb (puede hacerlo)",
+        "Galick Ho (copiado de Vegeta)",
+        "Death Beam (ADN de Freezer)",
+        "Special Beam Cannon (ADN de Piccolo)",
+        "Tail Absorption",
+        "Drain Energy",
+        "Cell Jr. Spawn",
+        "Regeneration (ADN de Piccolo)"
+      ],
+      "series_appearances": ["Dragon Ball Z", "Dragon Ball GT (aparición breve)"],
+      "debut": {
+        "manga": "Capítulo 361, Dragon Ball (1992)",
+        "anime": "Episodio 140, Dragon Ball Z (1992)"
+      }
+    },
+    {
+      "id": "majin_buu",
+      "name": "Majin Buu",
+      "alias": ["Buu el Gordo", "Buu Malo", "Buu Súper", "Kid Buu", "El Demonio Mágico"],
+      "race": "Majin",
+      "gender": "Sin género (masculino en apariencia)",
+      "birthdate": "Hace millones de años, antes del inicio del tiempo según el Kaioshin",
+      "origin": "Creado por Bibidi, un mago oscuro de hace 5 millones de años",
+      "height_cm": "Variable según la forma (de 120cm a colosal)",
+      "affiliation": ["Creación de Bibidi", "Bajo el control de Babidi", "Amigo de Mr. Satán (finalmente)"],
+      "biography": "El ser mágico más poderoso y antiguo del universo. Fue creado por el mago Bibidi hace millones de años y sembró el caos en toda la galaxia, absorbiendo a varios Kaioshin. Fue sellado por el Kaioshin Mayor y liberado por Babidi, el hijo de Bibidi. Tras múltiples transformaciones y batallas devastadoras, Kid Buu fue destruido por la Esfera Espiritual de Goku. La versión Buu Gordo fue reformada y se convirtió en un aliado de Mr. Satán.",
+      "personality": "Variable según la forma: la versión Gordo es inocente como un niño; Super Buu es inteligente, sádico y manipulador; Kid Buu es puro caos e instinto destructivo sin ninguna racionalidad.",
+      "transformations": [
+        {
+          "name": "Buu Gordo (Fat Buu)",
+          "description": "La forma más pacífica. Absorbió al Kaioshin Sur (el más bondadoso), lo que suavizó su naturaleza. Inocente pero puede estallar en ira."
+        },
+        {
+          "name": "Buu Malo (Evil Buu)",
+          "description": "La maldad pura de Fat Buu separada. Más delgado, gris. Absorbió a Fat Buu para convertirse en Super Buu."
+        },
+        {
+          "name": "Super Buu",
+          "description": "La forma más inteligente y calculadora. Absorbió a Gotenks, Piccolo y Ultimate Gohan para multiplicar su poder."
+        },
+        {
+          "name": "Buuhan (Buu + Gohan Absorbido)",
+          "description": "La forma más poderosa de Super Buu. Con el potencial de Ultimate Gohan, era prácticamente invencible."
+        },
+        {
+          "name": "Kid Buu",
+          "description": "La forma original y más pura. Completamente caótico y destructivo. Destruyó la Tierra de un golpe. Fue derrotado por la Esfera Espiritual de Goku."
+        }
+      ],
+      "techniques": [
+        "Candy Beam (Rayo Transformador)",
+        "Majin Buu Absorption (Absorción)",
+        "Planet Burst",
+        "Regeneración absoluta",
+        "Human Extinction Attack (ataque a todos los humanos a la vez)",
+        "Vanishing Beam",
+        "Chocolate Beam",
+        "Copying techniques (copia ataques al instante)"
+      ],
+      "series_appearances": ["Dragon Ball Z", "Dragon Ball Super (Fat Buu)"],
+      "debut": {
+        "manga": "Capítulo 460, Dragon Ball (1994)",
+        "anime": "Episodio 218, Dragon Ball Z (1994)"
+      }
+    },
+    {
+      "id": "beerus",
+      "name": "Beerus",
+      "alias": ["El Dios de la Destrucción del Universo 7", "Bills", "El Dios Gato"],
+      "race": "Dios de la Destrucción (especie: similar a un gato egipcio),",
+      "gender": "Masculino",
+      "birthdate": "Hace cientos de millones de años",
+      "origin": "Universo 7",
+      "affiliation": ["Dioses de la Destrucción", "Universo 7"],
+      "family": {
+        "gemelo": "Champa (Dios de la Destrucción del Universo 6)",
+        "asistente_angel": "Whis"
+      },
+      "biography": "El Dios de la Destrucción del Universo 7. Uno de los seres más poderosos de su universo, cuyo deber es destruir planetas para mantener el equilibrio cósmico de la creación. Pasó 39 años dormido antes de despertarse para buscar al Super Saiyajin Dios. Aunque inicialmente antagonista, se convirtió en un aliado recurrente al encontrar interesante a Goku y la Tierra (especialmente la comida terrestre).",
+      "personality": "Caprichoso, perezoso y adicto a la comida. Puede ser intimidante y destruir planetas por bagatelas (como cuando casi destruyó la Tierra por una disputa de pudín). Sin embargo, tiene un código de honor y respeta el poder genuino.",
+      "power_level_info": "Uno de los 5 seres más poderosos de todo el multiverso. Incluso el Ultra Instinto de Goku apenas lo iguala durante el Torneo del Poder.",
+      "techniques": [
+        "Hakai (Destrucción) - puede borrar la existencia de almas malignas",
+        "Sphere of Destruction",
+        "Beerus Ball",
+        "Pressure Point Attack",
+        "Ultra Instinto (domina perfectamente esta técnica de ángeles)"
+      ],
+      "series_appearances": ["Dragon Ball Super"],
+      "debut": {
+        "pelicula": "Dragon Ball Z: La Batalla de los Dioses (2013)",
+        "anime": "Episodio 1, Dragon Ball Super (2015)"
+      }
+    },
+    {
+      "id": "whis",
+      "name": "Whis",
+      "alias": ["El Ángel Guía del Universo 7", "Instructor de Beerus"],
+      "race": "Ángel",
+      "gender": "Masculino",
+      "origin": "Universo 7 (creado por el Gran Sacerdote)",
+      "affiliation": ["Ángeles Guías", "Universo 7"],
+      "family": {
+        "padre": "Gran Sacerdote (Daishinkan)",
+        "hermana": "Vados (Ángel Guía del Universo 6)"
+      },
+      "biography": "El asistente y tutor del Dios de la Destrucción Beerus. Es uno de los seres más poderosos del Universo 7, superando ampliamente a Beerus. Permanece en un estado permanente de Ultra Instinto. Entrena a Goku y Vegeta para que alcancen el nivel de los dioses. Puede deshacer la destrucción de Beerus retrocediendo el tiempo hasta 3 minutos.",
+      "personality": "Refinado, tranquilo y ligeramente condescendiente pero amable. Tiene una pasión por la comida terrestre igual o mayor que Beerus. Parece indiferente a los conflictos mortales, pero cuida silenciosamente a sus pupilos.",
+      "techniques": [
+        "Ultra Instinto (dominio total y natural)",
+        "Retroceso del tiempo (hasta 3 minutos)",
+        "Vuelo ultrarrápido",
+        "Neutralización de ki",
+        "Staff attacks"
+      ],
+      "series_appearances": ["Dragon Ball Super"],
+      "debut": {
+        "pelicula": "Dragon Ball Z: La Batalla de los Dioses (2013)",
+        "anime": "Episodio 1, Dragon Ball Super (2015)"
+      }
+    },
+    {
+      "id": "androide_18",
+      "name": "Androide #18",
+      "alias": ["Lazuli (nombre humano)", "La Androide más Bonita"],
+      "race": "Androide (ciborg humano)",
+      "gender": "Femenino",
+      "birthdate": "Age 750 aproximadamente",
+      "origin": "Tierra",
+      "affiliation": ["Guerreros Z", "Familia de Krilin"],
+      "family": {
+        "creador": "Dr. Gero",
+        "hermano_gemelo": "Androide #17",
+        "husband": "Krilin",
+        "daughter": "Marron"
+      },
+      "biography": "Fue una humana llamada Lazuli, transformada por el Dr. Gero en un ciborg androide. Junto con su hermano gemelo #17, fue una de las amenazas más temidas de la saga de los Androides. A diferencia de Cell, decidió no ser absorbida y eventualmente se reformó. Se casó con Krilin y tuvo una hija, Marron. Participa activamente en el Torneo del Poder.",
+      "personality": "Directa, fría y sin pelos en la lengua. No soporta el despilfarro ni la estupidez. Aunque parece distante, ama profundamente a su familia.",
+      "techniques": [
+        "Energy barriers",
+        "Ki blasts infinitos (no consume energía interna)",
+        "Infinity Bullet",
+        "Acrobatic dodging",
+        "Photon Wave"
+      ],
+      "series_appearances": ["Dragon Ball Z", "Dragon Ball GT", "Dragon Ball Super"]
+    },
+    {
+      "id": "androide_17",
+      "name": "Androide #17",
+      "alias": ["Lapis (nombre humano)", "Super 17 (fusión en GT)"],
+      "race": "Androide (ciborg humano)",
+      "gender": "Masculino",
+      "origin": "Tierra",
+      "affiliation": ["Reserva Natural (trabaja como guardabosques)", "Guerreros Z (temporal)", "Equipo Universo 7"],
+      "family": {
+        "creador": "Dr. Gero",
+        "hermana_gemela": "Androide #18",
+        "wife": "Unnamed (tiene una familia propia en Super)"
+      },
+      "biography": "Hermano gemelo del Androide #18. Transformado de humano llamado Lapis por el Dr. Gero. Fue absorbido por Cell pero liberado tras su derrota. Se reformó completamente y en Dragon Ball Super trabaja como guardabosques en una reserva natural. Es el MVP del Equipo del Universo 7 en el Torneo del Poder, siendo el último sobreviviente junto a Goku y Frieza.",
+      "personality": "Rebelde, independiente y con un sentido de la justicia propio. En Super se muestra mucho más maduro y tranquilo. Le gustan los animales y la naturaleza.",
+      "techniques": [
+        "Photon Flash",
+        "Energy Barrier",
+        "Power Blitz",
+        "Android Barrier",
+        "Energy Absorption (versión GT Super 17)"
+      ],
+      "series_appearances": ["Dragon Ball Z", "Dragon Ball GT", "Dragon Ball Super"]
+    },
+    {
+      "id": "goten",
+      "name": "Son Goten",
+      "alias": ["El Mini-Goku", "Goten el Prodigo"],
+      "race": "Mitad Saiyajin, Mitad Humano",
+      "gender": "Masculino",
+      "birthdate": "Age 767",
+      "origin": "Tierra",
+      "affiliation": ["Guerreros Z"],
+      "family": {
+        "father": "Goku",
+        "mother": "ChiChi",
+        "brother": "Gohan",
+        "mejor_amigo": "Trunks"
+      },
+      "biography": "Segundo hijo de Goku y ChiChi, nacido después de la muerte de Goku en el Juego de Cell. Siendo el hijo natural de Goku, es un Saiyajin puro en cuanto a herencia, lo que le permitió alcanzar el SSJ a una edad increíblemente joven (7 años) sin siquiera intentarlo conscientemente. Junto con Trunks domina la fusión Metamor para convertirse en Gotenks.",
+      "transformations": [
+        {
+          "name": "Super Saiyajin (SSJ)",
+          "description": "El Saiyajin más joven en alcanzar esta forma (junto con Trunks). La alcanzó naturalmente sin esfuerzo consciente."
+        },
+        {
+          "name": "Gotenks (fusión con Trunks)",
+          "description": "Resultado de la fusión Metamor de Goten y Trunks. Super Saiyajin 3 capaz."
+        }
+      ],
+      "techniques": [
+        "Kamehameha",
+        "Super Ghost Kamikaze Attack (como Gotenks)",
+        "Galactic Donuts",
+        "Super Saiyan Rage"
+      ],
+      "series_appearances": ["Dragon Ball Z", "Dragon Ball GT", "Dragon Ball Super"]
+    },
+    {
+      "id": "bardock",
+      "name": "Bardock",
+      "alias": ["El Padre de Goku", "El Saiyajin que desafió a Freezer"],
+      "race": "Saiyajin",
+      "gender": "Masculino",
+      "birthdate": "Age 715 aproximadamente",
+      "origin": "Planeta Vegeta",
+      "affiliation": ["Ejército de Freezer (como soldado de bajo rango)", "Guerreros de Bardock"],
+      "family": {
+        "wife": "Gine",
+        "sons": ["Raditz", "Goku (Kakarotto)"]
+      },
+      "biography": "El padre de Goku y Raditz. Era un guerrero de nivel bajo en el ejército de Freezer, conocido por su notable instinto de combate. Tras descubrir las intenciones genocidas de Freezer, intentó rebelarse y salvar el Planeta Vegeta. Murió en el Supernova de Freezer al tratar de detenerlo solo. En el especial 'Una Historia del Pasado', se revela que fue enviado al pasado y se convirtió en el legendario Saiyajin Super Saiyajin legendario de Yadrat.",
+      "personality": "Guerrero rudo, directo y de pocas palabras. Inusualmente para un Saiyajin, sentía algo parecido al amor por su familia, especialmente por Gine.",
+      "transformations": [
+        {
+          "name": "Ozaru",
+          "description": "Forma Saiyajin estándar con la luna llena."
+        },
+        {
+          "name": "Super Saiyajin (Manga/OVA 'El Pasado')",
+          "description": "En una historia del pasado del manga Super, Bardock alcanza el SSJ mientras estaba atrapado en el pasado en el planeta Cereal, convirtiéndose en el legendario SSJ que dio nombre a la transformación."
+        }
+      ],
+      "techniques": [
+        "Riot Javelin",
+        "Final Spirit Cannon",
+        "Rebellion Edge",
+        "Full Power Energy Wave",
+        "Kamehameha (manga)"
+      ],
+      "series_appearances": ["Dragon Ball Z (especial TV)", "Dragon Ball Super (manga)"]
+    },
+    {
+      "id": "jiren",
+      "name": "Jiren",
+      "alias": ["El Gris", "El Hombre que Superó su Propio Límite", "El Orgullo de la Patrulla del Orgullo"],
+      "race": "Humanoide alienígena (Universo 11)",
+      "gender": "Masculino",
+      "origin": "Universo 11",
+      "affiliation": ["Patrulla del Orgullo", "Equipo Universo 11"],
+      "biography": "El mortal más poderoso del Torneo del Poder y posiblemente del Universo 11. Es el principal antagonista del Torneo del Poder. Su poder supera incluso al de Belmod, el Dios de la Destrucción del Universo 11. Perdió a toda su familia y pueblo a manos de un villano de niño, lo que le forjó una filosofía de que solo el poder puede traer justicia.",
+      "personality": "Solitario, estricto, con un código de honor absoluto. Originalmente no creía en la confianza ni en los lazos, pensando que solo el poder individual importa. La batalla contra Goku comenzó a cambiar esa visión.",
+      "transformations": [
+        {
+          "name": "Power Impact (Estado de Poder Máximo)",
+          "description": "Al liberar todo su ki en combate, supera incluso al Ultra Instinto de Goku durante el torneo."
+        }
+      ],
+      "techniques": [
+        "Power Impact",
+        "Invisible Strikes (golpes a velocidad invisible)",
+        "Infinity Rush",
+        "Meditation (recarga instantánea de ki)",
+        "Hell Gate Strike"
+      ],
+      "series_appearances": ["Dragon Ball Super"],
+      "debut": {
+        "anime": "Episodio 85, Dragon Ball Super (2017)"
+      }
+    },
+    {
+      "id": "broly",
+      "name": "Broly",
+      "alias": ["El Super Saiyajin Legendario", "El Saiyajin del Poder Ilimitado"],
+      "race": "Saiyajin",
+      "gender": "Masculino",
+      "birthdate": "Age 737 (mismo que Goku)",
+      "origin": "Planeta Vegeta",
+      "height_cm": 198,
+      "affiliation": ["Ninguna (solitario)", "Ejército de Freezer (temporal en DBS)"],
+      "family": {
+        "father": "Paragus"
+      },
+      "biography": "Existen dos versiones de Broly: el clásico de las películas de DBZ (no canónico) y el canónico de Dragon Ball Super: Broly. El Broly canónico nació el mismo día que Goku y Vegeta con un nivel de poder extremadamente alto (10,000 unidades de poder de bebé). Fue exiliado por el Rey Vegeta por miedo. Criado en soledad por su padre Paragus en condiciones extremas, su poder es instintivo y casi ilimitado. A diferencia del Broly clásico, el canónico no es malvado sino producto de su traumático entrenamiento.",
+      "personality": "El Broly canónico es torpe, inocente y fundamentalmente bueno cuando no está enojado. Su ferocidad en batalla es instintiva, no maliciosa. El Broly clásico es puro odio irracional dirigido a Goku.",
+      "transformations": [
+        {
+          "name": "Wrathful State (Estado de Ira)",
+          "description": "Versión canónica: un estado de Ozaru mental sin transformarse físicamente. Su poder crece exponencialmente con la ira."
+        },
+        {
+          "name": "Super Saiyajin Legendario (Clásico)",
+          "description": "Versión de las películas: el Saiyajin Legendario con poder ilimitado que crece con el tiempo. Verde en SSJ full power."
+        },
+        {
+          "name": "Super Saiyajin (Canónico)",
+          "description": "En DBS: Broly alcanza el SSJ estándar al ver morir a Paragus, potenciado hasta extremos que superan el SSJB de Goku y Vegeta."
+        }
+      ],
+      "techniques": [
+        "Eraser Cannon (clásico)",
+        "Gigantic Breath (canónico)",
+        "Omega Blaster (clásico)",
+        "Full Power Energy Ball",
+        "Gebora (DBS canónico)"
+      ],
+      "series_appearances": ["Dragon Ball Z (películas, no canónico)", "Dragon Ball Super (canónico)"]
+    }
+  ]
+}

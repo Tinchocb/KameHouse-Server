@@ -8,8 +8,7 @@ import { cn, defineStyleAnatomy } from "../core/styling"
 
 export const CardAnatomy = defineStyleAnatomy({
     root: cva([
-        "UI-Card__root",
-        "bg-black text-white border border-white/10 rounded-none shadow-none transition-all duration-200 hover:border-white/40 hover:-translate-y-0.5",
+        "UI-Card__root liquid-glass-frosted liquid-glass-frosted-interactive rounded-2xl",
     ]),
     header: cva([
         "UI-Card__header",

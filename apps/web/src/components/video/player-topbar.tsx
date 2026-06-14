@@ -1,6 +1,7 @@
 import React from "react"
 import { FiX } from "react-icons/fi"
 import { cn } from "@/components/ui/core/styling"
+import { cleanMediaTitle } from "@/lib/helpers/media"
 
 interface PlayerTopBarProps {
     title?: string
@@ -8,35 +9,6 @@ interface PlayerTopBarProps {
     episodeNumber?: number
     mediaFormat?: string | null
     onClose: () => void
-}
-
-function cleanMediaTitle(text?: string, isMovie?: boolean): string {
-    if (!text) return ""
-    // Remove extensions
-    let cleaned = text.replace(/\.(mkv|mp4|avi|m4v|mov)$/i, "")
-    // Remove duplicate extensions or trailing dots
-    cleaned = cleaned.replace(/\.(mkv|mp4|avi|m4v|mov)/i, "").trim()
-    
-    // Strip common series prefixes for movies (e.g. "Dragon Ball: ", "Dragon Ball Z ", "Dragon Ball GT ")
-    if (isMovie) {
-        cleaned = cleaned.replace(/^(dragon\s*ball\s*(z|gt|super|kai)?\s*[:\-–—]?\s*)/i, "").trim()
-    }
-    
-    // Capitalize nicely if it's all uppercase (e.g. "LA PRINCESA DURMIENTE..." -> "La Princesa Durmiente...")
-    if (cleaned === cleaned.toUpperCase() && !/^[\d\s\W]+$/.test(cleaned)) {
-        cleaned = cleaned
-            .toLowerCase()
-            .replace(/\b([a-z])/g, (c) => c.toUpperCase())
-            // Capitalize common acronyms/words
-            .replace(/\b(Dbz|Db|Gt|Ova|Saga)\b/g, (m) => m.toUpperCase())
-            .replace(/\b(En|El|La|Lo|De|Y|Con|O|Para|Del|Al)\b/gi, (m) => m.toLowerCase());
-        
-        // Always capitalize the very first word
-        if (cleaned.length > 0) {
-            cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1)
-        }
-    }
-    return cleaned
 }
 
 export function PlayerTopBar({ title, episodeLabel, episodeNumber, mediaFormat, onClose }: PlayerTopBarProps) {
