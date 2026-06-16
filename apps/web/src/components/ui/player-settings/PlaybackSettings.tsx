@@ -33,7 +33,7 @@ function ToggleRow({ label, enabled, onChange }: { label: string; enabled: boole
         <button
             onClick={handleToggle}
             className={cn(
-                "flex items-center justify-between w-full px-6 py-3 transition-all duration-300 ease-out group text-left relative overflow-hidden",
+                "flex items-center justify-between w-full px-6 py-3 transition-all duration-300 ease-out group text-left relative overflow-hidden active:scale-[0.98]",
                 enabled ? "text-white" : "text-zinc-500 hover:text-zinc-300"
             )}
         >
@@ -42,12 +42,12 @@ function ToggleRow({ label, enabled, onChange }: { label: string; enabled: boole
 
             <span className="text-[11px] font-black uppercase tracking-widest text-left group-hover:translate-x-1.5 transition-transform duration-300 ease-out">{label}</span>
             <div className={cn(
-                "w-9 h-5 rounded-full relative transition-all duration-300 shrink-0 ml-4 border border-white/5",
-                enabled ? "bg-brand-orange" : "bg-white/10"
+                "w-9 h-5 rounded-full relative transition-all duration-400 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] shrink-0 ml-4 border border-white/5",
+                enabled ? "bg-brand-orange shadow-[0_0_12px_rgba(255,110,58,0.45)] border-brand-orange/30" : "bg-white/10"
             )}>
                 <div className={cn(
-                    "absolute top-[3px] w-3 h-3 rounded-full transition-all duration-300 shadow-sm",
-                    enabled ? "left-[21px] bg-white" : "left-[3px] bg-zinc-400"
+                    "absolute top-[3px] w-3 h-3 rounded-full transition-all duration-400 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] shadow-sm",
+                    enabled ? "left-[21px] bg-white scale-110" : "left-[3px] bg-zinc-400"
                 )} />
             </div>
         </button>
@@ -78,26 +78,11 @@ export function PlaybackSettings({
     return (
         <div className="py-4">
             {showSeparator && <div className="mx-6 h-px bg-white/10 mb-4" />}
-
-            {/* Auto-skip section */}
-            <div className="flex items-center gap-2 px-6 mb-3">
-                <FastForward className="w-3.5 h-3.5 text-zinc-600" />
-                <span className="text-[9px] font-black uppercase tracking-[0.4em] text-zinc-600">Skip Automático</span>
-            </div>
-            <ToggleRow label="Modo Maratón" enabled={marathonMode} onChange={onMarathonModeChange} />
-            <ToggleRow label="Modo TV" enabled={tvMode} onChange={onTvModeChange} />
-            <ToggleRow label="Saltar Intro Automáticamente" enabled={autoSkipIntro} onChange={onAutoSkipIntroChange} />
-            <ToggleRow label="Saltar Outro Automáticamente" enabled={autoSkipOutro} onChange={onAutoSkipOutroChange} />
-
-            {/* Misc section */}
-            <div className="mx-6 h-px bg-white/10 my-4" />
-            <div className="flex items-center gap-2 px-6 mb-3">
-                <Repeat className="w-3.5 h-3.5 text-zinc-600" />
-                <span className="text-[9px] font-black uppercase tracking-[0.4em] text-zinc-600">Opciones</span>
-            </div>
             <ToggleRow label="Mapa de Calor (timeline)" enabled={showHeatmap} onChange={onShowHeatmapChange} />
-            <ToggleRow label="Repetir Episodio (Loop)" enabled={loopEnabled} onChange={onLoopEnabledChange} />
-            <ToggleRow label="Desactivar subs con Audio Español (Dub)" enabled={autoDisableSubtitlesWhenDubbed} onChange={onAutoDisableSubtitlesWhenDubbedChange} />
+            <ToggleRow label="Omitir Intro (automático)" enabled={autoSkipIntro} onChange={onAutoSkipIntroChange} />
+            <ToggleRow label="Saltar Final (automático)" enabled={autoSkipOutro} onChange={onAutoSkipOutroChange} />
+            <ToggleRow label="Ambilight (experimenta)" enabled={ambilightEnabled} onChange={onAmbilightChange} />
+           
         </div>
     )
 }

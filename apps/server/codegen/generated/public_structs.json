@@ -536,6 +536,215 @@
     "comments": []
   },
   {
+    "filepath": "../internal/api/jikan/client.go",
+    "filename": "client.go",
+    "name": "AnimeFullResponse",
+    "formattedName": "AnimeFullResponse",
+    "package": "jikan",
+    "fields": [
+      {
+        "name": "Data",
+        "jsonName": "data",
+        "goType": "AnimeFullResponse_Data",
+        "inlineStructType": "struct{\nMalID int `json:\"mal_id\"`\nTitle string `json:\"title\"`\nTitleEng string `json:\"title_english\"`\nTitleJpn string `json:\"title_japanese\"`\nImages __STRUCT__ `json:\"images\"`\nSynopsis string `json:\"synopsis\"`\nEpisodes int `json:\"episodes\"`\nStatus string `json:\"status\"`\nDuration string `json:\"duration\"`\nRating string `json:\"rating\"`\nScore float64 `json:\"score\"`\nStudios []__STRUCT__ `json:\"studios\"`\nGenres []__STRUCT__ `json:\"genres\"`\nDemographics []__STRUCT__ `json:\"demographics\"`\nTheme __STRUCT__ `json:\"theme\"`\nRelations []__STRUCT__ `json:\"relations\"`}",
+        "typescriptType": "AnimeFullResponse_Data",
+        "usedTypescriptType": "{ mal_id: number; title: string; title_english: string; title_japanese: string; images: { jpg: { large_image_url: string; }; }; synopsis: string; episodes: number; status: string; duration: string; rating: string; score: number; studios: Array\u003c{ name: string; }\u003e; genres: Array\u003c{ name: string; }\u003e; demographics: Array\u003c{ name: string; }\u003e; theme: { openings: Array\u003cstring\u003e; endings: Array\u003cstring\u003e; }; relations: Array\u003c{ relation: string; entry: Array\u003c{ mal_id: number; type: string; name: string; }\u003e; }\u003e; }",
+        "usedStructName": "jikan.AnimeFullResponse_Data",
+        "required": true,
+        "public": true,
+        "comments": []
+      }
+    ],
+    "comments": []
+  },
+  {
+    "filepath": "../internal/api/jikan/client.go",
+    "filename": "client.go",
+    "name": "AnimeFullResponse_Data",
+    "formattedName": "AnimeFullResponse_Data",
+    "package": "jikan",
+    "fields": [
+      {
+        "name": "MalID",
+        "jsonName": "mal_id",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Title",
+        "jsonName": "title",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "TitleEng",
+        "jsonName": "title_english",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "TitleJpn",
+        "jsonName": "title_japanese",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Images",
+        "jsonName": "images",
+        "goType": "__STRUCT__",
+        "inlineStructType": "struct{\nJpg __STRUCT__ `json:\"jpg\"`}",
+        "typescriptType": "{ jpg: { large_image_url: string; }; }",
+        "usedTypescriptType": "{ jpg: { large_image_url: string; }; }",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Synopsis",
+        "jsonName": "synopsis",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Episodes",
+        "jsonName": "episodes",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Status",
+        "jsonName": "status",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Duration",
+        "jsonName": "duration",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Rating",
+        "jsonName": "rating",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Score",
+        "jsonName": "score",
+        "goType": "float64",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Studios",
+        "jsonName": "studios",
+        "goType": "[]__STRUCT__",
+        "inlineStructType": "[]struct{\nName string `json:\"name\"`}",
+        "typescriptType": "Array\u003c{ name: string; }\u003e",
+        "usedTypescriptType": "{ name: string; }",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Genres",
+        "jsonName": "genres",
+        "goType": "[]__STRUCT__",
+        "inlineStructType": "[]struct{\nName string `json:\"name\"`}",
+        "typescriptType": "Array\u003c{ name: string; }\u003e",
+        "usedTypescriptType": "{ name: string; }",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Demographics",
+        "jsonName": "demographics",
+        "goType": "[]__STRUCT__",
+        "inlineStructType": "[]struct{\nName string `json:\"name\"`}",
+        "typescriptType": "Array\u003c{ name: string; }\u003e",
+        "usedTypescriptType": "{ name: string; }",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Theme",
+        "jsonName": "theme",
+        "goType": "__STRUCT__",
+        "inlineStructType": "struct{\nOpenings []string `json:\"openings\"`\nEndings []string `json:\"endings\"`}",
+        "typescriptType": "{ openings: Array\u003cstring\u003e; endings: Array\u003cstring\u003e; }",
+        "usedTypescriptType": "{ openings: Array\u003cstring\u003e; endings: Array\u003cstring\u003e; }",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Relations",
+        "jsonName": "relations",
+        "goType": "[]__STRUCT__",
+        "inlineStructType": "[]struct{\nRelation string `json:\"relation\"`\nEntry []__STRUCT__ `json:\"entry\"`}",
+        "typescriptType": "Array\u003c{ relation: string; entry: Array\u003c{ mal_id: number; type: string; name: string; }\u003e; }\u003e",
+        "usedTypescriptType": "{ relation: string; entry: Array\u003c{ mal_id: number; type: string; name: string; }\u003e; }",
+        "required": false,
+        "public": true,
+        "comments": []
+      }
+    ],
+    "comments": []
+  },
+  {
+    "filepath": "../internal/api/jikan/client.go",
+    "filename": "client.go",
+    "name": "AnimeCharactersResponse",
+    "formattedName": "AnimeCharactersResponse",
+    "package": "jikan",
+    "fields": [
+      {
+        "name": "Data",
+        "jsonName": "data",
+        "goType": "[]__STRUCT__",
+        "inlineStructType": "[]struct{\nCharacter __STRUCT__ `json:\"character\"`\nRole string `json:\"role\"`}",
+        "typescriptType": "Array\u003c{ character: { mal_id: number; name: string; images: { jpg: { image_url: string; }; }; }; role: string; }\u003e",
+        "usedTypescriptType": "{ character: { mal_id: number; name: string; images: { jpg: { image_url: string; }; }; }; role: string; }",
+        "required": false,
+        "public": true,
+        "comments": []
+      }
+    ],
+    "comments": []
+  },
+  {
     "filepath": "../internal/api/metadata/types.go",
     "filename": "types.go",
     "name": "Platform",
@@ -612,6 +821,98 @@
         "typescriptType": "Metadata_AnimeMappings",
         "usedTypescriptType": "Metadata_AnimeMappings",
         "usedStructName": "metadata.AnimeMappings",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Status",
+        "jsonName": "status",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Rating",
+        "jsonName": "rating",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Score",
+        "jsonName": "score",
+        "goType": "float64",
+        "typescriptType": "number",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Duration",
+        "jsonName": "duration",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Genres",
+        "jsonName": "genres",
+        "goType": "[]string",
+        "typescriptType": "Array\u003cstring\u003e",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Studios",
+        "jsonName": "studios",
+        "goType": "[]string",
+        "typescriptType": "Array\u003cstring\u003e",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Demographics",
+        "jsonName": "demographics",
+        "goType": "[]string",
+        "typescriptType": "Array\u003cstring\u003e",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Openings",
+        "jsonName": "openings",
+        "goType": "[]string",
+        "typescriptType": "Array\u003cstring\u003e",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Endings",
+        "jsonName": "endings",
+        "goType": "[]string",
+        "typescriptType": "Array\u003cstring\u003e",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Characters",
+        "jsonName": "characters",
+        "goType": "[]CharacterMetadata",
+        "typescriptType": "Array\u003cMetadata_CharacterMetadata\u003e",
+        "usedTypescriptType": "Metadata_CharacterMetadata",
+        "usedStructName": "metadata.CharacterMetadata",
         "required": false,
         "public": true,
         "comments": []
@@ -740,6 +1041,43 @@
         "goType": "int",
         "typescriptType": "number",
         "required": false,
+        "public": true,
+        "comments": []
+      }
+    ],
+    "comments": []
+  },
+  {
+    "filepath": "../internal/api/metadata/types.go",
+    "filename": "types.go",
+    "name": "CharacterMetadata",
+    "formattedName": "Metadata_CharacterMetadata",
+    "package": "metadata",
+    "fields": [
+      {
+        "name": "Name",
+        "jsonName": "name",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Role",
+        "jsonName": "role",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "ImageUrl",
+        "jsonName": "imageUrl",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
         "public": true,
         "comments": []
       }
@@ -1008,52 +1346,6 @@
     "comments": []
   },
   {
-    "filepath": "../internal/api/metadata_provider/dragonball_sagas.go",
-    "filename": "dragonball_sagas.go",
-    "name": "SagaRange",
-    "formattedName": "SagaRange",
-    "package": "metadata_provider",
-    "fields": [
-      {
-        "name": "Id",
-        "jsonName": "Id",
-        "goType": "string",
-        "typescriptType": "string",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "Title",
-        "jsonName": "Title",
-        "goType": "string",
-        "typescriptType": "string",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "StartEp",
-        "jsonName": "StartEp",
-        "goType": "int",
-        "typescriptType": "number",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "EndEp",
-        "jsonName": "EndEp",
-        "goType": "int",
-        "typescriptType": "number",
-        "required": true,
-        "public": true,
-        "comments": []
-      }
-    ],
-    "comments": []
-  },
-  {
     "filepath": "../internal/api/metadata_provider/dynamic.go",
     "filename": "dynamic.go",
     "name": "DynamicProvider",
@@ -1286,8 +1578,7 @@
       }
     ],
     "comments": [
-      " ─── SimpleAnimeMetadataWrapper ──────────────────────────────────────────────",
-      " A lightweight, flat wrapper that looks up episode metadata by plain episode number.",
+      " SimpleAnimeMetadataWrapper is a lightweight, flat wrapper that looks up episode metadata by plain episode number.",
       " It is used by TMDB, Jikan, and AniList providers whose metadata map uses",
       " plain string keys (\"77\") rather than composite keys."
     ]
@@ -20844,6 +21135,266 @@
     "comments": []
   },
   {
+    "filepath": "../internal/lore/lore.go",
+    "filename": "lore.go",
+    "name": "LoreWiki",
+    "formattedName": "LoreWiki",
+    "package": "lore",
+    "fields": [
+      {
+        "name": "Universe",
+        "jsonName": "universe",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "SagasWiki",
+        "jsonName": "sagas_wiki",
+        "goType": "[]SeriesSagas",
+        "typescriptType": "Array\u003cSeriesSagas\u003e",
+        "usedTypescriptType": "SeriesSagas",
+        "usedStructName": "lore.SeriesSagas",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "CharactersWiki",
+        "jsonName": "characters_wiki",
+        "goType": "[]",
+        "typescriptType": "Array\u003cany\u003e",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "MoviesAndSpecials",
+        "jsonName": "movies_and_specials",
+        "goType": "[]",
+        "typescriptType": "Array\u003cany\u003e",
+        "required": false,
+        "public": true,
+        "comments": []
+      }
+    ],
+    "comments": []
+  },
+  {
+    "filepath": "../internal/lore/lore.go",
+    "filename": "lore.go",
+    "name": "SeriesSagas",
+    "formattedName": "SeriesSagas",
+    "package": "lore",
+    "fields": [
+      {
+        "name": "SeriesID",
+        "jsonName": "series_id",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Title",
+        "jsonName": "title",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Years",
+        "jsonName": "years",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "TotalEpisodes",
+        "jsonName": "total_episodes",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "TotalSagas",
+        "jsonName": "total_sagas",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Description",
+        "jsonName": "description",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Sagas",
+        "jsonName": "sagas",
+        "goType": "[]SagaWiki",
+        "typescriptType": "Array\u003cSagaWiki\u003e",
+        "usedTypescriptType": "SagaWiki",
+        "usedStructName": "lore.SagaWiki",
+        "required": false,
+        "public": true,
+        "comments": []
+      }
+    ],
+    "comments": []
+  },
+  {
+    "filepath": "../internal/lore/lore.go",
+    "filename": "lore.go",
+    "name": "SagaWiki",
+    "formattedName": "SagaWiki",
+    "package": "lore",
+    "fields": [
+      {
+        "name": "ID",
+        "jsonName": "id",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Name",
+        "jsonName": "name",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Episodes",
+        "jsonName": "episodes",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Canon",
+        "jsonName": "canon",
+        "goType": "",
+        "typescriptType": "any",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "IsFiller",
+        "jsonName": "is_filler",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Description",
+        "jsonName": "description",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Antagonists",
+        "jsonName": "antagonists",
+        "goType": "[]string",
+        "typescriptType": "Array\u003cstring\u003e",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "KeyEvents",
+        "jsonName": "key_events",
+        "goType": "[]string",
+        "typescriptType": "Array\u003cstring\u003e",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "NewCharacters",
+        "jsonName": "new_characters",
+        "goType": "[]string",
+        "typescriptType": "Array\u003cstring\u003e",
+        "required": false,
+        "public": true,
+        "comments": []
+      }
+    ],
+    "comments": []
+  },
+  {
+    "filepath": "../internal/lore/lore.go",
+    "filename": "lore.go",
+    "name": "SagaRange",
+    "formattedName": "SagaRange",
+    "package": "lore",
+    "fields": [
+      {
+        "name": "ID",
+        "jsonName": "ID",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Title",
+        "jsonName": "Title",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "StartEp",
+        "jsonName": "StartEp",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "EndEp",
+        "jsonName": "EndEp",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      }
+    ],
+    "comments": []
+  },
+  {
     "filepath": "../internal/matroska/ebml.go",
     "filename": "ebml.go",
     "name": "EBMLElement",
@@ -26508,6 +27059,47 @@
         "typescriptType": "number",
         "required": true,
         "public": true,
+        "comments": []
+      }
+    ],
+    "comments": []
+  },
+  {
+    "filepath": "../internal/platforms/jikan_platform/platform.go",
+    "filename": "platform.go",
+    "name": "Platform",
+    "formattedName": "Platform",
+    "package": "jikan_platform",
+    "fields": [
+      {
+        "name": "jikanClient",
+        "jsonName": "jikanClient",
+        "goType": "jikan.Client",
+        "typescriptType": "Client",
+        "usedTypescriptType": "Client",
+        "usedStructName": "jikan.Client",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "username",
+        "jsonName": "username",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "logger",
+        "jsonName": "logger",
+        "goType": "zerolog.Logger",
+        "typescriptType": "Logger",
+        "usedTypescriptType": "Logger",
+        "usedStructName": "zerolog.Logger",
+        "required": false,
+        "public": false,
         "comments": []
       }
     ],

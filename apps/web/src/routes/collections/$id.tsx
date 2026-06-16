@@ -146,7 +146,7 @@ function CollectionDetailPage() {
             </button>
 
             {/* Cinematic Hero Header */}
-            <section className="relative min-h-[65vh] flex flex-col justify-end pt-32 pb-20 px-8 md:px-16 lg:px-24">
+            <section className="relative min-h-[65vh] flex flex-col justify-end pt-32 pb-20 px-8 md:pl-[120px] md:pr-16 lg:pl-[120px] lg:pr-24">
                 {/* Backdrop with gradient and subtle motion blur */}
                 {backdropUrl && (
                     <div className="absolute inset-0 z-0 overflow-hidden bg-black">
@@ -200,7 +200,7 @@ function CollectionDetailPage() {
             </section>
 
             {/* Timeline Section */}
-            <section className="relative z-10 px-8 md:px-16 lg:px-24 max-w-[1400px] mx-auto w-full">
+            <section className="relative z-10 px-8 md:pl-[120px] md:pr-16 lg:pl-[120px] lg:pr-24 max-w-[1400px] mx-auto w-full">
                 <div className="space-y-1 border-b border-white/10 pb-8 mb-20 flex items-center justify-between">
                     <div>
                         <h2 className="text-4xl font-bebas tracking-widest text-white uppercase">LINEA TEMPORAL</h2>

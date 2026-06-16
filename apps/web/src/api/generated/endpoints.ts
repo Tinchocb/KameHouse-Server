@@ -70,6 +70,16 @@ export const API_ENDPOINTS = {
         },
         /**
          *  @description
+         *  Route return local files for the given anime media id.
+         *  Used for fast fetching of playable files (like random play or TV mode).
+         */
+        GetAnimeEntryLocalFiles: {
+            key: "ANIME-ENTRIES-get-anime-entry-local-files",
+            methods: ["GET"],
+            endpoint: "/api/v1/library/anime-entry/{id}/local-files",
+        },
+        /**
+         *  @description
          *  Route returns anime suggestions for the given local files.
          *  Accepts either a directory path (dir) or explicit file paths (paths[]).
          *  The frontend codegen contract sends dir; the legacy backend contract sends paths.

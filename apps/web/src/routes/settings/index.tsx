@@ -159,12 +159,21 @@ function SettingsPage() {
     if (isLoading && !serverSettings) return <LoadingOverlayWithLogo />
 
     return (
-        <div className="flex flex-col h-full w-full pt-12 md:pt-20 px-6 md:px-12 lg:px-16 bg-transparent text-zinc-300 selection:bg-[#ff6e3a]/30 overflow-y-auto relative">
-            <div className="absolute top-0 left-1/2 w-[600px] h-[600px] bg-[#ff6e3a]/5 rounded-full blur-[200px] -translate-y-1/2 -translate-x-1/2 pointer-events-none" />
+        <div className="flex flex-col h-full w-full pt-12 md:pt-20 px-6 md:pl-[120px] md:pr-12 lg:pl-[120px] lg:pr-16 bg-transparent text-zinc-300 selection:bg-[#ff6e3a]/30 overflow-y-auto relative no-scrollbar">
+            {/* Ambient Background Light Orbs */}
+            <div className="absolute top-0 left-1/3 w-[800px] h-[800px] bg-[#ff6e3a]/5 rounded-full blur-[240px] -translate-y-1/2 pointer-events-none" />
+            <div className="absolute top-1/2 right-1/4 w-[600px] h-[600px] bg-red-500/[0.02] rounded-full blur-[200px] pointer-events-none" />
 
-            <div className="w-full flex flex-col min-h-full relative z-10">
-                <header className="mb-10 flex flex-col gap-2 relative z-10">
-                    <h1 className="font-bebas text-5xl md:text-6xl tracking-wider text-white">Configuración</h1>
+            <div className="w-full flex flex-col min-h-full relative z-10 max-w-[1500px] mx-auto">
+                <header className="mb-12 flex flex-col gap-3 relative z-10">
+                    <div className="flex items-center gap-2.5">
+                        <span className="w-2 h-2 rounded-full bg-[#ff6e3a] shadow-[0_0_8px_#ff6e3a] animate-pulse" />
+                        <span className="text-[10px] font-black tracking-[0.3em] text-zinc-500 uppercase font-mono">PANEL DE CONTROL</span>
+                    </div>
+                    <h1 className="font-bebas text-5xl md:text-7xl tracking-wider text-white select-none">
+                        CONFIGURACIÓN <span className="text-zinc-650">GENERAL</span>
+                    </h1>
+                    <div className="h-[2px] w-16 bg-gradient-to-r from-[#ff6e3a] to-transparent rounded-full shadow-[0_0_8px_rgba(255,110,58,0.5)]" />
                 </header>
 
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col md:flex-row gap-8 lg:gap-12 pb-32">
@@ -172,7 +181,7 @@ function SettingsPage() {
                     <aside 
                         onMouseMove={handleSidebarMouseMove}
                         onMouseLeave={() => setSidebarSpotlight({ opacity: 0 })}
-                        className="w-full md:w-64 shrink-0 liquid-glass-frosted rounded-3xl p-5 h-fit relative overflow-hidden"
+                        className="w-full md:w-64 shrink-0 bg-zinc-950/45 border border-white/5 rounded-[28px] p-5 h-fit relative overflow-hidden backdrop-blur-2xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] group/sidebar"
                     >
                         {/* Cursor spotlight overlay */}
                         <div 
@@ -180,7 +189,7 @@ function SettingsPage() {
                             style={sidebarSpotlight}
                         />
 
-                        <TabsList className="bg-transparent border-0 flex flex-col items-stretch h-auto p-0 gap-1.5 relative z-10">
+                        <TabsList className="bg-transparent border-0 flex flex-col items-stretch h-auto p-0 gap-2 relative z-10">
                             {NAV_ITEMS.map((item) => {
                                 const isActive = activeTab === item.id
                                 return (
@@ -188,15 +197,15 @@ function SettingsPage() {
                                         key={item.id}
                                         value={item.id}
                                         className={cn(
-                                            "w-full flex items-center justify-start gap-3.5 px-4 py-3 rounded-xl text-left font-bold text-xs uppercase tracking-wider transition-all duration-300 relative group outline-none border border-transparent settings-nav-btn select-none",
+                                            "w-full flex items-center justify-start gap-4 px-4.5 py-3.5 rounded-xl text-left font-black text-[10px] uppercase tracking-widest transition-all duration-300 relative group outline-none border border-transparent settings-nav-btn select-none active:scale-[0.98]",
                                             isActive 
-                                                ? "active bg-gradient-to-r from-[#ff6e3a]/12 to-[#ff6e3a]/3 border-[#ff6e3a]/15 border-l-[3px] border-l-[#ff6e3a] text-[#ff6e3a] shadow-[0_4px_12px_rgba(255,110,58,0.04)] data-[state=active]:border-y-[#ff6e3a]/15 data-[state=active]:border-r-[#ff6e3a]/15 data-[state=active]:border-l-[#ff6e3a] data-[state=active]:text-[#ff6e3a]" 
-                                                : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.02] hover:-translate-x-0.5"
+                                                ? "active bg-gradient-to-r from-[#ff6e3a]/15 to-[#ff6e3a]/2 border-[#ff6e3a]/30 border-l-[3px] border-l-[#ff6e3a] text-white shadow-[0_8px_25px_rgba(255,110,58,0.12)] data-[state=active]:border-y-[#ff6e3a]/15 data-[state=active]:border-r-[#ff6e3a]/15 data-[state=active]:border-l-[#ff6e3a] data-[state=active]:text-white" 
+                                                : "text-zinc-500 hover:text-zinc-350 hover:bg-white/[0.02] hover:translate-x-1"
                                         )}
                                     >
                                         <item.icon className={cn(
-                                            "w-4 h-4 relative z-10 transition-colors", 
-                                            isActive ? "text-[#ff6e3a]" : "text-zinc-500 group-hover:text-zinc-350"
+                                            "w-4 h-4 relative z-10 transition-all duration-300", 
+                                            isActive ? "text-[#ff6e3a] scale-110 drop-shadow-[0_0_8px_rgba(255,110,58,0.5)]" : "text-zinc-500 group-hover:text-zinc-350"
                                         )} />
                                         <div className="flex flex-col text-left">
                                             <span className="relative z-10 leading-none">{item.label}</span>
@@ -208,7 +217,7 @@ function SettingsPage() {
                     </aside>
 
                     {/* ── Main content ─────────────────────────────────────────── */}
-                    <div className="flex-1 min-w-0 md:pl-4">
+                    <div className="flex-1 min-w-0 md:pl-2">
                         <form
                             id="settings-form"
                             onSubmit={handleSubmit(onSubmit as unknown as SubmitHandler<FieldValues>)}
@@ -226,24 +235,24 @@ function SettingsPage() {
                     <AnimatePresence>
                         {isDirty && (
                             <motion.div
-                                initial={{ opacity: 0, y: 40, x: "-50%" }}
+                                initial={{ opacity: 0, y: 50, x: "-50%" }}
                                 animate={{ opacity: 1, y: 0, x: "-50%" }}
-                                exit={{ opacity: 0, y: 40, x: "-50%" }}
-                                transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                                className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-8 liquid-glass-frosted rounded-xl px-6 py-4.5"
+                                exit={{ opacity: 0, y: 50, x: "-50%" }}
+                                transition={{ type: "spring", stiffness: 300, damping: 28 }}
+                                className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 flex items-center gap-10 bg-zinc-950/80 border border-white/10 backdrop-blur-2xl rounded-2xl px-8 py-5 shadow-[0_20px_50px_rgba(0,0,0,0.7)]"
                             >
-                                <div className="flex items-center gap-3 pl-1">
-                                    <span className="relative flex h-2 w-2">
+                                <div className="flex items-center gap-3.5 pl-1.5">
+                                    <span className="relative flex h-2.5 w-2.5">
                                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ff6e3a] opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-[#ff6e3a] shadow-[0_0_6px_#ff6e3a]"></span>
+                                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#ff6e3a] shadow-[0_0_8px_#ff6e3a]"></span>
                                     </span>
-                                    <span className="text-[10px] font-mono text-zinc-550 uppercase tracking-widest font-bold">Cambios locales detectados</span>
+                                    <span className="text-[10px] font-black font-mono text-zinc-400 uppercase tracking-widest">Cambios sin guardar detectados</span>
                                 </div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-4">
                                     <button
                                         type="button"
                                         onClick={() => reset()}
-                                        className="text-xs font-bold text-zinc-400 hover:text-white transition-colors mr-2"
+                                        className="text-xs font-bold text-zinc-400 hover:text-white transition-all mr-2 px-3 py-1.5 hover:bg-white/5 rounded-lg active:scale-95"
                                     >
                                         Descartar
                                     </button>
@@ -251,9 +260,9 @@ function SettingsPage() {
                                         type="submit"
                                         form="settings-form"
                                         disabled={isSaving}
-                                        className="bg-[#ff6e3a] hover:bg-[#ff7d4b] text-zinc-950 px-6 py-3 rounded-xl text-xs font-bold transition-all duration-300 disabled:opacity-50 font-black uppercase tracking-wider active:scale-95 shadow-lg shadow-orange-500/10"
+                                        className="bg-[#ff6e3a] hover:bg-[#ff7d4b] text-zinc-950 px-6 py-3.5 rounded-xl text-xs font-black transition-all duration-300 disabled:opacity-50 uppercase tracking-widest active:scale-95 shadow-xl shadow-orange-500/20"
                                     >
-                                        {isSaving ? "Guardando..." : "Guardar Configuración"}
+                                        {isSaving ? "Guardando..." : "Guardar Cambios"}
                                     </button>
                                 </div>
                             </motion.div>

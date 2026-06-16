@@ -71,48 +71,48 @@ export function PipelineStageCard({ stage, isActive, isDone }: {
             animate={isActive ? {
                 boxShadow: [
                     "0 0 0 rgba(255, 110, 58, 0)",
-                    "0 0 30px rgba(255, 110, 58, 0.15)",
+                    "0 0 30px rgba(255, 110, 58, 0.2)",
                     "0 0 0 rgba(255, 110, 58, 0)"
                 ],
             } : {}}
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
             className={cn(
-                "relative p-5 rounded-2xl border transition-all duration-500 overflow-hidden group",
+                "relative p-3.5 sm:p-4 rounded-2xl border transition-all duration-500 overflow-hidden group backdrop-blur-xl",
                 isActive
-                    ? "border-[#ff6e3a]/45 bg-[#ff6e3a]/[0.03] shadow-[0_0_30px_rgba(255,110,58,0.05)]"
+                    ? "border-[#ff6e3a]/50 bg-[#ff6e3a]/[0.03] shadow-[0_0_30px_rgba(255,110,58,0.08)]"
                     : isDone
-                        ? "border-emerald-500/20 bg-emerald-500/[0.01]"
-                        : "border-white/5 bg-white/[0.01] hover:border-white/10 hover:bg-white/[0.02]"
+                        ? "border-emerald-500/25 bg-emerald-500/[0.02]"
+                        : "border-white/5 bg-zinc-950/30 hover:border-white/10 hover:bg-white/[0.015]"
             )}
         >
             {/* Ambient Background Gradient */}
             <div 
                 className={cn(
-                    "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-1000",
-                    "bg-[radial-gradient(circle_at_50%_-20%,rgba(255,255,255,0.02),transparent_70%)]"
+                    "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none",
+                    "bg-[radial-gradient(circle_at_50%_-20%,rgba(255,255,255,0.03),transparent_70%)]"
                 )}
             />
 
-            <div className="relative space-y-4">
+            <div className="relative space-y-3.5">
                 <div className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center border transition-all duration-500",
+                    "w-9 h-9 rounded-xl flex items-center justify-center border transition-all duration-500 shadow-inner",
                     isActive
                         ? "text-[#ff6e3a] border-[#ff6e3a]/30 bg-[#ff6e3a]/10 shadow-[0_0_15px_rgba(255,110,58,0.25)]"
                         : isDone
-                            ? "text-[#34d399] border-emerald-500/20 bg-emerald-500/5 shadow-[0_0_10px_rgba(52,211,153,0.1)]"
-                            : "text-zinc-500 border-white/5 bg-white/[0.02] group-hover:border-zinc-700"
+                            ? "text-[#34d399] border-emerald-500/20 bg-emerald-500/5 shadow-[0_0_10px_rgba(52,211,153,0.15)]"
+                            : "text-zinc-500 border-white/5 bg-white/[0.01] group-hover:border-zinc-700"
                 )}>
-                    {isDone && !isActive ? <LucideCheck size={18} strokeWidth={3} /> : stage.icon}
+                    {isDone && !isActive ? <LucideCheck size={16} strokeWidth={3} /> : React.cloneElement(stage.icon as React.ReactElement, { size: 16 })}
                 </div>
 
-                <div>
+                <div className="min-w-0">
                     <p className={cn(
-                        "text-[9px] font-black uppercase tracking-[0.25em] transition-colors duration-500",
+                        "text-[9px] font-black uppercase tracking-[0.25em] transition-colors duration-500 font-mono",
                         isActive ? "text-[#ff6e3a]" : isDone ? "text-emerald-500/60" : "text-zinc-500"
                     )}>
                         {stage.shortLabel}
                     </p>
-                    <p className="text-xs font-bold text-white mt-0.5 tracking-tight leading-tight">{stage.label}</p>
+                    <p className="text-[11px] font-bold text-white mt-1 tracking-tight leading-snug break-words">{stage.label}</p>
                 </div>
 
                 {isActive && (

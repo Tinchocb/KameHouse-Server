@@ -27,6 +27,7 @@ export function BackgroundMusicPlayer() {
     
     const audioRef = React.useRef<HTMLAudioElement | null>(null)
     const [isPlaying, setIsPlaying] = React.useState(false)
+    const [isAnyVideoPlaying, setIsAnyVideoPlaying] = React.useState(false)
     const [currentTrackIndex, setCurrentTrackIndex] = React.useState(() => {
         // Start with a random track
         return Math.floor(Math.random() * PLAYLIST.length)
@@ -83,7 +84,7 @@ export function BackgroundMusicPlayer() {
         let playTimeout: NodeJS.Timeout | null = null
 
         // If enabled and no video is playing, start background music with a debounce to prevent pops during transitions
-        if (bgMusicEnabled && !isVideoActive) {
+        if (bgMusicEnabled && !isVideoActive && !isAnyVideoPlaying) {
             playTimeout = setTimeout(() => {
                 playAudio()
             }, 1000)
@@ -97,23 +98,35 @@ export function BackgroundMusicPlayer() {
             audio.removeEventListener("ended", handleEnded)
             audio.pause()
         }
-    }, [bgMusicEnabled, isVideoActive, currentTrackIndex])
+    }, [bgMusicEnabled, isVideoActive, isAnyVideoPlaying, currentTrackIndex])
 
     // Listen to any other video/audio playing on the page to automatically pause background music
     React.useEffect(() => {
-        const handleGlobalPlay = (e: Event) => {
-            const target = e.target as HTMLMediaElement
-            if (target && target !== audioRef.current) {
-                if (audioRef.current && !audioRef.current.paused) {
-                    audioRef.current.pause()
-                    setIsPlaying(false)
+        const updateMediaState = () => {
+            const mediaElements = document.querySelectorAll("video, audio")
+            let playing = false
+            mediaElements.forEach((el) => {
+                const media = el as HTMLMediaElement
+                if (media !== audioRef.current && !media.paused && !media.ended) {
+                    playing = true
                 }
-            }
+            })
+            setIsAnyVideoPlaying(playing)
         }
 
-        document.addEventListener("play", handleGlobalPlay, true)
+        document.addEventListener("play", updateMediaState, true)
+        document.addEventListener("playing", updateMediaState, true)
+        document.addEventListener("pause", updateMediaState, true)
+        document.addEventListener("ended", updateMediaState, true)
+
+        // Initial check
+        updateMediaState()
+
         return () => {
-            document.removeEventListener("play", handleGlobalPlay, true)
+            document.removeEventListener("play", updateMediaState, true)
+            document.removeEventListener("playing", updateMediaState, true)
+            document.removeEventListener("pause", updateMediaState, true)
+            document.removeEventListener("ended", updateMediaState, true)
         }
     }, [])
 

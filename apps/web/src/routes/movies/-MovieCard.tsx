@@ -73,27 +73,24 @@ export const MovieCard = memo(function MovieCard({
                 onHoverCard(null)
             }}
         >
-            {/* Poster Wrap (Flat style with glowing hover border and analog glares) */}
+            {/* Poster Wrap (Flat style) */}
             <div 
                 className={cn(
-                    "relative aspect-[2/3] w-full overflow-hidden rounded-xl bg-zinc-900 border transition-all duration-500 ease-out transform-gpu will-change-transform",
-                    isHovered ? "-translate-y-1.5" : "translate-y-0",
+                    "relative aspect-[2/3] w-full overflow-hidden rounded-xl bg-zinc-900 border transition-all duration-500 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] transform-gpu will-change-transform",
+                    "group-hover:scale-[1.03] group-hover:-translate-y-1",
                     !hasLocalFiles && "grayscale opacity-45 group-hover:grayscale-0 group-hover:opacity-100",
                 )}
                 style={{
                     borderColor: isHovered ? eraConfig.color : "rgba(255,255,255,0.06)",
                     boxShadow: isHovered 
-                        ? `0 25px 50px -12px rgba(0,0,0,0.85), 0 0 20px ${eraConfig.glow}` 
+                        ? `0 20px 35px -10px rgba(0,0,0,0.85), 0 0 25px ${eraConfig.glow}` 
                         : "0 10px 25px -10px rgba(0,0,0,0.6)",
                 }}
             >
                 <DeferredImage
                     src={posterUrl}
                     alt={title}
-                    className="w-full h-full object-cover transform-gpu group-hover:scale-[1.05]"
-                    style={{
-                        transition: "transform 700ms cubic-bezier(0.16, 1, 0.3, 1)",
-                    }}
+                    className="w-full h-full object-cover transform-gpu transition-transform duration-700 ease-out group-hover:scale-105"
                     showSkeleton={false}
                     fallback={
                         <div
@@ -109,21 +106,16 @@ export const MovieCard = memo(function MovieCard({
  
                 {/* Wear and analog glare textures */}
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.08),transparent)] z-20 pointer-events-none" />
-                <div className="absolute inset-0 bg-gradient-to-tr from-black/80 via-transparent to-white/[0.05] z-10 pointer-events-none" />
- 
-                {/* Diagonal Glossy Glare Sweep (Runs on hover) */}
-                <div 
-                    className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out bg-gradient-to-r from-transparent via-white/10 to-transparent z-30 pointer-events-none"
-                    style={{ transform: isHovered ? 'skewX(-25deg) translateX(200%)' : 'skewX(-25deg) translateX(-100%)', transition: 'transform 850ms cubic-bezier(0.16, 1, 0.3, 1)' }}
-                />
 
-                {/* Dark overlays */}
-                <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/80 to-transparent" />
-                <div className="absolute inset-0 bg-black/10 group-hover:bg-black/45 transition-colors duration-500" />
-                <div 
-                    className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/95 via-black/30 to-transparent opacity-0 group-hover:opacity-100"
-                    style={{ transition: "opacity 400ms ease-out" }}
-                />
+                {/* Glass sheen sweep */}
+                <div className="absolute inset-0 z-20 pointer-events-none overflow-hidden rounded-[inherit]">
+                    <div 
+                        className={cn(
+                            "w-[150%] h-[150%] bg-gradient-to-tr from-transparent via-white/10 to-transparent -rotate-12 absolute -top-[25%] -left-[100%] transition-transform duration-1000 ease-out",
+                            isHovered && "translate-x-[150%] translate-y-[10%]"
+                        )}
+                    />
+                </div>
  
                 {/* Action buttons (neon play / add queue) */}
                 <div 

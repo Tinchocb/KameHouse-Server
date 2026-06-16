@@ -1,4 +1,4 @@
-import { Play, Plus, Info, Star, Film, Check, ListPlus, Settings2 } from "lucide-react"
+import { Play, Plus, Info, Star, Film, Check, ListPlus } from "lucide-react"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { getLowResImage, getHighResImage, getMediumResImage } from "@/lib/helpers/images"
 import * as React from "react"
@@ -9,7 +9,6 @@ import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
 import { cn } from "@/components/ui/core/styling"
 import { toast } from "sonner"
 import { useAppStore } from "@/lib/store"
-import { ManualMatchModal } from "@/components/shared/manual-match-modal"
 
 interface SeriesHeroProps {
   entry: any
@@ -27,7 +26,6 @@ export function SeriesHero({
   const containerRef = useRef<HTMLElement>(null)
   const backdropRef = useRef<HTMLDivElement>(null)
   const setBackdropUrl = useIntelligenceStore(s => s.setBackdropUrl)
-  const [isMatchModalOpen, setIsMatchModalOpen] = React.useState(false)
 
   const media = entry?.media
   const title = media?.titleSpanish || media?.titleRomaji || media?.titleEnglish || "Título Desconocido"
@@ -38,6 +36,8 @@ export function SeriesHero({
   const ageRating = media?.isNsfw ? "18+" : "PG-13"
   const synopsis = media?.description || ""
   const directoryPath = entry?.directoryPath
+  const hasBannerImage = !!media?.bannerImage
+  const backdropSrc = media?.bannerImage ?? media?.posterImage ?? null
 
   // Sync current backdrop with global DynamicBackdrop blur background
   React.useEffect(() => {
@@ -158,7 +158,7 @@ export function SeriesHero({
   const accentColor = stringToColor(title)
 
   return (
-    <section ref={containerRef} className="relative w-full min-h-[75vh] md:min-h-[85vh] flex flex-col justify-end overflow-hidden bg-background select-none pb-8">
+    <section ref={containerRef} className="relative w-full h-[98vh] max-h-[550px] flex flex-col justify-center overflow-hidden bg-transparent select-none">
       {/* Cinematic Grain Overlay */}
       <div
         className="absolute inset-0 opacity-[0.025] pointer-events-none mix-blend-overlay z-20"
@@ -166,50 +166,79 @@ export function SeriesHero({
       />
 
       {/* Ambient Blur Background */}
-      <div className="absolute inset-0 overflow-hidden bg-background z-0">
-        {posterUrl ? (
+      <div className="absolute inset-0 overflow-hidden bg-transparent z-0">
+        {backdropSrc && (
           <div
-            className="absolute left-1/2 top-0 -translate-x-1/2 w-full h-full opacity-35"
+            className="absolute inset-0 opacity-100"
             style={{
-              backgroundImage: `url(${getLowResImage(posterUrl)})`,
+              backgroundImage: `url(${getLowResImage(backdropSrc)})`,
               backgroundSize: "cover",
               backgroundPosition: "center 20%",
-              filter: "blur(130px) saturate(160%) brightness(0.2)",
-            }}
-          />
-        ) : (
-          <div
-            className="absolute inset-0 opacity-30 blur-[150px]"
-            style={{
-              background: `radial-gradient(circle at 50% 30%, ${accentColor}, transparent 80%)`
+              filter: "blur(70px) brightness(0.5) saturate(170%)",
             }}
           />
         )}
       </div>
 
       {/* High Res Crisp Parallax Backdrop with Ken Burns */}
-      {backdropUrl && (
-        <div
-          ref={backdropRef}
-          className="absolute inset-0 overflow-hidden cursor-pointer z-0 will-change-transform group/backdrop"
-          onClick={onPlay}
-        >
-          <DeferredImage
-            src={backdropUrl}
-            alt={title}
-            priority={true}
-            className="w-full h-full object-cover object-center opacity-65 grayscale-[0.01] saturate-[115%] transition-all duration-[20s] ease-out scale-[1.01] group-hover/backdrop:scale-[1.05] group-hover/backdrop:opacity-75 animate-ken-burns"
-          />
-        </div>
-      )}
+      <div className="absolute inset-0 z-0">
+        {backdropUrl && (
+          hasBannerImage ? (
+            <div
+              ref={backdropRef}
+              className="absolute right-0 top-0 h-full w-full md:w-[80%] lg:w-[75%] overflow-hidden cursor-pointer z-0 will-change-transform group/backdrop"
+              onClick={onPlay}
+            >
+              <DeferredImage
+                src={backdropUrl}
+                alt={title}
+                priority={true}
+                className="w-full h-full object-cover object-[center_20%] opacity-90 transition-all duration-[20s] ease-out group-hover/backdrop:scale-[1.03] animate-ken-burns"
+                style={{
+                  WebkitMaskImage: "linear-gradient(to right, transparent 0%, rgba(0,0,0,0.15) 12%, black 40%)",
+                  maskImage: "linear-gradient(to right, transparent 0%, rgba(0,0,0,0.15) 12%, black 40%)",
+                }}
+              />
+            </div>
+          ) : (
+            <div
+              ref={backdropRef}
+              className="absolute right-0 top-0 h-full w-auto overflow-hidden cursor-pointer z-0 will-change-transform group/backdrop"
+              onClick={onPlay}
+            >
+              <DeferredImage
+                src={backdropUrl}
+                alt={title}
+                priority={true}
+                className="h-full w-auto object-contain object-right-top opacity-[0.75] transition-all duration-[20s] ease-out group-hover/backdrop:scale-[1.03] animate-ken-burns"
+              />
+            </div>
+          )
+        )}
+      </div>
 
-      {/* Deep Cinematic Gradient Vignette Masking */}
-      <div className="absolute inset-x-0 bottom-0 h-96 bg-gradient-to-t from-background via-background/85 to-transparent opacity-100 z-10 pointer-events-none" />
-      <div className="absolute inset-0 bg-gradient-to-r from-background via-background/60 to-transparent opacity-100 z-10 pointer-events-none" />
-      <div className="absolute inset-0 bg-gradient-to-b from-background/35 via-transparent to-transparent opacity-100 z-10 pointer-events-none" />
+      {/* Gradient izquierdo */}
+      <div
+        className="absolute inset-0 z-10 pointer-events-none"
+        style={{
+          background: hasBannerImage
+            ? "linear-gradient(to right, rgba(7,7,10,0.85) 0%, rgba(7,7,10,0.7) 25%, rgba(7,7,10,0.2) 60%, transparent 90%)"
+            : "linear-gradient(to right, rgba(7,7,10,0.85) 0%, rgba(7,7,10,0.7) 30%, rgba(7,7,10,0.15) 70%, transparent 95%)",
+        }}
+      />
+      {/* Gradient inferior */}
+      <div
+        className="absolute inset-x-0 bottom-0 h-32 z-10 pointer-events-none"
+        style={{ background: "linear-gradient(to top, transparent 0%, rgba(7,7,10,0.35) 50%, transparent 100%)" }}
+      />
+      {/* Vignette superior */}
+      <div
+        className="absolute inset-x-0 top-0 h-16 z-10 pointer-events-none"
+        style={{ background: "linear-gradient(to bottom, rgba(7,7,10,0.4) 0%, transparent 100%)" }}
+      />
 
       {/* Content Container */}
-      <div className="relative z-20 w-full max-w-[1800px] mx-auto px-6 sm:px-12 pb-10 pt-48 flex flex-col lg:flex-row lg:items-end justify-between gap-12">
+      <div className="relative z-20 w-full max-w-[1800px] mx-auto px-6 md:pl-[120px] md:pr-12 lg:pl-[120px] lg:pr-12 flex flex-col pointer-events-none">
         <div className="max-w-3xl space-y-7">
 
           {/* Metadata Row */}
@@ -329,44 +358,10 @@ export function SeriesHero({
                 <ListPlus className="w-5 h-5 transition-transform group-hover/queue:-translate-y-0.5" />
               </button>
             )}
-
-            {/* Fix Match Button */}
-            {directoryPath && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setIsMatchModalOpen(true)
-                }}
-                className="group/match flex items-center justify-center p-4.5 rounded-2xl liquid-glass-frosted liquid-glass-frosted-interactive text-white/70 hover:text-[#ff6b00] hover:!bg-[#ff6b00]/10 hover:!border-[#ff6b00]/30 transition-all duration-300 shadow-lg"
-                title="Corregir Vinculación"
-              >
-                <Settings2 className="w-5 h-5 transition-transform duration-700 group-hover/match:rotate-90" />
-              </button>
-            )}
           </div>
         </div>
 
-        {/* Floating Poster on Right (Desktop only with 3D hover effects) */}
-        {posterUrl && (
-          <div className="series-hero-animate hidden lg:block w-[265px] aspect-[2/3] flex-shrink-0 rounded-2xl overflow-hidden border border-white/15 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95)] transition-all duration-500 hover:scale-[1.03] hover:rotate-1 hover:border-brand-orange/40 hover:shadow-[0_0_50px_rgba(255,107,0,0.3)] relative group/poster perspective-1000">
-            <DeferredImage
-              src={getHighResImage(posterUrl)}
-              alt={title}
-              priority={true}
-              className="w-full h-full object-cover transition-transform duration-700 group-hover/poster:scale-105"
-            />
-            {/* Glass reflection sheen */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-white/5 via-white/0 to-white/10 pointer-events-none z-10" />
-          </div>
-        )}
       </div>
-
-      <ManualMatchModal
-        isOpen={isMatchModalOpen}
-        onClose={() => setIsMatchModalOpen(false)}
-        directoryPath={directoryPath}
-        currentMediaId={entry?.mediaId}
-      />
     </section>
   )
 }

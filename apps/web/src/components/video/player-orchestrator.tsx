@@ -126,6 +126,9 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
             episodes={props.episodes}
             onSelectEpisode={props.onSelectEpisode}
             mediaFormat={props.mediaFormat}
+            nextEpisodeTitle={props.nextEpisodeTitle}
+            nextEpisodeNumber={props.nextEpisodeNumber}
+            nextEpisodeImage={props.nextEpisodeImage}
         />
     )
 }

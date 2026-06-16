@@ -2,11 +2,14 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
@@ -82,25 +85,11 @@ func (r *UnifiedResolver) ResolveUnifiedMedia(ctx context.Context, mediaID strin
 			libMedia, err = db.GetLibraryMediaByTmdbIdAndType(r.db, tmdbID, "SHOW")
 		}
 		if err == nil && libMedia != nil {
-			switch {
-			case libMedia.TitleEnglish != "":
-				title = libMedia.TitleEnglish
-			case libMedia.TitleRomaji != "":
-				title = libMedia.TitleRomaji
-			case libMedia.TitleOriginal != "":
-				title = libMedia.TitleOriginal
-			}
+			title = resolveTitle(libMedia, title)
 		}
 	} else {
 		if libMedia, err := db.GetLibraryMediaByID(r.db, uint(id)); err == nil && libMedia != nil {
-			switch {
-			case libMedia.TitleEnglish != "":
-				title = libMedia.TitleEnglish
-			case libMedia.TitleRomaji != "":
-				title = libMedia.TitleRomaji
-			case libMedia.TitleOriginal != "":
-				title = libMedia.TitleOriginal
-			}
+			title = resolveTitle(libMedia, title)
 		}
 	}
 
@@ -115,14 +104,21 @@ func (r *UnifiedResolver) ResolveUnifiedMedia(ctx context.Context, mediaID strin
 // ── Local Sources ────────────────────────────────────────────────────────────
 
 func (r *UnifiedResolver) getLocalSources(mediaID int, episode int) []MediaSource {
-	lfs, _, err := db.GetLocalFiles(r.db)
+	start := time.Now()
+	lfs, err := db.GetLocalFilesByMediaID(r.db, mediaID)
+	// #region agent log
+	debugLogResolver("resolver.go:getLocalSources", "scoped query", map[string]any{
+		"mediaID": mediaID, "episode": episode, "fileCount": len(lfs),
+		"durationMs": time.Since(start).Milliseconds(), "hypothesisId": "A",
+	})
+	// #endregion
 	if err != nil {
 		return nil
 	}
 
 	var sources []MediaSource
 	for _, lf := range lfs {
-		if lf == nil || lf.MediaID != mediaID || lf.Metadata == nil || lf.Metadata.Episode != episode {
+		if lf == nil || lf.Metadata == nil || lf.Metadata.Episode != episode {
 			continue
 		}
 		quality := inferQuality(lf.Path)
@@ -180,4 +176,40 @@ func inferQuality(path string) string {
 		return "480p"
 	}
 	return "unknown"
+}
+
+func resolveTitle(libMedia *models.LibraryMedia, defaultTitle string) string {
+	if libMedia == nil {
+		return defaultTitle
+	}
+	switch {
+	case libMedia.TitleEnglish != "":
+		return libMedia.TitleEnglish
+	case libMedia.TitleRomaji != "":
+		return libMedia.TitleRomaji
+	case libMedia.TitleOriginal != "":
+		return libMedia.TitleOriginal
+	default:
+		return defaultTitle
+	}
+}
+
+func debugLogResolver(location, message string, data map[string]any) {
+	payload := map[string]any{
+		"sessionId": "549c87", "location": location, "message": message,
+		"data": data, "timestamp": time.Now().UnixMilli(), "runId": "perf-opt",
+	}
+	if hypothesisId, ok := data["hypothesisId"]; ok {
+		payload["hypothesisId"] = hypothesisId
+	}
+	line, err := json.Marshal(payload)
+	if err != nil {
+		return
+	}
+	f, err := os.OpenFile("debug-549c87.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	_, _ = f.Write(append(line, '\n'))
 }

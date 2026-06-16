@@ -14,7 +14,7 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/imroc/req/v3"
 	"github.com/labstack/echo/v4"
-	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 )
 
 var videoProxyClient2 = req.C().
@@ -36,7 +36,7 @@ func (h *Handler) VideoProxy(c echo.Context) (err error) {
 	var headerMap map[string]string
 	if headers != "" {
 		if err := json.Unmarshal([]byte(headers), &headerMap); err != nil {
-			log.Error().Err(err).Msg("proxy: Error unmarshalling headers")
+			h.App.Logger.Error().Err(err).Msg("proxy: Error unmarshalling headers")
 			return echo.NewHTTPError(http.StatusInternalServerError)
 		}
 		for key, value := range headerMap {
@@ -53,7 +53,7 @@ func (h *Handler) VideoProxy(c echo.Context) (err error) {
 	resp, err := r.Get(url)
 
 	if err != nil {
-		log.Error().Err(err).Msg("proxy: Error sending request")
+		h.App.Logger.Error().Err(err).Msg("proxy: Error sending request")
 		return echo.NewHTTPError(http.StatusInternalServerError)
 	}
 	defer resp.Body.Close()
@@ -90,11 +90,11 @@ func (h *Handler) VideoProxy(c echo.Context) (err error) {
 	lr := io.LimitReader(resp.Body, maxPlaylistSize+1)
 	bodyBytes, readErr := io.ReadAll(lr)
 	if readErr != nil {
-		log.Error().Err(readErr).Str("url", url).Msg("proxy: Error reading HLS response body")
+		h.App.Logger.Error().Err(readErr).Str("url", url).Msg("proxy: Error reading HLS response body")
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to read HLS playlist")
 	}
 	if len(bodyBytes) > maxPlaylistSize {
-		log.Error().Str("url", url).Msg("proxy: HLS playlist exceeds maximum allowed size (DoS protect)")
+		h.App.Logger.Error().Str("url", url).Msg("proxy: HLS playlist exceeds maximum allowed size (DoS protect)")
 		return echo.NewHTTPError(http.StatusRequestEntityTooLarge, "HLS playlist too large")
 	}
 
@@ -103,7 +103,7 @@ func (h *Handler) VideoProxy(c echo.Context) (err error) {
 	if decodeErr != nil {
 		// Playlist might be valid but not decodable by the library, or simply corrupted.
 		// Option 1: Proxy as-is (might be preferred if decoding fails unexpectedly)
-		log.Warn().Err(decodeErr).Str("url", url).Msg("proxy: Failed to decode M3U8 playlist, proxying raw content")
+		h.App.Logger.Warn().Err(decodeErr).Str("url", url).Msg("proxy: Failed to decode M3U8 playlist, proxying raw content")
 		c.Response().Header().Set(echo.HeaderContentType, resp.Header.Get("Content-Type")) // Use original Content-Type
 		c.Response().Header().Set(echo.HeaderContentLength, strconv.Itoa(len(bodyBytes)))
 		c.Response().WriteHeader(resp.StatusCode)
@@ -122,19 +122,19 @@ func (h *Handler) VideoProxy(c echo.Context) (err error) {
 		for _, segment := range mediaPl.Segments {
 			if segment != nil {
 				// Rewrite Segment URI
-				if rewriteURI(&segment.URI, baseURL, headerMap, authToken) {
+				if rewriteURI(&segment.URI, baseURL, headerMap, authToken, h.App.Logger) {
 					needsRewrite = true
 				}
 
 				// Rewrite encryption key URIs
 				for i := range segment.Keys {
-					if rewriteURI(&segment.Keys[i].URI, baseURL, headerMap, authToken) {
+					if rewriteURI(&segment.Keys[i].URI, baseURL, headerMap, authToken, h.App.Logger) {
 						needsRewrite = true
 					}
 				}
 
 				if segment.Map != nil {
-					if rewriteURI(&segment.Map.URI, baseURL, headerMap, authToken) {
+					if rewriteURI(&segment.Map.URI, baseURL, headerMap, authToken, h.App.Logger) {
 						needsRewrite = true
 					}
 				}
@@ -144,27 +144,27 @@ func (h *Handler) VideoProxy(c echo.Context) (err error) {
 		for _, segment := range mediaPl.PartialSegments {
 			if segment != nil {
 				// Rewrite Segment URI
-				if rewriteURI(&segment.URI, baseURL, headerMap, authToken) {
+				if rewriteURI(&segment.URI, baseURL, headerMap, authToken, h.App.Logger) {
 					needsRewrite = true
 				}
 			}
 		}
 
 		if mediaPl.PreloadHints != nil {
-			if rewriteURI(&mediaPl.PreloadHints.URI, baseURL, headerMap, authToken) {
+			if rewriteURI(&mediaPl.PreloadHints.URI, baseURL, headerMap, authToken, h.App.Logger) {
 				needsRewrite = true
 			}
 		}
 
 		if mediaPl.Map != nil {
-			if rewriteURI(&mediaPl.Map.URI, baseURL, headerMap, authToken) {
+			if rewriteURI(&mediaPl.Map.URI, baseURL, headerMap, authToken, h.App.Logger) {
 				needsRewrite = true
 			}
 		}
 
 		// Rewrite playlist-level encryption key URIs
 		for i := range mediaPl.Keys {
-			if rewriteURI(&mediaPl.Keys[i].URI, baseURL, headerMap, authToken) {
+			if rewriteURI(&mediaPl.Keys[i].URI, baseURL, headerMap, authToken, h.App.Logger) {
 				needsRewrite = true
 			}
 		}
@@ -179,13 +179,13 @@ func (h *Handler) VideoProxy(c echo.Context) (err error) {
 
 		for _, variant := range masterPl.Variants {
 			if variant != nil {
-				if rewriteURI(&variant.URI, baseURL, headerMap, authToken) {
+				if rewriteURI(&variant.URI, baseURL, headerMap, authToken, h.App.Logger) {
 					needsRewrite = true
 				}
 
 				// Handle alternative media groups (audio, subtitles, etc.)
 				for _, alternative := range variant.Alternatives {
-					if alternative != nil && rewriteURI(&alternative.URI, baseURL, headerMap, authToken) {
+					if alternative != nil && rewriteURI(&alternative.URI, baseURL, headerMap, authToken, h.App.Logger) {
 						needsRewrite = true
 					}
 				}
@@ -194,7 +194,7 @@ func (h *Handler) VideoProxy(c echo.Context) (err error) {
 
 		// Rewrite session key URIs
 		for i := range masterPl.SessionKeys {
-			if rewriteURI(&masterPl.SessionKeys[i].URI, baseURL, headerMap, authToken) {
+			if rewriteURI(&masterPl.SessionKeys[i].URI, baseURL, headerMap, authToken, h.App.Logger) {
 				needsRewrite = true
 			}
 		}
@@ -215,14 +215,14 @@ func (h *Handler) VideoProxy(c echo.Context) (err error) {
 	if resp.Header.Get("Cache-Control") == "" {
 		c.Response().Header().Set("Cache-Control", "no-cache")
 	}
-	log.Debug().Bool("rewritten", needsRewrite).Str("url", url).Msg("proxy: Sending modified HLS playlist")
+	h.App.Logger.Debug().Bool("rewritten", needsRewrite).Str("url", url).Msg("proxy: Sending modified HLS playlist")
 	c.Response().WriteHeader(resp.StatusCode)
 
 	return c.Blob(http.StatusOK, c.Response().Header().Get("Content-Type"), modifiedPlaylistBytes)
 }
 
 // rewriteURI rewrites a URI pointer if needed, returns true if modified
-func rewriteURI(uri *string, baseURL *url2.URL, headerMap map[string]string, authToken string) bool {
+func rewriteURI(uri *string, baseURL *url2.URL, headerMap map[string]string, authToken string, logger *zerolog.Logger) bool {
 	if *uri == "" || isAlreadyProxied(*uri) {
 		return false
 	}
@@ -232,7 +232,7 @@ func rewriteURI(uri *string, baseURL *url2.URL, headerMap map[string]string, aut
 		*uri = resolveURL(baseURL, *uri)
 	}
 
-	*uri = toProxyURL(*uri, headerMap, authToken)
+	*uri = toProxyURL(*uri, headerMap, authToken, logger)
 	return true
 }
 
@@ -247,12 +247,12 @@ func resolveURL(base *url2.URL, relativeURI string) string {
 	return base.ResolveReference(relativeURL).String()
 }
 
-func toProxyURL(targetMediaURL string, headerMap map[string]string, authToken string) string {
+func toProxyURL(targetMediaURL string, headerMap map[string]string, authToken string, logger *zerolog.Logger) string {
 	proxyURL := "/api/v1/proxy?url=" + url2.QueryEscape(targetMediaURL)
 	if len(headerMap) > 0 {
 		headersStrB, err := json.Marshal(headerMap)
 		if err != nil {
-			log.Warn().Err(err).Msg("proxy: failed to marshal headers")
+			logger.Warn().Err(err).Msg("proxy: failed to marshal headers")
 		} else if len(headersStrB) > 2 { // Check > 2 for "{}" empty map
 			proxyURL += "&headers=" + url2.QueryEscape(string(headersStrB))
 		}

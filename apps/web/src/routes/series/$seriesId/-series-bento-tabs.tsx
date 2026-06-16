@@ -1,17 +1,9 @@
 import React from "react"
-import { Models_LibraryMedia, Anime_LocalFile } from "@/api/generated/types"
-import { MonitorPlay, Database } from "lucide-react"
+import { Models_LibraryMedia } from "@/api/generated/types"
 import { useNavigate } from "@tanstack/react-router"
 import { DeferredImage } from "@/components/shared/deferred-image"
 
-// Helper to format file size beautifully
-const formatFileSize = (bytes: number) => {
-    const mb = bytes / (1024 * 1024)
-    if (mb >= 1024) {
-        return `${(mb / 1024).toFixed(2)} GB`
-    }
-    return `${mb.toFixed(0)} MB`
-}
+
 
 // ─── RELATIONS TAB ─────────────────────────────────────────────────────────────
 
@@ -103,88 +95,4 @@ export const CharactersTab = React.memo(function CharactersTab({ characters, onS
     )
 })
 
-// ─── TECHNICAL METADATA TAB ────────────────────────────────────────────────────
 
-export const TechnicalMetadataTab = React.memo(function TechnicalMetadataTab({ localFiles }: { localFiles: Anime_LocalFile[] }) {
-    if (!localFiles || localFiles.length === 0) {
-        return (
-            <div className="py-24 text-center">
-                <p className="text-zinc-600 font-bebas text-4xl tracking-widest">SIN DATOS TÉCNICOS</p>
-            </div>
-        )
-    }
-
-    const file = localFiles[0] // Preview the first file
-    const tech = file.technicalInfo
-
-    if (!tech) {
-         return (
-            <div className="py-24 text-center">
-                <p className="text-zinc-600 font-bebas text-4xl tracking-widest">ESCANEO PENDIENTE</p>
-                <p className="text-zinc-700 text-xs font-black uppercase tracking-[0.3em] mt-2">LOS DATOS TÉCNICOS NO HAN SIDO EXTRAÍDOS AÚN</p>
-            </div>
-        )
-    }
-
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Video Specs - Capsule Corp Terminal Style */}
-            <div className="liquid-glass-frosted liquid-glass-frosted-interactive rounded-2xl p-6 flex flex-col gap-4">
-                <div className="flex items-center gap-3 border-b border-white/5 pb-4">
-                    <MonitorPlay className="w-5 h-5 text-brand-orange animate-pulse" />
-                    <h3 className="text-lg font-bebas tracking-[0.15em] text-white uppercase">VIDEO SPECS</h3>
-                </div>
-                <div className="grid grid-cols-2 gap-4 font-mono">
-                    <div className="flex flex-col gap-1 border border-white/5 bg-zinc-950/20 p-3 rounded-xl hover:border-white/10 transition-colors">
-                        <span className="text-[8px] font-black text-zinc-500 tracking-[0.15em] uppercase">Resolución</span>
-                        <span className="text-xs font-bold text-white tracking-widest uppercase">{tech.videoStream?.width} <span className="text-zinc-600 font-normal">x</span> {tech.videoStream?.height}</span>
-                    </div>
-                    <div className="flex flex-col gap-1 border border-white/5 bg-zinc-950/20 p-3 rounded-xl hover:border-white/10 transition-colors">
-                        <span className="text-[8px] font-black text-zinc-500 tracking-[0.15em] uppercase">Códec</span>
-                        <span className="text-xs font-bold text-brand-orange tracking-widest uppercase">{tech.videoStream?.codec || "N/A"}</span>
-                    </div>
-                    <div className="flex flex-col gap-1 border border-white/5 bg-zinc-950/20 p-3 rounded-xl hover:border-white/10 transition-colors">
-                        <span className="text-[8px] font-black text-zinc-500 tracking-[0.15em] uppercase">Color Space</span>
-                        <span className="text-xs font-bold text-white tracking-widest uppercase">{tech.videoStream?.colorSpace || "N/A"}</span>
-                    </div>
-                    <div className="flex flex-col gap-1 border border-white/5 bg-zinc-950/20 p-3 rounded-xl hover:border-white/10 transition-colors">
-                        <span className="text-[8px] font-black text-zinc-500 tracking-[0.15em] uppercase">Frame Rate</span>
-                        <span className="text-xs font-bold text-white tracking-widest uppercase">{tech.videoStream?.frameRate || "N/A"} FPS</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Audio Specs - Capsule Corp Terminal Style */}
-            <div className="liquid-glass-frosted liquid-glass-frosted-interactive rounded-2xl p-6 flex flex-col gap-4">
-                <div className="flex items-center gap-3 border-b border-white/5 pb-4">
-                    <Database className="w-5 h-5 text-brand-orange animate-pulse" />
-                    <h3 className="text-lg font-bebas tracking-[0.15em] text-white uppercase">AUDIO & FORMAT</h3>
-                </div>
-                <div className="grid grid-cols-2 gap-4 font-mono">
-                    <div className="flex flex-col gap-1 border border-white/5 bg-zinc-950/20 p-3 rounded-xl hover:border-white/10 transition-colors">
-                        <span className="text-[8px] font-black text-zinc-500 tracking-[0.15em] uppercase">Contenedor</span>
-                        <span className="text-xs font-bold text-brand-orange tracking-widest uppercase">{tech.format || "N/A"}</span>
-                    </div>
-                    <div className="flex flex-col gap-1 border border-white/5 bg-zinc-950/20 p-3 rounded-xl hover:border-white/10 transition-colors">
-                        <span className="text-[8px] font-black text-zinc-500 tracking-[0.15em] uppercase">Tamaño</span>
-                        <span className="text-xs font-bold text-white tracking-widest uppercase">{formatFileSize(tech.size || 0)}</span>
-                    </div>
-                    <div className="flex flex-col gap-1 col-span-2 border border-white/5 bg-zinc-950/20 p-3 rounded-xl hover:border-white/10 transition-colors">
-                        <span className="text-[8px] font-black text-zinc-500 tracking-[0.15em] uppercase">Pistas de Audio</span>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                            {tech.audioStreams && tech.audioStreams.length > 0 ? (
-                                tech.audioStreams.map((aud, i) => (
-                                    <span key={i} className="px-3 py-1.5 bg-black/40 border border-white/5 hover:border-brand-orange/30 rounded-lg text-[9px] font-bold uppercase tracking-wider text-zinc-300 hover:text-white transition-all duration-300">
-                                        {aud.language ? aud.language.toUpperCase() : "UND"} <span className="text-zinc-600 font-normal">|</span> {aud.codec ? aud.codec.toUpperCase() : "N/A"}
-                                    </span>
-                                ))
-                            ) : (
-                                <span className="text-xs font-bold text-zinc-600 uppercase">Sin pistas de audio</span>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    )
-})

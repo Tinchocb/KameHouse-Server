@@ -3,7 +3,6 @@ package core
 import (
 	"errors"
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,7 +26,7 @@ type Config struct {
 		DoHUrl        string `mapstructure:"dohUrl"`
 		Password      string `mapstructure:"password"`
 		CorsOrigins   []string `mapstructure:"corsOrigins"`
-		Tls           struct {
+		TLS           struct {
 			Enabled  bool   `mapstructure:"enabled"`
 			CertPath string `mapstructure:"certPath"`
 			KeyPath  string `mapstructure:"keyPath"`
@@ -60,9 +59,9 @@ type Config struct {
 	Metadata struct {
 		TMDBApiKey       string `mapstructure:"tmdbApiKey"`
 		TMDBLanguage     string `mapstructure:"tmdbLanguage"`
-		FanArtApiKey     string `mapstructure:"fanartApiKey"`     // FanArt.tv â€” logos, clearart, thumbs (free key from fanart.tv/get-an-api-key)
-		OMDbApiKey       string `mapstructure:"omdbApiKey"`       // OMDb â€” ratings, runtime, director (free key, 1k req/day)
-		OpenSubsApiKey   string `mapstructure:"openSubsApiKey"`   // OpenSubtitles v1 REST â€” remote subtitle search (free key)
+		FanArtAPIKey     string `mapstructure:"fanartApiKey"`     // FanArt.tv â€” logos, clearart, thumbs (free key from fanart.tv/get-an-api-key)
+		OMDbAPIKey       string `mapstructure:"omdbApiKey"`       // OMDb â€” ratings, runtime, director (free key, 1k req/day)
+		OpenSubsAPIKey   string `mapstructure:"openSubsApiKey"`   // OpenSubtitles v1 REST â€” remote subtitle search (free key)
 		OpenSubsLanguages []string `mapstructure:"openSubsLanguages"` // Languages to search, e.g. ["es", "en"]
 	} `mapstructure:"metadata"`
 }
@@ -79,7 +78,6 @@ func ProvideConfig(opts *ConfigOptions, logger *zerolog.Logger) *Config {
 	cfg, err := NewConfig(opts, logger)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Configuration validation failed during startup sequence")
-		panic(fmt.Errorf("fatal configuration error: %w", err))
 	}
 	return cfg
 }
@@ -150,9 +148,9 @@ func NewConfig(options *ConfigOptions, logger *zerolog.Logger) (*Config, error) 
 	cfg.Data.WorkingDir = filepath.FromSlash(wd)
 	_ = os.Setenv("KAMEHOUSE_WORKING_DIR", cfg.Data.WorkingDir)
 
-	if cfg.Server.Tls.Enabled && (cfg.Server.Tls.CertPath == "" || cfg.Server.Tls.KeyPath == "") {
-		cfg.Server.Tls.CertPath = filepath.FromSlash(filepath.Join(dataDir, "certs", "cert.pem"))
-		cfg.Server.Tls.KeyPath = filepath.FromSlash(filepath.Join(dataDir, "certs", "key.pem"))
+	if cfg.Server.TLS.Enabled && (cfg.Server.TLS.CertPath == "" || cfg.Server.TLS.KeyPath == "") {
+		cfg.Server.TLS.CertPath = filepath.FromSlash(filepath.Join(dataDir, "certs", "cert.pem"))
+		cfg.Server.TLS.KeyPath = filepath.FromSlash(filepath.Join(dataDir, "certs", "key.pem"))
 	}
 
 	if err := validateConfig(&cfg); err != nil {
@@ -242,21 +240,16 @@ func validateConfig(cfg *Config) error {
 		}
 	}
 
-	if cfg.Server.Tls.Enabled {
-		if cfg.Server.Tls.CertPath == "" || !filepath.IsAbs(cfg.Server.Tls.CertPath) {
+	if cfg.Server.TLS.Enabled {
+		if cfg.Server.TLS.CertPath == "" || !filepath.IsAbs(cfg.Server.TLS.CertPath) {
 			return errors.New("server.tls.certPath must be an absolute path when TLS is enabled")
 		}
-		if cfg.Server.Tls.KeyPath == "" || !filepath.IsAbs(cfg.Server.Tls.KeyPath) {
+		if cfg.Server.TLS.KeyPath == "" || !filepath.IsAbs(cfg.Server.TLS.KeyPath) {
 			return errors.New("server.tls.keyPath must be an absolute path when TLS is enabled")
 		}
 	}
 
 	return nil
-}
-
-func isValidURL(raw string) bool {
-	u, err := url.Parse(raw)
-	return err == nil && u.Scheme != "" && u.Host != "" && (u.Scheme == "http" || u.Scheme == "https")
 }
 
 func expandEnvironmentValues(cfg *Config) {
@@ -267,8 +260,8 @@ func expandEnvironmentValues(cfg *Config) {
 	cfg.Offline.Dir = expandPath(cfg.Offline.Dir)
 	cfg.Offline.AssetDir = expandPath(cfg.Offline.AssetDir)
 	cfg.Extensions.Dir = expandPath(cfg.Extensions.Dir)
-	cfg.Server.Tls.CertPath = expandPath(cfg.Server.Tls.CertPath)
-	cfg.Server.Tls.KeyPath = expandPath(cfg.Server.Tls.KeyPath)
+	cfg.Server.TLS.CertPath = expandPath(cfg.Server.TLS.CertPath)
+	cfg.Server.TLS.KeyPath = expandPath(cfg.Server.TLS.KeyPath)
 }
 
 func expandPath(p string) string {
@@ -321,14 +314,14 @@ func loadLogo(logo []byte, dataDir string) {
 }
 
 // GetServerAddr returns the binding address safely.
-func (cfg *Config) GetServerAddr(df ...string) string {
+func (cfg *Config) GetServerAddr() string {
 	return fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 }
 
 // GetServerURI returns the full web URL.
 func (cfg *Config) GetServerURI(df ...string) string {
 	scheme := "http"
-	if cfg.Server.Tls.Enabled {
+	if cfg.Server.TLS.Enabled {
 		scheme = "https"
 	}
 	if cfg.Server.Host == "" || cfg.Server.Host == "0.0.0.0" {

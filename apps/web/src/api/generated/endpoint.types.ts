@@ -68,6 +68,20 @@ export type GetAnimeEntry_Variables = {
 /**
  * - Filepath: internal/handlers/anime_entries.go
  * - Filename: anime_entries.go
+ * - Endpoint: /api/v1/library/anime-entry/{id}/local-files
+ * @description
+ * Route return local files for the given anime media id.
+ */
+export type GetAnimeEntryLocalFiles_Variables = {
+    /**
+     *  Anime media ID
+     */
+    id: number
+}
+
+/**
+ * - Filepath: internal/handlers/anime_entries.go
+ * - Filename: anime_entries.go
  * - Endpoint: /api/v1/library/anime-entry/suggestions
  * @description
  * Route returns anime suggestions for the given local files.
@@ -421,6 +435,10 @@ export type UpdateLocalFiles_Variables = {
 export type DeleteLocalFiles_Variables = {
     paths: Array<string>
 }
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// lore
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // mediastream

@@ -1,3 +1,4 @@
+// Package core implements the main application server, database, configurations, and core services for KameHouse.
 package core
 
 import (
@@ -213,6 +214,7 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 	}
 
 	app.initModulesOnce()
+	app.runMigrations()
 	app.InitOrRefreshModules()
 	app.ServerReady = true
 	app.InitOrRefreshMediastreamSettings()
@@ -253,6 +255,7 @@ func initServerPassword(cfg *Config) string {
 }
 
 func initLogsDir(cfg *Config, logger *zerolog.Logger) {
+	logger.Trace().Str("dir", cfg.Logs.Dir).Msg("app: Creating logs directory")
 	_ = os.MkdirAll(cfg.Logs.Dir, 0755)
 }
 
@@ -304,13 +307,13 @@ type metadataEnrichers struct {
 }
 
 func initMetadataEnrichers(cfg *Config) metadataEnrichers {
-	fanartEnricher := metadata.NewFanArtEnricher(cfg.Metadata.FanArtApiKey)
-	omdbEnricher := metadata.NewOMDbEnricher(cfg.Metadata.OMDbApiKey)
+	fanartEnricher := metadata.NewFanArtEnricher(cfg.Metadata.FanArtAPIKey)
+	omdbEnricher := metadata.NewOMDbEnricher(cfg.Metadata.OMDbAPIKey)
 	openSubsLangs := cfg.Metadata.OpenSubsLanguages
 	if len(openSubsLangs) == 0 {
 		openSubsLangs = []string{"es", "en"}
 	}
-	openSubsEnricher := metadata.NewOpenSubtitlesEnricher(cfg.Metadata.OpenSubsApiKey, openSubsLangs...)
+	openSubsEnricher := metadata.NewOpenSubtitlesEnricher(cfg.Metadata.OpenSubsAPIKey, openSubsLangs...)
 	return metadataEnrichers{
 		FanArt:   fanartEnricher,
 		OMDb:     omdbEnricher,
@@ -461,4 +464,5 @@ func (a *KameHouse) GetAnimeCollection(bypassCache bool) (*platform.UnifiedColle
 }
 
 func (a *KameHouse) AddOnRefreshAnimeCollectionFunc(id string, f func()) {
+	// TODO: implement callback storage if notifier integration is needed
 }

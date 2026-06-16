@@ -11,7 +11,6 @@ import { useUpdateAnimeEntryProgress } from "@/api/hooks/anime_entries.hooks"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { useAppStore } from "@/lib/store"
 import { toast } from "sonner"
-import { ManualMatchModal } from "@/components/shared/manual-match-modal"
 
 interface MovieHeroSectionProps {
     seriesId: string
@@ -36,7 +35,6 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
     const backdropRef = useRef<HTMLDivElement>(null)
     const media = entry.media!
     const setBackdropUrl = useIntelligenceStore(s => s.setBackdropUrl)
-    const [isMatchModalOpen, setIsMatchModalOpen] = React.useState(false)
 
     // Sync current backdrop with global DynamicBackdrop blur background
     React.useEffect(() => {
@@ -79,6 +77,8 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
     
     const title = media.titleSpanish || media.titleEnglish || media.titleRomaji || "Título Desconocido"
     const year = media.year?.toString() || ""
+    const hasBannerImage = !!media.bannerImage
+    const backdropSrc = media.bannerImage ?? media.posterImage ?? null
 
     const genres = useMemo(() => {
         return (media?.genres as string[]) || []
@@ -154,45 +154,82 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
     return (
         <section 
             ref={containerRef}
-            className={cn("relative w-full h-[85vh] lg:h-[90vh] flex flex-col justify-end overflow-hidden bg-[#07070a] select-none", className)}
+            className={cn("relative w-full h-[98vh] max-h-[550px] flex flex-col justify-center overflow-hidden bg-transparent select-none", className)}
         >
             {/* Ambient Blur Background */}
-            <div className="absolute inset-0 overflow-hidden bg-[#07070a] z-0">
-                {media.posterImage && (
+            <div className="absolute inset-0 overflow-hidden bg-transparent z-0">
+                {backdropSrc && (
                     <div
-                        className="absolute left-1/2 top-0 -translate-x-1/2 w-full h-full opacity-35"
+                        className="absolute inset-0 opacity-100"
                         style={{
-                            backgroundImage: `url(${getLowResImage(media.posterImage)})`,
+                            backgroundImage: `url(${getLowResImage(backdropSrc)})`,
                             backgroundSize: "cover",
                             backgroundPosition: "center 20%",
-                            filter: "blur(130px) saturate(160%) brightness(0.2)",
+                            filter: "blur(70px) brightness(0.5) saturate(170%)",
                         }}
                     />
                 )}
             </div>
 
             {/* High Res Crisp Backdrop with Ken Burns */}
-            {backdropUrl && (
-                <div 
-                    ref={backdropRef}
-                    className="absolute inset-0 overflow-hidden cursor-pointer z-0 will-change-transform group/backdrop"
-                    onClick={onPlay}
-                >
-                    <DeferredImage
-                        src={backdropUrl}
-                        alt={title}
-                        priority={true}
-                        className="w-full h-full object-cover object-center md:object-[center_15%] opacity-90 transition-all duration-[20s] ease-out group-hover/backdrop:scale-[1.03] animate-ken-burns"
-                    />
-                </div>
-            )}
+            <div className="absolute inset-0 z-0">
+                {backdropUrl && (
+                    hasBannerImage ? (
+                        <div 
+                            ref={backdropRef}
+                            className="absolute right-0 top-0 h-full w-full md:w-[80%] lg:w-[75%] overflow-hidden cursor-pointer z-0 will-change-transform group/backdrop"
+                            onClick={onPlay}
+                        >
+                            <DeferredImage
+                                src={backdropUrl}
+                                alt={title}
+                                priority={true}
+                                className="w-full h-full object-cover object-[center_20%] opacity-90 transition-all duration-[20s] ease-out group-hover/backdrop:scale-[1.03] animate-ken-burns"
+                                style={{
+                                    WebkitMaskImage: "linear-gradient(to right, transparent 0%, rgba(0,0,0,0.15) 12%, black 40%)",
+                                    maskImage: "linear-gradient(to right, transparent 0%, rgba(0,0,0,0.15) 12%, black 40%)",
+                                }}
+                            />
+                        </div>
+                    ) : (
+                        <div 
+                            ref={backdropRef}
+                            className="absolute right-0 top-0 h-full w-auto overflow-hidden cursor-pointer z-0 will-change-transform group/backdrop"
+                            onClick={onPlay}
+                        >
+                            <DeferredImage
+                                src={backdropUrl}
+                                alt={title}
+                                priority={true}
+                                className="h-full w-auto object-contain object-right-top opacity-[0.75] transition-all duration-[20s] ease-out group-hover/backdrop:scale-[1.03] animate-ken-burns"
+                            />
+                        </div>
+                    )
+                )}
+            </div>
 
-            {/* Disney+ Style Deep Cinematic Gradient Vignette Masking */}
-            <div className="absolute inset-x-0 bottom-0 h-[60vh] bg-gradient-to-t from-[#050506] via-[#050506]/90 to-transparent opacity-100 z-10 pointer-events-none" />
-            <div className="absolute inset-y-0 left-0 w-full md:w-[60%] bg-gradient-to-r from-[#050506] via-[#050506]/85 to-transparent opacity-100 z-10 pointer-events-none" />
+            {/* Gradient izquierdo */}
+            <div
+                className="absolute inset-0 z-10 pointer-events-none"
+                style={{
+                    background: hasBannerImage
+                        ? "linear-gradient(to right, rgba(7,7,10,0.85) 0%, rgba(7,7,10,0.7) 25%, rgba(7,7,10,0.2) 60%, transparent 90%)"
+                        : "linear-gradient(to right, rgba(7,7,10,0.85) 0%, rgba(7,7,10,0.7) 30%, rgba(7,7,10,0.15) 70%, transparent 95%)",
+                }}
+            />
+            {/* Gradient inferior */}
+            <div
+                className="absolute inset-x-0 bottom-0 h-32 z-10 pointer-events-none"
+                style={{ background: "linear-gradient(to top, transparent 0%, rgba(7,7,10,0.35) 50%, transparent 100%)" }}
+            />
+            {/* Vignette superior */}
+            <div
+                className="absolute inset-x-0 top-0 h-16 z-10 pointer-events-none"
+                style={{ background: "linear-gradient(to bottom, rgba(7,7,10,0.4) 0%, transparent 100%)" }}
+            />
 
             {/* Content Container */}
-            <div className="relative z-20 w-full max-w-[1800px] mx-auto px-6 sm:px-12 pb-16 pt-32 flex flex-col pointer-events-none">
+            <div className="relative z-20 w-full max-w-[1800px] mx-auto px-6 md:pl-[120px] md:pr-12 lg:pl-[120px] lg:pr-12 flex flex-col pointer-events-none">
                 <div className="max-w-3xl space-y-5 pointer-events-auto w-full">
                     
                     {/* Main Cinematic Title */}
@@ -318,13 +355,6 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
                     )}
                 </div>
             </div>
-
-            <ManualMatchModal
-                isOpen={isMatchModalOpen}
-                onClose={() => setIsMatchModalOpen(false)}
-                directoryPath={directoryPath}
-                currentMediaId={entry.mediaId ?? Number(seriesId)}
-            />
         </section>
     )
 })

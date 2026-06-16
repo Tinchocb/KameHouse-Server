@@ -1,6 +1,6 @@
 import React, { useMemo } from "react"
 import { FaPlay, FaStar } from "react-icons/fa"
-import { ListPlus, Settings2, ExternalLink } from "lucide-react"
+import { ListPlus, ExternalLink } from "lucide-react"
 import { useSound } from "@/hooks/use-sound"
 import { useAppStore } from "@/lib/store"
 import { toast } from "sonner"
@@ -10,7 +10,6 @@ import { cn } from "@/components/ui/core/styling"
 import { sanitizeHtml } from "@/lib/helpers/sanitizer"
 import { motion } from "framer-motion"
 import { getDragonBallSpanishTitle } from "@/lib/config/dragonball.config"
-import { ManualMatchModal } from "@/components/shared/manual-match-modal"
 
 // ─── MediaActionButtons ───────────────────────────────────────────────────────
 
@@ -29,8 +28,6 @@ const MediaActionButtons = React.memo(function MediaActionButtons({
     continuityItem,
     malId,
 }: MediaActionButtonsProps) {
-    const [isMatchModalOpen, setIsMatchModalOpen] = React.useState(false)
-
     return (
         <div className="flex flex-wrap items-center gap-4 mt-8">
             {/* Play Button - Cinematic Glass */}
@@ -68,29 +65,6 @@ const MediaActionButtons = React.memo(function MediaActionButtons({
                     <ExternalLink className="w-3.5 h-3.5" />
                 </a>
             )}
-
-            {/* Fix Match Button */}
-            {directoryPath && (
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation()
-                        setIsMatchModalOpen(true)
-                    }}
-                    className={cn(
-                        "flex items-center justify-center p-4 rounded-xl liquid-glass-frosted liquid-glass-frosted-interactive text-white/70 hover:text-[#ff6b00] hover:!bg-[#ff6b00]/10 hover:!border-[#ff6b00]/30 transition-all duration-300 cursor-pointer shadow-lg"
-                    )}
-                    title="Corregir Vinculación (Fix Match)"
-                >
-                    <Settings2 className="w-4 h-4" />
-                </button>
-            )}
-
-            <ManualMatchModal
-                isOpen={isMatchModalOpen}
-                onClose={() => setIsMatchModalOpen(false)}
-                directoryPath={directoryPath}
-                currentMediaId={seriesId ? Number(seriesId) : undefined}
-            />
         </div>
     )
 })

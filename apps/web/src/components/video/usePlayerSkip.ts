@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { useAniSkipTimes } from "@/api/hooks/aniskip.hooks"
 import { useGetSettings } from "@/api/hooks/settings.hooks"
+import { usePreloadMediastreamMediaContainer } from "@/api/hooks/mediastream.hooks"
+import { useQueryClient } from "@tanstack/react-query"
+import { buildSeaQuery } from "@/api/client/requests"
+import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { useAppStore } from "@/lib/store"
 import { useShallow } from "zustand/react/shallow"
 import type { PlayerCoreProps } from "./player-core.types"
@@ -23,6 +27,9 @@ interface UsePlayerSkipProps {
     setAutoSkipOutro: (val: boolean) => void
     setTvMode: (val: boolean) => void
     triggerControlsVisibility: () => void
+    clientId?: string
+    nextStreamUrl?: string
+    nextStreamType?: "local" | "online" | "direct" | "transcode" | "optimized"
 }
 
 // Helper to set DOM properties without triggering React Compiler parameter mutation rules
@@ -47,9 +54,14 @@ export function usePlayerSkip({
     setAutoSkipIntro,
     setAutoSkipOutro,
     setTvMode,
-    triggerControlsVisibility
+    triggerControlsVisibility,
+    clientId,
+    nextStreamUrl,
+    nextStreamType,
 }: UsePlayerSkipProps) {
     const { data: settings } = useGetSettings()
+    const { mutate: preloadStream } = usePreloadMediastreamMediaContainer()
+    const queryClient = useQueryClient()
     const autoPlayNextEpisode = settings?.library?.autoPlayNextEpisode ?? true
 
     const { seriesSkipTimes, saveSeriesSkipTimes, marathonMode, setMarathonMode } = useAppStore(
@@ -66,6 +78,7 @@ export function usePlayerSkip({
     const toastTimerRef = useRef<NodeJS.Timeout | null>(null)
     const nextEpisodeTimerRef = useRef<NodeJS.Timeout | null>(null)
     const hasTriggeredNextEpisodeRef = useRef<boolean>(false)
+    const hasPreloadedRef = useRef<boolean>(false)
 
     const [skipMode, setSkipMode] = useState<"intro" | "outro" | null>(null)
     const [skipRemainingSeconds, setSkipRemainingSeconds] = useState(0)
@@ -83,6 +96,7 @@ export function usePlayerSkip({
         hasAutoSkippedIntroRef.current = false
         hasAutoSkippedOutroRef.current = false
         hasTriggeredNextEpisodeRef.current = false
+        hasPreloadedRef.current = false
         setShowNextEpisode(false)
         setCountdownSeconds(5)
         setSkipMode(null)
@@ -593,6 +607,35 @@ export function usePlayerSkip({
             }
         }
 
+        // Background preloading & prefetching
+        if (nextStreamUrl && !hasPreloadedRef.current && total > 0 && (total - curr <= 90 || (activeEd && curr >= activeEd.startTime))) {
+            hasPreloadedRef.current = true
+            
+            const resolvedStreamType = (nextStreamType === "transcode" || nextStreamType === "optimized" ? nextStreamType : "direct") as any
+            
+            // 1. Go backend extraction preload
+            preloadStream({
+                path: nextStreamUrl,
+                streamType: resolvedStreamType,
+                audioStreamIndex: 0,
+            })
+
+            // 2. React Query query cache prefetch
+            queryClient.prefetchQuery({
+                queryKey: [API_ENDPOINTS.MEDIASTREAM.RequestMediastreamMediaContainer.key, nextStreamUrl, resolvedStreamType],
+                queryFn: () => buildSeaQuery({
+                    endpoint: API_ENDPOINTS.MEDIASTREAM.RequestMediastreamMediaContainer.endpoint,
+                    method: API_ENDPOINTS.MEDIASTREAM.RequestMediastreamMediaContainer.methods[0],
+                    data: {
+                        path: nextStreamUrl,
+                        streamType: resolvedStreamType,
+                        audioStreamIndex: 0,
+                        clientID: clientId || "prefetch-client",
+                    }
+                })
+            })
+        }
+
         // Next episode trigger
         const ed = skipTimesEd
         const edTriggered = ed ? curr >= ed.startTime : false
@@ -609,7 +652,7 @@ export function usePlayerSkip({
         } else {
             if (showNextEpisode) setShowNextEpisode(false)
         }
-    }, [videoRef, skipTimesOp, skipTimesEd, autoSkipIntroPref, autoSkipOutroPref, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, hasNextEpisode, mediaFormat, chapters, activeChapter, triggerToast, tvMode, marathonMode])
+    }, [videoRef, skipTimesOp, skipTimesEd, autoSkipIntroPref, autoSkipOutroPref, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, hasNextEpisode, mediaFormat, chapters, activeChapter, triggerToast, tvMode, marathonMode, nextStreamUrl, nextStreamType, preloadStream, queryClient, clientId])
 
     useEffect(() => {
         if (!showNextEpisode) {

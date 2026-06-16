@@ -29,6 +29,11 @@ export interface PlayerCoreProps {
     title?: string
     /** e.g. "TV", "TV_SHORT", "MOVIE", "OVA", "SPECIAL" — used to decide fallback skip window */
     mediaFormat?: string | null
+    nextStreamUrl?: string
+    nextStreamType?: "local" | "online" | "direct" | "transcode" | "optimized"
+    nextEpisodeTitle?: string
+    nextEpisodeNumber?: number
+    nextEpisodeImage?: string
 }
 
 export interface PlayerCore {

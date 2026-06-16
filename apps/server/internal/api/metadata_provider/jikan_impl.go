@@ -98,36 +98,111 @@ func (p *JikanProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata
 		titleToSearch = media.TitleRomaji
 	}
 
-	// Step 1: Search for the Anime on MAL to get its ID and base metadata
-	searchRes, err := p.client.SearchAnime(ctx, titleToSearch)
-	if err != nil {
-		return nil, fmt.Errorf("jikan_provider: SearchAnime failed for '%s': %w", titleToSearch, err)
+	var malID int
+	var malTitle, malTitleEng, malTitleJpn, malSynopsis, malLargeImage string
+	var malEpisodes int
+	var fullData *jikan.AnimeFullResponse
+
+	if media.MyanimelistId > 0 {
+		malID = media.MyanimelistId
+		// #region agent log
+		debugLogJikan("jikan_impl.go:GetAnimeMetadata", "using stored MAL id", map[string]any{
+			"localId": id, "malId": malID, "hypothesisId": "D",
+		})
+		// #endregion
+	} else {
+		searchRes, err := p.client.SearchAnime(ctx, titleToSearch)
+		if err != nil {
+			return nil, fmt.Errorf("jikan_provider: SearchAnime failed for '%s': %w", titleToSearch, err)
+		}
+		if len(searchRes.Data) == 0 {
+			return nil, fmt.Errorf("no anime found for title: %s", titleToSearch)
+		}
+		malAnime := searchRes.Data[0]
+		malID = malAnime.MalID
+		malTitle = malAnime.Title
+		malTitleEng = malAnime.TitleEng
+		malTitleJpn = malAnime.TitleJpn
+		malSynopsis = malAnime.Synopsis
+		malLargeImage = malAnime.Images.Jpg.LargeImageUrl
+		malEpisodes = malAnime.Episodes
+		// #region agent log
+		debugLogJikan("jikan_impl.go:GetAnimeMetadata", "search resolved MAL id", map[string]any{
+			"localId": id, "malId": malID, "title": titleToSearch, "hypothesisId": "D",
+		})
+		// #endregion
 	}
 
-	if len(searchRes.Data) == 0 {
-		return nil, fmt.Errorf("no anime found for title: %s", titleToSearch)
+	if malTitle == "" {
+		fullRes, errFull := p.client.GetAnimeFull(ctx, malID)
+		if errFull != nil || fullRes == nil {
+			return nil, fmt.Errorf("jikan_provider: GetAnimeFull failed for mal_id %d: %w", malID, errFull)
+		}
+		fullData = fullRes
+		malTitle = fullRes.Data.Title
+		malTitleEng = fullRes.Data.TitleEng
+		malTitleJpn = fullRes.Data.TitleJpn
+		malSynopsis = fullRes.Data.Synopsis
+		malLargeImage = fullRes.Data.Images.Jpg.LargeImageUrl
+		malEpisodes = fullRes.Data.Episodes
 	}
 
-	malAnime := searchRes.Data[0]
 	titles := map[string]string{
-		"en": malAnime.TitleEng,
-		"ja": malAnime.TitleJpn,
+		"en": malTitleEng,
+		"ja": malTitleJpn,
 	}
 	if titles["en"] == "" {
-		titles["en"] = malAnime.Title
+		titles["en"] = malTitle
 	}
 
 	result := &apiMetadata.AnimeMetadata{
 		Titles:       titles,
 		Episodes:     make(map[string]*apiMetadata.EpisodeMetadata),
-		EpisodeCount: malAnime.Episodes,
+		EpisodeCount: malEpisodes,
 		SpecialCount: 0,
-		Mappings:     &apiMetadata.AnimeMappings{MyanimelistId: malAnime.MalID},
+		Mappings:     &apiMetadata.AnimeMappings{MyanimelistId: malID},
+	}
+
+	if fullData == nil {
+		if fullRes, errFull := p.client.GetAnimeFull(ctx, malID); errFull == nil && fullRes != nil {
+			fullData = fullRes
+		}
+	}
+	if fullData != nil {
+		result.Status = fullData.Data.Status
+		result.Duration = fullData.Data.Duration
+		result.Rating = fullData.Data.Rating
+		result.Score = fullData.Data.Score
+		for _, g := range fullData.Data.Genres {
+			result.Genres = append(result.Genres, g.Name)
+		}
+		for _, s := range fullData.Data.Studios {
+			result.Studios = append(result.Studios, s.Name)
+		}
+		for _, d := range fullData.Data.Demographics {
+			result.Demographics = append(result.Demographics, d.Name)
+		}
+		result.Openings = fullData.Data.Theme.Openings
+		result.Endings = fullData.Data.Theme.Endings
+	}
+
+	// Fetch Characters
+	if charRes, errChar := p.client.GetAnimeCharacters(ctx, malID); errChar == nil && charRes != nil {
+		for i, c := range charRes.Data {
+			if i >= 15 { // Cap at 15 characters to avoid huge payload
+				break
+			}
+			result.Characters = append(result.Characters, apiMetadata.CharacterMetadata{
+				Name:     c.Character.Name,
+				Role:     c.Role,
+				ImageUrl: c.Character.Images.Jpg.ImageUrl,
+			})
+		}
 	}
 
 	// Step 2: If it's a TV series with multiple episodes, fetch the episode list
-	if malAnime.Episodes > 1 {
-		episodesRes, err := p.client.GetAnimeEpisodes(ctx, malAnime.MalID)
+	if malEpisodes > 1 {
+		episodesRes, err := p.client.GetAnimeEpisodes(ctx, malID)
 		if err == nil && episodesRes != nil {
 			for _, ep := range episodesRes.Data {
 				epStr := strconv.Itoa(ep.Episode)
@@ -157,27 +232,27 @@ func (p *JikanProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata
 
 	// Step 3: Fill generic data if episode list failed or it's a movie/single episode
 	if len(result.Episodes) == 0 {
-		for i := 1; i <= malAnime.Episodes; i++ {
+		for i := 1; i <= malEpisodes; i++ {
 			epStr := strconv.Itoa(i)
 			result.Episodes[epStr] = &apiMetadata.EpisodeMetadata{
 				EpisodeNumber:         i,
 				SeasonNumber:          1,
 				Episode:               epStr,
 				Title:                 fmt.Sprintf("Episode %d", i),
-				Overview:              malAnime.Synopsis,
-				Image:                 malAnime.Images.Jpg.LargeImageUrl,
+				Overview:              malSynopsis,
+				Image:                 malLargeImage,
 				HasImage:              true,
 				AbsoluteEpisodeNumber: i,
 			}
 		}
-		if malAnime.Episodes == 0 { // e.g. ongoing or unknown count movie
+		if malEpisodes == 0 { // e.g. ongoing or unknown count movie
 			result.Episodes["1"] = &apiMetadata.EpisodeMetadata{
 				EpisodeNumber:         1,
 				SeasonNumber:          1,
 				Episode:               "1",
 				Title:                 titles["en"],
-				Overview:              malAnime.Synopsis,
-				Image:                 malAnime.Images.Jpg.LargeImageUrl,
+				Overview:              malSynopsis,
+				Image:                 malLargeImage,
 				HasImage:              true,
 				AbsoluteEpisodeNumber: 1,
 			}
@@ -201,7 +276,7 @@ func (p *JikanProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata
 						ep.Image = tmdbEp.Image
 						ep.HasImage = true
 					}
-					if ep.Overview == "" || ep.Overview == malAnime.Synopsis {
+					if ep.Overview == "" || ep.Overview == malSynopsis {
 						ep.Overview = tmdbEp.Overview
 					}
 				}

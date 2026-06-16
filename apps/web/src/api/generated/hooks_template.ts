@@ -68,6 +68,15 @@
 //     })
 // }
 
+// export function useGetAnimeEntryLocalFiles(id: number) {
+//     return useServerQuery<Array<LocalFile>>({
+//         endpoint: API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntryLocalFiles.endpoint.replace("{id}", String(id)),
+//         method: API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntryLocalFiles.methods[0],
+//         queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntryLocalFiles.key],
+//         enabled: true,
+//     })
+// }
+
 // export function useGetAnimeEntrySuggestions(dir: string, paths: unknown) {
 //     return useServerMutation<Array<UnifiedMedia>, GetAnimeEntrySuggestions_Variables>({
 //         endpoint: API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntrySuggestions.endpoint.replace("{dir}", String(dir)).replace("{paths}", String(paths)),

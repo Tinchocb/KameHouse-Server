@@ -39,7 +39,8 @@ func PrintHeader() {
 	for i, line := range logoLines {
 		colorIdx := i % len(gradientColors)
 		coloredLine := logoStyle.Foreground(lipgloss.Color(gradientColors[colorIdx])).Render(line)
-		doc.WriteString(coloredLine + "\n")
+		doc.WriteString(coloredLine)
+		doc.WriteByte('\n')
 	}
 
 	// App name and version with box
@@ -81,8 +82,8 @@ func PrintHeader() {
 	// 	Render(strings.Repeat("─", lineWidth))
 
 	// Put it all together
-	doc.WriteString("\n" +
-		lipgloss.NewStyle().Align(lipgloss.Center).Render(titleRow))
+	doc.WriteByte('\n')
+	doc.WriteString(lipgloss.NewStyle().Align(lipgloss.Center).Render(titleRow))
 
 	// Print the result
 	fmt.Println(docStyle.Render(doc.String()))

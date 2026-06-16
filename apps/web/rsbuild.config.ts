@@ -135,7 +135,7 @@ const config: RsbuildConfig = {
             type: "initial",
             include: [/(?:latin|bebas-neue).*\.woff2$/],
         },
-        chunkSplit: {
+        chunkSplit: process.env.NODE_ENV === "production" ? {
             forceSplitting: {
                 "hls": /hls\.js/,
                 "rrweb": /rrweb/,
@@ -150,6 +150,8 @@ const config: RsbuildConfig = {
                 "zod": /zod/,
                 "axios": /axios/,
             },
+        } : {
+            strategy: "all-in-one",
         },
     },
     tools: {

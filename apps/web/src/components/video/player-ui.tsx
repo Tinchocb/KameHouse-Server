@@ -67,6 +67,9 @@ export interface PlayerUIProps {
     }[]
     onSelectEpisode?: (episodeNumber: number) => void
     mediaFormat?: string | null
+    nextEpisodeTitle?: string
+    nextEpisodeNumber?: number
+    nextEpisodeImage?: string
 }
 
 export function PlayerUI(props: PlayerUIProps) {
@@ -74,7 +77,8 @@ export function PlayerUI(props: PlayerUIProps) {
         title, episodeLabel, onClose, onNextEpisode, playableUrl,
         streamType, episodeSources, onSourceSwitch, core,
         mediaId, episodeNumber, malId,
-        episodes, onSelectEpisode, mediaFormat
+        episodes, onSelectEpisode, mediaFormat,
+        nextEpisodeTitle, nextEpisodeNumber, nextEpisodeImage
     } = props
 
     const {
@@ -88,6 +92,116 @@ export function PlayerUI(props: PlayerUIProps) {
     const [isEpisodesSidebarOpen, setIsEpisodesSidebarOpen] = React.useState(false)
     const [isCastModalOpen, setIsCastModalOpen] = React.useState(false)
     const [isQueueSidebarOpen, setIsQueueSidebarOpen] = React.useState(false)
+
+    // Gesture tracking for double tap to skip and hold for 2x speed
+    const [isHoldSpeedActive, setIsHoldSpeedActive] = React.useState(false)
+    const holdTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    const isHoldingRef = useRef<boolean>(false)
+    const wasHoldingRef = useRef<boolean>(false)
+    const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    const lastClickTimeRef = useRef<number>(0)
+
+    const startHold = () => {
+        wasHoldingRef.current = false
+        if (holdTimeoutRef.current) clearTimeout(holdTimeoutRef.current)
+        holdTimeoutRef.current = setTimeout(() => {
+            isHoldingRef.current = true
+            wasHoldingRef.current = true
+            const video = domElements.videoElement.current as HTMLVideoElement
+            if (video) {
+                video.playbackRate = 2.0
+            }
+            setIsHoldSpeedActive(true)
+        }, 500)
+    }
+
+    const endHold = () => {
+        if (holdTimeoutRef.current) {
+            clearTimeout(holdTimeoutRef.current)
+            holdTimeoutRef.current = null
+        }
+        if (isHoldingRef.current) {
+            isHoldingRef.current = false
+            setIsHoldSpeedActive(false)
+            const video = domElements.videoElement.current as HTMLVideoElement
+            if (video) {
+                video.playbackRate = state.playbackRate
+            }
+            // Briefly delay resetting wasHoldingRef so it absorbs the trailing click event
+            setTimeout(() => {
+                wasHoldingRef.current = false
+            }, 150)
+        }
+    }
+
+    const playSkipAnimation = (side: "left" | "right") => {
+        const target = side === "left" ? ".skip-indicator-left" : ".skip-indicator-right"
+        gsap.killTweensOf(target)
+        gsap.fromTo(target, 
+            { opacity: 0, scale: 0.9 },
+            { 
+                opacity: 1, 
+                scale: 1, 
+                duration: 0.2, 
+                ease: "power2.out",
+                onComplete: () => {
+                    gsap.to(target, { 
+                        opacity: 0, 
+                        scale: 0.95,
+                        duration: 0.25, 
+                        delay: 0.3, 
+                        ease: "power2.in" 
+                    })
+                }
+            }
+        )
+    }
+
+    const handleInteractionClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        actions.triggerControlsVisibility()
+        if (wasHoldingRef.current) {
+            wasHoldingRef.current = false
+            return
+        }
+
+        const rect = e.currentTarget.getBoundingClientRect()
+        const clickX = e.clientX - rect.left
+        const isLeftSide = clickX < rect.width / 2
+
+        const now = Date.now()
+        const DOUBLE_CLICK_DELAY = 300
+
+        if (now - lastClickTimeRef.current < DOUBLE_CLICK_DELAY) {
+            if (clickTimeoutRef.current) {
+                clearTimeout(clickTimeoutRef.current)
+                clickTimeoutRef.current = null
+            }
+            if (isLeftSide) {
+                actions.skipTime(-10)
+                playSkipAnimation("left")
+            } else {
+                actions.skipTime(10)
+                playSkipAnimation("right")
+            }
+            lastClickTimeRef.current = 0
+        } else {
+            lastClickTimeRef.current = now
+            if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current)
+            clickTimeoutRef.current = setTimeout(() => {
+                if (!isHoldingRef.current) {
+                    actions.togglePlay()
+                }
+                clickTimeoutRef.current = null
+            }, DOUBLE_CLICK_DELAY)
+        }
+    }
+
+    useEffect(() => {
+        return () => {
+            if (holdTimeoutRef.current) clearTimeout(holdTimeoutRef.current)
+            if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current)
+        }
+    }, [])
 
     const { playlistQueue, currentQueueIndex } = useAppStore(useShallow(state => ({
         playlistQueue: state.playlistQueue,
@@ -194,7 +308,6 @@ export function PlayerUI(props: PlayerUIProps) {
 
             <video
                 ref={domElements.videoElement as any}
-                onClick={actions.togglePlay}
                 onPlay={() => actions.setIsPlaying(true)}
                 onPause={() => actions.setIsPlaying(false)}
                 onDurationChange={(e) => actions.setDuration(e.currentTarget.duration)}
@@ -214,6 +327,64 @@ export function PlayerUI(props: PlayerUIProps) {
                 playsInline
                 preload="metadata"
             />
+
+            {/* Gesture Interaction Overlay */}
+            <div
+                onMouseDown={(e) => {
+                    if (e.button === 0) startHold()
+                }}
+                onMouseUp={endHold}
+                onMouseLeave={endHold}
+                onTouchStart={startHold}
+                onTouchEnd={endHold}
+                onTouchCancel={endHold}
+                onClick={handleInteractionClick}
+                className="absolute inset-0 z-[12] cursor-pointer select-none"
+            />
+
+            {/* Skip animation indicator left */}
+            <div
+                className="skip-indicator-left absolute left-0 top-0 bottom-0 w-[30%] z-[13] pointer-events-none flex items-center justify-center bg-white/5 opacity-0"
+                style={{ clipPath: "ellipse(70% 100% at 0% 50%)" }}
+            >
+                <div className="flex flex-col items-center gap-1.5 text-white/95 bg-black/30 px-6 py-4 rounded-2xl backdrop-blur-sm">
+                    <div className="flex gap-0.5">
+                        <svg className="w-8 h-8 fill-current rotate-180" viewBox="0 0 24 24">
+                            <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/>
+                        </svg>
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-[0.25em]">-10s</span>
+                </div>
+            </div>
+
+            {/* Skip animation indicator right */}
+            <div
+                className="skip-indicator-right absolute right-0 top-0 bottom-0 w-[30%] z-[13] pointer-events-none flex items-center justify-center bg-white/5 opacity-0"
+                style={{ clipPath: "ellipse(70% 100% at 100% 50%)" }}
+            >
+                <div className="flex flex-col items-center gap-1.5 text-white/95 bg-black/30 px-6 py-4 rounded-2xl backdrop-blur-sm">
+                    <div className="flex gap-0.5">
+                        <svg className="w-8 h-8 fill-current" viewBox="0 0 24 24">
+                            <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/>
+                        </svg>
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-[0.25em]">+10s</span>
+                </div>
+            </div>
+
+            {/* 2x Speed Hold Indicator */}
+            {isHoldSpeedActive && (
+                <div className="absolute top-24 left-1/2 -translate-x-1/2 z-[31] pointer-events-none animate-in fade-in zoom-in-95 duration-200">
+                    <div className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-black/60 border border-white/10 backdrop-blur-md text-white shadow-xl">
+                        <svg className="w-3.5 h-3.5 fill-current text-brand-orange animate-pulse" viewBox="0 0 24 24">
+                            <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/>
+                        </svg>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-100">
+                            2.0x Velocidad
+                        </span>
+                    </div>
+                </div>
+            )}
 
             <canvas
                 ref={domElements.canvasElement as any}
@@ -278,8 +449,9 @@ export function PlayerUI(props: PlayerUIProps) {
                 tvMode={state.tvMode}
                 showCountdown={state.showCountdown}
                 countdownSeconds={state.countdownSeconds}
-                nextEpisodeTitle="Siguiente Episodio"
-                nextEpisodeNumber={undefined}
+                nextEpisodeTitle={nextEpisodeTitle || "Siguiente Episodio"}
+                nextEpisodeNumber={nextEpisodeNumber}
+                nextEpisodeImage={nextEpisodeImage}
                 onNext={onNextEpisode || (() => {})}
                 duration={state.duration}
                 remainingProgress={state.remainingProgress}

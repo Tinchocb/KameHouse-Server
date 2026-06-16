@@ -1035,6 +1035,27 @@ export type Metadata_AnimeMetadata = {
     episodeCount: number
     specialCount: number
     mappings?: Metadata_AnimeMappings
+    status?: string
+    rating?: string
+    score?: number
+    duration?: string
+    genres?: Array<string>
+    studios?: Array<string>
+    demographics?: Array<string>
+    openings?: Array<string>
+    endings?: Array<string>
+    characters?: Array<Metadata_CharacterMetadata>
+}
+
+/**
+ * - Filepath: internal/api/metadata/types.go
+ * - Filename: types.go
+ * - Package: metadata
+ */
+export type Metadata_CharacterMetadata = {
+    name: string
+    role: string
+    imageUrl: string
 }
 
 /**

@@ -6,9 +6,21 @@ import {
     Continuity_WatchHistory,
     Platform_BaseAnime as Platform_UnifiedMedia,
 } from "@/api/generated/types"
-import sortBy from "lodash/sortBy"
 import { media_getUnwatchedCount } from "./media"
 import { asUnifiedMedia } from "./type-guards"
+
+function sortBy<T>(array: T[], iteratee: (item: T) => any): T[] {
+    return [...array].sort((a, b) => {
+        const valueA = iteratee(a)
+        const valueB = iteratee(b)
+        if (valueA === valueB) return 0
+        if (valueA === undefined || valueA === null) return 1
+        if (valueB === undefined || valueB === null) return -1
+        if (valueA < valueB) return -1
+        if (valueA > valueB) return 1
+        return 0
+    })
+}
 
 type BaseCollectionSorting =
     "START_DATE"

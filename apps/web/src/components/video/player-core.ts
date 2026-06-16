@@ -84,6 +84,8 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         clientId,
         mediaFormat,
         title,
+        nextStreamUrl,
+        nextStreamType,
     } = props
 
     const { data: statusQuery } = useGetStatus()
@@ -304,7 +306,10 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         setAutoSkipIntro,
         setAutoSkipOutro,
         setTvMode,
-        triggerControlsVisibility
+        triggerControlsVisibility,
+        clientId,
+        nextStreamUrl,
+        nextStreamType,
     })
 
     const { mutate: shutdownTranscode } = useMediastreamShutdownTranscodeStream()

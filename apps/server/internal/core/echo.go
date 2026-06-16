@@ -7,7 +7,6 @@ import (
 	"kamehouse/internal/constants"
 	"log"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -36,18 +35,8 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 		}
 	})
 
-	e.Use(middleware.GzipWithConfig(middleware.GzipConfig{
-		Skipper: func(c echo.Context) bool {
-			if app.Flags.IsDesktopSidecar || os.Getenv("KAMEHOUSE_ENV") != "production" {
-				return true
-			}
-			path := c.Request().URL.Path
-			return strings.HasPrefix(path, "/api/v1/mediastream")
-		},
-	}))
-
-	// NOTE: Recover() and CORS middleware are registered in handlers.InitRoutes
-	// to avoid duplication and ensure the most complete CORS config is used.
+	// NOTE: Recover(), CORS and Gzip middleware are registered in handlers.InitRoutes
+	// to avoid duplication and ensure the most complete config is used.
 
 
 	distFS, err := fs.Sub(webFS, "web")
@@ -55,7 +44,7 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 		app.Logger.Fatal().Err(err).Msg("app: Failed to extract embedded web filesystem")
 	}
 
-	if app.Config.Server.Tls.Enabled {
+	if app.Config.Server.TLS.Enabled {
 		app.Logger.Debug().Msg("app: TLS is enabled, adding security middleware")
 		e.Use(middleware.Secure())
 	}
@@ -66,15 +55,15 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 			Browse:     true,
 			HTML5:      true,
 			Skipper: func(c echo.Context) bool {
-				cUrl := c.Request().URL
-				if strings.HasPrefix(cUrl.RequestURI(), "/api") ||
-					strings.HasPrefix(cUrl.RequestURI(), "/events") ||
-					strings.HasPrefix(cUrl.RequestURI(), "/assets") ||
-					strings.HasPrefix(cUrl.RequestURI(), "/offline-assets") {
+				cURL := c.Request().URL
+				if strings.HasPrefix(cURL.RequestURI(), "/api") ||
+					strings.HasPrefix(cURL.RequestURI(), "/events") ||
+					strings.HasPrefix(cURL.RequestURI(), "/assets") ||
+					strings.HasPrefix(cURL.RequestURI(), "/offline-assets") {
 					return true // Continue to the next handler
 				}
-				if !strings.HasSuffix(cUrl.Path, ".html") && filepath.Ext(cUrl.Path) == "" {
-					cUrl.Path = "/index.html"
+				if !strings.HasSuffix(cURL.Path, ".html") && filepath.Ext(cURL.Path) == "" {
+					cURL.Path = "/index.html"
 				}
 				return false // Continue to the filesystem handler
 			},
@@ -82,12 +71,12 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 	} else {
 		e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 			return func(c echo.Context) error {
-				cUrl := c.Request().URL.RequestURI()
+				cURL := c.Request().URL.RequestURI()
 
-				if strings.HasPrefix(cUrl, "/api") ||
-					strings.HasPrefix(cUrl, "/events") ||
-					strings.HasPrefix(cUrl, "/assets") ||
-					strings.HasPrefix(cUrl, "/offline-assets") {
+				if strings.HasPrefix(cURL, "/api") ||
+					strings.HasPrefix(cURL, "/events") ||
+					strings.HasPrefix(cURL, "/assets") ||
+					strings.HasPrefix(cURL, "/offline-assets") {
 					return next(c)
 				}
 
@@ -102,15 +91,15 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 			Filesystem: http.FS(distFS),
 			HTML5:      true,
 			Skipper: func(c echo.Context) bool {
-				cUrl := c.Request().URL
-				if strings.HasPrefix(cUrl.RequestURI(), "/api") ||
-					strings.HasPrefix(cUrl.RequestURI(), "/events") ||
-					strings.HasPrefix(cUrl.RequestURI(), "/assets") ||
-					strings.HasPrefix(cUrl.RequestURI(), "/offline-assets") {
+				cURL := c.Request().URL
+				if strings.HasPrefix(cURL.RequestURI(), "/api") ||
+					strings.HasPrefix(cURL.RequestURI(), "/events") ||
+					strings.HasPrefix(cURL.RequestURI(), "/assets") ||
+					strings.HasPrefix(cURL.RequestURI(), "/offline-assets") {
 					return true
 				}
-				if !strings.HasSuffix(cUrl.Path, ".html") && filepath.Ext(cUrl.Path) == "" {
-					cUrl.Path = "/index.html"
+				if !strings.HasSuffix(cURL.Path, ".html") && filepath.Ext(cURL.Path) == "" {
+					cURL.Path = "/index.html"
 				}
 				return false
 			},
@@ -163,9 +152,9 @@ func RunEchoServer(app *App, e *echo.Echo) {
 	}
 
 	go func() {
-		if app.Config.Server.Tls.Enabled {
-			certFile := app.Config.Server.Tls.CertPath
-			keyFile := app.Config.Server.Tls.KeyPath
+		if app.Config.Server.TLS.Enabled {
+			certFile := app.Config.Server.TLS.CertPath
+			keyFile := app.Config.Server.TLS.KeyPath
 
 			if err := GenerateSelfSignedCert(certFile, keyFile, app.Logger); err != nil {
 				app.Logger.Fatal().Err(err).Msg("app: Could not generate TLS certificates")

@@ -164,6 +164,31 @@ type NormalizedTitle struct {
 	IsMain         bool   // Whether this title is a main title (romaji,english)
 }
 
+var titleReplacer = strings.NewReplacer(
+	"ō", "ou",
+	"ū", "uu",
+	"@", "a",
+	"×", "x",
+	"꞉", ":",
+	"＊", "*",
+	"(tv)", "",
+	"'", "",
+	"’", "",
+	"`", "",
+	"\"", "",
+	"“", "",
+	"”", "",
+)
+
+func hasDigits(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] >= '0' && s[i] <= '9' {
+			return true
+		}
+	}
+	return false
+}
+
 // NormalizeTitle creates a normalized version of a title for matching
 func NormalizeTitle(title string) *NormalizedTitle {
 	if title == "" {
@@ -190,8 +215,11 @@ func NormalizeTitle(title string) *NormalizedTitle {
 	result.Tokens = tokenize(normalizedFull)
 
 	// Create a clean base title (without season/part/year markers)
-	cleanTitle := removeSeasonPartMarkers(title)
-	// Normalize the clean title
+	// Since normalizeString already removes season and part markers, we only need to remove the year in parentheses.
+	cleanTitle := title
+	if strings.Contains(title, "(") {
+		cleanTitle = yearParenRegex.ReplaceAllString(title, " ")
+	}
 	result.CleanBaseTitle = normalizeString(cleanTitle)
 
 	return result
@@ -200,15 +228,7 @@ func NormalizeTitle(title string) *NormalizedTitle {
 func normalizeString(s string) string {
 	s = strings.ToLower(s)
 
-	// Macrons to double vowels
-	s = strings.ReplaceAll(s, "ō", "ou")
-	s = strings.ReplaceAll(s, "ū", "uu")
-
-	// Character replacements
-	s = strings.ReplaceAll(s, "@", "a")
-	s = strings.ReplaceAll(s, "×", "x")
-	s = strings.ReplaceAll(s, "꞉", ":")
-	s = strings.ReplaceAll(s, "＊", "*")
+	s = titleReplacer.Replace(s)
 
 	s = replaceWord(s, "the animation", "")
 	s = replaceWord(s, "the", "")
@@ -217,22 +237,17 @@ func normalizeString(s string) string {
 	s = replaceWord(s, "oav", "ova")
 	s = replaceWord(s, "specials", "sp")
 	s = replaceWord(s, "special", "sp")
-	s = strings.ReplaceAll(s, "(tv)", "")
 	s = replaceWord(s, "&", "and")
 
 	// Remove explicit provider tags
-	s = ReExplicitProvider.ReplaceAllString(s, "")
+	if strings.Contains(s, "[") {
+		s = ReExplicitProvider.ReplaceAllString(s, "")
+	}
 
 	// Remove common file suffixes like (Dub), [BD], (1080p), etc.
-	s = fileSuffixRegex.ReplaceAllString(s, "")
-
-	// Replace smart quotes and apostrophes
-	s = strings.ReplaceAll(s, "'", "")
-	s = strings.ReplaceAll(s, "’", "")
-	s = strings.ReplaceAll(s, "`", "")
-	s = strings.ReplaceAll(s, "\"", "")
-	s = strings.ReplaceAll(s, "“", "")
-	s = strings.ReplaceAll(s, "”", "")
+	if strings.Contains(s, "(") || strings.Contains(s, "[") {
+		s = fileSuffixRegex.ReplaceAllString(s, "")
+	}
 
 	// Normalize separators to spaces
 	// normalize separators and non-alphanumeric characters
@@ -256,13 +271,17 @@ func normalizeString(s string) string {
 	// Remove season markers entirely from normalized title
 	// Season/part numbers are extracted separately for scoring
 	// We don't want "Title S2" to match "Other Title 2" just because of the bare "2"
-	s = seasonPatternExplicit.ReplaceAllString(s, " ") // "Season X", "SX", "S0X"
-	s = seasonPatternOrdinal.ReplaceAllString(s, " ")  // "2nd Season", "3rd Season"
-	s = seasonPatternSuffix.ReplaceAllString(s, " ")   // Japanese "2期", "シーズン"
-	// Remove part markers entirely
-	s = partPatternExplicit.ReplaceAllString(s, " ") // "Part X", "Cour X"
-	s = partPatternOrdinal.ReplaceAllString(s, " ")  // "2nd Part"
-	s = partPatternRoman.ReplaceAllString(s, " ")    // "Part II"
+	if hasDigits(s) {
+		s = seasonPatternExplicit.ReplaceAllString(s, " ") // "Season X", "SX", "S0X"
+		s = seasonPatternOrdinal.ReplaceAllString(s, " ")  // "2nd Season", "3rd Season"
+		s = seasonPatternSuffix.ReplaceAllString(s, " ")   // Japanese "2期", "シーズン"
+		// Remove part markers entirely
+		s = partPatternExplicit.ReplaceAllString(s, " ") // "Part X", "Cour X"
+		s = partPatternOrdinal.ReplaceAllString(s, " ")  // "2nd Part"
+	}
+	if strings.Contains(s, "part") || strings.Contains(s, "cour") {
+		s = partPatternRoman.ReplaceAllString(s, " ")    // "Part II"
+	}
 
 	// Collapse whitespace
 	s = collapseWhitespace(s)
@@ -279,6 +298,9 @@ func normalizeString(s string) string {
 // Assumes s is already lower-cased if old is lower-cased.
 func replaceWord(s string, oldStr, newStr string) string {
 	if s == "" || oldStr == "" {
+		return s
+	}
+	if !strings.Contains(s, oldStr) {
 		return s
 	}
 

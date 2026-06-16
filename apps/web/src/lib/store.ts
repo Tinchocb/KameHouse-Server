@@ -78,7 +78,7 @@ export const createUISlice: StateCreator<UIState & PlayerState, [], [], UIState>
     uiSoundsVolume: 1.0,
     globalQueueOpen: false,
     dynamicBackdropEnabled: true,
-    dynamicBackdropMotionEnabled: true,
+    dynamicBackdropMotionEnabled: false,
     setSidebarOpen: (open) => set({ sidebarOpen: open }),
     setActiveTheme: (theme) => set({ activeTheme: theme }),
     setSearchQuery: (query) => set({ searchQuery: query }),
@@ -187,7 +187,12 @@ export const createPlayerSlice: StateCreator<UIState & PlayerState, [], [], Play
     ambilightEnabled: false,
     setAmbilightEnabled: (ambilightEnabled) => set({ ambilightEnabled }),
     tvMode: false,
-    setTvMode: (tvMode) => set({ tvMode }),
+    setTvMode: (tvMode) => set((state) => {
+        if (tvMode) {
+            return { tvMode, autoSkipIntro: true, autoSkipOutro: true };
+        }
+        return { tvMode, autoSkipIntro: false, autoSkipOutro: false };
+    }),
     marathonMode: false,
     setMarathonMode: (marathonMode) => set({ marathonMode }),
 

@@ -20,7 +20,7 @@ export function LoadingErrorOverlay({
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 z-10 text-white bg-black">
                 <Loader2 className="w-16 h-16 text-white animate-spin" />
                 <p className="font-black tracking-[0.4em] uppercase text-[11px] opacity-60">
-                    {streamType === "transcode" ? "// PREPARANDO TRANSMISIÓN" : "// ESTABLECIENDO CONEXIÓN"}
+                    {streamType === "transcode" ? "PREPARANDO TRANSMISIÓN" : "ESTABLECIENDO CONEXIÓN"}
                 </p>
             </div>
         )
@@ -64,7 +64,7 @@ export function ResumeOverlay({ show, time, onResume, onClose }: { show: boolean
 
     return (
         <div className="absolute bottom-32 left-10 z-50 pointer-events-auto animate-in slide-in-from-left-4 duration-500">
-            <div className="bg-zinc-950/70 backdrop-blur-2xl border border-white/[0.08] rounded-2xl p-5 flex flex-col gap-4 min-w-[280px] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)]">
+            <div className="liquid-glass-popup p-5 flex flex-col gap-4 min-w-[280px]">
                 <div className="flex items-center justify-between gap-8">
                     <div className="flex flex-col gap-0.5">
                         <span className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em]">Continuar viendo</span>
@@ -146,8 +146,8 @@ export function SkipIntroOverlay({
                     onSkip()
                 }}
                 className={cn(
-                    "relative flex items-center gap-3 px-6 py-3 overflow-hidden",
-                    "bg-zinc-950/65 backdrop-blur-2xl text-white border rounded-xl",
+                    "relative flex items-center gap-3 px-6 py-3 overflow-hidden text-white",
+                    "liquid-glass-popup",
                     isOutro
                         ? "border-purple-500/30 hover:border-purple-400/60 hover:bg-purple-500/15"
                         : "border-white/10 hover:border-brand-orange/40 hover:bg-brand-orange/15",

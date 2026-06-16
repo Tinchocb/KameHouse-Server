@@ -19,12 +19,38 @@ var CurrLocalFiles mo.Option[[]*dto.LocalFile]
 // GetLocalFiles will return the latest local files.
 // The second return value (ID) is now legacy and returns 0 as we use relational storage.
 func GetLocalFiles(d *Database) ([]*dto.LocalFile, uint, error) {
+	localFilesMutex.RLock()
+	if cached, ok := CurrLocalFiles.Get(); ok {
+		localFilesMutex.RUnlock()
+		// #region agent log
+		debugLogLocalFiles("localfiles.go:GetLocalFiles", "cache hit", map[string]any{"count": len(cached), "hypothesisId": "B"})
+		// #endregion
+		return cached, CurrLocalFilesDbId, nil
+	}
+	localFilesMutex.RUnlock()
+
 	lfs, err := GetAllLocalFilesRelational(d)
 	if err != nil {
 		return nil, 0, err
 	}
+
+	localFilesMutex.Lock()
+	CurrLocalFiles = mo.Some(lfs)
+	CurrLocalFilesDbId = 0
+	localFilesMutex.Unlock()
+
+	// #region agent log
+	debugLogLocalFiles("localfiles.go:GetLocalFiles", "cache miss", map[string]any{"count": len(lfs), "hypothesisId": "B"})
+	// #endregion
 	d.Logger.Debug().Int("count", len(lfs)).Msg("db: Local files retrieved from relational storage")
 	return lfs, 0, nil
+}
+
+// InvalidateLocalFilesCache clears the in-memory local files cache.
+func InvalidateLocalFilesCache() {
+	localFilesMutex.Lock()
+	CurrLocalFiles = mo.None[[]*dto.LocalFile]()
+	localFilesMutex.Unlock()
 }
 
 // GetLocalFilesByMediaID will return the local files for the given media ID.

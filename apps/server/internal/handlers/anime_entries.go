@@ -29,6 +29,26 @@ import (
 	"github.com/samber/lo"
 )
 
+func debugLogEnrich(location, message string, data map[string]any) {
+	payload := map[string]any{
+		"sessionId": "549c87", "location": location, "message": message,
+		"data": data, "timestamp": time.Now().UnixMilli(), "runId": "perf-opt",
+	}
+	if hypothesisId, ok := data["hypothesisId"]; ok {
+		payload["hypothesisId"] = hypothesisId
+	}
+	line, err := json.Marshal(payload)
+	if err != nil {
+		return
+	}
+	f, err := os.OpenFile("debug-549c87.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	_, _ = f.Write(append(line, '\n'))
+}
+
 func getActiveProvider(h *Handler) librarymetadata.Provider {
 	var useTMDB bool
 	var tmdbToken string
@@ -94,6 +114,27 @@ func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry
 		return
 	}
 	if len(entry.Episodes) == 0 {
+		return
+	}
+
+	// Skip TMDB fetch when all episodes already have image and overview from the primary provider.
+	allComplete := true
+	for _, ep := range entry.Episodes {
+		if ep == nil {
+			continue
+		}
+		md := ep.EpisodeMetadata
+		if md == nil || !md.HasImage || md.Overview == "" {
+			allComplete = false
+			break
+		}
+	}
+	if allComplete {
+		// #region agent log
+		debugLogEnrich("anime_entries.go:enrichEpisodesWithTMDB", "skipped — episodes complete", map[string]any{
+			"tmdbID": entry.Media.TmdbID, "episodeCount": len(entry.Episodes), "hypothesisId": "C",
+		})
+		// #endregion
 		return
 	}
 

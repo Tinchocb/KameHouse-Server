@@ -16,18 +16,20 @@ import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { Anime_Episode, Anime_LocalFile, Mediastream_StreamType } from "@/api/generated/types"
 import { EmptyState } from "@/components/shared/empty-state"
 import { VideoPlayer } from "@/components/video/player"
-import { RelationsTab, CharactersTab, TechnicalMetadataTab } from "./-series-bento-tabs"
+import { RelationsTab, CharactersTab } from "./-series-bento-tabs"
 import { resolveSeriesSagas, getDragonBallSpanishTitle } from "@/lib/config/dragonball.config"
 import { startViewTransition } from "@/lib/helpers/transitions"
 import { X, Sparkles, Trophy, Skull } from "lucide-react"
 
 // Modular Components
+import { FloatingMatchFlap } from "@/components/shared/floating-match-flap"
 import { SeriesHero } from "./-components/series-hero"
 import { SagaSelector } from "./-components/saga-selector"
 import { CharacterCarousel } from "./-components/character-carousel"
 import { PremiumEpisodeList } from "./-components/premium-episode-list"
 import type { SagaDTO, CharacterDTO, PremiumEpisode } from "@/api/types/series.types"
 import { BentoDetailsSkeleton } from "@/components/ui/shimmer-skeleton"
+import { CharacterDetailModal } from "@/components/shared/character-detail-modal"
 
 export const Route = createFileRoute("/series/$seriesId/")({
     loader: ({ params: { seriesId }, context }) => {
@@ -116,7 +118,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         malId?: number | null
     } | null>(null)
 
-    const [activeTab, setActiveTab] = useState<"episodes" | "movie" | "relations" | "characters" | "technical">("episodes")
+    const [activeTab, setActiveTab] = useState<"episodes" | "movie" | "relations" | "characters">("episodes")
     const [prevEntryId, setPrevEntryId] = useState<number | null>(null)
     const [activeSagaId, setActiveSagaId] = useState<string>("")
     const [activeSubSagaId, setActiveSubSagaId] = useState<string>("")
@@ -462,6 +464,31 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         return idx >= 0 && idx < computedEpisodes.length - 1
     }, [computedEpisodes, playTarget])
 
+    const nextEp = useMemo(() => {
+        if (!computedEpisodes || !playTarget) return null
+        const currentEpIdx = computedEpisodes.findIndex(ep => (ep.absoluteEpisodeNumber || ep.episodeNumber) === playTarget.episodeNumber)
+        if (currentEpIdx === -1 || currentEpIdx >= computedEpisodes.length - 1) {
+            return null
+        }
+        return computedEpisodes[currentEpIdx + 1]
+    }, [computedEpisodes, playTarget])
+
+    const nextLocalFile = useMemo(() => {
+        if (!nextEp) return null
+        return nextEp.localFile || (entry?.localFiles || []).find(f => {
+            const fEp = f.metadata?.episode || f.parsedInfo?.episode
+            const fSeason = f.parsedInfo?.season
+            if (fEp == null) return false
+            if (Number(fEp) === nextEp.absoluteEpisodeNumber) {
+                return true
+            }
+            if (typeof nextEp.seasonNumber === 'number' && fSeason != null) {
+                return Number(fEp) === nextEp.episodeNumber && Number(fSeason) === nextEp.seasonNumber
+            }
+            return Number(fEp) === nextEp.episodeNumber
+        })
+    }, [nextEp, entry?.localFiles])
+
     if ((isLoading && !entry) || (entry && isMovie)) {
         if (isMovie) {
             return (
@@ -498,17 +525,20 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
 
     const hasRelations = entry.media?.relations && entry.media.relations.length > 0
     const hasCharacters = entry.media?.characters?.edges && entry.media.characters.edges.length > 0
-    const hasTechnical = entry.localFiles && entry.localFiles.length > 0
 
     return (
-        <div className="h-full w-full flex flex-col overflow-y-auto bg-[#050506]/35 backdrop-blur-[64px] text-white pb-16">
+        <div className="h-full w-full flex flex-col overflow-y-auto no-scrollbar bg-[#050506]/35 backdrop-blur-[64px] text-white pb-16">
+            <FloatingMatchFlap
+                directoryPath={entry.libraryData?.sharedPath || ""}
+                mediaId={entry.mediaId}
+            />
             <SeriesHero
                 entry={entry}
                 backdropUrl={heroBackdrop}
                 sagaCount={sagas.length}
                 onPlay={handlePlayDefault}
             />
-            <div className="w-full max-w-[1800px] mx-auto px-6 sm:px-12 mt-12">
+            <div className="w-full max-w-[1800px] mx-auto px-6 md:pl-[120px] md:pr-12 mt-12">
                 {/* Custom Glassmorphic Tabs Navigation for Series/Shows */}
                 <div className="flex border-b border-white/5 pb-2 mb-8 gap-8 overflow-x-auto no-scrollbar">
                     <button
@@ -554,20 +584,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                         </button>
                     )}
 
-                    {hasTechnical && (
-                        <button
-                            onClick={() => setActiveTab("technical")}
-                            className={cn(
-                                "text-sm uppercase tracking-[0.2em] font-black pb-3 transition-all relative shrink-0",
-                                activeTab === "technical" ? "text-brand-orange" : "text-zinc-500 hover:text-zinc-300"
-                            )}
-                        >
-                            Datos Técnicos
-                            {activeTab === "technical" && (
-                                <motion.div layoutId="detailActiveLine" className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-orange" />
-                            )}
-                        </button>
-                    )}
+
                 </div>
 
                 <div className="mt-8 min-h-[300px]">
@@ -681,43 +698,40 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                             </motion.div>
                         )}
 
-                        {activeTab === "technical" && (
-                            <motion.div
-                                key="technical"
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: 10 }}
-                                transition={{ duration: 0.2 }}
-                                className="py-4"
-                            >
-                                <TechnicalMetadataTab localFiles={entry.localFiles || []} />
-                            </motion.div>
-                        )}
+
                     </AnimatePresence>
                 </div>
             </div>
 
-            {playTarget && (
-                <VideoPlayer
-                    streamUrl={playTarget.path}
-                    streamType={playTarget.streamType as "local" | "online" | "direct"}
-                    title={title}
-                    episodeLabel={playTarget.episodeLabel}
-                    episodeNumber={playTarget.episodeNumber}
-                    mediaId={Number(seriesId)}
-                    malId={playTarget.malId}
-                    mediaFormat={entry.media?.format ?? null}
-                    onNextEpisode={handleNextEpisode}
-                    hasNextEpisode={hasNextEpisode}
-                    onClose={() => {
-                        startViewTransition(() => {
-                            setPlayTarget(null)
-                        })
-                        refetchContinuity()
-                        queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, String(seriesId)] })
-                    }}
-                />
-            )}
+            {playTarget && (() => {
+                const nextTitle = nextEp ? (nextEp.titleSpanish || nextEp.episodeMetadata?.title || nextEp.episodeTitle || nextEp.displayTitle || `Episodio ${nextEp.absoluteEpisodeNumber || nextEp.episodeNumber}`) : undefined;
+                return (
+                    <VideoPlayer
+                        streamUrl={playTarget.path}
+                        streamType={playTarget.streamType as "local" | "online" | "direct"}
+                        title={title}
+                        episodeLabel={playTarget.episodeLabel}
+                        episodeNumber={playTarget.episodeNumber}
+                        mediaId={Number(seriesId)}
+                        malId={playTarget.malId}
+                        mediaFormat={entry.media?.format ?? null}
+                        nextStreamUrl={nextLocalFile?.path}
+                        nextStreamType={nextLocalFile?.path?.toLowerCase().endsWith(".mp4") ? "direct" : "transcode"}
+                        nextEpisodeTitle={nextTitle}
+                        nextEpisodeNumber={nextEp ? (nextEp.absoluteEpisodeNumber || nextEp.episodeNumber) : undefined}
+                        nextEpisodeImage={nextEp?.episodeMetadata?.image || entry.media?.bannerImage || entry.media?.posterImage}
+                        onNextEpisode={handleNextEpisode}
+                        hasNextEpisode={hasNextEpisode}
+                        onClose={() => {
+                            startViewTransition(() => {
+                                setPlayTarget(null)
+                            })
+                            refetchContinuity()
+                            queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, String(seriesId)] })
+                        }}
+                    />
+                );
+            })()}
 
             {/* Character Lore Detail Modal overlay */}
             {selectedCharacterName && (
@@ -800,151 +814,4 @@ function SagaLoreHeader({ saga }: { saga: any }) {
     )
 }
 
-interface CharacterDetailModalProps {
-    characterName: string | null
-    entry: any
-    loreData: any
-    onClose: () => void
-}
 
-function CharacterDetailModal({ 
-    characterName, 
-    entry,
-    loreData, 
-    onClose 
-}: CharacterDetailModalProps) {
-    if (!characterName) return null
-
-    // Find the character info in local lore data
-    const charInfo = loreData?.characters_wiki?.find((c: any) => 
-        c.name.toLowerCase().includes(characterName.toLowerCase()) || 
-        characterName.toLowerCase().includes(c.name.toLowerCase())
-    )
-
-    if (!charInfo) return null
-
-    // Resolve avatar image from entry characters list
-    const charEdge = entry?.media?.characters?.edges?.find((e: any) => 
-        e.node?.name?.full?.toLowerCase().includes(characterName.toLowerCase()) || 
-        characterName.toLowerCase().includes(e.node?.name?.full?.toLowerCase())
-    )
-    const avatarUrl = charEdge?.node?.image?.large || ""
-
-    return (
-        <AnimatePresence>
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    onClick={onClose}
-                    className="absolute inset-0 bg-black/80 backdrop-blur-md"
-                />
-
-                <motion.div 
-                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                    className="relative w-full max-w-3xl max-h-[85vh] bg-zinc-950/90 border border-white/10 rounded-3xl overflow-y-auto shadow-2xl flex flex-col md:flex-row z-10 scrollbar-hide"
-                >
-                    <button 
-                        onClick={onClose}
-                        className="absolute top-4 right-4 z-20 p-2 rounded-full bg-white/5 border border-white/10 text-white/70 hover:text-white hover:bg-white/10 transition-all active:scale-95"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
-
-                    {/* Left Column: Avatar & Quick Info */}
-                    <div className="w-full md:w-1/3 p-6 flex flex-col items-center border-b md:border-b-0 md:border-r border-white/5 shrink-0 bg-black/20">
-                        <div className="w-32 h-32 rounded-full overflow-hidden border-2 border-brand-orange shadow-[0_0_20px_rgba(255,110,58,0.25)] mb-4 shrink-0">
-                            {avatarUrl ? (
-                                <img src={avatarUrl} alt={charInfo.name} className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="w-full h-full bg-zinc-900 flex items-center justify-center text-zinc-500 font-bold uppercase">DB</div>
-                            )}
-                        </div>
-
-                        <h3 className="text-xl font-black text-center text-white tracking-wide uppercase">{charInfo.name}</h3>
-                        {charInfo.alias && charInfo.alias.length > 0 && (
-                            <p className="text-xs text-zinc-500 text-center mt-1">Alias: {charInfo.alias.join(", ")}</p>
-                        )}
-
-                        <div className="w-full mt-6 space-y-3 font-mono text-[10px] text-zinc-400">
-                            <div className="flex justify-between border-b border-white/5 pb-1">
-                                <span>Raza</span>
-                                <span className="font-bold text-white uppercase">{charInfo.race || "N/A"}</span>
-                            </div>
-                            <div className="flex justify-between border-b border-white/5 pb-1">
-                                <span>Origen</span>
-                                <span className="font-bold text-white uppercase">{charInfo.origin || "N/A"}</span>
-                            </div>
-                            {charInfo.height_cm && (
-                                <div className="flex justify-between border-b border-white/5 pb-1">
-                                    <span>Altura</span>
-                                    <span className="font-bold text-white">{charInfo.height_cm} cm</span>
-                                </div>
-                            )}
-                            {charInfo.weight_kg && (
-                                <div className="flex justify-between border-b border-white/5 pb-1">
-                                    <span>Peso</span>
-                                    <span className="font-bold text-white">{charInfo.weight_kg} kg</span>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Right Column: Bio, Techniques & Transformations */}
-                    <div className="flex-grow p-6 md:p-8 space-y-6 overflow-y-auto max-h-[85vh]">
-                        <div>
-                            <span className="text-[10px] font-black text-brand-orange uppercase tracking-[0.2em] mb-2 block">Biografía</span>
-                            <p className="text-zinc-300 text-sm leading-relaxed">{charInfo.biography}</p>
-                        </div>
-
-                        {charInfo.personality && (
-                            <div>
-                                <span className="text-[10px] font-black text-brand-orange uppercase tracking-[0.2em] mb-2 block">Personalidad</span>
-                                <p className="text-zinc-400 text-xs leading-relaxed">{charInfo.personality}</p>
-                            </div>
-                        )}
-
-                        {charInfo.techniques && charInfo.techniques.length > 0 && (
-                            <div>
-                                <span className="text-[10px] font-black text-brand-orange uppercase tracking-[0.2em] mb-2 block">Técnicas</span>
-                                <div className="flex flex-wrap gap-1.5">
-                                    {charInfo.techniques.map((tech: string, i: number) => (
-                                        <span key={i} className="px-2.5 py-1 bg-white/5 border border-white/5 text-zinc-300 text-[10px] rounded-lg font-bold">
-                                            {tech}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {charInfo.transformations && charInfo.transformations.length > 0 && (
-                            <div>
-                                <span className="text-[10px] font-black text-brand-orange uppercase tracking-[0.2em] mb-3 block">Transformaciones / Estados</span>
-                                <div className="space-y-3">
-                                    {charInfo.transformations.map((trans: any, i: number) => (
-                                        <div key={i} className="p-3 bg-white/[0.02] border border-white/5 rounded-xl flex flex-col gap-1">
-                                            <div className="flex items-center justify-between gap-4">
-                                                <span className="font-bold text-xs text-white uppercase flex items-center gap-1">
-                                                    <Sparkles className="w-3.5 h-3.5 text-brand-orange" /> {trans.name}
-                                                </span>
-                                                {trans.multiplier && (
-                                                    <span className="font-mono text-[9px] font-bold text-brand-orange px-2 py-0.5 bg-brand-orange/10 border border-brand-orange/20 rounded">
-                                                        {trans.multiplier}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <p className="text-zinc-400 text-[11px] leading-relaxed">{trans.description}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </motion.div>
-            </div>
-        </AnimatePresence>
-    )
-}

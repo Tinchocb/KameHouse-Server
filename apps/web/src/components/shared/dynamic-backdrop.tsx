@@ -30,10 +30,9 @@ export function DynamicBackdrop() {
     const isEnabled = useAppStore(state => state.dynamicBackdropEnabled)
     const isMotionEnabled = useAppStore(state => state.dynamicBackdropMotionEnabled)
     const { currentBackdropUrl } = useIntelligenceStore()
-    const activeBackdropUrl = isStaticPage ? "/kamehouse-bg.png" : currentBackdropUrl
+    const activeBackdropUrl = currentBackdropUrl
     // Home uses a more subtle opacity to avoid competing with content
-    // Home uses a more subtle opacity to avoid competing with content
-    const baseOpacity = isHomePage ? 0.65 : isStaticPage ? 0.75 : 0.30
+    const baseOpacity = isHomePage ? 0.65 : 0.35
 
     const [displayedUrl, setDisplayedUrl] = React.useState<string | null>(null)
     const [nextUrl, setNextUrl] = React.useState<string | null>(null)
@@ -54,8 +53,13 @@ export function DynamicBackdrop() {
         let targetY = 0
         let currentX = 0
         let currentY = 0
+        let paused = document.visibilityState === "hidden"
 
         const updatePosition = () => {
+            if (paused) {
+                rafId = null
+                return
+            }
             const dx = targetX - currentX
             const dy = targetY - currentY
 
@@ -78,6 +82,7 @@ export function DynamicBackdrop() {
         }
 
         const handleMouseMove = (e: MouseEvent) => {
+            if (paused) return
             const { clientX, clientY } = e
             targetX = (clientX / window.innerWidth - 0.5) * 100
             targetY = (clientY / window.innerHeight - 0.5) * 100
@@ -87,14 +92,24 @@ export function DynamicBackdrop() {
             }
         }
 
+        const handleVisibility = () => {
+            paused = document.visibilityState === "hidden"
+            if (paused && rafId) {
+                cancelAnimationFrame(rafId)
+                rafId = null
+            }
+        }
+
         window.addEventListener("mousemove", handleMouseMove, { passive: true })
+        document.addEventListener("visibilitychange", handleVisibility)
         rafId = requestAnimationFrame(updatePosition)
 
         return () => {
             window.removeEventListener("mousemove", handleMouseMove)
+            document.removeEventListener("visibilitychange", handleVisibility)
             if (rafId) cancelAnimationFrame(rafId)
         }
-    }, [isEnabled])
+    }, [isEnabled, isMotionEnabled])
 
     // Orchestrate a smooth cross-fade without Framer Motion (pure CSS opacity)
     React.useEffect(() => {
@@ -128,7 +143,7 @@ export function DynamicBackdrop() {
         <div
             ref={containerRef}
             aria-hidden="true"
-            className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-zinc-950 animate-breathing"
+            className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-background animate-breathing"
         >
             <style>{`
                 @keyframes breathing {
@@ -155,7 +170,7 @@ export function DynamicBackdrop() {
                 {/* ── Displayed (current) backdrop ──────────────────────────── */}
                 <div
                     ref={currentLayerRef}
-                    className="absolute inset-0 scale-115 bg-cover bg-center bg-no-repeat blur-3xl saturate-150"
+                    className="absolute inset-0 scale-115 bg-cover bg-center bg-no-repeat blur-2xl saturate-150"
                     style={{
                         backgroundImage: displayedUrl ? `url(${displayedUrl})` : undefined,
                         opacity: isCrossFading ? 0 : baseOpacity,
@@ -167,7 +182,7 @@ export function DynamicBackdrop() {
                 {/* ── Incoming (next) backdrop — fades in over the current with asymmetric scale ── */}
                 <div
                     ref={nextLayerRef}
-                    className="absolute inset-0 bg-cover bg-center bg-no-repeat blur-3xl saturate-150"
+                    className="absolute inset-0 bg-cover bg-center bg-no-repeat blur-2xl saturate-150"
                     style={{
                         backgroundImage: nextUrl ? `url(${nextUrl})` : undefined,
                         opacity: isCrossFading ? baseOpacity : 0,

@@ -37,43 +37,46 @@ export function ScanActionCard({
 
     const colors: Record<string, { border: string; bg: string; glow: string; text: string; iconBg: string }> = {
         white: { 
-            border: "border-white/5 hover:border-brand-orange/45", 
-            bg: "bg-white/[0.02] hover:bg-brand-orange/[0.01]", 
-            glow: "hover:shadow-[0_0_40px_-10px_rgba(255,110,58,0.15)]", 
-            text: "text-brand-orange",
-            iconBg: "bg-white/5 group-hover:bg-brand-orange/15 group-hover:border-brand-orange/20"
+            border: "border-white/5 hover:border-[#ff6e3a]/40", 
+            bg: "bg-zinc-950/45 hover:bg-[#ff6e3a]/[0.01]", 
+            glow: "hover:shadow-[0_0_35px_rgba(255,110,58,0.12)]", 
+            text: "text-[#ff6e3a]",
+            iconBg: "bg-white/5 border-white/5 group-hover:bg-[#ff6e3a]/10 group-hover:border-[#ff6e3a]/25"
         },
         zinc: { 
-            border: "border-white/5 hover:border-white/20", 
-            bg: "bg-white/[0.01] hover:bg-white/[0.03]", 
-            glow: "hover:shadow-[0_0_40px_-10px_rgba(255,255,255,0.03)]", 
-            text: "text-zinc-500",
-            iconBg: "bg-white/[0.01] group-hover:bg-white/[0.04] group-hover:border-white/10"
+            border: "border-white/5 hover:border-white/15", 
+            bg: "bg-zinc-950/45 hover:bg-white/[0.015]", 
+            glow: "hover:shadow-[0_0_35px_rgba(255,255,255,0.03)]", 
+            text: "text-zinc-400",
+            iconBg: "bg-white/[0.01] border-white/5 group-hover:bg-white/[0.04] group-hover:border-white/10"
         },
     }
     const c = colors[accentColor]
 
     const baseClasses = cn(
-        "group relative block p-7 rounded-2xl border transition-all duration-500 text-left overflow-hidden backdrop-blur-md shadow-[0_15px_30px_rgba(0,0,0,0.2)]",
+        "group relative block p-7 rounded-[24px] border transition-all duration-500 text-left overflow-hidden backdrop-blur-2xl shadow-[0_15px_40px_rgba(0,0,0,0.6)]",
         c.border, c.bg, c.glow,
-        disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer active:scale-[0.98]"
+        disabled ? "opacity-35 cursor-not-allowed" : "cursor-pointer active:scale-[0.98]"
     )
 
     const content = (
         <div className="relative z-10 space-y-6">
-            <div className="flex items-center justify-between">
-                <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center border border-white/5 transition-all duration-500 shadow-inner", c.iconBg)}>
+            <div className="absolute inset-0 bg-gradient-to-b from-white/[0.01] to-transparent pointer-events-none" />
+            
+            <div className="flex items-center justify-between relative z-10">
+                <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center border transition-all duration-500 shadow-inner", c.iconBg)}>
                     {loading ? <LucideRefreshCw size={20} className={cn("animate-spin", c.text)} /> : icon}
                 </div>
-                <LucideChevronRight size={18} className="text-zinc-700 group-hover:text-brand-orange group-hover:translate-x-1.5 transition-all duration-500" />
+                <LucideChevronRight size={18} className="text-zinc-650 group-hover:text-[#ff6e3a] group-hover:translate-x-1.5 transition-all duration-500" />
             </div>
-            <div className="space-y-1.5">
+            
+            <div className="space-y-2 relative z-10">
                 <p className="font-bebas text-4xl text-white tracking-wider uppercase leading-none">{label}</p>
-                <p className="text-zinc-500 group-hover:text-zinc-400 text-xs leading-relaxed transition-colors duration-500 font-medium">{desc}</p>
+                <p className="text-zinc-500 group-hover:text-zinc-400 text-[11px] leading-relaxed transition-colors duration-500 font-medium">{desc}</p>
             </div>
             
             {/* Background Gradient Pulse */}
-            <div className="absolute -bottom-12 -right-12 w-36 h-36 bg-brand-orange/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none" />
+            <div className="absolute -bottom-12 -right-12 w-36 h-36 bg-[#ff6e3a]/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none" />
         </div>
     )
 

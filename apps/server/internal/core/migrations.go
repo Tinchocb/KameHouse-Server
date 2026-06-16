@@ -16,8 +16,6 @@ var Tours = map[string][]string{
 // runMigrations checks the previous version and runs any necessary migrations based on the version difference.
 // This is run synchronously on app startup.
 func (a *App) runMigrations() {
-
-	//go func() {
 	a.Logger.Debug().Msg("app: Checking for version migrations")
 	done := false
 	defer func() {
@@ -61,14 +59,5 @@ func (a *App) runMigrations() {
 				}
 			}
 		}
-
-		//-----------------------------------------------------------------------------------------
-
-		//-----------------------------------------------------------------------------------------
-
-		//-----------------------------------------------------------------------------------------
-
 	}
-	//}()
-
 }

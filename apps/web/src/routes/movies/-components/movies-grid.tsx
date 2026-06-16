@@ -38,8 +38,8 @@ export function MoviesGrid({
             for (const entry of entries) {
                 const width = entry.contentRect.width
                 setGridWidth(width)
-                // minmax(230px, 1fr) with gap 24px
-                const colCount = Math.floor((width + 24) / (230 + 24))
+                // minmax(180px, 1fr) with gap 24px
+                const colCount = Math.floor((width + 24) / (180 + 24))
                 setColumns(Math.max(1, colCount))
             }
             if (gridRef.current) {
@@ -59,7 +59,7 @@ export function MoviesGrid({
     }, [filteredSorted, columns])
 
     const rowHeight = useMemo(() => {
-        const cardWidth = Math.max(230, (gridWidth - (columns - 1) * 24) / columns)
+        const cardWidth = Math.max(180, (gridWidth - (columns - 1) * 24) / columns)
         const posterHeight = cardWidth * 1.5
         // Card title block is 36px (title) + 14px (info) + 14px (gap) = 64px
         // Row pb-10 is 40px
@@ -74,7 +74,7 @@ export function MoviesGrid({
     })
 
     return (
-        <div className="max-w-[1700px] mx-auto px-6 md:px-14 py-12 pb-32 z-10 relative">
+        <div className="w-full relative pb-32">
             {isLoading && allMoviesLength === 0 ? (
                 <PosterGridSkeleton count={18} />
             ) : filteredSorted.length === 0 ? (

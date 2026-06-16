@@ -1,7 +1,7 @@
 package db
 
 import (
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
 	"strings"
@@ -51,12 +51,17 @@ func UpsertLocalFileRelationalBatch(d *Database, files []*dto.LocalFile) error {
 		dbFiles[i] = LocalFileDtoToModel(f)
 	}
 
-	return d.gormdb.Transaction(func(tx *gorm.DB) error {
+	err := d.gormdb.Transaction(func(tx *gorm.DB) error {
 		return tx.Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "path"}},
 			UpdateAll: true,
 		}).CreateInBatches(dbFiles, 60).Error
 	})
+	if err != nil {
+		return err
+	}
+	InvalidateLocalFilesCache()
+	return nil
 }
 
 // SyncLocalFilesRelational performs a full sync: upserts the given files and deletes any other file in the DB.
@@ -118,6 +123,11 @@ func SyncLocalFilesRelational(d *Database, files []*dto.LocalFile) error {
 		// Cleanup
 		return tx.Exec("DROP TABLE sync_paths").Error
 	})
+	if err != nil {
+		return err
+	}
+	InvalidateLocalFilesCache()
+	return nil
 }
 
 // SyncPartialLocalFilesRelational performs a partial sync: upserts given files and deletes missing files ONLY within targeted paths.
@@ -148,7 +158,12 @@ func SyncPartialLocalFilesRelational(d *Database, files []*dto.LocalFile, target
 		}
 	}
 
-	return query.Delete(&models.LocalFile{}).Error
+	err = query.Delete(&models.LocalFile{}).Error
+	if err != nil {
+		return err
+	}
+	InvalidateLocalFilesCache()
+	return nil
 }
 
 // DeleteLocalFilesRelationalByPaths removes local files with the given paths.

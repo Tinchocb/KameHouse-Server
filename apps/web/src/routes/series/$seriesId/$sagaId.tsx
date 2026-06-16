@@ -475,6 +475,17 @@ function DetailPage() {
 
     const currentEpisode = saga?.episodes[currentIdx]
 
+    const nextEp = useMemo(() => {
+        if (!saga || currentIdx >= saga.episodes.length - 1) return null
+        return saga.episodes[currentIdx + 1]
+    }, [saga, currentIdx])
+
+    const nextLocalFile = useMemo(() => {
+        if (!nextEp) return null
+        const fullEp = libraryEntry?.episodes?.find(e => e.episodeNumber === nextEp.number)
+        return fullEp?.localFile
+    }, [nextEp, libraryEntry])
+
     // When user clicks an episode → play if local
     const handleEpisodePlay = useCallback((ep: Episode) => {
         const fullEp = libraryEntry?.episodes?.find(e => e.episodeNumber === ep.number)
@@ -545,22 +556,51 @@ function DetailPage() {
 
 
             {/* ── Video Player Modal ── */}
-            {isPlayerOpen && playTarget && (
-                <VideoPlayer
-                    streamUrl={playTarget.path}
-                    streamType={playTarget.streamType as "local" | "online" | "direct" | undefined}
-                    title={series.title}
-                    episodeLabel={playTarget.episodeLabel}
-                    mediaId={playTarget.seriesId}
-                    episodeNumber={playTarget.episodeNumber}
-                    isExternalStream={false}
-                    onClose={() => {
-                        startViewTransition(() => {
-                            setIsPlayerOpen(false)
-                        })
-                    }}
-                />
-            )}
+            {isPlayerOpen && playTarget && (() => {
+                const nextTitle = nextEp ? nextEp.title : undefined;
+                return (
+                    <VideoPlayer
+                        streamUrl={playTarget.path}
+                        streamType={playTarget.streamType as "local" | "online" | "direct" | undefined}
+                        title={series.title}
+                        episodeLabel={playTarget.episodeLabel}
+                        mediaId={playTarget.seriesId}
+                        episodeNumber={playTarget.episodeNumber}
+                        isExternalStream={false}
+                        nextStreamUrl={nextLocalFile?.path}
+                        nextStreamType={nextLocalFile?.path?.toLowerCase().endsWith(".mp4") ? "direct" : "transcode"}
+                        nextEpisodeTitle={nextTitle}
+                        nextEpisodeNumber={nextEp?.number}
+                        nextEpisodeImage={saga?.image}
+                        onNextEpisode={() => {
+                            if (currentIdx < saga.episodes.length - 1) {
+                                const nextIdx = currentIdx + 1
+                                setCurrentIdx(nextIdx)
+                                const next = saga.episodes[nextIdx]
+                                const fullEp = libraryEntry?.episodes?.find(e => e.episodeNumber === next.number)
+                                const filePath = fullEp?.localFile?.path
+                                if (filePath) {
+                                    const isMp4 = filePath.toLowerCase().endsWith(".mp4")
+                                    const targetType = isMp4 ? "direct" : "transcode"
+                                    setPlayTarget({
+                                        path: filePath,
+                                        streamType: targetType as Mediastream_StreamType,
+                                        episodeLabel: next.title,
+                                        episodeNumber: next.number,
+                                        seriesId: Number(seriesId)
+                                    })
+                                }
+                            }
+                        }}
+                        hasNextEpisode={currentIdx < saga.episodes.length - 1}
+                        onClose={() => {
+                            startViewTransition(() => {
+                                setIsPlayerOpen(false)
+                            })
+                        }}
+                    />
+                );
+            })()}
         </div>
     )
 }

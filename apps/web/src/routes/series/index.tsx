@@ -5,6 +5,7 @@ import { HydrationBoundary, dehydrate } from '@tanstack/react-query';
 import { API_ENDPOINTS } from '@/api/generated/endpoints';
 import { SeriesCard, getVhsColor } from './-SeriesCard';
 import { getLargeResImage } from '@/lib/helpers/images';
+import { useIntelligenceStore } from '@/hooks/use-home-intelligence';
 
 export const Route = createFileRoute('/series/')({
     loader: ({ context }) => {
@@ -64,8 +65,16 @@ const getSeriesYear = (title: string, mediaYear?: number, startDate?: string): n
 function SeriesFullscreenIndex() {
     const navigate = useNavigate();
     const [selectedId, setSelectedId] = useState<number | null>(null);
+    const setBackdropUrl = useIntelligenceStore(s => s.setBackdropUrl);
 
     const { data: collection, isLoading } = useGetLibraryCollection();
+
+    useEffect(() => {
+        setBackdropUrl("/casa-kame-de-dragon-ball-3963.webp");
+        return () => {
+            setBackdropUrl(null);
+        };
+    }, [setBackdropUrl]);
 
     const handleNavigate = useCallback((id: string) => {
         navigate({ to: '/series/$seriesId', params: { seriesId: id } });
@@ -121,65 +130,65 @@ function SeriesFullscreenIndex() {
 
     return (
         <div
-            className="w-full h-full flex flex-col text-white font-sans overflow-hidden relative"
+            className="w-full h-full flex flex-col bg-transparent text-white font-sans overflow-hidden relative p-4 md:p-6 md:pl-[110px]"
         >
-            {/* Subtle ambient glow that follows selected item — GPU-composited */}
+            {/* Ambient Background Glow — Single dynamic div transitioning position & color (GPU-composited) */}
             {selectedItem && (
                 <div
-                    className="absolute top-1/2 left-0 w-[600px] h-[600px] pointer-events-none blur-[80px] z-0"
+                    className="absolute top-1/2 left-0 w-[800px] h-[800px] pointer-events-none blur-[120px] z-0"
                     style={{
-                        opacity: 0.05,
+                        opacity: 0.08,
                         background: `radial-gradient(circle, ${getVhsColor(selectedItem.id)} 0%, transparent 70%)`,
-                        transform: `translate3d(calc(${(selectedIndex / Math.max(seriesList.length - 1, 1)) * 80 + 10}% - 300px), -50%, 0)`,
+                        transform: `translate3d(calc(${(selectedIndex / Math.max(seriesList.length - 1, 1)) * 80 + 10}% - 400px), -50%, 0)`,
                         transition: 'transform 700ms cubic-bezier(0.16, 1, 0.3, 1), background 700ms ease-out',
                     }}
                 />
             )}
 
-
-
             {/* CRT scanlines overlay filter */}
-            <div className="absolute inset-0 pointer-events-none z-[49] opacity-[0.012] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,6px_100%]" />
+            <div className="absolute inset-0 pointer-events-none z-[49] opacity-[0.015] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,6px_100%]" />
 
-            {/* Main Shelf Container */}
-            <main className="flex-1 min-h-0 flex bg-black/60 overflow-x-auto overflow-y-hidden no-scrollbar relative z-10 border-t-4 border-b-4 border-zinc-950/80 shadow-[inset_0_12px_30px_rgba(0,0,0,0.7),inset_0_-12px_30px_rgba(0,0,0,0.7)] backdrop-blur-[2px]">
-                {/* Backlight Glow inside shelf — Single dynamic div transitioning position & color */}
-                {selectedItem && (
-                    <div
-                        className="absolute top-1/2 left-0 w-[600px] h-[600px] pointer-events-none blur-[100px] z-0"
-                        style={{
-                            opacity: 0.14,
-                            background: `radial-gradient(circle, ${getVhsColor(selectedItem.id)} 0%, transparent 60%)`,
-                            transform: `translate3d(calc(${(selectedIndex / Math.max(seriesList.length - 1, 1)) * 80 + 10}% - 300px), -50%, 0)`,
-                            transition: 'transform 700ms cubic-bezier(0.16, 1, 0.3, 1), background 700ms ease-out',
-                        }}
-                    />
-                )}
-                
-                {isLoading && seriesList.length === 0 ? (
-                    <div className="w-full h-full flex items-center justify-center relative z-10">
-                        <span className="text-white/50 tracking-widest uppercase text-sm font-black animate-pulse">
-                            Cargando colección...
-                        </span>
-                    </div>
-                ) : seriesList.length === 0 ? (
-                    <div className="w-full h-full flex items-center justify-center relative z-10">
-                        <span className="text-white/50 tracking-widest uppercase text-sm font-black">
-                            No hay series en tu colección
-                        </span>
-                    </div>
-                ) : (
-                    seriesList.map((item) => (
-                        <SeriesCard
-                            key={item.id}
-                            item={item}
-                            isSelected={item.id === selectedId}
-                            onNavigate={handleNavigate}
-                            onSelect={setSelectedId}
+            {/* Main Shelf Container Wrapper (Enforces rounded corners clipping) */}
+            <div className="flex-1 min-h-0 bg-zinc-950/80 backdrop-blur-2xl rounded-[32px] border border-white/10 shadow-[0_16px_48px_rgba(0,0,0,0.6)] overflow-hidden relative z-10 flex flex-col">
+                <main className="w-full h-full flex bg-transparent overflow-x-auto overflow-y-hidden no-scrollbar relative z-10">
+                    {/* Backlight Glow inside shelf — Single dynamic div transitioning position & color */}
+                    {selectedItem && (
+                        <div
+                            className="absolute top-1/2 left-0 w-[600px] h-[600px] pointer-events-none blur-[100px] z-0"
+                            style={{
+                                opacity: 0.14,
+                                background: `radial-gradient(circle, ${getVhsColor(selectedItem.id)} 0%, transparent 60%)`,
+                                transform: `translate3d(calc(${(selectedIndex / Math.max(seriesList.length - 1, 1)) * 80 + 10}% - 300px), -50%, 0)`,
+                                transition: 'transform 700ms cubic-bezier(0.16, 1, 0.3, 1), background 700ms ease-out',
+                            }}
                         />
-                    ))
-                )}
-            </main>
+                    )}
+                    
+                    {isLoading && seriesList.length === 0 ? (
+                        <div className="w-full h-full flex items-center justify-center relative z-10">
+                            <span className="text-white/50 tracking-widest uppercase text-sm font-black animate-pulse">
+                                Cargando colección...
+                            </span>
+                        </div>
+                    ) : seriesList.length === 0 ? (
+                        <div className="w-full h-full flex items-center justify-center relative z-10">
+                            <span className="text-white/50 tracking-widest uppercase text-sm font-black">
+                                No hay series en tu colección
+                            </span>
+                        </div>
+                    ) : (
+                        seriesList.map((item) => (
+                            <SeriesCard
+                                key={item.id}
+                                item={item}
+                                isSelected={item.id === selectedId}
+                                onNavigate={handleNavigate}
+                                onSelect={setSelectedId}
+                            />
+                        ))
+                    )}
+                </main>
+            </div>
 
             <style>{`
                 .no-scrollbar::-webkit-scrollbar { display: none; }

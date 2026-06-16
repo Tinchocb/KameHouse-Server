@@ -113,13 +113,13 @@ func run(ctx context.Context) error {
 	errCh := make(chan error, 1)
 	go func() {
 		app.Logger.Info().Msg(fmt.Sprintf("server listening on %s", addr))
-		if app.Config.Server.Tls.Enabled {
-			if err := core.GenerateSelfSignedCert(app.Config.Server.Tls.CertPath, app.Config.Server.Tls.KeyPath, app.Logger); err != nil {
+		if app.Config.Server.TLS.Enabled {
+			if err := core.GenerateSelfSignedCert(app.Config.Server.TLS.CertPath, app.Config.Server.TLS.KeyPath, app.Logger); err != nil {
 				app.Logger.Error().Err(err).Msg("failed to generate/verify TLS certificate")
 				errCh <- err
 				return
 			}
-			errCh <- srv.ListenAndServeTLS(app.Config.Server.Tls.CertPath, app.Config.Server.Tls.KeyPath)
+			errCh <- srv.ListenAndServeTLS(app.Config.Server.TLS.CertPath, app.Config.Server.TLS.KeyPath)
 			return
 		}
 		errCh <- srv.ListenAndServe()

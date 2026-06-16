@@ -156,27 +156,37 @@ function MoviesPage() {
                 handleMovieClick={handleMovieClick}
             />
 
-            <MoviesFilterBar 
-                allMovies={allMovies}
-                activeEra={activeEra}
-                setActiveEra={setActiveEra}
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                sortBy={sortBy}
-                setSortBy={setSortBy}
-                sortOpen={sortOpen}
-                setSortOpen={setSortOpen}
-            />
+            <div className="w-full max-w-[1800px] mx-auto px-6 md:px-12 lg:px-16 mt-12">
+                <div className="flex flex-col lg:flex-row gap-8 min-h-[70vh]">
+                    {/* Left Column: Filter Sidebar */}
+                    <div className="lg:w-80 flex-shrink-0 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-7rem)]">
+                        <MoviesFilterBar 
+                            allMovies={allMovies}
+                            activeEra={activeEra}
+                            setActiveEra={setActiveEra}
+                            searchQuery={searchQuery}
+                            setSearchQuery={setSearchQuery}
+                            sortBy={sortBy}
+                            setSortBy={setSortBy}
+                            sortOpen={sortOpen}
+                            setSortOpen={setSortOpen}
+                        />
+                    </div>
 
-            <MoviesGrid 
-                filteredSorted={filteredSorted}
-                isLoading={isLoading}
-                allMoviesLength={allMovies.length}
-                watchHistory={watchHistory}
-                handleMovieClick={handleMovieClick}
-                handleHoverCard={handleHoverCard}
-                activeEra={activeEra}
-            />
+                    {/* Right Column: Movies Grid */}
+                    <div className="flex-grow min-w-0">
+                        <MoviesGrid 
+                            filteredSorted={filteredSorted}
+                            isLoading={isLoading}
+                            allMoviesLength={allMovies.length}
+                            watchHistory={watchHistory}
+                            handleMovieClick={handleMovieClick}
+                            handleHoverCard={handleHoverCard}
+                            activeEra={activeEra}
+                        />
+                    </div>
+                </div>
+            </div>
             
         </div>
     )

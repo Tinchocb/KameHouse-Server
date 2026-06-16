@@ -58,6 +58,62 @@ type AnimeEpisodesResponse struct {
 	} `json:"pagination"`
 }
 
+type AnimeFullResponse struct {
+	Data struct {
+		MalID  int    `json:"mal_id"`
+		Title  string `json:"title"`
+		TitleEng string `json:"title_english"`
+		TitleJpn string `json:"title_japanese"`
+		Images struct {
+			Jpg struct {
+				LargeImageUrl string `json:"large_image_url"`
+			} `json:"jpg"`
+		} `json:"images"`
+		Synopsis string `json:"synopsis"`
+		Episodes int    `json:"episodes"`
+		Status   string `json:"status"`
+		Duration string `json:"duration"`
+		Rating   string `json:"rating"`
+		Score    float64 `json:"score"`
+		Studios  []struct {
+			Name string `json:"name"`
+		} `json:"studios"`
+		Genres []struct {
+			Name string `json:"name"`
+		} `json:"genres"`
+		Demographics []struct {
+			Name string `json:"name"`
+		} `json:"demographics"`
+		Theme struct {
+			Openings []string `json:"openings"`
+			Endings  []string `json:"endings"`
+		} `json:"theme"`
+		Relations []struct {
+			Relation string `json:"relation"`
+			Entry    []struct {
+				MalID int    `json:"mal_id"`
+				Type  string `json:"type"`
+				Name  string `json:"name"`
+			} `json:"entry"`
+		} `json:"relations"`
+	} `json:"data"`
+}
+
+type AnimeCharactersResponse struct {
+	Data []struct {
+		Character struct {
+			MalID int    `json:"mal_id"`
+			Name  string `json:"name"`
+			Images struct {
+				Jpg struct {
+					ImageUrl string `json:"image_url"`
+				} `json:"jpg"`
+			} `json:"images"`
+		} `json:"character"`
+		Role string `json:"role"`
+	} `json:"data"`
+}
+
 // SearchAnime queries the Jikan API by title and returns the first match.
 func (c *Client) SearchAnime(ctx context.Context, title string) (*AnimeSearchResponse, error) {
 	escapedQuery := strings.ReplaceAll(url.QueryEscape(title), "+", "%20")
@@ -147,4 +203,120 @@ func (c *Client) GetAnimeEpisodes(ctx context.Context, malID int) (*AnimeEpisode
 	}
 
 	return &fullRes, nil
+}
+
+// SearchAnimeAdvanced queries the Jikan API by title with limit and pagination.
+func (c *Client) SearchAnimeAdvanced(ctx context.Context, query string, page int, limit int) (*AnimeSearchResponse, error) {
+	escapedQuery := strings.ReplaceAll(url.QueryEscape(query), "+", "%20")
+	reqUrl := fmt.Sprintf("https://api.jikan.moe/v4/anime?q=%s&page=%d&limit=%d", escapedQuery, page, limit)
+	
+	for attempt := 0; attempt < 3; attempt++ {
+		req, err := http.NewRequestWithContext(ctx, "GET", reqUrl, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		c.rateLimiter <- struct{}{}
+		resp, err := c.httpClient.Do(req)
+		<-c.rateLimiter
+
+		if err != nil {
+			return nil, err
+		}
+		
+		if resp.StatusCode == http.StatusTooManyRequests {
+			resp.Body.Close()
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("jikan api returned status %d", resp.StatusCode)
+		}
+
+		var res AnimeSearchResponse
+		if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+			return nil, err
+		}
+
+		return &res, nil
+	}
+	return nil, fmt.Errorf("jikan rate limited after retries")
+}
+
+// GetAnimeFull fetches the complete details of an anime by MAL ID.
+func (c *Client) GetAnimeFull(ctx context.Context, malID int) (*AnimeFullResponse, error) {
+	url := fmt.Sprintf("https://api.jikan.moe/v4/anime/%d/full", malID)
+	for attempt := 0; attempt < 3; attempt++ {
+		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		c.rateLimiter <- struct{}{}
+		resp, err := c.httpClient.Do(req)
+		<-c.rateLimiter
+
+		if err != nil {
+			return nil, err
+		}
+		
+		if resp.StatusCode == http.StatusTooManyRequests {
+			resp.Body.Close()
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("jikan api returned status %d", resp.StatusCode)
+		}
+
+		var res AnimeFullResponse
+		if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+			return nil, err
+		}
+
+		return &res, nil
+	}
+	return nil, fmt.Errorf("jikan rate limited after retries on GetAnimeFull")
+}
+
+// GetAnimeCharacters fetches the characters of an anime by MAL ID.
+func (c *Client) GetAnimeCharacters(ctx context.Context, malID int) (*AnimeCharactersResponse, error) {
+	url := fmt.Sprintf("https://api.jikan.moe/v4/anime/%d/characters", malID)
+	for attempt := 0; attempt < 3; attempt++ {
+		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		c.rateLimiter <- struct{}{}
+		resp, err := c.httpClient.Do(req)
+		<-c.rateLimiter
+
+		if err != nil {
+			return nil, err
+		}
+		
+		if resp.StatusCode == http.StatusTooManyRequests {
+			resp.Body.Close()
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("jikan api returned status %d", resp.StatusCode)
+		}
+
+		var res AnimeCharactersResponse
+		if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+			return nil, err
+		}
+
+		return &res, nil
+	}
+	return nil, fmt.Errorf("jikan rate limited after retries on GetAnimeCharacters")
 }

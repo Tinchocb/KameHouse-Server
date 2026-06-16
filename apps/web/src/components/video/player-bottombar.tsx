@@ -1,5 +1,5 @@
 import React from "react"
-import { Play, Pause, ChevronLeft, ChevronRight, Volume2, VolumeX, Maximize, Minimize, SkipForward, SkipBack, ListVideo, Tv } from "lucide-react"
+import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipForward, SkipBack, ListVideo, Tv } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 
 const CastIcon = ({ className }: { className?: string }) => (
@@ -301,19 +301,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                         }
                     </button>
 
-                    {/* Skip backward/forward */}
-                    <button
-                        onClick={(e) => { e.stopPropagation(); skipTime(-10); }}
-                        aria-label="Retroceder 10 segundos"
-                        className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 active:scale-90 duration-300">
-                        <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <button
-                        onClick={(e) => { e.stopPropagation(); skipTime(10); }}
-                        aria-label="Adelantar 10 segundos"
-                        className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 active:scale-90 duration-300">
-                        <ChevronRight className="w-4 h-4" />
-                    </button>
+
 
                     {/* Chapter Prev/Next navigation */}
                     {chapters && chapters.length > 0 && (
@@ -399,25 +387,6 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
 
                 {/* Right Wing */}
                 <div className="flex items-center gap-0.5">
-
-                    {/* Casting to TV */}
-                    {onPromptCast && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onPromptCast?.(); }}
-                            aria-label="Transmitir a TV"
-                            title="Transmitir a TV"
-                            className={cn(
-                                "transition-all duration-300 flex items-center justify-center w-8 h-8 rounded-full active:scale-90",
-                                castState === "connected"
-                                    ? "text-brand-orange bg-brand-orange/10 shadow-[0_0_12px_rgba(249,115,22,0.4)] animate-pulse"
-                                    : castState === "connecting"
-                                    ? "text-brand-orange animate-bounce"
-                                    : "text-zinc-500 hover:text-white hover:bg-white/5"
-                            )}
-                        >
-                            <CastIcon className="w-3.5 h-3.5" />
-                        </button>
-                    )}
 
                     {/* Queue Button */}
                     {hasQueue && (

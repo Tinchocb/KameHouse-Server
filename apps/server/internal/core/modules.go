@@ -18,7 +18,7 @@ import (
 	"kamehouse/internal/mediastream"
 	"kamehouse/internal/api/tmdb"
 	"kamehouse/internal/api/metadata_provider"
-	"kamehouse/internal/platforms/tmdb_platform"
+	"kamehouse/internal/platforms/jikan_platform"
 	"kamehouse/internal/util"
 
 	"github.com/cli/browser"
@@ -73,8 +73,13 @@ func (a *App) initModulesOnce() {
 	go func() {
 		ticker := time.NewTicker(10 * time.Minute)
 		defer ticker.Stop()
-		for range ticker.C {
-			cleanupTranscodeDirs(a.Logger)
+		for {
+			select {
+			case <-ticker.C:
+				cleanupTranscodeDirs(a.Logger, a.Config.Cache.TranscodeDir)
+			case <-a.shutdownCtx.Done():
+				return
+			}
 		}
 	}()
 
@@ -175,20 +180,21 @@ func (a *App) InitOrRefreshModules() {
 	})
 
 	if !a.IsOffline() {
-		a.Logger.Info().Msg("app: Using TMDb platform")
-		tmdbApiKey := settings.Library.TmdbApiKey
-		if tmdbApiKey == "" {
-			tmdbApiKey = a.Config.Metadata.TMDBApiKey
+		a.Logger.Info().Msg("app: Using Jikan platform")
+		a.Metadata.Platform.SetPlatform(jikan_platform.NewPlatform(a.Logger))
+		
+		tmdbAPIKey := settings.Library.TmdbApiKey
+		if tmdbAPIKey == "" {
+			tmdbAPIKey = a.Config.Metadata.TMDBApiKey
 		}
 		tmdbLanguage := settings.Library.TmdbLanguage
-		if tmdbLanguage == "" || tmdbLanguage == "en" || tmdbLanguage == "es" {
+		if tmdbLanguage == "" {
 			tmdbLanguage = "es-MX"
 		}
-		if tmdbApiKey == "" {
+		if tmdbAPIKey == "" {
 			a.Logger.Warn().Msg("app: No TMDB API key configured â€” platform features will be limited")
 		}
-		a.Metadata.Platform.SetPlatform(tmdb_platform.NewPlatform(tmdbApiKey, tmdbLanguage))
-		tmdbClient := tmdb.NewClient(tmdbApiKey, tmdbLanguage)
+		tmdbClient := tmdb.NewClient(tmdbAPIKey, tmdbLanguage)
 		if a.Database != nil {
 			tmdbClient.SetPersistentCache(&TMDbCacheAdapter{db: a.Database})
 		}
@@ -227,7 +233,12 @@ func (a *App) InitOrRefreshMediastreamSettings() {
 
 	if settings.TranscodeHwAccel == "disabled" || settings.TranscodeHwAccel == "" {
 		settings.TranscodeHwAccel = "auto"
-		a.Database.UpsertMediastreamSettings(settings)
+		updatedSettings, err := a.Database.UpsertMediastreamSettings(settings)
+		if err != nil {
+			a.Logger.Error().Err(err).Msg("app: Failed to update mediastream hardware acceleration settings")
+		} else {
+			settings = updatedSettings
+		}
 	}
 
 	a.MediastreamRepository.InitializeModules(settings, a.Config.Cache.Dir, a.Config.Cache.TranscodeDir)
@@ -270,8 +281,10 @@ func (a *App) performActionsOnce() {
 
 
 // cleanupTranscodeDirs removes transcode directories older than 1 hour.
-func cleanupTranscodeDirs(logger *zerolog.Logger) {
-	transcodeBaseDir := filepath.Join(os.TempDir(), "kamehouse", "transcodes")
+func cleanupTranscodeDirs(logger *zerolog.Logger, transcodeBaseDir string) {
+	if transcodeBaseDir == "" {
+		transcodeBaseDir = filepath.Join(os.TempDir(), "kamehouse", "transcodes")
+	}
 
 	entries, err := os.ReadDir(transcodeBaseDir)
 	if err != nil {

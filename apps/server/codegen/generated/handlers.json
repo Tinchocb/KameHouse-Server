@@ -266,6 +266,49 @@
     }
   },
   {
+    "name": "HandleGetAnimeEntryLocalFiles",
+    "trimmedName": "GetAnimeEntryLocalFiles",
+    "comments": [
+      "HandleGetAnimeEntryLocalFiles returns only the local files for the given anime media id.",
+      "",
+      "\t@summary return local files for the given anime media id.",
+      "\t@desc Used for fast fetching of playable files (like random play or TV mode).",
+      "\t@route /api/v1/library/anime-entry/{id}/local-files [GET]",
+      "\t@param id - int - true - \"Anime media ID\"",
+      "\t@returns []dto.LocalFile",
+      ""
+    ],
+    "filepath": "internal/handlers/anime_entries.go",
+    "filename": "anime_entries.go",
+    "api": {
+      "summary": "return local files for the given anime media id.",
+      "descriptions": [
+        "Used for fast fetching of playable files (like random play or TV mode)."
+      ],
+      "endpoint": "/api/v1/library/anime-entry/{id}/local-files",
+      "methods": [
+        "GET"
+      ],
+      "params": [
+        {
+          "name": "id",
+          "jsonName": "id",
+          "goType": "int",
+          "usedStructType": "",
+          "typescriptType": "number",
+          "required": true,
+          "descriptions": [
+            "Anime media ID"
+          ]
+        }
+      ],
+      "bodyFields": [],
+      "returns": "[]dto.LocalFile",
+      "returnGoType": "dto.LocalFile",
+      "returnTypescriptType": "Array\u003cLocalFile\u003e"
+    }
+  },
+  {
     "name": "HandleGetAnimeEntrySuggestions",
     "trimmedName": "GetAnimeEntrySuggestions",
     "comments": [
@@ -2871,6 +2914,27 @@
       "methods": [
         "DELETE"
       ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "HandleGetDragonBallLore",
+    "trimmedName": "GetDragonBallLore",
+    "comments": [
+      "HandleGetDragonBallLore handles the request to fetch the complete Dragon Ball lore database.",
+      ""
+    ],
+    "filepath": "internal/handlers/lore.go",
+    "filename": "lore.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
       "params": [],
       "bodyFields": [],
       "returns": "bool",

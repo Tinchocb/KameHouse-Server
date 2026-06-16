@@ -39,7 +39,7 @@ describe("Player Overlays", () => {
         it("hides when show is false", () => {
             const spy = vi.fn()
             render(<SkipIntroOverlay show={false} onSkip={spy} />)
-            const btn = screen.getByRole("button", { name: /saltar introducción/i })
+            const btn = screen.getByRole("button", { name: /saltar intro/i })
             // the parent div will have opacity-0 if not show
             expect(btn.parentElement).toHaveClass("opacity-0")
         })
@@ -47,7 +47,7 @@ describe("Player Overlays", () => {
         it("shows when show is true and triggers callback", () => {
             const spy = vi.fn()
             render(<SkipIntroOverlay show={true} onSkip={spy} />)
-            const btn = screen.getByRole("button", { name: /saltar introducción/i })
+            const btn = screen.getByRole("button", { name: /saltar intro/i })
             expect(btn.parentElement).toHaveClass("opacity-100")
             fireEvent.click(btn)
             expect(spy).toHaveBeenCalledTimes(1)

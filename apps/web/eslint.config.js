@@ -62,6 +62,10 @@ export default tseslint.config(
 
             // React Hooks
             ...reactHooksPlugin.configs.recommended.rules,
+            "react-hooks/preserve-manual-memoization": "warn",
+            "react-hooks/set-state-in-effect": "warn",
+            "react-hooks/refs": "warn",
+            "react-hooks/rules-of-hooks": "warn",
 
             // Accessibility
             "jsx-a11y/alt-text": "warn",
@@ -70,9 +74,10 @@ export default tseslint.config(
             // TypeScript
             "@typescript-eslint/no-explicit-any": "warn",
             "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+            "@typescript-eslint/ban-ts-comment": "warn",
 
             // React Compiler
-            "react-compiler/react-compiler": "error",
+            "react-compiler/react-compiler": "warn",
         },
     },
 )

@@ -1,7 +1,7 @@
 package db
 
 import (
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"kamehouse/internal/database/models"
 	"time"
 

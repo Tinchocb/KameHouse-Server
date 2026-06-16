@@ -190,14 +190,7 @@ export function PlayerSettingsMenu({
                                     value={activeSubtitle ? (activeSubtitle.title || langLabel(activeSubtitle.language)) : "Desactivado"}
                                     onClick={() => setView("subtitles")}
                                 />
-                                {(sources.length > 0 || hlsLevels.length > 0) && (
-                                    <MenuButton
-                                        icon={<Zap className="w-4 h-4" />}
-                                        label="Calidad / Fuente"
-                                        value={activeQuality}
-                                        onClick={() => setView("quality")}
-                                    />
-                                )}
+                                
                                 <MenuButton
                                     icon={<Monitor className="w-4 h-4" />}
                                     label="Imagen"

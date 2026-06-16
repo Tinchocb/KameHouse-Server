@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"kamehouse/internal/core"
 	util "kamehouse/internal/util/proxies"
 	"net/http"
@@ -187,7 +188,7 @@ func headMethodMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 				c.Request().Method = http.MethodHead
 			}()
 			if err := next(c); err != nil {
-				if err.Error() == echo.ErrMethodNotAllowed.Error() {
+				if errors.Is(err, echo.ErrMethodNotAllowed) {
 					return c.NoContent(http.StatusOK)
 				}
 				return err

@@ -109,6 +109,19 @@ type UnifiedMedia struct {
 	CollectionID   *int    `json:"collectionId,omitempty"`
 	CollectionName *string `json:"collectionName,omitempty"`
 	Runtime        *int    `json:"runtime,omitempty"`
+
+	// Jikan specific
+	Studios      []string            `json:"studios,omitempty"`
+	Demographics []string            `json:"demographics,omitempty"`
+	Openings     []string            `json:"openings,omitempty"`
+	Endings      []string            `json:"endings,omitempty"`
+	Characters   []*UnifiedCharacter `json:"characters,omitempty"`
+}
+
+type UnifiedCharacter struct {
+	Name     string `json:"name"`
+	Role     string `json:"role"`
+	ImageUrl string `json:"imageUrl"`
 }
 
 type MediaRelationType string

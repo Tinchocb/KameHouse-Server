@@ -24,6 +24,18 @@ type (
 		SpecialCount int                         `json:"specialCount"`
 		Mappings     *AnimeMappings              `json:"mappings"`
 
+		// Extended Jikan fields
+		Status       string                      `json:"status,omitempty"`
+		Rating       string                      `json:"rating,omitempty"`
+		Score        float64                     `json:"score,omitempty"`
+		Duration     string                      `json:"duration,omitempty"`
+		Genres       []string                    `json:"genres,omitempty"`
+		Studios      []string                    `json:"studios,omitempty"`
+		Demographics []string                    `json:"demographics,omitempty"`
+		Openings     []string                    `json:"openings,omitempty"`
+		Endings      []string                    `json:"endings,omitempty"`
+		Characters   []CharacterMetadata         `json:"characters,omitempty"`
+
 		currentEpisodeCount int `json:"-"`
 	}
 
@@ -41,6 +53,12 @@ type (
 		ThemoviedbId  string `json:"themoviedbId,omitempty"`
 		AnilistId     int    `json:"anilistId,omitempty"`
 		MyanimelistId int    `json:"myanimelistId,omitempty"`
+	}
+
+	CharacterMetadata struct {
+		Name     string `json:"name"`
+		Role     string `json:"role"`
+		ImageUrl string `json:"imageUrl"`
 	}
 
 	EpisodeMetadata struct {

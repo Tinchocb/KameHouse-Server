@@ -216,16 +216,18 @@ export function StatusCard({ label, value, icon: Icon }: { label: string; value:
 
 export function Section({ label, children, right }: { label: string; children: React.ReactNode; right?: React.ReactNode }) {
     return (
-        <div className="space-y-5 w-full">
+        <div className="space-y-6 w-full group/sec transition-all duration-300">
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="h-[1px] w-4 bg-gradient-to-r from-[#ff6e3a]/60 to-transparent" />
-                    <p className="text-[9px] font-black uppercase tracking-[0.35em] text-zinc-500">{label}</p>
-                    <div className="h-[1px] flex-1 bg-gradient-to-r from-white/5 to-transparent min-w-[60px]" />
+                <div className="flex items-center gap-3 w-full">
+                    <div className="h-[2px] w-6 bg-gradient-to-r from-[#ff6e3a] to-transparent rounded-full shadow-[0_0_8px_rgba(255,110,58,0.6)] transition-all duration-500 group-hover/sec:w-10" />
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 group-hover/sec:text-[#ff6e3a] transition-colors duration-300 font-mono select-none">{label}</p>
+                    <div className="h-[1px] flex-grow bg-gradient-to-r from-white/10 to-transparent min-w-[40px] ml-3" />
                 </div>
                 {right}
             </div>
-            {children}
+            <div className="w-full">
+                {children}
+            </div>
         </div>
     )
 }
@@ -235,10 +237,13 @@ export function Section({ label, children, right }: { label: string; children: R
 export function Card({ children, className }: { children: React.ReactNode; className?: string }) {
     return (
         <div className={cn(
-            "liquid-glass-frosted rounded-2xl overflow-hidden divide-y divide-white/[0.02]",
+            "bg-zinc-950/45 border border-white/5 hover:border-white/10 rounded-[24px] overflow-hidden divide-y divide-white/[0.03] backdrop-blur-2xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] transition-all duration-300 relative",
             className
         )}>
-            {children}
+            <div className="absolute inset-0 bg-gradient-to-b from-white/[0.01] to-transparent pointer-events-none" />
+            <div className="relative z-10">
+                {children}
+            </div>
         </div>
     )
 }
@@ -257,39 +262,42 @@ export interface OsToggleProps {
 export function OsToggle({ label, description, checked, onChange, disabled }: OsToggleProps) {
     return (
         <div className={cn(
-            "flex items-center justify-between p-5 transition-colors cursor-pointer group/toggle relative",
-            checked && "bg-[#ff6e3a]/[0.01]",
-            disabled
-                ? "opacity-40 cursor-not-allowed pointer-events-none"
-                : "hover:bg-white/[0.01] cursor-pointer"
+            "flex items-center justify-between p-6 transition-all duration-300 cursor-pointer group/toggle relative overflow-hidden",
+            checked ? "bg-[#ff6e3a]/[0.01]" : "",
+            disabled ? "opacity-30 cursor-not-allowed pointer-events-none" : "hover:bg-white/[0.015]"
         )}
             onClick={() => {
                 if (disabled) return
                 onChange(!checked)
             }}
         >
+            <div className="absolute inset-0 bg-gradient-to-r from-[#ff6e3a]/[0.015] to-transparent opacity-0 group-hover/toggle:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
             <div className={cn(
-                "absolute left-0 top-1/2 -translate-y-1/2 w-[2.5px] rounded-r-full transition-all duration-355",
-                checked ? "h-6 bg-[#ff6e3a] shadow-[0_0_12px_rgba(255,110,58,0.6)]" : "h-0 bg-transparent"
+                "absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full transition-all duration-300",
+                checked ? "h-8 bg-[#ff6e3a] shadow-[0_0_12px_rgba(255,110,58,0.8)]" : "h-0 bg-transparent"
             )} />
 
-            <div className="space-y-0.5 flex-1 pl-3">
+            <div className="space-y-1 flex-1 pl-4 relative z-10 pr-4">
                 <p className={cn(
-                    "text-sm font-semibold tracking-tight transition-colors duration-200",
+                    "text-sm font-semibold tracking-tight transition-colors duration-300",
                     checked ? "text-white" : "text-zinc-350 group-hover/toggle:text-white"
                 )}>{label}</p>
-                {description && <p className="text-xs text-zinc-650 leading-relaxed font-medium group-hover/toggle:text-zinc-555 transition-colors">{description}</p>}
+                {description && <p className="text-[11px] text-zinc-500 leading-relaxed font-medium group-hover/toggle:text-zinc-400 transition-colors duration-300">{description}</p>}
             </div>
-            <Switch
-                value={checked}
-                onValueChange={(v: boolean) => {
-                    if (disabled) return
-                    onChange(v)
-                }}
-                disabled={disabled}
-                className="scale-[0.85] origin-right transition-all duration-355 data-[state=checked]:bg-[#ff6e3a] shrink-0"
-                onClick={(e) => e.stopPropagation()}
-            />
+            
+            <div className="relative z-10 scale-[0.9] hover:scale-[0.93] transition-all shrink-0">
+                <Switch
+                    value={checked}
+                    onValueChange={(v: boolean) => {
+                        if (disabled) return
+                        onChange(v)
+                    }}
+                    disabled={disabled}
+                    className="data-[state=checked]:bg-[#ff6e3a] data-[state=checked]:shadow-[0_0_10px_rgba(255,110,58,0.4)] shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                />
+            </div>
         </div>
     )
 }
@@ -315,37 +323,37 @@ export function PathList({ directories = [], onAdd, onRemove, label, placeholder
     }
 
     return (
-        <div className="liquid-glass-frosted rounded-2xl overflow-hidden p-6 space-y-5">
-            <div className="space-y-1">
+        <div className="bg-zinc-950/45 border border-white/5 rounded-[24px] overflow-hidden p-6 space-y-6 backdrop-blur-2xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] transition-all duration-300 hover:border-white/10 group/pathlist">
+            <div className="space-y-1.5">
                 <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 rounded-lg bg-[#ff6e3a]/5 border border-[#ff6e3a]/10 flex items-center justify-center">
-                        <FolderIcon className="text-[#ff6e3a]/70" />
+                    <div className="w-8 h-8 rounded-xl bg-[#ff6e3a]/5 border border-[#ff6e3a]/15 flex items-center justify-center shadow-[0_0_15px_rgba(255,110,58,0.05)] transition-all duration-300 group-hover/pathlist:border-[#ff6e3a]/30">
+                        <FolderIcon className="text-[#ff6e3a]" />
                     </div>
                     <p className="text-sm font-bold tracking-tight text-white uppercase">{label}</p>
                 </div>
-                <p className="text-xs text-zinc-550 font-medium leading-relaxed max-w-xl pl-10">
+                <p className="text-[11px] text-zinc-500 font-medium leading-relaxed max-w-xl pl-11">
                     Directorios locales vinculados a este motor. El escáner analizará estos directorios de forma recursiva.
                 </p>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2.5">
                 {directories.length === 0 ? (
-                    <div className="border border-dashed border-white/[0.04] bg-black/10 p-6 rounded-xl text-center space-y-1">
-                        <FolderIcon className="mx-auto mb-2 text-zinc-800" />
-                        <p className="text-zinc-650 text-xs font-medium">No hay directorios configurados</p>
-                        <p className="text-zinc-700 text-[9px] uppercase tracking-wider font-mono">Agrega uno con el campo de abajo</p>
+                    <div className="border border-dashed border-white/10 bg-black/20 p-8 rounded-xl text-center space-y-1.5 transition-all">
+                        <FolderIcon className="mx-auto mb-2 text-zinc-650 animate-pulse" />
+                        <p className="text-zinc-500 text-xs font-semibold">No hay directorios configurados</p>
+                        <p className="text-zinc-650 text-[9px] uppercase tracking-wider font-mono">Agrega uno utilizando el campo de abajo</p>
                     </div>
                 ) : (
                     directories.map((path, idx) => (
-                        <div key={idx} className="flex items-center justify-between bg-black/30 border border-white/[0.03] px-4 py-2.5 rounded-xl transition-all duration-200 group/pathitem">
+                        <div key={idx} className="flex items-center justify-between bg-black/40 border border-white/5 px-4.5 py-3 rounded-xl transition-all duration-300 hover:border-white/10 hover:bg-[#ff6e3a]/[0.01] group/pathitem">
                             <div className="flex items-center gap-3 min-w-0">
                                 <CheckIcon className="text-[#ff6e3a] shrink-0" />
-                                <span className="font-mono text-xs text-zinc-455 truncate group-hover/pathitem:text-zinc-300 transition-colors">{path}</span>
+                                <span className="font-mono text-xs text-zinc-400 truncate group-hover/pathitem:text-white transition-colors">{path}</span>
                             </div>
                             <button
                                 type="button"
                                 onClick={() => onRemove(path)}
-                                className="text-zinc-700 hover:text-red-400 p-1.5 hover:bg-red-500/10 rounded-lg border border-transparent hover:border-red-500/10 transition-all ml-3 shrink-0"
+                                className="text-zinc-600 hover:text-red-400 p-2 hover:bg-red-500/10 rounded-xl border border-transparent hover:border-red-500/15 transition-all ml-3 shrink-0"
                             >
                                 <TrashIcon />
                             </button>
@@ -354,7 +362,7 @@ export function PathList({ directories = [], onAdd, onRemove, label, placeholder
                 )}
             </div>
 
-            <div className="flex gap-2 bg-[#050507]/60 border border-white/[0.04] focus-within:border-[#ff6e3a]/40 focus-within:shadow-[0_0_15px_rgba(255,110,58,0.1)] rounded-xl p-1 transition-all">
+            <div className="flex gap-2 bg-[#050507]/60 border border-white/5 focus-within:border-[#ff6e3a]/40 focus-within:shadow-[0_0_20px_rgba(255,110,58,0.12)] rounded-xl p-1.5 transition-all duration-300">
                 <input
                     type="text"
                     value={inputValue}
@@ -366,12 +374,12 @@ export function PathList({ directories = [], onAdd, onRemove, label, placeholder
                         }
                     }}
                     placeholder={placeholder || "Ej. C:\\Media\\Peliculas"}
-                    className="flex-1 bg-transparent px-4 py-2 text-white placeholder-zinc-800 text-xs font-mono focus:outline-none"
+                    className="flex-1 bg-transparent px-3 py-2 text-white placeholder-zinc-700 text-xs font-mono focus:outline-none"
                 />
                 <button
                     type="button"
                     onClick={handleAdd}
-                    className="bg-[#ff6e3a] hover:bg-[#ff7e4e] text-zinc-950 px-5 py-2 rounded-lg font-bold uppercase text-[9px] tracking-wider transition-all shrink-0 flex items-center gap-1.5 active:scale-95 shadow-md shadow-orange-500/10"
+                    className="bg-[#ff6e3a] hover:bg-[#ff7e4e] text-zinc-950 px-5.5 py-2.5 rounded-lg font-black uppercase text-[10px] tracking-wider transition-all shrink-0 flex items-center gap-1.5 active:scale-95 shadow-lg shadow-orange-500/15"
                 >
                     <PlusIcon />
                     AGREGAR
@@ -403,14 +411,14 @@ export const OsInput = React.forwardRef<HTMLInputElement, OsInputProps>(({
     const [showSecure, setShowSecure] = React.useState(false)
 
     return (
-        <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 border-b border-white/[0.02] last:border-0 hover:bg-white/[0.005] transition-all duration-200 gap-5 group/input">
-            <div className="space-y-0.5 flex-1 max-w-xl">
+        <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-5 border-b border-white/[0.02] last:border-0 hover:bg-white/[0.005] transition-all duration-200 gap-5 group/input">
+            <div className="space-y-1 flex-1 max-w-xl">
                 <p className="text-sm font-semibold text-zinc-300 group-hover/input:text-white transition-colors tracking-tight">{label}</p>
-                {description && <p className="text-xs text-zinc-550 leading-relaxed font-medium">{description}</p>}
+                {description && <p className="text-[11px] text-zinc-500 leading-relaxed font-medium group-hover/input:text-zinc-400 transition-colors duration-300">{description}</p>}
             </div>
             <div className={cn(
-                "flex items-center gap-2 bg-[#050507]/40 border border-white/[0.04] rounded-xl px-4 py-2.5 w-full md:w-72 transition-all relative",
-                "focus-within:border-[#ff6e3a]/40 focus-within:shadow-[0_0_15px_rgba(255,110,58,0.1)] hover:border-white/[0.08]",
+                "flex items-center gap-2.5 bg-black/40 border border-white/5 rounded-xl px-4 py-3 w-full md:w-72 transition-all relative",
+                "focus-within:border-[#ff6e3a]/40 focus-within:shadow-[0_0_20px_rgba(255,110,58,0.12)] hover:border-white/10",
                 className
             )}>
                 <input
@@ -418,7 +426,7 @@ export const OsInput = React.forwardRef<HTMLInputElement, OsInputProps>(({
                     type={isSecure ? (showSecure ? "text" : "password") : type}
                     placeholder={placeholder}
                     className={cn(
-                        "flex-1 bg-transparent text-white placeholder-zinc-750 text-xs focus:outline-none pr-5",
+                        "flex-1 bg-transparent text-white placeholder-zinc-700 text-xs focus:outline-none pr-5",
                         isMono && "font-mono text-[11px] tracking-tight"
                     )}
                     {...props}
@@ -427,7 +435,7 @@ export const OsInput = React.forwardRef<HTMLInputElement, OsInputProps>(({
                     <button
                         type="button"
                         onClick={() => setShowSecure(!showSecure)}
-                        className="absolute right-3 text-zinc-650 hover:text-zinc-350 transition-colors"
+                        className="absolute right-3.5 text-zinc-600 hover:text-zinc-350 transition-colors"
                     >
                         {showSecure ? <EyeOffIcon /> : <EyeIcon />}
                     </button>
@@ -455,14 +463,14 @@ export const OsSelect = React.forwardRef<HTMLSelectElement, OsSelectProps>(({
     ...props
 }, ref) => {
     return (
-        <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 border-b border-white/[0.02] last:border-0 hover:bg-white/[0.005] transition-all duration-200 gap-5 group/select">
-            <div className="space-y-0.5 flex-1 max-w-xl">
+        <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-5 border-b border-white/[0.02] last:border-0 hover:bg-white/[0.005] transition-all duration-200 gap-5 group/select">
+            <div className="space-y-1 flex-1 max-w-xl">
                 <p className="text-sm font-semibold text-zinc-300 group-hover/select:text-white transition-colors tracking-tight">{label}</p>
-                {description && <p className="text-xs text-zinc-550 leading-relaxed font-medium">{description}</p>}
+                {description && <p className="text-[11px] text-zinc-500 leading-relaxed font-medium group-hover/select:text-zinc-400 transition-colors duration-300">{description}</p>}
             </div>
             <div className={cn(
-                "flex items-center bg-[#050507]/40 border border-white/[0.04] rounded-xl px-4 py-2.5 w-full md:w-72 transition-all relative cursor-pointer",
-                "focus-within:border-[#ff6e3a]/40 focus-within:shadow-[0_0_15px_rgba(255,110,58,0.1)] hover:border-white/[0.08]",
+                "flex items-center bg-black/40 border border-white/5 rounded-xl px-4 py-3 w-full md:w-72 transition-all relative cursor-pointer",
+                "focus-within:border-[#ff6e3a]/40 focus-within:shadow-[0_0_20px_rgba(255,110,58,0.12)] hover:border-white/10",
                 className
             )}>
                 <select
@@ -476,7 +484,7 @@ export const OsSelect = React.forwardRef<HTMLSelectElement, OsSelectProps>(({
                         </option>
                     ))}
                 </select>
-                <div className="absolute right-3.5 pointer-events-none text-zinc-550 group-hover/select:text-zinc-300 transition-colors">
+                <div className="absolute right-3.5 pointer-events-none text-zinc-600 group-hover/select:text-zinc-300 transition-colors">
                     <ChevronDownIcon />
                 </div>
             </div>

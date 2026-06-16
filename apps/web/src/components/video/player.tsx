@@ -27,6 +27,11 @@ export type VideoPlayerProps = {
         watched?: boolean
     }[]
     onSelectEpisode?: (episodeNumber: number) => void
+    nextStreamUrl?: string
+    nextStreamType?: "local" | "online" | "direct" | "transcode" | "optimized"
+    nextEpisodeTitle?: string
+    nextEpisodeNumber?: number
+    nextEpisodeImage?: string
 }
 
 function PlayerLoadingScreen() {

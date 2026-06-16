@@ -41,8 +41,8 @@ export function AppSidebar() {
 
     return (
         <>
-            {/* Desktop Fixed Sidebar */}
-            <aside className="hidden md:flex flex-col shrink-0 h-full w-24 border-r border-white/5 liquid-glass-frosted !border-y-0 !border-l-0 !rounded-none z-50">
+            {/* Desktop Side Flap Sidebar */}
+            <aside className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 h-screen w-20 border-r border-white/10 bg-zinc-950/80 backdrop-blur-2xl rounded-r-[32px] shadow-[8px_0_32px_rgba(0,0,0,0.5)] z-50 overflow-visible">
                 <SidebarContent setSidebarOpen={setSidebarOpen} />
             </aside>
 
@@ -215,14 +215,14 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
     }
 
     return (
-        <div className="flex flex-col h-full py-10 px-4 md:px-0 w-full items-center bg-transparent">
+        <div className="flex flex-col h-full py-8 px-4 md:px-0 w-full items-center bg-transparent">
             {/* Header / Logo */}
-            <div className="mb-14 px-2 flex justify-center group cursor-pointer" onClick={() => { setSidebarOpen(false); playChangeSound(); }}>
+            <div className="mb-10 px-2 flex justify-center group cursor-pointer" onClick={() => { setSidebarOpen(false); playChangeSound(); }}>
                 <div className="relative">
-                    <img 
-                        src="/kamehouse-logo.png" 
-                        alt="KameHouse" 
-                        className="h-10 w-10 shrink-0 object-contain group-hover:scale-110 transition-transform duration-500" 
+                    <img
+                        src="/kamehouse-logo.png"
+                        alt="KameHouse"
+                        className="h-9 w-9 shrink-0 object-contain group-hover:scale-110 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-brand-orange/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-full" />
                 </div>
@@ -241,9 +241,9 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                                 <div className={cn(
                                     "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl transition-all duration-300 group px-4 md:px-0 relative liquid-glass-frosted-subtle",
                                     "active:scale-90 font-bold",
-                                    isActive 
-                                        ? "text-white" 
-                                        : "text-zinc-500 hover:text-white hover:!border-white/15"
+                                    isActive
+                                        ? "text-white"
+                                        : "text-zinc-400 hover:text-white hover:!border-white/15"
                                 )}>
                                     {/* Active Indicator Sliding Dot/Bar */}
                                     {isActive && (
@@ -285,7 +285,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                                 "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl transition-all duration-500 group px-4 md:px-0 relative liquid-glass-frosted-subtle",
                                 globalQueueOpen
                                     ? "text-brand-orange !bg-brand-orange/[0.06] !border-brand-orange/30 shadow-[0_8px_32px_rgba(255,110,58,0.15)]"
-                                    : "text-zinc-500 hover:text-white hover:!border-white/15",
+                                    : "text-zinc-400 hover:text-white hover:!border-white/15",
                                 "active:scale-90 font-bold"
                             )}
                         >
@@ -294,7 +294,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                                 "absolute left-0 w-1 h-6 bg-brand-orange rounded-r-full transition-all duration-500 hidden md:block",
                                 globalQueueOpen ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
                             )} />
-                            
+
                             <span className="shrink-0 z-10 relative">
                                 <FaLayerGroup className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
                                 {/* Badge count */}
@@ -321,7 +321,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                                 ? "!border-brand-orange/40 !bg-brand-orange/[0.06] text-brand-orange cursor-wait"
                                 : (isVideoActive && tvMode)
                                     ? "text-brand-orange !bg-brand-orange/[0.06] !border-brand-orange/30 shadow-[0_8px_32px_rgba(255,110,58,0.15)]"
-                                    : "text-zinc-500 hover:text-white hover:!border-white/15",
+                                    : "text-zinc-400 hover:text-white hover:!border-white/15",
                             "active:scale-90 font-bold"
                         )}
                     >
@@ -330,7 +330,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                             "absolute left-0 w-1 h-6 bg-brand-orange rounded-r-full transition-all duration-500 hidden md:block",
                             (isVideoActive && tvMode) ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
                         )} />
-                        
+
                         <span className="shrink-0 z-10 relative">
                             {isLoadingTarget ? (
                                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -348,13 +348,13 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
             </nav>
 
             {/* Footer / Info */}
-            <div className="mt-auto pb-6 w-full flex flex-col items-center gap-6 pt-8"> 
+            <div className="mt-auto pb-6 w-full flex flex-col items-center gap-6 pt-8">
                 {/* Background Music */}
                 <BackgroundMusicPlayer />
 
                 {/* Random Play */}
                 <RandomPlayButton />
-               
+
                 {/* Settings (Always at the bottom) */}
                 <Magnetic>
                     <Link
@@ -366,9 +366,9 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                             <div className={cn(
                                 "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl transition-all duration-300 group px-4 md:px-0 relative liquid-glass-frosted-subtle",
                                 "active:scale-90 font-bold",
-                                isActive 
-                                    ? "text-white" 
-                                    : "text-zinc-500 hover:text-white hover:!border-white/15"
+                                isActive
+                                    ? "text-white"
+                                    : "text-zinc-400 hover:text-white hover:!border-white/15"
                             )}>
                                 {/* Active Indicator Sliding Dot/Bar */}
                                 {isActive && (
@@ -426,9 +426,41 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
 }
 
 /**
- * Magnetic component (disabled to remove physical hover effect).
+ * Magnetic component using spring physics for a premium hover effect.
  */
 function Magnetic({ children }: { children: React.ReactNode }) {
-    return <>{children}</>
+    const ref = React.useRef<HTMLDivElement>(null)
+    const [position, setPosition] = React.useState({ x: 0, y: 0 })
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (!ref.current) return
+        const { clientX, clientY } = e
+        const { left, top, width, height } = ref.current.getBoundingClientRect()
+        const centerX = left + width / 2
+        const centerY = top + height / 2
+        const distanceX = clientX - centerX
+        const distanceY = clientY - centerY
+        // Attract toward cursor up to a maximum strength
+        setPosition({ x: distanceX * 0.35, y: distanceY * 0.3 })
+    }
+
+    const handleMouseLeave = () => {
+        setPosition({ x: 0, y: 0 })
+    }
+
+    const springConfig = { type: "spring", stiffness: 150, damping: 15, mass: 0.1 } as const
+
+    return (
+        <motion.div
+            ref={ref}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            animate={{ x: position.x, y: position.y }}
+            transition={springConfig}
+            className="w-full flex justify-center"
+        >
+            {children}
+        </motion.div>
+    )
 }
 

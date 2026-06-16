@@ -4,6 +4,7 @@ import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Dices, Clapperboard, Tv, Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import * as Popover from "@radix-ui/react-popover"
 
 import { cn } from "@/components/ui/core/styling"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
@@ -31,8 +32,6 @@ export function RandomPlayButton() {
     const [showPicker, setShowPicker] = React.useState(false)
     const [isLoading, setIsLoading] = React.useState(false)
     const [playTarget, setPlayTarget] = React.useState<PlayTarget | null>(null)
-    const btnRef = React.useRef<HTMLButtonElement>(null)
-    const pickerRef = React.useRef<HTMLDivElement>(null)
 
     const { data: collection } = useGetLibraryCollection()
 
@@ -42,40 +41,9 @@ export function RandomPlayButton() {
         return collection.lists.flatMap(list => list.entries ?? [])
     }, [collection])
 
-    const playRandomSound = () => {
+    const playRandomSound = React.useCallback(() => {
         playSound("random", 0.5)
-    }
-
-    // Close picker on outside click
-    React.useEffect(() => {
-        if (!showPicker) return
-        const handler = (e: MouseEvent) => {
-            if (
-                pickerRef.current && !pickerRef.current.contains(e.target as Node) &&
-                btnRef.current && !btnRef.current.contains(e.target as Node)
-            ) {
-                setShowPicker(false)
-                playRandomSound()
-            }
-        }
-        document.addEventListener("mousedown", handler)
-        return () => document.removeEventListener("mousedown", handler)
-    }, [showPicker])
-
-    const showPickerRef = React.useRef(showPicker)
-    React.useEffect(() => { showPickerRef.current = showPicker }, [showPicker])
-
-    // Close picker on Escape (only when open)
-    React.useEffect(() => {
-        const handler = (e: KeyboardEvent) => {
-            if (e.key === "Escape" && showPickerRef.current) {
-                setShowPicker(false)
-                playRandomSound()
-            }
-        }
-        document.addEventListener("keydown", handler)
-        return () => document.removeEventListener("keydown", handler)
-    }, [])
+    }, [playSound])
 
     const pick = async (type: "movie" | "episode") => {
         setShowPicker(false)
@@ -159,58 +127,53 @@ export function RandomPlayButton() {
         <>
             {/* ─── Trigger Button + Picker Popover ─────────────────────── */}
             <div className="relative flex items-center justify-center">
-                <motion.button
-                    ref={btnRef}
-                    id="random-play-btn"
-                    onClick={() => {
-                        if (!isLoading) {
-                            setShowPicker(p => !p)
-                            playRandomSound()
-                        }
+                <Popover.Root 
+                    open={showPicker} 
+                    onOpenChange={(open) => {
+                        setShowPicker(open)
+                        playRandomSound()
                     }}
-                    title="Reproducir Aleatorio"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.92 }}
-                    disabled={isLoading}
-                    className={cn(
-                        "flex items-center justify-center w-12 h-12 rounded-2xl transition-all duration-500 group liquid-glass-frosted-subtle",
-                        isLoading
-                            ? "!border-brand-orange/40 !bg-brand-orange/[0.08] text-brand-orange cursor-wait"
-                            : showPicker
-                                ? "!border-brand-orange/30 !bg-brand-orange/[0.08] text-brand-orange shadow-[0_0_20px_rgba(255,110,58,0.1)]"
-                                : "text-zinc-500 hover:text-white hover:!border-white/15"
-                    )}
                 >
-                    {isLoading ? (
-                        <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                        >
-                            <Loader2 className="w-5 h-5" />
-                        </motion.div>
-                    ) : (
-                        <Dices className={cn(
-                            "w-5 h-5 transition-transform duration-300",
-                            "group-hover:rotate-12 group-hover:scale-110"
-                        )} />
-                    )}
-                </motion.button>
-
-                {/* ─── Picker Popover ──────────────────────────────────── */}
-                <AnimatePresence>
-                    {showPicker && (
-                        <motion.div
-                            ref={pickerRef}
-                            role="menu"
-                            aria-label="Seleccionar tipo de reproducción aleatoria"
-                            initial={{ opacity: 0, scale: 0.88, x: 8, y: 4 }}
-                            animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.88, x: 8, y: 4 }}
-                            transition={{ type: "spring", stiffness: 380, damping: 28 }}
+                    <Popover.Trigger asChild>
+                        <motion.button
+                            id="random-play-btn"
+                            disabled={isLoading}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.92 }}
                             className={cn(
-                                "absolute left-full bottom-0 ml-4 z-[999]",
-                                "w-56 liquid-glass-frosted rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.75)]",
-                                "p-1.5 overflow-hidden"
+                                "flex items-center justify-center w-12 h-12 rounded-2xl transition-all duration-500 group liquid-glass-frosted-subtle",
+                                isLoading
+                                    ? "!border-brand-orange/40 !bg-brand-orange/[0.08] text-brand-orange cursor-wait"
+                                    : showPicker
+                                        ? "!border-brand-orange/30 !bg-brand-orange/[0.08] text-brand-orange shadow-[0_0_20px_rgba(255,110,58,0.1)]"
+                                        : "text-zinc-500 hover:text-white hover:!border-white/15"
+                            )}
+                        >
+                            {isLoading ? (
+                                <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                >
+                                    <Loader2 className="w-5 h-5" />
+                                </motion.div>
+                            ) : (
+                                <Dices className={cn(
+                                    "w-5 h-5 transition-transform duration-300",
+                                    "group-hover:rotate-12 group-hover:scale-110"
+                                )} />
+                            )}
+                        </motion.button>
+                    </Popover.Trigger>
+                    
+                    <Popover.Portal>
+                        <Popover.Content
+                            side="right"
+                            align="end"
+                            sideOffset={16}
+                            className={cn(
+                                "z-[999] w-56 liquid-glass-popup rounded-2xl p-1.5 outline-none",
+                                "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
+                                "data-[state=open]:fade-in-50 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
                             )}
                         >
                             {/* Header */}
@@ -254,9 +217,9 @@ export function RandomPlayButton() {
                                     Solo se incluyen títulos con archivos descargados
                                 </p>
                             </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                        </Popover.Content>
+                    </Popover.Portal>
+                </Popover.Root>
             </div>
 
             {/* ─── Video Player (rendered at the same root level) ──────── */}

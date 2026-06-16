@@ -1,9 +1,7 @@
-import React, { useCallback, useMemo } from "react"
+import React, { useCallback } from "react"
 import { motion } from "framer-motion"
 import { useScannerEvents } from "@/hooks/use-scanner-events"
 import { useScanLocalFiles } from "@/api/hooks/scan.hooks"
-import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
-import { getLargeResImage } from "@/lib/helpers/images"
 import {
     LucideFlame, LucideRefreshCw,
     LucideZap, LucideSparkles,
@@ -16,7 +14,6 @@ import { ScanActionCard } from "./scanner-results"
 export function ScannerDashboard() {
     const { isScanning, scanProgress, scanningFile, activeStageIdx, lastFinish } = useScannerEvents()
     const { mutate: scan, isPending: scanPending } = useScanLocalFiles()
-    const { data: collection } = useGetLibraryCollection()
 
     const startMetadataImprovement = useCallback(() => {
         scan({ mode: "metadata", skipLockedFiles: false, skipIgnoredFiles: false })
@@ -29,33 +26,6 @@ export function ScannerDashboard() {
     const startDeepScan = useCallback(() => {
         scan({ mode: "deep", skipLockedFiles: false, skipIgnoredFiles: false })
     }, [scan])
-
-    const mediaItems = useMemo(() => {
-        if (!collection?.lists) return []
-        const raw = collection.lists.flatMap(list => list.entries || [])
-        const unique = new Map<number, typeof raw[0]>()
-        raw.forEach(s => { if (s.mediaId) unique.set(s.mediaId, s) })
-        return Array.from(unique.values()).map(s => {
-            const media = s.media
-            const title = media?.titleEnglish || media?.titleRomaji || media?.titleSpanish || media?.titleOriginal || "Sin título"
-            const type = media?.type || "ANIME"
-            const format = media?.format || "TV"
-            const totalEps = media?.totalEpisodes || 0
-            const poster = media?.posterImage ? getLargeResImage(media.posterImage) : ""
-            const year = media?.year || (media?.startDate ? new Date(media.startDate).getFullYear() : null)
-
-            return {
-                id: s.mediaId,
-                title,
-                type,
-                format,
-                totalEps,
-                poster,
-                year,
-                score: media?.score || 0,
-            }
-        }).sort((a, b) => a.title.localeCompare(b.title))
-    }, [collection])
 
     return (
         <div className="max-w-[1600px] mx-auto space-y-12 pb-20 text-zinc-300">
@@ -209,89 +179,6 @@ export function ScannerDashboard() {
                     />
                 </div>
             </div>
-
-            {/* --- INDEXED LIBRARY GRID --- */}
-            {mediaItems.length > 0 && (
-                <div className="space-y-6 px-4">
-                    <div className="space-y-2 border-t border-white/5 pt-8">
-                        <h3 className="text-xl font-bold text-white tracking-tight uppercase flex items-center gap-3">
-                            <span>Mediateca Indexada</span>
-                            <span className="text-xs font-mono font-black text-[#ff6e3a] bg-[#ff6e3a]/10 px-2.5 py-1 rounded-xl border border-[#ff6e3a]/15 shadow-[0_0_15px_rgba(255,110,58,0.05)]">
-                                {mediaItems.length} TÍTULOS
-                            </span>
-                        </h3>
-                        <p className="text-xs text-zinc-550 font-medium">Contenidos de películas y series que han sido emparejados exitosamente por el backend.</p>
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
-                        {mediaItems.map(item => (
-                            <motion.div
-                                key={item.id}
-                                whileHover={{ 
-                                    y: -8,
-                                    scale: 1.02,
-                                    boxShadow: "0 25px 50px -12px rgba(255, 110, 58, 0.15)"
-                                }}
-                                transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                                className="group relative flex flex-col bg-[#070709] border border-white/[0.03] rounded-xl overflow-hidden transition-all duration-500"
-                            >
-                                {/* Poster Image Container - Photography First */}
-                                <div className="relative aspect-[2/3] w-full overflow-hidden bg-black/50">
-                                    {item.poster ? (
-                                        <img
-                                            src={item.poster}
-                                            alt={item.title}
-                                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                                            loading="lazy"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-zinc-800 text-[10px] uppercase font-black font-mono">
-                                            Sin Poster
-                                        </div>
-                                    )}
-
-                                    {/* Format Badge (Apple style minimal chip) */}
-                                    <div className="absolute top-3 left-3 opacity-90 group-hover:opacity-100 transition-opacity">
-                                        <span className="text-[8px] font-bold tracking-widest uppercase font-mono px-2 py-0.5 bg-[#0e0e11]/90 backdrop-blur-md border border-white/[0.08] rounded-md text-zinc-350">
-                                            {item.type === "MOVIE" || item.format === "MOVIE" ? "🎬 MOVIE" : `📺 ${item.format}`}
-                                        </span>
-                                    </div>
-
-                                    {/* Rating */}
-                                    {item.score > 0 && (
-                                        <div className="absolute top-3 right-3 opacity-90 group-hover:opacity-100 transition-opacity">
-                                            <span className="text-[8px] font-black tracking-wider font-mono px-2 py-0.5 bg-[#ff6e3a] text-zinc-950 rounded-md">
-                                                ★ {(item.score / 10).toFixed(1)}
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Details - Clean Typography with Negative Tracking */}
-                                <div className="p-4 flex-1 flex flex-col justify-between gap-3 bg-[#08080a]">
-                                    <div className="space-y-1">
-                                        <p className="text-[11px] font-bold text-zinc-200 group-hover:text-[#ff6e3a] transition-colors line-clamp-2 leading-snug uppercase tracking-tight">
-                                            {item.title}
-                                        </p>
-                                        <p className="text-[9px] font-mono text-zinc-600 font-medium">
-                                            {item.year ? `${item.year}` : "—"}
-                                        </p>
-                                    </div>
-                                    <div className="flex items-center justify-between border-t border-white/[0.03] pt-2.5 text-[9px] text-zinc-650 font-mono">
-                                        <span>
-                                            {item.totalEps > 0 ? `${item.totalEps} EPs` : "Único"}
-                                        </span>
-                                        <span className="text-emerald-500 font-bold flex items-center gap-1">
-                                            <span className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse" />
-                                            Activo
-                                        </span>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </div>
-                </div>
-            )}
         </div>
     )
 }

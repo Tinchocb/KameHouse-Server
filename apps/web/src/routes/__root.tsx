@@ -82,34 +82,42 @@ function RootComponent() {
             </AppLayoutContent>
             <AppBottomNav />
 
-            {activeQueuePlayItem && (
-                <React.Suspense fallback={null}>
-                    <VideoPlayer
-                        streamUrl={activeQueuePlayItem.playableUrl}
-                        streamType="direct"
-                        title={activeQueuePlayItem.title}
-                        episodeLabel={activeQueuePlayItem.subtitle}
-                        episodeNumber={activeQueuePlayItem.episodeNumber}
-                        mediaId={activeQueuePlayItem.mediaId}
-                        malId={activeQueuePlayItem.malId}
-                        mediaFormat={activeQueuePlayItem.mediaFormat}
-                        onNextEpisode={() => {
-                            const nextIdx = currentQueueIndex + 1;
-                            if (nextIdx < playlistQueue.length) {
-                                setCurrentQueueIndex(nextIdx);
-                            } else {
-                                clearQueue();
-                            }
-                        }}
-                        hasNextEpisode={currentQueueIndex + 1 < playlistQueue.length}
-                        onClose={() => {
-                            startViewTransition(() => {
-                                useAppStore.setState({ activeQueuePlayItem: null, currentQueueIndex: -1 });
-                            })
-                        }}
-                    />
-                </React.Suspense>
-            )}
+            {activeQueuePlayItem && (() => {
+                const nextItem = currentQueueIndex + 1 < playlistQueue.length ? playlistQueue[currentQueueIndex + 1] : null;
+                return (
+                    <React.Suspense fallback={null}>
+                        <VideoPlayer
+                            streamUrl={activeQueuePlayItem.playableUrl}
+                            streamType="direct"
+                            title={activeQueuePlayItem.title}
+                            episodeLabel={activeQueuePlayItem.subtitle}
+                            episodeNumber={activeQueuePlayItem.episodeNumber}
+                            mediaId={activeQueuePlayItem.mediaId}
+                            malId={activeQueuePlayItem.malId}
+                            mediaFormat={activeQueuePlayItem.mediaFormat}
+                            nextStreamUrl={nextItem?.playableUrl}
+                            nextStreamType="direct"
+                            nextEpisodeTitle={nextItem?.subtitle || nextItem?.title}
+                            nextEpisodeNumber={nextItem?.episodeNumber}
+                            nextEpisodeImage={nextItem?.thumbnail}
+                            onNextEpisode={() => {
+                                const nextIdx = currentQueueIndex + 1;
+                                if (nextIdx < playlistQueue.length) {
+                                    setCurrentQueueIndex(nextIdx);
+                                } else {
+                                    clearQueue();
+                                }
+                            }}
+                            hasNextEpisode={currentQueueIndex + 1 < playlistQueue.length}
+                            onClose={() => {
+                                startViewTransition(() => {
+                                    useAppStore.setState({ activeQueuePlayItem: null, currentQueueIndex: -1 });
+                                })
+                            }}
+                        />
+                    </React.Suspense>
+                );
+            })()}
         </AppLayout>
     )
 }
