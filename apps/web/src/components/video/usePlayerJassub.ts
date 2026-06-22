@@ -6,7 +6,7 @@ import { SubtitleTrack } from "@/components/ui/track-types"
 interface UsePlayerJassubProps {
     videoRef: React.RefObject<HTMLVideoElement | null>
     canvasRef: React.RefObject<HTMLCanvasElement | null>
-    jassubRef: React.MutableRefObject<any>
+    jassubRef: React.MutableRefObject<JASSUB | null>
     activeSubtitleIndex: number | null
     subtitleTracks: SubtitleTrack[]
     subtitleSizePref: number
@@ -41,10 +41,11 @@ export function usePlayerJassub({
 
     useEffect(() => {
         const video = videoRef.current
+        const currentJassubRef = jassubRef
         if (!video || activeSubtitleIndex === null || !trackUrl) {
-            if (jassubRef.current) {
-                jassubRef.current.destroy()
-                setRefValue(jassubRef, null)
+            if (currentJassubRef.current) {
+                currentJassubRef.current.destroy()
+                setRefValue(currentJassubRef, null)
                 Promise.resolve().then(() => {
                     setIsJassubLoading(false)
                     setIsJassubActive(false)
@@ -56,9 +57,9 @@ export function usePlayerJassub({
         const isAss = trackCodec?.toLowerCase() === "ass" || trackCodec?.toLowerCase() === "ssa"
 
         if (!isAss) {
-            if (jassubRef.current) {
-                jassubRef.current.destroy()
-                setRefValue(jassubRef, null)
+            if (currentJassubRef.current) {
+                currentJassubRef.current.destroy()
+                setRefValue(currentJassubRef, null)
                 Promise.resolve().then(() => {
                     setIsJassubLoading(false)
                     setIsJassubActive(false)
@@ -76,9 +77,9 @@ export function usePlayerJassub({
                 const res = await fetch(trackUrl)
                 const assContent = await res.text()
 
-                if (jassubRef.current) {
-                    jassubRef.current.destroy()
-                    setRefValue(jassubRef, null)
+                if (currentJassubRef.current) {
+                    currentJassubRef.current.destroy()
+                    setRefValue(currentJassubRef, null)
                     setIsJassubActive(false)
                 }
 
@@ -95,7 +96,7 @@ export function usePlayerJassub({
                     height: video.videoHeight || 1080,
                 })
 
-                setRefValue(jassubRef, jassub)
+                setRefValue(currentJassubRef, jassub)
                 setIsJassubActive(true)
                 setIsJassubLoading(false)
             } catch (err) {
@@ -108,9 +109,9 @@ export function usePlayerJassub({
         initJassub()
 
         return () => {
-            if (jassubRef.current) {
-                jassubRef.current.destroy()
-                setRefValue(jassubRef, null)
+            if (currentJassubRef.current) {
+                currentJassubRef.current.destroy()
+                setRefValue(currentJassubRef, null)
                 setIsJassubLoading(false)
                 setIsJassubActive(false)
             }

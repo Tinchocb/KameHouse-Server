@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"kamehouse/internal/mediastream/videofile"
+	"kamehouse/internal/util"
 	"strings"
 )
 
@@ -169,6 +170,12 @@ func BuildQualityLadder(info *videofile.MediaInfo) []QualityLadderEntry {
 		OriginalCanTransmux: canTransmux,
 	})
 
+	// If the video can be transmuxed directly (copy), do not offer lower transcoded qualities
+	// to prevent the player from requesting them in parallel and locking the backend.
+	if canTransmux {
+		return ladder
+	}
+
 	// add downscale tiers that make sense
 	for _, q := range Qualities {
 		h := q.Height()
@@ -184,7 +191,7 @@ func BuildQualityLadder(info *videofile.MediaInfo) []QualityLadderEntry {
 			continue
 		}
 
-		w := closestEven(int32(float64(h) * aspectRatio))
+		w := util.ClosestEven(int32(float64(h) * aspectRatio))
 
 		ladder = append(ladder, QualityLadderEntry{
 			Quality:        q,
@@ -200,14 +207,9 @@ func BuildQualityLadder(info *videofile.MediaInfo) []QualityLadderEntry {
 // isTransmuxableVideo returns true if the codec can be directly copied
 // into an HLS mpegts container without re-encoding and be playable in browsers.
 func isTransmuxableVideo(video *videofile.Video) bool {
-	if video.MimeCodec == nil {
-		return false
-	}
-	// chrome/safari support h.264 baseline/main/high profiles (8-bit)
-	codec := *video.MimeCodec
-	return strings.HasPrefix(codec, "avc1.42") ||
-		strings.HasPrefix(codec, "avc1.4d") ||
-		strings.HasPrefix(codec, "avc1.64")
+	codec := strings.ToLower(video.Codec)
+	// H.264, HEVC/H.265, VP9 and AV1 are universally playable via direct transmux (copy) in modern browsers/WebView2.
+	return codec == "h264" || codec == "h265" || codec == "hevc" || codec == "vp9" || codec == "av1"
 }
 
 // audio codec awareness
@@ -226,25 +228,13 @@ type AudioTranscodeDecision struct {
 	Channels string
 }
 
-// DecideAudioTranscode
-// - If the source is already AAC: copy it
-// - If the source has ≤ 2 channels: encode to AAC stereo @ 128k
-// - If the source has > 2 channels: encode to AAC preserving layout @ 384k
+// DecideAudioTranscode determina cómo se debe tratar una pista de audio.
+// Re-codifica todo el audio a AAC para asegurar una sincronización y alineación correctas de timestamps (nunca usa copy directo, ya que suele causar problemas de desfase A/V).
+// - Si la fuente tiene ≤ 2 canales: codifica a AAC estéreo @ 128k
+// - Si la fuente tiene > 2 canales: codifica a AAC preservando la distribución @ 384k
 func DecideAudioTranscode(audio *videofile.Audio) AudioTranscodeDecision {
-	// just copy aac
-	if audio.Codec == "aac" {
-		channels := "2"
-		if audio.Channels > 2 {
-			channels = fmt.Sprintf("%d", audio.Channels)
-		}
-		return AudioTranscodeDecision{
-			Copy:     true,
-			Codec:    "copy",
-			Channels: channels,
-		}
-	}
-
-	// everything else needs re-encoding to AAC
+	// Re-encoding audio is very cheap and guarantees A/V sync via FFmpeg's `aresample=async=1` filter.
+	// We force Copy to false for all codecs.
 	channels := "2"
 	bitrate := "128k"
 	if audio.Channels > 2 {

@@ -12,8 +12,9 @@ import { AudioSettings } from "./player-settings/AudioSettings"
 import { SubtitleSettings } from "./player-settings/SubtitleSettings"
 import { QualitySettings } from "./player-settings/QualitySettings"
 import { PlaybackSettings } from "./player-settings/PlaybackSettings"
+import { SkipTimesSettings } from "./player-settings/SkipTimesSettings"
 
-type SettingsView = "main" | "audio" | "subtitles" | "quality" | "playback" | "image"
+type SettingsView = "main" | "audio" | "subtitles" | "quality" | "playback" | "image" | "skiptimes"
 
 const ASPECT_RATIO_LABELS: Record<string, string> = {
     contain: "Ajustado",
@@ -51,16 +52,17 @@ export function PlayerSettingsMenu({
     onAspectRatioChange,
     subtitleSize = 100,
     onSubtitleSizeChange,
-    loopEnabled = false,
-    onLoopEnabledChange,
     autoDisableSubtitlesWhenDubbed = true,
     onAutoDisableSubtitlesWhenDubbedChange,
-    ambilightEnabled = true,
-    onAmbilightChange,
     tvMode = false,
     onTvModeChange,
     marathonMode = false,
     onMarathonModeChange,
+    videoRef,
+    malId,
+    duration,
+    mediaId,
+    episodeNumber,
 }: PlayerSettingsMenuProps) {
     const [internalOpen, setInternalOpen] = React.useState(false)
     const [view, setView] = React.useState<SettingsView>("main")
@@ -343,17 +345,32 @@ export function PlayerSettingsMenu({
                                     onAutoSkipOutroChange={onAutoSkipOutroChange ?? (() => {})}
                                     showHeatmap={showHeatmap}
                                     onShowHeatmapChange={onShowHeatmapChange ?? (() => {})}
-                                    loopEnabled={loopEnabled}
-                                    onLoopEnabledChange={onLoopEnabledChange ?? (() => {})}
                                     autoDisableSubtitlesWhenDubbed={autoDisableSubtitlesWhenDubbed}
                                     onAutoDisableSubtitlesWhenDubbedChange={onAutoDisableSubtitlesWhenDubbedChange ?? (() => {})}
-                                    ambilightEnabled={ambilightEnabled}
-                                    onAmbilightChange={onAmbilightChange ?? (() => {})}
                                     tvMode={tvMode}
                                     onTvModeChange={onTvModeChange}
                                     marathonMode={marathonMode}
                                     onMarathonModeChange={onMarathonModeChange}
                                     showSeparator={false}
+                                    onAdjustSkipTimes={() => setView("skiptimes")}
+                                />
+                            </SettingsLayout>
+                        )}
+
+                        {/* ── AJUSTAR SKIP TIMES ──────────────────────── */}
+                        {view === "skiptimes" && (
+                            <SettingsLayout
+                                title="Ajustar Skip"
+                                onBack={() => setView("playback")}
+                                onClose={() => setIsOpen(false)}
+                            >
+                                <SkipTimesSettings
+                                    videoRef={videoRef}
+                                    malId={malId}
+                                    duration={duration}
+                                    mediaId={mediaId}
+                                    episodeNumber={episodeNumber}
+                                    onClose={() => setIsOpen(false)}
                                 />
                             </SettingsLayout>
                         )}

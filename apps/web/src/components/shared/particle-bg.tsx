@@ -12,6 +12,18 @@ interface ParticleBackgroundProps {
     vy?: number;
 }
 
+/** Simple throttle — limits function calls to at most once per `ms` milliseconds. */
+function throttle<T extends (...args: Parameters<T>) => void>(fn: T, ms: number): T {
+    let lastCall = 0
+    return function (...args: Parameters<T>) {
+        const now = Date.now()
+        if (now - lastCall >= ms) {
+            lastCall = now
+            fn(...args)
+        }
+    } as T
+}
+
 function hexToRgb(hex: string): number[] {
     hex = hex.replace("#", "")
 
@@ -75,6 +87,23 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
     const rafId = useRef<number | null>(null)
     const isVisible = useRef(true)
 
+    // Stable refs for animation props — avoids re-creating the RAF loop on every prop change
+    const easeRef = useRef(ease)
+    const staticityRef = useRef(staticity)
+    const vxRef = useRef(vx)
+    const vyRef = useRef(vy)
+    const sizeRef = useRef(size)
+    const colorRef = useRef(color)
+    const quantityRef = useRef(quantity)
+
+    useEffect(() => { easeRef.current = ease }, [ease])
+    useEffect(() => { staticityRef.current = staticity }, [staticity])
+    useEffect(() => { vxRef.current = vx }, [vx])
+    useEffect(() => { vyRef.current = vy }, [vy])
+    useEffect(() => { sizeRef.current = size }, [size])
+    useEffect(() => { colorRef.current = color }, [color])
+    useEffect(() => { quantityRef.current = quantity }, [quantity])
+
     const clearContext = React.useCallback(() => {
         if (context.current) {
             context.current.clearRect(
@@ -91,7 +120,7 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
         const y = Math.floor(Math.random() * canvasSize.current.h)
         const translateX = 0
         const translateY = 0
-        const pSize = Math.floor(Math.random() * 2) + size
+        const pSize = Math.floor(Math.random() * 2) + sizeRef.current
         const alpha = 0
         const targetAlpha = parseFloat((Math.random() * 0.6 + 0.1).toFixed(1))
         const dx = (Math.random() - 0.5) * 0.1
@@ -109,23 +138,25 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
             dy,
             magnetism,
         }
-    }, [size])
+    }, [])
 
     const rgb = React.useMemo(() => hexToRgb(color), [color])
     const rgbString = React.useMemo(() => rgb.join(", "), [rgb])
+    const rgbStringRef = useRef(rgbString)
+    useEffect(() => { rgbStringRef.current = rgbString }, [rgbString])
 
     const resetCircle = React.useCallback((circle: Circle) => {
         circle.x = Math.floor(Math.random() * canvasSize.current.w)
         circle.y = Math.floor(Math.random() * canvasSize.current.h)
         circle.translateX = 0
         circle.translateY = 0
-        circle.size = Math.floor(Math.random() * 2) + size
+        circle.size = Math.floor(Math.random() * 2) + sizeRef.current
         circle.alpha = 0
         circle.targetAlpha = parseFloat((Math.random() * 0.6 + 0.1).toFixed(1))
         circle.dx = (Math.random() - 0.5) * 0.1
         circle.dy = (Math.random() - 0.5) * 0.1
         circle.magnetism = 0.1 + Math.random() * 4
-    }, [size])
+    }, [])
 
     const drawCircle = React.useCallback((circle: Circle) => {
         if (context.current) {
@@ -133,11 +164,11 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
             context.current.translate(translateX, translateY)
             context.current.beginPath()
             context.current.arc(x, y, size, 0, 2 * Math.PI)
-            context.current.fillStyle = `rgba(${rgbString}, ${alpha})`
+            context.current.fillStyle = `rgba(${rgbStringRef.current}, ${alpha})`
             context.current.fill()
             context.current.setTransform(dpr, 0, 0, dpr, 0, 0)
         }
-    }, [rgbString, dpr])
+    }, [dpr])
 
     const resizeCanvas = React.useCallback(() => {
         if (canvasRef.current && context.current) {
@@ -154,14 +185,14 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
 
     const drawParticleBackground = React.useCallback(() => {
         clearContext()
-        const particleCount = quantity
+        const particleCount = quantityRef.current
         circles.current = []
         for (let i = 0; i < particleCount; i++) {
             const circle = circleParams()
             circles.current.push(circle)
             drawCircle(circle)
         }
-    }, [clearContext, quantity, circleParams, drawCircle])
+    }, [clearContext, circleParams, drawCircle])
 
     const initCanvas = React.useCallback(() => {
         resizeCanvas()
@@ -188,14 +219,14 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
             } else {
                 circle.alpha = circle.targetAlpha * remapClosestEdge
             }
-            circle.x += circle.dx + vx
-            circle.y += circle.dy + vy
+            circle.x += circle.dx + vxRef.current
+            circle.y += circle.dy + vyRef.current
             circle.translateX +=
-                (mouse.current.x / (staticity / circle.magnetism) - circle.translateX) /
-                ease
+                (mouse.current.x / (staticityRef.current / circle.magnetism) - circle.translateX) /
+                easeRef.current
             circle.translateY +=
-                (mouse.current.y / (staticity / circle.magnetism) - circle.translateY) /
-                ease
+                (mouse.current.y / (staticityRef.current / circle.magnetism) - circle.translateY) /
+                easeRef.current
 
             drawCircle(circle)
 
@@ -209,14 +240,15 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
             }
         })
         rafId.current = window.requestAnimationFrame(animateFn)
-    }, [clearContext, drawCircle, ease, resetCircle, staticity, vx, vy])
+    }, [clearContext, drawCircle, resetCircle])
 
     useEffect(() => {
         if (canvasRef.current) {
             context.current = canvasRef.current.getContext("2d")
         }
         initCanvas()
-        window.addEventListener("resize", initCanvas)
+        const throttledResize = throttle(initCanvas, 250)
+        window.addEventListener("resize", throttledResize)
 
         const observer = new IntersectionObserver(
             ([entry]) => {
@@ -240,7 +272,7 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
         }
 
         return () => {
-            window.removeEventListener("resize", initCanvas)
+            window.removeEventListener("resize", throttledResize)
             observer.disconnect()
             if (rafId.current) {
                 cancelAnimationFrame(rafId.current)
@@ -271,8 +303,8 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
     }, [])
 
     useEffect(() => {
-        initCanvas()
-    }, [initCanvas, refresh])
+        drawParticleBackground()
+    }, [quantity, size, color, refresh, drawParticleBackground])
 
     return (
         <div className={className} ref={canvasContainerRef} aria-hidden="true">

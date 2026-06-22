@@ -3,7 +3,6 @@ import { cva, VariantProps } from "class-variance-authority"
 import * as React from "react"
 import { BasicField, BasicFieldOptions, extractBasicFieldProps } from "../basic-field"
 import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
-import { mergeRefs } from "../core/utils"
 import { hiddenInputStyles } from "../input"
 
 /* -------------------------------------------------------------------------------------------------
@@ -129,15 +128,15 @@ export const RadioGroup = React.forwardRef<HTMLButtonElement, RadioGroupProps>((
 
     const isFirst = React.useRef(true)
 
-    const buttonRef = React.useRef<HTMLButtonElement>(null)
+    const buttonRef = React.useRef<HTMLButtonElement | null>(null)
 
     const mergedRef = React.useCallback(
         (node: HTMLButtonElement | null) => {
-            (buttonRef as any).current = node
+            buttonRef.current = node
             if (typeof ref === "function") {
                 ref(node)
-            } else if (ref) {
-                (ref as any).current = node
+            } else if (ref && typeof ref === "object") {
+                (ref as React.MutableRefObject<HTMLButtonElement | null>).current = node
             }
         },
         [ref],

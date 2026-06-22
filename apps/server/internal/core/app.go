@@ -103,6 +103,10 @@ type (
 		ServerReady        bool
 		isOffline          *atomic.Bool
 		ServerPasswordHash string
+		ServerPasswordSHA256 string
+
+		onRefreshAnimeCollectionCallbacksMu sync.Mutex
+		onRefreshAnimeCollectionCallbacks   map[string]func()
 
 		shutdownCtx    context.Context
 		shutdownCancel context.CancelFunc
@@ -134,7 +138,7 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 	})
 
 	cfg := initConfig(configOpts, logger)
-	serverPasswordHash := initServerPassword(cfg)
+	serverPasswordHash, serverPasswordSHA256 := initServerPassword(cfg)
 	initLogsDir(cfg, logger)
 	startLogTrimmer(cfg, logger)
 
@@ -209,6 +213,8 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 		moduleMu:           sync.Mutex{},
 		isOffline:          isOffline,
 		ServerPasswordHash: serverPasswordHash,
+		ServerPasswordSHA256: serverPasswordSHA256,
+		onRefreshAnimeCollectionCallbacks: make(map[string]func()),
 		shutdownCtx:        shutdownCtx,
 		shutdownCancel:     shutdownCancel,
 	}
@@ -247,11 +253,17 @@ func initConfig(configOpts *ConfigOptions, logger *zerolog.Logger) *Config {
 	return cfg
 }
 
-func initServerPassword(cfg *Config) string {
+func initServerPassword(cfg *Config) (string, string) {
 	if cfg.Server.Password != "" {
-		return util.HashSHA256Hex(cfg.Server.Password)
+		argonHash, err := util.HashPasswordArgon2(cfg.Server.Password)
+		if err != nil {
+			// Si falla Argon2id por alguna razón, usar SHA256 como fallback
+			shaHash := util.HashSHA256Hex(cfg.Server.Password)
+			return shaHash, shaHash
+		}
+		return argonHash, util.HashSHA256Hex(cfg.Server.Password)
 	}
-	return ""
+	return "", ""
 }
 
 func initLogsDir(cfg *Config, logger *zerolog.Logger) {
@@ -457,6 +469,18 @@ func (a *KameHouse) GetAnimeCollection(bypassCache bool) (*platform.UnifiedColle
 	if err != nil {
 		return nil, err
 	}
+	if bypassCache {
+		a.onRefreshAnimeCollectionCallbacksMu.Lock()
+		callbacks := make([]func(), 0, len(a.onRefreshAnimeCollectionCallbacks))
+		for _, f := range a.onRefreshAnimeCollectionCallbacks {
+			callbacks = append(callbacks, f)
+		}
+		a.onRefreshAnimeCollectionCallbacksMu.Unlock()
+
+		for _, f := range callbacks {
+			f()
+		}
+	}
 	if res == nil {
 		return &platform.UnifiedCollection{}, nil
 	}
@@ -464,5 +488,7 @@ func (a *KameHouse) GetAnimeCollection(bypassCache bool) (*platform.UnifiedColle
 }
 
 func (a *KameHouse) AddOnRefreshAnimeCollectionFunc(id string, f func()) {
-	// TODO: implement callback storage if notifier integration is needed
+	a.onRefreshAnimeCollectionCallbacksMu.Lock()
+	defer a.onRefreshAnimeCollectionCallbacksMu.Unlock()
+	a.onRefreshAnimeCollectionCallbacks[id] = f
 }

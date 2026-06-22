@@ -10,6 +10,8 @@ const SETTINGS_DEFAULTS = {
     updateChannel: "github",
     windowBounds: null,
     windowMaximized: true,
+    disableHardwareAcceleration: false,
+    enableAggressiveGpuFlags: false,
 }
 
 function getSettingsPath() {

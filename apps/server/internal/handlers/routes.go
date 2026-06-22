@@ -97,7 +97,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 				newCookie.Expires = time.Now().Add(30 * 24 * time.Hour)
 				newCookie.Path = "/"
 				newCookie.Domain = ""
-				newCookie.SameSite = http.SameSiteDefaultMode
+				newCookie.SameSite = http.SameSiteStrictMode
 				newCookie.Secure = c.Scheme() == "https" || c.Request().Header.Get("X-Forwarded-Proto") == "https"
 				c.SetCookie(newCookie)
 				c.Set("KameHouse-Client-Id", u)

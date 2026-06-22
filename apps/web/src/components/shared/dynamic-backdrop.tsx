@@ -29,7 +29,7 @@ export function DynamicBackdrop() {
 
     const isEnabled = useAppStore(state => state.dynamicBackdropEnabled)
     const isMotionEnabled = useAppStore(state => state.dynamicBackdropMotionEnabled)
-    const { currentBackdropUrl } = useIntelligenceStore()
+    const currentBackdropUrl = useIntelligenceStore(s => s.currentBackdropUrl)
     const activeBackdropUrl = currentBackdropUrl
     // Home uses a more subtle opacity to avoid competing with content
     const baseOpacity = isHomePage ? 0.65 : 0.35
@@ -143,21 +143,8 @@ export function DynamicBackdrop() {
         <div
             ref={containerRef}
             aria-hidden="true"
-            className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-background animate-breathing"
+            className={`pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-background ${isMotionEnabled ? "animate-breathing" : ""}`}
         >
-            <style>{`
-                @keyframes breathing {
-                    0% { opacity: 1.0; }
-                    22.86% { opacity: 0.92; }
-                    51.43% { opacity: 1.0; }
-                    77.14% { opacity: 0.95; }
-                    100% { opacity: 1.0; }
-                }
-                .animate-breathing {
-                    animation: breathing 35s ease-in-out infinite;
-                    will-change: opacity;
-                }
-            `}</style>
             {/* Wrapper for the backdrop layers that receives the mouse translation without CSS transitions */}
             <div
                 ref={backdropWrapperRef}

@@ -45,8 +45,6 @@ const SwimlaneInner = React.memo(function SwimlaneInner({
     onHover,
     className,
 }: SwimlaneProps) {
-    const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null)
-
     if (items.length === 0) {
         return null
     }
@@ -84,7 +82,7 @@ const SwimlaneInner = React.memo(function SwimlaneInner({
                             viewport={{ once: true, margin: "-50px" }}
                             transition={{ 
                                 duration: 0.8,
-                                delay: index * 0.05,
+                                delay: Math.min(index * 0.04, 0.3),
                                 ease: [0.23, 1, 0.32, 1]
                             }}
                         >

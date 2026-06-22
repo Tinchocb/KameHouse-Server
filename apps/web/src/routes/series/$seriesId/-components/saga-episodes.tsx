@@ -7,7 +7,6 @@ import { SagaDefinition } from "@/lib/config/dragonball.config"
 import { EpisodeCard } from "../-series-interactivity-client"
 
 interface SagaEpisodesSectionProps {
-    seriesTitle: string
     fallbackThumb: string
     episodes: Anime_Episode[]
     localFiles: Anime_LocalFile[]
@@ -22,7 +21,6 @@ interface SagaEpisodesSectionProps {
 }
 
 export const SagaEpisodesSection = React.memo(function SagaEpisodesSection({
-    seriesTitle,
     fallbackThumb,
     episodes,
     localFiles,

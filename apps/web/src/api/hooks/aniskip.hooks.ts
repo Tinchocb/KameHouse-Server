@@ -9,6 +9,7 @@
  */
 
 import { useQuery } from "@tanstack/react-query"
+import { buildSeaQuery } from "@/api/client/requests"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -72,6 +73,8 @@ export interface UseAniSkipTimesOptions {
     episodeDuration?: number
     /** Set to false to disable fetching */
     enabled?: boolean
+    /** Local Media ID */
+    mediaId?: number | null
 }
 
 export interface AniSkipTimes {
@@ -83,36 +86,131 @@ export interface AniSkipTimes {
     hasSkipTimes: boolean
 }
 
+interface LocalSkipTimeResponse {
+    id: number
+    mediaId: number
+    episodeNumber: number
+    opStart: number
+    opEnd: number
+    edOffset: number
+}
+
+export async function getAniSkipTimes({
+    malId,
+    mediaId,
+    episodeNumber,
+    episodeDuration,
+}: {
+    malId?: number | null
+    mediaId?: number | null
+    episodeNumber: number
+    episodeDuration?: number
+}): Promise<AniSkipTimes> {
+    if ((!malId && !mediaId) || !episodeNumber) {
+        return { hasSkipTimes: false }
+    }
+
+    // 1. Try local KameHouse server database first
+    try {
+        const localData = await buildSeaQuery<LocalSkipTimeResponse, any>({
+            endpoint: "/api/v1/mediastream/skip-times",
+            method: "GET",
+            params: {
+                mediaId: mediaId || undefined,
+                malId: malId || undefined,
+                episodeNumber,
+            }
+        })
+
+        if (localData) {
+            const op = localData.opStart > 0 || localData.opEnd > 0 ? {
+                startTime: localData.opStart,
+                endTime: localData.opEnd,
+            } : undefined
+
+            let ed: AniSkipInterval | undefined = undefined
+            if (localData.edOffset > 0 && episodeDuration && episodeDuration > 0) {
+                ed = {
+                    startTime: episodeDuration - localData.edOffset,
+                    endTime: episodeDuration,
+                }
+            }
+
+            if (op || ed) {
+                return {
+                    op,
+                    ed,
+                    hasSkipTimes: true,
+                }
+            }
+        }
+    } catch (e) {
+        console.warn("Failed to check local skip times:", e)
+    }
+
+    // 2. Fallback to AniSkip API
+    if (!malId) {
+        return { hasSkipTimes: false }
+    }
+
+    const data = await fetchAniSkipTimes(malId, episodeNumber, episodeDuration)
+
+    if (!data.found || !data.results?.length) {
+        return { hasSkipTimes: false }
+    }
+
+    const opResult = data.results.find(r => r.skipType === "op" || r.skipType === "mixed-op")
+    const edResult = data.results.find(r => r.skipType === "ed" || r.skipType === "mixed-ed")
+
+    const op = opResult?.interval
+    const ed = edResult?.interval
+
+    // 3. Cache AniSkip times on our local server as a side-effect
+    if (op || ed) {
+        let resolvedEdOffset = 0
+        if (ed && episodeDuration && episodeDuration > 0) {
+            resolvedEdOffset = Math.max(0, episodeDuration - ed.startTime)
+        }
+
+        buildSeaQuery<any, any>({
+            endpoint: "/api/v1/mediastream/skip-times",
+            method: "POST",
+            data: {
+                mediaId: mediaId || undefined,
+                malId: malId || undefined,
+                episodeNumber,
+                opStart: op?.startTime ?? 0,
+                opEnd: op?.endTime ?? 0,
+                edOffset: resolvedEdOffset,
+                applyToSeason: false,
+            }
+        }).catch(err => console.warn("Failed to cache AniSkip times in KameHouse:", err))
+    }
+
+    return {
+        op,
+        ed,
+        hasSkipTimes: !!(op || ed),
+    }
+}
+
 export function useAniSkipTimes({
     malId,
     episodeNumber,
     episodeDuration,
     enabled = true,
+    mediaId,
 }: UseAniSkipTimesOptions) {
     return useQuery<AniSkipTimes>({
-        queryKey: ["aniskip", malId, episodeNumber, Math.round((episodeDuration ?? 0) / 30)],
-        queryFn: async (): Promise<AniSkipTimes> => {
-            if (!malId || !episodeNumber) {
-                return { hasSkipTimes: false }
-            }
-
-            const data = await fetchAniSkipTimes(malId, episodeNumber, episodeDuration)
-
-            if (!data.found || !data.results?.length) {
-                return { hasSkipTimes: false }
-            }
-
-            const op = data.results.find(r => r.skipType === "op" || r.skipType === "mixed-op")
-            const ed = data.results.find(r => r.skipType === "ed" || r.skipType === "mixed-ed")
-
-            return {
-                op: op?.interval,
-                ed: ed?.interval,
-                hasSkipTimes: !!(op || ed),
-            }
-        },
-        enabled: enabled && !!malId && !!episodeNumber,
-        staleTime: 1000 * 60 * 60 * 24, // Cache for 24h — skip times don't change
+        queryKey: ["aniskip", malId, mediaId, episodeNumber, Math.round((episodeDuration ?? 0) / 30)],
+        queryFn: () => getAniSkipTimes({
+            malId,
+            mediaId,
+            episodeNumber: episodeNumber!,
+            episodeDuration,
+        }),
+        enabled: enabled && !!(malId || mediaId) && !!episodeNumber,
+        staleTime: 1000 * 60 * 60 * 24, // Cache for 24h
         retry: 1,
         refetchOnWindowFocus: false,
     })

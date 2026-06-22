@@ -136,13 +136,12 @@ export interface PlayerState {
     setAutoDisableSubtitlesWhenDubbed: (auto: boolean) => void
     ambilightEnabled: boolean
     setAmbilightEnabled: (enabled: boolean) => void
-    tvMode: boolean
-    setTvMode: (enabled: boolean) => void
     marathonMode: boolean
     setMarathonMode: (enabled: boolean) => void
+    tvMode: boolean
+    setTvMode: (enabled: boolean) => void
 
-    seriesSkipTimes: Record<string, { opStart?: number; opEnd?: number; edOffset?: number }>
-    saveSeriesSkipTimes: (malId: number, opStart: number, opEnd: number, edOffset: number) => void
+
 
     playlistQueue: PlaylistItem[]
     currentQueueIndex: number
@@ -186,23 +185,17 @@ export const createPlayerSlice: StateCreator<UIState & PlayerState, [], [], Play
     setAutoDisableSubtitlesWhenDubbed: (autoDisableSubtitlesWhenDubbed) => set({ autoDisableSubtitlesWhenDubbed }),
     ambilightEnabled: false,
     setAmbilightEnabled: (ambilightEnabled) => set({ ambilightEnabled }),
+    marathonMode: false,
+    setMarathonMode: (marathonMode) => set({ marathonMode }),
     tvMode: false,
-    setTvMode: (tvMode) => set((state) => {
+    setTvMode: (tvMode) => set(() => {
         if (tvMode) {
             return { tvMode, autoSkipIntro: true, autoSkipOutro: true };
         }
         return { tvMode, autoSkipIntro: false, autoSkipOutro: false };
     }),
-    marathonMode: false,
-    setMarathonMode: (marathonMode) => set({ marathonMode }),
 
-    seriesSkipTimes: {},
-    saveSeriesSkipTimes: (malId, opStart, opEnd, edOffset) => set((state) => ({
-        seriesSkipTimes: {
-            ...state.seriesSkipTimes,
-            [String(malId)]: { opStart, opEnd, edOffset }
-        }
-    })),
+
 
     playlistQueue: [],
     currentQueueIndex: -1,
@@ -293,7 +286,6 @@ export const useAppStore = create<UIState & PlayerState & ScannerState>()(
                 playerVolume: state.playerVolume,
                 tvMode: state.tvMode,
                 marathonMode: state.marathonMode,
-                seriesSkipTimes: state.seriesSkipTimes,
                 dynamicBackdropEnabled: state.dynamicBackdropEnabled,
                 dynamicBackdropMotionEnabled: state.dynamicBackdropMotionEnabled,
             }),
@@ -338,6 +330,43 @@ export const useProgressStore = create<ProgressState>()(
                 }
                 return { ...current, ...p }
             },
+        }
+    )
+)
+
+// --- Skip Times Store (Persisted, Isolated) ---
+interface SkipTimesState {
+    seriesSkipTimes: Record<string, { opStart?: number; opEnd?: number; edOffset?: number }>
+    saveSeriesSkipTimes: (malId: number, opStart: number, opEnd: number, edOffset: number) => void
+}
+
+export const useSkipTimesStore = create<SkipTimesState>()(
+    persist(
+        (set) => ({
+            seriesSkipTimes: (() => {
+                try {
+                    const settingsStr = typeof window !== "undefined" ? localStorage.getItem("kamehouse-app-settings") : null
+                    if (settingsStr) {
+                        const parsed = JSON.parse(settingsStr) as { state?: { seriesSkipTimes?: Record<string, { opStart?: number; opEnd?: number; edOffset?: number }> } }
+                        if (parsed?.state?.seriesSkipTimes) {
+                            return parsed.state.seriesSkipTimes
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to migrate seriesSkipTimes", e)
+                }
+                return {}
+            })(),
+            saveSeriesSkipTimes: (malId, opStart, opEnd, edOffset) =>
+                set(state => ({
+                    seriesSkipTimes: {
+                        ...state.seriesSkipTimes,
+                        [String(malId)]: { opStart, opEnd, edOffset }
+                    }
+                })),
+        }),
+        {
+            name: "kamehouse-skip-times",
         }
     )
 )

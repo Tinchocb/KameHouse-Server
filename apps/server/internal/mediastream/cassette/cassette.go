@@ -1,10 +1,10 @@
+// Package cassette provides a dynamic HLS media streaming transcode pipeline and resource governor.
 package cassette
 
 import (
 	"context"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"kamehouse/internal/mediastream/videofile"
 	"sync"
@@ -47,13 +47,18 @@ func New(opts *NewCassetteOptions) (*Cassette, error) {
 		return nil, fmt.Errorf("cassette: failed to create stream dir: %w", err)
 	}
 
+	keyframeCacheDir := filepath.Join(opts.TempOutDir, "keyframes")
+	if err := os.MkdirAll(keyframeCacheDir, 0755); err != nil {
+		return nil, fmt.Errorf("cassette: failed to create keyframe cache dir: %w", err)
+	}
+
 	// clear stale segment dirs from previous runs.
 	entries, err := os.ReadDir(streamDir)
 	if err != nil {
 		return nil, err
 	}
 	for _, e := range entries {
-		_ = os.RemoveAll(path.Join(streamDir, e.Name()))
+		_ = os.RemoveAll(filepath.Join(streamDir, e.Name()))
 	}
 
 	hwAccel := BuildHwAccelProfile(HwAccelOptions{
@@ -67,10 +72,11 @@ func New(opts *NewCassetteOptions) (*Cassette, error) {
 		governor:   NewGovernor(opts.MaxConcurrency, hwAccel.Name != "disabled", opts.Logger),
 		logger:     opts.Logger,
 		settings: Settings{
-			StreamDir:   streamDir,
-			HwAccel:     hwAccel,
-			FfmpegPath:  opts.FfmpegPath,
-			FfprobePath: opts.FfprobePath,
+			StreamDir:        streamDir,
+			KeyframeCacheDir: keyframeCacheDir,
+			hwAccel:          hwAccel,
+			FfmpegPath:       opts.FfmpegPath,
+			FfprobePath:      opts.FfprobePath,
 		},
 	}
 	c.tracker = NewClientTracker(c)

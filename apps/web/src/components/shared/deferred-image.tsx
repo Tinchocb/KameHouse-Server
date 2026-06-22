@@ -71,14 +71,24 @@ export function DeferredImage(props: DeferredImageProps) {
     const [isLoaded, setIsLoaded] = useState(false);
     const [isLowResLoaded, setIsLowResLoaded] = useState(false);
     const [hasError, setHasError] = useState(false);
+    const [showLqip, setShowLqip] = useState(true);
     const containerRef = useRef<HTMLDivElement>(null);
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const [prevSrc, setPrevSrc] = useState(src);
-    if (src !== prevSrc) {
+    const [prevPriority, setPrevPriority] = useState(priority);
+    if (src !== prevSrc || priority !== prevPriority) {
         setPrevSrc(src);
+        setPrevPriority(priority);
         setIsLoaded(false);
         setIsLowResLoaded(false);
         setHasError(false);
+        setIsIntersecting(priority);
+        setShowLqip(true);
+        if (timerRef.current) {
+            clearTimeout(timerRef.current);
+            timerRef.current = null;
+        }
     }
 
     const lqipSrc = lowResSrc || getTinyResImage(src);
@@ -86,6 +96,11 @@ export function DeferredImage(props: DeferredImageProps) {
     const handleLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
         setIsLoaded(true);
         onLoad?.(e);
+        
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => {
+            setShowLqip(false);
+        }, 600);
     }, [onLoad]);
 
     const handleError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -93,6 +108,12 @@ export function DeferredImage(props: DeferredImageProps) {
         onError?.(e);
     }, [onError]);
     const thresholdStr = Array.isArray(threshold) ? threshold.join(',') : String(threshold);
+
+    useEffect(() => {
+        return () => {
+            if (timerRef.current) clearTimeout(timerRef.current);
+        };
+    }, []);
 
     useEffect(() => {
         if (!src) {
@@ -144,7 +165,7 @@ export function DeferredImage(props: DeferredImageProps) {
             )}
 
             {/* Low-res blurred placeholder (LQIP) */}
-            {!hasError && isIntersecting && lqipSrc && (
+            {!hasError && isIntersecting && lqipSrc && showLqip && (
                 <img
                     src={lqipSrc}
                     alt=""
@@ -168,7 +189,8 @@ export function DeferredImage(props: DeferredImageProps) {
                     onLoad={handleLoad}
                     onError={handleError}
                     className={cn(
-                        "relative h-full w-full object-cover transition-opacity duration-500 ease-out will-change-[opacity]",
+                        "relative h-full w-full object-cover transition-opacity duration-500 ease-out",
+                        !isLoaded && "will-change-[opacity]",  // Only hint GPU during the fade-in
                         isLoaded ? "opacity-100" : "opacity-0"
                     )}
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 )
@@ -78,7 +79,16 @@ func (r *Repository) ServeEchoDirectPlay(c echo.Context, clientID string) error 
 
 		// Set the content length
 		c.Response().Header().Set("Content-Length", fmt.Sprintf("%d", fileInfo.Size()))
-		c.Response().Header().Set("Content-Type", "video/mp4")
+		ext := strings.ToLower(filepath.Ext(mediaContainer.Filepath))
+		contentType := "video/mp4"
+		if ext == ".webm" {
+			contentType = "video/webm"
+		} else if ext == ".ogg" || ext == ".ogv" {
+			contentType = "video/ogg"
+		} else if ext == ".mov" {
+			contentType = "video/quicktime"
+		}
+		c.Response().Header().Set("Content-Type", contentType)
 		c.Response().Header().Set("Accept-Ranges", "bytes")
 		filename := filepath.Base(mediaContainer.Filepath)
 		c.Response().Header().Set("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))

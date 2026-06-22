@@ -6,15 +6,24 @@ import { RiSettings3Line, RiRefreshLine } from "react-icons/ri"
 
 const CONNECTION_TIMEOUT_MS = 15000 // 15 seconds
 
-export function LoadingOverlayWithLogo({ refetch, title }: { refetch?: () => void, title?: string }) {
+export function LoadingOverlayWithLogo({ refetch, title, isError }: { refetch?: () => void, title?: string, isError?: boolean }) {
     const [timedOut, setTimedOut] = useState(false)
 
+    const [prevIsError, setPrevIsError] = useState(isError)
+    if (isError !== prevIsError) {
+        setPrevIsError(isError)
+        if (isError) {
+            setTimedOut(true)
+        }
+    }
+
     useEffect(() => {
+        if (isError) return
         const timer = setTimeout(() => {
             setTimedOut(true)
         }, CONNECTION_TIMEOUT_MS)
         return () => clearTimeout(timer)
-    }, [])
+    }, [isError])
 
     return (
         <LoadingOverlay showSpinner={false} className="bg-zinc-950 flex flex-col justify-center items-center">
@@ -70,9 +79,6 @@ export function LoadingOverlayWithLogo({ refetch, title }: { refetch?: () => voi
                     <h1 className="text-white text-4xl font-bebas tracking-[0.3em] uppercase leading-none">
                         {title ?? "KAMEHOUSE"}
                     </h1>
-                    <span className="text-[10px] text-brand-orange font-black tracking-[0.5em] uppercase opacity-55 mt-1">
-                        Ultra Instinct
-                    </span>
                 </div>
             )}
 

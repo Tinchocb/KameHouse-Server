@@ -52,7 +52,10 @@ func NewDatabase(ctx context.Context, appDataDir, dbName string, logger *zerolog
 		sqlitePath = filepath.Join(appDataDir, dbName+".db")
 	}
 
-	dsn := sqlitePath + "?_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL"
+	// _cache_size=-32000  → 32 MB page cache (negative value = KiB). Reduces
+	// repeated I/O during scan-time enrichment loops and JOIN-heavy queries.
+	// _mmap_size=134217728 → 128 MB memory-mapped I/O for read-heavy workloads.
+	dsn := sqlitePath + "?_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL&_cache_size=-32000&_mmap_size=134217728"
 
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
 		Logger: gormlogger.New(
@@ -100,7 +103,7 @@ func NewDatabase(ctx context.Context, appDataDir, dbName string, logger *zerolog
 	}
 
 	database.cleanupManager = NewCleanupManager(database.gormdb, database.Logger)
-	database.bufferedWriter = nil // Unused, disabled to avoid ticker daemon overhead
+	database.bufferedWriter = NewBufferedWriter(database.gormdb, database.Logger, 100, 300*time.Millisecond)
 
 	logDir := appDataDir
 	if logDir == "" {
@@ -152,8 +155,9 @@ func (db *Database) Shutdown() {
 	if db.slowTraceLogger != nil {
 		db.slowTraceLogger.Flush()
 	}
-	// Consolidate WAL
-	db.gormdb.Exec("PRAGMA wal_checkpoint(PASSIVE);")
+	// TRUNCATE waits for all readers and resets the WAL to zero length, so the
+	// next startup has nothing to replay and begins faster than with PASSIVE.
+	db.gormdb.Exec("PRAGMA wal_checkpoint(TRUNCATE);")
 }
 
 // Close libera el pool de conexiones subyacente.
@@ -224,8 +228,24 @@ func migrateSchema(ctx context.Context, db *gorm.DB) error {
 
 		&models.MediaCollection{},
 		&models.MetadataCache{},
+		&models.EpisodeSkipTime{},
 	); err != nil {
 		return err
+	}
+
+	// 1. Eliminar duplicados de watch_histories antes de crear el índice único compuesto
+	_ = db.Exec(`
+		DELETE FROM watch_histories
+		WHERE id NOT IN (
+			SELECT MAX(id)
+			FROM watch_histories
+			GROUP BY account_id, media_id, episode_number
+		)
+	`).Error
+
+	// 2. Asegurar que el índice único compuesto exista para evitar errores de ON CONFLICT
+	if err := db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_media_episode ON watch_histories (account_id, media_id, episode_number)").Error; err != nil {
+		println("db: failed to create unique index on watch_histories:", err.Error())
 	}
 
 	// Migración manual: actualiza el índice único de LibraryMedia para manejar

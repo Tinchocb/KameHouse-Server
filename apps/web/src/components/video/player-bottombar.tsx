@@ -2,24 +2,6 @@ import React from "react"
 import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipForward, SkipBack, ListVideo, Tv } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 
-const CastIcon = ({ className }: { className?: string }) => (
-    <svg
-        viewBox="0 0 24 24"
-        width="14"
-        height="14"
-        stroke="currentColor"
-        strokeWidth="2"
-        fill="none"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className={className}
-    >
-        <path d="M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6" />
-        <path d="M2 12a9 9 0 0 1 8 8" />
-        <path d="M2 16a5 5 0 0 1 4 4" />
-        <line x1="2" x2="2.01" y1="20" y2="20" />
-    </svg>
-)
 import { TimelineHeatmap, type InsightNode } from "@/components/ui/timeline-heatmap"
 import { PlayerSettingsMenu } from "@/components/ui/PlayerSettingsMenu"
 import type { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
@@ -52,6 +34,8 @@ export interface PlayerBottomBarProps {
     progressBarRef: React.RefObject<HTMLDivElement>
     progressInputRef: React.RefObject<HTMLInputElement>
     handleSeek: (e: React.ChangeEvent<HTMLInputElement>) => void
+    handleSeekStart?: () => void
+    handleSeekEnd?: (e: React.MouseEvent<HTMLInputElement> | React.TouchEvent<HTMLInputElement> | React.KeyboardEvent<HTMLInputElement>) => void
     isPlaying: boolean
     togglePlay: () => void
     skipTime: (amount: number) => void
@@ -112,11 +96,10 @@ export interface PlayerBottomBarProps {
     ambilightEnabled?: boolean
     onAmbilightChange?: (enabled: boolean) => void
 
-
-    tvMode?: boolean
-    onTvModeChange?: (enabled: boolean) => void
     marathonMode?: boolean
     onMarathonModeChange?: (enabled: boolean) => void
+    tvMode?: boolean
+    onTvModeChange?: (enabled: boolean) => void
 
     /** AniSkip intervals for rendering visual markers on the timeline */
     skipTimesOp?: { startTime: number; endTime: number }
@@ -142,6 +125,10 @@ export interface PlayerBottomBarProps {
     isQueueSidebarOpen?: boolean
     onToggleQueueSidebar?: () => void
     hasQueue?: boolean
+
+    videoRef?: React.RefObject<HTMLVideoElement | null>
+    malId?: number | null
+    mediaId?: number
 }
 
 function getSeriesName(fullTitle?: string): string {
@@ -165,8 +152,8 @@ const SkipNextChapterIcon = () => (
 
 export const PlayerBottomBar = React.memo(function PlayerBottomBar({
     title, episodeNumber, episodeLabel, mediaFormat,
-    duration, insights, progressBarRef, progressInputRef, handleSeek,
-    isPlaying, togglePlay, skipTime,
+    duration, insights, progressBarRef, progressInputRef, handleSeek, handleSeekStart, handleSeekEnd,
+    isPlaying, togglePlay, skipTime: _skipTime,
     isMuted, toggleMute, volume, handleVolume,
     timeTextRef,
     audioTracks, activeAudioIndex, onSelectAudio,
@@ -174,7 +161,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
     isJassubLoading, episodeSources, activeStreamUrl, handleSourceSwitch,
     isFullscreen, toggleFullscreen,
     settingsOpen, onToggleSettings,
-    onTakeScreenshot, onTogglePip,
+    onTakeScreenshot: _onTakeScreenshot, onTogglePip: _onTogglePip,
     playbackRate = 1, onPlaybackRateChange,
     autoSkipIntro = false, onAutoSkipIntroChange,
     autoSkipOutro = false, onAutoSkipOutroChange,
@@ -186,23 +173,26 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
     loopEnabled = false, onLoopEnabledChange,
     autoDisableSubtitlesWhenDubbed = true, onAutoDisableSubtitlesWhenDubbedChange,
     ambilightEnabled = true, onAmbilightChange,
-    tvMode = false, onTvModeChange,
     marathonMode = false, onMarathonModeChange,
+    tvMode = false, onTvModeChange,
     skipTimesOp,
     skipTimesEd,
     chapters = [],
     skipToNextChapter,
     skipToPrevChapter,
     activeChapter,
-    isCastSupported = false,
-    castState = "disconnected",
-    onPromptCast,
-    isEpisodesSidebarOpen,
-    onToggleEpisodesSidebar,
-    hasEpisodes,
+    isCastSupported: _isCastSupported = false,
+    castState: _castState = "disconnected",
+    onPromptCast: _onPromptCast,
+    isEpisodesSidebarOpen: _isEpisodesSidebarOpen,
+    onToggleEpisodesSidebar: _onToggleEpisodesSidebar,
+    hasEpisodes: _hasEpisodes,
     isQueueSidebarOpen,
     onToggleQueueSidebar,
     hasQueue,
+    videoRef,
+    malId,
+    mediaId,
 }: PlayerBottomBarProps) {
     const isMovie = React.useMemo(() => {
         const formatUpper = mediaFormat?.toUpperCase()
@@ -212,7 +202,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
     return (
         <div className={cn(
             "absolute bottom-4 inset-x-4 md:bottom-6 md:inset-x-6 flex flex-col pointer-events-auto select-none",
-            "bg-zinc-950/55 backdrop-blur-[32px] border border-white/[0.08] rounded-2xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)] px-5 py-3.5 z-30",
+            "bg-zinc-950 border border-white/15 rounded-2xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.95)] px-5 py-3.5 z-30",
         )}>
 
             {/* Progress Timeline */}
@@ -250,7 +240,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                     )}
 
                     {/* Chapter tick markers */}
-                    {duration > 0 && chapters && chapters.map((chapter, idx) => {
+                    {duration > 0 && !isMovie && chapters && chapters.map((chapter, idx) => {
                         if (chapter.startTime <= 0 || chapter.startTime >= duration) return null;
                         return (
                             <div
@@ -280,6 +270,12 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                     max={duration || 0}
                     step="any"
                     onChange={handleSeek}
+                    onMouseDown={handleSeekStart}
+                    onTouchStart={handleSeekStart}
+                    onKeyDown={handleSeekStart}
+                    onMouseUp={handleSeekEnd}
+                    onTouchEnd={handleSeekEnd}
+                    onKeyUp={handleSeekEnd}
                     className="absolute inset-0 w-full h-full cursor-pointer opacity-0 z-10"
                 />
             </div>
@@ -304,7 +300,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
 
 
                     {/* Chapter Prev/Next navigation */}
-                    {chapters && chapters.length > 0 && (
+                    {!isMovie && chapters && chapters.length > 0 && (
                         <div className="flex items-center gap-0.5 border-l border-white/10 pl-2 ml-1">
                             <button
                                 onClick={(e) => { e.stopPropagation(); skipToPrevChapter?.(); }}
@@ -353,7 +349,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                         <span ref={timeTextRef} className="text-zinc-200">00:00</span>
                         <span className="text-zinc-600">/</span>
                         <span className="text-zinc-400">{formatTime(duration)}</span>
-                        {activeChapter && (
+                        {!isMovie && activeChapter && (
                             <>
                                 <span className="text-zinc-600 ml-1">•</span>
                                 <span className="text-brand-orange font-bold uppercase tracking-wider text-[10px] ml-1 truncate max-w-[150px] md:max-w-[240px]" title={activeChapter}>
@@ -364,26 +360,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                     </div>
                 </div>
 
-                {/* Middle Area: Episode Title & Number */}
-                <div className="flex flex-col items-center justify-center text-center max-w-[35%] select-none px-4 flex-1 min-w-0">
-                    <span className="text-xs font-bold text-white tracking-wide truncate max-w-full mb-1" title={episodeLabel}>
-                        {cleanMediaTitle(episodeLabel, isMovie) || ""}
-                    </span>
-                    <span className="text-[9px] font-black text-brand-orange uppercase tracking-[0.2em] font-mono leading-none">
-                        {(() => {
-                            const formatUpper = mediaFormat?.toUpperCase()
-                            const isMovieFormat = formatUpper === "MOVIE" || formatUpper === "SPECIAL" || formatUpper === "OVA"
-                            if (isMovieFormat && title) {
-                                return getSeriesName(title)
-                            }
-                            if (formatUpper === "MOVIE") return "Película"
-                            if (formatUpper === "SPECIAL") return "Especial"
-                            if (formatUpper === "OVA") return "OVA"
-                            if (episodeNumber) return `Episodio ${episodeNumber}`
-                            return ""
-                        })()}
-                    </span>
-                </div>
+
 
                 {/* Right Wing */}
                 <div className="flex items-center gap-0.5">
@@ -416,22 +393,23 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                         </button>
                     )}
 
-                    {/* TV Mode Button */}
-                    {onTvModeChange && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onTvModeChange(!tvMode); }}
-                            aria-label="Alternar Modo TV / Maratón"
-                            title="Modo TV / Maratón"
-                            className={cn(
-                                "transition-all duration-300 flex items-center justify-center w-8 h-8 rounded-full active:scale-90",
-                                tvMode
-                                    ? "text-brand-orange bg-brand-orange/10"
-                                    : "text-zinc-500 hover:text-white hover:bg-white/5"
-                            )}
-                        >
-                            <Tv className="w-3.5 h-3.5" fill={tvMode ? "currentColor" : "none"} />
-                        </button>
-                    )}
+                    {/* TV Mode (Skip Intro/Outro) */}
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            onTvModeChange?.(!tvMode)
+                        }}
+                        aria-label={tvMode ? "Desactivar Auto-Skip (TV Mode)" : "Activar Auto-Skip (TV Mode)"}
+                        title={tvMode ? "Desactivar Auto-Skip (TV Mode)" : "Activar Auto-Skip (TV Mode)"}
+                        className={cn(
+                            "transition-all duration-300 flex items-center justify-center w-8 h-8 rounded-lg active:scale-90",
+                            tvMode
+                                ? "text-brand-orange bg-brand-orange/10 hover:bg-brand-orange/20"
+                                : "text-zinc-500 hover:text-white hover:bg-white/5"
+                        )}
+                    >
+                        <Tv className="w-3.5 h-3.5" />
+                    </button>
 
                     {/* Settings gear */}
                     <PlayerSettingsMenu
@@ -468,10 +446,15 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                         onAutoDisableSubtitlesWhenDubbedChange={onAutoDisableSubtitlesWhenDubbedChange}
                         ambilightEnabled={ambilightEnabled}
                         onAmbilightChange={onAmbilightChange}
-                        tvMode={tvMode}
-                        onTvModeChange={onTvModeChange}
                         marathonMode={marathonMode}
                         onMarathonModeChange={onMarathonModeChange}
+                        tvMode={tvMode}
+                        onTvModeChange={onTvModeChange}
+                        videoRef={videoRef}
+                        malId={malId}
+                        mediaId={mediaId}
+                        episodeNumber={episodeNumber}
+                        duration={duration}
                     />
 
                     {/* Fullscreen */}

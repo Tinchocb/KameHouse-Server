@@ -16,10 +16,12 @@ tmp/
 *.db
 .run/
 testdata/
+scratch/
 
 # Environment and secrets
 .env
 .env*.local
+.env.web
 *.pem
 
 # Dependencies
@@ -41,6 +43,14 @@ apps/web/.next/
 apps/web/.tanstack/
 apps/server/kamehouse
 apps/server/kamehouse.exe
+apps/server/build/bin/
+apps/desktop/web/
+
+# Go
+coverage.out
+
+# Misc generated files
+package.json.md5
 
 # Project specific
 kamehouse-parser/.git
@@ -66,7 +76,8 @@ skills/
 # AI Data and Prompts
 .github/prompts/
 
-referencia
+# Local reference/scratch directories
+referencia/
 
 .antigravityignore
 .cursorignore

@@ -1,6 +1,6 @@
 import React from "react"
 import { TabsContent } from "@/components/ui/tabs/tabs"
-import { Section, Card, OsToggle, OsSelect } from "../components"
+import { Section, Card, OsToggle } from "../components"
 import { type Control, Controller } from "react-hook-form"
 import { type SettingsFormValues } from "../index"
 import { useAppStore } from "@/lib/store"
@@ -46,31 +46,40 @@ export function PlayerTab({ control }: PlayerTabProps) {
                         render={({ field }) => (
                             <div className="space-y-3 pt-2">
                                 {[
+                                    { id: "auto", label: "Detección Automática (Recomendado)", desc: "Detecta y usa de forma automática Nvidia NVENC, Intel QuickSync o VAAPI" },
                                     { id: "nvidia", label: "NVIDIA NVENC", desc: "Optimizado para tarjetas gráficas GeForce GTX/RTX" },
                                     { id: "qsv", label: "Intel QuickSync (QSV)", desc: "Procesamiento vía Gráficos Integrados Intel" },
                                     { id: "none", label: "Desactivado (CPU)", desc: "Usa el procesador para transcodificación de software" }
                                 ].map((gpu) => (
-                                    <label
+                                    <div
                                         key={gpu.id}
                                         className={`flex items-start gap-4 p-4 bg-[#050507]/45 rounded-xl border transition-all duration-300 cursor-pointer ${
                                             (field.value === gpu.id || (!field.value && gpu.id === "none"))
                                                 ? "border-[#ff6e3a]/30 bg-[#ff6e3a]/[0.01]"
                                                 : "border-white/[0.04] hover:border-white/10"
                                         }`}
+                                        onClick={() => field.onChange(gpu.id)}
                                     >
                                         <input
+                                            id={`hw-accel-radio-${gpu.id}`}
                                             type="radio"
                                             name="transcodeHwAccel"
                                             value={gpu.id}
                                             checked={field.value === gpu.id || (!field.value && gpu.id === "none")}
                                             onChange={() => field.onChange(gpu.id)}
                                             className="mt-1 accent-[#ff6e3a]"
+                                            onClick={(e) => e.stopPropagation()}
                                         />
                                         <div className="-mt-0.5">
-                                            <span className="text-xs font-bold text-white block tracking-tight">{gpu.label}</span>
+                                            <label
+                                                htmlFor={`hw-accel-radio-${gpu.id}`}
+                                                className="text-xs font-bold text-white block tracking-tight cursor-pointer"
+                                            >
+                                                {gpu.label}
+                                            </label>
                                             <span className="text-[10px] text-zinc-550 block mt-0.5">{gpu.desc}</span>
                                         </div>
-                                    </label>
+                                    </div>
                                 ))}
                             </div>
                         )}
@@ -163,10 +172,11 @@ export function PlayerTab({ control }: PlayerTabProps) {
                         render={({ field }) => (
                             <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 hover:bg-white/[0.015] transition-all duration-205 gap-5 group/input">
                                 <div className="space-y-0.5 flex-1 max-w-xl">
-                                    <p className="text-sm font-semibold text-zinc-200 group-hover/input:text-white transition-colors tracking-tight">Ruta Ejecutable FFmpeg</p>
-                                    <p className="text-xs text-zinc-500 leading-relaxed font-medium">Ubicación del binario ffmpeg en el sistema local.</p>
+                                    <label htmlFor="ffmpeg-path-input" className="text-sm font-semibold text-zinc-200 group-hover/input:text-white transition-colors tracking-tight cursor-pointer">Ruta Ejecutable FFmpeg</label>
+                                    <p className="text-xs text-zinc-550 leading-relaxed font-medium">Ubicación del binario ffmpeg en el sistema local.</p>
                                 </div>
                                 <input
+                                    id="ffmpeg-path-input"
                                     type="text"
                                     placeholder="Ej. /usr/bin/ffmpeg o C:\ffmpeg\ffmpeg.exe"
                                     value={field.value || ""}
@@ -182,10 +192,11 @@ export function PlayerTab({ control }: PlayerTabProps) {
                         render={({ field }) => (
                             <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 hover:bg-white/[0.015] transition-all duration-205 gap-5 group/input">
                                 <div className="space-y-0.5 flex-1 max-w-xl">
-                                    <p className="text-sm font-semibold text-zinc-200 group-hover/input:text-white transition-colors tracking-tight">Ruta Ejecutable FFprobe</p>
-                                    <p className="text-xs text-zinc-500 leading-relaxed font-medium">Ubicación del binario ffprobe en el sistema local.</p>
+                                    <label htmlFor="ffprobe-path-input" className="text-sm font-semibold text-zinc-200 group-hover/input:text-white transition-colors tracking-tight cursor-pointer">Ruta Ejecutable FFprobe</label>
+                                    <p className="text-xs text-zinc-550 leading-relaxed font-medium">Ubicación del binario ffprobe en el sistema local.</p>
                                 </div>
                                 <input
+                                    id="ffprobe-path-input"
                                     type="text"
                                     placeholder="Ej. /usr/bin/ffprobe o C:\ffmpeg\ffprobe.exe"
                                     value={field.value || ""}

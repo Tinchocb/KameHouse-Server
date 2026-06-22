@@ -93,7 +93,6 @@ export function RandomPlayButton() {
             const rawEp = selectedFile.metadata?.episode || Number(selectedFile.parsedInfo?.episode)
             const epNum = typeof rawEp === "number" ? rawEp : Number(rawEp) || 1
 
-            const isMp4 = selectedFile.path.toLowerCase().endsWith(".mp4")
             const seriesTitle =
                 randomEntry.media?.titleSpanish ||
                 randomEntry.media?.titleRomaji ||
@@ -102,7 +101,7 @@ export function RandomPlayButton() {
 
             setPlayTarget({
                 path: selectedFile.path,
-                streamType: isMp4 ? "direct" : "transcode",
+                streamType: "direct",
                 title: seriesTitle,
                 episodeLabel: isMovie ? "Película" : `Episodio ${epNum}`,
                 episodeNumber: epNum,

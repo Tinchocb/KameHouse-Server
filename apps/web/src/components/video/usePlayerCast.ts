@@ -9,12 +9,21 @@ interface UsePlayerCastProps {
     status: "loading" | "ready" | "error"
 }
 
+interface HTMLVideoElementWithPlaybackTarget extends HTMLVideoElement {
+    webkitShowPlaybackTargetPicker?: () => void
+    webkitCurrentPlaybackTargetIsWireless?: boolean
+}
+
 function setVideoSrc(video: HTMLVideoElement, src: string) {
     video.src = src
 }
 
 function setVideoCurrentTime(video: HTMLVideoElement, time: number) {
-    video.currentTime = time
+    if (Number.isFinite(time)) {
+        video.currentTime = time
+    } else {
+        console.warn("usePlayerCast: setVideoCurrentTime ignored non-finite time:", time)
+    }
 }
 
 export function usePlayerCast({
@@ -26,7 +35,7 @@ export function usePlayerCast({
 }: UsePlayerCastProps) {
     const [isCastSupported, setIsCastSupported] = useState(() => {
         if (typeof window === "undefined") return false
-        const video = document.createElement("video")
+        const video = document.createElement("video") as HTMLVideoElementWithPlaybackTarget
         return 'remote' in video || 'webkitShowPlaybackTargetPicker' in video
     })
     const [castState, setCastState] = useState<"disconnected" | "connecting" | "connected">("disconnected")
@@ -51,7 +60,7 @@ export function usePlayerCast({
     }, [playableUrl])
 
     const prepareForCast = useCallback(() => {
-        const video = videoRef.current
+        const video = videoRef.current as HTMLVideoElementWithPlaybackTarget | null
         if (!video || isCastingRef.current) return
 
         isCastingRef.current = true
@@ -82,7 +91,7 @@ export function usePlayerCast({
     }, [videoRef, hlsRef])
 
     const restoreLocalPlayback = useCallback(() => {
-        const video = videoRef.current
+        const video = videoRef.current as HTMLVideoElementWithPlaybackTarget | null
         if (!video || !castingSavedStateRef.current) return
 
         isCastingRef.current = false
@@ -117,15 +126,15 @@ export function usePlayerCast({
     }, [videoRef, hlsRef])
 
     useEffect(() => {
-        const video = videoRef.current
+        const video = videoRef.current as HTMLVideoElementWithPlaybackTarget | null
         if (!video) return
 
-        const hasRemote = 'remote' in video && (video as any).remote;
+        const hasRemote = 'remote' in video && video.remote;
         const hasWebkit = 'webkitShowPlaybackTargetPicker' in video;
 
-        if (hasRemote) {
+        if (hasRemote && video.remote) {
             setIsCastSupported(true)
-            const remote = (video as any).remote
+            const remote = video.remote
 
             const handleStateChange = () => {
                 const state = remote.state
@@ -152,12 +161,12 @@ export function usePlayerCast({
         } else if (hasWebkit) {
             setIsCastSupported(true)
 
-            const handleAvailability = (event: any) => {
+            const handleAvailability = (event: Event & { availability?: string }) => {
                 setIsCastSupported(event.availability === 'available')
             }
 
             const handleWebkitTargetChange = () => {
-                const isWireless = (video as any).webkitCurrentPlaybackTargetIsWireless
+                const isWireless = video.webkitCurrentPlaybackTargetIsWireless
                 setCastState(isWireless ? "connected" : "disconnected")
                 console.log("WebKit wireless target changed, isWireless:", isWireless)
 
@@ -168,34 +177,34 @@ export function usePlayerCast({
                 }
             }
 
-            video.addEventListener('webkitplaybacktargetavailabilitychanged', handleAvailability)
+            video.addEventListener('webkitplaybacktargetavailabilitychanged', handleAvailability as EventListener)
             video.addEventListener('webkitcurrentplaybacktargetiswirelesschanged', handleWebkitTargetChange)
             return () => {
-                video.removeEventListener('webkitplaybacktargetavailabilitychanged', handleAvailability)
+                video.removeEventListener('webkitplaybacktargetavailabilitychanged', handleAvailability as EventListener)
                 video.removeEventListener('webkitcurrentplaybacktargetiswirelesschanged', handleWebkitTargetChange)
             }
         }
     }, [status, videoRef, prepareForCast, restoreLocalPlayback])
 
     const promptCast = useCallback(async () => {
-        const video = videoRef.current
+        const video = videoRef.current as HTMLVideoElementWithPlaybackTarget | null
         if (!video) return
 
-        const hasRemote = 'remote' in video && (video as any).remote;
+        const hasRemote = 'remote' in video && video.remote;
         const hasWebkit = 'webkitShowPlaybackTargetPicker' in video;
 
-        if (hasRemote) {
-            const remote = (video as any).remote
+        if (hasRemote && video.remote) {
+            const remote = video.remote
             console.log("promptCast: Invoking remote.prompt() directly")
             try {
                 await remote.prompt()
             } catch (err) {
                 console.warn("User cancelled cast or prompt failed:", err)
             }
-        } else if (hasWebkit) {
+        } else if (hasWebkit && video.webkitShowPlaybackTargetPicker) {
             console.log("promptCast: Invoking webkitShowPlaybackTargetPicker() directly")
             try {
-                (video as any).webkitShowPlaybackTargetPicker()
+                video.webkitShowPlaybackTargetPicker()
             } catch (err) {
                 console.error("Webkit casting error:", err)
             }

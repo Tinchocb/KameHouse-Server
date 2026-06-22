@@ -16,10 +16,16 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/goccy/go-json"
 	"github.com/labstack/echo/v4"
+)
+
+var (
+	cpuProfileMu       sync.Mutex
+	cpuProfilingActive bool
 )
 
 // Status is a struct containing the user data, settings, and OS.
@@ -113,7 +119,13 @@ func (h *Handler) NewStatus(c echo.Context) *Status {
 		ServerPort:            h.App.Config.Server.Port,
 	}
 
-	if c.Get("unauthenticated") != nil && c.Get("unauthenticated").(bool) {
+	isAuthenticated := true
+	if h.App.Config.Server.Password != "" {
+		passwordHash := c.Request().Header.Get("X-KameHouse-Token")
+		isAuthenticated = h.isCorrectPasswordToken(passwordHash)
+	}
+
+	if !isAuthenticated {
 		// If the user is unauthenticated, return a status with no user data
 		status.OS = ""
 		status.DataDir = ""
@@ -423,6 +435,20 @@ func (h *Handler) HandleGetGoRoutineProfile(c echo.Context) error {
 //	@route /api/v1/memory/cpu [GET]
 //	@returns nil
 func (h *Handler) HandleGetCPUProfile(c echo.Context) error {
+	cpuProfileMu.Lock()
+	if cpuProfilingActive {
+		cpuProfileMu.Unlock()
+		return h.RespondWithCodeError(c, 409, fmt.Errorf("CPU profiling is already in progress"))
+	}
+	cpuProfilingActive = true
+	cpuProfileMu.Unlock()
+
+	defer func() {
+		cpuProfileMu.Lock()
+		cpuProfilingActive = false
+		cpuProfileMu.Unlock()
+	}()
+
 	// Parse duration from query parameter (default to 30 seconds)
 	durationStr := c.QueryParam("duration")
 	duration := 30 * time.Second

@@ -20,7 +20,7 @@ export function LoadingErrorOverlay({
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 z-10 text-white bg-black">
                 <Loader2 className="w-16 h-16 text-white animate-spin" />
                 <p className="font-black tracking-[0.4em] uppercase text-[11px] opacity-60">
-                    {streamType === "transcode" ? "PREPARANDO TRANSMISIÓN" : "ESTABLECIENDO CONEXIÓN"}
+                    {streamType === "transcode" ? "Espere" : "Cargando"}
                 </p>
             </div>
         )
@@ -40,8 +40,8 @@ export function LoadingErrorOverlay({
                 <AlertTriangle className="w-16 h-16 text-brand-orange animate-pulse" />
                 <h3 className="font-bebas text-3xl tracking-[0.2em] uppercase">TRANSMISIÓN CAÍDA</h3>
                 <p className="text-zinc-400 max-w-md text-sm font-medium uppercase tracking-wide leading-relaxed">{errorMsg}</p>
-                <button 
-                    onClick={onClose} 
+                <button
+                    onClick={onClose}
                     className="mt-6 px-10 py-3.5 bg-brand-orange hover:bg-brand-orange-hover text-white font-black text-[11px] uppercase tracking-[0.3em] transition-all rounded-xl active:scale-95"
                 >
                     REGRESAR
@@ -70,7 +70,7 @@ export function ResumeOverlay({ show, time, onResume, onClose }: { show: boolean
                         <span className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em]">Continuar viendo</span>
                         <span className="text-white font-bold text-sm">Desde {formatTime(time)}</span>
                     </div>
-                    <button 
+                    <button
                         onClick={onClose}
                         className="p-1.5 hover:bg-white/10 rounded-full transition-colors text-zinc-500 hover:text-white"
                     >
@@ -78,14 +78,14 @@ export function ResumeOverlay({ show, time, onResume, onClose }: { show: boolean
                     </button>
                 </div>
                 <div className="flex gap-2">
-                    <button 
+                    <button
                         onClick={onResume}
                         className="flex-1 py-2.5 bg-brand-orange hover:bg-brand-orange-hover text-white font-black text-[9px] uppercase tracking-widest transition-all rounded-xl active:scale-95 flex items-center justify-center gap-2"
                     >
                         <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                         REANUDAR
                     </button>
-                    <button 
+                    <button
                         onClick={onClose}
                         className="flex-1 py-2.5 bg-white/5 border border-white/5 text-zinc-300 font-black text-[9px] uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all rounded-xl active:scale-95"
                     >
@@ -103,8 +103,8 @@ export function CenterPlayFlash({ flash }: { flash: "play" | "pause" | null }) {
         <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
             <div className="flex items-center justify-center w-24 h-24 bg-white/10 border border-white/20 animate-[ping_0.4s_ease-out_forwards]">
                 {flash === "play"
-                    ? <svg viewBox="0 0 24 24" fill="currentColor" className="w-10 h-10 text-white ml-1"><path d="M8 5v14l11-7z"/></svg>
-                    : <svg viewBox="0 0 24 24" fill="currentColor" className="w-10 h-10 text-white"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                    ? <svg viewBox="0 0 24 24" fill="currentColor" className="w-10 h-10 text-white ml-1"><path d="M8 5v14l11-7z" /></svg>
+                    : <svg viewBox="0 0 24 24" fill="currentColor" className="w-10 h-10 text-white"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
                 }
             </div>
         </div>
@@ -171,7 +171,7 @@ export function SkipIntroOverlay({
                     "w-4 h-4 transition-colors shrink-0",
                     isOutro ? "text-purple-300 group-hover:text-purple-200" : "text-brand-orange group-hover:text-brand-orange-hover"
                 )}>
-                    <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/>
+                    <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z" />
                 </svg>
 
                 <span className="text-white">{label}</span>

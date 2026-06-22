@@ -1,6 +1,7 @@
 package cassette
 
 import (
+	"kamehouse/internal/util"
 	"sync"
 	"time"
 )
@@ -87,7 +88,7 @@ func (ve *VelocityEstimator) DetectSeek(threshold int32) bool {
 		return false
 	}
 	delta := ve.samples[n-1].segment - ve.samples[n-2].segment
-	return abs32(delta) > threshold
+	return util.Abs32(delta) > threshold
 }
 
 // Reset clears all samples

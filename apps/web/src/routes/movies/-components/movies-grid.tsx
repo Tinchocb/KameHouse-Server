@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react"
 import { motion } from "framer-motion"
 import { useWindowVirtualizer } from "@tanstack/react-virtual"
-import type { Anime_LibraryCollectionEntry } from "@/api/generated/types"
+import type { Anime_LibraryCollectionEntry, Continuity_WatchHistory } from "@/api/generated/types"
 import { EmptyState } from "@/components/shared/empty-state"
 import { MovieCard, EraTab } from "../-MovieCard"
 import { PosterGridSkeleton } from "@/components/ui/shimmer-skeleton"
@@ -10,10 +10,9 @@ interface MoviesGridProps {
     filteredSorted: (Anime_LibraryCollectionEntry & { era: EraTab; startedAtTimestamp: number })[]
     isLoading: boolean
     allMoviesLength: number
-    watchHistory: Record<number, any> | undefined
+    watchHistory: Continuity_WatchHistory | undefined
     handleMovieClick: (mediaId: number) => void
     handleHoverCard: (entry: (Anime_LibraryCollectionEntry & { era: EraTab; startedAtTimestamp: number }) | null) => void
-    activeEra: EraTab
 }
 
 export function MoviesGrid({
@@ -23,7 +22,6 @@ export function MoviesGrid({
     watchHistory,
     handleMovieClick,
     handleHoverCard,
-    activeEra,
 }: MoviesGridProps) {
     // Responsive grid columns measuring
     const gridRef = useRef<HTMLDivElement>(null)

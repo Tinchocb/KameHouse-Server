@@ -1,4 +1,3 @@
-import { Play, Plus, Info } from "lucide-react"
 
 interface MovieHeroWidescreenProps {
   title: string

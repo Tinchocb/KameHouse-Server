@@ -4,6 +4,25 @@ import { Link } from "@tanstack/react-router"
 import { Loader2, FileVideo } from "lucide-react"
 import { useEffect, useState } from "react"
 import { VideoPlayer } from "@/components/video/player"
+import type { IntelligentEntry } from "@/api/types/intelligence.types"
+
+export interface SyntheticUnlinkedEntry {
+    mediaId: string
+    isUnlinked: true
+    path: string
+    media: {
+        titleRomaji: string
+        titleEnglish: string
+        titleOriginal: string
+        year: string | number
+        format: string
+        posterImage: string
+        score?: number
+    }
+    vibes?: string[]
+}
+
+type SearchResultItem = (IntelligentEntry & { isUnlinked?: false; path?: string }) | SyntheticUnlinkedEntry
 
 export function CommandPalette() {
     const [open, setOpen] = useState(false)
@@ -63,7 +82,7 @@ export function CommandPalette() {
                             >
                                 <div className="grid gap-3 mt-2">
                                     {results?.map((res) => {
-                                        const result = res as any
+                                        const result = res as SearchResultItem
                                         const media = result.media
                                         const title = media?.titleRomaji || media?.titleEnglish || `Desconocido (${result.mediaId})`
                                         
@@ -133,15 +152,15 @@ export function CommandPalette() {
                                                                         <span className="text-[10px] font-black uppercase tracking-[0.1em] text-zinc-600">
                                                                             {media?.format || "LOCAL"}
                                                                         </span>
-                                                                        {(media as any)?.score && (
+                                                                        {media && media.score !== undefined && media.score > 0 && (
                                                                             <>
                                                                                 <div className="w-1 h-1 rounded-full bg-white/10" />
                                                                                 <span className="text-[10px] font-black text-brand-orange tracking-wider">
-                                                                                    ★ {(((media as any).score > 10 ? (media as any).score / 10 : (media as any).score) as number).toFixed(1)}
+                                                                                    ★ {(media.score > 10 ? media.score / 10 : media.score).toFixed(1)}
                                                                                 </span>
                                                                             </>
                                                                         )}
-                                                                        {(result as any).vibes?.map((vibe: string) => (
+                                                                        {result.vibes?.map((vibe) => (
                                                                             <span key={vibe} className="text-[8px] font-black tracking-[0.1em] uppercase px-1.5 py-0.5 rounded border border-white/5 bg-white/5 text-zinc-500 group-hover:text-zinc-300 transition-colors">
                                                                                 {vibe}
                                                                             </span>
@@ -164,7 +183,7 @@ export function CommandPalette() {
             {playTarget && (
                 <VideoPlayer
                     streamUrl={playTarget.path}
-                    streamType={playTarget.path.toLowerCase().endsWith(".mp4") ? "direct" : "transcode"}
+                    streamType="direct"
                     episodeLabel={playTarget.title}
                     onClose={() => setPlayTarget(null)}
                 />

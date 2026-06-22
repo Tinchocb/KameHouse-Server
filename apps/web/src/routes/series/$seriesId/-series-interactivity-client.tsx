@@ -14,16 +14,12 @@ import { getDragonBallSpanishTitle } from "@/lib/config/dragonball.config"
 // ─── MediaActionButtons ───────────────────────────────────────────────────────
 
 interface MediaActionButtonsProps {
-    seriesId?: string
-    directoryPath?: string
     onPlay?: () => void
     continuityItem?: Continuity_WatchHistoryItem | null
     malId?: number | null
 }
 
 const MediaActionButtons = React.memo(function MediaActionButtons({
-    seriesId,
-    directoryPath,
     onPlay,
     continuityItem,
     malId,

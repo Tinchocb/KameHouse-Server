@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from "react"
+import React from "react"
 import { TabsContent } from "@/components/ui/tabs/tabs"
-import { Section, Card, OsToggle, OsInput, OsSelect } from "../components"
+import { Section, Card, OsToggle } from "../components"
 import { type Control, Controller } from "react-hook-form"
 import { type SettingsFormValues } from "../index"
 import { toast } from "sonner"
 import { useAppStore } from "@/lib/store"
-import { useGetStatus } from "@/api/hooks/settings.hooks"
 
 import { useSound } from "@/hooks/use-sound"
 import { cn } from "@/components/ui/core/styling"
@@ -33,7 +32,6 @@ const AlertIcon = () => (
 )
 
 export function SystemTab({ control }: SystemTabProps) {
-    const { data: status } = useGetStatus()
     const { playSound } = useSound()
 
     const {
@@ -96,8 +94,9 @@ export function SystemTab({ control }: SystemTabProps) {
                             name="library.dohProvider"
                             render={({ field }) => (
                                 <div className="flex flex-col gap-2">
-                                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">Admin Username</label>
+                                    <label htmlFor="admin-username-input" className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">Admin Username</label>
                                     <input
+                                        id="admin-username-input"
                                         type="text"
                                         value={field.value || "Martín"}
                                         onChange={field.onChange}
@@ -111,8 +110,9 @@ export function SystemTab({ control }: SystemTabProps) {
                             name="library.tmdbLanguage"
                             render={({ field }) => (
                                 <div className="flex flex-col gap-2">
-                                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">Idioma de Preferencia</label>
+                                    <label htmlFor="pref-language-select" className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">Idioma de Preferencia</label>
                                     <select
+                                        id="pref-language-select"
                                         value={field.value || "es-MX"}
                                         onChange={field.onChange}
                                         className="w-full bg-black/40 ring-1 ring-white/10 rounded-xl px-4 py-2.5 text-xs text-zinc-350 focus:outline-none focus:ring-[#ff6e3a]/40 focus:border-transparent transition-all cursor-pointer [&>option]:bg-zinc-950 [&>option]:text-white"

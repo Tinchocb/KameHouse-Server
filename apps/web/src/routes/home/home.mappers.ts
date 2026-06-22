@@ -10,6 +10,16 @@ import type { IntelligentEntry } from "@/hooks/use-home-intelligence"
 import { getTitle, getProgress, getBackdrop } from "./home.helpers"
 
 /**
+ * Helper to strip HTML tags from a string.
+ */
+function stripHtml(text: string): string
+function stripHtml(text: string | undefined): string | undefined
+function stripHtml(text: string | undefined): string | undefined {
+    if (!text) return text
+    return text.replace(/<[^>]*>/g, '')
+}
+
+/**
  * Maps an episode and its media to SwimlaneItem (Continue Watching).
  */
 export function mapEpisodeToMediaCard(
@@ -24,7 +34,7 @@ export function mapEpisodeToMediaCard(
         title: getTitle(media),
         subtitle: episode.displayTitle || `Episodio ${episode.episodeNumber}`,
         badge: media.format,
-        description: episode.episodeMetadata?.summary || media.description,
+        description: stripHtml(episode.episodeMetadata?.summary || media.description),
         progress: getProgress(media.id, watchHistory),
         aspect: "wide",
         year: media.year || undefined,
@@ -49,7 +59,7 @@ export function mapLibraryEntryToMediaCard(
         title: getTitle(media),
         subtitle: `${media.year || ""} · ${media.format || ""}`,
         badge: media.format,
-        description: media.description,
+        description: stripHtml(media.description),
         aspect: "poster",
         year: media.year || undefined,
         rating: media.score ? (media.score > 10 ? media.score / 10 : media.score) : undefined,
@@ -91,7 +101,7 @@ export function mapToHeroItem(
     return {
         id: `hero-${targetId}`,
         title: getTitle(media),
-        synopsis: synopsis || media.description || "",
+        synopsis: stripHtml(synopsis || media.description || ""),
         backdropUrl: getBackdrop(media) || "",
         posterUrl: media.posterImage,
         year: media.year || undefined,

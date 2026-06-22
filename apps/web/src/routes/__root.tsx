@@ -9,7 +9,6 @@ import React from "react"
 import { AppLayout, AppLayoutContent } from "@/components/ui/app-layout/app-layout"
 import { AppBottomNav } from "@/components/ui/app-layout/app-topnav"
 import { AppSidebar } from "@/components/ui/app-layout/app-sidebar"
-import { AnimatePresence } from "framer-motion"
 
 const CommandPalette = React.lazy(() =>
     import("@/components/ui/search/command-palette").then((m) => ({ default: m.CommandPalette }))
@@ -17,12 +16,14 @@ const CommandPalette = React.lazy(() =>
 const VideoPlayer = React.lazy(() =>
     import("@/components/video/player").then((m) => ({ default: m.VideoPlayer }))
 )
+const PerformanceMonitor = React.lazy(() =>
+    import("@/components/shared/performance-monitor").then((m) => ({ default: m.PerformanceMonitor }))
+)
 import { useRouterState } from "@tanstack/react-router"
 import { PageTransition } from "@/components/shared/page-transition"
 import { FaBars } from "react-icons/fa"
 import { useAppStore } from "@/lib/store"
 import { DynamicBackdrop } from "@/components/shared/dynamic-backdrop"
-import { PerformanceMonitor } from "@/components/shared/performance-monitor"
 import { useGetStatus } from "@/api/hooks/settings.hooks"
 import { GettingStarted } from "@/components/shared/getting-started"
 import { GlobalQueueSidebar } from "@/components/shared/global-queue-sidebar"
@@ -38,14 +39,14 @@ function RootComponent() {
     const activeTheme = useAppStore(state => state.activeTheme)
 
     const sidebarOpen = useAppStore(state => state.sidebarOpen)
-    const { data: status, isLoading } = useGetStatus()
+    const { data: status, isLoading, isError, refetch } = useGetStatus()
 
     React.useEffect(() => {
         document.documentElement.dataset.theme = activeTheme || "dark"
     }, [activeTheme])
 
     if (isLoading || !status) {
-        return <LoadingOverlayWithLogo />
+        return <LoadingOverlayWithLogo isError={isError} refetch={refetch} />
     }
 
     if (!status.settings?.id) {
@@ -59,7 +60,9 @@ function RootComponent() {
     return (
         <AppLayout>
             <DynamicBackdrop />
-            <PerformanceMonitor />
+            <React.Suspense fallback={null}>
+                <PerformanceMonitor />
+            </React.Suspense>
             <AppSidebar />
             <React.Suspense fallback={null}>
                 <CommandPalette />

@@ -62,7 +62,7 @@ func BuildHwAccelProfile(opts HwAccelOptions, ffmpegPath string, logger *zerolog
 	case "disabled":
 		return cpuProfile(preset)
 	case "vaapi":
-		return vaApiProfile(defaultDevice)
+		return vaAPIProfile(defaultDevice)
 	case "qsv", "intel":
 		return qsvProfile(defaultDevice, preset)
 	case "nvidia", "cuda":
@@ -136,15 +136,18 @@ func testEncoder(ffmpegPath, encoder string) bool {
 // profile constructors
 
 func cpuProfile(preset string) HwAccelProfile {
+	// Optimize default preset for real-time local streaming
+	if preset == "fast" || preset == "" {
+		preset = "superfast"
+	}
 	return HwAccelProfile{
 		Name:        "disabled",
 		DecodeFlags: []string{},
 		EncodeFlags: []string{
 			"-c:v", "libx264",
 			"-preset", preset,
-			"-profile:v", "high", // ?
-			"-tune", "animation", // ?
-			// "-tune", "fastdecode,zerolatency", // ?
+			"-profile:v", "high",
+			"-tune", "fastdecode,zerolatency",
 			"-sc_threshold", "0",
 			"-pix_fmt", "yuv420p",
 		},
@@ -154,12 +157,12 @@ func cpuProfile(preset string) HwAccelProfile {
 	}
 }
 
-func vaApiProfile(device string) HwAccelProfile {
+func vaAPIProfile(device string) HwAccelProfile {
 	return HwAccelProfile{
 		Name: "vaapi",
 		DecodeFlags: []string{
 			"-hwaccel", "vaapi",
-			"-hwaccel_device", GetEnvOr("KAMEHOUSE_TRANSCODER_VAAPI_RENDERER", device),
+			"-hwaccel_device", getEnvOr("KAMEHOUSE_TRANSCODER_VAAPI_RENDERER", device),
 			"-hwaccel_output_format", "vaapi",
 		},
 		EncodeFlags: []string{
@@ -177,7 +180,7 @@ func qsvProfile(device, preset string) HwAccelProfile {
 		Name: "qsv",
 		DecodeFlags: []string{
 			"-hwaccel", "qsv",
-			"-qsv_device", GetEnvOr("KAMEHOUSE_TRANSCODER_QSV_RENDERER", device),
+			"-qsv_device", getEnvOr("KAMEHOUSE_TRANSCODER_QSV_RENDERER", device),
 			"-hwaccel_output_format", "qsv",
 		},
 		EncodeFlags: []string{
@@ -213,23 +216,23 @@ func nvidiaProfile(preset string) HwAccelProfile {
 	return HwAccelProfile{
 		Name: "nvidia",
 		DecodeFlags: []string{
-			"-hwaccel", "cuda",
-			"-hwaccel_output_format", "cuda",
+			"-hwaccel", "auto",
 		},
 		EncodeFlags: []string{
 			"-c:v", "h264_nvenc",
 			"-preset", preset,
-			"-profile:v", "high", // ?
-			"-rc:v", "vbr", // ?
-			"-bf", "0", // ?
-			"-spatial-aq", "1", // ?
-			"-temporal-aq", "1", // ?
-			"-rc-lookahead", "0", // ?
+			"-profile:v", "high",
+			"-rc:v", "vbr",
+			"-bf", "0",
+			"-spatial-aq", "1",
+			"-temporal-aq", "1",
+			"-rc-lookahead", "0",
 			"-delay", "0",
 			"-no-scenecut", "1",
+			"-pix_fmt", "yuv420p",
 		},
-		ScaleFilter:   "scale_cuda=%d:%d:format=nv12",
-		NoScaleFilter: "scale_cuda=w=iw:h=ih:format=nv12",
+		ScaleFilter:   "scale=%d:%d",
+		NoScaleFilter: "scale=iw:ih:format=yuv420p",
 		ForcedIDR:     true,
 	}
 }

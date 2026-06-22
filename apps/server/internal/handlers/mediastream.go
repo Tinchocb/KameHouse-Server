@@ -1,11 +1,17 @@
 package handlers
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/mediastream"
+	"strconv"
+	"time"
 
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // HandleGetMediastreamSettings returns the mediastream settings.
@@ -221,3 +227,167 @@ func (h *Handler) HandleMediastreamFile(c echo.Context) error {
 	libraryPaths := h.App.Settings.GetLibrary().GetAllPaths()
 	return h.App.MediastreamRepository.ServeEchoFile(c, fp, client, libraryPaths)
 }
+
+// HandleGetEpisodeSkipTimes returns the custom/saved skip times for a given episode.
+//
+//	@summary get episode skip times.
+//	@desc This gets the saved skip times (OP/ED) for a specific episode of a series.
+//	@returns models.EpisodeSkipTime
+//	@route /api/v1/mediastream/skip-times [GET]
+func (h *Handler) HandleGetEpisodeSkipTimes(c echo.Context) error {
+	mediaIdStr := c.QueryParam("mediaId")
+	malIdStr := c.QueryParam("malId")
+	episodeNumStr := c.QueryParam("episodeNumber")
+
+	mediaId, _ := strconv.Atoi(mediaIdStr)
+	malId, _ := strconv.Atoi(malIdStr)
+	episodeNum, _ := strconv.Atoi(episodeNumStr)
+
+	// Resolve mediaId if malId is provided instead
+	if mediaId == 0 && malId > 0 {
+		var lm models.LibraryMedia
+		if err := h.App.Database.Gorm().Where("myanimelist_id = ?", malId).First(&lm).Error; err == nil {
+			mediaId = int(lm.ID)
+		}
+	}
+
+	if mediaId == 0 || episodeNum == 0 {
+		return h.RespondWithError(c, fmt.Errorf("invalid mediaId/malId or episodeNumber"))
+	}
+
+	var skipTime models.EpisodeSkipTime
+	err := h.App.Database.Gorm().
+		Where("media_id = ? AND episode_number = ?", mediaId, episodeNum).
+		First(&skipTime).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return h.RespondWithData(c, nil)
+		}
+		return h.RespondWithError(c, err)
+	}
+
+	return h.RespondWithData(c, skipTime)
+}
+
+// HandleSaveEpisodeSkipTimes saves the skip times for an episode.
+//
+//	@summary save episode skip times.
+//	@desc This saves custom skip times for an episode. If applyToSeason is true, it propagates it as default offsets for all other episodes of the same series.
+//	@route /api/v1/mediastream/skip-times [POST]
+func (h *Handler) HandleSaveEpisodeSkipTimes(c echo.Context) error {
+	type body struct {
+		MediaID       int     `json:"mediaId"`
+		MalID         int     `json:"malId"`
+		EpisodeNumber int     `json:"episodeNumber"`
+		OpStart       float64 `json:"opStart"`
+		OpEnd         float64 `json:"opEnd"`
+		EdOffset      float64 `json:"edOffset"`
+		ApplyToSeason bool    `json:"applyToSeason"`
+	}
+
+	var b body
+	if err := c.Bind(&b); err != nil {
+		return h.RespondWithError(c, err)
+	}
+
+	// Resolve mediaId if malId is provided instead
+	mediaID := b.MediaID
+	if mediaID == 0 && b.MalID > 0 {
+		var lm models.LibraryMedia
+		if err := h.App.Database.Gorm().Where("myanimelist_id = ?", b.MalID).First(&lm).Error; err == nil {
+			mediaID = int(lm.ID)
+		}
+	}
+
+	if mediaID == 0 || b.EpisodeNumber == 0 {
+		return h.RespondWithError(c, fmt.Errorf("invalid mediaId/malId or episodeNumber"))
+	}
+
+	// Save or update the single episode skip times
+	skipTime := models.EpisodeSkipTime{
+		MediaID:       mediaID,
+		EpisodeNumber: b.EpisodeNumber,
+		OpStart:       b.OpStart,
+		OpEnd:         b.OpEnd,
+		EdOffset:      b.EdOffset,
+	}
+
+	err := h.App.Database.Gorm().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "media_id"}, {Name: "episode_number"}},
+		DoUpdates: clause.AssignmentColumns([]string{"op_start", "op_end", "ed_offset"}),
+	}).Create(&skipTime).Error
+	if err != nil {
+		return h.RespondWithError(c, err)
+	}
+
+	// Propagate if requested
+	if b.ApplyToSeason {
+		var episodes []models.LibraryEpisode
+		if err := h.App.Database.Gorm().Where("library_media_id = ?", mediaID).Find(&episodes).Error; err == nil {
+			var skipTimes []models.EpisodeSkipTime
+			for _, ep := range episodes {
+				if ep.EpisodeNumber == b.EpisodeNumber {
+					continue // skip the current one
+				}
+				skipTimes = append(skipTimes, models.EpisodeSkipTime{
+					MediaID:       mediaID,
+					EpisodeNumber: ep.EpisodeNumber,
+					OpStart:       b.OpStart,
+					OpEnd:         b.OpEnd,
+					EdOffset:      b.EdOffset,
+				})
+			}
+			if len(skipTimes) > 0 {
+				_ = h.App.Database.Gorm().Clauses(clause.OnConflict{
+					Columns:   []clause.Column{{Name: "media_id"}, {Name: "episode_number"}},
+					DoUpdates: clause.AssignmentColumns([]string{"op_start", "op_end", "ed_offset"}),
+				}).Create(&skipTimes).Error
+			}
+		}
+	}
+
+	return h.RespondWithData(c, true)
+}
+
+// HandleScanEpisodeSkipTimes triggers a background scan to detect skip times for a series.
+//
+//	@summary trigger skip times auto-scan.
+//	@desc This starts a background task using acoustic fingerprinting to detect intro/outro boundaries.
+//	@route /api/v1/mediastream/skip-times/scan [POST]
+func (h *Handler) HandleScanEpisodeSkipTimes(c echo.Context) error {
+	type body struct {
+		MediaID int `json:"mediaId"`
+	}
+
+	var b body
+	if err := c.Bind(&b); err != nil {
+		return h.RespondWithError(c, err)
+	}
+
+	if b.MediaID == 0 {
+		return h.RespondWithError(c, fmt.Errorf("invalid mediaId"))
+	}
+
+	detector := h.App.MediastreamRepository.GetSkipDetector()
+	if detector == nil {
+		return h.RespondWithError(c, fmt.Errorf("skip detector is not initialized yet"))
+	}
+
+	if detector.IsScanning(b.MediaID) {
+		return h.RespondWithError(c, fmt.Errorf("a scan is already in progress for this series"))
+	}
+
+	// Trigger asynchronously to avoid HTTP timeouts
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+		defer cancel()
+
+		if err := detector.ScanSeries(ctx, b.MediaID); err != nil {
+			h.App.Logger.Error().Err(err).Int("mediaId", b.MediaID).Msg("mediastream: auto skip-time scan failed")
+		}
+	}()
+
+	return h.RespondWithData(c, map[string]any{"ok": true, "message": "Scan started"})
+}
+

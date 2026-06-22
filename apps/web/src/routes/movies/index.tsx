@@ -37,6 +37,7 @@ function MoviesPageWrapper() {
 
 function MoviesPage() {
     const [activeEra, setActiveEra] = useState<EraTab>("all")
+    const [prevActiveEra, setPrevActiveEra] = useState<EraTab>("all")
     const [sortBy, setSortBy] = useState<SortOption>("year_asc")
     const [sortOpen, setSortOpen] = useState(false)
     const [searchQuery, setSearchQuery] = useState("")
@@ -97,8 +98,6 @@ function MoviesPage() {
 
     const activeEraConfig = ERA_TABS.find(t => t.value === activeEra) || ERA_TABS[0]
 
-    // Reset state on era change (synchronized in render phase to avoid cascading renders)
-    const [prevActiveEra, setPrevActiveEra] = useState<EraTab>("all")
     if (activeEra !== prevActiveEra) {
         setPrevActiveEra(activeEra)
         setHoveredMovie(null)
@@ -139,15 +138,7 @@ function MoviesPage() {
     return (
         <div className="min-h-screen bg-[#07070a]/40 text-white overflow-x-hidden selection:bg-orange-500/20 relative z-10">
 
-            {/* Capa estática CRT global */}
-            <div 
-                className="absolute inset-0 pointer-events-none z-30 opacity-[0.04]"
-                style={{
-                    background: `linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%), 
-                                 linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06))`,
-                    backgroundSize: '100% 4px, 6px 100%'
-                }}
-            />
+
 
             <MoviesHero 
                 topFeatured={topFeatured}
@@ -182,7 +173,6 @@ function MoviesPage() {
                             watchHistory={watchHistory}
                             handleMovieClick={handleMovieClick}
                             handleHoverCard={handleHoverCard}
-                            activeEra={activeEra}
                         />
                     </div>
                 </div>

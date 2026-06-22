@@ -1,12 +1,11 @@
-import { Play, Plus, Info, Star, Film, Check, ListPlus } from "lucide-react"
+import { Play, Star, ListPlus } from "lucide-react"
 import { DeferredImage } from "@/components/shared/deferred-image"
-import { getLowResImage, getHighResImage, getMediumResImage } from "@/lib/helpers/images"
+import { getLowResImage, getMediumResImage } from "@/lib/helpers/images"
 import * as React from "react"
 import { useRef, useMemo } from "react"
 import { useGSAP } from "@gsap/react"
 import gsap from "gsap"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
-import { cn } from "@/components/ui/core/styling"
 import { toast } from "sonner"
 import { useAppStore } from "@/lib/store"
 
@@ -30,12 +29,10 @@ export function SeriesHero({
   const media = entry?.media
   const title = media?.titleSpanish || media?.titleRomaji || media?.titleEnglish || "Título Desconocido"
   const romajiTitle = media?.titleRomaji
-  const posterUrl = media?.posterImage
   const rating = media?.score ? media.score / 10 : undefined
   const year = media?.year
   const ageRating = media?.isNsfw ? "18+" : "PG-13"
   const synopsis = media?.description || ""
-  const directoryPath = entry?.directoryPath
   const hasBannerImage = !!media?.bannerImage
   const backdropSrc = media?.bannerImage ?? media?.posterImage ?? null
 
@@ -146,16 +143,6 @@ export function SeriesHero({
     }
   }
 
-  // Dynamic gradient fallback if no posterUrl
-  const stringToColor = (str: string) => {
-    let hash = 0
-    for (let i = 0; i < str.length; i++) {
-      hash = str.charCodeAt(i) + ((hash << 5) - hash)
-    }
-    const h = Math.abs(hash % 360)
-    return `hsl(${h}, 60%, 12%)`
-  }
-  const accentColor = stringToColor(title)
 
   return (
     <section ref={containerRef} className="relative w-full h-[98vh] max-h-[550px] flex flex-col justify-center overflow-hidden bg-transparent select-none">
@@ -193,7 +180,7 @@ export function SeriesHero({
                 src={backdropUrl}
                 alt={title}
                 priority={true}
-                className="w-full h-full object-cover object-[center_20%] opacity-90 transition-all duration-[20s] ease-out group-hover/backdrop:scale-[1.03] animate-ken-burns"
+                className="w-full h-full object-cover object-[center_20%] opacity-90 transition-all [transition-duration:20s] ease-out group-hover/backdrop:scale-[1.03] animate-ken-burns"
                 style={{
                   WebkitMaskImage: "linear-gradient(to right, transparent 0%, rgba(0,0,0,0.15) 12%, black 40%)",
                   maskImage: "linear-gradient(to right, transparent 0%, rgba(0,0,0,0.15) 12%, black 40%)",
@@ -210,7 +197,7 @@ export function SeriesHero({
                 src={backdropUrl}
                 alt={title}
                 priority={true}
-                className="h-full w-auto object-contain object-right-top opacity-[0.75] transition-all duration-[20s] ease-out group-hover/backdrop:scale-[1.03] animate-ken-burns"
+                className="h-full w-auto object-contain object-right-top opacity-[0.75] transition-all [transition-duration:20s] ease-out group-hover/backdrop:scale-[1.03] animate-ken-burns"
               />
             </div>
           )

@@ -2,24 +2,24 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { HydrationBoundary, dehydrate, useQueryClient } from "@tanstack/react-query"
 import React, { useMemo, useState, useCallback } from "react"
 import { toast } from "sonner"
-import { useAppStore } from "@/lib/store"
 import { motion, AnimatePresence } from "framer-motion"
 import { useSound } from "@/hooks/use-sound"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
 
 import { cn } from "@/components/ui/core/styling"
 import { getHighResImage } from "@/lib/helpers/images"
-import { fetchAnimeEntry, useGetAnimeEntry, useUpdateAnimeEntryProgress } from "@/api/hooks/anime_entries.hooks"
+import { fetchAnimeEntry, useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import { useGetContinuityWatchHistoryItem } from "@/api/hooks/continuity.hooks"
 import { useServerQuery } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { Anime_Episode, Anime_LocalFile, Mediastream_StreamType } from "@/api/generated/types"
 import { EmptyState } from "@/components/shared/empty-state"
-import { VideoPlayer } from "@/components/video/player"
+
+const VideoPlayer = React.lazy(() => import("@/components/video/player").then(m => ({ default: m.VideoPlayer })))
 import { RelationsTab, CharactersTab } from "./-series-bento-tabs"
 import { resolveSeriesSagas, getDragonBallSpanishTitle } from "@/lib/config/dragonball.config"
 import { startViewTransition } from "@/lib/helpers/transitions"
-import { X, Sparkles, Trophy, Skull } from "lucide-react"
+import { Trophy, Skull } from "lucide-react"
 
 // Modular Components
 import { FloatingMatchFlap } from "@/components/shared/floating-match-flap"
@@ -27,7 +27,7 @@ import { SeriesHero } from "./-components/series-hero"
 import { SagaSelector } from "./-components/saga-selector"
 import { CharacterCarousel } from "./-components/character-carousel"
 import { PremiumEpisodeList } from "./-components/premium-episode-list"
-import type { SagaDTO, CharacterDTO, PremiumEpisode } from "@/api/types/series.types"
+import type { SagaDTO } from "@/api/types/series.types"
 import { BentoDetailsSkeleton } from "@/components/ui/shimmer-skeleton"
 import { CharacterDetailModal } from "@/components/shared/character-detail-modal"
 
@@ -105,7 +105,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     }, [isMovie, seriesId, navigate])
 
     React.useEffect(() => {
-        if (entry && !isMovie) {
+        if (entry?.media?.id && !isMovie) {
             playSound("detail", 0.4)
         }
     }, [entry?.media?.id, isMovie, playSound])
@@ -257,36 +257,14 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
             return Array.from(epMap.values()).sort((a, b) => a.episodeNumber - b.episodeNumber);
         }
         return [];
-    }, [entry, sagas]);
-
-    const { mutate: updateProgress } = useUpdateAnimeEntryProgress(seriesId, 0, false)
-
-    const handleUpdateProgress = useCallback((newProgress: number) => {
-        if (!entry) return
-        updateProgress({
-            mediaId: Number(seriesId),
-            progress: newProgress,
-        }, {
-            onSuccess: () => {
-                refetchContinuity()
-            }
-        })
-    }, [entry, seriesId, computedEpisodes.length, updateProgress, refetchContinuity])
-
-    const handleToggleWatched = useCallback((episode: Anime_Episode) => {
-        if (!entry) return
-        const epNum = episode.absoluteEpisodeNumber || episode.episodeNumber
-        const newProgress = episode.watched ? Math.max(0, epNum - 1) : epNum
-        handleUpdateProgress(newProgress)
-    }, [entry, handleUpdateProgress])
+    }, [entry, sagas, baseSagas]);
 
     const handlePlayEpisode = useCallback((localFile: Anime_LocalFile, episode: Anime_Episode) => {
         if (!localFile.path) {
             toast.error("Archivo local no disponible.")
             return
         }
-        const isMp4 = localFile.path.toLowerCase().endsWith(".mp4")
-        const targetType = isMp4 ? "direct" : "transcode"
+        const targetType = "direct"
         const epNum = episode.absoluteEpisodeNumber || episode.episodeNumber
         const localizedTitle = getDragonBallSpanishTitle(entry?.media?.tmdbId, epNum)
         const resolvedTitle = localizedTitle || episode.titleSpanish || episode.episodeMetadata?.title || episode.episodeTitle || episode.displayTitle || `Episodio ${epNum}`
@@ -322,8 +300,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         })
         const resolvedEpNum = matchedEp ? (matchedEp.absoluteEpisodeNumber || matchedEp.episodeNumber) : Number(epNum)
 
-        const isMp4 = localFile.path.toLowerCase().endsWith(".mp4")
-        const targetType = isMp4 ? "direct" : "transcode"
+        const targetType = "direct"
         startViewTransition(() => {
             setPlayTarget({
                 path: localFile.path,
@@ -383,7 +360,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         } else {
             toast.info("No hay archivos locales disponibles para reproducir.")
         }
-    }, [entry, computedEpisodes, continuityData?.item, handlePlayLocalFile, handlePlayEpisode])
+    }, [entry, computedEpisodes, continuityData, handlePlayLocalFile, handlePlayEpisode])
 
     const handlePlayByNumber = useCallback((episodeNumber: number) => {
         const targetEp = computedEpisodes.find(ep => (ep.absoluteEpisodeNumber || ep.episodeNumber) === episodeNumber)
@@ -706,30 +683,37 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
             {playTarget && (() => {
                 const nextTitle = nextEp ? (nextEp.titleSpanish || nextEp.episodeMetadata?.title || nextEp.episodeTitle || nextEp.displayTitle || `Episodio ${nextEp.absoluteEpisodeNumber || nextEp.episodeNumber}`) : undefined;
                 return (
-                    <VideoPlayer
-                        streamUrl={playTarget.path}
-                        streamType={playTarget.streamType as "local" | "online" | "direct"}
-                        title={title}
-                        episodeLabel={playTarget.episodeLabel}
-                        episodeNumber={playTarget.episodeNumber}
-                        mediaId={Number(seriesId)}
-                        malId={playTarget.malId}
-                        mediaFormat={entry.media?.format ?? null}
-                        nextStreamUrl={nextLocalFile?.path}
-                        nextStreamType={nextLocalFile?.path?.toLowerCase().endsWith(".mp4") ? "direct" : "transcode"}
-                        nextEpisodeTitle={nextTitle}
-                        nextEpisodeNumber={nextEp ? (nextEp.absoluteEpisodeNumber || nextEp.episodeNumber) : undefined}
-                        nextEpisodeImage={nextEp?.episodeMetadata?.image || entry.media?.bannerImage || entry.media?.posterImage}
-                        onNextEpisode={handleNextEpisode}
-                        hasNextEpisode={hasNextEpisode}
-                        onClose={() => {
-                            startViewTransition(() => {
-                                setPlayTarget(null)
-                            })
-                            refetchContinuity()
-                            queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, String(seriesId)] })
-                        }}
-                    />
+                    <React.Suspense fallback={
+                        <div className="fixed inset-0 bg-[#07070a]/90 backdrop-blur-xl flex flex-col justify-center items-center z-50">
+                            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-orange mb-4"></div>
+                            <p className="text-zinc-400 text-xs font-bold uppercase tracking-[0.2em]">Cargando reproductor...</p>
+                        </div>
+                    }>
+                        <VideoPlayer
+                            streamUrl={playTarget.path}
+                            streamType={playTarget.streamType as "local" | "online" | "direct"}
+                            title={title}
+                            episodeLabel={playTarget.episodeLabel}
+                            episodeNumber={playTarget.episodeNumber}
+                            mediaId={Number(seriesId)}
+                            malId={playTarget.malId}
+                            mediaFormat={entry.media?.format ?? null}
+                            nextStreamUrl={nextLocalFile?.path}
+                            nextStreamType={playTarget.streamType as any}
+                            nextEpisodeTitle={nextTitle}
+                            nextEpisodeNumber={nextEp ? (nextEp.absoluteEpisodeNumber || nextEp.episodeNumber) : undefined}
+                            nextEpisodeImage={nextEp?.episodeMetadata?.image || entry.media?.bannerImage || entry.media?.posterImage}
+                            onNextEpisode={handleNextEpisode}
+                            hasNextEpisode={hasNextEpisode}
+                            onClose={() => {
+                                startViewTransition(() => {
+                                    setPlayTarget(null)
+                                })
+                                refetchContinuity()
+                                queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, String(seriesId)] })
+                            }}
+                        />
+                    </React.Suspense>
                 );
             })()}
 

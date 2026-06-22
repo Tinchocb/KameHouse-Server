@@ -6,6 +6,7 @@ import { API_ENDPOINTS } from '@/api/generated/endpoints';
 import { SeriesCard, getVhsColor } from './-SeriesCard';
 import { getLargeResImage } from '@/lib/helpers/images';
 import { useIntelligenceStore } from '@/hooks/use-home-intelligence';
+import { useSound } from '@/hooks/use-sound';
 
 export const Route = createFileRoute('/series/')({
     loader: ({ context }) => {
@@ -68,6 +69,11 @@ function SeriesFullscreenIndex() {
     const setBackdropUrl = useIntelligenceStore(s => s.setBackdropUrl);
 
     const { data: collection, isLoading } = useGetLibraryCollection();
+    const { playSound } = useSound();
+
+    const handleSound = useCallback(() => {
+        playSound("series", 0.4);
+    }, [playSound]);
 
     useEffect(() => {
         setBackdropUrl("/casa-kame-de-dragon-ball-3963.webp");
@@ -115,17 +121,11 @@ function SeriesFullscreenIndex() {
         return mapped.sort((a, b) => a.yearNum - b.yearNum);
     }, [collection]);
 
-    const [prevSeriesList, setPrevSeriesList] = useState(seriesList);
-    if (seriesList !== prevSeriesList) {
-        setPrevSeriesList(seriesList);
-        if (seriesList.length > 0) {
-            setSelectedId(prev => prev ?? seriesList[0].id);
-        }
-    }
+    const activeSelectedId = selectedId ?? (seriesList.length > 0 ? seriesList[0].id : null);
 
     const selectedIndex = useMemo(() => {
-        return seriesList.findIndex(item => item.id === selectedId);
-    }, [seriesList, selectedId]);
+        return seriesList.findIndex(item => item.id === activeSelectedId);
+    }, [seriesList, activeSelectedId]);
     const selectedItem = seriesList[selectedIndex] ?? null;
 
     return (
@@ -135,9 +135,9 @@ function SeriesFullscreenIndex() {
             {/* Ambient Background Glow — Single dynamic div transitioning position & color (GPU-composited) */}
             {selectedItem && (
                 <div
-                    className="absolute top-1/2 left-0 w-[800px] h-[800px] pointer-events-none blur-[120px] z-0"
+                    className="absolute top-1/2 left-0 w-[800px] h-[800px] pointer-events-none z-0"
                     style={{
-                        opacity: 0.08,
+                        opacity: 0.15,
                         background: `radial-gradient(circle, ${getVhsColor(selectedItem.id)} 0%, transparent 70%)`,
                         transform: `translate3d(calc(${(selectedIndex / Math.max(seriesList.length - 1, 1)) * 80 + 10}% - 400px), -50%, 0)`,
                         transition: 'transform 700ms cubic-bezier(0.16, 1, 0.3, 1), background 700ms ease-out',
@@ -145,8 +145,7 @@ function SeriesFullscreenIndex() {
                 />
             )}
 
-            {/* CRT scanlines overlay filter */}
-            <div className="absolute inset-0 pointer-events-none z-[49] opacity-[0.015] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,6px_100%]" />
+
 
             {/* Main Shelf Container Wrapper (Enforces rounded corners clipping) */}
             <div className="flex-1 min-h-0 bg-zinc-950/80 backdrop-blur-2xl rounded-[32px] border border-white/10 shadow-[0_16px_48px_rgba(0,0,0,0.6)] overflow-hidden relative z-10 flex flex-col">
@@ -154,9 +153,9 @@ function SeriesFullscreenIndex() {
                     {/* Backlight Glow inside shelf — Single dynamic div transitioning position & color */}
                     {selectedItem && (
                         <div
-                            className="absolute top-1/2 left-0 w-[600px] h-[600px] pointer-events-none blur-[100px] z-0"
+                            className="absolute top-1/2 left-0 w-[600px] h-[600px] pointer-events-none z-0"
                             style={{
-                                opacity: 0.14,
+                                opacity: 0.20,
                                 background: `radial-gradient(circle, ${getVhsColor(selectedItem.id)} 0%, transparent 60%)`,
                                 transform: `translate3d(calc(${(selectedIndex / Math.max(seriesList.length - 1, 1)) * 80 + 10}% - 300px), -50%, 0)`,
                                 transition: 'transform 700ms cubic-bezier(0.16, 1, 0.3, 1), background 700ms ease-out',
@@ -181,22 +180,17 @@ function SeriesFullscreenIndex() {
                             <SeriesCard
                                 key={item.id}
                                 item={item}
-                                isSelected={item.id === selectedId}
+                                isSelected={item.id === activeSelectedId}
                                 onNavigate={handleNavigate}
                                 onSelect={setSelectedId}
+                                onSound={handleSound}
                             />
                         ))
                     )}
                 </main>
             </div>
 
-            <style>{`
-                .no-scrollbar::-webkit-scrollbar { display: none; }
-                .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-                .group\\/card:hover .vhs-spine-glow {
-                    box-shadow: 0 -15px 35px var(--tape-color), inset 0 3px 5px rgba(255,255,255,0.12), inset 0 -3px 5px rgba(0,0,0,0.9) !important;
-                }
-            `}</style>
+
         </div>
     );
 }

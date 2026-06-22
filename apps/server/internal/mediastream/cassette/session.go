@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"kamehouse/internal/mediastream/videofile"
+	"kamehouse/internal/util"
 	"sync"
 
 	"github.com/rs/zerolog"
@@ -59,7 +60,12 @@ func NewSession(
 	s.ready.Add(1)
 	go func() {
 		defer s.ready.Done()
-		s.Keyframes = getOrExtractKeyframes(path, hash, settings, logger)
+		kf, err := getOrExtractKeyframes(path, hash, settings, logger)
+		if err != nil {
+			s.err = err
+		} else {
+			s.Keyframes = kf
+		}
 	}()
 
 	if len(s.Ladder) > 0 {
@@ -159,9 +165,11 @@ func (s *Session) getVideoPipeline(q Quality) *Pipeline {
 			return args
 		}
 
+		hwProfile := s.settings.GetHwAccel()
+
 		if q == Original {
 			// Needs transcode even for original quality (e.g. HEVC).
-			args = append(args, s.settings.HwAccel.EncodeFlags...)
+			args = append(args, hwProfile.EncodeFlags...)
 
 			avgBitrate, maxBitrate := EffectiveBitrate(Original, s.Info.Video.Bitrate)
 			if avgBitrate == 0 {
@@ -169,15 +177,15 @@ func (s *Session) getVideoPipeline(q Quality) *Pipeline {
 				maxBitrate = 8_000_000
 			}
 
-			width := closestEven(int32(s.Info.Video.Width))
+			width := util.ClosestEven(int32(s.Info.Video.Width))
 			args = append(args,
-				"-vf", BuildVideoFilter(&s.settings.HwAccel, s.Info.Video, width, int32(s.Info.Video.Height)),
+				"-vf", BuildVideoFilter(&hwProfile, s.Info.Video, width, int32(s.Info.Video.Height)),
 				"-bufsize", fmt.Sprint(maxBitrate*5),
 				"-b:v", fmt.Sprint(avgBitrate),
 				"-maxrate", fmt.Sprint(maxBitrate),
 			)
 
-			if s.settings.HwAccel.ForcedIDR {
+			if hwProfile.ForcedIDR {
 				args = append(args, "-forced-idr", "1")
 			}
 			args = append(args,
@@ -188,19 +196,19 @@ func (s *Session) getVideoPipeline(q Quality) *Pipeline {
 		}
 
 		// Downscale transcode.
-		args = append(args, s.settings.HwAccel.EncodeFlags...)
+		args = append(args, hwProfile.EncodeFlags...)
 
-		width := closestEven(int32(
+		width := util.ClosestEven(int32(
 			float64(q.Height()) / float64(s.Info.Video.Height) * float64(s.Info.Video.Width),
 		))
 		args = append(args,
-			"-vf", BuildVideoFilter(&s.settings.HwAccel, s.Info.Video, width, int32(q.Height())),
+			"-vf", BuildVideoFilter(&hwProfile, s.Info.Video, width, int32(q.Height())),
 			// "-vf", fmt.Sprintf(s.settings.HwAccel.ScaleFilter, width, q.Height()),
 			"-bufsize", fmt.Sprint(q.MaxBitrate()*5),
 			"-b:v", fmt.Sprint(q.AverageBitrate()),
 			"-maxrate", fmt.Sprint(q.MaxBitrate()),
 		)
-		if s.settings.HwAccel.ForcedIDR {
+		if hwProfile.ForcedIDR {
 			args = append(args, "-forced-idr", "1")
 		}
 		args = append(args,
@@ -286,6 +294,7 @@ func (s *Session) getAudioPipeline(idx int32) *Pipeline {
 			if decision.Bitrate != "" {
 				args = append(args, "-b:a", decision.Bitrate)
 			}
+			args = append(args, "-af", "aresample=async=1")
 		}
 		return args
 	}

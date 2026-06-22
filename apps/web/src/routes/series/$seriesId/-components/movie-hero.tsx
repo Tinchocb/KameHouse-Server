@@ -3,13 +3,12 @@ import { useRef, useMemo } from "react"
 import { useGSAP } from "@gsap/react"
 import gsap from "gsap"
 import { cn } from "@/components/ui/core/styling"
-import { getHighResImage, getLowResImage } from "@/lib/helpers/images"
+import { getLowResImage } from "@/lib/helpers/images"
 import { Anime_Entry, Continuity_WatchHistoryItem } from "@/api/generated/types"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
 import { Play, Check, Plus, Users } from "lucide-react"
 import { useUpdateAnimeEntryProgress } from "@/api/hooks/anime_entries.hooks"
 import { DeferredImage } from "@/components/shared/deferred-image"
-import { useAppStore } from "@/lib/store"
 import { toast } from "sonner"
 
 interface MovieHeroSectionProps {
@@ -24,7 +23,7 @@ interface MovieHeroSectionProps {
 
 export const MovieHeroSection = React.memo(function MovieHeroSection({
     seriesId,
-    directoryPath,
+    directoryPath: _directoryPath,
     backdropUrl,
     entry,
     onPlay,
@@ -184,7 +183,7 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
                                 src={backdropUrl}
                                 alt={title}
                                 priority={true}
-                                className="w-full h-full object-cover object-[center_20%] opacity-90 transition-all duration-[20s] ease-out group-hover/backdrop:scale-[1.03] animate-ken-burns"
+                                className="w-full h-full object-cover object-[center_20%] opacity-90 transition-all [transition-duration:20s] ease-out group-hover/backdrop:scale-[1.03] animate-ken-burns"
                                 style={{
                                     WebkitMaskImage: "linear-gradient(to right, transparent 0%, rgba(0,0,0,0.15) 12%, black 40%)",
                                     maskImage: "linear-gradient(to right, transparent 0%, rgba(0,0,0,0.15) 12%, black 40%)",
@@ -201,7 +200,7 @@ export const MovieHeroSection = React.memo(function MovieHeroSection({
                                 src={backdropUrl}
                                 alt={title}
                                 priority={true}
-                                className="h-full w-auto object-contain object-right-top opacity-[0.75] transition-all duration-[20s] ease-out group-hover/backdrop:scale-[1.03] animate-ken-burns"
+                                className="h-full w-auto object-contain object-right-top opacity-[0.75] transition-all [transition-duration:20s] ease-out group-hover/backdrop:scale-[1.03] animate-ken-burns"
                             />
                         </div>
                     )

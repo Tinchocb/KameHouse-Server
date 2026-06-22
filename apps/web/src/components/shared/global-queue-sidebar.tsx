@@ -62,7 +62,7 @@ export const GlobalQueueSidebar = () => {
 
                         {/* Queue Items List */}
                         <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar">
-                            {playlistQueue.map((item, idx) => {
+                            {playlistQueue.slice(0, Math.max(50, currentQueueIndex + 10)).map((item, idx) => {
                                 const isCurrent = idx === currentQueueIndex
                                 const isHistory = idx < currentQueueIndex
 

@@ -74,8 +74,6 @@ func (w *SimpleAnimeMetadataWrapper) GetEpisodeMetadata(ep string) metadata.Epis
 }
 
 // NewProviderImplOptions configures the metadata provider.
-// If TMDBClient is set, returns a real TMDB-backed provider.
-// Otherwise returns the no-op stub.
 type NewProviderImplOptions struct {
 	Database         *db.Database
 	Logger           *zerolog.Logger
@@ -85,11 +83,64 @@ type NewProviderImplOptions struct {
 	TMDBClient *tmdb.Client
 }
 
+type RoutingProvider struct {
+	jikanProvider *JikanProviderImpl
+	tmdbProvider  *TMDBProviderImpl
+	database      *db.Database
+}
+
+func NewRoutingProvider(jikanProv *JikanProviderImpl, tmdbProv *TMDBProviderImpl, database *db.Database) *RoutingProvider {
+	return &RoutingProvider{
+		jikanProvider: jikanProv,
+		tmdbProvider:  tmdbProv,
+		database:      database,
+	}
+}
+
+func (p *RoutingProvider) GetAnimeMetadata(id int) (*metadata.AnimeMetadata, error) {
+	if p.database != nil {
+		if m, err := db.GetLibraryMediaByID(p.database, uint(id)); err == nil && m != nil {
+			if m.Type == "MOVIE" || m.Type == "SHOW" {
+				return p.tmdbProvider.GetAnimeMetadata(id)
+			}
+		}
+	}
+	return p.jikanProvider.GetAnimeMetadata(id)
+}
+
+func (p *RoutingProvider) GetAnimeMetadataWrapper(baseAnime *platform.UnifiedMedia, animeMetadata *metadata.AnimeMetadata) AnimeMetadataWrapper {
+	if p.database != nil && baseAnime != nil {
+		if m, err := db.GetLibraryMediaByID(p.database, uint(baseAnime.ID)); err == nil && m != nil {
+			if m.Type == "MOVIE" || m.Type == "SHOW" {
+				return p.tmdbProvider.GetAnimeMetadataWrapper(baseAnime, animeMetadata)
+			}
+		}
+	}
+	return p.jikanProvider.GetAnimeMetadataWrapper(baseAnime, animeMetadata)
+}
+
+func (p *RoutingProvider) SetUseFallbackProvider(v bool) {
+	p.jikanProvider.SetUseFallbackProvider(v)
+	p.tmdbProvider.SetUseFallbackProvider(v)
+}
+
+func (p *RoutingProvider) ClearCache() {
+	p.jikanProvider.ClearCache()
+	p.tmdbProvider.ClearCache()
+}
+
+func (p *RoutingProvider) Close() error {
+	_ = p.jikanProvider.Close()
+	_ = p.tmdbProvider.Close()
+	return nil
+}
+
 func NewProvider(opts *NewProviderImplOptions) Provider {
 	if opts != nil && opts.TMDBClient != nil {
-		// Use Jikan as primary provider with TMDB as a fallback for images
 		jikanClient := jikan.NewClient(opts.Logger)
-		return NewJikanProviderImpl(jikanClient, opts.Database, opts.Logger, opts.TMDBClient)
+		jikanProv := NewJikanProviderImpl(jikanClient, opts.Database, opts.Logger, opts.TMDBClient)
+		tmdbProv := NewTMDBProviderImpl(opts.TMDBClient, opts.Database, opts.Logger)
+		return NewRoutingProvider(jikanProv, tmdbProv, opts.Database)
 	}
 	return &ProviderImpl{}
 }
@@ -97,3 +148,4 @@ func NewProvider(opts *NewProviderImplOptions) Provider {
 func GetFakeProvider(t *testing.T, database *db.Database) Provider {
 	return &ProviderImpl{}
 }
+

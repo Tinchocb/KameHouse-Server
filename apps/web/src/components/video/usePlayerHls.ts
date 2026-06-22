@@ -2,6 +2,7 @@
 import { useEffect, useRef } from "react"
 import Hls from "hls.js"
 import { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
+import { Continuity_WatchHistoryItemResponse } from "@/api/generated/types"
 
 interface UsePlayerHlsProps {
     videoRef: React.RefObject<HTMLVideoElement | null>
@@ -12,7 +13,7 @@ interface UsePlayerHlsProps {
     backendTracks: { audioTracks: AudioTrack[]; subtitleTracks: SubtitleTrack[] } | null
     initialProgressSeconds?: number
     episodeNumber?: number
-    historyData: any
+    historyData: Continuity_WatchHistoryItemResponse | null | undefined
     setStatus: (status: "loading" | "ready" | "error") => void
     setIsBuffering: (buffering: boolean) => void
     setErrorMsg: (msg: string) => void
@@ -120,7 +121,7 @@ export function usePlayerHls({
         const handleCanPlay = () => {
             setStatus("ready")
             setIsBuffering(false)
-            if (progressSeconds > 0) {
+            if (Number.isFinite(progressSeconds) && progressSeconds > 0) {
                 video.currentTime = progressSeconds
             }
             video.play()
@@ -153,7 +154,7 @@ export function usePlayerHls({
                         url.host = window.location.host
                         return url.toString()
                     }
-                } catch (e) {}
+                } catch {}
             }
             return playableUrl
         })()
@@ -161,8 +162,45 @@ export function usePlayerHls({
         if (isHlsUrl && Hls.isSupported()) {
             const hls = new Hls({
                 enableWorker: true,
-                lowLatencyMode: true,
+                lowLatencyMode: false,
+                // Mantener hasta 90s de buffer ya reproducido para seeks instantáneos hacia atrás
                 backBufferLength: 90,
+
+                // Configuración de buffer optimizada para red local / alto rendimiento
+                maxBufferLength: 30,
+                maxMaxBufferLength: 60,
+                maxBufferSize: 120_000_000, // 120MB para admitir bitrates altos (1080p/4K) sin estrangular
+
+                // Tolerancia de desfase de audio antes de forzar resincronización.
+                // Con 2: balance ideal para resincronizar rápido sin causar tirones constantes.
+                maxAudioFramesDrift: 2,
+
+                // ─── Comportamiento ante huecos en el buffer ──────────────────────────────
+                // Si hay un hueco de más de 0.5s entre segmentos, hls.js salta sobre él.
+                // Ajustado a 0.5s para transiciones de segmento más fluidas.
+                maxBufferHole: 0.5,
+
+                // ─── Watchdog del buffer ──────────────────────────────────────────────────
+                // Sólo activa el watchdog (que puede reiniciar la reproducción) si el buffer
+                // lleva 5s sin avanzar, evitando intervenciones innecesarias.
+                highBufferWatchdogPeriod: 5,
+
+                // ─── Nudge (desatasco) ────────────────────────────────────────────────────
+                // nudgeOffset grande (0.3s) permite que el navegador se recupere solo
+                // de pequeños atascos antes de que hls.js intervenga agresivamente.
+                nudgeOffset: 0.3,
+                nudgeMaxRetry: 5,
+
+                // ─── ABR (Adaptive Bitrate) ───────────────────────────────────────────────
+                // Arranca siempre en calidad máxima disponible (-1 = auto pero empieza alto)
+                startLevel: -1,
+                // Estima 20 Mbps como ancho de banda inicial para no bajar a 240p en el seek
+                abrEwmaDefaultEstimate: 20_000_000,
+                // No medir ancho de banda con el primer segmento (evita resets tras seeks)
+                testBandwidth: false,
+                // Esperar más antes de degradar calidad ante un retraso corto de carga
+                abrBandWidthFactor: 0.90,
+                abrBandWidthUpFactor: 0.70,
             })
             setRefValue(hlsRef, hls)
             hlsInstance = hls
@@ -181,7 +219,7 @@ export function usePlayerHls({
                 }))
                 setHlsLevels(levels)
 
-                if (progressSeconds > 0) {
+                if (Number.isFinite(progressSeconds) && progressSeconds > 0) {
                     video.currentTime = progressSeconds
                 }
 
@@ -216,9 +254,26 @@ export function usePlayerHls({
             hls.on(Hls.Events.ERROR, (_, data) => {
                 if (data.fatal) {
                     console.error("Fatal HLS error:", data)
-                    setStatus("error")
-                    setErrorMsg(`Error fatal de reproducción HLS: ${data.details}`)
-                    hls.destroy()
+                    if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                        // Error de red: intentar recuperación automática
+                        console.warn("HLS: Fatal network error, attempting recovery...")
+                        hls.startLoad()
+                    } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                        // Error de media (buffer corrupto): recobrar el media element
+                        console.warn("HLS: Fatal media error, attempting recovery...")
+                        hls.recoverMediaError()
+                    } else {
+                        // Error irrecuperable
+                        setStatus("error")
+                        setErrorMsg(`Error fatal de reproducción HLS: ${data.details}`)
+                        hls.destroy()
+                    }
+                } else {
+                    // Errores no fatales de buffer: hls.js se recupera solo, solo logueamos
+                    if (data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR ||
+                        data.details === Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE) {
+                        console.warn("HLS: Non-fatal buffer stall, waiting for recovery:", data.details)
+                    }
                 }
             })
         } else {
@@ -236,13 +291,18 @@ export function usePlayerHls({
             }
         }
 
+        const currentHlsRef = hlsRef
         return () => {
             if (hlsInstance) {
                 hlsInstance.destroy()
-                if (hlsRef.current === hlsInstance) {
-                    setRefValue(hlsRef, null)
+                if (currentHlsRef.current === hlsInstance) {
+                    setRefValue(currentHlsRef, null)
                 }
             }
+            video.removeAttribute("src")
+            try {
+                video.load()
+            } catch {}
             video.removeEventListener("canplay", handleCanPlay)
             video.removeEventListener("error", handleNativeError)
         }

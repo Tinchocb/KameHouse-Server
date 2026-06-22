@@ -2,10 +2,25 @@ package handlers
 
 import (
 	"errors"
+	"kamehouse/internal/util"
 	"strings"
 
 	"github.com/labstack/echo/v4"
 )
+
+func (h *Handler) isCorrectPasswordToken(token string) bool {
+	if token == "" {
+		return false
+	}
+	if token == h.App.ServerPasswordHash || token == h.App.ServerPasswordSHA256 {
+		return true
+	}
+	if strings.HasPrefix(h.App.ServerPasswordHash, "$argon2id$") {
+		ok, err := util.VerifyPasswordArgon2(token, h.App.ServerPasswordHash)
+		return err == nil && ok
+	}
+	return false
+}
 
 func (h *Handler) OptionalAuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -33,7 +48,7 @@ func (h *Handler) OptionalAuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc
 			if path == "/api/v1/status" {
 				// allow status requests by anyone but mark as unauthenticated
 				// so we can filter out critical info like settings
-				if passwordHash != h.App.ServerPasswordHash {
+				if !h.isCorrectPasswordToken(passwordHash) {
 					c.Set("unauthenticated", true)
 				}
 			}
@@ -41,7 +56,7 @@ func (h *Handler) OptionalAuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc
 			return next(c)
 		}
 
-		if passwordHash == h.App.ServerPasswordHash {
+		if h.isCorrectPasswordToken(passwordHash) {
 			return next(c)
 		}
 

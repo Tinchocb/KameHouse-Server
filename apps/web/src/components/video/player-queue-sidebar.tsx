@@ -36,7 +36,7 @@ export function PlayerQueueSidebar({
                         animate={{ x: 0 }}
                         exit={{ x: "100%" }}
                         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                        className="absolute right-0 top-0 bottom-0 w-full sm:w-[400px] z-[160] bg-zinc-950/85 backdrop-blur-3xl border-l border-white/10 flex flex-col shadow-2xl pointer-events-auto select-none"
+                        className="absolute right-0 top-0 bottom-0 w-full sm:w-[400px] z-[160] bg-zinc-950 border-l border-white/15 flex flex-col shadow-2xl pointer-events-auto select-none"
                     >
                         {/* Header */}
                         <div className="flex items-center justify-between p-6 border-b border-white/5 shrink-0">

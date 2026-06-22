@@ -152,9 +152,10 @@ export function PlayerCastModal({
             } else {
                 toast.error(`No se pudo iniciar la transmisión en ${name}`)
             }
-        } catch (err: any) {
+        } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : String(err)
             console.error("Error casting to Samsung TV:", err)
-            toast.error(err?.message || `Error al transmitir a ${name}`)
+            toast.error(errorMsg || `Error al transmitir a ${name}`)
         } finally {
             setCastingTvIp(null)
         }

@@ -55,11 +55,10 @@ export function HeroBanner({
 
     const activeItem = items[activeIndex]
 
+    // Reset video playback during render when active slide changes
     const [prevActiveIndex, setPrevActiveIndex] = React.useState(activeIndex)
-    const [prevTrailerId, setPrevTrailerId] = React.useState(activeItem?.youtubeTrailerId)
-    if (activeIndex !== prevActiveIndex || activeItem?.youtubeTrailerId !== prevTrailerId) {
+    if (activeIndex !== prevActiveIndex) {
         setPrevActiveIndex(activeIndex)
-        setPrevTrailerId(activeItem?.youtubeTrailerId)
         setPlayVideo(false)
     }
 
@@ -96,16 +95,13 @@ export function HeroBanner({
                     transition={{ duration: 1.4, ease: [0.23, 1, 0.32, 1] }}
                     className="absolute inset-0 z-0 overflow-hidden"
                 >
-                    {/* Ken Burns slow zoom on the inner image with start reset */}
-                    <motion.img
+                    {/* Ken Burns slow zoom on the inner image — CSS compositor-driven (zero JS thread cost) */}
+                    <img
                         key={`img-${activeItem.id}`}
                         src={activeItem.backdropUrl}
                         alt=""
-                        initial={{ scale: 1.02 }}
-                        animate={{ scale: 1.08 }}
-                        transition={{ duration: 25, ease: "linear" }}
                         className={cn(
-                            "h-full w-full object-cover object-[center_15%] brightness-[0.45] saturate-[0.9] transition-opacity duration-1000",
+                            "h-full w-full object-cover object-[center_15%] brightness-[0.45] saturate-[0.9] transition-opacity duration-1000 animate-hero-ken-burns",
                             playVideo && activeItem.youtubeTrailerId ? "opacity-0" : "opacity-100"
                         )}
                     />
@@ -132,7 +128,7 @@ export function HeroBanner({
             </AnimatePresence>
 
             {/* Particle Background */}
-            <ParticleBackground className="absolute inset-0 z-[5] pointer-events-none opacity-40 mix-blend-screen" color="#FF6E3A" quantity={150} />
+            <ParticleBackground className="absolute inset-0 z-[5] pointer-events-none opacity-40 mix-blend-screen" color="#FF6E3A" quantity={60} />
 
             {/* ── Cinematic Double Vignettes ───────────────── */}
             <div className="absolute inset-0 z-10 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent pointer-events-none" />

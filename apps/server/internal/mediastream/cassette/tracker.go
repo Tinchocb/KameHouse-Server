@@ -1,6 +1,7 @@
 package cassette
 
 import (
+	"kamehouse/internal/util"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -27,6 +28,7 @@ type ClientTracker struct {
 
 	cassette      *Cassette
 	deletedStream chan string
+	removeChan    chan string
 	logger        *zerolog.Logger
 	killCh        chan struct{}
 }
@@ -41,6 +43,7 @@ func NewClientTracker(c *Cassette) *ClientTracker {
 		audioActive:   make(map[string]map[int32]time.Time),
 		cassette:      c,
 		deletedStream: make(chan string, 256),
+		removeChan:    make(chan string, 256),
 		logger:        c.logger,
 		killCh:        make(chan struct{}),
 	}
@@ -59,6 +62,14 @@ func (t *ClientTracker) Stop() {
 
 // RemoveClient deletes a client and triggers immediate reaping if necessary
 func (t *ClientTracker) RemoveClient(client string) {
+	select {
+	case t.removeChan <- client:
+	default:
+		t.logger.Warn().Str("client", client).Msg("cassette: client removal channel full")
+	}
+}
+
+func (t *ClientTracker) handleRemoveClient(client string) {
 	if info, ok := t.clients[client]; ok {
 		delete(t.clients, client)
 		delete(t.visitDate, client)
@@ -104,6 +115,9 @@ func (t *ClientTracker) run() {
 
 		case path := <-t.deletedStream:
 			t.maybeDestroySession(path)
+
+		case client := <-t.removeChan:
+			t.handleRemoveClient(client)
 		}
 	}
 }
@@ -149,7 +163,7 @@ func (t *ClientTracker) handleClientUpdate(info ClientInfo) {
 		return
 	}
 	// kill orphaned heads when playhead jumps far
-	if old.Head != -1 && abs32(info.Head-old.Head) > 100 {
+	if old.Head != -1 && util.Abs32(info.Head-old.Head) > 100 {
 		t.killOrphanedHeads(old.Path, old.Quality, old.Audio)
 	}
 }
@@ -291,7 +305,7 @@ func (t *ClientTracker) killOrphanedHeads(path string, quality *Quality, audio i
 				if c.Head == -1 {
 					continue
 				}
-				if d := abs32(c.Head - h.segment); d < dist {
+				if d := util.Abs32(c.Head - h.segment); d < dist {
 					dist = d
 				}
 			}

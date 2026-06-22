@@ -25,7 +25,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" -o 
 # Stage 3: Final Minimal Image
 FROM alpine:latest
 WORKDIR /app
-RUN apk --no-cache add ca-certificates tzdata
+RUN apk --no-cache add ca-certificates tzdata ffmpeg
 
 # Copy the static binary from backend-builder
 COPY --from=backend-builder /app/apps/server/kamehouse .

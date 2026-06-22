@@ -2,19 +2,15 @@
 import React, { useEffect, useRef } from "react"
 import gsap from "gsap"
 import { useGSAP } from "@gsap/react"
-import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/components/ui/core/styling"
-import { toast } from "sonner"
 import { PlayerTopBar } from "./player-topbar"
 import { PlayerBottomBar } from "./player-bottombar"
 import { LoadingErrorOverlay, CenterPlayFlash, SkipIntroOverlay, NextEpisodeOverlay, ResumeOverlay } from "./player-overlays"
 import type { EpisodeSource } from "@/api/types/unified.types"
 import { useGetVideoInsights } from "@/api/hooks/videocore.hooks"
-import { useAniSkipTimes } from "@/api/hooks/aniskip.hooks"
 import type { PlayerCore, PlayerStats } from "./player-core"
 import { useAppStore } from "@/lib/store"
 import { useShallow } from "zustand/react/shallow"
-import { DeferredImage } from "@/components/shared/deferred-image"
 import { PlayerEpisodesSidebar } from "./player-episodes-sidebar"
 import { PlayerQueueSidebar } from "./player-queue-sidebar"
 import { PlayerCastModal } from "./player-cast-modal"
@@ -88,6 +84,11 @@ export function PlayerUI(props: PlayerUIProps) {
     } = core
 
     const ambilightCanvasRef = useRef<HTMLCanvasElement>(null)
+    const localVideoRef = useRef<HTMLVideoElement | null>(null)
+
+    useEffect(() => {
+        localVideoRef.current = domElements.videoElement.current
+    })
 
     const [isEpisodesSidebarOpen, setIsEpisodesSidebarOpen] = React.useState(false)
     const [isCastModalOpen, setIsCastModalOpen] = React.useState(false)
@@ -107,7 +108,7 @@ export function PlayerUI(props: PlayerUIProps) {
         holdTimeoutRef.current = setTimeout(() => {
             isHoldingRef.current = true
             wasHoldingRef.current = true
-            const video = domElements.videoElement.current as HTMLVideoElement
+            const video = localVideoRef.current
             if (video) {
                 video.playbackRate = 2.0
             }
@@ -123,7 +124,7 @@ export function PlayerUI(props: PlayerUIProps) {
         if (isHoldingRef.current) {
             isHoldingRef.current = false
             setIsHoldSpeedActive(false)
-            const video = domElements.videoElement.current as HTMLVideoElement
+            const video = localVideoRef.current
             if (video) {
                 video.playbackRate = state.playbackRate
             }
@@ -137,20 +138,20 @@ export function PlayerUI(props: PlayerUIProps) {
     const playSkipAnimation = (side: "left" | "right") => {
         const target = side === "left" ? ".skip-indicator-left" : ".skip-indicator-right"
         gsap.killTweensOf(target)
-        gsap.fromTo(target, 
+        gsap.fromTo(target,
             { opacity: 0, scale: 0.9 },
-            { 
-                opacity: 1, 
-                scale: 1, 
-                duration: 0.2, 
+            {
+                opacity: 1,
+                scale: 1,
+                duration: 0.2,
                 ease: "power2.out",
                 onComplete: () => {
-                    gsap.to(target, { 
-                        opacity: 0, 
+                    gsap.to(target, {
+                        opacity: 0,
                         scale: 0.95,
-                        duration: 0.25, 
-                        delay: 0.3, 
-                        ease: "power2.in" 
+                        duration: 0.25,
+                        delay: 0.3,
+                        ease: "power2.in"
                     })
                 }
             }
@@ -227,13 +228,13 @@ export function PlayerUI(props: PlayerUIProps) {
     // Cinematic Controls Animation Layer
     useGSAP(() => {
         if (controlsVisible) {
-            gsap.to(".player-top-bar", { y: 0, scale: 1, opacity: 1, duration: 0.55, ease: "power4.out" })
-            gsap.to(".player-bottom-bar", { y: 0, scale: 1, opacity: 1, duration: 0.55, ease: "power4.out" })
-            gsap.to(".player-overlays-bg", { opacity: 1, duration: 0.45 })
+            gsap.to(".player-top-bar", { y: 0, scale: 1, autoAlpha: 1, duration: 0.55, ease: "power4.out" })
+            gsap.to(".player-bottom-bar", { y: 0, scale: 1, autoAlpha: 1, duration: 0.55, ease: "power4.out" })
+            gsap.to(".player-overlays-bg", { autoAlpha: 1, duration: 0.45 })
         } else {
-            gsap.to(".player-top-bar", { y: -15, scale: 0.97, opacity: 0, duration: 0.35, ease: "power2.inOut" })
-            gsap.to(".player-bottom-bar", { y: 15, scale: 0.97, opacity: 0, duration: 0.35, ease: "power2.inOut" })
-            gsap.to(".player-overlays-bg", { opacity: 0, duration: 0.5 })
+            gsap.to(".player-top-bar", { y: -15, scale: 0.97, autoAlpha: 0, duration: 0.35, ease: "power2.inOut" })
+            gsap.to(".player-bottom-bar", { y: 15, scale: 0.97, autoAlpha: 0, duration: 0.35, ease: "power2.inOut" })
+            gsap.to(".player-overlays-bg", { autoAlpha: 0, duration: 0.5 })
         }
     }, { dependencies: [controlsVisible], scope: domElements.containerElement })
 
@@ -241,7 +242,10 @@ export function PlayerUI(props: PlayerUIProps) {
         if (!state.ambilightEnabled || !state.isPlaying) return
 
         let handle: number
-        const video = domElements.videoElement.current as any
+        const video = localVideoRef.current as (HTMLVideoElement & {
+            requestVideoFrameCallback?: (cb: () => void) => number
+            cancelVideoFrameCallback?: (id: number) => void
+        }) | null
         const canvas = ambilightCanvasRef.current
 
         const drawFrame = () => {
@@ -257,35 +261,31 @@ export function PlayerUI(props: PlayerUIProps) {
             }
         }
 
-        if (video && "requestVideoFrameCallback" in video) {
+        if (video && video.requestVideoFrameCallback && video.cancelVideoFrameCallback) {
             const updateCallback = () => {
                 drawFrame()
-                handle = video.requestVideoFrameCallback(updateCallback)
+                if (video.requestVideoFrameCallback) {
+                    handle = video.requestVideoFrameCallback(updateCallback)
+                }
             }
             handle = video.requestVideoFrameCallback(updateCallback)
             return () => {
-                if (video && "cancelVideoFrameCallback" in video) {
+                if (video && video.cancelVideoFrameCallback) {
                     video.cancelVideoFrameCallback(handle)
                 }
             }
         } else {
-            let lastDrawTime = 0
-            const renderLoop = () => {
-                const now = Date.now()
-                if (video && !video.paused && (now - lastDrawTime >= 60)) {
-                    drawFrame()
-                    lastDrawTime = now
-                }
-                handle = requestAnimationFrame(renderLoop)
-            }
-            handle = requestAnimationFrame(renderLoop)
-            return () => cancelAnimationFrame(handle)
+            // Fallback: use a low-frequency interval (~5 FPS) instead of rAF.
+            // rAF runs at 60 FPS on the main thread, competing directly with
+            // the video renderer and React's reconciler — a major FPS killer.
+            const intervalId = setInterval(drawFrame, 200)
+            return () => clearInterval(intervalId)
         }
-    }, [state.ambilightEnabled, state.isPlaying, domElements.videoElement])
+    }, [state.ambilightEnabled, state.isPlaying, localVideoRef])
 
     return (
         <div
-            ref={domElements.containerElement as any}
+            ref={domElements.containerElement}
             onMouseMove={actions.triggerControlsVisibility}
             onMouseLeave={() => actions.setControlsVisible(false)}
             className={cn(
@@ -307,7 +307,7 @@ export function PlayerUI(props: PlayerUIProps) {
             />
 
             <video
-                ref={domElements.videoElement as any}
+                ref={domElements.videoElement}
                 onPlay={() => actions.setIsPlaying(true)}
                 onPause={() => actions.setIsPlaying(false)}
                 onDurationChange={(e) => actions.setDuration(e.currentTarget.duration)}
@@ -319,9 +319,9 @@ export function PlayerUI(props: PlayerUIProps) {
                 }}
                 className="w-full h-full bg-black relative z-10"
                 style={{
-                    objectFit: state.aspectRatio === "16/9" ? "contain" : 
-                               state.aspectRatio === "fill" ? "fill" : 
-                               state.aspectRatio === "cover" ? "cover" : "contain"
+                    objectFit: state.aspectRatio === "16/9" ? "contain" :
+                        state.aspectRatio === "fill" ? "fill" :
+                            state.aspectRatio === "cover" ? "cover" : "contain"
                 }}
                 crossOrigin="anonymous"
                 playsInline
@@ -339,7 +339,10 @@ export function PlayerUI(props: PlayerUIProps) {
                 onTouchEnd={endHold}
                 onTouchCancel={endHold}
                 onClick={handleInteractionClick}
-                className="absolute inset-0 z-[12] cursor-pointer select-none"
+                className={cn(
+                    "absolute inset-0 z-[12] select-none",
+                    !controlsVisible && state.isPlaying ? "cursor-none" : "cursor-pointer"
+                )}
             />
 
             {/* Skip animation indicator left */}
@@ -350,7 +353,7 @@ export function PlayerUI(props: PlayerUIProps) {
                 <div className="flex flex-col items-center gap-1.5 text-white/95 bg-black/30 px-6 py-4 rounded-2xl backdrop-blur-sm">
                     <div className="flex gap-0.5">
                         <svg className="w-8 h-8 fill-current rotate-180" viewBox="0 0 24 24">
-                            <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/>
+                            <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z" />
                         </svg>
                     </div>
                     <span className="text-[10px] font-black uppercase tracking-[0.25em]">-10s</span>
@@ -365,7 +368,7 @@ export function PlayerUI(props: PlayerUIProps) {
                 <div className="flex flex-col items-center gap-1.5 text-white/95 bg-black/30 px-6 py-4 rounded-2xl backdrop-blur-sm">
                     <div className="flex gap-0.5">
                         <svg className="w-8 h-8 fill-current" viewBox="0 0 24 24">
-                            <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/>
+                            <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z" />
                         </svg>
                     </div>
                     <span className="text-[10px] font-black uppercase tracking-[0.25em]">+10s</span>
@@ -377,7 +380,7 @@ export function PlayerUI(props: PlayerUIProps) {
                 <div className="absolute top-24 left-1/2 -translate-x-1/2 z-[31] pointer-events-none animate-in fade-in zoom-in-95 duration-200">
                     <div className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-black/60 border border-white/10 backdrop-blur-md text-white shadow-xl">
                         <svg className="w-3.5 h-3.5 fill-current text-brand-orange animate-pulse" viewBox="0 0 24 24">
-                            <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/>
+                            <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z" />
                         </svg>
                         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-100">
                             2.0x Velocidad
@@ -387,7 +390,7 @@ export function PlayerUI(props: PlayerUIProps) {
             )}
 
             <canvas
-                ref={domElements.canvasElement as any}
+                ref={domElements.canvasElement}
                 className={cn(
                     "absolute inset-0 w-full h-full pointer-events-none z-[11]",
                     state.isJassubActive ? "block" : "hidden"
@@ -416,16 +419,16 @@ export function PlayerUI(props: PlayerUIProps) {
             {/* Auto-Skip Toast */}
             {state.showAutoSkipToast && (
                 <div className="absolute top-24 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-none">
-                    <div className="bg-[#0f0f11]/55 backdrop-blur-[64px] border border-white/[0.08] px-6 py-3 shadow-2xl flex items-center gap-3">
+                    <div className="bg-[#121216] border border-white/15 px-6 py-3 shadow-2xl flex items-center gap-3 rounded-xl">
                         <svg className="w-4 h-4 text-white animate-pulse" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/>
+                            <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z" />
                         </svg>
                         <span className="text-[10px] font-black tracking-[0.25em] text-white uppercase">
-                            {state.showAutoSkipToast === "intro" 
-                                ? "AUTO-SALTANDO INTRO" 
-                                : state.showAutoSkipToast === "outro" 
-                                ? "AUTO-SALTANDO ENDING" 
-                                : "AUTO-SALTANDO PAUSA/INTERMEDIO"}
+                            {state.showAutoSkipToast === "intro"
+                                ? "AUTO-SALTANDO INTRO"
+                                : state.showAutoSkipToast === "outro"
+                                    ? "AUTO-SALTANDO ENDING"
+                                    : "AUTO-SALTANDO PAUSA/INTERMEDIO"}
                         </span>
                     </div>
                 </div>
@@ -452,7 +455,7 @@ export function PlayerUI(props: PlayerUIProps) {
                 nextEpisodeTitle={nextEpisodeTitle || "Siguiente Episodio"}
                 nextEpisodeNumber={nextEpisodeNumber}
                 nextEpisodeImage={nextEpisodeImage}
-                onNext={onNextEpisode || (() => {})}
+                onNext={onNextEpisode || (() => { })}
                 duration={state.duration}
                 remainingProgress={state.remainingProgress}
             />
@@ -490,17 +493,19 @@ export function PlayerUI(props: PlayerUIProps) {
                     mediaFormat={mediaFormat}
                     duration={state.duration}
                     insights={insights}
-                    progressBarRef={domElements.progressBarElement as any}
-                    progressInputRef={domElements.progressInputElement as any}
-                    handleSeek={actions.handleSeek as any}
+                    progressBarRef={domElements.progressBarElement}
+                    progressInputRef={domElements.progressInputElement}
+                    handleSeek={actions.handleSeek}
+                    handleSeekStart={actions.handleSeekStart}
+                    handleSeekEnd={actions.handleSeekEnd}
                     isPlaying={state.isPlaying}
                     togglePlay={actions.togglePlay}
                     skipTime={actions.skipTime}
                     isMuted={state.isMuted}
                     toggleMute={actions.toggleMute}
                     volume={state.volume}
-                    handleVolume={actions.handleVolume as any}
-                    timeTextRef={domElements.timeTextElement as any}
+                    handleVolume={actions.handleVolume}
+                    timeTextRef={domElements.timeTextElement}
                     audioTracks={state.audioTracks}
                     activeAudioIndex={state.activeAudioIndex}
                     onSelectAudio={actions.onSelectAudio}
@@ -510,11 +515,14 @@ export function PlayerUI(props: PlayerUIProps) {
                     isJassubLoading={state.isJassubLoading}
                     episodeSources={episodeSources || []}
                     activeStreamUrl={playableUrl}
-                    handleSourceSwitch={onSourceSwitch || (() => {})}
+                    handleSourceSwitch={onSourceSwitch || (() => { })}
                     isFullscreen={state.isFullscreen}
                     toggleFullscreen={actions.toggleFullscreen}
                     settingsOpen={state.isSettingsOpen}
                     onToggleSettings={(open?: boolean) => actions.setIsSettingsOpen(open !== undefined ? open : !state.isSettingsOpen)}
+                    videoRef={localVideoRef}
+                    malId={malId}
+                    mediaId={mediaId}
                     onTakeScreenshot={actions.takeScreenshot}
                     onTogglePip={actions.togglePip}
                     playbackRate={state.playbackRate}

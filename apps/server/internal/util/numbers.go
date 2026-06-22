@@ -91,3 +91,19 @@ func toOrdinal(number int) string {
 func IntegerToOrdinal(number int) string {
 	return strconv.Itoa(number) + toOrdinal(number)
 }
+
+// ClosestEven rounds n up to the nearest even number
+func ClosestEven(n int32) int32 {
+	if n%2 != 0 {
+		return n + 1
+	}
+	return n
+}
+
+// Abs32 returns the absolute value of an int32
+func Abs32(x int32) int32 {
+	if x < 0 {
+		return -x
+	}
+	return x
+}

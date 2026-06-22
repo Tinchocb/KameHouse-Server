@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"github.com/samber/lo"
 )
 
 // PipelineKind distinguishes video from audio pipelines
@@ -174,48 +173,78 @@ func (p *Pipeline) GetIndex(token string) (string, error) {
 // GetSegment blocks until the requested segment is ready and returns the path
 // to the .ts file on disk
 func (p *Pipeline) GetSegment(ctx context.Context, seg int32) (string, error) {
-	// Recreate the kill channel so that a previously-killed pipeline can
-	// service new requests
-	p.killCh = make(chan struct{})
-
 	// Record for velocity tracking
 	p.velocity.Record(seg)
 
-	// if the user jumped far, kill all distant heads
-	// immediately so we don't waste resources
-	if p.velocity.DetectSeek(50) {
-		p.killDistantHeads(seg)
+	// If a seek is detected, kill all existing active heads to prevent slot
+	// resource conflicts, governor slot exhaustion, and prioritize the new target segment.
+	if p.velocity.DetectSeek(5) {
+		p.killAllHeads()
+		p.velocity.Reset()
+		p.velocity.Record(seg)
 	}
 
-	if p.segments.IsReady(seg) {
-		p.prefetch(seg)
-		return p.segmentPath(seg), nil
-	}
-
-	// decide whether to spawn a new encoder
-	p.headsMu.RLock()
-	distance := p.minHeadDistance(seg)
-	scheduled := p.isScheduled(seg)
-	p.headsMu.RUnlock()
-
-	// todo: improve
-	if distance > 60 || !scheduled {
-		if err := p.runHead(seg); err != nil {
-			return "", err
+	for attempt := 0; attempt < 3; attempt++ {
+		p.headsMu.Lock()
+		select {
+		case <-p.killCh:
+			p.killCh = make(chan struct{})
+		default:
 		}
+		killCh := p.killCh
+		p.headsMu.Unlock()
+
+		if p.segments.IsReady(seg) {
+			p.prefetch(seg)
+			return p.segmentPath(seg), nil
+		}
+
+		// decide whether to spawn a new encoder
+		p.headsMu.RLock()
+		distance := p.minHeadDistance(seg)
+		scheduled := p.isScheduled(seg)
+		p.headsMu.RUnlock()
+
+		// Umbral de distancia dinámico basado en la velocidad de consumo (segmentos por segundo)
+		// Al reproducir a velocidad 1x, v es aproximadamente 0.25 segs/s.
+		// Si la velocidad aumenta, reducimos el umbral para ser más proactivos (mínimo de 15 segundos).
+		threshold := 60.0
+		if v := p.velocity.SegmentsPerSecond(); v > 0.25 {
+			threshold = 60.0 / (v / 0.25)
+			if threshold < 15.0 {
+				threshold = 15.0
+			}
+		}
+
+		if distance > threshold || !scheduled {
+			if err := p.runHead(seg); err != nil {
+				return "", err
+			}
+		}
+
+		// Wait for the segment, allowing the client's request ctx to
+		// abort the wait early if they disconnect
+		waitCtx, waitCancel := context.WithTimeout(ctx, 30*time.Second)
+		err := p.segments.WaitFor(waitCtx, seg, killCh)
+		waitCancel()
+
+		if err == nil {
+			p.prefetch(seg)
+			return p.segmentPath(seg), nil
+		}
+
+		if ctx.Err() != nil {
+			return "", fmt.Errorf("cassette: %s segment %d not ready: %w", p.label, seg, err)
+		}
+
+		p.logger.Warn().Int("attempt", attempt).Int32("seg", seg).Err(err).
+			Msg("cassette: segment wait failed, killing all active heads and retrying...")
+
+		// Kill all active heads on retry to clear any stuck or slow processes
+		p.killAllHeads()
 	}
 
-	// Wait for the segment, allowing the client's request ctx to
-	// abort the wait early if they disconnect
-	waitCtx, waitCancel := context.WithTimeout(ctx, 30*time.Second)
-	defer waitCancel()
-
-	if err := p.segments.WaitFor(waitCtx, seg, p.killCh); err != nil {
-		return "", fmt.Errorf("cassette: %s segment %d not ready: %w", p.label, seg, err)
-	}
-
-	p.prefetch(seg)
-	return p.segmentPath(seg), nil
+	return "", fmt.Errorf("cassette: %s segment %d not ready after retries", p.label, seg)
 }
 
 // segmentPath returns the path for a ready segment
@@ -256,26 +285,21 @@ func (p *Pipeline) killHeadLocked(id int) {
 	// use Kill to guarantee termination across platforms (os.Interrupt is
 	// unsupported on Windows for os.Process.Signal)
 	_ = h.cmd.Process.Kill()
-	p.heads[id] = deletedHead
+	p.heads[id].cmd = nil
 }
 
-// killDistantHeads kills distant heads on seek
-func (p *Pipeline) killDistantHeads(target int32) {
+// killAllHeads kills all active heads in the pipeline
+func (p *Pipeline) killAllHeads() {
 	p.headsMu.Lock()
 	defer p.headsMu.Unlock()
 	for i, h := range p.heads {
 		if h.segment == -1 {
 			continue
 		}
-		if abs32(h.segment-target) > 50 {
-			p.logger.Trace().Int("eid", i).Int32("at", h.segment).Int32("target", target).
-				Msg("cassette: killing distant head after seek")
-			p.killHeadLocked(i)
-		}
+		p.logger.Trace().Int("eid", i).Int32("at", h.segment).
+			Msg("cassette: killing active head to free resources")
+		p.killHeadLocked(i)
 	}
-	// devnote: don't recreate the pipeline context here because we only cancelled
-	// individual heads, not the whole pipeline. p.killCh will be recreated
-	// at the top of GetSegment
 }
 
 // encoder head management
@@ -370,10 +394,26 @@ func (p *Pipeline) runHead(start int32) error {
 	}
 
 	headCtx, headCancel := context.WithCancel(p.ctx)
+	success := false
+	defer func() {
+		if !success {
+			headCancel()
+		}
+	}()
 
 	p.headsMu.Lock()
-	encoderID := len(p.heads)
-	p.heads = append(p.heads, head{segment: start, end: end, cancel: headCancel})
+	encoderID := -1
+	for i, h := range p.heads {
+		if h.segment == -1 && h.end == -1 {
+			encoderID = i
+			p.heads[i] = head{segment: start, end: end, cancel: headCancel}
+			break
+		}
+	}
+	if encoderID == -1 {
+		encoderID = len(p.heads)
+		p.heads = append(p.heads, head{segment: start, end: end, cancel: headCancel})
+	}
 	p.headsMu.Unlock()
 
 	// build ffmpeg arguments
@@ -382,17 +422,13 @@ func (p *Pipeline) runHead(start int32) error {
 	if start != 0 {
 		startSeg = start - 1
 		if p.kind == AudioKind {
-			// audio needs pre-context to avoid ~100ms of silence at segment
-			// boundaries
+			// El audio requiere posicionarse exactamente en la marca del keyframe anterior
+			// para mantener la continuidad en la tubería y timestamps correctos.
 			startRef = p.session.Keyframes.Get(startSeg)
 		} else {
-			// video: nudge seek point past the keyframe to prevent ffmpeg from
-			// accidentally landing on the prior keyframe
-			if startSeg+1 == length {
-				startRef = (p.session.Keyframes.Get(startSeg) + float64(p.session.Info.Duration)) / 2
-			} else {
-				startRef = (p.session.Keyframes.Get(startSeg) + p.session.Keyframes.Get(startSeg+1)) / 2
-			}
+			// El video requiere un margen extra de 10ms para evitar que -noaccurate_seek
+			// retroceda por error al keyframe anterior por problemas de redondeo float.
+			startRef = p.session.Keyframes.Get(startSeg) + 0.01
 		}
 	}
 
@@ -420,12 +456,21 @@ func (p *Pipeline) runHead(start int32) error {
 	}
 
 	args := []string{"-nostats", "-hide_banner", "-loglevel", "warning"}
-	args = append(args, p.settings.HwAccel.DecodeFlags...)
+	isCopy := false
+	if p.buildArgs != nil {
+		for _, arg := range p.buildArgs("") {
+			if arg == "copy" {
+				isCopy = true
+				break
+			}
+		}
+	}
+	if !isCopy {
+		args = append(args, p.settings.GetHwAccel().DecodeFlags...)
+	}
 
 	if startRef != 0 {
-		if p.kind == VideoKind {
-			// -noaccurate_seek gives faster seeks for video and is required
-			// for correct segment boundary behaviour in transmux mode
+		if p.kind == VideoKind && !isCopy {
 			args = append(args, "-noaccurate_seek")
 		}
 		args = append(args, "-ss", fmt.Sprintf("%.6f", startRef))
@@ -444,24 +489,20 @@ func (p *Pipeline) runHead(start int32) error {
 		"-i", p.session.Path,
 		"-map_metadata", "-1", // ?
 		"-map_chapters", "-1", // ?
-		"-start_at_zero",
 		"-copyts",
 		"-muxdelay", "0",
 	)
 
+
+
 	segStr := toSegmentStr(segmentTimes)
 	args = append(args, p.buildArgs(segStr)...)
-
-	// Compute segment_times relative to -ss start.
-	relTimes := lo.Map(segmentTimes, func(t float64, _ int) float64 {
-		return t - p.session.Keyframes.Get(startSeg)
-	})
 
 	args = append(args,
 		"-f", "segment",
 		"-segment_time_delta", "0.05",
 		"-segment_format", "mpegts",
-		"-segment_times", toSegmentStr(relTimes),
+		"-segment_times", segStr,
 		"-segment_list_type", "flat",
 		"-segment_list", "pipe:1",
 		"-segment_start_number", fmt.Sprint(startSeg),
@@ -472,7 +513,7 @@ func (p *Pipeline) runHead(start int32) error {
 		Int32("start", start).Int32("end", end).
 		Msgf("cassette: spawning ffmpeg")
 
-	cmd := util.NewCmdCtx(context.Background(), p.settings.FfmpegPath, args...)
+	cmd := util.NewCmdCtx(headCtx, p.settings.FfmpegPath, args...)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -500,7 +541,7 @@ func (p *Pipeline) runHead(start int32) error {
 	p.activeHeadsWg.Add(1)
 
 	// read segment list from stdout
-	go p.readSegments(encoderID, start, end, length, stdout, stdin)
+	go p.readSegments(encoderID, start, end, stdout, stdin)
 
 	// cancel listener, propagates context cancellation to ffmpeg
 	go func(ctx context.Context) {
@@ -512,6 +553,7 @@ func (p *Pipeline) runHead(start int32) error {
 	// Goroutine: reap process and release governor slot.
 	go p.reapProcess(headCtx, encoderID, cmd, &stderr, release, headCancel)
 
+	success = true
 	return nil
 }
 
@@ -519,7 +561,7 @@ func (p *Pipeline) runHead(start int32) error {
 // As each segment is ready, it marks it as ready in the segments map.
 func (p *Pipeline) readSegments(
 	encoderID int,
-	start, end, length int32,
+	start, end int32,
 	stdout io.ReadCloser,
 	stdin io.WriteCloser,
 ) {
@@ -558,6 +600,10 @@ func (p *Pipeline) readSegments(
 			return
 		}
 	}
+
+	if err := scanner.Err(); err != nil {
+		p.logger.Error().Err(err).Msg("cassette: scanner error during segment read")
+	}
 }
 
 // reapProcess waits for the ffmpeg process to exit, marks its head as deleted,
@@ -570,11 +616,16 @@ func (p *Pipeline) reapProcess(ctx context.Context, encoderID int, cmd *exec.Cmd
 
 	err := cmd.Wait()
 
+	hwProfile := p.settings.GetHwAccel()
+	isHwAccelEnabled := hwProfile.Name != "disabled"
+
 	// Check for hardware acceleration failures in stderr
-	if len(p.settings.HwAccel.DecodeFlags) > 0 && DetectHwAccelFailure(stderr.String()) {
+	if isHwAccelEnabled && (DetectHwAccelFailure(stderr.String()) || err != nil) {
 		p.logger.Warn().Int("eid", encoderID).
-			Str("hwaccel", FormatHwAccelSummary(p.settings.HwAccel)).
-			Msg("cassette: hardware acceleration failed, consider switching to CPU or a different backend")
+			Str("hwaccel", FormatHwAccelSummary(hwProfile)).
+			Str("ffmpeg_error", stderr.String()).
+			Msg("cassette: hardware acceleration failed or process exited with error, falling back to CPU...")
+		p.settings.SetHwAccel(FallbackToCPU("superfast"))
 	}
 
 	var exitErr *exec.ExitError
@@ -589,6 +640,15 @@ func (p *Pipeline) reapProcess(ctx context.Context, encoderID int, cmd *exec.Cmd
 		p.logger.Error().Int("eid", encoderID).
 			Err(fmt.Errorf("%s: %s", err, stderr.String())).
 			Msg("cassette: ffmpeg process failed")
+
+		// If it's a real failure (not killed intentionally), notify GetSegment to retry immediately
+		p.headsMu.Lock()
+		select {
+		case <-p.killCh:
+		default:
+			close(p.killCh)
+		}
+		p.headsMu.Unlock()
 	default:
 		p.logger.Trace().Int("eid", encoderID).Str("pipeline", p.label).
 			Msg("cassette: ffmpeg process exited cleanly")

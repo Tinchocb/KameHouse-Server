@@ -6,7 +6,6 @@ import * as React from "react"
 import { AiOutlineExclamationCircle } from "react-icons/ai"
 import { BasicField, BasicFieldOptions, extractBasicFieldProps } from "../basic-field"
 import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
-import { mergeRefs } from "../core/utils"
 
 /* -------------------------------------------------------------------------------------------------
  * Anatomy

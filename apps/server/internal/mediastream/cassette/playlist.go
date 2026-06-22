@@ -108,15 +108,22 @@ func GenerateVariantPlaylist(ki *KeyframeIndex, duration float64, token string) 
 	b.WriteString("#EXT-X-MEDIA-SEQUENCE:0\n")
 	b.WriteString("#EXT-X-INDEPENDENT-SEGMENTS\n")
 
-	length, isDone := ki.Length()
-	for seg := int32(0); seg < length-1; seg++ {
-		fmt.Fprintf(&b, "#EXTINF:%.6f\n", ki.Get(seg+1)-ki.Get(seg))
+	// Batch lock and copy timestamps to avoid locking 2N times in the loop
+	ki.mu.RLock()
+	keyframes := make([]float64, len(ki.Keyframes))
+	copy(keyframes, ki.Keyframes)
+	isDone := ki.IsDone
+	ki.mu.RUnlock()
+
+	length := len(keyframes)
+	for seg := 0; seg < length-1; seg++ {
+		fmt.Fprintf(&b, "#EXTINF:%.6f\n", keyframes[seg+1]-keyframes[seg])
 		fmt.Fprintf(&b, "segment-%d.ts%s\n", seg, tokenSuffix)
 	}
 
 	// Final segment, include only when extraction is complete
 	if isDone && length > 0 {
-		fmt.Fprintf(&b, "#EXTINF:%.6f\n", duration-ki.Get(length-1))
+		fmt.Fprintf(&b, "#EXTINF:%.6f\n", duration-keyframes[length-1])
 		fmt.Fprintf(&b, "segment-%d.ts%s\n", length-1, tokenSuffix)
 		b.WriteString("#EXT-X-ENDLIST")
 	}

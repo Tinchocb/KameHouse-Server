@@ -42,6 +42,9 @@ func getOnlineUserAgents() ([]string, error) {
 		}
 		agents = append(agents, ua.UserAgent)
 	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
 
 	return agents, nil
 }

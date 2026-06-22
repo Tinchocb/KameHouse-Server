@@ -216,47 +216,49 @@ func NewMatroskaParser(r io.ReadSeeker, noSeeking bool, elementsToParse ...uint3
 		// Reader is already positioned at cluster data, ready for ReadPacket()
 	}
 
-	// Devnote: Avoid parsing cues to speed up the process.
-	//if !noSeeking && parser.cuesPos == 0 {
-	//	// Cues not found in initial scan, let's scan the whole segment more carefully
-	//	currentPos := parser.reader.Position()
-	//	if _, err := parser.reader.Seek(int64(parser.segmentPos), io.SeekStart); err != nil {
-	//		return nil, fmt.Errorf("failed to seek back to segment start: %w", err)
-	//	}
-	//
-	//	// Scan through the segment looking for cues without parsing everything
-	//	segmentEnd := parser.segmentPos + parser.segment.Size
-	//	for parser.reader.Position() < int64(segmentEnd) {
-	//		id, size, err := parser.reader.ReadElementHeader()
-	//		if err != nil {
-	//			if errors.Is(err, io.EOF) {
-	//				break
-	//			}
-	//			// If we can't read more elements, break gracefully
-	//			break
-	//		}
-	//
-	//		if id == IDCues {
-	//			parser.cuesPos = uint64(parser.reader.Position())
-	//			parser.cuesTopPos = uint64(parser.reader.Position()) + size
-	//			if err = parser.parseCues(size); err != nil {
-	//				// If cues parsing fails, continue without cues
-	//				break
-	//			}
-	//			break
-	//		} else {
-	//			// Skip this element
-	//			if _, err = parser.reader.Seek(int64(size), io.SeekCurrent); err != nil {
-	//				break
-	//			}
-	//		}
-	//	}
-	//
-	//	// Restore original position
-	//	if _, err := parser.reader.Seek(currentPos, io.SeekStart); err != nil {
-	//		return nil, fmt.Errorf("failed to restore position: %w", err)
-	//	}
-	//}
+	// Devnote: Enable cues scanning/direct parsing for seekable files to avoid slow ffprobe scanning.
+	if !noSeeking && parser.cuesPos > 0 && len(parser.cues) == 0 {
+		currentPos := parser.reader.Position()
+		if _, err := parser.reader.Seek(int64(parser.cuesPos), io.SeekStart); err == nil {
+			id, size, err := parser.reader.ReadElementHeader()
+			if err == nil && id == IDCues {
+				parser.cuesTopPos = parser.cuesPos + size
+				_ = parser.parseCues(size)
+			}
+		}
+		// Restore position
+		_, _ = parser.reader.Seek(currentPos, io.SeekStart)
+	}
+
+	if !noSeeking && parser.cuesPos == 0 {
+		// Cues not found in initial scan (e.g. no SeekHead), scan the whole segment
+		currentPos := parser.reader.Position()
+		if _, err := parser.reader.Seek(int64(parser.segmentPos), io.SeekStart); err == nil {
+			segmentEnd := parser.segmentPos + parser.segment.Size
+			for parser.reader.Position() < int64(segmentEnd) {
+				id, size, err := parser.reader.ReadElementHeader()
+				if err != nil {
+					if errors.Is(err, io.EOF) {
+						break
+					}
+					break
+				}
+
+				if id == IDCues {
+					parser.cuesPos = uint64(parser.reader.Position())
+					parser.cuesTopPos = uint64(parser.reader.Position()) + size
+					_ = parser.parseCues(size)
+					break
+				} else {
+					if _, err = parser.reader.Seek(int64(size), io.SeekCurrent); err != nil {
+						break
+					}
+				}
+			}
+		}
+		// Restore position
+		_, _ = parser.reader.Seek(currentPos, io.SeekStart)
+	}
 
 	return parser, nil
 }
@@ -383,6 +385,10 @@ func (mp *MatroskaParser) parseSegmentChildren() error {
 		currentPos := mp.reader.Position()
 
 		switch id {
+		case IDSeekHead:
+			if err = mp.parseSeekHead(size); err != nil {
+				return fmt.Errorf("failed to parse seek head: %w", err)
+			}
 		case IDSegmentInfo:
 			if mp.shouldParseElement(IDSegmentInfo) {
 				if err = mp.parseSegmentInfo(size); err != nil {
@@ -2067,4 +2073,64 @@ func (mp *MatroskaParser) SkipToKeyframe() {
 func (mp *MatroskaParser) SetTrackMask(mask uint64) {
 	mp.currentTrackMask = mask
 	// Here we could discard queued packets if we had a queue
+}
+
+func (mp *MatroskaParser) parseSeekHead(size uint64) error {
+	data := make([]byte, size)
+	n, err := io.ReadFull(mp.reader.r, data)
+	if err != nil {
+		return err
+	}
+	mp.reader.pos += int64(n)
+
+	reader := bytes.NewReader(data)
+	childReader := &EBMLReader{r: &seekableReader{reader}, pos: 0}
+
+	for childReader.pos < int64(size) {
+		element, errReadElement := childReader.ReadElement()
+		if errReadElement != nil {
+			if errors.Is(errReadElement, io.EOF) {
+				break
+			}
+			return errReadElement
+		}
+
+		if element.ID == IDSeek {
+			if err = mp.parseSeek(element.Data); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (mp *MatroskaParser) parseSeek(data []byte) error {
+	reader := bytes.NewReader(data)
+	childReader := &EBMLReader{r: &seekableReader{reader}, pos: 0}
+
+	var seekID uint32
+	var seekPos uint64
+
+	for childReader.pos < int64(len(data)) {
+		element, err := childReader.ReadElement()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return err
+		}
+
+		switch element.ID {
+		case IDSeekID:
+			seekID = uint32(element.ReadUInt())
+		case IDSeekPos:
+			seekPos = element.ReadUInt()
+		}
+	}
+
+	if seekID == IDCues {
+		mp.cuesPos = mp.segmentPos + seekPos
+	}
+	return nil
 }

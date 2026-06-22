@@ -31,6 +31,7 @@ export interface PlayerCoreProps {
     mediaFormat?: string | null
     nextStreamUrl?: string
     nextStreamType?: "local" | "online" | "direct" | "transcode" | "optimized"
+    streamType?: "local" | "online" | "direct" | "transcode" | "optimized"
     nextEpisodeTitle?: string
     nextEpisodeNumber?: number
     nextEpisodeImage?: string
@@ -38,12 +39,12 @@ export interface PlayerCoreProps {
 
 export interface PlayerCore {
     domElements: {
-        videoElement: React.RefObject<HTMLVideoElement | null>
-        containerElement: React.RefObject<HTMLDivElement | null>
-        canvasElement: React.RefObject<HTMLCanvasElement | null>
-        progressBarElement: React.RefObject<HTMLDivElement | null>
-        progressInputElement: React.RefObject<HTMLInputElement | null>
-        timeTextElement: React.RefObject<HTMLSpanElement | null>
+        videoElement: React.RefObject<HTMLVideoElement>
+        containerElement: React.RefObject<HTMLDivElement>
+        canvasElement: React.RefObject<HTMLCanvasElement>
+        progressBarElement: React.RefObject<HTMLDivElement>
+        progressInputElement: React.RefObject<HTMLInputElement>
+        timeTextElement: React.RefObject<HTMLSpanElement>
     }
     state: {
         isPlaying: boolean
@@ -111,6 +112,8 @@ export interface PlayerCore {
         triggerControlsVisibility: () => void
         togglePlay: () => void
         handleSeek: (e: React.ChangeEvent<HTMLInputElement>) => void
+        handleSeekStart: () => void
+        handleSeekEnd: (e: React.MouseEvent<HTMLInputElement> | React.TouchEvent<HTMLInputElement> | React.KeyboardEvent<HTMLInputElement>) => void
         skipTime: (seconds: number) => void
         skipOpening: () => void
         handleVolume: (e: React.ChangeEvent<HTMLInputElement>) => void

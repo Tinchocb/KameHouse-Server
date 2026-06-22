@@ -1,12 +1,15 @@
 package mediastream
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"kamehouse/internal/mediastream/videofile"
 	"kamehouse/internal/util/result"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/samber/mo"
@@ -99,6 +102,35 @@ func (p *PlaybackManager) PreloadPlayback(filepath string, streamType StreamType
 		return nil, fmt.Errorf("failed to create media container: %v", err)
 	}
 
+	// Zero Latency Next: Pre-transcode and cache the first 3 segments (video and audio) of the next episode in the background.
+	if ret.StreamType == StreamTypeTranscode && p.repository.transcoder.IsPresent() {
+		go func() {
+			tc, _ := p.repository.transcoder.Get()
+			ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+			defer cancel()
+
+			p.logger.Debug().Str("filepath", ret.Filepath).Msg("mediastream: Pre-transcoding video segments 0, 1 & 2 for zero-latency start")
+			_, _ = tc.GetVideoSegment(ctx, ret.Filepath, ret.Hash, ret.MediaInfo, "original", 0, "preload-client")
+			_, _ = tc.GetVideoSegment(ctx, ret.Filepath, ret.Hash, ret.MediaInfo, "original", 1, "preload-client")
+			_, _ = tc.GetVideoSegment(ctx, ret.Filepath, ret.Hash, ret.MediaInfo, "original", 2, "preload-client")
+
+			if len(ret.MediaInfo.Audios) > 0 {
+				defaultAudioIdx := int32(0)
+				for _, aud := range ret.MediaInfo.Audios {
+					if aud.IsDefault {
+						defaultAudioIdx = int32(aud.Index)
+						break
+					}
+				}
+				p.logger.Debug().Str("filepath", ret.Filepath).Msg("mediastream: Pre-transcoding audio segments 0, 1 & 2 for zero-latency start")
+				_, _ = tc.GetAudioSegment(ctx, ret.Filepath, ret.Hash, ret.MediaInfo, defaultAudioIdx, 0, "preload-client")
+				_, _ = tc.GetAudioSegment(ctx, ret.Filepath, ret.Hash, ret.MediaInfo, defaultAudioIdx, 1, "preload-client")
+				_, _ = tc.GetAudioSegment(ctx, ret.Filepath, ret.Hash, ret.MediaInfo, defaultAudioIdx, 2, "preload-client")
+			}
+			p.logger.Info().Str("filepath", ret.Filepath).Msg("mediastream: Finished proactive pre-transcoding of segments 0, 1 & 2")
+		}()
+	}
+
 	p.logger.Info().Str("filepath", filepath).Msg("mediastream: Ready to play media")
 
 	return
@@ -153,11 +185,50 @@ func (p *PlaybackManager) newMediaContainer(filePath string, streamType StreamTy
 
 	p.logger.Debug().Msg("mediastream: Extracted attachments")
 
+	// Dynamic fallback from Direct Play to Transcode if the browser doesn't support the container/codecs natively.
+	if streamType == StreamTypeDirect {
+		isDirectPlayable := false
+		ext := strings.ToLower(ret.MediaInfo.Extension)
+		// Universal direct-playable containers in modern browsers (including mkv inside WebView2)
+		if ext == "mp4" || ext == "m4v" || ext == "webm" || ext == "mov" || ext == "ogg" || ext == "mkv" {
+			hasSupportedVideo := false
+			if ret.MediaInfo.Video != nil {
+				vCodec := strings.ToLower(ret.MediaInfo.Video.Codec)
+				// h264, hevc/h265, vp8, vp9, and av1 are natively supported.
+				if vCodec == "h264" || vCodec == "hevc" || vCodec == "h265" || vCodec == "vp8" || vCodec == "vp9" || vCodec == "av1" {
+					hasSupportedVideo = true
+				}
+			} else {
+				// Audio only
+				hasSupportedVideo = true
+			}
+
+			hasSupportedAudio := true
+			if len(ret.MediaInfo.Audios) > 0 {
+				aCodec := strings.ToLower(ret.MediaInfo.Audios[0].Codec)
+				// aac, mp3, opus, flac, vorbis, ac3, and dts (dca) are universally supported or handled by modern audio hardware.
+				if aCodec != "aac" && aCodec != "mp3" && aCodec != "opus" && aCodec != "flac" && aCodec != "vorbis" && aCodec != "ac3" && aCodec != "dca" {
+					hasSupportedAudio = false
+				}
+			}
+
+			if hasSupportedVideo && hasSupportedAudio {
+				isDirectPlayable = true
+			}
+		}
+
+		if !isDirectPlayable {
+			p.logger.Info().Str("filepath", filePath).Str("ext", ext).Msg("mediastream: File container or codecs not natively supported by browser. Falling back to Transcode HLS.")
+			streamType = StreamTypeTranscode
+			ret.StreamType = StreamTypeTranscode
+		}
+	}
+
 	streamUrl := ""
 	switch streamType {
 	case StreamTypeDirect:
 		// Directly serve the file.
-		streamUrl = "/api/v1/mediastream/direct"
+		streamUrl = "/api/v1/mediastream/direct/play"
 	case StreamTypeTranscode:
 		// Live transcode the file.
 		streamUrl = "/api/v1/mediastream/transcode/master.m3u8"

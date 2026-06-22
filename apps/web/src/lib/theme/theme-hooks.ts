@@ -1,7 +1,5 @@
 import { Models_Theme } from "@/api/generated/types"
 
-import React from "react"
-
 
 export const enum ThemeLibraryScreenBannerType {
     Dynamic = "dynamic",

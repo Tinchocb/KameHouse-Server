@@ -9,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs/tabs"
 
 import { useGetSettings, useSaveSettings } from "@/api/hooks/settings.hooks"
 import {
-    LucideSave, LucideRefreshCw, LucideHardDrive, LucideSettings, LucideRadar, LucideCrown, LucideCloud, LucidePlay
+    LucideHardDrive, LucideSettings, LucideRadar, LucideCloud, LucidePlay
 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/components/ui/core/styling"
@@ -138,7 +138,7 @@ function SettingsPage() {
         mode: "onTouched",
     })
 
-    const { control, handleSubmit, register, formState: { isDirty }, reset } = form
+    const { control, handleSubmit, formState: { isDirty }, reset } = form
 
     useEffect(() => {
         if (serverSettings) {
@@ -224,8 +224,8 @@ function SettingsPage() {
                             className="w-full relative z-10"
                         >
                             {activeTab === "library"      && <LibraryTab control={control} />}
-                            {activeTab === "scanner"      && <ScannerTab control={control} register={register} />}
-                            {activeTab === "integrations" && <IntegrationsTab control={control} register={register} />}
+                            {activeTab === "scanner"      && <ScannerTab control={control} />}
+                            {activeTab === "integrations" && <IntegrationsTab control={control} />}
                             {activeTab === "system"       && <SystemTab control={control} />}
                             {activeTab === "player"       && <PlayerTab control={control} />}
                         </form>

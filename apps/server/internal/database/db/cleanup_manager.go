@@ -101,73 +101,52 @@ func (cm *CleanupManager) trimLocalFileEntries() {
 	}
 }
 
-// removeOrphanedAndCollidedMedia cleans up orphaned TV shows that share TMDB IDs with movies
+// removeOrphanedAndCollidedMedia removes TV shows/anime that share a TMDB ID
+// with a movie AND have no local files associated — they are phantom entries.
+// Uses a single SQL JOIN instead of loading all media into Go memory.
 func (cm *CleanupManager) removeOrphanedAndCollidedMedia() {
-	var movies []models.LibraryMedia
-	if err := cm.gormdb.Where("type = ?", "MOVIE").Find(&movies).Error; err != nil {
-		cm.logger.Error().Err(err).Msg("database cleanup: Failed to fetch movies")
+	type collidedRow struct {
+		ID           uint
+		TmdbID       int
+		TitleEnglish string
+	}
+	var collided []collidedRow
+
+	// Find shows/anime whose tmdb_id collides with a movie AND have no local files.
+	// The LEFT JOIN + lf.id IS NULL efficiently performs the "no files" check in SQL.
+	err := cm.gormdb.Raw(`
+		SELECT s.id, s.tmdb_id, s.title_english
+		FROM library_media s
+		INNER JOIN library_media m
+			ON m.tmdb_id = s.tmdb_id AND m.type = 'MOVIE'
+		LEFT JOIN local_file lf
+			ON lf.library_media_id = s.id
+		WHERE s.type IN ('SHOW', 'ANIME')
+		  AND lf.id IS NULL
+	`).Scan(&collided).Error
+
+	if err != nil {
+		cm.logger.Error().Err(err).Msg("database cleanup: Failed to find collided media")
+		return
+	}
+	if len(collided) == 0 {
 		return
 	}
 
-	movieTmdbIds := make(map[int]bool)
-	for _, m := range movies {
-		movieTmdbIds[m.TmdbID] = true
-	}
+	for _, row := range collided {
+		cm.logger.Warn().
+			Uint("id", row.ID).
+			Int("tmdbID", row.TmdbID).
+			Str("title", row.TitleEnglish).
+			Msg("database cleanup: Deleting collided show with no local files")
 
-	var shows []models.LibraryMedia
-	if err := cm.gormdb.Where("type IN ?", []string{"SHOW", "ANIME"}).Find(&shows).Error; err != nil {
-		cm.logger.Error().Err(err).Msg("database cleanup: Failed to fetch shows")
-		return
-	}
-
-	var collidedShows []models.LibraryMedia
-	var collidedShowIds []uint
-	for _, s := range shows {
-		if movieTmdbIds[s.TmdbID] {
-			collidedShows = append(collidedShows, s)
-			collidedShowIds = append(collidedShowIds, s.ID)
-		}
-	}
-
-	if len(collidedShowIds) == 0 {
-		return
-	}
-
-	// Bulk check local file associations
-	type Result struct {
-		LibraryMediaId uint
-		Count          int64
-	}
-	var results []Result
-	if err := cm.gormdb.Model(&models.LocalFile{}).
-		Select("library_media_id, count(*) as count").
-		Where("library_media_id IN ?", collidedShowIds).
-		Group("library_media_id").
-		Find(&results).Error; err != nil {
-		cm.logger.Error().Err(err).Msg("database cleanup: Failed to fetch local file counts")
-		return
-	}
-
-	hasFilesMap := make(map[uint]bool)
-	for _, r := range results {
-		if r.Count > 0 {
-			hasFilesMap[r.LibraryMediaId] = true
-		}
-	}
-
-	for _, s := range collidedShows {
-		if !hasFilesMap[s.ID] {
-			cm.logger.Warn().Uint("id", s.ID).Int("tmdbID", s.TmdbID).Str("title", s.TitleEnglish).Msg("database cleanup: Found collided show with no local files. Deleting.")
-
-			// Start a transaction to delete show and its children safely
-			_ = cm.gormdb.Transaction(func(tx *gorm.DB) error {
-				_ = tx.Where("library_media_id = ?", s.ID).Delete(&models.LibraryEpisode{})
-				_ = tx.Where("library_media_id = ?", s.ID).Delete(&models.LibrarySeason{})
-				_ = tx.Where("library_media_id = ?", s.ID).Delete(&models.MediaEntryListData{})
-				_ = tx.Delete(&s)
-				return nil
-			})
-		}
+		_ = cm.gormdb.Transaction(func(tx *gorm.DB) error {
+			_ = tx.Where("library_media_id = ?", row.ID).Delete(&models.LibraryEpisode{})
+			_ = tx.Where("library_media_id = ?", row.ID).Delete(&models.LibrarySeason{})
+			_ = tx.Where("library_media_id = ?", row.ID).Delete(&models.MediaEntryListData{})
+			_ = tx.Delete(&models.LibraryMedia{}, row.ID)
+			return nil
+		})
 	}
 }
 

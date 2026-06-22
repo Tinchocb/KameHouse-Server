@@ -71,10 +71,12 @@ func run(ctx context.Context) error {
 	e := core.NewEchoApp(app, &WebFS)
 	handlers.InitRoutes(app, e)
 
-	bindHost, bindPort, err := resolveBindableAddress(hostStr, portStrVal, app.Flags.IsDesktopSidecar, app.Logger)
+	bindListener, bindHost, bindPort, err := resolveBindableAddress(hostStr, portStrVal, app.Flags.IsDesktopSidecar, app.Logger)
 	if err != nil {
 		return err
 	}
+	defer bindListener.Close()
+
 	// Keep config/flags aligned with the real listen address so GetServerURI, CORS, and
 	// "open browser on start" use the same port (important when we fall back to ephemeral).
 	app.Config.Server.Host = bindHost
@@ -119,10 +121,10 @@ func run(ctx context.Context) error {
 				errCh <- err
 				return
 			}
-			errCh <- srv.ListenAndServeTLS(app.Config.Server.TLS.CertPath, app.Config.Server.TLS.KeyPath)
+			errCh <- srv.ServeTLS(bindListener, app.Config.Server.TLS.CertPath, app.Config.Server.TLS.KeyPath)
 			return
 		}
-		errCh <- srv.ListenAndServe()
+		errCh <- srv.Serve(bindListener)
 	}()
 
 
@@ -157,22 +159,21 @@ func run(ctx context.Context) error {
 	}
 }
 
-func resolveBindableAddress(host string, port int, isDesktopSidecar bool, logger *zerolog.Logger) (string, int, error) {
+func resolveBindableAddress(host string, port int, isDesktopSidecar bool, logger *zerolog.Logger) (net.Listener, string, int, error) {
 	addr := fmt.Sprintf("%s:%d", host, port)
 
 	// Retry binding to the requested port a few times (helps clear TIME_WAIT from rapid restarts in dev)
-	maxRetries := 5
+	maxRetries := 3
 	for i := 0; i < maxRetries; i++ {
 		l, err := net.Listen("tcp", addr)
 		if err == nil {
-			_ = l.Close()
-			return host, port, nil
+			return l, host, port, nil
 		}
 
 		errText := err.Error()
 		isBusy := strings.Contains(errText, "address already in use") || strings.Contains(errText, "Only one usage")
 		if !isBusy {
-			return "", 0, err
+			return nil, "", 0, err
 		}
 
 		if i < maxRetries-1 {
@@ -180,13 +181,13 @@ func resolveBindableAddress(host string, port int, isDesktopSidecar bool, logger
 				Int("port", port).
 				Int("attempt", i+1).
 				Int("max", maxRetries).
-				Msg("Port is busy (another instance may be running). Retrying in 1s...")
-			time.Sleep(1 * time.Second)
+				Msg("Port is busy (another instance may be running). Retrying in 500ms...")
+			time.Sleep(500 * time.Millisecond)
 		}
 	}
 
 	if isDesktopSidecar {
-		return "", 0, fmt.Errorf("port %d is busy and fallback is disabled in desktop sidecar mode", port)
+		return nil, "", 0, fmt.Errorf("port %d is busy and fallback is disabled in desktop sidecar mode", port)
 	}
 
 	// If still busy, log a final warning before falling back to ephemeral port (port 0)
@@ -196,11 +197,10 @@ func resolveBindableAddress(host string, port int, isDesktopSidecar bool, logger
 		Msg("Port is still busy after all attempts. Falling back to an ephemeral port.")
 	l2, err2 := net.Listen("tcp", fmt.Sprintf("%s:%d", host, 0))
 	if err2 != nil {
-		return "", 0, err2
+		return nil, "", 0, err2
 	}
 	ephemeralPort := l2.Addr().(*net.TCPAddr).Port
-	_ = l2.Close()
-	return host, ephemeralPort, nil
+	return l2, host, ephemeralPort, nil
 }
 
 // loadEnvFile searches for a .env file starting from the CWD and

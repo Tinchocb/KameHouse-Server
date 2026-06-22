@@ -47,9 +47,6 @@ export function useGetLibraryCollection({ enabled }: { enabled?: boolean } = { e
                     }).sort((a, b) => (a.media?.titleRomaji || "").localeCompare(b.media?.titleRomaji || ""))
                 }))
             }
-            // #region agent log
-            fetch('http://127.0.0.1:7902/ingest/3db04ea9-77c9-4bed-a20f-e86e950dde6c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'549c87'},body:JSON.stringify({sessionId:'549c87',location:'anime_collection.hooks.ts:select',message:'library select transform',data:{durationMs:Math.round(performance.now()-start),entryCount:data.lists?.reduce((n,l)=>n+(l.entries?.length??0),0)??0,hypothesisId:'E'},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
             return result
         }
     })

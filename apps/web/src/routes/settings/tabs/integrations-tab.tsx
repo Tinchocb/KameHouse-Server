@@ -1,16 +1,15 @@
 import React from "react"
 import { TabsContent } from "@/components/ui/tabs/tabs"
-import { IntegrationCard, Section, Card, OsInput, OsSelect, OsToggle } from "../components"
-import { type Control, Controller, type UseFormRegister } from "react-hook-form"
+import { Section, Card, OsToggle } from "../components"
+import { type Control, Controller } from "react-hook-form"
 import { type SettingsFormValues } from "../index"
 import { toast } from "sonner"
 
 interface IntegrationsTabProps {
     control: Control<SettingsFormValues>
-    register: UseFormRegister<SettingsFormValues>
 }
 
-export function IntegrationsTab({ control, register }: IntegrationsTabProps) {
+export function IntegrationsTab({ control }: IntegrationsTabProps) {
     const handleLinkAniList = () => {
         toast.success("Cuenta de AniList vinculada correctamente")
     }
@@ -52,8 +51,9 @@ export function IntegrationsTab({ control, register }: IntegrationsTabProps) {
                         name="library.tmdbApiKey"
                         render={({ field }) => (
                             <div className="flex flex-col gap-2">
-                                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">Clave de la API (V4 Auth Token)</label>
+                                <label htmlFor="tmdb-api-key" className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">Clave de la API (V4 Auth Token)</label>
                                 <input
+                                    id="tmdb-api-key"
                                     type="password"
                                     value={field.value || ""}
                                     onChange={field.onChange}
@@ -78,8 +78,9 @@ export function IntegrationsTab({ control, register }: IntegrationsTabProps) {
                         name="library.fanartApiKey"
                         render={({ field }) => (
                             <div className="flex flex-col gap-2">
-                                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">Clave de la API (API Key)</label>
+                                <label htmlFor="fanart-api-key" className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">Clave de la API (API Key)</label>
                                 <input
+                                    id="fanart-api-key"
                                     type="password"
                                     value={field.value || ""}
                                     onChange={field.onChange}
@@ -104,8 +105,9 @@ export function IntegrationsTab({ control, register }: IntegrationsTabProps) {
                         name="library.omdbApiKey"
                         render={({ field }) => (
                             <div className="flex flex-col gap-2">
-                                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">Clave de la API (API Key)</label>
+                                <label htmlFor="omdb-api-key" className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">Clave de la API (API Key)</label>
                                 <input
+                                    id="omdb-api-key"
                                     type="password"
                                     value={field.value || ""}
                                     onChange={field.onChange}
@@ -130,8 +132,9 @@ export function IntegrationsTab({ control, register }: IntegrationsTabProps) {
                         name="library.openSubsApiKey"
                         render={({ field }) => (
                             <div className="flex flex-col gap-2">
-                                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">Clave de la API (API Key)</label>
+                                <label htmlFor="opensubs-api-key" className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">Clave de la API (API Key)</label>
                                 <input
+                                    id="opensubs-api-key"
                                     type="password"
                                     value={field.value || ""}
                                     onChange={field.onChange}
@@ -152,9 +155,10 @@ export function IntegrationsTab({ control, register }: IntegrationsTabProps) {
                         <span className="text-[10px] text-zinc-500 font-mono">Sincronización de progreso</span>
                     </div>
                     <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">Nombre de Cuenta Vinculada</label>
+                        <label htmlFor="anilist-account-input" className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">Nombre de Cuenta Vinculada</label>
                         <div className="flex gap-2">
                             <input
+                                id="anilist-account-input"
                                 type="text"
                                 defaultValue="Martín (Conectado)"
                                 disabled

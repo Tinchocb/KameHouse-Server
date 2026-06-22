@@ -56,26 +56,11 @@ func printExecTime(logger *zerolog.Logger, message string, args ...any) func() {
 	}
 }
 
-// GetEnvOr returns the environment variable value or default
-func GetEnvOr(env, def string) string {
+// getEnvOr returns the environment variable value or default
+func getEnvOr(env, def string) string {
 	if v := os.Getenv(env); v != "" {
 		return v
 	}
 	return def
 }
 
-// closestEven rounds n up to the nearest even number
-func closestEven(n int32) int32 {
-	if n%2 != 0 {
-		return n + 1
-	}
-	return n
-}
-
-// abs32 returns the absolute value of an int32
-func abs32(x int32) int32 {
-	if x < 0 {
-		return -x
-	}
-	return x
-}

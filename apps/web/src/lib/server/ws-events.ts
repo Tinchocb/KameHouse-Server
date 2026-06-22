@@ -48,6 +48,7 @@ export const enum WSEvents {
     SHOW_INDEFINITE_LOADER = "show-indefinite-loader",
     PLAYLIST = "playlist",
     LIBRARY_SCAN = "library.scan",
+    SKIP_SCAN_STATUS = "SKIP_SCAN_STATUS",
 }
 
 export const enum WebviewEvents {
@@ -76,6 +77,13 @@ export interface ScannerMessage {
     duration_seconds?: number
 }
 
+export interface SkipScanStatusPayload {
+    mediaId: number
+    status: "idle" | "initializing" | "fingerprinting" | "matching" | "done" | "error"
+    percent?: number
+    message?: string
+}
+
 export type WebSocketMessage =
     | { type: WSEvents.SCAN_PROGRESS; payload: number }
     | { type: WSEvents.SCAN_PROGRESS_DETAILED; payload: ScanProgressDetailedPayload }
@@ -92,4 +100,5 @@ export type WebSocketMessage =
     | { type: WSEvents.INFO_TOAST; payload: string }
     | { type: WSEvents.WARNING_TOAST; payload: string }
     | { type: WSEvents.REFRESHED_ANIME_COLLECTION; payload: null }
+    | { type: WSEvents.SKIP_SCAN_STATUS; payload: SkipScanStatusPayload }
 

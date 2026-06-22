@@ -65,7 +65,7 @@ export const MovieCard = memo(function MovieCard({
             onClick={handleCardClick}
             onMouseEnter={() => {
                 setIsHovered(true)
-                onHoverCard(entry as any)
+                onHoverCard({ ...entry, era, startedAtTimestamp: entry.listData?.startedAt ? new Date(entry.listData.startedAt).getTime() : 0 })
                 playSound("hover", 0.15)
             }}
             onMouseLeave={() => {

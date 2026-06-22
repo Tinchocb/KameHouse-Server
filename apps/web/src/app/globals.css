@@ -15,8 +15,7 @@
    ║   12. View Transitions                                              ║
    ╚══════════════════════════════════════════════════════════════════════╝ */
 
-/* ── 1. Fonts & Tailwind ───────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Permanent+Marker&family=Architects+Daughter&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=Bebas+Neue&display=swap');
+
 
 @tailwind base;
 @tailwind components;
@@ -28,20 +27,20 @@
 
     :root,
     [data-theme="dark"] {
-        /* ── Surfaces ─────────────────────────── */
-        --background:   225 35% 4%;   /* Deep midnight blue OLED — #0B0F19 */
-        --surface-1:    225 30% 6%;   /* Navy glass — #0a0d16 */
-        --surface-2:    225 25% 10%;  /* Slate glass — #101422 */
-        --overlay:      225 35% 3% / 0.85;
+        /* ── Surfaces (Sleek Obsidian Solid) ── */
+        --background:   240 10% 3.9%;   /* Obsidian deep black — #09090b */
+        --surface-1:    240 6% 9%;      /* Solid surface dark — #151518 */
+        --surface-2:    240 5% 14%;     /* Solid surface medium — #212126 */
+        --overlay:      240 10% 2% / 0.95;
 
         /* ── Borders ──────────────────────────── */
-        --border-subtle: 0 0% 100% / 0.05;
-        --border-strong: 0 0% 100% / 0.12;
+        --border-subtle: 240 5% 100% / 0.08; /* High-visibility subtle border */
+        --border-strong: 240 5% 100% / 0.18; /* High-visibility strong border */
 
         /* ── Text ─────────────────────────────── */
         --text-primary:   0   0%  100%;  /* Pure white */
-        --text-secondary: 215 25%  85%;  /* High-contrast light gray */
-        --text-muted:     215 15%  65%;  /* Readable muted */
+        --text-secondary: 240 5%  90%;   /* High-contrast secondary text */
+        --text-muted:     240 5%  70%;   /* High-contrast muted text */
 
         /* ── Brand & Accents ──────────────────── */
         --brand-orange:       25 100% 55%;  /* Orange Coral */
@@ -125,8 +124,8 @@
         -webkit-tap-highlight-color: transparent;
     }
 
-    /* Subtle film-grain overlay for premium texture */
-    body::before {
+    /* Subtle film-grain overlay commented out for maximum visibility */
+    /* body::before {
         content: "";
         position: fixed;
         inset: 0;
@@ -135,7 +134,21 @@
         background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
         opacity: 0.025;
         mix-blend-mode: overlay;
-    }
+    } */
+
+    /* Global CRT Scanlines Overlay commented out for maximum visibility */
+    /* body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: 49;
+        pointer-events: none;
+        background:
+            linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.25) 50%),
+            linear-gradient(90deg, rgba(255,0,0,0.06), rgba(0,255,0,0.02), rgba(0,0,255,0.06));
+        background-size: 100% 4px, 6px 100%;
+        opacity: 0.018;
+    } */
 
     *:focus-visible {
         @apply outline-none ring-2 ring-brand-orange ring-offset-2 ring-offset-background transition-shadow;
@@ -204,10 +217,7 @@ pre {
     .text-zinc-650   { color: rgba(161, 161, 170, 0.95) !important; }
     .text-glow-white { text-shadow: 0 0 10px rgba(255, 255, 255, 0.2); }
 
-    /* Fonts */
-    .font-marker {
-        font-family: 'Caveat', 'Permanent Marker', 'Architects Daughter', cursive;
-    }
+
 
     /* Transitions */
     .transition-premium-fast   { transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1); }
@@ -227,9 +237,9 @@ pre {
         mask-composite: intersect;
     }
 
-    /* Glassmorphism shorthand */
+    /* High-contrast solid panel shorthand */
     .glass-morphism {
-        @apply bg-zinc-950/40 backdrop-blur-xl border border-white/5 shadow-2xl;
+        @apply bg-[#111115] border border-white/10 shadow-2xl;
     }
 
     /* ── Animations ─────────────────────────────── */
@@ -270,31 +280,46 @@ pre {
     .animate-ken-burns {
         animation: ken-burns 60s ease-out forwards;
     }
+
+    /* Hero banner Ken Burns — faster, slightly stronger zoom */
+    @keyframes hero-ken-burns {
+        from { transform: scale(1.02); }
+        to   { transform: scale(1.08); }
+    }
+
+    .animate-hero-ken-burns {
+        animation: hero-ken-burns 25s linear forwards;
+        will-change: transform;
+    }
+
+    /* DynamicBackdrop organic breathing */
+    @keyframes breathing {
+        0%      { opacity: 1.0;  }
+        22.86%  { opacity: 0.92; }
+        51.43%  { opacity: 1.0;  }
+        77.14%  { opacity: 0.95; }
+        100%    { opacity: 1.0;  }
+    }
+
+    .animate-breathing {
+        animation: breathing 35s ease-in-out infinite;
+        will-change: opacity;
+    }
 }
 
 
 /* ── 6. Component layer ───────────────────────────────────────────── */
 @layer components {
 
-    /* ── Liquid Glass ───────────────────────────────────────────────── */
+    /* ── Solid Premium Obsidian (Replacing Liquid Glass) ─────────────────── */
     .liquid-glass-frosted {
         position: relative;
-        background:
-            linear-gradient(
-                135deg,
-                rgba(255, 255, 255, 0.08) 0%,
-                rgba(255, 255, 255, 0.01) 50%,
-                rgba(255, 255, 255, 0.05) 100%
-            ),
-            rgba(7, 8, 15, 0.65);
-        backdrop-filter: blur(32px) saturate(140%);
-        -webkit-backdrop-filter: blur(32px) saturate(140%);
-        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: hsl(var(--surface-1));
+        border: 1px solid hsl(var(--border-strong));
         box-shadow:
-            0 24px 48px -12px rgba(0, 0, 0, 0.70),
-            inset 0  1px  1px 0 rgba(255, 255, 255, 0.18),
-            inset 0 -1px  2px 0 rgba(255, 255, 255, 0.04);
-        transition: all 400ms cubic-bezier(0.25, 0.8, 0.25, 1);
+            0 16px 36px -8px rgba(0, 0, 0, 0.80),
+            0 8px 16px -6px rgba(0, 0, 0, 0.50);
+        transition: all 300ms cubic-bezier(0.25, 0.8, 0.25, 1);
         overflow: hidden;
     }
 
@@ -303,52 +328,27 @@ pre {
     }
 
     .liquid-glass-frosted-interactive:hover {
-        border-color: rgba(255, 255, 255, 0.20);
-        background:
-            linear-gradient(
-                135deg,
-                rgba(255, 255, 255, 0.10) 0%,
-                rgba(255, 255, 255, 0.02) 50%,
-                rgba(255, 255, 255, 0.06) 100%
-            ),
-            rgba(7, 8, 15, 0.75);
+        border-color: hsl(var(--brand-orange));
+        background: hsl(var(--surface-2));
         box-shadow:
-            0 24px 48px -12px rgba(0, 0, 0, 0.75),
-            inset 0  1px  1px 0 rgba(255, 255, 255, 0.22),
-            inset 0 -1px  2px 0 rgba(255, 255, 255, 0.04);
+            0 20px 40px -8px rgba(0, 0, 0, 0.85),
+            0 10px 20px -6px rgba(0, 0, 0, 0.55);
     }
 
     .liquid-glass-frosted-subtle {
-        background:
-            linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%),
-            rgba(9, 9, 11, 0.55);
-        backdrop-filter: blur(20px) saturate(115%);
-        -webkit-backdrop-filter: blur(20px) saturate(115%);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.12);
+        background: hsl(var(--surface-1));
+        border: 1px solid hsl(var(--border-subtle));
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
 
     .liquid-glass-popup {
-        background:
-            linear-gradient(160deg, rgba(255,255,255,0.11) 0%, rgba(255,255,255,0.05) 30%, transparent 100%),
-            rgba(12, 9, 28, 0.72);                     /* ← más opaco */
-
-        backdrop-filter: blur(48px) saturate(160%) brightness(0.95);  /* ← brightness baja */
-        -webkit-backdrop-filter: blur(48px) saturate(160%) brightness(0.95);
-
+        background: hsl(var(--surface-2));
         border-radius: 22px;
-        border: 1px solid rgba(255,255,255,0.14);
-        border-top-color: rgba(255,255,255,0.36);
-        border-left-color: rgba(255,255,255,0.20);
-        border-bottom-color: rgba(0,0,0,0.35);
-
+        border: 1px solid hsl(var(--border-strong));
         box-shadow:
-            0 1.5px 0 0 rgba(255,255,255,0.16) inset,
-            0 -1px 0 0 rgba(0,0,0,0.4) inset,
-            0 28px 56px -10px rgba(0,0,0,0.75),
-            0 12px 24px -8px rgba(0,0,0,0.55),
-            0 4px 8px -2px rgba(0,0,0,0.4),
-            0 0 0 1px rgba(0,0,0,0.5);                /* ← outline separador */
+            0 32px 64px -16px rgba(0, 0, 0, 0.95),
+            0 16px 32px -8px rgba(0, 0, 0, 0.70),
+            0 4px 8px -2px rgba(0, 0, 0, 0.40);
     }
 
     /* ── Glass panels ───────────────────────────────────────────────── */
@@ -357,11 +357,10 @@ pre {
     }
 
     .glass-panel-strong {
-        @apply liquid-glass-frosted rounded-2xl bg-[#080d1e]/65;
+        @apply rounded-2xl bg-zinc-950 border border-white/10;
         box-shadow:
-            0 12px 40px 0   rgba(0, 0, 0, 0.60),
-            inset 0  1px 1px 0 rgba(255, 255, 255, 0.20),
-            inset 0 -1px 2px 0 rgba(255, 255, 255, 0.08);
+            0 16px 40px 0   rgba(0, 0, 0, 0.80),
+            0 4px 12px 0    rgba(0, 0, 0, 0.50);
     }
 
     /* ── Border styles ──────────────────────────────────────────────── */
@@ -380,6 +379,10 @@ pre {
 
     .card-glow-hover:hover {
         @apply border-brand-orange/20 -translate-y-1 shadow-[0_15px_30px_rgba(255,110,58,0.06)];
+    }
+
+    .group\/card:hover .vhs-spine-glow {
+        box-shadow: 0 -15px 35px var(--tape-color), inset 0 3px 5px rgba(255,255,255,0.12), inset 0 -3px 5px rgba(0,0,0,0.9) !important;
     }
 
     /* ── Button ─────────────────────────────────────────────────────── */

@@ -83,6 +83,11 @@ export const MediaCard = React.memo(function MediaCard({
             .filter((s) => ["EPIC", "CHILL", "EMOTIONAL", "HYPE", "INTENSE", "ÉPICO", "ESENCIAL", "LOCAL", "RELLENO", "ESPECIAL"].includes(s.toUpperCase()))
     }, [subtitle])
 
+    const cleanDesc = React.useMemo(
+        () => description?.replace(/<[^>]*>/g, '') ?? '',
+        [description]
+    )
+
     return (
         <div
             onMouseEnter={handleMouseEnter}
@@ -112,7 +117,7 @@ export const MediaCard = React.memo(function MediaCard({
                           )
                 )}
                 style={{
-                    willChange: "transform, width, height, top, left, opacity",
+                    willChange: showPopup ? "transform, opacity" : "auto",
                 }}
             >
                 {/* Glowing effect inside expanded card */}
@@ -241,7 +246,7 @@ export const MediaCard = React.memo(function MediaCard({
                         {/* Description/Synopsis */}
                         {description && (
                             <p className="line-clamp-3 text-[11px] leading-relaxed text-zinc-400 pt-1 font-medium select-none">
-                                {description.replace(/<[^>]*>/g, '')}
+                                {cleanDesc}
                             </p>
                         )}
                     </div>

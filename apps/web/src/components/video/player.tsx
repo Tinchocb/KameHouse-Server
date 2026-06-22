@@ -1,6 +1,6 @@
 import React, { useEffect, Suspense, lazy, useState } from "react"
 import { createPortal } from "react-dom"
-import { Loader2, AlertTriangle } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { useAppStore } from "@/lib/store"
 
 export type VideoPlayerProps = {
@@ -54,8 +54,10 @@ export function VideoPlayer(props: VideoPlayerProps) {
     const [mounted, setMounted] = useState(false)
 
     useEffect(() => {
-        setMounted(true)
-        setVideoActive(true)
+        Promise.resolve().then(() => {
+            setMounted(true)
+            setVideoActive(true)
+        })
         return () => {
             setVideoActive(false)
         }

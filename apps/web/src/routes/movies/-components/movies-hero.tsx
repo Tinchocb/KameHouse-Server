@@ -21,19 +21,21 @@ export function MoviesHero({
     handleMovieClick,
 }: MoviesHeroProps) {
     const [featuredIndex, setFeaturedIndex] = useState(0)
+    const [prevTopFeatured, setPrevTopFeatured] = useState(topFeatured)
     const [isHeroHovered, setIsHeroHovered] = useState(false)
     const heroRef = useRef<HTMLElement>(null)
     const setBackdropUrl = useIntelligenceStore((s) => s.setBackdropUrl)
+
+    if (topFeatured !== prevTopFeatured) {
+        setPrevTopFeatured(topFeatured)
+        setFeaturedIndex(0)
+    }
 
     useEffect(() => {
         if (isHeroHovered || topFeatured.length <= 1) return
         const id = setInterval(() => setFeaturedIndex((p) => (p + 1) % topFeatured.length), 8000)
         return () => clearInterval(id)
     }, [isHeroHovered, topFeatured])
-
-    useEffect(() => {
-        setFeaturedIndex(0)
-    }, [topFeatured])
 
     const defaultFeatured = topFeatured[featuredIndex] ?? topFeatured[0] ?? null
     const currentMovie = debouncedMovie ?? defaultFeatured

@@ -37,10 +37,10 @@
   };
 
   // ../../node_modules/.pnpm/abslink@1.2.2/node_modules/abslink/src/abslink.js
-  var proxyMarker = /* @__PURE__ */ Symbol("Abslink.proxy");
-  var releaseProxy = /* @__PURE__ */ Symbol("Abslink.releaseProxy");
-  var finalizer = /* @__PURE__ */ Symbol("Abslink.finalizer");
-  var throwMarker = /* @__PURE__ */ Symbol("Abslink.thrown");
+  var proxyMarker = Symbol("Abslink.proxy");
+  var releaseProxy = Symbol("Abslink.releaseProxy");
+  var finalizer = Symbol("Abslink.finalizer");
+  var throwMarker = Symbol("Abslink.thrown");
   var isObject = (val) => typeof val === "object" && val !== null || typeof val === "function";
   var proxyTransferHandler = {
     canHandle: (val) => isObject(val) && proxyMarker in val,
@@ -3290,7 +3290,7 @@ void main() {
   };
 
   // ../../node_modules/.pnpm/jassub@2.5.1/node_modules/jassub/dist/worker/worker.js
-  var constructor = /* @__PURE__ */ Symbol.for("constructor");
+  var constructor = Symbol.for("constructor");
   var ASSRenderer = class {
     _wasm;
     _subtitleColorSpace;

@@ -2,13 +2,17 @@ package cassette
 
 import (
 	"bufio"
+	"fmt"
+	"os"
 	"path/filepath"
-	"kamehouse/internal/mediastream/videofile"
-	"kamehouse/internal/util"
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
+	"time"
+
+	"kamehouse/internal/matroska"
+	"kamehouse/internal/mediastream/videofile"
+	"kamehouse/internal/util"
 
 	"github.com/rs/zerolog"
 )
@@ -18,6 +22,7 @@ type KeyframeIndex struct {
 	Sha       string    `json:"sha"`
 	Keyframes []float64 `json:"keyframes"`
 	IsDone    bool      `json:"isDone"`
+	Err       error     `json:"-"`
 
 	mu        sync.RWMutex
 	ready     sync.WaitGroup
@@ -87,11 +92,11 @@ func getOrExtractKeyframes(
 	hash string,
 	settings *Settings,
 	logger *zerolog.Logger,
-) *KeyframeIndex {
+) (*KeyframeIndex, error) {
 	if v, ok := kfCache.Load(hash); ok {
 		ki := v.(*KeyframeIndex)
 		ki.ready.Wait()
-		return ki
+		return ki, ki.Err
 	}
 
 	kfCacheMu.Lock()
@@ -99,7 +104,7 @@ func getOrExtractKeyframes(
 		kfCacheMu.Unlock()
 		ki := v.(*KeyframeIndex)
 		ki.ready.Wait()
-		return ki
+		return ki, ki.Err
 	}
 
 	ki := &KeyframeIndex{Sha: hash}
@@ -107,24 +112,37 @@ func getOrExtractKeyframes(
 	kfCache.Store(hash, ki)
 	kfCacheMu.Unlock()
 
+	var doneOnce sync.Once
+	unblock := func() {
+		doneOnce.Do(ki.ready.Done)
+	}
+
+	var err error
 	go func() {
-		diskPath := filepath.Join(settings.StreamDir, hash, "keyframes.json")
+		defer func() {
+			ki.Err = err
+			unblock()
+			if err != nil {
+				kfCache.Delete(hash)
+			}
+		}()
+
+		diskPath := filepath.Join(settings.KeyframeCacheDir, hash+".json")
 
 		// Try disk cache first
-		if err := getSavedInfo(diskPath, ki); err == nil {
+		if err = getSavedInfo(diskPath, ki); err == nil {
 			logger.Trace().Msg("cassette: keyframes disk cache HIT")
-			ki.ready.Done()
 			return
 		}
 
 		// Extract from the file
-		if err := extractKeyframes(settings.FfprobePath, path, ki, hash, logger); err == nil {
-			saveInfo(diskPath, ki)
+		if err = extractKeyframes(settings.FfprobePath, path, ki, hash, unblock, logger); err == nil {
+			_ = saveInfo(diskPath, ki)
 		}
 	}()
 
 	ki.ready.Wait()
-	return ki
+	return ki, ki.Err
 }
 // extractKeyframes probes the file for keyframes
 func extractKeyframes(
@@ -132,8 +150,19 @@ func extractKeyframes(
 	path string,
 	ki *KeyframeIndex,
 	hash string,
+	unblock func(),
 	logger *zerolog.Logger,
 ) error {
+	// Try parsing via pure Go Matroska parser for MKV/WebM files first (much faster than ffprobe)
+	ext := strings.ToLower(filepath.Ext(path))
+	if ext == ".mkv" || ext == ".webm" {
+		if err := extractKeyframesFromMatroska(path, ki, unblock, logger); err == nil {
+			return nil
+		}
+		// If Matroska parsing failed or has no cues, fallback to ffprobe
+		logger.Debug().Msgf("cassette: Go matroska parser failed for %s, falling back to ffprobe", path)
+	}
+
 	defer printExecTime(logger, "ffprobe keyframe analysis for %s", path)()
 
 	probeBin := ffprobePath
@@ -141,13 +170,12 @@ func extractKeyframes(
 		probeBin = "ffprobe"
 	}
 
-	// Optimize keyframe extraction using -skip_frame nokey which skips decoding non-keyframes
+	// Optimize keyframe extraction by reading packet headers (avoids decoding the video)
 	cmd := util.NewCmd(
 		probeBin,
 		"-loglevel", "error",
-		"-skip_frame", "nokey",
 		"-select_streams", "v:0",
-		"-show_entries", "frame=pkt_pts_time",
+		"-show_entries", "packet=pts_time,flags",
 		"-of", "csv=print_section=0",
 		path,
 	)
@@ -164,7 +192,6 @@ func extractKeyframes(
 	buf := make([]float64, 0, 1000)
 	batchSize := 100
 	flushed := int32(0)
-	var readyDone atomic.Bool
 
 	flush := func(final bool) {
 		if len(buf) == 0 && !final {
@@ -172,10 +199,7 @@ func extractKeyframes(
 		}
 		ki.append(buf)
 		flushed += int32(len(buf))
-		if !readyDone.Load() {
-			readyDone.Store(true)
-			ki.ready.Done()
-		}
+		unblock()
 		buf = buf[:0]
 		// After the first 500 keyframes increase batch size to reduce
 		// listener overhead on long files
@@ -211,6 +235,11 @@ func extractKeyframes(
 		}
 	}
 
+	if err := scanner.Err(); err != nil {
+		logger.Error().Err(err).Msg("cassette: scanner error during keyframe extraction")
+		return err
+	}
+
 	// Handle files with <=1 keyframe
 	if flushed == 0 && len(buf) < 2 {
 		dummy, err := makeDummyKeyframes(ffprobePath, path, hash)
@@ -237,4 +266,40 @@ func makeDummyKeyframes(ffprobePath, path, hash string) ([]float64, error) {
 		out[i] = float64(i) * interval
 	}
 	return out, nil
+}
+
+// extractKeyframesFromMatroska parses MKV/WebM cues directly (takes only milliseconds)
+func extractKeyframesFromMatroska(path string, ki *KeyframeIndex, unblock func(), logger *zerolog.Logger) error {
+	start := time.Now()
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	demuxer, err := matroska.NewDemuxer(file)
+	if err != nil {
+		return err
+	}
+	defer demuxer.Close()
+
+	cues := demuxer.GetCues()
+	if len(cues) == 0 {
+		return fmt.Errorf("no cues found in matroska file")
+	}
+
+	buf := make([]float64, len(cues))
+	for i, cue := range cues {
+		buf[i] = float64(cue.Time) / 1e9
+	}
+
+	ki.append(buf)
+	unblock()
+	ki.IsDone = true
+
+	logger.Info().
+		Int("keyframes", len(cues)).
+		Dur("elapsed", time.Since(start)).
+		Msg("cassette: keyframes extracted successfully using Go matroska parser")
+	return nil
 }

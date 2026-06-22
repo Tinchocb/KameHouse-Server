@@ -28,9 +28,9 @@ function getAbsoluteLanUrl(playableUrl: string, serverIPs?: string[], serverPort
     let lanIp = "127.0.0.1"
 
     if (serverIPs && serverIPs.length > 0) {
-        const preferredIp = serverIPs.find(ip => 
-            ip.startsWith("192.168.") || 
-            ip.startsWith("10.") || 
+        const preferredIp = serverIPs.find(ip =>
+            ip.startsWith("192.168.") ||
+            ip.startsWith("10.") ||
             ip.startsWith("172.")
         )
         lanIp = preferredIp || serverIPs[0]
@@ -58,7 +58,7 @@ function getAbsoluteLanUrl(playableUrl: string, serverIPs?: string[], serverPort
             url.port = String(port)
             return url.toString()
         }
-    } catch (e) {
+    } catch {
         if (playableUrl.includes("localhost") || playableUrl.includes("127.0.0.1")) {
             return playableUrl
                 .replace("localhost", lanIp)
@@ -86,6 +86,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         title,
         nextStreamUrl,
         nextStreamType,
+        streamType,
     } = props
 
     const { data: statusQuery } = useGetStatus()
@@ -132,6 +133,11 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const progressBarRef = useRef<HTMLDivElement>(null)
     const progressInputRef = useRef<HTMLInputElement>(null)
     const timeTextRef = useRef<HTMLSpanElement>(null)
+
+    const isSeekingRef = useRef(false)
+    const lastSeekTimeRef = useRef(0)
+    const pendingSeekTimeRef = useRef<number | null>(null)
+    const seekTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
     const [isPlaying, setIsPlaying] = useState(false)
     const [duration, setDuration] = useState(0)
@@ -235,6 +241,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const wsUrl = useMemo(() => getApiWebSocketUrl(), [])
     const { sendJsonMessage } = useWebSocket(wsUrl)
     const lastSentHeartbeatRef = useRef(0)
+    const lastStatsUpdateRef = useRef(0)
 
     const sendHeartbeat = useCallback((curr: number, dur: number) => {
         if (!mediaId || !episodeNumber) return
@@ -310,6 +317,8 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         clientId,
         nextStreamUrl,
         nextStreamType,
+        streamType,
+        mediaId,
     })
 
     const { mutate: shutdownTranscode } = useMediastreamShutdownTranscodeStream()
@@ -416,12 +425,37 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
 
     useEffect(() => {
         if (audioTracks.length > 0) {
-            const preferred = audioTracks.find(t => t.language === preferredAudioLang)
+            let preferred: AudioTrack | undefined
+
+            if (mediaFormat === "MOVIE") {
+                // Priority: 'spa-lat' or 'es-la' code -> title contains 'latino' or 'latin' -> generic 'spa'/'es'
+                preferred = audioTracks.find(t => {
+                    const lang = t.language?.toLowerCase() || ""
+                    return lang === "spa-lat" || lang === "es-la"
+                })
+                if (!preferred) {
+                    preferred = audioTracks.find(t => {
+                        const title = t.title?.toLowerCase() || ""
+                        return title.includes("latino") || title.includes("latin")
+                    })
+                }
+                if (!preferred) {
+                    preferred = audioTracks.find(t => {
+                        const lang = t.language?.toLowerCase() || ""
+                        return lang === "spa" || lang === "es"
+                    })
+                }
+            }
+
+            if (!preferred) {
+                preferred = audioTracks.find(t => t.language === preferredAudioLang)
+            }
+
             if (preferred && activeAudioIndex !== preferred.index) {
                 setTimeout(() => onSelectAudio(preferred), 0)
             }
         }
-    }, [audioTracks, preferredAudioLang, activeAudioIndex, onSelectAudio])
+    }, [audioTracks, preferredAudioLang, activeAudioIndex, onSelectAudio, mediaFormat])
 
     useEffect(() => {
         if (subtitleTracks.length > 0) {
@@ -470,20 +504,86 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         }
     }, [status])
 
-    const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const performSeek = useCallback((time: number) => {
         const video = videoRef.current
-        if (!video) return
+        if (!video || !Number.isFinite(time)) return
+
+        checkManualSkipOverrides(time)
+
+        // Visual update of elements instantly
+        if (progressBarRef.current) {
+            const percent = video.duration > 0 ? (time / video.duration) * 100 : 0
+            progressBarRef.current.style.width = `${percent}%`
+        }
+        if (timeTextRef.current) {
+            timeTextRef.current.innerText = formatTime(time)
+        }
+
+        if (isSeekingRef.current) {
+            // Do not perform actual video seek while dragging to avoid flooding requests
+            return
+        }
+
+        const now = Date.now()
+        const SEEK_THROTTLE_MS = 180
+
+        if (now - lastSeekTimeRef.current >= SEEK_THROTTLE_MS) {
+            video.currentTime = time
+            lastSeekTimeRef.current = now
+            pendingSeekTimeRef.current = null
+        } else {
+            pendingSeekTimeRef.current = time
+            if (seekTimeoutRef.current) clearTimeout(seekTimeoutRef.current)
+            seekTimeoutRef.current = setTimeout(() => {
+                const latestTime = pendingSeekTimeRef.current
+                if (latestTime !== null && video) {
+                    video.currentTime = latestTime
+                    lastSeekTimeRef.current = Date.now()
+                    pendingSeekTimeRef.current = null
+                }
+            }, SEEK_THROTTLE_MS - (now - lastSeekTimeRef.current))
+        }
+    }, [checkManualSkipOverrides, formatTime])
+
+    const handleSeekStart = useCallback(() => {
+        isSeekingRef.current = true
+    }, [])
+
+    const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = parseFloat(e.target.value)
-
-        checkManualSkipOverrides(val)
-
-        video.currentTime = val
+        performSeek(val)
         triggerControlsVisibility()
     }
 
-    const handleResume = () => {
+    const handleSeekEnd = useCallback((e: React.MouseEvent<HTMLInputElement> | React.TouchEvent<HTMLInputElement> | React.KeyboardEvent<HTMLInputElement>) => {
         const video = videoRef.current
         if (!video) return
+
+        isSeekingRef.current = false
+        if (seekTimeoutRef.current) {
+            clearTimeout(seekTimeoutRef.current)
+            seekTimeoutRef.current = null
+        }
+
+        const val = parseFloat(e.currentTarget.value)
+        if (!Number.isFinite(val)) return
+        checkManualSkipOverrides(val)
+        video.currentTime = val
+        lastSeekTimeRef.current = Date.now()
+        pendingSeekTimeRef.current = null
+
+        triggerControlsVisibility()
+    }, [checkManualSkipOverrides, triggerControlsVisibility])
+
+    useEffect(() => {
+        return () => {
+            if (seekTimeoutRef.current) clearTimeout(seekTimeoutRef.current)
+        }
+    }, [])
+
+    const handleResume = () => {
+        const video = videoRef.current
+        if (!video || !Number.isFinite(resumeTime)) return
         video.currentTime = resumeTime
         setShowResume(false)
         video.play()
@@ -494,11 +594,9 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         if (!video) return
         const target = Math.max(0, Math.min(video.duration, video.currentTime + amount))
 
-        checkManualSkipOverrides(target)
-
-        video.currentTime = target
+        performSeek(target)
         triggerControlsVisibility()
-    }, [checkManualSkipOverrides, triggerControlsVisibility])
+    }, [performSeek, triggerControlsVisibility])
 
     const handleVolume = (e: React.ChangeEvent<HTMLInputElement>) => {
         const video = videoRef.current
@@ -626,10 +724,11 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const handleTimeUpdate = useCallback(() => {
         const video = videoRef.current
         if (!video) return
-        
+        if (isSeekingRef.current) return
+
         const curr = video.currentTime
         const total = video.duration
-        
+
         if (progressBarRef.current) {
             const percent = total > 0 ? (curr / total) * 100 : 0
             progressBarRef.current.style.width = `${percent}%`
@@ -660,7 +759,8 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         processTimeUpdates(curr, total)
 
         // Stats for Nerds calculation
-        if (showStats && now - lastSentHeartbeatRef.current >= 1000) {
+        if (showStats && now - lastStatsUpdateRef.current >= 1000) {
+            lastStatsUpdateRef.current = now
             setStatsData({
                 currentTime: curr.toFixed(2),
                 duration: total.toFixed(2),
@@ -671,7 +771,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
                 source: playableUrl.substring(0, 50) + "...",
             })
         }
-    }, [showStats, lastSentHeartbeatRef, processTimeUpdates, onProgress, onTrackingProgress, onSyncProgress, playableUrl, sendHeartbeat, formatTime])
+    }, [showStats, lastStatsUpdateRef, processTimeUpdates, onProgress, onTrackingProgress, onSyncProgress, playableUrl, sendHeartbeat, formatTime])
 
     // Apply playback rate instantly
     useEffect(() => {
@@ -734,7 +834,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             serverPort,
         },
         actions: {
-            setIsPlaying, setDuration, setIsBuffering, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, skipTime, skipOpening, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, toggleFullscreen, handleSkipIntro, handleTimeUpdate,
+            setIsPlaying, setDuration, setIsBuffering, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, handleSeekStart, handleSeekEnd, skipTime, skipOpening, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, toggleFullscreen, handleSkipIntro, handleTimeUpdate,
             takeScreenshot, togglePip, changePlaybackRate, setShowStats,
             setAutoSkipIntro: handleSetAutoSkipIntro,
             setAutoSkipOutro: handleSetAutoSkipOutro,

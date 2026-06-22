@@ -369,3 +369,12 @@ type MetadataCache struct {
 	ExpiresAt time.Time `gorm:"column:expires_at" json:"expiresAt"`
 }
 
+type EpisodeSkipTime struct {
+	BaseModel
+	MediaID       int     `gorm:"column:media_id;uniqueIndex:idx_media_skip" json:"mediaId"`
+	EpisodeNumber int     `gorm:"column:episode_number;uniqueIndex:idx_media_skip" json:"episodeNumber"`
+	OpStart       float64 `gorm:"column:op_start" json:"opStart"`
+	OpEnd         float64 `gorm:"column:op_end" json:"opEnd"`
+	EdOffset      float64 `gorm:"column:ed_offset" json:"edOffset"`
+}
+

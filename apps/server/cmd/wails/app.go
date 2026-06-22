@@ -1,0 +1,25 @@
+package main
+
+import (
+	"context"
+)
+
+// App struct
+type App struct {
+	ctx context.Context
+}
+
+// NewApp creates a new App struct instance
+func NewApp() *App {
+	return &App{}
+}
+
+// startup is called when the app starts. The context is saved
+// so we can call the runtime methods
+func (a *App) startup(ctx context.Context) {
+	a.ctx = ctx
+}
+
+// shutdown is called when the app closes
+func (a *App) shutdown(ctx context.Context) {
+}

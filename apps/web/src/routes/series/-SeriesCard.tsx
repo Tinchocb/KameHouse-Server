@@ -2,7 +2,6 @@ import { memo } from 'react';
 import { Play } from 'lucide-react';
 import { DeferredImage } from '@/components/shared/deferred-image';
 import { cn } from '@/components/ui/core/styling';
-import { useSound } from '@/hooks/use-sound';
 
 export interface SeriesItem {
     id: number
@@ -25,13 +24,14 @@ export const SeriesCard = memo(function SeriesCard({
     isSelected,
     onNavigate,
     onSelect,
+    onSound,
 }: {
     item: SeriesItem
     isSelected: boolean
     onNavigate: (id: string) => void
     onSelect: (id: number) => void
+    onSound?: () => void
 }) {
-    const { playSound } = useSound();
     return (
         <div
             onClick={() => {
@@ -39,7 +39,7 @@ export const SeriesCard = memo(function SeriesCard({
                     onNavigate(item?.id?.toString() || "");
                 } else {
                     onSelect(item.id);
-                    playSound("series", 0.4);
+                    onSound?.();
                 }
             }}
             onDoubleClick={() => {
@@ -58,10 +58,10 @@ export const SeriesCard = memo(function SeriesCard({
                     src={item.img || item.poster}
                     alt={item.title}
                     className={cn(
-                        "absolute inset-0 w-full h-full object-cover transition-all duration-[800ms] cubic-bezier(0.2, 1, 0.2, 1) transform-gpu",
+                        "absolute inset-0 w-full h-full object-cover transition-all [transition-duration:800ms] cubic-bezier(0.2, 1, 0.2, 1) transform-gpu",
                         isSelected
-                            ? 'scale-[1.06] brightness-100 blur-0'
-                            : 'scale-100 brightness-[0.85] blur-[8px] group-hover/card:scale-[1.03] group-hover/card:brightness-[0.95] group-hover/card:blur-[3px]'
+                            ? 'scale-[1.06] brightness-100 grayscale-0'
+                            : 'scale-100 brightness-[0.7] grayscale-[45%] group-hover/card:scale-[1.03] group-hover/card:brightness-[0.85] group-hover/card:grayscale-0'
                     )}
                 />
 
@@ -82,13 +82,13 @@ export const SeriesCard = memo(function SeriesCard({
                     )}
                 >
                     <div className={cn(
-                        "glass-panel-strong border border-white/10 p-5 md:p-6 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] bg-slate-950/75 max-w-lg transition-all duration-400 ease-[cubic-bezier(0.34,1.56,0.64,1)] transform-gpu delay-75",
+                        "glass-panel-strong border border-white/10 p-5 md:p-6 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] bg-slate-950/75 max-w-lg transition-all duration-400 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] transform-gpu delay-75",
                         isSelected ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-8 scale-95"
                     )}>
                         {/* Category Tag */}
                         <div className={cn(
                             "flex items-center gap-3 mb-3 select-none transition-all duration-400 ease-out transform-gpu",
-                            isSelected ? "opacity-100 translate-y-0 delay-[120ms]" : "opacity-0 translate-y-4 delay-0"
+                            isSelected ? "opacity-100 translate-y-0 [transition-delay:120ms]" : "opacity-0 translate-y-4 delay-0"
                         )}>
                             <span className="px-2 py-0.5 bg-brand-orange/20 text-brand-orange border border-brand-orange/30 rounded text-[9px] font-black tracking-widest uppercase shadow-[0_0_15px_rgba(255,110,58,0.15)]">
                                 Serie
@@ -98,7 +98,7 @@ export const SeriesCard = memo(function SeriesCard({
                         {/* Title */}
                         <h3 className={cn(
                             "text-xl md:text-2xl font-black text-white mb-3 leading-tight tracking-tight drop-shadow-md line-clamp-2 transition-all duration-400 ease-out transform-gpu",
-                            isSelected ? "opacity-100 translate-y-0 delay-[160ms]" : "opacity-0 translate-y-4 delay-0"
+                            isSelected ? "opacity-100 translate-y-0 [transition-delay:160ms]" : "opacity-0 translate-y-4 delay-0"
                         )}>
                             {item.title}
                         </h3>
@@ -106,7 +106,7 @@ export const SeriesCard = memo(function SeriesCard({
                         {/* Description */}
                         <p className={cn(
                             "text-white/60 text-xs leading-relaxed mb-4 font-medium line-clamp-3 transition-all duration-400 ease-out transform-gpu",
-                            isSelected ? "opacity-100 translate-y-0 delay-[200ms]" : "opacity-0 translate-y-4 delay-0"
+                            isSelected ? "opacity-100 translate-y-0 [transition-delay:200ms]" : "opacity-0 translate-y-4 delay-0"
                         )}>
                             {item.desc}
                         </p>
@@ -114,7 +114,7 @@ export const SeriesCard = memo(function SeriesCard({
                         {/* Progress Bar */}
                         <div className={cn(
                             "flex flex-col mb-4 w-full transition-all duration-400 ease-out transform-gpu",
-                            isSelected ? "opacity-100 translate-y-0 delay-[240ms]" : "opacity-0 translate-y-4 delay-0"
+                            isSelected ? "opacity-100 translate-y-0 [transition-delay:240ms]" : "opacity-0 translate-y-4 delay-0"
                         )}>
                             <div className="flex justify-between items-end mb-1.5">
                                 <span className="text-[9px] font-black tracking-[0.2em] uppercase text-white/40">
@@ -133,7 +133,7 @@ export const SeriesCard = memo(function SeriesCard({
                         {/* Play Button */}
                         <div className={cn(
                             "flex gap-4 transition-all duration-400 ease-out transform-gpu",
-                            isSelected ? "opacity-100 translate-y-0 delay-[280ms]" : "opacity-0 translate-y-4 delay-0"
+                            isSelected ? "opacity-100 translate-y-0 [transition-delay:280ms]" : "opacity-0 translate-y-4 delay-0"
                         )}>
                             <button
                                 onClick={(e) => {
@@ -179,7 +179,7 @@ export const SeriesCard = memo(function SeriesCard({
                         {/* Carrete Izquierdo Animado */}
                         <div className="relative w-14 h-14 rounded-full bg-black/90 border border-zinc-800 shadow-[inset_0_4px_8px_rgba(0,0,0,0.8)] flex items-center justify-center shrink-0">
                             <div
-                                className="w-full h-full animate-spin-slow flex items-center justify-center"
+                                className={cn("w-full h-full flex items-center justify-center", isSelected && "animate-spin-slow")}
                                 style={{ animationDuration: isSelected ? '4s' : '15s' }}
                             >
                                 <svg className="w-12 h-12 text-zinc-700/60" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -207,7 +207,7 @@ export const SeriesCard = memo(function SeriesCard({
                         {/* Carrete Derecho Animado */}
                         <div className="relative w-14 h-14 rounded-full bg-black/90 border border-zinc-800 shadow-[inset_0_4px_8px_rgba(0,0,0,0.8)] flex items-center justify-center shrink-0">
                             <div
-                                className="w-full h-full animate-spin-slow flex items-center justify-center"
+                                className={cn("w-full h-full flex items-center justify-center", isSelected && "animate-spin-slow")}
                                 style={{ animationDuration: isSelected ? '4s' : '15s' }}
                             >
                                 <svg className="w-12 h-12 text-zinc-700/60" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">

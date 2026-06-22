@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react"
+import React, { useMemo, useState } from "react"
 import { useRequestMediastreamMediaContainer } from "@/api/hooks/mediastream.hooks"
 import { usePlayerCore } from "./player-core"
 import { PlayerUI } from "./player-ui"
@@ -26,7 +26,7 @@ export interface OrchestratorProps extends VideoPlayerProps {
 export function VideoPlayerOrchestrator(props: OrchestratorProps) {
     const [streamType, setStreamType] = useState<string>(props.streamType || "direct")
     const [clientId] = useState(() => Math.random().toString(36).substring(2, 11))
-    
+
     const [prevStreamTypeProp, setPrevStreamTypeProp] = useState(props.streamType)
     if (props.streamType !== prevStreamTypeProp) {
         setPrevStreamTypeProp(props.streamType)
@@ -35,7 +35,7 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
 
     const isLocal = !props.isExternalStream && Boolean(props.streamUrl) && streamType !== "online"
 
-    const { data, isLoading, error } = useRequestMediastreamMediaContainer({
+    const { data } = useRequestMediastreamMediaContainer({
         path: props.streamUrl,
         streamType: streamType as Mediastream_StreamType,
         clientID: clientId,
@@ -66,7 +66,7 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
                 forced: s.isForced,
                 url: `/api/v1/mediastream/subtitles?path=${encodeURIComponent(props.streamUrl)}&trackIndex=${s.index ?? i}&clientId=${clientId}`
             })) || [],
-            chapters: data.mediaInfo.chapters?.map((c: any) => ({
+            chapters: data.mediaInfo.chapters?.map((c) => ({
                 startTime: c.startTime || 0,
                 endTime: c.endTime || 0,
                 name: c.name || "",
@@ -75,8 +75,11 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
         }
     }, [data, props.streamUrl, clientId])
 
+    const activeStreamType = (data?.streamType || streamType) as "local" | "online" | "direct" | "transcode" | "optimized"
+
     const core = usePlayerCore({
         ...props,
+        streamType: activeStreamType,
         playableUrl,
         backendTracks,
         clientId,
@@ -115,7 +118,7 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
             onClose={props.onClose}
             onNextEpisode={props.onNextEpisode}
             playableUrl={playableUrl}
-            streamType={streamType as "local" | "online" | "direct" | "transcode" | "optimized"}
+            streamType={activeStreamType as "local" | "online" | "direct" | "transcode" | "optimized"}
             episodeSources={episodeSources}
             onSourceSwitch={handleSourceSwitch}
             core={core}

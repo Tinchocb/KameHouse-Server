@@ -77,7 +77,7 @@ func SyncLocalFilesRelational(d *Database, files []*dto.LocalFile) error {
 		paths[i] = f.Path
 	}
 
-	return d.gormdb.Transaction(func(tx *gorm.DB) error {
+	err = d.gormdb.Transaction(func(tx *gorm.DB) error {
 		// If the library is small, we can use a simple NOT IN clause
 		if len(paths) < 950 {
 			return tx.Where("path NOT IN ?", paths).Delete(&models.LocalFile{}).Error

@@ -38,7 +38,7 @@ var logBufferMutex = &sync.Mutex{}
 
 func NewLogger() *zerolog.Logger {
 
-	timeFormat := fmt.Sprintf("%s", time.DateTime)
+	timeFormat := time.DateTime
 	fieldsOrder := []string{"method", "status", "error", "uri", "latency_human"}
 	fieldsExclude := []string{"host", "latency", "referer", "remote_ip", "user_agent", "bytes_in", "bytes_out", "file"}
 

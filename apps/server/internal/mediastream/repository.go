@@ -2,6 +2,7 @@ package mediastream
 
 import (
 	"errors"
+	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/events"
 	"kamehouse/internal/mediastream/cassette"
@@ -27,12 +28,15 @@ type (
 		reqMu              sync.Mutex
 		cacheDir           string // where attachments are stored
 		transcodeDir       string // where stream segments are stored
+		database           *db.Database
+		skipDetector       *SkipDetector
 	}
 
 	NewRepositoryOptions struct {
 		Logger         *zerolog.Logger
 		WSEventManager events.WSEventManagerInterface
 		FileCacher     *filecache.Cacher
+		Database       *db.Database
 	}
 )
 
@@ -44,6 +48,7 @@ func NewRepository(opts *NewRepositoryOptions) *Repository {
 		wsEventManager:     opts.WSEventManager,
 		fileCacher:         opts.FileCacher,
 		mediaInfoExtractor: videofile.NewMediaInfoExtractor(opts.FileCacher, opts.Logger),
+		database:           opts.Database,
 	}
 	ret.playbackManager = NewPlaybackManager(ret)
 
@@ -83,12 +88,24 @@ func (r *Repository) InitializeModules(settings *models.MediastreamSettings, cac
 	r.cacheDir = cacheDir
 	r.transcodeDir = transcodeDir
 
+	r.skipDetector = NewSkipDetector(
+		r.database,
+		r.logger,
+		r.wsEventManager,
+		cacheDir,
+		settings.FfmpegPath,
+		settings.FfprobePath,
+	)
 
 	// Initialize the transcoder
 	if ok := r.initializeTranscoder(r.settings); ok {
 	}
 
 	r.logger.Info().Msg("mediastream: Module initialized")
+}
+
+func (r *Repository) GetSkipDetector() *SkipDetector {
+	return r.skipDetector
 }
 
 // CacheWasCleared should be called when the cache directory is manually cleared.

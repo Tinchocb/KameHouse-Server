@@ -13,7 +13,10 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
     const setScannerState = useAppStore(state => state.setScannerState)
     const activeStageIdx = useAppStore(state => state.activeStageIdx)
     const activeStageIdxRef = useRef(activeStageIdx)
-    activeStageIdxRef.current = activeStageIdx
+    
+    useEffect(() => {
+        activeStageIdxRef.current = activeStageIdx
+    }, [activeStageIdx])
 
     // Batching queues for throttling updates to at most once per 500ms
     const eventQueue = useRef<ScanEvent[]>([])
@@ -101,7 +104,7 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
                 const evt: ScanEvent = {
                     ...data,
                     timestamp: Date.now(),
-                    id: Math.random().toString(36).substring(2, 9) + Date.now()
+                    id: crypto.randomUUID()
                 }
                 
                 // Add to batch queue
@@ -175,7 +178,7 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
                     status: "PROCESSING",
                     file: payload.message || "",
                     timestamp: Date.now(),
-                    id: `legacy-${Math.random().toString(36).substring(2, 9)}`
+                    id: `legacy-${crypto.randomUUID()}`
                 }
                 eventQueue.current.unshift(evt)
                 stateUpdateRef.current = {
@@ -210,7 +213,7 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
                     status: statusStr.toLowerCase().includes("completed") || statusStr.toLowerCase().includes("finished") ? "FINISH" : "PROCESSING",
                     file: statusStr,
                     timestamp: Date.now(),
-                    id: `status-${Math.random().toString(36).substring(2, 9)}`
+                    id: `status-${crypto.randomUUID()}`
                 }
                 eventQueue.current.unshift(evt)
  

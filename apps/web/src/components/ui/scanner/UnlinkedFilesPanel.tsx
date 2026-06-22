@@ -2,7 +2,7 @@ import React, { useState } from "react"
 import { toast } from "sonner"
 import { motion, AnimatePresence } from "framer-motion"
 import {
-    LucideLink, LucideSearch, LucideAlertTriangle,
+    LucideLink, LucideSearch,
     LucideCheck, LucideChevronDown, LucideChevronUp,
     LucideLoader2, LucideFileVideo,
 } from "lucide-react"
@@ -144,15 +144,15 @@ const FileCard = React.forwardRef<HTMLDivElement, { file: GhostFile }>(function 
                                     )}
                                 </div>
                                 <div className="flex gap-2">
-                                    {[
+                                    {([
                                         { id: "multi", label: "TODO" },
                                         { id: "tv", label: "SERIES" },
                                         { id: "movie", label: "PELÍCULAS" }
-                                    ].map((type) => (
+                                    ] as const).map((type) => (
                                         <button
                                             key={type.id}
                                             type="button"
-                                            onClick={() => setSearchType(type.id as any)}
+                                            onClick={() => setSearchType(type.id)}
                                             className={`px-4 py-2 text-[10px] font-black tracking-[0.1em] transition-all border rounded-xl ${
                                                 searchType === type.id 
                                                 ? "bg-white text-black border-white" 

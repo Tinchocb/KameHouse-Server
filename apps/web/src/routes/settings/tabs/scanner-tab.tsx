@@ -1,16 +1,15 @@
 import React from "react"
 import { TabsContent } from "@/components/ui/tabs/tabs"
 import { ScannerDashboard } from "@/components/ui/scanner/ScannerDashboard"
-import { Section, Card, OsSelect, OsToggle } from "../components"
-import { type Control, Controller, type UseFormRegister } from "react-hook-form"
+import { Section, OsToggle } from "../components"
+import { type Control, Controller } from "react-hook-form"
 import { type SettingsFormValues } from "../index"
 
 interface ScannerTabProps {
     control: Control<SettingsFormValues>
-    register: UseFormRegister<SettingsFormValues>
 }
 
-export function ScannerTab({ control, register }: ScannerTabProps) {
+export function ScannerTab({ control }: ScannerTabProps) {
     return (
         <TabsContent value="scanner" className="m-0 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 outline-none">
             {/* Header */}
@@ -60,12 +59,13 @@ export function ScannerTab({ control, register }: ScannerTabProps) {
 
                     {/* Scan Frequency */}
                     <div className="flex flex-col gap-2">
-                        <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Frecuencia del Escáner en segundo plano</label>
+                        <label htmlFor="scan-frequency-select" className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Frecuencia del Escáner en segundo plano</label>
                         <Controller
                             control={control}
                             name="library.scannerProvider"
                             render={({ field }) => (
                                 <select
+                                    id="scan-frequency-select"
                                     value={field.value || "manual"}
                                     onChange={field.onChange}
                                     className="w-full bg-black/40 ring-1 ring-white/10 rounded-xl px-4 py-2.5 text-xs text-zinc-350 focus:outline-none focus:ring-[#ff6e3a]/40 focus:border-transparent transition-all cursor-pointer [&>option]:bg-zinc-950 [&>option]:text-white mt-1.5"
@@ -84,12 +84,13 @@ export function ScannerTab({ control, register }: ScannerTabProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Matching Algorithm */}
                     <div className="flex flex-col gap-2">
-                        <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Algoritmo de Emparejamiento</label>
+                        <label htmlFor="matching-algorithm-select" className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Algoritmo de Emparejamiento</label>
                         <Controller
                             control={control}
                             name="library.scannerMatchingAlgorithm"
                             render={({ field }) => (
                                 <select
+                                    id="matching-algorithm-select"
                                     value={field.value || "dice"}
                                     onChange={field.onChange}
                                     className="w-full bg-black/40 ring-1 ring-white/10 rounded-xl px-4 py-2.5 text-xs text-zinc-350 focus:outline-none focus:ring-[#ff6e3a]/40 focus:border-transparent transition-all cursor-pointer [&>option]:bg-zinc-950 [&>option]:text-white mt-1.5"

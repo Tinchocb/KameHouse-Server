@@ -2,10 +2,10 @@
 
 import { useAppStore } from "@/lib/store"
 import { Vaul, VaulContent } from "@/components/vaul"
-import { Link } from "@tanstack/react-router"
-import { motion, AnimatePresence } from "framer-motion"
+import { Link, useRouterState } from "@tanstack/react-router"
+import { AnimatePresence } from "framer-motion"
 import * as React from "react"
-import { FaBook, FaCog, FaHome, FaFilm, FaTv, FaMoon, FaDownload, FaLayerGroup, FaBroadcastTower } from "react-icons/fa"
+import { FaCog, FaHome, FaFilm, FaTv, FaLayerGroup, FaBroadcastTower } from "react-icons/fa"
 import { cn } from "../core/styling"
 import { RandomPlayButton } from "./random-play-button"
 import { useSound } from "@/hooks/use-sound"
@@ -13,11 +13,14 @@ import { useResponsive } from "@/hooks/use-responsive"
 import { BackgroundMusicPlayer } from "./background-music"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { fetchAnimeEntryLocalFiles } from "@/api/hooks/anime_entries.hooks"
+import { toast } from "sonner"
+import { Loader2 } from "lucide-react"
+import gsap from "gsap"
+import { useGSAP } from "@gsap/react"
+
 const VideoPlayer = React.lazy(() =>
     import("@/components/video/player").then((m) => ({ default: m.VideoPlayer }))
 )
-import { toast } from "sonner"
-import { Loader2 } from "lucide-react"
 
 interface SidebarItem {
     to: string
@@ -26,9 +29,9 @@ interface SidebarItem {
 }
 
 const SIDEBAR_ITEMS: SidebarItem[] = [
-    { to: "/home", label: "Inicio", icon: <FaHome className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" /> },
-    { to: "/series", label: "Series", icon: <FaTv className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" /> },
-    { to: "/movies", label: "Películas", icon: <FaFilm className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" /> },
+    { to: "/home", label: "Inicio", icon: <FaHome className="w-5 h-5" /> },
+    { to: "/series", label: "Series", icon: <FaTv className="w-5 h-5" /> },
+    { to: "/movies", label: "Películas", icon: <FaFilm className="w-5 h-5" /> },
 ]
 
 export function AppSidebar() {
@@ -64,13 +67,20 @@ export function AppSidebar() {
 function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) => void }) {
     const { playSound } = useSound()
     const activeTheme = useAppStore(state => state.activeTheme)
-    const setActiveTheme = useAppStore(state => state.setActiveTheme)
     const playlistQueue = useAppStore(state => state.playlistQueue)
     const globalQueueOpen = useAppStore(state => state.globalQueueOpen)
     const setGlobalQueueOpen = useAppStore(state => state.setGlobalQueueOpen)
     const tvMode = useAppStore(state => state.tvMode)
     const setTvMode = useAppStore(state => state.setTvMode)
     const isVideoActive = useAppStore(state => state.isVideoActive)
+
+    const containerRef = React.useRef<HTMLDivElement>(null)
+    const activeIndicatorRef = React.useRef<HTMLDivElement>(null)
+    const activeBgRef = React.useRef<HTMLDivElement>(null)
+    const navRef = React.useRef<HTMLDivElement>(null)
+
+    const routerState = useRouterState()
+    const currentPath = routerState.location.pathname
 
     const playChangeSound = () => {
         playSound("category", 0.4)
@@ -95,14 +105,19 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
         return collection.lists.flatMap(list => list.entries ?? [])
     }, [collection])
 
-    const playTvModeRandom = async () => {
+    const allEntriesRef = React.useRef(allEntries)
+    React.useEffect(() => {
+        allEntriesRef.current = allEntries
+    }, [allEntries])
+
+    const playTvModeRandom = React.useCallback(async () => {
         if (isLoadingTarget) return
         setIsLoadingTarget(true)
         setTvMode(true)
         playSound("category", 0.4)
 
         try {
-            const candidates = allEntries.filter(e => {
+            const candidates = allEntriesRef.current.filter(e => {
                 if (!e?.media || (e.libraryData?.mainFileCount ?? 0) === 0) return false
                 return e.media.format === "TV" || e.media.format === "TV_SHORT"
             })
@@ -132,7 +147,6 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
             const rawEp = selectedFile.metadata?.episode || Number(selectedFile.parsedInfo?.episode)
             const epNum = typeof rawEp === "number" ? rawEp : Number(rawEp) || 1
 
-            const isMp4 = selectedFile.path.toLowerCase().endsWith(".mp4")
             const seriesTitle =
                 randomEntry.media?.titleSpanish ||
                 randomEntry.media?.titleRomaji ||
@@ -141,7 +155,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
 
             setPlayTarget({
                 path: selectedFile.path,
-                streamType: isMp4 ? "direct" : "transcode",
+                streamType: "direct",
                 title: seriesTitle,
                 episodeLabel: `Episodio ${epNum}`,
                 episodeNumber: epNum,
@@ -160,9 +174,9 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
         } finally {
             setIsLoadingTarget(false)
         }
-    }
+    }, [isLoadingTarget, playSound, setTvMode, setPlayTarget])
 
-    const playTvModeNext = async (currentMediaId: number, currentEpisodeNumber: number) => {
+    const playTvModeNext = React.useCallback(async (currentMediaId: number, currentEpisodeNumber: number) => {
         setIsLoadingTarget(true)
         try {
             const localFiles = await fetchAnimeEntryLocalFiles(currentMediaId)
@@ -180,8 +194,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
             })
 
             if (nextFile) {
-                const isMp4 = nextFile.path.toLowerCase().endsWith(".mp4")
-                const series = allEntries.find(e => e.mediaId === currentMediaId)
+                const series = allEntriesRef.current.find(e => e.mediaId === currentMediaId)
                 const seriesTitle =
                     series?.media?.titleSpanish ||
                     series?.media?.titleRomaji ||
@@ -190,7 +203,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
 
                 setPlayTarget({
                     path: nextFile.path,
-                    streamType: isMp4 ? "direct" : "transcode",
+                    streamType: "direct",
                     title: seriesTitle,
                     episodeLabel: `Episodio ${nextEpNum}`,
                     episodeNumber: nextEpNum,
@@ -212,12 +225,66 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
         } finally {
             setIsLoadingTarget(false)
         }
-    }
+    }, [playTvModeRandom, setPlayTarget])
+
+    // GSAP staggered entrance animations & active state transitions
+    useGSAP(() => {
+        // Staggered entrance for all navigatable/button items
+        const items = containerRef.current?.querySelectorAll(".gsap-sidebar-item")
+        if (items && items.length > 0) {
+            gsap.fromTo(items,
+                { opacity: 0, x: -16, scale: 0.95 },
+                { opacity: 1, x: 0, scale: 1, duration: 0.5, stagger: 0.06, ease: "power3.out" }
+            )
+        }
+    }, { scope: containerRef })
+
+    // Move active indicator to the currently active link element in desktop layout
+    useGSAP(() => {
+        if (!navRef.current) return
+        const activeLink = navRef.current.querySelector(".active-sidebar-link") as HTMLElement
+        if (activeLink) {
+            // Find absolute coordinates relative to nav container
+            const navRect = navRef.current.getBoundingClientRect()
+            const linkRect = activeLink.getBoundingClientRect()
+            const targetY = linkRect.top - navRect.top
+            const targetHeight = linkRect.height
+
+            // Move the line active indicator
+            if (activeIndicatorRef.current) {
+                gsap.to(activeIndicatorRef.current, {
+                    y: targetY + (targetHeight - 24) / 2, // Centered vertically (height: 24px)
+                    opacity: 1,
+                    duration: 0.4,
+                    ease: "elastic.out(1, 0.75)"
+                })
+            }
+
+            // Move the pill active background
+            if (activeBgRef.current) {
+                gsap.to(activeBgRef.current, {
+                    y: targetY,
+                    opacity: 1,
+                    height: targetHeight,
+                    duration: 0.4,
+                    ease: "power3.out"
+                })
+            }
+        } else {
+            // Hide indicators if no active route is matched in main list (e.g. settings)
+            if (activeIndicatorRef.current) {
+                gsap.to(activeIndicatorRef.current, { opacity: 0, duration: 0.2 })
+            }
+            if (activeBgRef.current) {
+                gsap.to(activeBgRef.current, { opacity: 0, duration: 0.2 })
+            }
+        }
+    }, [currentPath, playlistQueue.length])
 
     return (
-        <div className="flex flex-col h-full py-8 px-4 md:px-0 w-full items-center bg-transparent">
+        <div ref={containerRef} className="flex flex-col h-full py-8 px-4 md:px-0 w-full items-center bg-transparent">
             {/* Header / Logo */}
-            <div className="mb-10 px-2 flex justify-center group cursor-pointer" onClick={() => { setSidebarOpen(false); playChangeSound(); }}>
+            <div className="mb-10 px-2 flex justify-center group cursor-pointer gsap-sidebar-item" onClick={() => { setSidebarOpen(false); playChangeSound(); }}>
                 <div className="relative">
                     <img
                         src="/kamehouse-logo.png"
@@ -229,51 +296,50 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 space-y-4 w-full px-3 md:px-0 flex flex-col items-center">
-                {SIDEBAR_ITEMS.map((item) => (
-                    <Magnetic key={item.to}>
-                        <Link
-                            to={item.to}
-                            title={item.label}
-                            onClick={() => { setSidebarOpen(false); playChangeSound(); }}
-                        >
-                            {({ isActive }) => (
+            <div ref={navRef} className="flex-1 space-y-4 w-full px-3 md:px-0 flex flex-col items-center relative">
+
+                {/* Active Indicator Sliding Dot/Bar */}
+                <div
+                    ref={activeIndicatorRef}
+                    className="absolute left-0 top-0 !mt-0 w-1 h-6 bg-brand-orange rounded-r-full hidden md:block z-10 pointer-events-none opacity-0"
+                />
+
+                {/* Active Background Sliding Pill */}
+                <div
+                    ref={activeBgRef}
+                    className="absolute left-0 right-0 top-0 !mt-0 w-14 mx-auto bg-brand-orange/[0.06] border border-brand-orange/30 rounded-2xl shadow-[0_8px_32px_rgba(255,110,58,0.15)] z-0 pointer-events-none opacity-0"
+                />
+
+                {SIDEBAR_ITEMS.map((item) => {
+                    const isActive = currentPath === item.to
+                    return (
+                        <div key={item.to} className="gsap-sidebar-item w-full flex justify-center">
+                            <Link
+                                to={item.to}
+                                title={item.label}
+                                onClick={() => { setSidebarOpen(false); playChangeSound(); }}
+                                className={cn("w-full flex justify-center", isActive && "active-sidebar-link")}
+                            >
                                 <div className={cn(
-                                    "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl transition-all duration-300 group px-4 md:px-0 relative liquid-glass-frosted-subtle",
-                                    "active:scale-90 font-bold",
+                                    "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl group px-4 md:px-0 relative liquid-glass-frosted-subtle",
+                                    "active:scale-95 font-bold transition-all duration-300",
                                     isActive
                                         ? "text-white"
                                         : "text-zinc-400 hover:text-white hover:!border-white/15"
                                 )}>
-                                    {/* Active Indicator Sliding Dot/Bar */}
-                                    {isActive && (
-                                        <motion.div
-                                            layoutId="sidebarActiveIndicator"
-                                            className="absolute left-0 w-1 h-6 bg-brand-orange rounded-r-full hidden md:block z-10"
-                                            transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                                        />
-                                    )}
-                                    {/* Active Background Sliding Pill */}
-                                    {isActive && (
-                                        <motion.div
-                                            layoutId="sidebarActiveBackground"
-                                            className="absolute inset-0 bg-brand-orange/[0.06] border border-brand-orange/30 rounded-2xl shadow-[0_8px_32px_rgba(255,110,58,0.15)] z-0"
-                                            transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                                        />
-                                    )}
-                                    <span className="shrink-0 z-10">
+                                    <span className="shrink-0 z-10 group-hover:scale-110 transition-transform duration-300">
                                         {item.icon}
                                     </span>
                                     <span className="md:hidden ml-6 flex-1 uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange">{item.label}</span>
                                 </div>
-                            )}
-                        </Link>
-                    </Magnetic>
-                ))}
+                            </Link>
+                        </div>
+                    )
+                })}
 
                 {/* Queue Toggle Button - Shown conditionally */}
                 {playlistQueue.length > 0 && (
-                    <Magnetic>
+                    <div className="gsap-sidebar-item w-full flex justify-center">
                         <button
                             onClick={() => {
                                 setGlobalQueueOpen(!globalQueueOpen)
@@ -282,11 +348,11 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                             }}
                             title="Cola de Reproducción"
                             className={cn(
-                                "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl transition-all duration-500 group px-4 md:px-0 relative liquid-glass-frosted-subtle",
+                                "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl group px-4 md:px-0 relative liquid-glass-frosted-subtle transition-all duration-300",
                                 globalQueueOpen
                                     ? "text-brand-orange !bg-brand-orange/[0.06] !border-brand-orange/30 shadow-[0_8px_32px_rgba(255,110,58,0.15)]"
                                     : "text-zinc-400 hover:text-white hover:!border-white/15",
-                                "active:scale-90 font-bold"
+                                "active:scale-95 font-bold"
                             )}
                         >
                             {/* Active Indicator Dot */}
@@ -295,8 +361,8 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                                 globalQueueOpen ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
                             )} />
 
-                            <span className="shrink-0 z-10 relative">
-                                <FaLayerGroup className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
+                            <span className="shrink-0 z-10 relative group-hover:scale-110 transition-transform duration-300">
+                                <FaLayerGroup className="w-5 h-5" />
                                 {/* Badge count */}
                                 <span className="absolute -top-2.5 -right-2.5 bg-brand-orange text-white text-[8px] font-black min-w-[18px] h-[18px] rounded-full flex items-center justify-center border border-zinc-950 shadow-md px-[3px]">
                                     {playlistQueue.length}
@@ -306,23 +372,23 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                                 Cola ({playlistQueue.length})
                             </span>
                         </button>
-                    </Magnetic>
+                    </div>
                 )}
 
                 {/* TV Mode Toggle Button */}
-                <Magnetic>
+                <div className="gsap-sidebar-item w-full flex justify-center">
                     <button
                         onClick={playTvModeRandom}
                         title="Sintonizar Modo TV (Aleatorio 24h)"
                         disabled={isLoadingTarget}
                         className={cn(
-                            "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl transition-all duration-500 group px-4 md:px-0 relative liquid-glass-frosted-subtle",
+                            "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl group px-4 md:px-0 relative liquid-glass-frosted-subtle transition-all duration-300",
                             isLoadingTarget
                                 ? "!border-brand-orange/40 !bg-brand-orange/[0.06] text-brand-orange cursor-wait"
                                 : (isVideoActive && tvMode)
                                     ? "text-brand-orange !bg-brand-orange/[0.06] !border-brand-orange/30 shadow-[0_8px_32px_rgba(255,110,58,0.15)]"
                                     : "text-zinc-400 hover:text-white hover:!border-white/15",
-                            "active:scale-90 font-bold"
+                            "active:scale-95 font-bold"
                         )}
                     >
                         {/* Active Indicator Dot */}
@@ -331,72 +397,55 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                             (isVideoActive && tvMode) ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
                         )} />
 
-                        <span className="shrink-0 z-10 relative">
+                        <span className="shrink-0 z-10 relative group-hover:scale-110 transition-transform duration-300">
                             {isLoadingTarget ? (
                                 <Loader2 className="w-5 h-5 animate-spin" />
                             ) : (
-                                <>
-                                    <FaBroadcastTower className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
-                                </>
+                                <FaBroadcastTower className="w-5 h-5" />
                             )}
                         </span>
                         <span className="md:hidden ml-6 flex-1 uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange">
                             Modo TV {(isVideoActive && tvMode) ? "(24H)" : ""}
                         </span>
                     </button>
-                </Magnetic>
-            </nav>
+                </div>
+            </div>
 
             {/* Footer / Info */}
             <div className="mt-auto pb-6 w-full flex flex-col items-center gap-6 pt-8">
                 {/* Background Music */}
-                <BackgroundMusicPlayer />
+                <div className="gsap-sidebar-item">
+                    <BackgroundMusicPlayer />
+                </div>
 
                 {/* Random Play */}
-                <RandomPlayButton />
+                <div className="gsap-sidebar-item">
+                    <RandomPlayButton />
+                </div>
 
                 {/* Settings (Always at the bottom) */}
-                <Magnetic>
+                <div className="gsap-sidebar-item w-full flex justify-center">
                     <Link
                         to="/settings"
                         title="Configuración"
                         onClick={() => { setSidebarOpen(false); playChangeSound(); }}
+                        className={cn("w-full flex justify-center", currentPath === "/settings" && "active-sidebar-link")}
                     >
-                        {({ isActive }) => (
-                            <div className={cn(
-                                "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl transition-all duration-300 group px-4 md:px-0 relative liquid-glass-frosted-subtle",
-                                "active:scale-90 font-bold",
-                                isActive
-                                    ? "text-white"
-                                    : "text-zinc-400 hover:text-white hover:!border-white/15"
-                            )}>
-                                {/* Active Indicator Sliding Dot/Bar */}
-                                {isActive && (
-                                    <motion.div
-                                        layoutId="sidebarSettingsIndicator"
-                                        className="absolute left-0 w-1 h-6 bg-brand-orange rounded-r-full hidden md:block z-10"
-                                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                                    />
-                                )}
-                                {/* Active Background Sliding Pill */}
-                                {isActive && (
-                                    <motion.div
-                                        layoutId="sidebarSettingsBackground"
-                                        className="absolute inset-0 bg-brand-orange/[0.06] border border-brand-orange/30 rounded-2xl shadow-[0_8px_32px_rgba(255,110,58,0.15)] z-0"
-                                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                                    />
-                                )}
-                                <span className="shrink-0 z-10">
-                                    <FaCog className="w-5 h-5 transition-transform duration-500 group-hover:rotate-45 group-hover:scale-110" />
-                                </span>
-                                <span className="md:hidden ml-6 flex-1 uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange">Configuración</span>
-                            </div>
-                        )}
+                        <div className={cn(
+                            "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl group px-4 md:px-0 relative liquid-glass-frosted-subtle transition-all duration-300",
+                            "active:scale-95 font-bold",
+                            currentPath === "/settings"
+                                ? "text-white"
+                                : "text-zinc-400 hover:text-white hover:!border-white/15"
+                        )}>
+                            <span className="shrink-0 z-10 group-hover:rotate-45 group-hover:scale-110 transition-transform duration-500">
+                                <FaCog className="w-5 h-5" />
+                            </span>
+                            <span className="md:hidden ml-6 flex-1 uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange">Configuración</span>
+                        </div>
                     </Link>
-                </Magnetic>
+                </div>
             </div>
-
-
 
             {/* Video Player overlay */}
             <AnimatePresence>
@@ -426,41 +475,53 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
 }
 
 /**
- * Magnetic component using spring physics for a premium hover effect.
+ * Magnetic component using GSAP for a high-performance GPU-accelerated cursor pull effect.
  */
-function Magnetic({ children }: { children: React.ReactNode }) {
+function Magnetic({ children, className }: { children: React.ReactNode, className?: string }) {
     const ref = React.useRef<HTMLDivElement>(null)
-    const [position, setPosition] = React.useState({ x: 0, y: 0 })
 
-    const handleMouseMove = (e: React.MouseEvent) => {
+    useGSAP(() => {
         if (!ref.current) return
-        const { clientX, clientY } = e
-        const { left, top, width, height } = ref.current.getBoundingClientRect()
-        const centerX = left + width / 2
-        const centerY = top + height / 2
-        const distanceX = clientX - centerX
-        const distanceY = clientY - centerY
-        // Attract toward cursor up to a maximum strength
-        setPosition({ x: distanceX * 0.35, y: distanceY * 0.3 })
-    }
 
-    const handleMouseLeave = () => {
-        setPosition({ x: 0, y: 0 })
-    }
+        const el = ref.current
 
-    const springConfig = { type: "spring", stiffness: 150, damping: 15, mass: 0.1 } as const
+        // GPU-accelerated GSAP quickTo properties for zero-lag coordinates movement
+        const xTo = gsap.quickTo(el, "x", { duration: 0.4, ease: "power3.out" })
+        const yTo = gsap.quickTo(el, "y", { duration: 0.4, ease: "power3.out" })
+
+        const handleMouseMove = (e: MouseEvent) => {
+            const { clientX, clientY } = e
+            const { left, top, width, height } = el.getBoundingClientRect()
+            const centerX = left + width / 2
+            const centerY = top + height / 2
+            const distanceX = clientX - centerX
+            const distanceY = clientY - centerY
+
+            // Dynamic magnetic pull physics
+            xTo(distanceX * 0.35)
+            yTo(distanceY * 0.3)
+        }
+
+        const handleMouseLeave = () => {
+            xTo(0)
+            yTo(0)
+        }
+
+        el.addEventListener("mousemove", handleMouseMove)
+        el.addEventListener("mouseleave", handleMouseLeave)
+
+        return () => {
+            el.removeEventListener("mousemove", handleMouseMove)
+            el.removeEventListener("mouseleave", handleMouseLeave)
+        }
+    }, { scope: ref })
 
     return (
-        <motion.div
+        <div
             ref={ref}
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
-            animate={{ x: position.x, y: position.y }}
-            transition={springConfig}
-            className="w-full flex justify-center"
+            className={cn("w-full flex justify-center", className)}
         >
             {children}
-        </motion.div>
+        </div>
     )
 }
-

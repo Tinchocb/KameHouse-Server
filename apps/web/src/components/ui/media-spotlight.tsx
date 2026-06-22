@@ -21,15 +21,15 @@ import { ERAS, ERA_COLOR_MAP, type EraId, getEraFromItem } from "./media-spotlig
 
 export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavigate, className }: MediaSpotlightProps) {
     const { playSound } = useSound()
-    const { setBackdropUrl } = useIntelligenceStore()
+    const setBackdropUrl = useIntelligenceStore(s => s.setBackdropUrl)
     const [activeEraId, setActiveEraId] = React.useState<EraId>("db")
     const [selectedItemId, setSelectedItemId] = React.useState<string | null>(null)
 
     const colors = ERA_COLOR_MAP[activeEraId]
 
-    const playHoverSound = () => {
+    const playHoverSound = React.useCallback(() => {
         playSound("hover")
-    }
+    }, [playSound])
 
     // Classify all library items into eras
     const categorizedData = React.useMemo(() => {
@@ -89,12 +89,14 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
         setSelectedItemId(eraData?.series?.id || null)
     }, [categorizedData])
 
-    // Initialize selected item on first load
+    // Initialize selected item on first load with a ref guard to avoid circular dependency
+    const initializedRef = React.useRef(false)
     React.useEffect(() => {
-        if (!selectedItemId && categorizedData[activeEraId]?.series) {
+        if (!initializedRef.current && categorizedData[activeEraId]?.series) {
+            initializedRef.current = true
             setSelectedItemId(categorizedData[activeEraId].series!.id)
         }
-    }, [categorizedData, activeEraId, selectedItemId])
+    }, [categorizedData, activeEraId])
 
     // Update global home page backdrop (always use the main series/era image, not the selected movie)
     React.useEffect(() => {
@@ -107,23 +109,23 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
         }
     }, [activeEraId, categorizedData, setBackdropUrl])
 
-    const activeEraName = React.useMemo(() => {
-        return ERAS.find(era => era.id === activeEraId)?.title || ""
-    }, [activeEraId])
-
-    const activeEraMovies = React.useMemo(() => {
-        return categorizedData[activeEraId]?.movies || []
+    const activeEraInfo = React.useMemo(() => {
+        const movies = categorizedData[activeEraId]?.movies ?? []
+        const name = ERAS.find(era => era.id === activeEraId)?.title ?? ""
+        return { movies, name, hasMovies: movies.length > 0 }
     }, [categorizedData, activeEraId])
+
+    const { movies: activeEraMovies, name: activeEraName, hasMovies } = activeEraInfo
+
+    const cleanDescription = React.useMemo(() => {
+        return activeItem?.description
+            ? activeItem.description.replace(/<[^>]*>/g, '')
+            : ""
+    }, [activeItem])
 
     if (!activeItem) {
         return null
     }
-
-    const cleanDescription = activeItem.description
-        ? activeItem.description.replace(/<[^>]*>/g, '')
-        : ""
-
-    const hasMovies = activeEraMovies.length > 0
 
     return (
         <section className={cn("relative pt-20 md:pt-28 pb-16 w-full select-none overflow-hidden", hasMovies ? "lg:min-h-0" : "lg:min-h-[720px]", className)}>
@@ -134,26 +136,20 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
 
                 {/* Dynamic colored ambient glows */}
                 <div
-                    className="absolute -top-[10%] -left-[5%] w-[50%] h-[70%] rounded-full blur-[130px] opacity-[0.22] transition-all duration-1000"
+                    className="absolute -top-[10%] -left-[5%] w-[50%] h-[70%] rounded-full opacity-[0.35] transition-all duration-1000"
                     style={{
-                        background: activeEraId === 'db' ? '#ff6e3a' :
-                            activeEraId === 'dbz' ? '#f59e0b' :
-                                activeEraId === 'dbgt' ? '#e11d48' :
-                                    activeEraId === 'dbs' ? '#0ea5e9' : '#22d3ee'
+                        background: `radial-gradient(ellipse, ${colors.ambientGlow1} 0%, transparent 70%)`
                     }}
                 />
                 <div
-                    className="absolute top-[10%] right-[-5%] w-[45%] h-[60%] rounded-full blur-[140px] opacity-[0.20] transition-all duration-1000"
+                    className="absolute top-[10%] right-[-5%] w-[45%] h-[60%] rounded-full opacity-[0.35] transition-all duration-1000"
                     style={{
-                        background: activeEraId === 'db' ? '#ff8c3a' :
-                            activeEraId === 'dbz' ? '#d97706' :
-                                activeEraId === 'dbgt' ? '#be123c' :
-                                    activeEraId === 'dbs' ? '#2563eb' : '#059669'
+                        background: `radial-gradient(ellipse, ${colors.ambientGlow2} 0%, transparent 70%)`
                     }}
                 />
 
                 {/* Multi-color warm ambient light matching reference image background */}
-                <div className="absolute bottom-0 left-[15%] right-[10%] h-[65%] bg-gradient-to-tr from-[#e05600]/22 via-[#3b2bcf]/12 to-transparent blur-[120px] opacity-80" />
+                <div className="absolute bottom-0 left-[15%] right-[10%] h-[65%] opacity-80 pointer-events-none" style={{ background: 'radial-gradient(ellipse at bottom, rgba(224,86,0,0.2) 0%, rgba(59,43,207,0.1) 40%, transparent 70%)' }} />
             </div>
 
             {/* Main content grid: Left Column (Artwork + Info Side-by-Side) & Right Column (Era Selector) */}
@@ -170,7 +166,7 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                         }}
                     >
                         {/* Glass glare reflex */}
-                        <div className="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-white/5 to-transparent -skew-x-12 -translate-x-[150%] group-hover/hero:translate-x-[150%] transition-transform duration-[1.6s] ease-out pointer-events-none z-30" />
+                        <div className="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-white/5 to-transparent -skew-x-12 -translate-x-[150%] group-hover/hero:translate-x-[150%] transition-transform [transition-duration:1.6s] ease-out pointer-events-none z-30" />
 
                         <AnimatePresence mode="popLayout">
                             <motion.div
@@ -188,7 +184,7 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                                             src={getLargeResImage(activeItem.backdropUrl)}
                                             alt={activeItem.title}
                                             priority={true}
-                                            className="h-full w-full object-cover object-top transition-transform duration-[6s] ease-out group-hover/hero:scale-[1.04]"
+                                            className="h-full w-full object-cover object-top transition-transform [transition-duration:6s] ease-out group-hover/hero:scale-[1.04]"
                                         />
                                     ) : (
                                         <div className="absolute inset-0 flex items-center justify-center bg-zinc-950">
@@ -204,7 +200,7 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                                                 src={getLargeResImage(activeItem.image)}
                                                 alt={activeItem.title}
                                                 priority={true}
-                                                className="relative z-10 h-full w-full object-cover opacity-80 mix-blend-luminosity transition-transform duration-[6s] ease-out group-hover/hero:scale-[1.04]"
+                                                className="relative z-10 h-full w-full object-cover opacity-80 mix-blend-luminosity transition-transform [transition-duration:6s] ease-out group-hover/hero:scale-[1.04]"
                                             />
                                         </div>
                                     )}
@@ -273,7 +269,7 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                                             "relative overflow-hidden flex items-center justify-center gap-2 bg-gradient-to-r from-[#f59e0b] to-[#ea580c] hover:from-[#fbbf24] hover:to-[#f97316] text-white font-black text-xs md:text-sm uppercase tracking-wider py-3 px-6 rounded-2xl hover:scale-[1.03] active:scale-95 transition-all duration-300 shadow-xl shadow-orange-950/20 group/play-btn font-bebas"
                                         )}
                                     >
-                                        <div className="absolute inset-0 w-[40px] h-full bg-white/20 transform skew-x-12 -translate-x-[60px] group-hover/play-btn:translate-x-[250px] transition-transform duration-[1.2s] ease-out pointer-events-none" />
+                                        <div className="absolute inset-0 w-[40px] h-full bg-white/20 transform skew-x-12 -translate-x-[60px] group-hover/play-btn:translate-x-[250px] transition-transform [transition-duration:1.2s] ease-out pointer-events-none" />
                                         <Play size={14} fill="currentColor" className="mr-0.5" />
                                         <span>Reproducir</span>
                                     </button>
@@ -298,7 +294,7 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                             Seleccionar Saga / Era
                         </h4>
 
-                        <motion.div layout className="flex flex-col gap-2 relative">
+                        <div className="flex flex-col gap-2 relative">
                             <AnimatePresence initial={false}>
                                 {ERAS.map((era) => {
                                     const eraData = categorizedData[era.id]
@@ -354,7 +350,7 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                                     )
                                 })}
                             </AnimatePresence>
-                        </motion.div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -377,72 +373,21 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                         </h4>
 
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 gap-4 pt-2 pb-4 w-full animate-in fade-in slide-in-from-bottom-3 duration-500">
-                            {activeEraMovies.map((movie) => {
-                                const isMovieSelected = selectedItemId === movie.id
+                            {/* hasSelection is computed once, not inside each card render */}
+                            {(() => {
                                 const hasSelection = selectedItemId !== null && activeEraMovies.some(m => m.id === selectedItemId)
-
-                                return (
-                                    <div
+                                return activeEraMovies.map((movie) => (
+                                    <SpotlightMovieCard
                                         key={movie.id}
-                                        onClick={() => setSelectedItemId(movie.id)}
-                                        onMouseEnter={playHoverSound}
-                                        className={cn(
-                                            "group relative w-full aspect-[2/3] rounded-2xl overflow-hidden cursor-pointer border select-none transition-all duration-500 shrink-0",
-                                            isMovieSelected
-                                                ? "scale-[1.04] z-10 opacity-100"
-                                                : hasSelection
-                                                    ? "border-white/5 opacity-40 blur-[1px] grayscale-[30%] hover:opacity-85 hover:blur-0 hover:grayscale-0 hover:scale-[1.01]"
-                                                    : "border-white/5 opacity-100 hover:border-white/20 hover:scale-[1.01]"
-                                        )}
-                                        style={{
-                                            borderColor: isMovieSelected ? colors.glow.replace('0.25', '0.7') : 'rgba(255, 255, 255, 0.05)',
-                                            boxShadow: isMovieSelected ? `0 0 25px -3px ${colors.glow}` : 'none',
-                                            transition: "all 600ms cubic-bezier(0.16, 1, 0.3, 1)"
-                                        }}
-                                    >
-                                        <DeferredImage
-                                            src={getMediumResImage(movie.image)}
-                                            alt={movie.title}
-                                            className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                                        />
-
-                                        {/* Glass sheen sweep */}
-                                        <div className="absolute inset-0 z-20 pointer-events-none overflow-hidden rounded-[inherit]">
-                                            <div 
-                                                className="w-[150%] h-[150%] bg-gradient-to-tr from-transparent via-white/10 to-transparent -rotate-12 absolute -top-[25%] -left-[100%] transition-transform duration-[800ms] ease-out group-hover:translate-x-[150%] group-hover:translate-y-[10%]"
-                                            />
-                                        </div>
-
-                                        {/* Gradient overlay */}
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent z-10" />
-
-                                        {/* Play icon overlay on hover */}
-                                        <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
-                                            <div className={cn(
-                                                "p-2.5 rounded-full text-white transform scale-90 group-hover:scale-100 transition-transform duration-300 shadow-lg bg-gradient-to-r",
-                                                colors.primary
-                                            )}>
-                                                <Play size={14} fill="currentColor" />
-                                            </div>
-                                        </div>
-
-                                        {/* Title + year at bottom */}
-                                        <div className="absolute bottom-0 left-0 right-0 z-30 p-3">
-                                            <p className="text-white font-bold text-[10px] uppercase tracking-wide leading-tight line-clamp-2 drop-shadow-md">
-                                                {movie.title}
-                                            </p>
-                                            {movie.year && (
-                                                <span className="text-[9px] font-black tracking-widest text-zinc-400 uppercase">{movie.year}</span>
-                                            )}
-                                        </div>
-
-                                        {/* Active wash */}
-                                        {isMovieSelected && (
-                                            <div className="absolute inset-0 bg-white/[0.04] z-10 pointer-events-none" />
-                                        )}
-                                    </div>
-                                )
-                            })}
+                                        movie={movie}
+                                        isSelected={selectedItemId === movie.id}
+                                        hasSelection={hasSelection}
+                                        colors={colors}
+                                        onSelect={setSelectedItemId}
+                                        onHover={playHoverSound}
+                                    />
+                                ))
+                            })()}
                         </div>
                     </motion.div>
                 )}
@@ -450,3 +395,84 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
         </section>
     )
 })
+
+// ─── Memoized movie card sub-component ────────────────────────────────────────
+interface SpotlightMovieCardProps {
+    movie: SwimlaneItem
+    isSelected: boolean
+    hasSelection: boolean
+    colors: typeof ERA_COLOR_MAP[EraId]
+    onSelect: (id: string) => void
+    onHover: () => void
+}
+
+const SpotlightMovieCard = React.memo(function SpotlightMovieCard({
+    movie,
+    isSelected,
+    hasSelection,
+    colors,
+    onSelect,
+    onHover,
+}: SpotlightMovieCardProps) {
+    return (
+        <div
+            onClick={() => onSelect(movie.id)}
+            onMouseEnter={onHover}
+            className={cn(
+                "group relative w-full aspect-[2/3] rounded-2xl overflow-hidden cursor-pointer border select-none transition-all duration-500 shrink-0",
+                isSelected
+                    ? "scale-[1.04] z-10 opacity-100"
+                    : hasSelection
+                        ? "border-white/5 opacity-40 grayscale-[30%] hover:opacity-85 hover:grayscale-0 hover:scale-[1.01]"
+                        : "border-white/5 opacity-100 hover:border-white/20 hover:scale-[1.01]"
+            )}
+            style={{
+                borderColor: isSelected ? colors.glow.replace('0.25', '0.7') : 'rgba(255, 255, 255, 0.05)',
+                boxShadow: isSelected ? `0 0 25px -3px ${colors.glow}` : 'none',
+                transition: "all 600ms cubic-bezier(0.16, 1, 0.3, 1)"
+            }}
+        >
+            <DeferredImage
+                src={getMediumResImage(movie.image)}
+                alt={movie.title}
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+            />
+
+            {/* Glass sheen sweep */}
+            <div className="absolute inset-0 z-20 pointer-events-none overflow-hidden rounded-[inherit]">
+                <div
+                    className="w-[150%] h-[150%] bg-gradient-to-tr from-transparent via-white/10 to-transparent -rotate-12 absolute -top-[25%] -left-[100%] transition-transform [transition-duration:800ms] ease-out group-hover:translate-x-[150%] group-hover:translate-y-[10%]"
+                />
+            </div>
+
+            {/* Gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent z-10" />
+
+            {/* Play icon overlay on hover */}
+            <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
+                <div className={cn(
+                    "p-2.5 rounded-full text-white transform scale-90 group-hover:scale-100 transition-transform duration-300 shadow-lg bg-gradient-to-r",
+                    colors.primary
+                )}>
+                    <Play size={14} fill="currentColor" />
+                </div>
+            </div>
+
+            {/* Title + year at bottom */}
+            <div className="absolute bottom-0 left-0 right-0 z-30 p-3">
+                <p className="text-white font-bold text-[10px] uppercase tracking-wide leading-tight line-clamp-2 drop-shadow-md">
+                    {movie.title}
+                </p>
+                {movie.year && (
+                    <span className="text-[9px] font-black tracking-widest text-zinc-400 uppercase">{movie.year}</span>
+                )}
+            </div>
+
+            {/* Active wash */}
+            {isSelected && (
+                <div className="absolute inset-0 bg-white/[0.04] z-10 pointer-events-none" />
+            )}
+        </div>
+    )
+})
+

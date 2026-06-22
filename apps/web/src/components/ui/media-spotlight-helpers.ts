@@ -12,36 +12,46 @@ export const ERAS = [
 export type EraId = typeof ERAS[number]["id"]
 
 // Theme colors and glows for each era
-export const ERA_COLOR_MAP: Record<EraId, { primary: string; glow: string; textBrand: string; borderActive: string }> = {
+export const ERA_COLOR_MAP: Record<EraId, { primary: string; glow: string; textBrand: string; borderActive: string; ambientGlow1: string; ambientGlow2: string }> = {
     db: {
         primary: "from-[#ff6e3a] to-[#ff8c3a]",
         glow: "rgba(255,110,58,0.25)",
         textBrand: "text-[#ff6e3a]",
-        borderActive: "border-[#ff6e3a]/40"
+        borderActive: "border-[#ff6e3a]/40",
+        ambientGlow1: "#ff6e3a",
+        ambientGlow2: "#ff8c3a"
     },
     dbz: {
         primary: "from-[#f59e0b] to-[#d97706]",
         glow: "rgba(245,158,11,0.25)",
         textBrand: "text-[#f59e0b]",
-        borderActive: "border-[#f59e0b]/40"
+        borderActive: "border-[#f59e0b]/40",
+        ambientGlow1: "#f59e0b",
+        ambientGlow2: "#d97706"
     },
     dbgt: {
         primary: "from-[#e11d48] to-[#be123c]",
         glow: "rgba(225,29,72,0.25)",
         textBrand: "text-[#e11d48]",
-        borderActive: "border-[#e11d48]/40"
+        borderActive: "border-[#e11d48]/40",
+        ambientGlow1: "#e11d48",
+        ambientGlow2: "#be123c"
     },
     dbs: {
         primary: "from-[#0ea5e9] to-[#2563eb]",
         glow: "rgba(14,165,233,0.25)",
         textBrand: "text-[#0ea5e9]",
-        borderActive: "border-[#0ea5e9]/40"
+        borderActive: "border-[#0ea5e9]/40",
+        ambientGlow1: "#0ea5e9",
+        ambientGlow2: "#2563eb"
     },
     dbdaima: {
         primary: "from-[#22d3ee] to-[#059669]",
         glow: "rgba(34,211,238,0.25)",
         textBrand: "text-[#22d3ee]",
-        borderActive: "border-[#22d3ee]/40"
+        borderActive: "border-[#22d3ee]/40",
+        ambientGlow1: "#22d3ee",
+        ambientGlow2: "#059669"
     }
 }
 

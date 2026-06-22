@@ -70,6 +70,9 @@ async function initOPFS() {
 }
 
 // 3. Custom Router for OPFS Media Chunks Strategy
+// Caching media chunks in OPFS has been disabled because background piping (pipeTo) on cloned streams
+// causes backpressure and severe I/O contention, resulting in audio delay/desync during playback.
+/*
 registerRoute(
     ({ request }) => {
         const url = new URL(request.url);
@@ -85,8 +88,9 @@ registerRoute(
         }
 
         const url = new URL(request.url);
-        // Create a safe, unique filename mapping for the chunk
-        const fileName = `${btoa(url.pathname.substring(0, 150))}.chunk`;
+        // Create a safe, unique filename mapping for the chunk including query parameters
+        const cacheKey = url.pathname + url.search;
+        const fileName = `${btoa(cacheKey.substring(0, 150))}.chunk`;
 
         try {
             const chunkDir = await opfsRoot.getDirectoryHandle(OPFS_CHUNK_DIR_NAME);
@@ -132,11 +136,17 @@ registerRoute(
         }
     }
 );
+*/
+
 
 // 4. API Requests (Stale While Revalidate)
 // For metadata endpoints (/api/v1/metadata/*)
 registerRoute(
-    ({ request, url }) => url.pathname.startsWith('/api/') && request.method === 'GET',
+    ({ request, url }) => 
+        url.pathname.startsWith('/api/') && 
+        !url.pathname.includes('/mediastream/') && 
+        !url.pathname.includes('/video-thumbnail') && 
+        request.method === 'GET',
     new NetworkFirst({
         cacheName: 'api-metadata-cache',
         plugins: [

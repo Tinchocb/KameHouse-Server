@@ -60,6 +60,7 @@ func (a *App) initModulesOnce() {
 		Logger:         a.Logger,
 		WSEventManager: a.WSEventManager,
 		FileCacher:     a.FileCacher,
+		Database:       a.Database,
 	})
 
 	a.AddCleanupFunction(func() {

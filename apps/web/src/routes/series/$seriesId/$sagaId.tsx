@@ -4,11 +4,10 @@ import { cn } from "@/components/ui/core/styling"
 import { useGetAnimeEntry, fetchAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
-import { HardDrive, Star, ArrowLeft, Calendar, Clock, CheckCircle2, Circle, ChevronRight, ChevronDown } from "lucide-react"
+import { HardDrive, Star, ArrowLeft, Calendar, Clock, CheckCircle2, Circle, ChevronDown } from "lucide-react"
 import { VideoPlayer } from "@/components/video/player"
-import type { Mediastream_StreamType, Anime_Episode } from "@/api/generated/types"
+import type { Mediastream_StreamType } from "@/api/generated/types"
 import { toast } from "sonner"
-import { PageHeader } from "@/components/ui/page-header"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { startViewTransition } from "@/lib/helpers/transitions"
@@ -248,7 +247,7 @@ interface RightPanelProps {
     currentWatched: boolean
     onPlayEpisode: (ep: Episode) => void
     downloadedEpisodes: Set<number>
-    libraryEntry?: any | null
+    libraryEntry?: Anime_Entry | null
 }
 
 function RightPanel({
@@ -347,7 +346,7 @@ function RightPanel({
                     )}
                 >
                     {episodes.map((ep, idx) => {
-                        const episodeProgress = libraryEntry?.episodes?.[idx]?.watched /* 0-100 de progreso */
+                        const episodeProgress = libraryEntry?.episodes?.[idx]?.watched ? 100 : 0 /* 0-100 de progreso */
                         return (
                             <EpisodeRow
                                 key={ep.id}
@@ -495,8 +494,7 @@ function DetailPage() {
             return
         }
 
-        const isMp4 = filePath.toLowerCase().endsWith(".mp4")
-        const targetType = isMp4 ? "direct" : "transcode"
+        const targetType = "direct"
 
         startViewTransition(() => {
             setPlayTarget({
@@ -568,7 +566,7 @@ function DetailPage() {
                         episodeNumber={playTarget.episodeNumber}
                         isExternalStream={false}
                         nextStreamUrl={nextLocalFile?.path}
-                        nextStreamType={nextLocalFile?.path?.toLowerCase().endsWith(".mp4") ? "direct" : "transcode"}
+                        nextStreamType={playTarget.streamType as any}
                         nextEpisodeTitle={nextTitle}
                         nextEpisodeNumber={nextEp?.number}
                         nextEpisodeImage={saga?.image}
@@ -580,8 +578,7 @@ function DetailPage() {
                                 const fullEp = libraryEntry?.episodes?.find(e => e.episodeNumber === next.number)
                                 const filePath = fullEp?.localFile?.path
                                 if (filePath) {
-                                    const isMp4 = filePath.toLowerCase().endsWith(".mp4")
-                                    const targetType = isMp4 ? "direct" : "transcode"
+                                    const targetType = "direct"
                                     setPlayTarget({
                                         path: filePath,
                                         streamType: targetType as Mediastream_StreamType,
