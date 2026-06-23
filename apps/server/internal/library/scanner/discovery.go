@@ -3,11 +3,10 @@ package scanner
 import (
 	"context"
 	"io/fs"
-	"os"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/events"
-	"kamehouse/internal/library/filesystem"
 	"kamehouse/internal/util"
+	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -53,23 +52,19 @@ func (scn *Scanner) discoverFilePaths(ctx context.Context, _ time.Time) ([]strin
 			var retrievedPaths []string
 			var err error
 
-			if true { // Always walk directories to find modified files accurately
-				err = filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
-					if err != nil {
-						return nil
-					}
-					if d.IsDir() {
-						return nil
-					}
-					ext := strings.ToLower(filepath.Ext(path))
-					if util.IsValidMediaFile(path) && util.IsValidVideoExtension(ext) {
-						retrievedPaths = append(retrievedPaths, path)
-					}
+			err = filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
+				if err != nil {
 					return nil
-				})
-			} else {
-				retrievedPaths, err = filesystem.GetMediaFilePathsFromDirS(dirPath)
-			}
+				}
+				if d.IsDir() {
+					return nil
+				}
+				ext := strings.ToLower(filepath.Ext(path))
+				if util.IsValidMediaFile(path) && util.IsValidVideoExtension(ext) {
+					retrievedPaths = append(retrievedPaths, path)
+				}
+				return nil
+			})
 
 			if err != nil {
 				scn.Logger.Error().Err(err).Str("dir", dirPath).Msg("scanner: error retrieving local files")
@@ -107,7 +102,7 @@ func (scn *Scanner) createLocalFiles(ctx context.Context, paths []string, librar
 	jobs := make(chan string, len(paths))
 	results := make(chan *dto.LocalFile, len(paths))
 	var skipped atomic.Int64
-	
+
 	// Pre-map existing files by path for O(1) lookup in workers
 	existingMap := make(map[string]*dto.LocalFile)
 	for _, f := range scn.ExistingLocalFiles {
@@ -135,7 +130,7 @@ func (scn *Scanner) createLocalFiles(ctx context.Context, paths []string, librar
 					continue
 				}
 				lf := dto.NewLocalFileS(path, libraryPaths)
-				
+
 				if stat, err := os.Stat(path); err == nil {
 					lf.FileSize = stat.Size()
 					lf.FileModTime = stat.ModTime().Unix()
@@ -156,7 +151,7 @@ func (scn *Scanner) createLocalFiles(ctx context.Context, paths []string, librar
 						lf.Metadata = existing.Metadata
 					}
 				}
-				
+
 				results <- lf
 			}
 		}()

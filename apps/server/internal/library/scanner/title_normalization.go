@@ -280,7 +280,7 @@ func normalizeString(s string) string {
 		s = partPatternOrdinal.ReplaceAllString(s, " ")  // "2nd Part"
 	}
 	if strings.Contains(s, "part") || strings.Contains(s, "cour") {
-		s = partPatternRoman.ReplaceAllString(s, " ")    // "Part II"
+		s = partPatternRoman.ReplaceAllString(s, " ") // "Part II"
 	}
 
 	// Collapse whitespace

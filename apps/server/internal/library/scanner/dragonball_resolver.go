@@ -27,46 +27,46 @@ var dragonBallMovies = FranchiseDef{
 	TriggerWords: []string{}, // No global trigger — called only when upstream identifies DB content.
 	Movies: []MovieMapping{
 		// ── Dragon Ball Super movies ──────────────────────────────────────────
-		{AnyOf: []string{"dioses", "gods"}, TMDBID: 126963},                                              // Battle of Gods
-		{AnyOf: []string{"resurreccion", "resurrection"}, TMDBID: 303857},                                // Resurrection 'F'
+		{AnyOf: []string{"dioses", "gods"}, TMDBID: 126963},                                                           // Battle of Gods
+		{AnyOf: []string{"resurreccion", "resurrection"}, TMDBID: 303857},                                             // Resurrection 'F'
 		{Keywords: []string{"broly", "super"}, Excluded: []string{"hero", "legendario", "legendary"}, TMDBID: 503314}, // DBS: Broly
-		{Keywords: []string{"super", "hero"}, TMDBID: 610150},                                            // Dragon Ball Super: Super Hero
+		{Keywords: []string{"super", "hero"}, TMDBID: 610150},                                                         // Dragon Ball Super: Super Hero
 
 		// ── DBZ Broly trilogy ────────────────────────────────────────────────
-		{Keywords: []string{"broly"}, AnyOf: []string{"regreso", "second"}, TMDBID: 44251},               // Broly – Second Coming
-		{Keywords: []string{"broly"}, AnyOf: []string{"bio", "combate"}, TMDBID: 39106},                  // Bio-Broly
-		{Keywords: []string{"broly"}, AnyOf: []string{"legendario", "legendary"}, TMDBID: 34433},         // Broly – The Legendary Super Saiyan
-		{Keywords: []string{"broly"}, TMDBID: 34433},                                                     // Broly (generic fallback)
+		{Keywords: []string{"broly"}, AnyOf: []string{"regreso", "second"}, TMDBID: 44251},       // Broly – Second Coming
+		{Keywords: []string{"broly"}, AnyOf: []string{"bio", "combate"}, TMDBID: 39106},          // Bio-Broly
+		{Keywords: []string{"broly"}, AnyOf: []string{"legendario", "legendary"}, TMDBID: 34433}, // Broly – The Legendary Super Saiyan
+		{Keywords: []string{"broly"}, TMDBID: 34433},                                             // Broly (generic fallback)
 
 		// ── DBZ movies ───────────────────────────────────────────────────────
-		{AnyOf: []string{"fusion", "janemba"}, TMDBID: 39107},                                            // Fusion Reborn
-		{AnyOf: []string{"tapion", "ataque"}, TMDBID: 39108},                                             // Wrath of the Dragon
-		{Keywords: []string{"cooler"}, AnyOf: []string{"regreso", "return", "choque"}, TMDBID: 39103},    // Return of Cooler
-		{Keywords: []string{"cooler"}, TMDBID: 24752},                                                    // Cooler's Revenge
-		{AnyOf: []string{"bojack", "galactico", "unbound"}, TMDBID: 39105},                               // Bojack Unbound
-		{Keywords: []string{"13"}, AnyOf: []string{"android", "androide"}, TMDBID: 39104},                // Super Android 13
-		{Keywords: []string{"trunks"}, AnyOf: []string{"futuro", "future"}, TMDBID: 39324},               // History of Trunks
-		{Keywords: []string{"bardock"}, AnyOf: []string{"episodio", "episode"}, TMDBID: 120475},          // Episode of Bardock (2011)
-		{AnyOf: []string{"bardock"}, TMDBID: 39323},                                                      // Bardock – Father of Goku (keyword)
-		{Keywords: []string{"padre", "goku", "freezer"}, TMDBID: 39323},                                  // Bardock – via description tokens
-		{AnyOf: []string{"arbol", "turles"}, TMDBID: 39101},                                              // Tree of Might
-		{Keywords: []string{"fuerte"}, AnyOf: []string{"hombre", "mundo"}, TMDBID: 39100},                // The World's Strongest
-		{Keywords: []string{"slug"}, TMDBID: 39102},                                                      // Lord Slug
-		{AnyOf: []string{"dead", "devuelveme"}, TMDBID: 28609},                                           // Dead Zone
+		{AnyOf: []string{"fusion", "janemba"}, TMDBID: 39107},                                         // Fusion Reborn
+		{AnyOf: []string{"tapion", "ataque"}, TMDBID: 39108},                                          // Wrath of the Dragon
+		{Keywords: []string{"cooler"}, AnyOf: []string{"regreso", "return", "choque"}, TMDBID: 39103}, // Return of Cooler
+		{Keywords: []string{"cooler"}, TMDBID: 24752},                                                 // Cooler's Revenge
+		{AnyOf: []string{"bojack", "galactico", "unbound"}, TMDBID: 39105},                            // Bojack Unbound
+		{Keywords: []string{"13"}, AnyOf: []string{"android", "androide"}, TMDBID: 39104},             // Super Android 13
+		{Keywords: []string{"trunks"}, AnyOf: []string{"futuro", "future"}, TMDBID: 39324},            // History of Trunks
+		{Keywords: []string{"bardock"}, AnyOf: []string{"episodio", "episode"}, TMDBID: 120475},       // Episode of Bardock (2011)
+		{AnyOf: []string{"bardock"}, TMDBID: 39323},                                                   // Bardock – Father of Goku (keyword)
+		{Keywords: []string{"padre", "goku", "freezer"}, TMDBID: 39323},                               // Bardock – via description tokens
+		{AnyOf: []string{"arbol", "turles"}, TMDBID: 39101},                                           // Tree of Might
+		{Keywords: []string{"fuerte"}, AnyOf: []string{"hombre", "mundo"}, TMDBID: 39100},             // The World's Strongest
+		{Keywords: []string{"slug"}, TMDBID: 39102},                                                   // Lord Slug
+		{AnyOf: []string{"dead", "devuelveme"}, TMDBID: 28609},                                        // Dead Zone
 
 		// ── GT Special ───────────────────────────────────────────────────────
-		{Keywords: []string{"100"}, AnyOf: []string{"anos", "despues"}, TMDBID: 18095},                   // A Hero's Legacy (100 años)
+		{Keywords: []string{"100"}, AnyOf: []string{"anos", "despues"}, TMDBID: 18095}, // A Hero's Legacy (100 años)
 
 		// ── Specials / Side-stories ──────────────────────────────────────────
-		{Keywords: []string{"hola", "goku"}, TMDBID: 38594},                                              // Yo! Son Goku and His Friends Return!!
-		{AnyOf: []string{"regresan"}, TMDBID: 38594},                                                     // Yo! (alternate title)
-		{AnyOf: []string{"vial", "seguridad", "safety"}, TMDBID: 39322},                                  // Goku's Traffic Safety
+		{Keywords: []string{"hola", "goku"}, TMDBID: 38594},             // Yo! Son Goku and His Friends Return!!
+		{AnyOf: []string{"regresan"}, TMDBID: 38594},                    // Yo! (alternate title)
+		{AnyOf: []string{"vial", "seguridad", "safety"}, TMDBID: 39322}, // Goku's Traffic Safety
 
 		// ── Classic Dragon Ball movies ───────────────────────────────────────
-		{Keywords: []string{"leyenda"}, AnyOf: []string{"shenlong", "shenron"}, TMDBID: 39144},           // La Leyenda de Shenlong
-		{Keywords: []string{"princesa", "durmiente"}, TMDBID: 39145},                                     // La Princesa Durmiente
-		{Keywords: []string{"aventura", "mistica"}, TMDBID: 116776},                                      // Una Aventura Mística
-		{Keywords: []string{"camino"}, AnyOf: []string{"fuerte", "power"}, TMDBID: 39148},                // El Camino al Poder
+		{Keywords: []string{"leyenda"}, AnyOf: []string{"shenlong", "shenron"}, TMDBID: 39144}, // La Leyenda de Shenlong
+		{Keywords: []string{"princesa", "durmiente"}, TMDBID: 39145},                           // La Princesa Durmiente
+		{Keywords: []string{"aventura", "mistica"}, TMDBID: 116776},                            // Una Aventura Mística
+		{Keywords: []string{"camino"}, AnyOf: []string{"fuerte", "power"}, TMDBID: 39148},      // El Camino al Poder
 	},
 }
 

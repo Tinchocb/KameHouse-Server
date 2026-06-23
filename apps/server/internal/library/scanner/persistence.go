@@ -8,8 +8,6 @@ import (
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
 	"path/filepath"
-
-
 )
 
 // persistMatchedMedia saves LibraryMedia records to the database and maps their IDs back to LocalFiles.
@@ -142,9 +140,9 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 				tmdbIDs[i] = m.TmdbID
 			}
 			scn.Database.Gorm().Where("tmdb_id IN ?", tmdbIDs).Find(&insertedMedia)
-			
+
 			scn.Logger.Debug().Int("insertedCount", len(insertedMedia)).Msg("scanner: Retrieved persisted LibraryMedia records")
-			
+
 			for _, m := range insertedMedia {
 				mapKey := m.TmdbID
 				if m.Type == "MOVIE" {

@@ -11,6 +11,7 @@ import (
 	"kamehouse/internal/platforms/platform"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 
 	"github.com/rs/zerolog"
 	"github.com/samber/lo"
@@ -367,7 +368,7 @@ func (m *ManagerImpl) GetTrackedMediaItems() (ret []*TrackedMediaItem) {
 // It will then update the ManagerImpl.localAnimeCollection
 func (m *ManagerImpl) SynchronizeLocal() error {
 
-	localStorageSizeCache = 0
+	localStorageSizeCache.Store(0)
 
 	m.loadLocalAnimeCollection()
 
@@ -539,12 +540,12 @@ func (m *ManagerImpl) removeMediaImages(mediaID int) error {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Avoids recalculating the size of the cache directory every time it is requested
-var localStorageSizeCache int64
+var localStorageSizeCache atomic.Int64
 
 func (m *ManagerImpl) GetLocalStorageSize() int64 {
 
-	if localStorageSizeCache != 0 {
-		return localStorageSizeCache
+	if size := localStorageSizeCache.Load(); size != 0 {
+		return size
 	}
 
 	var size int64
@@ -557,7 +558,7 @@ func (m *ManagerImpl) GetLocalStorageSize() int64 {
 		return nil
 	})
 
-	localStorageSizeCache = size
+	localStorageSizeCache.Store(size)
 
 	return size
 }

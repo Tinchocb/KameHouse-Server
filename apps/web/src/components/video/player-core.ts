@@ -97,6 +97,8 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         return getAbsoluteLanUrl(playableUrl, serverIPs, serverPort)
     }, [playableUrl, serverIPs, serverPort])
 
+    const lastRegisteredCastUrlRef = useRef<string | null>(null)
+
     useEffect(() => {
         if (!playableUrl) return
 
@@ -113,6 +115,9 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             return typeof window !== "undefined" ? window.location.origin : `http://localhost:${__DEV_SERVER_PORT}`
         })()
         const castUrl = `${localServerUrl}/api/v1/cast/player?url=${encodeURIComponent(absoluteLanUrl)}&title=${encodeURIComponent(title || "KameHouse")}`
+
+        if (lastRegisteredCastUrlRef.current === castUrl) return
+        lastRegisteredCastUrlRef.current = castUrl
 
         buildSeaQuery({
             endpoint: "/api/v1/cast/samsung/launch",
@@ -587,6 +592,11 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         video.currentTime = resumeTime
         setShowResume(false)
         video.play()
+            .then(() => setIsPlaying(true))
+            .catch((err) => {
+                console.log("Resume autoplay blocked:", err)
+                setIsPlaying(false)
+            })
     }
 
     const skipTime = useCallback((amount: number) => {

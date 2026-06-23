@@ -30,8 +30,8 @@ func (scn *Scanner) enrichMediaMetadata(ctx context.Context, libraryMediaIdMap m
 
 	// Collect TV show IDs to enrich (skip movies).
 	type enrichJob struct {
-		tmdbID    int
-		libId     uint
+		tmdbID int
+		libId  uint
 	}
 	var jobs []enrichJob
 	seen := make(map[int]bool)

@@ -100,40 +100,62 @@ export function usePlayerSkip({
     // which corrupt HLS.js audio decoding.
     const lastManualSeekTimestampRef = useRef<number>(0)
 
-    const [skipMode, setSkipMode] = useState<"intro" | "outro" | null>(null)
-    const [skipRemainingSeconds, setSkipRemainingSeconds] = useState(0)
-    const [segmentProgress, setSegmentProgress] = useState(0)
-    const [showNextEpisode, setShowNextEpisode] = useState(false)
-    const [showAutoSkipToast, setShowAutoSkipToast] = useState<"intro" | "outro" | "pause" | null>(null)
-    const [activeChapter, setActiveChapter] = useState<string | null>(null)
-    const [countdownSeconds, setCountdownSeconds] = useState(5)
+    const [skipMode, setSkipModeState] = useState<"intro" | "outro" | null>(null)
+    const skipModeRef = useRef<"intro" | "outro" | null>(null)
+    const setSkipMode = useCallback((val: "intro" | "outro" | null) => {
+        skipModeRef.current = val
+        setSkipModeState(val)
+    }, [])
 
-    // Synchronize video ended and current time into state to avoid accessing ref during render
-    const [videoTime, setVideoTime] = useState(0)
+    const [skipRemainingSeconds, setSkipRemainingSecondsState] = useState(0)
+    const skipRemainingSecondsRef = useRef(0)
+    const setSkipRemainingSeconds = useCallback((val: number) => {
+        skipRemainingSecondsRef.current = val
+        setSkipRemainingSecondsState(val)
+    }, [])
+
+    const [segmentProgress, setSegmentProgressState] = useState(0)
+    const segmentProgressRef = useRef(0)
+    const setSegmentProgress = useCallback((val: number) => {
+        segmentProgressRef.current = val
+        setSegmentProgressState(val)
+    }, [])
+
+    const [showNextEpisode, setShowNextEpisodeState] = useState(false)
+    const showNextEpisodeRef = useRef(false)
+    const setShowNextEpisode = useCallback((val: boolean) => {
+        showNextEpisodeRef.current = val
+        setShowNextEpisodeState(val)
+    }, [])
+
+    const [showAutoSkipToast, setShowAutoSkipToast] = useState<"intro" | "outro" | "pause" | null>(null)
+
+    const [activeChapter, setActiveChapterState] = useState<string | null>(null)
+    const activeChapterRef = useRef<string | null>(null)
+    const setActiveChapter = useCallback((val: string | null) => {
+        activeChapterRef.current = val
+        setActiveChapterState(val)
+    }, [])
+
+    const [countdownSeconds, setCountdownSeconds] = useState(5)
+    const [showCountdown, setShowCountdown] = useState(false)
     const [videoEnded, setVideoEnded] = useState(false)
 
-    const [prevEpisodeKey, setPrevEpisodeKey] = useState("")
     const currentEpisodeKey = `${episodeNumber}_${playableUrl}`
-    if (currentEpisodeKey !== prevEpisodeKey) {
-        setPrevEpisodeKey(currentEpisodeKey)
+    useEffect(() => {
         setShowNextEpisode(false)
         setSkipMode(null)
-    }
-
-    useEffect(() => {
+        setShowCountdown(false)
         hasAutoSkippedIntroRef.current = false
         hasAutoSkippedOutroRef.current = false
         hasTriggeredNextEpisodeRef.current = false
         hasPreloadedRef.current = false
-    }, [episodeNumber, playableUrl])
+    }, [currentEpisodeKey])
 
     useEffect(() => {
         const video = videoRef.current
         if (!video) return
 
-        const handleTimeUpdate = () => {
-            setVideoTime(video.currentTime)
-        }
         const handleEnded = () => {
             setVideoEnded(true)
         }
@@ -142,20 +164,16 @@ export function usePlayerSkip({
         }
         const handleSeeked = () => {
             setVideoEnded(video.ended)
-            setVideoTime(video.currentTime)
         }
 
-        video.addEventListener("timeupdate", handleTimeUpdate)
         video.addEventListener("ended", handleEnded)
         video.addEventListener("play", handlePlay)
         video.addEventListener("seeked", handleSeeked)
 
         // Initialize state
-        setVideoTime(video.currentTime)
         setVideoEnded(video.ended)
 
         return () => {
-            video.removeEventListener("timeupdate", handleTimeUpdate)
             video.removeEventListener("ended", handleEnded)
             video.removeEventListener("play", handlePlay)
             video.removeEventListener("seeked", handleSeeked)
@@ -220,12 +238,16 @@ export function usePlayerSkip({
         let opEnd = cached?.opEnd
         let edOffset = cached?.edOffset
 
-        // Resolve opening
         if (skipTimes?.op) {
             opStart = skipTimes.op.startTime
             opEnd = skipTimes.op.endTime
         } else {
-            const opChap = chapters.find(c => c.type === "opening" || c.name.toLowerCase().includes("op") || c.name.toLowerCase().includes("opening"))
+            const opChap = chapters.find(c => {
+                const n = c.name.toLowerCase()
+                return c.type === "opening" ||
+                    /^(op\d*|opening\d*|intro\d*)\b/i.test(n) ||
+                    /\b(op\d*|opening\d*|intro\d*)\b/i.test(n)
+            })
             if (opChap) {
                 opStart = opChap.startTime
                 opEnd = opChap.endTime
@@ -236,7 +258,12 @@ export function usePlayerSkip({
         if (skipTimes?.ed) {
             edOffset = duration - skipTimes.ed.startTime
         } else {
-            const edChap = chapters.find(c => c.type === "ending" || c.name.toLowerCase().includes("ed") || c.name.toLowerCase().includes("ending") || c.name.toLowerCase().includes("outro"))
+            const edChap = chapters.find(c => {
+                const n = c.name.toLowerCase()
+                return c.type === "ending" ||
+                    /^(ed\d*|ending\d*|credits|créditos|outro\d*)\b/i.test(n) ||
+                    /\b(ed\d*|ending\d*|credits|créditos|outro\d*)\b/i.test(n)
+            })
             if (edChap) {
                 edOffset = duration - edChap.startTime
             }
@@ -426,7 +453,7 @@ export function usePlayerSkip({
             if (chapters.length > 0) {
                 const current = chapters.find(c => curr >= c.startTime && curr < c.endTime)
                 const name = current ? current.name : null
-                if (activeChapter !== name) setActiveChapter(name)
+                if (activeChapterRef.current !== name) setActiveChapter(name)
             }
             return
         }
@@ -434,7 +461,7 @@ export function usePlayerSkip({
         if (chapters.length > 0) {
             const current = chapters.find(c => curr >= c.startTime && curr < c.endTime)
             const name = current ? current.name : null
-            if (activeChapter !== name) {
+            if (activeChapterRef.current !== name) {
                 setActiveChapter(name)
             }
 
@@ -540,10 +567,10 @@ export function usePlayerSkip({
             if (inOpWindow) {
                 const remaining = Math.ceil(endTime - curr)
                 const progress = Math.round(((curr - startTime) / (endTime - startTime)) * 100)
-                if (skipMode !== "intro") setSkipMode("intro")
-                if (skipRemainingSeconds !== remaining) setSkipRemainingSeconds(remaining)
-                if (segmentProgress !== progress) setSegmentProgress(progress)
-            } else if (skipMode === "intro") {
+                if (skipModeRef.current !== "intro") setSkipMode("intro")
+                if (skipRemainingSecondsRef.current !== remaining) setSkipRemainingSeconds(remaining)
+                if (segmentProgressRef.current !== progress) setSegmentProgress(progress)
+            } else if (skipModeRef.current === "intro") {
                 setSkipMode(null)
             }
         }
@@ -569,10 +596,10 @@ export function usePlayerSkip({
                 if (inEdWindow) {
                     const remaining = Math.ceil(endTime - curr)
                     const progress = Math.round(((curr - startTime) / (endTime - startTime)) * 100)
-                    if (skipMode !== "outro") setSkipMode("outro")
-                    if (skipRemainingSeconds !== remaining) setSkipRemainingSeconds(remaining)
-                    if (segmentProgress !== progress) setSegmentProgress(progress)
-                } else if (skipMode === "outro") {
+                    if (skipModeRef.current !== "outro") setSkipMode("outro")
+                    if (skipRemainingSecondsRef.current !== remaining) setSkipRemainingSeconds(remaining)
+                    if (segmentProgressRef.current !== progress) setSegmentProgress(progress)
+                } else if (skipModeRef.current === "outro") {
                     setSkipMode(null)
                 }
             }
@@ -634,14 +661,46 @@ export function usePlayerSkip({
             (autoSkipOutroPref && edTriggered && hasNextEpisode)
 
         if (shouldShowNext && hasNextEpisode) {
-            if (!showNextEpisode) {
+            if (!showNextEpisodeRef.current) {
                 setShowNextEpisode(true)
                 setCountdownSeconds(5)
             }
         } else {
-            if (showNextEpisode) setShowNextEpisode(false)
+            if (showNextEpisodeRef.current) setShowNextEpisode(false)
         }
-    }, [videoRef, skipTimesOp, skipTimesEd, autoSkipIntroPref, autoSkipOutroPref, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, hasNextEpisode, mediaFormat, chapters, activeChapter, triggerToast, marathonMode, nextStreamUrl, nextStreamType, streamType, preloadStream, queryClient, clientId])
+
+        // Calculate showCountdown state during playback
+        const isVideoPlayingOrEnded = !video.paused || video.ended
+        const isVideoEnded = video.ended
+        const targetShowCountdown =
+            tvMode &&
+            !marathonMode &&
+            autoPlayNextEpisode &&
+            isVideoPlayingOrEnded &&
+            hasNextEpisode &&
+            (isVideoEnded || 
+             (autoSkipOutroPref && skipTimesEd ? curr >= skipTimesEd.startTime : false) ||
+             (total > 0 && total - curr <= 15))
+
+        if (showCountdown !== targetShowCountdown) {
+            setShowCountdown(targetShowCountdown)
+        }
+
+        // Trigger marathon autoplay during playback
+        const shouldTriggerMarathon =
+            marathonMode &&
+            hasNextEpisode &&
+            onNextEpisode &&
+            (video.ended || (total > 0 && total - curr <= 3))
+
+        if (shouldTriggerMarathon) {
+            if (!hasTriggeredNextEpisodeRef.current) {
+                hasTriggeredNextEpisodeRef.current = true
+                video.pause()
+                onNextEpisode()
+            }
+        }
+    }, [videoRef, skipTimesOp, skipTimesEd, autoSkipIntroPref, autoSkipOutroPref, hasNextEpisode, mediaFormat, chapters, triggerToast, marathonMode, nextStreamUrl, nextStreamType, streamType, preloadStream, queryClient, clientId, showCountdown, tvMode, autoPlayNextEpisode, onNextEpisode])
 
     useEffect(() => {
         if (!showNextEpisode) {
@@ -649,17 +708,30 @@ export function usePlayerSkip({
         }
     }, [showNextEpisode])
 
-    const isVideoEnded = videoEnded
-    const isVideoPlayingOrEnded = isPlaying || isVideoEnded
-    const showCountdown =
-        tvMode &&
-        !marathonMode &&
-        autoPlayNextEpisode &&
-        isVideoPlayingOrEnded &&
-        hasNextEpisode &&
-        (isVideoEnded || 
-         (autoSkipOutroPref && skipTimesEd ? videoTime >= skipTimesEd.startTime : false) ||
-         (duration > 0 && duration - videoTime <= 15))
+    // Sync showCountdown when playback status changes (since processTimeUpdates does not fire when paused)
+    useEffect(() => {
+        const video = videoRef.current
+        if (!video) return
+
+        const isVideoEnded = videoEnded
+        const isVideoPlayingOrEnded = isPlaying || isVideoEnded
+        const curr = video.currentTime
+        const total = video.duration || duration
+
+        const targetShowCountdown =
+            tvMode &&
+            !marathonMode &&
+            autoPlayNextEpisode &&
+            isVideoPlayingOrEnded &&
+            hasNextEpisode &&
+            (isVideoEnded ||
+             (autoSkipOutroPref && skipTimesEd ? curr >= skipTimesEd.startTime : false) ||
+             (total > 0 && total - curr <= 15))
+
+        if (showCountdown !== targetShowCountdown) {
+            setShowCountdown(targetShowCountdown)
+        }
+    }, [isPlaying, videoEnded, tvMode, marathonMode, autoPlayNextEpisode, hasNextEpisode, autoSkipOutroPref, skipTimesEd, duration, videoRef, showCountdown])
 
     const remainingProgress = useMemo(() => {
         return (countdownSeconds / 5) * 100
@@ -683,30 +755,21 @@ export function usePlayerSkip({
         }
     }, [showNextEpisode, countdownSeconds, showCountdown, onNextEpisode, videoRef])
 
-
-    const shouldTriggerMarathonNext =
-        marathonMode &&
-        hasNextEpisode &&
-        onNextEpisode &&
-        (videoEnded || (duration > 0 && duration - videoTime <= 3))
-
     useEffect(() => {
-        if (shouldTriggerMarathonNext) {
-            if (!hasTriggeredNextEpisodeRef.current) {
-                hasTriggeredNextEpisodeRef.current = true
-                if (videoRef.current) videoRef.current.pause()
-                onNextEpisode()
+        if (videoEnded && hasNextEpisode && onNextEpisode && autoPlayNextEpisode) {
+            if (marathonMode) {
+                if (!hasTriggeredNextEpisodeRef.current) {
+                    hasTriggeredNextEpisodeRef.current = true
+                    if (videoRef.current) videoRef.current.pause()
+                    onNextEpisode()
+                }
+            } else if (!tvMode) {
+                const timer = setTimeout(() => {
+                    if (videoRef.current) videoRef.current.pause()
+                    onNextEpisode()
+                }, 1000)
+                return () => clearTimeout(timer)
             }
-        }
-    }, [shouldTriggerMarathonNext, onNextEpisode, videoRef])
-
-    useEffect(() => {
-        if (videoEnded && hasNextEpisode && onNextEpisode && autoPlayNextEpisode && !tvMode && !marathonMode) {
-            const timer = setTimeout(() => {
-                if (videoRef.current) videoRef.current.pause()
-                onNextEpisode()
-            }, 1000)
-            return () => clearTimeout(timer)
         }
     }, [videoEnded, hasNextEpisode, onNextEpisode, autoPlayNextEpisode, tvMode, marathonMode, videoRef])
 

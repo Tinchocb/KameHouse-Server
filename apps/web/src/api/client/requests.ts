@@ -96,10 +96,11 @@ export async function buildSeaQuery<T, D = void>(
 
             if (!res.ok) {
                 let errorData: unknown;
+                const text = await res.text();
                 try {
-                    errorData = await res.json();
+                    errorData = JSON.parse(text);
                 } catch {
-                    errorData = await res.text();
+                    errorData = text;
                 }
 
                 // If 502, 503, 504, 429 -> retry

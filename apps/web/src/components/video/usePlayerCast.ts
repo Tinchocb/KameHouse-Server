@@ -105,7 +105,7 @@ export function usePlayerCast({
             video.removeAttribute("src")
             video.load()
             hlsRef.current.attachMedia(video)
-            hlsRef.current.loadSource(absoluteLanUrlRef.current)
+            hlsRef.current.loadSource(playableUrlRef.current)
 
             const handleManifestParsed = () => {
                 setVideoCurrentTime(video, restoreTime)

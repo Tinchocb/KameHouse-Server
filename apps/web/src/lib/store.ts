@@ -77,7 +77,7 @@ export const createUISlice: StateCreator<UIState & PlayerState, [], [], UIState>
     uiSoundsEnabled: true,
     uiSoundsVolume: 1.0,
     globalQueueOpen: false,
-    dynamicBackdropEnabled: true,
+    dynamicBackdropEnabled: false,
     dynamicBackdropMotionEnabled: false,
     setSidebarOpen: (open) => set({ sidebarOpen: open }),
     setActiveTheme: (theme) => set({ activeTheme: theme }),

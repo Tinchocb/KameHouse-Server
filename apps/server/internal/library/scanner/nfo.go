@@ -19,17 +19,17 @@ type NfoUniqueID struct {
 // Supports tvshow, movie, anime, and episodedetails roots.
 type NfoFile struct {
 	XMLName       xml.Name      `xml:"tvshow"`
-	UniqueIDs     []NfoUniqueID `xml:"uniqueid"` // Jellyfin/Kodi-style: <uniqueid type="tmdb">603</uniqueid>
-	ID            int           `xml:"id"`       // Fallback / TMDB ID usually
-	TmdbID        int           `xml:"tmdbid"`   // TMDB ID
-	TvdbId        int           `xml:"tvdbid"`   // TVDB ID
-	AnilistId     int           `xml:"anilistid"` // AniList ID
+	UniqueIDs     []NfoUniqueID `xml:"uniqueid"`      // Jellyfin/Kodi-style: <uniqueid type="tmdb">603</uniqueid>
+	ID            int           `xml:"id"`            // Fallback / TMDB ID usually
+	TmdbID        int           `xml:"tmdbid"`        // TMDB ID
+	TvdbId        int           `xml:"tvdbid"`        // TVDB ID
+	AnilistId     int           `xml:"anilistid"`     // AniList ID
 	MalId         int           `xml:"myanimelistid"` // MAL ID
-	Season        int           `xml:"season"`   // Season number
-	Episode       int           `xml:"episode"`  // Episode number
-	Absolute      int           `xml:"absolute"` // Absolute anime episode number
-	EpisodeType   string        `xml:"episodetype"` // Canon, Filler, Mixed
-	Format        string        `xml:"format"`   // TV, MOVIE, OVA, SPECIAL
+	Season        int           `xml:"season"`        // Season number
+	Episode       int           `xml:"episode"`       // Episode number
+	Absolute      int           `xml:"absolute"`      // Absolute anime episode number
+	EpisodeType   string        `xml:"episodetype"`   // Canon, Filler, Mixed
+	Format        string        `xml:"format"`        // TV, MOVIE, OVA, SPECIAL
 	Title         string        `xml:"title"`
 	OriginalTitle string        `xml:"originaltitle"` // Romaji/Kanji
 	SortTitle     string        `xml:"sorttitle"`

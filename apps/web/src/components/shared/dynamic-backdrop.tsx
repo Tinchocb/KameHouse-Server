@@ -137,6 +137,9 @@ export function DynamicBackdrop() {
         return () => clearTimeout(timer)
     }, [activeBackdropUrl, displayedUrl, isEnabled])
 
+    const isWails = typeof window !== "undefined" && ((window as any).wails !== undefined || (window as any).runtime !== undefined)
+    const filterClass = isWails ? "blur-lg saturate-150" : "blur-md"
+
     if (!isEnabled) return null
 
     return (
@@ -157,7 +160,7 @@ export function DynamicBackdrop() {
                 {/* ── Displayed (current) backdrop ──────────────────────────── */}
                 <div
                     ref={currentLayerRef}
-                    className="absolute inset-0 scale-115 bg-cover bg-center bg-no-repeat blur-2xl saturate-150"
+                    className={`absolute inset-0 scale-115 bg-cover bg-center bg-no-repeat ${filterClass}`}
                     style={{
                         backgroundImage: displayedUrl ? `url(${displayedUrl})` : undefined,
                         opacity: isCrossFading ? 0 : baseOpacity,
@@ -169,7 +172,7 @@ export function DynamicBackdrop() {
                 {/* ── Incoming (next) backdrop — fades in over the current with asymmetric scale ── */}
                 <div
                     ref={nextLayerRef}
-                    className="absolute inset-0 bg-cover bg-center bg-no-repeat blur-2xl saturate-150"
+                    className={`absolute inset-0 bg-cover bg-center bg-no-repeat ${filterClass}`}
                     style={{
                         backgroundImage: nextUrl ? `url(${nextUrl})` : undefined,
                         opacity: isCrossFading ? baseOpacity : 0,

@@ -117,6 +117,9 @@ export function usePlayerHls({
 
         const isHlsUrl = playableUrl.includes(".m3u8")
         let hlsInstance: Hls | null = null
+        // Track media error recovery attempts to implement the two-pass strategy:
+        // 1st failure → recoverMediaError(), 2nd failure → swapAudioCodec() + recoverMediaError(), 3rd → fatal
+        let mediaRecoveryAttempt = 0
 
         const handleCanPlay = () => {
             setStatus("ready")
@@ -159,7 +162,10 @@ export function usePlayerHls({
             return playableUrl
         })()
 
+        let listenersAdded = false
+
         if (isHlsUrl && Hls.isSupported()) {
+            // ... (keep HLS setup as is)
             const hls = new Hls({
                 enableWorker: true,
                 lowLatencyMode: false,
@@ -259,9 +265,23 @@ export function usePlayerHls({
                         console.warn("HLS: Fatal network error, attempting recovery...")
                         hls.startLoad()
                     } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-                        // Error de media (buffer corrupto): recobrar el media element
-                        console.warn("HLS: Fatal media error, attempting recovery...")
-                        hls.recoverMediaError()
+                        mediaRecoveryAttempt++
+                        if (mediaRecoveryAttempt === 1) {
+                            // 1er intento: recuperación estándar del media element
+                            console.warn("HLS: Fatal media error (attempt 1/2), calling recoverMediaError()...")
+                            hls.recoverMediaError()
+                        } else if (mediaRecoveryAttempt === 2) {
+                            // 2do intento: el codec de audio puede ser incompatible, hacer swap y reintentar
+                            console.warn("HLS: Fatal media error (attempt 2/2), swapping audio codec and recovering...")
+                            hls.swapAudioCodec()
+                            hls.recoverMediaError()
+                        } else {
+                            // Recuperación fallida — mostrar pantalla de error
+                            console.error("HLS: Media error is unrecoverable after 2 attempts:", data.details)
+                            setStatus("error")
+                            setErrorMsg(video.error?.message || `Error de decodificación: ${data.details}`)
+                            hls.destroy()
+                        }
                     } else {
                         // Error irrecuperable
                         setStatus("error")
@@ -282,6 +302,7 @@ export function usePlayerHls({
 
             video.addEventListener("canplay", handleCanPlay)
             video.addEventListener("error", handleNativeError)
+            listenersAdded = true
 
             if (backendTracksRef.current) {
                 Promise.resolve().then(() => {
@@ -303,8 +324,10 @@ export function usePlayerHls({
             try {
                 video.load()
             } catch {}
-            video.removeEventListener("canplay", handleCanPlay)
-            video.removeEventListener("error", handleNativeError)
+            if (listenersAdded) {
+                video.removeEventListener("canplay", handleCanPlay)
+                video.removeEventListener("error", handleNativeError)
+            }
         }
     }, [
         playableUrl,

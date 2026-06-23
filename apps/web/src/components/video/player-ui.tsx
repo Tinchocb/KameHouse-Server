@@ -248,7 +248,12 @@ export function PlayerUI(props: PlayerUIProps) {
         }) | null
         const canvas = ambilightCanvasRef.current
 
+        let lastDrawTime = 0
         const drawFrame = () => {
+            const now = Date.now()
+            if (now - lastDrawTime < 100) return // Throttled to 10 FPS (100ms)
+            lastDrawTime = now
+
             if (video && canvas && !video.paused) {
                 const ctx = canvas.getContext("2d")
                 if (ctx) {
@@ -297,14 +302,19 @@ export function PlayerUI(props: PlayerUIProps) {
             } as React.CSSProperties}
         >
 
-            <canvas
-                ref={ambilightCanvasRef}
-                className={cn(
-                    "absolute inset-0 w-full h-full scale-110 blur-3xl opacity-75 z-0 pointer-events-none transition-all duration-700",
-                    state.ambilightEnabled && state.isPlaying ? "opacity-75" : "opacity-0"
-                )}
-                style={{ willChange: "transform, opacity" }}
-            />
+            <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
+                <canvas
+                    ref={ambilightCanvasRef}
+                    className={cn(
+                        "absolute top-1/2 left-1/2 w-[80px] h-[45px] blur-2xl opacity-75 pointer-events-none transition-all duration-700",
+                        state.ambilightEnabled && state.isPlaying ? "opacity-75" : "opacity-0"
+                    )}
+                    style={{
+                        willChange: "transform, opacity",
+                        transform: "translate(-50%, -50%) scale(50)",
+                    }}
+                />
+            </div>
 
             <video
                 ref={domElements.videoElement}

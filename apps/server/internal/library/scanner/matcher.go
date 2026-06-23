@@ -36,11 +36,11 @@ type Matcher struct { // Keep struct name 'Matcher' for backwards compatibility
 
 func NewMatcher(localFiles []*dto.LocalFile, mediaContainer *MediaContainer, logger *zerolog.Logger, db *db.Database) *Matcher {
 	return &Matcher{
-		LocalFiles:      localFiles,
-		MediaContainer:  mediaContainer,
-		Logger:          logger,
-		Database:        db,
-		Threshold:       0.70, // Optimized threshold for movies and Spanish titles
+		LocalFiles:     localFiles,
+		MediaContainer: mediaContainer,
+		Logger:         logger,
+		Database:       db,
+		Threshold:      0.70, // Optimized threshold for movies and Spanish titles
 	}
 }
 
@@ -208,7 +208,6 @@ func (m *Matcher) BayesianResolve(lf *dto.LocalFile) {
 verdict:
 	// 3. Verdict
 	if bestMatch != nil && bestConfidence >= threshold {
-
 
 		lf.MediaID = bestMatch.ID
 

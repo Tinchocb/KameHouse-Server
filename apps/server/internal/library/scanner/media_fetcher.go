@@ -231,8 +231,6 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 				}
 			}
 
-
-
 			// ── Persistent Cache + Provider Fetch ────────────────────────────────
 			result, err := metaCache.FetchOnce(egCtx, titleGroup, opts.MetadataProviders, tmdbLimiter, hint)
 			if err != nil {
@@ -258,12 +256,9 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 
 	_ = eg.Wait()
 
-
-
 	return mf, nil
 }
 
 func (mf *MediaFetcher) GetCollectionMediaIds() []int {
 	return mf.CollectionMediaIds
 }
-

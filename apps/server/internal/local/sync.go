@@ -97,7 +97,7 @@ func (q *Syncer) processAnimeJobs() {
 			Title:   job.Diff.AnimeEntry.Media.GetTitleSafe(),
 			Type:    "anime",
 		}
-		q.SendQueueStateToClient()
+		q.sendQueueStateToClientLocked()
 		q.queueStateMu.Unlock()
 
 		q.shouldUpdateLocalCollections = true
@@ -105,7 +105,7 @@ func (q *Syncer) processAnimeJobs() {
 
 		q.queueStateMu.Lock()
 		delete(q.queueState.AnimeTasks, job.Diff.AnimeEntry.Media.ID)
-		q.SendQueueStateToClient()
+		q.sendQueueStateToClientLocked()
 		q.queueStateMu.Unlock()
 
 		if len(q.animeJobQueue) == 0 && q.shouldUpdateLocalCollections {
@@ -309,6 +309,10 @@ func (q *Syncer) synchronizeCollections() (err error) {
 func (q *Syncer) SendQueueStateToClient() {
 	q.queueStateMu.RLock()
 	defer q.queueStateMu.RUnlock()
+	q.sendQueueStateToClientLocked()
+}
+
+func (q *Syncer) sendQueueStateToClientLocked() {
 	q.manager.wsEventManager.SendEvent(events.LocalGetSyncQueueStateEndpoint, q.queueState)
 }
  

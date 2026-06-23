@@ -724,7 +724,6 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	// |    FileHydrator     |
 	// +---------------------+
 
-
 	// Create a new hydrator
 	hydrator := &FileHydrator{
 		AllMedia:            mc.NormalizedMedia,
@@ -892,175 +891,171 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		}
 	}
 
-	// Always create LibraryMedia DB records and add media to collection.
-	// LibraryMedia DB creation is separate from platform ref check since it only needs the DB.
-	if true {
-		// Collect all unique media IDs from matched local files
-		allMatchedIds := make(map[int]struct{})
-		for _, lf := range localFiles {
-			if lf.MediaID != 0 {
-				allMatchedIds[lf.MediaID] = struct{}{}
-			}
+	// Collect all unique media IDs from matched local files
+	allMatchedIds := make(map[int]struct{})
+	for _, lf := range localFiles {
+		if lf.MediaID != 0 {
+			allMatchedIds[lf.MediaID] = struct{}{}
 		}
-		// Also include CollectionMediaIds from the fetcher
-		for _, id := range mf.CollectionMediaIds {
-			allMatchedIds[id] = struct{}{}
-		}
+	}
+	// Also include CollectionMediaIds from the fetcher
+	for _, id := range mf.CollectionMediaIds {
+		allMatchedIds[id] = struct{}{}
+	}
 
-		// Build a map from media ID → file-derived title for fallback
-		// and detect which media IDs are movies based on folder structure
-		fileTitleMap := make(map[int]string)
-		movieIds := make(map[int]bool)
-		for _, lf := range localFiles {
-			if lf.MediaID != 0 {
-				if _, exists := fileTitleMap[lf.MediaID]; !exists {
-					info := ParseFolderStructure(lf.Path, libraryPaths)
-					if info.SeriesName != "" {
-						fileTitleMap[lf.MediaID] = info.SeriesName
-					}
-					if info.IsMovie {
-						movieIds[lf.MediaID] = true
-					}
+	// Build a map from media ID → file-derived title for fallback
+	// and detect which media IDs are movies based on folder structure
+	fileTitleMap := make(map[int]string)
+	movieIds := make(map[int]bool)
+	for _, lf := range localFiles {
+		if lf.MediaID != 0 {
+			if _, exists := fileTitleMap[lf.MediaID]; !exists {
+				info := ParseFolderStructure(lf.Path, libraryPaths)
+				if info.SeriesName != "" {
+					fileTitleMap[lf.MediaID] = info.SeriesName
 				}
-				// IDs with offset >= 1,000,000 are always movies (DragonBallResolver convention)
-				if lf.MediaID >= 1_000_000 {
+				if info.IsMovie {
 					movieIds[lf.MediaID] = true
 				}
 			}
+			// IDs with offset >= 1,000,000 are always movies (DragonBallResolver convention)
+			if lf.MediaID >= 1_000_000 {
+				movieIds[lf.MediaID] = true
+			}
 		}
+	}
 
-		// Create LibraryMedia DB records for each unique matched media
-		// This is necessary so the collection can look them up and show entries in the UI
+	// Create LibraryMedia DB records for each unique matched media
+	// This is necessary so the collection can look them up and show entries in the UI
+	scn.Logger.Info().
+		Int("allMatchedIds", len(allMatchedIds)).
+		Bool("dbIsNil", scn.Database == nil).
+		Msg("scanner: Starting TMDB LibraryMedia persistence")
+	if scn.Database != nil {
+
+		// Persist LibraryMedia records and map IDs back to local files
+		libraryMediaIdMap := scn.persistMatchedMedia(allMatchedIds, movieIds, mc.NormalizedMedia, localFiles)
+
 		scn.Logger.Info().
-			Int("allMatchedIds", len(allMatchedIds)).
-			Bool("dbIsNil", scn.Database == nil).
-			Msg("scanner: Starting TMDB LibraryMedia persistence")
-		if scn.Database != nil {
+			Int("totalMatched", len(allMatchedIds)).
+			Int("libraryMediaCreated", len(libraryMediaIdMap)).
+			Msg("scanner: TMDB LibraryMedia persistence completed")
 
-			// Persist LibraryMedia records and map IDs back to local files
-			libraryMediaIdMap := scn.persistMatchedMedia(allMatchedIds, movieIds, mc.NormalizedMedia, localFiles)
+		// Fetch enriched metadata (seasons, episodes, etc.)
+		err = scn.enrichMediaMetadata(ctx, libraryMediaIdMap, movieIds, localFiles)
+		if err != nil {
+			return nil, err
+		}
+	}
 
-			scn.Logger.Info().
-				Int("totalMatched", len(allMatchedIds)).
-				Int("libraryMediaCreated", len(libraryMediaIdMap)).
-				Msg("scanner: TMDB LibraryMedia persistence completed")
+	// Add media to platform collection (requires platform ref)
+	if scn.PlatformRef != nil {
+		allIds := make([]int, 0, len(allMatchedIds))
+		for id := range allMatchedIds {
+			allIds = append(allIds, id)
+		}
+		if len(allIds) > 0 {
+			scn.Logger.Debug().Int("count", len(allIds)).Msg("scanner: Adding all matched media to platform collection")
+			if err = scn.PlatformRef.AddMediaToCollection(ctx, allIds); err != nil {
+				scn.Logger.Warn().Msg("scanner: An error occurred while adding TMDB media to collection: " + err.Error())
+			}
+		}
+	}
 
-			// Fetch enriched metadata (seasons, episodes, etc.)
-			err = scn.enrichMediaMetadata(ctx, libraryMediaIdMap, movieIds, localFiles)
-			if err != nil {
-				return nil, err
+	// ── Persist franchise/saga collections ─────────────────────────────────
+	// For every scanned movie, fetch its detailed metadata from TMDB to
+	// discover BelongsToCollection. Then upsert each unique collection so
+	// the /api/v1/collections/:id endpoint can serve cached poster/overview data.
+	if scn.Database != nil && scn.TMDBClient != nil && len(movieIds) > 0 {
+		scn.Logger.Info().Int("movieCount", len(movieIds)).Msg("scanner: Fetching BelongsToCollection for movies")
+
+		// Collect real movie IDs for concurrent lookup.
+		realMovieIDs := make([]int, 0, len(movieIds))
+		for normalizedID := range movieIds {
+			if realMovieID := normalizedID - 1_000_000; realMovieID > 0 {
+				realMovieIDs = append(realMovieIDs, realMovieID)
 			}
 		}
 
-		// Add media to platform collection (requires platform ref)
-		if scn.PlatformRef != nil {
-			allIds := make([]int, 0, len(allMatchedIds))
-			for id := range allMatchedIds {
-				allIds = append(allIds, id)
-			}
-			if len(allIds) > 0 {
-				scn.Logger.Debug().Int("count", len(allIds)).Msg("scanner: Adding all matched media to platform collection")
-				if err = scn.PlatformRef.AddMediaToCollection(ctx, allIds); err != nil {
-					scn.Logger.Warn().Msg("scanner: An error occurred while adding TMDB media to collection: " + err.Error())
-				}
-			}
+		// Fan-out: fetch all movie details concurrently (up to 5 workers).
+		var collectionMu sync.Mutex
+		collectionMembers := make(map[int][]int)
+
+		movieIDCh := make(chan int, len(realMovieIDs))
+		for _, id := range realMovieIDs {
+			movieIDCh <- id
 		}
+		close(movieIDCh)
 
-		// ── Persist franchise/saga collections ─────────────────────────────────
-		// For every scanned movie, fetch its detailed metadata from TMDB to
-		// discover BelongsToCollection. Then upsert each unique collection so
-		// the /api/v1/collections/:id endpoint can serve cached poster/overview data.
-		if scn.Database != nil && scn.TMDBClient != nil && len(movieIds) > 0 {
-			scn.Logger.Info().Int("movieCount", len(movieIds)).Msg("scanner: Fetching BelongsToCollection for movies")
-
-			// Collect real movie IDs for concurrent lookup.
-			realMovieIDs := make([]int, 0, len(movieIds))
-			for normalizedID := range movieIds {
-				if realMovieID := normalizedID - 1_000_000; realMovieID > 0 {
-					realMovieIDs = append(realMovieIDs, realMovieID)
-				}
-			}
-
-			// Fan-out: fetch all movie details concurrently (up to 5 workers).
-			var collectionMu sync.Mutex
-			collectionMembers := make(map[int][]int)
-
-			movieIDCh := make(chan int, len(realMovieIDs))
-			for _, id := range realMovieIDs {
-				movieIDCh <- id
-			}
-			close(movieIDCh)
-
-			collWorkers := 5
-			if len(realMovieIDs) < collWorkers {
-				collWorkers = len(realMovieIDs)
-			}
-			var collWg sync.WaitGroup
-			for w := 0; w < collWorkers; w++ {
-				collWg.Add(1)
-				go func() {
-					defer collWg.Done()
-					for realMovieID := range movieIDCh {
-						if ctx.Err() != nil {
-							return
-						}
-						details, detailErr := scn.TMDBClient.GetMovieDetailsV2(ctx, realMovieID)
-						if detailErr != nil {
-							scn.Logger.Debug().Err(detailErr).Int("tmdbID", realMovieID).Msg("scanner: Could not get movie details for collection lookup")
-							continue
-						}
-						if details.BelongsToCollection != nil && details.BelongsToCollection.ID > 0 {
-							collID := details.BelongsToCollection.ID
-							collectionMu.Lock()
-							collectionMembers[collID] = append(collectionMembers[collID], realMovieID)
-							collectionMu.Unlock()
-						}
+		collWorkers := 5
+		if len(realMovieIDs) < collWorkers {
+			collWorkers = len(realMovieIDs)
+		}
+		var collWg sync.WaitGroup
+		for w := 0; w < collWorkers; w++ {
+			collWg.Add(1)
+			go func() {
+				defer collWg.Done()
+				for realMovieID := range movieIDCh {
+					if ctx.Err() != nil {
+						return
 					}
-				}()
+					details, detailErr := scn.TMDBClient.GetMovieDetailsV2(ctx, realMovieID)
+					if detailErr != nil {
+						scn.Logger.Debug().Err(detailErr).Int("tmdbID", realMovieID).Msg("scanner: Could not get movie details for collection lookup")
+						continue
+					}
+					if details.BelongsToCollection != nil && details.BelongsToCollection.ID > 0 {
+						collID := details.BelongsToCollection.ID
+						collectionMu.Lock()
+						collectionMembers[collID] = append(collectionMembers[collID], realMovieID)
+						collectionMu.Unlock()
+					}
+				}
+			}()
+		}
+		collWg.Wait()
+
+		// Upsert each discovered collection (small N, sequential is fine here).
+		for collID, memberIDs := range collectionMembers {
+			if ctx.Err() != nil {
+				break
 			}
-			collWg.Wait()
+			collDetails, collErr := scn.TMDBClient.GetCollection(ctx, collID)
+			if collErr != nil {
+				scn.Logger.Warn().Err(collErr).Int("collectionId", collID).Msg("scanner: Could not fetch collection details")
+				continue
+			}
 
-			// Upsert each discovered collection (small N, sequential is fine here).
-			for collID, memberIDs := range collectionMembers {
-				if ctx.Err() != nil {
-					break
-				}
-				collDetails, collErr := scn.TMDBClient.GetCollection(ctx, collID)
-				if collErr != nil {
-					scn.Logger.Warn().Err(collErr).Int("collectionId", collID).Msg("scanner: Could not fetch collection details")
-					continue
-				}
+			posterPath := ""
+			backdropPath := ""
+			if collDetails.PosterPath != "" {
+				posterPath = "https://image.tmdb.org/t/p/original" + collDetails.PosterPath
+			}
+			if collDetails.BackdropPath != "" {
+				backdropPath = "https://image.tmdb.org/t/p/original" + collDetails.BackdropPath
+			}
 
-				posterPath := ""
-				backdropPath := ""
-				if collDetails.PosterPath != "" {
-					posterPath = "https://image.tmdb.org/t/p/original" + collDetails.PosterPath
-				}
-				if collDetails.BackdropPath != "" {
-					backdropPath = "https://image.tmdb.org/t/p/original" + collDetails.BackdropPath
-				}
+			memberSlice := make(models.IntSlice, len(memberIDs))
+			copy(memberSlice, memberIDs)
 
-				memberSlice := make(models.IntSlice, len(memberIDs))
-				copy(memberSlice, memberIDs)
+			coll := &models.MediaCollection{
+				TMDBCollectionID: collID,
+				Name:             collDetails.Name,
+				Overview:         collDetails.Overview,
+				PosterPath:       posterPath,
+				BackdropPath:     backdropPath,
+				MemberIDs:        memberSlice,
+			}
 
-				coll := &models.MediaCollection{
-					TMDBCollectionID: collID,
-					Name:             collDetails.Name,
-					Overview:         collDetails.Overview,
-					PosterPath:       posterPath,
-					BackdropPath:     backdropPath,
-					MemberIDs:        memberSlice,
-				}
-
-				if upsertErr := db.UpsertMediaCollection(scn.Database, coll); upsertErr != nil {
-					scn.Logger.Warn().Err(upsertErr).Int("collectionId", collID).Msg("scanner: Failed to upsert MediaCollection")
-				} else {
-					scn.Logger.Info().
-						Int("collectionId", collID).
-						Str("name", collDetails.Name).
-						Int("members", len(memberIDs)).
-						Msg("scanner: Persisted saga collection")
-				}
+			if upsertErr := db.UpsertMediaCollection(scn.Database, coll); upsertErr != nil {
+				scn.Logger.Warn().Err(upsertErr).Int("collectionId", collID).Msg("scanner: Failed to upsert MediaCollection")
+			} else {
+				scn.Logger.Info().
+					Int("collectionId", collID).
+					Str("name", collDetails.Name).
+					Int("members", len(memberIDs)).
+					Msg("scanner: Persisted saga collection")
 			}
 		}
 	}

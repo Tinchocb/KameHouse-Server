@@ -171,7 +171,12 @@ func DeleteLocalFilesRelationalByPaths(d *Database, paths []string) error {
 	if len(paths) == 0 {
 		return nil
 	}
-	return d.gormdb.Where("path IN ?", paths).Delete(&models.LocalFile{}).Error
+	err := d.gormdb.Where("path IN ?", paths).Delete(&models.LocalFile{}).Error
+	if err != nil {
+		return err
+	}
+	InvalidateLocalFilesCache()
+	return nil
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
