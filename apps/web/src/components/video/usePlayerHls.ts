@@ -168,45 +168,8 @@ export function usePlayerHls({
             // ... (keep HLS setup as is)
             const hls = new Hls({
                 enableWorker: true,
-                lowLatencyMode: false,
-                // Mantener hasta 90s de buffer ya reproducido para seeks instantáneos hacia atrás
+                lowLatencyMode: true,
                 backBufferLength: 90,
-
-                // Configuración de buffer optimizada para red local / alto rendimiento
-                maxBufferLength: 30,
-                maxMaxBufferLength: 60,
-                maxBufferSize: 120_000_000, // 120MB para admitir bitrates altos (1080p/4K) sin estrangular
-
-                // Tolerancia de desfase de audio antes de forzar resincronización.
-                // Con 2: balance ideal para resincronizar rápido sin causar tirones constantes.
-                maxAudioFramesDrift: 2,
-
-                // ─── Comportamiento ante huecos en el buffer ──────────────────────────────
-                // Si hay un hueco de más de 0.5s entre segmentos, hls.js salta sobre él.
-                // Ajustado a 0.5s para transiciones de segmento más fluidas.
-                maxBufferHole: 0.5,
-
-                // ─── Watchdog del buffer ──────────────────────────────────────────────────
-                // Sólo activa el watchdog (que puede reiniciar la reproducción) si el buffer
-                // lleva 5s sin avanzar, evitando intervenciones innecesarias.
-                highBufferWatchdogPeriod: 5,
-
-                // ─── Nudge (desatasco) ────────────────────────────────────────────────────
-                // nudgeOffset grande (0.3s) permite que el navegador se recupere solo
-                // de pequeños atascos antes de que hls.js intervenga agresivamente.
-                nudgeOffset: 0.3,
-                nudgeMaxRetry: 5,
-
-                // ─── ABR (Adaptive Bitrate) ───────────────────────────────────────────────
-                // Arranca siempre en calidad máxima disponible (-1 = auto pero empieza alto)
-                startLevel: -1,
-                // Estima 20 Mbps como ancho de banda inicial para no bajar a 240p en el seek
-                abrEwmaDefaultEstimate: 20_000_000,
-                // No medir ancho de banda con el primer segmento (evita resets tras seeks)
-                testBandwidth: false,
-                // Esperar más antes de degradar calidad ante un retraso corto de carga
-                abrBandWidthFactor: 0.90,
-                abrBandWidthUpFactor: 0.70,
             })
             setRefValue(hlsRef, hls)
             hlsInstance = hls

@@ -8,6 +8,7 @@
   "frontend:install": "pnpm install",
   "frontend:build": "pnpm build",
   "frontend:dev:watcher": "pnpm dev",
+  "frontend:dev:watcher:ignore": "node_modules,build,bin,.git",
   "frontend:dev:serverUrl": "http://localhost:43210",
   "wailsjsdir": "../web/src/wailsjs",
   "author": {

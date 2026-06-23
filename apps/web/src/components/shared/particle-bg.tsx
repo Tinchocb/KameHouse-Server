@@ -83,7 +83,7 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
     const circles = useRef<any[]>([])
     const mouse = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
     const canvasSize = useRef<{ w: number; h: number }>({ w: 0, h: 0 })
-    const dpr = typeof window !== "undefined" ? window.devicePixelRatio : 1
+    const dpr = typeof window !== "undefined" ? Math.min(window.devicePixelRatio, 1.5) : 1
     const rafId = useRef<number | null>(null)
     const isVisible = useRef(true)
 
@@ -161,14 +161,12 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
     const drawCircle = React.useCallback((circle: Circle) => {
         if (context.current) {
             const { x, y, translateX, translateY, size, alpha } = circle
-            context.current.translate(translateX, translateY)
             context.current.beginPath()
-            context.current.arc(x, y, size, 0, 2 * Math.PI)
+            context.current.arc(x + translateX, y + translateY, size, 0, 2 * Math.PI)
             context.current.fillStyle = `rgba(${rgbStringRef.current}, ${alpha})`
             context.current.fill()
-            context.current.setTransform(dpr, 0, 0, dpr, 0, 0)
         }
-    }, [dpr])
+    }, [])
 
     const resizeCanvas = React.useCallback(() => {
         if (canvasRef.current && context.current) {
@@ -179,7 +177,7 @@ export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
             canvasRef.current.height = canvasSize.current.h * dpr
             canvasRef.current.style.width = `${canvasSize.current.w}px`
             canvasRef.current.style.height = `${canvasSize.current.h}px`
-            context.current.scale(dpr, dpr)
+            context.current.setTransform(dpr, 0, 0, dpr, 0, 0)
         }
     }, [dpr])
 
