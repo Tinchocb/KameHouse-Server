@@ -159,9 +159,6 @@ export interface PlayerSettingsMenuProps {
     autoDisableSubtitlesWhenDubbed?: boolean
     onAutoDisableSubtitlesWhenDubbedChange?: (auto: boolean) => void
 
-    ambilightEnabled?: boolean
-    onAmbilightChange?: (enabled: boolean) => void
-
     tvMode?: boolean
     onTvModeChange?: (enabled: boolean) => void
 

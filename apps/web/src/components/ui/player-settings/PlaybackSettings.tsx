@@ -15,8 +15,6 @@ interface PlaybackSettingsProps {
     onLoopEnabledChange?: (enabled: boolean) => void
     autoDisableSubtitlesWhenDubbed?: boolean
     onAutoDisableSubtitlesWhenDubbedChange?: (enabled: boolean) => void
-    ambilightEnabled?: boolean
-    onAmbilightChange?: (enabled: boolean) => void
     tvMode?: boolean
     onTvModeChange?: (enabled: boolean) => void
     marathonMode?: boolean
@@ -68,8 +66,6 @@ export function PlaybackSettings({
     onLoopEnabledChange,
     autoDisableSubtitlesWhenDubbed = true,
     onAutoDisableSubtitlesWhenDubbedChange = () => {},
-    ambilightEnabled = true,
-    onAmbilightChange = () => {},
     tvMode = false,
     onTvModeChange = () => {},
     marathonMode = false,
@@ -84,7 +80,6 @@ export function PlaybackSettings({
             <ToggleRow label="Omitir Intro (automático)" enabled={autoSkipIntro} onChange={onAutoSkipIntroChange} />
             <ToggleRow label="Saltar Final (automático)" enabled={autoSkipOutro} onChange={onAutoSkipOutroChange} />
             <ToggleRow label="Modo Maratón" enabled={marathonMode} onChange={onMarathonModeChange} />
-            <ToggleRow label="Ambilight (experimenta)" enabled={ambilightEnabled} onChange={onAmbilightChange} />
             
             {onAdjustSkipTimes && (
                 <button

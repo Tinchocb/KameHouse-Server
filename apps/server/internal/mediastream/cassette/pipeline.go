@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"kamehouse/internal/util"
 	"strings"
 	"sync"
@@ -176,19 +175,23 @@ func (p *Pipeline) GetIndex(token string) (string, error) {
 // GetSegment blocks until the requested segment is ready and returns the path
 // to the .ts file on disk
 func (p *Pipeline) GetSegment(ctx context.Context, seg int32) (string, error) {
+	if seg < 0 || seg >= int32(p.segments.Len()) {
+		return "", fmt.Errorf("cassette: segment index %d out of bounds (len=%d)", seg, p.segments.Len())
+	}
+
 	// Record for velocity tracking
 	p.velocity.Record(seg)
 
-	// If a seek is detected, kill all existing active heads to prevent slot
-	// resource conflicts, governor slot exhaustion, and prioritize the new target segment.
+	// If a seek is detected, kill all heads across ALL pipelines in this session
+	// to free governor slots and ensure both video and audio restart fresh from
+	// the seek target. Without this, the sibling pipeline's heads may still hold
+	// governor slots and block the new heads from starting, causing the player
+	// to hang on "loading" while waiting for segments.
 	// killAllHeads releases governor slots immediately (via sync.Once on each head),
 	// so the subsequent governor.Acquire() in runHead does not block waiting for
 	// cmd.Wait() to return (which can take 100-500ms on Windows after Process.Kill).
 	if p.velocity.DetectSeek(5) {
-		p.killAllHeads()
-		// Yield the goroutine scheduler so that any in-flight reapProcess goroutines
-		// can complete their deferred releases before we call governor.Acquire() below.
-		runtime.Gosched()
+		p.session.KillAllPipelines()
 		p.velocity.Reset()
 		p.velocity.Record(seg)
 	}
@@ -243,6 +246,10 @@ func (p *Pipeline) GetSegment(ctx context.Context, seg int32) (string, error) {
 		}
 
 		if ctx.Err() != nil {
+			// Client disconnected — kill all active heads to immediately free
+			// governor slots instead of letting them idle until the tracker
+			// cleans up (which can take up to 60s).
+			p.killAllHeads()
 			return "", fmt.Errorf("cassette: %s segment %d not ready: %w", p.label, seg, err)
 		}
 

@@ -84,7 +84,6 @@ export interface PlayerCore {
         aspectRatio: "contain" | "fill" | "cover" | "16/9"
         subtitleSize: number
         loopEnabled: boolean
-        ambilightEnabled: boolean
         showStats: boolean
         statsData: PlayerStats | null
         hlsLevels: { index: number; label: string; height: number }[]
@@ -137,7 +136,6 @@ export interface PlayerCore {
         setAspectRatio: (val: "contain" | "fill" | "cover" | "16/9") => void
         setSubtitleSize: (val: number) => void
         setLoopEnabled: (val: boolean) => void
-        setAmbilightEnabled: (val: boolean) => void
         setTvMode: (val: boolean) => void
         setMarathonMode: (val: boolean) => void
         handleResume: () => void

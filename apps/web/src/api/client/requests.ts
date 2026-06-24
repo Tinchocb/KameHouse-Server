@@ -106,7 +106,7 @@ export async function buildSeaQuery<T, D = void>(
                 // If 502, 503, 504, 429 -> retry
                 if ((res.status === 429 || res.status === 502 || res.status === 503 || res.status === 504) && attempt < maxRetries) {
                     attempt++;
-                    const delay = 1000 * Math.pow(2, attempt - 1);
+                    const delay = 1000 * Math.pow(2, attempt - 1) * (0.5 + Math.random() * 0.5);
                     console.warn(`[API] Request failed with ${res.status}. Retrying in ${delay}ms... (Attempt ${attempt}/${maxRetries})`);
                     await sleep(delay);
                     continue;
@@ -134,7 +134,7 @@ export async function buildSeaQuery<T, D = void>(
             // Network errors or already thrown ApiError
             if (error instanceof TypeError && attempt < maxRetries) { // fetch throws TypeError on network failure
                 attempt++;
-                const delay = 1000 * Math.pow(2, attempt - 1);
+                const delay = 1000 * Math.pow(2, attempt - 1) * (0.5 + Math.random() * 0.5);
                 console.warn(`[API] Network error. Retrying in ${delay}ms... (Attempt ${attempt}/${maxRetries})`);
                 await sleep(delay);
                 continue;

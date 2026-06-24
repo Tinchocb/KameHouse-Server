@@ -87,7 +87,7 @@ func (t *ClientTracker) handleRemoveClient(client string) {
 func (t *ClientTracker) run() {
 	const (
 		inactiveTimeout      = 1 * time.Hour
-		pipelineIdleTimeout  = 15 * time.Second
+		pipelineIdleTimeout  = 60 * time.Second
 		pipelineTickInterval = 5 * time.Second
 	)
 

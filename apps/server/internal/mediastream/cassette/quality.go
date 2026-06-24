@@ -229,24 +229,13 @@ type AudioTranscodeDecision struct {
 }
 
 // DecideAudioTranscode determina cómo se debe tratar una pista de audio.
-// Si la fuente ya es AAC estéreo o mono, la copia directamente (-c:a copy)
-// para evitar la inicialización del encoder y de aresample, reduciendo la
-// latencia de arranque del primer segmento en 100-300 ms.
-// Para audio multicanal o codecs incompatibles con HLS, re-codifica a AAC:
+// Siempre re-codifica el audio a AAC para garantizar A/V sync mediante
+// el filtro aresample=async=1. No se usa copy directo aunque la fuente sea
+// AAC stereo, porque el remux a MPEG-TS sin resample causa deriva de sync
+// (los PTS del audio copiado no se ajustan a las variaciones del encoder de video).
 //   - ≤ 2 canales: AAC estéreo @ 128k
 //   - > 2 canales: AAC multicanal @ 384k con aresample=async=1 para A/V sync.
 func DecideAudioTranscode(audio *videofile.Audio) AudioTranscodeDecision {
-	codecLower := strings.ToLower(audio.Codec)
-	// If the source is already AAC stereo/mono, copy it directly.
-	// Multichannel AAC is excluded because some containers pack it in a way
-	// that causes A/V sync drift when remuxed into MPEG-TS without resampling.
-	if codecLower == "aac" && audio.Channels <= 2 {
-		return AudioTranscodeDecision{
-			Copy:  true,
-			Codec: "copy",
-		}
-	}
-
 	channels := "2"
 	bitrate := "128k"
 	if audio.Channels > 2 {

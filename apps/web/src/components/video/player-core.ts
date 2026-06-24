@@ -204,8 +204,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         autoDisableSubtitlesWhenDubbed,
         tvMode,
         setTvMode,
-        ambilightEnabled,
-        setAmbilightEnabled,
         marathonMode,
         setMarathonMode,
     } = useAppStore(
@@ -232,8 +230,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             autoDisableSubtitlesWhenDubbed: state.autoDisableSubtitlesWhenDubbed,
             tvMode: state.tvMode,
             setTvMode: state.setTvMode,
-            ambilightEnabled: state.ambilightEnabled,
-            setAmbilightEnabled: state.setAmbilightEnabled,
             marathonMode: state.marathonMode,
             setMarathonMode: state.setMarathonMode,
         }))
@@ -843,7 +839,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             aspectRatio: aspectRatioPref,
             subtitleSize: subtitleSizePref,
             loopEnabled: loopEnabledPref,
-            ambilightEnabled,
             showStats,
             statsData,
             hlsLevels,
@@ -875,7 +870,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             setAspectRatio: setAspectRatioPref,
             setSubtitleSize: setSubtitleSizePref,
             setLoopEnabled: setLoopEnabledPref,
-            setAmbilightEnabled,
             setTvMode: handleSetTvMode,
             setMarathonMode,
             handleResume,

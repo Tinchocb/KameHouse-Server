@@ -93,9 +93,6 @@ export interface PlayerBottomBarProps {
     autoDisableSubtitlesWhenDubbed?: boolean
     onAutoDisableSubtitlesWhenDubbedChange?: (enabled: boolean) => void
 
-    ambilightEnabled?: boolean
-    onAmbilightChange?: (enabled: boolean) => void
-
     marathonMode?: boolean
     onMarathonModeChange?: (enabled: boolean) => void
     tvMode?: boolean
@@ -172,7 +169,6 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
     subtitleSize = 100, onSubtitleSizeChange,
     loopEnabled = false, onLoopEnabledChange,
     autoDisableSubtitlesWhenDubbed = true, onAutoDisableSubtitlesWhenDubbedChange,
-    ambilightEnabled = true, onAmbilightChange,
     marathonMode = false, onMarathonModeChange,
     tvMode = false, onTvModeChange,
     skipTimesOp,
@@ -464,8 +460,6 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                         onLoopEnabledChange={onLoopEnabledChange}
                         autoDisableSubtitlesWhenDubbed={autoDisableSubtitlesWhenDubbed}
                         onAutoDisableSubtitlesWhenDubbedChange={onAutoDisableSubtitlesWhenDubbedChange}
-                        ambilightEnabled={ambilightEnabled}
-                        onAmbilightChange={onAmbilightChange}
                         marathonMode={marathonMode}
                         onMarathonModeChange={onMarathonModeChange}
                         tvMode={tvMode}

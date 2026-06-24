@@ -2,6 +2,7 @@ package cassette
 
 import (
 	"context"
+	"fmt"
 	"sync"
 )
 
@@ -23,7 +24,7 @@ func NewSegmentTable(initialLen int32) *SegmentTable {
 	st := &SegmentTable{
 		segments: make([]segmentEntry, initialLen, max(initialLen, 2048)),
 	}
-	for i := range st.segments {
+	for i := int32(0); i < initialLen; i++ {
 		st.segments[i].ch = make(chan struct{})
 	}
 	return st
@@ -51,8 +52,11 @@ func (st *SegmentTable) Len() int {
 // IsReady returns true if segment is ready
 func (st *SegmentTable) IsReady(seg int32) bool {
 	st.mu.RLock()
+	defer st.mu.RUnlock()
+	if seg < 0 || int(seg) >= len(st.segments) {
+		return false
+	}
 	ch := st.segments[seg].ch
-	st.mu.RUnlock()
 	select {
 	case <-ch:
 		return true
@@ -63,6 +67,9 @@ func (st *SegmentTable) IsReady(seg int32) bool {
 
 // isReadyLocked is like IsReady but expects at least an RLock to be held.
 func (st *SegmentTable) isReadyLocked(seg int32) bool {
+	if seg < 0 || int(seg) >= len(st.segments) {
+		return false
+	}
 	select {
 	case <-st.segments[seg].ch:
 		return true
@@ -75,6 +82,9 @@ func (st *SegmentTable) isReadyLocked(seg int32) bool {
 func (st *SegmentTable) MarkReady(seg int32, encoderID int) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
+	if seg < 0 || int(seg) >= len(st.segments) {
+		return
+	}
 	select {
 	case <-st.segments[seg].ch:
 		// Already closed — idempotent.
@@ -88,12 +98,19 @@ func (st *SegmentTable) MarkReady(seg int32, encoderID int) {
 func (st *SegmentTable) EncoderID(seg int32) int {
 	st.mu.RLock()
 	defer st.mu.RUnlock()
+	if seg < 0 || int(seg) >= len(st.segments) {
+		return -1
+	}
 	return st.segments[seg].encoderID
 }
 
 // WaitFor blocks until segment is ready or context is cancelled
 func (st *SegmentTable) WaitFor(ctx context.Context, seg int32, kill <-chan struct{}) error {
 	st.mu.RLock()
+	if seg < 0 || int(seg) >= len(st.segments) {
+		st.mu.RUnlock()
+		return fmt.Errorf("segment %d out of range", seg)
+	}
 	ch := st.segments[seg].ch
 	st.mu.RUnlock()
 

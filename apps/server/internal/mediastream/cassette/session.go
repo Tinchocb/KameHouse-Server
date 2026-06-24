@@ -319,6 +319,23 @@ func (s *Session) getAudioPipeline(idx int32) *Pipeline {
 
 // lifecycle
 
+// KillAllPipelines kills all running encode pipelines across video and audio.
+// Used when a seek is detected in any pipeline to free governor slots
+// and ensure both video and audio restart fresh from the seek target.
+func (s *Session) KillAllPipelines() {
+	s.videosMu.Lock()
+	for _, p := range s.videos {
+		p.Kill()
+	}
+	s.videosMu.Unlock()
+
+	s.audiosMu.Lock()
+	for _, p := range s.audios {
+		p.Kill()
+	}
+	s.audiosMu.Unlock()
+}
+
 // Kill stops all running encode pipelines
 func (s *Session) Kill() {
 	s.videosMu.Lock()

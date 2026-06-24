@@ -83,7 +83,6 @@ export function PlayerUI(props: PlayerUIProps) {
         actions
     } = core
 
-    const ambilightCanvasRef = useRef<HTMLCanvasElement>(null)
     const localVideoRef = useRef<HTMLVideoElement | null>(null)
 
     useEffect(() => {
@@ -238,55 +237,7 @@ export function PlayerUI(props: PlayerUIProps) {
         }
     }, { dependencies: [controlsVisible], scope: domElements.containerElement })
 
-    useEffect(() => {
-        if (!state.ambilightEnabled || !state.isPlaying) return
 
-        let handle: number
-        const video = localVideoRef.current as (HTMLVideoElement & {
-            requestVideoFrameCallback?: (cb: () => void) => number
-            cancelVideoFrameCallback?: (id: number) => void
-        }) | null
-        const canvas = ambilightCanvasRef.current
-
-        let lastDrawTime = 0
-        const drawFrame = () => {
-            const now = Date.now()
-            if (now - lastDrawTime < 100) return // Throttled to 10 FPS (100ms)
-            lastDrawTime = now
-
-            if (video && canvas && !video.paused) {
-                const ctx = canvas.getContext("2d")
-                if (ctx) {
-                    if (canvas.width !== 32) {
-                        canvas.width = 32
-                        canvas.height = 18
-                    }
-                    ctx.drawImage(video, 0, 0, 32, 18)
-                }
-            }
-        }
-
-        if (video && video.requestVideoFrameCallback && video.cancelVideoFrameCallback) {
-            const updateCallback = () => {
-                drawFrame()
-                if (video.requestVideoFrameCallback) {
-                    handle = video.requestVideoFrameCallback(updateCallback)
-                }
-            }
-            handle = video.requestVideoFrameCallback(updateCallback)
-            return () => {
-                if (video && video.cancelVideoFrameCallback) {
-                    video.cancelVideoFrameCallback(handle)
-                }
-            }
-        } else {
-            // Fallback: use a low-frequency interval (~5 FPS) instead of rAF.
-            // rAF runs at 60 FPS on the main thread, competing directly with
-            // the video renderer and React's reconciler — a major FPS killer.
-            const intervalId = setInterval(drawFrame, 200)
-            return () => clearInterval(intervalId)
-        }
-    }, [state.ambilightEnabled, state.isPlaying, localVideoRef])
 
     return (
         <div
@@ -302,19 +253,7 @@ export function PlayerUI(props: PlayerUIProps) {
             } as React.CSSProperties}
         >
 
-            <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
-                <canvas
-                    ref={ambilightCanvasRef}
-                    className={cn(
-                        "absolute top-1/2 left-1/2 w-[80px] h-[45px] blur-2xl opacity-75 pointer-events-none transition-all duration-700",
-                        state.ambilightEnabled && state.isPlaying ? "opacity-75" : "opacity-0"
-                    )}
-                    style={{
-                        willChange: "transform, opacity",
-                        transform: "translate(-50%, -50%) scale(50)",
-                    }}
-                />
-            </div>
+
 
             <video
                 ref={domElements.videoElement}
@@ -557,8 +496,6 @@ export function PlayerUI(props: PlayerUIProps) {
                     onLoopEnabledChange={actions.setLoopEnabled}
                     autoDisableSubtitlesWhenDubbed={state.autoDisableSubtitlesWhenDubbed}
                     onAutoDisableSubtitlesWhenDubbedChange={actions.setAutoDisableSubtitlesWhenDubbed}
-                    ambilightEnabled={state.ambilightEnabled}
-                    onAmbilightChange={actions.setAmbilightEnabled}
                     tvMode={state.tvMode}
                     onTvModeChange={actions.setTvMode}
                     marathonMode={state.marathonMode}
