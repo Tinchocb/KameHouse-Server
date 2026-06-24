@@ -84,6 +84,7 @@ export function usePlayerShortcuts({
                     break
                 case " ":
                 case "k":
+                case "mediaplaypause":
                     e.preventDefault()
                     togglePlay()
                     break
@@ -142,6 +143,7 @@ export function usePlayerShortcuts({
                     }
                     break
                 case "n":
+                case "medianexttrack":
                     if (showNextEpisode && onNextEpisode) {
                         e.preventDefault()
                         onNextEpisode()
@@ -164,6 +166,9 @@ export function usePlayerShortcuts({
                     setShowStats((prev) => !prev)
                     break
                 case "escape":
+                case "browserback":
+                case "backspace":
+                    e.preventDefault()
                     if (isFullscreen) {
                         toggleFullscreen()
                     } else {

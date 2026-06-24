@@ -33,11 +33,7 @@ export function usePlayerCast({
     playableUrl,
     status
 }: UsePlayerCastProps) {
-    const [isCastSupported, setIsCastSupported] = useState(() => {
-        if (typeof window === "undefined") return false
-        const video = document.createElement("video") as HTMLVideoElementWithPlaybackTarget
-        return 'remote' in video || 'webkitShowPlaybackTargetPicker' in video
-    })
+    const [isCastSupported, setIsCastSupported] = useState(true)
     const [castState, setCastState] = useState<"disconnected" | "connecting" | "connected">("disconnected")
 
     const isCastingRef = useRef(false)

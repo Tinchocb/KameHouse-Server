@@ -72,6 +72,7 @@ function getAbsoluteLanUrl(playableUrl: string, serverIPs?: string[], serverPort
 export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const {
         playableUrl,
+        streamUrl,
         backendTracks,
         initialProgressSeconds = 0,
         onClose,
@@ -333,21 +334,22 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     // transcode URL. This kicks off keyframe extraction + segments 0/1/2 in the
     // background so they are already on disk when hls.js requests them.
     useEffect(() => {
-        if (!playableUrl || streamType !== "transcode") return
-        preloadMutate({ path: playableUrl, streamType: "transcode", audioStreamIndex: 0 })
-    }, [playableUrl, streamType]) // eslint-disable-line react-hooks/exhaustive-deps
+        const path = streamUrl || playableUrl
+        if (!path || streamType !== "transcode") return
+        preloadMutate({ path, streamType: "transcode", audioStreamIndex: 0 })
+    }, [streamUrl, playableUrl, streamType]) // eslint-disable-line react-hooks/exhaustive-deps
 
     const { onProgress: onTrackingProgress, reset: resetTracking } = useAnimeTracking({
         mediaId,
         episodeNumber,
-        filepath: playableUrl,
+        filepath: streamUrl || playableUrl,
         enabled: !!(mediaId && episodeNumber),
     })
 
     const { onProgress: onSyncProgress } = usePlayerProgressSync({
         mediaId,
         episodeNumber,
-        filepath: playableUrl,
+        filepath: streamUrl || playableUrl,
         enabled: !!(mediaId && episodeNumber),
     })
 

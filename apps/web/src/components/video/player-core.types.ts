@@ -12,6 +12,7 @@ export interface PlayerStats {
 
 export interface PlayerCoreProps {
     playableUrl: string
+    streamUrl?: string
     backendTracks?: {
         audioTracks: AudioTrack[]
         subtitleTracks: SubtitleTrack[]

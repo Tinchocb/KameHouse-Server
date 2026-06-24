@@ -156,10 +156,11 @@ function createMainWindow(isDev, localPort) {
     mainWindowStartupReady = false
     const settings = loadSettings()
     const savedPlacement = getSafeMainWindowPlacement(settings.windowBounds)
-    shouldMaximizeMainWindow = savedPlacement.forceMaximize
+    const isFullscreenArg = process.argv.includes("--fullscreen")
 
     const windowOptions = {
         ...savedPlacement.bounds,
+        fullscreen: isFullscreenArg ? true : undefined,
         show: isDev ? true : false,
         backgroundColor: "#111111",
         acceptFirstMouse: false,
@@ -197,6 +198,9 @@ function createMainWindow(isDev, localPort) {
     mainWindow.once("ready-to-show", () => {
         log.info("[Window] Main window ready-to-show event, displaying window")
         showMainWindow()
+        if (isFullscreenArg) {
+            mainWindow.setFullScreen(true)
+        }
     })
 
     mainWindow.webContents.on("did-start-loading", () => {

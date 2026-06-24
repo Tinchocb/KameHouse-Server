@@ -132,6 +132,7 @@ export function usePlayerSkip({
 
     const [activeChapter, setActiveChapterState] = useState<string | null>(null)
     const activeChapterRef = useRef<string | null>(null)
+    const skippedChaptersRef = useRef<Set<string>>(new Set())
     const setActiveChapter = useCallback((val: string | null) => {
         activeChapterRef.current = val
         setActiveChapterState(val)
@@ -150,6 +151,7 @@ export function usePlayerSkip({
         hasAutoSkippedOutroRef.current = false
         hasTriggeredNextEpisodeRef.current = false
         hasPreloadedRef.current = false
+        skippedChaptersRef.current.clear()
     }, [currentEpisodeKey])
 
     useEffect(() => {
@@ -468,6 +470,11 @@ export function usePlayerSkip({
             // Intermediate pause auto-skip (recap, eyecatch, sponsor, intro, outro)
             const skippable = chapters.find(c => {
                 if (curr >= c.startTime && curr < c.endTime - 0.5) {
+                    const chapterKey = `${c.name}_${c.startTime}`
+                    if (skippedChaptersRef.current.has(chapterKey)) {
+                        return false;
+                    }
+
                     const n = c.name.toLowerCase();
 
                     const isIntro =
@@ -513,6 +520,8 @@ export function usePlayerSkip({
             });
 
             if (skippable) {
+                const chapterKey = `${skippable.name}_${skippable.startTime}`
+                skippedChaptersRef.current.add(chapterKey);
                 setVideoCurrentTime(video, skippable.endTime, lastManualSeekTimestampRef);
                 triggerToast("pause");
                 return;
@@ -657,8 +666,10 @@ export function usePlayerSkip({
         const edTriggered = ed ? curr >= ed.startTime : false
 
         const shouldShowNext =
-            (total > 0 && total - curr <= 15) ||
-            (autoSkipOutroPref && edTriggered && hasNextEpisode)
+            !marathonMode && (
+                (total > 0 && total - curr <= 15) ||
+                (autoSkipOutroPref && edTriggered && hasNextEpisode)
+            )
 
         if (shouldShowNext && hasNextEpisode) {
             if (!showNextEpisodeRef.current) {
@@ -674,7 +685,6 @@ export function usePlayerSkip({
         const isVideoEnded = video.ended
         const targetShowCountdown =
             tvMode &&
-            !marathonMode &&
             autoPlayNextEpisode &&
             isVideoPlayingOrEnded &&
             hasNextEpisode &&
@@ -691,7 +701,7 @@ export function usePlayerSkip({
             marathonMode &&
             hasNextEpisode &&
             onNextEpisode &&
-            (video.ended || (total > 0 && total - curr <= 3))
+            (video.ended || (!showCountdown && total > 0 && total - curr <= 3))
 
         if (shouldTriggerMarathon) {
             if (!hasTriggeredNextEpisodeRef.current) {
@@ -720,7 +730,6 @@ export function usePlayerSkip({
 
         const targetShowCountdown =
             tvMode &&
-            !marathonMode &&
             autoPlayNextEpisode &&
             isVideoPlayingOrEnded &&
             hasNextEpisode &&

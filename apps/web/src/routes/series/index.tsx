@@ -7,7 +7,6 @@ import { SeriesCard, getVhsColor } from './-SeriesCard';
 import { getLargeResImage } from '@/lib/helpers/images';
 import { useIntelligenceStore } from '@/hooks/use-home-intelligence';
 import { useSound } from '@/hooks/use-sound';
-import { generateGokuPanorama } from '@/lib/helpers/goku-panorama';
 
 export const Route = createFileRoute('/series/')({
     loader: ({ context }) => {
@@ -46,7 +45,7 @@ const getSeriesIdFromMedia = (media: any) => {
 const getSeriesYear = (title: string, mediaYear?: number, startDate?: string): number | string => {
     const titleLower = title.toLowerCase();
 
-    // 1. Explicit mappings for Dragon Ball franchise to guarantee correct sorting in all circumstances
+    // Mapeos explícitos
     if (titleLower.includes('daima')) return 2024;
     if (titleLower.includes('super')) return 2015;
     if (titleLower.includes('gt')) return 1996;
@@ -58,7 +57,6 @@ const getSeriesYear = (title: string, mediaYear?: number, startDate?: string): n
         }
     }
 
-    // 2. Try parsing year from startDate (e.g. ISO string "2024-10-11T00:00:00Z")
     if (startDate) {
         const match = startDate.match(/^(\d{4})/);
         if (match) {
@@ -69,7 +67,6 @@ const getSeriesYear = (title: string, mediaYear?: number, startDate?: string): n
         }
     }
 
-    // 3. Fallback to mediaYear
     if (mediaYear && mediaYear > 0) {
         return mediaYear;
     }
@@ -80,7 +77,6 @@ const getSeriesYear = (title: string, mediaYear?: number, startDate?: string): n
 function SeriesFullscreenIndex() {
     const navigate = useNavigate();
     const [selectedId, setSelectedId] = useState<number | null>(null);
-    const [panoramaUrl, setPanoramaUrl] = useState<string | null>(null);
     const setBackdropUrl = useIntelligenceStore(s => s.setBackdropUrl);
 
     const { data: collection, isLoading } = useGetLibraryCollection();
@@ -96,14 +92,6 @@ function SeriesFullscreenIndex() {
             setBackdropUrl(null);
         };
     }, [setBackdropUrl]);
-
-    useEffect(() => {
-        generateGokuPanorama().then(url => {
-            if (url) {
-                setPanoramaUrl(url);
-            }
-        });
-    }, []);
 
     const handleNavigate = useCallback((id: string) => {
         navigate({ to: '/series/$seriesId', params: { seriesId: id } });
@@ -141,11 +129,11 @@ function SeriesFullscreenIndex() {
             };
         });
 
-        // Sort chronologically by release year (ascending)
+        // Orden cronológico
         return mapped.sort((a, b) => a.yearNum - b.yearNum);
     }, [collection]);
 
-    const activeSelectedId = selectedId ?? (seriesList.length > 0 ? seriesList[0].id : null);
+    const activeSelectedId = selectedId;
 
     const selectedIndex = useMemo(() => {
         return seriesList.findIndex(item => item.id === activeSelectedId);
@@ -153,10 +141,8 @@ function SeriesFullscreenIndex() {
     const selectedItem = seriesList[selectedIndex] ?? null;
 
     return (
-        <div
-            className="w-full h-full flex flex-col bg-transparent text-white font-sans overflow-hidden relative p-4 md:p-6 md:pl-[110px]"
-        >
-            {/* Ambient Background Glow — Single dynamic div transitioning position & color (GPU-composited) */}
+        <div className="w-full h-full flex flex-col bg-transparent text-white font-sans overflow-hidden relative p-4 md:p-6 md:pl-[110px]">
+            {/* Resplandor ambiental de fondo */}
             {selectedItem && (
                 <div
                     className="absolute top-1/2 left-0 w-[800px] h-[800px] pointer-events-none z-0"
@@ -169,20 +155,16 @@ function SeriesFullscreenIndex() {
                 />
             )}
 
-
-
-            {/* Main Shelf Container Wrapper (Skeuomorphic Dark Walnut Wooden cabinet) */}
+            {/* Estante principal */}
             <div 
                 className="flex-1 min-h-0 rounded-[32px] border border-stone-800 shadow-[inset_0_24px_50px_rgba(0,0,0,0.9),inset_0_-24px_50px_rgba(0,0,0,0.9),0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden relative z-10 flex flex-col"
                 style={{
                     background: 'linear-gradient(to right, #140b07 0%, #25130b 50%, #140b07 100%)',
                 }}
             >
-                {/* Horizontal wood grain lines overlay */}
                 <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[linear-gradient(0deg,transparent_50%,rgba(255,255,255,0.1)_50%)] bg-[length:100%_4px] z-10" />
                 
                 <main className="w-full h-full flex bg-transparent overflow-x-auto overflow-y-hidden no-scrollbar relative z-10 pb-6">
-                    {/* Backlight Glow inside shelf — Single dynamic div transitioning position & color */}
                     {selectedItem && (
                         <div
                             className="absolute top-1/2 left-0 w-[600px] h-[600px] pointer-events-none z-0"
@@ -216,13 +198,12 @@ function SeriesFullscreenIndex() {
                                 onNavigate={handleNavigate}
                                 onSelect={setSelectedId}
                                 onSound={handleSound}
-                                panoramaUrl={panoramaUrl}
                             />
                         ))
                     )}
                 </main>
                 
-                {/* 3D Walnut Wooden shelf base plank */}
+                {/* Base del estante */}
                 <div 
                     className="absolute bottom-0 left-0 right-0 h-6 z-30 pointer-events-none border-t border-amber-950/20" 
                     style={{
@@ -231,8 +212,6 @@ function SeriesFullscreenIndex() {
                     }}
                 />
             </div>
-
-
         </div>
     );
 }

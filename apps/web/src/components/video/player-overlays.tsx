@@ -201,6 +201,7 @@ export function SkipIntroOverlay({
 export function NextEpisodeOverlay({
     show,
     tvMode,
+    marathonMode = false,
     showCountdown,
     countdownSeconds,
     nextEpisodeTitle,
@@ -212,6 +213,7 @@ export function NextEpisodeOverlay({
 }: {
     show: boolean
     tvMode: boolean
+    marathonMode?: boolean
     showCountdown: boolean
     countdownSeconds: number
     nextEpisodeTitle?: string
@@ -240,7 +242,7 @@ export function NextEpisodeOverlay({
                             loading="lazy"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                        {tvMode && showCountdown && (
+                        {(tvMode || marathonMode) && showCountdown && (
                             <div className="absolute top-3 right-3 bg-black/70 text-[9px] font-black uppercase tracking-widest text-white px-2 py-1 rounded">
                                 AUTO: {countdownSeconds}S
                             </div>
@@ -258,7 +260,7 @@ export function NextEpisodeOverlay({
                         <span className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.3em]">
                             {nextEpisodeNumber ? `EPISODIO ${nextEpisodeNumber}` : "SIGUIENTE"}
                         </span>
-                        {!nextEpisodeImage && tvMode && showCountdown && (
+                        {!nextEpisodeImage && (tvMode || marathonMode) && showCountdown && (
                             <span className="text-white text-[10px] font-black tabular-nums tracking-widest">
                                 AUTO: {countdownSeconds}S
                             </span>
@@ -273,7 +275,7 @@ export function NextEpisodeOverlay({
                     )}
 
                     {/* Auto transition progress bar */}
-                    {tvMode && showCountdown && (
+                    {(tvMode || marathonMode) && showCountdown && (
                         <div className="w-full h-1 bg-white/5 overflow-hidden rounded-full">
                             <div
                                 className="h-full bg-brand-orange transition-all duration-1000 ease-linear"

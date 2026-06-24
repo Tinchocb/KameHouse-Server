@@ -1,5 +1,5 @@
 import React from "react"
-import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipForward, SkipBack, ListVideo, Tv } from "lucide-react"
+import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipForward, SkipBack, ListVideo, Tv, Cast } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 
 import { TimelineHeatmap, type InsightNode } from "@/components/ui/timeline-heatmap"
@@ -410,6 +410,26 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                     >
                         <Tv className="w-3.5 h-3.5" />
                     </button>
+
+                    {/* Transmitir a TV */}
+                    {_onPromptCast && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                _onPromptCast()
+                            }}
+                            aria-label="Transmitir a TV"
+                            title="Transmitir a TV"
+                            className={cn(
+                                "transition-all duration-300 flex items-center justify-center w-8 h-8 rounded-lg active:scale-90",
+                                _castState !== "disconnected"
+                                    ? "text-brand-orange bg-brand-orange/10 hover:bg-brand-orange/20"
+                                    : "text-zinc-500 hover:text-white hover:bg-white/5"
+                            )}
+                        >
+                            <Cast className="w-3.5 h-3.5" />
+                        </button>
+                    )}
 
                     {/* Settings gear */}
                     <PlayerSettingsMenu

@@ -460,6 +460,7 @@ export function PlayerUI(props: PlayerUIProps) {
             <NextEpisodeOverlay
                 show={state.showNextEpisode}
                 tvMode={state.tvMode}
+                marathonMode={state.marathonMode}
                 showCountdown={state.showCountdown}
                 countdownSeconds={state.countdownSeconds}
                 nextEpisodeTitle={nextEpisodeTitle || "Siguiente Episodio"}
