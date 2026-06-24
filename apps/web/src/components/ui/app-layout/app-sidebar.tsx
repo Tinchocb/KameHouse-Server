@@ -5,7 +5,7 @@ import { Vaul, VaulContent } from "@/components/vaul"
 import { Link, useRouterState } from "@tanstack/react-router"
 import { AnimatePresence } from "framer-motion"
 import * as React from "react"
-import { FaCog, FaHome, FaFilm, FaTv, FaLayerGroup, FaBroadcastTower } from "react-icons/fa"
+import { FaCog, FaHome, FaFilm, FaTv, FaLayerGroup, FaBroadcastTower, FaRocket } from "react-icons/fa"
 import { cn } from "../core/styling"
 import { RandomPlayButton } from "./random-play-button"
 import { useSound } from "@/hooks/use-sound"
@@ -72,6 +72,8 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
     const setGlobalQueueOpen = useAppStore(state => state.setGlobalQueueOpen)
     const tvMode = useAppStore(state => state.tvMode)
     const setTvMode = useAppStore(state => state.setTvMode)
+    const marathonMode = useAppStore(state => state.marathonMode)
+    const setMarathonMode = useAppStore(state => state.setMarathonMode)
     const isVideoActive = useAppStore(state => state.isVideoActive)
 
     const containerRef = React.useRef<HTMLDivElement>(null)
@@ -406,6 +408,32 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                         </span>
                         <span className="md:hidden ml-6 flex-1 uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange">
                             Modo TV {(isVideoActive && tvMode) ? "(24H)" : ""}
+                        </span>
+                    </button>
+                </div>
+
+                {/* Marathon Mode Toggle Button */}
+                <div className="gsap-sidebar-item w-full flex justify-center">
+                    <button
+                        onClick={() => { setMarathonMode(!marathonMode); playChangeSound() }}
+                        title={marathonMode ? "Desactivar Modo Maratón" : "Activar Modo Maratón"}
+                        className={cn(
+                            "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl group px-4 md:px-0 relative liquid-glass-frosted-subtle transition-all duration-300",
+                            marathonMode
+                                ? "text-brand-orange !bg-brand-orange/[0.06] !border-brand-orange/30 shadow-[0_8px_32px_rgba(255,110,58,0.15)]"
+                                : "text-zinc-400 hover:text-white hover:!border-white/15",
+                            "active:scale-95 font-bold"
+                        )}
+                    >
+                        <div className={cn(
+                            "absolute left-0 w-1 h-6 bg-brand-orange rounded-r-full transition-all duration-500 hidden md:block",
+                            marathonMode ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
+                        )} />
+                        <span className="shrink-0 z-10 group-hover:scale-110 transition-transform duration-300">
+                            <FaRocket className="w-5 h-5" />
+                        </span>
+                        <span className="md:hidden ml-6 flex-1 uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange">
+                            Maratón {marathonMode ? "(ON)" : ""}
                         </span>
                     </button>
                 </div>

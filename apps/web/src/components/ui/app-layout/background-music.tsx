@@ -16,12 +16,14 @@ const PLAYLIST = [
 ]
 
 export function BackgroundMusicPlayer() {
-    const { bgMusicEnabled, setBgMusicEnabled, bgMusicVolume, isVideoActive } = useAppStore(
+    const { bgMusicEnabled, setBgMusicEnabled, bgMusicVolume, isVideoActive, uiSoundsEnabled, setUiSoundsEnabled } = useAppStore(
         useShallow((state) => ({
             bgMusicEnabled: state.bgMusicEnabled,
             setBgMusicEnabled: state.setBgMusicEnabled,
             bgMusicVolume: state.bgMusicVolume,
             isVideoActive: state.isVideoActive,
+            uiSoundsEnabled: state.uiSoundsEnabled,
+            setUiSoundsEnabled: state.setUiSoundsEnabled,
         }))
     )
     
@@ -161,6 +163,7 @@ export function BackgroundMusicPlayer() {
     const togglePlayback = () => {
         const nextState = !bgMusicEnabled
         setBgMusicEnabled(nextState)
+        setUiSoundsEnabled(nextState)
         
         // Immediate toggle feedback
         if (audioRef.current) {

@@ -374,6 +374,13 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         resetTracking()
     }, [mediaId, episodeNumber, playableUrl, resetTracking])
 
+    useEffect(() => {
+        setAudioTracks([])
+        setSubtitleTracks([])
+        setActiveAudioIndex(0)
+        setActiveSubtitleIndex(null)
+    }, [playableUrl])
+
     const formatTime = useCallback((secs: number) => {
         if (!secs || isNaN(secs)) return "00:00"
         const m = Math.floor(secs / 60)
@@ -420,8 +427,13 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const onSelectAudio = useCallback((track: AudioTrack) => {
         if (hlsRef.current) {
             hlsRef.current.audioTrack = track.index
-            setActiveAudioIndex(track.index)
+        } else if (videoRef.current && 'audioTracks' in videoRef.current && (videoRef.current as any).audioTracks) {
+            const trackList = (videoRef.current as any).audioTracks as { enabled: boolean; language: string; label: string }[]
+            for (let i = 0; i < trackList.length; i++) {
+                trackList[i].enabled = i === track.index
+            }
         }
+        setActiveAudioIndex(track.index)
         if (track.language) {
             setPreferredAudioLang(track.language)
         }
@@ -448,24 +460,21 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         if (audioTracks.length > 0) {
             let preferred: AudioTrack | undefined
 
-            if (mediaFormat === "MOVIE") {
-                // Priority: 'spa-lat' or 'es-la' code -> title contains 'latino' or 'latin' -> generic 'spa'/'es'
+            preferred = audioTracks.find(t => {
+                const lang = t.language?.toLowerCase() || ""
+                return lang === "spa-lat" || lang === "es-la"
+            })
+            if (!preferred) {
+                preferred = audioTracks.find(t => {
+                    const title = t.title?.toLowerCase() || ""
+                    return title.includes("latino") || title.includes("latin")
+                })
+            }
+            if (!preferred) {
                 preferred = audioTracks.find(t => {
                     const lang = t.language?.toLowerCase() || ""
-                    return lang === "spa-lat" || lang === "es-la"
+                    return lang === "spa" || lang === "es" || lang.startsWith("es-") || lang.startsWith("spa-")
                 })
-                if (!preferred) {
-                    preferred = audioTracks.find(t => {
-                        const title = t.title?.toLowerCase() || ""
-                        return title.includes("latino") || title.includes("latin")
-                    })
-                }
-                if (!preferred) {
-                    preferred = audioTracks.find(t => {
-                        const lang = t.language?.toLowerCase() || ""
-                        return lang === "spa" || lang === "es"
-                    })
-                }
             }
 
             if (!preferred) {
@@ -473,7 +482,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             }
 
             if (preferred && activeAudioIndex !== preferred.index) {
-                setTimeout(() => onSelectAudio(preferred), 0)
+                onSelectAudio(preferred)
             }
         }
     }, [audioTracks, preferredAudioLang, activeAudioIndex, onSelectAudio, mediaFormat])
@@ -719,6 +728,20 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         return () => {
             document.removeEventListener("fullscreenchange", handleFullscreenChange)
             setGlobalFullscreen(false)
+        }
+    }, [setGlobalFullscreen])
+
+    useEffect(() => {
+        const el = window.electron
+        if (!el) return
+
+        const unsub = el.on("window:fullscreen", (isFs: boolean) => {
+            setIsFullscreen(isFs)
+            setGlobalFullscreen(isFs)
+        })
+
+        return () => {
+            unsub?.()
         }
     }, [setGlobalFullscreen])
 

@@ -331,8 +331,8 @@ export const useProgressStore = create<ProgressState>()(
 
 // --- Skip Times Store (Persisted, Isolated) ---
 interface SkipTimesState {
-    seriesSkipTimes: Record<string, { opStart?: number; opEnd?: number; edOffset?: number }>
-    saveSeriesSkipTimes: (malId: number, opStart: number, opEnd: number, edOffset: number) => void
+    seriesSkipTimes: Record<string, { opStart?: number; opEnd?: number; edOffset?: number; edEnd?: number }>
+    saveSeriesSkipTimes: (key: string | number, opStart: number, opEnd: number, edOffset: number, edEnd?: number) => void
 }
 
 export const useSkipTimesStore = create<SkipTimesState>()(
@@ -342,7 +342,7 @@ export const useSkipTimesStore = create<SkipTimesState>()(
                 try {
                     const settingsStr = typeof window !== "undefined" ? localStorage.getItem("kamehouse-app-settings") : null
                     if (settingsStr) {
-                        const parsed = JSON.parse(settingsStr) as { state?: { seriesSkipTimes?: Record<string, { opStart?: number; opEnd?: number; edOffset?: number }> } }
+                        const parsed = JSON.parse(settingsStr) as { state?: { seriesSkipTimes?: Record<string, { opStart?: number; opEnd?: number; edOffset?: number; edEnd?: number }> } }
                         if (parsed?.state?.seriesSkipTimes) {
                             return parsed.state.seriesSkipTimes
                         }
@@ -352,11 +352,11 @@ export const useSkipTimesStore = create<SkipTimesState>()(
                 }
                 return {}
             })(),
-            saveSeriesSkipTimes: (malId, opStart, opEnd, edOffset) =>
+            saveSeriesSkipTimes: (key, opStart, opEnd, edOffset, edEnd) =>
                 set(state => ({
                     seriesSkipTimes: {
                         ...state.seriesSkipTimes,
-                        [String(malId)]: { opStart, opEnd, edOffset }
+                        [String(key)]: { opStart, opEnd, edOffset, edEnd }
                     }
                 })),
         }),

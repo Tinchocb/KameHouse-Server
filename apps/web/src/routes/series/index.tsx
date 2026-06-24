@@ -3,10 +3,11 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useGetLibraryCollection, fetchLibraryCollection } from '@/api/hooks/anime_collection.hooks';
 import { HydrationBoundary, dehydrate } from '@tanstack/react-query';
 import { API_ENDPOINTS } from '@/api/generated/endpoints';
-import { SeriesCard, getVhsColor } from './-SeriesCard';
+import { SeriesCard } from './-SeriesCard';
 import { getLargeResImage } from '@/lib/helpers/images';
 import { useIntelligenceStore } from '@/hooks/use-home-intelligence';
 import { useSound } from '@/hooks/use-sound';
+import { getSpineConfig } from '@/lib/helpers/goku-panorama';
 
 export const Route = createFileRoute('/series/')({
     loader: ({ context }) => {
@@ -45,7 +46,6 @@ const getSeriesIdFromMedia = (media: any) => {
 const getSeriesYear = (title: string, mediaYear?: number, startDate?: string): number | string => {
     const titleLower = title.toLowerCase();
 
-    // Mapeos explícitos
     if (titleLower.includes('daima')) return 2024;
     if (titleLower.includes('super')) return 2015;
     if (titleLower.includes('gt')) return 1996;
@@ -129,7 +129,6 @@ function SeriesFullscreenIndex() {
             };
         });
 
-        // Orden cronológico
         return mapped.sort((a, b) => a.yearNum - b.yearNum);
     }, [collection]);
 
@@ -140,52 +139,75 @@ function SeriesFullscreenIndex() {
     }, [seriesList, activeSelectedId]);
     const selectedItem = seriesList[selectedIndex] ?? null;
 
+    // Color de glow basado en la era de la serie seleccionada
+    const glowColor = useMemo(() => {
+        if (!selectedItem) return '#d96c14';
+        const cfg = getSpineConfig(selectedItem.seriesId || "", selectedItem.id);
+        return cfg.colors[0];
+    }, [selectedItem]);
+
     return (
         <div className="w-full h-full flex flex-col bg-transparent text-white font-sans overflow-hidden relative p-4 md:p-6 md:pl-[110px]">
             {/* Resplandor ambiental de fondo */}
             {selectedItem && (
                 <div
-                    className="absolute top-1/2 left-0 w-[800px] h-[800px] pointer-events-none z-0"
+                    className="absolute top-1/2 left-0 w-[900px] h-[900px] pointer-events-none z-0"
                     style={{
-                        opacity: 0.15,
-                        background: `radial-gradient(circle, ${getVhsColor(selectedItem.id)} 0%, transparent 70%)`,
-                        transform: `translate3d(calc(${(selectedIndex / Math.max(seriesList.length - 1, 1)) * 80 + 10}% - 400px), -50%, 0)`,
-                        transition: 'transform 700ms cubic-bezier(0.16, 1, 0.3, 1), background 700ms ease-out',
+                        opacity: 0.12,
+                        background: `radial-gradient(circle at 30% 50%, ${glowColor} 0%, transparent 70%)`,
+                        transform: `translate3d(0, -50%, 0)`,
+                        transition: 'background 800ms ease-out, opacity 800ms ease-out',
                     }}
                 />
             )}
 
+            {/* Header */}
+            <div className="relative z-10 mb-5 flex items-end justify-between px-1 shrink-0">
+                <div>
+                    <h1 className="font-bebas text-3xl md:text-4xl tracking-wide text-white leading-none">
+                        Colección de series
+                    </h1>
+                    <p className="text-[10px] font-black tracking-[0.3em] uppercase text-zinc-500 mt-1.5">
+                        {seriesList.length} {seriesList.length === 1 ? 'serie' : 'series'} en tu biblioteca
+                    </p>
+                </div>
+            </div>
+
             {/* Estante principal */}
             <div 
-                className="flex-1 min-h-0 rounded-[32px] border border-stone-800 shadow-[inset_0_24px_50px_rgba(0,0,0,0.9),inset_0_-24px_50px_rgba(0,0,0,0.9),0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden relative z-10 flex flex-col"
+                className="flex-1 min-h-0 rounded-[32px] border border-white/[0.06] shadow-[inset_0_24px_50px_rgba(0,0,0,0.9),inset_0_-24px_50px_rgba(0,0,0,0.9),0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden relative z-10 flex flex-col"
                 style={{
-                    background: 'linear-gradient(to right, #140b07 0%, #25130b 50%, #140b07 100%)',
+                    background: 'linear-gradient(to right, #0c0c10 0%, #111118 50%, #0c0c10 100%)',
                 }}
             >
-                <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[linear-gradient(0deg,transparent_50%,rgba(255,255,255,0.1)_50%)] bg-[length:100%_4px] z-10" />
-                
+                {/* Línea sutil de scanline */}
+                <div className="absolute inset-0 pointer-events-none opacity-[0.02] bg-[linear-gradient(0deg,transparent_50%,rgba(255,255,255,0.08)_50%)] bg-[length:100%_3px] z-10" />
+
                 <main className="w-full h-full flex bg-transparent overflow-x-auto overflow-y-hidden no-scrollbar relative z-10 pb-6">
                     {selectedItem && (
                         <div
-                            className="absolute top-1/2 left-0 w-[600px] h-[600px] pointer-events-none z-0"
+                            className="absolute top-1/2 left-0 w-[700px] h-[700px] pointer-events-none z-0"
                             style={{
-                                opacity: 0.20,
-                                background: `radial-gradient(circle, ${getVhsColor(selectedItem.id)} 0%, transparent 60%)`,
-                                transform: `translate3d(calc(${(selectedIndex / Math.max(seriesList.length - 1, 1)) * 80 + 10}% - 300px), -50%, 0)`,
-                                transition: 'transform 700ms cubic-bezier(0.16, 1, 0.3, 1), background 700ms ease-out',
+                                opacity: 0.18,
+                                background: `radial-gradient(circle at 30% 50%, ${glowColor} 0%, transparent 60%)`,
+                                transform: `translate3d(calc(${(selectedIndex / Math.max(seriesList.length - 1, 1)) * 80 + 10}% - 350px), -50%, 0)`,
+                                transition: 'transform 800ms cubic-bezier(0.16, 1, 0.3, 1), background 800ms ease-out',
                             }}
                         />
                     )}
                     
                     {isLoading && seriesList.length === 0 ? (
                         <div className="w-full h-full flex items-center justify-center relative z-10">
-                            <span className="text-white/50 tracking-widest uppercase text-sm font-black animate-pulse">
+                            <span className="text-white/30 tracking-widest uppercase text-xs font-black animate-pulse">
                                 Cargando colección...
                             </span>
                         </div>
                     ) : seriesList.length === 0 ? (
-                        <div className="w-full h-full flex items-center justify-center relative z-10">
-                            <span className="text-white/50 tracking-widest uppercase text-sm font-black">
+                        <div className="w-full h-full flex flex-col items-center justify-center relative z-10 gap-3">
+                            <span className="text-zinc-600 font-bebas text-4xl tracking-widest">
+                                SIN SERIES
+                            </span>
+                            <span className="text-zinc-700 text-[10px] font-black uppercase tracking-[0.3em]">
                                 No hay series en tu colección
                             </span>
                         </div>
@@ -203,12 +225,12 @@ function SeriesFullscreenIndex() {
                     )}
                 </main>
                 
-                {/* Base del estante */}
+                {/* Base del estante — refinada */}
                 <div 
-                    className="absolute bottom-0 left-0 right-0 h-6 z-30 pointer-events-none border-t border-amber-950/20" 
+                    className="absolute bottom-0 left-0 right-0 h-5 z-30 pointer-events-none border-t border-white/[0.04]" 
                     style={{
-                        background: 'linear-gradient(to bottom, #502e1b, #321c10 40%, #1a0f08 100%)',
-                        boxShadow: '0 -4px 12px rgba(0,0,0,0.6), inset 0 2px 2px rgba(255,255,255,0.06)'
+                        background: 'linear-gradient(to bottom, rgba(255,255,255,0.02), transparent)',
+                        boxShadow: '0 -4px 20px rgba(0,0,0,0.8)'
                     }}
                 />
             </div>

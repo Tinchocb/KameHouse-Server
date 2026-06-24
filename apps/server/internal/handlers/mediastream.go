@@ -283,6 +283,7 @@ func (h *Handler) HandleSaveEpisodeSkipTimes(c echo.Context) error {
 		OpStart       float64 `json:"opStart"`
 		OpEnd         float64 `json:"opEnd"`
 		EdOffset      float64 `json:"edOffset"`
+		EdEnd         float64 `json:"edEnd"`
 		ApplyToSeason bool    `json:"applyToSeason"`
 	}
 
@@ -311,17 +312,19 @@ func (h *Handler) HandleSaveEpisodeSkipTimes(c echo.Context) error {
 		OpStart:       b.OpStart,
 		OpEnd:         b.OpEnd,
 		EdOffset:      b.EdOffset,
+		EdEnd:         b.EdEnd,
 	}
 
 	err := h.App.Database.Gorm().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "media_id"}, {Name: "episode_number"}},
-		DoUpdates: clause.AssignmentColumns([]string{"op_start", "op_end", "ed_offset"}),
+		DoUpdates: clause.AssignmentColumns([]string{"op_start", "op_end", "ed_offset", "ed_end"}),
 	}).Create(&skipTime).Error
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
 
 	// Propagate if requested
+	episodesUpdated := 0
 	if b.ApplyToSeason {
 		var episodes []models.LibraryEpisode
 		if err := h.App.Database.Gorm().Where("library_media_id = ?", mediaID).Find(&episodes).Error; err == nil {
@@ -336,18 +339,29 @@ func (h *Handler) HandleSaveEpisodeSkipTimes(c echo.Context) error {
 					OpStart:       b.OpStart,
 					OpEnd:         b.OpEnd,
 					EdOffset:      b.EdOffset,
+					EdEnd:         b.EdEnd,
 				})
 			}
 			if len(skipTimes) > 0 {
-				_ = h.App.Database.Gorm().Clauses(clause.OnConflict{
+				if err := h.App.Database.Gorm().Clauses(clause.OnConflict{
 					Columns:   []clause.Column{{Name: "media_id"}, {Name: "episode_number"}},
-					DoUpdates: clause.AssignmentColumns([]string{"op_start", "op_end", "ed_offset"}),
-				}).Create(&skipTimes).Error
+					DoUpdates: clause.AssignmentColumns([]string{"op_start", "op_end", "ed_offset", "ed_end"}),
+				}).Create(&skipTimes).Error; err != nil {
+					h.App.Logger.Error().Err(err).Msg("mediastream: failed to propagate skip times to season")
+				} else {
+					episodesUpdated = len(skipTimes)
+				}
 			}
+		} else {
+			h.App.Logger.Warn().Err(err).Int("mediaID", mediaID).Msg("mediastream: failed to query episodes for season propagation")
 		}
 	}
 
-	return h.RespondWithData(c, true)
+	return h.RespondWithData(c, map[string]interface{}{
+		"saved":            true,
+		"episodesUpdated":  episodesUpdated,
+		"appliedToSeason":  b.ApplyToSeason,
+	})
 }
 
 // HandleScanEpisodeSkipTimes triggers a background scan to detect skip times for a series.

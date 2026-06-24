@@ -5,7 +5,9 @@ import (
 	"kamehouse/internal/events"
 	"kamehouse/internal/mediastream/videofile"
 	"net/url"
+	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 )
@@ -22,24 +24,35 @@ func (r *Repository) ServeEchoExtractedSubtitles(c echo.Context) error {
 		return errors.New("transcoder not initialized")
 	}
 
-	// Get the parameter group
-	subFilePath := c.Param("*")
-
 	// Get current media
 	mediaContainer, found := r.playbackManager.currentMediaContainer.Get()
 	if !found {
 		return errors.New("no file has been loaded")
 	}
 
-	retPath := videofile.GetFileSubsCacheDir(r.cacheDir, mediaContainer.Hash)
-
-	if retPath == "" {
+	cacheDir := videofile.GetFileSubsCacheDir(r.cacheDir, mediaContainer.Hash)
+	if cacheDir == "" {
 		return errors.New("could not find subtitles")
 	}
 
-	r.logger.Trace().Msgf("mediastream: Serving subtitles from %s", retPath)
+	trackIndex := c.QueryParam("trackIndex")
+	if trackIndex == "" {
+		return errors.New("trackIndex query parameter is required")
+	}
 
-	return c.File(filepath.Join(retPath, subFilePath))
+	entries, err := os.ReadDir(cacheDir)
+	if err != nil {
+		return errors.New("could not read subtitles directory")
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasPrefix(entry.Name(), trackIndex+".") {
+			r.logger.Trace().Msgf("mediastream: Serving subtitle %s", entry.Name())
+			return c.File(filepath.Join(cacheDir, entry.Name()))
+		}
+	}
+
+	return errors.New("subtitle file not found")
 }
 
 func (r *Repository) ServeEchoExtractedAttachments(c echo.Context) error {

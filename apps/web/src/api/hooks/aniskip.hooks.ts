@@ -93,6 +93,7 @@ interface LocalSkipTimeResponse {
     opStart: number
     opEnd: number
     edOffset: number
+    edEnd: number
 }
 
 export async function getAniSkipTimes({
@@ -130,9 +131,10 @@ export async function getAniSkipTimes({
 
             let ed: AniSkipInterval | undefined = undefined
             if (localData.edOffset > 0 && episodeDuration && episodeDuration > 0) {
+                const edEndTime = (localData.edEnd && localData.edEnd > 0) ? localData.edEnd : episodeDuration
                 ed = {
                     startTime: episodeDuration - localData.edOffset,
-                    endTime: episodeDuration,
+                    endTime: edEndTime,
                 }
             }
 
@@ -168,8 +170,10 @@ export async function getAniSkipTimes({
     // 3. Cache AniSkip times on our local server as a side-effect
     if (op || ed) {
         let resolvedEdOffset = 0
+        let resolvedEdEnd = 0
         if (ed && episodeDuration && episodeDuration > 0) {
             resolvedEdOffset = Math.max(0, episodeDuration - ed.startTime)
+            resolvedEdEnd = ed.endTime ?? episodeDuration
         }
 
         buildSeaQuery<any, any>({
@@ -182,6 +186,7 @@ export async function getAniSkipTimes({
                 opStart: op?.startTime ?? 0,
                 opEnd: op?.endTime ?? 0,
                 edOffset: resolvedEdOffset,
+                edEnd: resolvedEdEnd,
                 applyToSeason: false,
             }
         }).catch(err => console.warn("Failed to cache AniSkip times in KameHouse:", err))

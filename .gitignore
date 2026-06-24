@@ -68,6 +68,12 @@ whats-new.md
 TODO-priv.md
 CHANGELOG-priv.md
 
+# KameHouseTV (Tizen) build artifacts
+apps/KameHouseTV/*.wgt
+apps/KameHouseTV/.manifest.tmp
+apps/KameHouseTV/signature*.xml
+apps/KameHouseTV/author-signature.xml
+
 # AI Agent Config
 .clauderc
 .cursorrules

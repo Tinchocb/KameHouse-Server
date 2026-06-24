@@ -21,6 +21,7 @@ interface PlaybackSettingsProps {
     onMarathonModeChange?: (enabled: boolean) => void
     showSeparator?: boolean
     onAdjustSkipTimes?: () => void
+    mediaFormat?: string | null
 }
 
 function ToggleRow({ label, enabled, onChange }: { label: string; enabled: boolean; onChange: (v: boolean) => void }) {
@@ -72,15 +73,16 @@ export function PlaybackSettings({
     onMarathonModeChange = () => {},
     showSeparator = true,
     onAdjustSkipTimes,
+    mediaFormat,
 }: PlaybackSettingsProps) {
+    const isMovie = mediaFormat?.toUpperCase() === "MOVIE"
+
     return (
         <div className="py-4">
             {showSeparator && <div className="mx-6 h-px bg-white/10 mb-4" />}
             <ToggleRow label="Mapa de Calor (timeline)" enabled={showHeatmap} onChange={onShowHeatmapChange} />
-            <ToggleRow label="Omitir Intro (automático)" enabled={autoSkipIntro} onChange={onAutoSkipIntroChange} />
-            <ToggleRow label="Saltar Final (automático)" enabled={autoSkipOutro} onChange={onAutoSkipOutroChange} />
-            <ToggleRow label="Modo Maratón" enabled={marathonMode} onChange={onMarathonModeChange} />
-            
+            {!isMovie && <ToggleRow label="Omitir Intro (automático)" enabled={autoSkipIntro} onChange={onAutoSkipIntroChange} />}
+            {!isMovie && <ToggleRow label="Saltar Final (automático)" enabled={autoSkipOutro} onChange={onAutoSkipOutroChange} />}
             {onAdjustSkipTimes && (
                 <button
                     onClick={onAdjustSkipTimes}

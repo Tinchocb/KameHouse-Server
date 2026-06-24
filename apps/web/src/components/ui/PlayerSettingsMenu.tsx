@@ -63,6 +63,7 @@ export function PlayerSettingsMenu({
     duration,
     mediaId,
     episodeNumber,
+    mediaFormat,
 }: PlayerSettingsMenuProps) {
     const [internalOpen, setInternalOpen] = React.useState(false)
     const [view, setView] = React.useState<SettingsView>("main")
@@ -353,6 +354,7 @@ export function PlayerSettingsMenu({
                                     onMarathonModeChange={onMarathonModeChange}
                                     showSeparator={false}
                                     onAdjustSkipTimes={() => setView("skiptimes")}
+                                    mediaFormat={mediaFormat}
                                 />
                             </SettingsLayout>
                         )}

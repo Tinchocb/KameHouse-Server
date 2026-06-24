@@ -38,6 +38,7 @@ function setupAppProtocol(appPath, isDev) {
             })
         }
 
+        // For SPA routes (no extension) or explicit .html, serve index.html
         const ext = path.extname(urlPath)
         if (!ext || ext === ".html") {
             const fallbackPath = path.join(webPath, "index.html")
@@ -52,8 +53,13 @@ function setupAppProtocol(appPath, isDev) {
             })
         }
 
-        log.error(`[App Protocol] 404 Not Found: ${urlPath}`)
-        return new Response("Not Found", { status: 404 })
+        // For assets with extensions (.js, .css, .png, etc.) that don't exist,
+        // return 404 but with a more helpful error message
+        log.warn(`[App Protocol] Asset not found (404): ${urlPath}`)
+        return new Response("Not Found", { 
+            status: 404,
+            headers: { "Content-Type": "text/plain" }
+        })
     })
 }
 

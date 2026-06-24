@@ -16,6 +16,8 @@ interface PlayerEpisodesSidebarProps {
     episodes: Episode[]
     currentEpisodeNumber?: number
     onSelectEpisode?: (episodeNumber: number) => void
+    marathonMode?: boolean
+    onMarathonModeChange?: (enabled: boolean) => void
 }
 
 export function PlayerEpisodesSidebar({
@@ -24,6 +26,8 @@ export function PlayerEpisodesSidebar({
     episodes,
     currentEpisodeNumber,
     onSelectEpisode,
+    marathonMode = false,
+    onMarathonModeChange,
 }: PlayerEpisodesSidebarProps) {
     return (
         <AnimatePresence>
@@ -61,6 +65,32 @@ export function PlayerEpisodesSidebar({
                                 </svg>
                             </button>
                         </div>
+
+                        {/* Marathon Mode Toggle */}
+                        {onMarathonModeChange && (
+                            <div className="px-6 py-3 border-b border-white/5">
+                                <button
+                                    onClick={() => onMarathonModeChange(!marathonMode)}
+                                    className={cn(
+                                        "flex items-center justify-between w-full p-3 rounded-xl border transition-all duration-300",
+                                        marathonMode
+                                            ? "bg-brand-orange/10 border-brand-orange/30 text-white"
+                                            : "bg-white/[0.02] border-white/5 text-zinc-400 hover:text-white"
+                                    )}
+                                >
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Modo Maratón</span>
+                                    <div className={cn(
+                                        "w-8 h-4 rounded-full relative transition-all duration-300",
+                                        marathonMode ? "bg-brand-orange" : "bg-white/10"
+                                    )}>
+                                        <div className={cn(
+                                            "absolute top-[2px] w-2.5 h-2.5 rounded-full transition-all duration-300",
+                                            marathonMode ? "left-[17px] bg-white" : "left-[3px] bg-zinc-400"
+                                        )} />
+                                    </div>
+                                </button>
+                            </div>
+                        )}
 
                         {/* Episodes List */}
                         <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar">

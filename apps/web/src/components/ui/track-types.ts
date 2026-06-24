@@ -169,6 +169,7 @@ export interface PlayerSettingsMenuProps {
     onOpenChange?: (open: boolean) => void
     className?: string
 
+    mediaFormat?: string | null
     videoRef?: React.RefObject<HTMLVideoElement | null>
     malId?: number | null
     duration?: number

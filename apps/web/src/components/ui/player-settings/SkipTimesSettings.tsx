@@ -46,7 +46,10 @@ export function SkipTimesSettings({
         seriesData?.edOffset && duration ? duration - seriesData.edOffset : null
     )
     const [edEnd, setEdEnd] = React.useState<number | null>(
-        seriesData?.edOffset ? duration ?? null : null
+        seriesData?.edEnd && seriesData.edEnd > 0 ? seriesData.edEnd : null
+    )
+    const [edEndIsEpisodeEnd, setEdEndIsEpisodeEnd] = React.useState<boolean>(
+        !(seriesData?.edEnd && seriesData.edEnd > 0)
     )
 
     const handleMinChange = (
@@ -158,7 +161,9 @@ export function SkipTimesSettings({
 
     const handleMarkEdEnd = () => {
         if (videoRef?.current) {
-            setEdEnd(Math.round(videoRef.current.currentTime * 100) / 100)
+            const time = Math.round(videoRef.current.currentTime * 100) / 100
+            setEdEnd(time)
+            setEdEndIsEpisodeEnd(false)
         }
     }
 
@@ -170,14 +175,21 @@ export function SkipTimesSettings({
         const resolvedOpEnd = opEnd ?? 0
         
         let resolvedEdOffset = 0
+        let resolvedEdEnd = 0
         if (edStart !== null && duration && duration > 0) {
             resolvedEdOffset = Math.max(0, duration - edStart)
+            if (edEndIsEpisodeEnd) {
+                resolvedEdEnd = duration
+            } else if (edEnd !== null && edEnd > 0) {
+                resolvedEdEnd = edEnd
+            }
         }
 
         try {
             // 1. Save to local Zustand store
-            if (malId) {
-                saveSeriesSkipTimes(malId, resolvedOpStart, resolvedOpEnd, resolvedEdOffset)
+            const storeKey = malId || mediaId
+            if (storeKey) {
+                saveSeriesSkipTimes(storeKey, resolvedOpStart, resolvedOpEnd, resolvedEdOffset, resolvedEdEnd)
             }
 
             // 2. Save to KameHouse server database
@@ -191,6 +203,7 @@ export function SkipTimesSettings({
                     opStart: resolvedOpStart,
                     opEnd: resolvedOpEnd,
                     edOffset: resolvedEdOffset,
+                    edEnd: resolvedEdEnd,
                     applyToSeason,
                 }
             })
@@ -214,11 +227,13 @@ export function SkipTimesSettings({
         setOpEnd(null)
         setEdStart(null)
         setEdEnd(null)
+        setEdEndIsEpisodeEnd(true)
 
         try {
             // 1. Clear local Zustand store
-            if (malId) {
-                saveSeriesSkipTimes(malId, 0, 0, 0)
+            const storeKey = malId || mediaId
+            if (storeKey) {
+                saveSeriesSkipTimes(storeKey, 0, 0, 0, 0)
             }
 
             // 2. Clear on KameHouse server database
@@ -232,6 +247,7 @@ export function SkipTimesSettings({
                     opStart: 0,
                     opEnd: 0,
                     edOffset: 0,
+                    edEnd: 0,
                     applyToSeason: false,
                 }
             })
@@ -433,29 +449,49 @@ export function SkipTimesSettings({
                                 <div className="flex flex-col gap-1.5">
                                     <div className="flex justify-between items-center text-[10px] text-zinc-400 font-bold">
                                         <span>Fin:</span>
-                                        {edEnd === null && <span className="text-[9px] text-zinc-600 font-bold uppercase">No asignado</span>}
+                                        {edEndIsEpisodeEnd
+                                            ? <span className="text-[9px] text-purple-400 font-bold uppercase">Final del episodio</span>
+                                            : edEnd === null && <span className="text-[9px] text-zinc-600 font-bold uppercase">No asignado</span>}
                                     </div>
-                                    <div className="flex items-center gap-1">
-                                        <input
-                                            type="text"
-                                            inputMode="numeric"
-                                            pattern="[0-9]*"
-                                            placeholder="MM"
-                                            value={edEnd !== null ? Math.floor(edEnd / 60) : ""}
-                                            onChange={(e) => handleMinChange(e.target.value, edEnd, setEdEnd)}
-                                            className="w-12 bg-white/5 border border-white/10 rounded px-1.5 py-1 text-center font-mono text-xs text-purple-400 font-bold focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-colors"
-                                        />
-                                        <span className="text-zinc-600 font-bold">:</span>
-                                        <input
-                                            type="text"
-                                            inputMode="numeric"
-                                            pattern="[0-9]*"
-                                            placeholder="SS"
-                                            value={edEnd !== null ? Math.floor(edEnd % 60) : ""}
-                                            onChange={(e) => handleSecChange(e.target.value, edEnd, setEdEnd)}
-                                            className="w-12 bg-white/5 border border-white/10 rounded px-1.5 py-1 text-center font-mono text-xs text-purple-400 font-bold focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-colors"
-                                        />
-                                    </div>
+                                    {edEndIsEpisodeEnd ? (
+                                        <button
+                                            onClick={() => setEdEndIsEpisodeEnd(false)}
+                                            className="flex items-center gap-1 text-[9px] text-zinc-500 hover:text-purple-400 transition-colors"
+                                        >
+                                            <span className="text-[9px] text-zinc-400 font-bold">Final del episodio</span>
+                                            <span className="text-zinc-600 mx-1">—</span>
+                                            <span className="underline decoration-dotted">Fijar hora específica</span>
+                                        </button>
+                                    ) : (
+                                        <div className="flex items-center gap-1">
+                                            <input
+                                                type="text"
+                                                inputMode="numeric"
+                                                pattern="[0-9]*"
+                                                placeholder="MM"
+                                                value={edEnd !== null ? Math.floor(edEnd / 60) : ""}
+                                                onChange={(e) => handleMinChange(e.target.value, edEnd, setEdEnd)}
+                                                className="w-12 bg-white/5 border border-white/10 rounded px-1.5 py-1 text-center font-mono text-xs text-purple-400 font-bold focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-colors"
+                                            />
+                                            <span className="text-zinc-600 font-bold">:</span>
+                                            <input
+                                                type="text"
+                                                inputMode="numeric"
+                                                pattern="[0-9]*"
+                                                placeholder="SS"
+                                                value={edEnd !== null ? Math.floor(edEnd % 60) : ""}
+                                                onChange={(e) => handleSecChange(e.target.value, edEnd, setEdEnd)}
+                                                className="w-12 bg-white/5 border border-white/10 rounded px-1.5 py-1 text-center font-mono text-xs text-purple-400 font-bold focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-colors"
+                                            />
+                                            <button
+                                                onClick={() => setEdEndIsEpisodeEnd(true)}
+                                                className="ml-1 text-[9px] text-zinc-500 hover:text-purple-400 underline decoration-dotted transition-colors"
+                                                title="Saltar al final del episodio"
+                                            >
+                                                Final
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

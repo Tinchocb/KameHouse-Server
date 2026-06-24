@@ -133,6 +133,7 @@ export function usePlayerShortcuts({
                     toggleMute()
                     break
                 case "f":
+                case "f11":
                     e.preventDefault()
                     toggleFullscreen()
                     break

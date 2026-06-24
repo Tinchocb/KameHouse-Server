@@ -61,7 +61,8 @@ interface UsePlayerSkipProps {
 // ─── Pure Helpers (no hooks) ────────────────────────────────────────────────────
 
 /** Returns the effective OP/intro window: explicit AniSkip data → chapter → heuristic */
-function resolveActiveOp(skipTimesOp: SkipWindow | undefined, total: number): SkipWindow | undefined {
+function resolveActiveOp(skipTimesOp: SkipWindow | undefined, total: number, mediaFormat?: string | null): SkipWindow | undefined {
+    if (mediaFormat === "MOVIE") return undefined
     if (skipTimesOp) return skipTimesOp
     if (total > 120) return { startTime: 0, endTime: Math.min(90, total * 0.12) }
     return undefined
@@ -71,7 +72,8 @@ function resolveActiveOp(skipTimesOp: SkipWindow | undefined, total: number): Sk
  * Always caps endTime at `total - 5` to leave a buffer for post-ED content
  * (previews, after-credits scenes), regardless of whether the window came from
  * AniSkip, chapters, or the series cache. */
-function resolveActiveEd(skipTimesEd: SkipWindow | undefined, total: number): SkipWindow | undefined {
+function resolveActiveEd(skipTimesEd: SkipWindow | undefined, total: number, mediaFormat?: string | null): SkipWindow | undefined {
+    if (mediaFormat === "MOVIE") return undefined
     if (skipTimesEd) {
         const endTime = Math.min(skipTimesEd.endTime, Math.max(skipTimesEd.startTime + 1, total - 5))
         if (endTime <= skipTimesEd.startTime) return skipTimesEd
@@ -116,6 +118,7 @@ export function usePlayerSkip({
     malId,
     episodeNumber,
     chapters,
+    mediaFormat,
     autoSkipIntroPref,
     autoSkipOutroPref,
     hasNextEpisode,
@@ -206,6 +209,7 @@ export function usePlayerSkip({
         setShowNextEpisode(false)
         setSkipMode(null)
         setShowCountdown(false)
+        setVideoEnded(false)
         hasAutoSkippedIntroRef.current = false
         hasAutoSkippedOutroRef.current = false
         hasTriggeredNextEpisodeRef.current = false
@@ -244,40 +248,43 @@ export function usePlayerSkip({
     })
 
     // ── Resolved skip windows (AniSkip → chapter → series cache) ────────────────
+    const storeKey = malId || mediaId
     const skipTimesOp = useMemo<SkipWindow | undefined>(() => {
         if (skipTimes?.op) return skipTimes.op
         const chap = findIntroChapter(chapters)
         if (chap) return { startTime: chap.startTime, endTime: chap.endTime }
-        if (malId) {
-            const cached = seriesSkipTimes[String(malId)]
+        if (storeKey) {
+            const cached = seriesSkipTimes[String(storeKey)]
             if (cached && typeof cached.opStart === "number" && typeof cached.opEnd === "number") {
                 return { startTime: cached.opStart, endTime: cached.opEnd }
             }
         }
         return undefined
-    }, [skipTimes, chapters, malId, seriesSkipTimes])
+    }, [skipTimes, chapters, storeKey, seriesSkipTimes])
 
     const skipTimesEd = useMemo<SkipWindow | undefined>(() => {
         if (skipTimes?.ed) return skipTimes.ed
         const chap = findOutroChapter(chapters)
         if (chap) return { startTime: chap.startTime, endTime: chap.endTime }
-        if (malId && duration > 0) {
-            const cached = seriesSkipTimes[String(malId)]
+        if (storeKey && duration > 0) {
+            const cached = seriesSkipTimes[String(storeKey)]
             if (cached && typeof cached.edOffset === "number") {
-                return { startTime: duration - cached.edOffset, endTime: duration }
+                const endTime = (typeof cached.edEnd === "number" && cached.edEnd > 0) ? cached.edEnd : duration
+                return { startTime: duration - cached.edOffset, endTime }
             }
         }
         return undefined
-    }, [skipTimes, chapters, malId, duration, seriesSkipTimes])
+    }, [skipTimes, chapters, storeKey, duration, seriesSkipTimes])
 
     // ── Auto-learning: persist resolved skip times to series cache ───────────────
     useEffect(() => {
-        if (!malId || duration <= 0) return
+        if (!storeKey || duration <= 0) return
 
-        const cached = seriesSkipTimes[String(malId)]
+        const cached = seriesSkipTimes[String(storeKey)]
         let opStart = cached?.opStart
         let opEnd = cached?.opEnd
         let edOffset = cached?.edOffset
+        let edEnd = cached?.edEnd
 
         // Use resolved skipTimesOp/Ed rather than re-running chapter regex
         if (skipTimesOp) {
@@ -286,14 +293,15 @@ export function usePlayerSkip({
         }
         if (skipTimesEd) {
             edOffset = duration - skipTimesEd.startTime
+            edEnd = skipTimesEd.endTime
         }
 
         if (typeof opStart === "number" && typeof opEnd === "number" && typeof edOffset === "number") {
-            if (cached?.opStart !== opStart || cached?.opEnd !== opEnd || cached?.edOffset !== edOffset) {
-                saveSeriesSkipTimes(malId, opStart, opEnd, edOffset)
+            if (cached?.opStart !== opStart || cached?.opEnd !== opEnd || cached?.edOffset !== edOffset || cached?.edEnd !== edEnd) {
+                saveSeriesSkipTimes(storeKey!, opStart, opEnd, edOffset, edEnd)
             }
         }
-    }, [malId, duration, skipTimesOp, skipTimesEd, seriesSkipTimes, saveSeriesSkipTimes])
+    }, [storeKey, duration, skipTimesOp, skipTimesEd, seriesSkipTimes, saveSeriesSkipTimes])
 
     // ── Helpers ──────────────────────────────────────────────────────────────────
     const triggerToast = useCallback((type: "intro" | "outro" | "pause") => {
@@ -310,12 +318,12 @@ export function usePlayerSkip({
 
         lastManualSeekTimestampRef.current = Date.now()
 
-        const activeOp = resolveActiveOp(skipTimesOp, total)
+        const activeOp = resolveActiveOp(skipTimesOp, total, mediaFormat)
         if (activeOp && target >= activeOp.startTime && target < activeOp.endTime) {
             hasAutoSkippedIntroRef.current = true
         }
 
-        const activeEd = resolveActiveEd(skipTimesEd, total)
+        const activeEd = resolveActiveEd(skipTimesEd, total, mediaFormat)
         if (activeEd && target >= activeEd.startTime && target < activeEd.endTime) {
             hasAutoSkippedOutroRef.current = true
         }
@@ -365,7 +373,7 @@ export function usePlayerSkip({
         const video = videoRef.current
         if (!video || !val) return
         const curr = video.currentTime
-        const activeOp = resolveActiveOp(skipTimesOp, video.duration)
+        const activeOp = resolveActiveOp(skipTimesOp, video.duration, mediaFormat)
         if (activeOp && curr >= activeOp.startTime && curr < activeOp.endTime) {
             video.currentTime = activeOp.endTime
             lastManualSeekTimestampRef.current = Date.now()
@@ -381,9 +389,9 @@ export function usePlayerSkip({
         const curr = video.currentTime
         const total = video.duration
         // Only act on outro, not inside intro window
-        const activeOp = resolveActiveOp(skipTimesOp, total)
+        const activeOp = resolveActiveOp(skipTimesOp, total, mediaFormat)
         if (activeOp && curr < activeOp.endTime) return
-        const activeEd = resolveActiveEd(skipTimesEd, total)
+        const activeEd = resolveActiveEd(skipTimesEd, total, mediaFormat)
         if (activeEd && curr >= activeEd.startTime && curr < activeEd.endTime) {
             video.currentTime = activeEd.endTime
             lastManualSeekTimestampRef.current = Date.now()
@@ -404,11 +412,11 @@ export function usePlayerSkip({
         const activeMode = skipMode || (curr < 120 ? "intro" : "outro")
 
         if (activeMode === "intro") {
-            const activeOp = resolveActiveOp(skipTimesOp, total)
+            const activeOp = resolveActiveOp(skipTimesOp, total, mediaFormat)
             if (!activeOp || !(curr >= activeOp.startTime && curr < activeOp.endTime)) return
             video.currentTime = activeOp.endTime
         } else {
-            const activeEd = resolveActiveEd(skipTimesEd, total)
+            const activeEd = resolveActiveEd(skipTimesEd, total, mediaFormat)
             if (!activeEd || !(curr >= activeEd.startTime && curr < activeEd.endTime)) return
             video.currentTime = activeEd.endTime
         }
@@ -426,8 +434,8 @@ export function usePlayerSkip({
         const video = videoRef.current
         if (!video) return
 
-        const activeOp = resolveActiveOp(skipTimesOp, total)
-        const activeEd = resolveActiveEd(skipTimesEd, total)
+        const activeOp = resolveActiveOp(skipTimesOp, total, mediaFormat)
+        const activeEd = resolveActiveEd(skipTimesEd, total, mediaFormat)
 
         // ── 1. Seek cooldown guard ─────────────────────────────────────────────
         const inCooldown = Date.now() - lastManualSeekTimestampRef.current < SEEK_COOLDOWN_MS
@@ -575,7 +583,7 @@ export function usePlayerSkip({
         // ── 8. "Up next" panel visibility ─────────────────────────────────────
         const edTriggered = skipTimesEd ? curr >= skipTimesEd.startTime : false
         const shouldShowNext =
-            !marathonMode && (
+            mediaFormat !== "MOVIE" && !marathonMode && (
                 (total > 0 && total - curr <= 15) ||
                 (autoSkipOutroPref && edTriggered && hasNextEpisode)
             )
@@ -593,7 +601,8 @@ export function usePlayerSkip({
         const isPlayingOrEnded = !video.paused || video.ended
         const targetShowCountdown =
             tvMode && autoPlayNextEpisode && isPlayingOrEnded && hasNextEpisode &&
-            (video.ended ||
+            mediaFormat !== "MOVIE" && (
+                video.ended ||
                 (autoSkipOutroPref && skipTimesEd ? curr >= skipTimesEd.startTime : false) ||
                 (total > 0 && total - curr <= 15))
 
@@ -604,7 +613,8 @@ export function usePlayerSkip({
         // ── 10. Marathon mode auto-advance ────────────────────────────────────
         if (
             marathonMode && hasNextEpisode && onNextEpisode &&
-            (video.ended || (!showCountdown && total > 0 && total - curr <= 3))
+            mediaFormat !== "MOVIE" &&
+            (video.ended || (total > 0 && total - curr <= 3))
         ) {
             if (!hasTriggeredNextEpisodeRef.current) {
                 hasTriggeredNextEpisodeRef.current = true
@@ -620,6 +630,7 @@ export function usePlayerSkip({
         chapters,
         triggerToast,
         marathonMode,
+        mediaFormat,
         nextStreamUrl, streamType,
         preloadStream, queryClient,
         clientId,
@@ -647,14 +658,15 @@ export function usePlayerSkip({
 
         const targetShowCountdown =
             tvMode && autoPlayNextEpisode && isPlayingOrEnded && hasNextEpisode &&
-            (videoEnded ||
+            mediaFormat !== "MOVIE" && (
+                videoEnded ||
                 (autoSkipOutroPref && skipTimesEd ? curr >= skipTimesEd.startTime : false) ||
                 (total > 0 && total - curr <= 15))
 
         if (showCountdown !== targetShowCountdown) {
             setShowCountdown(targetShowCountdown)
         }
-    }, [isPlaying, videoEnded, tvMode, autoPlayNextEpisode, hasNextEpisode, autoSkipOutroPref, skipTimesEd, duration, videoRef, showCountdown])
+    }, [isPlaying, videoEnded, tvMode, autoPlayNextEpisode, hasNextEpisode, autoSkipOutroPref, skipTimesEd, duration, videoRef, showCountdown, mediaFormat])
 
     // ── Countdown tick ────────────────────────────────────────────────────────────
     const remainingProgress = useMemo(() => (countdownSeconds / COUNTDOWN_START) * 100, [countdownSeconds])
@@ -674,22 +686,25 @@ export function usePlayerSkip({
 
     // ── Auto-advance on video end ─────────────────────────────────────────────────
     useEffect(() => {
-        if (videoEnded && hasNextEpisode && onNextEpisode && autoPlayNextEpisode) {
+        if (videoEnded && hasNextEpisode && onNextEpisode && mediaFormat !== "MOVIE" && (marathonMode || autoPlayNextEpisode)) {
             if (marathonMode) {
                 if (!hasTriggeredNextEpisodeRef.current) {
                     hasTriggeredNextEpisodeRef.current = true
                     if (videoRef.current) videoRef.current.pause()
                     onNextEpisode()
                 }
-            } else if (!tvMode) {
-                const timer = setTimeout(() => {
-                    if (videoRef.current) videoRef.current.pause()
-                    onNextEpisode()
-                }, 1000)
-                return () => clearTimeout(timer)
+            } else {
+                if (!hasTriggeredNextEpisodeRef.current) {
+                    hasTriggeredNextEpisodeRef.current = true
+                    const timer = setTimeout(() => {
+                        if (videoRef.current) videoRef.current.pause()
+                        onNextEpisode()
+                    }, tvMode ? 5000 : 1000)
+                    return () => clearTimeout(timer)
+                }
             }
         }
-    }, [videoEnded, hasNextEpisode, onNextEpisode, autoPlayNextEpisode, tvMode, marathonMode, videoRef])
+    }, [videoEnded, hasNextEpisode, onNextEpisode, autoPlayNextEpisode, tvMode, marathonMode, mediaFormat, videoRef])
 
     // ── Cleanup ───────────────────────────────────────────────────────────────────
     useEffect(() => {

@@ -13,7 +13,6 @@ import { useAppStore } from "@/lib/store"
 import { useShallow } from "zustand/react/shallow"
 import { PlayerEpisodesSidebar } from "./player-episodes-sidebar"
 import { PlayerQueueSidebar } from "./player-queue-sidebar"
-import { PlayerCastModal } from "./player-cast-modal"
 
 function StatsOverlay({ show, data }: { show: boolean, data: PlayerStats }) {
     if (!show || !data) return null
@@ -509,7 +508,6 @@ export function PlayerUI(props: PlayerUIProps) {
                     activeChapter={state.activeChapter}
                     isCastSupported={state.isCastSupported}
                     castState={state.castState}
-                    onPromptCast={() => setIsCastModalOpen(true)}
                     isEpisodesSidebarOpen={isEpisodesSidebarOpen}
                     onToggleEpisodesSidebar={() => setIsEpisodesSidebarOpen(!isEpisodesSidebarOpen)}
                     hasEpisodes={Boolean(episodes && episodes.length > 0)}
@@ -526,6 +524,8 @@ export function PlayerUI(props: PlayerUIProps) {
                 episodes={episodes || []}
                 currentEpisodeNumber={episodeNumber}
                 onSelectEpisode={onSelectEpisode}
+                marathonMode={state.marathonMode}
+                onMarathonModeChange={actions.setMarathonMode}
             />
 
             {/* Queue Sidebar */}
@@ -534,17 +534,6 @@ export function PlayerUI(props: PlayerUIProps) {
                 onClose={() => setIsQueueSidebarOpen(false)}
                 playlistQueue={playlistQueue}
                 currentQueueIndex={currentQueueIndex}
-            />
-
-            {/* Casting Modal */}
-            <PlayerCastModal
-                isOpen={isCastModalOpen}
-                onClose={() => setIsCastModalOpen(false)}
-                playableUrl={playableUrl}
-                title={title}
-                serverIPs={state.serverIPs}
-                serverPort={state.serverPort}
-                absoluteLanUrl={state.absoluteLanUrl}
             />
         </div>
     )

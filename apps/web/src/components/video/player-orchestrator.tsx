@@ -51,12 +51,12 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
 
     const isLocal = !props.isExternalStream && Boolean(props.streamUrl) && streamType !== "online"
 
-    // Override streamType for local files on local network: always prefer Direct Play
+    // Override streamType for local files on local network: prefer Direct Play
+    // but respect the backend when it determined transcoding is necessary for codec support.
     const effectiveStreamType = useMemo(() => {
         if (isLocal && isLocalNetwork) {
-            // If server has DirectPlayOnly setting enabled, or we're on LAN, force direct
             if (mediastreamSettings?.directPlayOnly) return "direct"
-            // On LAN, default to direct for local files to avoid transcoding overhead
+            if (streamType === "transcode") return "transcode"
             return "direct"
         }
         return streamType

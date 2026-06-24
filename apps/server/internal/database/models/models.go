@@ -376,5 +376,6 @@ type EpisodeSkipTime struct {
 	OpStart       float64 `gorm:"column:op_start" json:"opStart"`
 	OpEnd         float64 `gorm:"column:op_end" json:"opEnd"`
 	EdOffset      float64 `gorm:"column:ed_offset" json:"edOffset"`
+	EdEnd         float64 `gorm:"column:ed_end" json:"edEnd"`
 }
 

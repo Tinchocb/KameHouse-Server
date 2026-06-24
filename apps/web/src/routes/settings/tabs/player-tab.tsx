@@ -139,13 +139,6 @@ export function PlayerTab({ control }: PlayerTabProps) {
                                 )}
                             />
 
-                            <OsToggle
-                                label="Modo Maratón"
-                                description="Saltea intros, endings y baches de manera automática para ver todos los episodios continuos como una película."
-                                checked={marathonMode}
-                                onChange={setMarathonMode}
-                            />
-
                             <Controller
                                 control={control}
                                 name="library.enableWatchContinuity"

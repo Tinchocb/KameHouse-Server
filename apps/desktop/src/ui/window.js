@@ -344,6 +344,10 @@ function createMainWindow(isDev, localPort) {
     mainWindow.on("leave-full-screen", () => {
         safeSendToMainWindow("window:fullscreen", false)
     })
+
+    mainWindow.webContents.on("leave-html-full-screen", () => {
+        log.info("[Window] HTML5 fullscreen exited")
+    })
 }
 
 function createSplashScreen(isDev) {
