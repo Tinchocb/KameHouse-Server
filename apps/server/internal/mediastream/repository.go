@@ -1,3 +1,4 @@
+// Package mediastream handles HLS and direct streaming of media files, transcode preloading, and subtitle extraction.
 package mediastream
 
 import (
@@ -98,8 +99,7 @@ func (r *Repository) InitializeModules(settings *models.MediastreamSettings, cac
 	)
 
 	// Initialize the transcoder
-	if ok := r.initializeTranscoder(r.settings); ok {
-	}
+	_ = r.initializeTranscoder(r.settings)
 
 	r.logger.Info().Msg("mediastream: Module initialized")
 }

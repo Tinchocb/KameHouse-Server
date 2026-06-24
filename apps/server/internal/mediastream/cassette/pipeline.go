@@ -455,7 +455,12 @@ func (p *Pipeline) runHead(start int32) error {
 		return err
 	}
 
-	args := []string{"-nostats", "-hide_banner", "-loglevel", "warning"}
+	args := []string{"-nostats", "-hide_banner", "-loglevel", "warning",
+		// Limit input analysis so FFmpeg starts writing the first segment faster.
+		// Default values (5 000 000 µs / 5 MB) force reading deep into large MKV
+		// files before the muxer is ready. 10 MB is enough to detect all streams.
+		"-analyzeduration", "10000000", "-probesize", "10000000",
+	}
 	isCopy := false
 	if p.buildArgs != nil {
 		for _, arg := range p.buildArgs("") {

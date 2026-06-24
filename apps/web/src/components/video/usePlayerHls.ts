@@ -168,8 +168,42 @@ export function usePlayerHls({
             // ... (keep HLS setup as is)
             const hls = new Hls({
                 enableWorker: true,
-                lowLatencyMode: true,
+
+                // VOD buffer strategy (Netflix/Plex style).
+                // lowLatencyMode is intentionally omitted — it is designed for live
+                // streams (Twitch-style LL-HLS) and causes hundreds of micro-requests
+                // on VOD content, saturating the network and hurting start times on
+                // heavy files (e.g. 4K MKVs).
+
+                // Start at level 0 (first/best available) instead of auto (-1).
+                // Auto forces a bandwidth estimation round-trip before the first segment
+                // is requested, adding ~1 RTT of latency on every playback start.
+                // On LAN the first level is always reachable; ABR will scale up/down
+                // after the second segment anyway.
+                startLevel: 0,
+
+                // Keep up to 6s buffered for initial start (hls.js declares
+                // canplay once this threshold is met). 30s was unnecessarily slow.
+                // maxMaxBufferLength lets it grow to 180s on fast connections.
+                maxBufferLength: 6,
+                // Allow the buffer to grow up to 180s when bandwidth is abundant.
+                maxMaxBufferLength: 180,
+                // Hard RAM cap: never hold more than 60MB of demuxed data in memory.
+                maxBufferSize: 60 * 1024 * 1024,
+                // Tolerate timestamp gaps up to 0.5s without stalling — common in
+                // anime MKVs with variable keyframe spacing.
+                maxBufferHole: 0.5,
+                // Don't request 4K segments when the video element is displayed
+                // at a lower resolution (e.g. picture-in-picture or small window).
+                capLevelToPlayerSize: true,
+                // Aggressive ABR upscaling so quality rises quickly after the first
+                // low-latency segment.
+                abrBandWidthFactor: 0.95,
+                abrBandWidthUpFactor: 0.7,
+                // Back-buffer: keep 90s behind the playhead for smooth backwards seeks.
                 backBufferLength: 90,
+                // Generous manifest load timeout for large library servers on LAN.
+                manifestLoadingTimeOut: 10000,
             })
             setRefValue(hlsRef, hls)
             hlsInstance = hls

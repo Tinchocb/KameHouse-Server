@@ -7,7 +7,7 @@ import { usePlayerHls } from "./usePlayerHls"
 import { useAnimeTracking } from "@/api/hooks/useAnimeTracking"
 import { useWebSocket } from "@/hooks/use-websocket"
 import { getApiWebSocketUrl } from "@/api/client/server-url"
-import { useMediastreamShutdownTranscodeStream } from "@/api/hooks/mediastream.hooks"
+import { useMediastreamShutdownTranscodeStream, usePreloadMediastreamMediaContainer } from "@/api/hooks/mediastream.hooks"
 import { useAppStore } from "@/lib/store"
 import { useShallow } from "zustand/react/shallow"
 import { usePlayerProgressSync } from "@/api/hooks/usePlayerProgressSync"
@@ -327,6 +327,15 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     })
 
     const { mutate: shutdownTranscode } = useMediastreamShutdownTranscodeStream()
+    const { mutate: preloadMutate } = usePreloadMediastreamMediaContainer()
+
+    // Proactive preload: fire-and-forget as soon as the player mounts with a
+    // transcode URL. This kicks off keyframe extraction + segments 0/1/2 in the
+    // background so they are already on disk when hls.js requests them.
+    useEffect(() => {
+        if (!playableUrl || streamType !== "transcode") return
+        preloadMutate({ path: playableUrl, streamType: "transcode", audioStreamIndex: 0 })
+    }, [playableUrl, streamType]) // eslint-disable-line react-hooks/exhaustive-deps
 
     const { onProgress: onTrackingProgress, reset: resetTracking } = useAnimeTracking({
         mediaId,

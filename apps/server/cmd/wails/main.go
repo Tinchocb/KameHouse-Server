@@ -107,7 +107,8 @@ func main() {
 		},
 		Windows: &windows.Options{
 			WebviewGpuIsDisabled: false,
-			BackdropType:         windows.Mica,
+			BackdropType:         windows.None,
+			ResizeDebounceMS:     50,
 		},
 	})
 

@@ -7,6 +7,7 @@ import { SeriesCard, getVhsColor } from './-SeriesCard';
 import { getLargeResImage } from '@/lib/helpers/images';
 import { useIntelligenceStore } from '@/hooks/use-home-intelligence';
 import { useSound } from '@/hooks/use-sound';
+import { generateGokuPanorama } from '@/lib/helpers/goku-panorama';
 
 export const Route = createFileRoute('/series/')({
     loader: ({ context }) => {
@@ -27,6 +28,19 @@ function SeriesFullscreenPage() {
             <SeriesFullscreenIndex />
         </HydrationBoundary>
     )
+}
+
+const getSeriesIdFromMedia = (media: any) => {
+    if (!media) return ""
+    const tmdbId = media.tmdbId || 0
+    const title = (media.titleRomaji || media.titleEnglish || media.titleOriginal || "").toLowerCase().replace(/\s+/g, "")
+    
+    if (tmdbId === 12971 || title.includes("dragonballz") || title === "dbz") return "dragon_ball_z"
+    if (tmdbId === 12697 || title.includes("dragonballgt")) return "dragon_ball_gt"
+    if (tmdbId === 62715 || title.includes("dragonballsuper")) return "dragon_ball_super"
+    if (tmdbId === 236994 || title.includes("dragonballdaima")) return "dragon_ball_daima"
+    if (tmdbId === 12609 || title === "dragonball") return "dragon_ball"
+    return ""
 }
 
 const getSeriesYear = (title: string, mediaYear?: number, startDate?: string): number | string => {
@@ -66,6 +80,7 @@ const getSeriesYear = (title: string, mediaYear?: number, startDate?: string): n
 function SeriesFullscreenIndex() {
     const navigate = useNavigate();
     const [selectedId, setSelectedId] = useState<number | null>(null);
+    const [panoramaUrl, setPanoramaUrl] = useState<string | null>(null);
     const setBackdropUrl = useIntelligenceStore(s => s.setBackdropUrl);
 
     const { data: collection, isLoading } = useGetLibraryCollection();
@@ -81,6 +96,14 @@ function SeriesFullscreenIndex() {
             setBackdropUrl(null);
         };
     }, [setBackdropUrl]);
+
+    useEffect(() => {
+        generateGokuPanorama().then(url => {
+            if (url) {
+                setPanoramaUrl(url);
+            }
+        });
+    }, []);
 
     const handleNavigate = useCallback((id: string) => {
         navigate({ to: '/series/$seriesId', params: { seriesId: id } });
@@ -114,6 +137,7 @@ function SeriesFullscreenIndex() {
                 img: getLargeResImage(media?.bannerImage || media?.posterImage || ''),
                 poster: getLargeResImage(media?.posterImage || media?.bannerImage || ''),
                 desc: media?.description?.replace(/<[^>]*>?/gm, '') || 'Sin descripción',
+                seriesId: getSeriesIdFromMedia(media),
             };
         });
 
@@ -147,9 +171,17 @@ function SeriesFullscreenIndex() {
 
 
 
-            {/* Main Shelf Container Wrapper (Enforces rounded corners clipping) */}
-            <div className="flex-1 min-h-0 bg-zinc-950/80 backdrop-blur-2xl rounded-[32px] border border-white/10 shadow-[0_16px_48px_rgba(0,0,0,0.6)] overflow-hidden relative z-10 flex flex-col">
-                <main className="w-full h-full flex bg-transparent overflow-x-auto overflow-y-hidden no-scrollbar relative z-10">
+            {/* Main Shelf Container Wrapper (Skeuomorphic Dark Walnut Wooden cabinet) */}
+            <div 
+                className="flex-1 min-h-0 rounded-[32px] border border-stone-800 shadow-[inset_0_24px_50px_rgba(0,0,0,0.9),inset_0_-24px_50px_rgba(0,0,0,0.9),0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden relative z-10 flex flex-col"
+                style={{
+                    background: 'linear-gradient(to right, #140b07 0%, #25130b 50%, #140b07 100%)',
+                }}
+            >
+                {/* Horizontal wood grain lines overlay */}
+                <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[linear-gradient(0deg,transparent_50%,rgba(255,255,255,0.1)_50%)] bg-[length:100%_4px] z-10" />
+                
+                <main className="w-full h-full flex bg-transparent overflow-x-auto overflow-y-hidden no-scrollbar relative z-10 pb-6">
                     {/* Backlight Glow inside shelf — Single dynamic div transitioning position & color */}
                     {selectedItem && (
                         <div
@@ -184,10 +216,20 @@ function SeriesFullscreenIndex() {
                                 onNavigate={handleNavigate}
                                 onSelect={setSelectedId}
                                 onSound={handleSound}
+                                panoramaUrl={panoramaUrl}
                             />
                         ))
                     )}
                 </main>
+                
+                {/* 3D Walnut Wooden shelf base plank */}
+                <div 
+                    className="absolute bottom-0 left-0 right-0 h-6 z-30 pointer-events-none border-t border-amber-950/20" 
+                    style={{
+                        background: 'linear-gradient(to bottom, #502e1b, #321c10 40%, #1a0f08 100%)',
+                        boxShadow: '0 -4px 12px rgba(0,0,0,0.6), inset 0 2px 2px rgba(255,255,255,0.06)'
+                    }}
+                />
             </div>
 
 

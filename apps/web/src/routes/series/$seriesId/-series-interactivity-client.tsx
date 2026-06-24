@@ -1,4 +1,4 @@
-import React, { useMemo } from "react"
+import React, { useMemo, useRef, useEffect } from "react"
 import { FaPlay, FaStar } from "react-icons/fa"
 import { ListPlus, ExternalLink } from "lucide-react"
 import { useSound } from "@/hooks/use-sound"
@@ -10,6 +10,7 @@ import { cn } from "@/components/ui/core/styling"
 import { sanitizeHtml } from "@/lib/helpers/sanitizer"
 import { motion } from "framer-motion"
 import { getDragonBallSpanishTitle } from "@/lib/config/dragonball.config"
+import { usePreloadMediastreamMediaContainer } from "@/api/hooks/mediastream.hooks"
 
 // ─── MediaActionButtons ───────────────────────────────────────────────────────
 
@@ -98,6 +99,8 @@ const EpisodeCard = React.memo(function EpisodeCard({
     mediaId,
 }: EpisodeCardProps) {
     const { playSound } = useSound()
+    const { mutate: preloadStream } = usePreloadMediastreamMediaContainer()
+    const preloadTimerRef = useRef<NodeJS.Timeout | null>(null)
     const thumb = episode?.episodeMetadata?.image || fallbackThumb
     
     const epNum = episode?.absoluteEpisodeNumber || episode?.episodeNumber || 0
@@ -180,9 +183,29 @@ const EpisodeCard = React.memo(function EpisodeCard({
         if (onToggleWatched && episode) onToggleWatched(episode)
     }
 
-    const playHoverSound = () => {
+    const handleMouseEnter = () => {
         playSound("hover")
+        if (hasLocalFile && localFile?.path) {
+            preloadTimerRef.current = setTimeout(() => {
+                preloadStream({ path: localFile.path, streamType: "direct", audioStreamIndex: 0 })
+            }, 150)
+        }
     }
+
+    const handleMouseLeave = () => {
+        if (preloadTimerRef.current) {
+            clearTimeout(preloadTimerRef.current)
+            preloadTimerRef.current = null
+        }
+    }
+
+    useEffect(() => {
+        return () => {
+            if (preloadTimerRef.current) {
+                clearTimeout(preloadTimerRef.current)
+            }
+        }
+    }, [])
 
     // Dynamic gradient fallback for thumb
     const baseColor = `hsl(${((episode?.absoluteEpisodeNumber || episode?.episodeNumber || 0) * 137.5) % 360}, 50%, 20%)`
@@ -193,7 +216,8 @@ const EpisodeCard = React.memo(function EpisodeCard({
         return (
             <div
                 onClick={hasLocalFile ? handlePlay : undefined}
-                onMouseEnter={playHoverSound}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
                 className={cn(
                     "group relative flex flex-col md:flex-row gap-8 transition-all duration-500 py-6 border-b border-white/[0.03] last:border-0 rounded-xl",
                     isCurrentlyPlaying 
@@ -443,7 +467,8 @@ const EpisodeCard = React.memo(function EpisodeCard({
     return (
         <div
             onClick={handlePlay}
-            onMouseEnter={playHoverSound}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
             className={cn(
                 "group relative flex flex-col liquid-glass-frosted liquid-glass-frosted-interactive rounded-xl transform-gpu will-change-transform",
                 isCurrentlyPlaying 

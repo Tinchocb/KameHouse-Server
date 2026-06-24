@@ -81,11 +81,12 @@ func (r *Repository) ServeEchoDirectPlay(c echo.Context, clientID string) error 
 		c.Response().Header().Set("Content-Length", fmt.Sprintf("%d", fileInfo.Size()))
 		ext := strings.ToLower(filepath.Ext(mediaContainer.Filepath))
 		contentType := "video/mp4"
-		if ext == ".webm" {
+		switch ext {
+		case ".webm":
 			contentType = "video/webm"
-		} else if ext == ".ogg" || ext == ".ogv" {
+		case ".ogg", ".ogv":
 			contentType = "video/ogg"
-		} else if ext == ".mov" {
+		case ".mov":
 			contentType = "video/quicktime"
 		}
 		c.Response().Header().Set("Content-Type", contentType)

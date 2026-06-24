@@ -40,7 +40,7 @@ type (
 		Filepath   string               `json:"filePath"`
 		Hash       string               `json:"hash"`
 		StreamType StreamType           `json:"streamType"` // Tells the frontend how to play the media.
-		StreamUrl  string               `json:"streamUrl"`  // The relative endpoint to stream the media.
+		StreamURL  string               `json:"streamUrl"`  // The relative endpoint to stream the media.
 		MediaInfo  *videofile.MediaInfo `json:"mediaInfo"`
 		//Metadata  *Metadata       `json:"metadata"`
 		// todo: add more fields (e.g. metadata)
@@ -102,17 +102,25 @@ func (p *PlaybackManager) PreloadPlayback(filepath string, streamType StreamType
 		return nil, fmt.Errorf("failed to create media container: %v", err)
 	}
 
-	// Zero Latency Next: Pre-transcode and cache the first 3 segments (video and audio) of the next episode in the background.
+	// Zero Latency Next: Pre-transcode and cache the first N segments (video and audio) of the next episode in the background.
 	if ret.StreamType == StreamTypeTranscode && p.repository.transcoder.IsPresent() {
 		go func() {
 			tc, _ := p.repository.transcoder.Get()
 			ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
 			defer cancel()
 
-			p.logger.Debug().Str("filepath", ret.Filepath).Msg("mediastream: Pre-transcoding video segments 0, 1 & 2 for zero-latency start")
-			_, _ = tc.GetVideoSegment(ctx, ret.Filepath, ret.Hash, ret.MediaInfo, "original", 0, "preload-client")
-			_, _ = tc.GetVideoSegment(ctx, ret.Filepath, ret.Hash, ret.MediaInfo, "original", 1, "preload-client")
-			_, _ = tc.GetVideoSegment(ctx, ret.Filepath, ret.Hash, ret.MediaInfo, "original", 2, "preload-client")
+			preloadSegments := 3
+			if p.repository.settings.IsPresent() {
+				s := p.repository.settings.MustGet()
+				if s != nil && s.TranscodeThreads > 0 {
+					preloadSegments = s.TranscodeThreads
+				}
+			}
+
+			p.logger.Debug().Str("filepath", ret.Filepath).Int("segments", preloadSegments).Msg("mediastream: Pre-transcoding video segments for zero-latency start")
+			for i := 0; i < preloadSegments; i++ {
+				_, _ = tc.GetVideoSegment(ctx, ret.Filepath, ret.Hash, ret.MediaInfo, "original", int32(i), "preload-client")
+			}
 
 			if len(ret.MediaInfo.Audios) > 0 {
 				defaultAudioIdx := int32(0)
@@ -122,12 +130,12 @@ func (p *PlaybackManager) PreloadPlayback(filepath string, streamType StreamType
 						break
 					}
 				}
-				p.logger.Debug().Str("filepath", ret.Filepath).Msg("mediastream: Pre-transcoding audio segments 0, 1 & 2 for zero-latency start")
-				_, _ = tc.GetAudioSegment(ctx, ret.Filepath, ret.Hash, ret.MediaInfo, defaultAudioIdx, 0, "preload-client")
-				_, _ = tc.GetAudioSegment(ctx, ret.Filepath, ret.Hash, ret.MediaInfo, defaultAudioIdx, 1, "preload-client")
-				_, _ = tc.GetAudioSegment(ctx, ret.Filepath, ret.Hash, ret.MediaInfo, defaultAudioIdx, 2, "preload-client")
+				p.logger.Debug().Str("filepath", ret.Filepath).Int("segments", preloadSegments).Msg("mediastream: Pre-transcoding audio segments for zero-latency start")
+				for i := 0; i < preloadSegments; i++ {
+					_, _ = tc.GetAudioSegment(ctx, ret.Filepath, ret.Hash, ret.MediaInfo, defaultAudioIdx, int32(i), "preload-client")
+				}
 			}
-			p.logger.Info().Str("filepath", ret.Filepath).Msg("mediastream: Finished proactive pre-transcoding of segments 0, 1 & 2")
+			p.logger.Info().Str("filepath", ret.Filepath).Int("segments", preloadSegments).Msg("mediastream: Finished proactive pre-transcoding of segments")
 		}()
 	}
 
@@ -224,34 +232,34 @@ func (p *PlaybackManager) newMediaContainer(filePath string, streamType StreamTy
 		}
 	}
 
-	streamUrl := ""
+	streamURL := ""
 	switch streamType {
 	case StreamTypeDirect:
 		// Directly serve the file.
-		streamUrl = "/api/v1/mediastream/direct/play"
+		streamURL = "/api/v1/mediastream/direct/play"
 	case StreamTypeTranscode:
 		// Live transcode the file.
-		streamUrl = "/api/v1/mediastream/transcode/master.m3u8"
+		streamURL = "/api/v1/mediastream/transcode/master.m3u8"
 	case StreamTypeOptimized:
 		optimizedPath := filepath.Join(p.repository.cacheDir, "optimized", hash, "master.m3u8")
 		if _, err := os.Stat(optimizedPath); err == nil {
-			streamUrl = "/api/v1/mediastream/hls/master.m3u8"
+			streamURL = "/api/v1/mediastream/hls/master.m3u8"
 		} else {
 			// Fall back gracefully to transcode stream
 			ret.StreamType = StreamTypeTranscode
-			streamUrl = "/api/v1/mediastream/transcode/master.m3u8"
+			streamURL = "/api/v1/mediastream/transcode/master.m3u8"
 		}
 	}
 
 	// TODO: Add metadata to the media container.
 	// ...
 
-	if streamUrl == "" {
+	if streamURL == "" {
 		return nil, errors.New("invalid stream type")
 	}
 
 	// Set the stream URL.
-	ret.StreamUrl = streamUrl
+	ret.StreamURL = streamURL
 
 	// Store the media container in the map.
 	p.mediaContainers.Set(hash, ret)
