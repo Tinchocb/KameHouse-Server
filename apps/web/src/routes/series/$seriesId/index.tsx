@@ -11,6 +11,7 @@ import { getHighResImage } from "@/lib/helpers/images"
 import { fetchAnimeEntry, useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import { useGetContinuityWatchHistoryItem } from "@/api/hooks/continuity.hooks"
 import { useServerQuery } from "@/api/client/requests"
+import { usePreloadMediastreamMediaContainer } from "@/api/hooks/mediastream.hooks"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { Anime_Episode, Anime_LocalFile, Mediastream_StreamType } from "@/api/generated/types"
 import { EmptyState } from "@/components/shared/empty-state"
@@ -82,6 +83,8 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     const { data: entry, isLoading } = useGetAnimeEntry(seriesId)
     const { data: continuityData, refetch: refetchContinuity } = useGetContinuityWatchHistoryItem(Number(seriesId))
     const setBackdropUrl = useIntelligenceStore(s => s.setBackdropUrl)
+
+    const { mutate: preloadStream } = usePreloadMediastreamMediaContainer()
 
     // Load rich Dragon Ball lore database
     const { data: lore } = useServerQuery<any>({
@@ -638,12 +641,14 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                                                     isWatched: ep.watched,
                                                     resolution: lf?.technicalInfo?.videoStream?.height ? `${lf.technicalInfo.videoStream.height}p` : "1080p",
                                                     videoCodec: lf?.technicalInfo?.videoStream?.codec || "H264",
-                                                    audioCodec: lf?.technicalInfo?.audioStreams?.[0]?.codec || "AAC"
+                                                    audioCodec: lf?.technicalInfo?.audioStreams?.[0]?.codec || "AAC",
+                                                    localFilePath: lf?.path
                                                 }
                                             })}
                                         activeSubSagaStart={activeSubSaga?.startEp}
                                         activeSubSagaEnd={activeSubSaga?.endEp}
                                         onPlay={handlePlayByNumber}
+                                        onPreload={(path) => preloadStream({ path, streamType: "direct", audioStreamIndex: 0 })}
                                     />
                                 </div>
                             </motion.div>

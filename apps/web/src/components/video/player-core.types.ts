@@ -58,6 +58,7 @@ export interface PlayerCore {
         status: "loading" | "ready" | "error"
         errorMsg: string
         isBuffering: boolean
+        isSeeking: boolean
         flash: "play" | "pause" | null
         /** null = hidden, "intro" = showing skip-intro button, "outro" = showing skip-outro button */
         skipMode: "intro" | "outro" | null
@@ -108,6 +109,7 @@ export interface PlayerCore {
         setIsPlaying: (playing: boolean) => void
         setDuration: (duration: number) => void
         setIsBuffering: (buffering: boolean) => void
+        setIsSeeking: (seeking: boolean) => void
         setControlsVisible: (visible: boolean) => void
         setIsSettingsOpen: (open: boolean) => void
         triggerControlsVisibility: () => void

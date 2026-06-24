@@ -16,7 +16,6 @@ function setupChromiumFlags() {
     app.commandLine.appendSwitch("disable-gpu-sandbox")
     app.commandLine.appendSwitch("autoplay-policy", "no-user-gesture-required")
     app.commandLine.appendSwitch("disk-cache-size", (400 * 1000 * 1000).toString())
-    app.commandLine.appendSwitch("force-effective-connection-type", "4g")
     app.commandLine.appendSwitch("disable-features", [
         "WidgetLayering",
         "ColorProviderRedirection",
@@ -29,6 +28,12 @@ function setupChromiumFlags() {
         "PlatformEncryptedDolbyVision"
     ].join(","))
 
+    // Always-on flags to prevent background throttling of the video player
+    app.commandLine.appendSwitch("disable-background-timer-throttling")
+    app.commandLine.appendSwitch("disable-backgrounding-occluded-windows")
+    app.commandLine.appendSwitch("disable-renderer-backgrounding")
+    app.commandLine.appendSwitch("disable-background-media-suspend")
+
     if (settings.enableAggressiveGpuFlags && !settings.disableHardwareAcceleration) {
         log.info("[Flags] Enabling aggressive GPU and performance flags")
         app.commandLine.appendSwitch("force_high_performance_gpu")
@@ -40,10 +45,6 @@ function setupChromiumFlags() {
         app.commandLine.appendSwitch("enable-unsafe-webgpu")
         app.commandLine.appendSwitch("enable-gpu-rasterization")
         app.commandLine.appendSwitch("enable-oop-rasterization")
-        app.commandLine.appendSwitch("disable-background-timer-throttling")
-        app.commandLine.appendSwitch("disable-backgrounding-occluded-windows")
-        app.commandLine.appendSwitch("disable-renderer-backgrounding")
-        app.commandLine.appendSwitch("disable-background-media-suspend")
     }
 
     if (process.platform === "linux") {

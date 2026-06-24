@@ -175,7 +175,7 @@ function createMainWindow(isDev, localPort) {
             // (e.g. from local DLNA servers or HTTP-only NAS devices) when the app runs in a secure context.
             allowRunningInsecureContent: true,
             enableBlinkFeatures: "FontAccess, AudioVideoTracks",
-            backgroundThrottling: true,
+            backgroundThrottling: false,
             webviewTag: true,
         }
     }

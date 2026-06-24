@@ -182,6 +182,11 @@ export function usePlayerHls({
                 // after the second segment anyway.
                 startLevel: 0,
 
+                // Load the very first fragment as soon as the manifest is parsed,
+                // before attaching to the video element. This shaves one RTT off the
+                // startup sequence.
+                startFragPrefetch: true,
+
                 // Keep up to 6s buffered for initial start (hls.js declares
                 // canplay once this threshold is met). 30s was unnecessarily slow.
                 // maxMaxBufferLength lets it grow to 180s on fast connections.
@@ -328,7 +333,10 @@ export function usePlayerHls({
         }
     }, [
         playableUrl,
-        absoluteLanUrl,
+        // absoluteLanUrl is intentionally omitted: it is derived from playableUrl + serverIPs and
+        // is only needed for Cast, not for HLS initialization. Including it caused the entire HLS
+        // instance to be destroyed and recreated whenever the server IP was detected/changed,
+        // producing a spurious "loading" state after seek or episode changes.
         initialProgressSeconds,
         videoRef,
         hlsRef,

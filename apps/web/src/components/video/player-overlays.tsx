@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { Loader2, AlertTriangle, Play } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 
@@ -7,14 +7,35 @@ export function LoadingErrorOverlay({
     errorMsg,
     streamType,
     isBuffering,
+    isSeeking,
     onClose
 }: {
     status: "loading" | "ready" | "error"
     errorMsg: string
     streamType: string
     isBuffering: boolean
+    isSeeking?: boolean
     onClose: () => void
 }) {
+    // Debounce buffering spinner on seek: wait 500ms before showing it
+    const [showBuffering, setShowBuffering] = useState(false)
+    const bufferingTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+    useEffect(() => {
+        if (isBuffering && isSeeking) {
+            if (bufferingTimerRef.current) clearTimeout(bufferingTimerRef.current)
+            bufferingTimerRef.current = setTimeout(() => setShowBuffering(true), 500)
+        } else if (isBuffering) {
+            setShowBuffering(true)
+        } else {
+            if (bufferingTimerRef.current) clearTimeout(bufferingTimerRef.current)
+            setShowBuffering(false)
+        }
+        return () => {
+            if (bufferingTimerRef.current) clearTimeout(bufferingTimerRef.current)
+        }
+    }, [isBuffering, isSeeking])
+
     if (status === "loading") {
         return (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 z-10 text-white bg-black">
@@ -26,10 +47,15 @@ export function LoadingErrorOverlay({
         )
     }
 
-    if (isBuffering && status === "ready") {
+    if (showBuffering && status === "ready") {
         return (
             <div className="absolute inset-0 flex flex-col items-center justify-center z-10 text-white pointer-events-none bg-black/20">
                 <Loader2 className="w-16 h-16 text-white animate-spin" />
+                {isSeeking && (
+                    <p className="mt-4 font-black tracking-[0.4em] uppercase text-[10px] opacity-50">
+                        Buscando...
+                    </p>
+                )}
             </div>
         )
     }

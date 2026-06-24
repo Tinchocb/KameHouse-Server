@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { Play } from 'lucide-react';
 import { DeferredImage } from '@/components/shared/deferred-image';
 import { cn } from '@/components/ui/core/styling';
@@ -48,9 +48,12 @@ export const SeriesCard = memo(function SeriesCard({
 }) {
     const spineCfg = getSpineConfig(item.seriesId || "", item.id);
     const gokuImg = getGokuImagePath(item.seriesId);
+    const [isHovered, setIsHovered] = useState(false);
 
     return (
         <div
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
             onClick={() => {
                 if (isSelected) {
                     onNavigate(item?.id?.toString() || "");
@@ -63,7 +66,7 @@ export const SeriesCard = memo(function SeriesCard({
                 onNavigate(item?.id?.toString() || "");
             }}
             style={{
-                flex: isSelected ? '4 0 450px' : '1 1 135px',
+                flex: isSelected ? '4 0 450px' : isHovered ? '1.8 1 240px' : '1 1 135px',
                 transition: 'flex 700ms cubic-bezier(0.2, 1, 0.2, 1), transform 500ms cubic-bezier(0.2, 1, 0.2, 1)',
                 willChange: "flex-grow, transform",
                 '--tape-color': getVhsColor(item.id)
@@ -251,7 +254,7 @@ export const SeriesCard = memo(function SeriesCard({
                     {/* Medio del Lomo: Titulo Vertical */}
                     <div className="z-20 flex-1 flex items-center justify-center my-4 w-full drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]">
                         <h3
-                            className="text-sm font-extrabold text-center tracking-[0.08em] uppercase select-none w-full max-h-[220px] overflow-hidden truncate px-1"
+                            className="text-base font-black text-center tracking-[0.25em] uppercase select-none w-full max-h-[220px] overflow-hidden truncate px-1"
                             style={{
                                 color: spineCfg.text,
                                 writingMode: 'vertical-rl',

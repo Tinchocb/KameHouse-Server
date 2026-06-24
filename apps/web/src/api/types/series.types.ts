@@ -52,4 +52,5 @@ export interface PremiumEpisode {
   resolution: string
   videoCodec: string
   audioCodec: string
+  localFilePath?: string
 }

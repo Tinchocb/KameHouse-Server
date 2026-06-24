@@ -154,6 +154,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const [status, setStatus] = useState<"loading" | "ready" | "error">("loading")
     const [errorMsg, setErrorMsg] = useState("")
     const [isBuffering, setIsBuffering] = useState(false)
+    const [isSeeking, setIsSeeking] = useState(false)
     const [flash, setFlash] = useState<"play" | "pause" | null>(null)
 
     const {
@@ -330,13 +331,21 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const { mutate: shutdownTranscode } = useMediastreamShutdownTranscodeStream()
     const { mutate: preloadMutate } = usePreloadMediastreamMediaContainer()
 
-    // Proactive preload: fire-and-forget as soon as the player mounts with a
-    // transcode URL. This kicks off keyframe extraction + segments 0/1/2 in the
-    // background so they are already on disk when hls.js requests them.
+    // Proactive preload: fire-and-forget as soon as the player mounts.
+    // For transcode: kicks off keyframe extraction + segments 0/1/2 in the background.
+    // For direct: does a HEAD request so the server caches ffprobe/MediaInfo and the
+    // browser's connection pool is warmed up, reducing cold-start latency.
     useEffect(() => {
         const path = streamUrl || playableUrl
-        if (!path || streamType !== "transcode") return
-        preloadMutate({ path, streamType: "transcode", audioStreamIndex: 0 })
+        if (!path) return
+
+        if (streamType === "transcode") {
+            preloadMutate({ path, streamType: "transcode", audioStreamIndex: 0 })
+        } else if (streamType === "direct" || streamType === "local") {
+            // Warm up: request the media container metadata so ffprobe runs now
+            // instead of when the user clicks play. This is a no-op if already cached.
+            preloadMutate({ path, streamType: "direct", audioStreamIndex: 0 })
+        }
     }, [streamUrl, playableUrl, streamType]) // eslint-disable-line react-hooks/exhaustive-deps
 
     const { onProgress: onTrackingProgress, reset: resetTracking } = useAnimeTracking({
@@ -524,6 +533,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         const video = videoRef.current
         if (!video || !Number.isFinite(time)) return
 
+        setIsSeeking(true)
         checkManualSkipOverrides(time)
 
         // Visual update of elements instantly
@@ -576,6 +586,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         if (!video) return
 
         isSeekingRef.current = false
+        setIsSeeking(false)
         if (seekTimeoutRef.current) {
             clearTimeout(seekTimeoutRef.current)
             seekTimeoutRef.current = null
@@ -824,7 +835,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             timeTextElement: timeTextRef,
         },
         state: {
-            isPlaying, duration, volume, isMuted, isFullscreen, controlsVisible, status, errorMsg, isBuffering, flash, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, countdownSeconds, showCountdown, tvMode, audioTracks, activeAudioIndex, subtitleTracks, activeSubtitleIndex, isJassubLoading, isJassubActive, isSettingsOpen, remainingProgress, showAutoSkipToast,
+            isPlaying, duration, volume, isMuted, isFullscreen, controlsVisible, status, errorMsg, isBuffering, isSeeking, flash, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, countdownSeconds, showCountdown, tvMode, audioTracks, activeAudioIndex, subtitleTracks, activeSubtitleIndex, isJassubLoading, isJassubActive, isSettingsOpen, remainingProgress, showAutoSkipToast,
             autoSkipIntro: autoSkipIntroPref,
             autoSkipOutro: autoSkipOutroPref,
             playbackRate: playbackRatePref,
@@ -855,7 +866,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             serverPort,
         },
         actions: {
-            setIsPlaying, setDuration, setIsBuffering, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, handleSeekStart, handleSeekEnd, skipTime, skipOpening, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, toggleFullscreen, handleSkipIntro, handleTimeUpdate,
+            setIsPlaying, setDuration, setIsBuffering, setIsSeeking, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, handleSeekStart, handleSeekEnd, skipTime, skipOpening, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, toggleFullscreen, handleSkipIntro, handleTimeUpdate,
             takeScreenshot, togglePip, changePlaybackRate, setShowStats,
             setAutoSkipIntro: handleSetAutoSkipIntro,
             setAutoSkipOutro: handleSetAutoSkipOutro,

@@ -289,40 +289,38 @@ export function usePlayerSkip({
         const video = videoRef.current
         if (!video) return
         const total = video.duration
-        const isTvSeries = !mediaFormat || mediaFormat === "TV" || mediaFormat === "TV_SHORT"
 
         // Mark this moment as a manual seek to suppress auto-skip briefly
         lastManualSeekTimestampRef.current = Date.now()
 
         // Check intro override
-        if (skipTimesOp) {
-            if (target >= skipTimesOp.startTime && target < skipTimesOp.endTime) {
-                hasAutoSkippedIntroRef.current = true
-            }
-        } else if (isTvSeries) {
-            if (target >= 0 && target < 90) {
-                hasAutoSkippedIntroRef.current = true
-            }
+        if (skipTimesOp && target >= skipTimesOp.startTime && target < skipTimesOp.endTime) {
+            hasAutoSkippedIntroRef.current = true
+        } else if (total > 120 && target >= 0 && target < Math.min(90, total * 0.12)) {
+            hasAutoSkippedIntroRef.current = true
         }
 
         // Check outro override
-        if (skipTimesEd) {
-            if (target >= skipTimesEd.startTime && target < skipTimesEd.endTime) {
-                hasAutoSkippedOutroRef.current = true
-            }
-        } else if (isTvSeries && total > 300) {
-            if (target >= total - 95 && target < total - 5) {
+        if (skipTimesEd && target >= skipTimesEd.startTime && target < skipTimesEd.endTime) {
+            hasAutoSkippedOutroRef.current = true
+        } else if (total > 300) {
+            const edStart = total - Math.min(95, total * 0.08)
+            if (target >= edStart && target < total - 5) {
                 hasAutoSkippedOutroRef.current = true
             }
         }
-    }, [skipTimesOp, skipTimesEd, mediaFormat, videoRef])
+    }, [skipTimesOp, skipTimesEd, videoRef])
 
     const skipOpening = useCallback(() => {
         const video = videoRef.current
         if (!video) return
-        setVideoCurrentTime(video, Math.min(video.duration, video.currentTime + 85), lastManualSeekTimestampRef)
+        const target = Math.min(video.duration, video.currentTime + 85)
+        checkManualSkipOverrides(target)
+        video.currentTime = target
+        lastManualSeekTimestampRef.current = Date.now()
+        video.play().catch(() => {})
         triggerControlsVisibility()
-    }, [videoRef, triggerControlsVisibility])
+    }, [videoRef, triggerControlsVisibility, checkManualSkipOverrides])
 
     const skipToNextChapter = useCallback(() => {
         const video = videoRef.current
@@ -332,7 +330,9 @@ export function usePlayerSkip({
         if (next) {
             const target = next.startTime
             checkManualSkipOverrides(target)
-            setVideoCurrentTime(video, target, lastManualSeekTimestampRef)
+            video.currentTime = target
+            lastManualSeekTimestampRef.current = Date.now()
+            video.play().catch(() => {})
             triggerControlsVisibility()
         }
     }, [videoRef, chapters, checkManualSkipOverrides, triggerControlsVisibility])
@@ -350,7 +350,9 @@ export function usePlayerSkip({
             target = 0
         }
         checkManualSkipOverrides(target)
-        setVideoCurrentTime(video, target, lastManualSeekTimestampRef)
+        video.currentTime = target
+        lastManualSeekTimestampRef.current = Date.now()
+        video.play().catch(() => {})
         triggerControlsVisibility()
     }, [videoRef, chapters, checkManualSkipOverrides, triggerControlsVisibility])
 
@@ -359,25 +361,23 @@ export function usePlayerSkip({
         const video = videoRef.current
         if (video && val) {
             const curr = video.currentTime
-            const isTvSeries = !mediaFormat || mediaFormat === "TV" || mediaFormat === "TV_SHORT"
-            
-            if (skipTimesOp) {
-                const { startTime, endTime } = skipTimesOp
-                if (curr >= startTime && curr < endTime) {
-                    setVideoCurrentTime(video, endTime, lastManualSeekTimestampRef)
-                    setSkipMode(null)
-                    return
-                }
-            } else if (isTvSeries) {
-                const introTarget = 90
-                if (curr >= 0 && curr < introTarget) {
-                    setVideoCurrentTime(video, introTarget, lastManualSeekTimestampRef)
-                    setSkipMode(null)
-                    return
-                }
+            if (skipTimesOp && curr >= skipTimesOp.startTime && curr < skipTimesOp.endTime) {
+                video.currentTime = skipTimesOp.endTime
+                lastManualSeekTimestampRef.current = Date.now()
+                video.play().catch(() => {})
+                setSkipMode(null)
+                return
+            }
+            // Fallback: skip if within first 20% of video
+            if (video.duration > 120 && curr < video.duration * 0.08) {
+                const target = Math.min(video.duration * 0.12, 120)
+                video.currentTime = target
+                lastManualSeekTimestampRef.current = Date.now()
+                video.play().catch(() => {})
+                setSkipMode(null)
             }
         }
-    }, [videoRef, setAutoSkipIntro, skipTimesOp, mediaFormat])
+    }, [videoRef, setAutoSkipIntro, skipTimesOp])
 
     const handleSetAutoSkipOutro = useCallback((val: boolean) => {
         setAutoSkipOutro(val)
@@ -385,31 +385,29 @@ export function usePlayerSkip({
         if (video && val) {
             const curr = video.currentTime
             const total = video.duration
-            const isTvSeries = !mediaFormat || mediaFormat === "TV" || mediaFormat === "TV_SHORT"
 
-            if (skipTimesEd) {
+            if (skipTimesEd && (!skipTimesOp || curr >= skipTimesOp.endTime)) {
                 const { startTime, endTime } = skipTimesEd
-                if (!skipTimesOp || curr >= skipTimesOp.endTime) {
-                    if (curr >= startTime && curr < endTime) {
-                        setVideoCurrentTime(video, endTime, lastManualSeekTimestampRef)
-                        setSkipMode(null)
-                        return
-                    }
+                if (curr >= startTime && curr < endTime) {
+                    video.currentTime = endTime
+                    lastManualSeekTimestampRef.current = Date.now()
+                    video.play().catch(() => {})
+                    setSkipMode(null)
+                    return
                 }
-            } else if (isTvSeries && total > 300) {
-                const outroStart = total - 95
-                const outroEnd = total - 5
-                const opEndTime = skipTimesOp ? skipTimesOp.endTime : 90
-                if (curr >= opEndTime) {
-                    if (curr >= outroStart && curr < outroEnd) {
-                        setVideoCurrentTime(video, outroEnd, lastManualSeekTimestampRef)
-                        setSkipMode(null)
-                        return
-                    }
+            }
+            // Fallback: skip the last ~8% of the video
+            if (total > 300) {
+                const edStart = total - Math.min(95, total * 0.08)
+                if (curr >= edStart && curr < total - 5) {
+                    video.currentTime = total - 5
+                    lastManualSeekTimestampRef.current = Date.now()
+                    video.play().catch(() => {})
+                    setSkipMode(null)
                 }
             }
         }
-    }, [videoRef, setAutoSkipOutro, skipTimesOp, skipTimesEd, mediaFormat])
+    }, [videoRef, setAutoSkipOutro, skipTimesOp, skipTimesEd])
 
     const handleSetTvMode = useCallback((val: boolean) => {
         setTvMode(val)
@@ -420,25 +418,28 @@ export function usePlayerSkip({
         if (!video) return
         const curr = video.currentTime
         const total = video.duration
-        const isTvSeries = !mediaFormat || mediaFormat === "TV" || mediaFormat === "TV_SHORT"
 
         const activeMode = skipMode || (curr < 120 ? "intro" : "outro")
 
         if (activeMode === "intro") {
             if (skipTimesOp && curr >= skipTimesOp.startTime && curr < skipTimesOp.endTime) {
-                setVideoCurrentTime(video, skipTimesOp.endTime, lastManualSeekTimestampRef)
-            } else if (isTvSeries) {
-                setVideoCurrentTime(video, 120, lastManualSeekTimestampRef)
+                video.currentTime = skipTimesOp.endTime
+            } else {
+                // Fallback: seek ~85s forward from current position
+                video.currentTime = Math.min(total, curr + 85)
             }
         } else if (activeMode === "outro") {
             if (skipTimesEd && curr >= skipTimesEd.startTime && curr < skipTimesEd.endTime) {
-                setVideoCurrentTime(video, skipTimesEd.endTime, lastManualSeekTimestampRef)
-            } else if (isTvSeries && total > 300) {
-                setVideoCurrentTime(video, total - 5, lastManualSeekTimestampRef)
+                video.currentTime = skipTimesEd.endTime
+            } else {
+                // Fallback: seek 5s before the end
+                video.currentTime = Math.max(0, total - 5)
             }
         }
+        lastManualSeekTimestampRef.current = Date.now()
+        video.play().catch(() => {})
         setSkipMode(null)
-    }, [videoRef, skipMode, skipTimesOp, skipTimesEd, mediaFormat])
+    }, [videoRef, skipMode, skipTimesOp, skipTimesEd])
 
     const processTimeUpdates = useCallback((curr: number, total: number) => {
         const video = videoRef.current
@@ -449,7 +450,7 @@ export function usePlayerSkip({
         // A seek already positions currentTime where the user wants; firing another
         // currentTime write immediately after causes HLS.js to issue a second seek
         // request while the first is still buffering, which drops/corrupts audio.
-        const SEEK_COOLDOWN_MS = 1500
+        const SEEK_COOLDOWN_MS = 800
         if (Date.now() - lastManualSeekTimestampRef.current < SEEK_COOLDOWN_MS) {
             // Still update UI state (chapter name, skip button) but skip no auto-jumps
             if (chapters.length > 0) {
@@ -522,7 +523,9 @@ export function usePlayerSkip({
             if (skippable) {
                 const chapterKey = `${skippable.name}_${skippable.startTime}`
                 skippedChaptersRef.current.add(chapterKey);
-                setVideoCurrentTime(video, skippable.endTime, lastManualSeekTimestampRef);
+                video.currentTime = skippable.endTime
+                lastManualSeekTimestampRef.current = Date.now()
+                video.play().catch(() => {})
                 triggerToast("pause");
                 return;
             }
@@ -533,12 +536,10 @@ export function usePlayerSkip({
             if (curr < skipTimesOp.startTime || curr >= skipTimesOp.endTime) {
                 hasAutoSkippedIntroRef.current = false
             }
-        } else {
-            const isTvSeries = !mediaFormat || mediaFormat === "TV" || mediaFormat === "TV_SHORT"
-            if (isTvSeries) {
-                if (curr < 0 || curr >= 90) {
-                    hasAutoSkippedIntroRef.current = false
-                }
+        } else if (total > 120) {
+            const opEnd = Math.min(90, total * 0.12)
+            if (curr < 0 || curr >= opEnd) {
+                hasAutoSkippedIntroRef.current = false
             }
         }
 
@@ -546,21 +547,17 @@ export function usePlayerSkip({
             if (curr < skipTimesEd.startTime || curr >= skipTimesEd.endTime) {
                 hasAutoSkippedOutroRef.current = false
             }
-        } else {
-            const isTvSeries = !mediaFormat || mediaFormat === "TV" || mediaFormat === "TV_SHORT"
-            if (isTvSeries && total > 300) {
-                if (curr < total - 95 || curr >= total - 5) {
-                    hasAutoSkippedOutroRef.current = false
-                }
+        } else if (total > 300) {
+            const edStart = total - Math.min(95, total * 0.08)
+            if (curr < edStart || curr >= total - 5) {
+                hasAutoSkippedOutroRef.current = false
             }
         }
 
-        const isTvSeries = !mediaFormat || mediaFormat === "TV" || mediaFormat === "TV_SHORT"
-
-        // OP / Intro window
+        // OP / Intro window — heuristic applies to all formats when near the start
         let activeOp = skipTimesOp
-        if (!activeOp && isTvSeries) {
-            activeOp = { startTime: 0, endTime: 90 }
+        if (!activeOp && total > 120) {
+            activeOp = { startTime: 0, endTime: Math.min(90, total * 0.12) }
         }
 
         if (activeOp) {
@@ -568,14 +565,16 @@ export function usePlayerSkip({
             const inOpWindow = curr >= startTime && curr < endTime
             if (autoSkipIntroPref && inOpWindow && !hasAutoSkippedIntroRef.current) {
                 hasAutoSkippedIntroRef.current = true
-                setVideoCurrentTime(video, endTime, lastManualSeekTimestampRef)
+                video.currentTime = endTime
+                lastManualSeekTimestampRef.current = Date.now()
+                video.play().catch(() => {})
                 setSkipMode(null)
                 triggerToast("intro")
                 return
             }
             if (inOpWindow) {
                 const remaining = Math.ceil(endTime - curr)
-                const progress = Math.round(((curr - startTime) / (endTime - startTime)) * 100)
+                const progress = Math.round(((curr - startTime) / (Math.max(1, endTime - startTime))) * 100)
                 if (skipModeRef.current !== "intro") setSkipMode("intro")
                 if (skipRemainingSecondsRef.current !== remaining) setSkipRemainingSeconds(remaining)
                 if (segmentProgressRef.current !== progress) setSegmentProgress(progress)
@@ -584,10 +583,11 @@ export function usePlayerSkip({
             }
         }
 
-        // ED / Outro window
+        // ED / Outro window — heuristic applies to all formats when total > 5min
         let activeEd = skipTimesEd
-        if (!activeEd && isTvSeries && total > 300) {
-            activeEd = { startTime: total - 95, endTime: total - 5 }
+        if (!activeEd && total > 300) {
+            const edDuration = Math.min(95, total * 0.08)
+            activeEd = { startTime: total - edDuration, endTime: total - 5 }
         }
 
         if (activeEd) {
@@ -595,16 +595,18 @@ export function usePlayerSkip({
             const inEdWindow = curr >= startTime && curr < endTime
             if (autoSkipOutroPref && inEdWindow && !hasAutoSkippedOutroRef.current) {
                 hasAutoSkippedOutroRef.current = true
-                setVideoCurrentTime(video, endTime, lastManualSeekTimestampRef)
+                video.currentTime = endTime
+                lastManualSeekTimestampRef.current = Date.now()
+                video.play().catch(() => {})
                 setSkipMode(null)
                 triggerToast("outro")
                 return
             }
-            const opEnd = activeOp ? activeOp.endTime : 120
+            const opEnd = activeOp ? activeOp.endTime : Math.min(120, total * 0.15)
             if (curr >= opEnd) {
                 if (inEdWindow) {
                     const remaining = Math.ceil(endTime - curr)
-                    const progress = Math.round(((curr - startTime) / (endTime - startTime)) * 100)
+                    const progress = Math.round(((curr - startTime) / (Math.max(1, endTime - startTime))) * 100)
                     if (skipModeRef.current !== "outro") setSkipMode("outro")
                     if (skipRemainingSecondsRef.current !== remaining) setSkipRemainingSeconds(remaining)
                     if (segmentProgressRef.current !== progress) setSegmentProgress(progress)
@@ -617,13 +619,18 @@ export function usePlayerSkip({
         // Background preloading & prefetching
         if (nextStreamUrl && !hasPreloadedRef.current && total > 0 && (total - curr <= 180 || (activeEd && curr >= activeEd.startTime))) {
             hasPreloadedRef.current = true
-            
+
+            // IMPORTANT: resolvedStreamType must match the cache key that player-orchestrator
+            // will use in useRequestMediastreamMediaContainer. The orchestrator forces "direct"
+            // for all local files on LAN, so if the current stream is "direct" we must prefetch
+            // the next episode as "direct" too — otherwise we get a cache miss and the next
+            // episode has to load from scratch, losing the zero-latency benefit.
             const resolvedStreamType = (
-                streamType === "transcode" || streamType === "optimized" 
-                    ? streamType 
-                    : (nextStreamType === "transcode" || nextStreamType === "optimized" ? nextStreamType : "direct")
+                streamType === "transcode" || streamType === "optimized"
+                    ? streamType
+                    : "direct" // Orchestrator always forces "direct" for local LAN files
             ) as Mediastream_StreamType
-            
+
             // 1. Go backend extraction preload
             preloadStream({
                 path: nextStreamUrl,
@@ -631,7 +638,7 @@ export function usePlayerSkip({
                 audioStreamIndex: 0,
             })
 
-            // 2. React Query query cache prefetch
+            // 2. React Query query cache prefetch (must use same key as useRequestMediastreamMediaContainer)
             queryClient.prefetchQuery({
                 queryKey: [API_ENDPOINTS.MEDIASTREAM.RequestMediastreamMediaContainer.key, nextStreamUrl, resolvedStreamType],
                 queryFn: () => buildSeaQuery({
@@ -710,7 +717,7 @@ export function usePlayerSkip({
                 onNextEpisode()
             }
         }
-    }, [videoRef, skipTimesOp, skipTimesEd, autoSkipIntroPref, autoSkipOutroPref, hasNextEpisode, mediaFormat, chapters, triggerToast, marathonMode, nextStreamUrl, nextStreamType, streamType, preloadStream, queryClient, clientId, showCountdown, tvMode, autoPlayNextEpisode, onNextEpisode])
+    }, [videoRef, skipTimesOp, skipTimesEd, autoSkipIntroPref, autoSkipOutroPref, hasNextEpisode, mediaFormat, chapters, triggerToast, marathonMode, nextStreamUrl, streamType, preloadStream, queryClient, clientId, showCountdown, tvMode, autoPlayNextEpisode, onNextEpisode])
 
     useEffect(() => {
         if (!showNextEpisode) {

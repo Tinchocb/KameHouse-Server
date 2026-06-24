@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"kamehouse/internal/util"
 	"strings"
 	"sync"
@@ -35,11 +36,13 @@ func (k PipelineKind) String() string {
 
 // head represents an ffmpeg process encoding segments
 type head struct {
-	segment int32              // Current segment (updated as ffmpeg writes segments).
-	end     int32              // First segment NOT included in this head's work.
-	cmd     *exec.Cmd          // The ffmpeg process.
-	stdin   io.WriteCloser     // Used to gracefully quit ffmpeg via "q".
-	cancel  context.CancelFunc // Cancels the head's soft-close goroutine.
+	segment  int32              // Current segment (updated as ffmpeg writes segments).
+	end      int32              // First segment NOT included in this head's work.
+	cmd      *exec.Cmd          // The ffmpeg process.
+	stdin    io.WriteCloser     // Used to gracefully quit ffmpeg via "q".
+	cancel   context.CancelFunc // Cancels the head's soft-close goroutine.
+	release  func()             // Governor slot release function.
+	released *sync.Once         // Ensures release is called at most once (early kill or natural exit).
 }
 
 var deletedHead = head{segment: -1, end: -1}
@@ -178,8 +181,14 @@ func (p *Pipeline) GetSegment(ctx context.Context, seg int32) (string, error) {
 
 	// If a seek is detected, kill all existing active heads to prevent slot
 	// resource conflicts, governor slot exhaustion, and prioritize the new target segment.
+	// killAllHeads releases governor slots immediately (via sync.Once on each head),
+	// so the subsequent governor.Acquire() in runHead does not block waiting for
+	// cmd.Wait() to return (which can take 100-500ms on Windows after Process.Kill).
 	if p.velocity.DetectSeek(5) {
 		p.killAllHeads()
+		// Yield the goroutine scheduler so that any in-flight reapProcess goroutines
+		// can complete their deferred releases before we call governor.Acquire() below.
+		runtime.Gosched()
 		p.velocity.Reset()
 		p.velocity.Record(seg)
 	}
@@ -278,6 +287,12 @@ func (p *Pipeline) killHeadLocked(id int) {
 	h := p.heads[id]
 	if h.cancel != nil {
 		h.cancel()
+	}
+	// Release the governor slot immediately — before waiting for the process to exit.
+	// This lets the next runHead acquire a slot without blocking on cmd.Wait(),
+	// which significantly reduces seek latency (especially on Windows).
+	if h.released != nil && h.release != nil {
+		h.released.Do(h.release)
 	}
 	if h.segment == -1 || h.cmd == nil {
 		return
@@ -401,18 +416,23 @@ func (p *Pipeline) runHead(start int32) error {
 		}
 	}()
 
+	// Create a sync.Once so the governor slot is released exactly once,
+	// whether the head is killed early (killHeadLocked) or exits naturally (reapProcess).
+	once := &sync.Once{}
+	safeRelease := func() { once.Do(release) }
+
 	p.headsMu.Lock()
 	encoderID := -1
 	for i, h := range p.heads {
 		if h.segment == -1 && h.end == -1 {
 			encoderID = i
-			p.heads[i] = head{segment: start, end: end, cancel: headCancel}
+			p.heads[i] = head{segment: start, end: end, cancel: headCancel, release: release, released: once}
 			break
 		}
 	}
 	if encoderID == -1 {
 		encoderID = len(p.heads)
-		p.heads = append(p.heads, head{segment: start, end: end, cancel: headCancel})
+		p.heads = append(p.heads, head{segment: start, end: end, cancel: headCancel, release: release, released: once})
 	}
 	p.headsMu.Unlock()
 
@@ -556,7 +576,9 @@ func (p *Pipeline) runHead(start int32) error {
 	}(headCtx)
 
 	// Goroutine: reap process and release governor slot.
-	go p.reapProcess(headCtx, encoderID, cmd, &stderr, release, headCancel)
+	// safeRelease uses sync.Once so the slot is freed exactly once,
+	// even if killHeadLocked already released it early.
+	go p.reapProcess(headCtx, encoderID, cmd, &stderr, safeRelease, headCancel)
 
 	success = true
 	return nil

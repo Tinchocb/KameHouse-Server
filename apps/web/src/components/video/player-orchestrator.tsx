@@ -1,11 +1,14 @@
 import React, { useMemo, useState } from "react"
 import { useRequestMediastreamMediaContainer } from "@/api/hooks/mediastream.hooks"
+import { useGetMediastreamSettings } from "@/api/hooks/mediastream.hooks"
+import { useGetStatus } from "@/api/hooks/settings.hooks"
 import { usePlayerCore } from "./player-core"
 import { PlayerUI } from "./player-ui"
 import type { EpisodeSource } from "@/api/types/unified.types"
 import type { Mediastream_StreamType, Audio, Subtitle } from "@/api/generated/types"
 import type { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
 import type { VideoPlayerProps } from "./player"
+import { __isElectronDesktop__ } from "@/types/constants"
 
 export interface Chapter {
     startTime: number
@@ -33,11 +36,35 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
         setStreamType(props.streamType || "direct")
     }
 
+    const { data: mediastreamSettings } = useGetMediastreamSettings()
+    const { data: status } = useGetStatus()
+
+    // Auto-detect if we're on local network (same PC or LAN)
+    // Force Direct Play for local files when on LAN to avoid unnecessary transcoding
+    const isLocalNetwork = useMemo(() => {
+        if (__isElectronDesktop__) return true // Electron app always runs locally
+        if (!status?.serverIPs?.length) return true // Default to local if no IPs
+        const hostname = typeof window !== "undefined" ? window.location.hostname : "localhost"
+        // Check if accessing via localhost or LAN IP
+        return hostname === "localhost" || hostname === "127.0.0.1" || hostname.startsWith("192.168.") || hostname.startsWith("10.") || hostname.startsWith("172.")
+    }, [status?.serverIPs])
+
     const isLocal = !props.isExternalStream && Boolean(props.streamUrl) && streamType !== "online"
+
+    // Override streamType for local files on local network: always prefer Direct Play
+    const effectiveStreamType = useMemo(() => {
+        if (isLocal && isLocalNetwork) {
+            // If server has DirectPlayOnly setting enabled, or we're on LAN, force direct
+            if (mediastreamSettings?.directPlayOnly) return "direct"
+            // On LAN, default to direct for local files to avoid transcoding overhead
+            return "direct"
+        }
+        return streamType
+    }, [isLocal, isLocalNetwork, streamType, mediastreamSettings?.directPlayOnly])
 
     const { data } = useRequestMediastreamMediaContainer({
         path: props.streamUrl,
-        streamType: streamType as Mediastream_StreamType,
+        streamType: effectiveStreamType as Mediastream_StreamType,
         clientID: clientId,
     }, isLocal)
 
@@ -75,7 +102,7 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
         }
     }, [data, props.streamUrl, clientId])
 
-    const activeStreamType = (data?.streamType || streamType) as "local" | "online" | "direct" | "transcode" | "optimized"
+    const activeStreamType = (data?.streamType || effectiveStreamType) as "local" | "online" | "direct" | "transcode" | "optimized"
 
     const core = usePlayerCore({
         ...props,

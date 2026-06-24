@@ -1,19 +1,55 @@
+import React from "react"
 import { Play, Check } from "lucide-react"
 import type { PremiumEpisode } from "@/api/types/series.types"
 import { cn } from "@/components/ui/core/styling"
+
 interface PremiumEpisodeListProps {
   episodes: PremiumEpisode[]
   activeSubSagaStart?: number
   activeSubSagaEnd?: number
   onPlay?: (episodeNumber: number) => void
+  onPreload?: (filePath: string) => void
 }
 
 export function PremiumEpisodeList({ 
   episodes,
   activeSubSagaStart,
   activeSubSagaEnd,
-  onPlay
+  onPlay,
+  onPreload
 }: PremiumEpisodeListProps) {
+  const preloadTimeoutsRef = React.useRef<Map<string, NodeJS.Timeout>>(new Map())
+
+  const handleMouseEnter = (ep: PremiumEpisode) => {
+    if (!ep.localFilePath || !onPreload) return
+    
+    // Debounce: wait 300ms before preloading to avoid accidental triggers
+    const existing = preloadTimeoutsRef.current.get(ep.id)
+    if (existing) clearTimeout(existing)
+    
+    const timeout = setTimeout(() => {
+      onPreload(ep.localFilePath!)
+      preloadTimeoutsRef.current.delete(ep.id)
+    }, 300)
+    
+    preloadTimeoutsRef.current.set(ep.id, timeout)
+  }
+
+  const handleMouseLeave = (ep: PremiumEpisode) => {
+    const existing = preloadTimeoutsRef.current.get(ep.id)
+    if (existing) {
+      clearTimeout(existing)
+      preloadTimeoutsRef.current.delete(ep.id)
+    }
+  }
+
+  React.useEffect(() => {
+    return () => {
+      preloadTimeoutsRef.current.forEach(t => clearTimeout(t))
+      preloadTimeoutsRef.current.clear()
+    }
+  }, [])
+
   return (
     <div className="flex flex-col gap-4 mt-6">
       {episodes.map((ep) => {
@@ -26,6 +62,8 @@ export function PremiumEpisodeList({
             key={ep.id}
             id={`episode-${ep.number}`}
             onClick={() => onPlay?.(ep.number)}
+            onMouseEnter={() => handleMouseEnter(ep)}
+            onMouseLeave={() => handleMouseLeave(ep)}
             className={cn(
               "group flex gap-6 p-4 rounded-xl transition-all duration-300 cursor-pointer shadow-lg",
               isHighlighted

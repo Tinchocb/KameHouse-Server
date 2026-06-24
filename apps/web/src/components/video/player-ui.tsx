@@ -323,7 +323,8 @@ export function PlayerUI(props: PlayerUIProps) {
                 onDurationChange={(e) => actions.setDuration(e.currentTarget.duration)}
                 onTimeUpdate={actions.handleTimeUpdate}
                 onWaiting={() => actions.setIsBuffering(true)}
-                onPlaying={() => actions.setIsBuffering(false)}
+                onPlaying={() => { actions.setIsBuffering(false); actions.setIsSeeking(false) }}
+                onSeeked={() => actions.setIsSeeking(false)}
                 onEnded={() => {
                     actions.handleTimeUpdate()
                 }}
@@ -335,7 +336,7 @@ export function PlayerUI(props: PlayerUIProps) {
                 }}
                 crossOrigin="anonymous"
                 playsInline
-                preload="metadata"
+                preload="auto"
             />
 
             {/* Gesture Interaction Overlay */}
@@ -423,6 +424,7 @@ export function PlayerUI(props: PlayerUIProps) {
                 errorMsg={state.errorMsg}
                 streamType={streamType || "local"}
                 isBuffering={state.isBuffering}
+                isSeeking={state.isSeeking}
                 onClose={onClose}
             />
 

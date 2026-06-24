@@ -182,50 +182,57 @@ func (p *PlaybackManager) newMediaContainer(filePath string, streamType StreamTy
 		return nil, err
 	}
 
-	p.logger.Debug().Msg("mediastream: Extracted media info, extracting attachments")
+	p.logger.Debug().Msg("mediastream: Extracted media info, deferring attachment extraction to background")
 
-	// Extract the attachments from the file.
-	err = videofile.ExtractAttachment(p.repository.settings.MustGet().FfmpegPath, filePath, hash, ret.MediaInfo, p.repository.cacheDir, p.logger)
-	if err != nil {
-		p.logger.Error().Err(err).Msg("mediastream: Failed to extract attachments")
-		return nil, err
-	}
-
-	p.logger.Debug().Msg("mediastream: Extracted attachments")
+	// Extract attachments (fonts, embedded subtitles) in background so it doesn't block playback start.
+	// The subtitles endpoint will still work once extraction completes; if the user requests subs before
+	// extraction finishes, the file will simply not be ready yet (handled by the serve endpoint).
+	go func() {
+		if err := videofile.ExtractAttachment(p.repository.settings.MustGet().FfmpegPath, filePath, hash, ret.MediaInfo, p.repository.cacheDir, p.logger); err != nil {
+			p.logger.Error().Err(err).Str("filepath", filePath).Msg("mediastream: Background attachment extraction failed")
+		} else {
+			p.logger.Debug().Str("filepath", filePath).Msg("mediastream: Background attachment extraction completed")
+		}
+	}()
 
 	// Dynamic fallback from Direct Play to Transcode if the browser doesn't support the container/codecs natively.
 	if streamType == StreamTypeDirect {
 		isDirectPlayable := false
-		ext := strings.ToLower(ret.MediaInfo.Extension)
-		// Universal direct-playable containers in modern browsers (including mkv inside WebView2)
-		if ext == "mp4" || ext == "m4v" || ext == "webm" || ext == "mov" || ext == "ogg" || ext == "mkv" {
-			hasSupportedVideo := false
-			if ret.MediaInfo.Video != nil {
-				vCodec := strings.ToLower(ret.MediaInfo.Video.Codec)
-				// h264, hevc/h265, vp8, vp9, and av1 are natively supported.
-				if vCodec == "h264" || vCodec == "hevc" || vCodec == "h265" || vCodec == "vp8" || vCodec == "vp9" || vCodec == "av1" {
+		if p.repository.settings.IsPresent() && (p.repository.settings.MustGet().DirectPlayOnly || !p.repository.settings.MustGet().TranscodeEnabled) {
+			isDirectPlayable = true
+		} else {
+			ext := strings.ToLower(ret.MediaInfo.Extension)
+			// Universal direct-playable containers in modern browsers
+			if ext == "mp4" || ext == "m4v" || ext == "webm" || ext == "mov" || ext == "ogg" || ext == "mkv" {
+				hasSupportedVideo := false
+				if ret.MediaInfo.Video != nil {
+					vCodec := strings.ToLower(ret.MediaInfo.Video.Codec)
+					// h264, hevc/h265, vp8, vp9, and av1 are natively supported.
+					if vCodec == "h264" || vCodec == "hevc" || vCodec == "h265" || vCodec == "vp8" || vCodec == "vp9" || vCodec == "av1" {
+						hasSupportedVideo = true
+					}
+				} else {
+					// Audio only
 					hasSupportedVideo = true
 				}
-			} else {
-				// Audio only
-				hasSupportedVideo = true
-			}
 
-			hasSupportedAudio := true
-			if len(ret.MediaInfo.Audios) > 0 {
-				aCodec := strings.ToLower(ret.MediaInfo.Audios[0].Codec)
-				// aac, mp3, opus, flac, vorbis, ac3, and dts (dca) are universally supported or handled by modern audio hardware.
-				if aCodec != "aac" && aCodec != "mp3" && aCodec != "opus" && aCodec != "flac" && aCodec != "vorbis" && aCodec != "ac3" && aCodec != "dca" {
-					hasSupportedAudio = false
+				hasSupportedAudio := true
+				if len(ret.MediaInfo.Audios) > 0 {
+					aCodec := strings.ToLower(ret.MediaInfo.Audios[0].Codec)
+					// aac, mp3, opus, flac, vorbis, ac3, and dts (dca) are universally supported or handled by modern audio hardware.
+					if aCodec != "aac" && aCodec != "mp3" && aCodec != "opus" && aCodec != "flac" && aCodec != "vorbis" && aCodec != "ac3" && aCodec != "dca" {
+						hasSupportedAudio = false
+					}
 				}
-			}
 
-			if hasSupportedVideo && hasSupportedAudio {
-				isDirectPlayable = true
+				if hasSupportedVideo && hasSupportedAudio {
+					isDirectPlayable = true
+				}
 			}
 		}
 
 		if !isDirectPlayable {
+			ext := strings.ToLower(ret.MediaInfo.Extension)
 			p.logger.Info().Str("filepath", filePath).Str("ext", ext).Msg("mediastream: File container or codecs not natively supported by browser. Falling back to Transcode HLS.")
 			streamType = StreamTypeTranscode
 			ret.StreamType = StreamTypeTranscode

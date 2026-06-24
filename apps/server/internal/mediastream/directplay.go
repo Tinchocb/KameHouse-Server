@@ -96,6 +96,39 @@ func (r *Repository) ServeEchoDirectPlay(c echo.Context, clientID string) error 
 		return c.NoContent(http.StatusOK)
 	}
 
+	// Set proper Content-Type for all supported container formats.
+	// Echo's c.File() uses http.ServeContent which detects MIME from extension,
+	// but it doesn't know .mkv or some niche formats — the browser delays parsing
+	// without a proper Content-Type.
+	ext := strings.ToLower(filepath.Ext(mediaContainer.Filepath))
+	contentType := ""
+	switch ext {
+	case ".mp4", ".m4v":
+		contentType = "video/mp4"
+	case ".webm":
+		contentType = "video/webm"
+	case ".ogg", ".ogv":
+		contentType = "video/ogg"
+	case ".mov":
+		contentType = "video/quicktime"
+	case ".mkv":
+		contentType = "video/x-matroska"
+	case ".avi":
+		contentType = "video/x-msvideo"
+	case ".wmv":
+		contentType = "video/x-ms-wmv"
+	case ".flv":
+		contentType = "video/x-flv"
+	case ".ts":
+		contentType = "video/mp2t"
+	case ".mts", ".m2ts":
+		contentType = "video/mp2t"
+	}
+	if contentType != "" {
+		c.Response().Header().Set("Content-Type", contentType)
+	}
 	c.Response().Header().Set("Accept-Ranges", "bytes")
+	filename := filepath.Base(mediaContainer.Filepath)
+	c.Response().Header().Set("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
 	return c.File(mediaContainer.Filepath)
 }

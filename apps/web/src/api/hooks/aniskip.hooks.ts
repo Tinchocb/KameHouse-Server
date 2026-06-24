@@ -202,7 +202,12 @@ export function useAniSkipTimes({
     mediaId,
 }: UseAniSkipTimesOptions) {
     return useQuery<AniSkipTimes>({
-        queryKey: ["aniskip", malId, mediaId, episodeNumber, Math.round((episodeDuration ?? 0) / 30)],
+        // NOTE: episodeDuration is intentionally NOT part of the query key.
+        // Including it causes the key to change as the video metadata loads
+        // (duration goes 0 → real value), which discards the previous result
+        // and re-triggers loading. The duration is passed to the fetcher as a
+        // hint but the API response is independent of it.
+        queryKey: ["aniskip", malId, mediaId, episodeNumber],
         queryFn: () => getAniSkipTimes({
             malId,
             mediaId,
