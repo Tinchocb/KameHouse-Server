@@ -7,7 +7,7 @@ import { getHighResImage, getMediumResImage, getLowResImage } from "@/lib/helper
 import { fetchAnimeEntry, useGetAnimeEntry, useUpdateAnimeEntryProgress } from "@/api/hooks/anime_entries.hooks"
 import { useGetContinuityWatchHistoryItem } from "@/api/hooks/continuity.hooks"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
-import { Anime_LocalFile, Mediastream_StreamType } from "@/api/generated/types"
+import { Anime_LocalFile, FileTechnicalInfo, Mediastream_StreamType } from "@/api/generated/types"
 import { EmptyState } from "@/components/shared/empty-state"
 
 const VideoPlayer = React.lazy(() => import("@/components/video/player").then(m => ({ default: m.VideoPlayer })))
@@ -132,7 +132,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
     const media = entry.media
     const title = media.titleSpanish || media.titleEnglish || media.titleRomaji || "Título Desconocido"
     const year = media.year?.toString() || ""
-    const era = getEntryEra(entry as any)
+    const era = getEntryEra(entry)
     const eraConfig = ERA_TABS.find(t => t.value === era) || ERA_TABS[0]
 
     const synopsis = media.description ? media.description.replace(/<[^>]*>/g, "") : ""
@@ -145,11 +145,12 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
     const durationMins = entry.episodes?.[0]?.episodeMetadata?.length || (continuityData?.item?.duration ? Math.round(continuityData.item.duration / 60) : null)
     const formattedDuration = durationMins ? (durationMins >= 60 ? `${Math.floor(durationMins / 60)}h ${durationMins % 60}m` : `${durationMins}m`) : null
 
-    const techInfo = entry.localFiles?.[0]?.technicalInfo as any
+    const techInfo = entry.localFiles?.[0]?.technicalInfo as FileTechnicalInfo | undefined
+    const streamWidth = techInfo?.videoStream?.width ?? 0
     const technicalData = techInfo ? {
         fileSize: formatFileSize(techInfo.size || 0),
-        resolutionTag: techInfo.videoStream?.width >= 1920 ? "1080P FHD" : "720P HD",
-        is4K: techInfo.videoStream?.width >= 3840,
+        resolutionTag: streamWidth >= 1920 ? "1080P FHD" : "720P HD",
+        is4K: streamWidth >= 3840,
     } : null
 
     const progressPercent = continuityData?.item?.duration ? (continuityData.item.currentTime / continuityData.item.duration) * 100 : 0
@@ -319,7 +320,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                         </div>
 
                         {/* Title */}
-                        <h1 className="movie-animate text-[clamp(2.2rem,5vw,4.2rem)] font-sans font-extrabold leading-[1.05] tracking-tighter text-white drop-shadow-[0_4px_25px_rgba(0,0,0,0.85)] uppercase">
+                        <h1 className="movie-animate font-sans font-extrabold leading-[1.05] tracking-tighter text-white drop-shadow-[0_4px_25px_rgba(0,0,0,0.85)] uppercase" style={{ fontSize: "max(2.2rem, min(5vw, 4.2rem))" }}>
                             {cleanMovieTitle(title)}
                         </h1>
 

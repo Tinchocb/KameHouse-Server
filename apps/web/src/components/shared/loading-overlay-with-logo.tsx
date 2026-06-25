@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button"
 import { LoadingOverlay } from "@/components/ui/loading-spinner"
 import { __isDesktop__ } from "@/types/constants"
 import React, { useEffect, useState } from "react"
-import { RiSettings3Line, RiRefreshLine } from "react-icons/ri"
+import { Settings, RefreshCw } from "lucide-react"
 
 const CONNECTION_TIMEOUT_MS = 15000 // 15 seconds
 
@@ -59,7 +59,7 @@ export function LoadingOverlayWithLogo({ refetch, title, isError }: { refetch?: 
                             intent="gray"
                             size="sm"
                             className="rounded-xl border-zinc-800 uppercase tracking-widest text-[10px]"
-                            leftIcon={<RiRefreshLine />}
+                            leftIcon={<RefreshCw />}
                         >
                             Reintentar
                         </Button>
@@ -68,7 +68,7 @@ export function LoadingOverlayWithLogo({ refetch, title, isError }: { refetch?: 
                             intent="white"
                             size="sm"
                             className="rounded-xl uppercase tracking-widest text-[10px]"
-                            leftIcon={<RiSettings3Line />}
+                            leftIcon={<Settings />}
                         >
                             Configuración
                         </Button>
@@ -88,7 +88,7 @@ export function LoadingOverlayWithLogo({ refetch, title, isError }: { refetch?: 
                     className="mt-8 z-[1] rounded-none border-zinc-800"
                     intent="gray"
                     size="sm"
-                    leftIcon={<RiRefreshLine />}
+                    leftIcon={<RefreshCw />}
                 >
                     Recargar página
                 </Button>

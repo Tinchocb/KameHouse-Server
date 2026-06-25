@@ -195,11 +195,11 @@ app.whenReady().then(async () => {
     // Setup other custom IPC handlers
     ipcMain.handle("get-local-server-port", () => getLocalServerPort())
 
-    ipcMain.handle("denshi:getSettings", () => {
+    ipcMain.handle("desktop:getSettings", () => {
         return loadSettings()
     })
 
-    ipcMain.handle("denshi:setSettings", (_, newSettings) => {
+    ipcMain.handle("desktop:setSettings", (_, newSettings) => {
         const settings = loadSettings()
         const updated = { ...settings, ...newSettings }
         saveSettings(updated)

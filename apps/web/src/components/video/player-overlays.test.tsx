@@ -7,7 +7,8 @@ describe("Player Overlays", () => {
     describe("LoadingErrorOverlay", () => {
         it("renders loading state", () => {
             render(<LoadingErrorOverlay status="loading" errorMsg="" streamType="transcode" isBuffering={false} onClose={() => {}} />)
-            expect(screen.getByText(/PREPARANDO TRANSMISIÓN/i)).toBeInTheDocument()
+            // streamType="transcode" renders "Espere", other values render "Cargando"
+            expect(screen.getByText("Espere")).toBeInTheDocument()
         })
 
         it("renders error state with generic message", () => {

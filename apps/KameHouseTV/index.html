@@ -31,7 +31,8 @@
 
         .input-hint { font-size: 13px; color: #666; margin-top: 6px; }
 
-        .btn-group { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
+        .btn-group { display: flex; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
+        .btn-group > * + * { margin-left: 12px; }
         .btn { padding: 16px 36px; font-size: 18px; font-weight: 600; border: none; border-radius: 10px; cursor: pointer; transition: transform .15s, box-shadow .15s; outline: none; min-width: 180px; text-align: center; }
         .btn:focus, .btn.focused { transform: scale(1.05); box-shadow: 0 0 0 3px #f97316, 0 0 20px rgba(249,115,22,.3); }
         .btn-primary { background: #f97316; color: #fff; }
@@ -53,10 +54,10 @@
         .loading-dots::after { content: ''; animation: dots 1.5s steps(4, end) infinite; }
         @keyframes dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } 100% { content: ''; } }
 
-        .scanning-list { list-style: none; margin-top: 16px; max-height: 200px; overflow-y: auto; font-size: 14px; color: #777; }
-        .scanning-list li { padding: 4px 0; }
-        .scanning-list li.found { color: #4ade80; }
-        .scanning-list li.fail { color: #555; }
+        .scanning-list { list-style: none; margin-top: 16px; max-height: 250px; overflow-y: auto; font-size: 13px; color: #666; background: #0a0a0a; border: 1px solid #222; border-radius: 8px; padding: 12px; }
+        .scanning-list li { padding: 3px 0; font-family: 'Courier New', monospace; }
+        .scanning-list li.found { color: #4ade80; font-weight: bold; }
+        .scanning-list li.fail { color: #444; }
 
         .help-text { margin-top: 24px; font-size: 13px; color: #555; text-align: center; line-height: 1.6; }
 
@@ -128,6 +129,12 @@
 
             function $(id) { return document.getElementById(id); }
 
+            function createTimeoutSignal(ms) {
+                var ctrl = new AbortController();
+                setTimeout(function () { ctrl.abort(); }, ms);
+                return ctrl.signal;
+            }
+
             function init() {
                 els.config  = $('screen-config');
                 els.loading = $('screen-loading');
@@ -144,17 +151,6 @@
                 els.errorTitle   = $('error-title');
                 els.errorDetail  = $('error-detail');
 
-                showScreen('config');
-
-                var saved = loadIP();
-                if (saved) {
-                    els.serverIP.value = saved;
-                    pendingIP = saved;
-                    doConnect(saved);
-                } else {
-                    focusFirstInput();
-                }
-
                 els.btnConnect.addEventListener('click', onConnectClick);
                 els.btnScan.addEventListener('click', onScanClick);
                 els.btnRetry.addEventListener('click', onRetryClick);
@@ -165,30 +161,22 @@
                 });
 
                 document.addEventListener('keydown', onKeyDown);
-                document.addEventListener('visibilitychange', function () {
-                    if (!document.hidden && currentScreen === 'loading') {
-                    }
-                });
 
-                trapFocus();
+                // Auto-conexión: mostrar loading y conectar directamente
+                var saved = loadIP();
+                if (saved) {
+                    els.serverIP.value = saved;
+                    pendingIP = saved;
+                    doConnect(saved);
+                } else {
+                    doAutoConnect();
+                }
             }
 
-            function trapFocus() {
-                var focusableSelector = 'button, input, [tabindex]:not([tabindex="-1"])';
-                document.addEventListener('keydown', function (e) {
-                    if (e.key !== 'Tab') return;
-                    var focusable = document.querySelectorAll(focusableSelector);
-                    if (!focusable.length) return;
-                    var first = focusable[0];
-                    var last  = focusable[focusable.length - 1];
-                    if (e.shiftKey && document.activeElement === first) {
-                        e.preventDefault();
-                        last.focus();
-                    } else if (!e.shiftKey && document.activeElement === last) {
-                        e.preventDefault();
-                        first.focus();
-                    }
-                });
+            function doAutoConnect() {
+                showScreen('loading');
+                els.loadingText.textContent = 'Buscando servidor KameHouse en la red...';
+                quickAutoScan();
             }
 
             function onKeyDown(e) {
@@ -198,7 +186,6 @@
                         e.preventDefault();
                         showScreen('config');
                         focusFirstInput();
-                    } else if (currentScreen === 'config') {
                     } else if (currentScreen === 'loading') {
                         e.preventDefault();
                         showScreen('config');
@@ -258,10 +245,6 @@
                 try { localStorage.setItem(STORAGE_KEY, ip); } catch (e) {}
             }
 
-            function clearIP() {
-                try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
-            }
-
             function normalizeAddress(input) {
                 input = input.trim();
                 if (!input) return '';
@@ -305,13 +288,13 @@
                 var controller = new AbortController();
                 var timeoutId = setTimeout(function () { controller.abort(); }, CONNECT_TIMEOUT);
 
-                fetch(url + '/api/health', { signal: controller.signal, mode: 'cors' })
+                fetch(url + '/api/v1/status', { signal: controller.signal, mode: 'cors' })
                     .then(function (r) {
                         clearTimeout(timeoutId);
                         if (!r.ok) throw new Error('HTTP ' + r.status);
                         return r.json();
                     })
-                    .then(function () {
+                    .then(function (data) {
                         clearTimeout(timeoutId);
                         redirectTo(url);
                     })
@@ -320,7 +303,23 @@
                         if (err.name === 'AbortError') {
                             onConnectFail('Tiempo de espera agotado', 'El servidor no respondió en ' + (CONNECT_TIMEOUT / 1000) + ' segundos. Verificá que la dirección sea correcta y que el servidor esté encendido.');
                         } else {
-                            onConnectFail('Conexión rechazada', 'No se pudo establecer conexión con <strong>' + encodeHTML(url) + '</strong>.<br>' + encodeHTML(err.message));
+                            // Try fallback to /api/health
+                            var c2 = new AbortController();
+                            var t2 = setTimeout(function () { c2.abort(); }, 3000);
+                            fetch(url + '/api/health', { signal: c2.signal, mode: 'cors' })
+                                .then(function (r2) {
+                                    clearTimeout(t2);
+                                    if (!r2.ok) throw new Error('HTTP ' + r2.status);
+                                    return r2.json();
+                                })
+                                .then(function () {
+                                    clearTimeout(t2);
+                                    redirectTo(url);
+                                })
+                                .catch(function () {
+                                    clearTimeout(t2);
+                                    onConnectFail('Conexión rechazada', 'No se pudo establecer conexión con <strong>' + encodeHTML(url) + '</strong>.<br>' + encodeHTML(err.message));
+                                });
                         }
                     });
             }
@@ -358,11 +357,20 @@
 
             function onScanClick() {
                 var raw = els.serverIP.value.trim();
-                var base = '';
+                var userSubnet = '';
+                var userPort = DEFAULT_PORT;
                 if (/^\d+\.\d+\.\d+\.\d+/.test(raw)) {
-                    base = raw.replace(/:\d+$/, '').split('.').slice(0, 3).join('.');
-                } else {
-                    base = '192.168.1';
+                    var parts = raw.replace(/:\d+$/, '').split('.').slice(0, 3).join('.');
+                    userSubnet = parts;
+                    var portMatch = raw.match(/:(\d+)$/);
+                    if (portMatch) userPort = portMatch[1];
+                }
+
+                var COMMON_SUBNETS = ['192.168.1', '192.168.0', '192.168.50', '192.168.86', '10.0.0', '10.0.1', '10.1.1', '172.16.0', '172.16.1', '172.20.10'];
+                var subnets = [];
+                if (userSubnet) subnets.push(userSubnet);
+                for (var i = 0; i < COMMON_SUBNETS.length; i++) {
+                    if (COMMON_SUBNETS[i] !== userSubnet) subnets.push(COMMON_SUBNETS[i]);
                 }
 
                 els.scanResults.classList.remove('hidden');
@@ -372,63 +380,167 @@
                 els.btnScan.textContent = 'Buscando...';
                 els.btnConnect.focus();
 
-                var ips = [];
-                for (var i = 1; i <= 254; i++) ips.push(base + '.' + i);
-
+                var BATCH = 15;
                 var found = false;
-                var checked = 0;
+                var totalSubnets = subnets.length;
+                var subnetIdx = 0;
 
-                function checkNext() {
-                    if (scanAbort || checked >= ips.length) {
+                function addLog(text, cls) {
+                    var li = document.createElement('li');
+                    li.textContent = text;
+                    if (cls) li.className = cls;
+                    els.scanList.appendChild(li);
+                    els.scanList.scrollTop = els.scanList.scrollHeight;
+                    return li;
+                }
+
+                function checkSubnet(subnet, port, callback) {
+                    addLog('Escaneando ' + subnet + '.1-254 (puerto ' + port + ')...', '');
+                    var ip = 1;
+                    function nextBatch() {
+                        if (scanAbort || ip > 254) { callback(); return; }
+                        var count = Math.min(BATCH, 254 - ip + 1);
+                        var promises = [];
+                        for (var j = 0; j < count; j++) {
+                            (function (currIP) {
+                                var url = 'http://' + subnet + '.' + currIP + ':' + port;
+                                promises.push(
+                                    fetch(url + '/api/v1/status', { signal: createTimeoutSignal(1500), mode: 'cors' })
+                                        .then(function (r) {
+                                            if (!r.ok) throw new Error(String(r.status));
+                                            return r.json().then(function (data) { return data.version ? currIP : null; });
+                                        })
+                                        .catch(function () {
+                                            return fetch(url + '/api/health', { signal: createTimeoutSignal(800), mode: 'cors' })
+                                                .then(function (r2) {
+                                                    if (!r2.ok) throw new Error();
+                                                    return r2.json().then(function (d) { return d.app === 'KameHouse' ? currIP : null; });
+                                                })
+                                                .catch(function () { return null; });
+                                        })
+                                );
+                            })(ip + j);
+                        }
+                        ip += count;
+                        Promise.all(promises).then(function (results) {
+                            for (var k = 0; k < results.length; k++) {
+                                if (results[k]) {
+                                    var foundIP = results[k];
+                                    addLog('  ' + foundIP + ':' + port + '  \u2713  Encontrado!', 'found');
+                                    els.serverIP.value = foundIP + ':' + port;
+                                    found = true;
+                                    pendingIP = normalizeAddress(foundIP + ':' + port);
+                                    saveIP(pendingIP);
+                                    scanAbort = true;
+                                    break;
+                                }
+                            }
+                            if (scanAbort) { callback(); return; }
+                            setTimeout(nextBatch, 10);
+                        });
+                    }
+                    nextBatch();
+                }
+
+                function scanNextSubnet() {
+                    if (scanAbort || subnetIdx >= totalSubnets) {
                         els.btnScan.disabled = false;
                         els.btnScan.textContent = 'Buscar en la red';
                         if (!found) {
-                            var li = document.createElement('li');
-                            li.textContent = 'No se encontraron servidores. Verificá la IP manualmente.';
-                            li.style.color = '#f87171';
-                            els.scanList.appendChild(li);
+                            addLog('No se encontraron servidores. Ingresá la IP manualmente.', '');
                         }
                         return;
                     }
-                    var ip = ips[checked];
-                    var url = 'http://' + ip + ':' + DEFAULT_PORT;
-                    checked++;
-
-                    var li = document.createElement('li');
-                    li.textContent = url + ' ...';
-                    els.scanList.appendChild(li);
-
-                    var controller = new AbortController();
-                    var timeoutId = setTimeout(function () { controller.abort(); }, 2000);
-
-                    fetch(url + '/api/health', { signal: controller.signal, mode: 'cors' })
-                        .then(function (r) {
-                            clearTimeout(timeoutId);
-                            if (!r.ok) throw new Error('HTTP ' + r.status);
-                            return r.json();
-                        })
-                        .then(function () {
-                            clearTimeout(timeoutId);
-                            found = true;
-                            li.textContent = url + '  \u2713  Encontrado!';
-                            li.className = 'found';
-                            els.serverIP.value = ip + ':' + DEFAULT_PORT;
-                            scanAbort = true;
+                    var subnet = subnets[subnetIdx];
+                    var port = (subnet === userSubnet && raw.match(/:(\d+)$/)) ? userPort : DEFAULT_PORT;
+                    subnetIdx++;
+                    checkSubnet(subnet, port, function () {
+                        if (found) {
                             els.btnScan.disabled = false;
                             els.btnScan.textContent = 'Buscar en la red';
-                            pendingIP = normalizeAddress(ip + ':' + DEFAULT_PORT);
-                            saveIP(pendingIP);
-                            setTimeout(function () { doConnect(pendingIP); }, 1000);
-                        })
-                        .catch(function () {
-                            clearTimeout(timeoutId);
-                            li.textContent = url + '  \u2717';
-                            li.className = 'fail';
-                            setTimeout(checkNext, 30);
-                        });
+                            addLog('Conectando al servidor encontrado...', 'found');
+                            setTimeout(function () { doConnect(pendingIP); }, 500);
+                            return;
+                        }
+                        setTimeout(scanNextSubnet, 50);
+                    });
                 }
 
-                checkNext();
+                addLog('Buscando servidores KameHouse en la red...', '');
+                setTimeout(scanNextSubnet, 100);
+            }
+
+            function quickAutoScan() {
+                var COMMON_SUBNETS = ['192.168.1', '192.168.0', '192.168.50', '192.168.86', '10.0.0', '10.0.1'];
+                var SCAN_BATCH = 15;
+                var found = false;
+
+                els.scanResults.classList.remove('hidden');
+                els.scanList.innerHTML = '';
+                els.btnScan.disabled = true;
+                els.btnScan.textContent = 'Auto-buscando...';
+
+                var li0 = document.createElement('li');
+                li0.textContent = 'Buscando servidores KameHouse en la red...';
+                els.scanList.appendChild(li0);
+
+                var subnetsDone = 0;
+                COMMON_SUBNETS.forEach(function (subnet) {
+                    var ip = 1;
+                    function nextBatch() {
+                        if (found || ip > 254) {
+                            subnetsDone++;
+                            if (subnetsDone >= COMMON_SUBNETS.length && !found) {
+                                els.btnScan.disabled = false;
+                                els.btnScan.textContent = 'Buscar en la red';
+                                li0.textContent = 'No se encontró ningún servidor automáticamente.';
+                            }
+                            return;
+                        }
+                        var count = Math.min(SCAN_BATCH, 254 - ip + 1);
+                        var promises = [];
+                        for (var j = 0; j < count; j++) {
+                            (function (currIP) {
+                                var url = 'http://' + subnet + '.' + currIP + ':' + DEFAULT_PORT;
+                                promises.push(
+                                    fetch(url + '/api/v1/status', { signal: createTimeoutSignal(1200), mode: 'cors' })
+                                        .then(function (r) {
+                                            if (!r.ok) throw new Error();
+                                            return r.json().then(function (data) { return data.version ? subnet + '.' + currIP : null; });
+                                        })
+                                        .catch(function () {
+                                            return fetch(url + '/api/health', { signal: createTimeoutSignal(600), mode: 'cors' })
+                                                .then(function (r2) {
+                                                    if (!r2.ok) throw new Error();
+                                                    return r2.json().then(function (d) { return d.app === 'KameHouse' ? subnet + '.' + currIP : null; });
+                                                })
+                                                .catch(function () { return null; });
+                                        })
+                                );
+                            })(ip + j);
+                        }
+                        ip += count;
+                        Promise.all(promises).then(function (results) {
+                            for (var k = 0; k < results.length; k++) {
+                                if (results[k]) {
+                                    found = true;
+                                    var foundIP = results[k];
+                                    li0.textContent = 'Servidor encontrado: ' + foundIP + ':' + DEFAULT_PORT;
+                                    li0.className = 'found';
+                                    els.serverIP.value = foundIP + ':' + DEFAULT_PORT;
+                                    pendingIP = normalizeAddress(foundIP + ':' + DEFAULT_PORT);
+                                    saveIP(pendingIP);
+                                    els.btnScan.disabled = false;
+                                    els.btnScan.textContent = 'Buscar en la red';
+                                    setTimeout(function () { doConnect(pendingIP); }, 600);
+                                    return;
+                                }
+                            }
+                            setTimeout(nextBatch, 5);
+                        });
+                    }
+                    nextBatch();
+                });
             }
 
             function encodeHTML(str) {

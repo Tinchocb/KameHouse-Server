@@ -6,7 +6,7 @@ import type {
 } from "@/api/generated/types"
 import type { HeroBannerItem } from "@/components/ui/hero-banner"
 import type { SwimlaneItem } from "@/components/ui/swimlane"
-import type { IntelligentEntry } from "@/hooks/use-home-intelligence"
+import type { IntelligentEntry } from "@/api/types/intelligence.types"
 import { getTitle, getProgress, getBackdrop } from "./home.helpers"
 
 /**

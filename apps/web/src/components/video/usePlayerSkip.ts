@@ -62,7 +62,7 @@ interface UsePlayerSkipProps {
 
 /** Returns the effective OP/intro window: explicit AniSkip data → chapter → heuristic */
 function resolveActiveOp(skipTimesOp: SkipWindow | undefined, total: number, mediaFormat?: string | null): SkipWindow | undefined {
-    if (mediaFormat === "MOVIE") return undefined
+    if (mediaFormat?.toUpperCase() === "MOVIE") return undefined
     if (skipTimesOp) return skipTimesOp
     if (total > 120) return { startTime: 0, endTime: Math.min(90, total * 0.12) }
     return undefined
@@ -73,10 +73,10 @@ function resolveActiveOp(skipTimesOp: SkipWindow | undefined, total: number, med
  * (previews, after-credits scenes), regardless of whether the window came from
  * AniSkip, chapters, or the series cache. */
 function resolveActiveEd(skipTimesEd: SkipWindow | undefined, total: number, mediaFormat?: string | null): SkipWindow | undefined {
-    if (mediaFormat === "MOVIE") return undefined
+    if (mediaFormat?.toUpperCase() === "MOVIE") return undefined
     if (skipTimesEd) {
         const endTime = Math.min(skipTimesEd.endTime, Math.max(skipTimesEd.startTime + 1, total - 5))
-        if (endTime <= skipTimesEd.startTime) return skipTimesEd
+        if (endTime <= skipTimesEd.startTime) return { startTime: skipTimesEd.startTime, endTime: skipTimesEd.startTime }
         return { startTime: skipTimesEd.startTime, endTime }
     }
     if (total > 300) {
@@ -161,6 +161,29 @@ export function usePlayerSkip({
     const lastManualSeekTimestampRef = useRef<number>(0)
     const skippedChaptersRef = useRef<Set<string>>(new Set())
 
+    // ── Stable config ref (decouples processTimeUpdates from closure deps) ──────
+    const configRef = useRef({
+        skipTimesOp: undefined as SkipWindow | undefined,
+        skipTimesEd: undefined as SkipWindow | undefined,
+        autoSkipIntroPref: false,
+        autoSkipOutroPref: false,
+        chapters: [] as Chapter[],
+        mediaFormat: undefined as string | undefined | null,
+        marathonMode: false,
+        hasNextEpisode: false,
+        onNextEpisode: undefined as (() => void) | undefined,
+        tvMode: false,
+        autoPlayNextEpisode: false,
+        nextStreamUrl: undefined as string | undefined,
+        streamType: undefined as string | undefined,
+        preloadStream: ((_: { path: string; streamType: Mediastream_StreamType; audioStreamIndex: number }) => {}) as (vars: { path: string; streamType: Mediastream_StreamType; audioStreamIndex: number }) => void,
+        queryClient: undefined as ReturnType<typeof useQueryClient> | undefined,
+        clientId: undefined as string | undefined,
+        malId: undefined as number | null | undefined,
+        mediaId: undefined as number | null | undefined,
+        episodeNumber: undefined as number | undefined,
+        showCountdown: false,
+    })
     // ── Dual ref+state pattern (avoids stale closures in hot callbacks) ─────────
     const [skipMode, setSkipModeState] = useState<"intro" | "outro" | null>(null)
     const skipModeRef = useRef<"intro" | "outro" | null>(null)
@@ -209,6 +232,7 @@ export function usePlayerSkip({
         setShowNextEpisode(false)
         setSkipMode(null)
         setShowCountdown(false)
+        setCountdownSeconds(COUNTDOWN_START)
         setVideoEnded(false)
         hasAutoSkippedIntroRef.current = false
         hasAutoSkippedOutroRef.current = false
@@ -430,19 +454,41 @@ export function usePlayerSkip({
     // processTimeUpdates — called on every timeupdate event from the video element
     // Split into focused sub-sections for clarity.
     // ─────────────────────────────────────────────────────────────────────────────
+    configRef.current = {
+        skipTimesOp,
+        skipTimesEd,
+        autoSkipIntroPref,
+        autoSkipOutroPref,
+        chapters,
+        mediaFormat,
+        marathonMode,
+        hasNextEpisode,
+        onNextEpisode,
+        tvMode,
+        autoPlayNextEpisode,
+        nextStreamUrl,
+        streamType,
+        preloadStream,
+        queryClient,
+        clientId,
+        malId,
+        mediaId,
+        episodeNumber,
+        showCountdown,
+    }
     const processTimeUpdates = useCallback((curr: number, total: number) => {
         const video = videoRef.current
         if (!video) return
 
-        const activeOp = resolveActiveOp(skipTimesOp, total, mediaFormat)
-        const activeEd = resolveActiveEd(skipTimesEd, total, mediaFormat)
+        const cfg = configRef.current
+        const activeOp = resolveActiveOp(cfg.skipTimesOp, total, cfg.mediaFormat)
+        const activeEd = resolveActiveEd(cfg.skipTimesEd, total, cfg.mediaFormat)
 
         // ── 1. Seek cooldown guard ─────────────────────────────────────────────
         const inCooldown = Date.now() - lastManualSeekTimestampRef.current < SEEK_COOLDOWN_MS
         if (inCooldown) {
-            // Update chapter name only — no auto-seeks
-            if (chapters.length > 0) {
-                const chap = chapters.find(c => curr >= c.startTime && curr < c.endTime)
+            if (cfg.chapters.length > 0) {
+                const chap = cfg.chapters.find(c => curr >= c.startTime && curr < c.endTime)
                 const name = chap ? chap.name : null
                 if (activeChapterRef.current !== name) setActiveChapter(name)
             }
@@ -450,24 +496,23 @@ export function usePlayerSkip({
         }
 
         // ── 2. Active chapter detection ────────────────────────────────────────
-        if (chapters.length > 0) {
-            const chap = chapters.find(c => curr >= c.startTime && curr < c.endTime)
+        if (cfg.chapters.length > 0) {
+            const chap = cfg.chapters.find(c => curr >= c.startTime && curr < c.endTime)
             const name = chap ? chap.name : null
             if (activeChapterRef.current !== name) setActiveChapter(name)
         }
 
-        // ── 3. Chapter-based intermediate auto-skip (eyecatch, sponsor…) ───────
-        if (chapters.length > 0) {
-            const skippable = chapters.find(c => {
+        // ── 3. Chapter-based intermediate auto-skip ────────────────────────────
+        if (cfg.chapters.length > 0) {
+            const skippable = cfg.chapters.find(c => {
                 if (!(curr >= c.startTime && curr < c.endTime - 0.5)) return false
                 const key = `${c.name}_${c.startTime}`
                 if (skippedChaptersRef.current.has(key)) return false
-                if (isIntroChapter(c)) return autoSkipIntroPref
-                if (isOutroChapter(c)) return autoSkipOutroPref
-                // Misc skippable chapter types
+                if (isIntroChapter(c)) return cfg.autoSkipIntroPref
+                if (isOutroChapter(c)) return cfg.autoSkipOutroPref
                 const n = c.name.toLowerCase()
                 return (
-                    autoSkipIntroPref &&
+                    cfg.autoSkipIntroPref &&
                     (n.includes("eyecatch") || n.includes("eye-catch") ||
                         n.includes("commercial") || n.includes("sponsor") || n.includes("sponsors") ||
                         n.includes("recap") || n.includes("resumen") ||
@@ -501,7 +546,7 @@ export function usePlayerSkip({
         if (activeOp) {
             const { startTime, endTime } = activeOp
             const inWindow = curr >= startTime && curr < endTime
-            if (autoSkipIntroPref && inWindow && !hasAutoSkippedIntroRef.current) {
+            if (cfg.autoSkipIntroPref && inWindow && !hasAutoSkippedIntroRef.current) {
                 hasAutoSkippedIntroRef.current = true
                 video.currentTime = endTime
                 lastManualSeekTimestampRef.current = Date.now()
@@ -526,7 +571,7 @@ export function usePlayerSkip({
             const { startTime, endTime } = activeEd
             const inWindow = curr >= startTime && curr < endTime
             const opEnd = activeOp ? activeOp.endTime : Math.min(120, total * 0.15)
-            if (autoSkipOutroPref && inWindow && !hasAutoSkippedOutroRef.current) {
+            if (cfg.autoSkipOutroPref && inWindow && !hasAutoSkippedOutroRef.current) {
                 hasAutoSkippedOutroRef.current = true
                 video.currentTime = endTime
                 lastManualSeekTimestampRef.current = Date.now()
@@ -548,47 +593,46 @@ export function usePlayerSkip({
             }
         }
 
-        // ── 7. Next-episode preload (fires once per episode) ───────────────────
+        // ── 7. Next-episode preload ────────────────────────────────────────────
         const nearEnd = total > 0 && (total - curr <= 180 || (activeEd && curr >= activeEd.startTime))
-        if (nextStreamUrl && !hasPreloadedRef.current && nearEnd) {
+        if (cfg.nextStreamUrl && !hasPreloadedRef.current && nearEnd) {
             hasPreloadedRef.current = true
 
-            // Always use "direct" for local/LAN — matches orchestrator's forced streamType
             const resolvedStreamType = (
-                streamType === "transcode" || streamType === "optimized"
-                    ? streamType
+                cfg.streamType === "transcode" || cfg.streamType === "optimized"
+                    ? cfg.streamType
                     : "direct"
             ) as Mediastream_StreamType
 
-            preloadStream({ path: nextStreamUrl, streamType: resolvedStreamType, audioStreamIndex: 0 })
+            cfg.preloadStream({ path: cfg.nextStreamUrl, streamType: resolvedStreamType, audioStreamIndex: 0 })
 
-            queryClient.prefetchQuery({
-                queryKey: [API_ENDPOINTS.MEDIASTREAM.RequestMediastreamMediaContainer.key, nextStreamUrl, resolvedStreamType],
+            cfg.queryClient!.prefetchQuery({
+                queryKey: [API_ENDPOINTS.MEDIASTREAM.RequestMediastreamMediaContainer.key, cfg.nextStreamUrl, resolvedStreamType],
                 queryFn: () => buildSeaQuery({
                     endpoint: API_ENDPOINTS.MEDIASTREAM.RequestMediastreamMediaContainer.endpoint,
                     method: API_ENDPOINTS.MEDIASTREAM.RequestMediastreamMediaContainer.methods[0],
-                    data: { path: nextStreamUrl, streamType: resolvedStreamType, audioStreamIndex: 0, clientID: clientId || "prefetch-client" }
+                    data: { path: cfg.nextStreamUrl, streamType: resolvedStreamType, audioStreamIndex: 0, clientID: cfg.clientId || "prefetch-client" }
                 })
             })
 
-            if ((malId || mediaId) && episodeNumber) {
-                const nextEp = episodeNumber + 1
-                queryClient.prefetchQuery({
-                    queryKey: ["aniskip", malId ?? null, mediaId ?? null, nextEp, 0],
-                    queryFn: () => getAniSkipTimes({ malId: malId ?? null, mediaId: mediaId ?? null, episodeNumber: nextEp, episodeDuration: 0 })
+            if ((cfg.malId || cfg.mediaId) && cfg.episodeNumber) {
+                const nextEp = cfg.episodeNumber + 1
+                cfg.queryClient!.prefetchQuery({
+                    queryKey: ["aniskip", cfg.malId ?? null, cfg.mediaId ?? null, nextEp, 0],
+                    queryFn: () => getAniSkipTimes({ malId: cfg.malId ?? null, mediaId: cfg.mediaId ?? null, episodeNumber: nextEp, episodeDuration: 0 })
                 })
             }
         }
 
         // ── 8. "Up next" panel visibility ─────────────────────────────────────
-        const edTriggered = skipTimesEd ? curr >= skipTimesEd.startTime : false
+        const edTriggered = cfg.skipTimesEd ? curr >= cfg.skipTimesEd.startTime : false
         const shouldShowNext =
-            mediaFormat !== "MOVIE" && !marathonMode && (
+            cfg.mediaFormat?.toUpperCase() !== "MOVIE" && !cfg.marathonMode && (
                 (total > 0 && total - curr <= 15) ||
-                (autoSkipOutroPref && edTriggered && hasNextEpisode)
+                (cfg.autoSkipOutroPref && edTriggered && cfg.hasNextEpisode)
             )
 
-        if (shouldShowNext && hasNextEpisode) {
+        if (shouldShowNext && cfg.hasNextEpisode) {
             if (!showNextEpisodeRef.current) {
                 setShowNextEpisode(true)
                 setCountdownSeconds(COUNTDOWN_START)
@@ -600,45 +644,29 @@ export function usePlayerSkip({
         // ── 9. TV-mode countdown ───────────────────────────────────────────────
         const isPlayingOrEnded = !video.paused || video.ended
         const targetShowCountdown =
-            tvMode && autoPlayNextEpisode && isPlayingOrEnded && hasNextEpisode &&
-            mediaFormat !== "MOVIE" && (
+            cfg.tvMode && cfg.autoPlayNextEpisode && isPlayingOrEnded && cfg.hasNextEpisode &&
+            cfg.mediaFormat?.toUpperCase() !== "MOVIE" && (
                 video.ended ||
-                (autoSkipOutroPref && skipTimesEd ? curr >= skipTimesEd.startTime : false) ||
+                (cfg.autoSkipOutroPref && cfg.skipTimesEd ? curr >= cfg.skipTimesEd.startTime : false) ||
                 (total > 0 && total - curr <= 15))
 
-        if (showCountdown !== targetShowCountdown) {
+        if (cfg.showCountdown !== targetShowCountdown) {
             setShowCountdown(targetShowCountdown)
         }
 
         // ── 10. Marathon mode auto-advance ────────────────────────────────────
         if (
-            marathonMode && hasNextEpisode && onNextEpisode &&
-            mediaFormat !== "MOVIE" &&
+            cfg.marathonMode && cfg.hasNextEpisode && cfg.onNextEpisode &&
+            cfg.mediaFormat?.toUpperCase() !== "MOVIE" &&
             (video.ended || (total > 0 && total - curr <= 3))
         ) {
             if (!hasTriggeredNextEpisodeRef.current) {
                 hasTriggeredNextEpisodeRef.current = true
                 video.pause()
-                onNextEpisode()
+                cfg.onNextEpisode()
             }
         }
-    }, [
-        videoRef,
-        skipTimesOp, skipTimesEd,
-        autoSkipIntroPref, autoSkipOutroPref,
-        hasNextEpisode,
-        chapters,
-        triggerToast,
-        marathonMode,
-        mediaFormat,
-        nextStreamUrl, streamType,
-        preloadStream, queryClient,
-        clientId,
-        malId, mediaId, episodeNumber,
-        showCountdown, tvMode, autoPlayNextEpisode,
-        onNextEpisode,
-        setSkipMode, setSkipRemainingSeconds, setSegmentProgress, setActiveChapter, setShowNextEpisode,
-    ])
+    }, [])
 
     // ── Countdown: clear nextEpisode guard when panel hides ─────────────────────
     useEffect(() => {
@@ -658,11 +686,11 @@ export function usePlayerSkip({
 
         const targetShowCountdown =
             tvMode && autoPlayNextEpisode && isPlayingOrEnded && hasNextEpisode &&
-            mediaFormat !== "MOVIE" && (
+            mediaFormat?.toUpperCase() !== "MOVIE" && (
                 videoEnded ||
                 (autoSkipOutroPref && skipTimesEd ? curr >= skipTimesEd.startTime : false) ||
                 (total > 0 && total - curr <= 15))
-
+ 
         if (showCountdown !== targetShowCountdown) {
             setShowCountdown(targetShowCountdown)
         }
@@ -686,7 +714,7 @@ export function usePlayerSkip({
 
     // ── Auto-advance on video end ─────────────────────────────────────────────────
     useEffect(() => {
-        if (videoEnded && hasNextEpisode && onNextEpisode && mediaFormat !== "MOVIE" && (marathonMode || autoPlayNextEpisode)) {
+        if (videoEnded && hasNextEpisode && onNextEpisode && mediaFormat?.toUpperCase() !== "MOVIE" && (marathonMode || autoPlayNextEpisode)) {
             if (marathonMode) {
                 if (!hasTriggeredNextEpisodeRef.current) {
                     hasTriggeredNextEpisodeRef.current = true

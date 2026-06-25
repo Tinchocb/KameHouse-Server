@@ -3,7 +3,7 @@ import { Popover } from "@/components/ui/popover"
 import * as SwitchPrimitive from "@radix-ui/react-switch"
 import { cva, VariantProps } from "class-variance-authority"
 import * as React from "react"
-import { AiOutlineExclamationCircle } from "react-icons/ai"
+import { AlertCircle } from "lucide-react"
 import { BasicField, BasicFieldOptions, extractBasicFieldProps } from "../basic-field"
 import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
 
@@ -175,7 +175,7 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>((props, r
                     </label>
                     {moreHelp && <Popover
                         className="text-sm"
-                        trigger={<span><AiOutlineExclamationCircle className="transition-opacity opacity-45 hover:opacity-90" /></span>}
+                        trigger={<span><AlertCircle className="transition-opacity opacity-45 hover:opacity-90" /></span>}
                     >
                         {moreHelp}
                     </Popover>}

@@ -16,15 +16,7 @@ import {
 import { AnimatePresence, motion } from "framer-motion"
 import React from "react"
 import { useFormContext, useWatch } from "react-hook-form"
-import { BiChevronLeft, BiChevronRight, BiFolder, BiPlay, BiRocket } from "react-icons/bi"
-import { FaBook, FaDiscord } from "react-icons/fa"
-import { HiEye, HiGlobeAlt, HiServerStack } from "react-icons/hi2"
-import { LuSparkles } from "react-icons/lu"
-import { MdOutlineBroadcastOnHome } from "react-icons/md"
-import { SiMpv, SiVlcmediaplayer } from "react-icons/si"
-import { IoPlayForwardCircleSharp } from "react-icons/io5"
-import { HiOutlineDesktopComputer } from "react-icons/hi"
-import { ImDownload } from "react-icons/im"
+import { ChevronLeft, ChevronRight, Folder, Rocket, Sparkles } from "lucide-react"
 
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -72,14 +64,14 @@ const STEPS = [
         id: "library",
         title: "Local Anime Library",
         description: "Choose your anime library folders",
-        icon: BiFolder,
+        icon: Folder,
         gradient: "from-blue-500 to-cyan-500",
     },
     {
         id: "features",
         title: "KameHouse Features",
         description: "Configure visual settings",
-        icon: LuSparkles,
+        icon: Sparkles,
         gradient: "from-teal-500 to-blue-500",
     },
 ]
@@ -230,7 +222,7 @@ function FeaturesStep({ kamehouseFeatures, setKamehouseFeatures }: {
                     )}
                 >
                     <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center shrink-0">
-                        <LuSparkles className="w-6 h-6 text-white" />
+                        <Sparkles className="w-6 h-6 text-white" />
                     </div>
                     <div>
                         <h4 className="font-semibold text-sm text-white">Fondo Dinámico Animado</h4>
@@ -372,7 +364,7 @@ export function GettingStarted({ status }: { status: Status }) {
                                     }}
                                     disabled={currentStep === 0}
                                     className="flex items-center space-x-2 rounded-xl"
-                                    leftIcon={<BiChevronLeft className="text-xl" />}
+                                    leftIcon={<ChevronLeft className="text-xl" />}
                                 >
                                     Anterior
                                 </Button>
@@ -382,7 +374,7 @@ export function GettingStarted({ status }: { status: Status }) {
                                         type="submit"
                                         className="flex items-center bg-gradient-to-r from-brand-orange to-red-600 hover:ring-2 ring-brand-orange text-white rounded-xl font-bold uppercase tracking-wider px-6"
                                         loading={isPending}
-                                        rightIcon={<BiRocket className="size-5" />}
+                                        rightIcon={<Rocket className="size-5" />}
                                     >
                                         <span>Iniciar KameHouse</span>
                                     </Button>
@@ -395,7 +387,7 @@ export function GettingStarted({ status }: { status: Status }) {
                                             nextStep()
                                         }}
                                         className="flex items-center space-x-2 rounded-xl"
-                                        rightIcon={<BiChevronRight className="text-xl" />}
+                                        rightIcon={<ChevronRight className="text-xl" />}
                                     >
                                         Siguiente
                                     </Button>

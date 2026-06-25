@@ -24,6 +24,10 @@ export interface SagaDTO {
   episodeRange: string
   description: string
   isFiller: boolean
+  canonStatus: string
+  antagonists: string[]
+  keyEvents: string[]
+  newCharacters: string[]
   keyCharacters: CharacterDTO[]
   subSagas?: SubSagaDTO[]
 }
@@ -53,4 +57,6 @@ export interface PremiumEpisode {
   videoCodec: string
   audioCodec: string
   localFilePath?: string
+  sagaId?: string
+  sagaName?: string
 }

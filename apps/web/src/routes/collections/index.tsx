@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useState, useMemo, memo } from "react"
-import { FaSearch, FaPlay, FaListOl, FaLayerGroup } from "react-icons/fa"
+import { Search, Play, ListOrdered, Layers } from "lucide-react"
 import { EmptyState } from "@/components/shared/empty-state"
 import { useGetMediaCollections, fetchMediaCollections } from "@/api/hooks/collections.hooks"
 import { useGetLibraryCollection, fetchLibraryCollection } from "@/api/hooks/anime_collection.hooks"
@@ -121,7 +121,7 @@ function CollectionsPage() {
                 <div className="px-8 md:px-16 py-3 flex flex-wrap gap-4 items-center justify-between">
                     {/* Search */}
                     <div className="relative group">
-                        <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-white transition-colors text-xs" />
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-white transition-colors text-xs" />
                         <input
                             className="pl-10 pr-4 py-2 bg-black hover:bg-zinc-900 border border-white/10 focus:border-white rounded-none text-sm outline-none transition-all duration-200 placeholder:text-zinc-700 w-64"
                             type="text"
@@ -142,7 +142,7 @@ function CollectionsPage() {
                         <EmptyState
                             title="No hay colecciones"
                             message={search ? "No hemos encontrado colecciones que coincidan con tu búsqueda." : "Aún no se han descubierto colecciones cinematográficas. Escanea películas en tu biblioteca para poblarlas."}
-                            illustration={<FaLayerGroup className="w-20 h-20 text-zinc-800" />}
+                            illustration={<Layers className="w-20 h-20 text-zinc-800" />}
                         />
                     </div>
                 ) : (
@@ -245,7 +245,7 @@ const CollectionCassette = memo(function CollectionCassette({
                     
                     {/* Size badge */}
                     <div className="mt-4 ml-4 flex items-center gap-1">
-                        <FaLayerGroup className={cn("text-[8px] transition-colors", stateColorClass)} />
+                        <Layers className={cn("text-[8px] transition-colors", stateColorClass)} />
                         <span className="text-[9px] font-black tabular-nums text-zinc-400">{count} PARTES</span>
                     </div>
 
@@ -306,7 +306,7 @@ const CollectionCassette = memo(function CollectionCassette({
                             onClick={() => onNavigate(coll.tmdbCollectionId)}
                             className="mb-6 w-full flex items-center justify-center gap-2 py-3 font-black text-[11px] uppercase tracking-[0.2em] text-black bg-yellow-500 hover:bg-yellow-400 transition-all duration-200"
                         >
-                            <FaPlay className="text-[10px]" />
+                            <Play className="text-[10px]" />
                             Explorar saga
                         </button>
 
@@ -318,7 +318,7 @@ const CollectionCassette = memo(function CollectionCassette({
                         {/* Library Stats */}
                         <div className="flex flex-wrap gap-1.5 mb-4">
                             <span className="flex items-center gap-1 text-[8px] font-black px-2 py-1 bg-zinc-800 text-zinc-300 uppercase tracking-widest border border-white/5">
-                                <FaListOl className="text-[7px]" /> {count} PARTES
+                                <ListOrdered className="text-[7px]" /> {count} PARTES
                             </span>
                             {localMembers > 0 && (
                                 <span className={cn(

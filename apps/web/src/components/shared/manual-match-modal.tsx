@@ -1,9 +1,8 @@
 import { Modal } from "@/components/ui/modal"
 import { useTMDBSearch } from "@/api/hooks/tmdb.hooks"
 import { useAnimeEntryManualMatch } from "@/api/hooks/anime_entries.hooks"
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Loader2, Film, Tv, Search } from "lucide-react"
-import { useDebounce } from "react-use"
 
 interface ManualMatchModalProps {
     isOpen: boolean
@@ -17,7 +16,10 @@ export function ManualMatchModal({ isOpen, onClose, directoryPath, currentMediaI
     const [searchType, setSearchType] = useState<"multi" | "tv" | "movie">("multi")
     const [debouncedQuery, setDebouncedQuery] = useState("")
     
-    useDebounce(() => setDebouncedQuery(query), 500, [query])
+    useEffect(() => {
+        const t = setTimeout(() => setDebouncedQuery(query), 500)
+        return () => clearTimeout(t)
+    }, [query])
     
     const { data: results, isLoading } = useTMDBSearch(debouncedQuery, searchType)
     const { mutateAsync: manualMatch, isPending } = useAnimeEntryManualMatch()

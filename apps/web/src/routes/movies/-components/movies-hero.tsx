@@ -196,7 +196,8 @@ export function MoviesHero({
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -12 }}
                             transition={{ duration: 0.4, ease: "easeOut" }}
-                            className="text-[clamp(1.6rem,3.5vw,2.8rem)] font-extrabold leading-[1.05] tracking-tight text-white uppercase cursor-pointer hover:text-zinc-200 transition-colors duration-300"
+                            className="font-extrabold leading-[1.05] tracking-tight text-white uppercase cursor-pointer hover:text-zinc-200 transition-colors duration-300"
+                            style={{ fontSize: "max(1.6rem, min(3.5vw, 2.8rem))" }}
                             onClick={() => currentMovie && handleMovieClick(currentMovie.mediaId!)}
                         >
                             {displayMedia

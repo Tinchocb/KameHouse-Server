@@ -3,11 +3,10 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useGetLibraryCollection, fetchLibraryCollection } from '@/api/hooks/anime_collection.hooks';
 import { HydrationBoundary, dehydrate } from '@tanstack/react-query';
 import { API_ENDPOINTS } from '@/api/generated/endpoints';
-import { SeriesCard } from './-SeriesCard';
+import { SeriesCard, getVhsColor } from './-SeriesCard';
 import { getLargeResImage } from '@/lib/helpers/images';
 import { useIntelligenceStore } from '@/hooks/use-home-intelligence';
-import { useSound } from '@/hooks/use-sound';
-import { getSpineConfig } from '@/lib/helpers/goku-panorama';
+import { getSeriesIdFromMedia, getSeriesYear } from '@/lib/helpers/series';
 
 export const Route = createFileRoute('/series/')({
     loader: ({ context }) => {
@@ -30,61 +29,12 @@ function SeriesFullscreenPage() {
     )
 }
 
-const getSeriesIdFromMedia = (media: any) => {
-    if (!media) return ""
-    const tmdbId = media.tmdbId || 0
-    const title = (media.titleRomaji || media.titleEnglish || media.titleOriginal || "").toLowerCase().replace(/\s+/g, "")
-    
-    if (tmdbId === 12971 || title.includes("dragonballz") || title === "dbz") return "dragon_ball_z"
-    if (tmdbId === 12697 || title.includes("dragonballgt")) return "dragon_ball_gt"
-    if (tmdbId === 62715 || title.includes("dragonballsuper")) return "dragon_ball_super"
-    if (tmdbId === 236994 || title.includes("dragonballdaima")) return "dragon_ball_daima"
-    if (tmdbId === 12609 || title === "dragonball") return "dragon_ball"
-    return ""
-}
-
-const getSeriesYear = (title: string, mediaYear?: number, startDate?: string): number | string => {
-    const titleLower = title.toLowerCase();
-
-    if (titleLower.includes('daima')) return 2024;
-    if (titleLower.includes('super')) return 2015;
-    if (titleLower.includes('gt')) return 1996;
-    if (titleLower.includes('kai') || titleLower.includes('seldion')) return 2009;
-    if (titleLower.includes('dbz') || (titleLower.includes('dragon ball') && titleLower.match(/\bz\b/))) return 1989;
-    if (titleLower.includes('dragon ball') || titleLower.includes('original')) {
-        if (!titleLower.includes('daima') && !titleLower.includes('super') && !titleLower.includes('gt') && !titleLower.includes('kai') && !titleLower.match(/\bz\b/)) {
-            return 1986;
-        }
-    }
-
-    if (startDate) {
-        const match = startDate.match(/^(\d{4})/);
-        if (match) {
-            const parsed = parseInt(match[1], 10);
-            if (!isNaN(parsed) && parsed > 1900) {
-                return parsed;
-            }
-        }
-    }
-
-    if (mediaYear && mediaYear > 0) {
-        return mediaYear;
-    }
-
-    return 'N/A';
-};
-
 function SeriesFullscreenIndex() {
     const navigate = useNavigate();
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const setBackdropUrl = useIntelligenceStore(s => s.setBackdropUrl);
 
     const { data: collection, isLoading } = useGetLibraryCollection();
-    const { playSound } = useSound();
-
-    const handleSound = useCallback(() => {
-        playSound("series", 0.4);
-    }, [playSound]);
 
     useEffect(() => {
         setBackdropUrl("/casa-kame-de-dragon-ball-3963.webp");
@@ -132,82 +82,64 @@ function SeriesFullscreenIndex() {
         return mapped.sort((a, b) => a.yearNum - b.yearNum);
     }, [collection]);
 
-    const activeSelectedId = selectedId;
+    const [prevSeriesList, setPrevSeriesList] = useState(seriesList);
+    useEffect(() => {
+        if (seriesList !== prevSeriesList) {
+            setPrevSeriesList(seriesList);
+            if (seriesList.length > 0) {
+                setSelectedId(prev => prev ?? seriesList[0].id);
+            }
+        }
+    }, [seriesList, prevSeriesList]);
 
     const selectedIndex = useMemo(() => {
-        return seriesList.findIndex(item => item.id === activeSelectedId);
-    }, [seriesList, activeSelectedId]);
+        return seriesList.findIndex(item => item.id === selectedId);
+    }, [seriesList, selectedId]);
     const selectedItem = seriesList[selectedIndex] ?? null;
-
-    // Color de glow basado en la era de la serie seleccionada
-    const glowColor = useMemo(() => {
-        if (!selectedItem) return '#d96c14';
-        const cfg = getSpineConfig(selectedItem.seriesId || "", selectedItem.id);
-        return cfg.colors[0];
-    }, [selectedItem]);
 
     return (
         <div className="w-full h-full flex flex-col bg-transparent text-white font-sans overflow-hidden relative p-4 md:p-6 md:pl-[110px]">
-            {/* Resplandor ambiental de fondo */}
+            {/* Ambient Background Glow */}
             {selectedItem && (
                 <div
-                    className="absolute top-1/2 left-0 w-[900px] h-[900px] pointer-events-none z-0"
+                    className="absolute top-1/2 left-0 w-[800px] h-[800px] pointer-events-none blur-[120px] z-0"
                     style={{
-                        opacity: 0.12,
-                        background: `radial-gradient(circle at 30% 50%, ${glowColor} 0%, transparent 70%)`,
-                        transform: `translate3d(0, -50%, 0)`,
-                        transition: 'background 800ms ease-out, opacity 800ms ease-out',
+                        opacity: 0.08,
+                        background: `radial-gradient(circle, ${getVhsColor(selectedItem.id)} 0%, transparent 70%)`,
+                        transform: `translate3d(calc(${(selectedIndex / Math.max(seriesList.length - 1, 1)) * 80 + 10}% - 400px), -50%, 0)`,
+                        transition: 'transform 700ms cubic-bezier(0.16, 1, 0.3, 1), background 700ms ease-out',
                     }}
                 />
             )}
 
-            {/* Header */}
-            <div className="relative z-10 mb-5 flex items-end justify-between px-1 shrink-0">
-                <div>
-                    <h1 className="font-bebas text-3xl md:text-4xl tracking-wide text-white leading-none">
-                        Colección de series
-                    </h1>
-                    <p className="text-[10px] font-black tracking-[0.3em] uppercase text-zinc-500 mt-1.5">
-                        {seriesList.length} {seriesList.length === 1 ? 'serie' : 'series'} en tu biblioteca
-                    </p>
-                </div>
-            </div>
+            {/* CRT scanlines */}
+            <div className="absolute inset-0 pointer-events-none z-[49] opacity-[0.015] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,6px_100%]" />
 
-            {/* Estante principal */}
-            <div 
-                className="flex-1 min-h-0 rounded-[32px] border border-white/[0.06] shadow-[inset_0_24px_50px_rgba(0,0,0,0.9),inset_0_-24px_50px_rgba(0,0,0,0.9),0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden relative z-10 flex flex-col"
-                style={{
-                    background: 'linear-gradient(to right, #0c0c10 0%, #111118 50%, #0c0c10 100%)',
-                }}
-            >
-                {/* Línea sutil de scanline */}
-                <div className="absolute inset-0 pointer-events-none opacity-[0.02] bg-[linear-gradient(0deg,transparent_50%,rgba(255,255,255,0.08)_50%)] bg-[length:100%_3px] z-10" />
-
-                <main className="w-full h-full flex bg-transparent overflow-x-auto overflow-y-hidden no-scrollbar relative z-10 pb-6">
+            {/* Main Shelf Container */}
+            <div className="flex-1 min-h-0 bg-zinc-950/80 backdrop-blur-2xl rounded-[32px] border border-white/10 shadow-[0_16px_48px_rgba(0,0,0,0.6)] overflow-hidden relative z-10 flex flex-col">
+                <main className="w-full h-full flex bg-transparent overflow-x-auto overflow-y-hidden no-scrollbar relative z-10">
+                    {/* Backlight Glow inside shelf */}
                     {selectedItem && (
                         <div
-                            className="absolute top-1/2 left-0 w-[700px] h-[700px] pointer-events-none z-0"
+                            className="absolute top-1/2 left-0 w-[600px] h-[600px] pointer-events-none blur-[100px] z-0"
                             style={{
-                                opacity: 0.18,
-                                background: `radial-gradient(circle at 30% 50%, ${glowColor} 0%, transparent 60%)`,
-                                transform: `translate3d(calc(${(selectedIndex / Math.max(seriesList.length - 1, 1)) * 80 + 10}% - 350px), -50%, 0)`,
-                                transition: 'transform 800ms cubic-bezier(0.16, 1, 0.3, 1), background 800ms ease-out',
+                                opacity: 0.14,
+                                background: `radial-gradient(circle, ${getVhsColor(selectedItem.id)} 0%, transparent 60%)`,
+                                transform: `translate3d(calc(${(selectedIndex / Math.max(seriesList.length - 1, 1)) * 80 + 10}% - 300px), -50%, 0)`,
+                                transition: 'transform 700ms cubic-bezier(0.16, 1, 0.3, 1), background 700ms ease-out',
                             }}
                         />
                     )}
                     
                     {isLoading && seriesList.length === 0 ? (
                         <div className="w-full h-full flex items-center justify-center relative z-10">
-                            <span className="text-white/30 tracking-widest uppercase text-xs font-black animate-pulse">
+                            <span className="text-white/50 tracking-widest uppercase text-sm font-black animate-pulse">
                                 Cargando colección...
                             </span>
                         </div>
                     ) : seriesList.length === 0 ? (
-                        <div className="w-full h-full flex flex-col items-center justify-center relative z-10 gap-3">
-                            <span className="text-zinc-600 font-bebas text-4xl tracking-widest">
-                                SIN SERIES
-                            </span>
-                            <span className="text-zinc-700 text-[10px] font-black uppercase tracking-[0.3em]">
+                        <div className="w-full h-full flex items-center justify-center relative z-10">
+                            <span className="text-white/50 tracking-widest uppercase text-sm font-black">
                                 No hay series en tu colección
                             </span>
                         </div>
@@ -216,24 +148,22 @@ function SeriesFullscreenIndex() {
                             <SeriesCard
                                 key={item.id}
                                 item={item}
-                                isSelected={item.id === activeSelectedId}
-                                onNavigate={handleNavigate}
+                                isSelected={item.id === selectedId}
+                                onNavigate={() => handleNavigate(item.id.toString())}
                                 onSelect={setSelectedId}
-                                onSound={handleSound}
                             />
                         ))
                     )}
                 </main>
-                
-                {/* Base del estante — refinada */}
-                <div 
-                    className="absolute bottom-0 left-0 right-0 h-5 z-30 pointer-events-none border-t border-white/[0.04]" 
-                    style={{
-                        background: 'linear-gradient(to bottom, rgba(255,255,255,0.02), transparent)',
-                        boxShadow: '0 -4px 20px rgba(0,0,0,0.8)'
-                    }}
-                />
             </div>
+
+            <style>{`
+                .no-scrollbar::-webkit-scrollbar { display: none; }
+                .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+                .group\\/card:hover .vhs-spine-glow {
+                    box-shadow: 0 -15px 35px var(--tape-color), inset 0 3px 5px rgba(255,255,255,0.12), inset 0 -3px 5px rgba(0,0,0,0.9) !important;
+                }
+            `}</style>
         </div>
     );
 }

@@ -21,7 +21,7 @@ contextBridge.exposeInMainWorld(
             isVisible: () => ipcRenderer.invoke("window:isVisible"),
             setTitleBarStyle: (style) => ipcRenderer.send("window:setTitleBarStyle", style),
             getCurrentWindow: () => ipcRenderer.invoke("window:getCurrentWindow"),
-            isMainWindow: () => ipcRenderer.send("window:isMainWindow"),
+            isMainWindow: () => ipcRenderer.invoke("window:isMainWindow"),
         },
 
         startup: {

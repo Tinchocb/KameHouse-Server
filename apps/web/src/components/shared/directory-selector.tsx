@@ -9,11 +9,7 @@ import { TextInput, TextInputProps } from "@/components/ui/text-input"
 import { useBoolean } from "@/hooks/use-disclosure"
 import { upath } from "@/lib/helpers/upath"
 import React from "react"
-import { BiCheck, BiFolderOpen, BiFolderPlus, BiX } from "react-icons/bi"
-import { FaFolder } from "react-icons/fa"
-import { FiChevronLeft, FiFolder } from "react-icons/fi"
-import { HiMiniChevronUpDown } from "react-icons/hi2"
-import { useUpdateEffect } from "react-use"
+import { Check, FolderOpen, FolderPlus, X, Folder, ChevronLeft, ChevronsUpDown } from "lucide-react"
 import { useDebounce } from "use-debounce"
 
 export type DirectorySelectorProps = {
@@ -83,14 +79,15 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
         }
     }, [input])
 
-    useUpdateEffect(() => {
+    const updateEffectFirst = React.useRef(true)
+    React.useEffect(() => {
+        if (updateEffectFirst.current) {
+            updateEffectFirst.current = false
+            return
+        }
         const trimmedValue = debouncedInput.trim()
         onSelect(trimmedValue)
         prevState.current = trimmedValue
-
-        // if (!isLoading && data && shouldExist && !data.exists && input.length > 0) {
-        //     onSelect("")
-        // }
     }, [debouncedInput, data, onSelect])
 
     const checkDirectoryExists = React.useCallback(() => {
@@ -108,7 +105,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
             <div className="space-y-1">
                 <div className="relative">
                     <TextInput
-                        leftIcon={<FaFolder />}
+                        leftIcon={<Folder />}
                         {...rest}
                         label={<div className="flex items-center gap-1">
                             {label}
@@ -118,7 +115,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                                     onOpenChange={setLibrarySelectionOpen}
                                     className="w-[400px] p-2 ml-[30px]"
                                     sideOffset={-4}
-                                    trigger={<Button size="sm" intent="gray-link" leftIcon={<HiMiniChevronUpDown />} className="!text-[--muted]">
+                                    trigger={<Button size="sm" intent="gray-link" leftIcon={<ChevronsUpDown />} className="!text-[--muted]">
                                         Change library
                                     </Button>}
                                 >
@@ -136,8 +133,8 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                         value={input}
                         rightIcon={<div className="flex">
                             {isLoading ? null : (data?.exists ?
-                                <BiCheck className="text-green-500" /> : shouldExist ?
-                                    input.length > 0 ? <BiX className="text-red-500" /> : null : <BiFolderPlus />)}
+                                <Check className="text-green-500" /> : shouldExist ?
+                                    input.length > 0 ? <X className="text-red-500" /> : null : <FolderPlus />)}
                         </div>}
                         onChange={e => {
                             setInput(e.target.value ?? "")
@@ -147,7 +144,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                     />
 
                     <div className="absolute z-[1] top-0 right-0 flex items-center">
-                        <BiFolderOpen
+                        <FolderOpen
                             className="text-2xl cursor-pointer"
                             onClick={selectorState.on}
                         />
@@ -170,15 +167,15 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                         onClick={() => data?.basePath && setInput(data?.basePath)}
                         intent="gray-basic"
                         size="sm"
-                        icon={<FiChevronLeft />}
+                        icon={<ChevronLeft />}
                         disabled={(!data?.basePath?.length || data?.basePath?.length === 1)}
                     />
                     <TextInput
-                        leftIcon={<FaFolder />}
+                        leftIcon={<Folder />}
                         value={input}
                         rightIcon={isLoading ? null : (data?.exists ?
-                            <BiCheck className="text-green-500" /> : shouldExist ?
-                                <BiX className="text-red-500" /> : <BiFolderPlus />)}
+                            <Check className="text-green-500" /> : shouldExist ?
+                                <X className="text-red-500" /> : <FolderPlus />)}
                         onChange={e => {
                             setInput(e.target.value ?? "")
                         }}
@@ -200,7 +197,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                                 className="py-1 flex items-center gap-2 text-sm px-3 rounded-[--radius-md] border flex-none cursor-pointer bg-gray-900 hover:bg-gray-800"
                                 onClick={() => setInput(folder.Path)}
                             >
-                                <FiFolder className="w-4 h-4 text-white/60" />
+                                <Folder className="w-4 h-4 text-white/60" />
                                 <span className="break-normal">{folder.Name}</span>
                             </div>
                         ))}
@@ -217,7 +214,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                                 className="flex items-center gap-2 py-2 px-3 cursor-pointer hover:bg-gray-800"
                                 onClick={() => setInput(folder.Path)}
                             >
-                                <FiFolder className="w-4 h-4 text-white/60" />
+                                <Folder className="w-4 h-4 text-white/60" />
                                 <span className="break-normal">{folder.Name}</span>
                             </div>
                         ))}

@@ -5,7 +5,7 @@ import { Vaul, VaulContent } from "@/components/vaul"
 import { Link, useRouterState } from "@tanstack/react-router"
 import { AnimatePresence } from "framer-motion"
 import * as React from "react"
-import { FaCog, FaHome, FaFilm, FaTv, FaLayerGroup, FaBroadcastTower, FaRocket } from "react-icons/fa"
+import { Settings, Home, Film, Tv, Layers, RadioTower, Rocket, Loader2 } from "lucide-react"
 import { cn } from "../core/styling"
 import { RandomPlayButton } from "./random-play-button"
 import { useSound } from "@/hooks/use-sound"
@@ -14,7 +14,6 @@ import { BackgroundMusicPlayer } from "./background-music"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { fetchAnimeEntryLocalFiles } from "@/api/hooks/anime_entries.hooks"
 import { toast } from "sonner"
-import { Loader2 } from "lucide-react"
 import gsap from "gsap"
 import { useGSAP } from "@gsap/react"
 
@@ -29,9 +28,9 @@ interface SidebarItem {
 }
 
 const SIDEBAR_ITEMS: SidebarItem[] = [
-    { to: "/home", label: "Inicio", icon: <FaHome className="w-5 h-5" /> },
-    { to: "/series", label: "Series", icon: <FaTv className="w-5 h-5" /> },
-    { to: "/movies", label: "Películas", icon: <FaFilm className="w-5 h-5" /> },
+    { to: "/home", label: "Inicio", icon: <Home className="w-5 h-5" /> },
+    { to: "/series", label: "Series", icon: <Tv className="w-5 h-5" /> },
+    { to: "/movies", label: "Películas", icon: <Film className="w-5 h-5" /> },
 ]
 
 export function AppSidebar() {
@@ -364,7 +363,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                             )} />
 
                             <span className="shrink-0 z-10 relative group-hover:scale-110 transition-transform duration-300">
-                                <FaLayerGroup className="w-5 h-5" />
+                                <Layers className="w-5 h-5" />
                                 {/* Badge count */}
                                 <span className="absolute -top-2.5 -right-2.5 bg-brand-orange text-white text-[8px] font-black min-w-[18px] h-[18px] rounded-full flex items-center justify-center border border-zinc-950 shadow-md px-[3px]">
                                     {playlistQueue.length}
@@ -403,7 +402,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                             {isLoadingTarget ? (
                                 <Loader2 className="w-5 h-5 animate-spin" />
                             ) : (
-                                <FaBroadcastTower className="w-5 h-5" />
+                                <RadioTower className="w-5 h-5" />
                             )}
                         </span>
                         <span className="md:hidden ml-6 flex-1 uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange">
@@ -430,7 +429,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                             marathonMode ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
                         )} />
                         <span className="shrink-0 z-10 group-hover:scale-110 transition-transform duration-300">
-                            <FaRocket className="w-5 h-5" />
+                            <Rocket className="w-5 h-5" />
                         </span>
                         <span className="md:hidden ml-6 flex-1 uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange">
                             Maratón {marathonMode ? "(ON)" : ""}
@@ -467,7 +466,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                                 : "text-zinc-400 hover:text-white hover:!border-white/15"
                         )}>
                             <span className="shrink-0 z-10 group-hover:rotate-45 group-hover:scale-110 transition-transform duration-500">
-                                <FaCog className="w-5 h-5" />
+                                <Settings className="w-5 h-5" />
                             </span>
                             <span className="md:hidden ml-6 flex-1 uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange">Configuración</span>
                         </div>

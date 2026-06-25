@@ -1,4 +1,4 @@
-const { spawn } = require("child_process")
+const { spawn, execSync } = require("child_process")
 const fs = require("fs")
 const path = require("path")
 const { net, app } = require("electron")
@@ -187,7 +187,6 @@ async function launchkamehouseServer(opts = {}) {
 
         const args = []
         if (isDevelopment()) {
-            args.push("-port", "43000") // kept for compatibility
             if (process.env.TEST_DATADIR) {
                 args.push("-datadir", process.env.TEST_DATADIR)
             } else {
@@ -287,11 +286,15 @@ async function restartkamehouseServer(opts = {}) {
                 }
 
                 killTimeout = setTimeout(() => {
-                    log.warn("[Sidecar] Timed out waiting for server process to exit, sending SIGKILL")
+                    log.warn("[Sidecar] Timed out waiting for server process to exit, force killing")
                     try {
-                        currentServerProcess.kill("SIGKILL")
+                        if (process.platform === "win32") {
+                            execSync(`taskkill /PID ${currentServerProcess.pid} /F`, { stdio: "ignore" })
+                        } else {
+                            currentServerProcess.kill("SIGKILL")
+                        }
                     } catch (e) {
-                        log.error("[Sidecar] Failed to send SIGKILL:", e)
+                        log.error("[Sidecar] Failed to force kill server:", e)
                     }
                     finish()
                 }, 3000)

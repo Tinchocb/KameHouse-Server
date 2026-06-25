@@ -35,11 +35,12 @@ export function SkipTimesSettings({
         }))
     )
 
-    const seriesData = malId ? seriesSkipTimes[String(malId)] : null
+    const storeKey = malId || mediaId
+    const seriesData = storeKey ? seriesSkipTimes[String(storeKey)] : null
 
     // Initial state setup from stored series data
-    const [opStart, setOpStart] = React.useState<number | null>(seriesData?.opStart ?? null)
-    const [opEnd, setOpEnd] = React.useState<number | null>(seriesData?.opEnd ?? null)
+    const [opStart, setOpStart] = React.useState<number | null>(seriesData?.opStart && seriesData.opStart > 0 ? seriesData.opStart : null)
+    const [opEnd, setOpEnd] = React.useState<number | null>(seriesData?.opEnd && seriesData.opEnd > 0 ? seriesData.opEnd : null)
     
     // In store, edOffset is duration - edStart. We reconstruct edStart and edEnd.
     const [edStart, setEdStart] = React.useState<number | null>(

@@ -1,5 +1,5 @@
 import React from "react"
-import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipForward, SkipBack, ListVideo, Tv, Cast } from "lucide-react"
+import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipForward, SkipBack, ListVideo, Tv } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 
 import { TimelineHeatmap, type InsightNode } from "@/components/ui/timeline-heatmap"
@@ -108,11 +108,6 @@ export interface PlayerBottomBarProps {
     skipToPrevChapter?: () => void
     activeChapter?: string | null
 
-    // Casting
-    isCastSupported?: boolean
-    castState?: "disconnected" | "connecting" | "connected"
-    onPromptCast?: () => void
-
     // Episode Selector
     isEpisodesSidebarOpen?: boolean
     onToggleEpisodesSidebar?: () => void
@@ -177,9 +172,6 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
     skipToNextChapter,
     skipToPrevChapter,
     activeChapter,
-    isCastSupported: _isCastSupported = false,
-    castState: _castState = "disconnected",
-    onPromptCast: _onPromptCast,
     isEpisodesSidebarOpen: _isEpisodesSidebarOpen,
     onToggleEpisodesSidebar: _onToggleEpisodesSidebar,
     hasEpisodes: _hasEpisodes,
@@ -202,7 +194,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
         )}>
 
             {/* Progress Timeline */}
-            <div className="relative group/progress flex items-center h-3 cursor-pointer w-full mb-2">
+            <div className="relative group/progress flex items-center h-3 md:h-3 cursor-pointer w-full mb-2 py-2.5 md:py-0 -my-2.5 md:my-0">
                 {showHeatmap && (
                     <TimelineHeatmap
                         duration={duration}
@@ -280,16 +272,17 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
             <div className="flex items-center justify-between w-full">
 
                 {/* Left Wing */}
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center ml-2.5 [&>*:not(:first-child)]:ml-2.5">
 
                     {/* Play/Pause */}
                     <button
+                        tabIndex={0}
                         onClick={(e) => { e.stopPropagation(); togglePlay(); }}
                         aria-label={isPlaying ? "Pausar" : "Reproducir"}
-                        className="text-white hover:text-brand-orange transition-all duration-300 flex items-center justify-center w-8 h-8 bg-white/5 rounded-full hover:bg-white/10 active:scale-90">
+                        className="text-white hover:text-brand-orange transition-all duration-300 flex items-center justify-center w-10 h-10 md:w-8 md:h-8 bg-white/5 rounded-full hover:bg-white/10 active:scale-90 focus-visible:ring-2 focus-visible:ring-brand-orange focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950">
                         {isPlaying
-                            ? <Pause className="w-3.5 h-3.5 fill-current" />
-                            : <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                            ? <Pause className="w-4 h-4 md:w-3.5 md:h-3.5 fill-current" />
+                            : <Play className="w-4 h-4 md:w-3.5 md:h-3.5 fill-current ml-0.5" />
                         }
                     </button>
 
@@ -297,30 +290,33 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
 
                     {/* Chapter Prev/Next navigation */}
                     {!isMovie && chapters && chapters.length > 0 && (
-                        <div className="flex items-center gap-0.5 border-l border-white/10 pl-2 ml-1">
+                        <div className="flex items-center border-l border-white/10 pl-2 ml-1 [&>*:not(:first-child)]:ml-0.5">
                             <button
+                                tabIndex={0}
                                 onClick={(e) => { e.stopPropagation(); skipToPrevChapter?.(); }}
                                 aria-label="Capítulo anterior"
                                 title="Capítulo anterior [[ ]"
-                                className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 active:scale-90 duration-300">
-                                <SkipBack className="w-3.5 h-3.5 fill-current" />
+                                className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-10 h-10 md:w-8 md:h-8 rounded-lg hover:bg-white/5 active:scale-90 duration-300 focus-visible:ring-2 focus-visible:ring-brand-orange focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950">
+                                <SkipBack className="w-4 h-4 md:w-3.5 md:h-3.5 fill-current" />
                             </button>
                             <button
+                                tabIndex={0}
                                 onClick={(e) => { e.stopPropagation(); skipToNextChapter?.(); }}
                                 aria-label="Siguiente capítulo"
                                 title="Siguiente capítulo [ ] ]"
-                                className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 active:scale-90 duration-300">
+                                className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-10 h-10 md:w-8 md:h-8 rounded-lg hover:bg-white/5 active:scale-90 duration-300 focus-visible:ring-2 focus-visible:ring-brand-orange focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950">
                                 <SkipNextChapterIcon />
                             </button>
                         </div>
                     )}
 
                     {/* Volume Control */}
-                    <div className="hidden md:flex items-center gap-1 group/volume">
+                    <div className="hidden md:flex items-center ml-1 group/volume [&>*:not(:first-child)]:ml-1">
                         <button
+                            tabIndex={0}
                             onClick={(e) => { e.stopPropagation(); toggleMute(); }}
                             aria-label={isMuted || volume === 0 ? "Activar sonido" : "Silenciar"}
-                            className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 active:scale-90 duration-300">
+                            className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 active:scale-90 duration-300 focus-visible:ring-2 focus-visible:ring-brand-orange focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950">
                             {isMuted || volume === 0 ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
                         </button>
                         <div className="w-0 overflow-hidden group-hover/volume:w-16 transition-all duration-300 flex items-center h-5 pl-1">
@@ -341,7 +337,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                     </div>
 
                     {/* Time indicator */}
-                    <div className="flex items-center gap-1.5 text-xs font-medium tracking-wide tabular-nums text-zinc-400 font-sans">
+                    <div className="flex items-center ml-1.5 text-xs font-medium tracking-wide tabular-nums text-zinc-400 font-sans [&>*:not(:first-child)]:ml-1.5">
                         <span ref={timeTextRef} className="text-zinc-200">00:00</span>
                         <span className="text-zinc-600">/</span>
                         <span className="text-zinc-400">{formatTime(duration)}</span>
@@ -359,38 +355,41 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
 
 
                 {/* Right Wing */}
-                <div className="flex items-center gap-0.5">
+                <div className="flex items-center ml-0.5 [&>*:not(:first-child)]:ml-0.5">
 
                     {/* Queue Button */}
                     {hasQueue && (
                         <button
+                            tabIndex={0}
                             onClick={(e) => { e.stopPropagation(); onToggleQueueSidebar?.(); }}
                             aria-label="Ver cola de reproducción"
                             title="Ver cola de reproducción"
                             className={cn(
-                                "transition-all duration-300 flex items-center justify-center w-8 h-8 rounded-full active:scale-90",
+                                "transition-all duration-300 flex items-center justify-center w-10 h-10 md:w-8 md:h-8 rounded-full active:scale-90 focus-visible:ring-2 focus-visible:ring-brand-orange focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950",
                                 isQueueSidebarOpen
                                     ? "text-brand-orange bg-brand-orange/10 shadow-[0_0_12px_rgba(249,115,22,0.4)] animate-pulse"
                                     : "text-zinc-500 hover:text-white hover:bg-white/5"
                             )}
                         >
-                            <ListVideo className="w-3.5 h-3.5" />
+                            <ListVideo className="w-4 h-4 md:w-3.5 md:h-3.5" />
                         </button>
                     )}
 
                     {/* Next episode */}
                     {onNextEpisode && (
                         <button
+                            tabIndex={0}
                             onClick={(e) => { e.stopPropagation(); onNextEpisode(); }}
                             aria-label="Siguiente episodio [N]"
                             title="Siguiente episodio [N]"
-                            className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 active:scale-90 duration-300">
-                            <SkipForward className="w-3.5 h-3.5" />
+                            className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-10 h-10 md:w-8 md:h-8 rounded-lg hover:bg-white/5 active:scale-90 duration-300 focus-visible:ring-2 focus-visible:ring-brand-orange focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950">
+                            <SkipForward className="w-4 h-4 md:w-3.5 md:h-3.5" />
                         </button>
                     )}
 
                     {/* TV Mode (Skip Intro/Outro) */}
                     {!isMovie && <button
+                        tabIndex={0}
                         onClick={(e) => {
                             e.stopPropagation()
                             onTvModeChange?.(!tvMode)
@@ -398,13 +397,13 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                         aria-label={tvMode ? "Desactivar Auto-Skip (TV Mode)" : "Activar Auto-Skip (TV Mode)"}
                         title={tvMode ? "Desactivar Auto-Skip (TV Mode)" : "Activar Auto-Skip (TV Mode)"}
                         className={cn(
-                            "transition-all duration-300 flex items-center justify-center w-8 h-8 rounded-lg active:scale-90",
+                            "transition-all duration-300 flex items-center justify-center w-10 h-10 md:w-8 md:h-8 rounded-lg active:scale-90 focus-visible:ring-2 focus-visible:ring-brand-orange focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950",
                             tvMode
                                 ? "text-brand-orange bg-brand-orange/10 hover:bg-brand-orange/20"
                                 : "text-zinc-500 hover:text-white hover:bg-white/5"
                         )}
                     >
-                        <Tv className="w-3.5 h-3.5" />
+                        <Tv className="w-4 h-4 md:w-3.5 md:h-3.5" />
                     </button>}
                     
 
@@ -455,11 +454,12 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
 
                     {/* Fullscreen */}
                     <button
+                        tabIndex={0}
                         onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
                         aria-label={isFullscreen ? "Salir de pantalla completa [F]" : "Pantalla completa [F]"}
                         title={isFullscreen ? "Salir de pantalla completa [F]" : "Pantalla completa [F]"}
-                        className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 active:scale-90 duration-300">
-                        {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
+                        className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-10 h-10 md:w-8 md:h-8 rounded-lg hover:bg-white/5 active:scale-90 duration-300 focus-visible:ring-2 focus-visible:ring-brand-orange focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950">
+                        {isFullscreen ? <Minimize className="w-4 h-4 md:w-3.5 md:h-3.5" /> : <Maximize className="w-4 h-4 md:w-3.5 md:h-3.5" />}
                     </button>
                 </div>
             </div>

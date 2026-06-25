@@ -1,9 +1,6 @@
 import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { IoSettingsSharp } from "react-icons/io5"
-import { FaVolumeUp } from "react-icons/fa"
-import { MdSubtitles } from "react-icons/md"
-import { Loader2, Zap, FastForward, Check, Monitor } from "lucide-react"
+import { Loader2, Zap, FastForward, Check, Monitor, Settings, Volume2, Subtitles } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 
 import type { PlayerSettingsMenuProps } from "./track-types"
@@ -155,13 +152,13 @@ export function PlayerSettingsMenu({
                 aria-label="Configuración [O]"
                 title="Configuración [O]"
                 className={cn(
-                    "relative flex items-center justify-center w-7 h-7",
+                    "relative flex items-center justify-center w-10 h-10 md:w-7 md:h-7",
                     "text-zinc-500 hover:text-white",
                     "transition-all duration-200",
                     isOpen && "text-white"
                 )}
             >
-                <IoSettingsSharp className={cn("w-3.5 h-3.5 transition-transform duration-300", isOpen && "rotate-90")} />
+                <Settings className={cn("w-4 h-4 md:w-3.5 md:h-3.5 transition-transform duration-300", isOpen && "rotate-90")} />
                 {isLoadingSubtitle && (
                     <span className="absolute -top-0.5 -right-0.5">
                         <Loader2 className="w-3 h-3 text-white animate-spin" />
@@ -182,13 +179,13 @@ export function PlayerSettingsMenu({
                         {view === "main" && (
                             <SettingsLayout title="Configuración" onClose={() => setIsOpen(false)}>
                                 <MenuButton
-                                    icon={<FaVolumeUp className="w-4 h-4" />}
+                                    icon={<Volume2 className="w-4 h-4" />}
                                     label="Audio"
                                     value={activeAudio ? (activeAudio.title || langLabel(activeAudio.language)) : "Desconocido"}
                                     onClick={() => setView("audio")}
                                 />
                                 <MenuButton
-                                    icon={<MdSubtitles className="w-4 h-4" />}
+                                    icon={<Subtitles className="w-4 h-4" />}
                                     label="Subtítulos"
                                     value={activeSubtitle ? (activeSubtitle.title || langLabel(activeSubtitle.language)) : "Desactivado"}
                                     onClick={() => setView("subtitles")}

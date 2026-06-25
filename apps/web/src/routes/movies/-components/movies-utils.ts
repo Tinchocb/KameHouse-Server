@@ -1,4 +1,4 @@
-import type { Anime_LibraryCollectionEntry } from "@/api/generated/types"
+import type { Models_LibraryMedia } from "@/api/generated/types"
 import { isTmdbId } from "@/lib/helpers/type-guards"
 import { EraTab } from "../-MovieCard"
 
@@ -17,7 +17,7 @@ export const gtTmdbIds = new Set([18095, 39149])
 export const superTmdbIds = new Set([503314, 610150])
 export const zKeywords = ["z ", " z:", "kai", "改", "freezer", "frieza", "cooler", "androide", "android", "bojack", "janemba", "tapion", "bardock", "trunks", "broly", "slug", "turles", "dead zone", "fusion", "bio-broly", "gohan", "vegeta"]
 
-export function getEntryEra(entry: Anime_LibraryCollectionEntry): EraTab {
+export function getEntryEra(entry: { media?: Models_LibraryMedia | null }): EraTab {
     const media = entry.media
     if (!media) return "Especiales y OVAs"
     const tmdbId = media.tmdbId || 0

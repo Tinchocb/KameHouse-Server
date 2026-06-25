@@ -1,6 +1,6 @@
 import { cva } from "class-variance-authority"
 import * as React from "react"
-import { BiX } from "react-icons/bi"
+import { X } from "lucide-react"
 import { BasicField, BasicFieldOptions, extractBasicFieldProps } from "../basic-field"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandProps } from "../command"
 import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
@@ -164,7 +164,7 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>((prop
                             if (!multiple) setOpen(false)
                         }}
                     >
-                        <BiX />
+                        <X />
                     </span>
                 </div>
             )) : <span className="truncate">{selectedOptions[0].label}</span>

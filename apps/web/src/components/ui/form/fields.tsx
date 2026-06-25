@@ -3,7 +3,7 @@ import { IconButton } from "@/components/ui/button"
 import { cn } from "@/components/ui/core/styling"
 import React, { forwardRef, useMemo } from "react"
 import { Controller, FormState, get, useController, useFormContext } from "react-hook-form"
-import { BiPlus, BiTrash } from "react-icons/bi"
+import { Plus, Trash2 } from "lucide-react"
 import { Checkbox, CheckboxGroup, CheckboxGroupProps, CheckboxProps } from "../checkbox"
 import { Combobox, ComboboxProps } from "../combobox"
 import { NativeSelect, NativeSelectProps } from "../native-select"
@@ -303,7 +303,7 @@ const MultiDirectorySelectorFieldInner = forwardRef<HTMLInputElement, FieldCompo
                     <IconButton
                         size="sm"
                         intent="alert-outline"
-                        icon={<BiTrash />}
+                        icon={<Trash2 />}
                         onClick={() => setPaths(prev => prev.filter((_, index) => index !== i))}
                     />
                 </div>
@@ -311,7 +311,7 @@ const MultiDirectorySelectorFieldInner = forwardRef<HTMLInputElement, FieldCompo
             <IconButton
                 size="sm"
                 intent="gray-subtle"
-                icon={<BiPlus />}
+                icon={<Plus />}
                 onClick={() => setPaths(prev => [...prev, ""])}
             />
         </div>

@@ -148,7 +148,7 @@ export function HeroBanner({
                             className="space-y-6"
                         >
                             {/* Metadata */}
-                            <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.3em] text-white/50">
+                            <div className="flex items-center text-[10px] font-black uppercase tracking-[0.3em] text-white/50 [&>*:not(:first-child)]:ml-4">
                                 {activeItem.year && <span>{activeItem.year}</span>}
                                 {activeItem.format && (
                                     <>
@@ -175,12 +175,12 @@ export function HeroBanner({
                             </p>
 
                             {/* Actions */}
-                            <div className="flex items-center gap-6 pt-4">
+                            <div className="flex items-center pt-4 [&>*:not(:first-child)]:ml-6">
                                 <motion.button
                                     whileHover={{ scale: 1.03 }}
                                     whileTap={{ scale: 0.97 }}
                                     onClick={activeItem.onPlay}
-                                    className="flex items-center gap-4 bg-brand-orange text-white px-10 py-4 rounded-xl font-bebas text-xl uppercase tracking-wider shadow-[0_15px_30px_-5px_rgba(255,110,58,0.3)] hover:shadow-[0_20px_40px_-5px_rgba(255,110,58,0.45)] border border-brand-orange/20 transition-all duration-300"
+                                    className="flex items-center bg-brand-orange text-white px-10 py-4 rounded-xl font-bebas text-xl uppercase tracking-wider shadow-[0_15px_30px_-5px_rgba(255,110,58,0.3)] hover:shadow-[0_20px_40px_-5px_rgba(255,110,58,0.45)] border border-brand-orange/20 transition-all duration-300 [&>*:not(:first-child)]:ml-4"
                                 >
                                     <Play size={20} fill="currentColor" />
                                     <span>Reproducir</span>
@@ -190,7 +190,7 @@ export function HeroBanner({
                                     whileHover={{ scale: 1.03 }}
                                     whileTap={{ scale: 0.97 }}
                                     onClick={activeItem.onMoreInfo}
-                                    className="flex items-center gap-4 bg-white/[0.03] backdrop-blur-md text-white px-10 py-4 rounded-xl border border-white/10 font-bebas text-xl uppercase tracking-wider hover:bg-white/[0.08] hover:border-white/25 transition-all duration-300"
+                                    className="flex items-center bg-white/[0.03] backdrop-blur-md text-white px-10 py-4 rounded-xl border border-white/10 font-bebas text-xl uppercase tracking-wider hover:bg-white/[0.08] hover:border-white/25 transition-all duration-300 [&>*:not(:first-child)]:ml-4"
                                 >
                                     <Info size={20} />
                                     <span>Detalles</span>
@@ -239,7 +239,7 @@ export function HeroBanner({
             )}
 
             {/* ── Scroll Indicator ──────────────────────────── */}
-            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-1.5 opacity-40 hover:opacity-90 transition-opacity duration-300 pointer-events-none hidden md:flex">
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center opacity-40 hover:opacity-90 transition-opacity duration-300 pointer-events-none hidden md:flex [&>*:not(:first-child)]:mt-1.5">
                 <span className="text-[9px] tracking-[0.3em] text-white/50 uppercase font-black">Explorar Catálogo</span>
                 <div className="w-5 h-7 rounded-full border border-white/20 flex justify-center p-1">
                     <motion.div 

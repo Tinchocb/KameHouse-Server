@@ -1,14 +1,11 @@
-import React, { useMemo, useState } from "react"
+import React, { useMemo, useState, useEffect } from "react"
 import { useRequestMediastreamMediaContainer } from "@/api/hooks/mediastream.hooks"
-import { useGetMediastreamSettings } from "@/api/hooks/mediastream.hooks"
-import { useGetStatus } from "@/api/hooks/settings.hooks"
 import { usePlayerCore } from "./player-core"
 import { PlayerUI } from "./player-ui"
 import type { EpisodeSource } from "@/api/types/unified.types"
 import type { Mediastream_StreamType, Audio, Subtitle } from "@/api/generated/types"
 import type { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
 import type { VideoPlayerProps } from "./player"
-import { __isElectronDesktop__ } from "@/types/constants"
 
 export interface Chapter {
     startTime: number
@@ -31,40 +28,22 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
     const [clientId] = useState(() => Math.random().toString(36).substring(2, 11))
 
     const [prevStreamTypeProp, setPrevStreamTypeProp] = useState(props.streamType)
-    if (props.streamType !== prevStreamTypeProp) {
-        setPrevStreamTypeProp(props.streamType)
-        setStreamType(props.streamType || "direct")
-    }
-
-    const { data: mediastreamSettings } = useGetMediastreamSettings()
-    const { data: status } = useGetStatus()
-
-    // Auto-detect if we're on local network (same PC or LAN)
-    // Force Direct Play for local files when on LAN to avoid unnecessary transcoding
-    const isLocalNetwork = useMemo(() => {
-        if (__isElectronDesktop__) return true // Electron app always runs locally
-        if (!status?.serverIPs?.length) return true // Default to local if no IPs
-        const hostname = typeof window !== "undefined" ? window.location.hostname : "localhost"
-        // Check if accessing via localhost or LAN IP
-        return hostname === "localhost" || hostname === "127.0.0.1" || hostname.startsWith("192.168.") || hostname.startsWith("10.") || hostname.startsWith("172.")
-    }, [status?.serverIPs])
+    useEffect(() => {
+        if (props.streamType !== prevStreamTypeProp) {
+            setPrevStreamTypeProp(props.streamType)
+            setStreamType(props.streamType || "direct")
+        }
+    }, [props.streamType, prevStreamTypeProp])
 
     const isLocal = !props.isExternalStream && Boolean(props.streamUrl) && streamType !== "online"
 
-    // Override streamType for local files on local network: prefer Direct Play
-    // but respect the backend when it determined transcoding is necessary for codec support.
-    const effectiveStreamType = useMemo(() => {
-        if (isLocal && isLocalNetwork) {
-            if (mediastreamSettings?.directPlayOnly) return "direct"
-            if (streamType === "transcode") return "transcode"
-            return "direct"
-        }
-        return streamType
-    }, [isLocal, isLocalNetwork, streamType, mediastreamSettings?.directPlayOnly])
-
+    // Let the backend decide the stream type based on codec compatibility.
+    // The backend evaluates video/audio codec support and decides whether to transcode
+    // or use direct play. We send the requested type and the backend responds with
+    // data.streamType indicating what it actually decided.
     const { data } = useRequestMediastreamMediaContainer({
         path: props.streamUrl,
-        streamType: effectiveStreamType as Mediastream_StreamType,
+        streamType: streamType as Mediastream_StreamType,
         clientID: clientId,
     }, isLocal)
 
@@ -102,7 +81,7 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
         }
     }, [data, props.streamUrl, clientId])
 
-    const activeStreamType = (data?.streamType || effectiveStreamType) as "local" | "online" | "direct" | "transcode" | "optimized"
+    const activeStreamType = (data?.streamType && ["local", "online", "direct", "transcode", "optimized"].includes(data.streamType) ? data.streamType : streamType || "direct") as "local" | "online" | "direct" | "transcode" | "optimized"
 
     const core = usePlayerCore({
         ...props,

@@ -8,7 +8,7 @@ function startLocalServer() {
         const match = req.url.match(/^\/player\/([\w-]+)/)
         if (match) {
             const id = match[1]
-            let url = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&enablejsapi=1&playsinline=1&modestbranding=1&rel=0e`
+            let url = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&enablejsapi=1&playsinline=1&modestbranding=1&rel=0`
             if (id.startsWith("compact_")) {
                 url = `https://www.youtube-nocookie.com/embed/${id.substring(8)}?autoplay=1&controls=0&mute=1&disablekb=1&loop=1&vq=medium&playlist=${id.substring(8)}&cc_lang_pref=ja&enablejsapi=true`
             }

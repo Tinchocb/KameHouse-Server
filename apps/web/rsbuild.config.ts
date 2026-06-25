@@ -21,13 +21,21 @@ const config: RsbuildConfig = {
     plugins: [
         pluginReact(),
         pluginJassubTranspile(),
-        process.env.NODE_ENV === "production" ? pluginBabel({
-            include: /\.(?:jsx|tsx)$/,
+        pluginBabel({
+            include: /\.(?:jsx|tsx|m?js|m?jsx)$/,
             babelLoaderOptions(opts) {
-                opts.plugins ??= []
-                opts.plugins.push(["babel-plugin-react-compiler", { target: "18" }])
+                opts.presets ??= []
+                opts.presets.push(["@babel/preset-env", {
+                    targets: ["chrome >= 76"],
+                    useBuiltIns: false,
+                    modules: false,
+                }])
+                if (process.env.NODE_ENV === "production") {
+                    opts.plugins ??= []
+                    opts.plugins.push(["babel-plugin-react-compiler", { target: "18" }])
+                }
             },
-        }) : null,
+        }),
     ].filter(Boolean),
     source: {
         entry: {
@@ -102,7 +110,6 @@ const config: RsbuildConfig = {
                 "gsap": /gsap/,
                 "recharts": /recharts/,
                 "codemirror": /codemirror/,
-                "react-icons": /react-icons/,
                 "zod": /zod/,
             },
         } : {

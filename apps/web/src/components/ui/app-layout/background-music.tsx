@@ -4,7 +4,7 @@ import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useAppStore } from "@/lib/store"
 import { useShallow } from "zustand/react/shallow"
-import { FaMusic, FaVolumeMute } from "react-icons/fa"
+import { Music, VolumeX } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 
 
@@ -73,7 +73,7 @@ export function BackgroundMusicPlayer() {
                     setIsPlaying(true)
                 })
                 .catch((err) => {
-                    console.log("Autoplay blocked or playback interrupted:", err)
+                    console.warn("Autoplay blocked or playback interrupted:", err)
                     setIsPlaying(false)
                 })
         }
@@ -163,7 +163,6 @@ export function BackgroundMusicPlayer() {
     const togglePlayback = () => {
         const nextState = !bgMusicEnabled
         setBgMusicEnabled(nextState)
-        setUiSoundsEnabled(nextState)
         
         // Immediate toggle feedback
         if (audioRef.current) {
@@ -228,9 +227,9 @@ export function BackgroundMusicPlayer() {
                             className="z-10"
                         >
                             {bgMusicEnabled ? (
-                                <FaMusic className="w-4 h-4 text-zinc-400 animate-pulse" />
+                                <Music className="w-4 h-4 text-zinc-400 animate-pulse" />
                             ) : (
-                                <FaVolumeMute className="w-5 h-5 text-zinc-500" />
+                                <VolumeX className="w-5 h-5 text-zinc-500" />
                             )}
                         </motion.div>
                     )}

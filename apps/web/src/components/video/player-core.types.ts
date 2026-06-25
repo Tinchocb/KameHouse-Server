@@ -98,8 +98,6 @@ export interface PlayerCore {
         showAutoSkipToast: "intro" | "outro" | "pause" | null
         chapters: { startTime: number; endTime: number; name: string; type?: string }[]
         activeChapter: string | null
-        isCastSupported: boolean
-        castState: "disconnected" | "connecting" | "connected"
         absoluteLanUrl?: string
         serverIPs?: string[]
         serverPort?: number
@@ -143,6 +141,5 @@ export interface PlayerCore {
         setAutoDisableSubtitlesWhenDubbed: (val: boolean) => void
         skipToNextChapter: () => void
         skipToPrevChapter: () => void
-        promptCast: () => void
     }
 }

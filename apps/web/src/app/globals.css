@@ -157,9 +157,10 @@
 
 
 /* ── 4. Typography ────────────────────────────────────────────────── */
+/* Note: clamp() replaced with min()/max() for Tizen 6.0 (Chromium M76) compatibility */
 h1 {
     @apply scroll-m-20 font-black tracking-tighter text-text-primary font-display;
-    font-size: clamp(3rem, 8vw + 1rem, 8rem);
+    font-size: max(3rem, min(8vw + 1rem, 8rem));
     line-height: 0.85;
     text-transform: uppercase;
     filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.5));
@@ -167,7 +168,7 @@ h1 {
 
 h2 {
     @apply scroll-m-20 font-extrabold tracking-tight first:mt-0 text-text-primary font-display;
-    font-size: clamp(2rem, 5vw + 1rem, 4rem);
+    font-size: max(2rem, min(5vw + 1rem, 4rem));
     text-transform: uppercase;
     letter-spacing: 0.02em;
     line-height: 0.95;
@@ -175,14 +176,14 @@ h2 {
 
 h3 {
     @apply scroll-m-20 font-bold tracking-tight text-text-secondary font-display;
-    font-size: clamp(1.5rem, 2.5vw + 1rem, 2.5rem);
+    font-size: max(1.5rem, min(2.5vw + 1rem, 2.5rem));
     letter-spacing: 0.04em;
     line-height: 1.1;
 }
 
 h4 {
     @apply scroll-m-20 font-bold tracking-tight text-text-secondary;
-    font-size: clamp(1.2rem, 1.8vw + 1rem, 1.85rem);
+    font-size: max(1.2rem, min(1.8vw + 1rem, 1.85rem));
     line-height: 1.2;
 }
 
@@ -216,6 +217,74 @@ pre {
     .text-zinc-550   { color: rgba(228, 228, 231, 0.80) !important; }
     .text-zinc-650   { color: rgba(161, 161, 170, 0.95) !important; }
     .text-glow-white { text-shadow: 0 0 10px rgba(255, 255, 255, 0.2); }
+
+    /* Aspect ratio fallbacks for Tizen 6.0 (Chromium M76) - aspect-ratio not supported */
+    .aspect-video {
+        aspect-ratio: 16/9;
+        /* Fallback for browsers without aspect-ratio support */
+        @supports not (aspect-ratio: 1/1) {
+            &::before {
+                content: "";
+                display: block;
+                padding-top: 56.25%; /* 9/16 * 100 */
+            }
+        }
+    }
+
+    .aspect-square {
+        aspect-ratio: 1/1;
+        @supports not (aspect-ratio: 1/1) {
+            &::before {
+                content: "";
+                display: block;
+                padding-top: 100%;
+            }
+        }
+    }
+
+    .aspect-\[2\/3\] {
+        aspect-ratio: 2/3;
+        @supports not (aspect-ratio: 1/1) {
+            &::before {
+                content: "";
+                display: block;
+                padding-top: 150%; /* 3/2 * 100 */
+            }
+        }
+    }
+
+    .aspect-\[16\/9\] {
+        aspect-ratio: 16/9;
+        @supports not (aspect-ratio: 1/1) {
+            &::before {
+                content: "";
+                display: block;
+                padding-top: 56.25%;
+            }
+        }
+    }
+
+    .aspect-\[16\/10\] {
+        aspect-ratio: 16/10;
+        @supports not (aspect-ratio: 1/1) {
+            &::before {
+                content: "";
+                display: block;
+                padding-top: 62.5%; /* 10/16 * 100 */
+            }
+        }
+    }
+
+    .aspect-\[4\/3\] {
+        aspect-ratio: 4/3;
+        @supports not (aspect-ratio: 1/1) {
+            &::before {
+                content: "";
+                display: block;
+                padding-top: 75%; /* 3/4 * 100 */
+            }
+        }
+    }
 
 
 
@@ -994,7 +1063,7 @@ media-controller .JASSUB,
 }
 
 /* Vidstack captions */
-:where([data-part="captions"] [data-part="cue"]) {
+[data-part="captions"] [data-part="cue"] {
     border-radius: 0.6rem;
     font-weight: 700;
 }

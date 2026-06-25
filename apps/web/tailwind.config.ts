@@ -61,9 +61,19 @@ const config: Config = {
             transitionDuration: {
                 "15": "15ms",
                 "50": "50ms",
+                "400": "400ms",
+                "800": "800ms",
+            },
+            transitionDelay: {
+                "120": "120ms",
+                "160": "160ms",
+                "240": "240ms",
+                "280": "280ms",
             },
             transitionTimingFunction: {
                 DEFAULT: "cubic-bezier(0.25, 0.1, 0.25, 1.0)",
+                "bounce-spring": "cubic-bezier(0.34, 1.56, 0.64, 1)",
+                "image-zoom": "cubic-bezier(0.2, 1, 0.2, 1)",
             },
             keyframes: {
                 "accordion-down": {

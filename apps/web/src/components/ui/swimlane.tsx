@@ -52,7 +52,7 @@ const SwimlaneInner = React.memo(function SwimlaneInner({
     return (
         <section className={cn("relative py-8", className)}>
             {title && (
-                <div className="mb-8 flex items-center gap-4 px-6 md:px-12 lg:px-20">
+                <div className="mb-8 flex items-center ml-4 px-6 md:px-12 lg:px-20 [&>*:not(:first-child)]:ml-4">
                     <h2 className="text-3xl font-bebas font-normal uppercase tracking-[0.15em] text-white/90">
                         {title}
                     </h2>
@@ -65,7 +65,7 @@ const SwimlaneInner = React.memo(function SwimlaneInner({
 
                 <HorizontalDraggableScroll
                     className="px-0"
-                    containerClass="gap-6 px-6 pt-16 pb-32 -mt-16 -mb-16 md:px-12 lg:px-20 xl:px-24 2xl:px-28"
+                    containerClass="pr-6 pl-6 pt-16 pb-32 -mt-16 -mb-16 md:px-12 lg:px-20 xl:px-24 2xl:px-28 [&>*:not(:first-child)]:ml-6"
                     chevronOverlayClass="from-background/95 via-background/60 to-transparent"
                     scrollAmount={420}
                     safeDisplacement={18}
@@ -133,11 +133,11 @@ export function SwimlaneSkeleton({
 
     return (
         <section className={cn("relative py-8", className)}>
-            <div className="mb-10 flex items-center gap-6 px-6 md:px-12 lg:px-20">
+            <div className="mb-10 flex items-center ml-4 px-6 md:px-12 lg:px-20 [&>*:not(:first-child)]:ml-6">
                 <Skeleton className="h-10 w-48 bg-white/5 rounded-lg" />
             </div>
 
-            <div className="flex gap-6 overflow-hidden px-6 pb-3 md:px-12 lg:px-20">
+            <div className="flex overflow-hidden px-6 pb-3 md:px-12 lg:px-20 [&>*:not(:first-child)]:ml-6">
                 {Array.from({ length: itemCount }).map((_, i) => (
                     <div key={i} className={cn("flex-shrink-0", cardWidths[aspect])}>
                         <Skeleton className={cn("mb-6 bg-white/[0.03] border border-white/5 rounded-2xl shadow-2xl", cardAspects[aspect])} />

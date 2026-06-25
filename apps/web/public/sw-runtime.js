@@ -1,5 +1,5 @@
 "use strict";
-(() => {
+var workbox = (() => {
   // ../../node_modules/.pnpm/workbox-core@7.4.1/node_modules/workbox-core/_version.js
   try {
     self["workbox:core:7.4.0"] && _();

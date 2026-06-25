@@ -293,7 +293,7 @@ export function SeriesHero({
                 {romajiTitle}
               </h2>
             )}
-            <h1 className="text-[clamp(2.5rem,5.5vw,4.5rem)] font-sans font-extrabold leading-[1.05] tracking-tight text-white drop-shadow-[0_4px_25px_rgba(0,0,0,0.85)] cursor-pointer hover:text-brand-orange transition-colors duration-500 z-10 relative select-none" onClick={onPlay}>
+            <h1 className="font-sans font-extrabold leading-[1.05] tracking-tight text-white drop-shadow-[0_4px_25px_rgba(0,0,0,0.85)] cursor-pointer hover:text-brand-orange transition-colors duration-500 z-10 relative select-none" style={{ fontSize: "max(2.5rem, min(5.5vw, 4.5rem))" }} onClick={onPlay}>
               {title}
             </h1>
           </div>

@@ -1,5 +1,5 @@
 import React from "react"
-import { Play, Check } from "lucide-react"
+import { Play, Check, Search, X } from "lucide-react"
 import type { PremiumEpisode } from "@/api/types/series.types"
 import { cn } from "@/components/ui/core/styling"
 
@@ -19,6 +19,17 @@ export function PremiumEpisodeList({
   onPreload
 }: PremiumEpisodeListProps) {
   const preloadTimeoutsRef = React.useRef<Map<string, NodeJS.Timeout>>(new Map())
+  const [searchQuery, setSearchQuery] = React.useState("")
+
+  const filteredEpisodes = React.useMemo(() => {
+    if (!searchQuery.trim()) return episodes
+    const query = searchQuery.toLowerCase().trim()
+    return episodes.filter(ep => {
+      const matchesNumber = ep.number.toString().includes(query)
+      const matchesTitle = ep.title.toLowerCase().includes(query)
+      return matchesNumber || matchesTitle
+    })
+  }, [episodes, searchQuery])
 
   const handleMouseEnter = (ep: PremiumEpisode) => {
     if (!ep.localFilePath || !onPreload) return
@@ -52,7 +63,47 @@ export function PremiumEpisodeList({
 
   return (
     <div className="flex flex-col gap-4 mt-6">
-      {episodes.map((ep) => {
+      {/* Search Input */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+        <input
+          type="text"
+          placeholder="Buscar episodio..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className={cn(
+            "w-full pl-10 pr-10 py-2.5 rounded-xl text-sm",
+            "bg-white/[0.03] border border-white/[0.08] text-white placeholder-zinc-500",
+            "focus:outline-none focus:border-brand-orange/40 focus:ring-1 focus:ring-brand-orange/20",
+            "transition-all duration-200"
+          )}
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      {/* Results count */}
+      {searchQuery && (
+        <div className="text-[10px] font-black tracking-widest uppercase text-zinc-500 px-1">
+          {filteredEpisodes.length} de {episodes.length} episodios
+        </div>
+      )}
+
+      {/* Episode List */}
+      {filteredEpisodes.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-zinc-500">
+          <Search className="w-8 h-8 mb-3 opacity-50" />
+          <p className="text-sm font-medium">No se encontraron episodios</p>
+          <p className="text-xs text-zinc-600 mt-1">Intenta con otro término de búsqueda</p>
+        </div>
+      ) : (
+        filteredEpisodes.map((ep) => {
         const isHighlighted = activeSubSagaStart != null && 
                             activeSubSagaEnd != null && 
                             ep.number >= activeSubSagaStart && 
@@ -91,7 +142,7 @@ export function PremiumEpisodeList({
             </div>
           </div>
 
-          {/* Details */}
+            {/* Details */}
           <div className="flex flex-col justify-center flex-grow min-w-0 py-1">
             <div className="flex justify-between items-start mb-1">
               <h4 className="text-lg font-bold text-white truncate">
@@ -99,17 +150,25 @@ export function PremiumEpisodeList({
                 {ep.title}
               </h4>
               
-              {/* Type Badge */}
-              {ep.episodeType === 'Filler' && (
-                <span className="text-[10px] font-mono uppercase bg-red-900/40 text-red-400 border border-red-900/50 px-2 py-0.5 rounded">
-                  Filler
-                </span>
-              )}
-              {ep.episodeType === 'Hyped' && (
-                <span className="text-[10px] font-mono uppercase bg-amber-900/40 text-amber-400 border border-amber-900/50 px-2 py-0.5 rounded shadow-[0_0_8px_rgba(245,158,11,0.2)]">
-                  Premium
-                </span>
-              )}
+              <div className="flex items-center gap-1.5 shrink-0">
+                {/* Saga Badge */}
+                {ep.sagaName && (
+                  <span className="text-[10px] font-mono uppercase bg-brand-orange/10 text-brand-orange border border-brand-orange/20 px-2 py-0.5 rounded">
+                    {ep.sagaName}
+                  </span>
+                )}
+                {/* Type Badge */}
+                {ep.episodeType === 'Filler' && (
+                  <span className="text-[10px] font-mono uppercase bg-red-900/40 text-red-400 border border-red-900/50 px-2 py-0.5 rounded">
+                    Filler
+                  </span>
+                )}
+                {ep.episodeType === 'Hyped' && (
+                  <span className="text-[10px] font-mono uppercase bg-amber-900/40 text-amber-400 border border-amber-900/50 px-2 py-0.5 rounded shadow-[0_0_8px_rgba(245,158,11,0.2)]">
+                    Premium
+                  </span>
+                )}
+              </div>
             </div>
 
             <p className="text-sm text-gray-400 line-clamp-2 mb-4 leading-relaxed">
@@ -136,7 +195,9 @@ export function PremiumEpisodeList({
             </div>
           </div>
         </div>
-      )})}
+        )
+      })
+      )}
     </div>
   )
 }

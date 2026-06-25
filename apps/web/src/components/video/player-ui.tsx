@@ -13,6 +13,8 @@ import { useAppStore } from "@/lib/store"
 import { useShallow } from "zustand/react/shallow"
 import { PlayerEpisodesSidebar } from "./player-episodes-sidebar"
 import { PlayerQueueSidebar } from "./player-queue-sidebar"
+import { __isTV__ } from "@/types/constants"
+import { useFocusNavigation } from "@/hooks/use-focus-navigation"
 
 function StatsOverlay({ show, data }: { show: boolean, data: PlayerStats }) {
     if (!show || !data) return null
@@ -89,7 +91,6 @@ export function PlayerUI(props: PlayerUIProps) {
     })
 
     const [isEpisodesSidebarOpen, setIsEpisodesSidebarOpen] = React.useState(false)
-    const [isCastModalOpen, setIsCastModalOpen] = React.useState(false)
     const [isQueueSidebarOpen, setIsQueueSidebarOpen] = React.useState(false)
 
     // Gesture tracking for double tap to skip and hold for 2x speed
@@ -207,14 +208,46 @@ export function PlayerUI(props: PlayerUIProps) {
         currentQueueIndex: state.currentQueueIndex
     })))
 
-    const controlsVisible = state.controlsVisible || isEpisodesSidebarOpen || isCastModalOpen || isQueueSidebarOpen
+    const controlsVisible = state.controlsVisible || isEpisodesSidebarOpen || isQueueSidebarOpen
 
-    // Force controls visibility if sidebar or cast modal is open
+    // Force controls visibility if sidebar is open
     useEffect(() => {
-        if (isEpisodesSidebarOpen || isCastModalOpen || isQueueSidebarOpen) {
+        if (isEpisodesSidebarOpen || isQueueSidebarOpen) {
             actions.setControlsVisible(true)
         }
-    }, [isEpisodesSidebarOpen, isCastModalOpen, isQueueSidebarOpen, actions])
+    }, [isEpisodesSidebarOpen, isQueueSidebarOpen, actions])
+
+    // D-pad navigation for TV remote control
+    const handleEscape = React.useCallback(() => {
+        if (isEpisodesSidebarOpen) {
+            setIsEpisodesSidebarOpen(false)
+        } else if (isQueueSidebarOpen) {
+            setIsQueueSidebarOpen(false)
+        } else if (state.isSettingsOpen) {
+            actions.setIsSettingsOpen(false)
+        } else if (state.isFullscreen) {
+            actions.toggleFullscreen()
+        } else {
+            onClose()
+        }
+    }, [isEpisodesSidebarOpen, isQueueSidebarOpen, state.isSettingsOpen, state.isFullscreen, actions, onClose])
+
+    useFocusNavigation({
+        containerRef: domElements.containerElement,
+        enabled: controlsVisible,
+        onEscape: handleEscape,
+    })
+
+    // Auto-enter fullscreen on TV platforms
+    React.useEffect(() => {
+        if (__isTV__ && !state.isFullscreen) {
+            // Small delay to ensure player is mounted
+            const timer = setTimeout(() => {
+                actions.toggleFullscreen()
+            }, 500)
+            return () => clearTimeout(timer)
+        }
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
     // Fetch video insights (heatmap)
     const { data: insightsData } = useGetVideoInsights({
@@ -299,8 +332,8 @@ export function PlayerUI(props: PlayerUIProps) {
                 className="skip-indicator-left absolute left-0 top-0 bottom-0 w-[30%] z-[13] pointer-events-none flex items-center justify-center bg-white/5 opacity-0"
                 style={{ clipPath: "ellipse(70% 100% at 0% 50%)" }}
             >
-                <div className="flex flex-col items-center gap-1.5 text-white/95 bg-black/30 px-6 py-4 rounded-2xl backdrop-blur-sm">
-                    <div className="flex gap-0.5">
+                <div className="flex flex-col items-center text-white/95 bg-black/30 px-6 py-4 rounded-2xl backdrop-blur-sm [&>*:not(:first-child)]:mt-1.5">
+                    <div className="flex [&>*:not(:first-child)]:ml-0.5">
                         <svg className="w-8 h-8 fill-current rotate-180" viewBox="0 0 24 24">
                             <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z" />
                         </svg>
@@ -314,8 +347,8 @@ export function PlayerUI(props: PlayerUIProps) {
                 className="skip-indicator-right absolute right-0 top-0 bottom-0 w-[30%] z-[13] pointer-events-none flex items-center justify-center bg-white/5 opacity-0"
                 style={{ clipPath: "ellipse(70% 100% at 100% 50%)" }}
             >
-                <div className="flex flex-col items-center gap-1.5 text-white/95 bg-black/30 px-6 py-4 rounded-2xl backdrop-blur-sm">
-                    <div className="flex gap-0.5">
+                <div className="flex flex-col items-center text-white/95 bg-black/30 px-6 py-4 rounded-2xl backdrop-blur-sm [&>*:not(:first-child)]:mt-1.5">
+                    <div className="flex [&>*:not(:first-child)]:ml-0.5">
                         <svg className="w-8 h-8 fill-current" viewBox="0 0 24 24">
                             <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z" />
                         </svg>
@@ -327,7 +360,7 @@ export function PlayerUI(props: PlayerUIProps) {
             {/* 2x Speed Hold Indicator */}
             {isHoldSpeedActive && (
                 <div className="absolute top-24 left-1/2 -translate-x-1/2 z-[31] pointer-events-none animate-in fade-in zoom-in-95 duration-200">
-                    <div className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-black/60 border border-white/10 backdrop-blur-md text-white shadow-xl">
+                    <div className="flex items-center px-5 py-2.5 rounded-full bg-black/60 border border-white/10 backdrop-blur-md text-white shadow-xl [&>*:not(:first-child)]:ml-2">
                         <svg className="w-3.5 h-3.5 fill-current text-brand-orange animate-pulse" viewBox="0 0 24 24">
                             <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z" />
                         </svg>
@@ -369,7 +402,7 @@ export function PlayerUI(props: PlayerUIProps) {
             {/* Auto-Skip Toast */}
             {state.showAutoSkipToast && (
                 <div className="absolute top-24 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-none">
-                    <div className="bg-[#121216] border border-white/15 px-6 py-3 shadow-2xl flex items-center gap-3 rounded-xl">
+                    <div className="bg-[#121216] border border-white/15 px-6 py-3 shadow-2xl flex items-center rounded-xl [&>*:not(:first-child)]:ml-3">
                         <svg className="w-4 h-4 text-white animate-pulse" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z" />
                         </svg>
@@ -506,8 +539,6 @@ export function PlayerUI(props: PlayerUIProps) {
                     skipToNextChapter={actions.skipToNextChapter}
                     skipToPrevChapter={actions.skipToPrevChapter}
                     activeChapter={state.activeChapter}
-                    isCastSupported={state.isCastSupported}
-                    castState={state.castState}
                     isEpisodesSidebarOpen={isEpisodesSidebarOpen}
                     onToggleEpisodesSidebar={() => setIsEpisodesSidebarOpen(!isEpisodesSidebarOpen)}
                     hasEpisodes={Boolean(episodes && episodes.length > 0)}

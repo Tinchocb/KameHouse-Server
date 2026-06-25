@@ -21,6 +21,7 @@ import { RelationsTab, CharactersTab } from "./-series-bento-tabs"
 import { resolveSeriesSagas, getDragonBallSpanishTitle } from "@/lib/config/dragonball.config"
 import { startViewTransition } from "@/lib/helpers/transitions"
 import { Trophy, Skull } from "lucide-react"
+import { getSeriesIdFromMedia } from "@/lib/helpers/series"
 
 // Modular Components
 import { FloatingMatchFlap } from "@/components/shared/floating-match-flap"
@@ -28,7 +29,7 @@ import { SeriesHero } from "./-components/series-hero"
 import { SagaSelector } from "./-components/saga-selector"
 import { CharacterCarousel } from "./-components/character-carousel"
 import { PremiumEpisodeList } from "./-components/premium-episode-list"
-import type { SagaDTO } from "@/api/types/series.types"
+import type { SagaDTO, CharacterRole } from "@/api/types/series.types"
 import { BentoDetailsSkeleton } from "@/components/ui/shimmer-skeleton"
 import { CharacterDetailModal } from "@/components/shared/character-detail-modal"
 
@@ -53,19 +54,6 @@ function SeriesDetailPage() {
             <SeriesDetailClient key={seriesId} seriesId={seriesId} />
         </HydrationBoundary>
     )
-}
-
-const getSeriesIdFromMedia = (media: any) => {
-    if (!media) return ""
-    const tmdbId = media.tmdbId || 0
-    const title = (media.titleRomaji || media.titleEnglish || media.titleOriginal || "").toLowerCase().replace(/\s+/g, "")
-    
-    if (tmdbId === 12971 || title.includes("dragonballz") || title === "dbz") return "dragon_ball_z"
-    if (tmdbId === 12697 || title.includes("dragonballgt")) return "dragon_ball_gt"
-    if (tmdbId === 62715 || title.includes("dragonballsuper")) return "dragon_ball_super"
-    if (tmdbId === 236994 || title.includes("dragonballdaima")) return "dragon_ball_daima"
-    if (tmdbId === 12609 || title === "dragonball") return "dragon_ball"
-    return ""
 }
 
 const parseEpisodeRange = (rangeStr: string) => {
@@ -126,12 +114,14 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     const [activeSagaId, setActiveSagaId] = useState<string>("")
     const [activeSubSagaId, setActiveSubSagaId] = useState<string>("")
 
-    if (entry?.media && entry.media.id !== prevEntryId) {
-        setPrevEntryId(entry.media.id)
-        setActiveTab("episodes")
-        setActiveSagaId("") // Reset saga on change
-        setActiveSubSagaId("") // Reset subSaga on change
-    }
+    React.useEffect(() => {
+        if (entry?.media && entry.media.id !== prevEntryId) {
+            setPrevEntryId(entry.media.id)
+            setActiveTab("episodes")
+            setActiveSagaId("")
+            setActiveSubSagaId("")
+        }
+    }, [entry?.media, prevEntryId])
 
     const baseSagas = useMemo(() => entry?.media ? resolveSeriesSagas(entry.media) : [], [entry])
 
@@ -141,7 +131,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
             .filter(edge => edge.node?.image?.large)
             .map(edge => ({
                 name: edge.node?.name?.full || "Unknown",
-                roleTag: (edge.role === "MAIN" ? "Protagonist" : "Supporting") as any,
+                roleTag: (edge.role === "MAIN" ? "Protagonist" : "Supporting") as CharacterRole,
                 avatarUrl: edge.node?.image?.large || ""
             }));
 
@@ -197,16 +187,18 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         return currentSaga?.subSagas?.find(ss => ss.id === activeSubSagaId) || null
     }, [sagas, activeSagaId, activeSubSagaId])
 
-    // Sync activeSagaId in render phase to avoid cascading renders
+    // Sync activeSagaId when sagas change
     const [prevSagas, setPrevSagas] = useState<SagaDTO[]>([])
-    if (sagas !== prevSagas) {
-        setPrevSagas(sagas)
-        if (sagas.length > 0 && !sagas.find(s => s.id === activeSagaId)) {
+    React.useEffect(() => {
+        if (sagas !== prevSagas) {
+            setPrevSagas(sagas)
+            if (sagas.length > 0 && !sagas.find(s => s.id === activeSagaId)) {
+                setActiveSagaId(sagas[0].id)
+            }
+        } else if (sagas.length > 0 && !activeSagaId) {
             setActiveSagaId(sagas[0].id)
         }
-    } else if (sagas.length > 0 && !activeSagaId) {
-        setActiveSagaId(sagas[0].id)
-    }
+    }, [sagas, activeSagaId, prevSagas])
     const computedEpisodes = useMemo(() => {
         if (!entry) return []
         if (entry.episodes && entry.episodes.length > 0) {
@@ -637,12 +629,14 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                                                     number: epNum,
                                                     description: ep.episodeMetadata?.summary || ep.episodeMetadata?.overview || "",
                                                     thumbnailUrl: ep.episodeMetadata?.image || heroBackdrop,
-                                                    episodeType: (lf?.metadata as any)?.episodeType || "Canon",
+                                                    episodeType: lf?.metadata?.episodeType || "Canon",
                                                     isWatched: ep.watched,
                                                     resolution: lf?.technicalInfo?.videoStream?.height ? `${lf.technicalInfo.videoStream.height}p` : "1080p",
                                                     videoCodec: lf?.technicalInfo?.videoStream?.codec || "H264",
                                                     audioCodec: lf?.technicalInfo?.audioStreams?.[0]?.codec || "AAC",
-                                                    localFilePath: lf?.path
+                                                    localFilePath: lf?.path,
+                                                    sagaId: ep.sagaId,
+                                                    sagaName: sagas.find(s => s.id === ep.sagaId)?.name
                                                 }
                                             })}
                                         activeSubSagaStart={activeSubSaga?.startEp}
@@ -704,7 +698,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                             malId={playTarget.malId}
                             mediaFormat={entry.media?.format ?? null}
                             nextStreamUrl={nextLocalFile?.path}
-                            nextStreamType={playTarget.streamType as any}
+                            nextStreamType={playTarget.streamType as Mediastream_StreamType}
                             nextEpisodeTitle={nextTitle}
                             nextEpisodeNumber={nextEp ? (nextEp.absoluteEpisodeNumber || nextEp.episodeNumber) : undefined}
                             nextEpisodeImage={nextEp?.episodeMetadata?.image || entry.media?.bannerImage || entry.media?.posterImage}
@@ -737,7 +731,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
 
 // ─── LORE UI COMPONENTS ──────────────────────────────────────────────────────
 
-function SagaLoreHeader({ saga }: { saga: any }) {
+function SagaLoreHeader({ saga }: { saga: SagaDTO | undefined }) {
     if (!saga) return null
 
     const hasRichDetails = saga.antagonists?.length > 0 || saga.keyEvents?.length > 0 || saga.newCharacters?.length > 0

@@ -36,6 +36,10 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 			"Accept-Ranges", "Content-Range", "Content-Length", "Content-Disposition",
 		},
 		AllowCredentials: true,
+		Skipper: func(c echo.Context) bool {
+			// Skip CORS for health endpoint — handled manually with permissive headers
+			return c.Path() == "/api/health"
+		},
 	}))
 
 	e.HTTPErrorHandler = CustomHTTPErrorHandler
@@ -116,6 +120,10 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 
 	h.StartPlaybackHeartbeatSubscriber()
 
+	// Health endpoint for KameHouseTV auto-discovery (no auth required, open CORS)
+	e.GET("/api/health", h.HandleHealth)
+	e.OPTIONS("/api/health", h.HandleHealth)
+
 	v1 := e.Group("/api/v1")
 	v1.GET("/events", h.webSocketEventHandler)
 	v1.GET("/ws", h.webSocketEventHandler)
@@ -148,20 +156,10 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	v1.POST("/directory-selector", h.HandleDirectorySelector)
 	v1.POST("/open-in-explorer", h.HandleOpenInExplorer)
 
-	// Samsung Tizen TV Cast
-	v1.GET("/cast/samsung/discover", h.HandleSamsungDiscover)
-	v1.GET("/cast/samsung/paired", h.HandleSamsungPaired)
-	v1.GET("/cast/samsung/ping", h.HandleSamsungPing)
-	v1.POST("/cast/samsung/launch", h.HandleSamsungLaunch)
-	v1.GET("/cast/player", h.HandleCastPlayer)
-
 	h.RegisterLibraryRoutes(v1)
 	h.RegisterStreamingRoutes(v1)
 	h.RegisterSettingsRoutes(v1)
 	h.RegisterLocalRoutes(v1)
-
-	// Short link redirector for manual Smart TV casting
-	e.GET("/go", h.HandleCastGo)
 }
 
 func (h *Handler) JSON(c echo.Context, code int, i interface{}) error {

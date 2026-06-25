@@ -107,12 +107,8 @@ export interface PlaylistItem {
 // --- Player Slice ---
 export interface PlayerState {
     playerVolume: number
-    videoQualities: string[]
-    currentQuality: string
     isFullscreen: boolean
     setPlayerVolume: (volume: number) => void
-    setVideoQualities: (qualities: string[]) => void
-    setCurrentQuality: (quality: string) => void
     setFullscreen: (fullscreen: boolean) => void
     autoSkipIntro: boolean
     setAutoSkipIntro: (auto: boolean) => void
@@ -154,15 +150,11 @@ export interface PlayerState {
 
 export const createPlayerSlice: StateCreator<UIState & PlayerState, [], [], PlayerState> = (set) => ({
     playerVolume: 1,
-    videoQualities: ["1080p"],
-    currentQuality: "1080p",
     isFullscreen: false,
     autoSkipIntro: false,
     autoSkipOutro: false,
     playbackRate: 1,
     setPlayerVolume: (volume) => set({ playerVolume: volume }),
-    setVideoQualities: (qualities) => set({ videoQualities: qualities }),
-    setCurrentQuality: (quality) => set({ currentQuality: quality }),
     setFullscreen: (fullscreen) => set({ isFullscreen: fullscreen }),
     setAutoSkipIntro: (autoSkipIntro) => set({ autoSkipIntro }),
     setAutoSkipOutro: (autoSkipOutro) => set({ autoSkipOutro }),

@@ -5,7 +5,7 @@ import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import React, { useMemo, useRef } from "react"
 import { EmptyState } from "@/components/shared/empty-state"
-import { FaPlay, FaCalendar, FaTag, FaChevronLeft, FaStar, FaCheckCircle } from "react-icons/fa"
+import { Play, Calendar, Tag, ChevronLeft, Star, CheckCircle2 } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
 import gsap from "gsap"
@@ -122,7 +122,7 @@ function CollectionDetailPage() {
                             onClick={() => navigate({ to: "/collections" })}
                             className="mt-6 flex items-center gap-2 px-6 py-3 bg-white text-black font-black uppercase text-[11px] tracking-[0.2em] hover:bg-zinc-200 transition-colors"
                         >
-                            <FaChevronLeft /> Volver a Sagas
+                            <ChevronLeft /> Volver a Sagas
                         </button>
                     }
                 />
@@ -142,7 +142,7 @@ function CollectionDetailPage() {
                 onClick={() => navigate({ to: "/collections" })}
                 className="absolute top-6 left-6 z-50 flex items-center gap-2 px-4 py-2 bg-black/40 border border-white/10 backdrop-blur-md hover:border-white text-[10px] font-black uppercase tracking-[0.2em] transition-all"
             >
-                <FaChevronLeft /> Volver a Sagas
+                <ChevronLeft /> Volver a Sagas
             </button>
 
             {/* Cinematic Hero Header */}
@@ -269,7 +269,7 @@ function CollectionDetailPage() {
                                                 {/* Score Badge */}
                                                 {userScore > 0 && (
                                                     <div className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded bg-black/75 backdrop-blur-md border border-yellow-500/40 text-[7px] font-black text-yellow-500 tracking-wider flex items-center gap-1 shadow-md">
-                                                        <FaStar className="w-2 h-2" />
+                                                        <Star className="w-2 h-2" />
                                                         <span>{userScore}</span>
                                                     </div>
                                                 )}
@@ -280,14 +280,14 @@ function CollectionDetailPage() {
                                         <div className="flex-1 flex flex-col justify-between gap-4">
                                             <div className="space-y-2">
                                                 <div className="flex flex-wrap items-center gap-3 text-[9px] font-black uppercase tracking-widest text-zinc-500">
-                                                    <span className="flex items-center gap-1.5"><FaCalendar className="text-[8px]" /> {formattedDate}</span>
+                                                    <span className="flex items-center gap-1.5"><Calendar className="text-[8px]" /> {formattedDate}</span>
                                                     <span>•</span>
-                                                    <span className="flex items-center gap-1.5"><FaTag className="text-[8px]" /> {part.format || "N/A"}</span>
+                                                    <span className="flex items-center gap-1.5"><Tag className="text-[8px]" /> {part.format || "N/A"}</span>
                                                     {isCompleted && (
                                                         <>
                                                             <span>•</span>
                                                             <span className="flex items-center gap-1 text-green-400 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20 shadow-sm">
-                                                                <FaCheckCircle className="text-[8px]" /> COMPLETADO
+                                                                <CheckCircle2 className="text-[8px]" /> COMPLETADO
                                                             </span>
                                                         </>
                                                     )}
@@ -355,7 +355,7 @@ function CollectionDetailPage() {
                                                     isCurrent ? "bg-brand-orange text-white hover:bg-brand-orange/80 shadow-[0_4px_20px_rgba(255,107,0,0.2)]" : "hover:bg-yellow-500"
                                                 )}
                                             >
-                                                <FaPlay className="text-[8px]" /> {isCurrent ? "REANUDAR PELÍCULA" : "VER DETALLES"}
+                                                <Play className="text-[8px]" /> {isCurrent ? "REANUDAR PELÍCULA" : "VER DETALLES"}
                                             </button>
                                         </div>
                                     </div>

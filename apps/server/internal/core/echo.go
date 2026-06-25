@@ -2,14 +2,12 @@ package core
 
 import (
 	"embed"
-	"errors"
 	"io/fs"
 	"kamehouse/internal/constants"
 	"log"
 	"net/http"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/goccy/go-json"
 	"github.com/labstack/echo/v4"
@@ -130,47 +128,4 @@ func (j *CustomJSONSerializer) Serialize(c echo.Context, i interface{}, indent s
 func (j *CustomJSONSerializer) Deserialize(c echo.Context, i interface{}) error {
 	dec := json.NewDecoder(c.Request().Body)
 	return dec.Decode(i)
-}
-
-func RunEchoServer(app *App, e *echo.Echo) {
-	serverAddr := app.Config.GetServerAddr()
-	app.Logger.Info().Msgf("app: Server Address: %s", serverAddr)
-
-	// Custom http.Server with timeouts tuned for local media streaming.
-	//
-	// WriteTimeout = 0: disabled intentionally. HLS/direct-stream handlers
-	// stream for hours; a finite WriteTimeout would kill active video sessions.
-	//
-	// ReadHeaderTimeout guards against Slowloris attacks without affecting
-	// long-lived streaming connections (headers are received once at start).
-	srv := &http.Server{
-		Addr:              serverAddr,
-		ReadHeaderTimeout: 10 * time.Second,
-		ReadTimeout:       30 * time.Second,
-		WriteTimeout:      0, // streaming: no write deadline
-		IdleTimeout:       120 * time.Second,
-	}
-
-	go func() {
-		if app.Config.Server.TLS.Enabled {
-			certFile := app.Config.Server.TLS.CertPath
-			keyFile := app.Config.Server.TLS.KeyPath
-
-			if err := GenerateSelfSignedCert(certFile, keyFile, app.Logger); err != nil {
-				app.Logger.Fatal().Err(err).Msg("app: Could not generate TLS certificates")
-			}
-
-			app.Logger.Info().Msg("app: Starting server with TLS enabled")
-			if err := e.StartTLS(serverAddr, certFile, keyFile); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				app.Logger.Fatal().Err(err).Msg("app: Could not start TLS server")
-			}
-		} else {
-			if err := e.StartServer(srv); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				app.Logger.Fatal().Err(err).Msg("app: Could not start server")
-			}
-		}
-	}()
-
-	time.Sleep(100 * time.Millisecond)
-	app.Logger.Info().Msg("app: KameHouse started at " + app.Config.GetServerURI())
 }

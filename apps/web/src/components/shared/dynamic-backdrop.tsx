@@ -137,8 +137,7 @@ export function DynamicBackdrop() {
         return () => clearTimeout(timer)
     }, [activeBackdropUrl, displayedUrl, isEnabled])
 
-    const isWails = typeof window !== "undefined" && ((window as any).wails !== undefined || (window as any).runtime !== undefined)
-    const filterClass = isWails ? "blur-lg saturate-150" : "blur-md"
+    const filterClass = "blur-md"
 
     if (!isEnabled) return null
 

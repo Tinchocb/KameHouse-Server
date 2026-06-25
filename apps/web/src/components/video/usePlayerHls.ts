@@ -9,7 +9,6 @@ interface UsePlayerHlsProps {
     hlsRef: React.MutableRefObject<Hls | null>
     playableUrl: string
     absoluteLanUrl: string
-    isCastingRef: React.RefObject<boolean>
     backendTracks: { audioTracks: AudioTrack[]; subtitleTracks: SubtitleTrack[] } | null
     initialProgressSeconds?: number
     episodeNumber?: number
@@ -39,7 +38,6 @@ export function usePlayerHls({
     hlsRef,
     playableUrl,
     absoluteLanUrl,
-    isCastingRef,
     backendTracks,
     initialProgressSeconds,
     episodeNumber,
@@ -120,6 +118,7 @@ export function usePlayerHls({
         // Track media error recovery attempts to implement the two-pass strategy:
         // 1st failure → recoverMediaError(), 2nd failure → swapAudioCodec() + recoverMediaError(), 3rd → fatal
         let mediaRecoveryAttempt = 0
+        let networkRecoveryAttempt = 0
 
         const handleCanPlay = () => {
             setStatus("ready")
@@ -130,16 +129,12 @@ export function usePlayerHls({
             video.play()
                 .then(() => setIsPlaying(true))
                 .catch((err) => {
-                    console.log("Autoplay blocked:", err)
+                    console.warn("Autoplay blocked:", err)
                     setIsPlaying(false)
                 })
         }
 
         const handleNativeError = () => {
-            if (isCastingRef.current) {
-                console.log("Ignoring native video error because casting is active.")
-                return
-            }
             setStatus("error")
             setErrorMsg(video.error?.message || "Ocurrió un error al cargar el archivo de video.")
         }
@@ -235,7 +230,7 @@ export function usePlayerHls({
                 video.play()
                     .then(() => setIsPlaying(true))
                     .catch((err) => {
-                        console.log("Autoplay blocked:", err)
+                        console.warn("Autoplay blocked:", err)
                         setIsPlaying(false)
                     })
             })
@@ -251,10 +246,10 @@ export function usePlayerHls({
             })
 
             hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, (_, data) => {
-                const mappedSubs = data.subtitleTracks.map((t, i) => ({
-                    index: i,
+                const mappedSubs = data.subtitleTracks.map((t) => ({
+                    index: typeof t.id === "number" ? t.id : 0,
                     language: t.lang || "und",
-                    title: t.name || t.lang || `Subtítulos ${i + 1}`,
+                    title: t.name || t.lang || `Subtítulos ${t.id ?? 0}`,
                 }))
                 setSubtitleTracks(mappedSubs.length > 0 ? mappedSubs : (backendTracksRef.current?.subtitleTracks || []))
             })
@@ -263,9 +258,16 @@ export function usePlayerHls({
                 if (data.fatal) {
                     console.error("Fatal HLS error:", data)
                     if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-                        // Error de red: intentar recuperación automática
-                        console.warn("HLS: Fatal network error, attempting recovery...")
-                        hls.startLoad()
+                        networkRecoveryAttempt++
+                        if (networkRecoveryAttempt <= 5) {
+                            console.warn(`HLS: Fatal network error (attempt ${networkRecoveryAttempt}/5), attempting recovery...`)
+                            hls.startLoad()
+                        } else {
+                            console.error("HLS: Network error is unrecoverable after 5 attempts")
+                            setStatus("error")
+                            setErrorMsg(`Error de red: ${data.details}`)
+                            hls.destroy()
+                        }
                     } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
                         mediaRecoveryAttempt++
                         if (mediaRecoveryAttempt === 1) {
@@ -333,14 +335,13 @@ export function usePlayerHls({
         }
     }, [
         playableUrl,
-        // absoluteLanUrl is intentionally omitted: it is derived from playableUrl + serverIPs and
-        // is only needed for Cast, not for HLS initialization. Including it caused the entire HLS
-        // instance to be destroyed and recreated whenever the server IP was detected/changed,
-        // producing a spurious "loading" state after seek or episode changes.
+        // absoluteLanUrl is intentionally omitted: it is derived from playableUrl + serverIPs.
+        // Including it caused the entire HLS instance to be destroyed and recreated whenever
+        // the server IP was detected/changed, producing a spurious "loading" state after seek
+        // or episode changes.
         initialProgressSeconds,
         videoRef,
         hlsRef,
-        isCastingRef,
         setStatus,
         setIsBuffering,
         setErrorMsg,

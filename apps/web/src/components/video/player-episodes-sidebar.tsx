@@ -52,7 +52,7 @@ export function PlayerEpisodesSidebar({
                     >
                         {/* Header */}
                         <div className="flex items-center justify-between p-6 border-b border-white/5 shrink-0">
-                            <h3 className="text-sm font-black tracking-[0.25em] text-white uppercase flex items-center gap-2">
+                            <h3 className="text-sm font-black tracking-[0.25em] text-white uppercase flex items-center ml-2 [&>*:not(:first-child)]:ml-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-brand-orange animate-pulse" />
                                 EPISODIOS
                             </h3>
@@ -108,7 +108,7 @@ export function PlayerEpisodesSidebar({
                                             onClose()
                                         }}
                                         className={cn(
-                                            "w-full text-left flex gap-4 p-3 rounded-xl border transition-all duration-300 group",
+                                            "w-full text-left flex p-3 rounded-xl border transition-all duration-300 group [&>*:not(:first-child)]:ml-4",
                                             isCurrent
                                                 ? "bg-brand-orange/10 border-brand-orange/30 text-white shadow-[0_0_15px_rgba(255,110,58,0.1)]"
                                                 : "bg-white/[0.02] border-white/5 text-zinc-400 hover:text-white hover:bg-white/[0.04] hover:border-white/10"
@@ -146,7 +146,7 @@ export function PlayerEpisodesSidebar({
 
                                         {/* Meta content */}
                                         <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                            <div className="flex items-center gap-2 mb-1">
+                                            <div className="flex items-center mb-1 [&>*:not(:first-child)]:ml-2">
                                                 <span className={cn(
                                                     "text-[9px] font-black tracking-widest",
                                                     isCurrent ? "text-brand-orange" : "text-zinc-500"

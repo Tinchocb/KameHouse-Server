@@ -21,7 +21,7 @@ const PerformanceMonitor = React.lazy(() =>
 )
 import { useRouterState } from "@tanstack/react-router"
 import { PageTransition } from "@/components/shared/page-transition"
-import { FaBars } from "react-icons/fa"
+import { Menu } from "lucide-react"
 import { useAppStore } from "@/lib/store"
 import { DynamicBackdrop } from "@/components/shared/dynamic-backdrop"
 import { useGetStatus } from "@/api/hooks/settings.hooks"
@@ -76,7 +76,7 @@ function RootComponent() {
                     aria-hidden={sidebarOpen ? "true" : undefined}
                     className="md:hidden fixed top-6 left-6 z-[60] p-3 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 text-white/70 hover:text-white transition-all active:scale-90"
                 >
-                    <FaBars className="w-5 h-5" />
+                    <Menu className="w-5 h-5" />
                 </button>
 
                 <PageTransition key={routerState.location.pathname} transitionKey={routerState.location.pathname} className="flex-1 w-full">

@@ -38,11 +38,10 @@ func (h *Handler) OptionalAuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc
 			path == "/api/v1/events" || // for server events
 			path == "/api/v1/ws" || // for server events (alias)
 			path == "/api/v1/proxy" || // for remote media images
-			path == "/api/v1/cast/player" || // cast receiver page opened by Smart TVs without app auth
 			strings.HasPrefix(path, "/api/v1/image") || // local covers requests
 			strings.HasPrefix(path, "/api/v1/mediastream/transcode/") ||
-			strings.HasPrefix(path, "/api/v1/mediastream/hls/") || // HLS playback for casting
-			path == "/api/v1/mediastream/direct/play" || // Direct playback for casting
+			strings.HasPrefix(path, "/api/v1/mediastream/hls/") ||
+			path == "/api/v1/mediastream/direct/play" ||
 			strings.HasPrefix(path, "/api/v1/mediastream/subs") { // Subtitles endpoints (covers /subs and /subtitles)
 
 			if path == "/api/v1/status" {

@@ -11,7 +11,7 @@ import { useDraggableScroll } from "@/hooks/use-draggable-scroll"
 const HorizontalDraggableScrollAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-HorizontalDraggableScroll__root",
-        "relative flex items-center lg:gap-2",
+        "relative flex items-center lg:[&>*:not(:first-child)]:ml-2",
     ]),
     container: cva([
         "UI-HorizontalDraggableScroll__container",

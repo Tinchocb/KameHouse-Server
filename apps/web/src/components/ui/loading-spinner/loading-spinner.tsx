@@ -1,6 +1,6 @@
 import { cva } from "class-variance-authority"
 import React from "react"
-import { ImSpinner2 } from "react-icons/im"
+import { Loader2 } from "lucide-react"
 import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
 
 /* -------------------------------------------------------------------------------------------------
@@ -74,7 +74,7 @@ export const Spinner = React.forwardRef<SVGSVGElement, SpinnerProps>((props, _re
     const { className } = props
 
     return (
-        <ImSpinner2
+        <Loader2
             className={cn(
                 LoadingSpinnerAnatomy.icon(),
                 className,

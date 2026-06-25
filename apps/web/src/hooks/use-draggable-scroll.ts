@@ -3,8 +3,8 @@
  * @author rfmiotto
  * @link https://www.npmjs.com/package/react-use-draggable-scroll/v/0.4.7
  * -----------------------------------------------------------------------------------------------*/
-import React, { MutableRefObject, useEffect, useRef } from "react"
-import { useIsomorphicLayoutEffect } from "react-use"
+import React, { MutableRefObject, useEffect, useRef, useLayoutEffect } from "react"
+const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect
 
 type OptionsType = {
     decayRate?: number

@@ -6,164 +6,93 @@ import { NetworkFirst, CacheFirst, StaleWhileRevalidate } from 'workbox-strategi
 import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
-// Google Fonts caching (Stylesheets and Webfonts)
+const CACHE_CONFIG = {
+  googleFonts: {
+    stylesheets: { name: 'google-fonts-stylesheets' },
+    webfonts: { name: 'google-fonts-webfonts', maxEntries: 30, maxAgeSeconds: 365 * 24 * 60 * 60 },
+  },
+  wasm: { name: 'wasm-decoders-cache', maxEntries: 10, maxAgeSeconds: 30 * 24 * 60 * 60 },
+  api: { name: 'api-metadata-cache', maxEntries: 100, maxAgeSeconds: 24 * 60 * 60 },
+} as const;
+
+function createCacheablePlugin(statuses: number[]) {
+  return new CacheableResponsePlugin({ statuses });
+}
+
+function createExpirationPlugin(maxEntries: number, maxAgeSeconds: number) {
+  return new ExpirationPlugin({ maxEntries, maxAgeSeconds });
+}
+
+// Google Fonts - Stylesheets (StaleWhileRevalidate)
 registerRoute(
-    ({ url }) => url.origin === 'https://fonts.googleapis.com',
-    new StaleWhileRevalidate({
-        cacheName: 'google-fonts-stylesheets',
-    })
+  ({ url }) => url.origin === 'https://fonts.googleapis.com',
+  new StaleWhileRevalidate({ cacheName: CACHE_CONFIG.googleFonts.stylesheets.name })
 );
 
+// Google Fonts - Webfonts (CacheFirst)
 registerRoute(
-    ({ url }) => url.origin === 'https://fonts.gstatic.com',
-    new CacheFirst({
-        cacheName: 'google-fonts-webfonts',
-        plugins: [
-            new CacheableResponsePlugin({ statuses: [0, 200] }),
-            new ExpirationPlugin({
-                maxEntries: 30,
-                maxAgeSeconds: 365 * 24 * 60 * 60, // 365 Days
-            }),
-        ],
-    })
+  ({ url }) => url.origin === 'https://fonts.gstatic.com',
+  new CacheFirst({
+    cacheName: CACHE_CONFIG.googleFonts.webfonts.name,
+    plugins: [
+      createCacheablePlugin([0, 200]),
+      createExpirationPlugin(CACHE_CONFIG.googleFonts.webfonts.maxEntries, CACHE_CONFIG.googleFonts.webfonts.maxAgeSeconds),
+    ],
+  })
 );
 
-// SPA Navigation Fallback
-// This ensures that when the user visits /movies or /series/123 while offline,
-// the Service Worker serves the cached /index.html instead of a 404.
-// Note: In GenerateSW, navigateFallback works natively, but we keep this as extra protection if custom caching takes over.
-
-// 1. WebAssembly Decoder Modules (High Priority, Immutable Cache)
-// Essential for WebTorrent or advanced demuxing. We cache these aggressively.
+// WASM Decoder Modules (CacheFirst, immutable)
 registerRoute(
-    ({ request }) => request.url.endsWith('.wasm'),
-    new CacheFirst({
-        cacheName: 'wasm-decoders-cache',
-        plugins: [
-            new CacheableResponsePlugin({ statuses: [0, 200] }),
-            new ExpirationPlugin({
-                maxEntries: 10,
-                maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
-            }),
-        ],
-    })
+  ({ request }) => request.url.endsWith('.wasm'),
+  new CacheFirst({
+    cacheName: CACHE_CONFIG.wasm.name,
+    plugins: [
+      createCacheablePlugin([0, 200]),
+      createExpirationPlugin(CACHE_CONFIG.wasm.maxEntries, CACHE_CONFIG.wasm.maxAgeSeconds),
+    ],
+  })
 );
 
-// 2. Initial Setup for OPFS (Origin Private File System)
-// We will intercept media chunks (.ts, .m4s, .mp4) and manually store them in OPFS.
-// The browser's native Cache API is backed by IndexedDB and is prone to quota crashes on large video files.
-// OPFS provides raw file system access, capable of handling JS gigabytes flawlessly.
+// OPFS (Origin Private File System) - Initialization for media chunks
+// Caching media chunks in OPFS is disabled due to backpressure/audio desync issues with pipeTo on cloned streams.
+// See commented block in src/sw.ts for reference implementation.
 let opfsRoot: FileSystemDirectoryHandle | null = null;
 const OPFS_CHUNK_DIR_NAME = 'media_chunks';
 
 async function initOPFS() {
-    try {
-        if (!navigator.storage || !navigator.storage.getDirectory) {
-            console.warn("OPFS is not supported, falling back to standard cache");
-            return;
-        }
-        opfsRoot = await navigator.storage.getDirectory();
-        await opfsRoot.getDirectoryHandle(OPFS_CHUNK_DIR_NAME, { create: true });
-    } catch {
-        console.error("Failed to initialize OPFS");
+  try {
+    if (!navigator.storage || !navigator.storage.getDirectory) {
+      console.warn('OPFS is not supported, falling back to standard cache');
+      return;
     }
+    opfsRoot = await navigator.storage.getDirectory();
+    await opfsRoot.getDirectoryHandle(OPFS_CHUNK_DIR_NAME, { create: true });
+  } catch {
+    console.error('Failed to initialize OPFS');
+  }
 }
 
-// 3. Custom Router for OPFS Media Chunks Strategy
-// Caching media chunks in OPFS has been disabled because background piping (pipeTo) on cloned streams
-// causes backpressure and severe I/O contention, resulting in audio delay/desync during playback.
-/*
+// API Metadata Requests (NetworkFirst)
 registerRoute(
-    ({ request }) => {
-        const url = new URL(request.url);
-        // Intercept common streaming chunk formats. 
-        // For HLS/DASH segments (.ts/.m4s), OPFS shines.
-        return url.pathname.endsWith('.ts') || url.pathname.endsWith('.m4s') || url.pathname.includes('/file/');
-    },
-    async ({ request }) => {
-        // If OPFS is not ready, fetch from network directly
-        if (!opfsRoot) {
-            initOPFS(); // try init again
-            return fetch(request);
-        }
-
-        const url = new URL(request.url);
-        // Create a safe, unique filename mapping for the chunk including query parameters
-        const cacheKey = url.pathname + url.search;
-        const fileName = `${btoa(cacheKey.substring(0, 150))}.chunk`;
-
-        try {
-            const chunkDir = await opfsRoot.getDirectoryHandle(OPFS_CHUNK_DIR_NAME);
-
-            // Check if chunk exists in OPFS
-            try {
-                const fileHandle = await chunkDir.getFileHandle(fileName);
-                const file = await fileHandle.getFile();
-                // Return cached OPFS chunk with zero-latency
-                return new Response(file, {
-                    headers: {
-                        'Content-Type': request.headers.get('Accept') || 'video/mp2t',
-                        'Cache-Control': 'public, max-age=31536000',
-                    }
-                });
-            } catch {
-                // Not found in OPFS, fetch from network and stream it into OPFS while reading
-                const networkResponse = await fetch(request);
-                if (!networkResponse.ok || !networkResponse.body) return networkResponse;
-
-                // Clone response to return to browser immediately
-                const responseToBrowser = networkResponse.clone();
-
-                // Stream the response concurrently into OPFS (SyncAccessHandle if inside dedicated worker, but here standard async)
-                (async () => {
-                    try {
-                        const fileHandle = await chunkDir.getFileHandle(fileName, { create: true });
-                        const writable = await fileHandle.createWritable();
-                        if (networkResponse.body) {
-                            await networkResponse.body.pipeTo(writable);
-                        }
-                    } catch (err) {
-                        console.error("Failed to cache chunk to OPFS:", err);
-                    }
-                })();
-
-                return responseToBrowser;
-            }
-
-        } catch {
-            console.error("OPFS Access Error");
-            return fetch(request);
-        }
-    }
-);
-*/
-
-
-// 4. API Requests (Stale While Revalidate)
-// For metadata endpoints (/api/v1/metadata/*)
-registerRoute(
-    ({ request, url }) => 
-        url.pathname.startsWith('/api/') && 
-        !url.pathname.includes('/mediastream/') && 
-        !url.pathname.includes('/video-thumbnail') && 
-        request.method === 'GET',
-    new NetworkFirst({
-        cacheName: 'api-metadata-cache',
-        plugins: [
-            new CacheableResponsePlugin({ statuses: [200] }),
-            new ExpirationPlugin({
-                maxEntries: 100,
-                maxAgeSeconds: 24 * 60 * 60, // 1 Day
-            }),
-        ],
-    })
+  ({ request, url }) =>
+    url.pathname.startsWith('/api/') &&
+    !url.pathname.includes('/mediastream/') &&
+    !url.pathname.includes('/video-thumbnail') &&
+    request.method === 'GET',
+  new NetworkFirst({
+    cacheName: CACHE_CONFIG.api.name,
+    plugins: [
+      createCacheablePlugin([200]),
+      createExpirationPlugin(CACHE_CONFIG.api.maxEntries, CACHE_CONFIG.api.maxAgeSeconds),
+    ],
+  })
 );
 
 // Listen to skip waiting message from app
 self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'SKIP_WAITING') {
-        self.skipWaiting();
-    }
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // Init OPFS immediately when SW boots

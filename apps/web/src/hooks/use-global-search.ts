@@ -1,8 +1,7 @@
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { useGetUnlinkedFiles } from "@/api/hooks/unlinked.hooks"
 import { IntelligentEntry } from "@/api/types/intelligence.types"
-import { useState, useMemo } from "react"
-import { useDebounce } from "react-use"
+import { useState, useMemo, useEffect } from "react"
 
 export function useGlobalSearch() {
     const [query, setQuery] = useState("")
@@ -13,13 +12,10 @@ export function useGlobalSearch() {
 
     const isLoading = isLoadingCol || isLoadingUnlinked
 
-    useDebounce(
-        () => {
-            setDebouncedQuery(query)
-        },
-        500,
-        [query],
-    )
+    useEffect(() => {
+        const t = setTimeout(() => setDebouncedQuery(query), 500)
+        return () => clearTimeout(t)
+    }, [query])
 
     const isSearchActive = debouncedQuery.length > 2
 

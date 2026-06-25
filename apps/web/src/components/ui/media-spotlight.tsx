@@ -221,10 +221,10 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: -20 }}
                                 transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-                                className="flex flex-col gap-4 px-1"
+                                className="flex flex-col px-1 [&>*:not(:first-child)]:mt-4"
                             >
                                 {/* Badges */}
-                                <div className="flex flex-wrap items-center gap-1.5">
+                                <div className="flex flex-wrap items-center [&>*:not(:first-child)]:ml-1.5">
                                     <span className={cn(
                                         "bg-[#f59e0b] text-zinc-950 text-[9px] font-extrabold uppercase px-2.5 py-1 rounded-[6px] tracking-wider flex items-center gap-1 shadow-sm border border-[#f59e0b]/20 select-none"
                                     )}>
@@ -242,7 +242,7 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                                         </span>
                                     )}
                                     {activeItem.rating && (
-                                        <span className="bg-emerald-500/20 text-emerald-400 text-[9px] font-extrabold tracking-wider px-2.5 py-1 rounded-[6px] border border-emerald-500/20 uppercase flex items-center gap-1 shadow-sm select-none">
+                                        <span className="bg-emerald-500/20 text-emerald-400 text-[9px] font-extrabold tracking-wider px-2.5 py-1 rounded-[6px] border border-emerald-500/20 uppercase flex items-center ml-1 shadow-sm select-none">
                                             <Star size={8} fill="currentColor" />
                                             {activeItem.rating.toFixed(1)} Ki
                                         </span>
@@ -262,23 +262,23 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                                 )}
 
                                 {/* Botones */}
-                                <div className="flex flex-row items-center gap-3 mt-2">
+                                <div className="flex flex-row items-center mt-2 [&>*:not(:first-child)]:ml-3">
                                     <button
                                         onClick={() => onNavigate(activeItem)}
                                         className={cn(
-                                            "relative overflow-hidden flex items-center justify-center gap-2 bg-gradient-to-r from-[#f59e0b] to-[#ea580c] hover:from-[#fbbf24] hover:to-[#f97316] text-white font-black text-xs md:text-sm uppercase tracking-wider py-3 px-6 rounded-2xl hover:scale-[1.03] active:scale-95 transition-all duration-300 shadow-xl shadow-orange-950/20 group/play-btn font-bebas"
+                                            "relative overflow-hidden flex items-center justify-center bg-gradient-to-r from-[#f59e0b] to-[#ea580c] hover:from-[#fbbf24] hover:to-[#f97316] text-white font-black text-xs md:text-sm uppercase tracking-wider py-3 px-6 rounded-2xl hover:scale-[1.03] active:scale-95 transition-all duration-300 shadow-xl shadow-orange-950/20 group/play-btn font-bebas [&>*:not(:first-child)]:ml-2"
                                         )}
                                     >
                                         <div className="absolute inset-0 w-[40px] h-full bg-white/20 transform skew-x-12 -translate-x-[60px] group-hover/play-btn:translate-x-[250px] transition-transform [transition-duration:1.2s] ease-out pointer-events-none" />
-                                        <Play size={14} fill="currentColor" className="mr-0.5" />
+                                        <Play size={14} fill="currentColor" />
                                         <span>Reproducir</span>
                                     </button>
 
                                     <button
                                         onClick={() => onNavigate(activeItem)}
-                                        className="flex items-center justify-center gap-2 border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 text-zinc-200 hover:text-white hover:scale-[1.03] active:scale-95 font-black text-xs md:text-sm uppercase tracking-wider py-3 px-6 rounded-2xl transition-all duration-300 shadow-xl backdrop-blur-md font-bebas"
+                                        className="flex items-center justify-center border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 text-zinc-200 hover:text-white hover:scale-[1.03] active:scale-95 font-black text-xs md:text-sm uppercase tracking-wider py-3 px-6 rounded-2xl transition-all duration-300 shadow-xl backdrop-blur-md font-bebas [&>*:not(:first-child)]:ml-2"
                                     >
-                                        <Info size={14} className="mr-0.5" />
+                                        <Info size={14} />
                                         <span>Detalles</span>
                                     </button>
                                 </div>
@@ -289,12 +289,12 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
 
                 {/* ─── LADO DERECHO (3/12): Selector de Eras en tarjeta Glassmorphic ─── */}
                 <div className="flex flex-col lg:col-span-3 h-full z-10 justify-center">
-                    <div className="bg-zinc-950/65 backdrop-blur-2xl border border-white/10 lg:border-r-0 rounded-3xl lg:rounded-r-none lg:rounded-l-[32px] p-5 lg:-mr-14 xl:-mr-16 shadow-2xl flex flex-col gap-4">
+                    <div className="bg-zinc-950/65 backdrop-blur-2xl border border-white/10 lg:border-r-0 rounded-3xl lg:rounded-r-none lg:rounded-l-[32px] p-5 lg:-mr-14 xl:-mr-16 shadow-2xl flex flex-col [&>*:not(:first-child)]:mt-4">
                         <h4 className="font-bold text-[10px] tracking-widest text-zinc-300 uppercase pl-1">
                             Seleccionar Saga / Era
                         </h4>
 
-                        <div className="flex flex-col gap-2 relative">
+                        <div className="flex flex-col relative [&>*:not(:first-child)]:mt-2">
                             <AnimatePresence initial={false}>
                                 {ERAS.map((era) => {
                                     const eraData = categorizedData[era.id]

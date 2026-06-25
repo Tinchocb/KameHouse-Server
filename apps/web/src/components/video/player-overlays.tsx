@@ -38,7 +38,7 @@ export function LoadingErrorOverlay({
 
     if (status === "loading") {
         return (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 z-10 text-white bg-black">
+            <div className="absolute inset-0 flex flex-col items-center justify-center z-10 text-white bg-black [&>*:not(:first-child)]:mt-6">
                 <Loader2 className="w-16 h-16 text-white animate-spin" />
                 <p className="font-black tracking-[0.4em] uppercase text-[11px] opacity-60">
                     {streamType === "transcode" ? "Espere" : "Cargando"}
@@ -62,7 +62,7 @@ export function LoadingErrorOverlay({
 
     if (status === "error") {
         return (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 z-10 px-8 text-center text-white bg-zinc-950/85 backdrop-blur-xl">
+            <div className="absolute inset-0 flex flex-col items-center justify-center z-10 px-8 text-center text-white bg-zinc-950/85 backdrop-blur-xl [&>*:not(:first-child)]:mt-6">
                 <AlertTriangle className="w-16 h-16 text-brand-orange animate-pulse" />
                 <h3 className="font-bebas text-3xl tracking-[0.2em] uppercase">TRANSMISIÓN CAÍDA</h3>
                 <p className="text-zinc-400 max-w-md text-sm font-medium uppercase tracking-wide leading-relaxed">{errorMsg}</p>
@@ -89,10 +89,10 @@ export function ResumeOverlay({ show, time, onResume, onClose }: { show: boolean
     }
 
     return (
-        <div className="absolute bottom-32 left-10 z-50 pointer-events-auto animate-in slide-in-from-left-4 duration-500">
-            <div className="liquid-glass-popup p-5 flex flex-col gap-4 min-w-[280px]">
-                <div className="flex items-center justify-between gap-8">
-                    <div className="flex flex-col gap-0.5">
+        <div className="absolute bottom-20 left-4 sm:bottom-32 sm:left-10 z-50 pointer-events-auto animate-in slide-in-from-left-4 duration-500">
+            <div className="liquid-glass-popup p-5 flex flex-col min-w-[240px] sm:min-w-[280px] [&>*:not(:first-child)]:mt-4">
+                <div className="flex items-center justify-between ml-8">
+                    <div className="flex flex-col [&>*:not(:first-child)]:mt-0.5">
                         <span className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em]">Continuar viendo</span>
                         <span className="text-white font-bold text-sm">Desde {formatTime(time)}</span>
                     </div>
@@ -103,17 +103,19 @@ export function ResumeOverlay({ show, time, onResume, onClose }: { show: boolean
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex [&>*:not(:first-child)]:ml-2">
                     <button
+                        tabIndex={0}
                         onClick={onResume}
-                        className="flex-1 py-2.5 bg-brand-orange hover:bg-brand-orange-hover text-white font-black text-[9px] uppercase tracking-widest transition-all rounded-xl active:scale-95 flex items-center justify-center gap-2"
+                        className="flex-1 py-3 bg-brand-orange hover:bg-brand-orange-hover text-white font-black text-[9px] uppercase tracking-widest transition-all rounded-xl active:scale-95 flex items-center justify-center [&>*:not(:first-child)]:ml-2 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-orange"
                     >
                         <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                         REANUDAR
                     </button>
                     <button
+                        tabIndex={0}
                         onClick={onClose}
-                        className="flex-1 py-2.5 bg-white/5 border border-white/5 text-zinc-300 font-black text-[9px] uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all rounded-xl active:scale-95"
+                        className="flex-1 py-3 bg-white/5 border border-white/5 text-zinc-300 font-black text-[9px] uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all rounded-xl active:scale-95 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
                     >
                         IGNORAR
                     </button>
@@ -161,18 +163,19 @@ export function SkipIntroOverlay({
 
     return (
         <div className={cn(
-            "absolute bottom-36 left-10 md:left-12 z-30 transition-all duration-300 pointer-events-auto",
+            "absolute bottom-24 left-4 sm:bottom-36 sm:left-10 md:left-12 z-30 transition-all duration-300 pointer-events-auto",
             show ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
         )}>
             <button
                 id="skip-intro-btn"
+                tabIndex={0}
                 aria-label={isOutro ? "Saltar Outro / Ending" : "Saltar Intro / Opening"}
                 onClick={(e) => {
                     e.stopPropagation()
                     onSkip()
                 }}
                 className={cn(
-                    "relative flex items-center gap-3 px-6 py-3 overflow-hidden text-white",
+                    "relative flex items-center px-6 py-3 overflow-hidden text-white",
                     "liquid-glass-popup",
                     isOutro
                         ? "border-purple-500/30 hover:border-purple-400/60 hover:bg-purple-500/15"
@@ -180,7 +183,9 @@ export function SkipIntroOverlay({
                     "text-[10px] font-black uppercase tracking-[0.3em]",
                     "transition-all duration-300",
                     "active:scale-95",
-                    "group"
+                    "group",
+                    "[&>*:not(:first-child)]:ml-3",
+                    "focus-visible:ring-2 focus-visible:ring-brand-orange focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
                 )}
             >
                 {/* Animated segment countdown fill — shrinks from full to empty */}
@@ -251,12 +256,13 @@ export function NextEpisodeOverlay({
 }) {
     return (
         <div className={cn(
-            "absolute bottom-32 right-8 md:right-12 z-30 transition-all duration-300 pointer-events-auto",
+            "absolute bottom-20 right-4 sm:bottom-32 sm:right-8 md:right-12 z-30 transition-all duration-300 pointer-events-auto",
             show ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8 pointer-events-none"
         )}>
             <div className={cn(
-                "flex flex-col gap-4 w-72 bg-zinc-950/70 backdrop-blur-2xl border border-white/[0.08]",
-                "shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)] overflow-hidden rounded-2xl"
+                "flex flex-col w-64 sm:w-72 bg-zinc-950/70 backdrop-blur-2xl border border-white/[0.08]",
+                "shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)] overflow-hidden rounded-2xl",
+                "[&>*:not(:first-child)]:mt-4"
             )}>
                 {/* Thumbnail */}
                 {nextEpisodeImage && (
@@ -280,7 +286,7 @@ export function NextEpisodeOverlay({
                     </div>
                 )}
 
-                <div className="flex flex-col gap-3 px-5 pb-5 pt-2">
+                <div className="flex flex-col px-5 pb-5 pt-2 [&>*:not(:first-child)]:mt-3">
                     {/* Label */}
                     <div className="flex items-center justify-between">
                         <span className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.3em]">
@@ -312,6 +318,7 @@ export function NextEpisodeOverlay({
 
                     {/* Button */}
                     <button
+                        tabIndex={0}
                         onClick={(e) => {
                             e.stopPropagation()
                             onNext()
@@ -319,7 +326,8 @@ export function NextEpisodeOverlay({
                         className={cn(
                             "w-full py-3 text-[10px] font-black uppercase tracking-[0.3em] rounded-xl",
                             "bg-brand-orange text-white hover:bg-brand-orange-hover",
-                            "transition-all duration-300 active:scale-95"
+                            "transition-all duration-300 active:scale-95",
+                            "focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-orange"
                         )}
                     >
                         SIGUIENTE →

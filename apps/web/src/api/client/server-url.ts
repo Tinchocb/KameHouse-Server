@@ -22,7 +22,7 @@ export function getApiWebSocketUrl(): string {
 export function getServerBaseUrl(removeProtocol: boolean = false): string {
     if (typeof window !== "undefined") {
         const o = window.location?.origin ?? ""
-        if (o.includes("wails.localhost") || o.startsWith("wails://") || (window as any).wails) {
+        if (o.includes("wails.localhost") || o.startsWith("wails://")) {
             let ret = `http://127.0.0.1:${__DEV_SERVER_PORT}`
             if (removeProtocol) {
                 ret = ret.replace("http://", "").replace("https://", "")

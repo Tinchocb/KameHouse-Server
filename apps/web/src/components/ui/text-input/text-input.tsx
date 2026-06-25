@@ -2,7 +2,7 @@ import { cn } from "../core/styling"
 import * as React from "react"
 import { BasicField, BasicFieldOptions, extractBasicFieldProps } from "../basic-field"
 import { extractInputPartProps, InputAddon, InputAnatomy, InputContainer, InputIcon, InputStyling } from "../input"
-import { BiHide, BiShow } from "react-icons/bi"
+import { EyeOff, Eye } from "lucide-react"
 
 /* -------------------------------------------------------------------------------------------------
  * TextInput
@@ -60,7 +60,7 @@ export const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>((pro
     }, [])
 
     const finalRightAddon = isPasswordInput
-        ? (showPassword ? <BiHide className="cursor-pointer" onClick={togglePasswordVisibility} /> : <BiShow
+        ? (showPassword ? <EyeOff className="cursor-pointer" onClick={togglePasswordVisibility} /> : <Eye
             className="cursor-pointer"
             onClick={togglePasswordVisibility}
         />)

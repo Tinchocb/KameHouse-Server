@@ -566,7 +566,7 @@ function DetailPage() {
                         episodeNumber={playTarget.episodeNumber}
                         isExternalStream={false}
                         nextStreamUrl={nextLocalFile?.path}
-                        nextStreamType={playTarget.streamType as any}
+                        nextStreamType={playTarget.streamType as Mediastream_StreamType}
                         nextEpisodeTitle={nextTitle}
                         nextEpisodeNumber={nextEp?.number}
                         nextEpisodeImage={saga?.image}

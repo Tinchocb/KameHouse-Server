@@ -412,15 +412,14 @@ func resolveCorsOrigins(cfg *Config) {
 		origins = []string{"http://localhost", "http://127.0.0.1"}
 	}
 
-	// Always add Chromecast receiver origins (needed for subtitles & media stream fetches on Chromecast TVs)
-	chromecastOrigins := []string{
+	// Always add gstatic origins (needed for remote assets)
+	gstaticOrigins := []string{
 		"https://www.gstatic.com",
 		"https://gstatic.com",
-		"chromecast-connection://",
 	}
-	for _, co := range chromecastOrigins {
-		if !containsString(origins, co) {
-			origins = append(origins, co)
+	for _, origin := range gstaticOrigins {
+		if !containsString(origins, origin) {
+			origins = append(origins, origin)
 		}
 	}
 
@@ -433,11 +432,20 @@ func resolveCorsOrigins(cfg *Config) {
 			fmt.Sprintf("http://%s:3000", ip),
 			fmt.Sprintf("http://%s", ip),
 		}
+		// Add the actual server port as well for direct LAN access
+		if cfg.Server.Port > 0 {
+			ipOrigins = append(ipOrigins, fmt.Sprintf("http://%s:%d", ip, cfg.Server.Port))
+		}
 		for _, io := range ipOrigins {
 			if !containsString(origins, io) {
 				origins = append(origins, io)
 			}
 		}
+	}
+
+	// Allow null origin for file:// smart TV apps (Tizen, webOS)
+	if !containsString(origins, "null") {
+		origins = append(origins, "null")
 	}
 
 	// Always add the server's own address (with port) so that direct-browser access

@@ -4,7 +4,7 @@ export const getPwaPlugin = () => {
     return new GenerateSW({
         clientsClaim: true,
         skipWaiting: true,
-        importScripts: ['/sw-custom.js'],
+        importScripts: ['/sw-runtime.js'],
         maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
         navigateFallback: "/index.html",
         runtimeCaching: [

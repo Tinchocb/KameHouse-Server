@@ -58,31 +58,3 @@ export function BentoDetailsSkeleton({ className }: { className?: string }) {
     )
 }
 
-// Renders a list layout skeleton for episodes list
-export function EpisodeListSkeleton({ count = 5, className }: { count?: number; className?: string }) {
-    return (
-        <div className={cn("space-y-3", className)}>
-            {Array.from({ length: count }).map((_, idx) => (
-                <div key={idx} className="flex flex-col sm:flex-row gap-4 p-4 rounded-2xl border border-white/5 bg-zinc-950/20 backdrop-blur-sm">
-                    {/* Episode Thumbnail */}
-                    <Skeleton className="aspect-video w-full sm:w-48 rounded-xl shrink-0" />
-                    
-                    {/* Episode Meta */}
-                    <div className="flex-1 flex flex-col justify-between py-1 gap-2">
-                        <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                                <Skeleton className="h-5 w-20 rounded-md" />
-                                <Skeleton className="h-5 w-40 rounded-md" />
-                            </div>
-                            <Skeleton className="h-4 w-5/6 rounded-md" />
-                        </div>
-                        <div className="flex justify-between items-center mt-2 sm:mt-0">
-                            <Skeleton className="h-6 w-24 rounded-full" />
-                            <Skeleton className="h-8 w-8 rounded-full" />
-                        </div>
-                    </div>
-                </div>
-            ))}
-        </div>
-    )
-}

@@ -15,7 +15,7 @@ import { useGetContinuityWatchHistoryItem } from "@/api/hooks/continuity.hooks"
 import { useGetStatus } from "@/api/hooks/settings.hooks"
 import type { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
 import type { PlayerCoreProps, PlayerCore, PlayerStats } from "./player-core.types"
-import { usePlayerCast } from "./usePlayerCast"
+
 import { usePlayerSkip } from "./usePlayerSkip"
 import { __DEV_SERVER_PORT } from "@/lib/server/config"
 import { buildSeaQuery } from "@/api/client/requests"
@@ -98,38 +98,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         return getAbsoluteLanUrl(playableUrl, serverIPs, serverPort)
     }, [playableUrl, serverIPs, serverPort])
 
-    const lastRegisteredCastUrlRef = useRef<string | null>(null)
-
-    useEffect(() => {
-        if (!playableUrl) return
-
-        const localServerUrl = (() => {
-            if (serverIPs && serverIPs.length > 0) {
-                const lanIp = serverIPs.find(ip =>
-                    ip.startsWith("192.168.") ||
-                    ip.startsWith("10.") ||
-                    ip.startsWith("172.")
-                ) || serverIPs[0]
-                const port = serverPort || __DEV_SERVER_PORT
-                return `http://${lanIp}:${port}`
-            }
-            return typeof window !== "undefined" ? window.location.origin : `http://localhost:${__DEV_SERVER_PORT}`
-        })()
-        const castUrl = `${localServerUrl}/api/v1/cast/player?url=${encodeURIComponent(absoluteLanUrl)}&title=${encodeURIComponent(title || "KameHouse")}`
-
-        if (lastRegisteredCastUrlRef.current === castUrl) return
-        lastRegisteredCastUrlRef.current = castUrl
-
-        buildSeaQuery({
-            endpoint: "/api/v1/cast/samsung/launch",
-            method: "POST",
-            data: {
-                ip: "",
-                url: castUrl,
-            }
-        }).catch(err => console.error("Error registering manual cast URL:", err))
-    }, [playableUrl, absoluteLanUrl, serverIPs, serverPort, title])
-
     const videoRef = useRef<HTMLVideoElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
     const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -156,19 +124,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const [isBuffering, setIsBuffering] = useState(false)
     const [isSeeking, setIsSeeking] = useState(false)
     const [flash, setFlash] = useState<"play" | "pause" | null>(null)
-
-    const {
-        isCastSupported,
-        castState,
-        isCastingRef,
-        promptCast
-    } = usePlayerCast({
-        videoRef,
-        hlsRef,
-        absoluteLanUrl,
-        playableUrl,
-        status
-    })
 
     const [audioTracks, setAudioTracks] = useState<AudioTrack[]>([])
     const [activeAudioIndex, setActiveAudioIndex] = useState(0)
@@ -394,7 +349,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         hlsRef,
         playableUrl,
         absoluteLanUrl,
-        isCastingRef,
         backendTracks: backendTracks || null,
         initialProgressSeconds,
         episodeNumber,
@@ -427,8 +381,9 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const onSelectAudio = useCallback((track: AudioTrack) => {
         if (hlsRef.current) {
             hlsRef.current.audioTrack = track.index
-        } else if (videoRef.current && 'audioTracks' in videoRef.current && (videoRef.current as any).audioTracks) {
-            const trackList = (videoRef.current as any).audioTracks as { enabled: boolean; language: string; label: string }[]
+        } else if (videoRef.current && 'audioTracks' in videoRef.current) {
+            const video = videoRef.current as HTMLVideoElement & { audioTracks: AudioTrackList }
+            const trackList = Array.from(video.audioTracks)
             for (let i = 0; i < trackList.length; i++) {
                 trackList[i].enabled = i === track.index
             }
@@ -485,24 +440,27 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
                 onSelectAudio(preferred)
             }
         }
-    }, [audioTracks, preferredAudioLang, activeAudioIndex, onSelectAudio, mediaFormat])
+    }, [audioTracks, preferredAudioLang, activeAudioIndex, onSelectAudio])
 
     useEffect(() => {
+        const timers: ReturnType<typeof setTimeout>[] = []
         if (subtitleTracks.length > 0) {
             const currentAudio = audioTracks.find(t => t.index === activeAudioIndex)
-            const isDubbed = currentAudio && ["spa", "spa-lat", "es", "eng"].includes(currentAudio.language)
+            const currentLang = currentAudio?.language?.toLowerCase() || ""
+            const isDubbed = currentAudio && (["spa", "es", "eng"].includes(currentLang) || currentLang.startsWith("spa-") || currentLang.startsWith("es-"))
 
             if (autoDisableSubtitlesWhenDubbed && isDubbed) {
                 if (activeSubtitleIndex !== null) {
-                    setTimeout(() => onSelectSubtitle(null), 0)
+                    timers.push(setTimeout(() => onSelectSubtitle(null), 0))
                 }
             } else {
                 const preferred = subtitleTracks.find(t => t.language === preferredSubtitleLang)
                 if (preferred && activeSubtitleIndex !== preferred.index) {
-                    setTimeout(() => onSelectSubtitle(preferred), 0)
+                    timers.push(setTimeout(() => onSelectSubtitle(preferred), 0))
                 }
             }
         }
+        return () => timers.forEach(clearTimeout)
     }, [subtitleTracks, audioTracks, activeAudioIndex, preferredSubtitleLang, autoDisableSubtitlesWhenDubbed, activeSubtitleIndex, onSelectSubtitle])
 
     useEffect(() => {
@@ -621,7 +579,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         video.play()
             .then(() => setIsPlaying(true))
             .catch((err) => {
-                console.log("Resume autoplay blocked:", err)
+                console.warn("Resume autoplay blocked:", err)
                 setIsPlaying(false)
             })
     }
@@ -735,7 +693,8 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         const el = window.electron
         if (!el) return
 
-        const unsub = el.on("window:fullscreen", (isFs: boolean) => {
+        const unsub = el.on("window:fullscreen", (...args: unknown[]) => {
+            const isFs = args[0] as boolean
             setIsFullscreen(isFs)
             setGlobalFullscreen(isFs)
         })
@@ -877,8 +836,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             skipTimesEd,
             chapters,
             activeChapter,
-            isCastSupported,
-            castState,
             absoluteLanUrl,
             serverIPs,
             serverPort,
@@ -900,7 +857,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             setAutoDisableSubtitlesWhenDubbed: (val: boolean) => { useAppStore.setState(s => ({ ...s, autoDisableSubtitlesWhenDubbed: val })) },
             skipToNextChapter,
             skipToPrevChapter,
-            promptCast,
         }
     }
 }

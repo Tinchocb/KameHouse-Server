@@ -59,4 +59,3 @@ export function useSound() {
 
     return { playSound };
 }
-export type UseSoundReturn = ReturnType<typeof useSound>;

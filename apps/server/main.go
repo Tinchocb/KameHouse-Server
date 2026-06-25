@@ -66,8 +66,6 @@ func run(ctx context.Context) error {
 
 	app := core.NewKameHouse(configOpts)
 
-	// Since NewEchoApp returns an unstarted Echo instance, we run it manually
-	// Or use core.RunEchoServer if adapted to take context
 	e := core.NewEchoApp(app, &WebFS)
 	handlers.InitRoutes(app, e)
 
@@ -110,6 +108,11 @@ func run(ctx context.Context) error {
 		WriteTimeout:      0,
 		IdleTimeout:       120 * time.Second,
 	}
+
+	// Start SSDP announcer for KameHouseTV auto-discovery
+	ssdp := core.NewSSDPAnnouncer(bindPort, app.Logger)
+	ssdp.Start()
+	defer ssdp.Stop()
 
 	// Start server concurrently
 	errCh := make(chan error, 1)
