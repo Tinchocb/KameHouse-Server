@@ -101,6 +101,9 @@ func (r *Repository) InitializeModules(settings *models.MediastreamSettings, cac
 	// Initialize the transcoder
 	_ = r.initializeTranscoder(r.settings)
 
+	// Purge stale transcode directory leftovers on startup
+	r.ClearTranscodeDir()
+
 	r.logger.Info().Msg("mediastream: Module initialized")
 }
 

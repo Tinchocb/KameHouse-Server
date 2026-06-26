@@ -122,7 +122,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 
 	h := &Handler{
 		App:                  app,
-		IntelligenceSelector: intelligence.NewSelector(app.Database, nil, app.Logger),
+		IntelligenceSelector: intelligence.NewSelector(app.Database, app.Logger),
 	}
 
 	h.StartPlaybackHeartbeatSubscriber()
@@ -143,7 +143,6 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	v1.GET("/proxy", h.VideoProxy)
 	v1.HEAD("/proxy", h.VideoProxy)
 	v1.GET("/status", h.HandleGetStatus)
-	v1.GET("/lore/dragonball", h.HandleGetDragonBallLore)
 	v1.GET("/config/metadata", h.HandleGetConfigMetadata)
 	v1.GET("/status/home-items", h.HandleGetHomeItems)
 	v1.POST("/status/home-items", h.HandleUpdateHomeItems)

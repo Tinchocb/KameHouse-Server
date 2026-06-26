@@ -2,7 +2,6 @@ package continuity
 
 import (
 	"context"
-	"fmt"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/test_utils"
@@ -47,8 +46,7 @@ func TestTelemetryManager_Stress(t *testing.T) {
 
 			// Each worker pushes 10 fast progress updates (simulating a few seconds of watching)
 			for j := 0; j < 10; j++ {
-				key := fmt.Sprintf("%d:%d:%f", 1, 1, 1000.0)
-				manager.TelemetryManager.UpdateProgress(key, workerID*10+j)
+				manager.TelemetryManager.UpdateProgress(1, 1, 1, float64(workerID*10+j), 1000.0)
 				time.Sleep(2 * time.Millisecond)
 			}
 		}(i)

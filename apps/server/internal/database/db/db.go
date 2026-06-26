@@ -138,6 +138,7 @@ func (db *Database) EnqueueWrite(op DbWriteOperation) {
 	if db.bufferedWriter != nil {
 		db.bufferedWriter.Enqueue(op)
 	} else {
+		db.Logger.Warn().Msg("db: EnqueueWrite fallback to synchronous operation because bufferedWriter is nil")
 		if err := op(db.gormdb); err != nil {
 			db.Logger.Error().Err(err).Msg("db: EnqueueWrite fallback operation failed")
 			if db.OnError != nil {
@@ -204,9 +205,7 @@ func migrateSchema(ctx context.Context, db *gorm.DB) error {
 		`)
 
 	if err := db.WithContext(ctx).AutoMigrate(
-		&models.LocalFiles{},
 		&models.LocalFile{},
-		&models.ShelvedLocalFiles{},
 		&models.Settings{},
 		&models.Account{},
 		&models.ScanSummary{},
@@ -257,20 +256,31 @@ func migrateSchema(ctx context.Context, db *gorm.DB) error {
 		_ = db.AutoMigrate(&models.LibraryMedia{})
 	}
 
+	// Purge legacy local_files and shelved_local_files tables if they exist
+	if db.Migrator().HasTable("local_files") {
+		_ = db.Migrator().DropTable("local_files")
+	}
+	if db.Migrator().HasTable("shelved_local_files") {
+		_ = db.Migrator().DropTable("shelved_local_files")
+	}
+
 	return nil
 }
 
 // migrateLegacyLocalFiles convierte el blob legacy LocalFiles al modelo relacional
 // LocalFile. Se ejecuta en segundo plano una vez que el pool WAL está activo.
 func migrateLegacyLocalFiles(gormDB *gorm.DB) error {
+	if !gormDB.Migrator().HasTable("local_files") {
+		return nil
+	}
 	var count int64
-	gormDB.Model(&models.LocalFiles{}).Count(&count)
+	gormDB.Table("local_files").Count(&count)
 	var relationalCount int64
 	gormDB.Model(&models.LocalFile{}).Count(&relationalCount)
 
 	if relationalCount == 0 && count > 0 {
 		var legacy models.LocalFiles
-		if err := gormDB.Last(&legacy).Error; err == nil {
+		if err := gormDB.Table("local_files").Last(&legacy).Error; err == nil {
 			var lfs []*dto.LocalFile
 			if err := json.Unmarshal(legacy.Value, &lfs); err == nil && len(lfs) > 0 {
 				dbFiles := make([]*models.LocalFile, len(lfs))

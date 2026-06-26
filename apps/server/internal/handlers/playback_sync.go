@@ -1,14 +1,12 @@
 package handlers
 
 import (
-	"fmt"
 	"kamehouse/internal/events"
 
 	"github.com/labstack/echo/v4"
 )
 
-// HandlePlaybackSync ...
-//
+// HandlePlaybackSync ...\n//
 //	@summary receives playback telemetry from the frontend.
 //	@desc    Updates continuity watch history and, when progress >= 85%,
 //	         automatically scrobbles the episode as watched to Platform.
@@ -21,8 +19,7 @@ func (h *Handler) HandlePlaybackSync(c echo.Context) error {
 	}
 
 	if h.App.ContinuityManager != nil && h.App.ContinuityManager.TelemetryManager != nil {
-		key := fmt.Sprintf("%d_%d", b.MediaID, b.EpisodeNumber)
-		h.App.ContinuityManager.TelemetryManager.UpdateProgress(key, int(b.CurrentTime))
+		h.App.ContinuityManager.TelemetryManager.UpdateProgress(0, b.MediaID, b.EpisodeNumber, b.CurrentTime, b.Duration)
 	}
 
 	return h.RespondWithData(c, true)
@@ -56,8 +53,7 @@ func (h *Handler) StartPlaybackHeartbeatSubscriber() {
 				continue
 			}
 
-			key := fmt.Sprintf("%d_%d", heartbeat.MediaID, heartbeat.EpisodeNumber)
-			h.App.ContinuityManager.TelemetryManager.UpdateProgress(key, int(heartbeat.CurrentTime))
+			h.App.ContinuityManager.TelemetryManager.UpdateProgress(0, heartbeat.MediaID, heartbeat.EpisodeNumber, heartbeat.CurrentTime, heartbeat.Duration)
 		}
 	}()
 }

@@ -262,7 +262,6 @@ func (p *JikanProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata
 
 	// Apply Dragon Ball specific enrichments (reusing the same logic as TMDB)
 	EnrichWithLatinTitles(media.TmdbID, result)
-	EnrichWithSagas(media.TmdbID, result)
 	EnrichWithFiller(media.TmdbID, result)
 	EnrichWithSeriesTitles(media.TmdbID, result)
 

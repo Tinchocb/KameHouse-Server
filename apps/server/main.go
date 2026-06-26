@@ -79,6 +79,7 @@ func run(ctx context.Context) error {
 	app.Config.Server.Port = bindPort
 	app.Flags.Host = bindHost
 	app.Flags.Port = bindPort
+	fmt.Printf("[KAMEHOUSE_PORT_HANDSHAKE: %d]\n", bindPort)
 	if bindPort != portStrVal {
 		app.Logger.Warn().
 			Int("requestedPort", portStrVal).

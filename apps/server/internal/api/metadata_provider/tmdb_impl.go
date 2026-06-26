@@ -293,8 +293,6 @@ func buildTitleMapFromMovie(r *tmdb.MovieDetails) map[string]string {
 func (p *TMDBProviderImpl) applyEnrichments(tmdbID int, metadata *apiMetadata.AnimeMetadata) {
 	// Apply Latin Spanish title overrides for Dragon Ball
 	EnrichWithLatinTitles(tmdbID, metadata)
-	// Apply Saga metadata for Dragon Ball
-	EnrichWithSagas(tmdbID, metadata)
 	// Apply Filler episode marking for Dragon Ball
 	EnrichWithFiller(tmdbID, metadata)
 	// Apply canonical series titles for Dragon Ball

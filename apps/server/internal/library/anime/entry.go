@@ -186,7 +186,7 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 
 	libraryData, _ := NewEntryLibraryData(&NewEntryLibraryDataOptions{
 		EntryLocalFiles: lfs,
-		MediaID:         opts.MediaID,
+		MediaID:         int(fetchedMedia.ID),
 		CurrentProgress: progress,
 	})
 	entry.EntryLibraryData = libraryData

@@ -8,6 +8,7 @@ let serverProcess = null
 let serverStarted = false
 let isShutdown = false
 let serverRestartPromise = null
+let dynamicServerPort = null
 
 const DESKTOP_SERVER_HOST = "127.0.0.1"
 const DESKTOP_SERVER_DEFAULT_PORT = 43211
@@ -18,6 +19,10 @@ function isDevelopment() {
 }
 
 function getDesktopServerPort() {
+    if (dynamicServerPort) {
+        return dynamicServerPort
+    }
+
     if (isDevelopment()) {
         return DESKTOP_SERVER_DEV_PORT
     }
@@ -52,9 +57,30 @@ async function isDesktopServerReachable() {
 
 function killServer() {
     if (serverProcess) {
-        log.info("[Sidecar] Killing server process")
+        log.info("[Sidecar] Sending SIGTERM to server process for graceful shutdown")
         try {
-            serverProcess.kill()
+            // Under Windows, child_process.kill() works by calling TerminateProcess which is NOT graceful.
+            // But Node does have some options, or we rely on SIGTERM for Unix.
+            serverProcess.kill("SIGTERM")
+            
+            // Setup a fallback force kill if it doesn't shut down in 2 seconds
+            const pid = serverProcess.pid
+            const p = serverProcess
+            setTimeout(() => {
+                try {
+                    if (p && !p.killed) {
+                        log.warn(`[Sidecar] Server process did not exit gracefully, force killing PID ${pid}`)
+                        if (process.platform === "win32") {
+                            execSync(`taskkill /PID ${pid} /F`, { stdio: "ignore" })
+                        } else {
+                            p.kill("SIGKILL")
+                        }
+                    }
+                } catch (e) {
+                    // Ignore error if already dead
+                }
+            }, 2000)
+
             serverProcess = null
         } catch (err) {
             log.error("[Sidecar] Error killing server process:", err)
@@ -220,6 +246,17 @@ async function launchkamehouseServer(opts = {}) {
 
         serverProcess.stdout.on("data", (data) => {
             const dataStr = data.toString()
+            
+            // Check for port handshake
+            const portMatch = dataStr.match(/\[KAMEHOUSE_PORT_HANDSHAKE:\s*(\d+)\]/)
+            if (portMatch) {
+                const port = parseInt(portMatch[1], 10)
+                if (port > 0) {
+                    dynamicServerPort = port
+                    log.info(`[Sidecar] Received port handshake: ${dynamicServerPort}`)
+                }
+            }
+
             // Check if the frontend is connected
             if (!serverStarted && dataStr.includes("Client connected")) {
                 checkFinalizeStartup("websocket client connection")

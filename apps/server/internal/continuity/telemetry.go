@@ -8,23 +8,29 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"gorm.io/gorm/clause"
 )
 
-// TelemetryEvent represents a highly-frequent, transient playback progress tick
-type TelemetryEvent struct {
+// telemetryEntry is the in-memory buffer entry for a single playback position.
+type telemetryEntry struct {
+	AccountID     uint
 	MediaID       int
 	EpisodeNumber int
 	CurrentTime   float64
 	Duration      float64
-	Kind          Kind
-	Filepath      string
-	IsFinal       bool
+}
+
+// telemetryKey uniquely identifies a playback session.
+type telemetryKey struct {
+	AccountID     uint
+	MediaID       int
+	EpisodeNumber int
 }
 
 // TelemetryManager orchestrates high-speed, thread-safe playback progress buffering.
 type TelemetryManager struct {
 	mu         sync.RWMutex
-	buffer     map[string]int
+	buffer     map[telemetryKey]telemetryEntry
 	repository *db.WatchHistoryRepository
 	ticker     *time.Ticker
 	quit       chan struct{}
@@ -34,7 +40,7 @@ type TelemetryManager struct {
 // NewTelemetryManager initializes the TelemetryManager
 func NewTelemetryManager(manager *Manager, logger *zerolog.Logger, flushInterval time.Duration) *TelemetryManager {
 	tm := &TelemetryManager{
-		buffer:     make(map[string]int),
+		buffer:     make(map[telemetryKey]telemetryEntry),
 		repository: db.NewWatchHistoryRepository(manager.db.Gorm()),
 		quit:       make(chan struct{}),
 		logger:     logger,
@@ -44,10 +50,17 @@ func NewTelemetryManager(manager *Manager, logger *zerolog.Logger, flushInterval
 	return tm
 }
 
-// UpdateProgress safely and instantly updates the memory buffer.
-func (tm *TelemetryManager) UpdateProgress(mediaID string, seconds int) {
+// UpdateProgress safely and instantly updates the memory buffer with a typed entry.
+func (tm *TelemetryManager) UpdateProgress(accountID uint, mediaID, episodeNumber int, currentTime, duration float64) {
 	tm.mu.Lock()
-	tm.buffer[mediaID] = seconds
+	key := telemetryKey{AccountID: accountID, MediaID: mediaID, EpisodeNumber: episodeNumber}
+	tm.buffer[key] = telemetryEntry{
+		AccountID:     accountID,
+		MediaID:       mediaID,
+		EpisodeNumber: episodeNumber,
+		CurrentTime:   currentTime,
+		Duration:      duration,
+	}
 	tm.mu.Unlock()
 }
 
@@ -67,7 +80,7 @@ func (tm *TelemetryManager) Start(flushInterval time.Duration) {
 	}()
 }
 
-// flush safely duplicates the map and calls the DB repository outside the lock
+// flush safely duplicates the map and calls the DB repository outside the lock.
 func (tm *TelemetryManager) flush() {
 	tm.mu.Lock()
 	if len(tm.buffer) == 0 {
@@ -76,29 +89,39 @@ func (tm *TelemetryManager) flush() {
 	}
 
 	// Copy and reinitialize
-	localBatch := make(map[string]int, len(tm.buffer))
+	localBatch := make(map[telemetryKey]telemetryEntry, len(tm.buffer))
 	for k, v := range tm.buffer {
 		localBatch[k] = v
 	}
-	tm.buffer = make(map[string]int)
+	tm.buffer = make(map[telemetryKey]telemetryEntry)
 	tm.mu.Unlock()
 
-	// Parse keys back and run bulk DB Upsert outside the mutex payload
 	var records []models.WatchHistory
-	for key, seconds := range localBatch {
-		// Expects key format: "userId:mediaID:episodeNumber:duration"
-		var userID uint
-		var mediaID, epNum int
-		var duration float64
-		fmt.Sscanf(key, "%d:%d:%d:%f", &userID, &mediaID, &epNum, &duration)
+	var completedProgress []models.UserMediaProgress
 
-		if mediaID > 0 {
-			records = append(records, models.WatchHistory{
-				AccountID:     userID,
-				MediaID:       mediaID,
-				EpisodeNumber: epNum,
-				CurrentTime:   float64(seconds),
-				Duration:      duration,
+	for _, entry := range localBatch {
+		if entry.MediaID <= 0 {
+			continue
+		}
+
+		// Keep track of watch history
+		records = append(records, models.WatchHistory{
+			AccountID:     entry.AccountID,
+			MediaID:       entry.MediaID,
+			EpisodeNumber: entry.EpisodeNumber,
+			CurrentTime:   entry.CurrentTime,
+			Duration:      entry.Duration,
+		})
+
+		// If ratio is >= 90%, mark the media/episode as completed
+		if entry.Duration > 0 && (entry.CurrentTime/entry.Duration) >= IgnoreRatioThreshold {
+			// Convert AccountID to string (or handle appropriately since UserMediaProgress uses AnonUserId as string)
+			anonUserId := fmt.Sprintf("%d", entry.AccountID)
+			completedProgress = append(completedProgress, models.UserMediaProgress{
+				AnonUserId: anonUserId,
+				MediaID:    entry.MediaID,
+				Status:     "completed",
+				Progress:   entry.EpisodeNumber,
 			})
 		}
 	}
@@ -108,6 +131,25 @@ func (tm *TelemetryManager) flush() {
 			tm.logger.Error().Err(err).Int("batchSize", len(records)).Msg("telemetry: Async DB Flush failed")
 		} else {
 			tm.logger.Trace().Int("batchSize", len(records)).Msg("telemetry: Flushed bulk tick to disk successfully")
+		}
+	}
+
+	if len(completedProgress) > 0 {
+		// Update UserMediaProgress to status='completed' in db
+		// Using the repository's underlying DB (gorm.DB)
+		for _, prog := range completedProgress {
+			err := tm.repository.DB.Clauses(clause.OnConflict{
+				Columns: []clause.Column{
+					{Name: "anon_user_id"},
+					{Name: "media_id"},
+				},
+				DoUpdates: clause.AssignmentColumns([]string{"status", "progress"}),
+			}).Create(&prog).Error
+			if err != nil {
+				tm.logger.Error().Err(err).Int("mediaID", prog.MediaID).Msg("telemetry: Failed to mark media progress as completed")
+			} else {
+				tm.logger.Debug().Int("mediaID", prog.MediaID).Msg("telemetry: Automatically marked media progress as completed")
+			}
 		}
 	}
 }
@@ -120,3 +162,5 @@ func (tm *TelemetryManager) Stop() {
 	// Send signal to close the background worker
 	tm.quit <- struct{}{}
 }
+
+

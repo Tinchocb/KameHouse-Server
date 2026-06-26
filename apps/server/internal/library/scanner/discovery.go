@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"context"
+	"errors"
 	"io/fs"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/events"
@@ -54,6 +55,14 @@ func (scn *Scanner) discoverFilePaths(ctx context.Context, _ time.Time) ([]strin
 
 			err = filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
 				if err != nil {
+					// Intercept and skip directory or file on permission error
+					if os.IsPermission(err) || errors.Is(err, fs.ErrPermission) {
+						scn.Logger.Warn().Str("path", path).Err(err).Msg("scanner: Permission denied, skipping")
+						if d != nil && d.IsDir() {
+							return filepath.SkipDir
+						}
+						return nil
+					}
 					return nil
 				}
 				if d.IsDir() {

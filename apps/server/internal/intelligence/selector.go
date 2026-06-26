@@ -2,9 +2,9 @@ package intelligence
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"kamehouse/internal/database/db"
-	"kamehouse/internal/jellyfin"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -17,17 +17,15 @@ import (
 // Selector es el motor de selección inteligente de archivos.
 type Selector struct {
 	db        *db.Database
-	jellyfin  *jellyfin.Client
 	cache     *ResultCache
 	logger    *zerolog.Logger
 	weights   ScoringWeights
 }
 
 // NewSelector crea un nuevo selector inteligente.
-func NewSelector(database *db.Database, jellyfinClient *jellyfin.Client, logger *zerolog.Logger) *Selector {
+func NewSelector(database *db.Database, logger *zerolog.Logger) *Selector {
 	return &Selector{
 		db:       database,
-		jellyfin: jellyfinClient,
 		cache:    NewResultCache(10*time.Minute, 500),
 		logger:   logger,
 		weights:  DefaultWeights(),
@@ -66,20 +64,6 @@ func (s *Selector) SelectBestSource(
 		Int("localSources", len(localSources)).
 		Msg("intelligence: found local sources")
 
-	// 3. Si hay menos de 2 fuentes locales, consultar Jellyfin
-	if len(localSources) < 2 && s.jellyfin != nil && s.jellyfin.IsConfigured() {
-		jellyfinSources, err := s.getJellyfinSources(ctx, tmdbID, episodeNumber)
-		if err != nil {
-			s.logger.Warn().Err(err).Int("tmdbId", tmdbID).Msg("intelligence: failed to get Jellyfin sources")
-		} else {
-			s.logger.Debug().
-				Int("tmdbId", tmdbID).
-				Int("jellyfinSources", len(jellyfinSources)).
-				Msg("intelligence: found Jellyfin sources")
-			localSources = mergeSources(localSources, jellyfinSources)
-		}
-	}
-
 	if len(localSources) == 0 {
 		return nil, fmt.Errorf("intelligence: no sources found for TMDB ID %d, episode %d", tmdbID, episodeNumber)
 	}
@@ -115,18 +99,52 @@ func (s *Selector) getLocalSources(tmdbID int, episodeNumber int) []*MediaCandid
 	}
 
 	// Buscar archivos locales asociados
-	var localFiles []struct {
-		Path string
+	var dbFiles []struct {
+		Path          string
+		FileSize      int64  `gorm:"column:file_size"`
+		TechnicalInfo []byte `gorm:"column:technical_info"`
+		ParsedData    []byte `gorm:"column:parsed_data"`
 	}
-	s.db.Gorm().
-		Table("local_files").
+	err := s.db.Gorm().
+		Table("local_file").
 		Where("media_id = ? AND library_media_id = ?", tmdbID, media.ID).
-		Select("path").
-		Scan(&localFiles)
+		Select("path, file_size, technical_info, parsed_data").
+		Scan(&dbFiles).Error
+	if err != nil {
+		return nil
+	}
 
 	var candidates []*MediaCandidate
-	for _, lf := range localFiles {
-		candidate := parseFilePathToCandidate(lf.Path, episodeNumber)
+	for _, lf := range dbFiles {
+		// Validar si corresponde al número de episodio solicitado
+		if episodeNumber > 0 && lf.ParsedData != nil {
+			var parsedInfo struct {
+				Episode      string   `json:"episode"`
+				EpisodeRange []string `json:"episodeRange"`
+			}
+			if err := json.Unmarshal(lf.ParsedData, &parsedInfo); err == nil {
+				// Solo filtrar si realmente se pudo parsear el episodio y no coincide
+				if parsedInfo.Episode != "" || len(parsedInfo.EpisodeRange) > 0 {
+					match := false
+					epStr := strconv.Itoa(episodeNumber)
+					if parsedInfo.Episode == epStr {
+						match = true
+					} else {
+						for _, rangeEp := range parsedInfo.EpisodeRange {
+							if rangeEp == epStr {
+								match = true
+								break
+							}
+						}
+					}
+					if !match {
+						continue
+					}
+				}
+			}
+		}
+
+		candidate := s.buildCandidateFromDb(lf.Path, lf.FileSize, lf.TechnicalInfo)
 		if candidate != nil {
 			candidates = append(candidates, candidate)
 		}
@@ -135,30 +153,62 @@ func (s *Selector) getLocalSources(tmdbID int, episodeNumber int) []*MediaCandid
 	return candidates
 }
 
-// getJellyfinSources obtiene fuentes desde la API de Jellyfin.
-func (s *Selector) getJellyfinSources(ctx context.Context, tmdbID int, episodeNumber int) ([]*MediaCandidate, error) {
-	// Buscar el item en Jellyfin
-	item, err := s.jellyfin.SearchByTMDB(ctx, tmdbID)
-	if err != nil {
-		return nil, err
+func (s *Selector) buildCandidateFromDb(path string, fileSize int64, technicalInfoBytes []byte) *MediaCandidate {
+	candidate := &MediaCandidate{
+		FilePath:  path,
+		FileSize:  uint64(fileSize),
+		Container: strings.TrimPrefix(strings.ToLower(filepath.Ext(path)), "."),
 	}
 
-	// Obtener las fuentes de medios
-	sources, err := s.jellyfin.GetMediaSources(ctx, item.ID)
-	if err != nil {
-		return nil, err
-	}
+	// Iniciar con valores por defecto del nombre de archivo por si falla el parseo de technicalInfo
+	filename := strings.ToLower(filepath.Base(path))
+	candidate.Resolution = inferResolutionFromFilename(filename)
+	candidate.Codec = inferCodecFromFilename(filename)
+	candidate.AudioLangs = inferAudioLangsFromFilename(filename)
 
-	var candidates []*MediaCandidate
-	for _, source := range sources {
-		candidate := jellyfinSourceToCandidate(source, episodeNumber)
-		if candidate != nil {
-			candidates = append(candidates, candidate)
+	if len(technicalInfoBytes) > 0 {
+		var techInfo struct {
+			Bitrate     int64 `json:"bitrate"`
+			VideoStream *struct {
+				Codec  string `json:"codec"`
+				Height int    `json:"height"`
+				Width  int    `json:"width"`
+			} `json:"videoStream"`
+			AudioStreams []struct {
+				Codec    string `json:"codec"`
+				Language string `json:"language"`
+			} `json:"audioStreams"`
+		}
+		if err := json.Unmarshal(technicalInfoBytes, &techInfo); err == nil {
+			if techInfo.Bitrate > 0 {
+				candidate.Bitrate = uint32(techInfo.Bitrate)
+			}
+			if techInfo.VideoStream != nil {
+				if techInfo.VideoStream.Height > 0 {
+					candidate.Resolution = techInfo.VideoStream.Height
+				}
+				if techInfo.VideoStream.Codec != "" {
+					candidate.Codec = techInfo.VideoStream.Codec
+				}
+			}
+			if len(techInfo.AudioStreams) > 0 {
+				var langs []string
+				for _, aud := range techInfo.AudioStreams {
+					if aud.Language != "" {
+						langs = append(langs, aud.Language)
+					}
+				}
+				if len(langs) > 0 {
+					candidate.AudioLangs = langs
+				}
+			}
 		}
 	}
 
-	return candidates, nil
+	return candidate
 }
+
+
 
 // scoreAndRank evalúa y ordena los candidatos.
 func (s *Selector) scoreAndRank(candidates []*MediaCandidate, preferredLangs []string) *SelectionResult {
@@ -324,63 +374,7 @@ func inferAudioLangsFromFilename(filename string) []string {
 	return langs
 }
 
-// jellyfinSourceToCandidate convierte una fuente de Jellyfin a un MediaCandidate.
-func jellyfinSourceToCandidate(source jellyfin.JellyfinMediaSource, episodeNumber int) *MediaCandidate {
-	candidate := &MediaCandidate{
-		FilePath:  source.Path,
-		Container: source.Container,
-		Bitrate:   uint32(source.Bitrate),
-		FileSize:  uint64(source.Size),
-	}
 
-	// Extraer streams
-	for _, stream := range source.MediaStreams {
-		switch stream.Type {
-		case "Video":
-			candidate.Resolution = stream.Height
-			candidate.Codec = stream.Codec
-			if stream.BitRate > 0 {
-				candidate.Bitrate = uint32(stream.BitRate)
-			}
-		case "Audio":
-			if stream.Language != "" {
-				candidate.AudioLangs = append(candidate.AudioLangs, stream.Language)
-			}
-			candidate.AudioCodec = stream.Codec
-		}
-	}
-
-	// Si no se detectó resolución, intentar del nombre
-	if candidate.Resolution == 0 {
-		candidate.Resolution = inferResolutionFromFilename(strings.ToLower(source.Name))
-	}
-
-	return candidate
-}
-
-// mergeSources combina fuentes locales y de Jellyfin, priorizando locales.
-func mergeSources(local, jellyfin []*MediaCandidate) []*MediaCandidate {
-	seen := make(map[string]bool)
-	var merged []*MediaCandidate
-
-	// Agregar fuentes locales primero (mayor prioridad)
-	for _, c := range local {
-		if !seen[c.FilePath] {
-			seen[c.FilePath] = true
-			merged = append(merged, c)
-		}
-	}
-
-	// Agregar fuentes de Jellyfin que no estén duplicadas
-	for _, c := range jellyfin {
-		if !seen[c.FilePath] {
-			seen[c.FilePath] = true
-			merged = append(merged, c)
-		}
-	}
-
-	return merged
-}
 
 // inferResolutionFromHeight convierte altura en píxeles a resolución legible.
 func inferResolutionFromHeight(height int) string {

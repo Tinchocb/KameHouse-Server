@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 
 	"github.com/rs/zerolog"
+	"golang.org/x/crypto/bcrypt"
 
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/api/tmdb"
@@ -255,9 +256,12 @@ func initServerPassword(cfg *Config) (string, string) {
 	if cfg.Server.Password != "" {
 		argonHash, err := util.HashPasswordArgon2(cfg.Server.Password)
 		if err != nil {
-			// Si falla Argon2id por alguna razón, usar SHA256 como fallback
-			shaHash := util.HashSHA256Hex(cfg.Server.Password)
-			return shaHash, shaHash
+			// Si falla Argon2id por alguna razón, usar bcrypt como fallback
+			bcryptBytes, bcryptErr := bcrypt.GenerateFromPassword([]byte(cfg.Server.Password), bcrypt.DefaultCost)
+			if bcryptErr != nil {
+				panic("failed to generate bcrypt password hash: " + bcryptErr.Error())
+			}
+			return string(bcryptBytes), util.HashSHA256Hex(cfg.Server.Password)
 		}
 		return argonHash, util.HashSHA256Hex(cfg.Server.Password)
 	}

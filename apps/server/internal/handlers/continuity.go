@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"kamehouse/internal/continuity"
 	"strconv"
 
@@ -33,8 +32,7 @@ func (h *Handler) HandleUpdateContinuityWatchHistoryItem(c echo.Context) error {
 				userID = id
 			}
 		}
-		key := fmt.Sprintf("%d:%d:%d:%f", userID, b.Options.MediaID, b.Options.EpisodeNumber, b.Options.Duration)
-		h.App.ContinuityManager.TelemetryManager.UpdateProgress(key, int(b.Options.CurrentTime))
+		h.App.ContinuityManager.TelemetryManager.UpdateProgress(userID, b.Options.MediaID, b.Options.EpisodeNumber, b.Options.CurrentTime, b.Options.Duration)
 	}
 
 	return h.RespondWithData(c, true)

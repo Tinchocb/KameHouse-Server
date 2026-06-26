@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func (h *Handler) isCorrectPasswordToken(token string) bool {
@@ -18,6 +19,12 @@ func (h *Handler) isCorrectPasswordToken(token string) bool {
 	if strings.HasPrefix(h.App.ServerPasswordHash, "$argon2id$") {
 		ok, err := util.VerifyPasswordArgon2(token, h.App.ServerPasswordHash)
 		return err == nil && ok
+	}
+	if strings.HasPrefix(h.App.ServerPasswordHash, "$2a$") ||
+		strings.HasPrefix(h.App.ServerPasswordHash, "$2b$") ||
+		strings.HasPrefix(h.App.ServerPasswordHash, "$2y$") {
+		err := bcrypt.CompareHashAndPassword([]byte(h.App.ServerPasswordHash), []byte(token))
+		return err == nil
 	}
 	return false
 }

@@ -202,13 +202,19 @@ func (m *WSEventManager) AddConn(id string, conn *websocket.Conn) {
 // RemoveConn removes a websocket connection by ID and cleans up its subscribers.
 func (m *WSEventManager) RemoveConn(id string) {
 	m.connsMu.Lock()
+	var connToClose *WSConn
 	for i, conn := range m.Conns {
 		if conn.ID == id {
+			connToClose = conn
 			m.Conns = append(m.Conns[:i], m.Conns[i+1:]...)
 			break
 		}
 	}
 	m.connsMu.Unlock()
+
+	if connToClose != nil {
+		_ = connToClose.Conn.Close()
+	}
 
 	// Cleanup subscribers after releasing connsMu to avoid lock ordering issues
 	m.UnsubscribeFromClientEvents(id)
