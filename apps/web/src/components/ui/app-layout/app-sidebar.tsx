@@ -5,7 +5,7 @@ import { Vaul, VaulContent } from "@/components/vaul"
 import { Link, useRouterState } from "@tanstack/react-router"
 import { AnimatePresence } from "framer-motion"
 import * as React from "react"
-import { Settings, Home, Film, Tv, Layers, RadioTower, Rocket, Loader2 } from "lucide-react"
+import { Settings, Home, Film, Tv, Layers, RadioTower, Rocket, Loader2, ChevronRight, Menu } from "lucide-react"
 import { cn } from "../core/styling"
 import { RandomPlayButton } from "./random-play-button"
 import { useSound } from "@/hooks/use-sound"
@@ -44,7 +44,10 @@ export function AppSidebar() {
     return (
         <>
             {/* Desktop Side Flap Sidebar */}
-            <aside className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 h-screen w-20 border-r border-white/10 bg-zinc-950/80 backdrop-blur-2xl rounded-r-[32px] shadow-[8px_0_32px_rgba(0,0,0,0.5)] z-50 overflow-visible">
+            <aside className={cn(
+                "hidden md:flex flex-col fixed left-0 top-0 bottom-0 h-screen border-r border-white/10 bg-zinc-950/80 backdrop-blur-2xl rounded-r-[32px] shadow-[8px_0_32px_rgba(0,0,0,0.5)] z-50 overflow-visible transition-all duration-300 ease-in-out",
+                sidebarOpen ? "w-[260px]" : "w-20"
+            )}>
                 <SidebarContent setSidebarOpen={setSidebarOpen} />
             </aside>
 
@@ -65,6 +68,7 @@ export function AppSidebar() {
 
 function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) => void }) {
     const { playSound } = useSound()
+    const sidebarOpen = useAppStore(state => state.sidebarOpen)
     const activeTheme = useAppStore(state => state.activeTheme)
     const playlistQueue = useAppStore(state => state.playlistQueue)
     const globalQueueOpen = useAppStore(state => state.globalQueueOpen)
@@ -74,6 +78,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
     const marathonMode = useAppStore(state => state.marathonMode)
     const setMarathonMode = useAppStore(state => state.setMarathonMode)
     const isVideoActive = useAppStore(state => state.isVideoActive)
+    const { isMobile } = useResponsive()
 
     const containerRef = React.useRef<HTMLDivElement>(null)
     const activeIndicatorRef = React.useRef<HTMLDivElement>(null)
@@ -250,6 +255,8 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
             const linkRect = activeLink.getBoundingClientRect()
             const targetY = linkRect.top - navRect.top
             const targetHeight = linkRect.height
+            const targetWidth = linkRect.width
+            const targetX = linkRect.left - navRect.left
 
             // Move the line active indicator
             if (activeIndicatorRef.current) {
@@ -265,6 +272,8 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
             if (activeBgRef.current) {
                 gsap.to(activeBgRef.current, {
                     y: targetY,
+                    x: targetX,
+                    width: targetWidth,
                     opacity: 1,
                     height: targetHeight,
                     duration: 0.4,
@@ -280,24 +289,62 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                 gsap.to(activeBgRef.current, { opacity: 0, duration: 0.2 })
             }
         }
-    }, [currentPath, playlistQueue.length])
+    }, [currentPath, playlistQueue.length, sidebarOpen])
 
     return (
-        <div ref={containerRef} className="flex flex-col h-full py-8 px-4 md:px-0 w-full items-center bg-transparent">
+        <div ref={containerRef} className={cn(
+            "flex flex-col h-full py-8 w-full items-center bg-transparent transition-all duration-300",
+            sidebarOpen ? "px-4" : "px-4 md:px-0"
+        )}>
             {/* Header / Logo */}
-            <div className="mb-10 px-2 flex justify-center group cursor-pointer gsap-sidebar-item" onClick={() => { setSidebarOpen(false); playChangeSound(); }}>
-                <div className="relative">
-                    <img
-                        src="/kamehouse-logo.png"
-                        alt="KameHouse"
-                        className="h-9 w-9 shrink-0 object-contain group-hover:scale-110 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-brand-orange/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-full" />
-                </div>
+            <div className={cn(
+                "mb-10 w-full flex items-center gsap-sidebar-item transition-all duration-300",
+                sidebarOpen ? "justify-between px-2" : "justify-center"
+            )}>
+                <Link
+                    to="/home"
+                    onClick={() => { if (isMobile) setSidebarOpen(false); playChangeSound(); }}
+                    className="flex items-center gap-3 cursor-pointer group"
+                >
+                    <div className="relative">
+                        <img
+                            src="/kamehouse-logo.png"
+                            alt="KameHouse"
+                            className="h-9 w-9 shrink-0 object-contain group-hover:scale-110 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-brand-orange/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-full" />
+                    </div>
+                    {sidebarOpen && (
+                        <span className="font-bebas text-xl text-white tracking-wider whitespace-nowrap">
+                            KAMEHOUSE
+                        </span>
+                    )}
+                </Link>
+                
+                {sidebarOpen && !isMobile && (
+                    <button
+                        onClick={() => { setSidebarOpen(false); playChangeSound(); }}
+                        className="flex items-center justify-center p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-all active:scale-95 border border-transparent hover:border-white/5"
+                        title="Contraer Menú"
+                    >
+                        <ChevronRight className="w-4 h-4 rotate-180" />
+                    </button>
+                )}
             </div>
 
+            {/* Expand arrow below logo when collapsed on desktop */}
+            {!sidebarOpen && !isMobile && (
+                <button
+                    onClick={() => { setSidebarOpen(true); playChangeSound(); }}
+                    className="hidden md:flex items-center justify-center p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-all active:scale-95 border border-transparent hover:border-white/5 mb-6"
+                    title="Expandir Menú"
+                >
+                    <ChevronRight className="w-4 h-4" />
+                </button>
+            )}
+
             {/* Navigation */}
-            <div ref={navRef} className="flex-1 space-y-4 w-full px-3 md:px-0 flex flex-col items-center relative">
+            <div ref={navRef} className="flex-1 space-y-4 w-full flex flex-col items-center relative">
 
                 {/* Active Indicator Sliding Dot/Bar */}
                 <div
@@ -308,7 +355,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                 {/* Active Background Sliding Pill */}
                 <div
                     ref={activeBgRef}
-                    className="absolute left-0 right-0 top-0 !mt-0 w-14 mx-auto bg-brand-orange/[0.06] border border-brand-orange/30 rounded-2xl shadow-[0_8px_32px_rgba(255,110,58,0.15)] z-0 pointer-events-none opacity-0"
+                    className="absolute left-0 top-0 !mt-0 bg-brand-orange/[0.06] border border-brand-orange/30 rounded-2xl shadow-[0_8px_32px_rgba(255,110,58,0.15)] z-0 pointer-events-none opacity-0"
                 />
 
                 {SIDEBAR_ITEMS.map((item) => {
@@ -318,12 +365,13 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                             <Link
                                 to={item.to}
                                 title={item.label}
-                                onClick={() => { setSidebarOpen(false); playChangeSound(); }}
+                                onClick={() => { if (isMobile) setSidebarOpen(false); playChangeSound(); }}
                                 className={cn("w-full flex justify-center", isActive && "active-sidebar-link")}
                             >
                                 <div className={cn(
-                                    "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl group px-4 md:px-0 relative liquid-glass-frosted-subtle",
-                                    "active:scale-95 font-bold transition-all duration-300",
+                                    "flex items-center h-14 rounded-2xl group px-4 relative liquid-glass-frosted-subtle transition-all duration-300",
+                                    "active:scale-95 font-bold",
+                                    sidebarOpen ? "w-full justify-start gap-4 px-5" : "justify-center md:w-14 w-full md:px-0",
                                     isActive
                                         ? "text-white"
                                         : "text-zinc-400 hover:text-white hover:!border-white/15"
@@ -331,7 +379,12 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                                     <span className="shrink-0 z-10 group-hover:scale-110 transition-transform duration-300">
                                         {item.icon}
                                     </span>
-                                    <span className="md:hidden ml-6 flex-1 uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange">{item.label}</span>
+                                    <span className={cn(
+                                        "uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange whitespace-nowrap",
+                                        (sidebarOpen || isMobile) ? "block" : "hidden md:hidden"
+                                    )}>
+                                        {item.label}
+                                    </span>
                                 </div>
                             </Link>
                         </div>
@@ -344,16 +397,17 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                         <button
                             onClick={() => {
                                 setGlobalQueueOpen(!globalQueueOpen)
-                                setSidebarOpen(false)
+                                if (isMobile) setSidebarOpen(false)
                                 playChangeSound()
                             }}
                             title="Cola de Reproducción"
                             className={cn(
-                                "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl group px-4 md:px-0 relative liquid-glass-frosted-subtle transition-all duration-300",
+                                "flex items-center h-14 rounded-2xl group px-4 relative liquid-glass-frosted-subtle transition-all duration-300",
+                                "active:scale-95 font-bold",
+                                sidebarOpen ? "w-full justify-start gap-4 px-5" : "justify-center md:w-14 w-full md:px-0",
                                 globalQueueOpen
                                     ? "text-brand-orange !bg-brand-orange/[0.06] !border-brand-orange/30 shadow-[0_8px_32px_rgba(255,110,58,0.15)]"
-                                    : "text-zinc-400 hover:text-white hover:!border-white/15",
-                                "active:scale-95 font-bold"
+                                    : "text-zinc-400 hover:text-white hover:!border-white/15"
                             )}
                         >
                             {/* Active Indicator Dot */}
@@ -369,7 +423,10 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                                     {playlistQueue.length}
                                 </span>
                             </span>
-                            <span className="md:hidden ml-6 flex-1 uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange">
+                            <span className={cn(
+                                "uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange whitespace-nowrap",
+                                (sidebarOpen || isMobile) ? "block" : "hidden md:hidden"
+                            )}>
                                 Cola ({playlistQueue.length})
                             </span>
                         </button>
@@ -383,13 +440,14 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                         title="Sintonizar Modo TV (Aleatorio 24h)"
                         disabled={isLoadingTarget}
                         className={cn(
-                            "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl group px-4 md:px-0 relative liquid-glass-frosted-subtle transition-all duration-300",
+                            "flex items-center h-14 rounded-2xl group px-4 relative liquid-glass-frosted-subtle transition-all duration-300",
+                            "active:scale-95 font-bold",
+                            sidebarOpen ? "w-full justify-start gap-4 px-5" : "justify-center md:w-14 w-full md:px-0",
                             isLoadingTarget
                                 ? "!border-brand-orange/40 !bg-brand-orange/[0.06] text-brand-orange cursor-wait"
                                 : (isVideoActive && tvMode)
                                     ? "text-brand-orange !bg-brand-orange/[0.06] !border-brand-orange/30 shadow-[0_8px_32px_rgba(255,110,58,0.15)]"
-                                    : "text-zinc-400 hover:text-white hover:!border-white/15",
-                            "active:scale-95 font-bold"
+                                    : "text-zinc-400 hover:text-white hover:!border-white/15"
                         )}
                     >
                         {/* Active Indicator Dot */}
@@ -405,7 +463,10 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                                 <RadioTower className="w-5 h-5" />
                             )}
                         </span>
-                        <span className="md:hidden ml-6 flex-1 uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange">
+                        <span className={cn(
+                            "uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange whitespace-nowrap",
+                            (sidebarOpen || isMobile) ? "block" : "hidden md:hidden"
+                        )}>
                             Modo TV {(isVideoActive && tvMode) ? "(24H)" : ""}
                         </span>
                     </button>
@@ -417,11 +478,12 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                         onClick={() => { setMarathonMode(!marathonMode); playChangeSound() }}
                         title={marathonMode ? "Desactivar Modo Maratón" : "Activar Modo Maratón"}
                         className={cn(
-                            "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl group px-4 md:px-0 relative liquid-glass-frosted-subtle transition-all duration-300",
+                            "flex items-center h-14 rounded-2xl group px-4 relative liquid-glass-frosted-subtle transition-all duration-300",
+                            "active:scale-95 font-bold",
+                            sidebarOpen ? "w-full justify-start gap-4 px-5" : "justify-center md:w-14 w-full md:px-0",
                             marathonMode
                                 ? "text-brand-orange !bg-brand-orange/[0.06] !border-brand-orange/30 shadow-[0_8px_32px_rgba(255,110,58,0.15)]"
-                                : "text-zinc-400 hover:text-white hover:!border-white/15",
-                            "active:scale-95 font-bold"
+                                : "text-zinc-400 hover:text-white hover:!border-white/15"
                         )}
                     >
                         <div className={cn(
@@ -431,7 +493,10 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                         <span className="shrink-0 z-10 group-hover:scale-110 transition-transform duration-300">
                             <Rocket className="w-5 h-5" />
                         </span>
-                        <span className="md:hidden ml-6 flex-1 uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange">
+                        <span className={cn(
+                            "uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange whitespace-nowrap",
+                            (sidebarOpen || isMobile) ? "block" : "hidden md:hidden"
+                        )}>
                             Maratón {marathonMode ? "(ON)" : ""}
                         </span>
                     </button>
@@ -440,13 +505,12 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
 
             {/* Footer / Info */}
             <div className="mt-auto pb-6 w-full flex flex-col items-center gap-6 pt-8">
-                {/* Background Music */}
-                <div className="gsap-sidebar-item">
+                {/* Background Music and Random Play buttons */}
+                <div className={cn(
+                    "flex gsap-sidebar-item transition-all duration-300 w-full justify-center items-center",
+                    sidebarOpen ? "flex-row gap-4 px-4" : "flex-col gap-6"
+                )}>
                     <BackgroundMusicPlayer />
-                </div>
-
-                {/* Random Play */}
-                <div className="gsap-sidebar-item">
                     <RandomPlayButton />
                 </div>
 
@@ -455,12 +519,13 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                     <Link
                         to="/settings"
                         title="Configuración"
-                        onClick={() => { setSidebarOpen(false); playChangeSound(); }}
+                        onClick={() => { if (isMobile) setSidebarOpen(false); playChangeSound(); }}
                         className={cn("w-full flex justify-center", currentPath === "/settings" && "active-sidebar-link")}
                     >
                         <div className={cn(
-                            "flex items-center justify-center md:w-14 w-full h-14 rounded-2xl group px-4 md:px-0 relative liquid-glass-frosted-subtle transition-all duration-300",
+                            "flex items-center h-14 rounded-2xl group px-4 relative liquid-glass-frosted-subtle transition-all duration-300",
                             "active:scale-95 font-bold",
+                            sidebarOpen ? "w-full justify-start gap-4 px-5" : "justify-center md:w-14 w-full md:px-0",
                             currentPath === "/settings"
                                 ? "text-white"
                                 : "text-zinc-400 hover:text-white hover:!border-white/15"
@@ -468,7 +533,12 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                             <span className="shrink-0 z-10 group-hover:rotate-45 group-hover:scale-110 transition-transform duration-500">
                                 <Settings className="w-5 h-5" />
                             </span>
-                            <span className="md:hidden ml-6 flex-1 uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange">Configuración</span>
+                            <span className={cn(
+                                "uppercase tracking-[0.2em] text-[10px] font-black z-10 text-left transition-colors group-hover:text-brand-orange whitespace-nowrap",
+                                (sidebarOpen || isMobile) ? "block" : "hidden md:hidden"
+                            )}>
+                                Configuración
+                            </span>
                         </div>
                     </Link>
                 </div>

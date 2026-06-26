@@ -3,11 +3,13 @@ package local
 import (
 	"context"
 	"fmt"
+	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
-
+	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/events"
+	"kamehouse/internal/library/anime"
 	"kamehouse/internal/platforms/platform"
 	"os"
 	"path/filepath"
@@ -35,8 +37,6 @@ type Manager interface {
 	UpdateLocalAnimeCollection(ac *platform.UnifiedCollection)
 	// GetOfflineMetadataProvider returns the offline metadata provider.
 	GetOfflineMetadataProvider() metadata_provider.Provider
-	// GetSyncer returns the syncer (used to synchronize the anime snapshots in the local database).
-	GetSyncer() *Syncer
 	AutoTrackCurrentMedia() (bool, error)
 	// TrackAnime adds an anime to track for offline use.
 	// It checks that the anime is currently in the user's anime collection.
@@ -47,11 +47,11 @@ type Manager interface {
 	IsMediaTracked(aId int, kind string) bool
 	// GetTrackedMediaItems returns all tracked media items.
 	GetTrackedMediaItems() []*TrackedMediaItem
-	// SynchronizeLocal syncs all currently tracked media.
+	// ScanLocal scans all currently tracked media.
 	// Compares the local database with the user's anime collection and updates the local database accordingly.
-	SynchronizeLocal() error
-	// SynchronizePlatform syncs the user's Platform data with data stored in the local database.
-	SynchronizePlatform() error
+	ScanLocal() error
+	// ScanPlatform syncs the user's Platform data with data stored in the local database.
+	ScanPlatform() error
 	// SetRefreshPlatformCollectionsFunc sets the function to call to refresh the online Platform collections.
 	SetRefreshPlatformCollectionsFunc(func())
 	// HasLocalChanges checks if there are any local changes that need to be uploaded or ignored.
@@ -64,10 +64,10 @@ type Manager interface {
 	GetSimulatedAnimeCollection() mo.Option[*platform.UnifiedCollection]
 	// SaveSimulatedAnimeCollection sets the simulated anime collection for unauthenticated users.
 	SaveSimulatedAnimeCollection(ac *platform.UnifiedCollection)
-	// SynchronizeSimulatedCollectionToPlatform synchronizes the simulated anime collection to the user's Platform account.
-	SynchronizeSimulatedCollectionToPlatform() error
-	// SynchronizePlatformToSimulatedCollection synchronizes the user's Platform account to the simulated anime collection.
-	SynchronizePlatformToSimulatedCollection() error
+	// ScanSimulatedCollectionToPlatform scans the simulated anime collection to the user's Platform account.
+	ScanSimulatedCollectionToPlatform() error
+	// ScanPlatformToSimulatedCollection scans the user's Platform account to the simulated anime collection.
+	ScanPlatformToSimulatedCollection() error
 
 	SetOffline(bool)
 }
@@ -86,15 +86,13 @@ type (
 		offlineMetadataProvider metadata_provider.Provider
 		platformRef             platform.Platform
 
-		syncer *Syncer
-
 		// Anime collection stored in the local database, without modifications
 		localAnimeCollection mo.Option[*platform.UnifiedCollection]
 
 		// Anime collection from the user's account, changed by ManagerImpl.SetAnimeCollection
 		animeCollection mo.Option[*platform.UnifiedCollection]
 
-		// Local files, set by ManagerImpl.Synchronize, accessed by the synchronization Syncer
+		// Local files, set by ManagerImpl.ScanLocal
 		localFiles []*dto.LocalFile
 
 		RefreshPlatformCollectionsFunc func()
@@ -142,7 +140,6 @@ func NewManager(opts *NewManagerOptions) (Manager, error) {
 		RefreshPlatformCollectionsFunc: func() {},
 	}
 
-	ret.syncer = NewQueue(ret)
 	ret.offlineMetadataProvider = NewOfflineMetadataProvider(ret)
 
 	// Load the local collections
@@ -157,9 +154,7 @@ func (m *ManagerImpl) SetRefreshPlatformCollectionsFunc(f func()) {
 	m.RefreshPlatformCollectionsFunc = f
 }
 
-func (m *ManagerImpl) GetSyncer() *Syncer {
-	return m.syncer
-}
+
 
 func (m *ManagerImpl) GetOfflineMetadataProvider() metadata_provider.Provider {
 	return m.offlineMetadataProvider
@@ -304,7 +299,7 @@ func (m *ManagerImpl) UntrackAnime(mID int) error {
 		return err
 	}
 
-	m.GetSyncer().refreshCollections()
+	m.loadLocalAnimeCollection()
 
 	return nil
 }
@@ -356,17 +351,17 @@ func (m *ManagerImpl) GetTrackedMediaItems() (ret []*TrackedMediaItem) {
 
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 
-// SynchronizeLocal should be called after updates to the user's anime collection.
+// ScanLocal should be called after updates to the user's anime collection.
 //
 //   - After adding/removing an anime to track
 //   - After the user's anime collection has been updated (e.g. after a user's anime list has been updated)
 //
-// It will add media list entries from the user's collection to the Syncer only if the media is tracked.
-//   - The Syncer will then synchronize the anime with the local database if needed
+// It will scan media list entries from the user's collection only if the media is tracked.
+//   - The scanner will then update the anime with the local database if needed
 //
 // It will remove any anime from the local database that are not in the user's collection anymore.
 // It will then update the ManagerImpl.localAnimeCollection
-func (m *ManagerImpl) SynchronizeLocal() error {
+func (m *ManagerImpl) ScanLocal() error {
 
 	localStorageSizeCache.Store(0)
 
@@ -374,25 +369,25 @@ func (m *ManagerImpl) SynchronizeLocal() error {
 
 	settings := m.localDb.GetSettings()
 	if settings.Updated {
-		return fmt.Errorf("cannot sync, upload or ignore local changes before syncing")
+		return fmt.Errorf("cannot scan, upload or ignore local changes before scanning")
 	}
 
 	lfs, _, err := db.GetLocalFiles(m.db)
 	if err != nil {
-		return fmt.Errorf("local manager: Couldn't start syncing, failed to get local files: %w", err)
+		return fmt.Errorf("local manager: Couldn't start scanning, failed to get local files: %w", err)
 	}
 
 	// Check if the anime collection is set
 	if m.animeCollection.IsAbsent() {
-		return fmt.Errorf("local manager: Couldn't start syncing, anime collection not set")
+		return fmt.Errorf("local manager: Couldn't start scanning, anime collection not set")
 	}
 
-	return m.synchronize(lfs)
+	return m.scan(lfs)
 }
 
-func (m *ManagerImpl) synchronize(lfs []*dto.LocalFile) error {
+func (m *ManagerImpl) scan(lfs []*dto.LocalFile) error {
 
-	m.logger.Trace().Msg("local manager: Synchronizing local database with user's anime collections")
+	m.logger.Trace().Msg("local manager: Scanning local database with user's anime collections")
 
 	m.localFiles = lfs
 
@@ -422,14 +417,145 @@ func (m *ManagerImpl) synchronize(lfs []*dto.LocalFile) error {
 		animeSnapshotMap[snapshot.MediaID] = snapshot
 	}
 
-	m.syncer.runDiffs(trackedAnimeMap, animeSnapshotMap, m.localFiles)
+	diff := &Diff{Logger: m.logger}
+	animeDiffs := diff.GetAnimeDiffs(GetAnimeDiffOptions{
+		Collection:      m.animeCollection.MustGet(),
+		LocalCollection: m.localAnimeCollection,
+		LocalFiles:      m.localFiles,
+		TrackedAnime:    trackedAnimeMap,
+		Snapshots:       animeSnapshotMap,
+	})
+
+	for _, d := range animeDiffs {
+		m.processAnimeDiff(d)
+	}
+
+	m.loadLocalAnimeCollection()
 
 	return nil
 }
 
+func (m *ManagerImpl) processAnimeDiff(diff *AnimeDiffResult) {
+	entry := diff.AnimeEntry
+	lfs := lo.Filter(m.localFiles, func(lf *dto.LocalFile, _ int) bool {
+		return lf.MediaID == entry.Media.ID
+	})
+
+	var animeMetadata *metadata.AnimeMetadata
+	var metadataWrapper metadata_provider.AnimeMetadataWrapper
+	if diff.DiffType == DiffTypeMissing || diff.DiffType == DiffTypeMetadata {
+		// Get the anime metadata
+		var err error
+		animeMetadata, err = m.metadataProviderRef.GetAnimeMetadata(entry.Media.ID)
+		if err != nil {
+			// If the anime metadata doesn't exist, create a fake one
+			simpleEntry, err := anime.NewSimpleEntry(context.Background(), &anime.NewSimpleAnimeEntryOptions{
+				MediaID:             entry.Media.ID,
+				LocalFiles:          lfs,
+				Database:            nil,
+				PlatformRef:         m.platformRef,
+				MetadataProviderRef: m.metadataProviderRef,
+			})
+			if err != nil {
+				m.logger.Error().Err(err).Msgf("local manager: Failed to get metadata for anime %d", entry.Media.ID)
+				return
+			}
+
+			animeMetadata = anime.NewAnimeMetadataFromEntry(models.ToLibraryMedia(entry.Media), simpleEntry.Episodes)
+		}
+		metadataWrapper = m.metadataProviderRef.GetAnimeMetadataWrapper(entry.Media, animeMetadata)
+	}
+
+	//
+	// The snapshot is missing
+	//
+	if diff.DiffType == DiffTypeMissing && animeMetadata != nil {
+		bannerImage, coverImage, episodeImagePaths, ok := DownloadAnimeImages(m.logger, m.localAssetsDir, entry, animeMetadata, metadataWrapper, lfs)
+		if !ok {
+			return
+		}
+
+		// Create a new snapshot
+		snapshot := &AnimeSnapshot{
+			MediaID:           entry.Media.ID,
+			AnimeMetadata:     LocalAnimeMetadata(*animeMetadata),
+			BannerImagePath:   bannerImage,
+			CoverImagePath:    coverImage,
+			EpisodeImagePaths: episodeImagePaths,
+			ReferenceKey:      GetAnimeReferenceKey(entry.Media, m.localFiles),
+		}
+
+		// Save the snapshot
+		err := m.localDb.SaveAnimeSnapshot(snapshot)
+		if err != nil {
+			m.logger.Error().Err(err).Msgf("local manager: Failed to save anime snapshot for anime %d", entry.Media.ID)
+		}
+		return
+	}
+
+	//
+	// The snapshot metadata is outdated (local files have changed)
+	// Update the anime metadata & download the new episode images if needed
+	//
+	if diff.DiffType == DiffTypeMetadata && diff.AnimeSnapshot != nil && animeMetadata != nil {
+
+		snapshot := *diff.AnimeSnapshot
+		snapshot.AnimeMetadata = LocalAnimeMetadata(*animeMetadata)
+		snapshot.ReferenceKey = GetAnimeReferenceKey(entry.Media, m.localFiles)
+
+		lfMap := make(map[string]*dto.LocalFile)
+		for _, lf := range lfs {
+			lfMap[lf.Metadata.AniDBEpisode] = lf
+		}
+
+		// Get the current episode image URLs
+		currentEpisodeImageUrls := make(map[string]string)
+		for episodeNum, episode := range animeMetadata.Episodes {
+			if episode.Image == "" {
+				continue
+			}
+			currentEpisodeImageUrls[episodeNum] = episode.Image
+		}
+
+		// Get the episode image URLs that we need to download (i.e. the ones that are not in the snapshot)
+		episodeImageUrlsToDownload := make(map[string]string)
+		// For each current episode image URL, check if the key (episode number) is in the snapshot
+		for episodeNum, episodeImageUrl := range currentEpisodeImageUrls {
+			if _, found := snapshot.EpisodeImagePaths[episodeNum]; !found {
+				// Check if the episode is in the local files
+				if _, ok := lfMap[episodeNum]; !ok {
+					continue
+				}
+				episodeImageUrlsToDownload[episodeNum] = episodeImageUrl
+			}
+		}
+
+		// Download the episode images if needed
+		if len(episodeImageUrlsToDownload) > 0 {
+			// Download only the episode images that we need to download
+			episodeImagePaths, ok := DownloadAnimeEpisodeImages(m.logger, m.localAssetsDir, entry.Media.ID, episodeImageUrlsToDownload)
+			if !ok {
+				// DownloadAnimeEpisodeImages will log the error
+				return
+			}
+			// Update the snapshot by adding the new episode images
+			for episodeNum, episodeImagePath := range episodeImagePaths {
+				snapshot.EpisodeImagePaths[episodeNum] = episodeImagePath
+			}
+		}
+
+		// Save the snapshot
+		err := m.localDb.SaveAnimeSnapshot(&snapshot)
+		if err != nil {
+			m.logger.Error().Err(err).Msgf("local manager: Failed to save anime snapshot for anime %d", entry.Media.ID)
+		}
+		return
+	}
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func (m *ManagerImpl) SynchronizePlatform() error {
+func (m *ManagerImpl) ScanPlatform() error {
 	if m.animeCollection.IsAbsent() {
 		return fmt.Errorf("local manager: Anime collection not set")
 	}
@@ -504,8 +630,6 @@ func (m *ManagerImpl) loadTrackedMedia() (trackedAnimeMap map[int]*TrackedMedia)
 	for _, item := range trackedAnime {
 		trackedAnimeMap[item.MediaID] = item
 	}
-
-	m.GetSyncer().trackedAnimeMap = trackedAnimeMap
 
 	return trackedAnimeMap
 }
@@ -585,7 +709,7 @@ func (m *ManagerImpl) SaveSimulatedAnimeCollection(ac *platform.UnifiedCollectio
 	_ = m.localDb.SaveSimulatedAnimeCollection(ac)
 }
 
-func (m *ManagerImpl) SynchronizePlatformToSimulatedCollection() error {
+func (m *ManagerImpl) ScanPlatformToSimulatedCollection() error {
 	m.logger.Trace().Msg("local manager: Synchronizing Platform to simulated (local) collection")
 
 	if animeCollection, ok := m.animeCollection.Get(); ok {
@@ -595,7 +719,7 @@ func (m *ManagerImpl) SynchronizePlatformToSimulatedCollection() error {
 	return nil
 }
 
-func (m *ManagerImpl) SynchronizeSimulatedCollectionToPlatform() error {
+func (m *ManagerImpl) ScanSimulatedCollectionToPlatform() error {
 	if localAnimeCollection, ok := m.localDb.GetSimulatedAnimeCollection(); ok {
 		for _, list := range localAnimeCollection.Lists {
 			if list.Entries == nil {

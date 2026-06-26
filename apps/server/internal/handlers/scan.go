@@ -109,7 +109,7 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 	ac, _ := h.App.GetAnimeCollection(false)
 
 	// Create a new scanner
-	sc := scanner.Scanner{
+	sc := scanner.NewScanner(&scanner.ScannerOptions{
 		DirPath:                    libraryPath,
 		OtherDirPaths:              additionalLibraryPaths,
 		SeriesPaths:                h.App.Settings.GetLibrary().SeriesPaths,
@@ -140,10 +140,9 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		TMDBClient:                 h.App.Metadata.TMDBClient,
 		FanArtEnricher:             h.App.Metadata.FanArt,
 		OMDbEnricher:               h.App.Metadata.OMDb,
-		OpenSubsEnricher:           h.App.Metadata.OpenSubs,
 		FFprobePath:                ffprobePath,
 		BackgroundQueue:            h.App.BackgroundQueue,
-	}
+	})
 
 	// EXECUTE ASYNCHRONOUSLY to prevent HTTP Timeout & 504 errors on massive scans
 	go func() {

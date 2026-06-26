@@ -48,7 +48,7 @@ export const settingsSchema = z.object({
         richPresenceShowPlatformProfileButton: z.boolean().optional().default(false),
         richPresenceUseMediaTitleStatus: z.boolean().optional().default(true),
 
-        autoPlayNextEpisode: z.boolean().optional().default(false),
+        autoPlayNextEpisode: z.boolean().optional().default(true),
         enableWatchContinuity: z.boolean().optional().default(false),
         seriesPaths: z.array(z.string()).optional().default([]),
         moviePaths: z.array(z.string()).optional().default([]),
@@ -72,7 +72,6 @@ export const settingsSchema = z.object({
         primaryMetadataProvider: z.string().optional().default("tmdb"),
         fanartApiKey: z.string().optional().default(""),
         omdbApiKey: z.string().optional().default(""),
-        openSubsApiKey: z.string().optional().default(""),
     }),
     mediaPlayer: z.object({
         host: z.string(),
@@ -162,7 +161,7 @@ export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>): 
         dohProvider: DEFAULT_DOH_PROVIDER,
         openWebURLOnStart: false,
         refreshLibraryOnStart: false,
-        autoPlayNextEpisode: false,
+        autoPlayNextEpisode: true,
         enableWatchContinuity: data.library.enableWatchContinuity,
         seriesPaths: data.library.seriesPaths || [],
         moviePaths: data.library.moviePaths || [],
@@ -184,7 +183,7 @@ export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>): 
         primaryMetadataProvider: data.library.primaryMetadataProvider || "tmdb",
         fanartApiKey: data.library.fanartApiKey || "",
         omdbApiKey: data.library.omdbApiKey || "",
-        openSubsApiKey: data.library.openSubsApiKey || "",
+        openSubsApiKey: "",
     },
     mediaPlayer: {
         host: data.mediaPlayer.host,

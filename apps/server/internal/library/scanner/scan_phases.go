@@ -11,12 +11,11 @@ import (
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/events"
 	librarymetadata "kamehouse/internal/library/metadata"
-	"kamehouse/internal/util"
 )
 
-// scanEnrichmentPhase runs optional metadata enrichers (FanArt, OMDb, OpenSubtitles) in parallel.
+// scanEnrichmentPhase runs optional metadata enrichers (FanArt, OMDb) in parallel.
 func (scn *Scanner) scanEnrichmentPhase(ctx context.Context, localFiles []*dto.LocalFile, mc *MediaContainer, tmdbProvider *librarymetadata.TMDBProvider) {
-	if scn.FanArtEnricher == nil && scn.OMDbEnricher == nil && scn.OpenSubsEnricher == nil {
+	if scn.FanArtEnricher == nil && scn.OMDbEnricher == nil {
 		return
 	}
 
@@ -47,7 +46,6 @@ func (scn *Scanner) scanEnrichmentPhase(ctx context.Context, localFiles []*dto.L
 	}
 	close(mIdChan)
 
-	openSubsSem := make(chan struct{}, 2)
 
 	var enrichWg sync.WaitGroup
 	for i := 0; i < enrichWorkers; i++ {
@@ -95,34 +93,6 @@ func (scn *Scanner) scanEnrichmentPhase(ctx context.Context, localFiles []*dto.L
 					}
 				}
 
-				if scn.OpenSubsEnricher != nil {
-					var fileWg sync.WaitGroup
-					for _, lf := range mediaGroups[mID] {
-						season, episode := 0, 0
-						if lf.ParsedData != nil {
-							if lf.ParsedData.Season != "" {
-								season, _ = util.StringToInt(lf.ParsedData.Season)
-							}
-							if lf.ParsedData.Episode != "" {
-								episode, _ = util.StringToInt(lf.ParsedData.Episode)
-							}
-						}
-						fileWg.Add(1)
-						go func(lf *dto.LocalFile, s, e int) {
-							defer fileWg.Done()
-
-							select {
-							case openSubsSem <- struct{}{}:
-								defer func() { <-openSubsSem }()
-							case <-ctx.Done():
-								return
-							}
-
-							_ = scn.OpenSubsEnricher.EnrichLocalFile(ctx, lf, matchedMedia, s, e)
-						}(lf, season, episode)
-					}
-					fileWg.Wait()
-				}
 			}
 		}()
 	}

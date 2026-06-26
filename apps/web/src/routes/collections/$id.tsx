@@ -146,7 +146,7 @@ function CollectionDetailPage() {
             </button>
 
             {/* Cinematic Hero Header */}
-            <section className="relative min-h-[65vh] flex flex-col justify-end pt-32 pb-20 px-8 md:pl-[120px] md:pr-16 lg:pl-[120px] lg:pr-24">
+            <section className="relative min-h-[65vh] flex flex-col justify-end pt-32 pb-20 px-8 md:px-16 lg:px-24">
                 {/* Backdrop with gradient and subtle motion blur */}
                 {backdropUrl && (
                     <div className="absolute inset-0 z-0 overflow-hidden bg-black">

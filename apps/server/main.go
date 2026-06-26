@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -18,9 +17,9 @@ import (
 
 	"kamehouse/internal/core"
 	"kamehouse/internal/handlers"
+	"kamehouse/internal/util"
 
 	"github.com/rs/zerolog"
-	"github.com/subosito/gotenv"
 )
 
 //go:embed all:web
@@ -41,7 +40,7 @@ func main() {
 }
 
 func run(ctx context.Context) error {
-	loadEnvFile()
+	util.LoadDotEnvFile()
 
 	portStr := os.Getenv("KAMEHOUSE_PORT")
 	portStrVal := 43211
@@ -56,7 +55,6 @@ func run(ctx context.Context) error {
 	}
 
 	isDev := os.Getenv("KAMEHOUSE_ENV") != "production"
-
 
 	// Initialize robust arguments required by NewKameHouse inside KameHouse.
 	configOpts := &core.ConfigOptions{
@@ -129,7 +127,6 @@ func run(ctx context.Context) error {
 		}
 		errCh <- srv.Serve(bindListener)
 	}()
-
 
 	// Block for shutdown signal or fatal error
 	select {
@@ -204,44 +201,4 @@ func resolveBindableAddress(host string, port int, isDesktopSidecar bool, logger
 	}
 	ephemeralPort := l2.Addr().(*net.TCPAddr).Port
 	return l2, host, ephemeralPort, nil
-}
-
-// loadEnvFile searches for a .env file starting from the CWD and
-// the executable's directory, then walking up to 5 parent directories.
-// This is needed because `go run` sets CWD to a temporary build directory.
-func loadEnvFile() {
-	// Candidate directories to search
-	candidates := make([]string, 0, 12)
-
-	if cwd, err := os.Getwd(); err == nil {
-		dir := cwd
-		for i := 0; i < 6; i++ {
-			candidates = append(candidates, dir)
-			parent := filepath.Dir(dir)
-			if parent == dir {
-				break
-			}
-			dir = parent
-		}
-	}
-
-	if exe, err := os.Executable(); err == nil {
-		dir := filepath.Dir(exe)
-		for i := 0; i < 6; i++ {
-			candidates = append(candidates, dir)
-			parent := filepath.Dir(dir)
-			if parent == dir {
-				break
-			}
-			dir = parent
-		}
-	}
-
-	for _, dir := range candidates {
-		envPath := filepath.Join(dir, ".env")
-		if _, err := os.Stat(envPath); err == nil {
-			_ = gotenv.OverLoad(envPath)
-			return
-		}
-	}
 }

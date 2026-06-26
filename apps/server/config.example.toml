@@ -68,6 +68,3 @@ fanartApiKey = ""         # API key de FanArt.tv — logos HD transparentes, cle
 #                           # Obtené una gratis en: https://fanart.tv/get-an-api-key/
 omdbApiKey = ""           # API key de OMDb — ratings IMDb, RT, Metacritic, runtime, director
 #                           # Obtené una gratis en: https://www.omdbapi.com/apikey.aspx (1000 req/día)
-# openSubsApiKey = ""       # API key de OpenSubtitles v1 — búsqueda de subtítulos remotos
-#                           # Obtené una gratis en: https://www.opensubtitles.com/en/consumers
-# openSubsLanguages = ["es", "en"]  # Idiomas a buscar en OpenSubtitles

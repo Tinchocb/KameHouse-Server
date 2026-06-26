@@ -97,16 +97,7 @@ func (bq *BackgroundQueue) worker() {
 func (bq *BackgroundQueue) processFile(prober *FileProber, lf *dto.LocalFile) {
 	changed := false
 
-	// 1. Calculate hash if empty
-	if lf.FileHash == "" {
-		hash, err := CalculateOpenSubtitlesHash(lf.Path)
-		if err == nil && hash != "" {
-			lf.FileHash = hash
-			changed = true
-		} else if err != nil {
-			bq.logger.Debug().Err(err).Str("path", lf.Path).Msg("scanner: background file hash calculation failed")
-		}
-	}
+	// File hash calculation removed (OpenSubtitles removed)
 
 	// 2. Perform probe if needed
 	if shouldFallbackToFFprobe(lf) && bq.ffprobePath != "" {

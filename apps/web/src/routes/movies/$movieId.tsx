@@ -293,7 +293,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                 />
 
                 {/* Content Container (Split Grid) */}
-                <div className="relative z-20 w-full max-w-[1800px] mx-auto px-6 md:pl-[128px] md:pr-12 flex flex-col lg:flex-row items-center lg:items-end gap-10">
+                <div className="relative z-20 w-full max-w-[1800px] mx-auto px-6 md:px-12 flex flex-col lg:flex-row items-center lg:items-end gap-10">
                                  {/* Left Column: Portrait Poster Card */}
                     <div className="movie-animate w-56 md:w-68 shrink-0 aspect-[2/3] rounded-2xl overflow-hidden border border-white/10 bg-zinc-900 shadow-[0_20px_50px_rgba(0,0,0,0.6)] hover:shadow-[0_25px_60px_rgba(0,0,0,0.7)] transition-all duration-500 hover:scale-[1.03]">
                         <DeferredImage

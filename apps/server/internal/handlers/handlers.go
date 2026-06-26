@@ -22,7 +22,6 @@ type LibraryHandler struct {
 	TMDBClient          TMDBClient
 	FanArt              FanArtEnricher
 	OMDb                OMDbEnricher
-	OpenSubs            OpenSubsEnricher
 	AnimeCollection     AnimeCollectionProvider
 	FillerManager       FillerManagerProvider
 	IntelligenceService *anime.IntelligenceService
@@ -45,7 +44,6 @@ func NewLibraryHandler(deps LibraryHandlerDeps) *LibraryHandler {
 		TMDBClient:          deps.TMDBClient,
 		FanArt:              deps.FanArt,
 		OMDb:                deps.OMDb,
-		OpenSubs:            deps.OpenSubs,
 		AnimeCollection:     deps.AnimeCollection,
 		FillerManager:       deps.FillerManager,
 		IntelligenceService: deps.IntelligenceService,
@@ -67,7 +65,6 @@ type LibraryHandlerDeps struct {
 	TMDBClient          TMDBClient
 	FanArt              FanArtEnricher
 	OMDb                OMDbEnricher
-	OpenSubs            OpenSubsEnricher
 	AnimeCollection     AnimeCollectionProvider
 	FillerManager       FillerManagerProvider
 	IntelligenceService *anime.IntelligenceService

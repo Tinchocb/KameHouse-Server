@@ -98,7 +98,7 @@ function SeriesFullscreenIndex() {
     const selectedItem = seriesList[selectedIndex] ?? null;
 
     return (
-        <div className="w-full h-full flex flex-col bg-transparent text-white font-sans overflow-hidden relative p-4 md:p-6 md:pl-[110px]">
+        <div className="w-full h-full flex flex-col bg-transparent text-white font-sans overflow-hidden relative p-4 md:p-6">
             {/* Ambient Background Glow */}
             {selectedItem && (
                 <div

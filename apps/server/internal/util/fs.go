@@ -131,7 +131,7 @@ func UnzipFile(src, dest string) error {
 	for _, f := range r.File {
 		// Get the full path of the file in the destination
 		fpath := filepath.Join(extractedDir, f.Name)
-		
+
 		// Zip Slip mitigation: ensure the resolved path remains inside the extraction directory
 		if !strings.HasPrefix(fpath, filepath.Clean(extractedDir)+string(os.PathSeparator)) {
 			return fmt.Errorf("illegal file path: %s", f.Name)
@@ -223,7 +223,7 @@ func UnrarFile(src, dest string) error {
 
 		// Get the full path of the file in the destination
 		fpath := filepath.Join(extractedDir, header.Name)
-		
+
 		// Zip Slip mitigation: ensure the resolved path remains inside the extraction directory
 		if !strings.HasPrefix(fpath, filepath.Clean(extractedDir)+string(os.PathSeparator)) {
 			return fmt.Errorf("illegal file path: %s", header.Name)

@@ -225,7 +225,7 @@ export function SeriesHero({
       />
 
       {/* Content Container */}
-      <div className="relative z-20 w-full max-w-[1800px] mx-auto px-6 md:pl-[120px] md:pr-12 lg:pl-[120px] lg:pr-12 flex flex-col pointer-events-none">
+      <div className="relative z-20 w-full max-w-[1800px] mx-auto px-6 md:px-12 lg:px-12 flex flex-col pointer-events-none">
         <div className="max-w-3xl space-y-7">
 
           {/* Metadata Row */}

@@ -227,8 +227,14 @@ export function usePlayerSkip({
     const [videoEnded, setVideoEnded] = useState(false)
 
     // ── Episode change reset ─────────────────────────────────────────────────────
-    const currentEpisodeKey = `${episodeNumber}_${playableUrl}`
+    // When the orchestrator loads a new episode, playableUrl transitions "" → realUrl.
+    // Using playableUrl in the key causes a double-reset (once with "" and once with
+    // the real URL), which clears hasTriggeredNextEpisodeRef prematurely.
+    // We use episodeNumber as the primary key and only append playableUrl when it is
+    // a real non-empty URL to ensure a single reset per episode change.
+    const currentEpisodeKey = playableUrl ? `${episodeNumber}_${playableUrl}` : String(episodeNumber)
     useEffect(() => {
+        if (!playableUrl) return  // still in the loading phase — wait for real URL
         setShowNextEpisode(false)
         setSkipMode(null)
         setShowCountdown(false)
@@ -702,37 +708,42 @@ export function usePlayerSkip({
     useEffect(() => {
         if (showNextEpisode && countdownSeconds > 0 && showCountdown) {
             nextEpisodeTimerRef.current = setTimeout(() => setCountdownSeconds(c => c - 1), 1000)
-        } else if (showNextEpisode && countdownSeconds === 0 && showCountdown && onNextEpisode) {
+        } else if (showNextEpisode && countdownSeconds === 0 && showCountdown && configRef.current.onNextEpisode) {
             if (!hasTriggeredNextEpisodeRef.current) {
                 hasTriggeredNextEpisodeRef.current = true
                 if (videoRef.current) videoRef.current.pause()
-                onNextEpisode()
+                configRef.current.onNextEpisode()
             }
         }
         return () => { if (nextEpisodeTimerRef.current) clearTimeout(nextEpisodeTimerRef.current) }
-    }, [showNextEpisode, countdownSeconds, showCountdown, onNextEpisode, videoRef])
+    }, [showNextEpisode, countdownSeconds, showCountdown, videoRef]) // eslint-disable-line react-hooks/exhaustive-deps
 
     // ── Auto-advance on video end ─────────────────────────────────────────────────
+    // onNextEpisode is intentionally NOT in the dep array: it is an inline arrow
+    // function in the parent and gets a new reference on every parent re-render.
+    // Including it would cause React to cancel the pending 1-second timer on each
+    // re-render (via the effect cleanup), meaning onNextEpisode() would never fire.
+    // We read it through configRef.current inside the callback so it is always current.
     useEffect(() => {
-        if (videoEnded && hasNextEpisode && onNextEpisode && mediaFormat?.toUpperCase() !== "MOVIE" && (marathonMode || autoPlayNextEpisode)) {
+        if (videoEnded && hasNextEpisode && configRef.current.onNextEpisode && mediaFormat?.toUpperCase() !== "MOVIE" && (marathonMode || autoPlayNextEpisode)) {
             if (marathonMode) {
                 if (!hasTriggeredNextEpisodeRef.current) {
                     hasTriggeredNextEpisodeRef.current = true
                     if (videoRef.current) videoRef.current.pause()
-                    onNextEpisode()
+                    configRef.current.onNextEpisode()
                 }
             } else {
                 if (!hasTriggeredNextEpisodeRef.current) {
                     hasTriggeredNextEpisodeRef.current = true
                     const timer = setTimeout(() => {
                         if (videoRef.current) videoRef.current.pause()
-                        onNextEpisode()
+                        configRef.current.onNextEpisode?.()
                     }, tvMode ? 5000 : 1000)
                     return () => clearTimeout(timer)
                 }
             }
         }
-    }, [videoEnded, hasNextEpisode, onNextEpisode, autoPlayNextEpisode, tvMode, marathonMode, mediaFormat, videoRef])
+    }, [videoEnded, hasNextEpisode, autoPlayNextEpisode, tvMode, marathonMode, mediaFormat, videoRef]) // eslint-disable-line react-hooks/exhaustive-deps
 
     // ── Cleanup ───────────────────────────────────────────────────────────────────
     useEffect(() => {

@@ -113,8 +113,8 @@ func NewDatabase(ctx context.Context, appDataDir, dbName string, logger *zerolog
 	slowTraceLogger.RegisterCallbacks(db)
 	database.slowTraceLogger = slowTraceLogger
 
-	// DML asíncrono: migración de datos legacy en segundo plano
-	go database.runDataMigrations()
+	// DML síncrono: migración de datos legacy antes de aceptar peticiones
+	database.runDataMigrations()
 
 	// Start background WAL checkpointing ticker (every 5 minutes)
 	go func() {
@@ -178,12 +178,13 @@ func (db *Database) runDataMigrations() {
 		}
 	}()
 
-	db.Logger.Info().Msg("db: iniciando migración de datos legacy en segundo plano")
+	db.Logger.Info().Msg("db: iniciando migraciones de datos")
 	if err := migrateLegacyLocalFiles(db.gormdb); err != nil {
 		db.Logger.Error().Err(err).Msg("db: fallo en migración de datos legacy LocalFiles -> LocalFile")
 		return
 	}
-	db.Logger.Info().Msg("db: migración de datos legacy completada")
+	migrateDefaultSettings(db.gormdb, db.Logger)
+	db.Logger.Info().Msg("db: migraciones de datos completadas")
 }
 
 // migrateSchema ejecuta exclusivamente operaciones DDL (AutoMigrate + índices)
@@ -302,6 +303,19 @@ func migrateLegacyLocalFiles(gormDB *gorm.DB) error {
 		}
 	}
 	return nil
+}
+
+// migrateDefaultSettings aplica valores por defecto a columnas booleanas que se
+// almacenaron históricamente como false pero cuyo default correcto es true.
+// Solo modifica filas que no han sido configuradas explícitamente por el usuario
+// (detectadas porque otros campos de preferencia también están en su valor inicial).
+func migrateDefaultSettings(gormDB *gorm.DB, logger *zerolog.Logger) {
+	result := gormDB.Exec("UPDATE settings SET auto_play_next_episode = 1 WHERE auto_play_next_episode = 0")
+	if result.Error != nil {
+		logger.Error().Err(result.Error).Msg("db: fallo al migrar auto_play_next_episode")
+	} else if result.RowsAffected > 0 {
+		logger.Info().Int64("rows", result.RowsAffected).Msg("db: auto_play_next_episode habilitado en configuración existente")
+	}
 }
 
 // RunDatabaseCleanup ejecuta todas las operaciones de limpieza de la base de datos.

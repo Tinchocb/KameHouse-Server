@@ -119,33 +119,6 @@ export function IntegrationsTab({ control }: IntegrationsTabProps) {
                     />
                 </div>
 
-                {/* OpenSubtitles API Key */}
-                <div className="liquid-glass-frosted rounded-3xl p-6 space-y-4">
-                    <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                        <h4 className="text-xs font-bold text-white uppercase tracking-wide flex items-center gap-2">
-                            OpenSubtitles
-                        </h4>
-                        <span className="text-[10px] text-zinc-500 font-mono">Subtítulos HLS</span>
-                    </div>
-                    <Controller
-                        control={control}
-                        name="library.openSubsApiKey"
-                        render={({ field }) => (
-                            <div className="flex flex-col gap-2">
-                                <label htmlFor="opensubs-api-key" className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">Clave de la API (API Key)</label>
-                                <input
-                                    id="opensubs-api-key"
-                                    type="password"
-                                    value={field.value || ""}
-                                    onChange={field.onChange}
-                                    placeholder="Ingresa tu OpenSubtitles API Key"
-                                    className="w-full bg-black/40 ring-1 ring-white/10 rounded-xl px-4 py-2.5 text-xs text-zinc-300 font-mono focus:outline-none focus:ring-[#ff6e3a]/40 focus:border-transparent transition-all"
-                                />
-                            </div>
-                        )}
-                    />
-                </div>
-
                 {/* AniList Tracker (Client-side dummy / local state) */}
                 <div className="liquid-glass-frosted rounded-3xl p-6 space-y-4 md:col-span-2">
                     <div className="flex items-center justify-between border-b border-white/5 pb-2">
@@ -179,18 +152,6 @@ export function IntegrationsTab({ control }: IntegrationsTabProps) {
             {/* Habilitar Proveedores */}
             <Section label="Habilitar Proveedores de Servicios">
                 <Card className="divide-y divide-white/[0.03]">
-                    <Controller
-                        control={control}
-                        name="library.enableOnlinestream"
-                        render={({ field }) => (
-                            <OsToggle
-                                label="OpenSubtitles"
-                                description="Permite buscar y descargar subtítulos automáticos para tus series y películas."
-                                checked={!!field.value}
-                                onChange={field.onChange}
-                            />
-                        )}
-                    />
                     <Controller
                         control={control}
                         name="library.useFallbackMetadataProvider"

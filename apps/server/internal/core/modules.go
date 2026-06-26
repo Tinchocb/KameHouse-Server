@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"kamehouse/internal/api/metadata_provider"
+	"kamehouse/internal/api/tmdb"
 	"kamehouse/internal/continuity"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
@@ -16,8 +18,6 @@ import (
 	"kamehouse/internal/library/scanner"
 	"kamehouse/internal/library_explorer"
 	"kamehouse/internal/mediastream"
-	"kamehouse/internal/api/tmdb"
-	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/platforms/jikan_platform"
 	"kamehouse/internal/util"
 
@@ -89,17 +89,18 @@ func (a *App) initModulesOnce() {
 	// +---------------------+
 
 	a.AutoScanner = autoscanner.New(&autoscanner.NewAutoScannerOptions{
-		Database:            a.Database,
-		Logger:              a.Logger,
-		WSEventManager:      a.WSEventManager,
-		Enabled:             false,
-		MetadataProvider:    a.Metadata.Provider,
-		Platform:            a.Metadata.Platform,
-		LogsDir:             a.Config.Logs.Dir,
+		Database:         a.Database,
+		Logger:           a.Logger,
+		WSEventManager:   a.WSEventManager,
+		Enabled:          true,
+		MetadataProvider: a.Metadata.Provider,
+		Platform:         a.Metadata.Platform,
+		LogsDir:          a.Config.Logs.Dir,
 		OnRefreshCollection: func() {
 		},
 		EventDispatcher: a.WSEventManager.Dispatcher(),
 		BackgroundQueue: a.BackgroundQueue,
+		ShutdownCtx:     a.shutdownCtx,
 	})
 
 	// +---------------------+
@@ -183,7 +184,7 @@ func (a *App) InitOrRefreshModules() {
 	if !a.IsOffline() {
 		a.Logger.Info().Msg("app: Using Jikan platform")
 		a.Metadata.Platform.SetPlatform(jikan_platform.NewPlatform(a.Logger))
-		
+
 		tmdbAPIKey := settings.Library.TmdbApiKey
 		if tmdbAPIKey == "" {
 			tmdbAPIKey = a.Config.Metadata.TMDBApiKey
@@ -279,8 +280,6 @@ func (a *App) performActionsOnce() {
 	}()
 }
 
-
-
 // cleanupTranscodeDirs removes transcode directories older than 1 hour.
 func cleanupTranscodeDirs(logger *zerolog.Logger, transcodeBaseDir string) {
 	if transcodeBaseDir == "" {
@@ -334,5 +333,3 @@ func (t *TMDbCacheAdapter) Get(key string, out interface{}) (bool, error) {
 func (t *TMDbCacheAdapter) Set(key string, value interface{}, ttl time.Duration) error {
 	return db.UpsertMetadataCache(t.db, "tmdb-api", key, value, ttl)
 }
-
-

@@ -131,7 +131,7 @@ func (h *Handler) HandleLocalSyncData(c echo.Context) error {
 	if h.App.GetUser().IsSimulated {
 		return h.RespondWithData(c, true)
 	}
-	err := h.App.LocalManager.SynchronizeLocal()
+	err := h.App.LocalManager.ScanLocal()
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
@@ -140,7 +140,7 @@ func (h *Handler) HandleLocalSyncData(c echo.Context) error {
 		go func() {
 			added, _ := h.App.LocalManager.AutoTrackCurrentMedia()
 			if added {
-				_ = h.App.LocalManager.SynchronizeLocal()
+				_ = h.App.LocalManager.ScanLocal()
 			}
 		}()
 	}
@@ -155,7 +155,7 @@ func (h *Handler) HandleLocalSyncData(c echo.Context) error {
 //	@route /api/v1/local/queue [GET]
 //	@returns local.QueueState
 func (h *Handler) HandleLocalGetSyncQueueState(c echo.Context) error {
-	return h.RespondWithData(c, h.App.LocalManager.GetSyncer().GetQueueState())
+	return h.RespondWithData(c, map[string]interface{}{"queued": []interface{}{}})
 }
 
 // HandleLocalSyncPlatformData ...
@@ -164,7 +164,7 @@ func (h *Handler) HandleLocalGetSyncQueueState(c echo.Context) error {
 //	@route /api/v1/local/Platform [POST]
 //	@returns bool
 func (h *Handler) HandleLocalSyncPlatformData(c echo.Context) error {
-	err := h.App.LocalManager.SynchronizePlatform()
+	err := h.App.LocalManager.ScanPlatform()
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
@@ -216,7 +216,7 @@ func (h *Handler) HandleLocalGetLocalStorageSize(c echo.Context) error {
 //	@route /api/v1/local/sync-simulated-to-Platform [POST]
 //	@returns bool
 func (h *Handler) HandleLocalSyncSimulatedDataToPlatform(c echo.Context) error {
-	err := h.App.LocalManager.SynchronizeSimulatedCollectionToPlatform()
+	err := h.App.LocalManager.ScanSimulatedCollectionToPlatform()
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}

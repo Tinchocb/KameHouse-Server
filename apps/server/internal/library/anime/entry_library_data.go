@@ -28,6 +28,9 @@ func NewEntryLibraryData(opts *NewEntryLibraryDataOptions) (ret *EntryLibraryDat
 	if len(opts.EntryLocalFiles) == 0 {
 		return nil, false
 	}
+	if opts.EntryLocalFiles[0] == nil {
+		return nil, false
+	}
 	sharedPath := strings.Replace(opts.EntryLocalFiles[0].Path, opts.EntryLocalFiles[0].Name, "", 1)
 	sharedPath = strings.TrimSuffix(strings.TrimSuffix(sharedPath, "\\"), "/")
 

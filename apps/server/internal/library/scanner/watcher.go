@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"kamehouse/internal/events"
+	"kamehouse/internal/util"
 	"os"
 	"path/filepath"
 	"strings"
@@ -92,14 +93,6 @@ func (w *Watcher) StartWatching(
 			onFileAction(path)
 		}
 
-		validExtensions := map[string]bool{
-			".mkv":  true,
-			".mp4":  true,
-			".avi":  true,
-			".m4v":  true,
-			".webm": true,
-		}
-
 		for {
 			select {
 			case event, ok := <-w.Watcher.Events:
@@ -119,10 +112,12 @@ func (w *Watcher) StartWatching(
 					continue
 				}
 
-				// 3. Filter by valid media extensions for Write/Create events
+				// 3. Filter by valid media extensions for Write/Create events.
+				// Uses util.IsValidVideoExtension as the single source of truth for
+				// supported extensions — keeps the watcher in sync with the scanner.
 				ext := strings.ToLower(filepath.Ext(event.Name))
 				isDirCreate := event.Op&fsnotify.Create != 0 && ext == ""
-				if event.Op&(fsnotify.Create|fsnotify.Write) != 0 && !validExtensions[ext] && !isDirCreate {
+				if event.Op&(fsnotify.Create|fsnotify.Write) != 0 && !util.IsValidVideoExtension(ext) && !isDirCreate {
 					continue
 				}
 

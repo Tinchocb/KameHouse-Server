@@ -24,6 +24,7 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
     const setBackdropUrl = useIntelligenceStore(s => s.setBackdropUrl)
     const [activeEraId, setActiveEraId] = React.useState<EraId>("db")
     const [selectedItemId, setSelectedItemId] = React.useState<string | null>(null)
+    const [isHovered, setIsHovered] = React.useState(false)
 
     const colors = ERA_COLOR_MAP[activeEraId]
 
@@ -89,6 +90,24 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
         setSelectedItemId(eraData?.series?.id || null)
     }, [categorizedData])
 
+    // Auto-rotate featured eras/content every 8s when not hovered
+    React.useEffect(() => {
+        if (isHovered) return
+
+        const timer = setInterval(() => {
+            setActiveEraId(prevEraId => {
+                const currentIndex = ERAS.findIndex(e => e.id === prevEraId)
+                const nextIndex = (currentIndex + 1) % ERAS.length
+                const nextEraId = ERAS[nextIndex].id
+                const eraData = categorizedData[nextEraId]
+                setSelectedItemId(eraData?.series?.id || null)
+                return nextEraId
+            })
+        }, 8000)
+
+        return () => clearInterval(timer)
+    }, [isHovered, categorizedData])
+
     // Initialize selected item on first load with a ref guard to avoid circular dependency
     const initializedRef = React.useRef(false)
     React.useEffect(() => {
@@ -128,7 +147,11 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
     }
 
     return (
-        <section className={cn("relative pt-20 md:pt-28 pb-16 w-full select-none overflow-hidden", hasMovies ? "lg:min-h-0" : "lg:min-h-[720px]", className)}>
+        <section 
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            className={cn("relative pt-20 md:pt-28 pb-16 w-full select-none overflow-hidden", hasMovies ? "lg:min-h-0" : "lg:min-h-[720px]", className)}
+        >
             {/* Ambient glow backgrounds */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
                 {/* Global dark/slate base */}
@@ -153,7 +176,7 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
             </div>
 
             {/* Main content grid: Left Column (Artwork + Info Side-by-Side) & Right Column (Era Selector) */}
-            <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch z-10 w-full px-6 md:pl-[120px] md:pr-10 lg:pl-[140px] lg:pr-14 xl:pl-[160px] xl:pr-16">
+            <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch z-10 w-full px-6 md:px-10 lg:px-14 xl:px-16">
 
                 {/* ─── LADO IZQUIERDO (8/12): Hero + Info lado a lado ─── */}
                 <div className="lg:col-span-9 grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
@@ -364,7 +387,7 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -15 }}
                         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                        className="relative z-10 text-left space-y-4 mt-14 px-6 md:pl-[120px] md:pr-10 lg:pl-[140px] lg:pr-14 xl:pl-[160px] xl:pr-16 w-full"
+                        className="relative z-10 text-left space-y-4 mt-14 px-6 md:px-10 lg:px-14 xl:px-16 w-full"
                     >
                         <h4 className="font-bebas text-lg md:text-xl tracking-wider text-zinc-300 uppercase flex items-center gap-2">
                             <span>Películas disponibles de</span>

@@ -1,4 +1,4 @@
-﻿package handlers
+package handlers
 
 import (
 	"context"
@@ -22,7 +22,7 @@ type Database interface {
 	GetThemeCopy() (*models.Theme, error)
 	UpsertTheme(theme *models.Theme) (*models.Theme, error)
 	GetAccount() (*models.Account, error)
-	GetAllLibraryPathsFromSettings() ([]string, string, error)
+	GetAllLibraryPathsFromSettings() ([]string, error)
 	GetAllGhostAssociations() ([]*models.GhostAssociatedMedia, error)
 	ResolveGhostAssociation(associationID uint) error
 	ResetLocalFilesMediaIds() error
@@ -85,7 +85,6 @@ type FanArtEnricher interface {
 
 type OMDbEnricher interface{}
 
-type OpenSubsEnricher interface{}
 
 type AnimeCollectionProvider interface {
 	GetAnimeCollection(bypassCache bool) (*platform.UnifiedCollection, error)

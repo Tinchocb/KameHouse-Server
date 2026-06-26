@@ -161,7 +161,7 @@ export function MoviesHero({
             />
 
             {/* Contenido */}
-            <div className="relative z-30 w-full max-w-[1800px] mx-auto px-6 md:pl-[128px] md:pr-12 flex flex-col pointer-events-none">
+            <div className="relative z-30 w-full max-w-[1800px] mx-auto px-6 md:px-12 flex flex-col pointer-events-none">
                 <div className="max-w-xl space-y-2.5 pointer-events-auto">
 
                     {/* Era badge */}

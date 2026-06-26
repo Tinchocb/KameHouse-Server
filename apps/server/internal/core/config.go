@@ -57,12 +57,10 @@ type Config struct {
 		Dir string `mapstructure:"dir"`
 	} `mapstructure:"extensions"`
 	Metadata struct {
-		TMDBApiKey       string `mapstructure:"tmdbApiKey"`
-		TMDBLanguage     string `mapstructure:"tmdbLanguage"`
-		FanArtAPIKey     string `mapstructure:"fanartApiKey"`     // FanArt.tv â€” logos, clearart, thumbs (free key from fanart.tv/get-an-api-key)
-		OMDbAPIKey       string `mapstructure:"omdbApiKey"`       // OMDb â€” ratings, runtime, director (free key, 1k req/day)
-		OpenSubsAPIKey   string `mapstructure:"openSubsApiKey"`   // OpenSubtitles v1 REST â€” remote subtitle search (free key)
-		OpenSubsLanguages []string `mapstructure:"openSubsLanguages"` // Languages to search, e.g. ["es", "en"]
+		TMDBApiKey   string `mapstructure:"tmdbApiKey"`
+		TMDBLanguage string `mapstructure:"tmdbLanguage"`
+		FanArtAPIKey string `mapstructure:"fanartApiKey"` // FanArt.tv — logos, clearart, thumbs (free key from fanart.tv/get-an-api-key)
+		OMDbAPIKey   string `mapstructure:"omdbApiKey"`   // OMDb — ratings, runtime, director (free key, 1k req/day)
 	} `mapstructure:"metadata"`
 }
 
@@ -191,8 +189,6 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("metadata.tmdbLanguage", "es-MX")
 	v.SetDefault("metadata.fanartApiKey", "")
 	v.SetDefault("metadata.omdbApiKey", "")
-	v.SetDefault("metadata.openSubsApiKey", "")
-	v.SetDefault("metadata.openSubsLanguages", []string{"es", "en"})
 
 }
 
@@ -377,8 +373,6 @@ tmdbApiKey = ""
 tmdbLanguage = "es-MX"
 fanartApiKey = ""
 omdbApiKey = ""
-openSubsApiKey = ""
-openSubsLanguages = ["es", "en"]
 `
 
 // resolveCorsOrigins resuelve los orígenes CORS permitidos desde variables de

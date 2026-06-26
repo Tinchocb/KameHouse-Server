@@ -55,7 +55,6 @@ const settingsSchema = z.object({
         primaryMetadataProvider: z.string().default("tmdb"),
         fanartApiKey: z.string().default(""),
         omdbApiKey: z.string().default(""),
-        openSubsApiKey: z.string().default(""),
     }).default({}),
     mediaPlayer: z.object({
         defaultPlayer: z.string().default(""),
@@ -159,7 +158,7 @@ function SettingsPage() {
     if (isLoading && !serverSettings) return <LoadingOverlayWithLogo />
 
     return (
-        <div className="flex flex-col h-full w-full pt-12 md:pt-20 px-6 md:pl-[120px] md:pr-12 lg:pl-[120px] lg:pr-16 bg-transparent text-zinc-300 selection:bg-[#ff6e3a]/30 overflow-y-auto relative no-scrollbar">
+        <div className="flex flex-col h-full w-full pt-12 md:pt-20 px-6 md:px-12 lg:px-16 bg-transparent text-zinc-300 selection:bg-[#ff6e3a]/30 overflow-y-auto relative no-scrollbar">
             {/* Ambient Background Light Orbs */}
             <div className="absolute top-0 left-1/3 w-[800px] h-[800px] bg-[#ff6e3a]/5 rounded-full blur-[240px] -translate-y-1/2 pointer-events-none" />
             <div className="absolute top-1/2 right-1/4 w-[600px] h-[600px] bg-red-500/[0.02] rounded-full blur-[200px] pointer-events-none" />

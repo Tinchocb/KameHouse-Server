@@ -42,7 +42,6 @@ type (
 		Platform   *platform.DynamicPlatform
 		FanArt     *metadata.FanArtEnricher
 		OMDb       *metadata.OMDbEnricher
-		OpenSubs   *metadata.OpenSubtitlesEnricher
 	}
 
 	CoreServices struct {
@@ -199,7 +198,6 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 			Platform:   dynamicPlatform,
 			FanArt:     enrichers.FanArt,
 			OMDb:       enrichers.OMDb,
-			OpenSubs:   enrichers.OpenSubs,
 		},
 		Version:           constants.Version,
 		ContinuityManager: continuityManager,
@@ -313,23 +311,16 @@ func initEventSystem(logger *zerolog.Logger, database *db.Database) (events.Disp
 }
 
 type metadataEnrichers struct {
-	FanArt   *metadata.FanArtEnricher
-	OMDb     *metadata.OMDbEnricher
-	OpenSubs *metadata.OpenSubtitlesEnricher
+	FanArt *metadata.FanArtEnricher
+	OMDb   *metadata.OMDbEnricher
 }
 
 func initMetadataEnrichers(cfg *Config) metadataEnrichers {
 	fanartEnricher := metadata.NewFanArtEnricher(cfg.Metadata.FanArtAPIKey)
 	omdbEnricher := metadata.NewOMDbEnricher(cfg.Metadata.OMDbAPIKey)
-	openSubsLangs := cfg.Metadata.OpenSubsLanguages
-	if len(openSubsLangs) == 0 {
-		openSubsLangs = []string{"es", "en"}
-	}
-	openSubsEnricher := metadata.NewOpenSubtitlesEnricher(cfg.Metadata.OpenSubsAPIKey, openSubsLangs...)
 	return metadataEnrichers{
-		FanArt:   fanartEnricher,
-		OMDb:     omdbEnricher,
-		OpenSubs: openSubsEnricher,
+		FanArt: fanartEnricher,
+		OMDb:   omdbEnricher,
 	}
 }
 

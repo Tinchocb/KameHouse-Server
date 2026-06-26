@@ -22,6 +22,23 @@ import (
 	"github.com/sourcegraph/conc/pool"
 )
 
+// resolveLibraryMediaID looks up the LibraryMedia record for a given mediaID.
+// By convention, mediaIDs >= 1_000_000 are movies (real TMDB ID = mediaID - 1_000_000);
+// smaller IDs are TV shows. Returns 0 when no matching record is found.
+func resolveLibraryMediaID(database *db.Database, mediaID int) uint {
+	var libMedia *models.LibraryMedia
+	var err error
+	if mediaID >= 1_000_000 {
+		libMedia, err = db.GetLibraryMediaByTmdbIdAndType(database, mediaID-1_000_000, "MOVIE")
+	} else {
+		libMedia, err = db.GetLibraryMediaByTmdbIdAndType(database, mediaID, "SHOW")
+	}
+	if err != nil || libMedia == nil {
+		return 0
+	}
+	return libMedia.ID
+}
+
 // HandleGetLocalFiles returns all local files.
 //
 //	@summary returns all local files.
@@ -222,16 +239,7 @@ func (h *Handler) HandleUpdateLocalFileData(c echo.Context) error {
 
 	// If a mediaID is being assigned, also resolve and set LibraryMediaId
 	if b.MediaID > 0 {
-		var libMedia *models.LibraryMedia
-		var err error
-		if b.MediaID > 1_000_000 {
-			libMedia, err = db.GetLibraryMediaByTmdbIdAndType(h.App.Database, b.MediaID-1_000_000, "MOVIE")
-		} else {
-			libMedia, err = db.GetLibraryMediaByTmdbIdAndType(h.App.Database, b.MediaID, "SHOW")
-		}
-		if err == nil && libMedia != nil {
-			lf.LibraryMediaId = libMedia.ID
-		}
+		lf.LibraryMediaId = resolveLibraryMediaID(h.App.Database, b.MediaID)
 	} else if b.MediaID == 0 {
 		// Unmatching: clear LibraryMediaId too
 		lf.LibraryMediaId = 0
@@ -245,7 +253,6 @@ func (h *Handler) HandleUpdateLocalFileData(c echo.Context) error {
 
 	return h.RespondWithData(c, retLfs)
 }
-
 
 // HandleSuperUpdateLocalFiles updates local files with the given paths.
 //
@@ -329,16 +336,7 @@ func (h *Handler) HandleUpdateLocalFiles(c echo.Context) error {
 			lf.Ignored = false
 			// Also resolve LibraryMediaId for complete state
 			if b.MediaID > 0 {
-				var libMedia *models.LibraryMedia
-				var err error
-				if b.MediaID > 1_000_000 {
-					libMedia, err = db.GetLibraryMediaByTmdbIdAndType(h.App.Database, b.MediaID-1_000_000, "MOVIE")
-				} else {
-					libMedia, err = db.GetLibraryMediaByTmdbIdAndType(h.App.Database, b.MediaID, "SHOW")
-				}
-				if err == nil && libMedia != nil {
-					lf.LibraryMediaId = libMedia.ID
-				}
+				lf.LibraryMediaId = resolveLibraryMediaID(h.App.Database, b.MediaID)
 			}
 		}
 

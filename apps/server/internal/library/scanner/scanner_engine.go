@@ -68,20 +68,109 @@ type Scanner struct {
 	TMDBClient      *tmdb.Client
 
 	// Optional enrichers
-	FanArtEnricher   *librarymetadata.FanArtEnricher
-	OMDbEnricher     *librarymetadata.OMDbEnricher
-	OpenSubsEnricher *librarymetadata.OpenSubtitlesEnricher
+	FanArtEnricher *librarymetadata.FanArtEnricher
+	OMDbEnricher   *librarymetadata.OMDbEnricher
 	ScanMode         string
 	TargetPaths      []string
 	FFprobePath      string
 	BackgroundQueue  *BackgroundQueue
 }
 
+// ScannerOptions mirrors all public fields of Scanner and is the canonical
+// way to initialise a Scanner via NewScanner. Adding a new option here
+// forces every call-site to be updated (no silent zero-value surprises).
+type ScannerOptions struct {
+	DirPath                    string
+	OtherDirPaths              []string
+	SeriesPaths                []string
+	MoviePaths                 []string
+	Enhanced                   bool
+	EnhanceWithOfflineDatabase bool
+	PlatformRef                platform.Platform
+	Logger                     *zerolog.Logger
+	WSEventManager             events.WSEventManagerInterface
+	ExistingLocalFiles         []*dto.LocalFile
+	SkipLockedFiles            bool
+	SkipIgnoredFiles           bool
+	ScanSummaryLogger          *summary.ScanSummaryLogger
+	ScanLogger                 *ScanLogger
+	Database                   *db.Database
+	MetadataProviderRef        metadata_provider.Provider
+	MetadataProviders          []librarymetadata.Provider
+	UseLegacyMatching          bool
+	MatchingThreshold          float64
+	MatchingAlgorithm          string
+	StrictStructure            bool
+	WithShelving               bool
+	ExistingShelvedFiles       []*dto.LocalFile
+	Config                     *Config
+	ConfigAsString             string
+	AnimeCollection            *platform.UnifiedCollection
+	UseTMDB                    bool
+	EventDispatcher            events.Dispatcher
+	TMDBClient                 *tmdb.Client
+	FanArtEnricher *librarymetadata.FanArtEnricher
+	OMDbEnricher   *librarymetadata.OMDbEnricher
+	ScanMode       string
+	TargetPaths                []string
+	FFprobePath                string
+	BackgroundQueue            *BackgroundQueue
+}
+
+// NewScanner constructs a Scanner from the given options.
+// Internal state fields (e.g. shelvedLocalFiles) are always zero-initialised.
+func NewScanner(opts *ScannerOptions) *Scanner {
+	return &Scanner{
+		DirPath:                    opts.DirPath,
+		OtherDirPaths:              opts.OtherDirPaths,
+		SeriesPaths:                opts.SeriesPaths,
+		MoviePaths:                 opts.MoviePaths,
+		Enhanced:                   opts.Enhanced,
+		EnhanceWithOfflineDatabase: opts.EnhanceWithOfflineDatabase,
+		PlatformRef:                opts.PlatformRef,
+		Logger:                     opts.Logger,
+		WSEventManager:             opts.WSEventManager,
+		ExistingLocalFiles:         opts.ExistingLocalFiles,
+		SkipLockedFiles:            opts.SkipLockedFiles,
+		SkipIgnoredFiles:           opts.SkipIgnoredFiles,
+		ScanSummaryLogger:          opts.ScanSummaryLogger,
+		ScanLogger:                 opts.ScanLogger,
+		Database:                   opts.Database,
+		MetadataProviderRef:        opts.MetadataProviderRef,
+		MetadataProviders:          opts.MetadataProviders,
+		UseLegacyMatching:          opts.UseLegacyMatching,
+		MatchingThreshold:          opts.MatchingThreshold,
+		MatchingAlgorithm:          opts.MatchingAlgorithm,
+		StrictStructure:            opts.StrictStructure,
+		WithShelving:               opts.WithShelving,
+		ExistingShelvedFiles:       opts.ExistingShelvedFiles,
+		Config:                     opts.Config,
+		ConfigAsString:             opts.ConfigAsString,
+		AnimeCollection:            opts.AnimeCollection,
+		UseTMDB:                    opts.UseTMDB,
+		EventDispatcher:            opts.EventDispatcher,
+		TMDBClient:                 opts.TMDBClient,
+		FanArtEnricher: opts.FanArtEnricher,
+		OMDbEnricher:   opts.OMDbEnricher,
+		ScanMode:       opts.ScanMode,
+		TargetPaths:                opts.TargetPaths,
+		FFprobePath:                opts.FFprobePath,
+		BackgroundQueue:            opts.BackgroundQueue,
+	}
+}
+
 // Scan will scan the directory and return a list of dto.LocalFile.
 func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) {
 	defer util.HandlePanicWithError(&err)
 
-	go anime.EpisodeCollectionFromLocalFilesCache.Clear()
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				scn.Logger.Error().Interface("panic", r).Msg("scanner: panic clearing episode collection cache")
+			}
+		}()
+		anime.EpisodeCollectionFromLocalFilesCache.Clear()
+	}()
 
 	// ── Non-blocking telemetry ────────────────────────────────────────────────
 	// All WSEventManager calls are routed through a buffered channel so workers
@@ -269,12 +358,6 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		})
 
 		localFiles = scn.createLocalFiles(ctx, paths, libraryPaths, skippedLfs)
-
-		if scn.BackgroundQueue != nil {
-			for _, lf := range localFiles {
-				scn.BackgroundQueue.Enqueue(lf)
-			}
-		}
 
 		if scn.ScanLogger != nil {
 			scn.ScanLogger.logger.Debug().
@@ -508,40 +591,40 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 					mediaBatch[i] = e.media
 				}
 				if batchErr := db.UpsertLibraryMediaBatch(scn.Database, mediaBatch, 20); batchErr != nil {
-					scn.Logger.Warn().Err(batchErr).Msg("scanner: NFO batch upsert failed, IDs may be missing")
-				}
-
-				// Query back the persisted records to retrieve their auto-generated IDs.
-				var persisted []*models.LibraryMedia
-				tmdbIDs := make([]int, len(withTmdb))
-				for i, e := range withTmdb {
-					tmdbIDs[i] = e.tmdbID
-				}
-				scn.Database.Gorm().Where("tmdb_id IN ? AND type = ?", tmdbIDs, "ANIME").Find(&persisted)
-
-				type tmdbTypeKey struct {
-					tmdbID    int
-					mediaType string
-				}
-				idMap := make(map[tmdbTypeKey]uint, len(persisted))
-				for _, m := range persisted {
-					idMap[tmdbTypeKey{m.TmdbID, m.Type}] = m.ID
-				}
-
-				for _, e := range withTmdb {
-					key := tmdbTypeKey{e.tmdbID, e.media.Type}
-					if id, ok := idMap[key]; ok {
-						e.lf.LibraryMediaId = id
-						e.lf.MediaID = e.tmdbID
-						if !e.isPerFile {
-							nfoFolderMap.Store(e.folderPath, id)
-						}
-						scn.Logger.Info().
-							Str("filename", e.lf.Name).
-							Uint("libraryMediaId", id).
-							Msg("scanner: Created LibraryMedia via local NFO (batch)")
+					scn.Logger.Error().Err(batchErr).Msg("scanner: NFO batch upsert failed, skipping ID mapping for this batch")
+				} else {
+					// Query back the persisted records to retrieve their auto-generated IDs.
+					var persisted []*models.LibraryMedia
+					tmdbIDs := make([]int, len(withTmdb))
+					for i, e := range withTmdb {
+						tmdbIDs[i] = e.tmdbID
 					}
-				}
+					scn.Database.Gorm().Where("tmdb_id IN ? AND type = ?", tmdbIDs, "ANIME").Find(&persisted)
+
+					type tmdbTypeKey struct {
+						tmdbID    int
+						mediaType string
+					}
+					idMap := make(map[tmdbTypeKey]uint, len(persisted))
+					for _, m := range persisted {
+						idMap[tmdbTypeKey{m.TmdbID, m.Type}] = m.ID
+					}
+
+					for _, e := range withTmdb {
+						key := tmdbTypeKey{e.tmdbID, e.media.Type}
+						if id, ok := idMap[key]; ok {
+							e.lf.LibraryMediaId = id
+							e.lf.MediaID = e.tmdbID
+							if !e.isPerFile {
+								nfoFolderMap.Store(e.folderPath, id)
+							}
+							scn.Logger.Info().
+								Str("filename", e.lf.Name).
+								Uint("libraryMediaId", id).
+								Msg("scanner: Created LibraryMedia via local NFO (batch)")
+						}
+					}
+				} // end else (upsert succeeded)
 			}
 
 			// 2. Individual inserts for local-only NFO records (no TMDB ID).
@@ -851,6 +934,12 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	scn.scanFranchisePhase(ctx, movieIds)
 
 	localFiles = scn.scanFinalizePhase(localFiles, skippedLfs, sortedLibraryPaths, mc, mf)
+
+	if scn.BackgroundQueue != nil {
+		for _, lf := range localFiles {
+			scn.BackgroundQueue.Enqueue(lf)
+		}
+	}
 
 	return localFiles, nil
 }

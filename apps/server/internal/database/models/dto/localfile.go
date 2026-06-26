@@ -56,7 +56,6 @@ type (
 		SubtitleStreams    []*AudioStreamInfo   `json:"subtitleStreams,omitempty"`    // Reusing Audio structure since they share basic properties
 		ExternalSubtitles  []*ExternalSubtitle  `json:"externalSubtitles,omitempty"`  // External .srt/.ass files (Jellyfin-style)
 		ExternalAudioFiles []*ExternalAudioFile `json:"externalAudioFiles,omitempty"` // External .dts/.ac3 files
-		RemoteSubtitles    []*RemoteSubtitle    `json:"remoteSubtitles,omitempty"`    // Available remote subtitles (e.g. OpenSubtitles)
 	}
 
 	// ExternalSubtitle represents a subtitle file found alongside a video file.
@@ -70,17 +69,6 @@ type (
 		IsForced bool   `json:"isForced,omitempty"` // True if "forced" flag present in filename
 		IsSDH    bool   `json:"isSDH,omitempty"`    // True if "sdh" or "hi" flag present (Hearing Impaired)
 		IsCC     bool   `json:"isCC,omitempty"`     // True if "cc" flag present (Closed Captions)
-	}
-
-	// RemoteSubtitle represents a subtitle available for download from a remote provider (e.g. OpenSubtitles).
-	// It is NOT automatically downloaded — the client can request a download separately.
-	RemoteSubtitle struct {
-		ProviderID    string `json:"providerId"`              // e.g. "opensubtitles"
-		FileID        int    `json:"fileId"`                  // OpenSubtitles file_id for download
-		Language      string `json:"language,omitempty"`      // ISO 639-1 code
-		Format        string `json:"format,omitempty"`        // "srt", "ass", etc.
-		DownloadCount int    `json:"downloadCount,omitempty"` // Popularity signal
-		Release       string `json:"release,omitempty"`       // Release name or episode title
 	}
 
 	// ExternalAudioFile represents an external audio track found alongside a video file.

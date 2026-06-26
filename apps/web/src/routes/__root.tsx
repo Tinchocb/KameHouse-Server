@@ -68,13 +68,19 @@ function RootComponent() {
                 <CommandPalette />
             </React.Suspense>
             <GlobalQueueSidebar />
-            <AppLayoutContent>
+            <AppLayoutContent
+                style={{
+                    '--sidebar-width': sidebarOpen ? '260px' : '80px',
+                    transition: 'padding-left 300ms cubic-bezier(0.25, 0.1, 0.25, 1)'
+                } as React.CSSProperties}
+                className="md:pl-[var(--sidebar-width)]"
+            >
                 {/* Mobile Menu Trigger */}
                 <button 
                     onClick={() => useAppStore.getState().setSidebarOpen(true)}
                     tabIndex={sidebarOpen ? -1 : 0}
                     aria-hidden={sidebarOpen ? "true" : undefined}
-                    className="md:hidden fixed top-6 left-6 z-[60] p-3 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 text-white/70 hover:text-white transition-all active:scale-90"
+                    className="md:hidden fixed top-6 left-6 z-[60] p-3 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 text-white/70 hover:text-white transition-all active:scale-95"
                 >
                     <Menu className="w-5 h-5" />
                 </button>

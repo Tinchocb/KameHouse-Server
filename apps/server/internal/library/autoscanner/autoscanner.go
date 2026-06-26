@@ -44,6 +44,10 @@ type (
 		eventDispatcher     events.Dispatcher
 		pendingPaths        []string
 		backgroundQueue     *scanner.BackgroundQueue
+		// shutdownCtx is the application-level context. When it is cancelled
+		// (e.g. on SIGTERM), in-progress scans will respect the cancellation
+		// rather than running to completion.
+		shutdownCtx context.Context
 	}
 	NewAutoScannerOptions struct {
 		Database            *db.Database
@@ -57,6 +61,9 @@ type (
 		OnRefreshCollection func()
 		EventDispatcher     events.Dispatcher
 		BackgroundQueue     *scanner.BackgroundQueue
+		// ShutdownCtx is propagated to every scan triggered by this AutoScanner.
+		// If nil, context.Background() is used as a fallback.
+		ShutdownCtx context.Context
 	}
 )
 
@@ -64,6 +71,11 @@ func New(opts *NewAutoScannerOptions) *AutoScanner {
 	wt := time.Second * 15 // Default wait time is 15 seconds.
 	if opts.WaitTime > 0 {
 		wt = opts.WaitTime
+	}
+
+	shutdownCtx := opts.ShutdownCtx
+	if shutdownCtx == nil {
+		shutdownCtx = context.Background()
 	}
 
 	return &AutoScanner{
@@ -83,6 +95,7 @@ func New(opts *NewAutoScannerOptions) *AutoScanner {
 		onRefreshCollection: opts.OnRefreshCollection,
 		eventDispatcher:     opts.EventDispatcher,
 		backgroundQueue:     opts.BackgroundQueue,
+		shutdownCtx:         shutdownCtx,
 	}
 }
 
@@ -107,7 +120,7 @@ func (as *AutoScanner) Notify(path string) {
 	if path != "" {
 		stat, err := os.Stat(path)
 		isDir := err == nil && stat.IsDir()
-		
+
 		if !isDir {
 			ext := strings.ToLower(filepath.Ext(path))
 			if !util.IsValidVideoExtension(ext) {
@@ -202,30 +215,30 @@ func (as *AutoScanner) TriggerScan(targets []string) {
 	}
 
 	// Scan the library
-	scn := &scanner.Scanner{
-		DirPath:               libraryPath,
-		OtherDirPaths:         additionalPaths,
-		SeriesPaths:           as.settings.SeriesPaths,
-		MoviePaths:            as.settings.MoviePaths,
-		Logger:                as.logger,
-		PlatformRef:           as.platform,
-		Database:              as.db,
-		MetadataProviderRef:   as.metadataProvider,
-		UseTMDB:               as.settings.ScannerProvider == "tmdb",
-		EventDispatcher:       as.eventDispatcher,
-		MatchingAlgorithm:     as.settings.ScannerMatchingAlgorithm,
-		MatchingThreshold:     as.settings.ScannerMatchingThreshold,
-		UseLegacyMatching:     as.settings.ScannerUseLegacyMatching,
-		StrictStructure:       as.settings.ScannerStrictStructure,
-		ConfigAsString:        as.settings.ScannerConfig,
-		ScanSummaryLogger:     summary.NewScanSummaryLogger(),
-		WithShelving:          true,
-		TargetPaths:           targets,
-		FFprobePath:           ffprobePath,
-		BackgroundQueue:       as.backgroundQueue,
-	}
+	scn := scanner.NewScanner(&scanner.ScannerOptions{
+		DirPath:             libraryPath,
+		OtherDirPaths:       additionalPaths,
+		SeriesPaths:         as.settings.SeriesPaths,
+		MoviePaths:          as.settings.MoviePaths,
+		Logger:              as.logger,
+		PlatformRef:         as.platform,
+		Database:            as.db,
+		MetadataProviderRef: as.metadataProvider,
+		UseTMDB:             as.settings.ScannerProvider == "tmdb",
+		EventDispatcher:     as.eventDispatcher,
+		MatchingAlgorithm:   as.settings.ScannerMatchingAlgorithm,
+		MatchingThreshold:   as.settings.ScannerMatchingThreshold,
+		UseLegacyMatching:   as.settings.ScannerUseLegacyMatching,
+		StrictStructure:     as.settings.ScannerStrictStructure,
+		ConfigAsString:      as.settings.ScannerConfig,
+		ScanSummaryLogger:   summary.NewScanSummaryLogger(),
+		WithShelving:        true,
+		TargetPaths:         targets,
+		FFprobePath:         ffprobePath,
+		BackgroundQueue:     as.backgroundQueue,
+	})
 
-	allLfs, err := scn.Scan(context.Background())
+	allLfs, err := scn.Scan(as.shutdownCtx)
 	if err != nil {
 		as.logger.Error().Err(err).Msg("autoscanner: Failed to scan library")
 		return
@@ -248,14 +261,10 @@ func (as *AutoScanner) TriggerScan(targets []string) {
 
 	as.logger.Info().Msg("autoscanner: Library scan completed")
 
-
-
 	// Refresh the collection
 	if as.onRefreshCollection != nil {
 		as.onRefreshCollection()
 	}
-
-
 
 	as.mu.Lock()
 	if as.missedAction {

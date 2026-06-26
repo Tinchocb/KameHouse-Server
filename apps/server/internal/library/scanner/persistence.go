@@ -130,11 +130,9 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 		scn.Logger.Debug().Int("batchSize", len(mediaBatch)).Msg("scanner: Persisting matched media batch")
 		err := db.UpsertLibraryMediaBatch(scn.Database, mediaBatch, 10)
 		if err != nil {
-			scn.Logger.Warn().Err(err).Msg("scanner: Failed to bulk upsert LibraryMedia batch")
-		}
-
-		var insertedMedia []*models.LibraryMedia
-		if scn.Database != nil {
+			scn.Logger.Error().Err(err).Msg("scanner: Failed to bulk upsert LibraryMedia batch, skipping ID mapping")
+		} else if scn.Database != nil {
+			var insertedMedia []*models.LibraryMedia
 			tmdbIDs := make([]int, len(mediaBatch))
 			for i, m := range mediaBatch {
 				tmdbIDs[i] = m.TmdbID

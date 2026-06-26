@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 	"time"
 
 	"kamehouse/internal/core"
 	"kamehouse/internal/handlers"
+	"kamehouse/internal/util"
 
-	"github.com/subosito/gotenv"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
@@ -26,7 +25,7 @@ var assets embed.FS
 var embeddedLogo []byte
 
 func main() {
-	loadEnvFile()
+	util.LoadDotEnvFile()
 
 	app := NewApp()
 
@@ -55,7 +54,7 @@ func main() {
 		}
 
 		kameApp := core.NewKameHouse(configOpts)
-		
+
 		// Initialize Echo app (using an empty embed.FS since Wails is serving the frontend)
 		var emptyWebFS embed.FS
 		e := core.NewEchoApp(kameApp, &emptyWebFS)
@@ -68,7 +67,7 @@ func main() {
 		kameApp.Flags.Port = portVal
 
 		// Add allowed CORS origins
-		kameApp.Config.Server.CorsOrigins = append(kameApp.Config.Server.CorsOrigins, 
+		kameApp.Config.Server.CorsOrigins = append(kameApp.Config.Server.CorsOrigins,
 			fmt.Sprintf("http://%s:%d", hostStr, portVal),
 			"http://localhost:43210", // Allow local dev server
 			"http://127.0.0.1:43210",
@@ -84,6 +83,10 @@ func main() {
 			WriteTimeout:      0,
 			IdleTimeout:       120 * time.Second,
 		}
+
+		// Wire up to the App struct so shutdown() can drain requests and flush DB.
+		app.srv = srv
+		app.kameApp = kameApp
 
 		kameApp.Logger.Info().Msg(fmt.Sprintf("Echo server running inside Wails at %s", addr))
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -114,42 +117,5 @@ func main() {
 
 	if err != nil {
 		println("Error:", err.Error())
-	}
-}
-
-// loadEnvFile matches the original server env loading
-func loadEnvFile() {
-	candidates := make([]string, 0, 12)
-
-	if cwd, err := os.Getwd(); err == nil {
-		dir := cwd
-		for i := 0; i < 6; i++ {
-			candidates = append(candidates, dir)
-			parent := filepath.Dir(dir)
-			if parent == dir {
-				break
-			}
-			dir = parent
-		}
-	}
-
-	if exe, err := os.Executable(); err == nil {
-		dir := filepath.Dir(exe)
-		for i := 0; i < 6; i++ {
-			candidates = append(candidates, dir)
-			parent := filepath.Dir(dir)
-			if parent == dir {
-				break
-			}
-			dir = parent
-		}
-	}
-
-	for _, dir := range candidates {
-		envPath := filepath.Join(dir, ".env")
-		if _, err := os.Stat(envPath); err == nil {
-			_ = gotenv.OverLoad(envPath)
-			return
-		}
 	}
 }

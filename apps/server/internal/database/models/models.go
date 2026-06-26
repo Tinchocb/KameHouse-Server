@@ -92,7 +92,6 @@ type LibrarySettings struct {
 	ScannerUseLegacyMatching        bool         `gorm:"column:scanner_use_legacy_matching" json:"scannerUseLegacyMatching"`
 	FanartApiKey                    string       `gorm:"column:fanart_api_key" json:"fanartApiKey"`
 	OmdbApiKey                      string       `gorm:"column:omdb_api_key" json:"omdbApiKey"`
-	OpenSubsApiKey                  string       `gorm:"column:opensubs_api_key" json:"openSubsApiKey"`
 	LastScanAt                      time.Time    `gorm:"column:last_scan_at" json:"lastScanAt"`
 	AutoScan                        bool         `gorm:"-" json:"autoScan"`
 	EnableOnlinestream              bool         `gorm:"-" json:"enableOnlinestream"`
