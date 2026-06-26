@@ -44,11 +44,11 @@ func (h *Handler) getAnimeEntry(c echo.Context, lfs []*dto.LocalFile, mID int) (
 
 	h.App.FillerManager.HydrateFillerData(entry)
 
-	// ── TMDB Episode Enrichment ──────────────────────────────────────────────────────────────────────────────────────
+	// ── TMDB Episode & Media Enrichment ──────────────────────────────────────────────────────────────────────────────
 	// If the media has a TmdbID and episodes are missing synopsis/image,
 	// fetch TMDB season data and fill in the gaps (best-effort, never fails the request).
-	h.enrichEpisodesWithTMDB(c.Request().Context(), entry)
-	h.enrichMediaWithTMDB(c.Request().Context(), entry)
+	h.enrichEpisodesWithTMDB(c.Request().Context(), entry, nil)
+	h.enrichMediaWithTMDB(c.Request().Context(), entry, nil)
 
 	return entry, nil
 }

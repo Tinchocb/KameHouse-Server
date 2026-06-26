@@ -1,4 +1,3 @@
-// Package lore provides functions to load, query, and manage Dragon Ball universe lore and sagas data.
 package lore
 
 import (
@@ -12,11 +11,32 @@ import (
 //go:embed dragonball_lore.json
 var dragonBallLoreJSON []byte
 
+// TMDB series IDs → internal series_id mapping
+var tmdbToSeriesID = map[int]string{
+	12609:  "dragon_ball",
+	12971:  "dragon_ball_z",
+	12697:  "dragon_ball_gt",
+	62715:  "dragon_ball_super",
+	236994: "dragon_ball_daima",
+	80629:  "dragon_ball_heroes",
+}
+
+// GetSeriesIDFromTMDB maps a TMDB media ID to the internal Dragon Ball series_id string.
+// Returns empty string if the TMDB ID is not recognized.
+func GetSeriesIDFromTMDB(tmdbID int) string {
+	return tmdbToSeriesID[tmdbID]
+}
+
+// GetTMDBIDs returns the full TMDB ID → series_id mapping.
+func GetTMDBIDs() map[int]string {
+	return tmdbToSeriesID
+}
+
 type LoreWiki struct {
-	Universe          string           `json:"universe"`
-	SagasWiki         []SeriesSagas    `json:"sagas_wiki"`
-	CharactersWiki    []interface{}    `json:"characters_wiki"`
-	MoviesAndSpecials []interface{}    `json:"movies_and_specials"`
+	Universe          string        `json:"universe"`
+	SagasWiki         []SeriesSagas `json:"sagas_wiki"`
+	CharactersWiki    []interface{} `json:"characters_wiki"`
+	MoviesAndSpecials []interface{} `json:"movies_and_specials"`
 }
 
 type SeriesSagas struct {
@@ -30,15 +50,15 @@ type SeriesSagas struct {
 }
 
 type SagaWiki struct {
-	ID            string   `json:"id"`
-	Name          string   `json:"name"`
-	Episodes      string   `json:"episodes"`
+	ID            string      `json:"id"`
+	Name          string      `json:"name"`
+	Episodes      string      `json:"episodes"`
 	Canon         interface{} `json:"canon,omitempty"`
-	IsFiller      bool     `json:"is_filler,omitempty"`
-	Description   string   `json:"description"`
-	Antagonists   []string `json:"antagonists,omitempty"`
-	KeyEvents     []string `json:"key_events,omitempty"`
-	NewCharacters []string `json:"new_characters,omitempty"`
+	IsFiller      bool        `json:"is_filler,omitempty"`
+	Description   string      `json:"description"`
+	Antagonists   []string    `json:"antagonists,omitempty"`
+	KeyEvents     []string    `json:"key_events,omitempty"`
+	NewCharacters []string    `json:"new_characters,omitempty"`
 }
 
 type SagaRange struct {
@@ -58,33 +78,25 @@ func GetDragonBallLoreJSON() []byte {
 	return dragonBallLoreJSON
 }
 
-// GetLore returns the loaded and parsed Dragon Ball lore wiki structure.
+// GetLore returns the parsed Dragon Ball lore wiki (lazily initialized).
 func GetLore() *LoreWiki {
 	loreOnce.Do(func() {
-		var l LoreWiki
-		if err := json.Unmarshal(dragonBallLoreJSON, &l); err == nil {
-			loreData = &l
+		var data struct {
+			Universe          string        `json:"universe"`
+			SagasWiki         []SeriesSagas `json:"sagas_wiki"`
+			CharactersWiki    []interface{} `json:"characters_wiki"`
+			MoviesAndSpecials []interface{} `json:"movies_and_specials"`
+		}
+		if err := json.Unmarshal(dragonBallLoreJSON, &data); err == nil {
+			loreData = &LoreWiki{
+				Universe:          data.Universe,
+				SagasWiki:         data.SagasWiki,
+				CharactersWiki:    data.CharactersWiki,
+				MoviesAndSpecials: data.MoviesAndSpecials,
+			}
 		}
 	})
 	return loreData
-}
-
-// GetSeriesIDFromTMDB maps TMDB ID to the internal series ID.
-func GetSeriesIDFromTMDB(tmdbID int) string {
-	switch tmdbID {
-	case 12609:
-		return "dragon_ball"
-	case 12971:
-		return "dragon_ball_z"
-	case 12697:
-		return "dragon_ball_gt"
-	case 62715:
-		return "dragon_ball_super"
-	case 236994:
-		return "dragon_ball_daima"
-	default:
-		return ""
-	}
 }
 
 // GetSagaRanges dynamically loads and returns the saga ranges for a given TMDB series.
@@ -103,7 +115,7 @@ func GetSagaRanges(tmdbID int) []SagaRange {
 		if series.SeriesID == seriesID {
 			var ranges []SagaRange
 			for _, s := range series.Sagas {
-				start, end := parseEpRange(s.Episodes)
+				start, end := ParseEpRange(s.Episodes)
 				ranges = append(ranges, SagaRange{
 					ID:      s.ID,
 					Title:   s.Name,
@@ -117,8 +129,7 @@ func GetSagaRanges(tmdbID int) []SagaRange {
 	return nil
 }
 
-
-func parseEpRange(epRange string) (int, int) {
+func ParseEpRange(epRange string) (int, int) {
 	parts := strings.Split(epRange, "-")
 	if len(parts) == 0 {
 		return 0, 0

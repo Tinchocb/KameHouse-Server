@@ -30,6 +30,7 @@ func (h *Handler) RegisterLibraryRoutes(v1 *echo.Group) {
 	v1Library.GET("/upcoming-episodes", h.HandleGetUpcomingEpisodes)
 
 	v1Library.GET("/anime-entry/:id", h.HandleGetAnimeEntry)
+	v1Library.GET("/anime-entry/:id/sagas", h.HandleGetSeriesSagas)
 	v1Library.GET("/anime-entry/:id/local-files", h.HandleGetAnimeEntryLocalFiles)
 	v1Library.POST("/anime-entry/suggestions", h.HandleGetAnimeEntrySuggestions)
 	v1Library.POST("/anime-entry/manual-match", h.HandleAnimeEntryManualMatch)

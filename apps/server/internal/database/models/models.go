@@ -379,3 +379,17 @@ type EpisodeSkipTime struct {
 	EdEnd         float64 `gorm:"column:ed_end" json:"edEnd"`
 }
 
+// MediaIDMapping centraliza el mapeo de IDs entre plataformas (TMDB, MAL, Jellyfin).
+// Permite al frontend comunicarse exclusivamente con TMDB IDs mientras el backend
+// traduce internamente a los IDs específicos de Jellyfin u otras fuentes.
+type MediaIDMapping struct {
+	BaseModel
+	InternalID int    `gorm:"column:internal_id;uniqueIndex" json:"internalId"`
+	TMDBID     int    `gorm:"column:tmdb_id;index" json:"tmdbId,omitempty"`
+	MALID      int    `gorm:"column:mal_id;index" json:"malId,omitempty"`
+	JellyfinID string `gorm:"column:jellyfin_id;index" json:"jellyfinId,omitempty"`
+	MediaType  string `gorm:"column:media_type" json:"mediaType"` // "movie" | "tv"
+	Title      string `gorm:"column:title" json:"title"`
+	LastSyncAt time.Time `gorm:"column:last_sync_at" json:"lastSyncAt"`
+}
+

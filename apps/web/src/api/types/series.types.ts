@@ -22,6 +22,8 @@ export interface SagaDTO {
   id: string
   name: string
   episodeRange: string
+  startEp: number
+  endEp: number
   description: string
   isFiller: boolean
   canonStatus: string
@@ -43,6 +45,12 @@ export interface SeriesDetailsDTO {
   media: NormalizedMedia
   advancedDetails: AdvancedMediaMetadata
   sagas: SagaDTO[]
+}
+
+export interface SagaDetailSearchParams {
+  tab?: "episodes" | "movie" | "relations" | "characters"
+  saga?: string
+  subSaga?: string
 }
 
 export interface PremiumEpisode {

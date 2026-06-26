@@ -5,23 +5,64 @@ import (
 	"os"
 	"sort"
 	"strconv"
+	"sync"
+	"time"
 
 	"kamehouse/internal/api/tmdb"
 	"kamehouse/internal/database/db"
+	"kamehouse/internal/database/models"
 	"kamehouse/internal/library/anime"
 	librarymetadata "kamehouse/internal/library/metadata"
 	"kamehouse/internal/platforms/platform"
 )
 
-func debugLogEnrich(location, message string, data map[string]any) {
-	// disabled
+// SettingsCache provides in-memory caching for application settings to reduce repeated database calls.
+// It stores the settings and can be invalidated when settings are updated.
+type SettingsCache struct {
+	settingsMutex sync.RWMutex
+	settings     *models.Settings
+	settingsTime time.Time
 }
 
-func getActiveProvider(h *Handler) librarymetadata.Provider {
+func (c *SettingsCache) GetSettings(database *db.Database) (*models.Settings, error) {
+	c.settingsMutex.RLock()
+	if c.settings != nil {
+		c.settingsMutex.RUnlock()
+		return c.settings, nil
+	}
+	c.settingsMutex.RUnlock()
+
+	c.settingsMutex.Lock()
+	defer c.settingsMutex.Unlock()
+
+	if c.settings != nil {
+		return c.settings, nil
+	}
+
+	var settings models.Settings
+	err := database.Gorm().Where("id = ?", 1).First(&settings).Error
+	if err != nil {
+		return nil, err
+	}
+	c.settings = &settings
+	c.settingsTime = time.Now()
+	return &settings, nil
+}
+
+func (c *SettingsCache) Invalidate() {
+	c.settingsMutex.Lock()
+	defer c.settingsMutex.Unlock()
+	c.settings = nil
+}
+
+// GlobalSettingsCache is the centralized instance for application settings.
+var GlobalSettingsCache = &SettingsCache{}
+
+func getActiveProvider(settings *models.Settings, dbInstance *db.Database) librarymetadata.Provider {
 	var useTMDB bool
 	var tmdbToken string
 	var tmdbLanguage string
-	if settings, err := h.App.Database.GetSettings(); err == nil && settings != nil {
+	if settings != nil {
 		useTMDB = settings.Library.ScannerProvider == "tmdb"
 		tmdbToken = settings.Library.TmdbApiKey
 		tmdbLanguage = settings.Library.TmdbLanguage
@@ -35,9 +76,8 @@ func getActiveProvider(h *Handler) librarymetadata.Provider {
 			tmdbLanguage = "es-MX"
 		}
 		if tmdbToken != "" {
-			return librarymetadata.NewTMDBProvider(tmdbToken, h.App.Database, tmdbLanguage)
+			return librarymetadata.NewTMDBProvider(tmdbToken, dbInstance, tmdbLanguage)
 		}
-		h.App.Logger.Warn().Msg("handlers: TMDB mode requested but TMDB token not set")
 	}
 
 	return nil
@@ -47,7 +87,7 @@ func getActiveProvider(h *Handler) librarymetadata.Provider {
 // any fields that AniDB/Animap left empty (title, overview/summary, still image, runtime).
 // Supports multi-season series by fetching all available seasons in parallel.
 // This is purely additive — never overwrites existing non-empty values.
-func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry) {
+func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry, settings *models.Settings) {
 	if entry == nil || entry.Media == nil || entry.Media.TmdbID == 0 {
 		return
 	}
@@ -68,32 +108,19 @@ func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry
 		}
 	}
 	if allComplete {
-		debugLogEnrich("anime_entries.go:enrichEpisodesWithTMDB", "skipped — episodes complete", map[string]any{
-			"tmdbID": entry.Media.TmdbID, "episodeCount": len(entry.Episodes), "hypothesisId": "C",
-		})
+		h.App.Logger.Debug().
+			Int("tmdbID", entry.Media.TmdbID).
+			Int("episodeCount", len(entry.Episodes)).
+			Msg("enrichEpisodesWithTMDB: skipped — episodes complete")
 		return
 	}
 
 	h.App.Logger.Debug().Int("tmdbID", entry.Media.TmdbID).Msg("enrichEpisodesWithTMDB: starting enrichment")
 
-	// Build a TMDB provider
-	var tmdbToken string
-	var tmdbLanguage string
-	if settings, err := h.App.Database.GetSettings(); err == nil && settings != nil {
-		tmdbToken = settings.Library.TmdbApiKey
-		tmdbLanguage = settings.Library.TmdbLanguage
-	}
-	if tmdbToken == "" {
-		tmdbToken = os.Getenv("KAMEHOUSE_TMDB_TOKEN")
-	}
-	if tmdbToken == "" {
+	provider := getActiveProvider(settings, h.App.Database)
+	if provider == nil {
 		return
 	}
-	if tmdbLanguage == "" || tmdbLanguage == "en" || tmdbLanguage == "es" {
-		tmdbLanguage = "es-MX"
-	}
-
-	provider := librarymetadata.NewTMDBProvider(tmdbToken, h.App.Database, tmdbLanguage)
 	tmdbID := entry.Media.TmdbID
 
 	// Determine the number of seasons we need to cover.
@@ -130,8 +157,13 @@ func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry
 		return
 	}
 
-	// Fetch Season 1 baseline
-	s1, err := provider.GetTVSeason(ctx, tmdbID, 1)
+	// Fetch Season 1 baseline — requires TMDBProvider specifically
+	tmdbProvider, ok := provider.(*librarymetadata.TMDBProvider)
+	if !ok {
+		return
+	}
+
+	s1, err := tmdbProvider.GetTVSeason(ctx, tmdbID, 1)
 	if err != nil {
 		h.App.Logger.Warn().Err(err).Int("tmdbID", tmdbID).Msg("enrichEpisodesWithTMDB: could not fetch TMDB season 1")
 		return
@@ -166,7 +198,7 @@ func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry
 		ch := make(chan seasonResult, numSeasonsNeeded-1)
 		for sn := 2; sn <= numSeasonsNeeded; sn++ {
 			go func(seasonNum int) {
-				s, e := provider.GetTVSeason(ctx, tmdbID, seasonNum)
+				s, e := tmdbProvider.GetTVSeason(ctx, tmdbID, seasonNum)
 				ch <- seasonResult{season: s, num: seasonNum, err: e}
 			}(sn)
 		}
@@ -239,7 +271,7 @@ func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry
 }
 
 // enrichMediaWithTMDB fetches series-level metadata from TMDB if the local description is missing.
-func (h *Handler) enrichMediaWithTMDB(ctx context.Context, entry *anime.Entry) {
+func (h *Handler) enrichMediaWithTMDB(ctx context.Context, entry *anime.Entry, settings *models.Settings) {
 	if entry == nil || entry.Media == nil || entry.Media.TmdbID == 0 {
 		return
 	}
@@ -255,23 +287,10 @@ func (h *Handler) enrichMediaWithTMDB(ctx context.Context, entry *anime.Entry) {
 
 	h.App.Logger.Debug().Int("tmdbID", entry.Media.TmdbID).Msg("enrichMediaWithTMDB: fetching series metadata")
 
-	var tmdbToken string
-	var tmdbLanguage string
-	if settings, err := h.App.Database.GetSettings(); err == nil && settings != nil {
-		tmdbToken = settings.Library.TmdbApiKey
-		tmdbLanguage = settings.Library.TmdbLanguage
-	}
-	if tmdbToken == "" {
-		tmdbToken = os.Getenv("KAMEHOUSE_TMDB_TOKEN")
-	}
-	if tmdbToken == "" {
+	provider := getActiveProvider(settings, h.App.Database)
+	if provider == nil {
 		return
 	}
-	if tmdbLanguage == "" || tmdbLanguage == "en" || tmdbLanguage == "es" {
-		tmdbLanguage = "es-MX"
-	}
-
-	provider := librarymetadata.NewTMDBProvider(tmdbToken, h.App.Database, tmdbLanguage)
 	tmdbID := entry.Media.TmdbID
 
 	// Fetch details

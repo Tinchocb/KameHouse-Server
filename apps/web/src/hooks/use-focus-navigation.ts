@@ -1,5 +1,12 @@
 import { useEffect, useCallback, useRef } from "react"
 
+interface SpatialNode {
+    element: HTMLElement
+    rect: DOMRect
+    centerX: number
+    centerY: number
+}
+
 interface UseFocusNavigationOptions {
     /** Container ref that holds the focusable elements */
     containerRef: React.RefObject<HTMLElement>
@@ -11,11 +18,87 @@ interface UseFocusNavigationOptions {
     onEscape?: () => void
     /** Called when Enter/OK key is pressed on a focused element */
     onEnter?: (element: HTMLElement) => void
+    /** Navigation mode: 'four-way' for TV, 'two-way' for horizontal carousels */
+    direction?: "four-way" | "two-way"
 }
 
 /**
- * Hook for D-pad/remote control navigation in TV browsers.
- * Handles arrow key navigation between focusable elements.
+ * Calcula un puntaje de idoneidad para navegar desde un nodo actual a un candidato
+ * en la dirección dada. Un puntaje más bajo significa mejor candidato.
+ *
+ * Utiliza distancia euclidiana ponderada con penalización por dirección opuesta.
+ */
+function calculateScore(
+    current: SpatialNode,
+    candidate: SpatialNode,
+    direction: "left" | "right" | "up" | "down"
+): number {
+    const dx = candidate.centerX - current.centerX
+    const dy = candidate.centerY - current.centerY
+    const distance = Math.sqrt(dx * dx + dy * dy)
+
+    if (distance === 0) return Infinity
+
+    // Determinar si el candidato está en la dirección correcta
+    let isInDirection = false
+    let perpendicularPenalty = 1.0
+
+    switch (direction) {
+        case "right":
+            isInDirection = dx > 0
+            // Penalizar candidatos que están muy arriba o abajo
+            perpendicularPenalty = 1.0 + Math.abs(dy) / (Math.abs(dx) + 1) * 0.5
+            break
+        case "left":
+            isInDirection = dx < 0
+            perpendicularPenalty = 1.0 + Math.abs(dy) / (Math.abs(dx) + 1) * 0.5
+            break
+        case "down":
+            isInDirection = dy > 0
+            perpendicularPenalty = 1.0 + Math.abs(dx) / (Math.abs(dy) + 1) * 0.5
+            break
+        case "up":
+            isInDirection = dy < 0
+            perpendicularPenalty = 1.0 + Math.abs(dx) / (Math.abs(dy) + 1) * 0.5
+            break
+    }
+
+    // Si no está en la dirección correcta, penalizar fuertemente
+    if (!isInDirection) {
+        return distance * 3.0
+    }
+
+    return distance * perpendicularPenalty
+}
+
+/**
+ * Obtiene el SpatialNode de un elemento HTML.
+ */
+function getSpatialNode(element: HTMLElement): SpatialNode {
+    const rect = element.getBoundingClientRect()
+    return {
+        element,
+        rect,
+        centerX: rect.left + rect.width / 2,
+        centerY: rect.top + rect.height / 2,
+    }
+}
+
+/**
+ * Hook para navegación espacial D-pad/remote control en TV browsers.
+ * Utiliza cálculo de distancias euclidianas para encontrar el elemento
+ * más cercano en la dirección de navegación.
+ *
+ * Ejemplo de uso:
+ * ```tsx
+ * const containerRef = useRef<HTMLDivElement>(null)
+ * useFocusNavigation({
+ *     containerRef,
+ *     enabled: controlsVisible,
+ *     onEscape: handleClose,
+ *     direction: "four-way",
+ * })
+ * ```
  */
 export function useFocusNavigation({
     containerRef,
@@ -23,8 +106,9 @@ export function useFocusNavigation({
     focusableSelector = 'button, [role="button"], input, select, textarea, a[href], [tabindex]:not([tabindex="-1"])',
     onEscape,
     onEnter,
+    direction = "four-way",
 }: UseFocusNavigationOptions) {
-    const focusedIndexRef = useRef<number>(-1)
+    const focusedElementRef = useRef<HTMLElement | null>(null)
 
     const getFocusableElements = useCallback(() => {
         if (!containerRef.current) return []
@@ -42,15 +126,40 @@ export function useFocusNavigation({
         })
     }, [containerRef, focusableSelector])
 
+    const findBestCandidate = useCallback(
+        (
+            current: SpatialNode,
+            elements: HTMLElement[],
+            arrowDirection: "left" | "right" | "up" | "down"
+        ): HTMLElement | null => {
+            let bestCandidate: HTMLElement | null = null
+            let bestScore = Infinity
+
+            for (const el of elements) {
+                if (el === current.element) continue
+
+                const candidateNode = getSpatialNode(el)
+                const score = calculateScore(current, candidateNode, arrowDirection)
+
+                if (score < bestScore) {
+                    bestScore = score
+                    bestCandidate = el
+                }
+            }
+
+            return bestCandidate
+        },
+        []
+    )
+
     const focusElement = useCallback(
-        (index: number) => {
-            const elements = getFocusableElements()
-            if (index >= 0 && index < elements.length) {
-                elements[index].focus()
-                focusedIndexRef.current = index
+        (element: HTMLElement | null) => {
+            if (element) {
+                element.focus()
+                focusedElementRef.current = element
             }
         },
-        [getFocusableElements]
+        []
     )
 
     const handleKeyDown = useCallback(
@@ -60,56 +169,89 @@ export function useFocusNavigation({
             const elements = getFocusableElements()
             if (elements.length === 0) return
 
-            const currentIndex = focusedIndexRef.current
-            let newIndex = currentIndex
+            const currentElement = focusedElementRef.current || document.activeElement as HTMLElement
+
+            // Si no hay elemento focalizado, enfocar el primero
+            if (!currentElement || !elements.includes(currentElement)) {
+                if (elements.length > 0) {
+                    focusElement(elements[0])
+                }
+                return
+            }
+
+            const currentNode = getSpatialNode(currentElement)
 
             switch (e.key) {
-                case "ArrowRight":
+                case "ArrowRight": {
                     e.preventDefault()
-                    newIndex = currentIndex < elements.length - 1 ? currentIndex + 1 : 0
-                    focusElement(newIndex)
-                    break
-
-                case "ArrowLeft":
-                    e.preventDefault()
-                    newIndex = currentIndex > 0 ? currentIndex - 1 : elements.length - 1
-                    focusElement(newIndex)
-                    break
-
-                case "ArrowDown":
-                    e.preventDefault()
-                    // For horizontal layouts, move to next element
-                    newIndex = currentIndex < elements.length - 1 ? currentIndex + 1 : 0
-                    focusElement(newIndex)
-                    break
-
-                case "ArrowUp":
-                    e.preventDefault()
-                    // For horizontal layouts, move to previous element
-                    newIndex = currentIndex > 0 ? currentIndex - 1 : elements.length - 1
-                    focusElement(newIndex)
-                    break
-
-                case "Enter":
-                case "OK":
-                    e.preventDefault()
-                    if (currentIndex >= 0 && currentIndex < elements.length) {
-                        onEnter?.(elements[currentIndex])
-                        elements[currentIndex].click()
+                    if (direction === "two-way") {
+                        // En modo dos vías, solo navegar horizontalmente
+                        const idx = elements.indexOf(currentElement)
+                        if (idx < elements.length - 1) {
+                            focusElement(elements[idx + 1])
+                        }
+                    } else {
+                        const best = findBestCandidate(currentNode, elements, "right")
+                        if (best) focusElement(best)
                     }
                     break
+                }
+
+                case "ArrowLeft": {
+                    e.preventDefault()
+                    if (direction === "two-way") {
+                        const idx = elements.indexOf(currentElement)
+                        if (idx > 0) {
+                            focusElement(elements[idx - 1])
+                        }
+                    } else {
+                        const best = findBestCandidate(currentNode, elements, "left")
+                        if (best) focusElement(best)
+                    }
+                    break
+                }
+
+                case "ArrowDown": {
+                    e.preventDefault()
+                    if (direction === "two-way") {
+                        // En modo dos vías, las flechas arriba/abajo no hacen nada
+                        return
+                    }
+                    const best = findBestCandidate(currentNode, elements, "down")
+                    if (best) focusElement(best)
+                    break
+                }
+
+                case "ArrowUp": {
+                    e.preventDefault()
+                    if (direction === "two-way") {
+                        return
+                    }
+                    const best = findBestCandidate(currentNode, elements, "up")
+                    if (best) focusElement(best)
+                    break
+                }
+
+                case "Enter":
+                case "OK": {
+                    e.preventDefault()
+                    onEnter?.(currentElement)
+                    currentElement.click()
+                    break
+                }
 
                 case "Escape":
-                case "Return":
+                case "Return": {
                     e.preventDefault()
                     onEscape?.()
                     break
+                }
 
                 default:
                     break
             }
         },
-        [enabled, getFocusableElements, focusElement, onEnter, onEscape]
+        [enabled, getFocusableElements, findBestCandidate, focusElement, onEnter, onEscape, direction]
     )
 
     useEffect(() => {
@@ -125,13 +267,13 @@ export function useFocusNavigation({
     }, [enabled, containerRef, handleKeyDown])
 
     return {
-        /** Programmatically focus an element by index */
+        /** Programmatically focus an element */
         focusElement,
-        /** Get the currently focused index */
-        getFocusedIndex: () => focusedIndexRef.current,
-        /** Reset focus to -1 (no element focused) */
+        /** Get the currently focused element */
+        getFocusedElement: () => focusedElementRef.current,
+        /** Reset focus (clear tracked element) */
         resetFocus: () => {
-            focusedIndexRef.current = -1
+            focusedElementRef.current = null
         },
     }
 }

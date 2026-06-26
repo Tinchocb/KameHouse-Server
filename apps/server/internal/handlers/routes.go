@@ -3,10 +3,13 @@ package handlers
 import (
 	"errors"
 	"kamehouse/internal/core"
+	"kamehouse/internal/database/models"
+	"kamehouse/internal/intelligence"
 	util "kamehouse/internal/util/proxies"
 	"net/http"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,7 +20,10 @@ import (
 )
 
 type Handler struct {
-	App *core.App
+	App                  *core.App
+	settingsMu           sync.RWMutex
+	settings             *models.Settings
+	IntelligenceSelector *intelligence.Selector
 }
 
 func InitRoutes(app *core.App, e *echo.Echo) {
@@ -115,7 +121,8 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	e.Use(headMethodMiddleware)
 
 	h := &Handler{
-		App: app,
+		App:                  app,
+		IntelligenceSelector: intelligence.NewSelector(app.Database, nil, app.Logger),
 	}
 
 	h.StartPlaybackHeartbeatSubscriber()
@@ -137,6 +144,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	v1.HEAD("/proxy", h.VideoProxy)
 	v1.GET("/status", h.HandleGetStatus)
 	v1.GET("/lore/dragonball", h.HandleGetDragonBallLore)
+	v1.GET("/config/metadata", h.HandleGetConfigMetadata)
 	v1.GET("/status/home-items", h.HandleGetHomeItems)
 	v1.POST("/status/home-items", h.HandleUpdateHomeItems)
 	v1.GET("/home/curated", h.HandleGetHomeCurated)
@@ -160,6 +168,14 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	h.RegisterStreamingRoutes(v1)
 	h.RegisterSettingsRoutes(v1)
 	h.RegisterLocalRoutes(v1)
+	h.RegisterIntelligenceRoutes(v1)
+}
+
+// RegisterIntelligenceRoutes registra las rutas del motor de selección inteligente.
+func (h *Handler) RegisterIntelligenceRoutes(v1 *echo.Group) {
+	intelligence := v1.Group("/intelligence")
+	intelligence.GET("/best-source", h.HandleGetBestSource)
+	intelligence.GET("/stats", h.HandleGetIntelligenceStats)
 }
 
 func (h *Handler) JSON(c echo.Context, code int, i interface{}) error {
@@ -176,6 +192,29 @@ func (h *Handler) RespondWithError(c echo.Context, err error) error {
 
 func (h *Handler) RespondWithCodeError(c echo.Context, code int, err error) error {
 	return c.JSON(code, NewErrorResponse(err))
+}
+
+func (h *Handler) getCachedSettings() *models.Settings {
+	h.settingsMu.RLock()
+	if h.settings != nil {
+		defer h.settingsMu.RUnlock()
+		return h.settings
+	}
+	h.settingsMu.RUnlock()
+
+	h.settingsMu.Lock()
+	defer h.settingsMu.Unlock()
+	settings, err := h.App.Database.GetSettings()
+	if err == nil && settings != nil {
+		h.settings = settings
+	}
+	return h.settings
+}
+
+func (h *Handler) invalidateSettingsCache() {
+	h.settingsMu.Lock()
+	h.settings = nil
+	h.settingsMu.Unlock()
 }
 
 func headMethodMiddleware(next echo.HandlerFunc) echo.HandlerFunc {

@@ -1,17 +1,40 @@
+interface MediaForSeriesId {
+    tmdbId?: number | null
+    titleRomaji?: string | null
+    titleEnglish?: string | null
+    titleOriginal?: string | null
+}
+
+const TMDB_SERIES_MAP: Record<number, string> = {
+    12609: "dragon_ball",
+    12971: "dragon_ball_z",
+    12697: "dragon_ball_gt",
+    62715: "dragon_ball_super",
+    236994: "dragon_ball_daima",
+}
+
+const TITLE_SERIES_MAP: [RegExp, string][] = [
+    [/dragonballz|^dbz$/, "dragon_ball_z"],
+    [/dragonballgt/, "dragon_ball_gt"],
+    [/dragonballsuper/, "dragon_ball_super"],
+    [/dragonballdaima/, "dragon_ball_daima"],
+    [/^dragonball$/, "dragon_ball"],
+]
+
 /**
  * Maps a media object to a Dragon Ball series ID string.
  * Used for spine config, lore, and character images.
  */
-export const getSeriesIdFromMedia = (media: any): string => {
+export const getSeriesIdFromMedia = (media: MediaForSeriesId | null | undefined): string => {
     if (!media) return ""
     const tmdbId = media.tmdbId || 0
     const title = (media.titleRomaji || media.titleEnglish || media.titleOriginal || "").toLowerCase().replace(/\s+/g, "")
-    
-    if (tmdbId === 12971 || title.includes("dragonballz") || title === "dbz") return "dragon_ball_z"
-    if (tmdbId === 12697 || title.includes("dragonballgt")) return "dragon_ball_gt"
-    if (tmdbId === 62715 || title.includes("dragonballsuper")) return "dragon_ball_super"
-    if (tmdbId === 236994 || title.includes("dragonballdaima")) return "dragon_ball_daima"
-    if (tmdbId === 12609 || title === "dragonball") return "dragon_ball"
+
+    if (TMDB_SERIES_MAP[tmdbId]) return TMDB_SERIES_MAP[tmdbId]
+
+    for (const [pattern, seriesId] of TITLE_SERIES_MAP) {
+        if (pattern.test(title)) return seriesId
+    }
     return ""
 }
 

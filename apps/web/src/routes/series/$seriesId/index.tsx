@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router"
 import { HydrationBoundary, dehydrate, useQueryClient } from "@tanstack/react-query"
 import React, { useMemo, useState, useCallback } from "react"
 import { toast } from "sonner"
@@ -18,10 +18,9 @@ import { EmptyState } from "@/components/shared/empty-state"
 
 const VideoPlayer = React.lazy(() => import("@/components/video/player").then(m => ({ default: m.VideoPlayer })))
 import { RelationsTab, CharactersTab } from "./-series-bento-tabs"
-import { resolveSeriesSagas, getDragonBallSpanishTitle } from "@/lib/config/dragonball.config"
+import { getDragonBallSpanishTitle } from "@/lib/config/dragonball.config"
 import { startViewTransition } from "@/lib/helpers/transitions"
 import { Trophy, Skull } from "lucide-react"
-import { getSeriesIdFromMedia } from "@/lib/helpers/series"
 
 // Modular Components
 import { FloatingMatchFlap } from "@/components/shared/floating-match-flap"
@@ -29,17 +28,25 @@ import { SeriesHero } from "./-components/series-hero"
 import { SagaSelector } from "./-components/saga-selector"
 import { CharacterCarousel } from "./-components/character-carousel"
 import { PremiumEpisodeList } from "./-components/premium-episode-list"
-import type { SagaDTO, CharacterRole } from "@/api/types/series.types"
+import type { SagaDTO, SagaDetailSearchParams } from "@/api/types/series.types"
 import { BentoDetailsSkeleton } from "@/components/ui/shimmer-skeleton"
 import { CharacterDetailModal } from "@/components/shared/character-detail-modal"
 
 export const Route = createFileRoute("/series/$seriesId/")({
-    loader: ({ params: { seriesId }, context }) => {
+    validateSearch: (search: Record<string, unknown>): SagaDetailSearchParams => ({
+        tab: (search.tab as SagaDetailSearchParams["tab"]) || "episodes",
+        saga: (search.saga as string) ?? "",
+        subSaga: (search.subSaga as string) ?? "",
+    }),
+    loader: async ({ params: { seriesId }, context }) => {
         const qc = context.queryClient
-        qc.prefetchQuery({
+        const data = await qc.fetchQuery({
             queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, seriesId],
             queryFn: () => fetchAnimeEntry(seriesId),
         })
+        if (data?.media?.format === "MOVIE" || data?.media?.format === "SPECIAL" || data?.media?.format === "OVA") {
+            throw redirect({ to: "/movies/$movieId", params: { movieId: String(seriesId) }, replace: true })
+        }
         return { dehydrateState: dehydrate(qc) }
     },
     component: SeriesDetailPage,
@@ -47,7 +54,8 @@ export const Route = createFileRoute("/series/$seriesId/")({
 
 function SeriesDetailPage() {
     const { seriesId } = Route.useParams()
-    const { dehydrateState } = Route.useLoaderData()
+    const loaderData = Route.useLoaderData()
+    const dehydrateState = loaderData?.dehydrateState
 
     return (
         <HydrationBoundary state={dehydrateState}>
@@ -56,25 +64,18 @@ function SeriesDetailPage() {
     )
 }
 
-const parseEpisodeRange = (rangeStr: string) => {
-    if (!rangeStr) return { startEp: 1, endEp: 1 }
-    const parts = rangeStr.split("-")
-    const startEp = parseInt(parts[0], 10) || 1
-    const endEp = parseInt(parts[1], 10) || startEp
-    return { startEp, endEp }
-}
-
 export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     const { playSound } = useSound()
     const queryClient = useQueryClient()
     const navigate = useNavigate()
+    const { tab: activeTab, saga: activeSagaId, subSaga: activeSubSagaId } = Route.useSearch()
     const { data: entry, isLoading } = useGetAnimeEntry(seriesId)
     const { data: continuityData, refetch: refetchContinuity } = useGetContinuityWatchHistoryItem(Number(seriesId))
     const setBackdropUrl = useIntelligenceStore(s => s.setBackdropUrl)
 
     const { mutate: preloadStream } = usePreloadMediastreamMediaContainer()
 
-    // Load rich Dragon Ball lore database
+    // Load rich Dragon Ball lore database (still needed for CharacterDetailModal)
     const { data: lore } = useServerQuery<any>({
         endpoint: "/api/v1/lore/dragonball",
         method: "GET",
@@ -84,22 +85,23 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
 
     const [selectedCharacterName, setSelectedCharacterName] = useState<string | null>(null)
 
-    const isMovie = React.useMemo(() => {
-        if (!entry?.media) return false
-        return entry.media.format === "MOVIE" || entry.media.format === "SPECIAL" || entry.media.format === "OVA"
-    }, [entry])
-
-    React.useEffect(() => {
-        if (isMovie) {
-            navigate({ to: "/movies/$movieId", params: { movieId: String(seriesId) }, replace: true })
+    const setSearchParams = useCallback((updates: Partial<SagaDetailSearchParams>) => {
+        const newSearch = new URLSearchParams(window.location.search)
+        for (const [key, value] of Object.entries(updates)) {
+            if (value) {
+                newSearch.set(key, value)
+            } else {
+                newSearch.delete(key)
+            }
         }
-    }, [isMovie, seriesId, navigate])
+        navigate({ to: "/series/$seriesId", params: { seriesId }, search: Object.fromEntries(newSearch) as SagaDetailSearchParams })
+    }, [navigate, seriesId])
 
     React.useEffect(() => {
-        if (entry?.media?.id && !isMovie) {
+        if (entry?.media?.id) {
             playSound("detail", 0.4)
         }
-    }, [entry?.media?.id, isMovie, playSound])
+    }, [entry?.media?.id, playSound])
 
     const [playTarget, setPlayTarget] = useState<{
         path: string
@@ -109,104 +111,34 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         malId?: number | null
     } | null>(null)
 
-    const [activeTab, setActiveTab] = useState<"episodes" | "movie" | "relations" | "characters">("episodes")
-    const [prevEntryId, setPrevEntryId] = useState<number | null>(null)
-    const [activeSagaId, setActiveSagaId] = useState<string>("")
-    const [activeSubSagaId, setActiveSubSagaId] = useState<string>("")
-
-    React.useEffect(() => {
-        if (entry?.media && entry.media.id !== prevEntryId) {
-            setPrevEntryId(entry.media.id)
-            setActiveTab("episodes")
-            setActiveSagaId("")
-            setActiveSubSagaId("")
-        }
-    }, [entry?.media, prevEntryId])
-
-    const baseSagas = useMemo(() => entry?.media ? resolveSeriesSagas(entry.media) : [], [entry])
-
-    // Convert config sagas to DTO format and enrich with wiki data
-    const sagas = useMemo(() => {
-        const allChars = (entry?.media?.characters?.edges || [])
-            .filter(edge => edge.node?.image?.large)
-            .map(edge => ({
-                name: edge.node?.name?.full || "Unknown",
-                roleTag: (edge.role === "MAIN" ? "Protagonist" : "Supporting") as CharacterRole,
-                avatarUrl: edge.node?.image?.large || ""
-            }));
-
-        const seriesIdKey = getSeriesIdFromMedia(entry?.media)
-        const wikiSeries = lore?.sagas_wiki?.find((s: any) => s.series_id === seriesIdKey)
-
-        return baseSagas.map((s) => {
-            let richDesc = s.description || ""
-            let antagonists: string[] = []
-            let keyEvents: string[] = []
-            let newCharacters: string[] = []
-            let canonStatus: string | boolean = true
-
-            if (wikiSeries?.sagas) {
-                const matchingWiki = wikiSeries.sagas.find((ws: any) => {
-                    const { startEp, endEp } = parseEpisodeRange(ws.episodes)
-                    return (s.startEp >= startEp && s.startEp <= endEp) || (startEp >= s.startEp && startEp <= s.endEp)
-                })
-                if (matchingWiki) {
-                    richDesc = matchingWiki.description || richDesc
-                    antagonists = matchingWiki.antagonists || []
-                    keyEvents = matchingWiki.key_events || []
-                    newCharacters = matchingWiki.new_characters || []
-                    canonStatus = matchingWiki.canon
-                }
-            }
-
-            return {
-                id: s.id,
-                name: s.title,
-                episodeRange: `${s.startEp}-${s.endEp}`,
-                description: richDesc,
-                isFiller: s.title.toLowerCase().includes("filler") || s.title.toLowerCase().includes("relleno") || canonStatus === false || String(canonStatus).toLowerCase() === "relleno",
-                canonStatus: String(canonStatus),
-                antagonists,
-                keyEvents,
-                newCharacters,
-                keyCharacters: allChars.slice(0, 15),
-                subSagas: s.subSagas?.map(ss => ({
-                    id: ss.id,
-                    name: ss.title,
-                    episodeRange: `${ss.startEp}-${ss.endEp}`,
-                    startEp: ss.startEp,
-                    endEp: ss.endEp
-                })) || []
-            }
-        })
-    }, [baseSagas, entry, lore])
+    // Fetch sagas from backend (lore-enriched + display data)
+    const { data: sagas } = useServerQuery<SagaDTO[]>({
+        endpoint: `/api/v1/library/anime-entry/${seriesId}/sagas`,
+        method: "GET",
+        queryKey: [`series-sagas-${seriesId}`],
+        staleTime: 600000,
+    })
 
     const activeSubSaga = useMemo(() => {
-        if (!activeSagaId || !activeSubSagaId) return null
+        if (!activeSagaId || !activeSubSagaId || !sagas) return null
         const currentSaga = sagas.find(s => s.id === activeSagaId)
         return currentSaga?.subSagas?.find(ss => ss.id === activeSubSagaId) || null
     }, [sagas, activeSagaId, activeSubSagaId])
 
-    // Sync activeSagaId when sagas change
-    const [prevSagas, setPrevSagas] = useState<SagaDTO[]>([])
+    // Sync activeSagaId when sagas load
     React.useEffect(() => {
-        if (sagas !== prevSagas) {
-            setPrevSagas(sagas)
-            if (sagas.length > 0 && !sagas.find(s => s.id === activeSagaId)) {
-                setActiveSagaId(sagas[0].id)
-            }
-        } else if (sagas.length > 0 && !activeSagaId) {
-            setActiveSagaId(sagas[0].id)
+        if (sagas && sagas.length > 0 && !activeSagaId) {
+            setSearchParams({ saga: sagas[0].id })
         }
-    }, [sagas, activeSagaId, prevSagas])
+    }, [sagas, activeSagaId, setSearchParams])
     const computedEpisodes = useMemo(() => {
         if (!entry) return []
         if (entry.episodes && entry.episodes.length > 0) {
             const eps = entry.episodes.filter(ep => ep && typeof ep.episodeNumber === 'number');
             eps.forEach(ep => {
-                if (sagas.length > 0) {
+                if (sagas && sagas.length > 0) {
                     const epNum = ep.absoluteEpisodeNumber || ep.episodeNumber;
-                    const matchingSaga = baseSagas.find(s => epNum >= s.startEp && epNum <= s.endEp);
+                    const matchingSaga = sagas.find(s => epNum >= s.startEp && epNum <= s.endEp);
                     if (matchingSaga) {
                         ep.sagaId = matchingSaga.id;
                     }
@@ -214,19 +146,19 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
             });
             return eps;
         }
-        
+
         if (entry.localFiles && entry.localFiles.length > 0) {
             const epMap = new Map<number, Anime_Episode>();
-            
+
             entry.localFiles.forEach(lf => {
                 const parsedEp = lf.parsedInfo?.episode || lf.metadata?.episode;
                 const epNum = Number(parsedEp);
                 if (!epNum || isNaN(epNum)) return;
-                
+
                 if (!epMap.has(epNum)) {
                     let sagaId: string | undefined = undefined;
-                    if (sagas) {
-                        const matchingSaga = baseSagas.find(s => epNum >= s.startEp && epNum <= s.endEp);
+                    if (sagas && sagas.length > 0) {
+                        const matchingSaga = sagas.find(s => epNum >= s.startEp && epNum <= s.endEp);
                         if (matchingSaga) sagaId = matchingSaga.id;
                     }
 
@@ -248,11 +180,11 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                     } as unknown as Anime_Episode);
                 }
             });
-            
+
             return Array.from(epMap.values()).sort((a, b) => a.episodeNumber - b.episodeNumber);
         }
         return [];
-    }, [entry, sagas, baseSagas]);
+    }, [entry, sagas]);
 
     const handlePlayEpisode = useCallback((localFile: Anime_LocalFile, episode: Anime_Episode) => {
         if (!localFile.path) {
@@ -461,19 +393,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         })
     }, [nextEp, entry?.localFiles])
 
-    if ((isLoading && !entry) || (entry && isMovie)) {
-        if (isMovie) {
-            return (
-                <div className="h-full w-full bg-[#09090b] text-white flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-5">
-                        <div className="w-10 h-10 border-2 border-brand-orange border-t-transparent rounded-full animate-spin" />
-                        <span className="text-[9px] font-black uppercase tracking-[0.5em] text-zinc-500 animate-pulse">
-                            Redirigiendo a Película...
-                        </span>
-                    </div>
-                </div>
-            )
-        }
+    if (isLoading && !entry) {
         return (
             <div className="h-full w-full bg-[#050506]/35 backdrop-blur-[64px] text-white pb-16 overflow-y-auto">
                 <BentoDetailsSkeleton />
@@ -507,14 +427,14 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
             <SeriesHero
                 entry={entry}
                 backdropUrl={heroBackdrop}
-                sagaCount={sagas.length}
+                sagaCount={sagas?.length ?? 0}
                 onPlay={handlePlayDefault}
             />
             <div className="w-full max-w-[1800px] mx-auto px-6 md:pl-[120px] md:pr-12 mt-12">
                 {/* Custom Glassmorphic Tabs Navigation for Series/Shows */}
                 <div className="flex border-b border-white/5 pb-2 mb-8 gap-8 overflow-x-auto no-scrollbar">
                     <button
-                        onClick={() => setActiveTab("episodes")}
+                        onClick={() => setSearchParams({ tab: "episodes" })}
                         className={cn(
                             "text-sm uppercase tracking-[0.2em] font-black pb-3 transition-all relative shrink-0",
                             activeTab === "episodes" ? "text-brand-orange" : "text-zinc-500 hover:text-zinc-300"
@@ -528,7 +448,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
 
                     {hasRelations && (
                         <button
-                            onClick={() => setActiveTab("relations")}
+                            onClick={() => setSearchParams({ tab: "relations" })}
                             className={cn(
                                 "text-sm uppercase tracking-[0.2em] font-black pb-3 transition-all relative shrink-0",
                                 activeTab === "relations" ? "text-brand-orange" : "text-zinc-500 hover:text-zinc-300"
@@ -543,7 +463,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
 
                     {hasCharacters && (
                         <button
-                            onClick={() => setActiveTab("characters")}
+                            onClick={() => setSearchParams({ tab: "characters" })}
                             className={cn(
                                 "text-sm uppercase tracking-[0.2em] font-black pb-3 transition-all relative shrink-0",
                                 activeTab === "characters" ? "text-brand-orange" : "text-zinc-500 hover:text-zinc-300"
@@ -571,18 +491,17 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                                 className="mt-8 flex flex-col lg:flex-row gap-8"
                             >
                                 {/* Left Column: Saga Selector */}
-                                {sagas.length > 0 && (
+                                {sagas && sagas.length > 0 && (
                                     <div className="lg:w-80 flex-shrink-0 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-7rem)]">
-                                        <SagaSelector 
+                                        <SagaSelector
                                             sagas={sagas}
                                             activeSagaId={activeSagaId}
                                             onSelectSaga={(sagaId) => {
-                                                setActiveSagaId(sagaId)
-                                                setActiveSubSagaId("")
+                                                setSearchParams({ saga: sagaId, subSaga: "" })
                                                 window.scrollTo({ top: 0, behavior: "smooth" })
                                             }}
                                             activeSubSagaId={activeSubSagaId}
-                                            onSelectSubSaga={setActiveSubSagaId}
+                                            onSelectSubSaga={(subSagaId) => setSearchParams({ subSaga: subSagaId })}
                                         />
                                     </div>
                                 )}
@@ -590,18 +509,18 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                                 {/* Right Column: Characters & Episodes */}
                                 <div className="flex-grow flex flex-col min-w-0">
                                     {/* Saga Lore Info Card */}
-                                    <SagaLoreHeader saga={sagas.find(s => s.id === activeSagaId)} />
+                                    <SagaLoreHeader saga={sagas?.find(s => s.id === activeSagaId)} />
 
                                     {/* Mapped Characters from active saga */}
                                     <CharacterCarousel 
-                                        characters={sagas.find(s => s.id === activeSagaId)?.keyCharacters || []}
+                                        characters={sagas?.find(s => s.id === activeSagaId)?.keyCharacters || []}
                                         onSelect={setSelectedCharacterName}
                                     />
                                     
                                     {/* Mapped Premium Episodes */}
                                     <PremiumEpisodeList 
                                         episodes={computedEpisodes
-                                            .filter(ep => sagas.length === 0 ? true : ep.sagaId === activeSagaId)
+                                            .filter(ep => !sagas?.length ? true : ep.sagaId === activeSagaId)
                                             .map(ep => {
                                                 const epNum = ep.absoluteEpisodeNumber || ep.episodeNumber;
                                                 const lf = ep.localFile || entry.localFiles?.find(f => {
@@ -636,7 +555,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                                                     audioCodec: lf?.technicalInfo?.audioStreams?.[0]?.codec || "AAC",
                                                     localFilePath: lf?.path,
                                                     sagaId: ep.sagaId,
-                                                    sagaName: sagas.find(s => s.id === ep.sagaId)?.name
+                                                    sagaName: sagas?.find(s => s.id === ep.sagaId)?.name
                                                 }
                                             })}
                                         activeSubSagaStart={activeSubSaga?.startEp}

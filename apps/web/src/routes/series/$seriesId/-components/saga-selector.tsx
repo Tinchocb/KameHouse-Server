@@ -3,7 +3,7 @@ import { cn } from "@/components/ui/core/styling"
 
 interface SagaSelectorProps {
   sagas: SagaDTO[]
-  activeSagaId: string
+  activeSagaId?: string
   onSelectSaga: (sagaId: string) => void
   activeSubSagaId?: string
   onSelectSubSaga?: (subSagaId: string) => void

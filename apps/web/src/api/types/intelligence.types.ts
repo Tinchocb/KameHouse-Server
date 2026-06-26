@@ -28,7 +28,7 @@ export interface EpisodeIntelligence {
     vibes?: string[]
 }
 
-/** 
+/**
  * An entry enriched with optional intelligence data.
  */
 export interface IntelligentEntry extends Omit<Anime_LibraryCollectionEntry, "episode" | "dominantVibe" | "vibes" | "tags"> {
@@ -77,4 +77,44 @@ export interface ContinueWatchingEntry {
     lastPlaybackPos: number
     /** True if this is the next episode in the sequence */
     isNextEpisode: boolean
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Intelligent Selection Engine Types
+// Mirrors Go types in internal/intelligence/types.go
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface MediaCandidate {
+    filePath: string
+    resolution: number
+    codec: string
+    bitrate: number
+    audioLangs: string[]
+    audioCodec: string
+    fileSize: number
+    isHDR: boolean
+    container: string
+}
+
+export interface ScoringWeights {
+    resolution: number
+    codec: number
+    bitrate: number
+    audioMatch: number
+}
+
+export interface SelectionResult {
+    winner: MediaCandidate
+    allCandidates: MediaCandidate[]
+    totalScore: number
+    reason: string
+}
+
+export interface IntelligenceStats {
+    weights: ScoringWeights
+    cache: {
+        size: number
+        maxSize: number
+        maxAge: number
+    }
 }

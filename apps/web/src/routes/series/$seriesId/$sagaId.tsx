@@ -4,13 +4,14 @@ import { cn } from "@/components/ui/core/styling"
 import { useGetAnimeEntry, fetchAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
-import { HardDrive, Star, ArrowLeft, Calendar, Clock, CheckCircle2, Circle, ChevronDown } from "lucide-react"
+import { HardDrive, Star, ArrowLeft, Calendar, Clock, CheckCircle2, Circle, ChevronDown, Layers } from "lucide-react"
 import { VideoPlayer } from "@/components/video/player"
 import type { Mediastream_StreamType } from "@/api/generated/types"
 import { toast } from "sonner"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { startViewTransition } from "@/lib/helpers/transitions"
+import type { SubSagaDefinition } from "@/lib/config/dragonball_sagas"
 
 export const Route = createFileRoute("/series/$seriesId/$sagaId")({
     loader: ({ params: { seriesId }, context }) => {
@@ -234,6 +235,88 @@ function EpisodeRow({ episode, isActive, isWatched, isDownloaded, progress, onSe
     )
 }
 
+// ─── Sub-Saga Navigator ───────────────────────────────────────────────────────
+
+interface SubSagaNavProps {
+    subSagas: SubSagaDefinition[]
+    episodes: Episode[]
+    currentEpNumber: number
+    onJumpToEp: (epNumber: number) => void
+}
+
+function SubSagaNav({ subSagas, episodes, currentEpNumber, onJumpToEp }: SubSagaNavProps) {
+    if (!subSagas || subSagas.length === 0) return null
+
+    const activeSubSaga = subSagas.find(
+        (ss) => currentEpNumber >= ss.startEp && currentEpNumber <= ss.endEp
+    )
+
+    return (
+        <section className="px-10 pt-8 pb-2">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-5">
+                <Layers className="w-3.5 h-3.5 text-brand-orange" />
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">
+                    ARCOS DE LA SAGA
+                </span>
+                <div className="h-px bg-white/10 flex-1" />
+            </div>
+
+            {/* Sub-saga chips as a timeline */}
+            <div className="flex flex-col gap-2">
+                {subSagas.map((ss, idx) => {
+                    const isActive = activeSubSaga?.id === ss.id
+                    const firstEp = episodes.find((e) => e.number === ss.startEp)
+                    const epCount = ss.endEp - ss.startEp + 1
+
+                    return (
+                        <button
+                            key={ss.id}
+                            onClick={() => {
+                                if (firstEp) onJumpToEp(ss.startEp)
+                            }}
+                            className={cn(
+                                "w-full flex items-center gap-4 px-5 py-3.5 rounded-xl border text-left transition-all duration-200 group",
+                                isActive
+                                    ? "bg-brand-orange/10 border-brand-orange/40 shadow-[0_0_12px_rgba(255,110,58,0.15)]"
+                                    : "bg-white/[0.03] border-white/[0.07] hover:bg-white/[0.06] hover:border-white/10"
+                            )}
+                        >
+                            {/* Index bubble */}
+                            <div className={cn(
+                                "w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black shrink-0 transition-colors",
+                                isActive
+                                    ? "bg-brand-orange text-white"
+                                    : "bg-white/10 text-zinc-500 group-hover:bg-white/20"
+                            )}>
+                                {idx + 1}
+                            </div>
+
+                            {/* Title + range */}
+                            <div className="flex-1 min-w-0">
+                                <p className={cn(
+                                    "text-[11px] font-black uppercase tracking-widest truncate transition-colors",
+                                    isActive ? "text-brand-orange" : "text-zinc-400 group-hover:text-white"
+                                )}>
+                                    {ss.title}
+                                </p>
+                                <p className="text-[9px] text-zinc-600 font-black uppercase tracking-widest mt-0.5">
+                                    EPS {ss.startEp}–{ss.endEp} · {epCount} EP{epCount !== 1 ? "S" : ""}
+                                </p>
+                            </div>
+
+                            {/* Active dot */}
+                            {isActive && (
+                                <div className="w-1.5 h-1.5 rounded-full bg-brand-orange shrink-0 animate-pulse" />
+                            )}
+                        </button>
+                    )
+                })}
+            </div>
+        </section>
+    )
+}
+
 // ─── Right Panel ──────────────────────────────────────────────────────────────
 
 import type { Anime_Entry } from "@/api/generated/types"
@@ -248,6 +331,7 @@ interface RightPanelProps {
     onPlayEpisode: (ep: Episode) => void
     downloadedEpisodes: Set<number>
     libraryEntry?: Anime_Entry | null
+    subSagas?: SubSagaDefinition[]
 }
 
 function RightPanel({
@@ -260,6 +344,7 @@ function RightPanel({
     onPlayEpisode,
     downloadedEpisodes,
     libraryEntry,
+    subSagas,
 }: RightPanelProps) {
     const current = episodes[currentIndex]!
     const [episodesOpen, setEpisodesOpen] = useState(true)
@@ -301,6 +386,19 @@ function RightPanel({
                 </div>
             </div>
 
+            {/* ── Sub-saga navigator ────────────────────────── */}
+            {subSagas && subSagas.length > 0 && (
+                <SubSagaNav
+                    subSagas={subSagas}
+                    episodes={episodes}
+                    currentEpNumber={current.number}
+                    onJumpToEp={(epNumber) => {
+                        const idx = episodes.findIndex((e) => e.number === epNumber)
+                        if (idx !== -1) onSelectEpisode(idx)
+                    }}
+                />
+            )}
+
             {/* ── Play Button ───────────────────────────────── */}
             <section className="px-10 pt-10 pb-6">
                 <button
@@ -338,27 +436,62 @@ function RightPanel({
                     <div className="h-px bg-white/10 flex-1" />
                 </button>
 
-                {/* Episode list */}
+                {/* Episode list — grouped by sub-saga if available */}
                 <div
                     className={cn(
                         "flex flex-col gap-1 overflow-hidden transition-all duration-300",
-                        episodesOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0",
+                        episodesOpen ? "max-h-[9999px] opacity-100" : "max-h-0 opacity-0",
                     )}
                 >
-                    {episodes.map((ep, idx) => {
-                        const episodeProgress = libraryEntry?.episodes?.[idx]?.watched ? 100 : 0 /* 0-100 de progreso */
-                        return (
-                            <EpisodeRow
-                                key={ep.id}
-                                episode={ep}
-                                isActive={idx === currentIndex}
-                                isWatched={isWatched(ep.id)}
-                                isDownloaded={downloadedEpisodes.has(ep.number)}
-                                progress={episodeProgress}
-                                onSelect={() => onSelectEpisode(idx)}
-                            />
-                        )
-                    })}
+                    {subSagas && subSagas.length > 0
+                        ? subSagas.map((ss) => {
+                            const ssEpisodes = episodes.filter(
+                                (e) => e.number >= ss.startEp && e.number <= ss.endEp
+                            )
+                            if (ssEpisodes.length === 0) return null
+                            return (
+                                <div key={ss.id} className="mb-4">
+                                    {/* Sub-saga label */}
+                                    <div className="flex items-center gap-3 px-2 mb-2">
+                                        <div className="h-px bg-white/[0.06] flex-1" />
+                                        <span className="text-[9px] font-black uppercase tracking-[0.25em] text-zinc-600">
+                                            {ss.title}
+                                        </span>
+                                        <div className="h-px bg-white/[0.06] flex-1" />
+                                    </div>
+                                    {ssEpisodes.map((ep) => {
+                                        const globalIdx = episodes.findIndex((e) => e.id === ep.id)
+                                        const episodeProgress = libraryEntry?.episodes?.[globalIdx]?.watched ? 100 : 0
+                                        return (
+                                            <EpisodeRow
+                                                key={ep.id}
+                                                episode={ep}
+                                                isActive={globalIdx === currentIndex}
+                                                isWatched={isWatched(ep.id)}
+                                                isDownloaded={downloadedEpisodes.has(ep.number)}
+                                                progress={episodeProgress}
+                                                onSelect={() => onSelectEpisode(globalIdx)}
+                                            />
+                                        )
+                                    })}
+                                </div>
+                            )
+                        })
+                        : episodes.map((ep, idx) => {
+                            const episodeProgress = libraryEntry?.episodes?.[idx]?.watched ? 100 : 0
+                            return (
+                                <EpisodeRow
+                                    key={ep.id}
+                                    episode={ep}
+                                    isActive={idx === currentIndex}
+                                    isWatched={isWatched(ep.id)}
+                                    isDownloaded={downloadedEpisodes.has(ep.number)}
+                                    progress={episodeProgress}
+                                    onSelect={() => onSelectEpisode(idx)}
+                                />
+                            )
+                        })
+                    }
                 </div>
             </section>
         </main>
@@ -536,7 +669,7 @@ function DetailPage() {
                 rating={series.rating}
                 durationPerEp={series.durationPerEp}
                 studios={series.studios}
-                onBack={() => navigate({ to: "/series/$seriesId", params: { seriesId: series.id } })}
+                onBack={() => navigate({ to: "/series/$seriesId", params: { seriesId: series.id }, search: {} })}
             />
 
             {/* ── Right: Episodes (70%) ── */}
@@ -550,6 +683,7 @@ function DetailPage() {
                 onPlayEpisode={handleEpisodePlay}
                 downloadedEpisodes={downloadedEpisodes}
                 libraryEntry={libraryEntry}
+                subSagas={saga.subSagas}
             />
 
 

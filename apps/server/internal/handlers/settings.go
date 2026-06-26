@@ -76,6 +76,7 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 		}()
 	}
 
+	h.invalidateSettingsCache()
 	h.App.WSEventManager.SendEvent("settings", settings)
 	h.App.InitOrRefreshModules()
 
@@ -216,7 +217,10 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		_, _ = h.App.Database.UpsertTheme(b.Theme)
 	}
 
-	// ── 7. Broadcast & refresh ────────────────────────────────────────────────
+	// ── 7. Invalidate settings cache ──────────────────────────────────────────
+	h.invalidateSettingsCache()
+
+	// ── 8. Broadcast & refresh ────────────────────────────────────────────────
 	h.App.WSEventManager.SendEvent("settings", saved)
 	h.App.InitOrRefreshModules()
 
@@ -262,6 +266,7 @@ func (h *Handler) HandleSaveMediaPlayerSettings(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
+	h.invalidateSettingsCache()
 	h.App.InitOrRefreshModules()
 
 	return h.RespondWithData(c, true)

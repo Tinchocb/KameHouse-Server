@@ -229,6 +229,7 @@ func migrateSchema(ctx context.Context, db *gorm.DB) error {
 		&models.MediaCollection{},
 		&models.MetadataCache{},
 		&models.EpisodeSkipTime{},
+		&models.MediaIDMapping{},
 	); err != nil {
 		return err
 	}
