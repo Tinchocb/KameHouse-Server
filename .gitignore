@@ -78,3 +78,7 @@ referencia/
 
 .antigravityignore
 .cursorignore
+
+# Zip archives and electron build zips
+*.zip
+apps/desktop/electron.zip
