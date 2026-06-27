@@ -1,7 +1,7 @@
 import React from "react"
 import { TabsContent } from "@/components/ui/tabs/tabs"
 import { Section, Card, OsToggle } from "../components"
-import { type Control, Controller } from "react-hook-form"
+import { type Control, Controller, useWatch } from "react-hook-form"
 import { type SettingsFormValues } from "../index"
 import { toast } from "sonner"
 
@@ -10,9 +10,9 @@ interface IntegrationsTabProps {
 }
 
 export function IntegrationsTab({ control }: IntegrationsTabProps) {
-    const handleLinkAniList = () => {
-        toast.success("Cuenta de AniList vinculada correctamente")
-    }
+    const tmdbApiKey = useWatch({ control, name: "library.tmdbApiKey" })
+    const fanartApiKey = useWatch({ control, name: "library.fanartApiKey" })
+    const omdbApiKey = useWatch({ control, name: "library.omdbApiKey" })
 
     return (
         <TabsContent value="integrations" className="m-0 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 outline-none">
@@ -44,7 +44,17 @@ export function IntegrationsTab({ control }: IntegrationsTabProps) {
                         <h4 className="text-xs font-bold text-white uppercase tracking-wide flex items-center gap-2">
                             The Movie Database (TMDB)
                         </h4>
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]"></span>
+                        {tmdbApiKey ? (
+                            <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
+                                <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest font-mono">Conectado</span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]"></span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-1.5 bg-zinc-800/20 border border-zinc-700/30 px-2.5 py-0.5 rounded-full">
+                                <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest font-mono">Sin configurar</span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-zinc-650 shadow-[0_0_6px_#52525b]"></span>
+                            </div>
+                        )}
                     </div>
                     <Controller
                         control={control}
@@ -71,7 +81,17 @@ export function IntegrationsTab({ control }: IntegrationsTabProps) {
                         <h4 className="text-xs font-bold text-white uppercase tracking-wide flex items-center gap-2">
                             Fanart.tv
                         </h4>
-                        <span className="text-[10px] text-zinc-500 font-mono">Imágenes & Fanart</span>
+                        {fanartApiKey ? (
+                            <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
+                                <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest font-mono">Conectado</span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]"></span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-1.5 bg-zinc-800/20 border border-zinc-700/30 px-2.5 py-0.5 rounded-full">
+                                <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest font-mono">Sin configurar</span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-zinc-650 shadow-[0_0_6px_#52525b]"></span>
+                            </div>
+                        )}
                     </div>
                     <Controller
                         control={control}
@@ -98,7 +118,17 @@ export function IntegrationsTab({ control }: IntegrationsTabProps) {
                         <h4 className="text-xs font-bold text-white uppercase tracking-wide flex items-center gap-2">
                             OMDb Service
                         </h4>
-                        <span className="text-[10px] text-zinc-500 font-mono">Ratings & Producción</span>
+                        {omdbApiKey ? (
+                            <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
+                                <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest font-mono">Conectado</span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]"></span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-1.5 bg-zinc-800/20 border border-zinc-700/30 px-2.5 py-0.5 rounded-full">
+                                <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest font-mono">Sin configurar</span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-zinc-650 shadow-[0_0_6px_#52525b]"></span>
+                            </div>
+                        )}
                     </div>
                     <Controller
                         control={control}
@@ -117,35 +147,6 @@ export function IntegrationsTab({ control }: IntegrationsTabProps) {
                             </div>
                         )}
                     />
-                </div>
-
-                {/* AniList Tracker (Client-side dummy / local state) */}
-                <div className="liquid-glass-frosted rounded-3xl p-6 space-y-4 md:col-span-2">
-                    <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                        <h4 className="text-xs font-bold text-white uppercase tracking-wide flex items-center gap-2">
-                            AniList Tracker Connection
-                        </h4>
-                        <span className="text-[10px] text-zinc-500 font-mono">Sincronización de progreso</span>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                        <label htmlFor="anilist-account-input" className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">Nombre de Cuenta Vinculada</label>
-                        <div className="flex gap-2">
-                            <input
-                                id="anilist-account-input"
-                                type="text"
-                                defaultValue="Martín (Conectado)"
-                                disabled
-                                className="flex-1 bg-black/40 ring-1 ring-white/10 rounded-xl px-4 py-2.5 text-xs text-zinc-400 focus:outline-none cursor-not-allowed"
-                            />
-                            <button
-                                type="button"
-                                onClick={handleLinkAniList}
-                                className="px-4 py-2.5 bg-[#ff6e3a] hover:bg-[#ff7d4b] text-zinc-950 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all duration-300 active:scale-95 font-bold shadow-lg shadow-orange-500/10"
-                            >
-                                Re-Vincular
-                            </button>
-                        </div>
-                    </div>
                 </div>
             </div>
 

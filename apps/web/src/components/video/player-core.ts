@@ -805,12 +805,12 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
 
     return {
         domElements: {
-            videoElement: videoRef,
-            containerElement: containerRef,
-            canvasElement: canvasRef,
-            progressBarElement: progressBarRef,
-            progressInputElement: progressInputRef,
-            timeTextElement: timeTextRef,
+            videoElement: videoRef as React.RefObject<HTMLVideoElement>,
+            containerElement: containerRef as React.RefObject<HTMLDivElement>,
+            canvasElement: canvasRef as React.RefObject<HTMLCanvasElement>,
+            progressBarElement: progressBarRef as React.RefObject<HTMLDivElement>,
+            progressInputElement: progressInputRef as React.RefObject<HTMLInputElement>,
+            timeTextElement: timeTextRef as React.RefObject<HTMLSpanElement>,
         },
         state: {
             isPlaying, duration, volume, isMuted, isFullscreen, controlsVisible, status, errorMsg, isBuffering, isSeeking, flash, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, countdownSeconds, showCountdown, tvMode, audioTracks, activeAudioIndex, subtitleTracks, activeSubtitleIndex, isJassubLoading, isJassubActive, isSettingsOpen, remainingProgress, showAutoSkipToast,

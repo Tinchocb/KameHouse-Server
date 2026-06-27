@@ -137,7 +137,7 @@ export function DynamicBackdrop() {
         return () => clearTimeout(timer)
     }, [activeBackdropUrl, displayedUrl, isEnabled])
 
-    const filterClass = "blur-md"
+    const filterClass = "blur-2xl"
 
     if (!isEnabled) return null
 

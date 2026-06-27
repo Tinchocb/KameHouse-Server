@@ -32,7 +32,7 @@ const config: RsbuildConfig = {
                 }])
                 if (process.env.NODE_ENV === "production") {
                     opts.plugins ??= []
-                    opts.plugins.push(["babel-plugin-react-compiler", { target: "18" }])
+                    opts.plugins.push(["babel-plugin-react-compiler"])
                 }
             },
         }),
@@ -49,7 +49,6 @@ const config: RsbuildConfig = {
     resolve: {
         alias: {
             "@": path.resolve(__dirname, "./src"),
-            "react$": path.resolve(__dirname, "./src/react-alias.ts"),
         },
     },
     server: { // dev server
@@ -81,7 +80,7 @@ const config: RsbuildConfig = {
     output: {
         dataUriLimit: 1024,
         cleanDistPath: true,
-        sourceMap: !!process.env.RSDOCTOR,
+        sourceMap: process.env.NODE_ENV === "production" ? "hidden" : !!process.env.RSDOCTOR,
         distPath: {
             root: "out",
         },
@@ -108,8 +107,6 @@ const config: RsbuildConfig = {
                 "tanstack-router": /@tanstack\/react-router/,
                 "framer-motion": /framer-motion/,
                 "gsap": /gsap/,
-                "recharts": /recharts/,
-                "codemirror": /codemirror/,
                 "zod": /zod/,
             },
         } : {

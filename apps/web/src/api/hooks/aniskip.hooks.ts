@@ -151,11 +151,38 @@ export async function getAniSkipTimes({
     }
 
     // 2. Fallback to AniSkip API
-    if (!malId) {
+    let activeMalId = malId;
+
+    if (!activeMalId && mediaId) {
+        try {
+            const entry = await buildSeaQuery<any, any>({
+                endpoint: `/api/v1/library/anime-entry/${mediaId}`,
+                method: "GET",
+            })
+            if (entry?.malId) {
+                activeMalId = entry.malId
+            } else if (entry?.media?.myanimelistId) {
+                activeMalId = entry.media.myanimelistId
+            } else if (entry?.media?.titleEnglish || entry?.media?.titleOriginal || entry?.media?.titleRomaji) {
+                const searchTitle = entry.media.titleEnglish || entry.media.titleOriginal || entry.media.titleRomaji
+                const jikanRes = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(searchTitle)}&limit=1`)
+                if (jikanRes.ok) {
+                    const jikanData = await jikanRes.json()
+                    if (jikanData?.data?.[0]?.mal_id) {
+                        activeMalId = jikanData.data[0].mal_id
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn("Failed to dynamically map TMDB/Media ID to MyAnimeList ID:", e)
+        }
+    }
+
+    if (!activeMalId) {
         return { hasSkipTimes: false }
     }
 
-    const data = await fetchAniSkipTimes(malId, episodeNumber, episodeDuration)
+    const data = await fetchAniSkipTimes(activeMalId, episodeNumber, episodeDuration)
 
     if (!data.found || !data.results?.length) {
         return { hasSkipTimes: false }
@@ -181,7 +208,7 @@ export async function getAniSkipTimes({
             method: "POST",
             data: {
                 mediaId: mediaId || undefined,
-                malId: malId || undefined,
+                malId: activeMalId || undefined,
                 episodeNumber,
                 opStart: op?.startTime ?? 0,
                 opEnd: op?.endTime ?? 0,

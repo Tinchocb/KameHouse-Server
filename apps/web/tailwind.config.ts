@@ -48,13 +48,6 @@ const config: Config = {
                 bebas: ["Bebas Neue", "cursive"],
                 mono: ["Space Mono", "ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", "monospace"],
             },
-            screens: {
-                "3xl": "1600px",
-                "4xl": "1800px",
-                "5xl": "2000px",
-                "6xl": "2200px",
-                "7xl": "2400px",
-            },
             animationDuration: {
                 DEFAULT: "0.25s",
             },

@@ -172,7 +172,7 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                 />
 
                 {/* Multi-color warm ambient light matching reference image background */}
-                <div className="absolute bottom-0 left-[15%] right-[10%] h-[65%] opacity-80 pointer-events-none" style={{ background: 'radial-gradient(ellipse at bottom, rgba(224,86,0,0.2) 0%, rgba(59,43,207,0.1) 40%, transparent 70%)' }} />
+                <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 50%, rgba(224,86,0,0.18) 0%, rgba(59,43,207,0.08) 45%, transparent 80%)' }} />
             </div>
 
             {/* Main content grid: Left Column (Artwork + Info Side-by-Side) & Right Column (Era Selector) */}

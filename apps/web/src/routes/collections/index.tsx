@@ -117,7 +117,7 @@ function CollectionsPage() {
             />
 
             {/* Controls */}
-            <div className="sticky top-0 z-30 bg-[#0b0f19]/80 border-b border-white/[0.04] backdrop-blur-2xl">
+            <div className="sticky top-0 z-30 bg-[#0b0f19]/60 border-b border-white/[0.04] backdrop-blur-2xl">
                 <div className="px-8 md:px-16 py-3 flex flex-wrap gap-4 items-center justify-between">
                     {/* Search */}
                     <div className="relative group">

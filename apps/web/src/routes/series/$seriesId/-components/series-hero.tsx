@@ -145,7 +145,7 @@ export function SeriesHero({
 
 
   return (
-    <section ref={containerRef} className="relative w-full h-[98vh] max-h-[550px] flex flex-col justify-center overflow-hidden bg-transparent select-none">
+    <section ref={containerRef} className="relative w-full h-[98vh] max-h-[420px] flex flex-col justify-center overflow-hidden bg-transparent select-none">
       {/* Cinematic Grain Overlay */}
       <div
         className="absolute inset-0 opacity-[0.025] pointer-events-none mix-blend-overlay z-20"

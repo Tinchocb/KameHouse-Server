@@ -37,7 +37,7 @@ export default tseslint.config(
             },
         },
         settings: {
-            react: { version: "18.3" },
+            react: { version: "detect" },
         },
         rules: {
             // Manually selected core rules (since we're skipping js.configs.recommended)
@@ -65,7 +65,7 @@ export default tseslint.config(
             "react-hooks/preserve-manual-memoization": "warn",
             "react-hooks/set-state-in-effect": "warn",
             "react-hooks/refs": "warn",
-            "react-hooks/rules-of-hooks": "warn",
+            "react-hooks/rules-of-hooks": "error",
 
             // Accessibility
             "jsx-a11y/alt-text": "warn",

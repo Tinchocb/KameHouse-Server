@@ -53,17 +53,8 @@ coverage.out
 package.json.md5
 
 # Project specific
-kamehouse-parser/.git
-kamehouse-web-tr/
-kamehouse-denshi/
 codegen/nonext/
 codegen/generated/
-test/testdata/**/*.json
-test/sample/
-test/providers.json
-test/db.json
-test/config.json
-test/config.toml
 whats-new.md
 TODO-priv.md
 CHANGELOG-priv.md

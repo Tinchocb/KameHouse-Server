@@ -199,14 +199,14 @@ export function IntegrationCard({ name, status, connected, disabled }: { name: s
 
 export function StatusCard({ label, value, icon: Icon }: { label: string; value: string; icon: React.ElementType }) {
     return (
-        <div className="p-5 liquid-glass-frosted liquid-glass-frosted-interactive rounded-2xl flex items-center gap-4 group/statuscard relative overflow-hidden">
-            <div className="absolute inset-0 opacity-0 group-hover/statuscard:opacity-100 transition-opacity duration-700 bg-[radial-gradient(ellipse_at_left,rgba(6,182,212,0.04),transparent_70%)] pointer-events-none" />
-            <div className="w-11 h-11 rounded-xl bg-cyan-500/5 border border-cyan-500/10 flex items-center justify-center text-cyan-400/60 group-hover/statuscard:text-cyan-400 group-hover/statuscard:bg-cyan-500/10 transition-all duration-300 relative z-10">
-                <Icon className="w-[18px] h-[18px]" />
+        <div className="p-6 bg-zinc-950/40 border border-white/[0.04] hover:border-cyan-500/30 rounded-3xl flex items-center gap-4 group/statuscard relative overflow-hidden transition-all duration-300 shadow-[0_8px_30px_rgba(0,0,0,0.3)]">
+            <div className="absolute inset-0 opacity-0 group-hover/statuscard:opacity-100 transition-opacity duration-500 bg-[radial-gradient(ellipse_at_left,rgba(6,182,212,0.06),transparent_70%)] pointer-events-none" />
+            <div className="w-12 h-12 rounded-2xl bg-cyan-500/5 border border-cyan-500/10 flex items-center justify-center text-cyan-400/60 group-hover/statuscard:text-cyan-400 group-hover/statuscard:bg-cyan-500/10 transition-all duration-300 relative z-10">
+                <Icon className="w-5 h-5" />
             </div>
             <div className="relative z-10">
-                <p className="text-[9px] font-black uppercase tracking-[0.25em] text-zinc-550 mb-0.5">{label}</p>
-                <p className="text-xl font-bebas tracking-wider uppercase text-white/90 group-hover/statuscard:text-white transition-colors leading-tight">{value}</p>
+                <p className="text-[9px] font-black uppercase tracking-[0.25em] text-zinc-550 mb-0.5 font-mono">{label}</p>
+                <p className="text-xl font-bebas tracking-wider uppercase text-white/95 group-hover/statuscard:text-white transition-colors leading-tight">{value}</p>
             </div>
         </div>
     )
@@ -214,21 +214,14 @@ export function StatusCard({ label, value, icon: Icon }: { label: string; value:
 
 // ─── Section ──────────────────────────────────────────────────────────────────
 
-export function Section({ label, children, right }: { label: string; children: React.ReactNode; right?: React.ReactNode }) {
+export function Section({ label, children }: { label: string; children: React.ReactNode }) {
     return (
-        <div className="space-y-6 w-full group/sec transition-all duration-300">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 w-full">
-                    <div className="h-[2px] w-6 bg-gradient-to-r from-[#ff6e3a] to-transparent rounded-full shadow-[0_0_8px_rgba(255,110,58,0.6)] transition-all duration-500 group-hover/sec:w-10" />
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 group-hover/sec:text-[#ff6e3a] transition-colors duration-300 font-mono select-none">{label}</p>
-                    <div className="h-[1px] flex-grow bg-gradient-to-r from-white/10 to-transparent min-w-[40px] ml-3" />
-                </div>
-                {right}
-            </div>
-            <div className="w-full">
-                {children}
-            </div>
-        </div>
+        <section className="space-y-4">
+            <h2 className="text-xs font-black uppercase tracking-[0.25em] text-zinc-550 font-mono pl-1">
+                {label}
+            </h2>
+            {children}
+        </section>
     )
 }
 
@@ -236,68 +229,8 @@ export function Section({ label, children, right }: { label: string; children: R
 
 export function Card({ children, className }: { children: React.ReactNode; className?: string }) {
     return (
-        <div className={cn(
-            "bg-zinc-950/45 border border-white/5 hover:border-white/10 rounded-[24px] overflow-hidden divide-y divide-white/[0.03] backdrop-blur-2xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] transition-all duration-300 relative",
-            className
-        )}>
-            <div className="absolute inset-0 bg-gradient-to-b from-white/[0.01] to-transparent pointer-events-none" />
-            <div className="relative z-10">
-                {children}
-            </div>
-        </div>
-    )
-}
-
-// ─── OsToggle ─────────────────────────────────────────────────────────────────
-
-export interface OsToggleProps {
-    name?: string
-    label: string
-    description?: string
-    checked: boolean
-    onChange: (checked: boolean) => void
-    disabled?: boolean
-}
-
-export function OsToggle({ label, description, checked, onChange, disabled }: OsToggleProps) {
-    return (
-        <div className={cn(
-            "flex items-center justify-between p-6 transition-all duration-300 cursor-pointer group/toggle relative overflow-hidden",
-            checked ? "bg-[#ff6e3a]/[0.01]" : "",
-            disabled ? "opacity-30 cursor-not-allowed pointer-events-none" : "hover:bg-white/[0.015]"
-        )}
-            onClick={() => {
-                if (disabled) return
-                onChange(!checked)
-            }}
-        >
-            <div className="absolute inset-0 bg-gradient-to-r from-[#ff6e3a]/[0.015] to-transparent opacity-0 group-hover/toggle:opacity-100 transition-opacity duration-500 pointer-events-none" />
-
-            <div className={cn(
-                "absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full transition-all duration-300",
-                checked ? "h-8 bg-[#ff6e3a] shadow-[0_0_12px_rgba(255,110,58,0.8)]" : "h-0 bg-transparent"
-            )} />
-
-            <div className="space-y-1 flex-1 pl-4 relative z-10 pr-4">
-                <p className={cn(
-                    "text-sm font-semibold tracking-tight transition-colors duration-300",
-                    checked ? "text-white" : "text-zinc-350 group-hover/toggle:text-white"
-                )}>{label}</p>
-                {description && <p className="text-[11px] text-zinc-500 leading-relaxed font-medium group-hover/toggle:text-zinc-400 transition-colors duration-300">{description}</p>}
-            </div>
-            
-            <div className="relative z-10 scale-[0.9] hover:scale-[0.93] transition-all shrink-0">
-                <Switch
-                    value={checked}
-                    onValueChange={(v: boolean) => {
-                        if (disabled) return
-                        onChange(v)
-                    }}
-                    disabled={disabled}
-                    className="data-[state=checked]:bg-[#ff6e3a] data-[state=checked]:shadow-[0_0_10px_rgba(255,110,58,0.4)] shrink-0"
-                    onClick={(e) => e.stopPropagation()}
-                />
-            </div>
+        <div className={cn("liquid-glass-frosted rounded-3xl overflow-hidden", className)}>
+            {children}
         </div>
     )
 }
@@ -305,75 +238,52 @@ export function OsToggle({ label, description, checked, onChange, disabled }: Os
 // ─── PathList ─────────────────────────────────────────────────────────────────
 
 export interface PathListProps {
+    label: string
     directories: string[]
     onAdd: (path: string) => void
     onRemove: (path: string) => void
-    label: string
     placeholder?: string
 }
 
-export function PathList({ directories = [], onAdd, onRemove, label, placeholder }: PathListProps) {
+export function PathList({ label, directories, onAdd, onRemove, placeholder }: PathListProps) {
     const [inputValue, setInputValue] = React.useState("")
 
     const handleAdd = () => {
-        if (inputValue.trim() && !directories.includes(inputValue.trim())) {
+        if (inputValue.trim()) {
             onAdd(inputValue.trim())
             setInputValue("")
         }
     }
 
     return (
-        <div className="bg-zinc-950/45 border border-white/5 rounded-[24px] overflow-hidden p-6 space-y-6 backdrop-blur-2xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] transition-all duration-300 hover:border-white/10 group/pathlist">
-            <div className="space-y-1.5">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-[#ff6e3a]/5 border border-[#ff6e3a]/15 flex items-center justify-center shadow-[0_0_15px_rgba(255,110,58,0.05)] transition-all duration-300 group-hover/pathlist:border-[#ff6e3a]/30">
-                        <FolderIcon className="text-[#ff6e3a]" />
-                    </div>
-                    <p className="text-sm font-bold tracking-tight text-white uppercase">{label}</p>
-                </div>
-                <p className="text-[11px] text-zinc-500 font-medium leading-relaxed max-w-xl pl-11">
-                    Directorios locales vinculados a este motor. El escáner analizará estos directorios de forma recursiva.
-                </p>
+        <div className="p-6 space-y-4">
+            <div className="space-y-1">
+                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wide">{label}</h4>
             </div>
 
-            <div className="space-y-2.5">
-                {directories.length === 0 ? (
-                    <div className="border border-dashed border-white/10 bg-black/20 p-8 rounded-xl text-center space-y-1.5 transition-all">
-                        <FolderIcon className="mx-auto mb-2 text-zinc-650 animate-pulse" />
-                        <p className="text-zinc-500 text-xs font-semibold">No hay directorios configurados</p>
-                        <p className="text-zinc-650 text-[9px] uppercase tracking-wider font-mono">Agrega uno utilizando el campo de abajo</p>
-                    </div>
-                ) : (
-                    directories.map((path, idx) => (
-                        <div key={idx} className="flex items-center justify-between bg-black/40 border border-white/5 px-4.5 py-3 rounded-xl transition-all duration-300 hover:border-white/10 hover:bg-[#ff6e3a]/[0.01] group/pathitem">
-                            <div className="flex items-center gap-3 min-w-0">
-                                <CheckIcon className="text-[#ff6e3a] shrink-0" />
-                                <span className="font-mono text-xs text-zinc-400 truncate group-hover/pathitem:text-white transition-colors">{path}</span>
-                            </div>
+            {directories.length > 0 && (
+                <div className="space-y-2">
+                    {directories.map((dir) => (
+                        <div key={dir} className="flex items-center justify-between bg-black/40 border border-white/5 rounded-xl px-4 py-2.5">
+                            <span className="text-xs text-zinc-300 font-mono truncate mr-4">{dir}</span>
                             <button
                                 type="button"
-                                onClick={() => onRemove(path)}
-                                className="text-zinc-600 hover:text-red-400 p-2 hover:bg-red-500/10 rounded-xl border border-transparent hover:border-red-500/15 transition-all ml-3 shrink-0"
+                                onClick={() => onRemove(dir)}
+                                className="text-zinc-550 hover:text-red-400 transition-colors duration-200 p-1 rounded-lg hover:bg-white/5"
                             >
-                                <TrashIcon />
+                                <TrashIcon className="w-4 h-4" />
                             </button>
                         </div>
-                    ))
-                )}
-            </div>
+                    ))}
+                </div>
+            )}
 
-            <div className="flex gap-2 bg-[#050507]/60 border border-white/5 focus-within:border-[#ff6e3a]/40 focus-within:shadow-[0_0_20px_rgba(255,110,58,0.12)] rounded-xl p-1.5 transition-all duration-300">
+            <div className="flex items-center gap-2.5 bg-black/40 border border-white/5 rounded-xl pl-1 pr-1.5 py-1 focus-within:border-[#ff6e3a]/40 transition-all">
                 <input
                     type="text"
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                            e.preventDefault()
-                            handleAdd()
-                        }
-                    }}
-                    placeholder={placeholder || "Ej. C:\\Media\\Peliculas"}
+                    placeholder={placeholder}
                     className="flex-1 bg-transparent px-3 py-2 text-white placeholder-zinc-700 text-xs font-mono focus:outline-none"
                 />
                 <button
@@ -493,3 +403,46 @@ export const OsSelect = React.forwardRef<HTMLSelectElement, OsSelectProps>(({
 })
 
 OsSelect.displayName = "OsSelect"
+
+// ─── OsToggle ─────────────────────────────────────────────────────────────────
+
+export interface OsToggleProps {
+    label: string
+    description?: string
+    checked: boolean
+    onChange: (value: boolean) => void
+    disabled?: boolean
+}
+
+export function OsToggle({ label, description, checked, onChange, disabled }: OsToggleProps) {
+    return (
+        <div
+            className="flex flex-col md:flex-row md:items-center justify-between px-6 py-5 border-b border-white/[0.02] last:border-0 hover:bg-white/[0.005] transition-all duration-200 gap-5 group/toggle cursor-pointer"
+            onClick={() => !disabled && onChange(!checked)}
+        >
+            <div className="space-y-1 flex-1 max-w-xl">
+                <p className="text-sm font-semibold text-zinc-300 group-hover/toggle:text-white transition-colors tracking-tight">{label}</p>
+                {description && <p className="text-[11px] text-zinc-500 leading-relaxed font-medium group-hover/toggle:text-zinc-400 transition-colors duration-300">{description}</p>}
+            </div>
+            <button
+                type="button"
+                role="switch"
+                aria-checked={checked}
+                disabled={disabled}
+                onClick={(e) => { e.stopPropagation(); onChange(!checked) }}
+                className={cn(
+                    "relative shrink-0 w-10 h-5.5 rounded-full border transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6e3a]/50",
+                    checked
+                        ? "bg-[#ff6e3a] border-[#ff6e3a] shadow-[0_0_12px_rgba(255,110,58,0.35)]"
+                        : "bg-black/50 border-white/10 hover:border-white/20",
+                    disabled && "opacity-40 cursor-not-allowed"
+                )}
+            >
+                <span className={cn(
+                    "absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200",
+                    checked && "translate-x-4.5"
+                )} />
+            </button>
+        </div>
+    )
+}

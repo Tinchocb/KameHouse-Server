@@ -94,14 +94,14 @@ export function PremiumEpisodeList({
             onMouseEnter={() => onMouseEnter(ep.id)}
             onMouseLeave={() => onMouseLeave(ep.id)}
             className={cn(
-              "group flex gap-6 p-4 rounded-xl transition-all duration-300 cursor-pointer shadow-lg",
+              "group flex gap-4 p-3 rounded-xl transition-all duration-300 cursor-pointer shadow-lg",
               isHighlighted
                 ? "liquid-glass-frosted liquid-glass-frosted-interactive !bg-brand-orange/[0.03] !border-brand-orange/20 border-l-[3.5px] !border-l-brand-orange shadow-[0_8px_24px_rgba(255,110,58,0.04)] hover:!bg-brand-orange/[0.06] hover:!border-brand-orange/30"
                 : "liquid-glass-frosted liquid-glass-frosted-interactive"
             )}
           >
           {/* Thumbnail */}
-          <div className="relative w-72 md:w-80 aspect-video rounded-lg overflow-hidden flex-shrink-0 bg-gray-900 shadow-md">
+          <div className="relative w-48 md:w-56 aspect-video rounded-lg overflow-hidden flex-shrink-0 bg-gray-900 shadow-md">
             <img 
               src={ep.thumbnailUrl} 
               alt={ep.title}
@@ -121,10 +121,10 @@ export function PremiumEpisodeList({
           </div>
 
             {/* Details */}
-          <div className="flex flex-col justify-center flex-grow min-w-0 py-1">
-            <div className="flex justify-between items-start mb-1">
-              <h4 className="text-lg font-bold text-white truncate">
-                <span className="text-gray-400 mr-2">{ep.number}.</span>
+          <div className="flex flex-col justify-center flex-grow min-w-0 py-0.5">
+            <div className="flex justify-between items-start mb-0.5">
+              <h4 className="text-sm font-bold text-white truncate">
+                <span className="text-gray-400 mr-1.5">{ep.number}.</span>
                 {ep.title}
               </h4>
               
@@ -149,20 +149,20 @@ export function PremiumEpisodeList({
               </div>
             </div>
 
-            <p className="text-sm text-gray-400 line-clamp-2 mb-4 leading-relaxed">
+            <p className="text-xs text-gray-400 line-clamp-2 mb-2 leading-relaxed">
               {ep.description}
             </p>
 
             {/* Technical Pills & Status */}
             <div className="flex items-center justify-between mt-auto">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono font-medium liquid-glass-frosted-subtle text-gray-300 px-2.5 py-1 rounded-md">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] font-mono font-medium liquid-glass-frosted-subtle text-gray-300 px-2 py-0.5 rounded-md">
                   {ep.resolution}
                 </span>
-                <span className="text-[10px] font-mono font-medium liquid-glass-frosted-subtle text-gray-300 px-2.5 py-1 rounded-md">
+                <span className="text-[9px] font-mono font-medium liquid-glass-frosted-subtle text-gray-300 px-2 py-0.5 rounded-md">
                   {ep.videoCodec}
                 </span>
-                <span className="text-[10px] font-mono font-medium liquid-glass-frosted-subtle text-gray-300 px-2.5 py-1 rounded-md">
+                <span className="text-[9px] font-mono font-medium liquid-glass-frosted-subtle text-gray-300 px-2 py-0.5 rounded-md">
                   {ep.audioCodec}
                 </span>
               </div>

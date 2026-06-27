@@ -395,7 +395,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
 
     if (isLoading && !entry) {
         return (
-            <div className="h-full w-full bg-[#050506]/35 backdrop-blur-[64px] text-white pb-16 overflow-y-auto">
+            <div className="h-full w-full bg-[#050506]/60 backdrop-blur-2xl text-white pb-16 overflow-y-auto">
                 <BentoDetailsSkeleton />
             </div>
         )
@@ -419,7 +419,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     const hasCharacters = entry.media?.characters?.edges && entry.media.characters.edges.length > 0
 
     return (
-        <div className="h-full w-full flex flex-col overflow-y-auto no-scrollbar bg-[#050506]/35 backdrop-blur-[64px] text-white pb-16">
+        <div className="h-full w-full flex flex-col overflow-y-auto no-scrollbar bg-[#050506]/60 backdrop-blur-2xl text-white pb-16">
             <FloatingMatchFlap
                 directoryPath={entry.libraryData?.sharedPath || ""}
                 mediaId={entry.mediaId}
@@ -430,9 +430,9 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                 sagaCount={sagas?.length ?? 0}
                 onPlay={handlePlayDefault}
             />
-            <div className="w-full max-w-[1800px] mx-auto px-6 md:pl-[120px] md:pr-12 mt-12">
+            <div className="w-full max-w-[1800px] mx-auto px-6 md:pl-[120px] md:pr-12 mt-8">
                 {/* Custom Glassmorphic Tabs Navigation for Series/Shows */}
-                <div className="flex border-b border-white/5 pb-2 mb-8 gap-8 overflow-x-auto no-scrollbar">
+                <div className="flex border-b border-white/5 pb-2 mb-6 gap-6 overflow-x-auto no-scrollbar">
                     <button
                         onClick={() => setSearchParams({ tab: "episodes" })}
                         className={cn(
@@ -479,7 +479,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
 
                 </div>
 
-                <div className="mt-8 min-h-[300px]">
+                <div className="mt-4 min-h-[300px]">
                     <AnimatePresence mode="wait">
                         {activeTab === "episodes" && (
                             <motion.div
@@ -671,7 +671,7 @@ function SagaLoreHeader({ saga }: { saga: SagaDTO | undefined }) {
                             ? "bg-red-500/10 text-red-400 border border-red-500/20"
                             : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
                     )}>
-                        {saga.canonStatus === "true" || saga.canonStatus.toLowerCase() === "canon" ? "Canon" : saga.canonStatus.toLowerCase() === "relleno" ? "Relleno" : saga.canonStatus}
+                        {saga.canonStatus === "true" || saga.canonStatus.toLowerCase() === "canon" ? "Canon" : saga.canonStatus.toLowerCase() === "relleno" || saga.canonStatus === "false" ? "Relleno" : saga.canonStatus}
                     </span>
                 )}
             </div>

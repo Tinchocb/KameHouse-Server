@@ -17,3 +17,8 @@ linters:
     - nilerr     # check for returning nil error
     - bodyclose  # check whether HTTP response body is closed
     - contextcheck # check whether context is passed correctly
+    - gofumpt    # strict gofmt formatting
+    - errorlint  # error wrapping best practices
+    - noctx      # HTTP requests without context
+    - unconvert  # unnecessary type conversions
+    - unparam    # unused function parameters

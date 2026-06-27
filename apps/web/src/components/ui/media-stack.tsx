@@ -27,7 +27,7 @@ export function MediaStack({ stackCount = 2, className, ...props }: MediaStackPr
                     key={idx}
                     className={cn(
                         "absolute inset-0 border border-white/5 shadow-2xl overflow-hidden",
-                        "bg-zinc-900/50 backdrop-blur-sm",
+                        "bg-zinc-900/50 backdrop-blur-md",
                         isPoster ? "rounded-xl" : "rounded-2xl"
                     )}
                     initial={false}

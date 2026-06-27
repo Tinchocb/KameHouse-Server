@@ -197,11 +197,16 @@ export function PlayerUI(props: PlayerUIProps) {
     }
 
     useEffect(() => {
+        const handleGlobalKeyDown = () => {
+            actions.triggerControlsVisibility()
+        }
+        window.addEventListener("keydown", handleGlobalKeyDown, { capture: true })
         return () => {
             if (holdTimeoutRef.current) clearTimeout(holdTimeoutRef.current)
             if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current)
+            window.removeEventListener("keydown", handleGlobalKeyDown, { capture: true })
         }
-    }, [])
+    }, [actions])
 
     const { playlistQueue, currentQueueIndex } = useAppStore(useShallow(state => ({
         playlistQueue: state.playlistQueue,

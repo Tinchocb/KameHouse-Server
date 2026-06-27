@@ -102,11 +102,11 @@ function SeriesFullscreenIndex() {
             {/* Ambient Background Glow */}
             {selectedItem && (
                 <div
-                    className="absolute top-1/2 left-0 w-[800px] h-[800px] pointer-events-none blur-[120px] z-0"
+                    className="absolute top-1/2 left-0 w-[700px] h-[700px] pointer-events-none blur-[100px] z-0"
                     style={{
-                        opacity: 0.08,
+                        opacity: 0.06,
                         background: `radial-gradient(circle, ${getVhsColor(selectedItem.id)} 0%, transparent 70%)`,
-                        transform: `translate3d(calc(${(selectedIndex / Math.max(seriesList.length - 1, 1)) * 80 + 10}% - 400px), -50%, 0)`,
+                        transform: `translate3d(calc(${(selectedIndex / Math.max(seriesList.length - 1, 1)) * 80 + 10}% - 350px), -50%, 0)`,
                         transition: 'transform 700ms cubic-bezier(0.16, 1, 0.3, 1), background 700ms ease-out',
                     }}
                 />
@@ -116,16 +116,16 @@ function SeriesFullscreenIndex() {
             <div className="absolute inset-0 pointer-events-none z-[49] opacity-[0.015] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,6px_100%]" />
 
             {/* Main Shelf Container */}
-            <div className="flex-1 min-h-0 bg-zinc-950/80 backdrop-blur-2xl rounded-[32px] border border-white/10 shadow-[0_16px_48px_rgba(0,0,0,0.6)] overflow-hidden relative z-10 flex flex-col">
-                <main className="w-full h-full flex bg-transparent overflow-x-auto overflow-y-hidden no-scrollbar relative z-10">
+            <div className="flex-1 min-h-0 bg-zinc-950/80 backdrop-blur-2xl rounded-[28px] border border-white/10 shadow-[0_16px_48px_rgba(0,0,0,0.6)] overflow-hidden relative z-10 flex flex-col">
+                <main className="w-full h-full flex bg-transparent overflow-x-auto overflow-y-hidden no-scrollbar relative z-10 scroll-smooth" style={{ scrollSnapType: 'x proximity', scrollPadding: '0 16px' }}>
                     {/* Backlight Glow inside shelf */}
                     {selectedItem && (
                         <div
-                            className="absolute top-1/2 left-0 w-[600px] h-[600px] pointer-events-none blur-[100px] z-0"
+                            className="absolute top-1/2 left-0 w-[500px] h-[500px] pointer-events-none blur-[80px] z-0"
                             style={{
-                                opacity: 0.14,
+                                opacity: 0.12,
                                 background: `radial-gradient(circle, ${getVhsColor(selectedItem.id)} 0%, transparent 60%)`,
-                                transform: `translate3d(calc(${(selectedIndex / Math.max(seriesList.length - 1, 1)) * 80 + 10}% - 300px), -50%, 0)`,
+                                transform: `translate3d(calc(${(selectedIndex / Math.max(seriesList.length - 1, 1)) * 80 + 10}% - 250px), -50%, 0)`,
                                 transition: 'transform 700ms cubic-bezier(0.16, 1, 0.3, 1), background 700ms ease-out',
                             }}
                         />
@@ -160,9 +160,6 @@ function SeriesFullscreenIndex() {
             <style>{`
                 .no-scrollbar::-webkit-scrollbar { display: none; }
                 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-                .group\\/card:hover .vhs-spine-glow {
-                    box-shadow: 0 -15px 35px var(--tape-color), inset 0 3px 5px rgba(255,255,255,0.12), inset 0 -3px 5px rgba(0,0,0,0.9) !important;
-                }
             `}</style>
         </div>
     );

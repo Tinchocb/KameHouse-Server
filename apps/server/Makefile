@@ -21,7 +21,7 @@ WEB_DIR        := ../web
 WEB_OUT_DIR    := $(WEB_DIR)/out
 DEST_WEB_DIR   := web
 DATA_DIR       ?= ./test_data_dir
-SERVER_PORT    ?= 43000
+SERVER_PORT    ?= 43211
 GO             := go
 NPM            := pnpm
 

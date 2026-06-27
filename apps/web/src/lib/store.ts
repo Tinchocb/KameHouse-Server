@@ -77,8 +77,12 @@ export const createUISlice: StateCreator<UIState & PlayerState, [], [], UIState>
     uiSoundsEnabled: true,
     uiSoundsVolume: 1.0,
     globalQueueOpen: false,
-    dynamicBackdropEnabled: false,
-    dynamicBackdropMotionEnabled: false,
+    dynamicBackdropEnabled: typeof window !== "undefined"
+        ? localStorage.getItem("kamehouse:dynamic-backdrop-enabled") !== "false"
+        : true,
+    dynamicBackdropMotionEnabled: typeof window !== "undefined"
+        ? localStorage.getItem("kamehouse:perf-monitor-enabled") === "true"
+        : false,
     setSidebarOpen: (open) => set({ sidebarOpen: open }),
     setActiveTheme: (theme) => set({ activeTheme: theme }),
     setSearchQuery: (query) => set({ searchQuery: query }),
@@ -88,8 +92,18 @@ export const createUISlice: StateCreator<UIState & PlayerState, [], [], UIState>
     setUiSoundsEnabled: (enabled) => set({ uiSoundsEnabled: enabled }),
     setUiSoundsVolume: (volume) => set({ uiSoundsVolume: volume }),
     setGlobalQueueOpen: (open) => set({ globalQueueOpen: open }),
-    setDynamicBackdropEnabled: (enabled) => set({ dynamicBackdropEnabled: enabled }),
-    setDynamicBackdropMotionEnabled: (enabled) => set({ dynamicBackdropMotionEnabled: enabled }),
+    setDynamicBackdropEnabled: (enabled) => {
+        if (typeof window !== "undefined") {
+            localStorage.setItem("kamehouse:dynamic-backdrop-enabled", enabled ? "true" : "false")
+        }
+        set({ dynamicBackdropEnabled: enabled })
+    },
+    setDynamicBackdropMotionEnabled: (enabled) => {
+        if (typeof window !== "undefined") {
+            localStorage.setItem("kamehouse:perf-monitor-enabled", enabled ? "true" : "false")
+        }
+        set({ dynamicBackdropMotionEnabled: enabled })
+    },
 })
 
 export interface PlaylistItem {

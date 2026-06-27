@@ -84,19 +84,19 @@ interface LeftPanelProps {
 function LeftPanel({ posterUrl, title, synopsis, year, episodesCount, sagaTitle, genres, rating, durationPerEp, studios, onBack }: LeftPanelProps) {
 
     return (
-        <aside className="w-full lg:w-[30%] lg:h-full bg-[#070a14]/40 backdrop-blur-md border-r border-white/5 flex flex-col overflow-y-auto shrink-0">
+        <aside className="w-full lg:w-[28%] lg:h-full bg-[#070a14]/40 backdrop-blur-md border-r border-white/5 flex flex-col overflow-y-auto shrink-0">
             {/* Back button */}
             <button
                 onClick={onBack}
-                className="flex items-center gap-2 px-8 pt-8 pb-4 text-zinc-500 hover:text-white transition-colors text-[10px] font-black uppercase tracking-[0.3em] group"
+                className="flex items-center gap-2 px-6 pt-6 pb-3 text-zinc-500 hover:text-brand-orange transition-colors text-[10px] font-black uppercase tracking-[0.3em] group"
             >
                 <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                 VOLVER
             </button>
 
             {/* Poster */}
-            <div className="px-8 mt-4">
-                <div className="relative w-full aspect-[2/3] bg-zinc-950 border border-white/5 rounded-2xl overflow-hidden shadow-2xl">
+            <div className="px-6 mt-2">
+                <div className="relative w-full aspect-[3/4] bg-zinc-950 border border-white/5 rounded-xl overflow-hidden shadow-2xl">
                     <DeferredImage
                         src={posterUrl}
                         alt={title}
@@ -108,7 +108,7 @@ function LeftPanel({ posterUrl, title, synopsis, year, episodesCount, sagaTitle,
             </div>
 
             {/* Metadata */}
-            <div className="flex-1 px-8 pt-8 pb-12 flex flex-col gap-6">
+            <div className="flex-1 px-6 pt-6 pb-10 flex flex-col gap-5">
                 {/* Saga label */}
                 <span className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em]">
                     SAGA: {sagaTitle}
@@ -184,12 +184,12 @@ function EpisodeRow({ episode, isActive, isWatched, isDownloaded, progress, onSe
         <button
             onClick={onSelect}
             className={cn(
-                "w-full flex items-center gap-6 px-6 py-4 text-left group relative",
-                "transition-all duration-300 rounded-xl",
+                "w-full flex items-center gap-5 px-5 py-3.5 text-left group relative",
+                "transition-all duration-300 rounded-xl border-l-[3px]",
                 isActive
-                    ? "bg-brand-orange text-white border-brand-orange shadow-[0_0_15px_rgba(255,110,58,0.4)]"
-                    : "bg-transparent border-transparent hover:bg-white/5 text-zinc-500 hover:text-white",
-                isWatched && "opacity-60",
+                    ? "bg-brand-orange/10 text-white border-l-brand-orange shadow-[0_0_12px_rgba(255,110,58,0.2)]"
+                    : "bg-transparent border-l-transparent hover:bg-white/[0.03] hover:border-l-white/10 text-zinc-500 hover:text-white",
+                isWatched && "opacity-50",
             )}
         >
             {/* Episode number */}
