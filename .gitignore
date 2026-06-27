@@ -64,6 +64,8 @@ apps/KameHouseTV/*.wgt
 apps/KameHouseTV/.manifest.tmp
 apps/KameHouseTV/signature*.xml
 apps/KameHouseTV/author-signature.xml
+apps/KameHouseTV/Debug/
+apps/KameHouseTV/Release/
 
 # AI Agent Config
 .clauderc

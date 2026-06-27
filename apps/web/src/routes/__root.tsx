@@ -9,6 +9,8 @@ import React from "react"
 import { AppLayout, AppLayoutContent } from "@/components/ui/app-layout/app-layout"
 import { AppBottomNav } from "@/components/ui/app-layout/app-topnav"
 import { AppSidebar } from "@/components/ui/app-layout/app-sidebar"
+import { TvNavBar } from "@/components/ui/app-layout/tv-nav-bar"
+import { useTvDpad } from "@/hooks/use-tv-dpad"
 
 const CommandPalette = React.lazy(() =>
     import("@/components/ui/search/command-palette").then((m) => ({ default: m.CommandPalette }))
@@ -39,6 +41,8 @@ function RootComponent() {
     const activeTheme = useAppStore(state => state.activeTheme)
 
     const sidebarOpen = useAppStore(state => state.sidebarOpen)
+    const tvMode = useAppStore(state => state.tvMode)
+    useTvDpad()
     const { data: status, isLoading, isError, refetch } = useGetStatus()
 
     React.useEffect(() => {
@@ -63,33 +67,35 @@ function RootComponent() {
             <React.Suspense fallback={null}>
                 <PerformanceMonitor />
             </React.Suspense>
-            <AppSidebar />
+            {!tvMode && <AppSidebar />}
             <React.Suspense fallback={null}>
                 <CommandPalette />
             </React.Suspense>
             <GlobalQueueSidebar />
             <AppLayoutContent
-                style={{
+                style={!tvMode ? {
                     '--sidebar-width': sidebarOpen ? '260px' : '80px',
                     transition: 'padding-left 300ms cubic-bezier(0.25, 0.1, 0.25, 1)'
-                } as React.CSSProperties}
-                className="md:pl-[var(--sidebar-width)]"
+                } as React.CSSProperties : undefined}
+                className={tvMode ? "pb-24" : "md:pl-[var(--sidebar-width)]"}
             >
-                {/* Mobile Menu Trigger */}
-                <button 
-                    onClick={() => useAppStore.getState().setSidebarOpen(true)}
-                    tabIndex={sidebarOpen ? -1 : 0}
-                    aria-hidden={sidebarOpen ? "true" : undefined}
-                    className="md:hidden fixed top-6 left-6 z-[60] p-3 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 text-white/70 hover:text-white transition-all active:scale-95"
-                >
-                    <Menu className="w-5 h-5" />
-                </button>
+                {/* Mobile Menu Trigger — hidden in TV mode */}
+                {!tvMode && (
+                    <button
+                        onClick={() => useAppStore.getState().setSidebarOpen(true)}
+                        tabIndex={sidebarOpen ? -1 : 0}
+                        aria-hidden={sidebarOpen ? "true" : undefined}
+                        className="md:hidden fixed top-6 left-6 z-[60] p-3 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 text-white/70 hover:text-white transition-all active:scale-95"
+                    >
+                        <Menu className="w-5 h-5" />
+                    </button>
+                )}
 
                 <PageTransition key={routerState.location.pathname} transitionKey={routerState.location.pathname} className="flex-1 w-full">
                     <Outlet />
                 </PageTransition>
             </AppLayoutContent>
-            <AppBottomNav />
+            {tvMode ? <TvNavBar /> : <AppBottomNav />}
 
             {activeQueuePlayItem && (() => {
                 const nextItem = currentQueueIndex + 1 < playlistQueue.length ? playlistQueue[currentQueueIndex + 1] : null;

@@ -26,7 +26,7 @@ const config: RsbuildConfig = {
             babelLoaderOptions(opts) {
                 opts.presets ??= []
                 opts.presets.push(["@babel/preset-env", {
-                    targets: ["chrome >= 76"],
+                    targets: ["chrome >= 47"],
                     useBuiltIns: false,
                     modules: false,
                 }])

@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import React, { useEffect } from "react"
 import { CookiesProvider } from "react-cookie"
 import { toast } from "sonner"
+import { useAppStore } from "@/lib/store"
 
 interface ClientProvidersProps {
     children?: React.ReactNode
@@ -45,6 +46,17 @@ export const queryClient = new QueryClient({
 })
 
 export const ClientProviders: React.FC<ClientProvidersProps> = ({ children }) => {
+    // Inicializar tvMode si viene en los query params de la URL (?tvMode=true)
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get("tvMode") === "true") {
+                useAppStore.getState().setTvMode(true);
+                // Remove the param from URL so it doesn't persist across navigation
+                window.history.replaceState({}, "", window.location.pathname);
+            }
+        }
+    }, []);
 
     return (
         <>

@@ -39,7 +39,9 @@ export function AppSidebar() {
     const isFullscreen = useAppStore(state => state.isFullscreen)
     const { isMobile } = useResponsive()
 
-    if (isFullscreen) return null
+    const tvMode = useAppStore(state => state.tvMode)
+
+    if (isFullscreen || tvMode) return null
 
     return (
         <>

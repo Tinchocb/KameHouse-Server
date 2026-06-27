@@ -417,3 +417,23 @@ media-time-range {
     z-index:        10;
     pointer-events: none;
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   TV MODE — D-pad focus rings & Samsung Tizen adaptations
+   ══════════════════════════════════════════════════════════════════════ */
+[data-tv="true"] .tv-focusable:focus,
+[data-tv="true"] .tv-focusable:focus-visible {
+    outline:        3px solid #f97316 !important;
+    outline-offset: 3px;
+    box-shadow:     0 0 0 6px rgba(249, 115, 22, 0.25) !important;
+}
+
+[data-tv="true"] a:focus,
+[data-tv="true"] button:focus,
+[data-tv="true"] [role="button"]:focus,
+[data-tv="true"] input:focus,
+[data-tv="true"] select:focus {
+    outline:        3px solid #f97316 !important;
+    outline-offset: 3px;
+    box-shadow:     0 0 0 6px rgba(249, 115, 22, 0.25) !important;
+}
