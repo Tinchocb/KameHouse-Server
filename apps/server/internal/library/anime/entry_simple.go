@@ -134,7 +134,7 @@ func NewSimpleEntry(ctx context.Context, opts *NewSimpleAnimeEntryOptions) (*Sim
 
 	libraryData, _ := NewEntryLibraryData(&NewEntryLibraryDataOptions{
 		EntryLocalFiles: lfs,
-		MediaID:         int(entry.Media.ID),
+		MediaID:         opts.MediaID,
 		CurrentProgress: progress,
 	})
 	entry.EntryLibraryData = libraryData

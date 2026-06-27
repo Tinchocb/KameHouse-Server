@@ -480,11 +480,17 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		var nfoEntriesMu sync.Mutex
 		var nfoEntries []*nfoEntry
 
-		nfoJobs := make(chan *dto.LocalFile, len(localFiles))
-		for _, lf := range localFiles {
-			nfoJobs <- lf
-		}
-		close(nfoJobs)
+		nfoJobs := make(chan *dto.LocalFile, 100)
+		go func() {
+			for _, lf := range localFiles {
+				select {
+				case <-ctx.Done():
+					return
+				case nfoJobs <- lf:
+				}
+			}
+			close(nfoJobs)
+		}()
 
 		// ── Worker pool: pure CPU/IO — no DB calls ────────────────────────────
 		var nfoWg sync.WaitGroup
@@ -594,12 +600,26 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 					scn.Logger.Error().Err(batchErr).Msg("scanner: NFO batch upsert failed, skipping ID mapping for this batch")
 				} else {
 					// Query back the persisted records to retrieve their auto-generated IDs.
+					// Fetch in chunks of 500 to avoid SQLite variable limits (too many SQL variables error)
 					var persisted []*models.LibraryMedia
 					tmdbIDs := make([]int, len(withTmdb))
 					for i, e := range withTmdb {
 						tmdbIDs[i] = e.tmdbID
 					}
-					scn.Database.Gorm().Where("tmdb_id IN ? AND type = ?", tmdbIDs, "ANIME").Find(&persisted)
+					const chunkSize = 500
+					for i := 0; i < len(tmdbIDs); i += chunkSize {
+						end := i + chunkSize
+						if end > len(tmdbIDs) {
+							end = len(tmdbIDs)
+						}
+						var chunkPersisted []*models.LibraryMedia
+						err := scn.Database.Gorm().Where("tmdb_id IN ? AND type = ?", tmdbIDs[i:end], "ANIME").Find(&chunkPersisted).Error
+						if err == nil {
+							persisted = append(persisted, chunkPersisted...)
+						} else {
+							scn.Logger.Error().Err(err).Msg("scanner: Failed to retrieve persisted media chunk")
+						}
+					}
 
 					type tmdbTypeKey struct {
 						tmdbID    int

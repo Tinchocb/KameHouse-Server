@@ -190,12 +190,7 @@ export const createPlayerSlice: StateCreator<UIState & PlayerState, [], [], Play
     marathonMode: false,
     setMarathonMode: (marathonMode) => set({ marathonMode }),
     tvMode: false,
-    setTvMode: (tvMode) => set(() => {
-        if (tvMode) {
-            return { tvMode, autoSkipIntro: true, autoSkipOutro: true };
-        }
-        return { tvMode, autoSkipIntro: false, autoSkipOutro: false };
-    }),
+    setTvMode: (tvMode) => set({ tvMode }),
 
 
 
@@ -285,7 +280,6 @@ export const useAppStore = create<UIState & PlayerState & ScannerState>()(
                 loopEnabled: state.loopEnabled,
                 autoDisableSubtitlesWhenDubbed: state.autoDisableSubtitlesWhenDubbed,
                 playerVolume: state.playerVolume,
-                tvMode: state.tvMode,
                 marathonMode: state.marathonMode,
                 dynamicBackdropEnabled: state.dynamicBackdropEnabled,
                 dynamicBackdropMotionEnabled: state.dynamicBackdropMotionEnabled,

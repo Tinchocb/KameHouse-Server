@@ -55,10 +55,15 @@ export function usePlayerHls({
 }: UsePlayerHlsProps) {
     const backendTracksRef = useRef(backendTracks)
     const hasPromptedResumeRef = useRef<string | null>(null)
+    const initialProgressRef = useRef(initialProgressSeconds)
 
     useEffect(() => {
         backendTracksRef.current = backendTracks
     }, [backendTracks])
+
+    useEffect(() => {
+        initialProgressRef.current = initialProgressSeconds
+    }, [playableUrl, initialProgressSeconds])
 
     // Decoupled watch history/resume prompt logic
     useEffect(() => {
@@ -101,7 +106,7 @@ export function usePlayerHls({
         const video = videoRef.current
         if (!video) return
 
-        const progressSeconds = initialProgressSeconds || 0
+        const progressSeconds = initialProgressRef.current || 0
 
         Promise.resolve().then(() => {
             setStatus("loading")
@@ -119,12 +124,14 @@ export function usePlayerHls({
         // 1st failure → recoverMediaError(), 2nd failure → swapAudioCodec() + recoverMediaError(), 3rd → fatal
         let mediaRecoveryAttempt = 0
         let networkRecoveryAttempt = 0
+        let initialSeekDone = false
 
         const handleCanPlay = () => {
             setStatus("ready")
             setIsBuffering(false)
-            if (Number.isFinite(progressSeconds) && progressSeconds > 0) {
+            if (!initialSeekDone && Number.isFinite(progressSeconds) && progressSeconds > 0) {
                 video.currentTime = progressSeconds
+                initialSeekDone = true
             }
             video.play()
                 .then(() => setIsPlaying(true))
@@ -158,8 +165,14 @@ export function usePlayerHls({
         })()
 
         let listenersAdded = false
+        const isTv = typeof navigator !== "undefined" && (
+            /SmartTV/i.test(navigator.userAgent) ||
+            /Tizen/i.test(navigator.userAgent) ||
+            /Web0S/i.test(navigator.userAgent)
+        )
+        const canPlayNatively = video.canPlayType("application/vnd.apple.mpegurl") !== ""
 
-        if (isHlsUrl && Hls.isSupported()) {
+        if (isHlsUrl && (!isTv || !canPlayNatively) && Hls.isSupported()) {
             // ... (keep HLS setup as is)
             const hls = new Hls({
                 enableWorker: true,
@@ -233,6 +246,10 @@ export function usePlayerHls({
                         console.warn("Autoplay blocked:", err)
                         setIsPlaying(false)
                     })
+            })
+
+            hls.on(Hls.Events.FRAG_LOADED, () => {
+                networkRecoveryAttempt = 0 // Reiniciar contador si hay conexión estable
             })
 
             hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_, data) => {
@@ -339,7 +356,6 @@ export function usePlayerHls({
         // Including it caused the entire HLS instance to be destroyed and recreated whenever
         // the server IP was detected/changed, producing a spurious "loading" state after seek
         // or episode changes.
-        initialProgressSeconds,
         videoRef,
         hlsRef,
         setStatus,

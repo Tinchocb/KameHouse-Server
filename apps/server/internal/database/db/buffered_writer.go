@@ -20,9 +20,10 @@ type BufferedWriter struct {
 	queue    []DbWriteOperation
 	maxBatch int
 	interval time.Duration
-	stopChan chan struct{}
-	doneChan chan struct{}
-	OnError  func(error)
+	stopChan       chan struct{}
+	doneChan       chan struct{}
+	OnError        func(error)
+	isShuttingDown bool
 }
 
 func NewBufferedWriter(db *gorm.DB, logger *zerolog.Logger, maxBatch int, flushInterval time.Duration) *BufferedWriter {
@@ -42,8 +43,15 @@ func NewBufferedWriter(db *gorm.DB, logger *zerolog.Logger, maxBatch int, flushI
 }
 
 // Enqueue adds a write operation to the RingBuffer. It returns immediately (non-blocking).
+// If the system is shutting down, it executes the operation synchronously to prevent data loss.
 func (bw *BufferedWriter) Enqueue(op DbWriteOperation) {
 	bw.mu.Lock()
+	if bw.isShuttingDown {
+		bw.mu.Unlock()
+		bw.logger.Warn().Msg("db/buffered_writer: Enqueue called while shutting down, executing synchronously")
+		_ = bw.db.Transaction(op)
+		return
+	}
 	bw.queue = append(bw.queue, op)
 
 	// Fast flush if batch size is reached
@@ -110,6 +118,10 @@ func (bw *BufferedWriter) committerDaemon() {
 
 // Shutdown gracefully stops the buffered writer and waits for the daemon to finish flushing.
 func (bw *BufferedWriter) Shutdown() {
+	bw.mu.Lock()
+	bw.isShuttingDown = true
+	bw.mu.Unlock()
+
 	close(bw.stopChan)
 	// Wait for the daemon to finish its final flush
 	<-bw.doneChan

@@ -15,6 +15,8 @@ import (
 	"github.com/samber/mo"
 )
 
+var attachmentSemaphore = make(chan struct{}, 2)
+
 const (
 	StreamTypeTranscode StreamType = "transcode" // On-the-fly transcoding
 	StreamTypeOptimized StreamType = "optimized" // Pre-transcoded
@@ -82,7 +84,6 @@ func (p *PlaybackManager) RequestPlayback(filepath string, streamType StreamType
 	if clientID != "" {
 		p.clientMediaContainers.Set(clientID, ret)
 	}
-	p.clientMediaContainers.Set("1", ret)
 
 	p.logger.Info().Str("filepath", filepath).Msg("mediastream: Ready to play media")
 
@@ -90,9 +91,9 @@ func (p *PlaybackManager) RequestPlayback(filepath string, streamType StreamType
 }
 
 // PreloadPlayback is called by the frontend to preload a media container so that the data is stored in advanced
-func (p *PlaybackManager) PreloadPlayback(filepath string, streamType StreamType) (ret *MediaContainer, err error) {
+func (p *PlaybackManager) PreloadPlayback(filepath string, streamType StreamType, preferredAudioLang string) (ret *MediaContainer, err error) {
 
-	p.logger.Debug().Str("filepath", filepath).Any("type", streamType).Msg("mediastream: Preloading playback")
+	p.logger.Debug().Str("filepath", filepath).Any("type", streamType).Str("preferredAudioLang", preferredAudioLang).Msg("mediastream: Preloading playback")
 
 	// Create a new media container
 	ret, err = p.newMediaContainer(filepath, streamType)
@@ -124,13 +125,62 @@ func (p *PlaybackManager) PreloadPlayback(filepath string, streamType StreamType
 
 			if len(ret.MediaInfo.Audios) > 0 {
 				defaultAudioIdx := int32(0)
-				for _, aud := range ret.MediaInfo.Audios {
-					if aud.IsDefault {
-						defaultAudioIdx = int32(aud.Index)
-						break
+				foundPreferred := false
+				if preferredAudioLang != "" {
+					prefLang := strings.ToLower(preferredAudioLang)
+					// First pass: try exact match or prefix match (e.g. "spa-lat" matches a track tagged "spa" or title containing "latino" / "lat")
+					for _, aud := range ret.MediaInfo.Audios {
+						audLang := ""
+						if aud.Language != nil {
+							audLang = strings.ToLower(*aud.Language)
+						}
+						audTitle := ""
+						if aud.Title != nil {
+							audTitle = strings.ToLower(*aud.Title)
+						}
+
+						if prefLang == "spa-lat" {
+							if (audLang == "spa" || audLang == "es") && (strings.Contains(audTitle, "lat") || strings.Contains(audTitle, "latino")) {
+								defaultAudioIdx = int32(aud.Index)
+								foundPreferred = true
+								break
+							}
+						} else {
+							if audLang == prefLang || (prefLang == "spa" && audLang == "es") || (prefLang == "es" && audLang == "spa") {
+								defaultAudioIdx = int32(aud.Index)
+								foundPreferred = true
+								break
+							}
+						}
+					}
+
+					// Second pass: if we wanted "spa-lat" but didn't find specific latino title, fallback to any Spanish/es track
+					if !foundPreferred && prefLang == "spa-lat" {
+						for _, aud := range ret.MediaInfo.Audios {
+							audLang := ""
+							if aud.Language != nil {
+								audLang = strings.ToLower(*aud.Language)
+							}
+							if audLang == "spa" || audLang == "es" {
+								defaultAudioIdx = int32(aud.Index)
+								foundPreferred = true
+								break
+							}
+						}
 					}
 				}
-				p.logger.Debug().Str("filepath", ret.Filepath).Int("segments", preloadSegments).Msg("mediastream: Pre-transcoding audio segments for zero-latency start")
+
+				// Fallback to default if no preferred audio match was found
+				if !foundPreferred {
+					for _, aud := range ret.MediaInfo.Audios {
+						if aud.IsDefault {
+							defaultAudioIdx = int32(aud.Index)
+							break
+						}
+					}
+				}
+
+				p.logger.Debug().Str("filepath", ret.Filepath).Int("segments", preloadSegments).Int32("audioIndex", defaultAudioIdx).Msg("mediastream: Pre-transcoding audio segments for zero-latency start")
 				for i := 0; i < preloadSegments; i++ {
 					_, _ = tc.GetAudioSegment(ctx, ret.Filepath, ret.Hash, ret.MediaInfo, defaultAudioIdx, int32(i), "preload-client")
 				}
@@ -188,6 +238,9 @@ func (p *PlaybackManager) newMediaContainer(filePath string, streamType StreamTy
 	// The subtitles endpoint will still work once extraction completes; if the user requests subs before
 	// extraction finishes, the file will simply not be ready yet (handled by the serve endpoint).
 	go func() {
+		attachmentSemaphore <- struct{}{}
+		defer func() { <-attachmentSemaphore }()
+
 		if err := videofile.ExtractAttachment(p.repository.settings.MustGet().FfmpegPath, filePath, hash, ret.MediaInfo, p.repository.cacheDir, p.logger); err != nil {
 			p.logger.Error().Err(err).Str("filepath", filePath).Msg("mediastream: Background attachment extraction failed")
 		} else {

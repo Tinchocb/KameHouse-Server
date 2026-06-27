@@ -465,12 +465,12 @@ func (d *SkipDetector) ScanSeries(ctx context.Context, mediaID int) error {
 	}
 
 	// 1. Fetch all local episodes for this series
-	var localFiles []models.LocalFiles
-	if err := d.db.Gorm().Find(&localFiles).Error; err != nil {
+	localFiles, err := db.GetLocalFilesByMediaID(d.db, mediaID)
+	if err != nil {
 		return err
 	}
 
-	// Unmarshal local files to match mediaID
+	// Build episodes to match mediaID
 	type lfItem struct {
 		ID            uint   `json:"id"`
 		Path          string `json:"path"`
@@ -480,14 +480,20 @@ func (d *SkipDetector) ScanSeries(ctx context.Context, mediaID int) error {
 	}
 
 	var episodes []lfItem
-	for _, rawLf := range localFiles {
-		var items []lfItem
-		if err := json.Unmarshal(rawLf.Value, &items); err == nil {
-			for _, item := range items {
-				if item.MediaID == mediaID && item.EpisodeNumber > 0 {
-					episodes = append(episodes, item)
-				}
+	for _, lf := range localFiles {
+		epNum := lf.GetEpisodeNumber()
+		if epNum > 0 {
+			var duration float64
+			if lf.TechnicalInfo != nil {
+				duration = lf.TechnicalInfo.Duration.Seconds()
 			}
+			episodes = append(episodes, lfItem{
+				ID:            lf.LibraryMediaId,
+				Path:          lf.Path,
+				MediaID:       lf.MediaID,
+				EpisodeNumber: epNum,
+				Duration:      duration,
+			})
 		}
 	}
 

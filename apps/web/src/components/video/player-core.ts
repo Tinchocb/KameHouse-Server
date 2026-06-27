@@ -25,6 +25,9 @@ export type { PlayerStats, PlayerCoreProps, PlayerCore }
 
 function getAbsoluteLanUrl(playableUrl: string, serverIPs?: string[], serverPort?: number): string {
     if (!playableUrl) return ""
+    if (typeof window !== "undefined" && (window.location.protocol === "https:" || !window.location.hostname.match(/^(192\.168\.|10\.|172\.|localhost|127\.0\.0\.1)/))) {
+        return playableUrl.startsWith("/") ? `${window.location.origin}${playableUrl}` : playableUrl;
+    }
     let lanIp = "127.0.0.1"
 
     if (serverIPs && serverIPs.length > 0) {
@@ -157,10 +160,10 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         loopEnabled: loopEnabledPref,
         setLoopEnabled: setLoopEnabledPref,
         autoDisableSubtitlesWhenDubbed,
-        tvMode,
-        setTvMode,
         marathonMode,
         setMarathonMode,
+        tvMode,
+        setTvMode,
     } = useAppStore(
         useShallow(state => ({
             setFullscreen: state.setFullscreen,
@@ -183,10 +186,10 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             loopEnabled: state.loopEnabled,
             setLoopEnabled: state.setLoopEnabled,
             autoDisableSubtitlesWhenDubbed: state.autoDisableSubtitlesWhenDubbed,
-            tvMode: state.tvMode,
-            setTvMode: state.setTvMode,
             marathonMode: state.marathonMode,
             setMarathonMode: state.setMarathonMode,
+            tvMode: state.tvMode,
+            setTvMode: state.setTvMode,
         }))
     )
 
@@ -277,6 +280,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         nextStreamType,
         streamType,
         mediaId,
+        preferredAudioLang,
     })
 
     const { mutate: shutdownTranscode } = useMediastreamShutdownTranscodeStream()
@@ -291,13 +295,13 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         if (!path) return
 
         if (streamType === "transcode") {
-            preloadMutate({ path, streamType: "transcode", audioStreamIndex: 0 })
+            preloadMutate({ path, streamType: "transcode", audioStreamIndex: 0, preferredAudioLang })
         } else if (streamType === "direct" || streamType === "local") {
             // Warm up: request the media container metadata so ffprobe runs now
             // instead of when the user clicks play. This is a no-op if already cached.
-            preloadMutate({ path, streamType: "direct", audioStreamIndex: 0 })
+            preloadMutate({ path, streamType: "direct", audioStreamIndex: 0, preferredAudioLang })
         }
-    }, [streamUrl, playableUrl, streamType]) // eslint-disable-line react-hooks/exhaustive-deps
+    }, [streamUrl, playableUrl, streamType, preferredAudioLang])
 
     const { onProgress: onTrackingProgress, reset: resetTracking } = useAnimeTracking({
         mediaId,
@@ -338,9 +342,14 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
 
     const formatTime = useCallback((secs: number) => {
         if (!secs || isNaN(secs)) return "00:00"
-        const m = Math.floor(secs / 60)
+        const h = Math.floor(secs / 3600)
+        const m = Math.floor((secs % 3600) / 60)
         const s = Math.floor(secs % 60)
-        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+
+        const mm = m.toString().padStart(2, '0')
+        const ss = s.toString().padStart(2, '0')
+
+        return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`
     }, [])
 
     // HLS and Native video stream management hook
@@ -703,6 +712,27 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             unsub?.()
         }
     }, [setGlobalFullscreen])
+
+    // Handle Page Visibility / App Suspend (especially on Tizen Smart TVs)
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                const video = videoRef.current
+                if (video && !video.paused) {
+                    video.pause()
+                    setIsPlaying(false)
+                }
+            }
+        }
+        document.addEventListener("visibilitychange", handleVisibilityChange)
+        document.addEventListener("webkitvisibilitychange", handleVisibilityChange)
+        document.addEventListener("tizenvisibilitywrapper", handleVisibilityChange)
+        return () => {
+            document.removeEventListener("visibilitychange", handleVisibilityChange)
+            document.removeEventListener("webkitvisibilitychange", handleVisibilityChange)
+            document.removeEventListener("tizenvisibilitywrapper", handleVisibilityChange)
+        }
+    }, [setIsPlaying, videoRef])
 
     // Keyboard shortcuts hook
     usePlayerShortcuts({

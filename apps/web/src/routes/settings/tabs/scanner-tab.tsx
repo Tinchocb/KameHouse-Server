@@ -1,5 +1,4 @@
 import React from "react"
-import { TabsContent } from "@/components/ui/tabs/tabs"
 import { ScannerDashboard } from "@/components/ui/scanner/ScannerDashboard"
 import { Section, OsToggle } from "../components"
 import { type Control, Controller } from "react-hook-form"
@@ -11,28 +10,10 @@ interface ScannerTabProps {
 
 export function ScannerTab({ control }: ScannerTabProps) {
     return (
-        <TabsContent value="scanner" className="m-0 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 outline-none">
-            {/* Header */}
-            <header className="space-y-3 pt-2">
-                <div className="flex items-center gap-3 mb-1">
-                    <div className="flex items-center justify-center p-1 rounded bg-[#ff6e3a]/10 border border-[#ff6e3a]/15">
-                        <svg className="h-3.5 w-3.5 text-[#ff6e3a]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
-                        </svg>
-                    </div>
-                    <span className="text-[9px] font-black uppercase tracking-[0.35em] text-zinc-650 font-mono">SCOUTER ENGINE · INDEXACIÓN INTELIGENTE</span>
-                </div>
-                <h1 className="text-5xl font-bebas tracking-wider text-white leading-none">
-                    SCOUTER <span className="text-zinc-655">ENGINE SETTINGS</span>
-                </h1>
-                <div className="h-[2px] w-12 bg-gradient-to-r from-[#ff6e3a]/50 to-transparent rounded-full" />
-                <p className="text-zinc-550 text-sm font-medium leading-relaxed max-w-2xl">
-                    Calibración fina del motor de inteligencia bayesiana y emparejamiento con coeficiente Dice.
-                </p>
-            </header>
+        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 outline-none">
 
             {/* Scouter engine parameters */}
-            <div className="liquid-glass-frosted rounded-3xl p-6 space-y-6">
+            <div className="liquid-glass-frosted rounded-2xl p-6 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Range slider for scoring threshold */}
                     <Controller
@@ -50,7 +31,7 @@ export function ScannerTab({ control }: ScannerTabProps) {
                                     max="95"
                                     value={field.value || 82}
                                     onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                    className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-[#ff6e3a] mt-2"
+                                    className="w-full h-1.5 bg-surface-3 rounded-lg appearance-none cursor-pointer accent-[#ff6e3a] mt-2"
                                 />
                                 <p className="text-[10px] text-zinc-500 mt-1">Valores altos evitan falsos positivos pero requieren nombres de archivos limpios.</p>
                             </div>
@@ -68,7 +49,7 @@ export function ScannerTab({ control }: ScannerTabProps) {
                                     id="scan-frequency-select"
                                     value={field.value || "manual"}
                                     onChange={field.onChange}
-                                    className="w-full bg-black/40 ring-1 ring-white/10 rounded-xl px-4 py-2.5 text-xs text-zinc-350 focus:outline-none focus:ring-[#ff6e3a]/40 focus:border-transparent transition-all cursor-pointer [&>option]:bg-zinc-950 [&>option]:text-white mt-1.5"
+                                    className="w-full bg-surface-2/60 border border-border-strong rounded-xl px-4 py-2.5 text-xs text-zinc-300 focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all cursor-pointer [&>option]:bg-[#141418] [&>option]:text-white mt-1.5"
                                 >
                                     <option value="manual">Solo manual o por Debouncer en tiempo real</option>
                                     <option value="6h">Cada 6 horas</option>
@@ -79,7 +60,7 @@ export function ScannerTab({ control }: ScannerTabProps) {
                     </div>
                 </div>
 
-                <hr className="border-white/5" />
+                <hr className="border-border-subtle" />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Matching Algorithm */}
@@ -93,7 +74,7 @@ export function ScannerTab({ control }: ScannerTabProps) {
                                     id="matching-algorithm-select"
                                     value={field.value || "dice"}
                                     onChange={field.onChange}
-                                    className="w-full bg-black/40 ring-1 ring-white/10 rounded-xl px-4 py-2.5 text-xs text-zinc-350 focus:outline-none focus:ring-[#ff6e3a]/40 focus:border-transparent transition-all cursor-pointer [&>option]:bg-zinc-950 [&>option]:text-white mt-1.5"
+                                    className="w-full bg-surface-2/60 border border-border-strong rounded-xl px-4 py-2.5 text-xs text-zinc-300 focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all cursor-pointer [&>option]:bg-[#141418] [&>option]:text-white mt-1.5"
                                 >
                                     <option value="dice">Coeficiente Dice (Recomendado)</option>
                                     <option value="levenshtein">Distancia de Levenshtein</option>
@@ -127,6 +108,6 @@ export function ScannerTab({ control }: ScannerTabProps) {
                     <ScannerDashboard />
                 </div>
             </Section>
-        </TabsContent>
+        </div>
     )
 }

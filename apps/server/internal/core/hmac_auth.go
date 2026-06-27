@@ -12,7 +12,7 @@ func (a *App) GetServerPasswordHMACAuth() *util.HMACAuth {
 	if a.Config != nil && a.Config.Server.Password != "" {
 		secret = a.ServerPasswordHash
 	} else {
-		secret = "KameHouse-default-secret"
+		secret = a.FallbackHMACSecret
 	}
 
 	return util.NewHMACAuth(secret, 24*time.Hour)

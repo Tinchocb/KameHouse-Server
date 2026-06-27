@@ -37,11 +37,12 @@ func userDir(dirType string) (string, error) {
 	case "linux":
 		// Linux: Use $XDG_DESKTOP_DIR / $XDG_DOCUMENTS_DIR / $XDG_DOWNLOAD_DIR if set, otherwise default
 		envVar := ""
-		if dirType == "Desktop" {
+		switch dirType {
+		case "Desktop":
 			envVar = os.Getenv("XDG_DESKTOP_DIR")
-		} else if dirType == "Documents" {
+		case "Documents":
 			envVar = os.Getenv("XDG_DOCUMENTS_DIR")
-		} else if dirType == "Downloads" {
+		case "Downloads":
 			envVar = os.Getenv("XDG_DOWNLOAD_DIR")
 		}
 

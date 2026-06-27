@@ -1,6 +1,11 @@
 import React from "react"
 import { cn } from "@/components/ui/core/styling"
 import { Switch } from "@/components/ui/switch"
+import { useMutation } from "@tanstack/react-query"
+import { useServerMutation } from "@/api/client/requests"
+import { API_ENDPOINTS } from "@/api/generated/endpoints"
+import { DirectorySelector_Variables } from "@/api/generated/endpoint.types"
+import { toast } from "sonner"
 
 // ─── Inline SVGs ──────────────────────────────────────────────────────────────
 
@@ -94,16 +99,16 @@ export function ScanButton({ variant, onClick, loading }: { variant: "delta" | "
             className={cn(
                 "flex-1 flex items-center justify-between p-6 rounded-2xl border transition-all duration-500 relative overflow-hidden group/scanbtn",
                 isDelta
-                    ? "bg-cyan-500/5 border-cyan-500/15 hover:bg-cyan-500/10 hover:border-cyan-500/30 text-cyan-400 shadow-[0_0_30px_rgba(6,182,212,0.03)]"
-                    : "bg-white/[0.01] border-white/[0.06] hover:bg-white/[0.04] hover:border-white/15 text-white",
+                    ? "bg-cyan-500/8 border-cyan-500/20 hover:bg-cyan-500/15 hover:border-cyan-500/35 text-cyan-400"
+                    : "liquid-glass-frosted-subtle hover:bg-surface-2/60 hover:border-border-strong text-white",
                 loading && "opacity-50 cursor-not-allowed"
             )}
         >
             {isDelta && (
-                <div className="absolute inset-0 opacity-0 group-hover/scanbtn:opacity-100 transition-opacity duration-700 bg-[radial-gradient(ellipse_at_left_bottom,rgba(6,182,212,0.06),transparent_60%)] pointer-events-none" />
+                <div className="absolute inset-0 opacity-0 group-hover/scanbtn:opacity-100 transition-opacity duration-700 bg-[radial-gradient(ellipse_at_left_bottom,rgba(6,182,212,0.08),transparent_60%)] pointer-events-none" />
             )}
             <div className="text-left relative z-10">
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] opacity-40 mb-1 group-hover/scanbtn:opacity-70 transition-opacity">
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] opacity-50 mb-1 group-hover/scanbtn:opacity-80 transition-opacity">
                     {isDelta ? "Rápido" : "Profundo"}
                 </p>
                 <p className="text-xl font-bebas tracking-wider uppercase">{isDelta ? "Escaneo Delta" : "Escaneo Completo"}</p>
@@ -111,13 +116,13 @@ export function ScanButton({ variant, onClick, loading }: { variant: "delta" | "
             <div className={cn(
                 "w-10 h-10 rounded-xl border flex items-center justify-center transition-all duration-300",
                 isDelta
-                    ? "bg-cyan-500/10 border-cyan-500/20 group-hover/scanbtn:bg-cyan-500/20"
-                    : "bg-white/[0.02] border-white/5 group-hover/scanbtn:bg-white/[0.06]"
+                    ? "bg-cyan-500/15 border-cyan-500/25 group-hover/scanbtn:bg-cyan-500/25"
+                    : "bg-white/[0.04] border-white/8 group-hover/scanbtn:bg-white/[0.08]"
             )}>
                 <RefreshIcon
                     className={cn(
                         "transition-all duration-700",
-                        isDelta ? "text-cyan-400" : "text-white/75 group-hover/scanbtn:text-white",
+                        isDelta ? "text-cyan-400" : "text-white/80 group-hover/scanbtn:text-white",
                         loading ? "animate-spin" : "group-hover/scanbtn:rotate-180"
                     )}
                 />
@@ -137,41 +142,41 @@ export function IntegrationCard({ name, status, connected, disabled }: { name: s
 
     return (
         <div className={cn(
-            "p-5 rounded-2xl flex items-center gap-4 relative overflow-hidden group/intcard",
+            "p-5 rounded-2xl flex items-center gap-4 relative overflow-hidden group/intcard transition-all duration-300",
             disabled
-                ? "opacity-30 grayscale liquid-glass-frosted-subtle border-white/5"
+                ? "opacity-40 liquid-glass-frosted-subtle"
                 : connected
-                    ? "liquid-glass-frosted liquid-glass-frosted-interactive border-white/10"
-                    : "liquid-glass-frosted-subtle hover:bg-white/[0.04] hover:border-white/12"
+                    ? "liquid-glass-frosted hover:border-white/20"
+                    : "liquid-glass-frosted-subtle hover:bg-surface-2/60 hover:border-border-strong"
         )}>
             {connected && (
                 <div
                     className="absolute inset-0 opacity-0 group-hover/intcard:opacity-100 transition-opacity duration-700 pointer-events-none"
-                    style={{ background: `radial-gradient(ellipse at left, ${color}08, transparent 60%)` }}
+                    style={{ background: `radial-gradient(ellipse at left, ${color}10, transparent 60%)` }}
                 />
             )}
 
             <div
                 className="w-11 h-11 rounded-xl border flex items-center justify-center shrink-0 transition-all duration-300 group-hover/intcard:scale-105"
                 style={{
-                    background: `${color}10`,
-                    borderColor: `${color}25`,
-                    boxShadow: connected ? `0 0 20px ${color}15` : "none"
+                    background: `${color}15`,
+                    borderColor: `${color}30`,
+                    boxShadow: connected ? `0 0 24px ${color}20` : "none"
                 }}
             >
                 {connected
                     ? <WifiIcon style={{ color }} />
-                    : <WifiOffIcon className="text-zinc-550" />
+                    : <WifiOffIcon className="text-zinc-500" />
                 }
             </div>
 
             <div className="flex-1 min-w-0">
                 <p className="font-bebas text-xl tracking-wider uppercase text-white/90 group-hover/intcard:text-white transition-colors leading-none">{name}</p>
-                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-550 mt-0.5">{status}</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mt-0.5">{status}</p>
             </div>
 
             {connected && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/25">
                     <span className="relative flex h-1.5 w-1.5">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
@@ -181,13 +186,13 @@ export function IntegrationCard({ name, status, connected, disabled }: { name: s
             )}
 
             {!connected && !disabled && (
-                <span className="text-[9px] font-black tracking-widest uppercase text-zinc-550 border border-zinc-800 px-2.5 py-1 rounded-full group-hover/intcard:border-zinc-700 group-hover/intcard:text-zinc-400 transition-colors shrink-0">
+                <span className="text-[9px] font-black tracking-widest uppercase text-zinc-500 border border-zinc-700/50 px-2.5 py-1 rounded-full group-hover/intcard:border-zinc-600 group-hover/intcard:text-zinc-400 transition-colors shrink-0">
                     DISPONIBLE
                 </span>
             )}
 
             {disabled && (
-                <span className="text-[9px] font-black tracking-widest uppercase text-zinc-650 border border-zinc-900 px-2.5 py-1 rounded-full shrink-0">
+                <span className="text-[9px] font-black tracking-widest uppercase text-zinc-600 border border-zinc-800/50 px-2.5 py-1 rounded-full shrink-0">
                     PRONTO
                 </span>
             )}
@@ -199,13 +204,13 @@ export function IntegrationCard({ name, status, connected, disabled }: { name: s
 
 export function StatusCard({ label, value, icon: Icon }: { label: string; value: string; icon: React.ElementType }) {
     return (
-        <div className="p-6 bg-zinc-950/40 border border-white/[0.04] hover:border-cyan-500/30 rounded-3xl flex items-center gap-4 group/statuscard relative overflow-hidden transition-all duration-300 shadow-[0_8px_30px_rgba(0,0,0,0.3)]">
-            <div className="absolute inset-0 opacity-0 group-hover/statuscard:opacity-100 transition-opacity duration-500 bg-[radial-gradient(ellipse_at_left,rgba(6,182,212,0.06),transparent_70%)] pointer-events-none" />
-            <div className="w-12 h-12 rounded-2xl bg-cyan-500/5 border border-cyan-500/10 flex items-center justify-center text-cyan-400/60 group-hover/statuscard:text-cyan-400 group-hover/statuscard:bg-cyan-500/10 transition-all duration-300 relative z-10">
+        <div className="p-6 liquid-glass-frosted-subtle hover:border-cyan-500/30 rounded-2xl flex items-center gap-4 group/statuscard relative overflow-hidden transition-all duration-300">
+            <div className="absolute inset-0 opacity-0 group-hover/statuscard:opacity-100 transition-opacity duration-500 bg-[radial-gradient(ellipse_at_left,rgba(6,182,212,0.08),transparent_70%)] pointer-events-none" />
+            <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 group-hover/statuscard:text-cyan-300 group-hover/statuscard:bg-cyan-500/15 transition-all duration-300 relative z-10">
                 <Icon className="w-5 h-5" />
             </div>
             <div className="relative z-10">
-                <p className="text-[9px] font-black uppercase tracking-[0.25em] text-zinc-550 mb-0.5 font-mono">{label}</p>
+                <p className="text-[9px] font-black uppercase tracking-[0.25em] text-zinc-500 mb-0.5 font-mono">{label}</p>
                 <p className="text-xl font-bebas tracking-wider uppercase text-white/95 group-hover/statuscard:text-white transition-colors leading-tight">{value}</p>
             </div>
         </div>
@@ -217,9 +222,12 @@ export function StatusCard({ label, value, icon: Icon }: { label: string; value:
 export function Section({ label, children }: { label: string; children: React.ReactNode }) {
     return (
         <section className="space-y-4">
-            <h2 className="text-xs font-black uppercase tracking-[0.25em] text-zinc-550 font-mono pl-1">
-                {label}
-            </h2>
+            <div className="flex items-center gap-3 pl-1">
+                <div className="w-1 h-4 rounded-full bg-[#ff6e3a]/60" />
+                <h2 className="text-xs font-black uppercase tracking-[0.25em] text-zinc-400 font-mono">
+                    {label}
+                </h2>
+            </div>
             {children}
         </section>
     )
@@ -229,7 +237,7 @@ export function Section({ label, children }: { label: string; children: React.Re
 
 export function Card({ children, className }: { children: React.ReactNode; className?: string }) {
     return (
-        <div className={cn("liquid-glass-frosted rounded-3xl overflow-hidden", className)}>
+        <div className={cn("liquid-glass-frosted rounded-2xl p-6", className)}>
             {children}
         </div>
     )
@@ -264,12 +272,12 @@ export function PathList({ label, directories, onAdd, onRemove, placeholder }: P
             {directories.length > 0 && (
                 <div className="space-y-2">
                     {directories.map((dir) => (
-                        <div key={dir} className="flex items-center justify-between bg-black/40 border border-white/5 rounded-xl px-4 py-2.5">
+                        <div key={dir} className="flex items-center justify-between bg-surface-2/50 border border-border-subtle rounded-xl px-4 py-2.5">
                             <span className="text-xs text-zinc-300 font-mono truncate mr-4">{dir}</span>
                             <button
                                 type="button"
                                 onClick={() => onRemove(dir)}
-                                className="text-zinc-550 hover:text-red-400 transition-colors duration-200 p-1 rounded-lg hover:bg-white/5"
+                                className="text-zinc-500 hover:text-red-400 transition-colors duration-200 p-1 rounded-lg hover:bg-white/5"
                             >
                                 <TrashIcon className="w-4 h-4" />
                             </button>
@@ -278,18 +286,18 @@ export function PathList({ label, directories, onAdd, onRemove, placeholder }: P
                 </div>
             )}
 
-            <div className="flex items-center gap-2.5 bg-black/40 border border-white/5 rounded-xl pl-1 pr-1.5 py-1 focus-within:border-[#ff6e3a]/40 transition-all">
+            <div className="flex items-center gap-2.5 bg-surface-2/40 border border-border-subtle rounded-xl pl-1 pr-1.5 py-1 focus-within:border-[#ff6e3a]/40 transition-all">
                 <input
                     type="text"
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     placeholder={placeholder}
-                    className="flex-1 bg-transparent px-3 py-2 text-white placeholder-zinc-700 text-xs font-mono focus:outline-none"
+                    className="flex-1 bg-transparent px-3 py-2 text-white placeholder-zinc-600 text-xs font-mono focus:outline-none"
                 />
                 <button
                     type="button"
                     onClick={handleAdd}
-                    className="bg-[#ff6e3a] hover:bg-[#ff7e4e] text-zinc-950 px-5.5 py-2.5 rounded-lg font-black uppercase text-[10px] tracking-wider transition-all shrink-0 flex items-center gap-1.5 active:scale-95 shadow-lg shadow-orange-500/15"
+                    className="bg-[#ff6e3a] hover:bg-[#ff7e4e] text-zinc-950 px-5 py-2.5 rounded-lg font-black uppercase text-[10px] tracking-wider transition-all shrink-0 flex items-center gap-1.5 active:scale-95 shadow-lg shadow-orange-500/20"
                 >
                     <PlusIcon />
                     AGREGAR
@@ -321,14 +329,14 @@ export const OsInput = React.forwardRef<HTMLInputElement, OsInputProps>(({
     const [showSecure, setShowSecure] = React.useState(false)
 
     return (
-        <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-5 border-b border-white/[0.02] last:border-0 hover:bg-white/[0.005] transition-all duration-200 gap-5 group/input">
+        <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-5 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.01] transition-all duration-200 gap-5 group/input">
             <div className="space-y-1 flex-1 max-w-xl">
                 <p className="text-sm font-semibold text-zinc-300 group-hover/input:text-white transition-colors tracking-tight">{label}</p>
                 {description && <p className="text-[11px] text-zinc-500 leading-relaxed font-medium group-hover/input:text-zinc-400 transition-colors duration-300">{description}</p>}
             </div>
             <div className={cn(
-                "flex items-center gap-2.5 bg-black/40 border border-white/5 rounded-xl px-4 py-3 w-full md:w-72 transition-all relative",
-                "focus-within:border-[#ff6e3a]/40 focus-within:shadow-[0_0_20px_rgba(255,110,58,0.12)] hover:border-white/10",
+                "flex items-center gap-2.5 bg-surface-2/60 border border-border-strong rounded-xl px-4 py-3 w-full md:w-72 transition-all relative",
+                "focus-within:border-[#ff6e3a]/50 focus-within:shadow-[0_0_24px_rgba(255,110,58,0.15)] focus-within:bg-surface-2/80 hover:border-white/15",
                 className
             )}>
                 <input
@@ -336,7 +344,7 @@ export const OsInput = React.forwardRef<HTMLInputElement, OsInputProps>(({
                     type={isSecure ? (showSecure ? "text" : "password") : type}
                     placeholder={placeholder}
                     className={cn(
-                        "flex-1 bg-transparent text-white placeholder-zinc-700 text-xs focus:outline-none pr-5",
+                        "flex-1 bg-transparent text-white placeholder-zinc-600 text-xs focus:outline-none pr-5",
                         isMono && "font-mono text-[11px] tracking-tight"
                     )}
                     {...props}
@@ -345,7 +353,7 @@ export const OsInput = React.forwardRef<HTMLInputElement, OsInputProps>(({
                     <button
                         type="button"
                         onClick={() => setShowSecure(!showSecure)}
-                        className="absolute right-3.5 text-zinc-600 hover:text-zinc-350 transition-colors"
+                        className="absolute right-3.5 text-zinc-500 hover:text-zinc-300 transition-colors"
                     >
                         {showSecure ? <EyeOffIcon /> : <EyeIcon />}
                     </button>
@@ -373,19 +381,19 @@ export const OsSelect = React.forwardRef<HTMLSelectElement, OsSelectProps>(({
     ...props
 }, ref) => {
     return (
-        <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-5 border-b border-white/[0.02] last:border-0 hover:bg-white/[0.005] transition-all duration-200 gap-5 group/select">
+        <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-5 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.01] transition-all duration-200 gap-5 group/select">
             <div className="space-y-1 flex-1 max-w-xl">
                 <p className="text-sm font-semibold text-zinc-300 group-hover/select:text-white transition-colors tracking-tight">{label}</p>
                 {description && <p className="text-[11px] text-zinc-500 leading-relaxed font-medium group-hover/select:text-zinc-400 transition-colors duration-300">{description}</p>}
             </div>
             <div className={cn(
-                "flex items-center bg-black/40 border border-white/5 rounded-xl px-4 py-3 w-full md:w-72 transition-all relative cursor-pointer",
-                "focus-within:border-[#ff6e3a]/40 focus-within:shadow-[0_0_20px_rgba(255,110,58,0.12)] hover:border-white/10",
+                "flex items-center bg-surface-2/60 border border-border-strong rounded-xl px-4 py-3 w-full md:w-72 transition-all relative cursor-pointer",
+                "focus-within:border-[#ff6e3a]/50 focus-within:shadow-[0_0_24px_rgba(255,110,58,0.15)] focus-within:bg-surface-2/80 hover:border-white/15",
                 className
             )}>
                 <select
                     ref={ref}
-                    className="flex-1 bg-transparent text-white text-xs focus:outline-none appearance-none cursor-pointer pr-6 font-medium [&>option]:bg-[#0c0c0e] [&>option]:text-white"
+                    className="flex-1 bg-transparent text-white text-xs focus:outline-none appearance-none cursor-pointer pr-6 font-medium [&>option]:bg-[#141418] [&>option]:text-white"
                     {...props}
                 >
                     {options.map((opt) => (
@@ -394,7 +402,7 @@ export const OsSelect = React.forwardRef<HTMLSelectElement, OsSelectProps>(({
                         </option>
                     ))}
                 </select>
-                <div className="absolute right-3.5 pointer-events-none text-zinc-600 group-hover/select:text-zinc-300 transition-colors">
+                <div className="absolute right-3.5 pointer-events-none text-zinc-500 group-hover/select:text-zinc-300 transition-colors">
                     <ChevronDownIcon />
                 </div>
             </div>
@@ -417,7 +425,7 @@ export interface OsToggleProps {
 export function OsToggle({ label, description, checked, onChange, disabled }: OsToggleProps) {
     return (
         <div
-            className="flex flex-col md:flex-row md:items-center justify-between px-6 py-5 border-b border-white/[0.02] last:border-0 hover:bg-white/[0.005] transition-all duration-200 gap-5 group/toggle cursor-pointer"
+            className="flex flex-col md:flex-row md:items-center justify-between px-6 py-5 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.01] transition-all duration-200 gap-5 group/toggle cursor-pointer"
             onClick={() => !disabled && onChange(!checked)}
         >
             <div className="space-y-1 flex-1 max-w-xl">
@@ -431,16 +439,16 @@ export function OsToggle({ label, description, checked, onChange, disabled }: Os
                 disabled={disabled}
                 onClick={(e) => { e.stopPropagation(); onChange(!checked) }}
                 className={cn(
-                    "relative shrink-0 w-10 h-5.5 rounded-full border transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6e3a]/50",
+                    "relative shrink-0 w-10 h-[22px] rounded-full border transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6e3a]/50",
                     checked
-                        ? "bg-[#ff6e3a] border-[#ff6e3a] shadow-[0_0_12px_rgba(255,110,58,0.35)]"
-                        : "bg-black/50 border-white/10 hover:border-white/20",
+                        ? "bg-[#ff6e3a] border-[#ff6e3a] shadow-[0_0_16px_rgba(255,110,58,0.4)]"
+                        : "bg-surface-3/80 border-border-strong hover:border-white/25 hover:bg-surface-3",
                     disabled && "opacity-40 cursor-not-allowed"
                 )}
             >
                 <span className={cn(
-                    "absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200",
-                    checked && "translate-x-4.5"
+                    "absolute top-[2px] left-[2px] w-4 h-4 rounded-full bg-white shadow-md transition-transform duration-200",
+                    checked && "translate-x-[18px]"
                 )} />
             </button>
         </div>

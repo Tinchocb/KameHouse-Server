@@ -3,9 +3,8 @@ import * as React from "react"
 
 type ExtendedProps<Props = {}, OverrideProps = {}> = OverrideProps &
     Omit<Props, keyof OverrideProps>;
-type ElementType = keyof JSX.IntrinsicElements | React.JSXElementConstructor<unknown>;
-type PropsOf<C extends ElementType> = JSX.LibraryManagedAttributes<C,
-    React.ComponentPropsWithoutRef<C>>;
+type ElementType = React.ElementType;
+type PropsOf<C extends ElementType> = React.ComponentPropsWithoutRef<C>;
 type ComponentProp<C> = {
     component?: C;
 };

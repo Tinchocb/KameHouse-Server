@@ -484,12 +484,17 @@ func GetDeepestFile(src string) (fp string) {
 		return ""
 	}
 
+	var firstFile string
 	for _, srcEntry := range srcEntries {
 		if srcEntry.IsDir() {
-			return GetDeepestFile(filepath.Join(src, srcEntry.Name()))
+			deep := GetDeepestFile(filepath.Join(src, srcEntry.Name()))
+			if deep != "" {
+				return deep
+			}
+		} else if firstFile == "" {
+			firstFile = filepath.Join(src, srcEntry.Name())
 		}
-		return filepath.Join(src, srcEntry.Name())
 	}
 
-	return ""
+	return firstFile
 }

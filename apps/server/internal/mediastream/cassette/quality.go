@@ -2,7 +2,6 @@ package cassette
 
 import (
 	"errors"
-	"fmt"
 	"math"
 	"kamehouse/internal/mediastream/videofile"
 	"kamehouse/internal/util"
@@ -208,8 +207,16 @@ func BuildQualityLadder(info *videofile.MediaInfo) []QualityLadderEntry {
 // into an HLS mpegts container without re-encoding and be playable in browsers.
 func isTransmuxableVideo(video *videofile.Video) bool {
 	codec := strings.ToLower(video.Codec)
-	// H.264, HEVC/H.265, VP9 and AV1 are universally playable via direct transmux (copy) in modern browsers/WebView2.
-	return codec == "h264" || codec == "h265" || codec == "hevc" || codec == "vp9" || codec == "av1"
+
+	// 10-bit and 12-bit videos (like High 10 Profile or HDR) are not widely supported
+	// for direct play in standard browser players and will trigger decode errors.
+	if strings.Contains(video.PixFmt, "10") || strings.Contains(video.PixFmt, "12") {
+		return false
+	}
+
+	// Only H.264 is universally supported inside MPEG-TS HLS streams by browsers and HLS.js.
+	// HEVC/H.265, VP9, and AV1 inside TS containers cause PIPELINE_ERROR_DECODE in many client players.
+	return codec == "h264"
 }
 
 // audio codec awareness

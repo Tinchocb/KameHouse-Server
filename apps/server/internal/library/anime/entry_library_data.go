@@ -1,7 +1,7 @@
 package anime
 
 import (
-	"strings"
+	"path/filepath"
 
 	"github.com/samber/lo"
 )
@@ -31,8 +31,7 @@ func NewEntryLibraryData(opts *NewEntryLibraryDataOptions) (ret *EntryLibraryDat
 	if opts.EntryLocalFiles[0] == nil {
 		return nil, false
 	}
-	sharedPath := strings.Replace(opts.EntryLocalFiles[0].Path, opts.EntryLocalFiles[0].Name, "", 1)
-	sharedPath = strings.TrimSuffix(strings.TrimSuffix(sharedPath, "\\"), "/")
+	sharedPath := filepath.Dir(opts.EntryLocalFiles[0].Path)
 
 	ret = &EntryLibraryData{
 		AllFilesLocked: lo.EveryBy(opts.EntryLocalFiles, func(item *LocalFile) bool { return item.Locked }),

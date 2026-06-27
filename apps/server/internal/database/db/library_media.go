@@ -60,11 +60,24 @@ func GetLibraryMediaByTmdbIdAndType(d *Database, tmdbID int, mediaType string) (
 
 // GetLibraryMediaByID retrieves a LibraryMedia by its primary key ID.
 func GetLibraryMediaByID(d *Database, id uint) (*models.LibraryMedia, error) {
+	cacheKey := fmt.Sprintf("pk_%d", id)
+	if v, ok := d.LibraryMediaCache.Load(cacheKey); ok {
+		if media, _ := v.(*models.LibraryMedia); media == nil {
+			return nil, nil
+		} else {
+			return media, nil
+		}
+	}
 	var media models.LibraryMedia
 	err := d.Gorm().First(&media, id).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			d.LibraryMediaCache.Store(cacheKey, (*models.LibraryMedia)(nil))
+			return nil, nil
+		}
 		return nil, err
 	}
+	d.LibraryMediaCache.Store(cacheKey, &media)
 	return &media, nil
 }
 
@@ -94,6 +107,9 @@ func InsertLibraryMedia(d *Database, media *models.LibraryMedia) (*models.Librar
 		d.LibraryMediaCache.Delete(fmt.Sprintf("id_%d", media.TmdbID))
 		d.LibraryMediaCache.Delete(fmt.Sprintf("id_type_%d_%s", media.TmdbID, media.Type))
 	}
+	if media.ID != 0 {
+		d.LibraryMediaCache.Delete(fmt.Sprintf("pk_%d", media.ID))
+	}
 	return media, nil
 }
 
@@ -120,8 +136,8 @@ func InsertMediaEntryListData(d *Database, data *models.MediaEntryListData) (*mo
 	return data, nil
 }
 
-// TrimLocalFileEntries removes old local file entries from the database,
-// keeping only the latest entry.
+// TrimLocalFileEntries removes old legacy local file entries (blob storage) from the database,
+// keeping only the latest entry. This is only for the legacy local_files table.
 func TrimLocalFileEntries(d *Database) {
 	var count int64
 	d.Gorm().Model(&models.LocalFiles{}).Count(&count)
@@ -165,6 +181,9 @@ func UpsertLibraryMediaBatch(d *Database, media []*models.LibraryMedia, batchSiz
 			if m.TmdbID != 0 {
 				d.LibraryMediaCache.Delete(fmt.Sprintf("id_%d", m.TmdbID))
 				d.LibraryMediaCache.Delete(fmt.Sprintf("id_type_%d_%s", m.TmdbID, m.Type))
+			}
+			if m.ID != 0 {
+				d.LibraryMediaCache.Delete(fmt.Sprintf("pk_%d", m.ID))
 			}
 		}
 	}

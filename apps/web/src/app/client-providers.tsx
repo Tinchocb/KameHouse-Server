@@ -46,13 +46,12 @@ export const queryClient = new QueryClient({
 })
 
 export const ClientProviders: React.FC<ClientProvidersProps> = ({ children }) => {
-    // Inicializar tvMode si viene en los query params de la URL (?tvMode=true)
     useEffect(() => {
         if (typeof window !== "undefined") {
             const params = new URLSearchParams(window.location.search);
             if (params.get("tvMode") === "true") {
                 useAppStore.getState().setTvMode(true);
-                // Remove the param from URL so it doesn't persist across navigation
+                // Remove parameter from URL history so navigation remains clean
                 window.history.replaceState({}, "", window.location.pathname);
             }
         }

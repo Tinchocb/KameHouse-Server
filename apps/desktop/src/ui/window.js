@@ -11,10 +11,10 @@ let mainWindowStartupReady = false
 let shouldMaximizeMainWindow = false
 
 const MAIN_WINDOW_DEFAULT_BOUNDS = {
-    width: 800,
-    height: 600,
+    width: 1920,
+    height: 1080,
 }
-const MIN_VISIBLE_WINDOW_EDGE = 120
+const MIN_VISIBLE_WINDOW_EDGE = 50
 
 function getMainWindow() { return mainWindow }
 function getSplashScreen() { return splashScreen }

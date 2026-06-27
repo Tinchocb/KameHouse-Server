@@ -30,9 +30,10 @@ func evaluateSimpleExpression(expr string) (int, error) {
 
 	for _, r := range toEval {
 		// Track depth to handle nested calc()
-		if r == '(' {
+		switch r {
+		case '(':
 			depth++
-		} else if r == ')' {
+		case ')':
 			depth--
 		}
 

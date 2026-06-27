@@ -2,20 +2,18 @@ package db
 
 import (
 	"kamehouse/internal/database/models"
-	"kamehouse/internal/util/result"
+	"strconv"
 	"time"
 )
 
-var mediaIDMappingCache = result.NewMap[string, *models.MediaIDMapping]()
-
 func formatMediaIDMappingCacheKey(tmdbID int) string {
-	return "tmdb:" + string(rune(tmdbID))
+	return "tmdb:" + strconv.Itoa(tmdbID)
 }
 
 // GetMediaIDMappingByTMDB busca un mapeo por TMDB ID.
 func (db *Database) GetMediaIDMappingByTMDB(tmdbID int) (*models.MediaIDMapping, bool) {
 	cacheKey := formatMediaIDMappingCacheKey(tmdbID)
-	if res, ok := mediaIDMappingCache.Get(cacheKey); ok {
+	if res, ok := db.MediaIDMappingCache.Get(cacheKey); ok {
 		return res, true
 	}
 
@@ -25,7 +23,7 @@ func (db *Database) GetMediaIDMappingByTMDB(tmdbID int) (*models.MediaIDMapping,
 		return nil, false
 	}
 
-	mediaIDMappingCache.Set(cacheKey, &res)
+	db.MediaIDMappingCache.Set(cacheKey, &res)
 	return &res, true
 }
 
@@ -52,6 +50,10 @@ func (db *Database) GetMediaIDMappingByInternal(internalID int) (*models.MediaID
 // UpsertMediaIDMapping inserta o actualiza un mapeo de IDs.
 func (db *Database) UpsertMediaIDMapping(mapping *models.MediaIDMapping) error {
 	mapping.LastSyncAt = time.Now()
+
+	// Invalidate cache
+	cacheKey := formatMediaIDMappingCacheKey(mapping.TMDBID)
+	db.MediaIDMappingCache.Delete(cacheKey)
 
 	var existing models.MediaIDMapping
 	result := db.gormdb.Where("tmdb_id = ? AND media_type = ?", mapping.TMDBID, mapping.MediaType).First(&existing)

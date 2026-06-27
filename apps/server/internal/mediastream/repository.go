@@ -175,14 +175,14 @@ func (r *Repository) RequestTranscodeStream(filepath string, clientID string) (r
 	return
 }
 
-func (r *Repository) RequestPreloadTranscodeStream(filepath string) (err error) {
-	r.logger.Debug().Str("filepath", filepath).Msg("mediastream: Transcode stream preloading requested")
+func (r *Repository) RequestPreloadTranscodeStream(filepath string, preferredAudioLang string) (err error) {
+	r.logger.Debug().Str("filepath", filepath).Str("preferredAudioLang", preferredAudioLang).Msg("mediastream: Transcode stream preloading requested")
 
 	if !r.IsInitialized() {
 		return errors.New("module not initialized")
 	}
 
-	_, err = r.playbackManager.PreloadPlayback(filepath, StreamTypeTranscode)
+	_, err = r.playbackManager.PreloadPlayback(filepath, StreamTypeTranscode, preferredAudioLang)
 
 	return
 }
@@ -213,7 +213,7 @@ func (r *Repository) RequestPreloadDirectPlay(filepath string) (err error) {
 		return errors.New("module not initialized")
 	}
 
-	_, err = r.playbackManager.PreloadPlayback(filepath, StreamTypeDirect)
+	_, err = r.playbackManager.PreloadPlayback(filepath, StreamTypeDirect, "")
 
 	return
 }
@@ -244,7 +244,7 @@ func (r *Repository) RequestPreloadOptimizedStream(filepath string) (err error) 
 		return errors.New("module not initialized")
 	}
 
-	_, err = r.playbackManager.PreloadPlayback(filepath, StreamTypeOptimized)
+	_, err = r.playbackManager.PreloadPlayback(filepath, StreamTypeOptimized, "")
 
 	return
 }

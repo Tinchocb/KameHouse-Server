@@ -63,6 +63,7 @@ self.addEventListener('fetch', (event) => {
           if (event.request.mode === 'navigate') {
             return caches.match(OFFLINE_URL);
           }
+          return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
         });
       })
   );

@@ -17,17 +17,20 @@ import (
 
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
+	"kamehouse/internal/util/result"
 )
 
 type Database struct {
-	gormdb            *gorm.DB
-	Logger            *zerolog.Logger
-	CurrMediaFillers  mo.Option[map[int]*MediaFillerItem]
-	cleanupManager    *CleanupManager
-	bufferedWriter    *BufferedWriter
-	OnError           func(error)
-	LibraryMediaCache sync.Map // L1 read cache scoped to the database instance
-	slowTraceLogger   *SlowTraceLogger
+	gormdb                   *gorm.DB
+	Logger                   *zerolog.Logger
+	CurrMediaFillers         mo.Option[map[int]*MediaFillerItem]
+	cleanupManager           *CleanupManager
+	bufferedWriter           *BufferedWriter
+	OnError                  func(error)
+	LibraryMediaCache        sync.Map // L1 read cache scoped to the database instance
+	MediaIDMappingCache      *result.Map[string, *models.MediaIDMapping]
+	OnlinestreamMappingCache *result.Map[string, *models.OnlinestreamMapping]
+	slowTraceLogger          *SlowTraceLogger
 }
 
 func (db *Database) SetOnError(f func(error)) {
@@ -110,9 +113,11 @@ func NewDatabase(ctx context.Context, appDataDir, dbName string, logger *zerolog
 	logger.Info().Str("name", fmt.Sprintf("%s.db", dbName)).Msg("db: Database instantiated and migrated")
 
 	database := &Database{
-		gormdb:           db,
-		Logger:           logger,
-		CurrMediaFillers: mo.None[map[int]*MediaFillerItem](),
+		gormdb:                   db,
+		Logger:                   logger,
+		CurrMediaFillers:         mo.None[map[int]*MediaFillerItem](),
+		MediaIDMappingCache:      result.NewMap[string, *models.MediaIDMapping](),
+		OnlinestreamMappingCache: result.NewMap[string, *models.OnlinestreamMapping](),
 	}
 
 	database.cleanupManager = NewCleanupManager(database.gormdb, database.Logger)
@@ -338,7 +343,7 @@ func migrateLegacyLocalFiles(gormDB *gorm.DB) error {
 // Solo modifica filas que no han sido configuradas explícitamente por el usuario
 // (detectadas porque otros campos de preferencia también están en su valor inicial).
 func migrateDefaultSettings(gormDB *gorm.DB, logger *zerolog.Logger) {
-	result := gormDB.Exec("UPDATE settings SET auto_play_next_episode = 1 WHERE auto_play_next_episode = 0")
+	result := gormDB.Exec("UPDATE settings SET library_auto_play_next_episode = 1 WHERE library_auto_play_next_episode = 0")
 	if result.Error != nil {
 		logger.Error().Err(result.Error).Msg("db: fallo al migrar auto_play_next_episode")
 	} else if result.RowsAffected > 0 {

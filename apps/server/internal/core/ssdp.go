@@ -175,8 +175,8 @@ func (s *SSDPAnnouncer) sendNOTIFY() {
 		"HOST: 239.255.255.250:1900",
 		"CACHE-CONTROL: max-age=1800",
 		fmt.Sprintf("LOCATION: %s", location),
-		fmt.Sprintf("NT: upnp:rootdevice"),
-		fmt.Sprintf("NTS: ssdp:alive"),
+		"NT: upnp:rootdevice",
+		"NTS: ssdp:alive",
 		fmt.Sprintf("SERVER: %s", server),
 		fmt.Sprintf("USN: %s", usn),
 	}

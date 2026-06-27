@@ -68,7 +68,6 @@ export interface PlayerCore {
         showNextEpisode: boolean
         countdownSeconds: number
         showCountdown: boolean
-        tvMode: boolean
         remainingProgress: number
         audioTracks: AudioTrack[]
         activeAudioIndex: number
@@ -92,6 +91,7 @@ export interface PlayerCore {
         resumeTime: number
         autoDisableSubtitlesWhenDubbed: boolean
         marathonMode: boolean
+        tvMode: boolean
         /** AniSkip intervals exposed to child components for rendering timeline markers */
         skipTimesOp?: { startTime: number; endTime: number }
         skipTimesEd?: { startTime: number; endTime: number }
@@ -134,8 +134,8 @@ export interface PlayerCore {
         setAspectRatio: (val: "contain" | "fill" | "cover" | "16/9") => void
         setSubtitleSize: (val: number) => void
         setLoopEnabled: (val: boolean) => void
-        setTvMode: (val: boolean) => void
         setMarathonMode: (val: boolean) => void
+        setTvMode: (val: boolean) => void
         handleResume: () => void
         setShowResume: (val: boolean) => void
         setAutoDisableSubtitlesWhenDubbed: (val: boolean) => void

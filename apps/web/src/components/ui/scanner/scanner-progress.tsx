@@ -102,7 +102,7 @@ export function PipelineStageCard({ stage, isActive, isDone }: {
                             ? "text-[#34d399] border-emerald-500/20 bg-emerald-500/5 shadow-[0_0_10px_rgba(52,211,153,0.15)]"
                             : "text-zinc-500 border-white/5 bg-white/[0.01] group-hover:border-zinc-700"
                 )}>
-                    {isDone && !isActive ? <LucideCheck size={16} strokeWidth={3} /> : React.cloneElement(stage.icon as React.ReactElement, { size: 16 })}
+                    {isDone && !isActive ? <LucideCheck size={16} strokeWidth={3} /> : React.cloneElement(stage.icon as React.ReactElement<any>, { size: 16 })}
                 </div>
 
                 <div className="min-w-0">

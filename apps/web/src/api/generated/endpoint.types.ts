@@ -447,6 +447,7 @@ export type RequestMediastreamMediaContainer_Variables = {
     streamType: Mediastream_StreamType
     audioStreamIndex: number
     clientID: string
+    preferredAudioLang?: string
 }
 
 /**
@@ -460,6 +461,7 @@ export type PreloadMediastreamMediaContainer_Variables = {
     path: string
     streamType: Mediastream_StreamType
     audioStreamIndex: number
+    preferredAudioLang?: string
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -1,5 +1,5 @@
 import React from "react"
-import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipForward, SkipBack, ListVideo, Tv } from "lucide-react"
+import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipForward, SkipBack, ListVideo, Tv, Rocket } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 
 import { TimelineHeatmap, type InsightNode } from "@/components/ui/timeline-heatmap"
@@ -387,23 +387,23 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                         </button>
                     )}
 
-                    {/* TV Mode (Skip Intro/Outro) */}
+                    {/* Marathon Mode Toggle */}
                     {!isMovie && <button
                         tabIndex={0}
                         onClick={(e) => {
                             e.stopPropagation()
-                            onTvModeChange?.(!tvMode)
+                            onMarathonModeChange?.(!marathonMode)
                         }}
-                        aria-label={tvMode ? "Desactivar Auto-Skip (TV Mode)" : "Activar Auto-Skip (TV Mode)"}
-                        title={tvMode ? "Desactivar Auto-Skip (TV Mode)" : "Activar Auto-Skip (TV Mode)"}
+                        aria-label={marathonMode ? "Desactivar Modo Maratón" : "Activar Modo Maratón"}
+                        title={marathonMode ? "Desactivar Modo Maratón" : "Activar Modo Maratón"}
                         className={cn(
                             "transition-all duration-300 flex items-center justify-center w-10 h-10 md:w-8 md:h-8 rounded-lg active:scale-90 focus-visible:ring-2 focus-visible:ring-brand-orange focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950",
-                            tvMode
+                            marathonMode
                                 ? "text-brand-orange bg-brand-orange/10 hover:bg-brand-orange/20"
                                 : "text-zinc-500 hover:text-white hover:bg-white/5"
                         )}
                     >
-                        <Tv className="w-4 h-4 md:w-3.5 md:h-3.5" />
+                        <Rocket className="w-4 h-4 md:w-3.5 md:h-3.5" />
                     </button>}
                     
 

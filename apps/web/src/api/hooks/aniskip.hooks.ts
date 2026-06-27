@@ -167,7 +167,7 @@ export async function getAniSkipTimes({
                 const searchTitle = entry.media.titleEnglish || entry.media.titleOriginal || entry.media.titleRomaji
                 const jikanRes = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(searchTitle)}&limit=1`)
                 if (jikanRes.ok) {
-                    const jikanData = await jikanRes.json()
+                    const jikanData = (await jikanRes.json()) as any
                     if (jikanData?.data?.[0]?.mal_id) {
                         activeMalId = jikanData.data[0].mal_id
                     }

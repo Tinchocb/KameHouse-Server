@@ -31,8 +31,8 @@ export function DynamicBackdrop() {
     const isMotionEnabled = useAppStore(state => state.dynamicBackdropMotionEnabled)
     const currentBackdropUrl = useIntelligenceStore(s => s.currentBackdropUrl)
     const activeBackdropUrl = currentBackdropUrl
-    // Home uses a more subtle opacity to avoid competing with content
-    const baseOpacity = isHomePage ? 0.65 : 0.35
+    // Home uses higher opacity, static pages (settings, movies, series) use minimal opacity
+    const baseOpacity = isHomePage ? 0.65 : 0.12
 
     const [displayedUrl, setDisplayedUrl] = React.useState<string | null>(null)
     const [nextUrl, setNextUrl] = React.useState<string | null>(null)
@@ -137,7 +137,7 @@ export function DynamicBackdrop() {
         return () => clearTimeout(timer)
     }, [activeBackdropUrl, displayedUrl, isEnabled])
 
-    const filterClass = "blur-2xl"
+    const filterClass = isStaticPage ? "" : "blur-2xl"
 
     if (!isEnabled) return null
 
@@ -145,7 +145,7 @@ export function DynamicBackdrop() {
         <div
             ref={containerRef}
             aria-hidden="true"
-            className={`pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-background ${isMotionEnabled ? "animate-breathing" : ""}`}
+            className={`pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-background ${isMotionEnabled && isHomePage ? "animate-breathing" : ""}`}
         >
             {/* Wrapper for the backdrop layers that receives the mouse translation without CSS transitions */}
             <div
@@ -182,12 +182,12 @@ export function DynamicBackdrop() {
                 />
             </div>
 
-            {/* ── Orbital Orbs — more subtle on home/static pages ── */}
+            {/* ── Orbital Orbs — very subtle on static pages ── */}
             <div
                 ref={orb1Ref}
                 className="absolute top-1/4 left-1/4 w-[400px] h-[400px] rounded-full blur-[120px] mix-blend-screen"
                 style={{
-                    background: isHomePage ? 'rgba(255,110,58,0.06)' : 'rgba(255,110,58,0.12)',
+                    background: isStaticPage ? 'rgba(255,110,58,0.02)' : 'rgba(255,110,58,0.12)',
                     transform: "translate3d(0px, 0px, 0px)",
                     willChange: "transform",
                 }}
@@ -196,7 +196,7 @@ export function DynamicBackdrop() {
                 ref={orb2Ref}
                 className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] rounded-full blur-[100px] mix-blend-screen"
                 style={{
-                    background: isHomePage ? 'rgba(59,130,246,0.03)' : 'rgba(59,130,246,0.06)',
+                    background: isStaticPage ? 'rgba(59,130,246,0.01)' : 'rgba(59,130,246,0.06)',
                     transform: "translate3d(0px, 0px, 0px)",
                     willChange: "transform",
                 }}
@@ -208,14 +208,14 @@ export function DynamicBackdrop() {
             />
 
             {/* ── Vignette stack — ensures text is always legible ───────── */}
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_120%_80%_at_50%_0%,rgba(255,255,255,0.04),transparent_60%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_120%_80%_at_50%_0%,rgba(255,255,255,0.02),transparent_60%)]" />
             <div
-                className="absolute inset-0 bg-gradient-to-r from-background via-background/30 to-transparent transition-opacity duration-500"
-                style={{ opacity: isStaticPage ? 0.20 : 0.65 }}
+                className="absolute inset-0 bg-gradient-to-r from-background via-background/15 to-transparent transition-opacity duration-500"
+                style={{ opacity: isStaticPage ? 0.08 : 0.65 }}
             />
             <div
                 className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent transition-opacity duration-500"
-                style={{ opacity: isStaticPage ? 0.25 : 0.70 }}
+                style={{ opacity: isStaticPage ? 0.1 : 0.70 }}
             />
         </div>
     )

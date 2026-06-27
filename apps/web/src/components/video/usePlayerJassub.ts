@@ -54,9 +54,14 @@ export function usePlayerJassub({
             return
         }
 
+        const isTv = typeof navigator !== "undefined" && (
+            /SmartTV/i.test(navigator.userAgent) ||
+            /Tizen/i.test(navigator.userAgent) ||
+            /Web0S/i.test(navigator.userAgent)
+        )
         const isAss = trackCodec?.toLowerCase() === "ass" || trackCodec?.toLowerCase() === "ssa"
 
-        if (!isAss) {
+        if (!isAss || isTv) {
             if (currentJassubRef.current) {
                 currentJassubRef.current.destroy()
                 setRefValue(currentJassubRef, null)
@@ -72,10 +77,14 @@ export function usePlayerJassub({
             setIsJassubLoading(true)
         })
 
+        let isCancelled = false
+
         const initJassub = async () => {
             try {
                 const res = await fetch(trackUrl)
                 const assContent = await res.text()
+
+                if (isCancelled) return
 
                 if (currentJassubRef.current) {
                     currentJassubRef.current.destroy()
@@ -101,14 +110,17 @@ export function usePlayerJassub({
                 setIsJassubLoading(false)
             } catch (err) {
                 console.error("jassub: Failed to initialize:", err)
-                setIsJassubLoading(false)
-                setIsJassubActive(false)
+                if (!isCancelled) {
+                    setIsJassubLoading(false)
+                    setIsJassubActive(false)
+                }
             }
         }
 
         initJassub()
 
         return () => {
+            isCancelled = true
             if (currentJassubRef.current) {
                 currentJassubRef.current.destroy()
                 setRefValue(currentJassubRef, null)

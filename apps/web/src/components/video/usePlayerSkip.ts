@@ -54,6 +54,7 @@ interface UsePlayerSkipProps {
     nextStreamType?: "local" | "online" | "direct" | "transcode" | "optimized"
     streamType?: "local" | "online" | "direct" | "transcode" | "optimized"
     mediaId?: number | null
+    preferredAudioLang?: string
     tvMode: boolean
     setTvMode: (val: boolean) => void
 }
@@ -130,6 +131,7 @@ export function usePlayerSkip({
     nextStreamUrl,
     streamType,
     mediaId,
+    preferredAudioLang,
     tvMode,
     setTvMode,
 }: UsePlayerSkipProps) {
@@ -172,17 +174,17 @@ export function usePlayerSkip({
         marathonMode: false,
         hasNextEpisode: false,
         onNextEpisode: undefined as (() => void) | undefined,
-        tvMode: false,
         autoPlayNextEpisode: false,
         nextStreamUrl: undefined as string | undefined,
         streamType: undefined as string | undefined,
-        preloadStream: ((_: { path: string; streamType: Mediastream_StreamType; audioStreamIndex: number }) => {}) as (vars: { path: string; streamType: Mediastream_StreamType; audioStreamIndex: number }) => void,
+        preloadStream: ((_: { path: string; streamType: Mediastream_StreamType; audioStreamIndex: number; preferredAudioLang?: string }) => {}) as (vars: { path: string; streamType: Mediastream_StreamType; audioStreamIndex: number; preferredAudioLang?: string }) => void,
         queryClient: undefined as ReturnType<typeof useQueryClient> | undefined,
         clientId: undefined as string | undefined,
         malId: undefined as number | null | undefined,
         mediaId: undefined as number | null | undefined,
         episodeNumber: undefined as number | undefined,
         showCountdown: false,
+        preferredAudioLang: undefined as string | undefined,
     })
     // ── Dual ref+state pattern (avoids stale closures in hot callbacks) ─────────
     const [skipMode, setSkipModeState] = useState<"intro" | "outro" | null>(null)
@@ -470,7 +472,6 @@ export function usePlayerSkip({
         marathonMode,
         hasNextEpisode,
         onNextEpisode,
-        tvMode,
         autoPlayNextEpisode,
         nextStreamUrl,
         streamType,
@@ -481,6 +482,7 @@ export function usePlayerSkip({
         mediaId,
         episodeNumber,
         showCountdown,
+        preferredAudioLang,
     }
     const processTimeUpdates = useCallback((curr: number, total: number) => {
         const video = videoRef.current
@@ -610,14 +612,14 @@ export function usePlayerSkip({
                     : "direct"
             ) as Mediastream_StreamType
 
-            cfg.preloadStream({ path: cfg.nextStreamUrl, streamType: resolvedStreamType, audioStreamIndex: 0 })
+            cfg.preloadStream({ path: cfg.nextStreamUrl, streamType: resolvedStreamType, audioStreamIndex: 0, preferredAudioLang: cfg.preferredAudioLang })
 
             cfg.queryClient!.prefetchQuery({
                 queryKey: [API_ENDPOINTS.MEDIASTREAM.RequestMediastreamMediaContainer.key, cfg.nextStreamUrl, resolvedStreamType],
                 queryFn: () => buildSeaQuery({
                     endpoint: API_ENDPOINTS.MEDIASTREAM.RequestMediastreamMediaContainer.endpoint,
                     method: API_ENDPOINTS.MEDIASTREAM.RequestMediastreamMediaContainer.methods[0],
-                    data: { path: cfg.nextStreamUrl, streamType: resolvedStreamType, audioStreamIndex: 0, clientID: cfg.clientId || "prefetch-client" }
+                    data: { path: cfg.nextStreamUrl, streamType: resolvedStreamType, audioStreamIndex: 0, preferredAudioLang: cfg.preferredAudioLang, clientID: cfg.clientId || "prefetch-client" }
                 })
             })
 
@@ -647,18 +649,7 @@ export function usePlayerSkip({
             if (showNextEpisodeRef.current) setShowNextEpisode(false)
         }
 
-        // ── 9. TV-mode countdown ───────────────────────────────────────────────
-        const isPlayingOrEnded = !video.paused || video.ended
-        const targetShowCountdown =
-            cfg.tvMode && cfg.autoPlayNextEpisode && isPlayingOrEnded && cfg.hasNextEpisode &&
-            cfg.mediaFormat?.toUpperCase() !== "MOVIE" && (
-                video.ended ||
-                (cfg.autoSkipOutroPref && cfg.skipTimesEd ? curr >= cfg.skipTimesEd.startTime : false) ||
-                (total > 0 && total - curr <= 15))
 
-        if (cfg.showCountdown !== targetShowCountdown) {
-            setShowCountdown(targetShowCountdown)
-        }
 
         // ── 10. Marathon mode auto-advance ────────────────────────────────────
         if (
@@ -681,26 +672,7 @@ export function usePlayerSkip({
         }
     }, [showNextEpisode])
 
-    // ── TV-mode countdown sync on pause/play ─────────────────────────────────────
-    // (processTimeUpdates only fires while playing; this keeps countdown correct on pause)
-    useEffect(() => {
-        const video = videoRef.current
-        if (!video) return
-        const curr = video.currentTime
-        const total = video.duration || duration
-        const isPlayingOrEnded = isPlaying || videoEnded
 
-        const targetShowCountdown =
-            tvMode && autoPlayNextEpisode && isPlayingOrEnded && hasNextEpisode &&
-            mediaFormat?.toUpperCase() !== "MOVIE" && (
-                videoEnded ||
-                (autoSkipOutroPref && skipTimesEd ? curr >= skipTimesEd.startTime : false) ||
-                (total > 0 && total - curr <= 15))
- 
-        if (showCountdown !== targetShowCountdown) {
-            setShowCountdown(targetShowCountdown)
-        }
-    }, [isPlaying, videoEnded, tvMode, autoPlayNextEpisode, hasNextEpisode, autoSkipOutroPref, skipTimesEd, duration, videoRef, showCountdown, mediaFormat])
 
     // ── Countdown tick ────────────────────────────────────────────────────────────
     const remainingProgress = useMemo(() => (countdownSeconds / COUNTDOWN_START) * 100, [countdownSeconds])

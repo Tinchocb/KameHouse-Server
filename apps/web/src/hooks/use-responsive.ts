@@ -7,13 +7,18 @@ export interface ResponsiveBreakpoints {
     isWide: boolean;
 }
 
+function getBreakpoints(): ResponsiveBreakpoints {
+    const w = typeof window !== "undefined" ? window.innerWidth : 1920;
+    return {
+        isMobile: w <= 767,
+        isTablet: w >= 768 && w <= 1023,
+        isDesktop: w >= 1024,
+        isWide: w >= 1440,
+    };
+}
+
 export function useResponsive(): ResponsiveBreakpoints {
-    const [breakpoints, setBreakpoints] = useState<ResponsiveBreakpoints>({
-        isMobile: false,
-        isTablet: false,
-        isDesktop: false,
-        isWide: false,
-    });
+    const [breakpoints, setBreakpoints] = useState<ResponsiveBreakpoints>(getBreakpoints);
 
     useEffect(() => {
         const mobileQuery = window.matchMedia("(max-width: 767px)");
@@ -22,30 +27,29 @@ export function useResponsive(): ResponsiveBreakpoints {
         const wideQuery = window.matchMedia("(min-width: 1440px)");
 
         const update = () => {
-            setBreakpoints({
-                isMobile: mobileQuery.matches,
-                isTablet: tabletQuery.matches,
-                isDesktop: desktopQuery.matches,
-                isWide: wideQuery.matches,
-            });
+            setBreakpoints(getBreakpoints());
         };
 
-        // Initial trigger
+        // Initial trigger (redundant but safe)
         update();
 
-        // Listeners
+        // matchMedia change listeners
         if (typeof mobileQuery.addEventListener === "function") {
             mobileQuery.addEventListener("change", update);
             tabletQuery.addEventListener("change", update);
             desktopQuery.addEventListener("change", update);
             wideQuery.addEventListener("change", update);
         } else {
-            // Fallback for older browsers
             mobileQuery.addListener(update);
             tabletQuery.addListener(update);
             desktopQuery.addListener(update);
             wideQuery.addListener(update);
         }
+
+        // Backup: resize event — catches cases where matchMedia change
+        // doesn't fire (e.g. Electron window maximized while hidden)
+        const onResize = () => update();
+        window.addEventListener("resize", onResize, { passive: true });
 
         return () => {
             if (typeof mobileQuery.removeEventListener === "function") {
@@ -59,6 +63,7 @@ export function useResponsive(): ResponsiveBreakpoints {
                 desktopQuery.removeListener(update);
                 wideQuery.removeListener(update);
             }
+            window.removeEventListener("resize", onResize);
         };
     }, []);
 

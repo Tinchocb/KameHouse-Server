@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Dices, Clapperboard, Tv, Loader2 } from "lucide-react"
+import { Clapperboard, Tv, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import * as Popover from "@radix-ui/react-popover"
 
@@ -11,6 +11,7 @@ import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { fetchAnimeEntryLocalFiles } from "@/api/hooks/anime_entries.hooks"
 import { VideoPlayer } from "@/components/video/player"
 import { useSound } from "@/hooks/use-sound"
+import { useAppStore } from "@/lib/store"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -32,6 +33,7 @@ export function RandomPlayButton() {
     const [showPicker, setShowPicker] = React.useState(false)
     const [isLoading, setIsLoading] = React.useState(false)
     const [playTarget, setPlayTarget] = React.useState<PlayTarget | null>(null)
+    const setTvMode = useAppStore(state => state.setTvMode)
 
     const { data: collection } = useGetLibraryCollection()
 
@@ -109,8 +111,9 @@ export function RandomPlayButton() {
                 malId: randomEntry.media?.idMal ?? null,
                 mediaFormat: randomEntry.media?.format,
             })
+            setTvMode(true)
 
-            toast.success(`🎲 ${isMovie ? "Película" : "Episodio"} aleatorio seleccionado`, {
+            toast.success(`📺 Modo TV ${isMovie ? "Películas" : "Series"} iniciado`, {
                 description: `${seriesTitle}${!isMovie ? ` — Ep. ${epNum}` : ""}`,
                 duration: 3000,
             })
@@ -126,8 +129,8 @@ export function RandomPlayButton() {
         <>
             {/* ─── Trigger Button + Picker Popover ─────────────────────── */}
             <div className="relative flex items-center justify-center">
-                <Popover.Root 
-                    open={showPicker} 
+                <Popover.Root
+                    open={showPicker}
                     onOpenChange={(open) => {
                         setShowPicker(open)
                         playRandomSound()
@@ -156,14 +159,14 @@ export function RandomPlayButton() {
                                     <Loader2 className="w-5 h-5" />
                                 </motion.div>
                             ) : (
-                                <Dices className={cn(
+                                <Tv className={cn(
                                     "w-5 h-5 transition-transform duration-300",
-                                    "group-hover:rotate-12 group-hover:scale-110"
+                                    "group-hover:scale-110"
                                 )} />
                             )}
                         </motion.button>
                     </Popover.Trigger>
-                    
+
                     <Popover.Portal>
                         <Popover.Content
                             side="right"
@@ -178,9 +181,9 @@ export function RandomPlayButton() {
                             {/* Header */}
                             <div className="px-3 pt-2.5 pb-2">
                                 <div className="flex items-center gap-2">
-                                    <Dices className="w-3 h-3 text-brand-orange opacity-75" />
+                                    <Tv className="w-3 h-3 text-brand-orange opacity-75" />
                                     <p className="text-[9px] font-black uppercase tracking-[0.4em] text-zinc-400">
-                                        ¿Qué quieres ver?
+                                        Modo TV
                                     </p>
                                 </div>
                             </div>
@@ -190,23 +193,23 @@ export function RandomPlayButton() {
 
                             {/* Movie option */}
                             <PickerOption
-                                id="random-play-movie"
+                                id="tv-mode-movie"
                                 onClick={() => pick("movie")}
                                 icon={<Clapperboard className="w-4 h-4 text-amber-400" />}
                                 iconBg="bg-amber-500/10 border-amber-500/20"
-                                label="Película"
-                                description="Aleatoria de tu colección"
+                                label="Modo TV Películas"
+                                description="Película aleatoria continua"
                                 accentColor="group-hover:text-amber-400"
                             />
 
                             {/* Episode option */}
                             <PickerOption
-                                id="random-play-episode"
+                                id="tv-mode-episode"
                                 onClick={() => pick("episode")}
                                 icon={<Tv className="w-4 h-4 text-blue-400" />}
                                 iconBg="bg-blue-500/10 border-blue-500/20"
-                                label="Episodio"
-                                description="De una serie aleatoria"
+                                label="Modo TV Series"
+                                description="Episodio aleatorio y orden cronológico"
                                 accentColor="group-hover:text-blue-400"
                             />
 

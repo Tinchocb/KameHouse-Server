@@ -3,10 +3,7 @@ package db
 import (
 	"fmt"
 	"kamehouse/internal/database/models"
-	"kamehouse/internal/util/result"
 )
-
-var onlinestreamMappingCache = result.NewMap[string, *models.OnlinestreamMapping]()
 
 func formatOnlinestreamMappingCacheKey(provider string, mediaID int) string {
 	return fmt.Sprintf("%s$%d", provider, mediaID)
@@ -14,7 +11,7 @@ func formatOnlinestreamMappingCacheKey(provider string, mediaID int) string {
 
 func (db *Database) GetOnlinestreamMapping(provider string, mediaID int) (*models.OnlinestreamMapping, bool) {
 
-	if res, ok := onlinestreamMappingCache.Get(formatOnlinestreamMappingCacheKey(provider, mediaID)); ok {
+	if res, ok := db.OnlinestreamMappingCache.Get(formatOnlinestreamMappingCacheKey(provider, mediaID)); ok {
 		return res, true
 	}
 
@@ -24,7 +21,7 @@ func (db *Database) GetOnlinestreamMapping(provider string, mediaID int) (*model
 		return nil, false
 	}
 
-	onlinestreamMappingCache.Set(formatOnlinestreamMappingCacheKey(provider, mediaID), &res)
+	db.OnlinestreamMappingCache.Set(formatOnlinestreamMappingCacheKey(provider, mediaID), &res)
 
 	return &res, true
 }
@@ -36,7 +33,7 @@ func (db *Database) InsertOnlinestreamMapping(provider string, mediaID int, anim
 		AnimeID:  animeId,
 	}
 
-	onlinestreamMappingCache.Set(formatOnlinestreamMappingCacheKey(provider, mediaID), &mapping)
+	db.OnlinestreamMappingCache.Set(formatOnlinestreamMappingCacheKey(provider, mediaID), &mapping)
 
 	return db.gormdb.Save(&mapping).Error
 }
@@ -47,6 +44,6 @@ func (db *Database) DeleteOnlinestreamMapping(provider string, mediaID int) erro
 		return err
 	}
 
-	onlinestreamMappingCache.Delete(formatOnlinestreamMappingCacheKey(provider, mediaID))
+	db.OnlinestreamMappingCache.Delete(formatOnlinestreamMappingCacheKey(provider, mediaID))
 	return nil
 }

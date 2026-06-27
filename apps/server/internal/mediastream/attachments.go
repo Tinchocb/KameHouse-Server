@@ -25,9 +25,16 @@ func (r *Repository) ServeEchoExtractedSubtitles(c echo.Context) error {
 	}
 
 	// Get current media
-	mediaContainer, found := r.playbackManager.currentMediaContainer.Get()
+	clientID := c.QueryParam("clientId")
+	if clientID == "" {
+		clientID = c.QueryParam("clientID")
+	}
+	mediaContainer, found := r.playbackManager.clientMediaContainers.Get(clientID)
 	if !found {
-		return errors.New("no file has been loaded")
+		mediaContainer, found = r.playbackManager.currentMediaContainer.Get()
+		if !found {
+			return errors.New("no file has been loaded")
+		}
 	}
 
 	cacheDir := videofile.GetFileSubsCacheDir(r.cacheDir, mediaContainer.Hash)
@@ -70,9 +77,16 @@ func (r *Repository) ServeEchoExtractedAttachments(c echo.Context) error {
 	subFilePath := c.Param("*")
 
 	// Get current media
-	mediaContainer, found := r.playbackManager.currentMediaContainer.Get()
+	clientID := c.QueryParam("clientId")
+	if clientID == "" {
+		clientID = c.QueryParam("clientID")
+	}
+	mediaContainer, found := r.playbackManager.clientMediaContainers.Get(clientID)
 	if !found {
-		return errors.New("no file has been loaded")
+		mediaContainer, found = r.playbackManager.currentMediaContainer.Get()
+		if !found {
+			return errors.New("no file has been loaded")
+		}
 	}
 
 	retPath := videofile.GetFileAttCacheDir(r.cacheDir, mediaContainer.Hash)

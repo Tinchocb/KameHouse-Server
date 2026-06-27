@@ -9,12 +9,14 @@ import (
 
 	"github.com/goccy/go-json"
 	"github.com/samber/mo"
+	"golang.org/x/sync/singleflight"
 	"gorm.io/gorm"
 )
 
 var localFilesMutex sync.RWMutex
 var CurrLocalFilesDbId uint
 var CurrLocalFiles mo.Option[[]*dto.LocalFile]
+var localFilesSingleFlight singleflight.Group
 
 // GetLocalFiles will return the latest local files.
 // The second return value (ID) is now legacy and returns 0 as we use relational storage.
@@ -29,15 +31,33 @@ func GetLocalFiles(d *Database) ([]*dto.LocalFile, uint, error) {
 	}
 	localFilesMutex.RUnlock()
 
-	lfs, err := GetAllLocalFilesRelational(d)
+	val, err, _ := localFilesSingleFlight.Do("get_local_files", func() (interface{}, error) {
+		// Re-check cache inside singleflight to avoid racing
+		localFilesMutex.RLock()
+		if cached, ok := CurrLocalFiles.Get(); ok {
+			localFilesMutex.RUnlock()
+			return cached, nil
+		}
+		localFilesMutex.RUnlock()
+
+		lfs, err := GetAllLocalFilesRelational(d)
+		if err != nil {
+			return nil, err
+		}
+
+		localFilesMutex.Lock()
+		CurrLocalFiles = mo.Some(lfs)
+		CurrLocalFilesDbId = 0
+		localFilesMutex.Unlock()
+
+		return lfs, nil
+	})
+
 	if err != nil {
 		return nil, 0, err
 	}
 
-	localFilesMutex.Lock()
-	CurrLocalFiles = mo.Some(lfs)
-	CurrLocalFilesDbId = 0
-	localFilesMutex.Unlock()
+	lfs := val.([]*dto.LocalFile)
 
 	// #region agent log
 	debugLogLocalFiles("localfiles.go:GetLocalFiles", "cache miss", map[string]any{"count": len(lfs), "hypothesisId": "B"})

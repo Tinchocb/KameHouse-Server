@@ -6,7 +6,6 @@ import (
 	"kamehouse/internal/constants"
 	"log"
 	"net/http"
-	"path/filepath"
 	"strings"
 
 	"github.com/goccy/go-json"

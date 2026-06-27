@@ -1,4 +1,4 @@
-﻿package videocore
+package videocore
 
 import (
 	"context"
@@ -51,6 +51,7 @@ type (
 		logger     *zerolog.Logger
 		settingsMu sync.RWMutex
 		settings   *models.Settings
+		httpClient *req.Client
 	}
 
 	// Subscriber listens to the player events
@@ -85,6 +86,7 @@ func New(opts NewVideoCoreOptions) *VideoCore {
 		eventBus:                    make(chan VideoEvent, 100),
 		dispatcherStop:              make(chan struct{}),
 		playbackMkvEvents:           result.NewMap[uint64, []*mkvparser.SubtitleEvent](),
+		httpClient:                  req.C().SetTimeout(30 * time.Second),
 	}
 	vc.Start()
 	vc.inSight = NewInSight(opts.Logger, vc)
@@ -158,9 +160,11 @@ func (vc *VideoCore) dispatchEvent(event VideoEvent) {
 			return true
 		}
 		if event.IsCritical() {
+			timer := time.NewTimer(50 * time.Millisecond)
 			select {
 			case subscriber.eventCh <- event:
-			case <-time.After(1 * time.Second):
+				timer.Stop()
+			case <-timer.C:
 				vc.logger.Warn().Msgf("videocore: Subscriber %s blocked critical event %T", id, event)
 			}
 		} else {
@@ -938,9 +942,7 @@ func (vc *VideoCore) listenToClientEvents() {
 							}
 							var translated string
 							if payload.Src != nil && len(*payload.Src) > 0 {
-								client := req.C()
-								client.SetTimeout(30 * time.Second)
-								resp := client.Get(*payload.Src).Do()
+								resp := vc.httpClient.Get(*payload.Src).Do()
 
 								if resp.IsErrorState() {
 									vc.logger.Error().Err(resp.Err).Msgf("videocore: Failed to download subtitle file %s", *payload.Src)

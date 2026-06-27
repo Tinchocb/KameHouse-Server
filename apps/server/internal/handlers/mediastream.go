@@ -121,9 +121,10 @@ func (h *Handler) HandleRequestMediastreamMediaContainer(c echo.Context) error {
 func (h *Handler) HandlePreloadMediastreamMediaContainer(c echo.Context) error {
 
 	type body struct {
-		Path             string                 `json:"path"`             // The path of the file.
-		StreamType       mediastream.StreamType `json:"streamType"`       // The type of stream to request.
-		AudioStreamIndex int                    `json:"audioStreamIndex"` // The audio stream index to use.
+		Path               string                 `json:"path"`               // The path of the file.
+		StreamType         mediastream.StreamType `json:"streamType"`         // The type of stream to request.
+		AudioStreamIndex   int                    `json:"audioStreamIndex"`   // The audio stream index to use.
+		PreferredAudioLang string                 `json:"preferredAudioLang"` // The preferred audio language.
 	}
 
 	var b body
@@ -135,7 +136,7 @@ func (h *Handler) HandlePreloadMediastreamMediaContainer(c echo.Context) error {
 
 	switch b.StreamType {
 	case mediastream.StreamTypeTranscode:
-		err = h.App.MediastreamRepository.RequestPreloadTranscodeStream(b.Path)
+		err = h.App.MediastreamRepository.RequestPreloadTranscodeStream(b.Path, b.PreferredAudioLang)
 	case mediastream.StreamTypeDirect:
 		err = h.App.MediastreamRepository.RequestPreloadDirectPlay(b.Path)
 	case mediastream.StreamTypeOptimized:
