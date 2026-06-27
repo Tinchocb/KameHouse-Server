@@ -175,20 +175,10 @@ function SettingsPage() {
                     <div className="h-[2px] w-16 bg-gradient-to-r from-[#ff6e3a] to-transparent rounded-full shadow-[0_0_8px_rgba(255,110,58,0.5)]" />
                 </header>
 
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col md:flex-row gap-8 lg:gap-12 pb-32">
-                    {/* ── Immersive Sidebar Nav ─────────────────────────────── */}
-                    <aside 
-                        onMouseMove={handleSidebarMouseMove}
-                        onMouseLeave={() => setSidebarSpotlight({ opacity: 0 })}
-                        className="w-full md:w-64 shrink-0 bg-zinc-950/45 border border-white/5 rounded-[28px] p-5 h-fit relative overflow-hidden backdrop-blur-xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] group/sidebar"
-                    >
-                        {/* Cursor spotlight overlay */}
-                        <div 
-                            className="absolute inset-0 pointer-events-none z-0 transition-opacity duration-300"
-                            style={sidebarSpotlight}
-                        />
-
-                        <TabsList className="bg-transparent border-0 flex flex-col items-stretch h-auto p-0 gap-2 relative z-10">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col gap-8 pb-32">
+                    {/* ── Top Horizontal Pill Navigation ─────────────────────────────── */}
+                    <div className="w-full flex justify-center mb-6">
+                        <TabsList className="bg-zinc-950/60 border border-white/5 rounded-full p-1 flex flex-row items-center gap-1 h-auto relative overflow-hidden backdrop-blur-xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] flex-wrap justify-center">
                             {NAV_ITEMS.map((item) => {
                                 const isActive = activeTab === item.id
                                 return (
@@ -196,27 +186,25 @@ function SettingsPage() {
                                         key={item.id}
                                         value={item.id}
                                         className={cn(
-                                            "w-full flex items-center justify-start gap-4 px-4.5 py-3.5 rounded-xl text-left font-black text-[10px] uppercase tracking-widest transition-all duration-300 relative group outline-none border border-transparent settings-nav-btn select-none active:scale-[0.98]",
+                                            "flex items-center gap-2 px-5 py-2.5 rounded-full font-black text-[10px] uppercase tracking-widest transition-all duration-300 relative outline-none border border-transparent select-none active:scale-[0.98] data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#ff6e3a] data-[state=active]:to-[#f97316] data-[state=active]:text-white data-[state=active]:shadow-[0_4px_15px_rgba(255,110,58,0.25)]",
                                             isActive 
-                                                ? "active bg-gradient-to-r from-[#ff6e3a]/15 to-[#ff6e3a]/2 border-[#ff6e3a]/30 border-l-[3px] border-l-[#ff6e3a] text-white shadow-[0_8px_25px_rgba(255,110,58,0.12)] data-[state=active]:border-y-[#ff6e3a]/15 data-[state=active]:border-r-[#ff6e3a]/15 data-[state=active]:border-l-[#ff6e3a] data-[state=active]:text-white" 
-                                                : "text-zinc-500 hover:text-zinc-350 hover:bg-white/[0.02] hover:translate-x-1"
+                                                ? "text-white" 
+                                                : "text-zinc-500 hover:text-zinc-350 hover:bg-white/[0.02]"
                                         )}
                                     >
                                         <item.icon className={cn(
-                                            "w-4 h-4 relative z-10 transition-all duration-300", 
-                                            isActive ? "text-[#ff6e3a] scale-110 drop-shadow-[0_0_8px_rgba(255,110,58,0.5)]" : "text-zinc-500 group-hover:text-zinc-350"
+                                            "w-3.5 h-3.5 relative z-10 transition-all duration-300", 
+                                            isActive ? "text-white scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]" : "text-zinc-500 group-hover:text-zinc-350"
                                         )} />
-                                        <div className="flex flex-col text-left">
-                                            <span className="relative z-10 leading-none">{item.label}</span>
-                                        </div>
+                                        <span className="relative z-10 leading-none">{item.label}</span>
                                     </TabsTrigger>
                                 )
                             })}
                         </TabsList>
-                    </aside>
+                    </div>
 
                     {/* ── Main content ─────────────────────────────────────────── */}
-                    <div className="flex-1 min-w-0 md:pl-2">
+                    <div className="flex-1 min-w-0">
                         <form
                             id="settings-form"
                             onSubmit={handleSubmit(onSubmit as unknown as SubmitHandler<FieldValues>)}

@@ -641,9 +641,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 						Uint("libraryMediaId", saved.ID).
 						Msg("scanner: Created LibraryMedia via local NFO (local-only)")
 				}
-			}
-
-			// 3. Propagate folder-level IDs to all local files in the same folder.
+			}			// 3. Propagate folder-level IDs to all local files in the same folder.
 			// Workers only tagged the "owning" file per folder; siblings need the same ID.
 			for _, lf := range localFiles {
 				if lf == nil || lf.LibraryMediaId != 0 {
@@ -654,9 +652,11 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 					lf.LibraryMediaId = id.(uint)
 				}
 			}
+			if scn.Database != nil {
+				scn.Database.Checkpoint()
+			}
 		}
 	}
-
 	// +---------------------+
 	// |    MediaFetcher     |
 	// +---------------------+

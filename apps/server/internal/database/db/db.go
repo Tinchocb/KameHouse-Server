@@ -52,10 +52,18 @@ func NewDatabase(ctx context.Context, appDataDir, dbName string, logger *zerolog
 		sqlitePath = filepath.Join(appDataDir, dbName+".db")
 	}
 
-	// _cache_size=-32000  → 32 MB page cache (negative value = KiB). Reduces
-	// repeated I/O during scan-time enrichment loops and JOIN-heavy queries.
-	// _mmap_size=134217728 → 128 MB memory-mapped I/O for read-heavy workloads.
-	dsn := sqlitePath + "?_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL&_cache_size=-32000&_mmap_size=134217728"
+	cacheSize := "-32000"
+	if envCache := os.Getenv("KAMEHOUSE_DB_CACHE_SIZE"); envCache != "" {
+		cacheSize = envCache
+	}
+	mmapSize := "134217728"
+	if envMmap := os.Getenv("KAMEHOUSE_DB_MMAP_SIZE"); envMmap != "" {
+		mmapSize = envMmap
+	}
+
+	// _cache_size  → page cache. Reduces repeated I/O.
+	// _mmap_size   → memory-mapped I/O for read-heavy workloads.
+	dsn := fmt.Sprintf("%s?_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL&_cache_size=%s&_mmap_size=%s", sqlitePath, cacheSize, mmapSize)
 
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
 		Logger: gormlogger.New(
@@ -73,6 +81,11 @@ func NewDatabase(ctx context.Context, appDataDir, dbName string, logger *zerolog
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database connection: %w", err)
+	}
+
+	// Set journal size limit to avoid unbounded WAL growth
+	if err := db.Exec("PRAGMA journal_size_limit = 67108864;").Error; err != nil {
+		logger.Warn().Err(err).Msg("db: Failed to set journal_size_limit")
 	}
 
 	sqlDB, err := db.DB()
@@ -161,6 +174,13 @@ func (db *Database) Shutdown() {
 	db.gormdb.Exec("PRAGMA wal_checkpoint(TRUNCATE);")
 }
 
+// Checkpoint performs a WAL checkpoint (PASSIVE mode).
+func (db *Database) Checkpoint() {
+	if err := db.gormdb.Exec("PRAGMA wal_checkpoint(PASSIVE);").Error; err != nil {
+		db.Logger.Error().Err(err).Msg("db: Failed to execute WAL checkpoint")
+	}
+}
+
 // Close libera el pool de conexiones subyacente.
 func (db *Database) Close() error {
 	sqlDB, err := db.gormdb.DB()
@@ -230,6 +250,7 @@ func migrateSchema(ctx context.Context, db *gorm.DB) error {
 		&models.MetadataCache{},
 		&models.EpisodeSkipTime{},
 		&models.MediaIDMapping{},
+		&models.ShelvedLocalFiles{},
 	); err != nil {
 		return err
 	}
@@ -256,12 +277,9 @@ func migrateSchema(ctx context.Context, db *gorm.DB) error {
 		_ = db.AutoMigrate(&models.LibraryMedia{})
 	}
 
-	// Purge legacy local_files and shelved_local_files tables if they exist
+	// Purge legacy local_files table if it exists
 	if db.Migrator().HasTable("local_files") {
 		_ = db.Migrator().DropTable("local_files")
-	}
-	if db.Migrator().HasTable("shelved_local_files") {
-		_ = db.Migrator().DropTable("shelved_local_files")
 	}
 
 	return nil

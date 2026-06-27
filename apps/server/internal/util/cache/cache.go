@@ -1,9 +1,6 @@
 package cache
 
 import (
-	"crypto/md5"
-	"encoding/hex"
-	"os"
 	"sync"
 	"time"
 )
@@ -115,31 +112,4 @@ func (c *Cache[T]) Size() int {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return len(c.entries)
-}
-
-func FileHash(filepath string) (string, error) {
-	info, err := os.Stat(filepath)
-	if err != nil {
-		return "", err
-	}
-
-	hash := md5.New()
-	hash.Write([]byte(filepath))
-	hash.Write([]byte(info.ModTime().String()))
-	hash.Write([]byte(int64ToBytes(info.Size())))
-
-	return hex.EncodeToString(hash.Sum(nil)), nil
-}
-
-func int64ToBytes(n int64) []byte {
-	return []byte{
-		byte(n >> 56),
-		byte(n >> 48),
-		byte(n >> 40),
-		byte(n >> 32),
-		byte(n >> 24),
-		byte(n >> 16),
-		byte(n >> 8),
-		byte(n),
-	}
 }

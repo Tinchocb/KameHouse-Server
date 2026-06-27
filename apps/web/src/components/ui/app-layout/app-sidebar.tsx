@@ -45,7 +45,7 @@ export function AppSidebar() {
         <>
             {/* Desktop Side Flap Sidebar */}
             <aside className={cn(
-                "hidden md:flex flex-col fixed left-0 top-0 bottom-0 h-screen border-r border-white/10 bg-zinc-950/60 backdrop-blur-2xl rounded-r-[32px] shadow-[8px_0_32px_rgba(0,0,0,0.5)] z-50 overflow-visible transition-all duration-300 ease-in-out",
+                "hidden md:flex flex-col fixed left-0 top-0 bottom-0 h-screen border-r border-white/10 bg-zinc-950/60 backdrop-blur-3xl rounded-r-[32px] shadow-[8px_0_32px_rgba(0,0,0,0.5)] z-50 overflow-visible transition-all duration-300 ease-in-out",
                 sidebarOpen ? "w-[260px]" : "w-20"
             )}>
                 <SidebarContent setSidebarOpen={setSidebarOpen} />

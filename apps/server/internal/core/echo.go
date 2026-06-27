@@ -47,62 +47,31 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 		e.Use(middleware.Secure())
 	}
 
-	if !constants.IsRspackFrontend {
-		e.Use(middleware.StaticWithConfig(middleware.StaticConfig{
-			Filesystem: http.FS(distFS),
-			Browse:     true,
-			HTML5:      true,
-			Skipper: func(c echo.Context) bool {
-				cURL := c.Request().URL
-				if strings.HasPrefix(cURL.RequestURI(), "/api") ||
-					strings.HasPrefix(cURL.RequestURI(), "/events") ||
-					strings.HasPrefix(cURL.RequestURI(), "/assets") ||
-					strings.HasPrefix(cURL.RequestURI(), "/offline-assets") {
-					return true // Continue to the next handler
-				}
-				if !strings.HasSuffix(cURL.Path, ".html") && filepath.Ext(cURL.Path) == "" {
-					cURL.Path = "/index.html"
-				}
-				return false // Continue to the filesystem handler
-			},
-		}))
-	} else {
-		e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
-			return func(c echo.Context) error {
-				cURL := c.Request().URL.RequestURI()
-
-				if strings.HasPrefix(cURL, "/api") ||
-					strings.HasPrefix(cURL, "/events") ||
-					strings.HasPrefix(cURL, "/assets") ||
-					strings.HasPrefix(cURL, "/offline-assets") {
-					return next(c)
-				}
-
-				c.Response().Header().Set("Cross-Origin-Opener-Policy", "same-origin")
-				c.Response().Header().Set("Cross-Origin-Embedder-Policy", "credentialless")
-
-				return next(c)
+	e.Use(middleware.StaticWithConfig(middleware.StaticConfig{
+		Filesystem: http.FS(distFS),
+		Browse:     !constants.IsRspackFrontend,
+		HTML5:      true,
+		Skipper: func(c echo.Context) bool {
+			cURL := c.Request().URL
+			if strings.HasPrefix(cURL.RequestURI(), "/api") ||
+				strings.HasPrefix(cURL.RequestURI(), "/events") ||
+				strings.HasPrefix(cURL.RequestURI(), "/assets") ||
+				strings.HasPrefix(cURL.RequestURI(), "/offline-assets") {
+				return true
 			}
-		})
-
-		e.Use(middleware.StaticWithConfig(middleware.StaticConfig{
-			Filesystem: http.FS(distFS),
-			HTML5:      true,
-			Skipper: func(c echo.Context) bool {
-				cURL := c.Request().URL
-				if strings.HasPrefix(cURL.RequestURI(), "/api") ||
-					strings.HasPrefix(cURL.RequestURI(), "/events") ||
-					strings.HasPrefix(cURL.RequestURI(), "/assets") ||
-					strings.HasPrefix(cURL.RequestURI(), "/offline-assets") {
-					return true
+			cleanPath := strings.TrimPrefix(cURL.Path, "/")
+			if cleanPath != "" {
+				if f, err := distFS.Open(cleanPath); err == nil {
+					f.Close()
+					return false
 				}
-				if !strings.HasSuffix(cURL.Path, ".html") && filepath.Ext(cURL.Path) == "" {
-					cURL.Path = "/index.html"
-				}
-				return false
-			},
-		}))
-	}
+			}
+			if !strings.HasSuffix(cURL.Path, ".html") {
+				cURL.Path = "/index.html"
+			}
+			return false
+		},
+	}))
 
 	app.Logger.Info().Msgf("app: Serving embedded web interface")
 
