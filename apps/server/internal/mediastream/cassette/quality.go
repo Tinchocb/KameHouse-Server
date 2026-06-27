@@ -236,18 +236,11 @@ type AudioTranscodeDecision struct {
 //   - ≤ 2 canales: AAC estéreo @ 128k
 //   - > 2 canales: AAC multicanal @ 384k con aresample=async=1 para A/V sync.
 func DecideAudioTranscode(audio *videofile.Audio) AudioTranscodeDecision {
-	channels := "2"
-	bitrate := "128k"
-	if audio.Channels > 2 {
-		channels = fmt.Sprintf("%d", audio.Channels)
-		bitrate = "384k"
-	}
-
 	return AudioTranscodeDecision{
 		Copy:     false,
 		Codec:    "aac",
-		Bitrate:  bitrate,
-		Channels: channels,
+		Bitrate:  "192k",
+		Channels: "2",
 	}
 }
 
