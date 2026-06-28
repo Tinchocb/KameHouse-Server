@@ -68,6 +68,8 @@ export const Icons = {
     eyeOff: Lucide.EyeOff,
     lock: Lucide.Lock,
     unlock: Lucide.Unlock,
+    xCircle: Lucide.XCircle,
+    helpCircle: Lucide.HelpCircle,
     key: Lucide.Key,
     shield: Lucide.Shield,
     bell: Lucide.Bell,

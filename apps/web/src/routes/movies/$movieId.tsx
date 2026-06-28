@@ -356,7 +356,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
 
                         {/* Synopsis */}
                         {synopsis && (
-                            <p className="movie-animate text-zinc-300 text-sm md:text-[15px] leading-relaxed max-w-3xl line-clamp-3 pl-4 border-l-2 border-brand-orange/30">
+                            <p className="movie-animate text-zinc-300 text-sm md:text-[15px] leading-relaxed max-w-3xl line-clamp-3 pl-4 border-l-2 border-[var(--brand-secondary)]/30">
                                 {synopsis}
                             </p>
                         )}
@@ -366,12 +366,12 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                             {/* Premium Play Button */}
                             <button
                                 onClick={handlePlayDefault}
-                                className="group/play relative flex items-center gap-4 px-9 py-4 bg-gradient-to-r from-brand-orange via-orange-500 to-amber-500 text-white rounded-full overflow-hidden shadow-[0_12px_40px_rgba(255,110,58,0.35)] hover:shadow-[0_18px_50px_rgba(255,110,58,0.55)] transition-all duration-500 hover:scale-105 active:scale-95 border border-white/10 hover:border-brand-orange/40"
+                                className="group/play relative flex items-center gap-4 px-9 py-4 bg-gradient-to-r from-[var(--brand-secondary)] via-[var(--brand-secondary)] to-[var(--brand-secondary)] text-white rounded-full overflow-hidden shadow-[0_12px_40px_rgba(255,110,58,0.35)] hover:shadow-[0_18px_50px_rgba(255,110,58,0.55)] transition-all duration-500 hover:scale-105 active:scale-95 border border-white/10 hover:border-[var(--brand-secondary)]/40"
                             >
                                 <div className="absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-transparent opacity-0 group-hover/play:opacity-100 transition-opacity duration-500 z-0" />
-                                <div className="absolute -inset-10 bg-brand-orange/30 blur-xl group-hover/play:opacity-100 opacity-0 transition-opacity duration-500 -z-10 animate-pulse" />
+                                <div className="absolute -inset-10 bg-[var(--brand-secondary)]/30 blur-xl group-hover/play:opacity-100 opacity-0 transition-opacity duration-500 -z-10 animate-pulse" />
 
-                                <div className="p-2.5 bg-black/40 backdrop-blur-xl rounded-full border border-white/10 text-white group-hover/play:bg-white group-hover/play:text-black transition-all duration-300 shadow-inner z-10 shrink-0">
+                                <div className="p-2.5 bg-black/40 backdrop-blur-[var(--blur-xl)] rounded-full border border-white/10 text-white group-hover/play:bg-white group-hover/play:text-black transition-all duration-300 shadow-inner z-10 shrink-0">
                                     <Play className="w-4 h-4 fill-current" />
                                 </div>
 
@@ -389,7 +389,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                             {entry.localFiles && entry.localFiles.length > 0 && (
                                 <button
                                     onClick={handleAddToQueue}
-                                    className="group/queue flex items-center justify-center w-14 h-14 rounded-full liquid-glass-frosted liquid-glass-frosted-interactive text-white hover:text-brand-orange transition-all duration-300 active:scale-95"
+                                    className="group/queue flex items-center justify-center w-14 h-14 rounded-full bg-[var(--glass-bg)] backdrop-blur-[var(--blur-card)] border border-[var(--glass-border)] hover:bg-[var(--glass-hover)] hover:border-[var(--glass-strong)] cursor-pointer text-white hover:text-[var(--brand-secondary)] transition-all duration-300 active:scale-95"
                                     title="Añadir a la cola"
                                 >
                                     <ListPlus className="w-5 h-5 transition-transform group-hover/queue:-translate-y-0.5" />
@@ -429,7 +429,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                         {continuityData?.item?.currentTime && continuityData.item.duration && (
                             <div className="movie-animate w-full max-w-sm mt-1 h-[5px] bg-white/20 rounded-full overflow-hidden relative z-10">
                                 <div 
-                                    className="h-full bg-brand-orange"
+                                    className="h-full bg-[var(--brand-secondary)]"
                                     style={{ width: `${progressPercent}%` }}
                                 />
                             </div>
@@ -441,8 +441,8 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
             {/* Video Player */}
             {playTarget && (
                 <React.Suspense fallback={
-                    <div className="fixed inset-0 bg-[#07070a]/90 backdrop-blur-xl flex flex-col justify-center items-center z-50">
-                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-orange mb-4"></div>
+                    <div className="fixed inset-0 bg-[#07070a]/90 backdrop-blur-[var(--blur-xl)] flex flex-col justify-center items-center z-50">
+                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--brand-secondary)] mb-4"></div>
                         <p className="text-zinc-400 text-xs font-bold uppercase tracking-[0.2em]">Cargando reproductor...</p>
                     </div>
                 }>

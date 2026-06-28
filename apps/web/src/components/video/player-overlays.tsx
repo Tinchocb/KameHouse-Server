@@ -68,7 +68,7 @@ export function LoadingErrorOverlay({
                 <p className="text-zinc-400 max-w-md text-sm font-medium uppercase tracking-wide leading-relaxed">{errorMsg}</p>
                 <button
                     onClick={onClose}
-                    className="mt-6 px-10 py-3.5 bg-brand-orange hover:bg-brand-orange-hover text-white font-black text-[11px] uppercase tracking-[0.3em] transition-all rounded-xl active:scale-95"
+                    className="mt-6 px-10 py-3.5 bg-brand-orange hover:brightness-110 text-white font-black text-[11px] uppercase tracking-[0.3em] transition-all rounded-xl active:scale-95"
                 >
                     REGRESAR
                 </button>
@@ -90,7 +90,7 @@ export function ResumeOverlay({ show, time, onResume, onClose }: { show: boolean
 
     return (
         <div className="absolute bottom-20 left-4 sm:bottom-32 sm:left-10 z-50 pointer-events-auto animate-in slide-in-from-left-4 duration-500">
-            <div className="liquid-glass-popup p-5 flex flex-col min-w-[240px] sm:min-w-[280px] [&>*:not(:first-child)]:mt-4">
+            <div className="bg-[var(--bg-secondary)] border border-[var(--glass-strong)] rounded-[22px] shadow-[var(--shadow-modal)] p-5 flex flex-col min-w-[240px] sm:min-w-[280px] [&>*:not(:first-child)]:mt-4">
                 <div className="flex items-center justify-between ml-8">
                     <div className="flex flex-col [&>*:not(:first-child)]:mt-0.5">
                         <span className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em]">Continuar viendo</span>
@@ -107,7 +107,7 @@ export function ResumeOverlay({ show, time, onResume, onClose }: { show: boolean
                     <button
                         tabIndex={0}
                         onClick={onResume}
-                        className="flex-1 py-3 bg-brand-orange hover:bg-brand-orange-hover text-white font-black text-[9px] uppercase tracking-widest transition-all rounded-xl active:scale-95 flex items-center justify-center [&>*:not(:first-child)]:ml-2 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-orange"
+                        className="flex-1 py-3 bg-brand-orange hover:brightness-110 text-white font-black text-[9px] uppercase tracking-widest transition-all rounded-xl active:scale-95 flex items-center justify-center [&>*:not(:first-child)]:ml-2 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-orange"
                     >
                         <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                         REANUDAR
@@ -176,7 +176,7 @@ export function SkipIntroOverlay({
                 }}
                 className={cn(
                     "relative flex items-center px-6 py-3 overflow-hidden text-white",
-                    "liquid-glass-popup",
+                    "bg-[var(--bg-secondary)] border border-[var(--glass-strong)] rounded-[22px] shadow-[var(--shadow-modal)]",
                     isOutro
                         ? "border-purple-500/30 hover:border-purple-400/60 hover:bg-purple-500/15"
                         : "border-white/10 hover:border-brand-orange/40 hover:bg-brand-orange/15",
@@ -200,7 +200,7 @@ export function SkipIntroOverlay({
                 {/* Skip icon */}
                 <svg viewBox="0 0 24 24" fill="currentColor" className={cn(
                     "w-4 h-4 transition-colors shrink-0",
-                    isOutro ? "text-purple-300 group-hover:text-purple-200" : "text-brand-orange group-hover:text-brand-orange-hover"
+                    isOutro ? "text-purple-300 group-hover:text-purple-200" : "text-brand-orange group-hover:brightness-110"
                 )}>
                     <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z" />
                 </svg>
@@ -325,7 +325,7 @@ export function NextEpisodeOverlay({
                         }}
                         className={cn(
                             "w-full py-3 text-[10px] font-black uppercase tracking-[0.3em] rounded-xl",
-                            "bg-brand-orange text-white hover:bg-brand-orange-hover",
+                            "bg-brand-orange text-white hover:brightness-110",
                             "transition-all duration-300 active:scale-95",
                             "focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-orange"
                         )}

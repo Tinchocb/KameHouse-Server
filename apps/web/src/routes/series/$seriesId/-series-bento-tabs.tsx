@@ -32,9 +32,9 @@ export const RelationsTab = React.memo(function RelationsTab({ media }: { media?
                             })
                         }
                     }}
-                    className="liquid-glass-frosted liquid-glass-frosted-interactive rounded-xl p-4 flex gap-4 group cursor-pointer"
+                    className="bg-[var(--glass-bg)] backdrop-blur-[var(--blur-card)] border border-[var(--glass-border)] rounded-2xl hover:bg-[var(--glass-hover)] hover:border-[var(--glass-strong)] transition-all duration-300 rounded-xl p-4 flex gap-4 group cursor-pointer"
                 >
-                    <div className="w-16 h-24 shrink-0 bg-zinc-950 overflow-hidden relative rounded-lg border border-white/10 group-hover:border-brand-orange/30 transition-colors duration-500">
+                    <div className="w-16 h-24 shrink-0 bg-zinc-950 overflow-hidden relative rounded-lg border border-white/10 group-hover:border-[var(--brand-secondary)]/30 transition-colors duration-500">
                         {(relation.media?.coverImage?.large || relation.media?.coverImage?.medium) && (
                             <DeferredImage
                                 src={relation.media.coverImage?.large || relation.media.coverImage?.medium || ""}
@@ -45,8 +45,8 @@ export const RelationsTab = React.memo(function RelationsTab({ media }: { media?
                         )}
                     </div>
                     <div className="flex flex-col flex-1 justify-center">
-                        <span className="text-[8px] font-black text-brand-orange tracking-[0.18em] uppercase mb-1">{relation.relationType}</span>
-                        <h4 className="text-sm font-bold leading-tight line-clamp-2 text-white group-hover:text-brand-orange transition-colors duration-300">{relation.media?.title?.spanish || relation.media?.title?.romaji || relation.media?.title?.english}</h4>
+                        <span className="text-[8px] font-black text-[var(--brand-secondary)] tracking-[0.18em] uppercase mb-1">{relation.relationType}</span>
+                        <h4 className="text-sm font-bold leading-tight line-clamp-2 text-white group-hover:text-[var(--brand-secondary)] transition-colors duration-300">{relation.media?.title?.spanish || relation.media?.title?.romaji || relation.media?.title?.english}</h4>
                         <span className="text-[9px] font-black text-white/30 mt-2 tracking-[0.2em] uppercase">{relation.media?.format}</span>
                     </div>
                 </div>
@@ -75,7 +75,7 @@ export const CharactersTab = React.memo(function CharactersTab({ characters, onS
                     onClick={() => onSelectChar?.(char.node?.name?.full || "")}
                     className="flex flex-col items-center text-center gap-3 group cursor-pointer"
                 >
-                    <div className="w-24 h-24 rounded-full overflow-hidden bg-zinc-950/40 border-2 border-white/5 group-hover:border-brand-orange/60 group-hover:shadow-[0_0_20px_rgba(255,110,58,0.25)] transition-all duration-500 shadow-xl">
+                    <div className="w-24 h-24 rounded-full overflow-hidden bg-zinc-950/40 border-2 border-white/5 group-hover:border-[var(--brand-secondary)]/60 group-hover:shadow-[0_0_20px_rgba(255,110,58,0.25)] transition-all duration-500 shadow-xl">
                         {char.node?.image?.large && (
                             <DeferredImage
                                 src={char.node.image.large}
@@ -86,8 +86,8 @@ export const CharactersTab = React.memo(function CharactersTab({ characters, onS
                         )}
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-xs font-bold text-white group-hover:text-brand-orange uppercase tracking-wider transition-colors duration-300">{char.node?.name?.full}</span>
-                        <span className="text-[9px] font-black text-white/35 tracking-[0.15em] uppercase mt-1 group-hover:text-brand-orange/60 transition-colors duration-300">{char.role}</span>
+                        <span className="text-xs font-bold text-white group-hover:text-[var(--brand-secondary)] uppercase tracking-wider transition-colors duration-300">{char.node?.name?.full}</span>
+                        <span className="text-[9px] font-black text-white/35 tracking-[0.15em] uppercase mt-1 group-hover:text-[var(--brand-secondary)]/60 transition-colors duration-300">{char.role}</span>
                     </div>
                 </div>
             ))}

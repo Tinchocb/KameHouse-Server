@@ -4,7 +4,6 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <title>KameHouse TV</title>
-    <!-- CSS Design System: 3 files -->
     <link rel="stylesheet" href="css/tokens.css">
     <link rel="stylesheet" href="css/base.css">
     <link rel="stylesheet" href="css/components.css">
@@ -26,6 +25,7 @@
             var MAX_RETRIES = 2;
             
             var retryCount = 0;
+            var scanResults = [];
             
             function $(id) { return document.getElementById(id); }
             

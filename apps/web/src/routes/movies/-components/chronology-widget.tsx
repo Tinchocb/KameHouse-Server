@@ -8,7 +8,7 @@ export function ChronologyWidget({ chronology }: ChronologyWidgetProps) {
   if (!chronology || !chronology.startEpisodeContext) return null
 
   return (
-    <div className="liquid-glass-frosted liquid-glass-frosted-interactive rounded-2xl p-6 mt-8">
+    <div className="bg-[var(--glass-bg)] backdrop-blur-[var(--blur-card)] border border-[var(--glass-border)] rounded-2xl p-6 mt-8 hover:bg-[var(--glass-hover)] hover:border-[var(--glass-strong)] transition-all duration-300 cursor-pointer">
       <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-6">
         Ubicación Cronológica
       </h4>
@@ -18,7 +18,7 @@ export function ChronologyWidget({ chronology }: ChronologyWidgetProps) {
         <div className="absolute left-0 right-0 h-1 bg-white/10 top-1/2 -translate-y-1/2 rounded-full z-0" />
         
         {/* Active Orange Line segment */}
-        <div className="absolute left-1/4 right-1/4 h-1 bg-gradient-to-r from-amber-500/20 via-amber-500 to-amber-500/20 top-1/2 -translate-y-1/2 rounded-full z-0 shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
+        <div className="absolute left-1/4 right-1/4 h-1 bg-gradient-to-r from-amber-500/20 via-amber-500 to-[var(--brand-secondary)]/20 top-1/2 -translate-y-1/2 rounded-full z-0 shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
 
         {/* Start Episode Node */}
         <div className="relative z-10 flex flex-col items-center gap-2 -ml-4">

@@ -176,3 +176,77 @@ export function Modal(props: ModalProps) {
 }
 
 Modal.displayName = "Modal"
+
+/* -------------------------------------------------------------------------------------------------
+ * ConfirmModal
+ * -----------------------------------------------------------------------------------------------*/
+
+export interface ConfirmModalProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  title?: React.ReactNode;
+  description?: React.ReactNode;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  variant?: "primary" | "destructive" | "success";
+  onConfirm?: () => void;
+  onCancel?: () => void;
+  loading?: boolean;
+  children?: React.ReactNode;
+}
+
+export function ConfirmModal({
+  open,
+  onOpenChange,
+  title = "Confirmar",
+  description,
+  confirmLabel = "Confirmar",
+  cancelLabel = "Cancelar",
+  variant = "primary",
+  onConfirm,
+  onCancel,
+  loading = false,
+  children,
+}: ConfirmModalProps) {
+  return (
+    <Modal open={open} onOpenChange={onOpenChange} title={title} description={description}>
+      {children}
+    </Modal>
+  )
+}
+ConfirmModal.displayName = "ConfirmModal"
+
+/* -------------------------------------------------------------------------------------------------
+ * AlertModal
+ * -----------------------------------------------------------------------------------------------*/
+
+export interface AlertModalProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  title?: React.ReactNode;
+  description?: React.ReactNode;
+  confirmLabel?: string;
+  variant?: "primary" | "destructive" | "success";
+  onConfirm?: () => void;
+  icon?: React.ReactNode;
+  children?: React.ReactNode;
+}
+
+export function AlertModal({
+  open,
+  onOpenChange,
+  title = "Aviso",
+  description,
+  confirmLabel = "Entendido",
+  variant = "primary",
+  onConfirm,
+  icon,
+  children,
+}: AlertModalProps) {
+  return (
+    <Modal open={open} onOpenChange={onOpenChange} title={title} description={description}>
+      {children}
+    </Modal>
+  )
+}
+AlertModal.displayName = "AlertModal"

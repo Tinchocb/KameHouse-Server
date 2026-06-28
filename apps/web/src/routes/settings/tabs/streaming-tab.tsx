@@ -57,7 +57,7 @@ export function StreamingTab({ control }: StreamingTabProps) {
                                             "flex items-start gap-4 p-4 rounded-xl border transition-all duration-300 cursor-pointer group",
                                             field.value === gpu.value || (!field.value && gpu.value === "")
                                                 ? "border-[#ff6e3a]/30 bg-[#ff6e3a]/[0.03] bg-[radial-gradient(ellipse_at_left,rgba(255,110,58,0.04),transparent_70%)]"
-                                                : "border-border-subtle hover:border-border-strong hover:bg-surface-2/40"
+                                                : "border-[var(--glass-border)] hover:border-[var(--glass-strong)] hover:bg-[var(--bg-quaternary)]/40"
                                         )}
                                         onClick={() => field.onChange(gpu.value)}
                                     >
@@ -84,7 +84,7 @@ export function StreamingTab({ control }: StreamingTabProps) {
                                             "w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black uppercase tracking-wider shrink-0",
                                             field.value === gpu.value || (!field.value && gpu.value === "")
                                                 ? "bg-[#ff6e3a]/20 text-[#ff6e3a] border border-[#ff6e3a]/30"
-                                                : "bg-surface-2/50 text-zinc-500 border border-border-subtle"
+                                                : "bg-[var(--bg-quaternary)]/50 text-zinc-500 border border-[var(--glass-border)]"
                                         )}>
                                             {gpu.value === "" ? "AUTO" : gpu.value.toUpperCase().slice(0, 4)}
                                         </div>
@@ -94,7 +94,7 @@ export function StreamingTab({ control }: StreamingTabProps) {
                         )}
                     />
 
-                    <hr className="border-border-subtle my-2" />
+                    <hr className="border-[var(--glass-border)] my-2" />
 
                     {/* Preset de calidad */}
                     <Controller
@@ -133,7 +133,7 @@ export function StreamingTab({ control }: StreamingTabProps) {
                                     max="16"
                                     value={field.value || 0}
                                     onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                    className="w-full h-1.5 bg-surface-3 rounded-lg appearance-none cursor-pointer accent-[#ff6e3a] mt-2"
+                                    className="w-full h-1.5 bg-[var(--bg-quaternary)] rounded-lg appearance-none cursor-pointer accent-[var(--brand-secondary)] mt-2"
                                 />
                                 <p className="text-[10px] text-zinc-500 mt-1">0 = automático (usa todos los núcleos lógicos disponibles)</p>
                             </div>
@@ -153,7 +153,7 @@ export function StreamingTab({ control }: StreamingTabProps) {
                                     value={field.value || ""}
                                     onChange={field.onChange}
                                     placeholder="Ej: -preset p4 -tune hq -rc vbr"
-                                    className="w-full bg-surface-2/60 border border-border-strong rounded-xl px-4 py-2.5 text-xs text-zinc-300 font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
+                                    className="w-full bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 text-xs text-zinc-300 font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
                                 />
                                 <p className="text-[10px] text-zinc-500">Parámetros extra pasados al encoder de hardware (solo para usuarios avanzados)</p>
                             </div>
@@ -192,7 +192,7 @@ export function StreamingTab({ control }: StreamingTabProps) {
                                     placeholder="Ej. /mnt/cache/pretranscode o D:\\Cache\\Pretranscode"
                                     value={field.value || ""}
                                     onChange={field.onChange}
-                                    className="bg-surface-2/60 border border-border-strong rounded-xl px-4 py-2.5 w-full md:w-72 text-white placeholder-zinc-600 text-xs focus:outline-none focus:border-[#ff6e3a]/50 font-mono"
+                                    className="bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 w-full md:w-72 text-white placeholder-zinc-600 text-xs focus:outline-none focus:border-[#ff6e3a]/50 font-mono"
                                 />
                             </div>
                         )}
@@ -260,7 +260,7 @@ export function StreamingTab({ control }: StreamingTabProps) {
                                     placeholder="Ej. /usr/bin/ffmpeg o C:\\ffmpeg\\ffmpeg.exe"
                                     value={field.value || ""}
                                     onChange={field.onChange}
-                                    className="bg-surface-2/60 border border-border-strong rounded-xl px-4 py-2.5 w-full md:w-72 text-white placeholder-zinc-600 text-xs focus:outline-none focus:border-[#ff6e3a]/50 font-mono"
+                                    className="bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 w-full md:w-72 text-white placeholder-zinc-600 text-xs focus:outline-none focus:border-[#ff6e3a]/50 font-mono"
                                 />
                             </div>
                         )}
@@ -280,7 +280,7 @@ export function StreamingTab({ control }: StreamingTabProps) {
                                     placeholder="Ej. /usr/bin/ffprobe o C:\\ffmpeg\\ffprobe.exe"
                                     value={field.value || ""}
                                     onChange={field.onChange}
-                                    className="bg-surface-2/60 border border-border-strong rounded-xl px-4 py-2.5 w-full md:w-72 text-white placeholder-zinc-600 text-xs focus:outline-none focus:border-[#ff6e3a]/50 font-mono"
+                                    className="bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 w-full md:w-72 text-white placeholder-zinc-600 text-xs focus:outline-none focus:border-[#ff6e3a]/50 font-mono"
                                 />
                             </div>
                         )}
@@ -292,17 +292,17 @@ export function StreamingTab({ control }: StreamingTabProps) {
             <Section label="Estado del Motor">
                 <Card className="p-6 space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div className="p-4 rounded-2xl liquid-glass-frosted-subtle">
+                        <div className="p-4 rounded-2xl bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-2xl">
                             <p className="text-[9px] font-black uppercase tracking-[0.25em] text-zinc-500 font-mono mb-2">Transcodificación</p>
                             <p className="text-2xl font-bebas text-white">ACTIVO</p>
                             <p className="text-[10px] text-zinc-500 mt-1">Hardware: Auto-detect</p>
                         </div>
-                        <div className="p-4 rounded-2xl liquid-glass-frosted-subtle">
+                        <div className="p-4 rounded-2xl bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-2xl">
                             <p className="text-[9px] font-black uppercase tracking-[0.25em] text-zinc-500 font-mono mb-2">Pre-Transcodificación</p>
                             <p className="text-2xl font-bebas text-white">INACTIVO</p>
                             <p className="text-[10px] text-zinc-500 mt-1">Directorio no configurado</p>
                         </div>
-                        <div className="p-4 rounded-2xl liquid-glass-frosted-subtle">
+                        <div className="p-4 rounded-2xl bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-2xl">
                             <p className="text-[9px] font-black uppercase tracking-[0.25em] text-zinc-500 font-mono mb-2">Direct Play</p>
                             <p className="text-2xl font-bebas text-white">DISPONIBLE</p>
                             <p className="text-[10px] text-zinc-500 mt-1">Compatible con la mayoría de clientes</p>

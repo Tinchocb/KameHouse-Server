@@ -67,7 +67,7 @@ function ProfileClient() {
         return collection.lists
             .flatMap(l => l.entries ?? [])
             .filter(e => e.media && (e.listData?.progress || 0) > 0 && (e.listData?.progress || 0) < (e.media.totalEpisodes || 1) * 0.95)
-            .sort((a, b) => (b.listData?.updatedAt || 0) - (a.listData?.updatedAt || 0))
+            .sort((a, b) => ((b.listData as any)?.updatedAt || 0) - ((a.listData as any)?.updatedAt || 0))
             .slice(0, 6)
             .map(e => ({
                 artwork: e.media?.bannerImage || e.media?.posterImage || "",
@@ -76,7 +76,7 @@ function ProfileClient() {
                 aspect: "landscape" as const,
                 progress: Math.round(((e.listData?.progress || 0) / (e.media?.totalEpisodes || 1)) * 100),
                 year: e.media?.startDate?.split("-")[0],
-                rating: e.media?.averageScore ? e.media.averageScore / 100 : undefined,
+                rating: (e.media as any)?.averageScore ? (e.media as any).averageScore / 100 : undefined,
                 episodeNumber: e.listData?.progress,
                 layoutId: `continue-${e.mediaId}`,
             }))
@@ -87,7 +87,7 @@ function ProfileClient() {
         return collection.lists
             .flatMap(l => l.entries ?? [])
             .filter(e => e.media && e.listData?.status === "COMPLETED")
-            .sort((a, b) => (b.media?.averageScore || 0) - (a.media?.averageScore || 0))
+            .sort((a, b) => ((b.media as any)?.averageScore || 0) - ((a.media as any)?.averageScore || 0))
             .slice(0, 8)
             .map(e => ({
                 artwork: e.media?.bannerImage || e.media?.posterImage || "",
@@ -95,7 +95,7 @@ function ProfileClient() {
                 subtitle: e.media?.format === "MOVIE" ? "Película" : `${e.media?.totalEpisodes || 0} eps`,
                 aspect: "poster" as const,
                 year: e.media?.startDate?.split("-")[0],
-                rating: e.media?.averageScore ? e.media.averageScore / 100 : undefined,
+                rating: (e.media as any)?.averageScore ? (e.media as any).averageScore / 100 : undefined,
                 layoutId: `fav-${e.mediaId}`,
             }))
     }, [collection])
@@ -168,7 +168,7 @@ function ProfileHeader({ stats, settings }: { stats: any; settings: any }) {
                                 <img src={avatarUrl} alt={username} className="w-full h-full object-cover" />
                             </div>
                             <div className="absolute -bottom-3 -right-3 w-10 h-10 rounded-full bg-[var(--brand-primary)] border-4 border-[var(--bg-primary)] flex items-center justify-center shadow-lg">
-                                <Icons.status.star size={20} className="text-[var(--primary-foreground)]" />
+                                <Icons.ui.star size={20} className="text-[var(--primary-foreground)]" />
                             </div>
                         </div>
 
@@ -213,7 +213,7 @@ function ProfileSection({ title, subtitle, action, children }: ProfileSectionPro
                     {subtitle && <p className="text-body-sm text-muted mt-1">{subtitle}</p>}
                 </div>
                 {action && (
-                    <GlassButton variant="ghost" size="sm" onClick={action.action}>
+                    <GlassButton variant="ghost" size="sm" onClick={action.onClick}>
                         {action.label}
                         <Icons.arrow.right size={14} strokeWidth={2.5} className="ml-1" />
                     </GlassButton>

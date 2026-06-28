@@ -1,4 +1,5 @@
 import React from "react"
+import { GlassCard } from "@/components/ui"
 import { Section, Card, OsToggle } from "../components"
 import { type Control, Controller } from "react-hook-form"
 import { type SettingsFormValues } from "../index"
@@ -14,7 +15,7 @@ export function PlayerTab({ control }: PlayerTabProps) {
         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 outline-none">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Configuración de Player */}
-                <div className="liquid-glass-frosted rounded-2xl p-6 space-y-5">
+                <GlassCard variant="elevated" padding="lg" radius="2xl" className="space-y-5">
                     <h3 className="text-sm font-bold text-[#ff6e3a] uppercase tracking-wide">Reproductor por Defecto</h3>
 
                     <Controller
@@ -33,7 +34,7 @@ export function PlayerTab({ control }: PlayerTabProps) {
                                         className={`flex items-start gap-4 p-4 rounded-xl border transition-all duration-300 cursor-pointer ${
                                             field.value === player.id
                                                 ? "border-[#ff6e3a]/30 bg-[#ff6e3a]/[0.03] bg-[radial-gradient(ellipse_at_left,rgba(255,110,58,0.04),transparent_70%)]"
-                                                : "border-border-subtle hover:border-border-strong hover:bg-surface-2/40"
+                                                : "border-[var(--glass-border)] hover:border-[var(--glass-strong)] hover:bg-[var(--bg-quaternary)]/40"
                                         }`}
                                         onClick={() => field.onChange(player.id)}
                                     >
@@ -61,10 +62,10 @@ export function PlayerTab({ control }: PlayerTabProps) {
                             </div>
                         )}
                     />
-                </div>
+                </GlassCard>
 
                 {/* Configuración VLC */}
-                <div className="liquid-glass-frosted rounded-2xl p-6 space-y-5">
+                <GlassCard variant="elevated" padding="lg" radius="2xl" className="space-y-5">
                     <h3 className="text-sm font-bold text-zinc-400 uppercase tracking-wide">Conexión VLC</h3>
 
                     <Controller
@@ -78,7 +79,7 @@ export function PlayerTab({ control }: PlayerTabProps) {
                                     value={field.value || "localhost"}
                                     onChange={field.onChange}
                                     placeholder="localhost o 192.168.1.x"
-                                    className="w-full bg-surface-2/60 border border-border-strong rounded-xl px-4 py-2.5 text-xs text-zinc-300 font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
+                                    className="w-full bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 text-xs text-zinc-300 font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
                                 />
                             </div>
                         )}
@@ -95,7 +96,7 @@ export function PlayerTab({ control }: PlayerTabProps) {
                                         type="number"
                                         value={field.value || 8080}
                                         onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                        className="w-full bg-surface-2/60 border border-border-strong rounded-xl px-4 py-2.5 text-xs text-zinc-300 font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
+                                        className="w-full bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 text-xs text-zinc-300 font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
                                     />
                                 </div>
                             )}
@@ -111,7 +112,7 @@ export function PlayerTab({ control }: PlayerTabProps) {
                                         value={field.value || ""}
                                         onChange={field.onChange}
                                         placeholder="(vacío = sin auth)"
-                                        className="w-full bg-surface-2/60 border border-border-strong rounded-xl px-4 py-2.5 text-xs text-zinc-300 font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
+                                        className="w-full bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 text-xs text-zinc-300 font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
                                     />
                                 </div>
                             )}
@@ -129,7 +130,7 @@ export function PlayerTab({ control }: PlayerTabProps) {
                                     value={field.value || ""}
                                     onChange={field.onChange}
                                     placeholder="(vacío = sin auth)"
-                                    className="w-full bg-surface-2/60 border border-border-strong rounded-xl px-4 py-2.5 text-xs text-zinc-300 font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
+                                    className="w-full bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 text-xs text-zinc-300 font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
                                 />
                             </div>
                         )}
@@ -146,12 +147,12 @@ export function PlayerTab({ control }: PlayerTabProps) {
                                     value={field.value || ""}
                                     onChange={field.onChange}
                                     placeholder="Ej. C:\Program Files\VideoLAN\VLC\vlc.exe"
-                                    className="w-full bg-surface-2/60 border border-border-strong rounded-xl px-4 py-2.5 text-xs text-zinc-300 font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
+                                    className="w-full bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 text-xs text-zinc-300 font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
                                 />
                             </div>
                         )}
                     />
-                </div>
+                </GlassCard>
             </div>
 
             {/* Reproducción */}
@@ -231,7 +232,7 @@ export function PlayerTab({ control }: PlayerTabProps) {
                                     placeholder="C:\Program Files\MPC-HC\mpc-hc64.exe"
                                     value={field.value || ""}
                                     onChange={field.onChange}
-                                    className="bg-surface-2/60 border border-border-strong rounded-xl px-4 py-2.5 w-full md:w-72 text-white placeholder-zinc-600 text-xs font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)]"
+                                    className="bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 w-full md:w-72 text-white placeholder-zinc-600 text-xs font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)]"
                                 />
                             </div>
                         )}
@@ -250,7 +251,7 @@ export function PlayerTab({ control }: PlayerTabProps) {
                                     placeholder="Ej. /usr/bin/mpv o C:\mpv\mpv.exe"
                                     value={field.value || ""}
                                     onChange={field.onChange}
-                                    className="bg-surface-2/60 border border-border-strong rounded-xl px-4 py-2.5 w-full md:w-72 text-white placeholder-zinc-600 text-xs font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)]"
+                                    className="bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 w-full md:w-72 text-white placeholder-zinc-600 text-xs font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)]"
                                 />
                             </div>
                         )}
@@ -269,7 +270,7 @@ export function PlayerTab({ control }: PlayerTabProps) {
                                     placeholder="Ej. \\.\pipe\mpv_ipc (Windows) o /tmp/mpv_socket (Linux)"
                                     value={field.value || ""}
                                     onChange={field.onChange}
-                                    className="bg-surface-2/60 border border-border-strong rounded-xl px-4 py-2.5 w-full md:w-72 text-white placeholder-zinc-600 text-xs font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)]"
+                                    className="bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 w-full md:w-72 text-white placeholder-zinc-600 text-xs font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)]"
                                 />
                             </div>
                         )}
@@ -288,7 +289,7 @@ export function PlayerTab({ control }: PlayerTabProps) {
                                     placeholder="/Applications/IINA.app/Contents/MacOS/iina-cli"
                                     value={field.value || ""}
                                     onChange={field.onChange}
-                                    className="bg-surface-2/60 border border-border-strong rounded-xl px-4 py-2.5 w-full md:w-72 text-white placeholder-zinc-600 text-xs font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)]"
+                                    className="bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 w-full md:w-72 text-white placeholder-zinc-600 text-xs font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)]"
                                 />
                             </div>
                         )}

@@ -203,14 +203,14 @@ const CollectionCassette = memo(function CollectionCassette({
         isFullyWatched 
             ? "bg-[#10b981] shadow-[0_0_8px_rgba(16,185,129,0.6)]" 
             : isFullyLocal 
-                ? "bg-brand-orange shadow-[0_0_8px_rgba(255,107,0,0.6)]" 
+                ? "bg-[var(--brand-secondary)] shadow-[0_0_8px_rgba(255,107,0,0.6)]" 
                 : "bg-yellow-500"
     )
 
     const stateColorClass = isFullyWatched 
         ? "text-[#10b981]" 
         : isFullyLocal 
-            ? "text-brand-orange" 
+            ? "text-[var(--brand-secondary)]" 
             : "text-yellow-500"
 
     return (
@@ -324,7 +324,7 @@ const CollectionCassette = memo(function CollectionCassette({
                                 <span className={cn(
                                     "flex items-center gap-1 text-[8px] font-black px-2 py-1 uppercase tracking-widest border transition-all duration-300",
                                     isFullyLocal
-                                        ? "bg-[#ff6b00]/10 text-brand-orange border-brand-orange/30 shadow-[0_0_8px_rgba(255,107,0,0.15)]"
+                                        ? "bg-[#ff6b00]/10 text-[var(--brand-secondary)] border-[var(--brand-secondary)]/30 shadow-[0_0_8px_rgba(255,107,0,0.15)]"
                                         : "bg-zinc-800/40 text-zinc-400 border-white/5"
                                 )}>
                                     {localMembers}/{totalMembers} LOCAL

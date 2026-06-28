@@ -1,4 +1,5 @@
 import React from "react"
+import { GlassCard } from "@/components/ui"
 import { Section, Card, OsToggle } from "../components"
 import { type Control, Controller, useWatch } from "react-hook-form"
 import { type SettingsFormValues } from "../index"
@@ -17,8 +18,8 @@ export function IntegrationsTab({ control }: IntegrationsTabProps) {
             {/* Bento grids for integrations */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* TMDB API Key */}
-                <div className="liquid-glass-frosted rounded-2xl p-6 space-y-4">
-                    <div className="flex items-center justify-between border-b border-border-subtle pb-2">
+                <GlassCard variant="elevated" padding="lg" radius="2xl" className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-[var(--glass-border)] pb-2">
                         <h4 className="text-xs font-bold text-white uppercase tracking-wide flex items-center gap-2">
                             The Movie Database (TMDB)
                         </h4>
@@ -28,7 +29,7 @@ export function IntegrationsTab({ control }: IntegrationsTabProps) {
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]" />
                             </div>
                         ) : (
-                            <div className="flex items-center gap-1.5 bg-surface-2/60 border border-border-subtle px-2.5 py-0.5 rounded-full">
+                            <div className="flex items-center gap-1.5 bg-[var(--bg-quaternary)]/60 border border-[var(--glass-border)] px-2.5 py-0.5 rounded-full">
                                 <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest font-mono">Sin configurar</span>
                                 <span className="w-1.5 h-1.5 rounded-full bg-zinc-600" />
                             </div>
@@ -46,16 +47,16 @@ export function IntegrationsTab({ control }: IntegrationsTabProps) {
                                     value={field.value || ""}
                                     onChange={field.onChange}
                                     placeholder="Ingresa tu TMDB Auth Token"
-                                    className="w-full bg-surface-2/60 border border-border-strong rounded-xl px-4 py-2.5 text-xs text-zinc-300 font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
+                                    className="w-full bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 text-xs text-zinc-300 font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
                                 />
                             </div>
                         )}
                     />
-                </div>
+                </GlassCard>
 
                 {/* Fanart.tv API Key */}
-                <div className="liquid-glass-frosted rounded-2xl p-6 space-y-4">
-                    <div className="flex items-center justify-between border-b border-border-subtle pb-2">
+                <GlassCard variant="elevated" padding="lg" radius="2xl" className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-[var(--glass-border)] pb-2">
                         <h4 className="text-xs font-bold text-white uppercase tracking-wide flex items-center gap-2">
                             Fanart.tv
                         </h4>
@@ -65,7 +66,7 @@ export function IntegrationsTab({ control }: IntegrationsTabProps) {
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]" />
                             </div>
                         ) : (
-                            <div className="flex items-center gap-1.5 bg-surface-2/60 border border-border-subtle px-2.5 py-0.5 rounded-full">
+                            <div className="flex items-center gap-1.5 bg-[var(--bg-quaternary)]/60 border border-[var(--glass-border)] px-2.5 py-0.5 rounded-full">
                                 <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest font-mono">Sin configurar</span>
                                 <span className="w-1.5 h-1.5 rounded-full bg-zinc-600" />
                             </div>
@@ -83,16 +84,16 @@ export function IntegrationsTab({ control }: IntegrationsTabProps) {
                                     value={field.value || ""}
                                     onChange={field.onChange}
                                     placeholder="Ingresa tu Fanart.tv API Key"
-                                    className="w-full bg-surface-2/60 border border-border-strong rounded-xl px-4 py-2.5 text-xs text-zinc-300 font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
+                                    className="w-full bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 text-xs text-zinc-300 font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
                                 />
                             </div>
                         )}
                     />
-                </div>
+                </GlassCard>
 
                 {/* OMDb API Key */}
-                <div className="liquid-glass-frosted rounded-2xl p-6 space-y-4">
-                    <div className="flex items-center justify-between border-b border-border-subtle pb-2">
+                <GlassCard variant="elevated" padding="lg" radius="2xl" className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-[var(--glass-border)] pb-2">
                         <h4 className="text-xs font-bold text-white uppercase tracking-wide flex items-center gap-2">
                             OMDb Service
                         </h4>
@@ -102,7 +103,7 @@ export function IntegrationsTab({ control }: IntegrationsTabProps) {
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]" />
                             </div>
                         ) : (
-                            <div className="flex items-center gap-1.5 bg-surface-2/60 border border-border-subtle px-2.5 py-0.5 rounded-full">
+                            <div className="flex items-center gap-1.5 bg-[var(--bg-quaternary)]/60 border border-[var(--glass-border)] px-2.5 py-0.5 rounded-full">
                                 <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest font-mono">Sin configurar</span>
                                 <span className="w-1.5 h-1.5 rounded-full bg-zinc-600" />
                             </div>
@@ -120,12 +121,12 @@ export function IntegrationsTab({ control }: IntegrationsTabProps) {
                                     value={field.value || ""}
                                     onChange={field.onChange}
                                     placeholder="Ingresa tu OMDb API Key"
-                                    className="w-full bg-surface-2/60 border border-border-strong rounded-xl px-4 py-2.5 text-xs text-zinc-300 font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
+                                    className="w-full bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 text-xs text-zinc-300 font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
                                 />
                             </div>
                         )}
                     />
-                </div>
+                </GlassCard>
             </div>
 
             {/* Habilitar Proveedores */}
@@ -155,7 +156,7 @@ export function IntegrationsTab({ control }: IntegrationsTabProps) {
                                 <select
                                     value={field.value || "tmdb"}
                                     onChange={field.onChange}
-                                    className="bg-surface-2/60 border border-border-strong rounded-xl px-4 py-2.5 text-xs text-zinc-300 focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all cursor-pointer w-full md:w-72 font-medium [&>option]:bg-[#141418] [&>option]:text-white"
+                                    className="bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 text-xs text-zinc-300 focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all cursor-pointer w-full md:w-72 font-medium [&>option]:bg-[#141418] [&>option]:text-white"
                                 >
                                     <option value="tmdb">TMDB (Recomendado)</option>
                                     <option value="mal">MyAnimeList</option>

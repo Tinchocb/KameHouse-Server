@@ -95,7 +95,7 @@
   --numeric-lg: var(--text-xl)   / var(--leading-none) var(--font-numeric) var(--weight-bold) var(--tracking-tight);
 }
 
-/* ─── Clases utilitarias de display ──────────────────────────────────── */
+/* ─── Clases utilitarias ──────────────────────────────────────────────── */
 .text-display-xl { font: var(--display-xl); }
 .text-display-lg { font: var(--display-lg); }
 .text-display-md { font: var(--display-md); }
@@ -130,13 +130,11 @@
 .text-numeric { font: var(--numeric); }
 .text-numeric-lg { font: var(--numeric-lg); }
 
-/* ─── Font family utilities ──────────────────────────────────────────── */
 .font-sans      { font-family: var(--font-sans); }
 .font-display   { font-family: var(--font-display); }
 .font-mono      { font-family: var(--font-mono); }
 .font-numeric   { font-family: var(--font-numeric); font-variant-numeric: tabular-nums; }
 
-/* ─── Text color utilities ───────────────────────────────────────────── */
 .text-primary   { color: var(--text-primary); }
 .text-secondary { color: var(--text-secondary); }
 .text-muted     { color: var(--text-muted); }

@@ -253,8 +253,8 @@ export function usePlayerHls({
             })
 
             hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_, data) => {
-                const mappedTracks = data.audioTracks.map((t) => ({
-                    index: t.id,
+                const mappedTracks = data.audioTracks.map((t, idx) => ({
+                    index: idx,
                     language: t.lang || "und",
                     title: t.name || t.lang || `Audio ${t.id}`,
                 }))
@@ -263,8 +263,8 @@ export function usePlayerHls({
             })
 
             hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, (_, data) => {
-                const mappedSubs = data.subtitleTracks.map((t) => ({
-                    index: typeof t.id === "number" ? t.id : 0,
+                const mappedSubs = data.subtitleTracks.map((t, idx) => ({
+                    index: idx,
                     language: t.lang || "und",
                     title: t.name || t.lang || `Subtítulos ${t.id ?? 0}`,
                 }))

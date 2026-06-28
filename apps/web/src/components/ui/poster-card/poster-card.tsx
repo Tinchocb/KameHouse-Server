@@ -369,6 +369,7 @@ export interface PosterGridProps {
   columns?: { base?: number; sm?: number; md?: number; lg?: number; xl?: number };
   gap?: number;
   onItemClick?: (item: PosterCardProps) => void;
+  className?: string;
 }
 
 export function PosterGrid({ items, columns, gap = 4, onItemClick }: PosterGridProps) {

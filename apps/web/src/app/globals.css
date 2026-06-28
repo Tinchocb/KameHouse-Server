@@ -1,120 +1,27 @@
 /* ╔══════════════════════════════════════════════════════════════════════╗
    ║  globals.css — KameHouse Design System · v2.0                       ║
-   ║  Dark-first · Tailwind v3 · Tizen 6.0 compatible                    ║
+   ║  Thin import layer: loads token system + reset + utilities          ║
    ╚══════════════════════════════════════════════════════════════════════╝ */
+
+@import "../styles/tokens/colors.css";
+@import "../styles/tokens/typography.css";
+@import "../styles/tokens/spacing.css";
+@import "../styles/tokens/radius.css";
+@import "../styles/tokens/shadows.css";
+@import "../styles/tokens/blur.css";
+@import "../styles/tokens/animation.css";
+@import "../styles/tokens/z-index.css";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 
-/* ══════════════════════════════════════════════════════════════════════
-   1. DESIGN TOKENS
-   ══════════════════════════════════════════════════════════════════════ */
 @layer base {
-    :root,
-    [data-theme="dark"] {
-
-        /* ── Fondos y superficies ──────────────── */
-        --background: 240 10%  3.9%;
-        --surface-1:  240  6%  9%;
-        --surface-2:  240  5% 14%;
-        --surface-3:  240  5% 18%;    /* cards anidados, tooltips profundos */
-
-        /* ── Bordes ────────────────────────────── */
-        --border-subtle: 240 5% 100% / 0.06;
-        --border-strong: 240 5% 100% / 0.16;
-
-        /* ── Texto ─────────────────────────────── */
-        --text-primary:   0   0% 100%;
-        --text-secondary: 240 5%  88%;
-        --text-muted:     240 5%  60%;
-        --text-disabled:  240 5%  38%;
-
-        /* ── Marca ─────────────────────────────── */
-        --brand-orange:       25 100% 55%;
-        --brand-orange-hover: 25 100% 63%;
-        --brand-orange-muted: 25  55% 38%;  /* estados deshabilitados */
-        --accent-blue:        200 100% 50%;
-        --accent-gold:         45  95% 60%; /* estrellas / rankings Dragon Ball */
-
-        /* ── Estados semánticos ────────────────── */
-        --success:              142  70% 45%;
-        --warning:               38  95% 55%;
-        --destructive:            0  85% 60%;
-        --destructive-foreground: 0   0% 100%;
-
-        /* ── Sombras precompiladas ─────────────── */
-        --shadow-sm:    0 2px   8px -2px hsl(240 10% 2% / 0.55);
-        --shadow-md:    0 8px  24px -4px  hsl(240 10% 2% / 0.75);
-        --shadow-lg:    0 20px 48px -8px  hsl(240 10% 2% / 0.90);
-        --shadow-brand: 0 8px  24px -4px  hsl(25 100% 55% / 0.25);
-
-        /* ── Durations ─────────────────────────── */
-        --duration-fast:   100ms;
-        --duration-base:   250ms;
-        --duration-slow:   400ms;
-
-        /* ── Alias Tailwind / shadcn ───────────── */
-        --foreground:           var(--text-primary);
-        --card:                 var(--surface-1);
-        --card-foreground:      var(--text-primary);
-        --popover:              var(--surface-1);
-        --popover-foreground:   var(--text-primary);
-        --primary:              var(--brand-orange);
-        --primary-foreground:   210 40% 98%;
-        --secondary:            var(--surface-2);
-        --secondary-foreground: var(--text-primary);
-        --muted:                var(--surface-1);
-        --muted-foreground:     var(--text-muted);
-
-        --border:  var(--border-subtle);
-        --input:   var(--border-subtle);
-        --ring:    var(--brand-orange);
-        --radius:  1rem;
+    .font-bebas {
+        font-family: "Bebas Neue", "cursive", sans-serif;
     }
 
-    /* ── Tema AMOLED ───────────────────────────── */
-    [data-theme="amoled"] {
-        --background:          0 0%  0%;
-        --surface-1:           0 0%  3%;
-        --surface-2:           0 0%  6%;
-        --surface-3:           0 0%  9%;
-        --border-subtle:       0 0% 100% / 0.05;
-        --brand-orange:        350 100% 55%;
-        --brand-orange-hover:  350 100% 63%;
-        --brand-orange-muted:  350  50% 35%;
-        --shadow-brand:        0 8px 24px -4px hsl(350 100% 55% / 0.30);
-        --primary:             var(--brand-orange);
-    }
-
-    /* ── Tema Cyberpunk ────────────────────────── */
-    [data-theme="cyberpunk"] {
-        --background:         260 40%  4%;
-        --surface-1:          260 30%  6%;
-        --surface-2:          260 25% 10%;
-        --surface-3:          260 20% 14%;
-        --border-subtle:      180 100% 50% / 0.10;
-        --border-strong:      180 100% 50% / 0.25;
-        --brand-orange:       180 100% 50%;
-        --brand-orange-hover: 180 100% 62%;
-        --brand-orange-muted: 180  50% 33%;
-        --accent-gold:         60 100% 65%;
-        --shadow-brand:        0 8px 24px -4px hsl(180 100% 50% / 0.25);
-        --primary:             var(--brand-orange);
-    }
-
-    /* ── Accesibilidad: reducción de movimiento ── */
-    @media (prefers-reduced-motion: reduce) {
-        *, *::before, *::after {
-            animation-duration:        0.01ms !important;
-            animation-iteration-count: 1      !important;
-            transition-duration:       0.01ms !important;
-            scroll-behavior:           auto   !important;
-        }
-    }
-
-    /* ── Base global ────────────────────────────── */
     * {
         @apply border-border;
         scrollbar-width:       none;
@@ -129,227 +36,56 @@
     }
 
     *:focus-visible {
-        @apply outline-none ring-2 ring-brand-orange ring-offset-2 ring-offset-background transition-shadow;
+        @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background transition-shadow;
     }
 
-    /* ── Tipografía ─────────────────────────────── */
-    h1 { @apply font-black tracking-tighter text-text-primary font-bebas uppercase drop-shadow-xl text-5xl md:text-7xl lg:text-9xl; }
-    h2 { @apply font-extrabold tracking-tight text-text-primary font-bebas uppercase text-4xl md:text-6xl; }
-    h3 { @apply font-bold tracking-tight text-text-secondary font-bebas text-3xl md:text-4xl; }
-    h4 { @apply font-bold tracking-tight text-text-secondary text-2xl md:text-3xl; }
-
-    .code {
-        @apply bg-zinc-800/50 rounded-md px-2 py-1 text-sm font-mono border border-border-subtle;
-    }
+    h1 { font: var(--display-xl); color: var(--text-primary); }
+    h2 { font: var(--display-lg); color: var(--text-primary); }
+    h3 { font: var(--display-md); color: var(--text-secondary); }
+    h4 { font: var(--h4); color: var(--text-secondary); }
 }
 
 
-/* ══════════════════════════════════════════════════════════════════════
-   2. KEYFRAMES
-   ── Definidos fuera de @layer para máxima compatibilidad (Tizen 6.0) ──
-   ══════════════════════════════════════════════════════════════════════ */
-@keyframes fade-in {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-}
-
-@keyframes slide-up {
-    from { opacity: 0; transform: translateY(10px); }
-    to   { opacity: 1; transform: translateY(0);    }
-}
-
-@keyframes slide-down {
-    from { opacity: 0; transform: translateY(-10px); }
-    to   { opacity: 1; transform: translateY(0);     }
-}
-
-@keyframes scale-in {
-    from { opacity: 0; transform: scale(0.95); }
-    to   { opacity: 1; transform: scale(1);    }
-}
-
-/* Shimmer para skeleton loaders */
-@keyframes shimmer {
-    from { background-position: -200% 0; }
-    to   { background-position:  200% 0; }
-}
-
-/* Pulso de brillo para elementos destacados */
-@keyframes pulse-glow {
-    0%, 100% { box-shadow: 0 0  0   0   hsl(var(--brand-orange) / 0.15); }
-    50%       { box-shadow: 0 0 18px 3px hsl(var(--brand-orange) / 0.35); }
-}
-
-@keyframes spin-slow {
-    to { transform: rotate(360deg); }
-}
-
-
-/* ══════════════════════════════════════════════════════════════════════
-   3. UTILITIES
-   ══════════════════════════════════════════════════════════════════════ */
 @layer utilities {
-
-    /* ── Texto ───────────────────────────────────────── */
     .text-balance         { text-wrap: balance; }
     .text-pretty          { text-wrap: pretty; }
-    .text-glow-white      { text-shadow: 0 0 10px rgba(255, 255, 255, 0.20); }
-    .text-glow-brand      { text-shadow: 0 0 20px hsl(var(--brand-orange) / 0.50); }
-    .text-gradient-brand {
-        background:              linear-gradient(135deg, hsl(var(--brand-orange)), hsl(var(--accent-gold)));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip:         text;
-    }
+    .gpu                  { will-change: transform; transform: translateZ(0); }
+    .contain-layout       { contain: layout style; }
 
-    /* ── Hover premium ───────────────────────────────── */
-    .hover-premium {
-        @apply transition-all duration-300 ease-out hover:scale-[1.04] hover:brightness-[1.06] active:scale-[0.97];
-    }
-
-    /* ── Máscaras ────────────────────────────────────── */
-    .mask-cinematic {
-        mask-image:
-            linear-gradient(to bottom, black 50%, transparent 95%),
-            linear-gradient(to right,  black 80%, transparent 100%);
-        mask-composite:         intersect;
-        -webkit-mask-composite: source-in;  /* Safari */
-    }
-
-    .mask-fade-bottom {
-        mask-image: linear-gradient(to bottom, black 65%, transparent 100%);
-    }
-
-    /* ── Animaciones ─────────────────────────────────── */
-    .animate-fade-in    { animation: fade-in    var(--duration-base)  ease-out    both; }
-    .animate-slide-up   { animation: slide-up   var(--duration-base)  ease-out    both; }
-    .animate-slide-down { animation: slide-down var(--duration-base)  ease-out    both; }
-    .animate-scale-in   { animation: scale-in   var(--duration-base)  ease-out    both; }
-    .animate-pulse-glow { animation: pulse-glow 2.5s ease-in-out infinite; }
-    .animate-spin-slow  { animation: spin-slow  8s   linear     infinite; }
-
-    /* Stagger delays */
-    .delay-75  { animation-delay:  75ms; }
-    .delay-150 { animation-delay: 150ms; }
-    .delay-300 { animation-delay: 300ms; }
-
-    /* ── Performance hints ───────────────────────────── */
-    .gpu            { will-change: transform; transform: translateZ(0); }
-    .contain-layout { contain: layout style; }
-
-    /* ── Aspect-ratio polyfill (Chromium ≤ M76 / Tizen 6.0) ──── */
-    @supports not (aspect-ratio: 16/9) {
-        .aspect-video::before    { content: ""; display: block; padding-top: 56.25%; }
-        .aspect-square::before   { content: ""; display: block; padding-top: 100%;   }
-        .aspect-\[2\/3\]::before { content: ""; display: block; padding-top: 150%;   }
-    }
-}
-
-
-/* ══════════════════════════════════════════════════════════════════════
-   4. COMPONENTS
-   ══════════════════════════════════════════════════════════════════════ */
-@layer components {
-
-    /* ── Glass / Surface ──────────────────────────────────────────── */
-    .liquid-glass-frosted {
-        @apply relative bg-surface-1/90 border border-border-strong rounded-2xl overflow-hidden transition-all duration-300;
-        backdrop-filter: blur(16px) saturate(1.2);
-        box-shadow: 0 8px 32px -4px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
-    }
-
-    .liquid-glass-frosted-subtle {
-        @apply relative bg-surface-1/60 border border-border-subtle rounded-2xl overflow-hidden transition-all duration-300;
-        backdrop-filter: blur(8px) saturate(1.1);
-        box-shadow: 0 4px 16px -2px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.03);
-    }
-
-    .liquid-glass-frosted-interactive {
-        @apply cursor-pointer
-               hover:border-brand-orange/40
-               hover:bg-surface-2/80
-               hover:shadow-[0_20px_40px_-8px_rgba(0,0,0,0.85)];
-    }
-
-    .liquid-glass-popup {
-        @apply bg-surface-2 border border-border-strong rounded-[22px];
-        backdrop-filter: blur(20px) saturate(1.3);
-        box-shadow: 0 32px 64px -16px rgba(0,0,0,0.95), inset 0 1px 0 rgba(255,255,255,0.05);
-    }
-
-    /* ── Cards ──────────────────────────────────────────────────── */
-    .card-glow-hover {
-        @apply rounded-xl transition-all duration-300
-               border border-white/5
-               hover:border-brand-orange/20
-               hover:-translate-y-1
-               hover:shadow-[0_15px_30px_rgba(255,110,58,0.08)];
-    }
-
-    /* ── Buttons ────────────────────────────────────────────────── */
-    .button-flat {
-        @apply rounded-lg transition-all duration-300
-               hover:brightness-110
-               hover:shadow-[0_0_15px_hsl(var(--brand-orange)/0.25)]
-               active:scale-[0.98];
-    }
-
-    .button-brand {
-        @apply inline-flex items-center justify-center gap-2
-               rounded-lg px-5 py-2.5 text-sm font-semibold text-white
-               bg-brand-orange transition-all duration-200
-               hover:bg-brand-orange-hover
-               hover:shadow-[0_4px_20px_hsl(var(--brand-orange)/0.40)]
-               active:scale-[0.97]
-               disabled:opacity-50 disabled:pointer-events-none;
-    }
-
-    .button-ghost {
-        @apply inline-flex items-center justify-center gap-2
-               rounded-lg px-4 py-2 text-sm font-medium text-text-secondary
-               border border-transparent transition-all duration-200
-               hover:border-border-strong hover:text-text-primary hover:bg-surface-2
-               active:scale-[0.98]
-               disabled:opacity-40 disabled:pointer-events-none;
-    }
-
-    /* ── Skeleton ───────────────────────────────────────────────── */
-    .skeleton {
-        @apply rounded-md overflow-hidden;
-        background: linear-gradient(
-            90deg,
-            hsl(var(--surface-2)) 25%,
-            hsl(var(--surface-3)) 50%,
-            hsl(var(--surface-2)) 75%
-        );
-        background-size: 200% 100%;
-        animation: shimmer 1.8s ease-in-out infinite;
-    }
-
-    /* ── Badges ─────────────────────────────────────────────────── */
     .badge {
-        @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border;
+        display: inline-flex; align-items: center; gap: 0.25rem;
+        padding: 0.125rem 0.5rem; border-radius: 9999px;
+        font-size: 0.75rem; font-weight: 500; border: 1px solid;
     }
-    .badge-brand   { @apply badge bg-brand-orange/15 text-brand-orange   border-brand-orange/25; }
-    .badge-muted   { @apply badge bg-surface-2       text-text-muted      border-border-subtle;   }
+    .badge-primary {
+        background: hsl(var(--color-db-hsl) / 0.15);
+        color: hsl(var(--color-db-hsl));
+        border-color: hsl(var(--color-db-hsl) / 0.25);
+    }
+    .badge-secondary {
+        background: hsl(var(--color-dbz-hsl) / 0.15);
+        color: hsl(var(--color-dbz-hsl));
+        border-color: hsl(var(--color-dbz-hsl) / 0.25);
+    }
     .badge-success {
-        @apply badge;
-        background:   hsl(var(--success) / 0.15);
-        color:        hsl(var(--success));
-        border-color: hsl(var(--success) / 0.25);
+        background: hsl(var(--color-dbs-hsl) / 0.15);
+        color: hsl(var(--color-dbs-hsl));
+        border-color: hsl(var(--color-dbs-hsl) / 0.25);
     }
-    .badge-warning {
-        @apply badge;
-        background:   hsl(var(--warning) / 0.15);
-        color:        hsl(var(--warning));
-        border-color: hsl(var(--warning) / 0.25);
+    .badge-magic {
+        background: hsl(var(--color-daima-hsl) / 0.15);
+        color: hsl(var(--color-daima-hsl));
+        border-color: hsl(var(--color-daima-hsl) / 0.25);
+    }
+    .badge-muted {
+        background: var(--glass-bg);
+        color: var(--text-muted);
+        border-color: var(--glass-border);
     }
 }
 
 
-/* ══════════════════════════════════════════════════════════════════════
-   5. SPATIAL NAVIGATION / TV ACCESSIBILITY
-   ══════════════════════════════════════════════════════════════════════ */
+/* ── Navegación espacial / TV ───────────────────────────────────────── */
 [data-focusable]:focus-visible {
     outline:        2px solid white;
     outline-offset: 3px;
@@ -357,12 +93,11 @@
     transition:     all 150ms ease;
     box-shadow:
         0 0 0 5px rgba(255, 255, 255, 0.12),
-        var(--shadow-brand, none);
+        var(--shadow-card, none);
 }
 
 [data-focusable]:focus-visible:active { transform: scale(0.98); }
 
-/* Área mínima táctil en dispositivos sin cursor (TV / touch) */
 @media (hover: none) {
     [data-focusable] {
         min-width:  44px;
@@ -371,10 +106,7 @@
 }
 
 
-/* ══════════════════════════════════════════════════════════════════════
-   6. VIDEO PLAYER OVERRIDES
-   ── TODO: migrar a src/styles/video-player.css ──────────────────────
-   ══════════════════════════════════════════════════════════════════════ */
+/* ── Video Player ──────────────────────────────────────────────────── */
 media-controller {
     --base:                      1rem;
     font-family:                 Inter, Roboto, Arial, sans-serif;
@@ -416,8 +148,8 @@ media-time-range {
     bottom:   36px;
     width:    100%;
     height:   5px;
-    --media-range-thumb-background: hsl(var(--brand-orange));
-    --media-range-bar-color:        hsl(var(--brand-orange));
+    --media-range-thumb-background: hsl(var(--color-dbz-hsl));
+    --media-range-bar-color:        hsl(var(--color-dbz-hsl));
 }
 
 .JASSUB {
@@ -427,14 +159,13 @@ media-time-range {
     pointer-events: none;
 }
 
-/* ══════════════════════════════════════════════════════════════════════
-   TV MODE — D-pad focus rings & Samsung Tizen adaptations
-   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── TV Mode ───────────────────────────────────────────────────────── */
 [data-tv="true"] .tv-focusable:focus,
 [data-tv="true"] .tv-focusable:focus-visible {
-    outline:        3px solid #f97316 !important;
+    outline:        3px solid hsl(var(--color-dbz-hsl)) !important;
     outline-offset: 3px;
-    box-shadow:     0 0 0 6px rgba(249, 115, 22, 0.25) !important;
+    box-shadow:     0 0 0 6px hsl(var(--color-dbz-hsl) / 0.25) !important;
 }
 
 [data-tv="true"] a:focus,
@@ -442,7 +173,7 @@ media-time-range {
 [data-tv="true"] [role="button"]:focus,
 [data-tv="true"] input:focus,
 [data-tv="true"] select:focus {
-    outline:        3px solid #f97316 !important;
+    outline:        3px solid hsl(var(--color-dbz-hsl)) !important;
     outline-offset: 3px;
-    box-shadow:     0 0 0 6px rgba(249, 115, 22, 0.25) !important;
+    box-shadow:     0 0 0 6px hsl(var(--color-dbz-hsl) / 0.25) !important;
 }

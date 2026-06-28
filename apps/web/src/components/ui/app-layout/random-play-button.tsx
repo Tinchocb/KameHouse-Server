@@ -143,7 +143,7 @@ export function RandomPlayButton() {
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.92 }}
                             className={cn(
-                                "flex items-center justify-center w-12 h-12 rounded-2xl transition-all duration-500 group liquid-glass-frosted-subtle",
+                                "flex items-center justify-center w-12 h-12 rounded-2xl transition-all duration-500 group bg-[var(--glass-bg)] backdrop-blur-[var(--blur-sm)] border border-[var(--glass-border)]",
                                 isLoading
                                     ? "!border-brand-orange/40 !bg-brand-orange/[0.08] text-brand-orange cursor-wait"
                                     : showPicker
@@ -173,7 +173,7 @@ export function RandomPlayButton() {
                             align="end"
                             sideOffset={16}
                             className={cn(
-                                "z-[999] w-56 liquid-glass-popup rounded-2xl p-1.5 outline-none",
+                                "z-[999] w-56 bg-[var(--bg-secondary)] border border-[var(--glass-strong)] rounded-[22px] shadow-[var(--shadow-modal)] p-1.5 outline-none",
                                 "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
                                 "data-[state=open]:fade-in-50 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
                             )}
@@ -264,7 +264,7 @@ function PickerOption({ id, onClick, icon, iconBg, label, description, accentCol
             onClick={onClick}
             whileHover={{ x: 2 }}
             whileTap={{ scale: 0.97 }}
-            className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:liquid-glass-frosted-subtle transition-all duration-200 text-left group"
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-[var(--glass-hover)] hover:border-[var(--glass-strong)] transition-all duration-200 text-left group"
         >
             {/* Icon badge */}
             <div className={cn(

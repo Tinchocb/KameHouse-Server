@@ -73,6 +73,7 @@ export interface PlayerBottomBarProps {
     onAutoSkipOutroChange?: (enabled: boolean) => void
 
     onNextEpisode?: () => void
+    hasNextEpisode?: boolean
 
     hlsLevels?: { index: number; label: string; height: number }[]
     activeHlsLevel?: number
@@ -158,6 +159,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
     autoSkipIntro = false, onAutoSkipIntroChange,
     autoSkipOutro = false, onAutoSkipOutroChange,
     onNextEpisode,
+    hasNextEpisode,
     hlsLevels = [], activeHlsLevel = -1, onHlsLevelChange,
     showHeatmap = true, onShowHeatmapChange,
     aspectRatio = "contain", onAspectRatioChange,
@@ -190,7 +192,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
     return (
         <div className={cn(
             "absolute bottom-4 inset-x-4 md:bottom-6 md:inset-x-6 flex flex-col pointer-events-auto select-none",
-            "bg-zinc-950 border border-white/15 rounded-2xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.95)] px-5 py-3.5 z-30",
+            "bg-[var(--bg-primary)]/60 backdrop-blur-[var(--blur-player)] border border-white/10 rounded-2xl shadow-[var(--shadow-player)] px-5 py-3.5 z-30",
         )}>
 
             {/* Progress Timeline */}
@@ -319,7 +321,10 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                             className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 active:scale-90 duration-300 focus-visible:ring-2 focus-visible:ring-brand-orange focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950">
                             {isMuted || volume === 0 ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
                         </button>
-                        <div className="w-0 overflow-hidden group-hover/volume:w-16 transition-all duration-300 flex items-center h-5 pl-1">
+                        <div className={cn(
+                            "w-0 overflow-hidden transition-all duration-300 flex items-center h-5 pl-1",
+                            tvMode ? "w-16" : "group-hover/volume:w-16"
+                        )}>
                             <div className="w-full h-[3px] bg-white/20 relative rounded-full flex items-center">
                                 <div
                                     className="absolute left-0 h-full bg-brand-orange rounded-full transition-all"
@@ -376,7 +381,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                     )}
 
                     {/* Next episode */}
-                    {onNextEpisode && (
+                    {onNextEpisode && hasNextEpisode && (
                         <button
                             tabIndex={0}
                             onClick={(e) => { e.stopPropagation(); onNextEpisode(); }}

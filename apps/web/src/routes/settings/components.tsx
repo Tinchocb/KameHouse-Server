@@ -1,5 +1,6 @@
 import React from "react"
 import { cn } from "@/components/ui/core/styling"
+import { GlassCard } from "@/components/ui"
 import { Switch } from "@/components/ui/switch"
 import { useMutation } from "@tanstack/react-query"
 import { useServerMutation } from "@/api/client/requests"
@@ -100,7 +101,7 @@ export function ScanButton({ variant, onClick, loading }: { variant: "delta" | "
                 "flex-1 flex items-center justify-between p-6 rounded-2xl border transition-all duration-500 relative overflow-hidden group/scanbtn",
                 isDelta
                     ? "bg-cyan-500/8 border-cyan-500/20 hover:bg-cyan-500/15 hover:border-cyan-500/35 text-cyan-400"
-                    : "liquid-glass-frosted-subtle hover:bg-surface-2/60 hover:border-border-strong text-white",
+                    : "bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-2xl hover:bg-[var(--bg-quaternary)]/60 hover:border-[var(--glass-strong)] text-white",
                 loading && "opacity-50 cursor-not-allowed"
             )}
         >
@@ -144,10 +145,10 @@ export function IntegrationCard({ name, status, connected, disabled }: { name: s
         <div className={cn(
             "p-5 rounded-2xl flex items-center gap-4 relative overflow-hidden group/intcard transition-all duration-300",
             disabled
-                ? "opacity-40 liquid-glass-frosted-subtle"
+                ? "opacity-40 bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-2xl"
                 : connected
-                    ? "liquid-glass-frosted hover:border-white/20"
-                    : "liquid-glass-frosted-subtle hover:bg-surface-2/60 hover:border-border-strong"
+                    ? "bg-[var(--glass-bg)] border border-[var(--glass-strong)] rounded-2xl hover:border-white/20"
+                    : "bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-2xl hover:bg-[var(--bg-quaternary)]/60 hover:border-[var(--glass-strong)]"
         )}>
             {connected && (
                 <div
@@ -204,7 +205,7 @@ export function IntegrationCard({ name, status, connected, disabled }: { name: s
 
 export function StatusCard({ label, value, icon: Icon }: { label: string; value: string; icon: React.ElementType }) {
     return (
-        <div className="p-6 liquid-glass-frosted-subtle hover:border-cyan-500/30 rounded-2xl flex items-center gap-4 group/statuscard relative overflow-hidden transition-all duration-300">
+        <div className="p-6 bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-2xl hover:border-cyan-500/30 rounded-2xl flex items-center gap-4 group/statuscard relative overflow-hidden transition-all duration-300">
             <div className="absolute inset-0 opacity-0 group-hover/statuscard:opacity-100 transition-opacity duration-500 bg-[radial-gradient(ellipse_at_left,rgba(6,182,212,0.08),transparent_70%)] pointer-events-none" />
             <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 group-hover/statuscard:text-cyan-300 group-hover/statuscard:bg-cyan-500/15 transition-all duration-300 relative z-10">
                 <Icon className="w-5 h-5" />
@@ -237,9 +238,9 @@ export function Section({ label, children }: { label: string; children: React.Re
 
 export function Card({ children, className }: { children: React.ReactNode; className?: string }) {
     return (
-        <div className={cn("liquid-glass-frosted rounded-2xl p-6", className)}>
+        <GlassCard variant="elevated" padding="lg" radius="2xl" className={className}>
             {children}
-        </div>
+        </GlassCard>
     )
 }
 
@@ -272,7 +273,7 @@ export function PathList({ label, directories, onAdd, onRemove, placeholder }: P
             {directories.length > 0 && (
                 <div className="space-y-2">
                     {directories.map((dir) => (
-                        <div key={dir} className="flex items-center justify-between bg-surface-2/50 border border-border-subtle rounded-xl px-4 py-2.5">
+                        <div key={dir} className="flex items-center justify-between bg-[var(--bg-quaternary)]/50 border border-[var(--glass-border)] rounded-xl px-4 py-2.5">
                             <span className="text-xs text-zinc-300 font-mono truncate mr-4">{dir}</span>
                             <button
                                 type="button"
@@ -286,7 +287,7 @@ export function PathList({ label, directories, onAdd, onRemove, placeholder }: P
                 </div>
             )}
 
-            <div className="flex items-center gap-2.5 bg-surface-2/40 border border-border-subtle rounded-xl pl-1 pr-1.5 py-1 focus-within:border-[#ff6e3a]/40 transition-all">
+            <div className="flex items-center gap-2.5 bg-[var(--bg-quaternary)]/40 border border-[var(--glass-border)] rounded-xl pl-1 pr-1.5 py-1 focus-within:border-[#ff6e3a]/40 transition-all">
                 <input
                     type="text"
                     value={inputValue}
@@ -335,8 +336,8 @@ export const OsInput = React.forwardRef<HTMLInputElement, OsInputProps>(({
                 {description && <p className="text-[11px] text-zinc-500 leading-relaxed font-medium group-hover/input:text-zinc-400 transition-colors duration-300">{description}</p>}
             </div>
             <div className={cn(
-                "flex items-center gap-2.5 bg-surface-2/60 border border-border-strong rounded-xl px-4 py-3 w-full md:w-72 transition-all relative",
-                "focus-within:border-[#ff6e3a]/50 focus-within:shadow-[0_0_24px_rgba(255,110,58,0.15)] focus-within:bg-surface-2/80 hover:border-white/15",
+                "flex items-center gap-2.5 bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-3 w-full md:w-72 transition-all relative",
+                "focus-within:border-[#ff6e3a]/50 focus-within:shadow-[0_0_24px_rgba(255,110,58,0.15)] focus-within:bg-[var(--bg-quaternary)]/80 hover:border-white/15",
                 className
             )}>
                 <input
@@ -387,8 +388,8 @@ export const OsSelect = React.forwardRef<HTMLSelectElement, OsSelectProps>(({
                 {description && <p className="text-[11px] text-zinc-500 leading-relaxed font-medium group-hover/select:text-zinc-400 transition-colors duration-300">{description}</p>}
             </div>
             <div className={cn(
-                "flex items-center bg-surface-2/60 border border-border-strong rounded-xl px-4 py-3 w-full md:w-72 transition-all relative cursor-pointer",
-                "focus-within:border-[#ff6e3a]/50 focus-within:shadow-[0_0_24px_rgba(255,110,58,0.15)] focus-within:bg-surface-2/80 hover:border-white/15",
+                "flex items-center bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-3 w-full md:w-72 transition-all relative cursor-pointer",
+                "focus-within:border-[#ff6e3a]/50 focus-within:shadow-[0_0_24px_rgba(255,110,58,0.15)] focus-within:bg-[var(--bg-quaternary)]/80 hover:border-white/15",
                 className
             )}>
                 <select
@@ -442,7 +443,7 @@ export function OsToggle({ label, description, checked, onChange, disabled }: Os
                     "relative shrink-0 w-10 h-[22px] rounded-full border transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6e3a]/50",
                     checked
                         ? "bg-[#ff6e3a] border-[#ff6e3a] shadow-[0_0_16px_rgba(255,110,58,0.4)]"
-                        : "bg-surface-3/80 border-border-strong hover:border-white/25 hover:bg-surface-3",
+                        : "bg-[var(--bg-quaternary)]/80 border-[var(--glass-strong)] hover:border-white/25 hover:bg-[var(--bg-quaternary)]",
                     disabled && "opacity-40 cursor-not-allowed"
                 )}
             >

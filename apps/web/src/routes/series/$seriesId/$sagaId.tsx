@@ -88,7 +88,7 @@ function LeftPanel({ posterUrl, title, synopsis, year, episodesCount, sagaTitle,
             {/* Back button */}
             <button
                 onClick={onBack}
-                className="flex items-center gap-2 px-6 pt-6 pb-3 text-zinc-500 hover:text-brand-orange transition-colors text-[10px] font-black uppercase tracking-[0.3em] group"
+                className="flex items-center gap-2 px-6 pt-6 pb-3 text-zinc-500 hover:text-[var(--brand-secondary)] transition-colors text-[10px] font-black uppercase tracking-[0.3em] group"
             >
                 <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                 VOLVER
@@ -140,7 +140,7 @@ function LeftPanel({ posterUrl, title, synopsis, year, episodesCount, sagaTitle,
                     {genres.slice(0, 4).map((g) => (
                         <span
                             key={g}
-                            className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-brand-orange/10 text-brand-orange border border-brand-orange/20"
+                            className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-[var(--brand-secondary)]/10 text-[var(--brand-secondary)] border border-[var(--brand-secondary)]/20"
                         >
                             {g}
                         </span>
@@ -187,7 +187,7 @@ function EpisodeRow({ episode, isActive, isWatched, isDownloaded, progress, onSe
                 "w-full flex items-center gap-5 px-5 py-3.5 text-left group relative",
                 "transition-all duration-300 rounded-xl border-l-[3px]",
                 isActive
-                    ? "bg-brand-orange/10 text-white border-l-brand-orange shadow-[0_0_12px_rgba(255,110,58,0.2)]"
+                    ? "bg-[var(--brand-secondary)]/10 text-white border-l-[var(--brand-secondary)] shadow-[0_0_12px_rgba(255,110,58,0.2)]"
                     : "bg-transparent border-l-transparent hover:bg-white/[0.03] hover:border-l-white/10 text-zinc-500 hover:text-white",
                 isWatched && "opacity-50",
             )}
@@ -216,7 +216,7 @@ function EpisodeRow({ episode, isActive, isWatched, isDownloaded, progress, onSe
                     <ProgressBar
                         value={progress}
                         className="bg-zinc-900"
-                        indicatorClass="bg-brand-orange"
+                        indicatorClass="bg-[var(--brand-secondary)]"
                     />
                 </div>
             )}
@@ -255,7 +255,7 @@ function SubSagaNav({ subSagas, episodes, currentEpNumber, onJumpToEp }: SubSaga
         <section className="px-10 pt-8 pb-2">
             {/* Header */}
             <div className="flex items-center gap-3 mb-5">
-                <Layers className="w-3.5 h-3.5 text-brand-orange" />
+                <Layers className="w-3.5 h-3.5 text-[var(--brand-secondary)]" />
                 <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">
                     ARCOS DE LA SAGA
                 </span>
@@ -278,7 +278,7 @@ function SubSagaNav({ subSagas, episodes, currentEpNumber, onJumpToEp }: SubSaga
                             className={cn(
                                 "w-full flex items-center gap-4 px-5 py-3.5 rounded-xl border text-left transition-all duration-200 group",
                                 isActive
-                                    ? "bg-brand-orange/10 border-brand-orange/40 shadow-[0_0_12px_rgba(255,110,58,0.15)]"
+                                    ? "bg-[var(--brand-secondary)]/10 border-[var(--brand-secondary)]/40 shadow-[0_0_12px_rgba(255,110,58,0.15)]"
                                     : "bg-white/[0.03] border-white/[0.07] hover:bg-white/[0.06] hover:border-white/10"
                             )}
                         >
@@ -286,7 +286,7 @@ function SubSagaNav({ subSagas, episodes, currentEpNumber, onJumpToEp }: SubSaga
                             <div className={cn(
                                 "w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black shrink-0 transition-colors",
                                 isActive
-                                    ? "bg-brand-orange text-white"
+                                    ? "bg-[var(--brand-secondary)] text-white"
                                     : "bg-white/10 text-zinc-500 group-hover:bg-white/20"
                             )}>
                                 {idx + 1}
@@ -296,7 +296,7 @@ function SubSagaNav({ subSagas, episodes, currentEpNumber, onJumpToEp }: SubSaga
                             <div className="flex-1 min-w-0">
                                 <p className={cn(
                                     "text-[11px] font-black uppercase tracking-widest truncate transition-colors",
-                                    isActive ? "text-brand-orange" : "text-zinc-400 group-hover:text-white"
+                                    isActive ? "text-[var(--brand-secondary)]" : "text-zinc-400 group-hover:text-white"
                                 )}>
                                     {ss.title}
                                 </p>
@@ -307,7 +307,7 @@ function SubSagaNav({ subSagas, episodes, currentEpNumber, onJumpToEp }: SubSaga
 
                             {/* Active dot */}
                             {isActive && (
-                                <div className="w-1.5 h-1.5 rounded-full bg-brand-orange shrink-0 animate-pulse" />
+                                <div className="w-1.5 h-1.5 rounded-full bg-[var(--brand-secondary)] shrink-0 animate-pulse" />
                             )}
                         </button>
                     )
@@ -373,8 +373,8 @@ function RightPanel({
                         className={cn(
                             "shrink-0 flex items-center gap-3 px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] border transition-all duration-300 rounded-xl",
                             currentWatched
-                                ? "bg-brand-orange border-brand-orange text-white shadow-[0_0_15px_rgba(255,110,58,0.4)]"
-                                : "bg-[#0a0e1a]/40 border-white/10 text-zinc-400 hover:text-brand-orange hover:border-brand-orange/30",
+                                ? "bg-[var(--brand-secondary)] border-[var(--brand-secondary)] text-white shadow-[0_0_15px_rgba(255,110,58,0.4)]"
+                                : "bg-[#0a0e1a]/40 border-white/10 text-zinc-400 hover:text-[var(--brand-secondary)] hover:border-[var(--brand-secondary)]/30",
                         )}
                     >
                         {currentWatched
@@ -406,7 +406,7 @@ function RightPanel({
                     className={cn(
                         "w-full flex items-center justify-center gap-4 py-6 font-black text-[13px] uppercase tracking-[0.3em] transition-all duration-300 rounded-2xl shadow-[0_0_20px_rgba(255,110,58,0.3)] border",
                         isCurrentDownloaded
-                            ? "bg-brand-orange border-brand-orange text-white hover:bg-brand-orange-hover hover:shadow-[0_0_30px_rgba(255,110,58,0.55)]"
+                            ? "bg-[var(--brand-secondary)] border-[var(--brand-secondary)] text-white hover:brightness-110 hover:shadow-[0_0_30px_rgba(255,110,58,0.55)]"
                             : "bg-white/5 border-white/5 text-zinc-600 cursor-not-allowed"
                     )}
                     disabled={!isCurrentDownloaded}

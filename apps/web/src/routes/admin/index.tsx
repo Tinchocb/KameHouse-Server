@@ -118,12 +118,12 @@ function AdminSection({ title, subtitle, children }: { title: string; subtitle?:
 
 function AdminActionsGrid() {
     const actions = [
-        { label: "Escanear Biblioteca", desc: "Detectar nuevos archivos", icon: Icons.ui.search, variant: "primary" as const, action: () => {} },
+        { label: "Escanear Biblioteca", desc: "Detectar nuevos archivos", icon: Icons.navigation.search, variant: "primary" as const, action: () => {} },
         { label: "Re-Scan Forzado", desc: "Ignorar cache y re-escanear todo", icon: Icons.ui.refresh, variant: "secondary" as const, action: () => {} },
         { label: "Match Manual", desc: "Resolver archivos no vinculados", icon: Icons.ui.link, variant: "outline" as const, action: () => {} },
-        { label: "Limpiar Huérfanos", desc: "Eliminar entradas sin archivo", icon: Icons.ui.trash2, variant: "destructive" as const, action: () => {} },
-        { label: "Actualizar Metadatos", desc: "Refrescar info de TMDB/AniList", icon: Icons.ui.database, variant: "outline" as const, action: () => {} },
-        { label: "Generar Thumbnails", desc: "Crear previews de video", icon: Icons.ui.image, variant: "outline" as const, action: () => {} },
+        { label: "Limpiar Huérfanos", desc: "Eliminar entradas sin archivo", icon: Icons.ui.delete, variant: "destructive" as const, action: () => {} },
+        { label: "Actualizar Metadatos", desc: "Refrescar info de TMDB/AniList", icon: Icons.status.database, variant: "outline" as const, action: () => {} },
+        { label: "Generar Thumbnails", desc: "Crear previews de video", icon: Icons.status.image, variant: "outline" as const, action: () => {} },
     ]
 
     return (
@@ -137,7 +137,7 @@ function AdminActionsGrid() {
                             action.variant === "secondary" && "bg-[var(--brand-secondary)]/20 text-[var(--brand-secondary)]",
                             action.variant === "destructive" && "bg-[var(--brand-destructive)]/20 text-[var(--brand-destructive)]",
                             action.variant === "outline" && "bg-[var(--glass-bg)] border border-[var(--glass-border)] text-muted",
-                            action.variant === "magic" && "bg-[var(--brand-magic)]/20 text-[var(--brand-magic)]",
+                            (action as any).variant === "magic" && "bg-[var(--brand-magic)]/20 text-[var(--brand-magic)]",
                         )}>
                             <action.icon size={24} strokeWidth={2.5} />
                         </div>
@@ -158,7 +158,7 @@ function AdminServicesGrid() {
         { name: "TMDB", status: "connected", desc: "Metadatos de películas/series", lastSync: "Hace 2 min", icon: Icons.status.cloud },
         { name: "AniList", status: "connected", desc: "Metadatos de anime/manga", lastSync: "Hace 5 min", icon: Icons.status.database },
         { name: "Trakt", status: "disconnected", desc: "Sincronización de progreso", lastSync: "Nunca", icon: Icons.status.server },
-        { name: "Fanart.tv", status: "connected", desc: "Arte y fondos de alta calidad", lastSync: "Hace 1 hora", icon: Icons.ui.image },
+        { name: "Fanart.tv", status: "connected", desc: "Arte y fondos de alta calidad", lastSync: "Hace 1 hora", icon: Icons.status.image },
         { name: "OMDb", status: "error", desc: "Datos complementarios", lastSync: "Error API", icon: Icons.ui.alert },
         { name: "OpenSubtitles", status: "connected", desc: "Subtítulos automáticos", lastSync: "Hace 30 min", icon: Icons.ui.message },
     ]
@@ -209,7 +209,7 @@ function AdminServicesGrid() {
 
 function AdminSystemGrid() {
     const items = [
-        { label: "Logs del Sistema", desc: "Ver eventos y errores recientes", icon: Icons.ui.file, action: () => {} },
+        { label: "Logs del Sistema", desc: "Ver eventos y errores recientes", icon: Icons.status.file, action: () => {} },
         { label: "Rendimiento", desc: "CPU, RAM, Disco, Red", icon: Icons.status.activity, action: () => {} },
         { label: "Configuración Avanzada", desc: "Variables de entorno y features", icon: Icons.ui.sliders, action: () => {} },
         { label: "Usuarios y Permisos", desc: "Gestionar accesos", icon: Icons.navigation.users, action: () => {} },
@@ -244,7 +244,7 @@ function AdminRecentActivity() {
         { time: "Hace 1 hora", type: "sync", message: "Sincronización TMDB completada: 247 items actualizados", icon: Icons.status.cloud, color: "var(--brand-secondary)" },
         { time: "Hace 3 horas", type: "error", message: "Error en Trakt API: Rate limit exceeded", icon: Icons.ui.alertCircle, color: "var(--brand-destructive)" },
         { time: "Hace 6 horas", type: "backup", message: "Backup automático completado: 2.1 GB", icon: Icons.status.hdd, color: "var(--brand-magic)" },
-        { time: "Ayer", type: "scan", message: "Escaneo programado: 0 nuevos items", icon: Icons.ui.search, color: "var(--text-muted)" },
+        { time: "Ayer", type: "scan", message: "Escaneo programado: 0 nuevos items", icon: Icons.navigation.search, color: "var(--text-muted)" },
     ]
 
     return (

@@ -2,11 +2,11 @@ import { cn } from "@/components/ui/core/styling";
 import * as React from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import { Icons } from "@/components/ui/icons";
-import { GlassButton } from "@/components/ui/glass-button";
+import { GlassButton, IconButton } from "@/components/ui/glass-button";
 import { useAppStore } from "@/lib/store";
 import { useResponsive } from "@/hooks/use-responsive";
 
-interface NavbarProps {
+export interface NavbarProps {
   className?: string;
   transparent?: boolean;
   floating?: boolean;
@@ -49,17 +49,14 @@ export function Navbar({ className, transparent = true, floating = true }: Navba
       }}
     >
       <div className="flex items-center gap-4">
-        <GlassButton
+        <IconButton
           variant="ghost"
           size="md"
           icon="menu"
-          iconSize={20}
           aria-label={sidebarOpen ? "Cerrar menú" : "Abrir menú"}
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className="md:hidden"
-        >
-          <Icons.navigation.menu size={20} strokeWidth={2.5} />
-        </GlassButton>
+        />
 
         <Link to="/home" className="flex items-center gap-2" onClick={() => setSidebarOpen(false)}>
           <div className="relative">
@@ -103,43 +100,37 @@ export function Navbar({ className, transparent = true, floating = true }: Navba
       </div>
 
       <div className="flex items-center gap-2">
-        <GlassButton
+        <IconButton
           variant="glass"
           size="sm"
           icon="search"
           aria-label="Buscar"
           className="hidden sm:inline-flex"
-        >
-          <Icons.ui.search size={16} strokeWidth={2.5} />
-        </GlassButton>
+        />
 
-        <GlassButton
+        <IconButton
           variant="glass"
           size="sm"
           icon="bell"
           aria-label="Notificaciones"
           className="hidden md:inline-flex relative"
         >
-          <Icons.ui.bell size={16} strokeWidth={2.5} />
           <span className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--brand-destructive)] rounded-full text-[9px] font-black flex items-center justify-center">
             3
           </span>
-        </GlassButton>
+        </IconButton>
 
         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] flex items-center justify-center font-bold text-[var(--primary-foreground)] text-sm ring-2 ring-[var(--bg-primary)]">
           M
         </div>
 
-        <GlassButton
+        <IconButton
           variant="ghost"
           size="md"
           icon="chevronDown"
-          iconSize={18}
           aria-label="Menú usuario"
           className="md:hidden"
-        >
-          <Icons.arrow.down size={18} strokeWidth={2.5} />
-        </GlassButton>
+        />
       </div>
     </nav>
   );

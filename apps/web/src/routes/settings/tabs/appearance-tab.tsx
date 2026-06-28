@@ -129,7 +129,8 @@ export function AppearanceTab({ control }: AppearanceTabProps) {
         if (preset.sidebar) setValue("theme.sidebarBackgroundColor", preset.sidebar, { shouldValidate: true, shouldDirty: true })
 
         if (preset.id !== "custom") {
-            applyPresetMutation.mutate(preset)
+            // Let the global form submission handle saving the values to DB
+            // rather than calling a redundant/failing immediate mutation
         }
     }
 
@@ -150,7 +151,7 @@ export function AppearanceTab({ control }: AppearanceTabProps) {
                                     "relative flex flex-col p-5 rounded-2xl border transition-all duration-300 group active:scale-95 overflow-hidden min-h-[160px]",
                                     isActive
                                         ? "border-[#ff6e3a] bg-white/[0.03] shadow-[0_8px_30px_rgba(255,110,58,0.1)]"
-                                        : "liquid-glass-frosted-subtle hover:bg-white/[0.04] hover:border-white/12"
+                                        : "bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-2xl hover:bg-white/[0.04] hover:border-white/12"
                                 )}
                                 style={
                                     !isCustom && preset.background
@@ -587,7 +588,7 @@ export function AppearanceTab({ control }: AppearanceTabProps) {
                             toast.success("Apariencia restablecida")
                         }
                     }}
-                    className="p-5 rounded-2xl liquid-glass-frosted-subtle border border-white/5 hover:border-red-500/20 hover:bg-red-500/5 transition-all text-left group w-full"
+                    className="p-5 rounded-2xl bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-2xl border border-white/5 hover:border-red-500/20 hover:bg-red-500/5 transition-all text-left group w-full"
                 >
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">

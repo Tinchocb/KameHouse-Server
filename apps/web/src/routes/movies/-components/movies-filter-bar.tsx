@@ -29,7 +29,7 @@ export function MoviesFilterBar({
     setSortOpen,
 }: MoviesFilterBarProps) {
     return (
-        <div className="w-full flex flex-col p-6 liquid-glass-frosted rounded-2xl overflow-visible gap-6">
+        <div className="w-full flex flex-col p-6 bg-[var(--glass-bg)] backdrop-blur-[var(--blur-card)] border border-[var(--glass-border)] rounded-2xl overflow-visible gap-6">
             <h3 className="font-bebas text-2xl tracking-[0.15em] text-white/90 uppercase flex items-center justify-between flex-shrink-0">
                 <span>Filtrar</span>
                 <span className="text-[10px] font-mono font-bold tracking-normal text-zinc-400 lowercase px-2.5 py-0.5 bg-white/5 rounded-full">
@@ -39,13 +39,13 @@ export function MoviesFilterBar({
 
             {/* Search Input */}
             <div className="relative w-full group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-brand-orange transition-colors" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-[var(--brand-secondary)] transition-colors" />
                 <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Buscar Películas..."
-                    className="w-full bg-white/[0.05] hover:bg-white/[0.08] border border-white/10 rounded-xl pl-11 pr-10 py-3 text-[12px] font-sans font-medium tracking-wide text-white placeholder-zinc-400 focus:outline-none focus:border-brand-orange/40 focus:bg-brand-orange/5 focus:ring-4 focus:ring-brand-orange/10 transition-all duration-300"
+                    className="w-full bg-white/[0.05] hover:bg-white/[0.08] border border-white/10 rounded-xl pl-11 pr-10 py-3 text-[12px] font-sans font-medium tracking-wide text-white placeholder-zinc-400 focus:outline-none focus:border-[var(--brand-secondary)]/40 focus:bg-[var(--brand-secondary)]/5 focus:ring-4 focus:ring-brand-orange/10 transition-all duration-300"
                 />
                 {searchQuery && (
                     <button
@@ -81,7 +81,7 @@ export function MoviesFilterBar({
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.95, y: -4 }}
                                 transition={{ duration: 0.2, ease: "easeOut" }}
-                                className="absolute left-0 right-0 top-[calc(100%+6px)] bg-[#0f0f13]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.5)] z-50 overflow-hidden p-1.5"
+                                className="absolute left-0 right-0 top-[calc(100%+6px)] bg-[#0f0f13]/95 backdrop-blur-[var(--blur-xl)] border border-white/10 rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.5)] z-50 overflow-hidden p-1.5"
                                 onMouseLeave={() => setSortOpen(false)}
                             >
                                 {SORT_OPTIONS.map((opt) => (
@@ -94,12 +94,12 @@ export function MoviesFilterBar({
                                         className={cn(
                                             "w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-[11px] font-sans font-bold tracking-wide transition-all duration-200",
                                             sortBy === opt.value
-                                                ? "text-brand-orange bg-brand-orange/10"
+                                                ? "text-[var(--brand-secondary)] bg-[var(--brand-secondary)]/10"
                                                 : "text-zinc-400 hover:text-white hover:bg-white/5"
                                         )}
                                     >
                                         <span>{opt.label}</span>
-                                        {sortBy === opt.value && <div className="w-1.5 h-1.5 rounded-full bg-brand-orange" />}
+                                        {sortBy === opt.value && <div className="w-1.5 h-1.5 rounded-full bg-[var(--brand-secondary)]" />}
                                     </button>
                                 ))}
                             </motion.div>

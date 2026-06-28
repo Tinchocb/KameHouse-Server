@@ -294,7 +294,7 @@ function CollectionDetailPage() {
                                                     {isCurrent && (
                                                         <>
                                                             <span>•</span>
-                                                            <span className="flex items-center gap-1 text-brand-orange bg-brand-orange/10 px-2 py-0.5 rounded border border-brand-orange/20 shadow-sm animate-pulse">
+                                                            <span className="flex items-center gap-1 text-[var(--brand-secondary)] bg-[var(--brand-secondary)]/10 px-2 py-0.5 rounded border border-[var(--brand-secondary)]/20 shadow-sm animate-pulse">
                                                                 VIENDO ({progress}/{totalEp})
                                                             </span>
                                                         </>
@@ -326,7 +326,7 @@ function CollectionDetailPage() {
                                                         </div>
                                                         <div className="h-1 w-full bg-zinc-900 rounded-full overflow-hidden border border-white/5">
                                                             <div 
-                                                                className="h-full bg-gradient-to-r from-brand-orange to-white rounded-full transition-all duration-500" 
+                                                                className="h-full bg-gradient-to-r from-[var(--brand-secondary)] to-white rounded-full transition-all duration-500" 
                                                                 style={{ width: `${progressPercent}%` }}
                                                             />
                                                         </div>
@@ -352,7 +352,7 @@ function CollectionDetailPage() {
                                                 }}
                                                 className={cn(
                                                     "self-start flex items-center gap-2 py-2.5 px-5 bg-white text-black text-[9px] font-black uppercase tracking-[0.2em] transition-all duration-200",
-                                                    isCurrent ? "bg-brand-orange text-white hover:bg-brand-orange/80 shadow-[0_4px_20px_rgba(255,107,0,0.2)]" : "hover:bg-yellow-500"
+                                                    isCurrent ? "bg-[var(--brand-secondary)] text-white hover:bg-[var(--brand-secondary)]/80 shadow-[0_4px_20px_rgba(255,107,0,0.2)]" : "hover:bg-yellow-500"
                                                 )}
                                             >
                                                 <Play className="text-[8px]" /> {isCurrent ? "REANUDAR PELÍCULA" : "VER DETALLES"}

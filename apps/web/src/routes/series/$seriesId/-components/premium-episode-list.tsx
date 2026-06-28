@@ -52,7 +52,7 @@ export function PremiumEpisodeList({
           className={cn(
             "w-full pl-10 pr-10 py-2.5 rounded-xl text-sm",
             "bg-white/[0.03] border border-white/[0.08] text-white placeholder-zinc-500",
-            "focus:outline-none focus:border-brand-orange/40 focus:ring-1 focus:ring-brand-orange/20",
+            "focus:outline-none focus:border-[var(--brand-secondary)]/40 focus:ring-1 focus:ring-brand-orange/20",
             "transition-all duration-200"
           )}
         />
@@ -96,8 +96,8 @@ export function PremiumEpisodeList({
             className={cn(
               "group flex gap-4 p-3 rounded-xl transition-all duration-300 cursor-pointer shadow-lg",
               isHighlighted
-                ? "liquid-glass-frosted liquid-glass-frosted-interactive !bg-brand-orange/[0.03] !border-brand-orange/20 border-l-[3.5px] !border-l-brand-orange shadow-[0_8px_24px_rgba(255,110,58,0.04)] hover:!bg-brand-orange/[0.06] hover:!border-brand-orange/30"
-                : "liquid-glass-frosted liquid-glass-frosted-interactive"
+                ? "bg-[var(--glass-bg)] backdrop-blur-[var(--blur-card)] border border-[var(--glass-border)] rounded-2xl hover:bg-[var(--glass-hover)] hover:border-[var(--glass-strong)] transition-all duration-300 !bg-[var(--brand-secondary)]/[0.03] !border-[var(--brand-secondary)]/20 border-l-[3.5px] !border-l-[var(--brand-secondary)] shadow-[0_8px_24px_rgba(255,110,58,0.04)] hover:!bg-[var(--brand-secondary)]/[0.06] hover:!border-[var(--brand-secondary)]/30"
+                : "bg-[var(--glass-bg)] backdrop-blur-[var(--blur-card)] border border-[var(--glass-border)] rounded-2xl hover:bg-[var(--glass-hover)] hover:border-[var(--glass-strong)] transition-all duration-300"
             )}
           >
           {/* Thumbnail */}
@@ -109,7 +109,7 @@ export function PremiumEpisodeList({
             />
             {/* Play Overlay */}
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-300 cursor-pointer">
-              <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/40">
+              <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-[var(--blur-sm)] flex items-center justify-center border border-white/40">
                 <Play className="w-6 h-6 text-white ml-1" fill="currentColor" />
               </div>
             </div>
@@ -131,7 +131,7 @@ export function PremiumEpisodeList({
               <div className="flex items-center gap-1.5 shrink-0">
                 {/* Saga Badge */}
                 {ep.sagaName && (
-                  <span className="text-[10px] font-mono uppercase bg-brand-orange/10 text-brand-orange border border-brand-orange/20 px-2 py-0.5 rounded">
+                  <span className="text-[10px] font-mono uppercase bg-[var(--brand-secondary)]/10 text-[var(--brand-secondary)] border border-[var(--brand-secondary)]/20 px-2 py-0.5 rounded">
                     {ep.sagaName}
                   </span>
                 )}
@@ -156,13 +156,13 @@ export function PremiumEpisodeList({
             {/* Technical Pills & Status */}
             <div className="flex items-center justify-between mt-auto">
               <div className="flex items-center gap-1.5">
-                <span className="text-[9px] font-mono font-medium liquid-glass-frosted-subtle text-gray-300 px-2 py-0.5 rounded-md">
+                <span className="text-[9px] font-mono font-medium bg-[var(--glass-bg)] backdrop-blur-[var(--blur-sm)] border border-[var(--glass-border)] rounded-2xl text-gray-300 px-2 py-0.5 rounded-md">
                   {ep.resolution}
                 </span>
-                <span className="text-[9px] font-mono font-medium liquid-glass-frosted-subtle text-gray-300 px-2 py-0.5 rounded-md">
+                <span className="text-[9px] font-mono font-medium bg-[var(--glass-bg)] backdrop-blur-[var(--blur-sm)] border border-[var(--glass-border)] rounded-2xl text-gray-300 px-2 py-0.5 rounded-md">
                   {ep.videoCodec}
                 </span>
-                <span className="text-[9px] font-mono font-medium liquid-glass-frosted-subtle text-gray-300 px-2 py-0.5 rounded-md">
+                <span className="text-[9px] font-mono font-medium bg-[var(--glass-bg)] backdrop-blur-[var(--blur-sm)] border border-[var(--glass-border)] rounded-2xl text-gray-300 px-2 py-0.5 rounded-md">
                   {ep.audioCodec}
                 </span>
               </div>

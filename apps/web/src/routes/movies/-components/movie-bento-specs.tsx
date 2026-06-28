@@ -9,8 +9,8 @@ export function MovieBentoSpecs({ technical }: MovieBentoSpecsProps) {
   if (!technical) return null
 
   return (
-    <div className="liquid-glass-frosted liquid-glass-frosted-interactive rounded-2xl p-5 mt-6">
-      <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-orange mb-4 px-1">
+    <div className="bg-[var(--glass-bg)] backdrop-blur-[var(--blur-card)] border border-[var(--glass-border)] rounded-2xl p-5 hover:bg-[var(--glass-hover)] hover:border-[var(--glass-strong)] transition-all duration-300 cursor-pointer mt-6">
+      <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--brand-secondary)] mb-4 px-1">
         Ficha Técnica
       </h4>
       

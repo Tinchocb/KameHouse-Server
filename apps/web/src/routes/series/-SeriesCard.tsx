@@ -107,7 +107,7 @@ export const SeriesCard = memo(function SeriesCard({
                     loading={isSelected ? "eager" : "lazy"}
                     decoding="async"
                     className={cn(
-                        "absolute inset-0 w-full h-full object-cover transition-all duration-500 ease-out transform-gpu",
+                        "absolute inset-0 w-full h-full object-cover transition-all duration-500 ease-out gpu",
                         isSelected
                             ? 'opacity-100 scale-105 brightness-50'
                             : 'opacity-0 scale-100 pointer-events-none'
@@ -117,20 +117,20 @@ export const SeriesCard = memo(function SeriesCard({
                 {/* Expanded content - clean info panel */}
                 <div
                     className={cn(
-                        "absolute inset-0 z-[5] flex flex-col justify-end p-5 transition-all duration-400 ease-out transform-gpu",
+                        "absolute inset-0 z-[5] flex flex-col justify-end p-5 transition-all duration-400 ease-out gpu",
                         isSelected ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
                     )}
                 >
                     <div className={cn(
-                        "transition-all duration-400 ease-bounce-spring transform-gpu delay-75",
+                        "transition-all duration-400 ease-bounce-spring gpu delay-100",
                         isSelected ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-6 scale-95"
                     )}>
                         {/* Badge */}
                         <div className={cn(
-                            "flex items-center gap-2 mb-2 transition-all duration-400 ease-out transform-gpu",
+                            "flex items-center gap-2 mb-2 transition-all duration-400 ease-out gpu",
                             isSelected ? "opacity-100 translate-y-0 delay-100" : "opacity-0 translate-y-3 delay-0"
                         )}>
-                            <span className="px-2 py-0.5 bg-brand-orange/20 text-brand-orange border border-brand-orange/30 rounded text-[8px] font-black tracking-widest uppercase">
+                            <span className="px-2 py-0.5 bg-[var(--brand-secondary)]/20 text-[var(--brand-secondary)] border border-[var(--brand-secondary)]/30 rounded text-[8px] font-black tracking-widest uppercase">
                                 Serie
                             </span>
                             <span className="text-[8px] font-black tracking-widest uppercase text-white/30">
@@ -140,7 +140,7 @@ export const SeriesCard = memo(function SeriesCard({
 
                         {/* Title */}
                         <h3 className={cn(
-                            "text-lg md:text-xl font-black text-white mb-2 leading-tight tracking-tight line-clamp-2 transition-all duration-400 ease-out transform-gpu",
+                            "text-lg md:text-xl font-black text-white mb-2 leading-tight tracking-tight line-clamp-2 transition-all duration-400 ease-out gpu",
                             isSelected ? "opacity-100 translate-y-0 delay-140" : "opacity-0 translate-y-3 delay-0"
                         )}>
                             {item.title}
@@ -155,18 +155,18 @@ export const SeriesCard = memo(function SeriesCard({
 
                         {/* Progress bar */}
                         <div className={cn(
-                            "flex flex-col w-full transition-all duration-400 ease-out transform-gpu",
+                            "flex flex-col w-full transition-all duration-400 ease-out gpu",
                             isSelected ? "opacity-100 translate-y-0 delay-200" : "opacity-0 translate-y-3 delay-0"
                         )}>
                             <div className="flex justify-between items-end mb-1">
                                 <span className="text-[8px] font-black tracking-[0.2em] uppercase text-white/30">
                                     Progreso
                                 </span>
-                                <span className="text-[9px] font-black text-brand-orange">{item.progress}%</span>
+                                <span className="text-[9px] font-black text-[var(--brand-secondary)]">{item.progress}%</span>
                             </div>
                             <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
                                 <div
-                                    className="h-full bg-gradient-to-r from-brand-orange to-[#ff9d5c] rounded-full transition-all duration-1000 ease-out origin-left"
+                                    className="h-full bg-gradient-to-r from-[var(--brand-secondary)] to-[#ff9d5c] rounded-full transition-all duration-1000 ease-out origin-left"
                                     style={{ width: isSelected ? `${item.progress}%` : '0%' }}
                                 />
                             </div>
@@ -174,7 +174,7 @@ export const SeriesCard = memo(function SeriesCard({
 
                         {/* Play button */}
                         <div className={cn(
-                            "mt-3 transition-all duration-400 ease-out transform-gpu",
+                            "mt-3 transition-all duration-400 ease-out gpu",
                             isSelected ? "opacity-100 translate-y-0 delay-240" : "opacity-0 translate-y-3 delay-0"
                         )}>
                             <button
@@ -183,7 +183,7 @@ export const SeriesCard = memo(function SeriesCard({
                                     e.stopPropagation();
                                     onNavigate(item.id.toString());
                                 }}
-                                className="w-full bg-brand-orange hover:bg-[#ff8559] active:scale-[0.98] text-white rounded-lg text-[10px] font-black tracking-widest uppercase py-2 transition-all duration-300 flex justify-center items-center gap-2 shadow-[0_6px_16px_rgba(255,110,58,0.3)] hover:shadow-[0_10px_24px_rgba(255,110,58,0.45)] relative overflow-hidden group/btn"
+                                className="w-full bg-[var(--brand-secondary)] hover:bg-[#ff8559] active:scale-[0.98] text-white rounded-lg text-[10px] font-black tracking-widest uppercase py-2 transition-all duration-300 flex justify-center items-center gap-2 shadow-[0_6px_16px_rgba(255,110,58,0.3)] hover:shadow-[0_10px_24px_rgba(255,110,58,0.45)] relative overflow-hidden group/btn"
                             >
                                 <div className="absolute inset-0 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000 ease-out bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
                                 <Play className="w-3.5 h-3.5 fill-current" />
@@ -201,7 +201,7 @@ export const SeriesCard = memo(function SeriesCard({
                         aria-hidden="true"
                         draggable={false}
                         className={cn(
-                            "pointer-events-none absolute z-[6] select-none object-contain transition-all duration-500 ease-out transform-gpu",
+                            "pointer-events-none absolute z-[6] select-none object-contain transition-all duration-500 ease-out gpu",
                             isSelected
                                 ? "opacity-0 scale-90 pointer-events-none hidden"
                                 : "bottom-0 right-1/2 translate-x-1/2 h-[70%] opacity-90 scale-100 saturate-100 group-hover/card:opacity-100 group-hover/card:scale-[1.05]"
@@ -216,7 +216,7 @@ export const SeriesCard = memo(function SeriesCard({
 
             {/* ─── VHS SPINE (Bottom portion) ─── */}
             <div
-                className="relative shrink-0 bg-[#0d0d0d] flex items-center justify-center px-3 z-20 h-[110px] w-full min-w-0 select-none overflow-hidden transition-all duration-500 ease-out transform-gpu border-t-2"
+                className="relative shrink-0 bg-[#0d0d0d] flex items-center justify-center px-3 z-20 h-[110px] w-full min-w-0 select-none overflow-hidden transition-all duration-500 ease-out gpu border-t-2"
                 style={{
                     borderColor: eraGradientFrom,
                     boxShadow: !isHovered && !isSelected
@@ -226,12 +226,12 @@ export const SeriesCard = memo(function SeriesCard({
             >
                 {/* Plastic texture */}
                 <div className="absolute inset-0 bg-[radial-gradient(#1a1a1a_1px,transparent_1px)] [background-size:3px_3px] opacity-30 pointer-events-none" />
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.015] to-transparent pointer-events-none skew-x-12 transform-gpu" />
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.015] to-transparent pointer-events-none skew-x-12 gpu" />
 
                 {/* Expanded state: VHS Reels + Label */}
                 <div
                     className={cn(
-                        "absolute inset-0 px-3 flex items-center justify-between py-2 z-10 transition-all duration-300 ease-out transform-gpu",
+                        "absolute inset-0 px-3 flex items-center justify-between py-2 z-10 transition-all duration-300 ease-out gpu",
                         isSelected ? "opacity-100 scale-100 pointer-events-auto" : "opacity-0 scale-95 pointer-events-none"
                     )}
                 >
@@ -283,7 +283,7 @@ export const SeriesCard = memo(function SeriesCard({
                 {/* Collapsed state: VHS Label */}
                 <div
                     className={cn(
-                        "absolute inset-0 px-3 flex items-center justify-center py-2 z-10 transition-all duration-300 ease-out transform-gpu",
+                        "absolute inset-0 px-3 flex items-center justify-center py-2 z-10 transition-all duration-300 ease-out gpu",
                         !isSelected ? "opacity-100 scale-100 pointer-events-auto" : "opacity-0 scale-95 pointer-events-none"
                     )}
                 >
@@ -319,7 +319,7 @@ export const SeriesCard = memo(function SeriesCard({
                         {item.progress > 0 && (
                             <div className="h-[3px] bg-zinc-200 w-full">
                                 <div
-                                    className="h-full bg-brand-orange transition-all duration-700"
+                                    className="h-full bg-[var(--brand-secondary)] transition-all duration-700"
                                     style={{ width: `${item.progress}%` }}
                                 />
                             </div>

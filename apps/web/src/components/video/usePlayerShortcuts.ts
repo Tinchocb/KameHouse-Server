@@ -61,15 +61,42 @@ export function usePlayerShortcuts({
 }: UsePlayerShortcutsProps) {
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            const activeEl = document.activeElement
+            const isInteractive = activeEl && (
+                activeEl.tagName === "INPUT" ||
+                activeEl.tagName === "SELECT" ||
+                activeEl.tagName === "TEXTAREA" ||
+                activeEl.tagName === "BUTTON" ||
+                activeEl.tagName === "A" ||
+                activeEl.getAttribute("role") === "button" ||
+                activeEl.getAttribute("role") === "tab" ||
+                activeEl.getAttribute("role") === "menuitem" ||
+                activeEl.getAttribute("role") === "slider" ||
+                activeEl.hasAttribute("data-player-control")
+            )
+
+            const key = e.key.toLowerCase()
+
+            // Skip conflicting activation and navigation shortcuts if focused on interactive UI controls
+            if (isInteractive && (
+                key === " " ||
+                key === "arrowleft" ||
+                key === "arrowright" ||
+                key === "arrowup" ||
+                key === "arrowdown"
+            )) {
+                return
+            }
+
             if (
-                document.activeElement?.tagName === "INPUT" ||
-                document.activeElement?.tagName === "SELECT" ||
-                document.activeElement?.tagName === "TEXTAREA"
+                activeEl?.tagName === "INPUT" ||
+                activeEl?.tagName === "SELECT" ||
+                activeEl?.tagName === "TEXTAREA"
             ) {
                 return
             }
 
-            switch (e.key.toLowerCase()) {
+            switch (key) {
                 case "[":
                     if (skipToPrevChapter) {
                         e.preventDefault()

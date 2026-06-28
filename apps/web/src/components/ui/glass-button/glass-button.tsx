@@ -55,7 +55,7 @@ function resolveIcon(icon: GlassButtonProps["leftIcon"], size: number) {
     }
   }
   if (React.isValidElement(icon)) {
-    return React.cloneElement(icon, { width: size, height: size });
+    return React.cloneElement(icon as React.ReactElement<{ width?: number; height?: number }>, { width: size, height: size });
   }
   return icon;
 }
@@ -176,7 +176,7 @@ export const IconButton = React.forwardRef<HTMLButtonElement, React.ButtonHTMLAt
         }
       }
     } else if (React.isValidElement(icon)) {
-      iconElement = React.cloneElement(icon, { width: resolvedIconSize, height: resolvedIconSize });
+      iconElement = React.cloneElement(icon as React.ReactElement<{ width?: number; height?: number }>, { width: resolvedIconSize, height: resolvedIconSize });
     } else {
       iconElement = icon;
     }

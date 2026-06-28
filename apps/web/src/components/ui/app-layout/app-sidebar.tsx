@@ -56,7 +56,7 @@ export function AppSidebar() {
             {isMobile && (
                 <Vaul open={sidebarOpen} onOpenChange={setSidebarOpen} direction="left">
                     <VaulContent
-                        className="md:hidden fixed inset-y-0 left-0 z-50 flex h-full w-[280px] flex-col border-r border-white/5 liquid-glass-frosted !border-y-0 !border-l-0 !rounded-none shadow-2xl"
+                        className="md:hidden fixed inset-y-0 left-0 z-50 flex h-full w-[280px] flex-col border-r border-white/5 bg-[var(--glass-bg)] backdrop-blur-[var(--blur-card)] border-r border-[var(--glass-border)] shadow-[var(--shadow-modal)]"
                         overlayClass="md:hidden bg-black/60 backdrop-blur-sm"
                     >
                         <SidebarContent setSidebarOpen={setSidebarOpen} />
@@ -232,7 +232,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                                 className={cn("w-full flex justify-center", isActive && "active-sidebar-link")}
                             >
                                 <div className={cn(
-                                    "flex items-center h-14 rounded-2xl group px-4 relative liquid-glass-frosted-subtle transition-all duration-300",
+                                    "flex items-center h-14 rounded-2xl group px-4 relative bg-[var(--glass-bg)] backdrop-blur-[var(--blur-sm)] border border-[var(--glass-border)] transition-all duration-300",
                                     "active:scale-95 font-bold",
                                     sidebarOpen ? "w-full justify-start gap-4 px-5" : "justify-center md:w-14 w-full md:px-0",
                                     isActive
@@ -265,7 +265,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                             }}
                             title="Cola de Reproducción"
                             className={cn(
-                                "flex items-center h-14 rounded-2xl group px-4 relative liquid-glass-frosted-subtle transition-all duration-300",
+                                "flex items-center h-14 rounded-2xl group px-4 relative bg-[var(--glass-bg)] backdrop-blur-[var(--blur-sm)] border border-[var(--glass-border)] transition-all duration-300",
                                 "active:scale-95 font-bold",
                                 sidebarOpen ? "w-full justify-start gap-4 px-5" : "justify-center md:w-14 w-full md:px-0",
                                 globalQueueOpen
@@ -304,7 +304,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                         onClick={() => { setMarathonMode(!marathonMode); playChangeSound() }}
                         title={marathonMode ? "Desactivar Modo Maratón" : "Activar Modo Maratón"}
                         className={cn(
-                            "flex items-center h-14 rounded-2xl group px-4 relative liquid-glass-frosted-subtle transition-all duration-300",
+                            "flex items-center h-14 rounded-2xl group px-4 relative bg-[var(--glass-bg)] backdrop-blur-[var(--blur-sm)] border border-[var(--glass-border)] transition-all duration-300",
                             "active:scale-95 font-bold",
                             sidebarOpen ? "w-full justify-start gap-4 px-5" : "justify-center md:w-14 w-full md:px-0",
                             marathonMode
@@ -349,7 +349,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                         className={cn("w-full flex justify-center", currentPath === "/settings" && "active-sidebar-link")}
                     >
                         <div className={cn(
-                            "flex items-center h-14 rounded-2xl group px-4 relative liquid-glass-frosted-subtle transition-all duration-300",
+                            "flex items-center h-14 rounded-2xl group px-4 relative bg-[var(--glass-bg)] backdrop-blur-[var(--blur-sm)] border border-[var(--glass-border)] transition-all duration-300",
                             "active:scale-95 font-bold",
                             sidebarOpen ? "w-full justify-start gap-4 px-5" : "justify-center md:w-14 w-full md:px-0",
                             currentPath === "/settings"

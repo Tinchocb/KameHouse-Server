@@ -66,6 +66,7 @@ export interface PlayerCore {
         /** 0–100: how much of the current skip segment has elapsed (used for progress fill on the button) */
         segmentProgress: number
         showNextEpisode: boolean
+        hasNextEpisode: boolean
         countdownSeconds: number
         showCountdown: boolean
         remainingProgress: number

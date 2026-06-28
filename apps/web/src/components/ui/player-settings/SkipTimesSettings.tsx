@@ -554,7 +554,7 @@ export function SkipTimesSettings({
                 <button
                     onClick={handleSave}
                     disabled={isSaving}
-                    className="flex-1 py-3 bg-brand-orange hover:bg-brand-orange-hover text-white text-[10px] font-black uppercase tracking-widest transition-all rounded-xl active:scale-95 flex items-center justify-center gap-2 disabled:opacity-40"
+                    className="flex-1 py-3 bg-brand-orange hover:brightness-110 text-white text-[10px] font-black uppercase tracking-widest transition-all rounded-xl active:scale-95 flex items-center justify-center gap-2 disabled:opacity-40"
                 >
                     <Save className="w-3.5 h-3.5" />
                     {isSaving ? "Guardando..." : "Guardar y Aplicar"}

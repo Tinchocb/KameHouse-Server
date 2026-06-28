@@ -159,3 +159,16 @@
 .era-dbgt   { --era-color: var(--color-dbgt);   --era-glow: var(--glow-dbgt);   }
 .era-dbs    { --era-color: var(--color-dbs);    --era-glow: var(--glow-dbs);    }
 .era-daima  { --era-color: var(--color-daima);  --era-glow: var(--glow-daima);  }
+
+/* ─── Backward-compatible aliases (para tailwind.config y componentes legacy) ── */
+:root {
+  --surface-1:     240 6% 5%;
+  --surface-2:     240 5% 10%;
+  --overlay:       0 0% 0% / 0.6;
+  --border-subtle: 240 5% 100% / 0.06;
+  --border-strong: 240 5% 100% / 0.12;
+  --text-primary:  0 0% 96%;
+  --text-secondary: 0 0% 100% / 0.72;
+  --text-muted:    0 0% 100% / 0.48;
+  --brand-orange:  var(--color-dbz-hsl);
+}

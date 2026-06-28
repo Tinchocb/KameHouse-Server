@@ -29,6 +29,12 @@ export function usePlayerProgressSync({
     useEffect(() => {
         if (!enabled || !mediaId || !episodeNumber) return
 
+        // Reset refs when starting a new episode sync session so that
+        // previous episode progress does not leak when unmounting the new episode.
+        currentTimeRef.current = 0
+        lastSavedTimeRef.current = 0
+        durationRef.current = 0
+
         const sync = () => {
             const currentTime = currentTimeRef.current
             const duration = durationRef.current

@@ -538,6 +538,7 @@ export function PlayerUI(props: PlayerUIProps) {
                     marathonMode={state.marathonMode}
                     onMarathonModeChange={actions.setMarathonMode}
                     onNextEpisode={onNextEpisode}
+                    hasNextEpisode={state.hasNextEpisode}
                     skipTimesOp={state.skipTimesOp}
                     skipTimesEd={state.skipTimesEd}
                     chapters={state.chapters}

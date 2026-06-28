@@ -189,7 +189,7 @@ export const MovieCard = memo(function MovieCard({
                         </div>
                     )}
                     {!isCompleted && hasProgress && (
-                        <div className="px-1.5 py-0.5 rounded bg-brand-orange text-[6.5px] font-black text-white uppercase tracking-wider leading-none shadow-sm">
+                        <div className="px-1.5 py-0.5 rounded bg-[var(--brand-secondary)] text-[6.5px] font-black text-white uppercase tracking-wider leading-none shadow-sm">
                             {Math.round(progressPercent)}%
                         </div>
                     )}

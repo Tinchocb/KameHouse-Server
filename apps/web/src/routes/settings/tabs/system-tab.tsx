@@ -1,5 +1,6 @@
 import React from "react"
 import { Section, Card, OsToggle } from "../components"
+import { GlassCard } from "@/components/ui"
 import { type Control, Controller } from "react-hook-form"
 import { type SettingsFormValues } from "../index"
 import { toast } from "sonner"
@@ -65,7 +66,7 @@ export function SystemTab({ control }: SystemTabProps) {
             {/* User preferences & Core DB Bento Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
                 {/* Preferencias de Usuario */}
-                <div className="liquid-glass-frosted rounded-2xl p-6 md:col-span-2 space-y-5">
+                <GlassCard variant="elevated" padding="lg" radius="2xl" className="md:col-span-2 space-y-5">
                     <h4 className="text-xs font-bold text-[#ff6e3a] uppercase tracking-wide">Preferencias de Usuario</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <Controller
@@ -79,7 +80,7 @@ export function SystemTab({ control }: SystemTabProps) {
                                         type="text"
                                         value={field.value || "Martín"}
                                         onChange={field.onChange}
-                                        className="w-full bg-surface-2/60 border border-border-strong rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
+                                        className="w-full bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
                                     />
                                 </div>
                             )}
@@ -94,7 +95,7 @@ export function SystemTab({ control }: SystemTabProps) {
                                         id="pref-language-select"
                                         value={field.value || "es-MX"}
                                         onChange={field.onChange}
-                                        className="w-full bg-surface-2/60 border border-border-strong rounded-xl px-4 py-2.5 text-xs text-zinc-300 focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all cursor-pointer [&>option]:bg-[#141418] [&>option]:text-white"
+                                        className="w-full bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 text-xs text-zinc-300 focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all cursor-pointer [&>option]:bg-[#141418] [&>option]:text-white"
                                     >
                                         <option value="es-MX">Español Latino (Intertrack)</option>
                                         <option value="es-ES">Español (España)</option>
@@ -104,10 +105,10 @@ export function SystemTab({ control }: SystemTabProps) {
                             )}
                         />
                     </div>
-                </div>
+                </GlassCard>
 
                 {/* Base de Datos Core */}
-                <div className="liquid-glass-frosted rounded-2xl p-6 flex flex-col justify-between">
+                <GlassCard variant="elevated" padding="lg" radius="2xl" className="flex flex-col justify-between">
                     <div className="space-y-1">
                         <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wide flex items-center gap-2">
                             <HardDriveIcon /> Base de Datos Core
@@ -118,7 +119,7 @@ export function SystemTab({ control }: SystemTabProps) {
                         <button
                             type="button"
                             onClick={handleBackup}
-                            className="w-full py-2.5 bg-surface-2/50 hover:bg-surface-2/80 border border-border-subtle text-[10px] font-bold uppercase tracking-wider text-zinc-300 rounded-xl transition-all active:scale-[0.98]"
+                            className="w-full py-2.5 bg-[var(--bg-quaternary)]/50 hover:bg-[var(--bg-quaternary)]/80 border border-[var(--glass-border)] text-[10px] font-bold uppercase tracking-wider text-zinc-300 rounded-xl transition-all active:scale-[0.98]"
                         >
                             Respaldar DB
                         </button>
@@ -130,7 +131,7 @@ export function SystemTab({ control }: SystemTabProps) {
                             Limpiar Caché Imágenes
                         </button>
                     </div>
-                </div>
+                </GlassCard>
             </div>
 
             {/* Tema de la Interfaz */}
@@ -153,8 +154,8 @@ export function SystemTab({ control }: SystemTabProps) {
                                 className={cn(
                                     "flex flex-col text-left p-5 rounded-2xl border transition-all duration-300 relative overflow-hidden group active:scale-95",
                                     isThemeActive
-                                        ? "bg-surface-2/60 border-[#ff6e3a] shadow-[0_8px_30px_rgba(255,110,58,0.12)]"
-                                        : "liquid-glass-frosted-subtle hover:bg-surface-2/50 hover:border-border-strong"
+                                        ? "bg-[var(--bg-quaternary)]/60 border-[#ff6e3a] shadow-[0_8px_30px_rgba(255,110,58,0.12)]"
+                                        : "bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-2xl hover:bg-[var(--bg-quaternary)]/50 hover:border-[var(--glass-strong)]"
                                 )}
                             >
                                 <div className="flex items-center justify-between w-full mb-3">
@@ -233,7 +234,7 @@ export function SystemTab({ control }: SystemTabProps) {
                                     step="0.05"
                                     value={uiSoundsVolume}
                                     onChange={(e) => setUiSoundsVolume(parseFloat(e.target.value))}
-                                    className="w-full accent-[#ff6e3a] bg-surface-3 h-1.5 rounded-lg appearance-none cursor-pointer"
+                                    className="w-full accent-[var(--brand-secondary)] bg-[var(--bg-quaternary)] h-1.5 rounded-lg appearance-none cursor-pointer"
                                 />
                                 <span className="text-xs font-mono text-zinc-400 w-8 text-right shrink-0">
                                     {Math.round(uiSoundsVolume * 100)}%
@@ -261,7 +262,7 @@ export function SystemTab({ control }: SystemTabProps) {
                                     step="0.05"
                                     value={bgMusicVolume}
                                     onChange={(e) => setBgMusicVolume(parseFloat(e.target.value))}
-                                    className="w-full accent-[#ff6e3a] bg-surface-3 h-1.5 rounded-lg appearance-none cursor-pointer"
+                                    className="w-full accent-[var(--brand-secondary)] bg-[var(--bg-quaternary)] h-1.5 rounded-lg appearance-none cursor-pointer"
                                 />
                                 <span className="text-xs font-mono text-zinc-400 w-8 text-right shrink-0">
                                     {Math.round(bgMusicVolume * 100)}%
@@ -295,7 +296,7 @@ export function SystemTab({ control }: SystemTabProps) {
 
             {/* Zona de Peligro */}
             <Section label="Zona de Peligro">
-                <div className="border border-red-500/20 liquid-glass-frosted-subtle rounded-2xl p-6 space-y-6 relative overflow-hidden group/danger">
+                <div className="border border-red-500/20 bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-2xl p-6 space-y-6 relative overflow-hidden group/danger">
                     <div className="flex items-start gap-4">
                         <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
                             <AlertIcon />
