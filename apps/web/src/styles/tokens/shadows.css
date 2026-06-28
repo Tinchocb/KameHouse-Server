@@ -1,0 +1,60 @@
+/* ╔════════════════════════════════════════════════════════════════════════╗
+   ║  shadows.css — KameHouse Design System v2                          ║
+   ║  4 Niveles semánticos + Brand glow — NO inventar sombras inline   ║
+   ╚═══════════════════════════════════════════════════════════════════════╝ */
+
+:root {
+  /* ─── Niveles Semánticos ───────────────────────────────────────────── */
+  
+  /* Nivel 1: Cards, elementos base */
+  --shadow-card: 
+    0 4px 16px -4px rgba(0,0,0,0.50),
+    0 0 0 1px rgba(255,255,255,0.04);
+
+  /* Nivel 2: Elevated, hover states, dropdowns */
+  --shadow-elevated: 
+    0 12px 32px -8px rgba(0,0,0,0.70),
+    0 0 0 1px rgba(255,255,255,0.06);
+
+  /* Nivel 3: Modales, popovers, sidebars */
+  --shadow-modal: 
+    0 24px 64px -12px rgba(0,0,0,0.85),
+    0 0 0 1px rgba(255,255,255,0.08);
+
+  /* Nivel 4: Player, fullscreen, overlays principales */
+  --shadow-player: 
+    0 32px 80px -16px rgba(0,0,0,0.95);
+
+  /* ─── Brand Glows (por era) ────────────────────────────────────────── */
+  --shadow-brand-primary:   0 8px 24px -4px var(--glow-primary);
+  --shadow-brand-secondary: 0 8px 24px -4px var(--glow-secondary);
+  --shadow-brand-destructive: 0 8px 24px -4px var(--glow-destructive);
+  --shadow-brand-success:   0 8px 24px -4px var(--glow-success);
+  --shadow-brand-magic:     0 8px 24px -4px var(--glow-magic);
+
+  /* ─── Alias semánticos para componentes ────────────────────────────── */
+  --shadow-sm:  var(--shadow-card);
+  --shadow-md:  var(--shadow-elevated);
+  --shadow-lg:  var(--shadow-modal);
+  --shadow-xl:  var(--shadow-player);
+  
+  /* Glass inner shadow (para efecto depth en glass cards) */
+  --glass-inner: inset 0 1px 0 rgba(255,255,255,0.05);
+  --glass-inner-strong: inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+/* ─── Clases utilitarias ─────────────────────────────────────────────── */
+.shadow-card       { box-shadow: var(--shadow-card); }
+.shadow-elevated   { box-shadow: var(--shadow-elevated); }
+.shadow-modal      { box-shadow: var(--shadow-modal); }
+.shadow-player     { box-shadow: var(--shadow-player); }
+
+.shadow-brand-primary   { box-shadow: var(--shadow-brand-primary); }
+.shadow-brand-secondary { box-shadow: var(--shadow-brand-secondary); }
+.shadow-brand-destructive { box-shadow: var(--shadow-brand-destructive); }
+.shadow-brand-success   { box-shadow: var(--shadow-brand-success); }
+.shadow-brand-magic     { box-shadow: var(--shadow-brand-magic); }
+
+/* Glass inner highlight */
+.glass-inner       { box-shadow: var(--glass-inner); }
+.glass-inner-strong { box-shadow: var(--glass-inner-strong); }

@@ -1,0 +1,54 @@
+/* ╔══════════════════════════════════════════════════════════════════════╗
+   ║  spacing.css — KameHouse Design System v2                           ║
+   ║  Escala de espaciado consistente (base 4px)                         ║
+   ╚══════════════════════════════════════════════════════════════════════╝ */
+
+:root {
+  /* Escala base 4px */
+  --space-0:   0;
+  --space-px:  1px;
+  --space-0_5: 2px;
+  --space-1:   4px;
+  --space-1_5: 6px;
+  --space-2:   8px;
+  --space-2_5: 10px;
+  --space-3:   12px;
+  --space-3_5: 14px;
+  --space-4:   16px;
+  --space-5:   20px;
+  --space-6:   24px;
+  --space-7:   28px;
+  --space-8:   32px;
+  --space-9:   36px;
+  --space-10:  40px;
+  --space-11:  44px;
+  --space-12:  48px;
+  --space-14:  56px;
+  --space-16:  64px;
+  --space-20:  80px;
+  --space-24:  96px;
+  --space-28:  112px;
+  --space-32:  128px;
+  --space-36:  144px;
+  --space-40:  160px;
+  --space-44:  176px;
+  --space-48:  192px;
+  --space-52:  208px;
+  --space-56:  224px;
+  --space-60:  240px;
+  --space-64:  256px;
+  --space-72:  288px;
+  --space-80:  320px;
+  --space-96:  384px;
+
+  /* Alias semánticos para uso común */
+  --space-xs:     var(--space-1);    /* 4px  */
+  --gap  */
+  --space-sm:     var(--space-2);    /* 8gap  */
+  --space-md:     var(--space-4);    /* 16gap */
+  --space-lg:     var(--space-6);    /* 24gap */
+  --space-xl:     var(--space-8);    /* 32gap */
+  --space-2xl:    var(--space-12);   /* 48gap */
+  --space-3xl:    var(--space-16);   /* 64gap */
+  --space-4xl:    var(--space-24);   /* 96gap */
+}

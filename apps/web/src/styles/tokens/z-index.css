@@ -1,0 +1,51 @@
+/* ╔═════════════════════════════════════════════════════════════════════════╗
+   ║  z-index.css — KameHouse Design System v2                          ║
+   ║  Capas semánticas — NO usar z-index arbitrarios (9999, 10000, etc) ║
+   ╚═══════════════════════════════════════════════════════════════════════╝ */
+
+:root {
+  /* ─── Capas Base ───────────────────────────────────────────────────── */
+  --z-base:         0;       /* Contenido normal */
+  --z-raised:       10;      /* Elementos ligeramente elevados */
+  --z-dropdown:     100;     /* Dropdowns, selects, popovers */
+  --z-sticky:       200;     /* Headers sticky, sidebars */
+  --z-overlay:      300;     /* Overlays, backdrops */
+  --z-modal:        400;     /* Modales, dialogs */
+  --z-popover:      500;     /* Popovers, tooltips, command palette */
+  --z-toast:        600;     /* Toasts, notificaciones */
+  --z-tooltip:      700;     /* Tooltips (sobre todo) */
+  
+  /* ─── Navegación / Layout ──────────────────────────────────────────── */
+  --z-navbar:       800;     /* Navbar principal */
+  --z-sidebar:      850;     /* Sidebar (sobre navbar en mobile) */
+  --z-mobile-nav:   900;     /* Bottom nav mobile / TV nav */
+  
+  /* ─── Player / Video ───────────────────────────────────────────────── */
+  --z-player:       10000;   /* Video player fullscreen */
+  --z-player-ui:    10010;   /* Controles del player */
+  --z-player-overlay: 10020; /* Overlays del player (skip, next ep, etc) */
+  --z-player-sidebar: 10030; /* Sidebars del player (episodios, cola) */
+  --z-player-settings: 10040; /* Settings panel del player */
+  
+  /* ─── Máximo ───────────────────────────────────────────────────────── */
+  --z-max:          2147483647; /* Límite técnico (2^31-1) */
+}
+
+/* ─── Clases utilitarias ─────────────────────────────────────────────── */
+.z-base         { z-index: var(--z-base); }
+.z-raised       { z-index: var(--z-raised); }
+.z-dropdown     { z-index: var(--z-dropdown); }
+.z-sticky       { z-index: var(--z-sticky); }
+.z-overlay      { z-index: var(--z-overlay); }
+.z-modal        { z-index: var(--z-modal); }
+.z-popover      { z-index: var(--z-popover); }
+.z-toast        { z-index: var(--z-toast); }
+.z-tooltip      { z-index: var(--z-tooltip); }
+.z-navbar       { z-index: var(--z-navbar); }
+.z-sidebar      { z-index: var(--z-sidebar); }
+.z-mobile-nav   { z-index: var(--z-mobile-nav); }
+.z-player       { z-index: var(--z-player); }
+.z-player-ui    { z-index: var(--z-player-ui); }
+.z-player-overlay { z-index: var(--z-player-overlay); }
+.z-player-sidebar { z-index: var(--z-player-sidebar); }
+.z-player-settings { z-index: var(--z-player-settings); }

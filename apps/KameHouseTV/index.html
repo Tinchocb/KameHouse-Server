@@ -4,129 +4,37 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <title>KameHouse TV</title>
+    <!-- CSS Design System: 3 files -->
+    <link rel="stylesheet" href="css/tokens.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/components.css">
     <script src="$WEBAPIS/webapis/webapis.js"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #18181b;
-            color: #f4f4f5;
-            font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        }
-        body { display: flex; align-items: center; justify-content: center; }
-
-        #app {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .hidden { display: none !important; }
-
-        /* Loading */
-        .spinner {
-            width: 72px;
-            height: 72px;
-            border: 6px solid #27272a;
-            border-top-color: #f97316;
-            border-radius: 50%;
-            animation: spin 1s cubic-bezier(0.55, 0.055, 0.675, 0.19) infinite;
-            margin-bottom: 32px;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .status-text { font-size: 22px; color: #e4e4e7; text-align: center; font-weight: 500; }
-        .loading-dots::after { content: ''; animation: dots 1.5s steps(4, end) infinite; }
-        @keyframes dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } 100% { content: ''; } }
-
-        /* Error */
-        .error-icon  { font-size: 64px; margin-bottom: 20px; color: #ef4444; }
-        .error-title { font-size: 28px; font-weight: 700; color: #ef4444; margin-bottom: 12px; text-align: center; }
-        .error-detail { font-size: 18px; color: #a1a1aa; margin-bottom: 36px; text-align: center; line-height: 1.6; max-width: 600px; }
-
-        .btn-group { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; }
-        .btn {
-            padding: 18px 44px;
-            font-size: 20px;
-            font-weight: 700;
-            border: 3px solid transparent;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            outline: none;
-            min-width: 220px;
-            text-align: center;
-        }
-        .btn:focus, .btn.focused {
-            transform: scale(1.08);
-            border-color: #ffffff;
-            box-shadow: 0 0 25px rgba(249, 115, 22, 0.4);
-        }
-        .btn-primary { background: #f97316; color: #ffffff; }
-        .btn-primary:focus, .btn-primary.focused { background: #ea580c; }
-        .btn-secondary { background: #27272a; color: #f4f4f5; border: 3px solid #3f3f46; }
-        .btn-secondary:focus, .btn-secondary.focused { background: #3f3f46; }
-    </style>
 </head>
 <body>
-    <div id="app">
-        <div id="screen-loading">
-            <div class="spinner"></div>
-            <div class="status-text" id="loading-text">Conectando a KameHouse<span class="loading-dots"></span></div>
-        </div>
-
-        <div id="screen-error" class="hidden">
-            <div class="error-icon">&#9888;</div>
-            <div class="error-title" id="error-title">Error de conexión</div>
-            <div class="error-detail" id="error-detail">No se pudo conectar al servidor.</div>
-            <div class="btn-group">
-                <button class="btn btn-primary" id="btn-retry" tabindex="0">Reintentar</button>
-                <button class="btn btn-secondary" id="btn-exit" tabindex="0">Salir</button>
-            </div>
-        </div>
-    </div>
-
+    <div id="app"></div>
     <script>
         (function () {
             'use strict';
-
-            var SERVER_URL    = 'http://192.168.100.2:43211';
-            var CONNECT_TIMEOUT = 10000;
-            var MAX_RETRIES   = 2;
-
+            
+            const STATE_LOADING = 'loading';
+            const STATE_ERROR = 'error';
+            const STATE_CONFIG = 'config';
+            
+            var currentState = STATE_LOADING;
+            var SERVER_URL = 'http://192.168.100.2:43211';
+            var CONNECT_TIMEOUT = 30000;
+            var MAX_RETRIES = 2;
+            
             var retryCount = 0;
-            var els = {};
-
+            
             function $(id) { return document.getElementById(id); }
-
+            
             function init() {
                 registerTizenKeys();
-
-                els.loading     = $('screen-loading');
-                els.error       = $('screen-error');
-                els.loadingText = $('loading-text');
-                els.errorTitle  = $('error-title');
-                els.errorDetail = $('error-detail');
-                els.btnRetry    = $('btn-retry');
-                els.btnExit     = $('btn-exit');
-
-                els.btnRetry.addEventListener('click', function () { doConnect(); });
-                els.btnExit.addEventListener('click', exitApp);
-
-                [els.btnRetry, els.btnExit].forEach(function (el) {
-                    el.addEventListener('focus', function () { el.classList.add('focused'); });
-                    el.addEventListener('blur',  function () { el.classList.remove('focused'); });
-                });
-
-                document.addEventListener('keydown', onKeyDown);
-
+                updateUI();
                 doConnect();
             }
-
+            
             function registerTizenKeys() {
                 try {
                     if (typeof window.tizen !== 'undefined' && window.tizen.tvinputdevice) {
@@ -137,31 +45,87 @@
                     }
                 } catch (e) {}
             }
-
+            
+            function updateUI() {
+                if (currentState === STATE_LOADING) {
+                    $('#app').innerHTML = `
+                        <div class="kh-panel">
+                            <div class="kh-spinner"></div>
+                            <div class="kh-status-text" id="loading-text">Conectando a KameHouse<span class="kh-loading-dots"></span></div>
+                        </div>
+                    `;
+                } else if (currentState === STATE_ERROR) {
+                    $('#app').innerHTML = `
+                        <div class="kh-panel">
+                            <div class="kh-error-icon">&#9888;</div>
+                            <div class="kh-error-title" id="error-title">Error de conexión</div>
+                            <div class="kh-error-detail" id="error-detail">No se pudo conectar al servidor.</div>
+                            <div class="kh-btn-group">
+                                <button class="kh-btn kh-btn-primary kh-focusable" id="btn-retry">Reintentar</button>
+                                <button class="kh-btn kh-btn-secondary kh-focusable" id="btn-exit">Salir</button>
+                            </div>
+                        </div>
+                    `;
+                    $("#btn-retry").addEventListener('click', function () { onRetryClick(); });
+                    $("#btn-exit").addEventListener('click', exitApp);
+                    ["#btn-retry", "#btn-exit"].forEach(selector => {
+                        var el = $(selector);
+                        el.addEventListener('focus', function() { el.classList.add('focused'); });
+                        el.addEventListener('blur',  function() { el.classList.remove('focused'); });
+                    });
+                } else if (currentState === STATE_CONFIG) {
+                    $('#app').innerHTML = `
+                        <div class="kh-panel kh-config-panel">
+                            <div class="kh-logo">KameHouse<span class="kh-logo-orange">TV</span></div>
+                            <h2 class="kh-panel-title">Configurar Servidor</h2>
+                            <div class="kh-input-group">
+                                <label class="kh-input-label" for="server-input">Dirección del servidor</label>
+                                <input type="text" id="server-input" class="kh-input kh-focusable" placeholder="http://192.168.100.2:43211" value="${SERVER_URL}">
+                            </div>
+                            <div class="kh-button-row">
+                                <button class="kh-btn kh-btn-primary kh-focusable" id="btn-connect">Conectar</button>
+                                <button class="kh-btn kh-btn-secondary kh-focusable" id="btn-scan">Buscar red</button>
+                            </div>
+                        </div>
+                    `;
+                    $("#btn-connect").addEventListener('click', function () { onConnectClick(); });
+                    $("#btn-scan").addEventListener('click', function () { onScanClick(); });
+                    $("#server-input").addEventListener('focus', function() { this.select(); });
+                    ["#btn-connect", "#btn-scan", "#server-input"].forEach(selector => {
+                        var el = $(selector);
+                        el.addEventListener('focus', function() { el.classList.add('focused'); });
+                        el.addEventListener('blur',  function() { el.classList.remove('focused'); });
+                    });
+                }
+                
+                document.addEventListener('keydown', onKeyDown);
+            }
+            
             function onKeyDown(e) {
                 var key = e.key, code = e.keyCode;
-
                 if (key === 'Return' || code === 10009 || key === 'Back' || code === 27) {
                     e.preventDefault();
-                    exitApp();
+                    if (currentState === STATE_CONFIG) {
+                        onBackFromConfig();
+                    } else if (currentState === STATE_ERROR || currentState === STATE_LOADING) {
+                        exitApp();
+                    }
                     return;
                 }
-
                 if (key === 'ArrowLeft' || code === 37 || key === 'ArrowRight' || code === 39) {
                     e.preventDefault();
-                    var btns = [els.btnRetry, els.btnExit].filter(function (b) { return b && b.offsetParent !== null; });
+                    var btns = ["#btn-connect", "#btn-scan", "#server-input", "#btn-retry", "#btn-exit"].filter(function (s) { return $(s) && $(s).offsetParent !== null; });
                     var idx = btns.indexOf(document.activeElement);
                     if (idx === -1) { btns[0] && btns[0].focus(); return; }
                     var next = (key === 'ArrowRight' || code === 39) ? Math.min(idx + 1, btns.length - 1) : Math.max(idx - 1, 0);
                     btns[next].focus();
                 }
-
                 if (key === 'Enter' || code === 13) {
                     var active = document.activeElement;
                     if (active && typeof active.click === 'function') { e.preventDefault(); active.click(); }
                 }
             }
-
+            
             function exitApp() {
                 try {
                     if (typeof window.tizen !== 'undefined' && window.tizen.application) {
@@ -171,32 +135,18 @@
                     }
                 } catch (e) {}
             }
-
-            function showLoading(text) {
-                els.loading.classList.remove('hidden');
-                els.error.classList.add('hidden');
-                if (text) els.loadingText.textContent = text;
-            }
-
-            function showError(title, detail) {
-                els.loading.classList.add('hidden');
-                els.error.classList.remove('hidden');
-                els.errorTitle.textContent  = title;
-                els.errorDetail.textContent = detail;
-                els.btnRetry.focus();
-            }
-
+            
             function doConnect() {
                 retryCount = 0;
-                showLoading('Conectando a KameHouse...');
+                currentState = STATE_LOADING;
+                updateUI();
                 attemptConnect();
             }
-
+            
             function attemptConnect() {
                 var xhr = new XMLHttpRequest();
                 xhr.open('GET', SERVER_URL + '/api/health', true);
                 xhr.timeout = CONNECT_TIMEOUT;
-
                 xhr.onload = function () {
                     if (xhr.status >= 200 && xhr.status < 300) {
                         redirectTo();
@@ -205,32 +155,61 @@
                     }
                 };
                 xhr.onerror   = onFail;
-                xhr.ontimeout = function () {
-                    showError('Tiempo agotado', 'El servidor tardó demasiado en responder en ' + SERVER_URL);
-                };
+                xhr.ontimeout = function () { onTimeout(); };
                 xhr.send();
             }
-
+            
             function onFail() {
                 if (retryCount < MAX_RETRIES) {
                     retryCount++;
-                    showLoading('Reintentando conexión (' + retryCount + '/' + MAX_RETRIES + ')...');
+                    currentState = STATE_LOADING;
+                    updateUI();
                     setTimeout(attemptConnect, 2000);
                 } else {
-                    showError(
-                        'Sin conexión',
-                        'No se pudo conectar a ' + SERVER_URL + '. Verificá que el servidor esté encendido y en la misma red.'
-                    );
+                    currentState = STATE_ERROR;
+                    updateUI();
                 }
             }
-
+            
+            function onTimeout() {
+                currentState = STATE_ERROR;
+                updateUI();
+            }
+            
             function redirectTo() {
-                showLoading('¡Conectado! Abriendo KameHouse...');
+                currentState = STATE_LOADING;
+                updateUI();
                 setTimeout(function () {
                     window.location.replace(SERVER_URL + '?tvMode=true');
                 }, 400);
             }
-
+            
+            function onConnectClick() {
+                SERVER_URL = $("#server-input").value.trim();
+                if (!SERVER_URL) {
+                    currentState = STATE_ERROR;
+                    updateUI();
+                    return;
+                }
+                doConnect();
+            }
+            
+            function onRetryClick() {
+                doConnect();
+            }
+            
+            function onBackFromConfig() {
+                if (currentState === STATE_ERROR) {
+                    doConnect();
+                } else {
+                    doConnect();
+                }
+            }
+            
+            function onScanClick() {
+                alert('Escaneo de red: activar cuando esté listo');
+            }
+            
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', init);
             } else {

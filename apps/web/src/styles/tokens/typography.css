@@ -1,0 +1,143 @@
+/* ╔════════════════════════════════════════════════════════════════════════╗
+   ║  typography.css — KameHouse Design System v2                       ║
+   ║  Scale tipográfica + Font stacks + Utilidades                     ║
+   ╚═══════════════════════════════════════════════════════════════════════╝ */
+
+:root {
+  /* ─── Font Stacks ──────────────────────────────────────────────────── */
+  --font-sans:      "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display:   "Bebas Neue", cursive, var(--font-sans);
+  --font-mono:      "Space Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-numeric:   "Inter Variable", "Tabular Numbers", var(--font-mono);
+
+  /* ─── Escala Tipográfica (clamp para responsive fluido) ────────────── */
+  /* Mobile first, escala fluida hasta desktop */
+  
+  --text-xs:     clamp(0.70rem, 0.65rem + 0.25vw, 0.75rem);    /* ~11-12px */
+  --text-sm:     clamp(0.80rem, 0.75rem + 0.25vw, 0.875rem);   /* ~13-14px */
+  --text-base:   clamp(0.95rem, 0.875rem + 0.375vw, 1rem);     /* ~15-16px */
+  --text-lg:     clamp(1.05rem, 0.95rem + 0.5vw, 1.125rem);    /* ~17-18px */
+  --text-xl:     clamp(1.2rem, 1.1rem + 0.5vw, 1.25rem);       /* ~19-20px */
+  --text-2xl:    clamp(1.4rem, 1.25rem + 0.75vw, 1.5rem);      /* ~22-24px */
+  --text-3xl:    clamp(1.7rem, 1.5rem + 1vw, 1.875rem);        /* ~27-30px */
+  --text-4xl:    clamp(2rem, 1.75rem + 1.25vw, 2.25rem);       /* ~32-36px */
+  --text-5xl:    clamp(2.5rem, 2rem + 1.5vw, 3rem);            /* ~40-48px */
+  --text-6xl:    clamp(3rem, 2.5rem + 2vw, 3.75rem);           /* ~48-60px */
+  --text-7xl:    clamp(3.75rem, 3rem + 2.5vw, 4.5rem);         /* ~60-72px */
+  --text-8xl:    clamp(5rem, 4rem + 3vw, 6rem);                /* ~80-96px */
+  --text-9xl:    clamp(6.5rem, 5rem + 4vw, 8rem);              /* ~104-128px */
+
+  /* ─── Line Heights ─────────────────────────────────────────────────── */
+  --leading-none:      1;
+  --leading-tight:     1.1;
+  --leading-snug:      1.375;
+  --leading-normal:    1.5;
+  --leading-relaxed:   1.625;
+  --leading-loose:     2;
+
+  /* ─── Font Weights ─────────────────────────────────────────────────── */
+  --weight-thin:       100;
+  --weight-extralight: 200;
+  --weight-light:      300;
+  --weight-normal:     400;
+  --weight-medium:     500;
+  --weight-semibold:   600;
+  --weight-bold:       700;
+  --weight-extrabold:  800;
+  --weight-black:      900;
+
+  /* ─── Letter Spacing ───────────────────────────────────────────────── */
+  --tracking-tighter:  -0.05em;
+  --tracking-tight:    -0.025em;
+  --tracking-normal:   0;
+  --tracking-wide:     0.025em;
+  --tracking-wider:    0.05em;
+  --tracking-widest:   0.1em;
+  --tracking-ultra:    0.2em;
+
+  /* ─── Estilos de Display (para títulos hero) ───────────────────────── */
+  --display-xl:   var(--text-9xl) / var(--leading-none) var(--font-display) var(--weight-black) var(--tracking-tighter);
+  --display-lg:   var(--text-8xl) / var(--leading-none) var(--font-display) var(--weight-black) var(--tracking-tighter);
+  --display-md:   var(--text-7xl) / var(--leading-tight) var(--font-display) var(--weight-black) var(--tracking-tight);
+  --display-sm:   var(--text-6xl) / var(--leading-tight) var(--font-display) var(--weight-extrabold) var(--tracking-tight);
+  --display-xs:   var(--text-5xl) / var(--leading-tight) var(--font-display) var(--weight-extrabold) var(--tracking-tight);
+
+  /* ─── Estilos de Heading ───────────────────────────────────────────── */
+  --h1:  var(--text-5xl) / var(--leading-tight) var(--font-display) var(--weight-extrabold) var(--tracking-tight);
+  --h2:  var(--text-4xl) / var(--leading-tight) var(--font-display) var(--weight-extrabold) var(--tracking-tight);
+  --h3:  var(--text-3xl) / var(--leading-snug) var(--font-display) var(--weight-bold) var(--tracking-tight);
+  --h4:  var(--text-2xl) / var(--leading-snug) var(--font-sans) var(--weight-bold) var(--tracking-normal);
+  --h5:  var(--text-xl)  / var(--leading-normal) var(--font-sans) var(--weight-semibold) var(--tracking-normal);
+  --h6:  var(--text-lg)  / var(--leading-normal) var(--font-sans) var(--weight-semibold) var(--tracking-wide);
+
+  /* ─── Body Styles ──────────────────────────────────────────────────── */
+  --body-lg:   var(--text-lg)   / var(--leading-relaxed) var(--font-sans) var(--weight-normal) var(--tracking-normal);
+  --body-md:   var(--text-base) / var(--leading-relaxed) var(--font-sans) var(--weight-normal) var(--tracking-normal);
+  --body-sm:   var(--text-sm)   / var(--leading-normal) var(--font-sans) var(--weight-normal) var(--tracking-normal);
+  --body-xs:   var(--text-xs)   / var(--leading-normal) var(--font-sans) var(--weight-medium) var(--tracking-wide);
+
+  /* ─── UI Styles (botones, labels, badges) ──────────────────────────── */
+  --button-lg:  var(--text-base) / var(--leading-none) var(--font-sans) var(--weight-semibold) var(--tracking-wider);
+  --button-md:  var(--text-sm)   / var(--leading-none) var(--font-sans) var(--weight-semibold) var(--tracking-wider);
+  --button-sm:  var(--text-xs)   / var(--leading-none) var(--font-sans) var(--weight-bold) var(--tracking-widest);
+  --button-xs:  var(--text-xs)   / var(--leading-none) var(--font-sans) var(--weight-black) var(--tracking-ultra);
+
+  --label-lg:   var(--text-sm)   / var(--leading-normal) var(--font-sans) var(--weight-semibold) var(--tracking-wide);
+  --label-md:   var(--text-xs)   / var(--leading-normal) var(--font-sans) var(--weight-medium) var(--tracking-wider);
+  --label-sm:   var(--text-xs)   / var(--leading-none) var(--font-sans) var(--weight-bold) var(--tracking-ultra);
+
+  --badge:      var(--text-xs)   / var(--leading-none) var(--font-sans) var(--weight-bold) var(--tracking-widest);
+  --caption:    var(--text-xs)   / var(--leading-normal) var(--font-sans) var(--weight-medium) var(--tracking-wide);
+  --overline:   var(--text-xs)   / var(--leading-none) var(--font-sans) var(--weight-black) var(--tracking-ultra);
+
+  /* ─── Numeric / Tabular ────────────────────────────────────────────── */
+  --numeric:    var(--text-base) / var(--leading-none) var(--font-numeric) var(--weight-medium) var(--tracking-normal);
+  --numeric-lg: var(--text-xl)   / var(--leading-none) var(--font-numeric) var(--weight-bold) var(--tracking-tight);
+}
+
+/* ─── Clases utilitarias de display ──────────────────────────────────── */
+.text-display-xl { font: var(--display-xl); }
+.text-display-lg { font: var(--display-lg); }
+.text-display-md { font: var(--display-md); }
+.text-display-sm { font: var(--display-sm); }
+.text-display-xs { font: var(--display-xs); }
+
+.text-h1 { font: var(--h1); }
+.text-h2 { font: var(--h2); }
+.text-h3 { font: var(--h3); }
+.text-h4 { font: var(--h4); }
+.text-h5 { font: var(--h5); }
+.text-h6 { font: var(--h6); }
+
+.text-body-lg { font: var(--body-lg); }
+.text-body-md { font: var(--body-md); }
+.text-body-sm { font: var(--body-sm); }
+.text-body-xs { font: var(--body-xs); }
+
+.text-button-lg { font: var(--button-lg); }
+.text-button-md { font: var(--button-md); }
+.text-button-sm { font: var(--button-sm); }
+.text-button-xs { font: var(--button-xs); }
+
+.text-label-lg { font: var(--label-lg); }
+.text-label-md { font: var(--label-md); }
+.text-label-sm { font: var(--label-sm); }
+
+.text-badge { font: var(--badge); }
+.text-caption { font: var(--caption); }
+.text-overline { font: var(--overline); }
+
+.text-numeric { font: var(--numeric); }
+.text-numeric-lg { font: var(--numeric-lg); }
+
+/* ─── Font family utilities ──────────────────────────────────────────── */
+.font-sans      { font-family: var(--font-sans); }
+.font-display   { font-family: var(--font-display); }
+.font-mono      { font-family: var(--font-mono); }
+.font-numeric   { font-family: var(--font-numeric); font-variant-numeric: tabular-nums; }
+
+/* ─── Text color utilities ───────────────────────────────────────────── */
+.text-primary   { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-muted     { color: var(--text-muted); }
+.text-disabled  { color: var(--text-disabled); }

@@ -22,7 +22,7 @@ import { getDragonBallSpanishTitle } from "@/lib/config/dragonball.config"
 import { startViewTransition } from "@/lib/helpers/transitions"
 import { Trophy, Skull } from "lucide-react"
 
-// Modular Components
+// New Design System Components
 import { FloatingMatchFlap } from "@/components/shared/floating-match-flap"
 import { SeriesHero } from "./-components/series-hero"
 import { SagaSelector } from "./-components/saga-selector"
@@ -31,6 +31,9 @@ import { PremiumEpisodeList } from "./-components/premium-episode-list"
 import type { SagaDTO, SagaDetailSearchParams } from "@/api/types/series.types"
 import { BentoDetailsSkeleton } from "@/components/ui/shimmer-skeleton"
 import { CharacterDetailModal } from "@/components/shared/character-detail-modal"
+import { GlassCard, GlassButton, IconButton } from "@/components/ui"
+import { Icons } from "@/components/ui/icons"
+import { PosterCard } from "@/components/ui/poster-card"
 
 export const Route = createFileRoute("/series/$seriesId/")({
     validateSearch: (search: Record<string, unknown>): SagaDetailSearchParams => ({
@@ -75,7 +78,6 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
 
     const { mutate: preloadStream } = usePreloadMediastreamMediaContainer()
 
-    // Load rich Dragon Ball lore database (still needed for CharacterDetailModal)
     const { data: lore } = useServerQuery<any>({
         endpoint: "/api/v1/lore/dragonball",
         method: "GET",
@@ -111,7 +113,6 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         malId?: number | null
     } | null>(null)
 
-    // Fetch sagas from backend (lore-enriched + display data)
     const { data: sagas } = useServerQuery<SagaDTO[]>({
         endpoint: `/api/v1/library/anime-entry/${seriesId}/sagas`,
         method: "GET",
@@ -125,12 +126,12 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         return currentSaga?.subSagas?.find(ss => ss.id === activeSubSagaId) || null
     }, [sagas, activeSagaId, activeSubSagaId])
 
-    // Sync activeSagaId when sagas load
     React.useEffect(() => {
         if (sagas && sagas.length > 0 && !activeSagaId) {
             setSearchParams({ saga: sagas[0].id })
         }
     }, [sagas, activeSagaId, setSearchParams])
+
     const computedEpisodes = useMemo(() => {
         if (!entry) return []
         if (entry.episodes && entry.episodes.length > 0) {
@@ -184,7 +185,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
             return Array.from(epMap.values()).sort((a, b) => a.episodeNumber - b.episodeNumber);
         }
         return [];
-    }, [entry, sagas]);
+    }, [entry, sagas])
 
     const handlePlayEpisode = useCallback((localFile: Anime_LocalFile, episode: Anime_Episode) => {
         if (!localFile.path) {
@@ -215,7 +216,6 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         const epNum = localFile.parsedInfo?.episode || localFile.metadata?.episode || 1
         const seasonNum = localFile.parsedInfo?.season
         
-        // Try to find the matching episode in computedEpisodes to resolve absoluteEpisodeNumber
         const matchedEp = computedEpisodes.find(ep => {
             if (ep.absoluteEpisodeNumber === Number(epNum)) {
                 return true
@@ -257,7 +257,6 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
             return
         }
         
-        // Find resume episode or first unwatched episode
         let targetEp = computedEpisodes.find(ep => !ep.watched) || computedEpisodes[0]
         if (continuityData?.item) {
             const resumeEp = computedEpisodes.find(ep => (ep.absoluteEpisodeNumber || ep.episodeNumber) === continuityData.item?.episodeNumber)
@@ -282,7 +281,6 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         if (lf) {
             handlePlayEpisode(lf, targetEp)
         } else if (entry?.localFiles && entry.localFiles.length > 0) {
-            // If no metadata match, just play first available local file
             handlePlayLocalFile(entry.localFiles[0])
         } else {
             toast.info("No hay archivos locales disponibles para reproducir.")
@@ -313,8 +311,6 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
             toast.error("Archivo local no disponible para este episodio.")
         }
     }, [computedEpisodes, entry?.localFiles, handlePlayEpisode])
-
-
 
     const handleNextEpisode = () => {
         if (!computedEpisodes || !playTarget) return
@@ -395,16 +391,15 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
 
     if (isLoading && !entry) {
         return (
-            <div className="h-full w-full bg-[#050506]/60 backdrop-blur-2xl text-white pb-16 overflow-y-auto">
+            <div className="h-full w-full bg-[var(--bg-primary)] text-white pb-16 overflow-y-auto">
                 <BentoDetailsSkeleton />
             </div>
         )
     }
 
-
     if (!entry || !entry.media) {
         return (
-            <div className="h-full w-full bg-[#09090b] text-white flex items-center justify-center px-6">
+            <div className="h-full w-full bg-[var(--bg-primary)] text-white flex items-center justify-center px-6">
                 <EmptyState
                     title="Contenido no encontrado"
                     message="No pudimos cargar este contenido. Vuelve al inicio o intenta con otro."
@@ -414,12 +409,11 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     }
 
     const title = entry.media.titleSpanish || entry.media.titleRomaji || entry.media.titleEnglish || "Título Desconocido"
-
     const hasRelations = entry.media?.relations && entry.media.relations.length > 0
     const hasCharacters = entry.media?.characters?.edges && entry.media.characters.edges.length > 0
 
     return (
-        <div className="h-full w-full flex flex-col overflow-y-auto no-scrollbar bg-[#050506]/60 backdrop-blur-2xl text-white pb-16">
+        <div className="h-full w-full flex flex-col overflow-y-auto no-scrollbar bg-[var(--bg-primary)] text-white pb-16">
             <FloatingMatchFlap
                 directoryPath={entry.libraryData?.sharedPath || ""}
                 mediaId={entry.mediaId}
@@ -430,53 +424,41 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                 sagaCount={sagas?.length ?? 0}
                 onPlay={handlePlayDefault}
             />
-            <div className="w-full max-w-[1800px] mx-auto px-6 md:pl-[120px] md:pr-12 mt-8">
-                {/* Custom Glassmorphic Tabs Navigation for Series/Shows */}
-                <div className="flex border-b border-white/5 pb-2 mb-6 gap-6 overflow-x-auto no-scrollbar">
-                    <button
+            <div className="w-full max-w-[1800px] mx-auto px-6 md:pl-20 md:pr-12 mt-8">
+                <div className="flex border-b border-[var(--glass-border)] pb-2 mb-6 gap-6 overflow-x-auto no-scrollbar">
+                    <GlassButton
+                        variant={activeTab === "episodes" ? "primary" : "ghost"}
+                        size="sm"
                         onClick={() => setSearchParams({ tab: "episodes" })}
-                        className={cn(
-                            "text-sm uppercase tracking-[0.2em] font-black pb-3 transition-all relative shrink-0",
-                            activeTab === "episodes" ? "text-brand-orange" : "text-zinc-500 hover:text-zinc-300"
-                        )}
+                        leftIcon="film"
+                        className="shrink-0"
                     >
                         Episodios
-                        {activeTab === "episodes" && (
-                            <motion.div layoutId="detailActiveLine" className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-orange" />
-                        )}
-                    </button>
+                    </GlassButton>
 
                     {hasRelations && (
-                        <button
+                        <GlassButton
+                            variant={activeTab === "relations" ? "primary" : "ghost"}
+                            size="sm"
                             onClick={() => setSearchParams({ tab: "relations" })}
-                            className={cn(
-                                "text-sm uppercase tracking-[0.2em] font-black pb-3 transition-all relative shrink-0",
-                                activeTab === "relations" ? "text-brand-orange" : "text-zinc-500 hover:text-zinc-300"
-                            )}
+                            leftIcon="layers"
+                            className="shrink-0"
                         >
                             Relacionados
-                            {activeTab === "relations" && (
-                                <motion.div layoutId="detailActiveLine" className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-orange" />
-                            )}
-                        </button>
+                        </GlassButton>
                     )}
 
                     {hasCharacters && (
-                        <button
+                        <GlassButton
+                            variant={activeTab === "characters" ? "primary" : "ghost"}
+                            size="sm"
                             onClick={() => setSearchParams({ tab: "characters" })}
-                            className={cn(
-                                "text-sm uppercase tracking-[0.2em] font-black pb-3 transition-all relative shrink-0",
-                                activeTab === "characters" ? "text-brand-orange" : "text-zinc-500 hover:text-zinc-300"
-                            )}
+                            leftIcon="users"
+                            className="shrink-0"
                         >
                             Personajes
-                            {activeTab === "characters" && (
-                                <motion.div layoutId="detailActiveLine" className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-orange" />
-                            )}
-                        </button>
+                        </GlassButton>
                     )}
-
-
                 </div>
 
                 <div className="mt-4 min-h-[300px]">
@@ -490,34 +472,31 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                                 transition={{ duration: 0.2 }}
                                 className="mt-8 flex flex-col lg:flex-row gap-8"
                             >
-                                {/* Left Column: Saga Selector */}
                                 {sagas && sagas.length > 0 && (
                                     <div className="lg:w-80 flex-shrink-0 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-7rem)]">
-                                        <SagaSelector
-                                            sagas={sagas}
-                                            activeSagaId={activeSagaId}
-                                            onSelectSaga={(sagaId) => {
-                                                setSearchParams({ saga: sagaId, subSaga: "" })
-                                                window.scrollTo({ top: 0, behavior: "smooth" })
-                                            }}
-                                            activeSubSagaId={activeSubSagaId}
-                                            onSelectSubSaga={(subSagaId) => setSearchParams({ subSaga: subSagaId })}
-                                        />
+                                        <GlassCard variant="elevated" padding="md" radius="2xl" className="h-full">
+                                            <SagaSelector
+                                                sagas={sagas}
+                                                activeSagaId={activeSagaId}
+                                                onSelectSaga={(sagaId) => {
+                                                    setSearchParams({ saga: sagaId, subSaga: "" })
+                                                    window.scrollTo({ top: 0, behavior: "smooth" })
+                                                }}
+                                                activeSubSagaId={activeSubSagaId}
+                                                onSelectSubSaga={(subSagaId) => setSearchParams({ subSaga: subSagaId })}
+                                            />
+                                        </GlassCard>
                                     </div>
                                 )}
 
-                                {/* Right Column: Characters & Episodes */}
                                 <div className="flex-grow flex flex-col min-w-0">
-                                    {/* Saga Lore Info Card */}
                                     <SagaLoreHeader saga={sagas?.find(s => s.id === activeSagaId)} />
 
-                                    {/* Mapped Characters from active saga */}
                                     <CharacterCarousel 
                                         characters={sagas?.find(s => s.id === activeSagaId)?.keyCharacters || []}
                                         onSelect={setSelectedCharacterName}
                                     />
                                     
-                                    {/* Mapped Premium Episodes */}
                                     <PremiumEpisodeList 
                                         episodes={computedEpisodes
                                             .filter(ep => !sagas?.length ? true : ep.sagaId === activeSagaId)
@@ -527,15 +506,12 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                                                     const fEp = f.metadata?.episode || f.parsedInfo?.episode;
                                                     const fSeason = f.parsedInfo?.season;
                                                     
-                                                    // Prioritize absolute episode number match
                                                     if (ep.absoluteEpisodeNumber && Number(fEp) === ep.absoluteEpisodeNumber) {
                                                         return true;
                                                     }
-                                                    // Otherwise, match episode number and season if available
                                                     if (fSeason != null && ep.seasonNumber != null) {
                                                         return Number(fEp) === ep.episodeNumber && Number(fSeason) === ep.seasonNumber;
                                                     }
-                                                    // Fallback to simple episode number match
                                                     return Number(fEp) === ep.episodeNumber;
                                                 });
                                                 
@@ -576,7 +552,9 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                                 transition={{ duration: 0.2 }}
                                 className="py-4"
                             >
-                                <RelationsTab media={entry.media} />
+                                <GlassCard variant="default" padding="lg" radius="2xl">
+                                    <RelationsTab media={entry.media} />
+                                </GlassCard>
                             </motion.div>
                         )}
 
@@ -589,11 +567,11 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                                 transition={{ duration: 0.2 }}
                                 className="py-4"
                             >
-                                <CharactersTab characters={entry.media?.characters?.edges || []} onSelectChar={setSelectedCharacterName} />
+                                <GlassCard variant="default" padding="lg" radius="2xl">
+                                    <CharactersTab characters={entry.media?.characters?.edges || []} onSelectChar={setSelectedCharacterName} />
+                                </GlassCard>
                             </motion.div>
                         )}
-
-
                     </AnimatePresence>
                 </div>
             </div>
@@ -602,9 +580,9 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                 const nextTitle = nextEp ? (nextEp.titleSpanish || nextEp.episodeMetadata?.title || nextEp.episodeTitle || nextEp.displayTitle || `Episodio ${nextEp.absoluteEpisodeNumber || nextEp.episodeNumber}`) : undefined;
                 return (
                     <React.Suspense fallback={
-                        <div className="fixed inset-0 bg-[#07070a]/90 backdrop-blur-xl flex flex-col justify-center items-center z-50">
-                            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-orange mb-4"></div>
-                            <p className="text-zinc-400 text-xs font-bold uppercase tracking-[0.2em]">Cargando reproductor...</p>
+                        <div className="fixed inset-0 bg-[var(--bg-primary)]/90 backdrop-blur-xl flex flex-col justify-center items-center z-50">
+                            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--brand-primary)] mb-4"></div>
+                            <p className="text-muted text-label-md uppercase tracking-widest">Cargando reproductor...</p>
                         </div>
                     }>
                         <VideoPlayer
@@ -635,7 +613,6 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                 );
             })()}
 
-            {/* Character Lore Detail Modal overlay */}
             {selectedCharacterName && (
                 <CharacterDetailModal 
                     characterName={selectedCharacterName}
@@ -648,72 +625,76 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     )
 }
 
-// ─── LORE UI COMPONENTS ──────────────────────────────────────────────────────
-
 function SagaLoreHeader({ saga }: { saga: SagaDTO | undefined }) {
     if (!saga) return null
 
     const hasRichDetails = saga.antagonists?.length > 0 || saga.keyEvents?.length > 0 || saga.newCharacters?.length > 0
 
     return (
-        <div className="p-8 liquid-glass-frosted rounded-2xl mb-8 flex flex-col gap-6">
+        <GlassCard variant="elevated" padding="lg" radius="2xl" className="mb-8">
             <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="space-y-1">
-                    <span className="text-[9px] font-black text-brand-orange uppercase tracking-[0.25em] bg-brand-orange/10 border border-brand-orange/20 px-2.5 py-0.5 rounded">Detalles del Arco</span>
-                    <h2 className="text-3xl font-black text-white tracking-wide uppercase mt-1.5">{saga.name}</h2>
+                    <span className="text-label-sm text-[var(--brand-primary)] uppercase tracking-widest bg-[var(--brand-primary)]/10 border border-[var(--brand-primary)]/20 px-2.5 py-0.5 rounded">
+                        Detalles del Arco
+                    </span>
+                    <h2 className="text-h3 font-display text-primary uppercase tracking-wide mt-1.5">
+                        {saga.name}
+                    </h2>
                 </div>
                 {saga.canonStatus && (
                     <span className={cn(
-                        "px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.15em] shadow-sm",
+                        "px-4 py-1.5 rounded-full text-label-sm font-black uppercase tracking-wider shadow-sm",
                         saga.canonStatus === "true" || saga.canonStatus.toLowerCase() === "canon"
-                            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                            ? "bg-[var(--brand-success)]/15 text-[var(--brand-success)] border border-[var(--brand-success)]/25"
                             : saga.canonStatus.toLowerCase() === "relleno" || saga.canonStatus === "false"
-                            ? "bg-red-500/10 text-red-400 border border-red-500/20"
-                            : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                            ? "bg-[var(--brand-destructive)]/15 text-[var(--brand-destructive)] border border-[var(--brand-destructive)]/25"
+                            : "bg-[var(--brand-secondary)]/15 text-[var(--brand-secondary)] border border-[var(--brand-secondary)]/25"
                     )}>
                         {saga.canonStatus === "true" || saga.canonStatus.toLowerCase() === "canon" ? "Canon" : saga.canonStatus.toLowerCase() === "relleno" || saga.canonStatus === "false" ? "Relleno" : saga.canonStatus}
                     </span>
                 )}
             </div>
 
-            <p className="text-zinc-300 text-sm md:text-base leading-relaxed border-l-2 border-brand-orange/30 pl-4 py-1">{saga.description}</p>
+            <p className="text-body-md text-secondary leading-relaxed border-l-2 border-[var(--brand-primary)]/30 pl-4 py-1">
+                {saga.description}
+            </p>
 
             {hasRichDetails && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-white/5 mt-2">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-[var(--glass-border)] mt-2">
                     {saga.antagonists?.length > 0 && (
-                        <div className="p-5 liquid-glass-frosted-subtle rounded-xl shadow-inner">
-                            <span className="flex items-center gap-2 text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-3 pb-2 border-b border-white/5">
-                                <Skull className="w-3.5 h-3.5 text-red-400" /> Antagonistas
+                        <GlassCard variant="default" padding="lg" radius="xl" className="shadow-inner">
+                            <span className="flex items-center gap-2 text-label-sm font-black text-muted uppercase tracking-wider mb-3 pb-2 border-b border-[var(--glass-border)]">
+                                <Icons.status.skull size={14} className="text-[var(--brand-destructive)]" />
+                                Antagonistas
                             </span>
                             <div className="flex flex-wrap gap-2">
                                 {saga.antagonists.map((ant: string, idx: number) => (
-                                    <span key={idx} className="px-2.5 py-1 bg-red-950/20 text-red-300 border border-red-500/10 text-[10px] rounded-lg font-bold">
+                                    <span key={idx} className="px-2.5 py-1 bg-[var(--brand-destructive)]/20 text-[var(--brand-destructive)] border border-[var(--brand-destructive)]/20 text-label-sm rounded-lg font-bold">
                                         {ant}
                                     </span>
                                 ))}
                             </div>
-                        </div>
+                        </GlassCard>
                     )}
 
                     {saga.keyEvents?.length > 0 && (
-                        <div className="md:col-span-2 p-5 liquid-glass-frosted-subtle rounded-xl shadow-inner">
-                            <span className="flex items-center gap-2 text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-3 pb-2 border-b border-white/5">
-                                <Trophy className="w-3.5 h-3.5 text-amber-400" /> Hitos Clave
+                        <GlassCard variant="default" padding="lg" radius="xl" className="md:col-span-2 shadow-inner">
+                            <span className="flex items-center gap-2 text-label-sm font-black text-muted uppercase tracking-wider mb-3 pb-2 border-b border-[var(--glass-border)]">
+                                <Icons.status.trophy size={14} className="text-[var(--brand-secondary)]" />
+                                Hitos Clave
                             </span>
-                            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-zinc-400">
+                            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-body-sm text-secondary">
                                 {saga.keyEvents.map((event: string, idx: number) => (
                                     <li key={idx} className="flex items-start gap-2 leading-relaxed">
-                                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-orange/60 mt-1.5 shrink-0" />
-                                        <span className="text-zinc-300">{event}</span>
+                                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--brand-primary)]/60 mt-1.5 shrink-0" />
+                                        <span className="text-muted">{event}</span>
                                     </li>
                                 ))}
                             </ul>
-                        </div>
+                        </GlassCard>
                     )}
                 </div>
             )}
-        </div>
+        </GlassCard>
     )
 }
-
-

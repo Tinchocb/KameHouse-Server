@@ -1,0 +1,39 @@
+/* ╔════════════════════════════════════════════════════════════════════════╗
+   ║  radius.css — KameHouse Design System v2                          ║
+   ║  Escala de radios consistente — SOLO estos valores                ║
+   ╚═══════════════════════════════════════════════════════════════════════╝ */
+
+:root {
+  /* Escala principal — NO usar valores arbitrarios (13px, 19px, 27px, etc.) */
+  --radius-none:  0;
+  --radius-xs:    4px;    /* badges, chips, avatars pequeños */
+  --radius-sm:    8px;    /* botones, inputs, badges */
+  --radius-md:    12px;   /* cards pequeñas, dropdowns */
+  --radius-lg:    16px;   /* cards estándar, modales */
+  --radius-xl:    20px;   /* cards grandes, hero sections */
+  --radius-2xl:   24px;   /* panels, sidebars */
+  --radius-3xl:   32px;   /* hero banners, layouts principales */
+  --radius-4xl:   40px;   /* casos especiales */
+  --radius-full:  9999px; /* pills, avatars, badges redondos */
+
+  /* Alias semánticos */
+  --radius-card:      var(--radius-lg);     /* 16px - Card estándar */
+  --radius-button:    var(--radius-sm);     /* 8px - Botones */
+  --radius-input:     var(--radius-sm);     /* 8px - Inputs */
+  --radius-badge:     var(--radius-full);   /* Pills, badges */
+  --radius-avatar:    var(--radius-full);   /* Avatares */
+  --radius-modal:     var(--radius-2xl);    /* 24px - Modales */
+  --radius-popover:   var(--radius-md);     /* 12px - Popovers, dropdowns */
+  --radius-hero:      var(--radius-3xl);    /* 32px - Hero banners */
+}
+
+/* Clases utilitarias Tailwind compatibles */
+.rounded-xs      { border-radius: var(--radius-xs); }
+.rounded-sm      { border-radius: var(--radius-sm); }
+.rounded-md      { border-radius: var(--radius-md); }
+.rounded-lg      { border-radius: var(--radius-lg); }
+.rounded-xl      { border-radius: var(--radius-xl); }
+.rounded-2xl     { border-radius: var(--radius-2xl); }
+.rounded-3xl     { border-radius: var(--radius-3xl); }
+.rounded-4xl     { border-radius: var(--radius-4xl); }
+.rounded-full    { border-radius: var(--radius-full); }
