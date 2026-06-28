@@ -84,6 +84,9 @@ func writeAudioTracks(b *strings.Builder, info *videofile.MediaInfo, token strin
 		}
 
 		ch := 2
+		if audio.Channels > 0 {
+			ch = int(audio.Channels)
+		}
 		fmt.Fprintf(b, "CHANNELS=\"%d\",", ch)
 		fmt.Fprintf(b, "URI=\"./audio/%d/index.m3u8%s\"\n", audio.Index, tokenSuffix)
 	}

@@ -3,6 +3,7 @@ package cassette
 import (
 	"errors"
 	"math"
+	"strconv"
 	"kamehouse/internal/mediastream/videofile"
 	"kamehouse/internal/util"
 	"strings"
@@ -243,11 +244,21 @@ type AudioTranscodeDecision struct {
 //   - ≤ 2 canales: AAC estéreo @ 128k
 //   - > 2 canales: AAC multicanal @ 384k con aresample=async=1 para A/V sync.
 func DecideAudioTranscode(audio *videofile.Audio) AudioTranscodeDecision {
+	channels := 2
+	bitrate := "128k"
+
+	if audio.Channels > 2 {
+		channels = int(audio.Channels)
+		bitrate = "384k"
+	} else if audio.Channels > 0 {
+		channels = int(audio.Channels)
+	}
+
 	return AudioTranscodeDecision{
 		Copy:     false,
 		Codec:    "aac",
-		Bitrate:  "192k",
-		Channels: "2",
+		Bitrate:  bitrate,
+		Channels: strconv.Itoa(channels),
 	}
 }
 
