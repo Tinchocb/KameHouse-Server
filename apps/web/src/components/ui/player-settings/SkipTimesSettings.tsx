@@ -42,9 +42,9 @@ export function SkipTimesSettings({
     const [opStart, setOpStart] = React.useState<number | null>(seriesData?.opStart && seriesData.opStart > 0 ? seriesData.opStart : null)
     const [opEnd, setOpEnd] = React.useState<number | null>(seriesData?.opEnd && seriesData.opEnd > 0 ? seriesData.opEnd : null)
     
-    // In store, edOffset is duration - edStart. We reconstruct edStart and edEnd.
+    // In store, edOffset represents the absolute start time of the outro.
     const [edStart, setEdStart] = React.useState<number | null>(
-        seriesData?.edOffset && duration ? duration - seriesData.edOffset : null
+        seriesData?.edOffset && seriesData.edOffset > 0 ? seriesData.edOffset : null
     )
     const [edEnd, setEdEnd] = React.useState<number | null>(
         seriesData?.edEnd && seriesData.edEnd > 0 ? seriesData.edEnd : null
@@ -177,9 +177,9 @@ export function SkipTimesSettings({
         
         let resolvedEdOffset = 0
         let resolvedEdEnd = 0
-        if (edStart !== null && duration && duration > 0) {
-            resolvedEdOffset = Math.max(0, duration - edStart)
-            if (edEndIsEpisodeEnd) {
+        if (edStart !== null) {
+            resolvedEdOffset = edStart
+            if (edEndIsEpisodeEnd && duration && duration > 0) {
                 resolvedEdEnd = duration
             } else if (edEnd !== null && edEnd > 0) {
                 resolvedEdEnd = edEnd

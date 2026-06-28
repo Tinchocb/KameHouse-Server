@@ -6,6 +6,7 @@ export interface GlassCardProps extends React.HTMLAttributes<HTMLDivElement> {
   padding?: "none" | "sm" | "md" | "lg" | "xl";
   radius?: "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "full";
   blur?: "xs" | "sm" | "md" | "lg" | "xl";
+  borderVariant?: "directional" | "uniform";
   hover?: boolean;
   onClick?: () => void;
 }
@@ -29,12 +30,25 @@ const radiusMap = {
   full: "rounded-full",
 } as const;
 
+const blurMap = {
+  xs: "backdrop-blur-xs",
+  sm: "backdrop-blur-sm",
+  md: "backdrop-blur-md",
+  lg: "backdrop-blur-lg",
+  xl: "backdrop-blur-xl",
+} as const;
+
 const variantClasses = {
-  default: "bg-[var(--glass-bg)] border border-[var(--glass-border)] backdrop-blur-md shadow-card glass-inner",
-  elevated: "bg-[var(--glass-bg)] border border-[var(--glass-border)] backdrop-blur-lg shadow-elevated glass-inner",
-  interactive: "bg-[var(--glass-bg)] border border-[var(--glass-border)] backdrop-blur-md shadow-card glass-inner cursor-pointer transition-all duration-base hover:border-[var(--glass-hover)] hover:bg-[var(--glass-hover)] hover:shadow-elevated active:scale-[0.98]",
-  popup: "bg-[var(--glass-bg)] border border-[var(--glass-strong)] backdrop-blur-xl shadow-modal glass-inner-strong",
-  strong: "bg-[var(--glass-bg)] border border-[var(--glass-strong)] backdrop-blur-xl shadow-modal glass-inner-strong",
+  default: "bg-[var(--glass-bg)] shadow-glass",
+  elevated: "bg-[var(--glass-bg)] shadow-elevated",
+  interactive: "bg-[var(--glass-bg)] shadow-glass cursor-pointer transition-all duration-base hover:bg-[var(--glass-bg-hover)] hover:shadow-elevated active:scale-[0.98]",
+  popup: "bg-[var(--glass-bg-strong)] shadow-modal",
+  strong: "bg-[var(--glass-bg-strong)] shadow-modal",
+} as const;
+
+const borderClasses = {
+  directional: "border-t-[var(--glass-border-top)] border-r-[var(--glass-border-side)] border-b-[var(--glass-border-bottom)] border-l-[var(--glass-border-side)]",
+  uniform: "border border-[var(--glass-border-top)]",
 } as const;
 
 export const GlassCard = React.forwardRef<HTMLDivElement, GlassCardProps>(
@@ -43,7 +57,8 @@ export const GlassCard = React.forwardRef<HTMLDivElement, GlassCardProps>(
       variant = "default",
       padding = "md",
       radius = "lg",
-      blur,
+      blur = "md",
+      borderVariant = "directional",
       hover = false,
       onClick,
       className,
@@ -62,7 +77,8 @@ export const GlassCard = React.forwardRef<HTMLDivElement, GlassCardProps>(
           variantClasses[variant],
           radiusMap[radius],
           paddingMap[padding],
-          blur && `backdrop-blur-${blur}`,
+          blurMap[blur],
+          borderClasses[borderVariant],
           isInteractive && "tap-scale",
           className
         )}
@@ -112,7 +128,7 @@ GlassCardContent.displayName = "GlassCardContent";
 
 export const GlassCardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("flex items-center gap-3 mt-4 pt-4 border-t border-[var(--glass-border)]", className)} {...props} />
+    <div ref={ref} className={cn("flex items-center gap-3 mt-4 pt-4 border-t border-[var(--glass-border-top)]", className)} {...props} />
   )
 );
 GlassCardFooter.displayName = "GlassCardFooter";

@@ -1,18 +1,16 @@
 /* ╔════════════════════════════════════════════════════════════════════════╗
-   ║  typography.css — KameHouse Design System v2                       ║
-   ║  Scale tipográfica + Font stacks + Utilidades                     ║
-   ╚═══════════════════════════════════════════════════════════════════════╝ */
+   ║  typography.css — KameHouse Design System v3 (Cinematic Minimalist)  ║
+   ║  Space Grotesk display + Inter sans + tracking-tight headings        ║
+   ╚════════════════════════════════════════════════════════════════════════╝ */
 
 :root {
-  /* ─── Font Stacks ──────────────────────────────────────────────────── */
+  /* ─── Font Stacks ───────────────────────────────────────────────────── */
   --font-sans:      "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-display:   "Bebas Neue", cursive, var(--font-sans);
+  --font-display:   "Space Grotesk", "Bebas Neue", ui-sans-serif, system-ui, sans-serif;
   --font-mono:      "Space Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   --font-numeric:   "Inter Variable", "Tabular Numbers", var(--font-mono);
 
-  /* ─── Escala Tipográfica (clamp para responsive fluido) ────────────── */
-  /* Mobile first, escala fluida hasta desktop */
-  
+  /* ─── Escala Tipográfica (clamp para responsive fluido) ─────────────── */
   --text-xs:     clamp(0.70rem, 0.65rem + 0.25vw, 0.75rem);    /* ~11-12px */
   --text-sm:     clamp(0.80rem, 0.75rem + 0.25vw, 0.875rem);   /* ~13-14px */
   --text-base:   clamp(0.95rem, 0.875rem + 0.375vw, 1rem);     /* ~15-16px */
@@ -27,7 +25,7 @@
   --text-8xl:    clamp(5rem, 4rem + 3vw, 6rem);                /* ~80-96px */
   --text-9xl:    clamp(6.5rem, 5rem + 4vw, 8rem);              /* ~104-128px */
 
-  /* ─── Line Heights ─────────────────────────────────────────────────── */
+  /* ─── Line Heights ──────────────────────────────────────────────────── */
   --leading-none:      1;
   --leading-tight:     1.1;
   --leading-snug:      1.375;
@@ -35,7 +33,7 @@
   --leading-relaxed:   1.625;
   --leading-loose:     2;
 
-  /* ─── Font Weights ─────────────────────────────────────────────────── */
+  /* ─── Font Weights ──────────────────────────────────────────────────── */
   --weight-thin:       100;
   --weight-extralight: 200;
   --weight-light:      300;
@@ -46,23 +44,23 @@
   --weight-extrabold:  800;
   --weight-black:      900;
 
-  /* ─── Letter Spacing ───────────────────────────────────────────────── */
+  /* ─── Letter Spacing ────────────────────────────────────────────────── */
   --tracking-tighter:  -0.05em;
-  --tracking-tight:    -0.025em;
+  --tracking-tight:    -0.025em;   /* Para headings elegantes */
   --tracking-normal:   0;
   --tracking-wide:     0.025em;
   --tracking-wider:    0.05em;
   --tracking-widest:   0.1em;
   --tracking-ultra:    0.2em;
 
-  /* ─── Estilos de Display (para títulos hero) ───────────────────────── */
+  /* ─── Estilos de Display (Hero, logos grandes) ──────────────────────── */
   --display-xl:   var(--text-9xl) / var(--leading-none) var(--font-display) var(--weight-black) var(--tracking-tighter);
   --display-lg:   var(--text-8xl) / var(--leading-none) var(--font-display) var(--weight-black) var(--tracking-tighter);
   --display-md:   var(--text-7xl) / var(--leading-tight) var(--font-display) var(--weight-black) var(--tracking-tight);
   --display-sm:   var(--text-6xl) / var(--leading-tight) var(--font-display) var(--weight-extrabold) var(--tracking-tight);
   --display-xs:   var(--text-5xl) / var(--leading-tight) var(--font-display) var(--weight-extrabold) var(--tracking-tight);
 
-  /* ─── Estilos de Heading ───────────────────────────────────────────── */
+  /* ─── Estilos de Heading (tracking-tight para look premium) ─────────── */
   --h1:  var(--text-5xl) / var(--leading-tight) var(--font-display) var(--weight-extrabold) var(--tracking-tight);
   --h2:  var(--text-4xl) / var(--leading-tight) var(--font-display) var(--weight-extrabold) var(--tracking-tight);
   --h3:  var(--text-3xl) / var(--leading-snug) var(--font-display) var(--weight-bold) var(--tracking-tight);
@@ -70,13 +68,13 @@
   --h5:  var(--text-xl)  / var(--leading-normal) var(--font-sans) var(--weight-semibold) var(--tracking-normal);
   --h6:  var(--text-lg)  / var(--leading-normal) var(--font-sans) var(--weight-semibold) var(--tracking-wide);
 
-  /* ─── Body Styles ──────────────────────────────────────────────────── */
+  /* ─── Body Styles ───────────────────────────────────────────────────── */
   --body-lg:   var(--text-lg)   / var(--leading-relaxed) var(--font-sans) var(--weight-normal) var(--tracking-normal);
   --body-md:   var(--text-base) / var(--leading-relaxed) var(--font-sans) var(--weight-normal) var(--tracking-normal);
   --body-sm:   var(--text-sm)   / var(--leading-normal) var(--font-sans) var(--weight-normal) var(--tracking-normal);
   --body-xs:   var(--text-xs)   / var(--leading-normal) var(--font-sans) var(--weight-medium) var(--tracking-wide);
 
-  /* ─── UI Styles (botones, labels, badges) ──────────────────────────── */
+  /* ─── UI Styles (botones, labels, badges) ───────────────────────────── */
   --button-lg:  var(--text-base) / var(--leading-none) var(--font-sans) var(--weight-semibold) var(--tracking-wider);
   --button-md:  var(--text-sm)   / var(--leading-none) var(--font-sans) var(--weight-semibold) var(--tracking-wider);
   --button-sm:  var(--text-xs)   / var(--leading-none) var(--font-sans) var(--weight-bold) var(--tracking-widest);
@@ -90,7 +88,7 @@
   --caption:    var(--text-xs)   / var(--leading-normal) var(--font-sans) var(--weight-medium) var(--tracking-wide);
   --overline:   var(--text-xs)   / var(--leading-none) var(--font-sans) var(--weight-black) var(--tracking-ultra);
 
-  /* ─── Numeric / Tabular ────────────────────────────────────────────── */
+  /* ─── Numeric / Tabular ─────────────────────────────────────────────── */
   --numeric:    var(--text-base) / var(--leading-none) var(--font-numeric) var(--weight-medium) var(--tracking-normal);
   --numeric-lg: var(--text-xl)   / var(--leading-none) var(--font-numeric) var(--weight-bold) var(--tracking-tight);
 }

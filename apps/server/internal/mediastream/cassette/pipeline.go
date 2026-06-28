@@ -304,9 +304,8 @@ func (p *Pipeline) killHeadLocked(id int) {
 	if h.segment == -1 || h.cmd == nil {
 		return
 	}
-	// use Kill to guarantee termination across platforms (os.Interrupt is
-	// unsupported on Windows for os.Process.Signal)
-	_ = h.cmd.Process.Kill()
+	// Use util.KillCmd to guarantee tree termination across platforms (including Windows HW sub-processes)
+	_ = util.KillCmd(h.cmd)
 	p.heads[id].cmd = nil
 }
 

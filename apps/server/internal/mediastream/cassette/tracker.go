@@ -227,12 +227,12 @@ func (t *ClientTracker) killSessionIfDead(path string) bool {
 	}
 	s.Kill()
 
-	// Schedule full destruction after a cooldown
+	// Schedule full destruction after a short cooldown (reduced from 4 hours to 5 minutes)
 	go func() {
 		select {
 		case <-t.killCh:
 			return
-		case <-time.After(4 * time.Hour):
+		case <-time.After(5 * time.Minute):
 			t.deletedStream <- path
 		}
 	}()
@@ -240,7 +240,7 @@ func (t *ClientTracker) killSessionIfDead(path string) bool {
 }
 
 func (t *ClientTracker) maybeDestroySession(path string) {
-	if time.Since(t.lastUsage[path]) < 4*time.Hour {
+	if time.Since(t.lastUsage[path]) < 5*time.Minute {
 		return
 	}
 	t.cassette.destroySession(path)

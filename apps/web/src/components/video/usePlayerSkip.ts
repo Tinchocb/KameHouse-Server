@@ -300,9 +300,11 @@ export function usePlayerSkip({
         if (chap) return { startTime: chap.startTime, endTime: chap.endTime }
         if (storeKey && duration > 0) {
             const cached = seriesSkipTimes[String(storeKey)]
-            if (cached && typeof cached.edOffset === "number") {
+            if (cached && typeof cached.edOffset === "number" && cached.edOffset > 0) {
                 const endTime = (typeof cached.edEnd === "number" && cached.edEnd > 0) ? cached.edEnd : duration
-                return { startTime: duration - cached.edOffset, endTime }
+                // Bug #3 Fix: edOffset in the DB/store is the absolute start time of the ending/outro (e.g. 1200s),
+                // NOT the relative offset from duration. So startTime is simply cached.edOffset.
+                return { startTime: cached.edOffset, endTime }
             }
         }
         return undefined
@@ -324,7 +326,7 @@ export function usePlayerSkip({
             opEnd = skipTimesOp.endTime
         }
         if (skipTimesEd) {
-            edOffset = duration - skipTimesEd.startTime
+            edOffset = skipTimesEd.startTime
             edEnd = skipTimesEd.endTime
         }
 

@@ -166,15 +166,30 @@ func (h *Handler) HandleMediastreamGetAttachments(c echo.Context) error {
 	return h.App.MediastreamRepository.ServeEchoExtractedAttachments(c)
 }
 
+// getClientID resolves the client ID from query param, header, or context cookie.
+func (h *Handler) getClientID(c echo.Context) string {
+	client := c.QueryParam("clientID")
+	if client != "" {
+		return client
+	}
+	client = c.QueryParam("clientId")
+	if client != "" {
+		return client
+	}
+	if val := c.Get("KameHouse-Client-Id"); val != nil {
+		if id, ok := val.(string); ok && id != "" {
+			return id
+		}
+	}
+	return "1"
+}
+
 //
 // Direct
 //
 
 func (h *Handler) HandleMediastreamDirectPlay(c echo.Context) error {
-	client := c.QueryParam("clientID")
-	if client == "" {
-		client = "1"
-	}
+	client := h.getClientID(c)
 	return h.App.MediastreamRepository.ServeEchoDirectPlay(c, client)
 }
 
@@ -183,10 +198,7 @@ func (h *Handler) HandleMediastreamDirectPlay(c echo.Context) error {
 //
 
 func (h *Handler) HandleMediastreamTranscode(c echo.Context) error {
-	client := c.QueryParam("clientID")
-	if client == "" {
-		client = "1"
-	}
+	client := h.getClientID(c)
 	return h.App.MediastreamRepository.ServeEchoTranscodeStream(c, client)
 }
 
@@ -199,10 +211,7 @@ func (h *Handler) HandleMediastreamTranscode(c echo.Context) error {
 //	@returns bool
 //	@route /api/v1/mediastream/shutdown-transcode [POST]
 func (h *Handler) HandleMediastreamShutdownTranscodeStream(c echo.Context) error {
-	client := c.QueryParam("clientID")
-	if client == "" {
-		client = "1"
-	}
+	client := h.getClientID(c)
 	h.App.MediastreamRepository.ShutdownTranscodeStream(client)
 	return h.RespondWithData(c, true)
 }
@@ -212,18 +221,12 @@ func (h *Handler) HandleMediastreamShutdownTranscodeStream(c echo.Context) error
 //
 
 func (h *Handler) HandleMediastreamServeOptimizedStatic(c echo.Context) error {
-	client := c.QueryParam("clientID")
-	if client == "" {
-		client = "1"
-	}
+	client := h.getClientID(c)
 	return h.App.MediastreamRepository.ServeEchoOptimizedStream(c, client)
 }
 
 func (h *Handler) HandleMediastreamFile(c echo.Context) error {
-	client := c.QueryParam("clientID")
-	if client == "" {
-		client = "1"
-	}
+	client := h.getClientID(c)
 	fp := c.QueryParam("path")
 	libraryPaths := h.App.Settings.GetLibrary().GetAllPaths()
 	return h.App.MediastreamRepository.ServeEchoFile(c, fp, client, libraryPaths)

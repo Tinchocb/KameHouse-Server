@@ -1,44 +1,45 @@
-/* ╔════════════════════════════════════════════════════════════════════════╗
-   ║  blur.css — KameHouse Design System v2                             ║
-   ║  5 Niveles semánticos — NO inventar valores (blur-[87px], etc.)   ║
-   ╚═══════════════════════════════════════════════════════════════════════╝ */
+/* ╔══════════════════════════════════════════════════════════════════════╗
+   ║  blur.css — KameHouse Design System v3 (Cinematic Minimalist)      ║
+   ║  Escala recalibrada: 8/12/16/24/32 — NO inventar valores           ║
+   ╚══════════════════════════════════════════════════════════════════════╝ */
 
 :root {
-  /* ─── Escala de Blur (backdrop-filter) ─────────────────────────────── */
+  /* ─── Escala de Blur (backdrop-filter) ───────────────────────────────── */
   --blur-xs:  8px;    /* Sutíl: badges, chips, micro-elementos */
-  --blur-sm:  12px;   /* Ligero: botones ghost, tooltips */
-  --blur-md:  20px;   /* Estándar: cards, navbars, sidebars */
-  --blur-lg:  30px;   /* Fuerte: modales, popovers, hero overlays */
-  --blur-xl:  40px;   /* Máximo: backgrounds inmersivos, full-screen glass */
+  --blur-sm:  12px;   /* Ligero: botones ghost, tooltips, inputs */
+  --blur-md:  16px;   /* Estándar: cards, navbars, sidebars */
+  --blur-lg:  24px;   /* Fuerte: modales, popovers, hero overlays */
+  --blur-xl:  32px;   /* Máximo: backgrounds inmersivos, full-screen glass, player */
 
-  /* ─── Alias semánticos ─────────────────────────────────────────────── */
-  --blur-card:      var(--blur-md);     /* 20px - GlassCard estándar */
-  --blur-button:    var(--blur-sm);     /* 12px - GlassButton */
-  --blur-navbar:    var(--blur-xl);     /* 40px - Navbar principal */
-  --blur-sidebar:   var(--blur-lg);     /* 30px - Sidebar */
-  --blur-modal:     var(--blur-lg);     /* 30px - Modales */
-  --blur-popover:   var(--blur-md);     /* 20px - Popovers, dropdowns */
-  --blur-hero:      var(--blur-xl);     /* 40px - Hero sections */
-  --blur-player:    var(--blur-xl);     /* 40px - Player overlays */
+  /* ─── Alias semánticos para componentes ──────────────────────────────── */
+  --blur-card:      var(--blur-md);     /* 16px - GlassCard estándar */
+  --blur-button:    var(--blur-sm);     /* 12px - GlassButton variant glass */
+  --blur-input:     var(--blur-sm);     /* 12px - Inputs, selects */
+  --blur-navbar:    var(--blur-xl);     /* 32px - Navbar principal fija */
+  --blur-sidebar:   var(--blur-lg);     /* 24px - Sidebar lateral */
+  --blur-modal:     var(--blur-lg);     /* 24px - Modales, dialogs */
+  --blur-popover:   var(--blur-md);     /* 16px - Popovers, dropdowns, menus */
+  --blur-hero:      var(--blur-xl);     /* 32px - Hero sections */
+  --blur-player:    var(--blur-xl);     /* 32px - Player overlays */
 
-  /* ─── Saturación para backdrop-filter (mejora legibilidad en glass) ─── */
-  --glass-saturate:      1.2;
-  --glass-saturate-subtle: 1.1;
-  --glass-saturate-strong: 1.3;
+  /* ─── Saturación para backdrop-filter (mejora legibilidad en glass) ───── */
+  --glass-saturate:       1.2;   /* estándar */
+  --glass-saturate-subtle: 1.1;  /* sutil */
+  --glass-saturate-strong: 1.3;  /* fuerte */
 }
 
-/* ─── Clases utilitarias ─────────────────────────────────────────────── */
-.blur-xs      { backdrop-filter: blur(var(--blur-xs)) saturate(var(--glass-saturate)); }
-.blur-sm      { backdrop-filter: blur(var(--blur-sm)) saturate(var(--glass-saturate)); }
-.blur-md      { backdrop-filter: blur(var(--blur-md)) saturate(var(--glass-saturate)); }
-.blur-lg      { backdrop-filter: blur(var(--blur-lg)) saturate(var(--glass-saturate)); }
-.blur-xl      { backdrop-filter: blur(var(--blur-xl)) saturate(var(--glass-saturate)); }
+/* ─── Clases utilitarias (para uso directo si necesario) ───────────────── */
+.blur-xs      { backdrop-filter: blur(var(--blur-xs))  saturate(var(--glass-saturate)); }
+.blur-sm      { backdrop-filter: blur(var(--blur-sm))  saturate(var(--glass-saturate)); }
+.blur-md      { backdrop-filter: blur(var(--blur-md))  saturate(var(--glass-saturate)); }
+.blur-lg      { backdrop-filter: blur(var(--blur-lg))  saturate(var(--glass-saturate)); }
+.blur-xl      { backdrop-filter: blur(var(--blur-xl))  saturate(var(--glass-saturate)); }
 
 /* Variantes con saturación distinta */
-.blur-subtle     { backdrop-filter: blur(var(--blur-md)) saturate(var(--glass-saturate-subtle)); }
-.blur-strong     { backdrop-filter: blur(var(--blur-lg)) saturate(var(--glass-saturate-strong)); }
+.blur-subtle  { backdrop-filter: blur(var(--blur-md)) saturate(var(--glass-saturate-subtle)); }
+.blur-strong  { backdrop-filter: blur(var(--blur-lg)) saturate(var(--glass-saturate-strong)); }
 
-/* Combinaciones comunes */
-.glass-blur      { backdrop-filter: blur(var(--blur-md)) saturate(var(--glass-saturate)); }
-.glass-blur-lg   { backdrop-filter: blur(var(--blur-lg)) saturate(var(--glass-saturate)); }
-.glass-blur-xl   { backdrop-filter: blur(var(--blur-xl)) saturate(var(--glass-saturate)); }
+/* Combinaciones comunes glass */
+.glass-blur      { backdrop-filter: blur(var(--blur-md))  saturate(var(--glass-saturate)); }
+.glass-blur-lg   { backdrop-filter: blur(var(--blur-lg))  saturate(var(--glass-saturate)); }
+.glass-blur-xl   { backdrop-filter: blur(var(--blur-xl))  saturate(var(--glass-saturate)); }

@@ -1,128 +1,157 @@
 /* ╔══════════════════════════════════════════════════════════════════════╗
-   ║  colors.css — KameHouse Design System v2                            ║
-   ║  Paleta por Eras Dragon Ball + Neutros + Glass + Semánticos        ║
+   ║  colors.css — KameHouse Design System v3 (Cinematic Minimalist)     ║
+   ║  Base inmutable + Temas por Era Dragon Ball + Glassmorphism Slate   ║
    ╚══════════════════════════════════════════════════════════════════════╝ */
 
 :root {
-  /* ─── Fondos Base (Más oscuros, inmersivos) — HEX ───────────────────── */
-  --bg-primary:     #040404;
-  --bg-secondary:   #080808;
-  --bg-tertiary:    #0d0d0d;
-  --bg-quaternary:  #141414;
+  /* ─── Base Inmutable (Cinematic Dark) ────────────────────────────────── */
+  --bg-primary:     #09090b;                    /* zinc-950 */
+  --bg-secondary:   #0f0f12;                    /* zinc-950 + slightly lighter */
+  --bg-tertiary:    #18181b;                    /* zinc-900 */
+  --bg-quaternary:  #27272a;                    /* zinc-800 */
 
-  /* ─── Glassmorphism ────────────────────────────────────────────────── */
-  --glass-bg:       rgba(255,255,255,0.04);
-  --glass-border:   rgba(255,255,255,0.08);
-  --glass-hover:    rgba(255,255,255,0.10);
-  --glass-strong:   rgba(255,255,255,0.12);
+  /* ─── Glassmorphism (Slate-based) ────────────────────────────────────── */
+  --glass-bg:           rgba(15, 23, 42, 0.45);     /* slate-900 @ 45% */
+  --glass-bg-strong:    rgba(30, 41, 59, 0.65);     /* slate-800 @ 65% */
+  --glass-bg-hover:     rgba(15, 23, 42, 0.55);     /* slate-900 @ 55% */
+  --glass-border-top:   rgba(255, 255, 255, 0.08);  /* reflejo superior */
+  --glass-border-bottom:rgba(255, 255, 255, 0.03);  /* reflejo inferior */
+  --glass-border-side:  rgba(255, 255, 255, 0.05);  /* reflejo lateral */
 
-  /* ─── Texto ────────────────────────────────────────────────────────── */
-  --text-primary:   #F5F5F5;
-  --text-secondary: rgba(255,255,255,0.72);
-  --text-muted:     rgba(255,255,255,0.48);
-  --text-disabled:  rgba(255,255,255,0.28);
+  /* ─── Texto ──────────────────────────────────────────────────────────── */
+  --text-primary:   #fafafa;                        /* zinc-50 */
+  --text-secondary: rgba(250, 250, 250, 0.72);     /* zinc-50 @ 72% */
+  --text-muted:     rgba(250, 250, 250, 0.48);     /* zinc-50 @ 48% */
+  --text-disabled:  rgba(250, 250, 250, 0.28);     /* zinc-50 @ 28% */
 
-  /* ─── Era Colors — Dragon Ball (HEX) ───────────────────────────────── */
-  --color-db:       #0096E6;
-  --color-dbz:      #E85D2E;
-  --color-dbgt:     #D32F2F;
-  --color-dbs:      #00D4D4;
-  --color-daima:    #9333EA;
+  /* ─── Era Colors — Dragon Ball (HSL para Tailwind/shadcn) ────────────── */
+  --era-db-hsl:       200 100% 45%;   /* Azul Kame */
+  --era-dbz-hsl:      25 100% 55%;    /* Naranja Saiyajin */
+  --era-dbgt-hsl:     0 85% 55%;      /* Rojo SSJ4 */
+  --era-dbs-hsl:      180 100% 60%;   /* Celeste Ultra Instinto */
+  --era-daima-hsl:    270 80% 55%;    /* Violeta Reino Demonio */
 
-  /* Era Colors — HSL (para shadcn/tailwind compatibility) ────────────── */
-  --color-db-hsl:       200 100% 45%;
-  --color-dbz-hsl:      25 100% 55%;
-  --color-dbgt-hsl:     0 85% 55%;
-  --color-dbs-hsl:      180 100% 60%;
-  --color-daima-hsl:    270 80% 55%;
+  /* Era Colors — HEX (para uso directo) */
+  --era-db-hex:       #0096E6;
+  --era-dbz-hex:      #E85D2E;
+  --era-dbgt-hex:     #D32F2F;
+  --era-dbs-hex:      #00D4D4;
+  --era-daima-hex:    #9333EA;
 
-  /* Glows (RGBA) ─────────────────────────────────────────────────────── */
-  --glow-db:        rgba(0,150,230,0.40);
-  --glow-dbz:       rgba(232,93,46,0.40);
-  --glow-dbgt:      rgba(211,47,47,0.40);
-  --glow-dbs:       rgba(0,212,212,0.40);
-  --glow-daima:     rgba(147,51,234,0.40);
+  /* Glows por Era (RGBA) */
+  --glow-db:       rgba(0, 150, 230, 0.40);
+  --glow-dbz:      rgba(232, 93, 46, 0.40);
+  --glow-dbgt:     rgba(211, 47, 47, 0.40);
+  --glow-dbs:      rgba(0, 212, 212, 0.40);
+  --glow-daima:    rgba(147, 51, 234, 0.40);
 
-  /* ─── Alias Semánticos (HEX para uso directo) ──────────────────────── */
-  --brand-primary:      var(--color-db);
-  --brand-secondary:    var(--color-dbz);
-  --brand-destructive:  var(--color-dbgt);
-  --brand-success:      var(--color-dbs);
-  --brand-magic:        var(--color-daima);
+  /* ─── Brand Accent (Controlado por [data-theme="era-*"]) ────────────── */
+  --brand-accent:     var(--era-daima-hsl);   /* Default: Daima Violeta */
+  --brand-accent-hex: var(--era-daima-hex);
+  --brand-glow:       var(--glow-daima);
+
+  /* Alias semánticos (usan brand-accent dinámico) */
+  --brand-primary:      var(--brand-accent);
+  --brand-secondary:    var(--era-dbz-hsl);
+  --brand-destructive:  var(--era-dbgt-hsl);
+  --brand-success:      var(--era-dbs-hsl);
+  --brand-magic:        var(--era-daima-hsl);
 
   /* Glows semánticos */
-  --glow-primary:       var(--glow-db);
+  --glow-primary:       var(--brand-glow);
   --glow-secondary:     var(--glow-dbz);
   --glow-destructive:   var(--glow-dbgt);
   --glow-success:       var(--glow-dbs);
   --glow-magic:         var(--glow-daima);
 
-  /* ─── Estados UI ───────────────────────────────────────────────────── */
-  --focus-ring:         var(--brand-primary);
-  --error-bg:           rgba(211,47,47,0.12);
-  --error-border:       rgba(211,47,47,0.30);
-  --success-bg:         rgba(0,212,212,0.12);
-  --success-border:     rgba(0,212,212,0.30);
-  --warning-bg:         rgba(232,93,46,0.12);
-  --warning-border:     rgba(232,93,46,0.30);
+  /* ─── Estados UI ─────────────────────────────────────────────────────── */
+  --focus-ring:         var(--brand-accent);
+  --error-bg:           rgba(211, 47, 47, 0.12);
+  --error-border:       rgba(211, 47, 47, 0.30);
+  --success-bg:         rgba(0, 212, 212, 0.12);
+  --success-border:     rgba(0, 212, 212, 0.30);
+  --warning-bg:         rgba(232, 93, 46, 0.12);
+  --warning-border:     rgba(232, 93, 46, 0.30);
 
-  /* ─── Compatibilidad shadcn / Tailwind (HSL format) ────────────────── */
-  /* Background & Foreground */
-  --background:         240 10% 2%;
-  --foreground:         0 0% 96%;
+  /* ─── Sombras ────────────────────────────────────────────────────────── */
+  --shadow-glass: 0 4px 30px rgba(0, 0, 0, 0.30);
 
-  /* Card & Popover */
-  --card:               240 6% 3%;
-  --card-foreground:    0 0% 96%;
-  --popover:            240 5% 5%;
-  --popover-foreground: 0 0% 96%;
-
-  /* Primary (Azul DB) */
-  --primary:            var(--color-db-hsl);
-  --primary-foreground: 240 10% 2%;
-
-  /* Secondary (Naranja DBZ) */
-  --secondary:          var(--color-dbz-hsl);
-  --secondary-foreground: 240 10% 2%;
-
-  /* Muted */
-  --muted:              240 6% 3%;
+  /* ─── Compatibilidad shadcn / Tailwind (HSL format) ──────────────────── */
+  --background:         240 10% 3.5%;
+  --foreground:         0 0% 98%;
+  --card:               240 6% 4%;
+  --card-foreground:    0 0% 98%;
+  --popover:            240 5% 6%;
+  --popover-foreground: 0 0% 98%;
+  --primary:            var(--brand-accent);
+  --primary-foreground: 240 10% 3.5%;
+  --secondary:          240 5% 8%;
+  --secondary-foreground: 0 0% 98%;
+  --muted:              240 5% 8%;
   --muted-foreground:   240 5% 48%;
-
-  /* Accent (Surface terciario) */
-  --accent:             240 5% 5%;
-  --accent-foreground:  0 0% 96%;
-
-  /* Destructive (Rojo GT) */
-  --destructive:        var(--color-dbgt-hsl);
-  --destructive-foreground: 0 0% 96%;
-
-  /* Text (HSL for Tailwind compatibility) */
-  --text-primary-hsl:   0 0% 96%;
-  --text-secondary-hsl: 0 0% 100% / 0.72;
-  --text-muted-hsl:     0 0% 100% / 0.48;
-
-  /* Border, Input, Ring */
+  --accent:             240 5% 10%;
+  --accent-foreground:  0 0% 98%;
+  --destructive:        var(--era-dbgt-hsl);
+  --destructive-foreground: 0 0% 98%;
   --border:             240 5% 100% / 0.08;
   --input:              240 5% 100% / 0.08;
-  --ring:               var(--color-db-hsl);
-
-  /* Radius */
+  --ring:               var(--brand-accent);
   --radius:             16px;
 }
 
-/* ─── Tema AMOLED (Negro puro) ───────────────────────────────────────── */
+/* ─── Temas por Era (Activables via Settings → Appearance) ─────────────── */
+[data-theme="era-db"] {
+  --brand-accent:     var(--era-db-hsl);
+  --brand-accent-hex: var(--era-db-hex);
+  --brand-glow:       var(--glow-db);
+  --primary:          var(--era-db-hsl);
+  --ring:             var(--era-db-hsl);
+}
+
+[data-theme="era-dbz"] {
+  --brand-accent:     var(--era-dbz-hsl);
+  --brand-accent-hex: var(--era-dbz-hex);
+  --brand-glow:       var(--glow-dbz);
+  --primary:          var(--era-dbz-hsl);
+  --ring:             var(--era-dbz-hsl);
+}
+
+[data-theme="era-dbgt"] {
+  --brand-accent:     var(--era-dbgt-hsl);
+  --brand-accent-hex: var(--era-dbgt-hex);
+  --brand-glow:       var(--glow-dbgt);
+  --primary:          var(--era-dbgt-hsl);
+  --ring:             var(--era-dbgt-hsl);
+}
+
+[data-theme="era-dbs"] {
+  --brand-accent:     var(--era-dbs-hsl);
+  --brand-accent-hex: var(--era-dbs-hex);
+  --brand-glow:       var(--glow-dbs);
+  --primary:          var(--era-dbs-hsl);
+  --ring:             var(--era-dbs-hsl);
+}
+
+[data-theme="era-daima"] {
+  --brand-accent:     var(--era-daima-hsl);
+  --brand-accent-hex: var(--era-daima-hex);
+  --brand-glow:       var(--glow-daima);
+  --primary:          var(--era-daima-hsl);
+  --ring:             var(--era-daima-hsl);
+}
+
+/* ─── Temas Especiales ─────────────────────────────────────────────────── */
 [data-theme="amoled"] {
   --bg-primary:     #000000;
-  --bg-secondary:   #020202;
-  --bg-tertiary:    #050505;
-  --bg-quaternary:  #0a0a0a;
-  --glass-bg:       rgba(255,255,255,0.03);
-  --glass-border:   rgba(255,255,255,0.06);
-  --glass-hover:    rgba(255,255,255,0.08);
-  --glass-strong:   rgba(255,255,255,0.10);
-
-  /* shadcn HSL overrides */
+  --bg-secondary:   #030303;
+  --bg-tertiary:    #0a0a0a;
+  --bg-quaternary:  #121212;
+  --glass-bg:           rgba(255, 255, 255, 0.03);
+  --glass-bg-strong:    rgba(255, 255, 255, 0.05);
+  --glass-bg-hover:     rgba(255, 255, 255, 0.04);
+  --glass-border-top:   rgba(255, 255, 255, 0.06);
+  --glass-border-bottom:rgba(255, 255, 255, 0.02);
+  --glass-border-side:  rgba(255, 255, 255, 0.03);
   --background:         0 0% 0%;
   --card:               0 0% 1%;
   --popover:            0 0% 2%;
@@ -132,33 +161,28 @@
   --input:              0 0% 100% / 0.06;
 }
 
-/* ─── Tema Cyberpunk (Override mínimo) ───────────────────────────────── */
 [data-theme="cyberpunk"] {
-  --bg-primary:        #06020a;
-  --bg-secondary:      #0a0412;
-  --brand-primary:     var(--color-dbs);
-  --brand-secondary:   var(--color-daima);
-  --glass-border:      var(--glow-dbs);
-  --focus-ring:        var(--color-dbs);
-
-  /* shadcn HSL overrides */
-  --background:         260 40% 2%;
-  --card:               260 30% 4%;
-  --popover:            260 25% 6%;
-  --primary:            var(--color-dbs-hsl);
-  --accent:             var(--color-daima-hsl);
-  --destructive:        var(--color-dbgt-hsl);
-  --border:             180 100% 50% / 0.10;
-  --input:              180 100% 50% / 0.10;
-  --ring:               var(--color-dbs-hsl);
+  --bg-primary:        #0a0412;
+  --bg-secondary:      #0f081a;
+  --brand-accent:      var(--era-dbs-hsl);
+  --brand-accent-hex:  var(--era-dbs-hex);
+  --brand-glow:        var(--glow-dbs);
+  --glass-border-top:  var(--glow-dbs);
+  --primary:           var(--era-dbs-hsl);
+  --secondary:         var(--era-daima-hsl);
+  --accent:            var(--era-daima-hsl);
+  --destructive:       var(--era-dbgt-hsl);
+  --border:            180 100% 50% / 0.10;
+  --input:             180 100% 50% / 0.10;
+  --ring:              var(--era-dbs-hsl);
 }
 
-/* ─── Utilidades de color por Era (para uso directo en componentes) ──── */
-.era-db     { --era-color: var(--color-db);     --era-glow: var(--glow-db);     }
-.era-dbz    { --era-color: var(--color-dbz);    --era-glow: var(--glow-dbz);    }
-.era-dbgt   { --era-color: var(--color-dbgt);   --era-glow: var(--glow-dbgt);   }
-.era-dbs    { --era-color: var(--color-dbs);    --era-glow: var(--glow-dbs);    }
-.era-daima  { --era-color: var(--color-daima);  --era-glow: var(--glow-daima);  }
+/* ─── Utilidades de color por Era (para uso directo en componentes) ────── */
+.era-db     { --era-color: var(--era-db-hex);     --era-glow: var(--glow-db);     }
+.era-dbz    { --era-color: var(--era-dbz-hex);    --era-glow: var(--glow-dbz);    }
+.era-dbgt   { --era-color: var(--era-dbgt-hex);   --era-glow: var(--glow-dbgt);   }
+.era-dbs    { --era-color: var(--era-dbs-hex);    --era-glow: var(--glow-dbs);    }
+.era-daima  { --era-color: var(--era-daima-hex);  --era-glow: var(--glow-daima);  }
 
 /* ─── Backward-compatible aliases (para tailwind.config y componentes legacy) ── */
 :root {
@@ -167,8 +191,8 @@
   --overlay:       0 0% 0% / 0.6;
   --border-subtle: 240 5% 100% / 0.06;
   --border-strong: 240 5% 100% / 0.12;
-  --text-primary:  0 0% 96%;
+  --text-primary:  0 0% 98%;
   --text-secondary: 0 0% 100% / 0.72;
   --text-muted:    0 0% 100% / 0.48;
-  --brand-orange:  var(--color-dbz-hsl);
+  --brand-orange:  var(--era-dbz-hsl);
 }

@@ -8,49 +8,34 @@ import { useResponsive } from "@/hooks/use-responsive";
 
 export interface NavbarProps {
   className?: string;
-  transparent?: boolean;
-  floating?: boolean;
 }
 
-export function Navbar({ className, transparent = true, floating = true }: NavbarProps) {
+export function Navbar({ className }: NavbarProps) {
   const { isMobile } = useResponsive();
   const sidebarOpen = useAppStore(state => state.sidebarOpen);
   const setSidebarOpen = useAppStore(state => state.setSidebarOpen);
   const tvMode = useAppStore(state => state.tvMode);
   const location = useLocation();
-  const [scrolled, setScrolled] = React.useState(false);
-
-  React.useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const shouldShowGlass = !transparent || scrolled;
 
   if (tvMode) return null;
 
   return (
     <nav
       className={cn(
-        "fixed top-0 left-0 right-0 z-[var(--z-navbar)] flex items-center justify-between transition-all duration-base",
-        floating && "mx-4 mt-4 rounded-2xl",
-        !floating && "rounded-none",
-        shouldShowGlass
-          ? "glass-strong px-6 py-4 shadow-navbar"
-          : "px-6 py-4 bg-transparent",
+        "fixed top-0 left-0 right-0 z-[var(--z-navbar)] flex items-center justify-between",
+        "px-4 md:px-6 h-[64px]",
+        "bg-[var(--glass-bg)] backdrop-blur-[var(--blur-navbar)]",
+        "border-b border-[var(--glass-border-top)]",
+        "shadow-[var(--shadow-glass)]",
         className
       )}
       style={{
-        backdropFilter: shouldShowGlass ? `blur(var(--blur-xl)) saturate(1.3)` : "none",
-        background: shouldShowGlass ? "var(--glass-bg)" : "transparent",
-        borderColor: shouldShowGlass ? "var(--glass-strong)" : "transparent",
-        boxShadow: shouldShowGlass ? "var(--shadow-elevated)" : "none",
+        borderBottom: "1px solid var(--glass-border-top)",
       }}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 md:gap-4">
         <IconButton
-          variant="ghost"
+          variant="glass"
           size="md"
           icon="menu"
           aria-label={sidebarOpen ? "Cerrar menú" : "Abrir menú"}
@@ -58,14 +43,18 @@ export function Navbar({ className, transparent = true, floating = true }: Navba
           className="md:hidden"
         />
 
-        <Link to="/home" className="flex items-center gap-2" onClick={() => setSidebarOpen(false)}>
+        <Link
+          to="/home"
+          className="flex items-center gap-2 shrink-0"
+          onClick={() => setSidebarOpen(false)}
+        >
           <div className="relative">
             <img
               src="/kamehouse-logo.png"
               alt="KameHouse"
               className="h-8 w-8 object-contain"
             />
-            <div className="absolute inset-0 bg-[var(--brand-primary)]/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-slow rounded-full" />
+            <div className="absolute inset-0 bg-[var(--brand-accent)]/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-slow rounded-full" />
           </div>
           {!isMobile && (
             <span className="font-display text-xl text-primary tracking-wider whitespace-nowrap">
@@ -74,7 +63,7 @@ export function Navbar({ className, transparent = true, floating = true }: Navba
           )}
         </Link>
 
-        <div className="hidden md:flex items-center gap-1">
+        <div className="hidden md:flex items-center gap-1 ml-2">
           {[
             { to: "/home", label: "Inicio", icon: Icons.navigation.home },
             { to: "/series", label: "Series", icon: Icons.navigation.tv },
@@ -87,7 +76,7 @@ export function Navbar({ className, transparent = true, floating = true }: Navba
               className={cn(
                 "flex items-center gap-2 px-3 py-2 rounded-lg text-label-md font-medium transition-all duration-fast",
                 location.pathname === item.to
-                  ? "text-primary bg-[var(--brand-primary)]/10"
+                  ? "text-primary bg-[var(--brand-accent)]/10"
                   : "text-muted hover:text-primary hover:bg-[var(--glass-hover)]"
               )}
               onClick={() => setSidebarOpen(false)}
@@ -100,13 +89,14 @@ export function Navbar({ className, transparent = true, floating = true }: Navba
       </div>
 
       <div className="flex items-center gap-2">
-        <IconButton
+        <GlassButton
           variant="glass"
           size="sm"
-          icon="search"
-          aria-label="Buscar"
+          leftIcon="search"
           className="hidden sm:inline-flex"
-        />
+        >
+          Buscar
+        </GlassButton>
 
         <IconButton
           variant="glass"
@@ -120,12 +110,12 @@ export function Navbar({ className, transparent = true, floating = true }: Navba
           </span>
         </IconButton>
 
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] flex items-center justify-center font-bold text-[var(--primary-foreground)] text-sm ring-2 ring-[var(--bg-primary)]">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--brand-accent)] to-[var(--era-dbz-hsl)] flex items-center justify-center font-bold text-[var(--primary-foreground)] text-sm ring-2 ring-[var(--bg-primary)]">
           M
         </div>
 
         <IconButton
-          variant="ghost"
+          variant="glass"
           size="md"
           icon="chevronDown"
           aria-label="Menú usuario"
@@ -137,5 +127,5 @@ export function Navbar({ className, transparent = true, floating = true }: Navba
 }
 
 export function NavbarSpacer() {
-  return <div className="h-[72px] md:h-[80px]" aria-hidden="true" />;
+  return <div className="h-[64px]" aria-hidden="true" />;
 }

@@ -138,10 +138,31 @@ func (m *Manager) GetWatchHistoryItem(mediaID int) *WatchHistoryItemResponse {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	i, found := m.getWatchHistory(mediaID)
+	// Get all items and find the latest updated for this mediaID
+	items, err := filecache.GetAll[*WatchHistoryItem](m.fileCacher, *m.watchHistoryFileCacheBucket)
+	if err != nil {
+		return &WatchHistoryItemResponse{Found: false}
+	}
+
+	var latestItem *WatchHistoryItem
+	for _, item := range items {
+		if item.MediaID == mediaID {
+			if latestItem == nil || item.TimeUpdated.After(latestItem.TimeUpdated) {
+				latestItem = item
+			}
+		}
+	}
+
+	if latestItem != nil {
+		return &WatchHistoryItemResponse{
+			Item:  latestItem,
+			Found: true,
+		}
+	}
+
 	return &WatchHistoryItemResponse{
-		Item:  i,
-		Found: found,
+		Item:  nil,
+		Found: false,
 	}
 }
 
@@ -155,7 +176,7 @@ func (m *Manager) UpdateWatchHistoryItem(opts *UpdateWatchHistoryItemOptions) (e
 	added := false
 
 	// Get the current history
-	i, found := m.getWatchHistory(opts.MediaID)
+	i, found := m.getWatchHistory(opts.MediaID, opts.EpisodeNumber)
 	if !found {
 		added = true
 		i = &WatchHistoryItem{
@@ -177,7 +198,7 @@ func (m *Manager) UpdateWatchHistoryItem(opts *UpdateWatchHistoryItemOptions) (e
 	}
 
 	// Save the i
-	err = m.fileCacher.Set(*m.watchHistoryFileCacheBucket, strconv.Itoa(opts.MediaID), i)
+	err = m.fileCacher.Set(*m.watchHistoryFileCacheBucket, fmt.Sprintf("%d_%d", opts.MediaID, opts.EpisodeNumber), i)
 	if err != nil {
 		return fmt.Errorf("continuity: Failed to save watch history item: %w", err)
 	}
@@ -201,7 +222,11 @@ func (m *Manager) DeleteWatchHistoryItem(mediaID int) (err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	err = m.fileCacher.Delete(*m.watchHistoryFileCacheBucket, strconv.Itoa(mediaID))
+	// Delete any items matching the mediaID (since key format is mediaID_episodeNumber)
+	prefix := fmt.Sprintf("%d_", mediaID)
+	err = m.fileCacher.RemoveAllBy(func(key string) bool {
+		return strings.HasPrefix(key, prefix)
+	})
 	if err != nil {
 		return fmt.Errorf("continuity: Failed to delete watch history item: %w", err)
 	}
@@ -252,7 +277,7 @@ func (m *Manager) GetExternalPlayerEpisodeWatchHistoryItem(path string, isStream
 			return
 		}
 
-		i, found := m.getWatchHistory(mediaID)
+		i, found := m.getWatchHistory(mediaID, episode)
 		if !found || i.EpisodeNumber != episode {
 			m.logger.Trace().
 				Interface("item", i).
@@ -302,7 +327,7 @@ func (m *Manager) GetExternalPlayerEpisodeWatchHistoryItem(path string, isStream
 			return
 		}
 
-		i, found := m.getWatchHistory(lf.MediaID)
+		i, found := m.getWatchHistory(lf.MediaID, lf.GetEpisodeNumber())
 		if !found || i.EpisodeNumber != lf.GetEpisodeNumber() {
 			m.logger.Trace().
 				Interface("item", i).
@@ -343,7 +368,7 @@ func (m *Manager) UpdateExternalPlayerEpisodeWatchHistoryItem(currentTime, durat
 	}
 
 	// Get the current history
-	i, found := m.getWatchHistory(opts.MediaID)
+	i, found := m.getWatchHistory(opts.MediaID, opts.EpisodeNumber)
 	if !found {
 		added = true
 		i = &WatchHistoryItem{
@@ -377,13 +402,13 @@ func (m *Manager) UpdateExternalPlayerEpisodeWatchHistoryItem(currentTime, durat
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func (m *Manager) getWatchHistory(mediaID int) (ret *WatchHistoryItem, exists bool) {
+func (m *Manager) getWatchHistory(mediaID, episodeNumber int) (ret *WatchHistoryItem, exists bool) {
 	defer util.HandlePanicInModuleThen("continuity/getWatchHistory", func() {
 		ret = nil
 		exists = false
 	})
 
-	exists, _ = m.fileCacher.Get(*m.watchHistoryFileCacheBucket, strconv.Itoa(mediaID), &ret)
+	exists, _ = m.fileCacher.Get(*m.watchHistoryFileCacheBucket, fmt.Sprintf("%d_%d", mediaID, episodeNumber), &ret)
 
 	if exists && ret != nil && ret.Duration > 0 {
 		// If the item completion ratio is equal or above IgnoreRatioThreshold, don't return anything
@@ -392,7 +417,7 @@ func (m *Manager) getWatchHistory(mediaID int) (ret *WatchHistoryItem, exists bo
 			// Delete the item
 			go func() {
 				defer util.HandlePanicInModuleThen("continuity/getWatchHistory", func() {})
-				_ = m.fileCacher.Delete(*m.watchHistoryFileCacheBucket, strconv.Itoa(mediaID))
+				_ = m.fileCacher.Delete(*m.watchHistoryFileCacheBucket, fmt.Sprintf("%d_%d", mediaID, episodeNumber))
 			}()
 			return nil, false
 		}

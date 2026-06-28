@@ -243,20 +243,28 @@ func (m *WSEventManager) SendEvent(t string, payload interface{}) {
 	env.Payload = payload
 	env.Timestamp = time.Now().UnixMilli()
 
+	defer func() {
+		env.Payload = nil // Reset for GC
+		wsEventPool.Put(env)
+	}()
+
 	data, err := json.Marshal(env)
-
-	env.Payload = nil // Reset for GC
-	wsEventPool.Put(env)
-
 	if err != nil {
 		return
 	}
 
 	for _, conn := range conns {
-		conn.writeMu.Lock()
-		_ = conn.Conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
-		_ = conn.Conn.WriteMessage(websocket.TextMessage, data)
-		conn.writeMu.Unlock()
+		func() {
+			conn.writeMu.Lock()
+			defer conn.writeMu.Unlock()
+			defer func() {
+				if r := recover(); r != nil {
+					m.Logger.Error().Interface("panic", r).Msg("ws: Recovered from panic in SendEvent write (possibly closed websocket)")
+				}
+			}()
+			_ = conn.Conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+			_ = conn.Conn.WriteMessage(websocket.TextMessage, data)
+		}()
 	}
 }
 
@@ -295,11 +303,16 @@ func (m *WSEventManager) SendEventTo(clientID string, t string, payload interfac
 	targetConn.writeMu.Lock()
 	defer targetConn.writeMu.Unlock()
 
+	defer func() {
+		if r := recover(); r != nil {
+			m.Logger.Error().Interface("panic", r).Msg("ws: Recovered from panic in SendEventTo (possibly closed websocket)")
+		}
+		env.Payload = nil // Reset for GC
+		wsEventPool.Put(env)
+	}()
+
 	_ = targetConn.Conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 	_ = targetConn.Conn.WriteJSON(env)
-
-	env.Payload = nil // Reset for GC
-	wsEventPool.Put(env)
 }
 
 func (m *WSEventManager) SendStringTo(clientID string, s string) {

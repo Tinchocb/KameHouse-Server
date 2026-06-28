@@ -40,6 +40,10 @@ export function useRequestMediastreamMediaContainer(variables: Partial<RequestMe
         queryKey: [API_ENDPOINTS.MEDIASTREAM.RequestMediastreamMediaContainer.key, variables?.path, variables?.streamType],
         data: variables as RequestMediastreamMediaContainer_Variables,
         enabled: !!variables.path && !!variables.streamType && enabled,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+        staleTime: Infinity,
+        gcTime: 0,
     })
 }
 

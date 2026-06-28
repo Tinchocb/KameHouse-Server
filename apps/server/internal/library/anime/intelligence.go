@@ -439,12 +439,12 @@ func (s *IntelligenceService) GetContinueWatching(ctx context.Context, userID ui
 					item.Episode = nextEpisode
 					item.Progress = 0
 					item.IsNextEpisode = true
-				} else {
-					continue
 				}
-			} else {
-				continue
+				// If next episode file is not available, we keep the current episode at 90%
+				// instead of continuing and omitting the series entirely (Bug #15)
 			}
+			// If next episode is not found (e.g. series completed), we keep the current episode
+			// instead of continuing and omitting the series entirely (Bug #15)
 		}
 
 		items = append(items, item)

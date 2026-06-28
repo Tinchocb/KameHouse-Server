@@ -5,6 +5,7 @@ package util
 import (
 	"context"
 	"os/exec"
+	"strconv"
 	"syscall"
 )
 
@@ -31,4 +32,15 @@ func NewCmdCtx(ctx context.Context, arg string, args ...string) *exec.Cmd {
 		CreationFlags: 0x08000200,
 	}
 	return cmd
+}
+
+// KillCmd kills the command process and all its children on Windows using taskkill
+func KillCmd(cmd *exec.Cmd) error {
+	if cmd == nil || cmd.Process == nil {
+		return nil
+	}
+	// Use taskkill with /T (tree kill) and /F (force)
+	killCmd := exec.Command("taskkill", "/F", "/T", "/PID", string([]byte(strconv.Itoa(cmd.Process.Pid))))
+	killCmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000} // Hide window
+	return killCmd.Run()
 }

@@ -119,10 +119,14 @@ func (bw *BufferedWriter) committerDaemon() {
 // Shutdown gracefully stops the buffered writer and waits for the daemon to finish flushing.
 func (bw *BufferedWriter) Shutdown() {
 	bw.mu.Lock()
+	if bw.isShuttingDown {
+		bw.mu.Unlock()
+		return
+	}
 	bw.isShuttingDown = true
+	close(bw.stopChan)
 	bw.mu.Unlock()
 
-	close(bw.stopChan)
 	// Wait for the daemon to finish its final flush
 	<-bw.doneChan
 }

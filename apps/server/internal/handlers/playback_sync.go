@@ -6,7 +6,8 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// HandlePlaybackSync ...\n//
+// HandlePlaybackSync ...
+//
 //	@summary receives playback telemetry from the frontend.
 //	@desc    Updates continuity watch history and, when progress >= 85%,
 //	         automatically scrobbles the episode as watched to Platform.
@@ -19,7 +20,11 @@ func (h *Handler) HandlePlaybackSync(c echo.Context) error {
 	}
 
 	if h.App.ContinuityManager != nil && h.App.ContinuityManager.TelemetryManager != nil {
-		h.App.ContinuityManager.TelemetryManager.UpdateProgress(0, b.MediaID, b.EpisodeNumber, b.CurrentTime, b.Duration)
+		accountID := uint(0)
+		if acc, err := h.App.Database.GetAccount(); err == nil && acc != nil {
+			accountID = acc.ID
+		}
+		h.App.ContinuityManager.TelemetryManager.UpdateProgress(accountID, b.MediaID, b.EpisodeNumber, b.CurrentTime, b.Duration)
 	}
 
 	return h.RespondWithData(c, true)
@@ -53,7 +58,12 @@ func (h *Handler) StartPlaybackHeartbeatSubscriber() {
 				continue
 			}
 
-			h.App.ContinuityManager.TelemetryManager.UpdateProgress(0, heartbeat.MediaID, heartbeat.EpisodeNumber, heartbeat.CurrentTime, heartbeat.Duration)
+			accountID := uint(0)
+			if acc, err := h.App.Database.GetAccount(); err == nil && acc != nil {
+				accountID = acc.ID
+			}
+
+			h.App.ContinuityManager.TelemetryManager.UpdateProgress(accountID, heartbeat.MediaID, heartbeat.EpisodeNumber, heartbeat.CurrentTime, heartbeat.Duration)
 		}
 	}()
 }

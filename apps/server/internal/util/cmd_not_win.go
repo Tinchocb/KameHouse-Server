@@ -29,3 +29,15 @@ func NewCmdCtx(ctx context.Context, arg string, args ...string) *exec.Cmd {
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	return cmd
 }
+
+// KillCmd kills the entire process group on POSIX systems
+func KillCmd(cmd *exec.Cmd) error {
+	if cmd == nil || cmd.Process == nil {
+		return nil
+	}
+	pgid, err := syscall.Getpgid(cmd.Process.Pid)
+	if err == nil {
+		return syscall.Kill(-pgid, syscall.SIGKILL)
+	}
+	return cmd.Process.Kill()
+}

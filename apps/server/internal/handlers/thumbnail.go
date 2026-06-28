@@ -31,6 +31,36 @@ func (h *Handler) HandleGetVideoThumbnail(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, map[string]string{"error": "video file not found"})
 	}
 
+	// Prevent path traversal: ensure the path belongs to one of the configured library paths
+	libraryPaths, err := h.App.Database.GetAllLibraryPathsFromSettings()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to retrieve library paths"})
+	}
+
+	isPathAllowed := false
+	absVideoPath, err := filepath.Abs(videoPath)
+	if err == nil {
+		for _, libPath := range libraryPaths {
+			absLibPath, err := filepath.Abs(libPath)
+			if err != nil {
+				continue
+			}
+			// Clean paths to normalize separators and trailing slashes
+			cleanVideo := filepath.Clean(absVideoPath)
+			cleanLib := filepath.Clean(absLibPath)
+			
+			// Check if cleanVideo starts with cleanLib
+			if strings.HasPrefix(cleanVideo, cleanLib) {
+				isPathAllowed = true
+				break
+			}
+		}
+	}
+
+	if !isPathAllowed {
+		return c.JSON(http.StatusForbidden, map[string]string{"error": "access denied to the requested file path"})
+	}
+
 	// Get ffmpeg and ffprobe paths from mediastream settings
 	ffmpegPath := "ffmpeg"
 	ffprobePath := "ffprobe"

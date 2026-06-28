@@ -42,30 +42,38 @@ func main() {
 func run(ctx context.Context) error {
 	util.LoadDotEnvFile()
 
+	// Parse CLI flags
+	flags := core.GetKameHouseFlags()
+
 	portStr := os.Getenv("KAMEHOUSE_PORT")
 	portStrVal := 43211
-	if portStr != "" {
+	if flags.Port != 0 {
+		portStrVal = flags.Port
+	} else if portStr != "" {
 		if p, err := strconv.Atoi(portStr); err == nil {
 			portStrVal = p
 		}
 	}
 	hostStr := os.Getenv("KAMEHOUSE_HOST")
-	if hostStr == "" {
+	if flags.Host != "" {
+		hostStr = flags.Host
+	} else if hostStr == "" {
 		hostStr = "127.0.0.1"
 	}
 
-	isDev := os.Getenv("KAMEHOUSE_ENV") != "production"
-
 	// Initialize robust arguments required by NewKameHouse inside KameHouse.
 	configOpts := &core.ConfigOptions{
-		Flags:        core.KameHouseFlags{Port: portStrVal, Host: hostStr, IsDesktopSidecar: !isDev},
+		Flags:        flags,
 		EmbeddedLogo: embeddedLogo,
 	}
 
 	app := core.NewKameHouse(configOpts)
 
 	e := core.NewEchoApp(app, &WebFS)
-	handlers.InitRoutes(app, e)
+	
+	if app.Flags.IsDesktopSidecar {
+		app.WSEventManager.ExitIfNoConnsAsDesktopSidecar()
+	}
 
 	bindListener, bindHost, bindPort, err := resolveBindableAddress(hostStr, portStrVal, app.Flags.IsDesktopSidecar, app.Logger)
 	if err != nil {
@@ -98,6 +106,9 @@ func run(ctx context.Context) error {
 	if bindHost != "127.0.0.1" && bindHost != "localhost" {
 		app.Config.Server.CorsOrigins = append(app.Config.Server.CorsOrigins, fmt.Sprintf("http://127.0.0.1:%d", bindPort))
 	}
+
+	// Initialize routes AFTER CORS origins have been resolved and finalized!
+	handlers.InitRoutes(app, e)
 	addr := fmt.Sprintf("%s:%d", bindHost, bindPort)
 	srv := &http.Server{
 		Addr:              addr,
@@ -173,6 +184,18 @@ func resolveBindableAddress(host string, port int, isDesktopSidecar bool, logger
 
 		errText := err.Error()
 		isBusy := strings.Contains(errText, "address already in use") || strings.Contains(errText, "Only one usage")
+		if !isBusy {
+			if opErr, ok := err.(*net.OpError); ok {
+				if sysErr, ok := opErr.Err.(*os.SyscallError); ok {
+					// Check for Windows specific error (WSAEADDRINUSE = 10048) or Unix (EADDRINUSE)
+					errnoErr := sysErr.Err.Error()
+					if strings.Contains(errnoErr, "10048") || strings.Contains(errnoErr, "address already in use") {
+						isBusy = true
+					}
+				}
+			}
+		}
+
 		if !isBusy {
 			return nil, "", 0, err
 		}
