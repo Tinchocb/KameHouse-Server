@@ -4,15 +4,11 @@ import { useLocation } from "@tanstack/react-router"
 import { useAppStore } from "@/lib/store"
 
 /**
- * DynamicBackdrop — global fixed layer behind the entire home page.
- * Enhanced with organic breathing animation and smooth asymmetric cross-fade.
- *
- * Performance notes:
- * - The cross-fade is driven purely by CSS `opacity` + `will-change: opacity`
- *   so the browser handles it on the compositor thread (zero layout/paint cost).
- * - The blurred image is scaled to 115% to avoid transparent edge bleeding.
- * - Organic breathing uses CSS keyframes for 100% GPU compositor-driven animation.
- * - The 150 ms hover debounce in `useIntelligenceStore` prevents flicker.
+ * DynamicBackdrop — Cinematic Minimalist backdrop for KameHouse v3
+ * - Subtle gradient orbs animated via CSS keyframes (GPU-accelerated)
+ * - Cross-fade between artwork images
+ * - Film grain + vignette overlays
+ * - Mouse parallax (optional, respects reduced motion)
  */
 export function DynamicBackdrop() {
     const location = useLocation()
@@ -31,7 +27,6 @@ export function DynamicBackdrop() {
     const isMotionEnabled = useAppStore(state => state.dynamicBackdropMotionEnabled)
     const currentBackdropUrl = useIntelligenceStore(s => s.currentBackdropUrl)
     const activeBackdropUrl = currentBackdropUrl
-    // Home uses higher opacity, static pages (settings, movies, series) use minimal opacity
     const baseOpacity = isHomePage ? 0.65 : 0.12
 
     const [displayedUrl, setDisplayedUrl] = React.useState<string | null>(null)
@@ -42,10 +37,8 @@ export function DynamicBackdrop() {
     const nextLayerRef = React.useRef<HTMLDivElement>(null)
     const containerRef = React.useRef<HTMLDivElement>(null)
     const backdropWrapperRef = React.useRef<HTMLDivElement>(null)
-    const orb1Ref = React.useRef<HTMLDivElement>(null)
-    const orb2Ref = React.useRef<HTMLDivElement>(null)
 
-    // Handle global mouse move for orbital effect with smooth interpolation (lerping)
+    // Mouse parallax (GPU-accelerated)
     React.useEffect(() => {
         if (!isEnabled || !isMotionEnabled) return
         let rafId: number | null = null
@@ -68,12 +61,6 @@ export function DynamicBackdrop() {
                 currentY += dy * 0.05
                 if (backdropWrapperRef.current) {
                     backdropWrapperRef.current.style.transform = `translate3d(${currentX * 0.1}px, ${currentY * 0.1}px, 0)`
-                }
-                if (orb1Ref.current) {
-                    orb1Ref.current.style.transform = `translate3d(${currentX * 0.5}px, ${currentY * 0.5}px, 0)`
-                }
-                if (orb2Ref.current) {
-                    orb2Ref.current.style.transform = `translate3d(${currentX * -0.3}px, ${currentY * -0.3}px, 0)`
                 }
                 rafId = requestAnimationFrame(updatePosition)
             } else {
@@ -111,18 +98,16 @@ export function DynamicBackdrop() {
         }
     }, [isEnabled, isMotionEnabled])
 
-    // Orchestrate a smooth cross-fade without Framer Motion (pure CSS opacity)
+    // Cross-fade orchestration
     React.useEffect(() => {
         if (!isEnabled) return
         if (!activeBackdropUrl || activeBackdropUrl === displayedUrl) return
 
         if (!displayedUrl) {
-            // First image — just show it
             setTimeout(() => setDisplayedUrl(activeBackdropUrl), 0)
             return
         }
 
-        // Cross-fade: load next into a hidden layer, then swap
         setTimeout(() => {
             setNextUrl(activeBackdropUrl)
             setIsCrossFading(true)
@@ -132,7 +117,7 @@ export function DynamicBackdrop() {
             setDisplayedUrl(activeBackdropUrl)
             setNextUrl(null)
             setIsCrossFading(false)
-        }, 520) // slightly longer than the CSS transition (500ms)
+        }, 520)
 
         return () => clearTimeout(timer)
     }, [activeBackdropUrl, displayedUrl, isEnabled])
@@ -145,9 +130,37 @@ export function DynamicBackdrop() {
         <div
             ref={containerRef}
             aria-hidden="true"
-            className={`pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-background ${isMotionEnabled && isHomePage ? "animate-breathing" : ""}`}
+            className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-[var(--bg-primary)]"
         >
-            {/* Wrapper for the backdrop layers that receives the mouse translation without CSS transitions */}
+            {/* Cinematic Gradient Orbs - CSS animated, GPU-composited */}
+            <div className="absolute inset-0 overflow-hidden" style={{ filter: "blur(160px)" }}>
+                <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full animate-float-blur mix-blend-plus-lighter"
+                    style={{
+                        background: "radial-gradient(circle at 30% 30%, var(--brand-accent) 0%, transparent 70%)",
+                        opacity: 0.18,
+                        willChange: "transform",
+                    }}
+                />
+                <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full animate-float-blur-reverse mix-blend-plus-lighter"
+                    style={{
+                        background: "radial-gradient(circle at 70% 70%, var(--era-dbs-hex) 0%, transparent 70%)",
+                        opacity: 0.15,
+                        willChange: "transform",
+                    }}
+                />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full animate-pulse-glow mix-blend-plus-lighter"
+                    style={{
+                        background: "radial-gradient(circle at 50% 50%, var(--era-db-hex) 0%, transparent 60%)",
+                        opacity: 0.1,
+                        willChange: "opacity, transform",
+                    }}
+                />
+            </div>
+
+            {/* Frosted Glass Overlay - adds blur depth behind content */}
+            <div className="absolute inset-0 bg-[var(--glass-bg)] backdrop-blur-[var(--blur-xl)]" style={{ opacity: isHomePage ? 0.3 : 0.1 }} />
+
+            {/* Wrapper for backdrop layers with mouse parallax */}
             <div
                 ref={backdropWrapperRef}
                 className="absolute inset-0"
@@ -156,7 +169,7 @@ export function DynamicBackdrop() {
                     willChange: "transform",
                 }}
             >
-                {/* ── Displayed (current) backdrop ──────────────────────────── */}
+                {/* Current backdrop */}
                 <div
                     ref={currentLayerRef}
                     className={`absolute inset-0 scale-115 bg-cover bg-center bg-no-repeat ${filterClass}`}
@@ -168,7 +181,7 @@ export function DynamicBackdrop() {
                     }}
                 />
 
-                {/* ── Incoming (next) backdrop — fades in over the current with asymmetric scale ── */}
+                {/* Incoming backdrop */}
                 <div
                     ref={nextLayerRef}
                     className={`absolute inset-0 bg-cover bg-center bg-no-repeat ${filterClass}`}
@@ -182,42 +195,21 @@ export function DynamicBackdrop() {
                 />
             </div>
 
-            {/* ── Orbital Orbs — very subtle on static pages ── */}
-            <div
-                ref={orb1Ref}
-                className="absolute top-1/4 left-1/4 w-[400px] h-[400px] rounded-full blur-[120px] mix-blend-screen"
-                style={{
-                    background: isStaticPage ? 'rgba(255,110,58,0.02)' : 'rgba(255,110,58,0.12)',
-                    transform: "translate3d(0px, 0px, 0px)",
-                    willChange: "transform",
-                }}
-            />
-            <div
-                ref={orb2Ref}
-                className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] rounded-full blur-[100px] mix-blend-screen"
-                style={{
-                    background: isStaticPage ? 'rgba(59,130,246,0.01)' : 'rgba(59,130,246,0.06)',
-                    transform: "translate3d(0px, 0px, 0px)",
-                    willChange: "transform",
-                }}
-            />
-
-            {/* ── Cinematic Grain Overlay ── */}
-            <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay z-10"
+            {/* Film Grain Overlay */}
+            <div className="absolute inset-0 opacity-[0.025] pointer-events-none mix-blend-overlay z-10"
                 style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}
             />
 
-            {/* ── Vignette stack — ensures text is always legible ───────── */}
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_120%_80%_at_50%_0%,rgba(255,255,255,0.02),transparent_60%)]" />
+            {/* Vignette Stack */}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_120%_80%_at_50%_0%,rgba(255,255,255,0.015),transparent_60%)]" />
             <div
-                className="absolute inset-0 bg-gradient-to-r from-background via-background/15 to-transparent transition-opacity duration-500"
+                className="absolute inset-0 bg-gradient-to-r from-[var(--bg-primary)] via-[var(--bg-primary)]/10 to-transparent transition-opacity duration-500"
                 style={{ opacity: isStaticPage ? 0.08 : 0.65 }}
             />
             <div
-                className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent transition-opacity duration-500"
+                className="absolute inset-0 bg-gradient-to-t from-[var(--bg-primary)] via-transparent to-transparent transition-opacity duration-500"
                 style={{ opacity: isStaticPage ? 0.1 : 0.70 }}
             />
         </div>
     )
 }
-

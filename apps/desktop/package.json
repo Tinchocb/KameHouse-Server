@@ -1,25 +1,33 @@
 {
   "name": "kamehouse-desktop",
   "version": "0.1.0",
-  "description": "Electron-based Desktop client for KameHouse",
-  "main": "src/main.js",
-  "author": "KameHouse",
+  "description": "Tauri 2 based Desktop client for KameHouse",
+  "type": "module",
   "scripts": {
-    "dev": "cross-env NODE_ENV=development electron .",
-    "prebuild": "node sync-web.js && node copy-server.js",
-    "build": "electron-builder build",
-    "build:mac": "electron-builder build --mac --arm64",
-    "build:win": "electron-builder build --win --x64",
-    "build:linux": "electron-builder build --linux --x64"
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "build:debug": "tauri build --debug",
+    "preview": "tauri preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
+    "tauri": "tauri"
   },
   "dependencies": {
-    "electron-log": "^5.4.3",
+    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-clipboard-manager": "^2.0.0",
+    "@tauri-apps/plugin-dialog": "^2.0.0",
+    "@tauri-apps/plugin-fs": "^2.0.0",
+    "@tauri-apps/plugin-global-shortcut": "^2.0.0",
+    "@tauri-apps/plugin-log": "^2.0.0",
+    "@tauri-apps/plugin-opener": "^2.0.0",
+    "@tauri-apps/plugin-shell": "^2.0.0",
+    "@tauri-apps/plugin-updater": "^2.0.0",
     "electron-updater": "^6.7.3"
   },
   "devDependencies": {
-    "cross-env": "^7.0.3",
-    "electron": "^35.0.0",
-    "electron-builder": "^25.0.0"
+    "@tauri-apps/cli": "^2.0.0",
+    "typescript": "^5.0.0",
+    "eslint": "^9.0.0"
   },
   "build": {
     "appId": "app.kamehouse.desktop",
@@ -31,57 +39,6 @@
         "to": "binaries"
       }
     ],
-    "mac": {
-      "category": "public.app-category.entertainment",
-      "target": [
-        {
-          "target": "default",
-          "arch": [
-            "arm64"
-          ]
-        }
-      ],
-      "darkModeSupport": true,
-      "notarize": false,
-      "hardenedRuntime": true,
-      "gatekeeperAssess": false,
-      "artifactName": "kamehouse-desktop-${version}_MacOS_${arch}.${ext}",
-      "identity": "-"
-    },
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "artifactName": "kamehouse-desktop-${version}_Windows_${arch}.${ext}",
-      "verifyUpdateCodeSignature": false
-    },
-    "linux": {
-      "target": [
-        {
-          "target": "AppImage",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "category": "Entertainment",
-      "artifactName": "kamehouse-desktop-${version}_Linux_${arch}.${ext}"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "deleteAppDataOnUninstall": true,
-      "shortcutName": "KameHouse",
-      "artifactName": "kamehouse-desktop-${version}_Windows_${arch}.${ext}",
-      "perMachine": true
-    },
     "directories": {
       "buildResources": "assets",
       "output": "dist"

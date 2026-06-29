@@ -40,7 +40,7 @@ function ProfileClient() {
         const entries = collection.lists.flatMap(l => l.entries ?? [])
         const uniqueSeries = new Set<number>()
         const uniqueMovies = new Set<number>()
-        let totalEpisodes = 0
+        const totalEpisodes = 0
         let watchedEpisodes = 0
 
         entries.forEach(e => {

@@ -4,7 +4,9 @@ import { Play, Info, Plus, Check, Clock, Star, Sparkles } from "lucide-react";
 import { getHighResImage, getMediumResImage, getLowResImage } from "@/lib/helpers/images";
 import { DeferredImage } from "@/components/shared/deferred-image";
 import { GlassButton } from "@/components/ui/glass-button";
+import { GlassCard } from "@/components/ui/glass-card";
 import { Icons } from "@/components/ui/icons";
+import { Badge } from "@/components/ui/badge";
 
 export type PosterAspect = "poster" | "landscape" | "square" | "ultrawide";
 export type PosterSize = "xs" | "sm" | "md" | "lg" | "xl";
@@ -140,30 +142,47 @@ export const PosterCard = React.memo(function PosterCard({
         variantClass,
         className
       )}
-style={{ viewTransitionName: layoutId ? `poster-${layoutId}` : undefined }}
-      >
+      style={{ viewTransitionName: layoutId ? `poster-${layoutId}` : undefined }}
+    >
       <div
         className={cn(
           "absolute inset-0 overflow-hidden flex flex-col origin-top",
           "transition-all duration-slow ease-smooth",
           showPopup
             ? cn(
-                "z-[100] bg-[var(--bg-tertiary)]/95 backdrop-blur-xl border border-[var(--glass-border)] shadow-modal",
+                "z-[100]",
                 isPoster
-                  ? "-top-[10%] -left-[10%] w-[120%] h-[130%] rounded-2xl"
-                  : "-top-[12%] -left-[8%] w-[116%] h-[130%] rounded-2xl"
+                  ? "-top-[10%] -left-[10%] w-[120%] h-[130%]"
+                  : "-top-[12%] -left-[8%] w-[116%] h-[130%]"
               )
-            : cn(
-                "z-10 w-full h-full bg-[var(--bg-secondary)]/40 border border-[var(--glass-border)] hover:border-[var(--brand-primary)]/30 hover:shadow-[var(--shadow-brand-primary)] shadow-card cursor-pointer group",
-                isPoster ? "rounded-xl" : "rounded-2xl"
-              )
+            : "z-10 w-full h-full group cursor-pointer"
         )}
         style={{
           willChange: showPopup ? "transform, opacity" : "auto",
         }}
       >
         {showPopup && (
-          <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-primary)]/10 via-transparent to-transparent pointer-events-none rounded-[inherit] opacity-50" />
+          <GlassCard
+            variant="popup"
+            padding="none"
+            radius={isPoster ? "2xl" : "3xl"}
+            blur="xl"
+            borderVariant="directional"
+            className="absolute inset-0"
+          >
+            <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-accent)]/10 via-transparent to-transparent pointer-events-none rounded-[inherit] opacity-50" />
+          </GlassCard>
+        )}
+
+        {!showPopup && (
+          <GlassCard
+            variant="interactive"
+            padding="none"
+            radius={isPoster ? "xl" : "2xl"}
+            blur="md"
+            borderVariant="directional"
+            className="absolute inset-0 bg-[var(--bg-secondary)]/40 hover:border-[var(--brand-accent)]/30 hover:shadow-[var(--shadow-brand-primary)] shadow-glass"
+          />
         )}
 
         <div className={cn("relative w-full overflow-hidden shrink-0", showPopup ? "aspect-[16/9]" : "h-full")}>
@@ -191,39 +210,45 @@ style={{ viewTransitionName: layoutId ? `poster-${layoutId}` : undefined }}
 
           {episodeNumber !== undefined && (
             <div className="absolute top-0 left-0 z-20">
-              <div className="bg-[var(--bg-primary)]/80 backdrop-blur-sm text-[var(--text-muted)] border-r border-b border-[var(--glass-border)] px-3 py-1.5 rounded-br-xl font-black text-[10px] tracking-[0.15em] uppercase flex items-center gap-1 shadow-md">
-                <span>EP</span>
-                <span className="text-[var(--brand-primary)]">{episodeNumber}</span>
-              </div>
+              <Badge variant="primary" size="sm" className="rounded-br-xl border-r-0 border-b-0 px-3 py-1.5">
+                <span className="flex items-center gap-1">
+                  <span className="font-black text-[10px] tracking-[0.15em] uppercase">EP</span>
+                  <span className="font-black text-[10px] tracking-[0.15em] uppercase">{episodeNumber}</span>
+                </span>
+              </Badge>
             </div>
           )}
 
           {mediaTypeBadge && (
             <div className="absolute top-0 right-0 z-20">
-              <div className="bg-[var(--bg-primary)]/80 backdrop-blur-sm text-[var(--text-muted)] border-l border-b border-[var(--glass-border)] px-2.5 py-1 rounded-bl-xl font-black text-[8px] tracking-[0.2em] uppercase shadow-md">
-                {mediaTypeBadge}
-              </div>
+              <Badge variant="muted" size="sm" className="rounded-bl-xl border-l-0 border-b-0 px-2.5 py-1">
+                <span className="font-black text-[8px] tracking-[0.2em] uppercase">{mediaTypeBadge}</span>
+              </Badge>
             </div>
           )}
 
           {badge && !showPopup && (
             <div className="absolute top-0 left-0 z-20 m-2">
-              <span className="badge-primary px-2 py-1 text-[9px]">{badge}</span>
+              <Badge variant="primary" size="sm" className="px-2 py-1">
+                {badge}
+              </Badge>
             </div>
           )}
 
           {availabilityType && !showPopup && (
             <div className="absolute top-0 right-0 z-20 m-2">
-              <span className={cn(
-                "badge px-2 py-1 text-[9px]",
-                availabilityType === "FULL_LOCAL" && "badge-success",
-                availabilityType === "HYBRID" && "badge-secondary",
-                availabilityType === "ONLY_ONLINE" && "badge-magic"
-              )}>
+              <Badge
+                variant={
+                  availabilityType === "FULL_LOCAL" ? "success" :
+                  availabilityType === "HYBRID" ? "secondary" : "magic"
+                }
+                size="sm"
+                className="px-2 py-1"
+              >
                 {availabilityType === "FULL_LOCAL" && "✓ Local"}
                 {availabilityType === "HYBRID" && "☁ Híbrido"}
                 {availabilityType === "ONLY_ONLINE" && "🌐 Online"}
-              </span>
+              </Badge>
             </div>
           )}
 
@@ -269,94 +294,93 @@ style={{ viewTransitionName: layoutId ? `poster-${layoutId}` : undefined }}
           )}
 
           {progress !== undefined && (
-            <div className="absolute inset-x-0 bottom-0 z-20 h-1 bg-[var(--glass-border)]">
+            <div className="absolute inset-x-0 bottom-0 z-20 h-1 bg-[var(--glass-border-side)]">
               <div
-                className="h-full bg-[var(--brand-primary)] shadow-[var(--shadow-brand-primary)] transition-all duration-base"
+                className="h-full bg-[var(--brand-accent)] shadow-[var(--shadow-brand-primary)] transition-all duration-base"
                 style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
               />
             </div>
           )}
         </div>
 
-        <div
-          className={cn(
-            "p-3 md:p-4 space-y-2 overflow-hidden bg-[var(--bg-tertiary)]/90 transition-all duration-slow ease-out",
-            showPopup
-              ? "opacity-100 max-h-[200px] pointer-events-auto"
-              : "opacity-0 max-h-0 py-0 pointer-events-none"
-          )}
-        >
-          <div className="space-y-2">
-            <h3 className="text-h5 font-display text-primary line-clamp-1">
-              {title}
-            </h3>
+        {showPopup && (
+          <div className="p-3 md:p-4 space-y-2 overflow-hidden bg-[var(--bg-tertiary)]/90 transition-all duration-slow ease-out">
+            <div className="space-y-2">
+              <h3 className="text-h5 font-display text-primary line-clamp-1">
+                {title}
+              </h3>
 
-            <div className="flex flex-wrap items-center gap-1.5 text-caption font-bold uppercase tracking-wider text-muted">
-              {rating && (
-                <span className="text-[var(--brand-success)] font-extrabold flex items-center gap-1">
-                  <Star size={10} fill="currentColor" />
-                  {(rating * 10).toFixed(0)}%
-                </span>
+              <div className="flex flex-wrap items-center gap-1.5 text-caption font-bold uppercase tracking-wider text-muted">
+                {rating && (
+                  <span className="text-[var(--brand-success)] font-extrabold flex items-center gap-1">
+                    <Star size={10} fill="currentColor" />
+                    {(rating * 10).toFixed(0)}%
+                  </span>
+                )}
+                {year && <span className="text-secondary font-medium">{year}</span>}
+                {badge && (
+                  <Badge variant="muted" size="sm" className="px-1.5 py-0.5">
+                    {badge}
+                  </Badge>
+                )}
+                {episodeTitle && (
+                  <span className="text-[var(--text-muted)] text-[9px]">
+                    {episodeTitle}
+                  </span>
+                )}
+              </div>
+
+              {vibes.length > 0 && (
+                <div className="flex flex-wrap gap-1 pt-1">
+                  {vibes.slice(0, 3).map((vibe, idx) => (
+                    <Badge
+                      key={idx}
+                      variant="primary"
+                      size="sm"
+                      dot
+                      className="text-[7px] tracking-widest px-2 py-0.5"
+                    >
+                      <Sparkles size={8} className="animate-pulse" />
+                      {vibe}
+                    </Badge>
+                  ))}
+                </div>
               )}
-              {year && <span className="text-secondary font-medium">{year}</span>}
-              {badge && (
-                <span className="badge-muted text-[8px] px-1.5 py-0.5">
-                  {badge}
-                </span>
+
+              {description && (
+                <p className="line-clamp-3 text-body-xs leading-relaxed text-muted pt-1">
+                  {cleanDesc}
+                </p>
               )}
-              {episodeTitle && (
-                <span className="text-[var(--text-muted)] text-[9px]">
-                  {episodeTitle}
-                </span>
+
+              {showQuickActions && showPopup && (
+                <div className="flex items-center gap-2 pt-2 border-t border-[var(--glass-border-top)]">
+                  <GlassButton
+                    variant="primary"
+                    size="sm"
+                    leftIcon="play"
+                    className="flex-1"
+                  >
+                    Reproducir
+                  </GlassButton>
+                  <GlassButton
+                    variant="glass"
+                    size="sm"
+                    leftIcon="info"
+                    className="flex-1"
+                  >
+                    Detalles
+                  </GlassButton>
+                </div>
               )}
             </div>
-
-            {vibes.length > 0 && (
-              <div className="flex flex-wrap gap-1 pt-1">
-                {vibes.slice(0, 3).map((vibe, idx) => (
-                  <span
-                    key={idx}
-                    className="badge text-[7px] tracking-widest bg-[var(--brand-primary)]/15 border-[var(--brand-primary)]/30 text-[var(--brand-primary)] px-2 py-0.5 flex items-center gap-1"
-                  >
-                    <Sparkles size={8} className="animate-pulse" />
-                    {vibe}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {description && (
-              <p className="line-clamp-3 text-body-xs leading-relaxed text-muted pt-1">
-                {cleanDesc}
-              </p>
-            )}
-
-            {showQuickActions && showPopup && (
-              <div className="flex items-center gap-2 pt-2 border-t border-[var(--glass-border)]">
-                <GlassButton
-                  variant="primary"
-                  size="sm"
-                  leftIcon="play"
-                  className="flex-1"
-                >
-                  Reproducir
-                </GlassButton>
-                <GlassButton
-                  variant="outline"
-                  size="sm"
-                  leftIcon="info"
-                  className="flex-1"
-                >
-                  Detalles
-                </GlassButton>
-              </div>
-            )}
           </div>
-        </div>
+        )}
+
       </div>
 
       {isSelected && (
-        <div className="absolute inset-0 border-2 border-[var(--brand-primary)] rounded-[inherit] pointer-events-none opacity-50" />
+        <div className="absolute inset-0 border-2 border-[var(--brand-accent)] rounded-[inherit] pointer-events-none opacity-50" />
       )}
     </div>
   );

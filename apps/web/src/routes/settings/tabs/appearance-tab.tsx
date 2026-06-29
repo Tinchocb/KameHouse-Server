@@ -94,14 +94,15 @@ export function AppearanceTab({ control }: AppearanceTabProps) {
     const { setValue, getValues } = useFormContext()
     const [activePreset, setActivePreset] = React.useState<string>("kamehouse")
 
+    const updateThemeMutation = useServerMutation<unknown, UpdateTheme_Variables>({
+        endpoint: API_ENDPOINTS.THEME.UpdateTheme.endpoint,
+        method: API_ENDPOINTS.THEME.UpdateTheme.methods[0],
+        mutationKey: [API_ENDPOINTS.THEME.UpdateTheme.key],
+    })
+
     const applyPresetMutation = useMutation({
         mutationFn: async (preset: typeof THEME_PRESETS[number]) => {
-            const mut = useServerMutation<unknown, UpdateTheme_Variables>({
-                endpoint: API_ENDPOINTS.THEME.UpdateTheme.endpoint,
-                method: API_ENDPOINTS.THEME.UpdateTheme.methods[0],
-                mutationKey: [API_ENDPOINTS.THEME.UpdateTheme.key],
-            })
-            return mut.mutateAsync({
+            return updateThemeMutation.mutateAsync({
                 theme: {
                     id: 0,
                     enableColorSettings: true,

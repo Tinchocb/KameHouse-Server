@@ -196,8 +196,9 @@ func (h *Handler) RespondWithCodeError(c echo.Context, code int, err error) erro
 func (h *Handler) getCachedSettings() *models.Settings {
 	h.settingsMu.RLock()
 	if h.settings != nil {
-		defer h.settingsMu.RUnlock()
-		return h.settings
+		s := h.settings
+		h.settingsMu.RUnlock()
+		return s
 	}
 	h.settingsMu.RUnlock()
 

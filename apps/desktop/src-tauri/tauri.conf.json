@@ -1,0 +1,112 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "KameHouse",
+  "version": "0.1.0",
+  "identifier": "app.kamehouse.desktop",
+  "build": {
+    "frontendDist": "../web",
+    "devUrl": "http://127.0.0.1:43210",
+    "beforeDevCommand": "pnpm --filter kamehouse-web dev",
+    "beforeBuildCommand": "pnpm --filter kamehouse-web build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "KameHouse",
+        "width": 1920,
+        "height": 1080,
+        "minWidth": 800,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "visible": false,
+        "backgroundColor": "#111111",
+        "decorations": false,
+        "transparent": false,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "center": true
+      },
+      {
+        "label": "splash",
+        "title": "KameHouse",
+        "width": 800,
+        "height": 600,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "visible": false,
+        "center": true
+      },
+      {
+        "label": "crash",
+        "title": "KameHouse - Error",
+        "width": 800,
+        "height": 600,
+        "resizable": false,
+        "decorations": false,
+        "visible": false,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' data: blob: https: http:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: http:; style-src 'self' 'unsafe-inline' https: http:; img-src 'self' data: blob: https: http:; font-src 'self' data: https: http:; connect-src 'self' https: http: ws: wss:; media-src 'self' data: blob: https: http:; worker-src 'self' blob:; frame-src https: http:;"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Entertainment",
+    "icon": [
+      "icons/icon.ico",
+      "icons/icon.icns",
+      "icons/128x128.png",
+      "icons/32x32.png"
+    ],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "",
+      "wix": {
+        "language": "en-US",
+        "template": null
+      }
+    },
+    "macOS": {
+      "hardenedRuntime": true,
+      "signingIdentity": "-"
+    },
+    "externalBin": [
+      "binaries/kamehouse-server-windows.exe",
+      "binaries/kamehouse-server-darwin-amd64",
+      "binaries/kamehouse-server-darwin-arm64",
+      "binaries/kamehouse-server-linux-amd64",
+      "binaries/kamehouse-server-linux-arm64"
+    ]
+  },
+  "plugins": {
+    "shell": {
+      "scope": {
+        "allowlist": [
+          {
+            "name": "kamehouse-server",
+            "cmd": "kamehouse-server",
+            "args": [
+              "-desktop-sidecar",
+              "true"
+            ],
+            "sidecar": true
+          }
+        ]
+      }
+    },
+    "updater": {
+      "pubkey": "",
+      "endpoints": [
+        "https://kamehouse.app/api/updates/{{target}}/{{current_version}}"
+      ],
+      "dialog": true
+    }
+  }
+}

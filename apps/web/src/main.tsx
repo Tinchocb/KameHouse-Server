@@ -1,5 +1,6 @@
 import { ClientProviders, queryClient } from "@/app/client-providers"
 import "./app/globals.css"
+import "@/lib/desktop-bridge"
 import { createRouter, RouterProvider } from "@tanstack/react-router"
 import React from "react"
 import ReactDOM from "react-dom/client"

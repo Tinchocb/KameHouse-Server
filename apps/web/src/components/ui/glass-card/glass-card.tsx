@@ -2,7 +2,7 @@ import { cn } from "@/components/ui/core/styling";
 import * as React from "react";
 
 export interface GlassCardProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: "default" | "elevated" | "interactive" | "popup" | "strong";
+  variant?: "default" | "elevated" | "interactive" | "popup" | "strong" | "featured";
   padding?: "none" | "sm" | "md" | "lg" | "xl";
   radius?: "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "full";
   blur?: "xs" | "sm" | "md" | "lg" | "xl";
@@ -44,6 +44,7 @@ const variantClasses = {
   interactive: "bg-[var(--glass-bg)] shadow-glass cursor-pointer transition-all duration-base hover:bg-[var(--glass-bg-hover)] hover:shadow-elevated active:scale-[0.98]",
   popup: "bg-[var(--glass-bg-strong)] shadow-modal",
   strong: "bg-[var(--glass-bg-strong)] shadow-modal",
+  featured: "bg-[var(--glass-bg)] shadow-glass",
 } as const;
 
 const borderClasses = {

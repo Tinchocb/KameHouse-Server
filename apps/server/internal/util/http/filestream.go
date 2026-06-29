@@ -219,11 +219,18 @@ func (fs *FileStream) Close() error {
 
 	// Close all readers
 	fs.readersMu.Lock()
-	for _, reader := range fs.readers {
-		go reader.Close()
+	readersToClose := make([]*fileStreamReader, len(fs.readers))
+	for i, r := range fs.readers {
+		readersToClose[i] = r.(*fileStreamReader)
 	}
 	fs.readers = nil
 	fs.readersMu.Unlock()
+
+	for _, reader := range readersToClose {
+		reader.mu.Lock()
+		reader.closed = true
+		reader.mu.Unlock()
+	}
 
 	// Remove the temp file and close
 	fileName := fs.file.Name()
@@ -334,11 +341,12 @@ func (r *fileStreamReader) Read(p []byte) (int, error) {
 
 		// Wait a bit before checking again
 		r.mu.Unlock()
+		time.Sleep(10 * time.Millisecond)
 		select {
 		case <-r.fs.ctx.Done():
 			r.mu.Lock()
 			return 0, r.fs.ctx.Err()
-		case <-time.After(10 * time.Millisecond):
+		default:
 			r.mu.Lock()
 		}
 	}

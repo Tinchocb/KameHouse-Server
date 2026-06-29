@@ -29,9 +29,9 @@ function hslToRgb(h: number, s: number, l: number): [number, number, number] {
 }
 
 function boostColor(r: number, g: number, b: number): [number, number, number] {
-    let [h, s, l] = rgbToHsl(r, g, b);
-    s = Math.min(1, s * 1.3 + 0.1);
-    l = Math.max(0.25, Math.min(0.65, l));
+    const [h, sOrig, lOrig] = rgbToHsl(r, g, b);
+    const s = Math.min(1, sOrig * 1.3 + 0.1);
+    const l = Math.max(0.25, Math.min(0.65, lOrig));
     return hslToRgb(h, s, l);
 }
 
@@ -58,7 +58,7 @@ function quantize(pixels: [number, number, number][], k: number, iterations = 20
         return sa - sb;
     });
 
-    let centroids: [number, number, number][] = [];
+    const centroids: [number, number, number][] = [];
     for (let i = 0; i < k; i++) {
         const idx = Math.floor((i / k) * sorted.length);
         centroids.push([...sorted[Math.min(idx, sorted.length - 1)]]);

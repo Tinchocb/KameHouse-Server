@@ -13,7 +13,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             { inputContainerProps, leftAddonProps, rightAddonProps, leftIconProps, rightIconProps },
         ] = extractInputPartProps(props as unknown as Record<string, unknown>)
 
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+         
         const {
             size,
             intent,

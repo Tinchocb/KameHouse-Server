@@ -2,7 +2,7 @@ import { cn } from "@/components/ui/core/styling";
 import * as React from "react";
 import { Icons } from "@/components/ui/icons";
 
-export type ButtonVariant = "primary" | "secondary" | "destructive" | "success" | "magic" | "glass";
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "destructive" | "success" | "magic" | "outline" | "glass";
 export type ButtonSize = "xs" | "sm" | "md" | "lg" | "xl";
 
 export interface GlassButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -22,6 +22,8 @@ const variantStyles: Record<ButtonVariant, string> = {
   destructive: "bg-[var(--brand-destructive)] text-[var(--destructive-foreground)] hover:brightness-110 hover:shadow-[var(--shadow-brand-destructive)] active:scale-[0.97]",
   success: "bg-[var(--brand-success)] text-[var(--bg-primary)] hover:brightness-110 hover:shadow-[var(--shadow-brand-success)] active:scale-[0.97]",
   magic: "bg-[var(--brand-magic)] text-white hover:brightness-110 hover:shadow-[var(--shadow-brand-magic)] active:scale-[0.97]",
+  ghost: "bg-transparent text-[var(--text-primary)] hover:bg-[var(--glass-hover)] hover:border-[var(--glass-hover)] border border-transparent active:scale-[0.97]",
+  outline: "bg-transparent border border-[var(--glass-border-top)] text-[var(--text-primary)] hover:border-[var(--brand-accent)] hover:bg-[var(--brand-accent)]/10 active:scale-[0.97]",
   glass: "bg-[var(--glass-bg)] backdrop-blur-sm border border-[var(--glass-border-top)] text-[var(--text-primary)] hover:border-[var(--glass-border-top)] hover:bg-[var(--glass-bg-hover)] active:scale-[0.97]",
 };
 

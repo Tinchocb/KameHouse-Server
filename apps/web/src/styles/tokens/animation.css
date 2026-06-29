@@ -1,7 +1,7 @@
 /* ╔════════════════════════════════════════════════════════════════════════╗
-   ║  animation.css — KameHouse Design System v2                        ║
-   ║  Duraciones, Easings, Keyframes — Sistema unificado               ║
-   ╚═══════════════════════════════════════════════════════════════════════╝ */
+   ║  animation.css — KameHouse Design System v3 (Cinematic Minimalist)   ║
+   ║  Duraciones, Easings, Keyframes — Sistema unificado                  ║
+   ╚════════════════════════════════════════════════════════════════════════╝ */
 
 /* ─── Duraciones ───────────────────────────────────────────────────── */
 :root {
@@ -72,6 +72,24 @@
   50%      { transform: translateY(-20px) rotate(2deg); }
 }
 
+/* ─── Cinematic Orb Animations (GPU-composited) ──────────────────────── */
+@keyframes float-blur {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); }
+  25%      { transform: translate3d(30px, -40px, 0) scale(1.05) rotate(3deg); }
+  50%      { transform: translate3d(-20px, -60px, 0) scale(1.1) rotate(-2deg); }
+  75%      { transform: translate3d(-40px, -20px, 0) scale(1.05) rotate(1deg); }
+}
+@keyframes float-blur-reverse {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); }
+  25%      { transform: translate3d(-30px, 40px, 0) scale(1.05) rotate(-3deg); }
+  50%      { transform: translate3d(20px, 60px, 0) scale(1.1) rotate(2deg); }
+  75%      { transform: translate3d(40px, 20px, 0) scale(1.05) rotate(-1deg); }
+}
+@keyframes pulse-glow-soft {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50%      { opacity: 1; transform: scale(1.08); }
+}
+
 /* ─── Clases de Animación ──────────────────────────────────────────── */
 .animate-fade-in       { animation: fade-in var(--duration-base) var(--ease-out) both; }
 .animate-fade-out      { animation: fade-out var(--duration-fast) var(--ease-in) both; }
@@ -89,11 +107,14 @@
 .animate-page-exit     { animation: slide-down var(--duration-base) var(--ease-in) both; }
 .animate-shimmer       { animation: shimmer 1.8s ease-in-out infinite; }
 .animate-pulse-glow    { animation: pulse-glow 2.5s ease-in-out infinite; }
+.animate-pulse-glow-soft { animation: pulse-glow-soft 4s ease-in-out infinite; }
 .animate-spin-slow     { animation: spin-slow 8s linear infinite; }
 .animate-float         { animation: float 6s ease-in-out infinite; }
+.animate-float-blur    { animation: float-blur 20s ease-in-out infinite; }
+.animate-float-blur-reverse { animation: float-blur-reverse 25s ease-in-out infinite; }
 
 /* Stagger delays */
-.delay-500  { animation-delay: 50ms; }
+.delay-50   { animation-delay: 50ms; }
 .delay-100  { animation-delay: 100ms; }
 .delay-150  { animation-delay: 150ms; }
 .delay-200  { animation-delay: 200ms; }
@@ -101,6 +122,20 @@
 .delay-300  { animation-delay: 300ms; }
 .delay-350  { animation-delay: 350ms; }
 .delay-400  { animation-delay: 400ms; }
+
+/* ─── Hover Lift (para cards interactivas) ───────────────────────────── */
+.hover-lift {
+  transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+}
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-elevated);
+}
+
+/* ─── Tap Scale (feedback táctil) ───────────────────────────────────── */
+.tap-scale:active {
+  transform: scale(0.98);
+}
 
 /* ─── Accesibilidad: Reducción de movimiento ──────────────────────────── */
 @media (prefers-reduced-motion: reduce) {

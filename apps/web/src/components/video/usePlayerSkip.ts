@@ -690,7 +690,7 @@ export function usePlayerSkip({
             }
         }
         return () => { if (nextEpisodeTimerRef.current) clearTimeout(nextEpisodeTimerRef.current) }
-    }, [showNextEpisode, countdownSeconds, showCountdown, videoRef]) // eslint-disable-line react-hooks/exhaustive-deps
+    }, [showNextEpisode, countdownSeconds, showCountdown, videoRef])  
 
     // ── Auto-advance on video end ─────────────────────────────────────────────────
     // onNextEpisode is intentionally NOT in the dep array: it is an inline arrow
@@ -717,7 +717,7 @@ export function usePlayerSkip({
                 }
             }
         }
-    }, [videoEnded, hasNextEpisode, autoPlayNextEpisode, tvMode, marathonMode, mediaFormat, videoRef]) // eslint-disable-line react-hooks/exhaustive-deps
+    }, [videoEnded, hasNextEpisode, autoPlayNextEpisode, tvMode, marathonMode, mediaFormat, videoRef])  
 
     // ── Cleanup ───────────────────────────────────────────────────────────────────
     useEffect(() => {
