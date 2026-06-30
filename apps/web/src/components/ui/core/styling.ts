@@ -35,7 +35,7 @@ export const cssUtils = {
     focusRing: "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6e3a] focus-visible:ring-offset-2",
 
     // Glassmorphism
-    glass: "bg-[var(--glass-bg)] backdrop-blur-[var(--blur-card)] border border-[var(--glass-border)] shadow-[var(--shadow-card)]",
+    glass: "bg-[var(--glass-bg)] backdrop-blur-[var(--blur-overlay-md)] border border-[var(--glass-border)] shadow-[var(--shadow-card)]",
     glassInteractive: "hover:border-[var(--glass-strong)] hover:bg-[var(--glass-hover)] transition-all",
 
     // Tabs
@@ -51,7 +51,7 @@ export const cssUtils = {
     sliderThumb: "appearance-none w-5 h-5 rounded-full bg-[#ff6e3a] cursor-pointer transition-all",
 
     // Card
-    card: "bg-[var(--glass-bg)] backdrop-blur-[var(--blur-card)] border border-[var(--glass-border)] rounded-3xl overflow-hidden",
+    card: "bg-[var(--glass-bg)] backdrop-blur-[var(--blur-overlay-md)] border border-[var(--glass-border)] rounded-3xl overflow-hidden",
 
     // Field wrapper
     field: "space-y-2",

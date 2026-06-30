@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router"
 import { motion } from "framer-motion"
 import * as React from "react"
 import { cn } from "@/components/ui/core/styling"
-import { GlassCard, GlassButton } from "@/components/ui"
 import { Icons } from "@/components/ui/icons"
 
 export const Route = createFileRoute("/admin/")({
@@ -15,7 +14,7 @@ function AdminPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4 }}
-            className="min-h-screen bg-[var(--bg-primary)] text-white overflow-x-hidden"
+            className="min-h-screen bg-surface text-on-surface overflow-x-hidden"
         >
             <div className="container-fluid py-8 md:py-12 lg:py-16">
                 <AdminHeader />
@@ -52,12 +51,14 @@ function AdminHeader() {
                         <p className="text-body-md text-muted mt-2">Gestiona y monitorea tu instancia de KameHouse</p>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
-                        <GlassButton variant="outline" size="md" leftIcon="download">
+                        <button className="inline-flex items-center justify-center gap-2 px-5 h-10 border border-outline-variant text-on-surface-variant font-semibold text-sm rounded-button transition-all duration-fast hover:border-primary hover:bg-primary/10 active:scale-[0.97]">
+                            <Icons.ui.download size={16} strokeWidth={2.5} />
                             Backup
-                        </GlassButton>
-                        <GlassButton variant="primary" size="md" leftIcon="refresh">
+                        </button>
+                        <button className="inline-flex items-center justify-center gap-2 px-5 h-10 bg-primary text-on-surface font-semibold text-sm rounded-button transition-all duration-fast active:scale-[0.97]">
+                            <Icons.ui.refresh size={16} strokeWidth={2.5} />
                             Reiniciar Servicios
-                        </GlassButton>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -80,10 +81,10 @@ function AdminStatsGrid() {
             <h2 id="stats-title" className="sr-only">Estadísticas Generales</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {stats.map((stat, i) => (
-                    <GlassCard key={i} variant="elevated" padding="lg" radius="2xl" className="relative overflow-hidden group">
-                        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-[rgba(255,255,255,0.02)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div key={i} className="bg-surface-container shadow-elevation-3 rounded-container p-6 backdrop-blur-overlay-md border border-outline-variant relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-on-surface/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                         <div className="flex items-start justify-between">
-                            <stat.icon size={28} className="text-[var(--text-muted)] group-hover:text-white transition-colors" style={{ color: stat.color }} />
+                            <stat.icon size={28} className="text-on-surface-variant group-hover:text-on-surface transition-colors" style={{ color: stat.color }} />
                             <span className="text-caption text-muted uppercase tracking-wider">{stat.trend === "up" ? "↑" : stat.trend === "down" ? "↓" : "—"}</span>
                         </div>
                         <div className="text-h3 font-display text-primary font-extrabold tracking-tight mt-4" style={{ fontVariantNumeric: 'tabular-nums' }}>
@@ -93,7 +94,7 @@ function AdminStatsGrid() {
                             <span className="text-secondary">{stat.label}</span>
                             <span className="text-muted ml-2">{stat.change}</span>
                         </div>
-                    </GlassCard>
+                        </div>
                 ))}
             </div>
         </section>
@@ -129,15 +130,15 @@ function AdminActionsGrid() {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {actions.map((action, i) => (
-                <GlassCard key={i} variant="interactive" padding="lg" radius="2xl" onClick={action.action} className="group">
+                <div key={i} onClick={action.action} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); action.action(); } }} className="bg-surface-container shadow-elevation-3 rounded-container p-6 backdrop-blur-overlay-md border border-outline-variant cursor-pointer transition-all duration-base hover:shadow-elevation-4 active:scale-[0.98] group">
                     <div className="flex items-start gap-4">
                         <div className={cn(
                             "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform",
-                            action.variant === "primary" && "bg-[var(--brand-primary)]/20 text-[var(--brand-primary)]",
-                            action.variant === "secondary" && "bg-[var(--brand-secondary)]/20 text-[var(--brand-secondary)]",
-                            action.variant === "destructive" && "bg-[var(--brand-destructive)]/20 text-[var(--brand-destructive)]",
-                            action.variant === "outline" && "bg-[var(--glass-bg)] border border-[var(--glass-border)] text-muted",
-                            (action as any).variant === "magic" && "bg-[var(--brand-magic)]/20 text-[var(--brand-magic)]",
+                            action.variant === "primary" && "bg-brand-primary/20 text-brand-primary",
+                            action.variant === "secondary" && "bg-brand-secondary/20 text-brand-secondary",
+                            action.variant === "destructive" && "bg-brand-destructive/20 text-brand-destructive",
+                            action.variant === "outline" && "bg-surface-container border border-outline-variant text-muted",
+                            (action as any).variant === "magic" && "bg-brand-magic/20 text-brand-magic",
                         )}>
                             <action.icon size={24} strokeWidth={2.5} />
                         </div>
@@ -147,7 +148,7 @@ function AdminActionsGrid() {
                         </div>
                         <Icons.arrow.right size={20} className="text-muted group-hover:text-primary transition-colors shrink-0 mt-1" />
                     </div>
-                </GlassCard>
+                </div>
             ))}
         </div>
     )
@@ -177,11 +178,11 @@ function AdminServicesGrid() {
             {services.map((service, i) => {
                 const status = getStatusConfig(service.status)
                 return (
-                    <GlassCard key={i} variant="elevated" padding="lg" radius="2xl">
+                    <div key={i} className="bg-surface-container shadow-elevation-3 rounded-container p-6 backdrop-blur-overlay-md border border-outline-variant">
                         <div className="flex items-start justify-between">
                             <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-xl bg-[var(--glass-bg)] border border-[var(--glass-border)] flex items-center justify-center">
-                                    <service.icon size={24} className="text-[var(--text-secondary)]" />
+                                <div className="w-12 h-12 rounded-xl bg-surface-container border border-outline-variant flex items-center justify-center">
+                                    <service.icon size={24} className="text-on-surface-variant/80" />
                                 </div>
                                 <div>
                                     <h3 className="text-h6 font-display text-primary tracking-wide">{service.name}</h3>
@@ -193,14 +194,14 @@ function AdminServicesGrid() {
                                 <span className="text-caption font-bold uppercase tracking-wider" style={{ color: status.color }}>{status.label}</span>
                             </div>
                         </div>
-                        <div className="mt-4 pt-4 border-t border-[var(--glass-border)] flex items-center justify-between">
+                        <div className="mt-4 pt-4 border-t border-outline-variant flex items-center justify-between">
                             <span className="text-caption text-muted">Última sync: </span>
                             <span className="text-caption text-secondary font-mono">{service.lastSync}</span>
-                            <GlassButton variant="ghost" size="xs" onClick={() => {}}>
+                            <button onClick={() => {}} className="inline-flex items-center justify-center gap-1.5 px-3 h-7 text-on-surface-variant font-semibold text-xs rounded-button transition-all duration-fast hover:bg-surface-container active:scale-[0.97]">
                                 {service.status === "connected" ? "Desconectar" : "Conectar"}
-                            </GlassButton>
+                            </button>
                         </div>
-                    </GlassCard>
+                    </div>
                 )
             })}
         </div>
@@ -220,10 +221,10 @@ function AdminSystemGrid() {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {items.map((item, i) => (
-                <GlassCard key={i} variant="interactive" padding="lg" radius="2xl" onClick={item.action} className="group">
+                <div key={i} onClick={item.action} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); item.action(); } }} className="bg-surface-container shadow-elevation-3 rounded-container p-6 backdrop-blur-overlay-md border border-outline-variant cursor-pointer transition-all duration-base hover:shadow-elevation-4 active:scale-[0.98] group">
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-[var(--glass-bg)] border border-[var(--glass-border)] flex items-center justify-center group-hover:bg-[var(--glass-hover)] transition-colors">
-                            <item.icon size={24} className="text-[var(--text-secondary)]" />
+                        <div className="w-12 h-12 rounded-xl bg-surface-container border border-outline-variant flex items-center justify-center group-hover:bg-surface-container-high transition-colors">
+                            <item.icon size={24} className="text-on-surface-variant/80" />
                         </div>
                         <div className="flex-1 min-w-0">
                             <h3 className="text-h6 font-display text-primary tracking-wide">{item.label}</h3>
@@ -231,7 +232,7 @@ function AdminSystemGrid() {
                         </div>
                         <Icons.arrow.right size={20} className="text-muted group-hover:text-primary transition-colors shrink-0 mt-1" />
                     </div>
-                </GlassCard>
+                </div>
             ))}
         </div>
     )
@@ -250,18 +251,18 @@ function AdminRecentActivity() {
     return (
         <section aria-labelledby="activity-title" className="mb-4">
             <h2 id="activity-title" className="sr-only">Actividad Reciente</h2>
-            <GlassCard variant="elevated" padding="lg" radius="2xl">
+            <div className="bg-surface-container shadow-elevation-3 rounded-container p-6 backdrop-blur-overlay-md border border-outline-variant">
                 <div className="flex items-center justify-between mb-6">
                     <h3 className="text-h5 font-display text-primary uppercase tracking-wide">Actividad Reciente</h3>
-                    <GlassButton variant="ghost" size="sm">
+                    <button className="inline-flex items-center justify-center gap-2 px-4 h-9 text-on-surface-variant font-semibold text-xs rounded-button transition-all duration-fast hover:bg-surface-container active:scale-[0.97]">
                         Ver Todo
                         <Icons.arrow.right size={14} strokeWidth={2.5} className="ml-1" />
-                    </GlassButton>
+                    </button>
                 </div>
                 <div className="space-y-4">
                     {activities.map((activity, i) => (
-                        <div key={i} className="flex items-start gap-4 p-4 rounded-xl bg-[var(--glass-bg)] border border-[var(--glass-border)] hover:border-[var(--glass-hover)] transition-colors">
-                            <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${activity.color}20`, color: activity.color }}>
+                        <div key={i} className="flex items-start gap-4 p-4 rounded-xl bg-surface-container border border-outline-variant hover:border-surface-container-high transition-colors">
+                            <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: `hsl(${activity.color} / 0.12)`, color: `hsl(${activity.color})` }}>
                                 <activity.icon size={20} strokeWidth={2.5} />
                             </div>
                             <div className="flex-1 min-w-0">
@@ -272,7 +273,7 @@ function AdminRecentActivity() {
                         </div>
                     ))}
                 </div>
-            </GlassCard>
+                </div>
         </section>
     )
 }

@@ -106,14 +106,14 @@ export const MediaCard = React.memo(function MediaCard({
                     "transition-all duration-300",
                     showPopup
                         ? cn(
-                              "z-[100] bg-zinc-950/95 backdrop-blur-xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.85)]",
+                              "z-[100] bg-surface-container backdrop-blur-overlay-xl border border-outline-variant/10 shadow-[0_20px_50px_rgba(0,0,0,0.85)]",
                               isPoster
-                                  ? "-top-[12%] -left-[12.5%] w-[125%] h-[135%] rounded-2xl"
-                                  : "-top-[15%] -left-[10%] w-[120%] h-[135%] rounded-2xl"
+                                  ? "-top-[12%] -left-[12.5%] w-[125%] h-[135%] rounded-container"
+                                  : "-top-[15%] -left-[10%] w-[120%] h-[135%] rounded-container"
                           )
                         : cn(
-                              "z-10 w-full h-full bg-zinc-900/40 border border-white/5 hover:border-brand-orange/30 hover:shadow-[0_0_20px_rgba(255,110,58,0.15)] shadow-md group cursor-pointer",
-                              isPoster ? "rounded-xl" : "rounded-2xl"
+                              "z-10 w-full h-full bg-surface-container/10 border border-outline-variant/5 hover:border-brand-orange/30 hover:shadow-[0_0_20px_rgba(255,110,58,0.15)] shadow-elevation-2 group cursor-pointer",
+                              isPoster ? "rounded-xl" : "rounded-container"
                           )
                 )}
                 style={{
@@ -154,7 +154,7 @@ export const MediaCard = React.memo(function MediaCard({
                     {/* Episode/Saga Badge */}
                     {episodeNumber !== undefined && (
                         <div className="absolute top-0 left-0 z-20">
-                            <div className="bg-zinc-950/70 backdrop-blur-md text-zinc-300 border-r border-b border-white/10 px-3 py-1.5 rounded-br-xl font-black text-[10px] tracking-[0.15em] uppercase flex items-center gap-1 shadow-md">
+                            <div className="bg-surface-container backdrop-blur-overlay-md text-on-surface-variant border-r border-b border-outline-variant/10 px-3 py-1.5 rounded-br-xl font-black text-[10px] tracking-[0.15em] uppercase flex items-center gap-1 shadow-elevation-2">
                                 <span>EP</span>
                                 <span className="text-brand-orange">{episodeNumber}</span>
                             </div>
@@ -164,7 +164,7 @@ export const MediaCard = React.memo(function MediaCard({
                     {/* Media Type Badge (e.g. PELÍCULA, EPISODIO, OVA) */}
                     {mediaTypeBadge && (
                         <div className="absolute top-0 right-0 z-20">
-                            <div className="bg-zinc-950/70 backdrop-blur-md text-zinc-400 border-l border-b border-white/10 px-2.5 py-1 rounded-bl-xl font-black text-[8px] tracking-[0.2em] uppercase shadow-md">
+                            <div className="bg-surface-container backdrop-blur-overlay-md text-on-surface-variant border-l border-b border-outline-variant/10 px-2.5 py-1 rounded-bl-xl font-black text-[8px] tracking-[0.2em] uppercase shadow-elevation-2">
                                 {mediaTypeBadge}
                             </div>
                         </div>
@@ -173,10 +173,10 @@ export const MediaCard = React.memo(function MediaCard({
                     {/* Quick Play Action Indicator */}
                     {showPopup && (
                         <div className="absolute bottom-3 left-4 z-20 flex items-center gap-2">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-orange text-white shadow-lg hover:scale-110 hover:shadow-brand-orange/20 active:scale-95 transition-all duration-300 cursor-pointer">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-orange text-white shadow-elevation-3 hover:scale-110 hover:shadow-brand-orange/20 active:scale-95 transition-all duration-300 cursor-pointer">
                                 <Play size={15} fill="currentColor" className="ml-0.5" />
                             </div>
-                            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-zinc-900/60 backdrop-blur-md text-zinc-300 hover:text-white hover:bg-zinc-800/80 hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-outline-variant/10 bg-surface-container backdrop-blur-overlay-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer">
                                 <Plus size={15} />
                             </div>
                         </div>
@@ -186,11 +186,11 @@ export const MediaCard = React.memo(function MediaCard({
                     {!showPopup && (
                         <div className="absolute inset-0 z-10 flex flex-col justify-end p-4 md:p-5 transition-transform duration-500 ease-out group-hover:translate-y-[-2px]">
                             <div className="space-y-1.5">
-                                <h3 className="font-bebas text-lg md:text-xl leading-none tracking-wide text-white line-clamp-1">
+                                <h3 className="font-bebas text-lg md:text-xl leading-none tracking-wide text-on-surface line-clamp-1">
                                     {title}
                                 </h3>
                                 {subtitle && (
-                                    <p className="text-[9px] font-black uppercase tracking-[0.15em] text-white/40 group-hover:text-white/60 transition-colors duration-500 line-clamp-1">
+                                    <p className="text-[9px] font-black uppercase tracking-[0.15em] text-on-surface/40 group-hover:text-on-surface/60 transition-colors duration-500 line-clamp-1">
                                         {subtitle}
                                     </p>
                                 )}
@@ -202,27 +202,27 @@ export const MediaCard = React.memo(function MediaCard({
                 {/* Extended Details Body */}
                 <div
                     className={cn(
-                        "p-4 space-y-2 select-none flex flex-col justify-between overflow-hidden bg-zinc-950/90 transition-all duration-300 ease-out transform-gpu",
+                        "p-4 space-y-2 select-none flex flex-col justify-between overflow-hidden bg-surface-container transition-all duration-300 ease-out transform-gpu",
                         showPopup 
                             ? "opacity-100 max-h-[220px] pointer-events-auto" 
                             : "opacity-0 max-h-0 py-0 pointer-events-none"
                     )}
                 >
                     <div className="space-y-2">
-                        <h3 className="font-bebas text-xl md:text-2xl leading-none text-white uppercase tracking-wide line-clamp-1">
+                        <h3 className="font-bebas text-xl md:text-2xl leading-none text-on-surface uppercase tracking-wide line-clamp-1">
                             {title}
                         </h3>
 
                         {/* Tags / Meta Information */}
-                        <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                        <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">
                             {rating && (
                                 <span className="text-emerald-400 font-extrabold flex items-center gap-1">
                                     {(rating * 10).toFixed(0)}% COINCIDENCIA
                                 </span>
                             )}
-                            {year && <span className="text-zinc-300 font-medium">{year}</span>}
+                            {year && <span className="text-on-surface-variant font-medium">{year}</span>}
                             {badge && (
-                                <span className="border border-white/10 bg-white/5 backdrop-blur-md px-1.5 py-0.5 rounded text-zinc-300 text-[8px]">
+                                <span className="border border-outline-variant/10 bg-surface-variant backdrop-blur-overlay-md px-1.5 py-0.5 rounded text-on-surface-variant text-[8px]">
                                     {badge}
                                 </span>
                             )}
@@ -245,7 +245,7 @@ export const MediaCard = React.memo(function MediaCard({
 
                         {/* Description/Synopsis */}
                         {description && (
-                            <p className="line-clamp-3 text-[11px] leading-relaxed text-zinc-400 pt-1 font-medium select-none">
+                            <p className="line-clamp-3 text-[11px] leading-relaxed text-on-surface-variant pt-1 font-medium select-none">
                                 {cleanDesc}
                             </p>
                         )}
@@ -254,7 +254,7 @@ export const MediaCard = React.memo(function MediaCard({
 
                 {/* Progress Bar */}
                 {progress !== undefined && (
-                    <div className="absolute inset-x-0 bottom-0 z-20 h-1 bg-white/10">
+                    <div className="absolute inset-x-0 bottom-0 z-20 h-1 bg-surface-variant">
                         <div
                             className="h-full bg-brand-orange shadow-[0_0_8px_rgba(255,110,58,0.5)]"
                             style={{ width: `${progress}%` }}

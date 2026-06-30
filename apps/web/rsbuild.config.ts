@@ -23,15 +23,16 @@ const config: RsbuildConfig = {
         pluginJassubTranspile(),
         pluginBabel({
             include: /\.(?:jsx|tsx|m?js|m?jsx)$/,
+            exclude: [/[\\/]node_modules[\\/]/],
             babelLoaderOptions(opts) {
                 opts.presets ??= []
                 opts.presets.push(["@babel/preset-env", {
                     targets: ["chrome >= 47"],
-                    useBuiltIns: false,
                     modules: false,
                 }])
+                opts.plugins ??= []
+                opts.plugins.push(["babel-plugin-polyfill-corejs3", { method: "usage-global", version: "3.38" }])
                 if (process.env.NODE_ENV === "production") {
-                    opts.plugins ??= []
                     opts.plugins.push(["babel-plugin-react-compiler"])
                 }
             },
@@ -78,6 +79,7 @@ const config: RsbuildConfig = {
         },
     },
     output: {
+        polyfill: "usage",
         dataUriLimit: 1024,
         cleanDistPath: true,
         sourceMap: process.env.NODE_ENV === "production" ? "hidden" : !!process.env.RSDOCTOR,

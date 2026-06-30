@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
-use log::{debug, error, info, warn};
-use tauri::{AppHandle, Manager, Runtime};
+use log::info;
+use tauri::{AppHandle, Runtime};
+use tauri_plugin_updater::UpdaterExt;
 
 use crate::sidecar::SidecarManager;
 use crate::window_manager::WindowManager;
@@ -16,9 +17,9 @@ impl UpdaterManager {
 
     pub async fn setup<R: Runtime>(
         &self,
-        app_handle: &AppHandle<R>,
-        window_manager: Arc<WindowManager>,
-        sidecar_manager: Arc<SidecarManager>,
+        _app_handle: &tauri::AppHandle<R>,
+        _window_manager: Arc<WindowManager>,
+        _sidecar_manager: Arc<SidecarManager>,
         settings: DesktopSettings,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("[Updater] Setting up auto-updater");
@@ -86,7 +87,7 @@ impl UpdaterManager {
             "updateAvailable": result.is_some(),
             "updateInfo": result.map(|u| serde_json::json!({
                 "version": u.version,
-                "date": u.date,
+                "date": u.date.map(|d| d.to_string()),
                 "body": u.body,
             })),
         }))
@@ -98,8 +99,9 @@ impl UpdaterManager {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("[Updater] Installing update");
 
-        let updater = app_handle.updater()?;
-        updater.download_and_install(|_chunk, _content_length| {}, || {}).await?;
+        if let Some(update) = app_handle.updater()?.check().await? {
+            update.download_and_install(|_chunk, _content_length| {}, || {}).await?;
+        }
 
         Ok(())
     }

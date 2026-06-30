@@ -1,6 +1,5 @@
 import React from "react"
 import { ScannerDashboard } from "@/components/ui/scanner/ScannerDashboard"
-import { GlassCard } from "@/components/ui"
 import { Section, OsToggle } from "../components"
 import { type Control, Controller } from "react-hook-form"
 import { type SettingsFormValues } from "../index"
@@ -14,7 +13,7 @@ export function ScannerTab({ control }: ScannerTabProps) {
         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 outline-none">
 
             {/* Scouter engine parameters */}
-            <GlassCard variant="elevated" padding="lg" radius="2xl" className="space-y-6">
+            <div className="bg-surface-container rounded-container p-6 shadow-elevation-1 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Range slider for scoring threshold */}
                     <Controller
@@ -22,7 +21,7 @@ export function ScannerTab({ control }: ScannerTabProps) {
                         name="library.scannerMatchingThreshold"
                         render={({ field }) => (
                             <div className="flex flex-col gap-2">
-                                <div className="flex justify-between text-[11px] font-mono font-bold text-zinc-400">
+                                <div className="flex justify-between text-[11px] font-mono font-bold text-on-surface-variant">
                                     <span>Umbral de Sensibilidad (Scoring Threshold)</span>
                                     <span className="text-[#ff6e3a] font-bold">{(field.value || 82) / 100} (Dice)</span>
                                 </div>
@@ -32,16 +31,16 @@ export function ScannerTab({ control }: ScannerTabProps) {
                                     max="95"
                                     value={field.value || 82}
                                     onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                    className="w-full h-1.5 bg-[var(--bg-quaternary)] rounded-lg appearance-none cursor-pointer accent-[var(--brand-secondary)] mt-2"
+                                    className="w-full h-1.5 bg-surface-container rounded-lg appearance-none cursor-pointer accent-brand-secondary mt-2"
                                 />
-                                <p className="text-[10px] text-zinc-500 mt-1">Valores altos evitan falsos positivos pero requieren nombres de archivos limpios.</p>
+                                <p className="text-[10px] text-on-surface-variant mt-1">Valores altos evitan falsos positivos pero requieren nombres de archivos limpios.</p>
                             </div>
                         )}
                     />
 
                     {/* Scan Frequency */}
                     <div className="flex flex-col gap-2">
-                        <label htmlFor="scan-frequency-select" className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Frecuencia del Escáner en segundo plano</label>
+                        <label htmlFor="scan-frequency-select" className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest font-mono">Frecuencia del Escáner en segundo plano</label>
                         <Controller
                             control={control}
                             name="library.scannerProvider"
@@ -50,7 +49,7 @@ export function ScannerTab({ control }: ScannerTabProps) {
                                     id="scan-frequency-select"
                                     value={field.value || "manual"}
                                     onChange={field.onChange}
-                                    className="w-full bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 text-xs text-zinc-300 focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all cursor-pointer [&>option]:bg-[#141418] [&>option]:text-white mt-1.5"
+                                    className="w-full bg-surface-container border border-outline-variant rounded-xl px-4 py-2.5 text-xs text-on-surface-variant focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all cursor-pointer [&>option]:bg-[#141418] [&>option]:text-on-surface mt-1.5"
                                 >
                                     <option value="manual">Solo manual o por Debouncer en tiempo real</option>
                                     <option value="6h">Cada 6 horas</option>
@@ -61,12 +60,12 @@ export function ScannerTab({ control }: ScannerTabProps) {
                     </div>
                 </div>
 
-                <hr className="border-[var(--glass-border)]" />
+                <hr className="border-outline-variant" />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Matching Algorithm */}
                     <div className="flex flex-col gap-2">
-                        <label htmlFor="matching-algorithm-select" className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Algoritmo de Emparejamiento</label>
+                        <label htmlFor="matching-algorithm-select" className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest font-mono">Algoritmo de Emparejamiento</label>
                         <Controller
                             control={control}
                             name="library.scannerMatchingAlgorithm"
@@ -75,7 +74,7 @@ export function ScannerTab({ control }: ScannerTabProps) {
                                     id="matching-algorithm-select"
                                     value={field.value || "dice"}
                                     onChange={field.onChange}
-                                    className="w-full bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 text-xs text-zinc-300 focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all cursor-pointer [&>option]:bg-[#141418] [&>option]:text-white mt-1.5"
+                                    className="w-full bg-surface-container border border-outline-variant rounded-xl px-4 py-2.5 text-xs text-on-surface-variant focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all cursor-pointer [&>option]:bg-[#141418] [&>option]:text-on-surface mt-1.5"
                                 >
                                     <option value="dice">Coeficiente Dice (Recomendado)</option>
                                     <option value="levenshtein">Distancia de Levenshtein</option>
@@ -101,7 +100,7 @@ export function ScannerTab({ control }: ScannerTabProps) {
                         />
                     </div>
                     </div>
-                </GlassCard>
+                </div>
 
             {/* Scanner Bento Dashboard */}
             <Section label="Diagnóstico en Vivo">

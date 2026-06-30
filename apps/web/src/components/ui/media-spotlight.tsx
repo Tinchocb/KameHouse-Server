@@ -183,7 +183,7 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
 
                     {/* Imagen Hero */}
                     <div
-                        className="md:col-span-7 relative w-full aspect-[4/3] md:aspect-[16/10] rounded-[32px] overflow-hidden border border-white/10 bg-zinc-950 group/hero shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] transition-all duration-700"
+                        className="md:col-span-7 relative w-full aspect-[4/3] md:aspect-[16/10] rounded-[32px] overflow-hidden border border-white/10 bg-surface-container group/hero shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] transition-all duration-700"
                         style={{
                             boxShadow: `0 25px 60px -15px rgba(0,0,0,0.9), 0 0 40px -10px ${colors.glow}`
                         }}
@@ -201,7 +201,7 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                                 className="absolute inset-0 w-full h-full"
                             >
                                 {/* Artwork Background */}
-                                <div className="absolute inset-0 w-full h-full z-0 bg-zinc-950">
+                                <div className="absolute inset-0 w-full h-full z-0 bg-surface-container">
                                     {activeItem.backdropUrl ? (
                                         <DeferredImage
                                             src={getLargeResImage(activeItem.backdropUrl)}
@@ -210,7 +210,7 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                                             className="h-full w-full object-cover object-top transition-transform [transition-duration:6s] ease-out group-hover/hero:scale-[1.04]"
                                         />
                                     ) : (
-                                        <div className="absolute inset-0 flex items-center justify-center bg-zinc-950">
+                                        <div className="absolute inset-0 flex items-center justify-center bg-surface-container">
                                             <div className="absolute inset-0 opacity-40">
                                                 <DeferredImage
                                                     src={getLargeResImage(activeItem.image)}
@@ -255,12 +255,12 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                                         Destacado
                                     </span>
                                     {activeItem.badge && (
-                                        <span className="bg-white/10 text-white text-[9px] font-bold tracking-wider px-2.5 py-1 rounded-[6px] border border-white/5 uppercase select-none">
+                                        <span className="bg-surface-variant text-white text-[9px] font-bold tracking-wider px-2.5 py-1 rounded-[6px] border border-white/5 uppercase select-none">
                                             {activeItem.badge}
                                         </span>
                                     )}
                                     {activeItem.year && (
-                                        <span className="bg-white/10 text-white text-[9px] font-bold tracking-wider px-2.5 py-1 rounded-[6px] border border-white/5 uppercase select-none">
+                                        <span className="bg-surface-variant text-white text-[9px] font-bold tracking-wider px-2.5 py-1 rounded-[6px] border border-white/5 uppercase select-none">
                                             {activeItem.year}
                                         </span>
                                     )}
@@ -292,14 +292,14 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                                             "relative overflow-hidden flex items-center justify-center bg-gradient-to-r from-[#f59e0b] to-[#ea580c] hover:from-[#fbbf24] hover:to-[#f97316] text-white font-black text-xs md:text-sm uppercase tracking-wider py-3 px-6 rounded-2xl hover:scale-[1.03] active:scale-95 transition-all duration-300 shadow-xl shadow-orange-950/20 group/play-btn font-bebas [&>*:not(:first-child)]:ml-2"
                                         )}
                                     >
-                                        <div className="absolute inset-0 w-[40px] h-full bg-white/20 transform skew-x-12 -translate-x-[60px] group-hover/play-btn:translate-x-[250px] transition-transform [transition-duration:1.2s] ease-out pointer-events-none" />
+                                        <div className="absolute inset-0 w-[40px] h-full bg-on-surface/20 transform skew-x-12 -translate-x-[60px] group-hover/play-btn:translate-x-[250px] transition-transform [transition-duration:1.2s] ease-out pointer-events-none" />
                                         <Play size={14} fill="currentColor" />
                                         <span>Reproducir</span>
                                     </button>
 
                                     <button
                                         onClick={() => onNavigate(activeItem)}
-                                        className="flex items-center justify-center border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 text-zinc-200 hover:text-white hover:scale-[1.03] active:scale-95 font-black text-xs md:text-sm uppercase tracking-wider py-3 px-6 rounded-2xl transition-all duration-300 shadow-xl backdrop-blur-md font-bebas [&>*:not(:first-child)]:ml-2"
+                                        className="flex items-center justify-center border border-white/10 bg-white/5 hover:bg-surface-variant hover:border-white/20 text-zinc-200 hover:text-white hover:scale-[1.03] active:scale-95 font-black text-xs md:text-sm uppercase tracking-wider py-3 px-6 rounded-2xl transition-all duration-300 shadow-xl backdrop-blur-[var(--blur-overlay-sm)] font-bebas [&>*:not(:first-child)]:ml-2"
                                     >
                                         <Info size={14} />
                                         <span>Detalles</span>
@@ -312,7 +312,7 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
 
                 {/* ─── LADO DERECHO (3/12): Selector de Eras en tarjeta Glassmorphic ─── */}
                 <div className="flex flex-col lg:col-span-3 h-full z-10 justify-center">
-                    <div className="bg-zinc-950/65 backdrop-blur-2xl border border-white/10 lg:border-r-0 rounded-3xl lg:rounded-r-none lg:rounded-l-[32px] p-5 lg:-mr-14 xl:-mr-16 shadow-2xl flex flex-col [&>*:not(:first-child)]:mt-4">
+                    <div className="bg-surface-container/65 backdrop-blur-[var(--blur-overlay-md)] border border-white/10 lg:border-r-0 rounded-3xl lg:rounded-r-none lg:rounded-l-[32px] p-5 lg:-mr-14 xl:-mr-16 shadow-2xl flex flex-col [&>*:not(:first-child)]:mt-4">
                         <h4 className="font-bold text-[10px] tracking-widest text-zinc-300 uppercase pl-1">
                             Seleccionar Saga / Era
                         </h4>

@@ -15,7 +15,7 @@ export function TvNavBar() {
     const { location } = useRouterState()
 
     return (
-        <nav className="fixed bottom-0 inset-x-0 z-50 flex items-center justify-center gap-3 px-8 py-4 bg-zinc-950/95 backdrop-blur-2xl border-t border-white/[0.08]">
+        <nav className="fixed bottom-0 inset-x-0 z-50 flex items-center justify-center gap-3 px-8 py-4 bg-surface/95 backdrop-blur-[var(--blur-overlay-xl)] border-t border-outline-variant/50 shadow-elevation-3">
             {TV_NAV_ITEMS.map(({ to, label, Icon }) => {
                 const isActive = location.pathname === to || location.pathname.startsWith(to + "/")
                 return (
@@ -23,12 +23,12 @@ export function TvNavBar() {
                         key={to}
                         to={to}
                         className={cn(
-                            "flex flex-col items-center gap-1.5 px-10 py-3 rounded-2xl transition-all duration-150",
+                            "flex flex-col items-center gap-1.5 px-10 py-3 rounded-full transition-all duration-150",
                             "focus:outline-none focus-visible:outline-none",
                             "tv-focusable",
                             isActive
-                                ? "bg-[#f97316]/15 text-[#f97316]"
-                                : "text-zinc-500 hover:text-zinc-200 hover:bg-white/5"
+                                ? "bg-primary/15 text-primary"
+                                : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container"
                         )}
                     >
                         <Icon className="w-6 h-6 shrink-0" />

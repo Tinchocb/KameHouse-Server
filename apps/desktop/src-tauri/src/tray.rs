@@ -1,12 +1,10 @@
-use std::path::PathBuf;
 use std::sync::Arc;
 
-use log::{debug, error, info, warn};
+use log::info;
 use tauri::{
-    AppHandle, Emitter, Manager, Runtime,
+    AppHandle, Manager, Runtime,
     menu::{MenuBuilder, MenuItemBuilder},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    WebviewWindow,
 };
 
 use crate::sidecar::SidecarManager;
@@ -23,8 +21,8 @@ impl TrayManager {
         &self,
         app_handle: &AppHandle<R>,
         sidecar_manager: Arc<SidecarManager>,
-        window_manager: Arc<WindowManager>,
-        settings: crate::settings::DesktopSettings,
+        _window_manager: Arc<WindowManager>,
+        _settings: crate::settings::DesktopSettings,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("[Tray] Creating system tray");
 
@@ -45,13 +43,14 @@ impl TrayManager {
         let icon_path = self.get_icon_path(app_handle);
 
         // Create tray icon
-        let tray = TrayIconBuilder::new()
+        let menu_sidecar_manager = sidecar_manager.clone();
+        let _tray = TrayIconBuilder::new()
             .icon(icon_path)
             .menu(&menu)
             .tooltip("KameHouse")
             .on_menu_event(move |app, event| match event.id.as_ref() {
                 "toggle_visibility" => {
-                    if !sidecar_manager.get_status().eq(&crate::sidecar::ServerStatus::Running) {
+                    if !menu_sidecar_manager.get_status().eq(&crate::sidecar::ServerStatus::Running) {
                         return;
                     }
                     if let Some(main) = app.get_webview_window("main") {
@@ -64,17 +63,22 @@ impl TrayManager {
                     }
                 }
                 "quit" => {
-                    sidecar_manager.shutdown().await;
-                    app.exit(0);
+                    let sidecar_mgr = menu_sidecar_manager.clone();
+                    let app_clone = app.clone();
+                    tauri::async_runtime::spawn(async move {
+                        sidecar_mgr.shutdown().await;
+                        app_clone.exit(0);
+                    });
                 }
                 _ => {}
             })
-            .on_tray_icon_event(move |app, event| {
+            .on_tray_icon_event(move |tray, event| {
                 if let TrayIconEvent::Click { button, button_state, .. } = event {
                     if button == MouseButton::Left && button_state == MouseButtonState::Up {
                         if !sidecar_manager.get_status().eq(&crate::sidecar::ServerStatus::Running) {
                             return;
                         }
+                        let app = tray.app_handle();
                         if let Some(main) = app.get_webview_window("main") {
                             if main.is_visible().unwrap_or(false) {
                                 let _ = main.hide();
@@ -92,7 +96,7 @@ impl TrayManager {
         Ok(())
     }
 
-    fn get_icon_path<R: Runtime>(&self, app_handle: &AppHandle<R>) -> tauri::Image<'_> {
+    fn get_icon_path<R: Runtime>(&self, app_handle: &AppHandle<R>) -> tauri::image::Image<'_> {
         let icon_name = if cfg!(target_os = "macos") {
             "18x18.png"
         } else {
@@ -111,9 +115,9 @@ impl TrayManager {
                 .join(icon_name)
         };
 
-        tauri::Image::from_path(icon_path).unwrap_or_else(|_| {
+        tauri::image::Image::from_path(icon_path).unwrap_or_else(|_| {
             // Fallback to a simple generated icon
-            tauri::Image::from_bytes(include_bytes!("../../assets/icon.png")).unwrap()
+            tauri::image::Image::from_bytes(include_bytes!("../../assets/icon.png")).unwrap()
         })
     }
 }

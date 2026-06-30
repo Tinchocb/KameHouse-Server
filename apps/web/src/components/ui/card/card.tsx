@@ -1,4 +1,4 @@
-import { cva } from "class-variance-authority"
+import { cva, VariantProps } from "class-variance-authority"
 import * as React from "react"
 import { cn, defineStyleAnatomy } from "../core/styling"
 
@@ -8,27 +8,49 @@ import { cn, defineStyleAnatomy } from "../core/styling"
 
 export const CardAnatomy = defineStyleAnatomy({
     root: cva([
-        "UI-Card__root bg-[var(--glass-bg)] backdrop-blur-[var(--blur-card)] border border-[var(--glass-border)] rounded-2xl hover:bg-[var(--glass-hover)] hover:border-[var(--glass-strong)] transition-all duration-300",
-    ]),
+        "UI-Card__root bg-surface border border-outline-variant rounded-container shadow-elevation-1 transition-all duration-200 ease-standard",
+    ], {
+        variants: {
+            variant: {
+                elevated: "shadow-elevation-2 bg-surface-container",
+                outlined: "border-2 border-outline bg-transparent shadow-none hover:bg-surface-container-low",
+                filled: "bg-surface-container-highest border-none shadow-none hover:bg-surface-container-high",
+                tonal: "bg-secondary-container border-none shadow-none",
+            },
+            interactive: {
+                true: "hover:shadow-elevation-2 hover:-translate-y-0.5 cursor-pointer",
+                false: "",
+            },
+            padded: {
+                true: "p-6",
+                false: "",
+            },
+        },
+        defaultVariants: {
+            variant: "elevated",
+            interactive: true,
+            padded: false,
+        },
+    }),
     header: cva([
         "UI-Card__header",
-        "flex flex-col space-y-1.5 p-4",
+        "flex flex-col space-y-1.5 p-6 pt-6 pb-2",
     ]),
     title: cva([
         "UI-Card__title",
-        "text-2xl font-semibold leading-none tracking-tight",
+        "text-xl font-semibold leading-tight tracking-tight",
     ]),
     description: cva([
         "UI-Card__description",
-        "text-sm text-muted-foreground",
+        "text-sm text-on-surface-variant",
     ]),
     content: cva([
         "UI-Card__content",
-        "p-4 pt-0",
+        "p-6 pt-0",
     ]),
     footer: cva([
         "UI-Card__footer",
-        "flex items-center p-4 pt-0",
+        "flex items-center p-6 pt-0 gap-3",
     ]),
 })
 
@@ -36,14 +58,14 @@ export const CardAnatomy = defineStyleAnatomy({
  * Card
  * -----------------------------------------------------------------------------------------------*/
 
-export type CardProps = React.ComponentPropsWithoutRef<"div">
+export type CardProps = React.ComponentPropsWithoutRef<"div"> & VariantProps<typeof CardAnatomy.root>
 
 export const Card = React.forwardRef<HTMLDivElement, CardProps>((props, ref) => {
-    const { className, ...rest } = props
+    const { className, variant, interactive, padded, ...rest } = props
     return (
         <div
             ref={ref}
-            className={cn(CardAnatomy.root(), className)}
+            className={cn(CardAnatomy.root({ variant, interactive, padded }), className)}
             {...rest}
         />
     )
@@ -139,4 +161,3 @@ export const CardFooter = React.forwardRef<HTMLDivElement, CardFooterProps>((pro
     )
 })
 CardFooter.displayName = "CardFooter"
-

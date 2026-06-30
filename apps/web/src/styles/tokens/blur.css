@@ -1,45 +1,60 @@
-/* ╔══════════════════════════════════════════════════════════════════════╗
-   ║  blur.css — KameHouse Design System v3 (Cinematic Minimalist)      ║
-   ║  Escala recalibrada: 8/12/16/24/32 — NO inventar valores           ║
-   ╚══════════════════════════════════════════════════════════════════════╝ */
+/* ╔════════════════════════════════════════════════════════════════════════╗
+   ║  blur.css — KameHouse Design System v4 (Material Design 3)          ║
+   ║  SOLO para overlays/modales — NO para cards ni navegación           ║
+   ╚════════════════════════════════════════════════════════════════════════╝ */
 
 :root {
-  /* ─── Escala de Blur (backdrop-filter) ───────────────────────────────── */
-  --blur-xs:  8px;    /* Sutíl: badges, chips, micro-elementos */
-  --blur-sm:  12px;   /* Ligero: botones ghost, tooltips, inputs */
-  --blur-md:  16px;   /* Estándar: cards, navbars, sidebars */
-  --blur-lg:  24px;   /* Fuerte: modales, popovers, hero overlays */
-  --blur-xl:  32px;   /* Máximo: backgrounds inmersivos, full-screen glass, player */
+  /* ─── Escala de Blur para Overlays/Modales (backdrop-filter) ────────────── */
+  --blur-overlay-sm:  16px;    /* Sutíl: toasts, tooltips, dropdowns */
+  --blur-overlay-md:  24px;    /* Estándar: modales, sidebars, command palette */
+  --blur-overlay-lg:  32px;    /* Fuerte: full-screen overlays, player inmersivo */
+  --blur-overlay-xl:  48px;    /* AGRESIVO: scrims, backgrounds inmersivos, cinematic */
+  --blur-overlay-2xl: 64px;    /* MÁXIMO: hero backgrounds, cinematic overlays */
 
-  /* ─── Alias semánticos para componentes ──────────────────────────────── */
-  --blur-card:      var(--blur-md);     /* 16px - GlassCard estándar */
-  --blur-button:    var(--blur-sm);     /* 12px - GlassButton variant glass */
-  --blur-input:     var(--blur-sm);     /* 12px - Inputs, selects */
-  --blur-navbar:    var(--blur-xl);     /* 32px - Navbar principal fija */
-  --blur-sidebar:   var(--blur-lg);     /* 24px - Sidebar lateral */
-  --blur-modal:     var(--blur-lg);     /* 24px - Modales, dialogs */
-  --blur-popover:   var(--blur-md);     /* 16px - Popovers, dropdowns, menus */
-  --blur-hero:      var(--blur-xl);     /* 32px - Hero sections */
-  --blur-player:    var(--blur-xl);     /* 32px - Player overlays */
+  /* ─── Saturación para backdrop-filter (mejora legibilidad en glass) ──────── */
+  --glass-saturate:        1.2;   /* estándar */
+  --glass-saturate-subtle: 1.1;   /* sutil */
+  --glass-saturate-strong: 1.3;   /* fuerte */
+  --glass-saturate-cinematic: 1.4; /* cinematográfico */
 
-  /* ─── Saturación para backdrop-filter (mejora legibilidad en glass) ───── */
-  --glass-saturate:       1.2;   /* estándar */
-  --glass-saturate-subtle: 1.1;  /* sutil */
-  --glass-saturate-strong: 1.3;  /* fuerte */
+  /* ─── DEPRECATED — Alias legacy (mantener por compatibilidad temporal) ─────
+       Migrar a: elevation (shadows.css) + surface colors (colors.css)         */
+  --blur-xs:       var(--blur-overlay-sm);
+  --blur-sm:       var(--blur-overlay-sm);
+  --blur-md:       var(--blur-overlay-md);
+  --blur-lg:       var(--blur-overlay-lg);
+  --blur-xl:       var(--blur-overlay-xl);
+  --blur-card:     var(--blur-overlay-md);
+  --blur-button:   var(--blur-overlay-sm);
+  --blur-input:    var(--blur-overlay-sm);
+  --blur-navbar:   var(--blur-overlay-md);
+  --blur-sidebar:  var(--blur-overlay-md);
+  --blur-modal:    var(--blur-overlay-md);
+  --blur-popover:  var(--blur-overlay-sm);
+  --blur-hero:     var(--blur-overlay-xl);
+  --blur-player:   var(--blur-overlay-xl);
 }
 
-/* ─── Clases utilitarias (para uso directo si necesario) ───────────────── */
+/* ─── Clases Utilitarias (solo para overlays) ─────────────────────────────── */
+.blur-overlay-sm  { backdrop-filter: blur(var(--blur-overlay-sm))  saturate(var(--glass-saturate)); }
+.blur-overlay-md  { backdrop-filter: blur(var(--blur-overlay-md))  saturate(var(--glass-saturate)); }
+.blur-overlay-lg  { backdrop-filter: blur(var(--blur-overlay-lg))  saturate(var(--glass-saturate)); }
+.blur-overlay-xl  { backdrop-filter: blur(var(--blur-overlay-xl))  saturate(var(--glass-saturate-cinematic)); }
+.blur-overlay-2xl { backdrop-filter: blur(var(--blur-overlay-2xl)) saturate(var(--glass-saturate-cinematic)); }
+
+/* Variantes con saturación distinta */
+.blur-overlay-subtle     { backdrop-filter: blur(var(--blur-overlay-md)) saturate(var(--glass-saturate-subtle)); }
+.blur-overlay-strong     { backdrop-filter: blur(var(--blur-overlay-lg)) saturate(var(--glass-saturate-strong)); }
+.blur-overlay-cinematic  { backdrop-filter: blur(var(--blur-overlay-xl)) saturate(var(--glass-saturate-cinematic)); }
+
+/* ─── DEPRECATED — Clases legacy (no usar en código nuevo) ─────────────────── */
 .blur-xs      { backdrop-filter: blur(var(--blur-xs))  saturate(var(--glass-saturate)); }
 .blur-sm      { backdrop-filter: blur(var(--blur-sm))  saturate(var(--glass-saturate)); }
 .blur-md      { backdrop-filter: blur(var(--blur-md))  saturate(var(--glass-saturate)); }
 .blur-lg      { backdrop-filter: blur(var(--blur-lg))  saturate(var(--glass-saturate)); }
 .blur-xl      { backdrop-filter: blur(var(--blur-xl))  saturate(var(--glass-saturate)); }
-
-/* Variantes con saturación distinta */
 .blur-subtle  { backdrop-filter: blur(var(--blur-md)) saturate(var(--glass-saturate-subtle)); }
 .blur-strong  { backdrop-filter: blur(var(--blur-lg)) saturate(var(--glass-saturate-strong)); }
-
-/* Combinaciones comunes glass */
 .glass-blur      { backdrop-filter: blur(var(--blur-md))  saturate(var(--glass-saturate)); }
 .glass-blur-lg   { backdrop-filter: blur(var(--blur-lg))  saturate(var(--glass-saturate)); }
 .glass-blur-xl   { backdrop-filter: blur(var(--blur-xl))  saturate(var(--glass-saturate)); }

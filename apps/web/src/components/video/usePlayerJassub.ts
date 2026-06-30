@@ -57,6 +57,7 @@ export function usePlayerJassub({
         const isTv = typeof navigator !== "undefined" && (
             /SmartTV/i.test(navigator.userAgent) ||
             /Tizen/i.test(navigator.userAgent) ||
+            /WebOS/i.test(navigator.userAgent) ||
             /Web0S/i.test(navigator.userAgent)
         )
         const isAss = trackCodec?.toLowerCase() === "ass" || trackCodec?.toLowerCase() === "ssa"

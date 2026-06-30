@@ -3,18 +3,9 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { writeText, readText } from '@tauri-apps/plugin-clipboard-manager';
 import { check } from '@tauri-apps/plugin-updater';
-import { open } from '@tauri-apps/plugin-opener';
 
 const appWindow = getCurrentWindow();
 let pendingUpdate: any = null;
-
-declare global {
-  interface Window {
-    electron: ElectronAPI;
-    __isElectronDesktop__: boolean;
-    __isTauriDesktop__: boolean;
-  }
-}
 
 export interface ElectronAPI {
   window: {
@@ -32,8 +23,11 @@ export interface ElectronAPI {
     show: () => void;
     isVisible: () => Promise<boolean>;
     setTitleBarStyle: (style: string) => void;
-    getCurrentWindow: () => Promise<number>;
+    getCurrentWindow: () => Promise<string>;
     isMainWindow: () => Promise<boolean>;
+  };
+  localServer: {
+    getPort: () => Promise<number>;
   };
   startup: {
     ready: () => void;
@@ -42,6 +36,9 @@ export interface ElectronAPI {
   emit: (channel: string, data?: unknown) => void;
   send: (channel: string, ...args: unknown[]) => void;
   platform: NodeJS.Platform;
+  shell: {
+    open: (url: string) => Promise<void>;
+  };
   clipboard: {
     writeText: (text: string) => Promise<boolean>;
   };
@@ -89,7 +86,7 @@ const isElectron = () => {
 };
 
 function createElectronBridge(): ElectronAPI {
-  const unsubscribeMap = new Map<string, () => void>();
+  const unsubscribeMap = new Map<string, () => Promise<void>>();
 
   return {
     window: {
@@ -176,9 +173,9 @@ function createElectronBridge(): ElectronAPI {
       getCurrentWindow: async () => {
         if (isTauri()) {
           const label = appWindow.label;
-          return label === 'main' ? 1 : 2;
+          return label === 'main' ? 'main' : label;
         }
-        return 0;
+        return 'unknown';
       },
       isMainWindow: async () => {
         if (isTauri()) {
@@ -196,12 +193,16 @@ function createElectronBridge(): ElectronAPI {
     },
     on: (channel: string, callback: (...args: unknown[]) => void) => {
       if (isTauri()) {
-        const unsubscribe = listen(channel, (event) => {
+        let unsubscribePromise: Promise<() => void> | null = null;
+        listen(channel, (event) => {
           callback(event.payload);
+        }).then((unsub) => {
+          unsubscribePromise = Promise.resolve(unsub);
         });
-        unsubscribeMap.set(channel, unsubscribe);
+        unsubscribeMap.set(channel, () => unsubscribePromise?.then((fn) => fn()) || Promise.resolve());
         return () => {
-          unsubscribe.then((fn) => fn());
+          const unsub = unsubscribeMap.get(channel);
+          if (unsub) unsub();
           unsubscribeMap.delete(channel);
         };
       }
@@ -238,6 +239,29 @@ function createElectronBridge(): ElectronAPI {
       }
     },
     platform: process.platform,
+    localServer: {
+      getPort: async () => {
+        if (isTauri()) {
+          try {
+            return await invoke<number>('get_local_server_port');
+          } catch {
+            return 0;
+          }
+        }
+        return 0;
+      },
+    },
+    shell: {
+      open: async (url: string) => {
+        if (isTauri()) {
+          try {
+            await invoke('shell_open', { url });
+          } catch (e) {
+            console.error('[Bridge] Shell open failed:', e);
+          }
+        }
+      },
+    },
     clipboard: {
       writeText: async (text: string) => {
         if (isTauri()) {

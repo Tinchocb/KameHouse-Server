@@ -2,7 +2,6 @@ import { cn } from "@/components/ui/core/styling";
 import * as React from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import { Icons } from "@/components/ui/icons";
-import { GlassButton, IconButton } from "@/components/ui/glass-button";
 import { useAppStore } from "@/lib/store";
 import { useResponsive } from "@/hooks/use-responsive";
 
@@ -24,24 +23,20 @@ export function Navbar({ className }: NavbarProps) {
       className={cn(
         "fixed top-0 left-0 right-0 z-[var(--z-navbar)] flex items-center justify-between",
         "px-4 md:px-6 h-[64px]",
-        "bg-[var(--glass-bg)] backdrop-blur-[var(--blur-navbar)]",
-        "border-b border-[var(--glass-border-top)]",
-        "shadow-[var(--shadow-glass)]",
+        "bg-surface/70 backdrop-blur-[var(--blur-overlay-xl)]",
+        "border-b border-outline-variant/50",
+        "shadow-elevation-1",
         className
       )}
-      style={{
-        borderBottom: "1px solid var(--glass-border-top)",
-      }}
     >
       <div className="flex items-center gap-3 md:gap-4">
-        <IconButton
-          variant="glass"
-          size="md"
-          icon="menu"
-          aria-label={sidebarOpen ? "Cerrar menú" : "Abrir menú"}
+        <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="md:hidden"
-        />
+          className="md:hidden p-3 rounded-full bg-surface-variant text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all active:scale-[0.95]"
+          aria-label={sidebarOpen ? "Cerrar menú" : "Abrir menú"}
+        >
+            <Icons.navigation.menu className="w-5 h-5" />
+        </button>
 
         <Link
           to="/home"
@@ -54,7 +49,7 @@ export function Navbar({ className }: NavbarProps) {
               alt="KameHouse"
               className="h-8 w-8 object-contain"
             />
-            <div className="absolute inset-0 bg-[var(--brand-accent)]/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-slow rounded-full" />
+            <div className="absolute inset-0 bg-primary/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-slow rounded-full" />
           </div>
           {!isMobile && (
             <span className="font-display text-xl text-primary tracking-wider whitespace-nowrap">
@@ -76,8 +71,8 @@ export function Navbar({ className }: NavbarProps) {
               className={cn(
                 "flex items-center gap-2 px-3 py-2 rounded-lg text-label-md font-medium transition-all duration-fast",
                 location.pathname === item.to
-                  ? "text-primary bg-[var(--brand-accent)]/10"
-                  : "text-muted hover:text-primary hover:bg-[var(--glass-hover)]"
+                  ? "text-primary bg-primary/10"
+                  : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container"
               )}
               onClick={() => setSidebarOpen(false)}
             >
@@ -89,38 +84,33 @@ export function Navbar({ className }: NavbarProps) {
       </div>
 
       <div className="flex items-center gap-2">
-        <GlassButton
-          variant="glass"
-          size="sm"
-          leftIcon="search"
-          className="hidden sm:inline-flex"
+        <button
+          className="hidden sm:inline-flex flex items-center gap-2 px-3 py-2 rounded-full bg-surface-variant text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all duration-200"
         >
-          Buscar
-        </GlassButton>
+          <Icons.navigation.search className="w-4 h-4" />
+          <span>Buscar</span>
+        </button>
 
-        <IconButton
-          variant="glass"
-          size="sm"
-          icon="bell"
+        <button
+          className="hidden md:inline-flex p-2 rounded-full bg-surface-variant text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all duration-200 relative"
           aria-label="Notificaciones"
-          className="hidden md:inline-flex relative"
         >
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--brand-destructive)] rounded-full text-[9px] font-black flex items-center justify-center">
+          <Icons.ui.bell className="w-5 h-5" />
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive rounded-full text-[9px] font-black flex items-center justify-center">
             3
           </span>
-        </IconButton>
+        </button>
 
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--brand-accent)] to-[var(--era-dbz-hsl)] flex items-center justify-center font-bold text-[var(--primary-foreground)] text-sm ring-2 ring-[var(--bg-primary)]">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-brand-secondary flex items-center justify-center font-bold text-primary-foreground text-sm ring-2 ring-surface">
           M
         </div>
 
-        <IconButton
-          variant="glass"
-          size="md"
-          icon="chevronDown"
+        <button
+          className="md:hidden p-3 rounded-full bg-surface-variant text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all active:scale-[0.95]"
           aria-label="Menú usuario"
-          className="md:hidden"
-        />
+        >
+          <Icons.navigation.chevronDown className="w-5 h-5" />
+        </button>
       </div>
     </nav>
   );

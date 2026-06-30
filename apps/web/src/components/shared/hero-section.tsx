@@ -33,7 +33,7 @@ export function HeroSection({
             <HalftoneDots />
             
             {/* Vertical Decoration */}
-            <div className="absolute right-6 top-1/2 -translate-y-1/2 [writing-mode:vertical-rl] font-black text-[10px] tracking-[0.5em] text-zinc-800 uppercase pointer-events-none select-none">
+            <div className="absolute right-6 top-1/2 -translate-y-1/2 [writing-mode:vertical-rl] font-black text-[10px] tracking-[0.5em] text-on-surface-variant/30 uppercase pointer-events-none select-none">
                 {verticalTag}
             </div>
 
@@ -75,9 +75,9 @@ export function HeroSection({
                     className="mt-12"
                 >
                     {count !== undefined && (
-                        <div className="inline-block px-4 py-2 bg-black border border-white/20">
-                            <p className="text-[14px] font-black text-white tabular-nums uppercase tracking-widest">
-                                {count} <span className="text-[11px] font-black text-zinc-600 uppercase ml-2 tracking-widest">{countLabel}</span>
+                        <div className="inline-block px-4 py-2 bg-surface-container border border-outline-variant">
+                            <p className="text-[14px] font-black text-on-surface tabular-nums uppercase tracking-widest">
+                                {count} <span className="text-[11px] font-black text-on-surface-variant/60 uppercase ml-2 tracking-widest">{countLabel}</span>
                             </p>
                         </div>
                     )}

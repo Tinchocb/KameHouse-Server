@@ -11,12 +11,12 @@ import type { Anime_LibraryCollectionEntry, Continuity_WatchHistoryItem } from "
 export type EraTab = "all" | "Dragon Ball" | "Dragon Ball Z" | "Dragon Ball Super" | "Dragon Ball GT" | "Especiales y OVAs"
 
 export const ERA_TABS: { value: EraTab; label: string; shortLabel: string; color: string; glow: string }[] = [
-    { value: "all", label: "Todas", shortLabel: "Todas", color: "#ff6b00", glow: "rgba(255,107,0,0.3)" },
-    { value: "Dragon Ball", label: "Dragon Ball", shortLabel: "DB", color: "#e07030", glow: "rgba(224,112,48,0.3)" },
-    { value: "Dragon Ball Z", label: "Dragon Ball Z", shortLabel: "Z", color: "#e74c3c", glow: "rgba(231,76,60,0.3)" },
-    { value: "Dragon Ball GT", label: "Dragon Ball GT", shortLabel: "GT", color: "#3498db", glow: "rgba(52,152,219,0.3)" },
-    { value: "Dragon Ball Super", label: "Dragon Ball Super", shortLabel: "Super", color: "#9b59b6", glow: "rgba(155,89,182,0.3)" },
-    { value: "Especiales y OVAs", label: "Especiales y OVAs", shortLabel: "Esp/OVAs", color: "#1abc9c", glow: "rgba(26,188,156,0.3)" },
+    { value: "all", label: "Todas", shortLabel: "Todas", color: "#E85D2E", glow: "rgba(232,93,46,0.3)" },
+    { value: "Dragon Ball", label: "Dragon Ball", shortLabel: "DB", color: "#0096E6", glow: "rgba(0,150,230,0.3)" },
+    { value: "Dragon Ball Z", label: "Dragon Ball Z", shortLabel: "Z", color: "#E85D2E", glow: "rgba(232,93,46,0.3)" },
+    { value: "Dragon Ball GT", label: "Dragon Ball GT", shortLabel: "GT", color: "#D32F2F", glow: "rgba(211,47,47,0.3)" },
+    { value: "Dragon Ball Super", label: "Dragon Ball Super", shortLabel: "Super", color: "#00D4D4", glow: "rgba(0,212,212,0.3)" },
+    { value: "Especiales y OVAs", label: "Especiales y OVAs", shortLabel: "Esp/OVAs", color: "#9333EA", glow: "rgba(147,51,234,0.3)" },
 ]
 
 export function cleanMovieTitle(title: string): string {
@@ -76,7 +76,7 @@ export const MovieCard = memo(function MovieCard({
             {/* Poster Wrap (Flat style) */}
             <div 
                 className={cn(
-                    "relative aspect-[2/3] w-full overflow-hidden rounded-xl bg-zinc-900 border transition-all duration-500 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] transform-gpu will-change-transform",
+                    "relative aspect-[2/3] w-full overflow-hidden rounded-xl bg-surface-container border transition-all duration-500 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] transform-gpu will-change-transform",
                     "group-hover:scale-[1.03] group-hover:-translate-y-1",
                     !hasLocalFiles && "grayscale opacity-45 group-hover:grayscale-0 group-hover:opacity-100",
                 )}
@@ -126,12 +126,12 @@ export const MovieCard = memo(function MovieCard({
                 >
                     <div
                         onClick={(e) => { e.stopPropagation(); handleCardClick(); }}
-                        className="w-11 h-11 rounded-full flex items-center justify-center shadow-2xl active:scale-[0.93] transform-gpu border bg-white text-black border-white cursor-pointer hover:scale-110 transition-transform"
+                        className="w-11 h-11 rounded-full flex items-center justify-center shadow-elevation-5 active:scale-[0.93] transform-gpu border bg-surface-container text-on-surface border-outline-variant cursor-pointer hover:scale-110 transition-transform"
                         style={{ 
                             boxShadow: `0 0 20px ${eraConfig.glow}`,
                         }}
                     >
-                        <Play className="size-[18px] fill-current ml-0.5 text-black" />
+                                        <Play className="size-[18px] fill-current ml-0.5 text-on-surface" />
                     </div>
  
                     {hasLocalFiles && (
@@ -163,7 +163,7 @@ export const MovieCard = memo(function MovieCard({
                                     console.error(err);
                                 }
                             }}
-                            className="px-2.5 py-1 rounded-full bg-black/60 hover:bg-white hover:text-black border border-white/10 flex items-center gap-1.5 shadow-2xl text-[8px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer"
+                            className="px-2.5 py-1 rounded-full bg-surface/60 hover:bg-white hover:text-black border border-outline-variant/10 flex items-center gap-1.5 shadow-elevation-5 text-[8px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer"
                         >
                             <ListPlus className="w-2.5 h-2.5" />
                             <span>Cola</span>
@@ -174,7 +174,7 @@ export const MovieCard = memo(function MovieCard({
                 {/* Sticker de Categoría de Videoclub */}
                 <div className="absolute top-2.5 left-2.5 z-20 flex flex-col gap-1 items-start">
                     <span 
-                        className="text-[7.5px] font-mono font-black uppercase px-2 py-0.5 rounded shadow-md border bg-black/85 backdrop-blur-sm" 
+                        className="text-[7.5px] font-mono font-black uppercase px-2 py-0.5 rounded shadow-elevation-2 border bg-surface-container backdrop-blur-overlay-sm" 
                         style={{ borderColor: `${eraConfig.color}40`, color: eraConfig.color }}
                     >
                         {eraConfig.shortLabel}
@@ -184,17 +184,17 @@ export const MovieCard = memo(function MovieCard({
                 {/* Status badges */}
                 <div className="absolute top-2.5 right-2.5 flex flex-col items-end gap-1 z-10">
                     {isCompleted && (
-                        <div className="px-1.5 py-0.5 rounded bg-green-500 text-[6.5px] font-black text-white uppercase tracking-wider leading-none shadow-sm">
+                        <div className="px-1.5 py-0.5 rounded bg-green-500 text-[6.5px] font-black text-on-surface uppercase tracking-wider leading-none shadow-sm">
                             visto
                         </div>
                     )}
                     {!isCompleted && hasProgress && (
-                        <div className="px-1.5 py-0.5 rounded bg-[var(--brand-secondary)] text-[6.5px] font-black text-white uppercase tracking-wider leading-none shadow-sm">
+                        <div className="px-1.5 py-0.5 rounded bg-brand-secondary text-[6.5px] font-black text-on-surface uppercase tracking-wider leading-none shadow-sm">
                             {Math.round(progressPercent)}%
                         </div>
                     )}
                     {!hasLocalFiles && (
-                        <div className="px-1.5 py-0.5 rounded bg-zinc-900 text-[6.5px] font-black text-zinc-500 uppercase tracking-wider leading-none shadow-sm border border-white/5">
+                        <div className="px-1.5 py-0.5 rounded bg-surface-container text-[6.5px] font-black text-on-surface-variant uppercase tracking-wider leading-none shadow-sm border border-outline-variant/5">
                             NO LOCAL
                         </div>
                     )}
@@ -202,7 +202,7 @@ export const MovieCard = memo(function MovieCard({
  
                 {/* Progress bar */}
                 {hasProgress && (
-                    <div className="absolute bottom-0 inset-x-0 h-1 bg-black/40">
+                    <div className="absolute bottom-0 inset-x-0 h-1 bg-surface/40">
                         <div
                             className="h-full transition-all duration-500"
                             style={{ width: `${progressPercent}%`, backgroundColor: eraConfig.color }}
@@ -215,13 +215,13 @@ export const MovieCard = memo(function MovieCard({
             <div className="mt-3.5 space-y-1.5 px-1">
                 {/* Fixed height and line-clamp-2 keeps titles aligned without shifting layout */}
                 <div className="h-9 min-h-[36px] flex flex-col justify-start">
-                    <h3 className="font-sans text-[11px] font-bold text-zinc-200 line-clamp-2 uppercase tracking-wide leading-tight group-hover:text-white transition-colors duration-300">
+                    <h3 className="font-sans text-[11px] font-bold text-on-surface-variant line-clamp-2 uppercase tracking-wide leading-tight group-hover:text-on-surface transition-colors duration-300">
                         {title}
                     </h3>
                 </div>
-                <div className="flex items-center justify-between text-[9px] font-mono text-zinc-500 font-medium">
+                <div className="flex items-center justify-between text-[9px] font-mono text-on-surface-variant font-medium">
                     <span>AÑO {movie.year || "----"}</span>
-                    {movie.runtime && <span className="text-zinc-500/80">{movie.runtime} MIN</span>}
+                    {movie.runtime && <span className="text-on-surface-variant/80">{movie.runtime} MIN</span>}
                 </div>
             </div>
         </div>

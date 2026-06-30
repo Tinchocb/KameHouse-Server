@@ -1,33 +1,41 @@
 /* ╔════════════════════════════════════════════════════════════════════════╗
-   ║  radius.css — KameHouse Design System v2                          ║
-   ║  Escala de radios consistente — SOLO estos valores                ║
-   ╚═══════════════════════════════════════════════════════════════════════╝ */
+   ║  radius.css — KameHouse Design System v3 (Material Design 3)         ║
+   ║  Escala de radios consistente — SOLO estos valores                    ║
+   ╚════════════════════════════════════════════════════════════════════════╝ */
 
 :root {
-  /* Escala principal — NO usar valores arbitrarios (13px, 19px, 27px, etc.) */
-  --radius-none:  0;
-  --radius-xs:    4px;    /* badges, chips, avatars pequeños */
-  --radius-sm:    8px;    /* botones, inputs, badges */
-  --radius-md:    12px;   /* cards pequeñas, dropdowns */
-  --radius-lg:    16px;   /* cards estándar, modales */
-  --radius-xl:    20px;   /* cards grandes, hero sections */
-  --radius-2xl:   24px;   /* panels, sidebars */
-  --radius-3xl:   32px;   /* hero banners, layouts principales */
-  --radius-4xl:   40px;   /* casos especiales */
-  --radius-full:  9999px; /* pills, avatars, badges redondos */
+  /* ─── Escala Principal — NO usar valores arbitrarios (13px, 19px, 27px, etc.) ─── */
+  --radius-none:    0;
+  --radius-xs:      4px;     /* badges, chips, avatars pequeños */
+  --radius-sm:      8px;     /* botones, inputs, badges */
+  --radius-md:      12px;    /* cards pequeñas, dropdowns */
+  --radius-lg:      16px;    /* cards estándar, modales (MD3 Container) */
+  --radius-xl:      20px;    /* cards grandes, hero sections */
+  --radius-2xl:     24px;    /* panels, sidebars */
+  --radius-3xl:     28px;    /* hero banners, layouts principales (MD3 Corner Extra Large) */
+  --radius-4xl:     32px;    /* casos especiales */
+  --radius-full:    9999px;  /* pills, avatares, badges redondos */
 
-  /* Alias semánticos */
-  --radius-card:      var(--radius-lg);     /* 16px - Card estándar */
-  --radius-button:    var(--radius-sm);     /* 8px - Botones */
-  --radius-input:     var(--radius-sm);     /* 8px - Inputs */
-  --radius-badge:     var(--radius-full);   /* Pills, badges */
-  --radius-avatar:    var(--radius-full);   /* Avatares */
-  --radius-modal:     var(--radius-2xl);    /* 24px - Modales */
-  --radius-popover:   var(--radius-md);     /* 12px - Popovers, dropdowns */
-  --radius-hero:      var(--radius-3xl);    /* 32px - Hero banners */
+  /* ─── Alias Semánticos MD3 ─────────────────────────────────────────────────── */
+  --radius-card:        var(--radius-lg);      /* 16px - Card estándar (MD3 Container) */
+  --radius-button:      var(--radius-full);    /* Pills (MD3 Button) */
+  --radius-input:       var(--radius-full);    /* Pills (MD3 Text Field) */
+  --radius-badge:       var(--radius-full);    /* Pills, chips */
+  --radius-avatar:      var(--radius-full);    /* Avatares circulares */
+  --radius-modal:       var(--radius-2xl);     /* 24px - Modales, dialogs */
+  --radius-popover:     var(--radius-md);      /* 12px - Popovers, dropdowns, menus */
+  --radius-hero:        var(--radius-3xl);     /* 28px - Hero banners (MD3 Corner XL) */
+  --radius-container:   var(--radius-lg);      /* 16px - MD3 Surface Container */
+  --radius-corner-lg:   var(--radius-3xl);     /* 28px - MD3 Corner Extra Large */
+  --radius-pill:        var(--radius-full);    /* 9999px - MD3 Pill shape */
+
+  /* ─── Legacy aliases (para compatibilidad gradual) ─────────────────────────── */
+  --radius-player:      var(--radius-2xl);     /* 24px - Player overlays */
+  --radius-sidebar:     var(--radius-2xl);     /* 24px - Sidebar panels */
+  --radius-navbar:      var(--radius-3xl);     /* 28px - Navbar (redondeo superior en móvil) */
 }
 
-/* Clases utilitarias Tailwind compatibles */
+/* ─── Clases Utilitarias Tailwind Compatibles ───────────────────────────────── */
 .rounded-xs      { border-radius: var(--radius-xs); }
 .rounded-sm      { border-radius: var(--radius-sm); }
 .rounded-md      { border-radius: var(--radius-md); }
@@ -37,3 +45,16 @@
 .rounded-3xl     { border-radius: var(--radius-3xl); }
 .rounded-4xl     { border-radius: var(--radius-4xl); }
 .rounded-full    { border-radius: var(--radius-full); }
+
+/* Alias semánticos para uso directo si necesario */
+.rounded-card       { border-radius: var(--radius-card); }
+.rounded-button     { border-radius: var(--radius-button); }
+.rounded-input      { border-radius: var(--radius-input); }
+.rounded-badge      { border-radius: var(--radius-badge); }
+.rounded-avatar     { border-radius: var(--radius-avatar); }
+.rounded-modal      { border-radius: var(--radius-modal); }
+.rounded-popover    { border-radius: var(--radius-popover); }
+.rounded-hero       { border-radius: var(--radius-hero); }
+.rounded-container  { border-radius: var(--radius-container); }
+.rounded-corner-lg  { border-radius: var(--radius-corner-lg); }
+.rounded-pill       { border-radius: var(--radius-pill); }

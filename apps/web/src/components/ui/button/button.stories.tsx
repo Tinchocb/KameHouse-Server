@@ -10,27 +10,26 @@ const meta: Meta<typeof Button> = {
         intent: {
             control: "select",
             options: [
-                "primary", "primary-outline", "primary-subtle", "primary-glass", "primary-glow",
-                "warning", "warning-outline", "warning-subtle", "warning-glass", "warning-glow",
-                "success", "success-outline", "success-subtle", "success-glass", "success-glow",
-                "alert", "alert-outline", "alert-subtle", "alert-glass",
-                "gray", "gray-outline", "gray-subtle", "gray-glass",
-                "white", "white-outline", "white-subtle", "white-glass"
+                "primary", "secondary", "outlined", "text", "destructive", "ghost", "link",
+                "primary-glass", "gray-glass",
+                "brand-primary", "brand-secondary", "brand-destructive", "brand-success", "brand-magic",
+                "gray", "gray-outline", "gray-subtle", "gray-basic", "gray-link",
+                "white", "white-outline", "primary-basic", "primary-outline", "primary-glow",
+                "alert", "alert-outline", "alert-subtle",
             ],
         },
         size: {
             control: "select",
-            options: ["xs", "sm", "md", "lg", "xl"],
+            options: ["xs", "sm", "md", "lg", "xl", "icon", "icon-sm", "icon-lg"],
         },
-        rounded: { control: "boolean" },
         loading: { control: "boolean" },
         disabled: { control: "boolean" },
+        hideTextOnSmallScreen: { control: "boolean" },
     },
     args: {
         children: "Button",
         intent: "primary",
         size: "md",
-        rounded: true,
     },
 }
 
@@ -44,10 +43,31 @@ export const Primary: Story = {
     },
 }
 
-export const Glowing: Story = {
+export const Secondary: Story = {
     args: {
-        children: "Glowing Action",
-        intent: "primary",
+        children: "Secondary Button",
+        intent: "secondary",
+    },
+}
+
+export const Outlined: Story = {
+    args: {
+        children: "Outlined Button",
+        intent: "outlined",
+    },
+}
+
+export const Text: Story = {
+    args: {
+        children: "Text Button",
+        intent: "text",
+    },
+}
+
+export const Ghost: Story = {
+    args: {
+        children: "Ghost Button",
+        intent: "ghost",
     },
 }
 
@@ -55,6 +75,13 @@ export const Glass: Story = {
     args: {
         children: "Glass Effect",
         intent: "primary-glass",
+    },
+}
+
+export const GrayGlass: Story = {
+    args: {
+        children: "Gray Glass",
+        intent: "gray-glass",
     },
 }
 
@@ -70,8 +97,8 @@ export const OnlyIcon: Story = {
     args: {
         children: null,
         leftIcon: <Search size={16} />,
-        intent: "gray-subtle",
-        contentWidth: true,
+        intent: "secondary",
+        size: "icon",
     },
 }
 
@@ -86,7 +113,7 @@ export const Loading: Story = {
 export const Danger: Story = {
     args: {
         children: "Delete Item",
-        intent: "alert",
+        intent: "destructive",
     },
 }
 

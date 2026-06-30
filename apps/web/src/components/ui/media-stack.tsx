@@ -27,7 +27,7 @@ export function MediaStack({ stackCount = 2, className, ...props }: MediaStackPr
                     key={idx}
                     className={cn(
                         "absolute inset-0 border border-white/5 shadow-2xl overflow-hidden",
-                        "bg-zinc-900/50 backdrop-blur-md",
+                        "bg-zinc-900/50 backdrop-blur-[var(--blur-overlay-sm)]",
                         isPoster ? "rounded-xl" : "rounded-2xl"
                     )}
                     initial={false}
@@ -65,7 +65,7 @@ export function MediaStack({ stackCount = 2, className, ...props }: MediaStackPr
                 
                 {/* Minimalist Series Indicator */}
                 <div className="absolute top-4 right-4 z-30">
-                    <div className="bg-black/60 backdrop-blur-md text-white/70 text-[8px] font-black px-2 py-1 rounded-md border border-white/10 uppercase tracking-[0.2em]">
+                    <div className="bg-black/60 backdrop-blur-[var(--blur-overlay-sm)] text-white/70 text-[8px] font-black px-2 py-1 rounded-md border border-white/10 uppercase tracking-[0.2em]">
                         Serie
                     </div>
                 </div>

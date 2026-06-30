@@ -130,7 +130,7 @@ export const SeriesCard = memo(function SeriesCard({
                             "flex items-center gap-2 mb-2 transition-all duration-400 ease-out gpu",
                             isSelected ? "opacity-100 translate-y-0 delay-100" : "opacity-0 translate-y-3 delay-0"
                         )}>
-                            <span className="px-2 py-0.5 bg-[var(--brand-secondary)]/20 text-[var(--brand-secondary)] border border-[var(--brand-secondary)]/30 rounded text-[8px] font-black tracking-widest uppercase">
+                            <span className="px-2 py-0.5 bg-brand-secondary/20 text-brand-secondary border border-brand-secondary/30 rounded text-[8px] font-black tracking-widest uppercase">
                                 Serie
                             </span>
                             <span className="text-[8px] font-black tracking-widest uppercase text-white/30">
@@ -162,11 +162,11 @@ export const SeriesCard = memo(function SeriesCard({
                                 <span className="text-[8px] font-black tracking-[0.2em] uppercase text-white/30">
                                     Progreso
                                 </span>
-                                <span className="text-[9px] font-black text-[var(--brand-secondary)]">{item.progress}%</span>
+                                <span className="text-[9px] font-black text-brand-secondary">{item.progress}%</span>
                             </div>
-                            <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+                            <div className="h-1 w-full bg-surface-variant rounded-full overflow-hidden">
                                 <div
-                                    className="h-full bg-gradient-to-r from-[var(--brand-secondary)] to-[#ff9d5c] rounded-full transition-all duration-1000 ease-out origin-left"
+                                    className="h-full bg-gradient-to-r from-brand-secondary to-[#ff9d5c] rounded-full transition-all duration-1000 ease-out origin-left"
                                     style={{ width: isSelected ? `${item.progress}%` : '0%' }}
                                 />
                             </div>
@@ -183,7 +183,7 @@ export const SeriesCard = memo(function SeriesCard({
                                     e.stopPropagation();
                                     onNavigate(item.id.toString());
                                 }}
-                                className="w-full bg-[var(--brand-secondary)] hover:bg-[#ff8559] active:scale-[0.98] text-white rounded-lg text-[10px] font-black tracking-widest uppercase py-2 transition-all duration-300 flex justify-center items-center gap-2 shadow-[0_6px_16px_rgba(255,110,58,0.3)] hover:shadow-[0_10px_24px_rgba(255,110,58,0.45)] relative overflow-hidden group/btn"
+                                className="w-full bg-brand-secondary hover:bg-[#ff8559] active:scale-[0.98] text-white rounded-lg text-[10px] font-black tracking-widest uppercase py-2 transition-all duration-300 flex justify-center items-center gap-2 shadow-[0_6px_16px_rgba(255,110,58,0.3)] hover:shadow-[0_10px_24px_rgba(255,110,58,0.45)] relative overflow-hidden group/btn"
                             >
                                 <div className="absolute inset-0 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000 ease-out bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
                                 <Play className="w-3.5 h-3.5 fill-current" />
@@ -236,7 +236,7 @@ export const SeriesCard = memo(function SeriesCard({
                     )}
                 >
                     {/* Left reel */}
-                    <div className="relative w-12 h-12 rounded-full bg-black/90 border border-zinc-800 shadow-[inset_0_3px_6px_rgba(0,0,0,0.8)] flex items-center justify-center shrink-0">
+                    <div className="relative w-12 h-12 rounded-full bg-surface/90 border border-zinc-800 shadow-[inset_0_3px_6px_rgba(0,0,0,0.8)] flex items-center justify-center shrink-0">
                         <div
                             className="w-full h-full animate-spin-slow flex items-center justify-center"
                             style={{ animationDuration: '4s' }}
@@ -263,7 +263,7 @@ export const SeriesCard = memo(function SeriesCard({
                     </div>
 
                     {/* Right reel */}
-                    <div className="relative w-12 h-12 rounded-full bg-black/90 border border-zinc-800 shadow-[inset_0_3px_6px_rgba(0,0,0,0.8)] flex items-center justify-center shrink-0">
+                    <div className="relative w-12 h-12 rounded-full bg-surface/90 border border-zinc-800 shadow-[inset_0_3px_6px_rgba(0,0,0,0.8)] flex items-center justify-center shrink-0">
                         <div
                             className="w-full h-full animate-spin-slow flex items-center justify-center"
                             style={{ animationDuration: '4s' }}
@@ -319,7 +319,7 @@ export const SeriesCard = memo(function SeriesCard({
                         {item.progress > 0 && (
                             <div className="h-[3px] bg-zinc-200 w-full">
                                 <div
-                                    className="h-full bg-[var(--brand-secondary)] transition-all duration-700"
+                                    className="h-full bg-brand-secondary transition-all duration-700"
                                     style={{ width: `${item.progress}%` }}
                                 />
                             </div>

@@ -1,8 +1,10 @@
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Manager, Runtime, State, WebviewWindow};
+use std::sync::Arc;
+use tauri::{AppHandle, Manager, State, WebviewWindow};
+use tauri_plugin_clipboard_manager::ClipboardExt;
 
 use crate::settings::{DesktopSettings, SettingsManager, WindowBounds};
-use crate::sidecar::{SidecarManager, ServerStatus};
+use crate::sidecar::SidecarManager;
 use crate::window_manager::WindowManager;
 use crate::updater::UpdaterManager;
 
@@ -17,7 +19,7 @@ pub struct WindowState {
 
 #[tauri::command]
 pub async fn get_desktop_settings(
-    settings_manager: State<'_, SettingsManager>,
+    settings_manager: State<'_, Arc<SettingsManager>>,
     app_handle: AppHandle,
 ) -> Result<DesktopSettings, String> {
     let path = settings_manager.get_settings_path(&app_handle);
@@ -27,7 +29,7 @@ pub async fn get_desktop_settings(
 
 #[tauri::command]
 pub async fn set_desktop_settings(
-    settings_manager: State<'_, SettingsManager>,
+    settings_manager: State<'_, Arc<SettingsManager>>,
     app_handle: AppHandle,
     updates: std::collections::HashMap<String, serde_json::Value>,
 ) -> Result<DesktopSettings, String> {
@@ -36,9 +38,9 @@ pub async fn set_desktop_settings(
 
 #[tauri::command]
 pub async fn restart_server(
-    sidecar_manager: State<'_, SidecarManager>,
-    settings_manager: State<'_, SettingsManager>,
-    window_manager: State<'_, WindowManager>,
+    sidecar_manager: State<'_, Arc<SidecarManager>>,
+    settings_manager: State<'_, Arc<SettingsManager>>,
+    window_manager: State<'_, Arc<WindowManager>>,
     app_handle: AppHandle,
 ) -> Result<(), String> {
     let path = settings_manager.get_settings_path(&app_handle);
@@ -59,7 +61,7 @@ pub async fn restart_server(
 
 #[tauri::command]
 pub async fn kill_server(
-    sidecar_manager: State<'_, SidecarManager>,
+    sidecar_manager: State<'_, Arc<SidecarManager>>,
 ) -> Result<bool, String> {
     sidecar_manager.kill().await;
     Ok(true)
@@ -80,14 +82,14 @@ pub async fn write_to_clipboard(
 
 #[tauri::command]
 pub async fn get_local_server_port(
-    sidecar_manager: State<'_, SidecarManager>,
+    sidecar_manager: State<'_, Arc<SidecarManager>>,
 ) -> Result<u16, String> {
     Ok(sidecar_manager.get_port())
 }
 
 #[tauri::command]
 pub async fn check_for_updates(
-    updater_manager: State<'_, UpdaterManager>,
+    updater_manager: State<'_, Arc<UpdaterManager>>,
     app_handle: AppHandle,
 ) -> Result<serde_json::Value, String> {
     updater_manager.check_for_updates(&app_handle).await.map_err(|e| e.to_string())
@@ -95,7 +97,7 @@ pub async fn check_for_updates(
 
 #[tauri::command]
 pub async fn install_update(
-    updater_manager: State<'_, UpdaterManager>,
+    updater_manager: State<'_, Arc<UpdaterManager>>,
     app_handle: AppHandle,
 ) -> Result<bool, String> {
     updater_manager.install_update(&app_handle).await.map_err(|e| e.to_string())?;
@@ -113,11 +115,13 @@ pub async fn get_window_state(
     let is_fullscreen = window.is_fullscreen().unwrap_or(false);
     let is_visible = window.is_visible().unwrap_or(false);
 
-    let bounds = window.normal_bounds().ok().map(|b| WindowBounds {
-        x: b.x,
-        y: b.y,
-        width: b.width,
-        height: b.height,
+    let position = window.outer_position().unwrap_or(tauri::PhysicalPosition { x: 0, y: 0 });
+    let size = window.inner_size().unwrap_or(tauri::PhysicalSize { width: 800, height: 600 });
+    let bounds = Some(WindowBounds {
+        x: position.x,
+        y: position.y,
+        width: size.width,
+        height: size.height,
     });
 
     Ok(WindowState {
@@ -183,7 +187,7 @@ pub async fn is_main_window(
 
 #[tauri::command]
 pub async fn startup_renderer_ready(
-    window_manager: State<'_, WindowManager>,
+    window_manager: State<'_, Arc<WindowManager>>,
 ) -> Result<(), String> {
     window_manager.set_startup_ready(true);
     Ok(())

@@ -77,7 +77,7 @@ export function PipelineStageCard({ stage, isActive, isDone }: {
             } : {}}
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
             className={cn(
-                "relative p-3.5 sm:p-4 rounded-2xl border transition-all duration-500 overflow-hidden group backdrop-blur-xl",
+                "relative p-3.5 sm:p-4 rounded-2xl border transition-all duration-500 overflow-hidden group backdrop-blur-[var(--blur-overlay-lg)]",
                 isActive
                     ? "border-[#ff6e3a]/50 bg-[#ff6e3a]/[0.03] shadow-[0_0_30px_rgba(255,110,58,0.08)]"
                     : isDone

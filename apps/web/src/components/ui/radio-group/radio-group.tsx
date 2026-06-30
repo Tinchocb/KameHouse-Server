@@ -15,13 +15,14 @@ export const RadioGroupAnatomy = defineStyleAnatomy({
     ]),
     item: cva([
         "UI-RadioGroup__item",
-        "block aspect-square rounded-full border text-brand ring-offset-1 ring-offset-[--background]",
-        "focus:outline-none focus-visible:ring-2 focus-visible:ring-[--ring] focus-visible:ring-offset-2",
+        "block aspect-square rounded-full border text-brand-primary ring-offset-1 ring-offset-[hsl(var(--background))]",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2",
         "disabled:cursor-not-allowed data-[disabled=true]:opacity-50 data-[readonly=true]:cursor-not-allowed",
-        "data-[state=unchecked]:bg-white dark:data-[state=unchecked]:bg-gray-700", // Unchecked
-        "data-[state=unchecked]:hover:bg-gray-100 dark:data-[state=unchecked]:hover:bg-gray-600", // Unchecked hover
-        "data-[state=checked]:bg-brand data-[state=checked]:border-transparent", // Checked
-        "data-[error=true]:border-red-500 data-[error=true]:dark:border-red-500 data-[error=true]:data-[state=checked]:border-red-500 data-[error=true]:dark:data-[state=checked]:border-red-500", // Error
+        "border-outline-variant",
+        "data-[state=unchecked]:bg-surface-container", // Unchecked
+        "data-[state=unchecked]:hover:bg-surface-container-high", // Unchecked hover
+        "data-[state=checked]:bg-brand-primary data-[state=checked]:border-transparent", // Checked
+        "data-[error=true]:border-brand-destructive data-[error=true]:data-[state=checked]:border-brand-destructive", // Error
     ], {
         variants: {
             size: {

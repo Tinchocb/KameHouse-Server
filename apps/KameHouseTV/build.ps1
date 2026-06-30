@@ -59,29 +59,49 @@ Write-Host "  OK" -ForegroundColor Green
 
 # --- Step 2: Package the widget ---
 Write-Host "[2/3] Empaquetando widget..." -ForegroundColor Yellow
+
+$StagingDir = Join-Path $ProjectDir ".staging"
+if (Test-Path $StagingDir) {
+    Remove-Item -Path $StagingDir -Recurse -Force -ErrorAction SilentlyContinue
+}
+New-Item -ItemType Directory -Path $StagingDir -Force | Out-Null
+
+# Copy only the necessary files for the TV application
+Copy-Item -Path (Join-Path $ProjectDir "index.html") -Destination $StagingDir
+Copy-Item -Path (Join-Path $ProjectDir "icon.png") -Destination $StagingDir
+Copy-Item -Path (Join-Path $ProjectDir "config.xml") -Destination $StagingDir
+
 $pkgArgs = @(
     "package"
     "-t", "wgt"
-    "--", $ProjectDir
+    "--", $StagingDir
 )
 if (-not $NoSign) {
     $pkgArgs = @(
         "package"
         "-t", "wgt"
         "-s", $Profile
-        "--", $ProjectDir
+        "--", $StagingDir
     )
 }
 
 & $TizenCLI $pkgArgs 2>&1
-if ($LASTEXITCODE -ne 0) {
+$buildExitCode = $LASTEXITCODE
+
+# Find the generated .wgt file in the parent directory (Tizen CLI generates .wgt in the parent of the input directory)
+$wgtFile = Get-ChildItem -Path "$ProjectDir\*.wgt" -ErrorAction SilentlyContinue | Select-Object -First 1
+
+# Clean staging directory
+Remove-Item -Path $StagingDir -Recurse -Force -ErrorAction SilentlyContinue
+
+if ($buildExitCode -ne 0) {
     Write-Error "Error al empaquetar el widget."
     exit 1
 }
+
 Write-Host "  OK" -ForegroundColor Green
 
 # --- Normalize .wgt filename (remove spaces, use consistent name) ---
-$wgtFile = Get-ChildItem -Path "$ProjectDir\*.wgt" -ErrorAction SilentlyContinue | Select-Object -First 1
 if (-not $wgtFile) {
     Write-Error "No se generó el archivo .wgt."
     exit 1

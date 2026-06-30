@@ -21,7 +21,7 @@ export const CloseButton = React.forwardRef<HTMLButtonElement, CloseButtonProps>
     return (
         <IconButton
             type="button"
-            intent="gray-basic"
+            intent="ghost"
             size="sm"
             className={cn(
                 "rounded-full text-2xl flex-none",

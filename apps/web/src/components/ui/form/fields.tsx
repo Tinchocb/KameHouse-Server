@@ -203,10 +203,10 @@ const RadioCardsFieldInner = forwardRef<HTMLButtonElement, FieldComponent<RadioG
         return <RadioGroup
             itemContainerClass={cn(
                 "items-start cursor-pointer transition border-transparent rounded-none p-3 w-full md:w-fit",
-                "bg-transparent dark:hover:bg-gray-900 dark:bg-transparent",
-                "data-[state=checked]:bg-white/5 dark:data-[state=checked]:bg-gray-900",
+                "bg-transparent hover:bg-surface-container",
+                "data-[state=checked]:bg-surface-container-high",
                 "focus:ring-0 ring-offset-0 transition",
-                "dark:border dark:data-[state=checked]:border-white/20",
+                "border data-[state=checked]:border-outline-variant",
                 itemContainerClass,
             )}
             itemClass={cn(
@@ -259,28 +259,15 @@ const DirectorySelectorField = React.memo(withControlledInput(DirectorySelectorF
 type MultiDirectorySelectorFieldProps = Omit<DirectorySelectorProps, "onSelect" | "value"> & { value?: string[] }
 
 const MultiDirectorySelectorFieldInner = forwardRef<HTMLInputElement, FieldComponent<MultiDirectorySelectorFieldProps>>(
-    ({ value: _value, onChange: _onChange, shouldExist, label, help, ...props }, ref) => {
-        const context = useFormContext()
-        const controller = useController({ name: props.name })
-
-        const [paths, setPaths] = React.useState<string[]>([])
-
-        const defaultValue = useMemo(() => get(context.formState.defaultValues, props.name) ?? [], [context.formState.defaultValues, props.name])
-        React.useEffect(() => {
-            setTimeout(() => setPaths(defaultValue), 0)
-        }, [defaultValue])
-
-
-        React.useEffect(() => {
-            controller.field.onChange(paths.filter(p => p))
-        }, [paths, controller.field])
+    ({ value: _value = [], onChange: _onChange, shouldExist, label, help, ...props }, ref) => {
+        const paths = _value ?? []
 
         return <div className="space-y-2">
             <div>
                 {label && <label className="block text-md font-bold text-white uppercase tracking-wider">{label}</label>}
                 {help && <p className="text-sm text-zinc-500">{help}</p>}
             </div>
-            {paths?.map((v, i) => (
+            {paths.map((v, i) => (
                 <div className="flex items-center gap-2" key={i}>
                     <div className="w-full">
                         <DirectorySelector
@@ -290,11 +277,9 @@ const MultiDirectorySelectorFieldInner = forwardRef<HTMLInputElement, FieldCompo
                             value={v ?? ""}
                             defaultValue={v ?? ""}
                             onSelect={value => {
-                                setPaths(prev => {
-                                    const newPaths = [...prev]
-                                    newPaths[i] = value
-                                    return newPaths
-                                })
+                                const newPaths = [...paths]
+                                newPaths[i] = value
+                                _onChange?.(newPaths)
                             }}
                             ref={ref}
                             fieldClass="w-full"
@@ -304,7 +289,7 @@ const MultiDirectorySelectorFieldInner = forwardRef<HTMLInputElement, FieldCompo
                         size="sm"
                         intent="alert-outline"
                         icon={<Trash2 />}
-                        onClick={() => setPaths(prev => prev.filter((_, index) => index !== i))}
+                        onClick={() => _onChange?.(paths.filter((_, index) => index !== i))}
                     />
                 </div>
             ))}
@@ -312,7 +297,7 @@ const MultiDirectorySelectorFieldInner = forwardRef<HTMLInputElement, FieldCompo
                 size="sm"
                 intent="gray-subtle"
                 icon={<Plus />}
-                onClick={() => setPaths(prev => [...prev, ""])}
+                onClick={() => _onChange?.([...paths, ""])}
             />
         </div>
     },

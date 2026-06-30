@@ -64,6 +64,7 @@ func NewLogger() *zerolog.Logger {
 
 	multi := zerolog.MultiLevelWriter(consoleOutput, fileOutput)
 	logger := zerolog.New(multi).With().Timestamp().Logger()
+	log.Logger = logger
 	return &logger
 }
 

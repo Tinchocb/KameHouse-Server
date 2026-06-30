@@ -37,7 +37,7 @@ export function ScannerDashboard() {
                     layout
                     className={cn(
                         "col-span-12 lg:col-span-8 rounded-3xl",
-                        "bg-[var(--glass-bg)] backdrop-blur-[var(--blur-card)] border border-[var(--glass-border)] rounded-2xl p-8 lg:p-10",
+                        "bg-[var(--glass-bg)] backdrop-blur-[var(--blur-overlay-md)] border border-[var(--glass-border)] rounded-2xl p-8 lg:p-10",
                         isScanning ? "ring-1 ring-[#ff6e3a]/20" : ""
                     )}
                 >

@@ -266,27 +266,27 @@ export function PerformanceMonitor() {
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 10 }}
                     transition={{ type: "spring", stiffness: 380, damping: 26 }}
-                    className="fixed top-6 right-6 z-[9999] w-[350px] bg-zinc-950/85 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl p-5 select-none font-sans text-white"
+                    className="fixed top-6 right-6 z-[9999] w-[350px] bg-surface-container/90 backdrop-blur-overlay-xl border border-outline-variant rounded-corner-lg shadow-elevation-4 p-5 select-none font-sans text-on-surface"
                 >
                     {/* Header */}
-                    <div className="flex items-center justify-between pb-3 border-b border-white/5">
+                    <div className="flex items-center justify-between pb-3 border-b border-outline-variant/30">
                         <div className="flex items-center gap-2">
                             <LucideActivity className="text-brand-orange animate-pulse w-4 h-4" />
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant">
                                 Diagnóstico de Rendimiento
                             </span>
                         </div>
                         <div className="flex items-center gap-1.5">
                             <button
                                 onClick={handleClearStats}
-                                className="p-1.5 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors"
+                                className="p-1.5 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors"
                                 title="Reiniciar estadísticas"
                             >
                                 <LucideTrash2 size={13} />
                             </button>
                             <button
                                 onClick={() => setIsOpen(false)}
-                                className="p-1.5 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors"
+                                className="p-1.5 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors"
                             >
                                 <LucideX size={14} />
                             </button>
@@ -296,86 +296,86 @@ export function PerformanceMonitor() {
                     {/* Stats Grid */}
                     <div className="grid grid-cols-2 gap-4 py-4">
                         {/* Live FPS */}
-                        <div className="bg-white/[0.01] border border-white/5 rounded-xl p-3 flex flex-col items-start">
-                            <span className="text-[8px] font-black uppercase tracking-wider text-zinc-500">FPS Actual</span>
+                        <div className="bg-surface-container-low border border-outline-variant/30 rounded-xl p-3 flex flex-col items-start">
+                            <span className="text-[8px] font-black uppercase tracking-wider text-on-surface-variant/60">FPS Actual</span>
                             <div className="flex items-baseline gap-1 mt-1">
                                 <span className={`text-3xl font-bebas tracking-wide ${getFpsColor(fps)}`}>
                                     {fps}
                                 </span>
-                                <span className="text-[10px] font-bold text-zinc-600">FPS</span>
+                                <span className="text-[10px] font-bold text-on-surface-variant/50">FPS</span>
                             </div>
                         </div>
 
                         {/* Stability Index */}
-                        <div className="bg-white/[0.01] border border-white/5 rounded-xl p-3 flex flex-col items-start">
-                            <span className="text-[8px] font-black uppercase tracking-wider text-zinc-500">Estabilidad UI</span>
+                        <div className="bg-surface-container-low border border-outline-variant/30 rounded-xl p-3 flex flex-col items-start">
+                            <span className="text-[8px] font-black uppercase tracking-wider text-on-surface-variant/60">Estabilidad UI</span>
                             <div className="flex items-baseline gap-1 mt-1">
                                 <span className={`text-3xl font-bebas tracking-wide ${getSmoothnessColor(smoothnessIndex)}`}>
                                     {smoothnessIndex}%
                                 </span>
-                                <span className="text-[10px] font-bold text-zinc-600">INDEX</span>
+                                <span className="text-[10px] font-bold text-on-surface-variant/50">INDEX</span>
                             </div>
                         </div>
 
                         {/* Dropped Frames */}
-                        <div className="bg-white/[0.01] border border-white/5 rounded-xl p-3 flex flex-col items-start">
-                            <span className="text-[8px] font-black uppercase tracking-wider text-zinc-500">Cuadros Perdidos</span>
+                        <div className="bg-surface-container-low border border-outline-variant/30 rounded-xl p-3 flex flex-col items-start">
+                            <span className="text-[8px] font-black uppercase tracking-wider text-on-surface-variant/60">Cuadros Perdidos</span>
                             <span className="text-xl font-bold text-red-400 mt-2 font-mono tabular-nums">
                                 {droppedFrames}
                             </span>
                         </div>
 
                         {/* JS Memory */}
-                        <div className="bg-white/[0.01] border border-white/5 rounded-xl p-3 flex flex-col items-start">
-                            <span className="text-[8px] font-black uppercase tracking-wider text-zinc-500">Memoria Heap JS</span>
+                        <div className="bg-surface-container-low border border-outline-variant/30 rounded-xl p-3 flex flex-col items-start">
+                            <span className="text-[8px] font-black uppercase tracking-wider text-on-surface-variant/60">Memoria Heap JS</span>
                             {memory ? (
                                 <div className="flex items-baseline gap-0.5 mt-2">
-                                    <span className="text-xl font-bold text-white font-mono tabular-nums">{memory.used}</span>
-                                    <span className="text-[8px] font-bold text-zinc-500">/{memory.total}MB</span>
+                                    <span className="text-xl font-bold text-on-surface font-mono tabular-nums">{memory.used}</span>
+                                    <span className="text-[8px] font-bold text-on-surface-variant/50">/{memory.total}MB</span>
                                 </div>
                             ) : (
-                                <span className="text-xs text-zinc-600 font-bold mt-2">N/A (No Chrome)</span>
+                                <span className="text-xs text-on-surface-variant/50 font-bold mt-2">N/A (No Chrome)</span>
                             )}
                         </div>
                     </div>
 
                     {/* Chart Canvas */}
-                    <div className="bg-black/40 border border-white/5 rounded-xl p-2 relative h-16 w-full flex items-center justify-center">
+                    <div className="bg-surface/40 backdrop-blur-[var(--blur-overlay-sm)] border border-outline-variant/30 rounded-xl p-2 relative h-16 w-full flex items-center justify-center">
                         <canvas ref={canvasRef} width={300} height={48} className="w-full h-full block" />
-                        <span className="absolute bottom-1 right-2 text-[7px] text-zinc-600 font-black tracking-widest uppercase pointer-events-none">HISTORIAL 10s</span>
+                        <span className="absolute bottom-1 right-2 text-[7px] text-on-surface-variant/50 font-black tracking-widest uppercase pointer-events-none">HISTORIAL 10s</span>
                     </div>
 
                     {/* Page transition latency info */}
-                    <div className="mt-4 p-3 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-between">
-                        <span className="text-[8px] font-black uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+                    <div className="mt-4 p-3 bg-surface-container-low border border-outline-variant/30 rounded-xl flex items-center justify-between">
+                        <span className="text-[8px] font-black uppercase tracking-wider text-on-surface-variant/60 flex items-center gap-1.5">
                             <LucideCpu size={12} className="text-brand-orange" />
                             Latencia Carga Ruta
                         </span>
-                        <span className="text-xs font-bold text-zinc-300 font-mono">
+                        <span className="text-xs font-bold text-on-surface-variant/80 font-mono">
                             {routeLatency !== null ? `${routeLatency} ms` : "---"}
                         </span>
                     </div>
 
                     {/* Tips and Solutions */}
-                    <div className="mt-4 border-t border-white/5 pt-4 space-y-2.5 max-h-[140px] overflow-y-auto no-scrollbar">
-                        <p className="text-[8px] font-black uppercase tracking-[0.25em] text-zinc-500 mb-1">
+                    <div className="mt-4 border-t border-outline-variant/30 pt-4 space-y-2.5 max-h-[140px] overflow-y-auto no-scrollbar">
+                        <p className="text-[8px] font-black uppercase tracking-[0.25em] text-on-surface-variant/60 mb-1">
                             Diagnóstico y Solución
                         </p>
                         {optimizationTips.map((tip) => (
-                            <div key={tip.id} className="flex items-start gap-2.5 bg-white/[0.01] p-2.5 border border-white/[0.03] rounded-lg">
+                            <div key={tip.id} className="flex items-start gap-2.5 bg-surface-container-low p-2.5 border border-outline-variant/20 rounded-lg">
                                 {tip.level === "warning" ? (
                                     <LucideAlertTriangle size={14} className="text-amber-500 shrink-0 mt-0.5" />
                                 ) : (
                                     <LucideCheckCircle size={14} className="text-emerald-400 shrink-0 mt-0.5" />
                                 )}
-                                <span className="text-[10px] text-zinc-400 leading-relaxed font-medium">
+                                <span className="text-[10px] text-on-surface-variant/80 leading-relaxed font-medium">
                                     {tip.text}
                                 </span>
                             </div>
                         ))}
                     </div>
 
-                    <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[7px] text-zinc-600 font-black tracking-widest uppercase">
+                    <div className="mt-4 pt-3 border-t border-outline-variant/30 flex items-center justify-between text-[7px] text-on-surface-variant/50 font-black tracking-widest uppercase">
                         <span>ATAJO: CTRL + SHIFT + F</span>
                         <span>KAMEHOUSE ENGINE</span>
                     </div>

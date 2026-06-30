@@ -37,8 +37,8 @@ const HorizontalDraggableScrollAnatomy = defineStyleAnatomy({
         "flex max-w-full w-full space-x-3 overflow-x-scroll scrollbar-hide scroll select-none",
     ]),
     chevronIcon: cva([
-        "w-12 h-12 stroke-[2.5px] p-3 rounded-full bg-zinc-950/70 text-white/80 border border-white/10 shadow-lg",
-        "backdrop-blur-md transition-all duration-300",
+        "w-12 h-12 stroke-[2.5px] p-3 rounded-full bg-surface-container/70 text-white/80 border border-white/10 shadow-lg",
+        "backdrop-blur-[var(--blur-overlay-md)] transition-all duration-300",
         "group-hover/chevron:bg-brand-orange group-hover/chevron:text-white group-hover/chevron:border-brand-orange group-hover/chevron:scale-110 group-hover/chevron:shadow-[0_0_15px_rgba(255,110,58,0.4)]",
     ]),
 

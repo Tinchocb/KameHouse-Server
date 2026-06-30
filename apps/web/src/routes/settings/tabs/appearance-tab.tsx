@@ -149,10 +149,10 @@ export function AppearanceTab({ control }: AppearanceTabProps) {
                                 type="button"
                                 onClick={() => handlePresetClick(preset)}
                                 className={cn(
-                                    "relative flex flex-col p-5 rounded-2xl border transition-all duration-300 group active:scale-95 overflow-hidden min-h-[160px]",
+                                    "relative flex flex-col p-5 rounded-container border transition-all duration-300 group active:scale-95 overflow-hidden min-h-[160px]",
                                     isActive
-                                        ? "border-[#ff6e3a] bg-white/[0.03] shadow-[0_8px_30px_rgba(255,110,58,0.1)]"
-                                        : "bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-2xl hover:bg-white/[0.04] hover:border-white/12"
+                                        ? "border-[#ff6e3a] bg-surface-variant/30 shadow-[0_8px_30px_rgba(255,110,58,0.1)]"
+                                        : "bg-surface-container border border-outline-variant rounded-container hover:bg-surface-variant/40 hover:border-outline-variant/12"
                                 )}
                                 style={
                                     !isCustom && preset.background
@@ -161,13 +161,13 @@ export function AppearanceTab({ control }: AppearanceTabProps) {
                                 }
                             >
                                 {isCustom ? (
-                                    <div className="flex items-center justify-center h-full min-h-[120px] border-2 border-dashed border-white/10 rounded-xl">
+                                    <div className="flex items-center justify-center h-full min-h-[120px] border-2 border-dashed border-outline-variant/10 rounded-xl">
                                         <div className="text-center">
-                                            <svg className="w-10 h-10 mx-auto text-zinc-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg className="w-10 h-10 mx-auto text-on-surface-variant/60 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
                                             </svg>
-                                            <p className="text-xs font-bold text-white uppercase tracking-wider">Crear Tema</p>
-                                            <p className="text-[10px] text-zinc-550 mt-1">Diseña tu propia paleta</p>
+                                            <p className="text-xs font-bold text-on-surface uppercase tracking-wider">Crear Tema</p>
+                                            <p className="text-[10px] text-on-surface-variant mt-1">Diseña tu propia paleta</p>
                                         </div>
                                     </div>
                                 ) : (
@@ -175,15 +175,15 @@ export function AppearanceTab({ control }: AppearanceTabProps) {
                                         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none bg-gradient-to-b from-transparent to-black/60" />
                                         <div className="relative z-10 flex flex-col h-full">
                                             <div className="flex items-center justify-between mb-3">
-                                                <span className="text-xs font-bold text-white uppercase tracking-wider">{preset.name}</span>
+                                                <span className="text-xs font-bold text-on-surface uppercase tracking-wider">{preset.name}</span>
                                                 <div className="flex gap-1">
-                                                    <div className="w-3 h-3 rounded-full border border-white/10" style={{ background: preset.background }} />
+                                                    <div className="w-3 h-3 rounded-full border border-outline-variant/10" style={{ background: preset.background }} />
                                                     <div className="w-3 h-3 rounded-full" style={{ background: preset.accent }} />
                                                 </div>
                                             </div>
-                                            <p className="text-[11px] text-zinc-500 leading-relaxed font-medium flex-1">{preset.desc}</p>
+                                            <p className="text-[11px] text-on-surface-variant leading-relaxed font-medium flex-1">{preset.desc}</p>
                                             {isActive && (
-                                                <div className="absolute inset-0 border-2 border-[#ff6e3a] rounded-2xl pointer-events-none" />
+                                                <div className="absolute inset-0 border-2 border-[#ff6e3a] rounded-container pointer-events-none" />
                                             )}
                                         </div>
                                     </>
@@ -196,7 +196,7 @@ export function AppearanceTab({ control }: AppearanceTabProps) {
 
             {/* Color Customization */}
             <Section label="Paleta de Colores">
-                <Card className="divide-y divide-white/[0.03]">
+                <Card className="divide-y divide-outline-variant/3">
                     <Controller
                         control={control}
                         name="theme.enableColorSettings"
@@ -213,10 +213,10 @@ export function AppearanceTab({ control }: AppearanceTabProps) {
                         control={control}
                         name="theme.backgroundColor"
                         render={({ field }) => (
-                            <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-5 border-b border-white/[0.02] hover:bg-white/[0.005] transition-all duration-200 gap-5 group/input">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-5 border-b border-outline-variant/2 hover:bg-surface-variant/[0.005] transition-all duration-200 gap-5 group/input">
                                 <div className="space-y-0.5 flex-1 max-w-xl">
-                                    <label htmlFor="bg-color" className="text-sm font-semibold text-zinc-200 group-hover/input:text-white transition-colors tracking-tight cursor-pointer">Color de Fondo Principal</label>
-                                    <p className="text-[11px] text-zinc-500 leading-relaxed font-medium">Color base de toda la aplicación</p>
+                                    <label htmlFor="bg-color" className="text-sm font-semibold text-on-surface group-hover/input:text-on-surface transition-colors tracking-tight cursor-pointer">Color de Fondo Principal</label>
+                                    <p className="text-[11px] text-on-surface-variant leading-relaxed font-medium">Color base de toda la aplicación</p>
                                 </div>
                                 <div className="flex items-center gap-2.5">
                                     <input
@@ -224,13 +224,13 @@ export function AppearanceTab({ control }: AppearanceTabProps) {
                                         type="color"
                                         value={field.value || "#070707"}
                                         onChange={(e) => field.onChange(e.target.value)}
-                                        className="w-10 h-10 rounded-lg border border-white/10 cursor-pointer"
+                                        className="w-10 h-10 rounded-lg border border-outline-variant/10 cursor-pointer"
                                     />
                                     <input
                                         type="text"
                                         value={field.value || "#070707"}
                                         onChange={(e) => field.onChange(e.target.value)}
-                                        className="bg-black/40 border border-white/5 rounded-xl px-4 py-2.5 w-36 text-white placeholder-zinc-700 text-xs font-mono focus:outline-none focus:border-[#ff6e3a]/40"
+                                        className="bg-surface-container border border-outline-variant/5 rounded-xl px-4 py-2.5 w-36 text-on-surface placeholder:text-on-surface-variant/70 text-xs font-mono focus:outline-none focus:border-[#ff6e3a]/40"
                                         placeholder="#000000"
                                     />
                                 </div>
@@ -241,10 +241,10 @@ export function AppearanceTab({ control }: AppearanceTabProps) {
                         control={control}
                         name="theme.accentColor"
                         render={({ field }) => (
-                            <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-5 border-b border-white/[0.02] hover:bg-white/[0.005] transition-all duration-200 gap-5 group/input">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-5 border-b border-outline-variant/2 hover:bg-surface-variant/[0.005] transition-all duration-200 gap-5 group/input">
                                 <div className="space-y-0.5 flex-1 max-w-xl">
-                                    <label htmlFor="accent-color" className="text-sm font-semibold text-zinc-200 group-hover/input:text-white transition-colors tracking-tight cursor-pointer">Color de Acento</label>
-                                    <p className="text-[11px] text-zinc-500 leading-relaxed font-medium">Color principal para botones, enlaces, estados activos</p>
+                                    <label htmlFor="accent-color" className="text-sm font-semibold text-on-surface group-hover/input:text-on-surface transition-colors tracking-tight cursor-pointer">Color de Acento</label>
+                                    <p className="text-[11px] text-on-surface-variant leading-relaxed font-medium">Color principal para botones, enlaces, estados activos</p>
                                 </div>
                                 <div className="flex items-center gap-2.5">
                                     <input
@@ -252,13 +252,13 @@ export function AppearanceTab({ control }: AppearanceTabProps) {
                                         type="color"
                                         value={field.value || "#ff6e3a"}
                                         onChange={(e) => field.onChange(e.target.value)}
-                                        className="w-10 h-10 rounded-lg border border-white/10 cursor-pointer"
+                                        className="w-10 h-10 rounded-lg border border-outline-variant/10 cursor-pointer"
                                     />
                                     <input
                                         type="text"
                                         value={field.value || "#ff6e3a"}
                                         onChange={(e) => field.onChange(e.target.value)}
-                                        className="bg-black/40 border border-white/5 rounded-xl px-4 py-2.5 w-36 text-white placeholder-zinc-700 text-xs font-mono focus:outline-none focus:border-[#ff6e3a]/40"
+                                        className="bg-surface-container border border-outline-variant/5 rounded-xl px-4 py-2.5 w-36 text-on-surface placeholder:text-on-surface-variant/70 text-xs font-mono focus:outline-none focus:border-[#ff6e3a]/40"
                                         placeholder="#ff6e3a"
                                     />
                                 </div>
@@ -269,10 +269,10 @@ export function AppearanceTab({ control }: AppearanceTabProps) {
                         control={control}
                         name="theme.sidebarBackgroundColor"
                         render={({ field }) => (
-                            <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-5 border-b border-white/[0.02] hover:bg-white/[0.005] transition-all duration-200 gap-5 group/input">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-5 border-b border-outline-variant/2 hover:bg-surface-variant/[0.005] transition-all duration-200 gap-5 group/input">
                                 <div className="space-y-0.5 flex-1 max-w-xl">
-                                    <label htmlFor="sidebar-color" className="text-sm font-semibold text-zinc-200 group-hover/input:text-white transition-colors tracking-tight cursor-pointer">Color Sidebar</label>
-                                    <p className="text-[11px] text-zinc-500 leading-relaxed font-medium">Fondo del panel lateral (vacío = usa fondo principal)</p>
+                                    <label htmlFor="sidebar-color" className="text-sm font-semibold text-on-surface group-hover/input:text-on-surface transition-colors tracking-tight cursor-pointer">Color Sidebar</label>
+                                    <p className="text-[11px] text-on-surface-variant leading-relaxed font-medium">Fondo del panel lateral (vacío = usa fondo principal)</p>
                                 </div>
                                 <div className="flex items-center gap-2.5">
                                     <input
@@ -280,13 +280,13 @@ export function AppearanceTab({ control }: AppearanceTabProps) {
                                         type="color"
                                         value={field.value || "#0b0f19"}
                                         onChange={(e) => field.onChange(e.target.value)}
-                                        className="w-10 h-10 rounded-lg border border-white/10 cursor-pointer"
+                                        className="w-10 h-10 rounded-lg border border-outline-variant/10 cursor-pointer"
                                     />
                                     <input
                                         type="text"
                                         value={field.value || "#0b0f19"}
                                         onChange={(e) => field.onChange(e.target.value)}
-                                        className="bg-black/40 border border-white/5 rounded-xl px-4 py-2.5 w-36 text-white placeholder-zinc-700 text-xs font-mono focus:outline-none focus:border-[#ff6e3a]/40"
+                                        className="bg-surface-container border border-outline-variant/5 rounded-xl px-4 py-2.5 w-36 text-on-surface placeholder:text-on-surface-variant/70 text-xs font-mono focus:outline-none focus:border-[#ff6e3a]/40"
                                         placeholder="#0b0f19"
                                     />
                                 </div>
@@ -298,7 +298,7 @@ export function AppearanceTab({ control }: AppearanceTabProps) {
 
             {/* Layout & Behavior */}
             <Section label="Diseño y Comportamiento">
-                <Card className="divide-y divide-white/[0.03]">
+                <Card className="divide-y divide-outline-variant/3">
                     <Controller
                         control={control}
                         name="theme.themeSmallerEpisodeCarouselSize"
@@ -376,7 +376,7 @@ export function AppearanceTab({ control }: AppearanceTabProps) {
 
             {/* Library Screen Customization */}
             <Section label="Pantalla de Biblioteca">
-                <Card className="divide-y divide-white/[0.03]">
+                <Card className="divide-y divide-outline-variant/3">
                     <Controller
                         control={control}
                         name="theme.themeLibraryScreenBannerType"
@@ -413,10 +413,10 @@ export function AppearanceTab({ control }: AppearanceTabProps) {
                         control={control}
                         name="theme.themeLibraryScreenCustomBannerOpacity"
                         render={({ field }) => (
-                            <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-5 border-b border-white/[0.02] hover:bg-white/[0.005] transition-all duration-200 gap-5 group/input">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-5 border-b border-outline-variant/2 hover:bg-surface-variant/[0.005] transition-all duration-200 gap-5 group/input">
                                 <div className="space-y-0.5 flex-1 max-w-xl">
-                                    <label htmlFor="banner-opacity" className="text-sm font-semibold text-zinc-200 group-hover/input:text-white transition-colors tracking-tight cursor-pointer">Opacidad del Banner</label>
-                                    <p className="text-[11px] text-zinc-500 leading-relaxed font-medium">0 = Transparente, 100 = Opaco</p>
+                                    <label htmlFor="banner-opacity" className="text-sm font-semibold text-on-surface group-hover/input:text-on-surface transition-colors tracking-tight cursor-pointer">Opacidad del Banner</label>
+                                    <p className="text-[11px] text-on-surface-variant leading-relaxed font-medium">0 = Transparente, 100 = Opaco</p>
                                 </div>
                                 <div className="flex items-center gap-3 w-full md:w-72">
                                     <input
@@ -426,9 +426,9 @@ export function AppearanceTab({ control }: AppearanceTabProps) {
                                         max="100"
                                         value={field.value || 10}
                                         onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                        className="w-full accent-[#ff6e3a] bg-zinc-800 h-1 rounded-lg appearance-none cursor-pointer"
+                                        className="w-full accent-[#ff6e3a] bg-surface-variant h-1 rounded-lg appearance-none cursor-pointer"
                                     />
-                                    <span className="text-xs font-mono text-zinc-400 w-8 text-right shrink-0">{field.value || 10}%</span>
+                                    <span className="text-xs font-mono text-on-surface-variant w-8 text-right shrink-0">{field.value || 10}%</span>
                                 </div>
                             </div>
                         )}
@@ -450,7 +450,7 @@ export function AppearanceTab({ control }: AppearanceTabProps) {
 
             {/* Media Page Customization */}
             <Section label="Página de Detalle">
-                <Card className="divide-y divide-white/[0.03]">
+                <Card className="divide-y divide-outline-variant/3">
                     <Controller
                         control={control}
                         name="theme.themeMediaPageBannerType"
@@ -497,7 +497,7 @@ export function AppearanceTab({ control }: AppearanceTabProps) {
 
             {/* Sorting & Lists */}
             <Section label="Ordenación y Listas">
-                <Card className="divide-y divide-white/[0.03]">
+                <Card className="divide-y divide-outline-variant/3">
                     <Controller
                         control={control}
                         name="theme.themeContinueWatchingDefaultSorting"
@@ -544,14 +544,14 @@ export function AppearanceTab({ control }: AppearanceTabProps) {
                         name="theme.themeCustomCSS"
                         render={({ field }) => (
                             <div className="relative">
-                                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wide block mb-2">CSS Global</label>
+                                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wide block mb-2">CSS Global</label>
                                 <textarea
                                     value={field.value || ""}
                                     onChange={(e) => field.onChange(e.target.value)}
                                     placeholder="/* Tu CSS personalizado aqui */"
-                                    className="w-full h-48 bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-white placeholder-zinc-700 text-[11px] font-mono focus:outline-none focus:border-[#ff6e3a]/40 resize-y"
+                                    className="w-full h-48 bg-surface-container border border-outline-variant/5 rounded-xl px-4 py-3 text-on-surface placeholder:text-on-surface-variant/70 text-[11px] font-mono focus:outline-none focus:border-[#ff6e3a]/40 resize-y"
                                 />
-                                <div className="absolute bottom-2 right-2 text-[9px] font-mono text-zinc-600">
+                                <div className="absolute bottom-2 right-2 text-[9px] font-mono text-on-surface-variant/60">
                                     {(field.value || "").length} chars
                                 </div>
                             </div>
@@ -561,13 +561,13 @@ export function AppearanceTab({ control }: AppearanceTabProps) {
                         control={control}
                         name="theme.themeMobileCustomCSS"
                         render={({ field }) => (
-                            <div className="relative pt-4 border-t border-white/5">
-                                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono mb-2 block">CSS Solo Móvil</label>
+                            <div className="relative pt-4 border-t border-outline-variant/5">
+                                <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider font-mono mb-2 block">CSS Solo Móvil</label>
                                 <textarea
                                     value={field.value || ""}
                                     onChange={(e) => field.onChange(e.target.value)}
                                     placeholder="@media (max-width: 768px) { ... }"
-                                    className="w-full h-32 bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-white placeholder-zinc-700 text-[11px] font-mono focus:outline-none focus:border-[#ff6e3a]/40 resize-y"
+                                    className="w-full h-32 bg-surface-container border border-outline-variant/5 rounded-xl px-4 py-3 text-on-surface placeholder:text-on-surface-variant/70 text-[11px] font-mono focus:outline-none focus:border-[#ff6e3a]/40 resize-y"
                                 />
                             </div>
                         )}
@@ -589,7 +589,7 @@ export function AppearanceTab({ control }: AppearanceTabProps) {
                             toast.success("Apariencia restablecida")
                         }
                     }}
-                    className="p-5 rounded-2xl bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-2xl border border-white/5 hover:border-red-500/20 hover:bg-red-500/5 transition-all text-left group w-full"
+                    className="p-5 rounded-container bg-surface-container border border-outline-variant/5 hover:border-red-500/20 hover:bg-red-500/5 transition-all text-left group w-full"
                 >
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
@@ -598,8 +598,8 @@ export function AppearanceTab({ control }: AppearanceTabProps) {
                             </svg>
                         </div>
                         <div>
-                            <p className="font-bold text-white text-sm">Restablecer a Defecto</p>
-                            <p className="text-[11px] text-zinc-500">Vuelve al tema KameHouse Original</p>
+                            <p className="font-bold text-on-surface text-sm">Restablecer a Defecto</p>
+                            <p className="text-[11px] text-on-surface-variant">Vuelve al tema KameHouse Original</p>
                         </div>
                     </div>
                 </button>

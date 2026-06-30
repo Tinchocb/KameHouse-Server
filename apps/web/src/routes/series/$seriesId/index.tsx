@@ -31,7 +31,7 @@ import { PremiumEpisodeList } from "./-components/premium-episode-list"
 import type { SagaDTO, SagaDetailSearchParams } from "@/api/types/series.types"
 import { BentoDetailsSkeleton } from "@/components/ui/shimmer-skeleton"
 import { CharacterDetailModal } from "@/components/shared/character-detail-modal"
-import { GlassCard, GlassButton, IconButton } from "@/components/ui"
+import { IconButton } from "@/components/ui"
 import { Icons } from "@/components/ui/icons"
 import { PosterCard } from "@/components/ui/poster-card"
 
@@ -425,39 +425,48 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                 onPlay={handlePlayDefault}
             />
             <div className="w-full max-w-[1800px] mx-auto px-6 md:pl-20 md:pr-12 mt-8">
-                <div className="flex border-b border-[var(--glass-border)] pb-2 mb-6 gap-6 overflow-x-auto no-scrollbar">
-                    <GlassButton
-                        variant={activeTab === "episodes" ? "primary" : "ghost"}
-                        size="sm"
+                <div className="flex border-b border-outline-variant pb-2 mb-6 gap-6 overflow-x-auto no-scrollbar">
+                    <button
                         onClick={() => setSearchParams({ tab: "episodes" })}
-                        leftIcon="film"
-                        className="shrink-0"
+                        className={cn(
+                            "inline-flex items-center gap-2 shrink-0 text-sm font-semibold transition-all px-4 py-2 rounded-pill",
+                            activeTab === "episodes"
+                                ? "bg-primary text-on-primary shadow-elevation-1"
+                                : "bg-transparent text-on-surface-variant hover:bg-surface-container-high"
+                        )}
                     >
+                        <Icons.navigation.film size={14} strokeWidth={2.5} />
                         Episodios
-                    </GlassButton>
+                    </button>
 
                     {hasRelations && (
-                        <GlassButton
-                            variant={activeTab === "relations" ? "primary" : "ghost"}
-                            size="sm"
+                        <button
                             onClick={() => setSearchParams({ tab: "relations" })}
-                            leftIcon="layers"
-                            className="shrink-0"
+                            className={cn(
+                                "inline-flex items-center gap-2 shrink-0 text-sm font-semibold transition-all px-4 py-2 rounded-pill",
+                                activeTab === "relations"
+                                    ? "bg-primary text-on-primary shadow-elevation-1"
+                                    : "bg-transparent text-on-surface-variant hover:bg-surface-container-high"
+                            )}
                         >
+                            <Icons.navigation.layers size={14} strokeWidth={2.5} />
                             Relacionados
-                        </GlassButton>
+                        </button>
                     )}
 
                     {hasCharacters && (
-                        <GlassButton
-                            variant={activeTab === "characters" ? "primary" : "ghost"}
-                            size="sm"
+                        <button
                             onClick={() => setSearchParams({ tab: "characters" })}
-                            leftIcon="users"
-                            className="shrink-0"
+                            className={cn(
+                                "inline-flex items-center gap-2 shrink-0 text-sm font-semibold transition-all px-4 py-2 rounded-pill",
+                                activeTab === "characters"
+                                    ? "bg-primary text-on-primary shadow-elevation-1"
+                                    : "bg-transparent text-on-surface-variant hover:bg-surface-container-high"
+                            )}
                         >
+                            <Icons.navigation.users size={14} strokeWidth={2.5} />
                             Personajes
-                        </GlassButton>
+                        </button>
                     )}
                 </div>
 
@@ -474,7 +483,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                             >
                                 {sagas && sagas.length > 0 && (
                                     <div className="lg:w-80 flex-shrink-0 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-7rem)]">
-                                        <GlassCard variant="elevated" padding="md" radius="2xl" className="h-full">
+                                        <div className="bg-surface-container shadow-elevation-2 p-4 rounded-container h-full">
                                             <SagaSelector
                                                 sagas={sagas}
                                                 activeSagaId={activeSagaId}
@@ -485,7 +494,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                                                 activeSubSagaId={activeSubSagaId}
                                                 onSelectSubSaga={(subSagaId) => setSearchParams({ subSaga: subSagaId })}
                                             />
-                                        </GlassCard>
+                                        </div>
                                     </div>
                                 )}
 
@@ -552,9 +561,9 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                                 transition={{ duration: 0.2 }}
                                 className="py-4"
                             >
-                                <GlassCard variant="default" padding="lg" radius="2xl">
+                                <div className="bg-surface-container-low p-6 rounded-container">
                                     <RelationsTab media={entry.media} />
-                                </GlassCard>
+                                </div>
                             </motion.div>
                         )}
 
@@ -567,9 +576,9 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                                 transition={{ duration: 0.2 }}
                                 className="py-4"
                             >
-                                <GlassCard variant="default" padding="lg" radius="2xl">
+                                <div className="bg-surface-container-low p-6 rounded-container">
                                     <CharactersTab characters={entry.media?.characters?.edges || []} onSelectChar={setSelectedCharacterName} />
-                                </GlassCard>
+                                </div>
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -580,8 +589,8 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                 const nextTitle = nextEp ? (nextEp.titleSpanish || nextEp.episodeMetadata?.title || nextEp.episodeTitle || nextEp.displayTitle || `Episodio ${nextEp.absoluteEpisodeNumber || nextEp.episodeNumber}`) : undefined;
                 return (
                     <React.Suspense fallback={
-                        <div className="fixed inset-0 bg-[var(--bg-primary)]/90 backdrop-blur-xl flex flex-col justify-center items-center z-50">
-                            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--brand-primary)] mb-4"></div>
+                        <div className="fixed inset-0 bg-[var(--bg-primary)]/90 backdrop-blur-[var(--blur-overlay-lg)] flex flex-col justify-center items-center z-50">
+                            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-primary mb-4"></div>
                             <p className="text-muted text-label-md uppercase tracking-widest">Cargando reproductor...</p>
                         </div>
                     }>
@@ -631,10 +640,10 @@ function SagaLoreHeader({ saga }: { saga: SagaDTO | undefined }) {
     const hasRichDetails = saga.antagonists?.length > 0 || saga.keyEvents?.length > 0 || saga.newCharacters?.length > 0
 
     return (
-        <GlassCard variant="elevated" padding="lg" radius="2xl" className="mb-8">
+        <div className="bg-surface-container shadow-elevation-2 p-6 rounded-container mb-8">
             <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="space-y-1">
-                    <span className="text-label-sm text-[var(--brand-primary)] uppercase tracking-widest bg-[var(--brand-primary)]/10 border border-[var(--brand-primary)]/20 px-2.5 py-0.5 rounded">
+                    <span className="text-label-sm text-brand-primary uppercase tracking-widest bg-brand-primary/10 border border-brand-primary/20 px-2.5 py-0.5 rounded">
                         Detalles del Arco
                     </span>
                     <h2 className="text-h3 font-display text-primary uppercase tracking-wide mt-1.5">
@@ -645,56 +654,56 @@ function SagaLoreHeader({ saga }: { saga: SagaDTO | undefined }) {
                     <span className={cn(
                         "px-4 py-1.5 rounded-full text-label-sm font-black uppercase tracking-wider shadow-sm",
                         saga.canonStatus === "true" || saga.canonStatus.toLowerCase() === "canon"
-                            ? "bg-[var(--brand-success)]/15 text-[var(--brand-success)] border border-[var(--brand-success)]/25"
+                            ? "bg-brand-success/15 text-brand-success border border-brand-success/25"
                             : saga.canonStatus.toLowerCase() === "relleno" || saga.canonStatus === "false"
-                            ? "bg-[var(--brand-destructive)]/15 text-[var(--brand-destructive)] border border-[var(--brand-destructive)]/25"
-                            : "bg-[var(--brand-secondary)]/15 text-[var(--brand-secondary)] border border-[var(--brand-secondary)]/25"
+                            ? "bg-brand-destructive/15 text-brand-destructive border border-brand-destructive/25"
+                            : "bg-brand-secondary/15 text-brand-secondary border border-brand-secondary/25"
                     )}>
                         {saga.canonStatus === "true" || saga.canonStatus.toLowerCase() === "canon" ? "Canon" : saga.canonStatus.toLowerCase() === "relleno" || saga.canonStatus === "false" ? "Relleno" : saga.canonStatus}
                     </span>
                 )}
             </div>
 
-            <p className="text-body-md text-secondary leading-relaxed border-l-2 border-[var(--brand-primary)]/30 pl-4 py-1">
+            <p className="text-body-md text-secondary leading-relaxed border-l-2 border-brand-primary/30 pl-4 py-1">
                 {saga.description}
             </p>
 
             {hasRichDetails && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-[var(--glass-border)] mt-2">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-outline-variant mt-2">
                     {saga.antagonists?.length > 0 && (
-                        <GlassCard variant="default" padding="lg" radius="xl" className="shadow-inner">
-                            <span className="flex items-center gap-2 text-label-sm font-black text-muted uppercase tracking-wider mb-3 pb-2 border-b border-[var(--glass-border)]">
-                                <Icons.status.skull size={14} className="text-[var(--brand-destructive)]" />
+                        <div className="bg-surface-container-low p-6 rounded-container shadow-inner">
+                            <span className="flex items-center gap-2 text-label-sm font-black text-muted uppercase tracking-wider mb-3 pb-2 border-b border-outline-variant">
+                                <Icons.status.skull size={14} className="text-brand-destructive" />
                                 Antagonistas
                             </span>
                             <div className="flex flex-wrap gap-2">
                                 {saga.antagonists.map((ant: string, idx: number) => (
-                                    <span key={idx} className="px-2.5 py-1 bg-[var(--brand-destructive)]/20 text-[var(--brand-destructive)] border border-[var(--brand-destructive)]/20 text-label-sm rounded-lg font-bold">
+                                    <span key={idx} className="px-2.5 py-1 bg-brand-destructive/20 text-brand-destructive border border-brand-destructive/20 text-label-sm rounded-lg font-bold">
                                         {ant}
                                     </span>
                                 ))}
                             </div>
-                        </GlassCard>
+                        </div>
                     )}
 
                     {saga.keyEvents?.length > 0 && (
-                        <GlassCard variant="default" padding="lg" radius="xl" className="md:col-span-2 shadow-inner">
-                            <span className="flex items-center gap-2 text-label-sm font-black text-muted uppercase tracking-wider mb-3 pb-2 border-b border-[var(--glass-border)]">
-                                <Icons.status.trophy size={14} className="text-[var(--brand-secondary)]" />
+                        <div className="bg-surface-container-low p-6 rounded-container md:col-span-2 shadow-inner">
+                            <span className="flex items-center gap-2 text-label-sm font-black text-muted uppercase tracking-wider mb-3 pb-2 border-b border-outline-variant">
+                                <Icons.status.trophy size={14} className="text-brand-secondary" />
                                 Hitos Clave
                             </span>
                             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-body-sm text-secondary">
                                 {saga.keyEvents.map((event: string, idx: number) => (
                                     <li key={idx} className="flex items-start gap-2 leading-relaxed">
-                                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--brand-primary)]/60 mt-1.5 shrink-0" />
+                                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-primary/60 mt-1.5 shrink-0" />
                                         <span className="text-muted">{event}</span>
                                     </li>
                                 ))}
                             </ul>
-                        </GlassCard>
+                        </div>
                     )}
                 </div>
             )}
-        </GlassCard>
+        </div>
     )
 }

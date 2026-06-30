@@ -85,7 +85,7 @@ function RootComponent() {
                         onClick={() => useAppStore.getState().setSidebarOpen(true)}
                         tabIndex={sidebarOpen ? -1 : 0}
                         aria-hidden={sidebarOpen ? "true" : undefined}
-                        className="md:hidden fixed top-6 left-6 z-[60] p-3 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 text-white/70 hover:text-white transition-all active:scale-95"
+                        className="md:hidden fixed top-6 left-6 z-[60] p-3 rounded-full bg-surface/40 backdrop-blur-[var(--blur-overlay-sm)] border border-white/10 text-white/70 hover:text-white transition-all active:scale-95"
                     >
                         <Menu className="w-5 h-5" />
                     </button>

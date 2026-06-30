@@ -120,10 +120,10 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
 
     if (!entry || !entry.media) {
         if (isLoading) {
-            return <div className="h-full w-full bg-[#050506] animate-pulse pb-16" />
+            return             <div className="h-full w-full bg-surface animate-pulse pb-16" />
         }
         return (
-            <div className="min-h-screen bg-[#050506] text-white flex items-center justify-center">
+            <div className="min-h-screen bg-surface text-on-surface flex items-center justify-center">
                 <EmptyState title="Película no encontrada" message="No pudimos cargar este contenido." />
             </div>
         )
@@ -216,7 +216,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
     }
 
     return (
-        <div ref={containerRef} className="h-full w-full flex flex-col overflow-y-auto no-scrollbar bg-[#07070a] text-white pb-24 relative select-none">
+        <div ref={containerRef} className="h-full w-full flex flex-col overflow-y-auto no-scrollbar bg-surface text-on-surface pb-24 relative select-none">
             <FloatingMatchFlap
                 directoryPath={entry.libraryData?.sharedPath || ""}
                 mediaId={entry.mediaId}
@@ -295,7 +295,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                 {/* Content Container (Split Grid) */}
                 <div className="relative z-20 w-full max-w-[1800px] mx-auto px-6 md:px-12 flex flex-col lg:flex-row items-center lg:items-end gap-10">
                                  {/* Left Column: Portrait Poster Card */}
-                    <div className="movie-animate w-56 md:w-68 shrink-0 aspect-[2/3] rounded-2xl overflow-hidden border border-white/10 bg-zinc-900 shadow-[0_20px_50px_rgba(0,0,0,0.6)] hover:shadow-[0_25px_60px_rgba(0,0,0,0.7)] transition-all duration-500 hover:scale-[1.03]">
+                    <div className="movie-animate w-56 md:w-68 shrink-0 aspect-[2/3] rounded-container overflow-hidden border border-outline-variant bg-surface-container shadow-elevation-5 transition-all duration-500 hover:scale-[1.03]">
                         <DeferredImage
                             src={posterUrl}
                             alt={title}
@@ -308,7 +308,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                         {/* Era Badge */}
                         <div className="movie-animate">
                             <span 
-                                className="inline-flex items-center text-[10px] font-black uppercase tracking-[0.25em] px-3.5 py-1.5 rounded-lg shadow-md border"
+                                className="inline-flex items-center text-[10px] font-black uppercase tracking-[0.25em] px-3.5 py-1.5 rounded-lg shadow-elevation-2 border"
                                 style={{
                                     color: eraConfig.color,
                                     borderColor: `${eraConfig.color}45`,
@@ -320,31 +320,31 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                         </div>
 
                         {/* Title */}
-                        <h1 className="movie-animate font-sans font-extrabold leading-[1.05] tracking-tighter text-white drop-shadow-[0_4px_25px_rgba(0,0,0,0.85)] uppercase" style={{ fontSize: "max(2.2rem, min(5vw, 4.2rem))" }}>
+                        <h1 className="movie-animate font-sans font-extrabold leading-[1.05] tracking-tighter text-white drop-shadow-[0_4px_25px_rgba(0,0,0,0.85)] uppercase" style={{ fontSize: "max(2.5rem, min(5.5vw, 4.5rem))" }}>
                             {cleanMovieTitle(title)}
                         </h1>
 
                         {/* Meta Info Row */}
-                        <div className="movie-animate flex flex-wrap items-center text-zinc-300 text-xs font-semibold tracking-wide gap-3">
-                            <span className="flex items-center justify-center bg-zinc-800/80 border border-zinc-600/50 rounded-md px-2 py-0.5 text-zinc-300 font-bold tracking-widest text-[9px]">
+                        <div className="movie-animate flex flex-wrap items-center text-on-surface-variant text-xs font-semibold tracking-wide gap-3">
+                            <span className="flex items-center justify-center bg-surface-container-low border border-outline-variant/50 rounded-md px-2 py-0.5 text-on-surface-variant font-bold tracking-widest text-[9px]">
                                 {media.isNsfw ? "18+" : "PG-13"}
                             </span>
                             
                             {technicalData?.is4K && (
-                                <span className="flex items-center gap-1 font-black text-white text-[11px] tracking-wide bg-gradient-to-r from-amber-500 to-orange-500 px-2 py-0.5 rounded-md">
+                                <span className="flex items-center gap-1 font-black text-on-surface text-[11px] tracking-wide bg-gradient-to-r from-amber-500 to-orange-500 px-2 py-0.5 rounded-md">
                                     4K ENHANCED
                                 </span>
                             )}
                             
-                            <span className="flex items-center justify-center bg-zinc-800/80 border border-zinc-600/50 rounded-md px-2 py-0.5 text-zinc-300 font-bold text-[9px]">CC</span>
+                            <span className="flex items-center justify-center bg-surface-container-low border border-outline-variant/50 rounded-md px-2 py-0.5 text-on-surface-variant font-bold text-[9px]">CC</span>
                             
-                            <div className="flex items-center gap-1.5 text-zinc-300 text-[11px] tracking-wide">
+                            <div className="flex items-center gap-1.5 text-on-surface-variant text-[11px] tracking-wide">
                                 {year && <span>{year}</span>}
-                                {year && formattedDuration && <span className="text-zinc-600">•</span>}
+                                {year && formattedDuration && <span className="text-on-surface-variant/60">•</span>}
                                 {formattedDuration && <span>{formattedDuration}</span>}
                                 {media.score && (
                                     <>
-                                        <span className="text-zinc-600">•</span>
+                                        <span className="text-on-surface-variant/60">•</span>
                                         <span className="flex items-center gap-1 text-amber-400">
                                             <Star size={11} fill="currentColor" className="stroke-none" />
                                             {(media.score / 10).toFixed(1)} Ki
@@ -356,7 +356,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
 
                         {/* Synopsis */}
                         {synopsis && (
-                            <p className="movie-animate text-zinc-300 text-sm md:text-[15px] leading-relaxed max-w-3xl line-clamp-3 pl-4 border-l-2 border-[var(--brand-secondary)]/30">
+                            <p className="movie-animate text-on-surface-variant text-sm md:text-[15px] leading-relaxed max-w-3xl line-clamp-3 pl-4 border-l-2 border-brand-secondary/30">
                                 {synopsis}
                             </p>
                         )}
@@ -366,20 +366,20 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                             {/* Premium Play Button */}
                             <button
                                 onClick={handlePlayDefault}
-                                className="group/play relative flex items-center gap-4 px-9 py-4 bg-gradient-to-r from-[var(--brand-secondary)] via-[var(--brand-secondary)] to-[var(--brand-secondary)] text-white rounded-full overflow-hidden shadow-[0_12px_40px_rgba(255,110,58,0.35)] hover:shadow-[0_18px_50px_rgba(255,110,58,0.55)] transition-all duration-500 hover:scale-105 active:scale-95 border border-white/10 hover:border-[var(--brand-secondary)]/40"
+                                className="group/play relative flex items-center gap-4 px-9 py-4 bg-gradient-to-r from-brand-secondary via-brand-secondary to-brand-secondary text-white rounded-full overflow-hidden shadow-[0_12px_40px_rgba(255,110,58,0.35)] hover:shadow-[0_18px_50px_rgba(255,110,58,0.55)] transition-all duration-500 hover:scale-105 active:scale-95 border border-outline-variant hover:border-brand-secondary/40"
                             >
                                 <div className="absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-transparent opacity-0 group-hover/play:opacity-100 transition-opacity duration-500 z-0" />
-                                <div className="absolute -inset-10 bg-[var(--brand-secondary)]/30 blur-xl group-hover/play:opacity-100 opacity-0 transition-opacity duration-500 -z-10 animate-pulse" />
+                                <div className="absolute -inset-10 bg-brand-secondary/30 blur-xl group-hover/play:opacity-100 opacity-0 transition-opacity duration-500 -z-10 animate-pulse" />
 
-                                <div className="p-2.5 bg-black/40 backdrop-blur-[var(--blur-xl)] rounded-full border border-white/10 text-white group-hover/play:bg-white group-hover/play:text-black transition-all duration-300 shadow-inner z-10 shrink-0">
+                                <div className="p-2.5 bg-surface-container backdrop-blur-overlay-xl rounded-full border border-outline-variant text-on-surface group-hover/play:bg-white group-hover/play:text-black transition-all duration-300 shadow-inner z-10 shrink-0">
                                     <Play className="w-4 h-4 fill-current" />
                                 </div>
 
                                 <div className="flex flex-col items-start z-10 select-none text-left shrink-0">
-                                    <span className="font-sans text-[13px] tracking-[0.15em] font-extrabold uppercase text-white transition-colors whitespace-nowrap">
+                                    <span className="font-sans text-[13px] tracking-[0.15em] font-extrabold uppercase text-on-surface transition-colors whitespace-nowrap">
                                         {continuityData?.item?.currentTime ? "REANUDAR" : "PLAY"}
                                     </span>
-                                    <span className="text-[8px] font-black text-white/60 tracking-[0.1em] uppercase transition-colors mt-0.5 whitespace-nowrap">
+                                    <span className="text-[8px] font-black text-on-surface/60 tracking-[0.1em] uppercase transition-colors mt-0.5 whitespace-nowrap">
                                         {continuityData?.item?.currentTime ? "Continuar viendo" : "Ver película"}
                                     </span>
                                 </div>
@@ -389,7 +389,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                             {entry.localFiles && entry.localFiles.length > 0 && (
                                 <button
                                     onClick={handleAddToQueue}
-                                    className="group/queue flex items-center justify-center w-14 h-14 rounded-full bg-[var(--glass-bg)] backdrop-blur-[var(--blur-card)] border border-[var(--glass-border)] hover:bg-[var(--glass-hover)] hover:border-[var(--glass-strong)] cursor-pointer text-white hover:text-[var(--brand-secondary)] transition-all duration-300 active:scale-95"
+                                    className="group/queue flex items-center justify-center w-14 h-14 rounded-full bg-[var(--glass-bg)] backdrop-blur-overlay-md border border-[var(--glass-border)] hover:bg-[var(--glass-hover)] hover:border-[var(--glass-strong)] cursor-pointer text-on-surface hover:text-brand-secondary transition-all duration-300 active:scale-95"
                                     title="Añadir a la cola"
                                 >
                                     <ListPlus className="w-5 h-5 transition-transform group-hover/queue:-translate-y-0.5" />
@@ -402,8 +402,8 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                                 className={cn(
                                     "flex items-center justify-center w-14 h-14 rounded-full border transition-all duration-300 active:scale-95",
                                     isWatched
-                                        ? "bg-white text-black border-white"
-                                        : "bg-white/[0.05] border-white/10 text-white hover:bg-white/10 hover:border-white/20"
+                                        ? "bg-surface-container text-on-surface border-outline-variant"
+                                        : "bg-surface-container/5 border-outline-variant/10 text-on-surface"
                                 )}
                                 title={isWatched ? "Marcar como no vista" : "Marcar como vista"}
                             >
@@ -416,8 +416,8 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                                 className={cn(
                                     "flex items-center justify-center w-14 h-14 rounded-full border transition-all duration-300 active:scale-95",
                                     isFavorite
-                                        ? "bg-white text-black border-white"
-                                        : "bg-white/[0.05] border-white/10 text-white hover:bg-white/10 hover:border-white/20"
+                                        ? "bg-surface-container text-on-surface border-outline-variant"
+                                        : "bg-surface-container/5 border-outline-variant/10 text-on-surface"
                                 )}
                                 title={isFavorite ? "Quitar de favoritos" : "Añadir a favoritos"}
                             >
@@ -427,9 +427,9 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
 
                         {/* Progress bar */}
                         {continuityData?.item?.currentTime && continuityData.item.duration && (
-                            <div className="movie-animate w-full max-w-sm mt-1 h-[5px] bg-white/20 rounded-full overflow-hidden relative z-10">
+                            <div className="movie-animate w-full max-w-sm mt-1 h-[5px] bg-surface-container/20 rounded-full overflow-hidden relative z-10">
                                 <div 
-                                    className="h-full bg-[var(--brand-secondary)]"
+                                    className="h-full bg-brand-secondary"
                                     style={{ width: `${progressPercent}%` }}
                                 />
                             </div>
@@ -441,9 +441,9 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
             {/* Video Player */}
             {playTarget && (
                 <React.Suspense fallback={
-                    <div className="fixed inset-0 bg-[#07070a]/90 backdrop-blur-[var(--blur-xl)] flex flex-col justify-center items-center z-50">
-                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--brand-secondary)] mb-4"></div>
-                        <p className="text-zinc-400 text-xs font-bold uppercase tracking-[0.2em]">Cargando reproductor...</p>
+                    <div className="fixed inset-0 bg-surface/90 backdrop-blur-overlay-xl flex flex-col justify-center items-center z-50">
+                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-secondary mb-4"></div>
+                        <p className="text-on-surface-variant text-xs font-bold uppercase tracking-[0.2em]">Cargando reproductor...</p>
                     </div>
                 }>
                     <VideoPlayer

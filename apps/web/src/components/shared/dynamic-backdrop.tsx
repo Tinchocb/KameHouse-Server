@@ -15,19 +15,22 @@ export function DynamicBackdrop() {
     const isHomePage =
         location.pathname === "/home" ||
         location.pathname === "/home/"
-    const isStaticPage =
-        isHomePage ||
+    // Listing/section pages: no big hero image of their own, so the global
+    // backdrop needs to stay visible (with blur) behind them for the
+    // glassmorphic chrome (sidebar, panels) to have something to blur.
+    const isListingPage =
         location.pathname === "/movies" ||
         location.pathname === "/movies/" ||
         location.pathname === "/series" ||
         location.pathname === "/series/" ||
         location.pathname.startsWith("/settings")
+    const isStaticPage = isHomePage || isListingPage
 
     const isEnabled = useAppStore(state => state.dynamicBackdropEnabled)
     const isMotionEnabled = useAppStore(state => state.dynamicBackdropMotionEnabled)
     const currentBackdropUrl = useIntelligenceStore(s => s.currentBackdropUrl)
     const activeBackdropUrl = currentBackdropUrl
-    const baseOpacity = isHomePage ? 0.65 : 0.12
+    const baseOpacity = isHomePage ? 0.65 : isListingPage ? 0.40 : 0.12
 
     const [displayedUrl, setDisplayedUrl] = React.useState<string | null>(null)
     const [nextUrl, setNextUrl] = React.useState<string | null>(null)
@@ -122,7 +125,7 @@ export function DynamicBackdrop() {
         return () => clearTimeout(timer)
     }, [activeBackdropUrl, displayedUrl, isEnabled])
 
-    const filterClass = isStaticPage ? "" : "blur-2xl"
+    const filterClass = isHomePage ? "" : "blur-2xl"
 
     if (!isEnabled) return null
 
@@ -136,7 +139,7 @@ export function DynamicBackdrop() {
             <div className="absolute inset-0 overflow-hidden" style={{ filter: "blur(160px)" }}>
                 <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full animate-float-blur mix-blend-plus-lighter"
                     style={{
-                        background: "radial-gradient(circle at 30% 30%, var(--brand-accent) 0%, transparent 70%)",
+                        background: "radial-gradient(circle at 30% 30%, hsl(var(--brand-accent)) 0%, transparent 70%)",
                         opacity: 0.18,
                         willChange: "transform",
                     }}
@@ -158,7 +161,7 @@ export function DynamicBackdrop() {
             </div>
 
             {/* Frosted Glass Overlay - adds blur depth behind content */}
-            <div className="absolute inset-0 bg-[var(--glass-bg)] backdrop-blur-[var(--blur-xl)]" style={{ opacity: isHomePage ? 0.3 : 0.1 }} />
+            <div className="absolute inset-0 bg-surface-container/30 backdrop-blur-overlay-xl" style={{ opacity: isHomePage ? 0.3 : isListingPage ? 0.25 : 0.1 }} />
 
             {/* Wrapper for backdrop layers with mouse parallax */}
             <div
@@ -204,11 +207,11 @@ export function DynamicBackdrop() {
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_120%_80%_at_50%_0%,rgba(255,255,255,0.015),transparent_60%)]" />
             <div
                 className="absolute inset-0 bg-gradient-to-r from-[var(--bg-primary)] via-[var(--bg-primary)]/10 to-transparent transition-opacity duration-500"
-                style={{ opacity: isStaticPage ? 0.08 : 0.65 }}
+                style={{ opacity: isHomePage ? 0.08 : isListingPage ? 0.35 : 0.65 }}
             />
             <div
-                className="absolute inset-0 bg-gradient-to-t from-[var(--bg-primary)] via-transparent to-transparent transition-opacity duration-500"
-                style={{ opacity: isStaticPage ? 0.1 : 0.70 }}
+                className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent transition-opacity duration-500"
+                style={{ opacity: isHomePage ? 0.1 : isListingPage ? 0.40 : 0.70 }}
             />
         </div>
     )

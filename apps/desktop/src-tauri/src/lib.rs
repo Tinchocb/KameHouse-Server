@@ -3,19 +3,15 @@
 
 mod sidecar;
 mod settings;
+#[path = "window.rs"]
 mod window_manager;
 mod tray;
 mod updater;
 mod ipc;
 
 use std::sync::Arc;
-use tauri::{
-    menu::{MenuBuilder, MenuItemBuilder},
-    tray::TrayIconBuilder,
-    Manager, Runtime, WebviewUrl, WebviewWindowBuilder,
-};
+use tauri::Manager;
 use tauri_plugin_log::{Target, TargetKind};
-use tauri_plugin_single_instance::SingleInstancePlugin;
 
 use sidecar::SidecarManager;
 use window_manager::WindowManager;
@@ -29,6 +25,11 @@ pub fn run() {
     let window_manager = Arc::new(WindowManager::new());
     let tray_manager = Arc::new(TrayManager::new());
     let updater_manager = Arc::new(UpdaterManager::new());
+
+    let single_instance_window_manager = window_manager.clone();
+    let setup_settings_manager = settings_manager.clone();
+    let setup_window_manager = window_manager.clone();
+    let setup_sidecar_manager = sidecar_manager.clone();
 
     tauri::Builder::default()
         .plugin(
@@ -47,9 +48,8 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
-        .plugin(SingleInstancePlugin::new(|app, _args, _cwd| {
-            let window_manager = window_manager.clone();
-            let _ = window_manager.show_main_window(app);
+        .plugin(tauri_plugin_single_instance::init(move |app, _args, _cwd| {
+            let _ = single_instance_window_manager.show_main_window(app);
         }))
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(sidecar_manager.clone())
@@ -86,34 +86,36 @@ pub fn run() {
             }
 
             // Initialize settings
-            let settings = settings_manager.load();
+            let settings = setup_settings_manager.load(&handle);
             log::info!("[Settings] Loaded: {:?}", settings);
 
             // Initialize window manager
             let dev_mode = cfg!(debug_assertions);
-            window_manager.create_windows(&handle, dev_mode, settings.clone())?;
+            setup_window_manager.create_windows(&handle, dev_mode, settings.clone()).map_err(|e| e as Box<dyn std::error::Error>)?;
 
             // Initialize tray
-            tray_manager.create_tray(&handle, sidecar_manager.clone(), window_manager.clone(), settings.clone())?;
+            tray_manager.create_tray(&handle, setup_sidecar_manager.clone(), setup_window_manager.clone(), settings.clone()).map_err(|e| e as Box<dyn std::error::Error>)?;
 
             // Initialize sidecar
-            let sidecar_mgr = sidecar_manager.clone();
-            let window_mgr = window_manager.clone();
+            let sidecar_mgr = setup_sidecar_manager.clone();
+            let window_mgr = setup_window_manager.clone();
             let settings_clone = settings.clone();
 
+            let sidecar_handle = handle.clone();
+            let sidecar_window_mgr = window_mgr.clone();
+            let launch_sidecar_mgr = sidecar_mgr.clone();
             tauri::async_runtime::spawn(async move {
-                if let Err(e) = sidecar_mgr.launch(&handle, settings_clone, window_mgr).await {
+                if let Err(e) = launch_sidecar_mgr.launch(&sidecar_handle, settings_clone, sidecar_window_mgr.clone()).await {
                     log::error!("[Sidecar] Failed to launch: {}", e);
-                    let _ = window_mgr.show_crash_screen(&handle, &format!("Failed to start server: {}", e));
+                    let _ = sidecar_window_mgr.show_crash_screen(&sidecar_handle, &format!("Failed to start server: {}", e));
                 }
             });
 
             // Setup auto-updater
             let updater_mgr = updater_manager.clone();
-            let window_mgr = window_manager.clone();
-            let sidecar_mgr = sidecar_manager.clone();
+            let updater_handle = handle.clone();
             tauri::async_runtime::spawn(async move {
-                if let Err(e) = updater_mgr.setup(&handle, window_mgr, sidecar_mgr, settings).await {
+                if let Err(e) = updater_mgr.setup(&updater_handle, window_mgr, sidecar_mgr, settings).await {
                     log::error!("[Updater] Setup failed: {}", e);
                 }
             });
@@ -134,7 +136,7 @@ pub fn run() {
             match event {
                 tauri::WindowEvent::CloseRequested { api, .. } => {
                     if label == "main" {
-                        let settings = settings_manager.load();
+                        let settings = settings_manager.load(&window.app_handle());
                         if settings.minimize_to_tray && !sidecar_manager.is_shutdown() {
                             api.prevent_close();
                             let _ = window.hide();
@@ -144,8 +146,8 @@ pub fn run() {
                     }
                 }
                 tauri::WindowEvent::Focused(focused) => {
-                    if focused && label == "main" {
-                        window_manager.set_main_window_startup_ready(true);
+                    if *focused && label == "main" {
+                        window_manager.set_startup_ready(true);
                     }
                 }
                 tauri::WindowEvent::Resized(_) | tauri::WindowEvent::Moved(_) => {
@@ -153,18 +155,9 @@ pub fn run() {
                         let _ = window_manager.save_window_state(&window);
                     }
                 }
-                tauri::WindowEvent::Minimized => {
-                    window_manager.emit_to_main("window:minimized", ());
-                }
-                tauri::WindowEvent::Maximized => {
-                    window_manager.emit_to_main("window:maximized", ());
-                }
-                tauri::WindowEvent::Unmaximized => {
-                    window_manager.emit_to_main("window:unmaximized", ());
-                }
                 _ => {}
             }
         })
-        .build(tauri::generate_context!())
+        .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

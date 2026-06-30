@@ -1,25 +1,25 @@
 use std::sync::Arc;
-
-use log::{debug, error, info, warn};
+use log::{debug, info};
 use tauri::{
-    AppHandle, Emitter, Manager, Runtime, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent,
+    AppHandle, Emitter, Manager, Runtime, WebviewUrl, WebviewWindowBuilder, WindowEvent,
 };
 
-use crate::sidecar::SidecarManager;
 use crate::settings::{DesktopSettings, WindowBounds};
 
+#[allow(dead_code)]
 pub struct WindowManager {
-    startup_ready: Arc<tokio::sync::RwLock<bool>>,
-    should_maximize: Arc<tokio::sync::RwLock<bool>>,
-    is_shutdown: Arc<tokio::sync::RwLock<bool>>,
+    startup_ready: Arc<std::sync::RwLock<bool>>,
+    should_maximize: Arc<std::sync::RwLock<bool>>,
+    is_shutdown: Arc<std::sync::RwLock<bool>>,
 }
 
+#[allow(dead_code)]
 impl WindowManager {
     pub fn new() -> Self {
         Self {
-            startup_ready: Arc::new(tokio::sync::RwLock::new(false)),
-            should_maximize: Arc::new(tokio::sync::RwLock::new(false)),
-            is_shutdown: Arc::new(tokio::sync::RwLock::new(false)),
+            startup_ready: Arc::new(std::sync::RwLock::new(false)),
+            should_maximize: Arc::new(std::sync::RwLock::new(false)),
+            is_shutdown: Arc::new(std::sync::RwLock::new(false)),
         }
     }
 
@@ -51,7 +51,7 @@ impl WindowManager {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("[WindowManager] Creating main window");
 
-        *self.startup_ready.write() = false;
+        *self.startup_ready.write().unwrap() = false;
 
         let url = if is_dev {
             WebviewUrl::External("http://127.0.0.1:43210".parse().unwrap())
@@ -65,23 +65,15 @@ impl WindowManager {
             .min_inner_size(800.0, 600.0)
             .resizable(true)
             .fullscreen(false)
-            .visible(false)
-            .background_color(tauri::utils::Color::from_hex("#111111").unwrap())
-            .decorations(false)
-            .transparent(false)
-            .hidden_title(true);
+            .visible(true)
+            .background_color(tauri::window::Color(17, 17, 17, 255))
+            .decorations(true)
+            .transparent(false);
 
         #[cfg(target_os = "macos")]
         {
             if !is_dev {
                 builder = builder.title_bar_style(tauri::TitleBarStyle::HiddenInset);
-            }
-        }
-
-        #[cfg(target_os = "windows")]
-        {
-            if !is_dev {
-                builder = builder.title_bar_style(tauri::TitleBarStyle::Hidden);
             }
         }
 
@@ -104,41 +96,20 @@ impl WindowManager {
         window.on_window_event(move |event| {
             match event {
                 WindowEvent::CloseRequested { api, .. } => {
-                    let settings = crate::settings::SettingsManager::new().load();
+                    let settings = crate::settings::SettingsManager::new().load(&window_clone.app_handle());
                     if settings.minimize_to_tray {
                         api.prevent_close();
                         let _ = window_clone.hide();
                     }
                 }
-                WindowEvent::Minimized => {
-                    let _ = window_clone.emit("window:minimized", ());
-                }
-                WindowEvent::Hidden => {
-                    let _ = window_clone.emit("window:hidden", ());
-                }
-                WindowEvent::Maximized => {
-                    let _ = window_clone.emit("window:maximized", ());
-                }
-                WindowEvent::Unmaximized => {
-                    let _ = window_clone.emit("window:unmaximized", ());
-                }
-                WindowEvent::FullscreenChanged(fullscreen) => {
-                    let _ = window_clone.emit("window:fullscreen", fullscreen);
-                }
                 WindowEvent::Focused(focused) => {
                     debug!("[WindowManager] Main window focused: {}", focused);
                 }
-                WindowEvent::Resized(_) | WindowEvent::Moved(_) => {
-                    // Save window state - handled via IPC command
+                WindowEvent::Resized(_) => {
+                    let _ = window_clone.emit("window:fullscreen", window_clone.is_fullscreen().unwrap_or(false));
                 }
                 _ => {}
             }
-        });
-
-        window.once("ready-to-show", move |_| {
-            info!("[WindowManager] Main window ready-to-show");
-            let _ = window.show();
-            let _ = window.set_focus();
         });
 
         Ok(())
@@ -158,7 +129,7 @@ impl WindowManager {
             WebviewUrl::App("app://-/splashscreen".into())
         };
 
-        let window = WebviewWindowBuilder::new(app_handle, "splash", url)
+        WebviewWindowBuilder::new(app_handle, "splash", url)
             .title("KameHouse")
             .inner_size(800.0, 600.0)
             .resizable(false)
@@ -184,7 +155,7 @@ impl WindowManager {
             WebviewUrl::App("app://-/splashscreen/crash".into())
         };
 
-        let window = WebviewWindowBuilder::new(app_handle, "crash", url)
+        WebviewWindowBuilder::new(app_handle, "crash", url)
             .title("KameHouse - Error")
             .inner_size(800.0, 600.0)
             .resizable(false)
@@ -196,16 +167,16 @@ impl WindowManager {
         Ok(())
     }
 
-    pub fn finalize_startup(&self, app_handle: &AppHandle, source: &str) {
+    pub fn finalize_startup<R: Runtime>(&self, app_handle: &AppHandle<R>, source: &str) {
         info!("[WindowManager] Finalizing startup from: {}", source);
-        *self.startup_ready.write() = true;
+        *self.startup_ready.write().unwrap() = true;
 
         if let Some(splash) = app_handle.get_webview_window("splash") {
             let _ = splash.close();
         }
 
         // Show main window after a delay if not opening in background
-        let settings = crate::settings::SettingsManager::new().load();
+        let settings = crate::settings::SettingsManager::new().load(app_handle);
         if !settings.open_in_background {
             if let Some(main) = app_handle.get_webview_window("main") {
                 std::thread::spawn(move || {
@@ -217,7 +188,7 @@ impl WindowManager {
         }
     }
 
-    pub fn show_crash_screen(&self, app_handle: &AppHandle, message: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub fn show_crash_screen<R: Runtime>(&self, app_handle: &AppHandle<R>, message: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         if let Some(splash) = app_handle.get_webview_window("splash") {
             let _ = splash.close();
         }
@@ -234,9 +205,9 @@ impl WindowManager {
         Ok(())
     }
 
-    pub fn show_main_window(&self, app_handle: &AppHandle) {
+    pub fn show_main_window<R: Runtime>(&self, app_handle: &AppHandle<R>) {
         if let Some(window) = app_handle.get_webview_window("main") {
-            let settings = crate::settings::SettingsManager::new().load();
+            let settings = crate::settings::SettingsManager::new().load(app_handle);
 
             if window.is_minimized().unwrap_or(false) {
                 let _ = window.unminimize();
@@ -254,32 +225,61 @@ impl WindowManager {
         }
     }
 
-    pub fn hide_main_window(&self, app_handle: &AppHandle) {
+    pub fn hide_main_window<R: Runtime>(&self, app_handle: &AppHandle<R>) {
         if let Some(window) = app_handle.get_webview_window("main") {
             let _ = window.hide();
         }
     }
 
     pub fn set_shutdown(&self, val: bool) {
-        *self.is_shutdown.write() = val;
+        *self.is_shutdown.write().unwrap() = val;
     }
 
     pub fn is_shutdown(&self) -> bool {
-        *self.is_shutdown.read()
+        *self.is_shutdown.read().unwrap()
     }
 
     pub fn is_startup_ready(&self) -> bool {
-        *self.startup_ready.read()
+        *self.startup_ready.read().unwrap()
     }
 
     pub fn set_startup_ready(&self, val: bool) {
-        *self.startup_ready.write() = val;
+        *self.startup_ready.write().unwrap() = val;
     }
 
-    pub fn emit_to_main(&self, app_handle: &AppHandle, event: &str, payload: impl serde::Serialize) {
+    pub fn emit_to_main<R: Runtime>(&self, app_handle: &AppHandle<R>, event: &str, payload: impl serde::Serialize + Clone) {
         if let Some(main) = app_handle.get_webview_window("main") {
             let _ = main.emit(event, payload);
         }
+    }
+
+    pub fn save_window_state<R: Runtime>(&self, window: &tauri::Window<R>) -> Result<(), String> {
+        let is_maximized = window.is_maximized().unwrap_or(false);
+        
+        let position = window.outer_position().unwrap_or(tauri::PhysicalPosition { x: 0, y: 0 });
+        let size = window.inner_size().unwrap_or(tauri::PhysicalSize { width: 800, height: 600 });
+        
+        let bounds = if !is_maximized {
+            Some(WindowBounds {
+                x: position.x,
+                y: position.y,
+                width: size.width,
+                height: size.height,
+            })
+        } else {
+            None
+        };
+
+        let app_handle = window.app_handle();
+        let settings_manager = crate::settings::SettingsManager::new();
+        let mut settings = settings_manager.load(app_handle);
+        
+        settings.window_maximized = is_maximized;
+        if bounds.is_some() {
+            settings.window_bounds = bounds;
+        }
+        
+        settings_manager.save(app_handle, &settings)
     }
 }
 

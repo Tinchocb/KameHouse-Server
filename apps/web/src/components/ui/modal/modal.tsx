@@ -13,14 +13,14 @@ import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
 export const ModalAnatomy = defineStyleAnatomy({
     overlay: cva([
         "UI-Modal__overlay",
-        "fixed inset-0 z-50 bg-black/60 backdrop-blur-md transition-all duration-300",
+        "fixed inset-0 z-50 bg-surface/60 backdrop-blur-[var(--blur-overlay-xl)] transition-all duration-300",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         // "overflow-y-auto p-0 md:p-4 grid place-items-center",
     ]),
     content: cva([
         "UI-Modal__content",
-        "z-50 grid relative w-full shadow-2xl border border-white/5 max-w-lg gap-4 bg-[#0c1020]/55 backdrop-blur-2xl p-6 duration-200",
+        "z-50 grid relative w-full shadow-2xl border border-white/5 max-w-lg gap-4 bg-[#0c1020]/55 backdrop-blur-[var(--blur-overlay-md)] p-6 duration-200",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",

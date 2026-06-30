@@ -65,14 +65,14 @@ const STEPS = [
         title: "Local Anime Library",
         description: "Choose your anime library folders",
         icon: Folder,
-        gradient: "from-blue-500 to-cyan-500",
+        gradient: "from-blue-500 to-emerald-500",
     },
     {
         id: "features",
         title: "KameHouse Features",
         description: "Configure visual settings",
         icon: Sparkles,
-        gradient: "from-teal-500 to-blue-500",
+        gradient: "from-teal-500 to-emerald-500",
     },
 ]
 
@@ -142,7 +142,7 @@ function StepCard({ children, className }: CardProps) {
         <motion.div
             variants={itemVariants}
             className={cn(
-                "relative rounded-2xl bg-zinc-900/40 backdrop-blur-2xl border border-white/5 shadow-2xl overflow-hidden",
+                "relative rounded-2xl bg-zinc-900/40 backdrop-blur-[var(--blur-overlay-xl)] border border-white/5 shadow-2xl overflow-hidden",
                 className,
             )}
         >
@@ -192,7 +192,7 @@ function LibraryStep() {
     )
 }
 
-function FeaturesStep({ kamehouseFeatures, setKamehouseFeatures }: { 
+function FeaturesStep({ kamehouseFeatures, setKamehouseFeatures }: {
     kamehouseFeatures: { dynamicBackdrop: boolean },
     setKamehouseFeatures: React.Dispatch<React.SetStateAction<{ dynamicBackdrop: boolean }>>
 }) {
@@ -214,7 +214,7 @@ function FeaturesStep({ kamehouseFeatures, setKamehouseFeatures }: {
             {/* KameHouse unique features section */}
             <div className="max-w-2xl mx-auto pt-6">
                 {/* Dynamic Backdrop */}
-                <div 
+                <div
                     onClick={() => setKamehouseFeatures(prev => ({ ...prev, dynamicBackdrop: !prev.dynamicBackdrop }))}
                     className={cn(
                         "cursor-pointer p-6 rounded-2xl bg-zinc-900/40 hover:bg-zinc-800/40 border transition-all duration-200 text-left flex items-start space-x-5",
@@ -271,7 +271,7 @@ export function GettingStarted({ status }: { status: Status }) {
     if (isPending) return <LoadingOverlayWithLogo />
 
     return (
-        <div className="min-h-screen bg-zinc-950 relative flex items-center justify-center py-12 px-4 select-none">
+        <div className="w-full min-h-screen bg-zinc-950 relative flex items-center justify-center py-12 px-4 select-none">
             {/* Cinematic animated background gradients */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full bg-brand-orange/5 blur-[120px] mix-blend-screen animate-pulse" />

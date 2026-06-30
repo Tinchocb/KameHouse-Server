@@ -46,29 +46,33 @@ declare global {
             };
             localServer: {
                 getPort: () => Promise<number>;
-            },
+            };
             media?: {
-                setMetadata: (metadata: Record<string, unknown>) => Promise<boolean>
-                clearSession: () => Promise<boolean>
-                stopAllMedia: () => Promise<boolean>
-            }
+                setMetadata: (metadata: Record<string, unknown>) => Promise<boolean>;
+                clearSession: () => Promise<boolean>;
+                stopAllMedia: () => Promise<boolean>;
+            };
             on: (channel: string, callback: (...args: unknown[]) => void) => (() => void) | undefined;
-            // Send events
             emit: (channel: string, data?: unknown) => void;
-            // General send method
             send: (channel: string, ...args: unknown[]) => void;
             platform: NodeJS.Platform;
             shell: {
                 open: (url: string) => Promise<void>;
             };
             clipboard: {
-                writeText: (text: string) => Promise<void>;
+                writeText: (text: string) => Promise<boolean>;
             };
             checkForUpdates: () => Promise<unknown>;
             installUpdate: () => Promise<unknown>;
             killServer: () => Promise<unknown>;
+            settings: {
+                get: () => Promise<DesktopSettings>;
+                set: (settings: Partial<DesktopSettings>) => Promise<DesktopSettings>;
+            };
         };
 
         __isElectronDesktop__?: boolean;
+        __isTauriDesktop__?: boolean;
+        __TAURI__?: unknown;
     }
 }

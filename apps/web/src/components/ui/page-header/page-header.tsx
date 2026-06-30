@@ -15,7 +15,7 @@ const PageHeaderBase = React.forwardRef<HTMLDivElement, PageHeaderProps>((props,
         <header
             ref={ref}
             className={cn(
-                "flex items-center justify-between px-4 py-3 bg-background/80 backdrop-blur-md border-b border-border",
+                "flex items-center justify-between px-4 py-3 bg-surface/80 backdrop-blur-overlay-md border-b border-outline-variant shadow-elevation-1",
                 className
             )}
             {...rest}
@@ -24,7 +24,7 @@ const PageHeaderBase = React.forwardRef<HTMLDivElement, PageHeaderProps>((props,
                 {breadcrumbs ? (
                     breadcrumbs
                 ) : title ? (
-                    <h1 className="text-lg font-semibold text-white">{title}</h1>
+                    <h1 className="text-lg font-semibold text-on-surface">{title}</h1>
                 ) : null}
             </div>
 

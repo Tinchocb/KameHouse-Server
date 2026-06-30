@@ -52,7 +52,7 @@ excludes:
   - \.tizen-ui-builder-tool.xml
   - \.tproject
   - \.wgt
-  - tizen_web_project.yaml
+  - build.ps1
   - webUnitTest/*
 
 # project dependencies

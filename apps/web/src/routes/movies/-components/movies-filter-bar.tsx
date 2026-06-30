@@ -29,28 +29,28 @@ export function MoviesFilterBar({
     setSortOpen,
 }: MoviesFilterBarProps) {
     return (
-        <div className="w-full flex flex-col p-6 bg-[var(--glass-bg)] backdrop-blur-[var(--blur-card)] border border-[var(--glass-border)] rounded-2xl overflow-visible gap-6">
-            <h3 className="font-bebas text-2xl tracking-[0.15em] text-white/90 uppercase flex items-center justify-between flex-shrink-0">
+        <div className="w-full flex flex-col p-6 bg-[var(--glass-bg)] backdrop-blur-overlay-md border border-[var(--glass-border)] rounded-container overflow-visible gap-6">
+            <h3 className="font-bebas text-2xl tracking-[0.15em] text-on-surface/90 uppercase flex items-center justify-between flex-shrink-0">
                 <span>Filtrar</span>
-                <span className="text-[10px] font-mono font-bold tracking-normal text-zinc-400 lowercase px-2.5 py-0.5 bg-white/5 rounded-full">
+                <span className="text-[10px] font-mono font-bold tracking-normal text-on-surface-variant lowercase px-2.5 py-0.5 bg-surface-container/5 rounded-full">
                     {allMovies.length} películas
                 </span>
             </h3>
 
             {/* Search Input */}
             <div className="relative w-full group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-[var(--brand-secondary)] transition-colors" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant group-focus-within:text-brand-secondary transition-colors" />
                 <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Buscar Películas..."
-                    className="w-full bg-white/[0.05] hover:bg-white/[0.08] border border-white/10 rounded-xl pl-11 pr-10 py-3 text-[12px] font-sans font-medium tracking-wide text-white placeholder-zinc-400 focus:outline-none focus:border-[var(--brand-secondary)]/40 focus:bg-[var(--brand-secondary)]/5 focus:ring-4 focus:ring-brand-orange/10 transition-all duration-300"
+                    className="w-full bg-surface-container/5 hover:bg-surface-container/8 border border-outline-variant/10 rounded-xl pl-11 pr-10 py-3 text-[12px] font-sans font-medium tracking-wide text-on-surface placeholder-zinc-400 focus:outline-none focus:border-brand-secondary/40 focus:bg-brand-secondary/5 focus:ring-4 focus:ring-brand-orange/10 transition-all duration-300"
                 />
                 {searchQuery && (
                     <button
                         onClick={() => setSearchQuery("")}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-zinc-400 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-on-surface-variant hover:text-on-surface hover:bg-surface-container/10 rounded-full transition-colors"
                     >
                         <X className="w-3.5 h-3.5" />
                     </button>
@@ -59,18 +59,18 @@ export function MoviesFilterBar({
 
             {/* Sort Section */}
             <div className="flex flex-col gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Ordenar por</span>
+                <span className="text-[10px] font-black uppercase tracking-wider text-on-surface-variant">Ordenar por</span>
                 <div className="relative w-full">
                     <button
                         onClick={() => setSortOpen((o) => !o)}
-                        className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] border border-white/10 text-[11px] font-sans font-bold uppercase tracking-wider text-zinc-200 hover:text-white hover:border-white/20 transition-all duration-300"
+                        className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-surface-container/5 hover:bg-surface-container/8 border border-outline-variant/10 text-[11px] font-sans font-bold uppercase tracking-wider text-on-surface-variant hover:text-on-surface hover:border-outline-variant/20 transition-all duration-300"
                     >
                         <div className="flex items-center gap-2">
-                            <ArrowDownUp className="w-3.5 h-3.5 text-zinc-500" />
+                            <ArrowDownUp className="w-3.5 h-3.5 text-on-surface-variant" />
                             <span>{SORT_OPTIONS.find((s) => s.value === sortBy)?.label}</span>
                         </div>
                         <motion.span animate={{ rotate: sortOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                            <ChevronDown className="w-3.5 h-3.5 text-zinc-500" />
+                            <ChevronDown className="w-3.5 h-3.5 text-on-surface-variant" />
                         </motion.span>
                     </button>
 
@@ -81,7 +81,7 @@ export function MoviesFilterBar({
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.95, y: -4 }}
                                 transition={{ duration: 0.2, ease: "easeOut" }}
-                                className="absolute left-0 right-0 top-[calc(100%+6px)] bg-[#0f0f13]/95 backdrop-blur-[var(--blur-xl)] border border-white/10 rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.5)] z-50 overflow-hidden p-1.5"
+                                className="absolute left-0 right-0 top-[calc(100%+6px)] bg-surface/95 backdrop-blur-overlay-xl border border-outline-variant/10 rounded-xl shadow-elevation-5 z-50 overflow-hidden p-1.5"
                                 onMouseLeave={() => setSortOpen(false)}
                             >
                                 {SORT_OPTIONS.map((opt) => (
@@ -94,12 +94,12 @@ export function MoviesFilterBar({
                                         className={cn(
                                             "w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-[11px] font-sans font-bold tracking-wide transition-all duration-200",
                                             sortBy === opt.value
-                                                ? "text-[var(--brand-secondary)] bg-[var(--brand-secondary)]/10"
-                                                : "text-zinc-400 hover:text-white hover:bg-white/5"
+                                                ? "text-brand-secondary bg-brand-secondary/10"
+                                                : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container/5"
                                         )}
                                     >
                                         <span>{opt.label}</span>
-                                        {sortBy === opt.value && <div className="w-1.5 h-1.5 rounded-full bg-[var(--brand-secondary)]" />}
+                                        {sortBy === opt.value && <div className="w-1.5 h-1.5 rounded-full bg-brand-secondary" />}
                                     </button>
                                 ))}
                             </motion.div>
@@ -110,7 +110,7 @@ export function MoviesFilterBar({
 
             {/* Eras Section */}
             <div className="flex flex-col gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Eras</span>
+                <span className="text-[10px] font-black uppercase tracking-wider text-on-surface-variant">Eras</span>
                 <div className="flex flex-col gap-2">
                     {ERA_TABS.map((tab) => {
                         const count =
@@ -127,8 +127,8 @@ export function MoviesFilterBar({
                                 className={cn(
                                     "relative flex items-center justify-between h-11 pl-9 pr-4 text-[11px] font-sans font-bold tracking-wider uppercase rounded-xl transition-all duration-300 overflow-hidden select-none border w-full text-left",
                                     isActive
-                                        ? "text-white border-transparent"
-                                        : "text-zinc-400 border-white/5 bg-white/[0.02] hover:text-white hover:border-white/10 hover:bg-white/[0.05]"
+                                        ? "text-on-surface border-transparent"
+                                        : "text-on-surface-variant border-outline-variant/5 bg-surface-container/2 hover:text-on-surface hover:border-outline-variant/10 hover:bg-surface-container/5"
                                 )}
                                 style={isActive ? {
                                     backgroundColor: tab.color + "15",

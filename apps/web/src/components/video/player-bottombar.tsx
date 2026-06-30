@@ -191,26 +191,26 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
 
     return (
         <div className={cn(
-            "absolute bottom-4 inset-x-4 md:bottom-6 md:inset-x-6 flex flex-col pointer-events-auto select-none",
-            "bg-[var(--bg-primary)]/60 backdrop-blur-[var(--blur-player)] border border-white/10 rounded-2xl shadow-[var(--shadow-player)] px-5 py-3.5 z-30",
+            "absolute bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-4xl flex flex-col pointer-events-auto select-none",
+            "bg-surface-container/85 backdrop-blur-[var(--blur-overlay-xl)] border border-outline-variant rounded-full shadow-elevation-4 px-6 py-3 z-30",
         )}>
 
             {/* Progress Timeline */}
-            <div className="relative group/progress flex items-center h-3 md:h-3 cursor-pointer w-full mb-2 py-2.5 md:py-0 -my-2.5 md:my-0">
+            <div className="relative flex items-center h-3 md:h-3 cursor-pointer w-full mb-2 py-2.5 md:py-0 -my-2.5 md:my-0">
                 {showHeatmap && (
                     <TimelineHeatmap
                         duration={duration}
                         insights={insights}
-                        className="absolute bottom-0 inset-x-0 w-full h-3 opacity-15 pointer-events-none group-hover/progress:opacity-35 transition-all duration-300"
+                        className="absolute bottom-0 inset-x-0 w-full h-3 opacity-15 pointer-events-none transition-all duration-300"
                     />
                 )}
                 {/* Track background */}
-                <div className="w-full h-[2.5px] group-hover/progress:h-[4px] bg-white/10 rounded-full transition-all duration-200 relative flex items-center">
+                <div className="w-full h-[4px] bg-outline-variant/50 rounded-full relative flex items-center">
 
                     {/* Skip segment markers — rendered behind the playback bar */}
                     {duration > 0 && skipTimesOp && (
                         <div
-                            className="absolute top-0 bottom-0 bg-brand-orange/25 pointer-events-none rounded-sm"
+                            className="absolute top-0 bottom-0 bg-primary/25 pointer-events-none rounded-sm"
                             title={`Intro: ${Math.round(skipTimesOp.startTime)}s – ${Math.round(skipTimesOp.endTime)}s`}
                             style={{
                                 left: `${(skipTimesOp.startTime / duration) * 100}%`,
@@ -235,7 +235,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                         return (
                             <div
                                 key={idx}
-                                className="absolute top-0 bottom-0 w-[2px] bg-zinc-950 pointer-events-none z-20"
+                                className="absolute top-0 bottom-0 w-[2px] bg-surface pointer-events-none z-20"
                                 style={{
                                     left: `${(chapter.startTime / duration) * 100}%`,
                                 }}
@@ -246,11 +246,11 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
 
                     <div 
                         ref={progressBarRef}
-                        className="h-full bg-brand-orange rounded-full transition-all duration-100 relative"
+                        className="h-full bg-primary rounded-full transition-all duration-100 relative"
                         style={{ width: '0%' }}
                     >
-                        {/* Thumb indicator - sleek and shows on hover with scale transition */}
-                        <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 rounded-full bg-brand-orange border-2 border-white opacity-0 group-hover/progress:opacity-100 scale-90 group-hover/progress:scale-100 transition-all duration-200 shadow-md ring-2 ring-zinc-950/40 pointer-events-none" />
+                        {/* Thumb indicator - always visible but subtle */}
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 rounded-full bg-primary border-2 border-white opacity-60 scale-90 transition-all duration-200 shadow-md ring-2 ring-zinc-950/40 pointer-events-none" />
                     </div>
                 </div>
                 <input
@@ -281,7 +281,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                         tabIndex={0}
                         onClick={(e) => { e.stopPropagation(); togglePlay(); }}
                         aria-label={isPlaying ? "Pausar" : "Reproducir"}
-                        className="text-white hover:text-brand-orange transition-all duration-300 flex items-center justify-center w-10 h-10 md:w-8 md:h-8 bg-white/5 rounded-full hover:bg-white/10 active:scale-90 focus-visible:ring-2 focus-visible:ring-brand-orange focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950">
+                        className="text-white hover:text-primary transition-all duration-200 flex items-center justify-center w-10 h-10 md:w-8 md:h-8 rounded-full bg-surface-variant hover:bg-surface-container active:scale-[0.95] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
                         {isPlaying
                             ? <Pause className="w-4 h-4 md:w-3.5 md:h-3.5 fill-current" />
                             : <Play className="w-4 h-4 md:w-3.5 md:h-3.5 fill-current ml-0.5" />
@@ -292,13 +292,13 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
 
                     {/* Chapter Prev/Next navigation */}
                     {!isMovie && chapters && chapters.length > 0 && (
-                        <div className="flex items-center border-l border-white/10 pl-2 ml-1 [&>*:not(:first-child)]:ml-0.5">
+                        <div className="flex items-center border-l border-outline-variant pl-2 ml-1 [&>*:not(:first-child)]:ml-0.5">
                             <button
                                 tabIndex={0}
                                 onClick={(e) => { e.stopPropagation(); skipToPrevChapter?.(); }}
                                 aria-label="Capítulo anterior"
                                 title="Capítulo anterior [[ ]"
-                                className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-10 h-10 md:w-8 md:h-8 rounded-lg hover:bg-white/5 active:scale-90 duration-300 focus-visible:ring-2 focus-visible:ring-brand-orange focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950">
+                                className="text-on-surface-variant hover:text-on-surface transition-all flex items-center justify-center w-10 h-10 md:w-8 md:h-8 rounded-full hover:bg-surface-container active:scale-[0.95] duration-200 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
                                 <SkipBack className="w-4 h-4 md:w-3.5 md:h-3.5 fill-current" />
                             </button>
                             <button
@@ -306,7 +306,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                                 onClick={(e) => { e.stopPropagation(); skipToNextChapter?.(); }}
                                 aria-label="Siguiente capítulo"
                                 title="Siguiente capítulo [ ] ]"
-                                className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-10 h-10 md:w-8 md:h-8 rounded-lg hover:bg-white/5 active:scale-90 duration-300 focus-visible:ring-2 focus-visible:ring-brand-orange focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950">
+                                className="text-on-surface-variant hover:text-on-surface transition-all flex items-center justify-center w-10 h-10 md:w-8 md:h-8 rounded-full hover:bg-surface-container active:scale-[0.95] duration-200 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
                                 <SkipNextChapterIcon />
                             </button>
                         </div>
@@ -318,16 +318,16 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                             tabIndex={0}
                             onClick={(e) => { e.stopPropagation(); toggleMute(); }}
                             aria-label={isMuted || volume === 0 ? "Activar sonido" : "Silenciar"}
-                            className="text-zinc-500 hover:text-white transition-all flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 active:scale-90 duration-300 focus-visible:ring-2 focus-visible:ring-brand-orange focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950">
+                            className="text-on-surface-variant hover:text-on-surface transition-all flex items-center justify-center w-8 h-8 rounded-full hover:bg-surface-container active:scale-[0.95] duration-200 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
                             {isMuted || volume === 0 ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
                         </button>
                         <div className={cn(
                             "w-0 overflow-hidden transition-all duration-300 flex items-center h-5 pl-1",
                             tvMode ? "w-16" : "group-hover/volume:w-16"
                         )}>
-                            <div className="w-full h-[3px] bg-white/20 relative rounded-full flex items-center">
+                            <div className="w-full h-[3px] bg-outline-variant/50 relative rounded-full flex items-center">
                                 <div
-                                    className="absolute left-0 h-full bg-brand-orange rounded-full transition-all"
+                                    className="absolute left-0 h-full bg-primary rounded-full transition-all"
                                     style={{ width: `${isMuted ? 0 : volume * 100}%` }}
                                 />
                                 <input
@@ -342,14 +342,14 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                     </div>
 
                     {/* Time indicator */}
-                    <div className="flex items-center ml-1.5 text-xs font-medium tracking-wide tabular-nums text-zinc-400 font-sans [&>*:not(:first-child)]:ml-1.5">
-                        <span ref={timeTextRef} className="text-zinc-200">00:00</span>
-                        <span className="text-zinc-600">/</span>
-                        <span className="text-zinc-400">{formatTime(duration)}</span>
+                    <div className="flex items-center ml-1.5 text-xs font-medium tracking-wide tabular-nums text-on-surface-variant font-sans [&>*:not(:first-child)]:ml-1.5">
+                        <span ref={timeTextRef} className="text-on-surface">00:00</span>
+                        <span className="text-on-surface-variant/50">/</span>
+                        <span className="text-on-surface-variant">{formatTime(duration)}</span>
                         {!isMovie && activeChapter && (
                             <>
-                                <span className="text-zinc-600 ml-1">•</span>
-                                <span className="text-brand-orange font-bold uppercase tracking-wider text-[10px] ml-1 truncate max-w-[150px] md:max-w-[240px]" title={activeChapter}>
+                                <span className="text-on-surface-variant/50 ml-1">•</span>
+                                <span className="text-primary font-bold uppercase tracking-wider text-[10px] ml-1 truncate max-w-[150px] md:max-w-[240px]" title={activeChapter}>
                                     {activeChapter}
                                 </span>
                             </>

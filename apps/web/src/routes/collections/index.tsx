@@ -105,7 +105,7 @@ function CollectionsPage() {
     }
 
     return (
-        <div className="flex-1 w-full min-h-screen bg-transparent text-white overflow-hidden font-sans selection:bg-primary/30">
+        <div className="flex-1 w-full min-h-screen bg-transparent text-on-surface overflow-hidden font-sans selection:bg-primary/30">
             {/* Page Header */}
             <HeroSection
                 title={<>SAGAS<br /><span className="text-transparent stroke-text opacity-20">UNIFICADAS</span></>}
@@ -117,13 +117,13 @@ function CollectionsPage() {
             />
 
             {/* Controls */}
-            <div className="sticky top-0 z-30 bg-[#0b0f19]/60 border-b border-white/[0.04] backdrop-blur-2xl">
+            <div className="sticky top-0 z-30 bg-surface-container/60 border-b border-outline-variant/5 backdrop-blur-overlay-2xl">
                 <div className="px-8 md:px-16 py-3 flex flex-wrap gap-4 items-center justify-between">
                     {/* Search */}
                     <div className="relative group">
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-white transition-colors text-xs" />
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant/60 group-focus-within:text-on-surface transition-colors text-xs" />
                         <input
-                            className="pl-10 pr-4 py-2 bg-black hover:bg-zinc-900 border border-white/10 focus:border-white rounded-none text-sm outline-none transition-all duration-200 placeholder:text-zinc-700 w-64"
+                            className="pl-10 pr-4 py-2 bg-surface-container hover:bg-surface-container-high border border-outline-variant/10 focus:border-on-surface rounded-none text-sm outline-none transition-all duration-200 placeholder:text-on-surface-variant/40 w-64"
                             type="text"
                             value={search}
                             onChange={e => setSearch(e.target.value)}
@@ -142,7 +142,7 @@ function CollectionsPage() {
                         <EmptyState
                             title="No hay colecciones"
                             message={search ? "No hemos encontrado colecciones que coincidan con tu búsqueda." : "Aún no se han descubierto colecciones cinematográficas. Escanea películas en tu biblioteca para poblarlas."}
-                            illustration={<Layers className="w-20 h-20 text-zinc-800" />}
+                            illustration={<Layers className="w-20 h-20 text-on-surface-variant/20" />}
                         />
                     </div>
                 ) : (
@@ -200,17 +200,17 @@ const CollectionCassette = memo(function CollectionCassette({
 
     const accentStripeClass = cn(
         "absolute left-0 inset-y-0 w-1 transition-[background-color,box-shadow] duration-300",
-        isFullyWatched 
-            ? "bg-[#10b981] shadow-[0_0_8px_rgba(16,185,129,0.6)]" 
-            : isFullyLocal 
-                ? "bg-[var(--brand-secondary)] shadow-[0_0_8px_rgba(255,107,0,0.6)]" 
+        isFullyWatched
+            ? "bg-brand-success shadow-[0_0_8px_hsl(var(--era-dbs-hsl)/0.6)]"
+            : isFullyLocal
+                ? "bg-brand-secondary shadow-[0_0_8px_hsl(var(--era-dbz-hsl)/0.6)]"
                 : "bg-yellow-500"
     )
 
-    const stateColorClass = isFullyWatched 
-        ? "text-[#10b981]" 
-        : isFullyLocal 
-            ? "text-[var(--brand-secondary)]" 
+    const stateColorClass = isFullyWatched
+        ? "text-brand-success"
+        : isFullyLocal
+            ? "text-brand-secondary"
             : "text-yellow-500"
 
     return (
@@ -235,7 +235,7 @@ const CollectionCassette = memo(function CollectionCassette({
             >
                 {/* Spine */}
                 <div
-                    className="absolute inset-y-0 left-0 flex flex-col justify-between overflow-hidden border border-white/20 bg-black"
+                    className="absolute inset-y-0 left-0 flex flex-col justify-between overflow-hidden border border-outline-variant/20 bg-surface-container"
                     style={{
                         width: SPINE_W,
                     }}
@@ -246,12 +246,12 @@ const CollectionCassette = memo(function CollectionCassette({
                     {/* Size badge */}
                     <div className="mt-4 ml-4 flex items-center gap-1">
                         <Layers className={cn("text-[8px] transition-colors", stateColorClass)} />
-                        <span className="text-[9px] font-black tabular-nums text-zinc-400">{count} PARTES</span>
+                        <span className="text-[9px] font-black tabular-nums text-on-surface-variant">{count} PARTES</span>
                     </div>
 
                     {/* Title rotated */}
                     <span
-                        className="flex-1 text-[10px] font-black text-zinc-300 tracking-widest whitespace-nowrap px-2 py-4 uppercase"
+                        className="flex-1 text-[10px] font-black text-on-surface-variant/80 tracking-widest whitespace-nowrap px-2 py-4 uppercase"
                         style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", textOverflow: "ellipsis", overflow: "hidden" }}
                     >
                         {coll.name}
@@ -259,13 +259,13 @@ const CollectionCassette = memo(function CollectionCassette({
 
                     {/* Footer decoration */}
                     <div className="mb-3 ml-3 flex items-center justify-center">
-                        <span className="text-[8px] font-black text-zinc-700 tracking-wider">SAGA</span>
+                        <span className="text-[8px] font-black text-on-surface-variant/40 tracking-wider">SAGA</span>
                     </div>
                 </div>
 
                 {/* Cover */}
                 <div
-                    className="absolute inset-y-0 right-0 overflow-hidden border border-white/20 cursor-pointer bg-black"
+                    className="absolute inset-y-0 right-0 overflow-hidden border border-outline-variant/20 cursor-pointer bg-surface-container"
                     style={{ left: SPINE_W }}
                     onClick={() => onNavigate(coll.tmdbCollectionId)}
                 >
@@ -285,7 +285,7 @@ const CollectionCassette = memo(function CollectionCassette({
 
                     {/* Hover info overlay */}
                     <div 
-                        className="absolute inset-0 flex flex-col justify-end p-5 opacity-0 group-hover/item:opacity-100 bg-black/95"
+                        className="absolute inset-0 flex flex-col justify-end p-5 opacity-0 group-hover/item:opacity-100 bg-surface-container/95"
                         style={{
                             transition: "opacity 500ms cubic-bezier(0.16, 1, 0.3, 1)",
                             willChange: "opacity",
@@ -295,7 +295,7 @@ const CollectionCassette = memo(function CollectionCassette({
                         {/* Sello Retro SAGA COMPLETADA */}
                         {isFullyWatched && (
                             <div className="absolute top-5 right-5 z-20 pointer-events-none select-none transition-all duration-500 rotate-[-12deg] scale-100">
-                                <span className="block px-2 py-1 border border-[#10b981]/50 text-[#10b981] text-[8px] font-black uppercase tracking-widest rounded bg-[#10b981]/5 backdrop-blur-sm shadow-[0_4px_10px_rgba(16,185,129,0.15)]">
+                                <span className="block px-2 py-1 border border-brand-success/50 text-brand-success text-[8px] font-black uppercase tracking-widest rounded bg-brand-success/5 backdrop-blur-overlay-sm shadow-[0_4px_10px_hsl(var(--era-dbs-hsl)/0.15)]">
                                     COMPLETADA
                                 </span>
                             </div>
@@ -311,21 +311,21 @@ const CollectionCassette = memo(function CollectionCassette({
                         </button>
 
                         {/* Title */}
-                        <h3 className="text-[16px] font-black text-white leading-tight mb-3 uppercase tracking-tight line-clamp-2">
+                        <h3 className="text-[16px] font-black text-on-surface leading-tight mb-3 uppercase tracking-tight line-clamp-2">
                             {coll.name}
                         </h3>
 
                         {/* Library Stats */}
                         <div className="flex flex-wrap gap-1.5 mb-4">
-                            <span className="flex items-center gap-1 text-[8px] font-black px-2 py-1 bg-zinc-800 text-zinc-300 uppercase tracking-widest border border-white/5">
+                            <span className="flex items-center gap-1 text-[8px] font-black px-2 py-1 bg-surface-container text-on-surface-variant/80 uppercase tracking-widest border border-outline-variant/5">
                                 <ListOrdered className="text-[7px]" /> {count} PARTES
                             </span>
                             {localMembers > 0 && (
                                 <span className={cn(
                                     "flex items-center gap-1 text-[8px] font-black px-2 py-1 uppercase tracking-widest border transition-all duration-300",
                                     isFullyLocal
-                                        ? "bg-[#ff6b00]/10 text-[var(--brand-secondary)] border-[var(--brand-secondary)]/30 shadow-[0_0_8px_rgba(255,107,0,0.15)]"
-                                        : "bg-zinc-800/40 text-zinc-400 border-white/5"
+                                        ? "bg-brand-secondary/10 text-brand-secondary border-brand-secondary/30 shadow-[0_0_8px_hsl(var(--era-dbz-hsl)/0.15)]"
+                                        : "bg-surface-container-low text-on-surface-variant border-outline-variant/5"
                                 )}>
                                     {localMembers}/{totalMembers} LOCAL
                                 </span>
@@ -334,8 +334,8 @@ const CollectionCassette = memo(function CollectionCassette({
                                 <span className={cn(
                                     "flex items-center gap-1 text-[8px] font-black px-2 py-1 uppercase tracking-widest border transition-all duration-300",
                                     isFullyWatched
-                                        ? "bg-[#10b981]/10 text-[#10b981] border-[#10b981]/30 shadow-[0_0_8px_rgba(16,185,129,0.15)]"
-                                        : "bg-zinc-800/40 text-zinc-400 border-white/5"
+                                        ? "bg-brand-success/10 text-brand-success border-brand-success/30 shadow-[0_0_8px_hsl(var(--era-dbs-hsl)/0.15)]"
+                                        : "bg-surface-container-low text-on-surface-variant border-outline-variant/5"
                                 )}>
                                     {watchedMembers}/{totalMembers} VISTAS
                                 </span>
@@ -344,7 +344,7 @@ const CollectionCassette = memo(function CollectionCassette({
 
                         {/* Description */}
                         {coll.overview && (
-                            <p className="text-[12px] text-zinc-400 leading-relaxed line-clamp-4 font-medium">
+                            <p className="text-[12px] text-on-surface-variant leading-relaxed line-clamp-4 font-medium">
                                 {coll.overview}
                             </p>
                         )}
@@ -357,7 +357,7 @@ const CollectionCassette = memo(function CollectionCassette({
                             transition: "opacity 400ms cubic-bezier(0.16, 1, 0.3, 1)",
                         }}
                     >
-                        <p className="text-[11px] font-black text-white uppercase tracking-wider line-clamp-1">
+                        <p className="text-[11px] font-black text-on-surface uppercase tracking-wider line-clamp-1">
                             {coll.name}
                         </p>
                     </div>
@@ -365,7 +365,7 @@ const CollectionCassette = memo(function CollectionCassette({
 
                 {/* Drop shadow beneath cassette */}
                 <div
-                    className="absolute -bottom-6 left-4 right-4 h-6 opacity-0 group-hover/item:opacity-100 blur-xl bg-white/10"
+                    className="absolute -bottom-6 left-4 right-4 h-6 opacity-0 group-hover/item:opacity-100 blur-xl bg-on-surface/10"
                     style={{
                         transition: "opacity 600ms cubic-bezier(0.16, 1, 0.3, 1)",
                     }}
@@ -381,7 +381,7 @@ function ShelfSkeleton() {
             {Array.from({ length: 5 }).map((_, i) => (
                 <div
                     key={i}
-                    className="shrink-0 rounded-none animate-pulse bg-white/[0.03] border border-white/5"
+                    className="shrink-0 rounded-none animate-pulse bg-surface-container/5 border border-outline-variant/5"
                     style={{
                         width: CASSETTE_W,
                         height: CASSETTE_H + ((i * 7) % 21),

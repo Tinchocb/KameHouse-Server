@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use log::{debug, error, info, warn};
+use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, Runtime};
 
@@ -42,13 +42,13 @@ impl Default for DesktopSettings {
 }
 
 pub struct SettingsManager {
-    settings: Arc<tokio::sync::RwLock<DesktopSettings>>,
+    settings: Arc<std::sync::RwLock<DesktopSettings>>,
 }
 
 impl SettingsManager {
     pub fn new() -> Self {
         Self {
-            settings: Arc::new(tokio::sync::RwLock::new(DesktopSettings::default())),
+            settings: Arc::new(std::sync::RwLock::new(DesktopSettings::default())),
         }
     }
 
@@ -56,7 +56,7 @@ impl SettingsManager {
         let app_data = app_handle
             .path()
             .app_data_dir()
-            .unwrap_or_else(|| {
+            .unwrap_or_else(|_| {
                 dirs::data_dir()
                     .unwrap_or_else(|| std::env::current_dir().unwrap_or_default())
                     .join("KameHouse")
@@ -70,14 +70,14 @@ impl SettingsManager {
     }
 
     pub fn load_from_path(&self, path: &PathBuf) -> DesktopSettings {
-        let mut settings = self.settings.blocking_write();
+        let mut settings = self.settings.write().unwrap();
 
         if path.exists() {
             match std::fs::read_to_string(path) {
                 Ok(content) => {
                     match serde_json::from_str::<DesktopSettings>(&content) {
                         Ok(loaded) => {
-                            *settings = { let mut merged = DesktopSettings::default(); merged.window_bounds = loaded.window_bounds; merged };
+                            *settings = { let mut merged = DesktopSettings::default(); merged.window_bounds = loaded.window_bounds.clone(); merged };
                             settings.minimize_to_tray = loaded.minimize_to_tray;
                             settings.open_in_background = loaded.open_in_background;
                             settings.open_at_launch = loaded.open_at_launch;
@@ -185,7 +185,7 @@ impl SettingsManager {
         let json = serde_json::to_string_pretty(settings).map_err(|e| e.to_string())?;
         std::fs::write(path, json).map_err(|e| e.to_string())?;
 
-        *self.settings.blocking_write() = settings.clone();
+        *self.settings.write().unwrap() = settings.clone();
         Ok(())
     }
 }

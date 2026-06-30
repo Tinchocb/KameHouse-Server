@@ -80,7 +80,7 @@ export function HeroBanner({
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
             className={cn(
-                "relative w-full overflow-hidden bg-zinc-950 group/hero flex items-end",
+                "relative w-full overflow-hidden bg-surface group/hero flex items-end",
                 "h-[90vh] md:h-[95dvh] min-h-[780px] max-h-[1100px]",
                 className
             )}
@@ -152,13 +152,13 @@ export function HeroBanner({
                                 {activeItem.year && <span>{activeItem.year}</span>}
                                 {activeItem.format && (
                                     <>
-                                        <div className="h-1 w-1 rounded-full bg-white/20" />
+                                        <div className="h-1 w-1 rounded-full bg-on-surface/20" />
                                         <span>{activeItem.format}</span>
                                     </>
                                 )}
                                 {activeItem.rating && (
                                     <>
-                                        <div className="h-1 w-1 rounded-full bg-white/20" />
+                                        <div className="h-1 w-1 rounded-full bg-on-surface/20" />
                                         <span className="text-emerald-400">{(activeItem.rating * 10).toFixed(0)}% Match</span>
                                     </>
                                 )}
@@ -190,7 +190,7 @@ export function HeroBanner({
                                     whileHover={{ scale: 1.03 }}
                                     whileTap={{ scale: 0.97 }}
                                     onClick={activeItem.onMoreInfo}
-                                    className="flex items-center bg-white/[0.03] backdrop-blur-md text-white px-10 py-4 rounded-xl border border-white/10 font-bebas text-xl uppercase tracking-wider hover:bg-white/[0.08] hover:border-white/25 transition-all duration-300 [&>*:not(:first-child)]:ml-4"
+                                    className="flex items-center bg-surface-container backdrop-blur-[var(--blur-overlay-sm)] text-white px-10 py-4 rounded-xl border border-white/10 font-bebas text-xl uppercase tracking-wider hover:bg-white/[0.08] hover:border-white/25 transition-all duration-300 [&>*:not(:first-child)]:ml-4"
                                 >
                                     <Info size={20} />
                                     <span>Detalles</span>
@@ -213,7 +213,7 @@ export function HeroBanner({
                                 e.stopPropagation()
                                 handlePrev()
                             }}
-                            className="pointer-events-auto flex items-center justify-center w-14 h-14 rounded-full bg-zinc-900/40 backdrop-blur-md border border-white/5 text-white/70 hover:text-white transition-all duration-300 shadow-2xl"
+                            className="pointer-events-auto flex items-center justify-center w-14 h-14 rounded-full bg-zinc-900/40 backdrop-blur-[var(--blur-overlay-sm)] border border-white/5 text-white/70 hover:text-white transition-all duration-300 shadow-2xl"
                             aria-label="Previous Slide"
                         >
                             <ChevronLeft size={28} />
@@ -229,7 +229,7 @@ export function HeroBanner({
                                 e.stopPropagation()
                                 handleNext()
                             }}
-                            className="pointer-events-auto flex items-center justify-center w-14 h-14 rounded-full bg-zinc-900/40 backdrop-blur-md border border-white/5 text-white/70 hover:text-white transition-all duration-300 shadow-2xl"
+                            className="pointer-events-auto flex items-center justify-center w-14 h-14 rounded-full bg-zinc-900/40 backdrop-blur-[var(--blur-overlay-sm)] border border-white/5 text-white/70 hover:text-white transition-all duration-300 shadow-2xl"
                             aria-label="Next Slide"
                         >
                             <ChevronRight size={28} />

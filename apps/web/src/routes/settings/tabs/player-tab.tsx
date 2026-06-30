@@ -1,5 +1,4 @@
 import React from "react"
-import { GlassCard } from "@/components/ui"
 import { Section, Card, OsToggle } from "../components"
 import { type Control, Controller } from "react-hook-form"
 import { type SettingsFormValues } from "../index"
@@ -15,7 +14,7 @@ export function PlayerTab({ control }: PlayerTabProps) {
         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 outline-none">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Configuración de Player */}
-                <GlassCard variant="elevated" padding="lg" radius="2xl" className="space-y-5">
+                <div className="bg-surface-container rounded-container p-6 shadow-elevation-1 space-y-5">
                     <h3 className="text-sm font-bold text-[#ff6e3a] uppercase tracking-wide">Reproductor por Defecto</h3>
 
                     <Controller
@@ -34,7 +33,7 @@ export function PlayerTab({ control }: PlayerTabProps) {
                                         className={`flex items-start gap-4 p-4 rounded-xl border transition-all duration-300 cursor-pointer ${
                                             field.value === player.id
                                                 ? "border-[#ff6e3a]/30 bg-[#ff6e3a]/[0.03] bg-[radial-gradient(ellipse_at_left,rgba(255,110,58,0.04),transparent_70%)]"
-                                                : "border-[var(--glass-border)] hover:border-[var(--glass-strong)] hover:bg-[var(--bg-quaternary)]/40"
+                                                : "border-outline-variant hover:border-outline-variant hover:bg-surface-container-high"
                                         }`}
                                         onClick={() => field.onChange(player.id)}
                                     >
@@ -51,35 +50,35 @@ export function PlayerTab({ control }: PlayerTabProps) {
                                         <div className="-mt-0.5">
                                             <label
                                                 htmlFor={`player-radio-${player.id}`}
-                                                className="text-xs font-bold text-white block tracking-tight cursor-pointer"
+                                                className="text-xs font-bold text-on-surface block tracking-tight cursor-pointer"
                                             >
                                                 {player.label}
                                             </label>
-                                            <span className="text-[10px] text-zinc-500 block mt-0.5">{player.desc}</span>
+                                            <span className="text-[10px] text-on-surface-variant block mt-0.5">{player.desc}</span>
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         )}
                     />
-                </GlassCard>
+                </div>
 
                 {/* Configuración VLC */}
-                <GlassCard variant="elevated" padding="lg" radius="2xl" className="space-y-5">
-                    <h3 className="text-sm font-bold text-zinc-400 uppercase tracking-wide">Conexión VLC</h3>
+                <div className="bg-surface-container rounded-container p-6 shadow-elevation-1 space-y-5">
+                    <h3 className="text-sm font-bold text-on-surface-variant uppercase tracking-wide">Conexión VLC</h3>
 
                     <Controller
                         control={control}
                         name="mediaPlayer.host"
                         render={({ field }) => (
                             <div className="flex flex-col gap-2">
-                                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">Host / IP</label>
+                                <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider font-mono">Host / IP</label>
                                 <input
                                     type="text"
                                     value={field.value || "localhost"}
                                     onChange={field.onChange}
                                     placeholder="localhost o 192.168.1.x"
-                                    className="w-full bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 text-xs text-zinc-300 font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
+                                    className="w-full bg-surface-container border border-outline-variant rounded-xl px-4 py-2.5 text-xs text-on-surface-variant font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
                                 />
                             </div>
                         )}
@@ -91,12 +90,12 @@ export function PlayerTab({ control }: PlayerTabProps) {
                             name="mediaPlayer.vlcPort"
                             render={({ field }) => (
                                 <div className="flex flex-col gap-2">
-                                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">Puerto</label>
+                                    <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider font-mono">Puerto</label>
                                     <input
                                         type="number"
                                         value={field.value || 8080}
                                         onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                        className="w-full bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 text-xs text-zinc-300 font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
+                                        className="w-full bg-surface-container border border-outline-variant rounded-xl px-4 py-2.5 text-xs text-on-surface-variant font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
                                     />
                                 </div>
                             )}
@@ -106,13 +105,13 @@ export function PlayerTab({ control }: PlayerTabProps) {
                             name="mediaPlayer.vlcUsername"
                             render={({ field }) => (
                                 <div className="flex flex-col gap-2">
-                                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">Usuario</label>
+                                    <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider font-mono">Usuario</label>
                                     <input
                                         type="text"
                                         value={field.value || ""}
                                         onChange={field.onChange}
                                         placeholder="(vacío = sin auth)"
-                                        className="w-full bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 text-xs text-zinc-300 font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
+                                        className="w-full bg-surface-container border border-outline-variant rounded-xl px-4 py-2.5 text-xs text-on-surface-variant font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
                                     />
                                 </div>
                             )}
@@ -124,13 +123,13 @@ export function PlayerTab({ control }: PlayerTabProps) {
                         name="mediaPlayer.vlcPassword"
                         render={({ field }) => (
                             <div className="flex flex-col gap-2">
-                                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">Contraseña</label>
+                                <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider font-mono">Contraseña</label>
                                 <input
                                     type="password"
                                     value={field.value || ""}
                                     onChange={field.onChange}
                                     placeholder="(vacío = sin auth)"
-                                    className="w-full bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 text-xs text-zinc-300 font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
+                                    className="w-full bg-surface-container border border-outline-variant rounded-xl px-4 py-2.5 text-xs text-on-surface-variant font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
                                 />
                             </div>
                         )}
@@ -141,23 +140,23 @@ export function PlayerTab({ control }: PlayerTabProps) {
                         name="mediaPlayer.vlcPath"
                         render={({ field }) => (
                             <div className="flex flex-col gap-2">
-                                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">Ruta VLC (opcional)</label>
+                                <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider font-mono">Ruta VLC (opcional)</label>
                                 <input
                                     type="text"
                                     value={field.value || ""}
                                     onChange={field.onChange}
                                     placeholder="Ej. C:\Program Files\VideoLAN\VLC\vlc.exe"
-                                    className="w-full bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 text-xs text-zinc-300 font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
+                                    className="w-full bg-surface-container border border-outline-variant rounded-xl px-4 py-2.5 text-xs text-on-surface-variant font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)] transition-all"
                                 />
                             </div>
                         )}
                     />
-                </GlassCard>
+                </div>
             </div>
 
             {/* Reproducción */}
             <Section label="Comportamiento de Reproducción">
-                <Card className="divide-y divide-white/[0.03]">
+                <Card className="divide-y divide-outline-variant/3">
                     <Controller
                         control={control}
                         name="library.autoPlayNextEpisode"
@@ -199,7 +198,7 @@ export function PlayerTab({ control }: PlayerTabProps) {
 
             {/* Traducción */}
             <Section label="Voice Control / Traducción">
-                <Card className="divide-y divide-white/[0.03]">
+                <Card className="divide-y divide-outline-variant/3">
                     <Controller
                         control={control}
                         name="mediaPlayer.vcTranslate"
@@ -217,22 +216,22 @@ export function PlayerTab({ control }: PlayerTabProps) {
 
             {/* MPC / MPV Paths */}
             <Section label="Rutas de Reproductores Alternativos">
-                <Card className="divide-y divide-white/[0.04]">
+                <Card className="divide-y divide-outline-variant/4">
                     <Controller
                         control={control}
                         name="mediaPlayer.mpcPath"
                         render={({ field }) => (
-                            <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 hover:bg-white/[0.01] transition-all duration-200 gap-5">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 hover:bg-surface-variant/[0.01] transition-all duration-200 gap-5">
                                 <div className="space-y-0.5 flex-1 max-w-xl">
-                                    <label className="text-sm font-semibold text-zinc-200 tracking-tight">Ruta MPC-HC / MPC-BE</label>
-                                    <p className="text-xs text-zinc-500 font-medium">Ubicación del binario MPC en Windows.</p>
+                                    <label className="text-sm font-semibold text-on-surface tracking-tight">Ruta MPC-HC / MPC-BE</label>
+                                    <p className="text-xs text-on-surface-variant font-medium">Ubicación del binario MPC en Windows.</p>
                                 </div>
                                 <input
                                     type="text"
                                     placeholder="C:\Program Files\MPC-HC\mpc-hc64.exe"
                                     value={field.value || ""}
                                     onChange={field.onChange}
-                                    className="bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 w-full md:w-72 text-white placeholder-zinc-600 text-xs font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)]"
+                                    className="bg-surface-container border border-outline-variant rounded-xl px-4 py-2.5 w-full md:w-72 text-on-surface placeholder:text-on-surface-variant/60 text-xs font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)]"
                                 />
                             </div>
                         )}
@@ -241,17 +240,17 @@ export function PlayerTab({ control }: PlayerTabProps) {
                         control={control}
                         name="mediaPlayer.mpvPath"
                         render={({ field }) => (
-                            <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 hover:bg-white/[0.01] transition-all duration-200 gap-5">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 hover:bg-surface-variant/[0.01] transition-all duration-200 gap-5">
                                 <div className="space-y-0.5 flex-1 max-w-xl">
-                                    <label className="text-sm font-semibold text-zinc-200 tracking-tight">Ruta MPV</label>
-                                    <p className="text-xs text-zinc-500 font-medium">Ubicación del binario MPV.</p>
+                                    <label className="text-sm font-semibold text-on-surface tracking-tight">Ruta MPV</label>
+                                    <p className="text-xs text-on-surface-variant font-medium">Ubicación del binario MPV.</p>
                                 </div>
                                 <input
                                     type="text"
                                     placeholder="Ej. /usr/bin/mpv o C:\mpv\mpv.exe"
                                     value={field.value || ""}
                                     onChange={field.onChange}
-                                    className="bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 w-full md:w-72 text-white placeholder-zinc-600 text-xs font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)]"
+                                    className="bg-surface-container border border-outline-variant rounded-xl px-4 py-2.5 w-full md:w-72 text-on-surface placeholder:text-on-surface-variant/60 text-xs font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)]"
                                 />
                             </div>
                         )}
@@ -260,17 +259,17 @@ export function PlayerTab({ control }: PlayerTabProps) {
                         control={control}
                         name="mediaPlayer.mpvSocket"
                         render={({ field }) => (
-                            <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 hover:bg-white/[0.01] transition-all duration-200 gap-5">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 hover:bg-surface-variant/[0.01] transition-all duration-200 gap-5">
                                 <div className="space-y-0.5 flex-1 max-w-xl">
-                                    <label className="text-sm font-semibold text-zinc-200 tracking-tight">Socket IPC MPV</label>
-                                    <p className="text-xs text-zinc-500 font-medium">Ruta del socket para comunicación con MPV.</p>
+                                    <label className="text-sm font-semibold text-on-surface tracking-tight">Socket IPC MPV</label>
+                                    <p className="text-xs text-on-surface-variant font-medium">Ruta del socket para comunicación con MPV.</p>
                                 </div>
                                 <input
                                     type="text"
                                     placeholder="Ej. \\.\pipe\mpv_ipc (Windows) o /tmp/mpv_socket (Linux)"
                                     value={field.value || ""}
                                     onChange={field.onChange}
-                                    className="bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 w-full md:w-72 text-white placeholder-zinc-600 text-xs font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)]"
+                                    className="bg-surface-container border border-outline-variant rounded-xl px-4 py-2.5 w-full md:w-72 text-on-surface placeholder:text-on-surface-variant/60 text-xs font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)]"
                                 />
                             </div>
                         )}
@@ -279,17 +278,17 @@ export function PlayerTab({ control }: PlayerTabProps) {
                         control={control}
                         name="mediaPlayer.iinaPath"
                         render={({ field }) => (
-                            <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 hover:bg-white/[0.01] transition-all duration-200 gap-5">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between px-6 py-4 hover:bg-surface-variant/[0.01] transition-all duration-200 gap-5">
                                 <div className="space-y-0.5 flex-1 max-w-xl">
-                                    <label className="text-sm font-semibold text-zinc-200 tracking-tight">Ruta IINA (macOS)</label>
-                                    <p className="text-xs text-zinc-500 font-medium">Ubicación del binario IINA en macOS.</p>
+                                    <label className="text-sm font-semibold text-on-surface tracking-tight">Ruta IINA (macOS)</label>
+                                    <p className="text-xs text-on-surface-variant font-medium">Ubicación del binario IINA en macOS.</p>
                                 </div>
                                 <input
                                     type="text"
                                     placeholder="/Applications/IINA.app/Contents/MacOS/iina-cli"
                                     value={field.value || ""}
                                     onChange={field.onChange}
-                                    className="bg-[var(--bg-quaternary)]/60 border border-[var(--glass-strong)] rounded-xl px-4 py-2.5 w-full md:w-72 text-white placeholder-zinc-600 text-xs font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)]"
+                                    className="bg-surface-container border border-outline-variant rounded-xl px-4 py-2.5 w-full md:w-72 text-on-surface placeholder:text-on-surface-variant/60 text-xs font-mono focus:outline-none focus:border-[#ff6e3a]/50 focus:shadow-[0_0_20px_rgba(255,110,58,0.12)]"
                                 />
                             </div>
                         )}

@@ -168,14 +168,15 @@ export function usePlayerHls({
         const isTv = typeof navigator !== "undefined" && (
             /SmartTV/i.test(navigator.userAgent) ||
             /Tizen/i.test(navigator.userAgent) ||
+            /WebOS/i.test(navigator.userAgent) ||
             /Web0S/i.test(navigator.userAgent)
         )
         const canPlayNatively = video.canPlayType("application/vnd.apple.mpegurl") !== ""
 
-        if (isHlsUrl && (!isTv || !canPlayNatively) && Hls.isSupported()) {
+        if (isHlsUrl && Hls.isSupported()) {
             // ... (keep HLS setup as is)
             const hls = new Hls({
-                enableWorker: true,
+                enableWorker: !isTv,
 
                 // VOD buffer strategy (Netflix/Plex style).
                 // lowLatencyMode is intentionally omitted — it is designed for live

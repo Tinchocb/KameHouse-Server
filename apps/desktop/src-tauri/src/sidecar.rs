@@ -1,12 +1,12 @@
 use std::path::PathBuf;
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
 use log::{debug, error, info, warn};
 use tauri::{AppHandle, Manager, Runtime};
-use tokio::process::Child;
+use tokio::process::{Child, Command};
 use tokio::sync::Mutex;
 use tokio::time::timeout;
 
@@ -72,10 +72,12 @@ impl SidecarManager {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_base_url(&self) -> String {
         format!("http://{}:{}", DESKTOP_SERVER_HOST, self.get_port())
     }
 
+    #[allow(dead_code)]
     async fn is_server_reachable(&self) -> bool {
         let url = format!("{}/api/v1/status", self.get_base_url());
         let client = reqwest::Client::new();
@@ -104,7 +106,7 @@ impl SidecarManager {
         }
     }
 
-    fn get_binary_path(&self, app_handle: &AppHandle) -> PathBuf {
+    fn get_binary_path<R: Runtime>(&self, app_handle: &AppHandle<R>) -> PathBuf {
         let binary_name = self.get_binary_name();
         if self.is_dev {
             // In dev, the binary is in the server directory at the root of the monorepo
@@ -212,16 +214,14 @@ impl SidecarManager {
         // Take stdout and stderr
         let stdout = child.stdout.take();
         let stderr = child.stderr.take();
-        let process_arc = self.process.clone();
         let dynamic_port = self.dynamic_port.clone();
         let status = self.status.clone();
         let startup_resolved = self.startup_resolved.clone();
-        let is_shutdown = self.is_shutdown.clone();
         let window_manager_clone = window_manager.clone();
         let app_handle_clone = app_handle.clone();
 
         // Handle stdout
-        if let Some(mut stdout) = stdout {
+        if let Some(stdout) = stdout {
             let dynamic_port = dynamic_port.clone();
             let status = status.clone();
             let startup_resolved = startup_resolved.clone();
@@ -262,7 +262,7 @@ impl SidecarManager {
         }
 
         // Handle stderr
-        if let Some(mut stderr) = stderr {
+        if let Some(stderr) = stderr {
             tokio::spawn(async move {
                 use tokio::io::{AsyncBufReadExt, BufReader};
                 let reader = BufReader::new(stderr);
@@ -299,8 +299,8 @@ impl SidecarManager {
                     break;
                 }
 
-                let process_lock = process_arc.lock().await;
-                if process_lock.is_none() || process_lock.as_ref().unwrap().is_finished().await.unwrap_or(true) {
+                let mut process_lock = process_arc.lock().await;
+                if process_lock.is_none() || process_lock.as_mut().unwrap().try_wait().map(|status| status.is_some()).unwrap_or(true) {
                     drop(process_lock);
                     if !startup_resolved.load(Ordering::SeqCst) {
                         status.store(3, Ordering::SeqCst); // Crashed

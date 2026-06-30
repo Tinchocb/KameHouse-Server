@@ -229,7 +229,7 @@ export function SeriesHero({
         <div className="max-w-3xl space-y-7">
 
           {/* Metadata Row */}
-          <div className="series-hero-animate flex flex-wrap items-center text-zinc-300 text-xs font-semibold tracking-wide gap-y-1.5">
+          <div className="series-hero-animate flex flex-wrap items-center text-on-surface-variant text-xs font-semibold tracking-wide gap-y-1.5">
             {rating && (
               <span className="flex items-center gap-1">
                 <Star size={12} fill="currentColor" className="text-amber-500 stroke-none" />
@@ -238,50 +238,50 @@ export function SeriesHero({
             )}
             {year && (
               <>
-                {(rating) && <span className="text-zinc-600 mx-2 select-none">|</span>}
+                {(rating) && <span className="text-on-surface-variant/50 mx-2 select-none">|</span>}
                 <span>{year}</span>
               </>
             )}
             {ageRating && (
               <>
-                {(rating || year) && <span className="text-zinc-600 mx-2 select-none">|</span>}
+                {(rating || year) && <span className="text-on-surface-variant/50 mx-2 select-none">|</span>}
                 <span>{ageRating}</span>
               </>
             )}
             {sagaCount !== undefined && (
               <>
-                {(rating || year || ageRating) && <span className="text-zinc-600 mx-2 select-none">|</span>}
+                {(rating || year || ageRating) && <span className="text-on-surface-variant/50 mx-2 select-none">|</span>}
                 <span>{sagaCount} {sagaCount === 1 ? "Saga" : "Sagas"}</span>
               </>
             )}
-            <span className="text-[var(--brand-secondary)] font-bold flex items-center gap-1.5">
-              {(rating || year || ageRating || sagaCount !== undefined) && <span className="text-zinc-600 mr-2 select-none">|</span>}
+            <span className="text-brand-secondary font-bold flex items-center gap-1.5">
+              {(rating || year || ageRating || sagaCount !== undefined) && <span className="text-on-surface-variant/50 mr-2 select-none">|</span>}
               SERIE
             </span>
             {genres.length > 0 && (
               <>
-                <span className="text-zinc-600 mx-2 select-none">|</span>
-                <span className="text-zinc-400">{genres.join(" | ")}</span>
+                <span className="text-on-surface-variant/50 mx-2 select-none">|</span>
+                <span className="text-on-surface-variant">{genres.join(" | ")}</span>
               </>
             )}
 
             {/* Quality details inline with low-profile colors */}
             {qualityBadge && (
               <>
-                <span className="text-zinc-600 mx-2 select-none">|</span>
+                <span className="text-on-surface-variant/50 mx-2 select-none">|</span>
                 <span className="text-emerald-400/90 font-bold uppercase tracking-wider text-[10px]">{qualityBadge}</span>
               </>
             )}
             {codecBadge && (
               <>
-                <span className="text-zinc-600 mx-2 select-none">|</span>
+                <span className="text-on-surface-variant/50 mx-2 select-none">|</span>
                 <span className="text-indigo-400/95 font-bold uppercase tracking-wider text-[10px]">{codecBadge}</span>
               </>
             )}
             {audioBadge && (
               <>
-                <span className="text-zinc-600 mx-2 select-none">|</span>
-                <span className="text-zinc-400/95 font-bold uppercase tracking-wider text-[10px]">{audioBadge}</span>
+                <span className="text-on-surface-variant/50 mx-2 select-none">|</span>
+                <span className="text-on-surface-variant/95 font-bold uppercase tracking-wider text-[10px]">{audioBadge}</span>
               </>
             )}
           </div>
@@ -289,23 +289,23 @@ export function SeriesHero({
           {/* Titles */}
           <div className="series-hero-animate space-y-2">
             {romajiTitle && (
-              <h2 className="text-[var(--brand-secondary)] font-bold uppercase tracking-[0.25em] text-xs md:text-sm animate-ki-shimmer bg-gradient-to-r from-[var(--brand-secondary)] via-amber-500 to-brand-orange bg-clip-text text-transparent select-none drop-shadow-[0_2px_8px_rgba(255,110,58,0.25)]">
+              <h2 className="text-brand-secondary font-bold uppercase tracking-[0.25em] text-xs md:text-sm animate-ki-shimmer bg-gradient-to-r from-brand-secondary via-amber-500 to-brand-orange bg-clip-text text-transparent select-none drop-shadow-[0_2px_8px_rgba(255,110,58,0.25)]">
                 {romajiTitle}
               </h2>
             )}
-            <h1 className="font-sans font-extrabold leading-[1.05] tracking-tight text-white drop-shadow-[0_4px_25px_rgba(0,0,0,0.85)] cursor-pointer hover:text-[var(--brand-secondary)] transition-colors duration-500 z-10 relative select-none" style={{ fontSize: "max(2.5rem, min(5.5vw, 4.5rem))" }} onClick={onPlay}>
+            <h1 className="font-sans font-extrabold leading-[1.05] tracking-tight text-on-surface drop-shadow-[0_4px_25px_rgba(0,0,0,0.85)] cursor-pointer hover:text-brand-secondary transition-colors duration-500 z-10 relative select-none" style={{ fontSize: "max(2.5rem, min(5.5vw, 4.5rem))" }} onClick={onPlay}>
               {title}
             </h1>
           </div>
 
           {/* Synopsis */}
-          <p className="series-hero-animate text-zinc-300 text-sm md:text-base leading-relaxed line-clamp-3 drop-shadow-md font-medium select-none max-w-2xl border-l-[3px] border-[var(--brand-secondary)]/20 pl-4 py-0.5">
+          <p className="series-hero-animate text-on-surface-variant text-sm md:text-base leading-relaxed line-clamp-3 drop-shadow-md font-medium select-none max-w-2xl border-l-[3px] border-brand-secondary/20 pl-4 py-0.5">
             {synopsis}
           </p>
 
           {/* Cast list at the bottom of the left column */}
           {castList.length > 0 && (
-            <p className="series-hero-animate text-zinc-400 text-xs font-semibold tracking-wide select-none drop-shadow-sm">
+            <p className="series-hero-animate text-on-surface-variant text-xs font-semibold tracking-wide select-none drop-shadow-sm">
               {castList.join(", ")}
             </p>
           )}
@@ -314,14 +314,14 @@ export function SeriesHero({
           <div className="series-hero-animate flex flex-wrap items-center gap-4 pt-2">
             <button
               onClick={onPlay}
-              className="group/play relative flex items-center gap-4 px-9 py-4.5 bg-gradient-to-r from-[var(--brand-secondary)] via-orange-500 to-amber-500 text-white rounded-2xl overflow-hidden shadow-[0_12px_40px_rgba(255,110,58,0.35)] hover:shadow-[0_18px_50px_rgba(255,110,58,0.55)] transition-all duration-500 hover:scale-105 active:scale-95 border border-white/10 hover:border-[var(--brand-secondary)]/40"
+              className="group/play relative flex items-center gap-4 px-9 py-4.5 bg-gradient-to-r from-brand-secondary via-orange-500 to-amber-500 text-white rounded-container overflow-hidden shadow-[0_12px_40px_rgba(255,110,58,0.35)] hover:shadow-[0_18px_50px_rgba(255,110,58,0.55)] transition-all duration-500 hover:scale-105 active:scale-95 border border-outline-variant hover:border-brand-secondary/40"
             >
               {/* Glossy shine */}
               <div className="absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-transparent opacity-0 group-hover/play:opacity-100 transition-opacity duration-500 z-0" />
               {/* Glow halo */}
-              <div className="absolute -inset-10 bg-[var(--brand-secondary)]/30 blur-xl group-hover/play:opacity-100 opacity-0 transition-opacity duration-500 -z-10 animate-pulse" />
+              <div className="absolute -inset-10 bg-brand-secondary/30 blur-xl group-hover/play:opacity-100 opacity-0 transition-opacity duration-500 -z-10 animate-pulse" />
 
-              <div className="p-3 bg-black/40 backdrop-blur-[var(--blur-xl)] rounded-xl border border-white/10 text-white group-hover/play:bg-white group-hover/play:text-black transition-all duration-300 shadow-inner z-10 shrink-0">
+              <div className="p-3 bg-surface-container/40 backdrop-blur-[var(--blur-overlay-xl)] rounded-xl border border-outline-variant text-on-surface group-hover/play:bg-white group-hover/play:text-black transition-all duration-300 shadow-inner z-10 shrink-0">
                 <Play className="w-4 h-4 fill-current" />
               </div>
 
@@ -339,7 +339,7 @@ export function SeriesHero({
             {entry?.localFiles && entry.localFiles.length > 0 && (
               <button
                 onClick={handleAddToQueue}
-                className="group/queue flex items-center justify-center p-4.5 rounded-2xl bg-[var(--glass-bg)] backdrop-blur-[var(--blur-card)] border border-[var(--glass-border)] rounded-2xl hover:bg-[var(--glass-hover)] hover:border-[var(--glass-strong)] transition-all duration-300 text-white/70 hover:text-white transition-all duration-300 shadow-lg"
+                className="group/queue flex items-center justify-center p-4.5 rounded-container bg-[var(--glass-bg)] backdrop-blur-[var(--blur-overlay-md)] border border-[var(--glass-border)] rounded-container hover:bg-[var(--glass-hover)] hover:border-[var(--glass-strong)] transition-all duration-300 text-on-surface/70 hover:text-on-surface transition-all duration-300 shadow-elevation-2"
                 title="Añadir a la cola"
               >
                 <ListPlus className="w-5 h-5 transition-transform group-hover/queue:-translate-y-0.5" />

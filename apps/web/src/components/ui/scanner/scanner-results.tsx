@@ -54,7 +54,7 @@ export function ScanActionCard({
     const c = colors[accentColor]
 
     const baseClasses = cn(
-        "group relative block p-7 rounded-[24px] border transition-all duration-500 text-left overflow-hidden backdrop-blur-2xl shadow-[0_15px_40px_rgba(0,0,0,0.6)]",
+        "group relative block p-7 rounded-[24px] border transition-all duration-500 text-left overflow-hidden backdrop-blur-[var(--blur-overlay-xl)] shadow-[0_15px_40px_rgba(0,0,0,0.6)]",
         c.border, c.bg, c.glow,
         disabled ? "opacity-35 cursor-not-allowed" : "cursor-pointer active:scale-[0.98]"
     )
@@ -201,7 +201,7 @@ export function EventFeed({ events }: { events: ScanEvent[] }) {
             </div>
 
             {/* Event List Container */}
-            <div className="rounded-2xl bg-[var(--glass-bg)] backdrop-blur-[var(--blur-card)] border border-[var(--glass-border)] relative">
+            <div className="rounded-2xl bg-[var(--glass-bg)] backdrop-blur-[var(--blur-overlay-md)] border border-[var(--glass-border)] relative">
                 {isPaused && (
                     <div className="absolute top-3 right-4 z-20 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[8px] font-black tracking-widest uppercase px-2.5 py-1 rounded-full animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.15)]">
                         FROZEN FEED

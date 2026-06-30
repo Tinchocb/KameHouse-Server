@@ -1,7 +1,7 @@
 import { cn } from "@/components/ui/core/styling";
 import * as React from "react";
 
-export type BadgeVariant = "primary" | "secondary" | "success" | "magic" | "muted" | "destructive";
+export type BadgeVariant = "primary" | "secondary" | "success" | "magic" | "muted" | "destructive" | "outline";
 export type BadgeSize = "sm" | "md" | "lg";
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
@@ -11,12 +11,18 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
 }
 
 const variantStyles: Record<BadgeVariant, string> = {
-  primary: "bg-[var(--brand-accent)]/15 text-[var(--brand-accent)] border-[var(--brand-accent)]/30",
-  secondary: "bg-[var(--brand-secondary)]/15 text-[var(--brand-secondary)] border-[var(--brand-secondary)]/30",
-  success: "bg-[var(--brand-success)]/15 text-[var(--brand-success)] border-[var(--brand-success)]/30",
-  magic: "bg-[var(--brand-magic)]/15 text-[var(--brand-magic)] border-[var(--brand-magic)]/30",
-  muted: "bg-[var(--glass-bg)] text-[var(--text-muted)] border-[var(--glass-border-top)]",
-  destructive: "bg-[var(--brand-destructive)]/15 text-[var(--brand-destructive)] border-[var(--brand-destructive)]/30",
+  /* MD3 Filled variants */
+  primary: "bg-primary text-on-primary border-transparent",
+  secondary: "bg-secondary-container text-on-secondary-container border-transparent",
+  success: "bg-brand-success/15 text-brand-success border-brand-success/30",
+  magic: "bg-brand-magic/15 text-brand-magic border-brand-magic/30",
+  
+  /* MD3 Outlined variant */
+  outline: "bg-transparent text-primary border-outline",
+  
+  /* MD3 Muted - using surface variant */
+  muted: "bg-surface-variant text-on-surface-variant border-outline-variant",
+  destructive: "bg-brand-destructive/15 text-brand-destructive border-brand-destructive/30",
 };
 
 const sizeStyles: Record<BadgeSize, string> = {
@@ -26,12 +32,13 @@ const sizeStyles: Record<BadgeSize, string> = {
 };
 
 const dotStyles: Record<BadgeVariant, string> = {
-  primary: "bg-[var(--brand-accent)]",
-  secondary: "bg-[var(--brand-secondary)]",
-  success: "bg-[var(--brand-success)]",
-  magic: "bg-[var(--brand-magic)]",
-  muted: "bg-[var(--text-muted)]",
-  destructive: "bg-[var(--brand-destructive)]",
+  primary: "bg-primary",
+  secondary: "bg-on-secondary-container",
+  success: "bg-brand-success",
+  magic: "bg-brand-magic",
+  outline: "bg-primary",
+  muted: "bg-on-surface-variant",
+  destructive: "bg-brand-destructive",
 };
 
 export const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(

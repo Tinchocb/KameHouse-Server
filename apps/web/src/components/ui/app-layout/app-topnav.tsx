@@ -15,19 +15,19 @@ export const AppTopNav = ({ title }: TopNavProps) => {
     if (isFullscreen) return null
 
     return (
-        <header className="fixed top-0 left-0 right-0 z-[40] bg-zinc-950/60 backdrop-blur-2xl border-b border-white/[0.03]">
+        <header className="fixed top-0 left-0 right-0 z-[40] bg-surface/70 backdrop-blur-[var(--blur-overlay-xl)] border-b border-outline-variant/50 shadow-elevation-1">
             <div className="flex items-center justify-between h-20 px-6 md:px-10">
                 <div className="flex items-center ml-6 [&>*:not(:first-child)]:ml-6">
                     <button 
                         onClick={() => setSidebarOpen(true)}
-                        className="md:hidden p-3 rounded-xl bg-white/5 text-white/50 hover:text-white transition-all active:scale-90"
+                        className="md:hidden p-3 rounded-full bg-surface-variant text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all active:scale-[0.95]"
                         aria-label="Abrir menú"
                     >
                         <Menu className="w-5 h-5" />
                     </button>
 
                     {title && (
-                        <h1 className="text-2xl font-bebas tracking-[0.1em] text-white uppercase hidden md:block">
+                        <h1 className="text-2xl font-bebas tracking-[0.1em] text-on-surface uppercase hidden md:block">
                             {title}
                         </h1>
                     )}
@@ -43,11 +43,11 @@ export const AppBottomNav = () => {
     if (isFullscreen) return null
 
     return (
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-20 bg-zinc-950/80 backdrop-blur-3xl border-t border-white/[0.05] z-[40] flex items-center justify-around px-8 safe-area-pb">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-20 bg-surface/90 backdrop-blur-[var(--blur-overlay-xl)] border-t border-outline-variant/50 shadow-elevation-3 z-[40] flex items-center justify-around px-8 safe-area-pb">
             <Link 
                 to="/home" 
-                activeProps={{ className: "text-brand-orange scale-110" }}
-                inactiveProps={{ className: "text-zinc-600" }}
+                activeProps={{ className: "text-primary scale-110" }}
+                inactiveProps={{ className: "text-on-surface-variant" }}
                 className="flex flex-col items-center transition-all duration-300 [&>*:not(:first-child)]:mt-1.5"
             >
                 <span className="text-[10px] font-black uppercase tracking-[0.2em]">Inicio</span>
@@ -55,16 +55,16 @@ export const AppBottomNav = () => {
             </Link>
             <Link 
                 to="/series" 
-                activeProps={{ className: "text-brand-orange scale-110" }}
-                inactiveProps={{ className: "text-zinc-600" }}
+                activeProps={{ className: "text-primary scale-110" }}
+                inactiveProps={{ className: "text-on-surface-variant" }}
                 className="flex flex-col items-center transition-all duration-300 [&>*:not(:first-child)]:mt-1.5"
             >
                 <span className="text-[10px] font-black uppercase tracking-[0.2em]">Series</span>
             </Link>
             <Link 
                 to="/movies" 
-                activeProps={{ className: "text-brand-orange scale-110" }}
-                inactiveProps={{ className: "text-zinc-600" }}
+                activeProps={{ className: "text-primary scale-110" }}
+                inactiveProps={{ className: "text-on-surface-variant" }}
                 className="flex flex-col items-center transition-all duration-300 [&>*:not(:first-child)]:mt-1.5"
             >
                 <span className="text-[10px] font-black uppercase tracking-[0.2em]">Películas</span>

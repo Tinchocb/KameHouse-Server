@@ -6,7 +6,6 @@ import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { useGetSettings } from "@/api/hooks/settings.hooks"
 import { getHighResImage, getMediumResImage } from "@/lib/helpers/images"
 import { cn } from "@/components/ui/core/styling"
-import { GlassCard, GlassButton } from "@/components/ui"
 import { Icons } from "@/components/ui/icons"
 import { PosterCard } from "@/components/ui/poster-card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -105,7 +104,7 @@ function ProfileClient() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4 }}
-            className="min-h-screen bg-[var(--bg-primary)] text-white overflow-x-hidden"
+            className="min-h-screen bg-surface text-on-surface overflow-x-hidden"
         >
             <div className="relative z-10">
                 <ProfileHeader stats={stats} settings={settings} />
@@ -156,19 +155,19 @@ function ProfileHeader({ stats, settings }: { stats: any; settings: any }) {
     return (
         <header className="relative overflow-hidden">
             <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute -top-[100px] -left-[100px] w-[300px] h-[300px] rounded-full bg-[var(--brand-primary)]/10 blur-[100px]" />
-                <div className="absolute bottom-[-100px] right-[-100px] w-[300px] h-[300px] rounded-full bg-[var(--brand-secondary)]/10 blur-[100px]" />
+                <div className="absolute -top-[100px] -left-[100px] w-[300px] h-[300px] rounded-full bg-brand-primary/10 blur-[100px]" />
+                <div className="absolute bottom-[-100px] right-[-100px] w-[300px] h-[300px] rounded-full bg-brand-secondary/10 blur-[100px]" />
             </div>
 
             <div className="relative z-10 container-fluid py-12 md:py-16 lg:py-24">
                 <div className="max-w-4xl mx-auto">
                     <div className="flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-12 text-center md:text-left">
                         <div className="relative shrink-0">
-                            <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-[var(--glass-border)] bg-[var(--bg-tertiary)] shadow-[var(--shadow-brand-primary)]">
+                            <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-outline-variant bg-surface-container-low shadow-elevation-3">
                                 <img src={avatarUrl} alt={username} className="w-full h-full object-cover" />
                             </div>
-                            <div className="absolute -bottom-3 -right-3 w-10 h-10 rounded-full bg-[var(--brand-primary)] border-4 border-[var(--bg-primary)] flex items-center justify-center shadow-lg">
-                                <Icons.ui.star size={20} className="text-[var(--primary-foreground)]" />
+                            <div className="absolute -bottom-3 -right-3 w-10 h-10 rounded-full bg-brand-primary border-4 border-outline-variant flex items-center justify-center shadow-elevation-3">
+                                <Icons.ui.star size={20} className="text-on-surface" />
                             </div>
                         </div>
 
@@ -177,15 +176,18 @@ function ProfileHeader({ stats, settings }: { stats: any; settings: any }) {
                             <p className="text-body-md text-muted mt-2">Miembro desde {joinedDate}</p>
 
                             <div className="flex flex-wrap items-center gap-4 mt-6">
-                                <GlassButton variant="primary" size="md" leftIcon="play">
-                                    Reproducir Aleatorio
-                                </GlassButton>
-                                <GlassButton variant="outline" size="md" leftIcon="heart">
-                                    Lista de Deseos
-                                </GlassButton>
-                                <GlassButton variant="ghost" size="md" leftIcon="settings">
-                                    Configuración
-                                </GlassButton>
+                                <button className="inline-flex items-center justify-center gap-2 px-5 h-10 bg-primary text-on-surface font-semibold text-sm rounded-button transition-all duration-fast active:scale-[0.97]">
+                                <Icons.media.play size={16} strokeWidth={2.5} />
+                                Reproducir Aleatorio
+                            </button>
+                                <button className="inline-flex items-center justify-center gap-2 px-5 h-10 border border-outline-variant text-on-surface-variant font-semibold text-sm rounded-button transition-all duration-fast hover:border-primary hover:bg-primary/10 active:scale-[0.97]">
+                                <Icons.ui.heart size={16} strokeWidth={2.5} />
+                                Lista de Deseos
+                            </button>
+                                <button className="inline-flex items-center justify-center gap-2 px-5 h-10 text-on-surface-variant font-semibold text-sm rounded-button transition-all duration-fast hover:bg-surface-container active:scale-[0.97]">
+                                <Icons.ui.settings size={16} strokeWidth={2.5} />
+                                Configuración
+                            </button>
                             </div>
                         </div>
                     </div>
@@ -213,10 +215,10 @@ function ProfileSection({ title, subtitle, action, children }: ProfileSectionPro
                     {subtitle && <p className="text-body-sm text-muted mt-1">{subtitle}</p>}
                 </div>
                 {action && (
-                    <GlassButton variant="ghost" size="sm" onClick={action.onClick}>
+                    <button onClick={action.onClick} className="inline-flex items-center justify-center gap-2 px-4 h-9 text-on-surface-variant font-semibold text-xs rounded-button transition-all duration-fast hover:bg-surface-container active:scale-[0.97]">
                         {action.label}
                         <Icons.arrow.right size={14} strokeWidth={2.5} className="ml-1" />
-                    </GlassButton>
+                    </button>
                 )}
             </div>
             {children}
@@ -237,18 +239,19 @@ function ProfileStatsGrid({ stats }: { stats: any }) {
             <h2 id="stats-title" className="sr-only">Estadísticas</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {statItems.map((item, i) => (
-                    <GlassCard key={i} variant="elevated" padding="lg" radius="2xl" className="text-center group relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-[rgba(255,255,255,0.02)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <item.icon size={28} className="mx-auto mb-3 text-[var(--text-muted)] group-hover:text-white transition-colors" style={{ color: item.color }} />
+                    <div className="bg-surface-container shadow-elevation-3 rounded-container p-6 backdrop-blur-overlay-md border border-outline-variant text-center group relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-on-surface/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <item.icon size={28} className="mx-auto mb-3 text-on-surface-variant group-hover:text-on-surface transition-colors" style={{ color: item.color }} />
                         <div className="text-h3 font-display text-primary font-extrabold tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>
                             {item.value}
                         </div>
                         <div className="text-label-md text-muted mt-1 uppercase tracking-wider">
                             {item.label}
                         </div>
-                    </GlassCard>
+                                        </div>
                 ))}
             </div>
         </section>
     )
 }
+

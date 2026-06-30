@@ -110,27 +110,27 @@ function HomeClient() {
 
 function HomeSkeleton() {
     return (
-        <div className="min-h-screen bg-zinc-950 flex flex-col gap-8 p-6 md:p-12 lg:p-24 overflow-hidden animate-pulse">
+        <div className="min-h-screen bg-surface flex flex-col gap-8 p-6 md:p-12 lg:p-24 overflow-hidden animate-pulse">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch min-h-[500px]">
                 {/* Left side details skeleton */}
-                <div className="lg:col-span-8 bg-zinc-900/40 rounded-3xl min-h-[400px] p-8 flex flex-col justify-end space-y-4">
-                    <Skeleton className="h-6 w-32 bg-white/5 rounded-full" />
-                    <Skeleton className="h-16 w-3/4 bg-white/5 rounded-lg" />
-                    <Skeleton className="h-4 w-1/2 bg-white/5 rounded-lg" />
-                    <Skeleton className="h-20 w-full bg-white/5 rounded-lg" />
+                <div className="lg:col-span-8 bg-surface-container/40 rounded-3xl min-h-[400px] p-8 flex flex-col justify-end space-y-4">
+                    <Skeleton className="h-6 w-32 bg-surface-container rounded-full" />
+                    <Skeleton className="h-16 w-3/4 bg-surface-container rounded-lg" />
+                    <Skeleton className="h-4 w-1/2 bg-surface-container rounded-lg" />
+                    <Skeleton className="h-20 w-full bg-surface-container rounded-lg" />
                     <div className="flex gap-4">
-                        <Skeleton className="h-10 w-32 bg-white/5 rounded-full" />
-                        <Skeleton className="h-10 w-32 bg-white/5 rounded-full" />
+                        <Skeleton className="h-10 w-32 bg-surface-container rounded-full" />
+                        <Skeleton className="h-10 w-32 bg-surface-container rounded-full" />
                     </div>
                 </div>
                 {/* Right side list skeleton */}
                 <div className="lg:col-span-4 flex flex-col gap-4">
                     {[1, 2, 3, 4, 5].map((i) => (
-                        <div key={i} className="flex items-center gap-4 p-3 bg-zinc-900/20 rounded-2xl border border-white/5">
-                            <Skeleton className="h-16 w-24 bg-white/5 rounded-lg shrink-0" />
+                        <div key={i} className="flex items-center gap-4 p-3 bg-surface-container/20 rounded-2xl border border-outline-variant/30">
+                            <Skeleton className="h-16 w-24 bg-surface-container rounded-lg shrink-0" />
                             <div className="flex-1 space-y-2">
-                                <Skeleton className="h-5 w-2/3 bg-white/5 rounded" />
-                                <Skeleton className="h-3 w-1/2 bg-white/5 rounded" />
+                                <Skeleton className="h-5 w-2/3 bg-surface-container rounded" />
+                                <Skeleton className="h-3 w-1/2 bg-surface-container rounded" />
                             </div>
                         </div>
                     ))}

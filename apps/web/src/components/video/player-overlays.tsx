@@ -49,7 +49,7 @@ export function LoadingErrorOverlay({
 
     if (showBuffering && status === "ready") {
         return (
-            <div className="absolute inset-0 flex flex-col items-center justify-center z-10 text-white pointer-events-none bg-black/20">
+            <div className="absolute inset-0 flex flex-col items-center justify-center z-10 text-white pointer-events-none bg-surface/20">
                 <Loader2 className="w-16 h-16 text-white animate-spin" />
                 {isSeeking && (
                     <p className="mt-4 font-black tracking-[0.4em] uppercase text-[10px] opacity-50">
@@ -62,7 +62,7 @@ export function LoadingErrorOverlay({
 
     if (status === "error") {
         return (
-            <div className="absolute inset-0 flex flex-col items-center justify-center z-10 px-8 text-center text-white bg-zinc-950/85 backdrop-blur-xl [&>*:not(:first-child)]:mt-6">
+            <div className="absolute inset-0 flex flex-col items-center justify-center z-10 px-8 text-center text-white bg-surface/85 backdrop-blur-[var(--blur-overlay-lg)] [&>*:not(:first-child)]:mt-6">
                 <AlertTriangle className="w-16 h-16 text-brand-orange animate-pulse" />
                 <h3 className="font-bebas text-3xl tracking-[0.2em] uppercase">TRANSMISIÓN CAÍDA</h3>
                 <p className="text-zinc-400 max-w-md text-sm font-medium uppercase tracking-wide leading-relaxed">{errorMsg}</p>
@@ -115,7 +115,7 @@ export function ResumeOverlay({ show, time, onResume, onClose }: { show: boolean
                     <button
                         tabIndex={0}
                         onClick={onClose}
-                        className="flex-1 py-3 bg-white/5 border border-white/5 text-zinc-300 font-black text-[9px] uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all rounded-xl active:scale-95 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+                        className="flex-1 py-3 bg-surface-container border border-white/5 text-zinc-300 font-black text-[9px] uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all rounded-xl active:scale-95 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
                     >
                         IGNORAR
                     </button>
@@ -260,7 +260,7 @@ export function NextEpisodeOverlay({
             show ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8 pointer-events-none"
         )}>
             <div className={cn(
-                "flex flex-col w-64 sm:w-72 bg-zinc-950/70 backdrop-blur-2xl border border-white/[0.08]",
+                "flex flex-col w-64 sm:w-72 bg-zinc-950/70 backdrop-blur-[var(--blur-overlay-md)] border border-white/[0.08]",
                 "shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)] overflow-hidden rounded-2xl",
                 "[&>*:not(:first-child)]:mt-4"
             )}>
@@ -308,7 +308,7 @@ export function NextEpisodeOverlay({
 
                     {/* Auto transition progress bar */}
                     {(tvMode || marathonMode) && showCountdown && (
-                        <div className="w-full h-1 bg-white/5 overflow-hidden rounded-full">
+                        <div className="w-full h-1 bg-surface-container overflow-hidden rounded-full">
                             <div
                                 className="h-full bg-brand-orange transition-all duration-1000 ease-linear"
                                 style={{ width: `${remainingProgress}%` }}

@@ -7,14 +7,7 @@ fn main() {
 
     // Copy external binaries to the resource directory
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
-    let target_dir = out_dir
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("binaries");
+
 
     let resource_dir = out_dir.join("resources");
 

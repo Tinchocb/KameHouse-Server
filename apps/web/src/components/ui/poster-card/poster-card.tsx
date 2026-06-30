@@ -3,8 +3,7 @@ import * as React from "react";
 import { Play, Info, Plus, Check, Clock, Star, Sparkles } from "lucide-react";
 import { getHighResImage, getMediumResImage, getLowResImage } from "@/lib/helpers/images";
 import { DeferredImage } from "@/components/shared/deferred-image";
-import { GlassButton } from "@/components/ui/glass-button";
-import { GlassCard } from "@/components/ui/glass-card";
+
 import { Icons } from "@/components/ui/icons";
 import { Badge } from "@/components/ui/badge";
 
@@ -162,26 +161,23 @@ export const PosterCard = React.memo(function PosterCard({
         }}
       >
         {showPopup && (
-          <GlassCard
-            variant="popup"
-            padding="none"
-            radius={isPoster ? "2xl" : "3xl"}
-            blur="xl"
-            borderVariant="directional"
-            className="absolute inset-0"
+          <div
+            className={cn(
+              "absolute inset-0 bg-surface-container shadow-elevation-2 border border-outline-variant overflow-hidden",
+              isPoster ? "rounded-2xl" : "rounded-3xl"
+            )}
           >
-            <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-accent)]/10 via-transparent to-transparent pointer-events-none rounded-[inherit] opacity-50" />
-          </GlassCard>
+            <div className="absolute inset-0 bg-gradient-to-t from-brand-primary/10 via-transparent to-transparent pointer-events-none rounded-[inherit] opacity-50" />
+          </div>
         )}
 
         {!showPopup && (
-          <GlassCard
-            variant="interactive"
-            padding="none"
-            radius={isPoster ? "xl" : "2xl"}
-            blur="md"
-            borderVariant="directional"
-            className="absolute inset-0 bg-[var(--bg-secondary)]/40 hover:border-[var(--brand-accent)]/30 hover:shadow-[var(--shadow-brand-primary)] shadow-glass"
+          <div
+            className={cn(
+              "absolute inset-0 bg-surface-container shadow-elevation-2 border border-outline-variant",
+              isPoster ? "rounded-xl" : "rounded-2xl",
+              "bg-[var(--bg-secondary)]/40 hover:border-brand-primary/30 hover:shadow-[var(--shadow-brand-primary)]"
+            )}
           />
         )}
 
@@ -254,27 +250,15 @@ export const PosterCard = React.memo(function PosterCard({
 
           {showPopup && showQuickActions && (
             <div className="absolute bottom-4 left-4 z-20 flex items-center gap-2">
-              <GlassButton
-                variant="primary"
-                size="sm"
-                leftIcon="play"
-                iconSize={14}
-                className="h-9 w-9 p-0 justify-center rounded-full shadow-lg hover:scale-110 hover:shadow-[var(--shadow-brand-primary)]"
-              />
-              <GlassButton
-                variant="glass"
-                size="sm"
-                leftIcon="plus"
-                iconSize={14}
-                className="h-9 w-9 p-0 justify-center rounded-full"
-              />
-              <GlassButton
-                variant="glass"
-                size="sm"
-                leftIcon="info"
-                iconSize={14}
-                className="h-9 w-9 p-0 justify-center rounded-full"
-              />
+              <button className="h-9 w-9 flex items-center justify-center rounded-full shadow-lg hover:scale-110 hover:shadow-[var(--shadow-brand-primary)] bg-primary text-on-primary">
+                <Play size={14} />
+              </button>
+              <button className="h-9 w-9 flex items-center justify-center rounded-full bg-transparent border border-[var(--glass-border)] text-primary">
+                <Plus size={14} />
+              </button>
+              <button className="h-9 w-9 flex items-center justify-center rounded-full bg-transparent border border-[var(--glass-border)] text-primary">
+                <Info size={14} />
+              </button>
             </div>
           )}
 
@@ -296,7 +280,7 @@ export const PosterCard = React.memo(function PosterCard({
           {progress !== undefined && (
             <div className="absolute inset-x-0 bottom-0 z-20 h-1 bg-[var(--glass-border-side)]">
               <div
-                className="h-full bg-[var(--brand-accent)] shadow-[var(--shadow-brand-primary)] transition-all duration-base"
+                className="h-full bg-brand-primary shadow-[var(--shadow-brand-primary)] transition-all duration-base"
                 style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
               />
             </div>
@@ -312,7 +296,7 @@ export const PosterCard = React.memo(function PosterCard({
 
               <div className="flex flex-wrap items-center gap-1.5 text-caption font-bold uppercase tracking-wider text-muted">
                 {rating && (
-                  <span className="text-[var(--brand-success)] font-extrabold flex items-center gap-1">
+                  <span className="text-brand-success font-extrabold flex items-center gap-1">
                     <Star size={10} fill="currentColor" />
                     {(rating * 10).toFixed(0)}%
                   </span>
@@ -355,22 +339,14 @@ export const PosterCard = React.memo(function PosterCard({
 
               {showQuickActions && showPopup && (
                 <div className="flex items-center gap-2 pt-2 border-t border-[var(--glass-border-top)]">
-                  <GlassButton
-                    variant="primary"
-                    size="sm"
-                    leftIcon="play"
-                    className="flex-1"
-                  >
+                  <button className="flex-1 flex items-center justify-center gap-2 bg-primary text-on-primary rounded-pill px-4 py-2">
+                    <Play size={14} />
                     Reproducir
-                  </GlassButton>
-                  <GlassButton
-                    variant="glass"
-                    size="sm"
-                    leftIcon="info"
-                    className="flex-1"
-                  >
+                  </button>
+                  <button className="flex-1 flex items-center justify-center gap-2 bg-transparent border border-[var(--glass-border)] text-primary rounded-pill px-4 py-2">
+                    <Info size={14} />
                     Detalles
-                  </GlassButton>
+                  </button>
                 </div>
               )}
             </div>
@@ -380,7 +356,7 @@ export const PosterCard = React.memo(function PosterCard({
       </div>
 
       {isSelected && (
-        <div className="absolute inset-0 border-2 border-[var(--brand-accent)] rounded-[inherit] pointer-events-none opacity-50" />
+        <div className="absolute inset-0 border-2 border-brand-primary rounded-[inherit] pointer-events-none opacity-50" />
       )}
     </div>
   );

@@ -39,7 +39,7 @@ export function PlayerEpisodesSidebar({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="absolute inset-0 z-[150] bg-black/60 backdrop-blur-sm pointer-events-auto"
+                        className="absolute inset-0 z-[150] bg-black/60 backdrop-blur-[var(--blur-overlay-sm)] pointer-events-auto"
                     />
 
                     {/* Sidebar Panel */}
@@ -48,7 +48,7 @@ export function PlayerEpisodesSidebar({
                         animate={{ x: 0 }}
                         exit={{ x: "100%" }}
                         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                        className="absolute right-0 top-0 bottom-0 w-full sm:w-[400px] z-[160] bg-zinc-950 border-l border-white/15 flex flex-col shadow-2xl pointer-events-auto select-none"
+                        className="absolute right-0 top-0 bottom-0 w-full sm:w-[400px] z-[160] bg-surface-container border-l border-white/15 flex flex-col shadow-2xl pointer-events-auto select-none"
                     >
                         {/* Header */}
                         <div className="flex items-center justify-between p-6 border-b border-white/5 shrink-0">
@@ -81,7 +81,7 @@ export function PlayerEpisodesSidebar({
                                     <span className="text-[10px] font-black uppercase tracking-widest">Modo Maratón</span>
                                     <div className={cn(
                                         "w-8 h-4 rounded-full relative transition-all duration-300",
-                                        marathonMode ? "bg-brand-orange" : "bg-white/10"
+                                        marathonMode ? "bg-brand-orange" : "bg-surface-variant"
                                     )}>
                                         <div className={cn(
                                             "absolute top-[2px] w-2.5 h-2.5 rounded-full transition-all duration-300",
@@ -128,7 +128,7 @@ export function PlayerEpisodesSidebar({
                                             )}
 
                                             {/* Dark overlay */}
-                                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors duration-300" />
+                                            <div className="absolute inset-0 bg-surface/20 group-hover:bg-black/0 transition-colors duration-300" />
 
                                             {/* Play overlay for current or hover */}
                                             <div className={cn(

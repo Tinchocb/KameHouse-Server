@@ -17,10 +17,10 @@ export function SagaSelector({
   onSelectSubSaga
 }: SagaSelectorProps) {
   return (
-    <div className="w-full h-full flex flex-col p-5 border border-white/5 bg-zinc-950/40 backdrop-blur-md rounded-2xl overflow-hidden">
-      <h3 className="font-bebas text-2xl tracking-[0.15em] text-white/95 mb-5 px-1 uppercase flex items-center justify-between flex-shrink-0">
+    <div className="w-full h-full flex flex-col p-5 border border-outline-variant/5 bg-surface-container/40 backdrop-blur-overlay-md rounded-container overflow-hidden">
+      <h3 className="font-bebas text-2xl tracking-[0.15em] text-on-surface/95 mb-5 px-1 uppercase flex items-center justify-between flex-shrink-0">
         <span>Sagas</span>
-        <span className="text-[10px] font-mono font-bold tracking-normal text-zinc-500 lowercase">
+        <span className="text-[10px] font-mono font-bold tracking-normal text-on-surface-variant lowercase">
           {sagas.length} sagas
         </span>
       </h3>
@@ -36,8 +36,8 @@ export function SagaSelector({
               className={cn(
                 "relative flex flex-col text-left p-4 rounded-xl transition-all duration-300 ease-out border select-none group/saga",
                 isActive 
-                  ? "bg-zinc-900/40 border-brand-orange/30 shadow-[0_8px_32px_rgba(0,0,0,0.4)]" 
-                  : "bg-transparent border-transparent hover:bg-white/[0.02] hover:border-white/5",
+                  ? "bg-surface-container-high/40 border-brand-orange/30 shadow-[0_8px_32px_rgba(0,0,0,0.4)]" 
+                  : "bg-transparent border-transparent hover:bg-surface-container/5 hover:border-outline-variant/5",
                 saga.isFiller && !isActive && "opacity-50 hover:opacity-90"
               )}
             >
@@ -50,8 +50,8 @@ export function SagaSelector({
                 <span className={cn(
                   "font-bold text-base leading-snug line-clamp-2 transition-colors duration-300 pr-2",
                   isActive 
-                    ? "text-white" 
-                    : "text-zinc-400 group-hover/saga:text-zinc-200"
+                    ? "text-on-surface" 
+                    : "text-on-surface-variant group-hover/saga:text-on-surface"
                 )}>
                   {saga.name}
                 </span>
@@ -66,7 +66,7 @@ export function SagaSelector({
                 "text-[10px] font-black uppercase tracking-widest transition-colors duration-300",
                 isActive 
                   ? "text-brand-orange" 
-                  : "text-zinc-500 group-hover/saga:text-brand-orange/80"
+                  : "text-on-surface-variant group-hover/saga:text-brand-orange/80"
               )}>
                 Eps {saga.episodeRange}
               </span>
@@ -97,12 +97,12 @@ export function SagaSelector({
                           "relative mt-1 flex items-center justify-center shrink-0 w-2.5 h-2.5 rounded-full border transition-all duration-300",
                           isSubActive 
                             ? "border-brand-orange bg-brand-orange shadow-[0_0_8px_rgba(255,110,58,0.7)]" 
-                            : "border-white/20 bg-zinc-950 group-hover/subsaga:border-brand-orange group-hover/subsaga:scale-110"
+                            : "border-outline-variant/20 bg-surface-container group-hover/subsaga:border-brand-orange group-hover/subsaga:scale-110"
                         )}>
                           <div className={cn(
                             "w-1.5 h-1.5 rounded-full transition-colors duration-300",
                             isSubActive 
-                              ? "bg-white" 
+                              ? "bg-on-surface" 
                               : "bg-transparent group-hover/subsaga:bg-brand-orange"
                           )} />
                         </div>
@@ -111,13 +111,13 @@ export function SagaSelector({
                         <div className="space-y-0.5">
                           <span className={cn(
                             "block text-xs font-bold transition-colors duration-300 leading-normal",
-                            isSubActive ? "text-white" : "text-zinc-400 group-hover/subsaga:text-white"
+                            isSubActive ? "text-on-surface" : "text-on-surface-variant group-hover/subsaga:text-on-surface"
                           )}>
                             {sub.name}
                           </span>
                           <span className={cn(
                             "block text-[8px] font-black tracking-widest transition-colors duration-300",
-                            isSubActive ? "text-brand-orange" : "text-zinc-600 group-hover/subsaga:text-brand-orange/80"
+                            isSubActive ? "text-brand-orange" : "text-on-surface-variant group-hover/subsaga:text-brand-orange/80"
                           )}>
                             Eps {sub.episodeRange}
                           </span>

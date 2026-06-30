@@ -25,7 +25,7 @@ export const SelectAnatomy = defineStyleAnatomy({
     ]),
     content: cva([
         "UI-Select__content",
-        "w-full overflow-hidden rounded-xl shadow-2xl bg-[var(--glass-bg)] backdrop-blur-[var(--blur-xl)] border border-white/[0.08] leading-none z-[100]",
+        "w-full overflow-hidden rounded-corner-lg shadow-elevation-3 bg-surface-container/85 backdrop-blur-[var(--blur-overlay-md)] border border-outline-variant leading-none z-[100]",
     ]),
     viewport: cva([
         "UI-Select__viewport",

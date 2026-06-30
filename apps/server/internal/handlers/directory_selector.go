@@ -97,7 +97,7 @@ func getAutocompletionSuggestions(input string) ([]DirectoryInfo, error) {
 
 	entries, err := os.ReadDir(baseDir)
 	if err != nil {
-		return nil, err
+		return nil, nil
 	}
 
 	for _, entry := range entries {

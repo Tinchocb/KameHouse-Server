@@ -52,7 +52,7 @@ export function PremiumEpisodeList({
           className={cn(
             "w-full pl-10 pr-10 py-2.5 rounded-xl text-sm",
             "bg-white/[0.03] border border-white/[0.08] text-white placeholder-zinc-500",
-            "focus:outline-none focus:border-[var(--brand-secondary)]/40 focus:ring-1 focus:ring-brand-orange/20",
+            "focus:outline-none focus:border-brand-secondary/40 focus:ring-1 focus:ring-brand-orange/20",
             "transition-all duration-200"
           )}
         />
@@ -94,14 +94,14 @@ export function PremiumEpisodeList({
             onMouseEnter={() => onMouseEnter(ep.id)}
             onMouseLeave={() => onMouseLeave(ep.id)}
             className={cn(
-              "group flex gap-4 p-3 rounded-xl transition-all duration-300 cursor-pointer shadow-lg",
+              "group flex gap-4 p-3 rounded-2xl transition-all duration-300 cursor-pointer shadow-lg",
               isHighlighted
-                ? "bg-[var(--glass-bg)] backdrop-blur-[var(--blur-card)] border border-[var(--glass-border)] rounded-2xl hover:bg-[var(--glass-hover)] hover:border-[var(--glass-strong)] transition-all duration-300 !bg-[var(--brand-secondary)]/[0.03] !border-[var(--brand-secondary)]/20 border-l-[3.5px] !border-l-[var(--brand-secondary)] shadow-[0_8px_24px_rgba(255,110,58,0.04)] hover:!bg-[var(--brand-secondary)]/[0.06] hover:!border-[var(--brand-secondary)]/30"
-                : "bg-[var(--glass-bg)] backdrop-blur-[var(--blur-card)] border border-[var(--glass-border)] rounded-2xl hover:bg-[var(--glass-hover)] hover:border-[var(--glass-strong)] transition-all duration-300"
+                ? "bg-[var(--glass-bg)] backdrop-blur-[var(--blur-overlay-md)] border border-[var(--glass-border)] rounded-2xl hover:bg-[var(--glass-hover)] hover:border-[var(--glass-strong)] transition-all duration-300 !bg-brand-secondary/[0.03] !border-brand-secondary/20 border-l-[3.5px] !border-l-brand-secondary shadow-[0_8px_24px_rgba(255,110,58,0.04)] hover:!bg-brand-secondary/[0.06] hover:!border-brand-secondary/30"
+                : "bg-[var(--glass-bg)] backdrop-blur-[var(--blur-overlay-md)] border border-[var(--glass-border)] rounded-2xl hover:bg-[var(--glass-hover)] hover:border-[var(--glass-strong)] transition-all duration-300"
             )}
           >
           {/* Thumbnail */}
-          <div className="relative w-48 md:w-56 aspect-video rounded-lg overflow-hidden flex-shrink-0 bg-gray-900 shadow-md">
+          <div className="relative w-48 md:w-56 aspect-video rounded-lg overflow-hidden flex-shrink-0 bg-surface-container shadow-md">
             <img 
               src={ep.thumbnailUrl} 
               alt={ep.title}
@@ -109,13 +109,13 @@ export function PremiumEpisodeList({
             />
             {/* Play Overlay */}
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-300 cursor-pointer">
-              <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-[var(--blur-sm)] flex items-center justify-center border border-white/40">
+              <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-[var(--blur-overlay-sm)] flex items-center justify-center border border-white/40">
                 <Play className="w-6 h-6 text-white ml-1" fill="currentColor" />
               </div>
             </div>
             
             {/* Progress/Watched Indicator */}
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-800">
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-surface-container-high">
               {ep.isWatched && <div className="h-full bg-amber-500 w-full" />}
             </div>
           </div>
@@ -124,20 +124,20 @@ export function PremiumEpisodeList({
           <div className="flex flex-col justify-center flex-grow min-w-0 py-0.5">
             <div className="flex justify-between items-start mb-0.5">
               <h4 className="text-sm font-bold text-white truncate">
-                <span className="text-gray-400 mr-1.5">{ep.number}.</span>
+                <span className="text-on-surface-variant mr-1.5">{ep.number}.</span>
                 {ep.title}
               </h4>
               
               <div className="flex items-center gap-1.5 shrink-0">
                 {/* Saga Badge */}
                 {ep.sagaName && (
-                  <span className="text-[10px] font-mono uppercase bg-[var(--brand-secondary)]/10 text-[var(--brand-secondary)] border border-[var(--brand-secondary)]/20 px-2 py-0.5 rounded">
+                  <span className="text-[10px] font-mono uppercase bg-brand-secondary/10 text-brand-secondary border border-brand-secondary/20 px-2 py-0.5 rounded">
                     {ep.sagaName}
                   </span>
                 )}
                 {/* Type Badge */}
                 {ep.episodeType === 'Filler' && (
-                  <span className="text-[10px] font-mono uppercase bg-red-900/40 text-red-400 border border-red-900/50 px-2 py-0.5 rounded">
+                  <span className="text-[10px] font-mono uppercase bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2 py-0.5 rounded">
                     Filler
                   </span>
                 )}
@@ -149,25 +149,25 @@ export function PremiumEpisodeList({
               </div>
             </div>
 
-            <p className="text-xs text-gray-400 line-clamp-2 mb-2 leading-relaxed">
+            <p className="text-xs text-on-surface-variant line-clamp-2 mb-2 leading-relaxed">
               {ep.description}
             </p>
 
             {/* Technical Pills & Status */}
             <div className="flex items-center justify-between mt-auto">
               <div className="flex items-center gap-1.5">
-                <span className="text-[9px] font-mono font-medium bg-[var(--glass-bg)] backdrop-blur-[var(--blur-sm)] border border-[var(--glass-border)] rounded-2xl text-gray-300 px-2 py-0.5 rounded-md">
+                <span className="text-[9px] font-mono font-medium bg-[var(--glass-bg)] backdrop-blur-[var(--blur-overlay-sm)] border border-[var(--glass-border)] text-on-surface-variant px-2 py-0.5 rounded-md">
                   {ep.resolution}
                 </span>
-                <span className="text-[9px] font-mono font-medium bg-[var(--glass-bg)] backdrop-blur-[var(--blur-sm)] border border-[var(--glass-border)] rounded-2xl text-gray-300 px-2 py-0.5 rounded-md">
+                <span className="text-[9px] font-mono font-medium bg-[var(--glass-bg)] backdrop-blur-[var(--blur-overlay-sm)] border border-[var(--glass-border)] text-on-surface-variant px-2 py-0.5 rounded-md">
                   {ep.videoCodec}
                 </span>
-                <span className="text-[9px] font-mono font-medium bg-[var(--glass-bg)] backdrop-blur-[var(--blur-sm)] border border-[var(--glass-border)] rounded-2xl text-gray-300 px-2 py-0.5 rounded-md">
+                <span className="text-[9px] font-mono font-medium bg-[var(--glass-bg)] backdrop-blur-[var(--blur-overlay-sm)] border border-[var(--glass-border)] text-on-surface-variant px-2 py-0.5 rounded-md">
                   {ep.audioCodec}
                 </span>
               </div>
-              
-              <div className="flex items-center justify-center w-6 h-6 rounded-full border border-gray-600 group-hover:border-gray-400 transition-colors">
+
+              <div className="flex items-center justify-center w-6 h-6 rounded-full border border-outline-variant group-hover:border-outline-variant/70 transition-colors">
                 {ep.isWatched && <Check className="w-3.5 h-3.5 text-amber-500" strokeWidth={3} />}
               </div>
             </div>

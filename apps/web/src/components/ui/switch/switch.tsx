@@ -13,13 +13,13 @@ import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
 export const SwitchAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-Switch__root",
-        "peer inline-flex shrink-0 cursor-pointer items-center rounded-full border transition-colors",
+        "peer inline-flex shrink-0 cursor-pointer items-center rounded-full border border-outline-variant transition-colors",
         "disabled:cursor-not-allowed data-[disabled=true]:opacity-50",
-        "outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--ring] focus-visible:ring-offset-1",
-        "data-[state=unchecked]:bg-gray-200 dark:data-[state=unchecked]:bg-gray-900", // Unchecked
-        "data-[state=unchecked]:hover:bg-gray-300 dark:data-[state=unchecked]:hover:bg-gray-800", // Unchecked hover
-        "data-[state=checked]:bg-brand", // Checked
-        "data-[error=true]:border-red-500", // Checked
+        "outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1",
+        "data-[state=unchecked]:bg-surface-container", // Unchecked
+        "data-[state=unchecked]:hover:bg-surface-container-high", // Unchecked hover
+        "data-[state=checked]:bg-brand-primary", // Checked
+        "data-[error=true]:border-brand-destructive", // Checked
     ], {
         variants: {
             size: {
@@ -65,7 +65,7 @@ export const SwitchAnatomy = defineStyleAnatomy({
     label: cva([
         "UI-Switch__label",
         "relative font-normal",
-        "data-[disabled=true]:text-gray-300 cursor-pointer user-select-none select-none",
+        "data-[disabled=true]:text-on-surface-variant/50 cursor-pointer user-select-none select-none",
     ]),
 })
 
@@ -139,7 +139,7 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>((props, r
             id={basicFieldProps.id}
             fieldClass={cn(
                 "w-fit",
-                side === "right" && "w-full group/switch transition-all duration-200 hover:bg-gray-600/10 rounded-[--radius] p-2 w-[calc(100%_+_1rem)] -ml-2 border border-transparent hover:border-[--subtle]",
+                side === "right" && "w-full group/switch transition-all duration-200 hover:bg-surface-container/50 rounded-[--radius] p-2 w-[calc(100%_+_1rem)] -ml-2 border border-transparent hover:border-outline-variant",
                 basicFieldProps.fieldClass,
             )}
             fieldHelpTextClass={cn("")}

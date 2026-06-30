@@ -56,6 +56,7 @@ var animeAliases = map[string][]string{
 	"dragon ball super": {"dbs", "dragonball super"},
 	"dragon ball gt":    {"dbgt", "dragonball gt"},
 	"dragon ball daima": {"db daima", "dragonball daima"},
+	"dragon ball kai":   {"db kai", "dragonball kai", "dragon ball z kai", "dbz kai", "dragonball z kai"},
 
 	// Naruto franchise
 	"naruto":                         {"naruto original"},
@@ -244,9 +245,11 @@ var animeAliases = map[string][]string{
 // commonAbbreviations maps short abbreviations to their expanded forms.
 // These are used during title normalization to expand abbreviations found in file names.
 var commonAbbreviations = map[string]string{
-	"dbz":   "dragon ball z",
-	"dbs":   "dragon ball super",
-	"dbgt":  "dragon ball gt",
+	"dbz":     "dragon ball z",
+	"dbs":     "dragon ball super",
+	"dbgt":    "dragon ball gt",
+	"dbz kai": "dragon ball kai",
+	"db kai":  "dragon ball kai",
 	"aot":   "attack on titan",
 	"snk":   "shingeki no kyojin",
 	"bnha":  "boku no hero academia",

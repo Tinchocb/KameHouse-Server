@@ -32,7 +32,7 @@ export function EmptyState({
             {illustration ? (
                 <div className="mb-8 opacity-80">{illustration}</div>
             ) : (
-                <div className="mb-8 flex h-20 w-20 items-center justify-center bg-white/[0.03] border border-white/5 text-white">
+                <div className="mb-8 flex h-20 w-20 items-center justify-center bg-surface-container border border-white/5 text-white">
                     {icon ?? <Ghost className="h-10 w-10 animate-pulse-slow" />}
                 </div>
             )}

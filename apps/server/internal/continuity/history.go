@@ -76,8 +76,21 @@ func (m *Manager) CalculateBingeProbability(mediaID int) BingeWatcherProbability
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	i, found := m.getWatchHistory(mediaID)
-	if !found || i == nil {
+	items, err := filecache.GetAll[*WatchHistoryItem](m.fileCacher, *m.watchHistoryFileCacheBucket)
+	if err != nil {
+		return BingeWatcherProbability{MediaID: mediaID, Probability: 0, IsBingeCooling: true}
+	}
+
+	var i *WatchHistoryItem
+	for _, item := range items {
+		if item.MediaID == mediaID {
+			if i == nil || item.TimeUpdated.After(i.TimeUpdated) {
+				i = item
+			}
+		}
+	}
+
+	if i == nil {
 		return BingeWatcherProbability{MediaID: mediaID, Probability: 0, IsBingeCooling: true}
 	}
 

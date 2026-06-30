@@ -37,8 +37,6 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
         ...rest
     } = props
 
-    const firstRender = React.useRef(true)
-
     const sanitizePath = React.useCallback((path: string) => {
         if (!path) return ""
         return upath.normalizeSafe(path.replace(/[<>"]/g, ""))
@@ -47,8 +45,6 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
     const [input, setInputRaw] = React.useState(defaultValue ? sanitizePath(defaultValue) : "")
     const [debouncedInput] = useDebounce(input, 300)
     const selectorState = useBoolean(false)
-    const prevState = React.useRef<string>(input)
-    const currentState = React.useRef<string>(input)
 
     const setInput = React.useCallback((newInput: string) => {
         setInputRaw(sanitizePath(newInput))
@@ -57,23 +53,12 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
     const { data, isLoading } = useDirectorySelector(debouncedInput)
 
     React.useEffect(() => {
-        if (firstRender.current) {
-            firstRender.current = false
-            return
-        }
         if (value !== input) {
             setInput(value)
         }
-    }, [value, input, setInput])
+    }, [value])
 
     React.useEffect(() => {
-        if (value !== currentState.current) {
-            setInput(value)
-        }
-    }, [value, setInput])
-
-    React.useEffect(() => {
-        currentState.current = input
         if (input === ".") {
             setInputRaw("")
         }
@@ -87,8 +72,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
         }
         const trimmedValue = debouncedInput.trim()
         onSelect(trimmedValue)
-        prevState.current = trimmedValue
-    }, [debouncedInput, data, onSelect])
+    }, [debouncedInput, onSelect])
 
     const checkDirectoryExists = React.useCallback(() => {
         if (!isLoading && data && shouldExist && !data.exists && input.length > 0) {

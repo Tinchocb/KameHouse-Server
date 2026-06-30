@@ -198,10 +198,10 @@ export function BackgroundMusicPlayer() {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.92 }}
                 className={cn(
-                    "flex items-center justify-center w-12 h-12 rounded-2xl transition-all duration-500 group relative overflow-hidden bg-[var(--glass-bg)] backdrop-blur-[var(--blur-sm)] border border-[var(--glass-border)]",
+                    "flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300 group relative overflow-hidden bg-surface-variant border border-outline-variant/50",
                     bgMusicEnabled && isPlaying && !isVideoActive
-                        ? "!border-brand-orange/30 !bg-brand-orange/[0.08] text-brand-orange shadow-[0_0_25px_rgba(255,110,58,0.15)]"
-                        : "text-zinc-500 hover:text-white hover:!border-white/15"
+                        ? "!border-primary/30 !bg-primary/10 text-primary shadow-[0_0_25px_var(--glow-primary)]"
+                        : "text-on-surface-variant hover:text-on-surface hover:border-outline-variant"
                 )}
             >
                 <AnimatePresence mode="wait">

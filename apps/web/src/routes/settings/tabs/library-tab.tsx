@@ -65,7 +65,7 @@ export function LibraryTab({ control }: LibraryTabProps) {
 
             {/* 2. Escáner y Metadatos */}
             <Section label="Escáner y Metadatos">
-                <Card className="divide-y divide-white/[0.04]">
+                <Card className="divide-y divide-outline-variant/4">
                     <Controller
                         control={control}
                         name="library.autoScan"

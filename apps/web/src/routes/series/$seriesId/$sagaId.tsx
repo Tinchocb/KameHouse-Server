@@ -84,11 +84,11 @@ interface LeftPanelProps {
 function LeftPanel({ posterUrl, title, synopsis, year, episodesCount, sagaTitle, genres, rating, durationPerEp, studios, onBack }: LeftPanelProps) {
 
     return (
-        <aside className="w-full lg:w-[28%] lg:h-full bg-[#070a14]/40 backdrop-blur-md border-r border-white/5 flex flex-col overflow-y-auto shrink-0">
+        <aside className="w-full lg:w-[28%] lg:h-full bg-surface/40 backdrop-blur-overlay-md border-r border-outline-variant/5 flex flex-col overflow-y-auto shrink-0">
             {/* Back button */}
             <button
                 onClick={onBack}
-                className="flex items-center gap-2 px-6 pt-6 pb-3 text-zinc-500 hover:text-[var(--brand-secondary)] transition-colors text-[10px] font-black uppercase tracking-[0.3em] group"
+                className="flex items-center gap-2 px-6 pt-6 pb-3 text-on-surface-variant hover:text-brand-secondary transition-colors text-[10px] font-black uppercase tracking-[0.3em] group"
             >
                 <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                 VOLVER
@@ -96,7 +96,7 @@ function LeftPanel({ posterUrl, title, synopsis, year, episodesCount, sagaTitle,
 
             {/* Poster */}
             <div className="px-6 mt-2">
-                <div className="relative w-full aspect-[3/4] bg-zinc-950 border border-white/5 rounded-xl overflow-hidden shadow-2xl">
+                <div className="relative w-full aspect-[3/4] bg-surface-container border border-outline-variant/5 rounded-xl overflow-hidden shadow-elevation-5">
                     <DeferredImage
                         src={posterUrl}
                         alt={title}
@@ -110,12 +110,12 @@ function LeftPanel({ posterUrl, title, synopsis, year, episodesCount, sagaTitle,
             {/* Metadata */}
             <div className="flex-1 px-6 pt-6 pb-10 flex flex-col gap-5">
                 {/* Saga label */}
-                <span className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em]">
+                <span className="text-on-surface-variant text-[10px] font-black uppercase tracking-[0.3em]">
                     SAGA: {sagaTitle}
                 </span>
 
                 {/* Title */}
-                <h1 className="text-white text-4xl font-bebas leading-[0.9] tracking-widest uppercase">
+                <h1 className="text-on-surface text-4xl font-bebas leading-[0.9] tracking-widest uppercase">
                     {title}
                 </h1>
 
@@ -123,7 +123,7 @@ function LeftPanel({ posterUrl, title, synopsis, year, episodesCount, sagaTitle,
                 <StarRating rating={rating} />
 
                 {/* Quick stats row */}
-                <div className="flex flex-wrap items-center gap-4 text-zinc-500 text-[10px] font-black uppercase tracking-widest">
+                <div className="flex flex-wrap items-center gap-4 text-on-surface-variant text-[10px] font-black uppercase tracking-widest">
                     <span className="flex items-center gap-2">
                         <Calendar className="w-3.5 h-3.5" />
                         {year}
@@ -140,7 +140,7 @@ function LeftPanel({ posterUrl, title, synopsis, year, episodesCount, sagaTitle,
                     {genres.slice(0, 4).map((g) => (
                         <span
                             key={g}
-                            className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-[var(--brand-secondary)]/10 text-[var(--brand-secondary)] border border-[var(--brand-secondary)]/20"
+                            className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-brand-secondary/10 text-brand-secondary border border-brand-secondary/20"
                         >
                             {g}
                         </span>
@@ -148,18 +148,18 @@ function LeftPanel({ posterUrl, title, synopsis, year, episodesCount, sagaTitle,
                 </div>
 
                 {/* Synopsis */}
-                <p className="text-zinc-400 text-[13px] leading-relaxed font-bold uppercase tracking-wide">
+                <p className="text-on-surface-variant text-[13px] leading-relaxed font-bold uppercase tracking-wide">
                     {synopsis}
                 </p>
 
                 {/* Divider */}
-                <div className="h-px bg-white/10 mt-auto mb-6" />
+                <div className="h-px bg-on-surface/10 mt-auto mb-6" />
 
                 {/* Studio info */}
-                <div className="text-[9px] text-zinc-600 font-black uppercase tracking-[0.2em]">
+                <div className="text-[9px] text-on-surface-variant font-black uppercase tracking-[0.2em]">
                     {studios.length > 0 && (
                         <>
-                            <span className="text-zinc-700">ESTUDIO: </span>{studios.join(", ")}
+                            <span className="text-on-surface-variant">ESTUDIO: </span>{studios.join(", ")}
                         </>
                     )}
                 </div>
@@ -187,8 +187,8 @@ function EpisodeRow({ episode, isActive, isWatched, isDownloaded, progress, onSe
                 "w-full flex items-center gap-5 px-5 py-3.5 text-left group relative",
                 "transition-all duration-300 rounded-xl border-l-[3px]",
                 isActive
-                    ? "bg-[var(--brand-secondary)]/10 text-white border-l-[var(--brand-secondary)] shadow-[0_0_12px_rgba(255,110,58,0.2)]"
-                    : "bg-transparent border-l-transparent hover:bg-white/[0.03] hover:border-l-white/10 text-zinc-500 hover:text-white",
+                    ? "bg-brand-secondary/10 text-on-surface border-l-brand-secondary shadow-[0_0_12px_rgba(255,110,58,0.2)]"
+                    : "bg-transparent border-l-transparent hover:bg-surface-container/5 hover:border-l-outline-variant/10 text-on-surface-variant hover:text-on-surface",
                 isWatched && "opacity-50",
             )}
         >
@@ -197,12 +197,12 @@ function EpisodeRow({ episode, isActive, isWatched, isDownloaded, progress, onSe
                 <span
                     className={cn(
                         "text-xs font-black tracking-widest",
-                        isActive ? "text-white" : "text-zinc-700 group-hover:text-zinc-400",
+                        isActive ? "text-on-surface" : "text-on-surface-variant group-hover:text-on-surface-variant",
                     )}
                 >
                     {episode?.number?.toString().padStart(2, '0') || "00"}
                 </span>
-                {isDownloaded && <HardDrive className={cn("w-3 h-3 mt-1", isActive ? "text-white/65" : "text-zinc-700")} />}
+                {isDownloaded && <HardDrive className={cn("w-3 h-3 mt-1", isActive ? "text-on-surface/65" : "text-on-surface-variant")} />}
             </div>
 
             {/* Title */}
@@ -215,21 +215,21 @@ function EpisodeRow({ episode, isActive, isWatched, isDownloaded, progress, onSe
                 <div className="w-20 shrink-0">
                     <ProgressBar
                         value={progress}
-                        className="bg-zinc-900"
-                        indicatorClass="bg-[var(--brand-secondary)]"
+                        className="bg-surface-variant"
+                        indicatorClass="bg-brand-secondary"
                     />
                 </div>
             )}
 
             {/* Duration */}
-            <span className={cn("text-[10px] font-black tracking-widest shrink-0", isActive ? "text-white/75" : "text-zinc-700")}>
+            <span className={cn("text-[10px] font-black tracking-widest shrink-0", isActive ? "text-on-surface/75" : "text-on-surface-variant")}>
                 {episode.duration.toUpperCase()}
             </span>
 
             {/* Watched indicator */}
             {isWatched
-                ? <CheckCircle2 className={cn("w-4 h-4 shrink-0", isActive ? "text-white" : "text-green-500")} />
-                : <Circle className="w-4 h-4 text-zinc-800 shrink-0 opacity-0 group-hover:opacity-100" />
+                ? <CheckCircle2 className={cn("w-4 h-4 shrink-0", isActive ? "text-on-surface" : "text-green-500")} />
+                : <Circle className="w-4 h-4 text-on-surface-variant shrink-0 opacity-0 group-hover:opacity-100" />
             }
         </button>
     )
@@ -255,11 +255,11 @@ function SubSagaNav({ subSagas, episodes, currentEpNumber, onJumpToEp }: SubSaga
         <section className="px-10 pt-8 pb-2">
             {/* Header */}
             <div className="flex items-center gap-3 mb-5">
-                <Layers className="w-3.5 h-3.5 text-[var(--brand-secondary)]" />
-                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">
+                <Layers className="w-3.5 h-3.5 text-brand-secondary" />
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-on-surface-variant">
                     ARCOS DE LA SAGA
                 </span>
-                <div className="h-px bg-white/10 flex-1" />
+                <div className="h-px bg-on-surface/10 flex-1" />
             </div>
 
             {/* Sub-saga chips as a timeline */}
@@ -278,16 +278,16 @@ function SubSagaNav({ subSagas, episodes, currentEpNumber, onJumpToEp }: SubSaga
                             className={cn(
                                 "w-full flex items-center gap-4 px-5 py-3.5 rounded-xl border text-left transition-all duration-200 group",
                                 isActive
-                                    ? "bg-[var(--brand-secondary)]/10 border-[var(--brand-secondary)]/40 shadow-[0_0_12px_rgba(255,110,58,0.15)]"
-                                    : "bg-white/[0.03] border-white/[0.07] hover:bg-white/[0.06] hover:border-white/10"
+                                    ? "bg-brand-secondary/10 border-brand-secondary/40 shadow-[0_0_12px_rgba(255,110,58,0.15)]"
+                                    : "bg-surface-container/5 border-outline-variant/[0.07] hover:bg-surface-container/10 hover:border-outline-variant/10"
                             )}
                         >
                             {/* Index bubble */}
                             <div className={cn(
                                 "w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black shrink-0 transition-colors",
                                 isActive
-                                    ? "bg-[var(--brand-secondary)] text-white"
-                                    : "bg-white/10 text-zinc-500 group-hover:bg-white/20"
+                                    ? "bg-brand-secondary text-white"
+                                    : "bg-surface-container/10 text-on-surface-variant group-hover:bg-surface-container/20"
                             )}>
                                 {idx + 1}
                             </div>
@@ -296,18 +296,18 @@ function SubSagaNav({ subSagas, episodes, currentEpNumber, onJumpToEp }: SubSaga
                             <div className="flex-1 min-w-0">
                                 <p className={cn(
                                     "text-[11px] font-black uppercase tracking-widest truncate transition-colors",
-                                    isActive ? "text-[var(--brand-secondary)]" : "text-zinc-400 group-hover:text-white"
+                                    isActive ? "text-brand-secondary" : "text-on-surface-variant group-hover:text-on-surface"
                                 )}>
                                     {ss.title}
                                 </p>
-                                <p className="text-[9px] text-zinc-600 font-black uppercase tracking-widest mt-0.5">
+                                <p className="text-[9px] text-on-surface-variant font-black uppercase tracking-widest mt-0.5">
                                     EPS {ss.startEp}–{ss.endEp} · {epCount} EP{epCount !== 1 ? "S" : ""}
                                 </p>
                             </div>
 
                             {/* Active dot */}
                             {isActive && (
-                                <div className="w-1.5 h-1.5 rounded-full bg-[var(--brand-secondary)] shrink-0 animate-pulse" />
+                                <div className="w-1.5 h-1.5 rounded-full bg-brand-secondary shrink-0 animate-pulse" />
                             )}
                         </button>
                     )
@@ -353,16 +353,16 @@ function RightPanel({
     return (
         <main className="flex-1 min-h-0 flex flex-col bg-transparent overflow-y-auto">
             {/* ── Current episode info ────────────────────────── */}
-            <div className="px-10 pt-12 pb-10 border-b border-white/10">
+            <div className="px-10 pt-12 pb-10 border-b border-outline-variant/10">
                 <div className="flex items-start justify-between gap-12">
                     <div className="flex-1">
-                        <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em] mb-4">
+                        <p className="text-on-surface-variant text-[10px] font-black uppercase tracking-[0.3em] mb-4">
                             EPISODIO {current.number}
                         </p>
-                        <h2 className="text-white text-4xl font-black leading-none uppercase tracking-tight mb-6">
+                        <h2 className="text-on-surface text-4xl font-black leading-none uppercase tracking-tight mb-6">
                             {current.title}
                         </h2>
-                        <p className="text-zinc-400 text-[14px] leading-relaxed font-bold uppercase tracking-wide max-w-3xl">
+                        <p className="text-on-surface-variant text-[14px] leading-relaxed font-bold uppercase tracking-wide max-w-3xl">
                             {current.description}
                         </p>
                     </div>
@@ -373,8 +373,8 @@ function RightPanel({
                         className={cn(
                             "shrink-0 flex items-center gap-3 px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] border transition-all duration-300 rounded-xl",
                             currentWatched
-                                ? "bg-[var(--brand-secondary)] border-[var(--brand-secondary)] text-white shadow-[0_0_15px_rgba(255,110,58,0.4)]"
-                                : "bg-[#0a0e1a]/40 border-white/10 text-zinc-400 hover:text-[var(--brand-secondary)] hover:border-[var(--brand-secondary)]/30",
+                                ? "bg-brand-secondary border-brand-secondary text-white shadow-[0_0_15px_rgba(255,110,58,0.4)]"
+                                : "bg-surface/40 border-outline-variant/10 text-on-surface-variant hover:text-brand-secondary hover:border-brand-secondary/30",
                         )}
                     >
                         {currentWatched
@@ -404,10 +404,10 @@ function RightPanel({
                 <button
                     onClick={() => onPlayEpisode(current)}
                     className={cn(
-                        "w-full flex items-center justify-center gap-4 py-6 font-black text-[13px] uppercase tracking-[0.3em] transition-all duration-300 rounded-2xl shadow-[0_0_20px_rgba(255,110,58,0.3)] border",
+                        "w-full flex items-center justify-center gap-4 py-6 font-black text-[13px] uppercase tracking-[0.3em] transition-all duration-300 rounded-container shadow-[0_0_20px_rgba(255,110,58,0.3)] border",
                         isCurrentDownloaded
-                            ? "bg-[var(--brand-secondary)] border-[var(--brand-secondary)] text-white hover:brightness-110 hover:shadow-[0_0_30px_rgba(255,110,58,0.55)]"
-                            : "bg-white/5 border-white/5 text-zinc-600 cursor-not-allowed"
+                            ? "bg-brand-secondary border-brand-secondary text-white hover:brightness-110 hover:shadow-[0_0_30px_rgba(255,110,58,0.55)]"
+                            : "bg-surface-container/5 border-outline-variant/5 text-on-surface-variant cursor-not-allowed"
                     )}
                     disabled={!isCurrentDownloaded}
                 >
@@ -423,17 +423,17 @@ function RightPanel({
                     onClick={() => setEpisodesOpen((v) => !v)}
                     className="w-full flex items-center gap-4 mb-6 group"
                 >
-                    <div className="h-px bg-white/10 flex-1" />
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 group-hover:text-white transition-colors">
+                    <div className="h-px bg-on-surface/10 flex-1" />
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-on-surface-variant group-hover:text-on-surface transition-colors">
                         EPISODIOS DE LA SAGA
                     </h3>
                     <ChevronDown
                         className={cn(
-                            "w-4 h-4 text-zinc-700 group-hover:text-white transition-all duration-300",
+                            "w-4 h-4 text-on-surface-variant group-hover:text-on-surface transition-all duration-300",
                             episodesOpen ? "rotate-180" : "",
                         )}
                     />
-                    <div className="h-px bg-white/10 flex-1" />
+                    <div className="h-px bg-on-surface/10 flex-1" />
                 </button>
 
                 {/* Episode list — grouped by sub-saga if available */}
@@ -453,11 +453,11 @@ function RightPanel({
                                 <div key={ss.id} className="mb-4">
                                     {/* Sub-saga label */}
                                     <div className="flex items-center gap-3 px-2 mb-2">
-                                        <div className="h-px bg-white/[0.06] flex-1" />
-                                        <span className="text-[9px] font-black uppercase tracking-[0.25em] text-zinc-600">
+                                        <div className="h-px bg-on-surface/[0.06] flex-1" />
+                                        <span className="text-[9px] font-black uppercase tracking-[0.25em] text-on-surface-variant">
                                             {ss.title}
                                         </span>
-                                        <div className="h-px bg-white/[0.06] flex-1" />
+                                        <div className="h-px bg-on-surface/[0.06] flex-1" />
                                     </div>
                                     {ssEpisodes.map((ep) => {
                                         const globalIdx = episodes.findIndex((e) => e.id === ep.id)
@@ -643,7 +643,7 @@ function DetailPage() {
 
     if (!series || !saga || saga.episodes.length === 0) {
         return (
-            <div className="h-full w-full flex items-center justify-center text-white bg-background">
+            <div className="h-full w-full flex items-center justify-center text-on-surface bg-background">
                 Contenido no encontrado
             </div>
         )

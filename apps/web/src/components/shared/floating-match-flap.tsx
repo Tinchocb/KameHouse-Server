@@ -21,7 +21,7 @@ export function FloatingMatchFlap({ directoryPath, mediaId }: FloatingMatchFlapP
                     setIsMatchModalOpen(true)
                 }}
                 className={cn(
-                    "fixed left-0 md:left-[80px] top-[40%] z-[49] flex items-center justify-center p-3.5 rounded-r-2xl bg-zinc-950/90 backdrop-blur-2xl border-y border-r border-white/10 text-white/60 hover:text-brand-orange transition-all duration-300 shadow-[4px_0_16px_rgba(0,0,0,0.4)] hover:pl-5 hover:scale-105 active:scale-95 group cursor-pointer"
+                    "fixed left-0 md:left-[80px] top-[40%] z-[49] flex items-center justify-center p-3.5 rounded-r-corner-lg bg-surface-container/80 backdrop-blur-overlay-xl border-y border-r border-outline-variant text-on-surface-variant hover:text-brand-orange transition-all duration-300 shadow-elevation-3 hover:pl-5 hover:scale-105 active:scale-95 group cursor-pointer"
                 )}
                 title="Corregir Vinculación"
             >

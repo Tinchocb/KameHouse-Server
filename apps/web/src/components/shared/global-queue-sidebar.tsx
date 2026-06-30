@@ -35,7 +35,7 @@ export const GlobalQueueSidebar = () => {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={() => setGlobalQueueOpen(false)}
-                        className="fixed inset-0 z-[9990] bg-black/60 backdrop-blur-sm pointer-events-auto"
+                        className="fixed inset-0 z-[9990] bg-black/50 backdrop-blur-overlay-sm pointer-events-auto"
                     />
 
                     {/* Sidebar Panel */}
@@ -44,17 +44,17 @@ export const GlobalQueueSidebar = () => {
                         animate={{ x: 0 }}
                         exit={{ x: "100%" }}
                         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                        className="fixed right-0 top-0 bottom-0 w-full sm:w-[420px] z-[9995] bg-zinc-950/90 backdrop-blur-3xl border-l border-white/10 flex flex-col shadow-2xl pointer-events-auto select-none"
+                        className="fixed right-0 top-0 bottom-0 w-full sm:w-[420px] z-[9995] bg-surface-container/90 backdrop-blur-overlay-xl border-l border-outline-variant flex flex-col shadow-elevation-4 pointer-events-auto select-none"
                     >
                         {/* Header */}
-                        <div className="flex items-center justify-between p-6 border-b border-white/5 shrink-0">
-                            <h3 className="text-sm font-black tracking-[0.25em] text-white uppercase flex items-center gap-2.5">
+                        <div className="flex items-center justify-between p-6 border-b border-outline-variant/30 shrink-0">
+                            <h3 className="text-sm font-black tracking-[0.25em] text-on-surface uppercase flex items-center gap-2.5">
                                 <div className="w-2 h-2 rounded-full bg-brand-orange animate-pulse" />
                                 Cola de Reproducción ({playlistQueue.length})
                             </h3>
                             <button
                                 onClick={() => setGlobalQueueOpen(false)}
-                                className="p-2 text-zinc-500 hover:text-white hover:bg-white/5 rounded-full transition-all duration-300"
+                                className="p-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full transition-all duration-300"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -72,10 +72,10 @@ export const GlobalQueueSidebar = () => {
                                         className={cn(
                                             "w-full text-left flex gap-4 p-3 rounded-2xl border transition-all duration-300 group relative",
                                             isCurrent
-                                                ? "bg-brand-orange/10 border-brand-orange/30 text-white shadow-[0_8px_20px_-6px_rgba(255,110,58,0.15)]"
+                                                ? "bg-primary/10 border-primary/30 text-on-surface shadow-elevation-1"
                                                 : isHistory
-                                                    ? "bg-white/[0.01] border-white/5 opacity-50 hover:opacity-80"
-                                                    : "bg-white/[0.02] border-white/5 text-zinc-400 hover:text-white hover:bg-white/[0.04] hover:border-white/10"
+                                                    ? "bg-surface-container-low border-outline-variant/20 opacity-50 hover:opacity-80"
+                                                    : "bg-surface-container-low border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:bg-surface-container hover:border-outline-variant"
                                         )}
                                     >
                                         {/* Clickable Area to play */}
@@ -86,7 +86,7 @@ export const GlobalQueueSidebar = () => {
                                             className="flex-1 flex gap-4 cursor-pointer min-w-0"
                                         >
                                             {/* Thumbnail */}
-                                            <div className="relative w-28 aspect-video bg-zinc-900 border border-white/5 rounded-xl overflow-hidden shrink-0 flex items-center justify-center">
+                                            <div className="relative w-28 aspect-video bg-surface border border-outline-variant/30 rounded-xl overflow-hidden shrink-0 flex items-center justify-center">
                                                 {item.thumbnail ? (
                                                     <DeferredImage
                                                         src={item.thumbnail}
@@ -95,14 +95,14 @@ export const GlobalQueueSidebar = () => {
                                                         showSkeleton={false}
                                                     />
                                                 ) : (
-                                                    <span className="text-[10px] font-black text-zinc-700">SIN IMAGEN</span>
+                                                    <span className="text-[10px] font-black text-on-surface-variant/40">SIN IMAGEN</span>
                                                 )}
 
                                                 {/* Play overlay */}
                                                 <div className={cn(
                                                     "absolute inset-0 flex items-center justify-center transition-all duration-300",
                                                     isCurrent 
-                                                        ? "opacity-100 bg-brand-orange/10" 
+                                                        ? "opacity-100 bg-primary/10" 
                                                         : "opacity-0 group-hover:opacity-100 bg-black/50"
                                                 )}>
                                                     {isCurrent ? (
@@ -122,14 +122,14 @@ export const GlobalQueueSidebar = () => {
                                                 {item.subtitle && (
                                                     <span className={cn(
                                                         "text-[9px] font-black tracking-widest mb-0.5",
-                                                        isCurrent ? "text-brand-orange" : "text-zinc-500"
+                                                        isCurrent ? "text-primary" : "text-on-surface-variant"
                                                     )}>
                                                         {item.subtitle.toUpperCase()}
                                                     </span>
                                                 )}
                                                 <h4 className={cn(
                                                     "text-[12px] font-bold tracking-wide truncate leading-tight transition-colors",
-                                                    isCurrent ? "text-white" : "text-zinc-300 group-hover:text-white"
+                                                    isCurrent ? "text-on-surface" : "text-on-surface-variant/80 group-hover:text-on-surface"
                                                 )}>
                                                     {item.title}
                                                 </h4>
@@ -142,7 +142,7 @@ export const GlobalQueueSidebar = () => {
                                                 e.stopPropagation()
                                                 removeFromQueue(idx)
                                             }}
-                                            className="p-2 text-zinc-500 hover:text-red-400 self-center hover:bg-white/5 rounded-xl transition-all duration-200 z-10"
+                                            className="p-2 text-on-surface-variant hover:text-red-400 self-center hover:bg-surface-container rounded-xl transition-all duration-200 z-10"
                                             title="Eliminar de la cola"
                                         >
                                             <Trash2 className="w-4 h-4" />
@@ -153,10 +153,10 @@ export const GlobalQueueSidebar = () => {
 
                             {playlistQueue.length === 0 && (
                                 <div className="py-24 flex flex-col items-center justify-center text-center gap-4">
-                                    <div className="p-4 rounded-full bg-white/[0.02] border border-white/5 text-zinc-600 animate-pulse">
+                                    <div className="p-4 rounded-full bg-surface-container-low border border-outline-variant/30 text-on-surface-variant/60 animate-pulse">
                                         <Film className="w-8 h-8" />
                                     </div>
-                                    <p className="text-[11px] text-zinc-500 uppercase tracking-widest font-black">
+                                    <p className="text-[11px] text-on-surface-variant uppercase tracking-widest font-black">
                                         La cola está vacía
                                     </p>
                                 </div>
@@ -165,13 +165,13 @@ export const GlobalQueueSidebar = () => {
 
                         {/* Footer */}
                         {playlistQueue.length > 0 && (
-                            <div className="p-6 border-t border-white/5 shrink-0 flex justify-between gap-4">
+                            <div className="p-6 border-t border-outline-variant/30 shrink-0 flex justify-between gap-4">
                                 <button
                                     onClick={() => {
                                         clearQueue()
                                         setGlobalQueueOpen(false)
                                     }}
-                                    className="w-full py-3.5 border border-white/10 hover:border-red-500/30 hover:bg-red-500/10 text-zinc-400 hover:text-red-400 font-black text-[10px] uppercase tracking-widest rounded-xl transition-all duration-300"
+                                    className="w-full py-3.5 border border-outline-variant hover:border-destructive/30 hover:bg-destructive/10 text-on-surface-variant hover:text-destructive font-black text-[10px] uppercase tracking-widest rounded-pill transition-all duration-300"
                                 >
                                     Vaciar Cola
                                 </button>

@@ -1,8 +1,4 @@
-export { GlassCard, GlassCardHeader, GlassCardTitle, GlassCardDescription, GlassCardContent, GlassCardFooter } from "./glass-card";
-export type { GlassCardProps } from "./glass-card";
-
-export { GlassButton, IconButton } from "./glass-button";
-export type { GlassButtonProps, ButtonVariant, ButtonSize } from "./glass-button";
+export { IconButton } from "./button";
 
 export { PosterCard, PosterGrid, PosterCarousel } from "./poster-card";
 export type { PosterCardProps, PosterAspect, PosterSize, PosterGridProps } from "./poster-card";
