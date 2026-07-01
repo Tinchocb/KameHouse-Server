@@ -87,7 +87,10 @@ export const getSpineConfig = (seriesId: string, id: number): SpineTheme => {
         subtitle: "SERIE",
         borderColor: cfg.borderColor,
         colIndex: id % 5,
-        rawImg: "/icons/series-icons/goku-raw-dbz.png",
+        // No hardcoded character art for series outside the known Dragon
+        // Ball themes — showing Goku on an unrelated scanned series would
+        // be wrong. The card falls back to its poster/gradient instead.
+        rawImg: "",
         colors: cfg.colors
     };
 };

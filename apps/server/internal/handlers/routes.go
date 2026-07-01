@@ -162,6 +162,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	v1.POST("/announcements", h.HandleGetAnnouncements)
 	v1.POST("/directory-selector", h.HandleDirectorySelector)
 	v1.POST("/open-in-explorer", h.HandleOpenInExplorer)
+	v1.GET("/lore/dragonball", h.HandleGetDragonballLore)
 
 	h.RegisterLibraryRoutes(v1)
 	h.RegisterStreamingRoutes(v1)

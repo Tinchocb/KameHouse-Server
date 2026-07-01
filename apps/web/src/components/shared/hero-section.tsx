@@ -41,7 +41,7 @@ export function HeroSection({
                 <motion.div 
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.7 }}
+                    transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
                     className="flex items-center gap-3 mb-4"
                 >
                     <div className="h-[2px] w-8 bg-primary shadow-[0_0_15px_rgba(249,115,22,0.5)]" />
@@ -51,7 +51,7 @@ export function HeroSection({
                 <motion.h1 
                     initial={{ opacity: 0, x: -30 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 1, delay: 0.1 }}
+                    transition={{ duration: 1, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
                     className="font-bebas text-6xl md:text-8xl lg:text-9xl leading-[0.8] tracking-[0.02em] text-white"
                 >
                     {title}
@@ -61,7 +61,7 @@ export function HeroSection({
                     <motion.p 
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, delay: 0.2 }}
+                        transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
                         className="font-bebas text-3xl md:text-5xl tracking-[0.1em] text-white mt-4 uppercase"
                     >
                         {subtitle}
@@ -71,7 +71,7 @@ export function HeroSection({
                 <motion.div 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, delay: 0.4 }}
+                    transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
                     className="mt-12"
                 >
                     {count !== undefined && (

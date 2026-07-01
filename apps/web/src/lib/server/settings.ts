@@ -134,7 +134,11 @@ export const settingsSchema = z.object({
     }),
 })
 
-export const gettingStartedSchema = _gettingStartedSchema.extend(settingsSchema.shape)
+export const gettingStartedSchema = _gettingStartedSchema.extend({
+    library: settingsSchema.shape.library,
+    mediaPlayer: settingsSchema.shape.mediaPlayer,
+    notifications: settingsSchema.shape.notifications.optional(),
+})
 
 export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>): GettingStarted_Variables => ({
     library: {

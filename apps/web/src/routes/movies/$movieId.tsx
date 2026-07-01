@@ -9,13 +9,14 @@ import { useGetContinuityWatchHistoryItem } from "@/api/hooks/continuity.hooks"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { Anime_LocalFile, FileTechnicalInfo, Mediastream_StreamType } from "@/api/generated/types"
 import { EmptyState } from "@/components/shared/empty-state"
+import { Skeleton } from "@/components/ui/skeleton/skeleton"
 
 const VideoPlayer = React.lazy(() => import("@/components/video/player").then(m => ({ default: m.VideoPlayer })))
 import { startViewTransition } from "@/lib/helpers/transitions"
 import { FloatingMatchFlap } from "@/components/shared/floating-match-flap"
 import { useSound } from "@/hooks/use-sound"
 import { cn } from "@/components/ui/core/styling"
-import { Play, Check, Plus, Star, Users, ListPlus } from "lucide-react"
+import { Icons } from "@/components/ui/icons"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { ERA_TABS, cleanMovieTitle } from "./-MovieCard"
 import { getEntryEra } from "./-components/movies-utils"
@@ -23,6 +24,7 @@ import { useGSAP } from "@gsap/react"
 import gsap from "gsap"
 import { useServerQuery } from "@/api/client/requests"
 import { CharacterDetailModal } from "@/components/shared/character-detail-modal"
+import { isDragonBallTmdbId } from "@/lib/config/dragonball.config"
 
 
 export const Route = createFileRoute("/movies/$movieId")({
@@ -71,6 +73,8 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
         method: "GET",
         queryKey: ["dragonball-lore"],
         staleTime: 300000,
+        enabled: isDragonBallTmdbId(entry?.media?.tmdbId),
+        muteError: true,
     })
 
     const [isFavorite, setIsFavorite] = useState(false)
@@ -120,7 +124,20 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
 
     if (!entry || !entry.media) {
         if (isLoading) {
-            return             <div className="h-full w-full bg-surface animate-pulse pb-16" />
+            return (
+                <div className="h-full w-full bg-surface pb-16 p-6 md:p-12 flex flex-col justify-end min-h-screen gap-6">
+                    <div className="flex flex-col lg:flex-row items-center lg:items-end gap-10 max-w-[1800px] w-full mx-auto">
+                        <Skeleton className="w-56 md:w-68 shrink-0 aspect-[2/3] h-auto rounded-container" />
+                        <div className="flex-1 w-full flex flex-col gap-4">
+                            <Skeleton className="h-6 w-32 rounded-lg" />
+                            <Skeleton className="h-14 w-2/3 rounded-lg" />
+                            <Skeleton className="h-4 w-full rounded-lg" />
+                            <Skeleton className="h-4 w-3/4 rounded-lg" />
+                            <Skeleton className="h-14 w-48 rounded-full mt-2" />
+                        </div>
+                    </div>
+                </div>
+            )
         }
         return (
             <div className="min-h-screen bg-surface text-on-surface flex items-center justify-center">
@@ -243,15 +260,16 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                 <div className="absolute inset-0 z-0">
                     {backdropUrl && (
                         hasBannerImage ? (
-                            <div 
+                            <div
                                 ref={backdropRef}
-                                className="absolute right-0 top-0 h-full w-full md:w-[82%] lg:w-[78%] overflow-hidden z-0 will-change-transform"
+                                onClick={handlePlayDefault}
+                                className="absolute right-0 top-0 h-full w-full md:w-[82%] lg:w-[78%] overflow-hidden cursor-pointer z-0 will-change-transform group/backdrop"
                             >
                                 <DeferredImage
                                     src={backdropUrl}
                                     alt={title}
                                     priority={true}
-                                    className="w-full h-full object-cover object-[center_20%] opacity-85 transition-all [transition-duration:20s] ease-out hover:scale-[1.02] animate-ken-burns"
+                                    className="w-full h-full object-cover object-[center_20%] opacity-85 transition-all [transition-duration:20s] ease-out group-hover/backdrop:scale-[1.02] animate-ken-burns"
                                     style={{
                                         WebkitMaskImage: "linear-gradient(to right, transparent 0%, rgba(0,0,0,0.15) 12%, black 40%)",
                                         maskImage: "linear-gradient(to right, transparent 0%, rgba(0,0,0,0.15) 12%, black 40%)",
@@ -259,15 +277,16 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                                 />
                             </div>
                         ) : (
-                            <div 
+                            <div
                                 ref={backdropRef}
-                                className="absolute right-0 top-0 h-full w-auto overflow-hidden z-0 will-change-transform"
+                                onClick={handlePlayDefault}
+                                className="absolute right-0 top-0 h-full w-auto overflow-hidden cursor-pointer z-0 will-change-transform group/backdrop"
                             >
                                 <DeferredImage
                                     src={backdropUrl}
                                     alt={title}
                                     priority={true}
-                                    className="h-full w-auto object-contain object-right-top opacity-[0.65] transition-all [transition-duration:20s] ease-out hover:scale-[1.02] animate-ken-burns"
+                                    className="h-full w-auto object-contain object-right-top opacity-[0.65] transition-all [transition-duration:20s] ease-out group-hover/backdrop:scale-[1.02] animate-ken-burns"
                                 />
                             </div>
                         )
@@ -295,7 +314,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                 {/* Content Container (Split Grid) */}
                 <div className="relative z-20 w-full max-w-[1800px] mx-auto px-6 md:px-12 flex flex-col lg:flex-row items-center lg:items-end gap-10">
                                  {/* Left Column: Portrait Poster Card */}
-                    <div className="movie-animate w-56 md:w-68 shrink-0 aspect-[2/3] rounded-container overflow-hidden border border-outline-variant bg-surface-container shadow-elevation-5 transition-all duration-500 hover:scale-[1.03]">
+                    <div className="movie-animate w-56 md:w-68 shrink-0 aspect-[2/3] rounded-container overflow-hidden border border-outline-variant bg-surface-container shadow-elevation-5">
                         <DeferredImage
                             src={posterUrl}
                             alt={title}
@@ -308,11 +327,11 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                         {/* Era Badge */}
                         <div className="movie-animate">
                             <span 
-                                className="inline-flex items-center text-[10px] font-black uppercase tracking-[0.25em] px-3.5 py-1.5 rounded-lg shadow-elevation-2 border"
+                                className="inline-flex items-center text-[10px] font-black uppercase tracking-widest px-3.5 py-1.5 rounded-lg shadow-elevation-2 border"
                                 style={{
                                     color: eraConfig.color,
-                                    borderColor: `${eraConfig.color}45`,
-                                    backgroundColor: `${eraConfig.color}15`,
+                                    borderColor: `color-mix(in srgb, ${eraConfig.color} 27%, transparent)`,
+                                    backgroundColor: `color-mix(in srgb, ${eraConfig.color} 8%, transparent)`,
                                 }}
                             >
                                 {eraConfig.label}
@@ -346,7 +365,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                                     <>
                                         <span className="text-on-surface-variant/60">•</span>
                                         <span className="flex items-center gap-1 text-amber-400">
-                                            <Star size={11} fill="currentColor" className="stroke-none" />
+                                            <Icons.ui.star size={11} fill="currentColor" className="stroke-none" />
                                             {(media.score / 10).toFixed(1)} Ki
                                         </span>
                                     </>
@@ -372,14 +391,14 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                                 <div className="absolute -inset-10 bg-brand-secondary/30 blur-xl group-hover/play:opacity-100 opacity-0 transition-opacity duration-500 -z-10 animate-pulse" />
 
                                 <div className="p-2.5 bg-surface-container backdrop-blur-overlay-xl rounded-full border border-outline-variant text-on-surface group-hover/play:bg-white group-hover/play:text-black transition-all duration-300 shadow-inner z-10 shrink-0">
-                                    <Play className="w-4 h-4 fill-current" />
+                                    <Icons.media.play className="w-4 h-4 fill-current" />
                                 </div>
 
                                 <div className="flex flex-col items-start z-10 select-none text-left shrink-0">
-                                    <span className="font-sans text-[13px] tracking-[0.15em] font-extrabold uppercase text-on-surface transition-colors whitespace-nowrap">
+                                    <span className="font-sans text-[13px] tracking-widest font-extrabold uppercase text-on-surface transition-colors whitespace-nowrap">
                                         {continuityData?.item?.currentTime ? "REANUDAR" : "PLAY"}
                                     </span>
-                                    <span className="text-[8px] font-black text-on-surface/60 tracking-[0.1em] uppercase transition-colors mt-0.5 whitespace-nowrap">
+                                    <span className="text-[8px] font-black text-on-surface/60 tracking-widest uppercase transition-colors mt-0.5 whitespace-nowrap">
                                         {continuityData?.item?.currentTime ? "Continuar viendo" : "Ver película"}
                                     </span>
                                 </div>
@@ -392,7 +411,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                                     className="group/queue flex items-center justify-center w-14 h-14 rounded-full bg-[var(--glass-bg)] backdrop-blur-overlay-md border border-[var(--glass-border)] hover:bg-[var(--glass-hover)] hover:border-[var(--glass-strong)] cursor-pointer text-on-surface hover:text-brand-secondary transition-all duration-300 active:scale-95"
                                     title="Añadir a la cola"
                                 >
-                                    <ListPlus className="w-5 h-5 transition-transform group-hover/queue:-translate-y-0.5" />
+                                    <Icons.ui.listPlus className="w-5 h-5 transition-transform group-hover/queue:-translate-y-0.5" />
                                 </button>
                             )}
 
@@ -407,7 +426,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                                 )}
                                 title={isWatched ? "Marcar como no vista" : "Marcar como vista"}
                             >
-                                {isWatched ? <Check className="w-5 h-5 stroke-[3px]" /> : <Plus className="w-5 h-5 stroke-[2.5px]" />}
+                                {isWatched ? <Icons.ui.check className="w-5 h-5 stroke-[3px]" /> : <Icons.ui.plus className="w-5 h-5 stroke-[2.5px]" />}
                             </button>
 
                             {/* Favorite Button */}
@@ -421,7 +440,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                                 )}
                                 title={isFavorite ? "Quitar de favoritos" : "Añadir a favoritos"}
                             >
-                                <Users className="w-5 h-5" />
+                                <Icons.navigation.users className="w-5 h-5" />
                             </button>
                         </div>
 
@@ -443,7 +462,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                 <React.Suspense fallback={
                     <div className="fixed inset-0 bg-surface/90 backdrop-blur-overlay-xl flex flex-col justify-center items-center z-50">
                         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-secondary mb-4"></div>
-                        <p className="text-on-surface-variant text-xs font-bold uppercase tracking-[0.2em]">Cargando reproductor...</p>
+                        <p className="text-on-surface-variant text-label-md uppercase tracking-widest">Cargando reproductor...</p>
                     </div>
                 }>
                     <VideoPlayer

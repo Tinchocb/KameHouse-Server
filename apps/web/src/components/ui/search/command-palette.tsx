@@ -87,9 +87,9 @@ heading={isSearchActive ? "RESULTADOS ENCONTRADOS" : "TENDENCIAS GLOBALES"}
                                         const title = media?.titleRomaji || media?.titleEnglish || `Desconocido (${result.mediaId})`
                                         
                                         return (
-                                            <CommandItem 
-                                                key={String(result.mediaId)} 
-                                                value={title} 
+                                            <CommandItem
+                                                key={String(result.mediaId)}
+                                                value={`${title}-${result.mediaId}`}
                                                 onSelect={() => {
                                                     setOpen(false)
                                                     if (result.isUnlinked) {

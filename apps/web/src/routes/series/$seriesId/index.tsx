@@ -18,9 +18,8 @@ import { EmptyState } from "@/components/shared/empty-state"
 
 const VideoPlayer = React.lazy(() => import("@/components/video/player").then(m => ({ default: m.VideoPlayer })))
 import { RelationsTab, CharactersTab } from "./-series-bento-tabs"
-import { getDragonBallSpanishTitle } from "@/lib/config/dragonball.config"
+import { getDragonBallSpanishTitle, isDragonBallTmdbId, getSeriesEraTheme } from "@/lib/config/dragonball.config"
 import { startViewTransition } from "@/lib/helpers/transitions"
-import { Trophy, Skull } from "lucide-react"
 
 // New Design System Components
 import { FloatingMatchFlap } from "@/components/shared/floating-match-flap"
@@ -55,6 +54,22 @@ export const Route = createFileRoute("/series/$seriesId/")({
     component: SeriesDetailPage,
 })
 
+function resolveLocalFileForEpisode(episode: Anime_Episode, localFiles: Anime_LocalFile[] | undefined | null): Anime_LocalFile | undefined {
+    if (episode.localFile) return episode.localFile
+    return (localFiles || []).find(f => {
+        const fEp = f.metadata?.episode || f.parsedInfo?.episode
+        const fSeason = f.parsedInfo?.season
+        if (fEp == null) return false
+        if (Number(fEp) === episode.absoluteEpisodeNumber) {
+            return true
+        }
+        if (typeof episode.seasonNumber === 'number' && fSeason != null) {
+            return Number(fEp) === episode.episodeNumber && Number(fSeason) === episode.seasonNumber
+        }
+        return Number(fEp) === episode.episodeNumber
+    })
+}
+
 function SeriesDetailPage() {
     const { seriesId } = Route.useParams()
     const loaderData = Route.useLoaderData()
@@ -83,6 +98,8 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         method: "GET",
         queryKey: ["dragonball-lore"],
         staleTime: 300000,
+        enabled: isDragonBallTmdbId(entry?.media?.tmdbId),
+        muteError: true,
     })
 
     const [selectedCharacterName, setSelectedCharacterName] = useState<string | null>(null)
@@ -135,17 +152,14 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     const computedEpisodes = useMemo(() => {
         if (!entry) return []
         if (entry.episodes && entry.episodes.length > 0) {
-            const eps = entry.episodes.filter(ep => ep && typeof ep.episodeNumber === 'number');
-            eps.forEach(ep => {
-                if (sagas && sagas.length > 0) {
+            return entry.episodes
+                .filter(ep => ep && typeof ep.episodeNumber === 'number')
+                .map(ep => {
+                    if (!sagas || sagas.length === 0) return ep;
                     const epNum = ep.absoluteEpisodeNumber || ep.episodeNumber;
                     const matchingSaga = sagas.find(s => epNum >= s.startEp && epNum <= s.endEp);
-                    if (matchingSaga) {
-                        ep.sagaId = matchingSaga.id;
-                    }
-                }
-            });
-            return eps;
+                    return matchingSaga ? { ...ep, sagaId: matchingSaga.id } : ep;
+                });
         }
 
         if (entry.localFiles && entry.localFiles.length > 0) {
@@ -265,19 +279,8 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
             }
         }
         
-        const lf = targetEp.localFile || (entry?.localFiles || []).find(f => {
-            const fEp = f.metadata?.episode || f.parsedInfo?.episode
-            const fSeason = f.parsedInfo?.season
-            if (fEp == null) return false
-            if (Number(fEp) === targetEp.absoluteEpisodeNumber) {
-                return true
-            }
-            if (typeof targetEp.seasonNumber === 'number' && fSeason != null) {
-                return Number(fEp) === targetEp.episodeNumber && Number(fSeason) === targetEp.seasonNumber
-            }
-            return Number(fEp) === targetEp.episodeNumber
-        })
-        
+        const lf = resolveLocalFileForEpisode(targetEp, entry?.localFiles)
+
         if (lf) {
             handlePlayEpisode(lf, targetEp)
         } else if (entry?.localFiles && entry.localFiles.length > 0) {
@@ -293,18 +296,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
             toast.error("Episodio no encontrado en la base de datos.")
             return
         }
-        const lf = targetEp.localFile || (entry?.localFiles || []).find(f => {
-            const fEp = f.metadata?.episode || f.parsedInfo?.episode
-            const fSeason = f.parsedInfo?.season
-            if (fEp == null) return false
-            if (Number(fEp) === targetEp.absoluteEpisodeNumber) {
-                return true
-            }
-            if (typeof targetEp.seasonNumber === 'number' && fSeason != null) {
-                return Number(fEp) === targetEp.episodeNumber && Number(fSeason) === targetEp.seasonNumber
-            }
-            return Number(fEp) === targetEp.episodeNumber
-        })
+        const lf = resolveLocalFileForEpisode(targetEp, entry?.localFiles)
         if (lf) {
             handlePlayEpisode(lf, targetEp)
         } else {
@@ -323,18 +315,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
             return
         }
         const nextEp = computedEpisodes[currentEpIdx + 1]
-        const lf = nextEp.localFile || (entry?.localFiles || []).find(f => {
-            const fEp = f.metadata?.episode || f.parsedInfo?.episode
-            const fSeason = f.parsedInfo?.season
-            if (fEp == null) return false
-            if (Number(fEp) === nextEp.absoluteEpisodeNumber) {
-                return true
-            }
-            if (typeof nextEp.seasonNumber === 'number' && fSeason != null) {
-                return Number(fEp) === nextEp.episodeNumber && Number(fSeason) === nextEp.seasonNumber
-            }
-            return Number(fEp) === nextEp.episodeNumber
-        })
+        const lf = resolveLocalFileForEpisode(nextEp, entry?.localFiles)
         if (!lf) {
             toast.error("El siguiente episodio no está disponible localmente.")
             startViewTransition(() => {
@@ -375,18 +356,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
 
     const nextLocalFile = useMemo(() => {
         if (!nextEp) return null
-        return nextEp.localFile || (entry?.localFiles || []).find(f => {
-            const fEp = f.metadata?.episode || f.parsedInfo?.episode
-            const fSeason = f.parsedInfo?.season
-            if (fEp == null) return false
-            if (Number(fEp) === nextEp.absoluteEpisodeNumber) {
-                return true
-            }
-            if (typeof nextEp.seasonNumber === 'number' && fSeason != null) {
-                return Number(fEp) === nextEp.episodeNumber && Number(fSeason) === nextEp.seasonNumber
-            }
-            return Number(fEp) === nextEp.episodeNumber
-        })
+        return resolveLocalFileForEpisode(nextEp, entry?.localFiles)
     }, [nextEp, entry?.localFiles])
 
     if (isLoading && !entry) {
@@ -411,9 +381,13 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     const title = entry.media.titleSpanish || entry.media.titleRomaji || entry.media.titleEnglish || "Título Desconocido"
     const hasRelations = entry.media?.relations && entry.media.relations.length > 0
     const hasCharacters = entry.media?.characters?.edges && entry.media.characters.edges.length > 0
+    const eraTheme = getSeriesEraTheme(entry.media?.tmdbId)
 
     return (
-        <div className="h-full w-full flex flex-col overflow-y-auto no-scrollbar bg-[var(--bg-primary)] text-white pb-16">
+        <div
+            data-theme={eraTheme || undefined}
+            className="h-full w-full flex flex-col overflow-y-auto no-scrollbar bg-[var(--bg-primary)] text-white pb-16"
+        >
             <FloatingMatchFlap
                 directoryPath={entry.libraryData?.sharedPath || ""}
                 mediaId={entry.mediaId}
@@ -424,7 +398,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                 sagaCount={sagas?.length ?? 0}
                 onPlay={handlePlayDefault}
             />
-            <div className="w-full max-w-[1800px] mx-auto px-6 md:pl-20 md:pr-12 mt-8">
+            <div className="w-full max-w-[1800px] mx-auto px-6 md:px-12 mt-8">
                 <div className="flex border-b border-outline-variant pb-2 mb-6 gap-6 overflow-x-auto no-scrollbar">
                     <button
                         onClick={() => setSearchParams({ tab: "episodes" })}
@@ -479,7 +453,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: 10 }}
                                 transition={{ duration: 0.2 }}
-                                className="mt-8 flex flex-col lg:flex-row gap-8"
+                                className="mt-8 flex flex-col lg:flex-row gap-10"
                             >
                                 {sagas && sagas.length > 0 && (
                                     <div className="lg:w-80 flex-shrink-0 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-7rem)]">
@@ -535,9 +509,9 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                                                     thumbnailUrl: ep.episodeMetadata?.image || heroBackdrop,
                                                     episodeType: lf?.metadata?.episodeType || "Canon",
                                                     isWatched: ep.watched,
-                                                    resolution: lf?.technicalInfo?.videoStream?.height ? `${lf.technicalInfo.videoStream.height}p` : "1080p",
-                                                    videoCodec: lf?.technicalInfo?.videoStream?.codec || "H264",
-                                                    audioCodec: lf?.technicalInfo?.audioStreams?.[0]?.codec || "AAC",
+                                                    resolution: lf?.technicalInfo?.videoStream?.height ? `${lf.technicalInfo.videoStream.height}p` : undefined,
+                                                    videoCodec: lf?.technicalInfo?.videoStream?.codec,
+                                                    audioCodec: lf?.technicalInfo?.audioStreams?.[0]?.codec,
                                                     localFilePath: lf?.path,
                                                     sagaId: ep.sagaId,
                                                     sagaName: sagas?.find(s => s.id === ep.sagaId)?.name
@@ -590,8 +564,8 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                 return (
                     <React.Suspense fallback={
                         <div className="fixed inset-0 bg-[var(--bg-primary)]/90 backdrop-blur-[var(--blur-overlay-lg)] flex flex-col justify-center items-center z-50">
-                            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-primary mb-4"></div>
-                            <p className="text-muted text-label-md uppercase tracking-widest">Cargando reproductor...</p>
+                            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-secondary mb-4"></div>
+                            <p className="text-on-surface-variant/70 text-label-md uppercase tracking-widest">Cargando reproductor...</p>
                         </div>
                     }>
                         <VideoPlayer
@@ -643,16 +617,16 @@ function SagaLoreHeader({ saga }: { saga: SagaDTO | undefined }) {
         <div className="bg-surface-container shadow-elevation-2 p-6 rounded-container mb-8">
             <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="space-y-1">
-                    <span className="text-label-sm text-brand-primary uppercase tracking-widest bg-brand-primary/10 border border-brand-primary/20 px-2.5 py-0.5 rounded">
+                    <span className="text-label-sm text-brand-accent uppercase tracking-widest bg-brand-accent/10 border border-brand-accent/20 px-4 py-1.5 rounded-full">
                         Detalles del Arco
                     </span>
-                    <h2 className="text-h3 font-display text-primary uppercase tracking-wide mt-1.5">
+                    <h2 className="text-h3 font-display text-on-surface uppercase tracking-wide mt-1.5">
                         {saga.name}
                     </h2>
                 </div>
                 {saga.canonStatus && (
                     <span className={cn(
-                        "px-4 py-1.5 rounded-full text-label-sm font-black uppercase tracking-wider shadow-sm",
+                        "px-2.5 py-1 rounded-full text-label-sm font-black uppercase tracking-wider shadow-sm",
                         saga.canonStatus === "true" || saga.canonStatus.toLowerCase() === "canon"
                             ? "bg-brand-success/15 text-brand-success border border-brand-success/25"
                             : saga.canonStatus.toLowerCase() === "relleno" || saga.canonStatus === "false"
@@ -664,15 +638,17 @@ function SagaLoreHeader({ saga }: { saga: SagaDTO | undefined }) {
                 )}
             </div>
 
-            <p className="text-body-md text-secondary leading-relaxed border-l-2 border-brand-primary/30 pl-4 py-1">
-                {saga.description}
-            </p>
+            {saga.description && (
+                <p className="text-body-md text-on-surface-variant leading-relaxed border-l-2 border-brand-accent/30 pl-4 py-1">
+                    {saga.description}
+                </p>
+            )}
 
             {hasRichDetails && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-outline-variant mt-2">
                     {saga.antagonists?.length > 0 && (
                         <div className="bg-surface-container-low p-6 rounded-container shadow-inner">
-                            <span className="flex items-center gap-2 text-label-sm font-black text-muted uppercase tracking-wider mb-3 pb-2 border-b border-outline-variant">
+                            <span className="flex items-center gap-2 text-label-sm font-black text-on-surface-variant/70 uppercase tracking-wider mb-3 pb-2 border-b border-outline-variant">
                                 <Icons.status.skull size={14} className="text-brand-destructive" />
                                 Antagonistas
                             </span>
@@ -688,15 +664,15 @@ function SagaLoreHeader({ saga }: { saga: SagaDTO | undefined }) {
 
                     {saga.keyEvents?.length > 0 && (
                         <div className="bg-surface-container-low p-6 rounded-container md:col-span-2 shadow-inner">
-                            <span className="flex items-center gap-2 text-label-sm font-black text-muted uppercase tracking-wider mb-3 pb-2 border-b border-outline-variant">
+                            <span className="flex items-center gap-2 text-label-sm font-black text-on-surface-variant/70 uppercase tracking-wider mb-3 pb-2 border-b border-outline-variant">
                                 <Icons.status.trophy size={14} className="text-brand-secondary" />
                                 Hitos Clave
                             </span>
-                            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-body-sm text-secondary">
+                            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-body-sm text-on-surface-variant">
                                 {saga.keyEvents.map((event: string, idx: number) => (
                                     <li key={idx} className="flex items-start gap-2 leading-relaxed">
-                                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-primary/60 mt-1.5 shrink-0" />
-                                        <span className="text-muted">{event}</span>
+                                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-accent/60 mt-1.5 shrink-0" />
+                                        <span className="text-on-surface-variant/70">{event}</span>
                                     </li>
                                 ))}
                             </ul>

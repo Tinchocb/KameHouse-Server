@@ -140,15 +140,13 @@ export function RandomPlayButton() {
                         <motion.button
                             id="random-play-btn"
                             disabled={isLoading}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.92 }}
                             className={cn(
-                                "flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300 group bg-surface-variant border border-outline-variant/50",
+                                "flex items-center justify-center w-14 h-14 rounded-2xl transition-all duration-300 group bg-white/[0.03] hover:bg-white/[0.08] backdrop-blur-[var(--blur-overlay-sm)] border border-white/5 hover:border-white/10 active:scale-95 font-bold",
                                 isLoading
-                                    ? "!border-brand-orange/40 !bg-brand-orange/10 text-brand-orange cursor-wait"
+                                    ? "!border-brand-orange/25 !bg-brand-orange/[0.05] text-brand-orange cursor-wait"
                                     : showPicker
-                                        ? "!border-brand-orange/30 !bg-brand-orange/10 text-brand-orange shadow-[0_0_20px_var(--glow-primary)]"
-                                        : "text-on-surface-variant hover:text-on-surface hover:border-outline-variant"
+                                        ? "!border-brand-orange/25 !bg-brand-orange/[0.05] text-brand-orange shadow-[0_8px_32px_rgba(255,110,58,0.15)]"
+                                        : "text-zinc-400 hover:text-brand-orange"
                             )}
                         >
                             {isLoading ? (
@@ -173,9 +171,11 @@ export function RandomPlayButton() {
                             align="end"
                             sideOffset={16}
                             className={cn(
-                                "z-[999] w-56 bg-surface-container border border-outline-variant/50 rounded-corner-lg shadow-elevation-3 p-1.5 outline-none",
-                                "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
-                                "data-[state=open]:fade-in-50 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+                                "z-[999] w-56 bg-black/40 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl p-1.5 outline-none",
+                                "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+                                "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+                                "data-[side=right]:slide-in-from-left-4 data-[side=bottom]:slide-in-from-top-4",
+                                "duration-300 ease-out"
                             )}
                         >
                             {/* Header */}
@@ -258,13 +258,11 @@ interface PickerOptionProps {
 
 function PickerOption({ id, onClick, icon, iconBg, label, description, accentColor }: PickerOptionProps) {
     return (
-        <motion.button
+        <button
             id={id}
             role="menuitem"
             onClick={onClick}
-            whileHover={{ x: 2 }}
-            whileTap={{ scale: 0.97 }}
-            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg bg-surface-variant/50 hover:bg-surface-container border border-outline-variant/50 transition-all duration-200 text-left group"
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.08] border border-transparent hover:border-white/10 transition-all duration-300 text-left group active:scale-95"
         >
             {/* Icon badge */}
             <div className={cn(
@@ -289,13 +287,11 @@ function PickerOption({ id, onClick, icon, iconBg, label, description, accentCol
             </div>
 
             {/* Arrow hint */}
-            <motion.span
-                className="ml-auto text-zinc-500 text-xs"
-                animate={{ x: [0, 2, 0] }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+            <span
+                className="ml-auto text-zinc-500/50 group-hover:text-zinc-300 text-xs transition-all duration-300 group-hover:translate-x-1"
             >
                 ›
-            </motion.span>
-        </motion.button>
+            </span>
+        </button>
     )
 }

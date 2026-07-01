@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion"
-import { ChevronDown, Search, X, ArrowDownUp } from "lucide-react"
+import { Icons } from "@/components/ui/icons"
 import { cn } from "@/components/ui/core/styling"
 import { ERA_TABS, EraTab } from "../-MovieCard"
 import type { Anime_LibraryCollectionEntry } from "@/api/generated/types"
@@ -30,7 +30,7 @@ export function MoviesFilterBar({
 }: MoviesFilterBarProps) {
     return (
         <div className="w-full flex flex-col p-6 bg-[var(--glass-bg)] backdrop-blur-overlay-md border border-[var(--glass-border)] rounded-container overflow-visible gap-6">
-            <h3 className="font-bebas text-2xl tracking-[0.15em] text-on-surface/90 uppercase flex items-center justify-between flex-shrink-0">
+            <h3 className="font-bebas text-2xl tracking-widest text-on-surface/90 uppercase flex items-center justify-between flex-shrink-0">
                 <span>Filtrar</span>
                 <span className="text-[10px] font-mono font-bold tracking-normal text-on-surface-variant lowercase px-2.5 py-0.5 bg-surface-container/5 rounded-full">
                     {allMovies.length} películas
@@ -39,7 +39,7 @@ export function MoviesFilterBar({
 
             {/* Search Input */}
             <div className="relative w-full group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant group-focus-within:text-brand-secondary transition-colors" />
+                <Icons.navigation.search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant group-focus-within:text-brand-secondary transition-colors" />
                 <input
                     type="text"
                     value={searchQuery}
@@ -52,7 +52,7 @@ export function MoviesFilterBar({
                         onClick={() => setSearchQuery("")}
                         className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-on-surface-variant hover:text-on-surface hover:bg-surface-container/10 rounded-full transition-colors"
                     >
-                        <X className="w-3.5 h-3.5" />
+                        <Icons.ui.close className="w-3.5 h-3.5" />
                     </button>
                 )}
             </div>
@@ -66,11 +66,11 @@ export function MoviesFilterBar({
                         className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-surface-container/5 hover:bg-surface-container/8 border border-outline-variant/10 text-[11px] font-sans font-bold uppercase tracking-wider text-on-surface-variant hover:text-on-surface hover:border-outline-variant/20 transition-all duration-300"
                     >
                         <div className="flex items-center gap-2">
-                            <ArrowDownUp className="w-3.5 h-3.5 text-on-surface-variant" />
+                            <Icons.arrow.downUp className="w-3.5 h-3.5 text-on-surface-variant" />
                             <span>{SORT_OPTIONS.find((s) => s.value === sortBy)?.label}</span>
                         </div>
                         <motion.span animate={{ rotate: sortOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                            <ChevronDown className="w-3.5 h-3.5 text-on-surface-variant" />
+                            <Icons.navigation.chevronDown className="w-3.5 h-3.5 text-on-surface-variant" />
                         </motion.span>
                     </button>
 
@@ -131,9 +131,9 @@ export function MoviesFilterBar({
                                         : "text-on-surface-variant border-outline-variant/5 bg-surface-container/2 hover:text-on-surface hover:border-outline-variant/10 hover:bg-surface-container/5"
                                 )}
                                 style={isActive ? {
-                                    backgroundColor: tab.color + "15",
-                                    borderColor: tab.color + "30",
-                                    boxShadow: `0 0 15px ${tab.color}08`,
+                                    backgroundColor: `color-mix(in srgb, ${tab.color} 8%, transparent)`,
+                                    borderColor: `color-mix(in srgb, ${tab.color} 19%, transparent)`,
+                                    boxShadow: `0 0 15px color-mix(in srgb, ${tab.color} 3%, transparent)`,
                                 } : {}}
                             >
                                 {isActive && (
@@ -150,7 +150,7 @@ export function MoviesFilterBar({
                                 <span 
                                     className="relative z-10 text-[9px] font-black px-2 py-0.5 rounded-md transition-colors duration-300 flex items-center justify-center min-w-[20px]"
                                     style={{
-                                        backgroundColor: isActive ? tab.color + "30" : "rgba(255,255,255,0.06)",
+                                        backgroundColor: isActive ? `color-mix(in srgb, ${tab.color} 19%, transparent)` : "rgba(255,255,255,0.06)",
                                         color: isActive ? "#fff" : "rgba(255,255,255,0.6)"
                                     }}
                                 >

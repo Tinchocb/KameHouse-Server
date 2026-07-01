@@ -51,7 +51,7 @@
   *::-webkit-scrollbar { display: none; }
 
   html, body {
-    @apply bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans antialiased;
+    @apply bg-[var(--bg-primary)] text-[var(--md-sys-color-on-surface)] font-sans antialiased;
     overscroll-behavior-y: none;
     -webkit-tap-highlight-color: transparent;
   }
@@ -60,10 +60,10 @@
     @apply outline-none ring-2 ring-[var(--focus-ring)] ring-offset-2 ring-offset-[var(--bg-primary)] transition-shadow;
   }
 
-  h1 { font: var(--display-xl); color: var(--text-primary); }
-  h2 { font: var(--display-lg); color: var(--text-primary); }
-  h3 { font: var(--display-md); color: var(--text-primary); }
-  h4 { font: var(--h4); color: var(--text-secondary); }
+  h1 { font: var(--display-xl); color: var(--md-sys-color-on-surface); }
+  h2 { font: var(--display-lg); color: var(--md-sys-color-on-surface); }
+  h3 { font: var(--display-md); color: var(--md-sys-color-on-surface); }
+  h4 { font: var(--h4); color: var(--md-sys-color-on-surface-variant); }
 }
 
 /* ─── Utilities ──────────────────────────────────────────────────────── */
@@ -106,7 +106,7 @@
   .badge-secondary { background: hsl(var(--brand-secondary) / 0.15); color: hsl(var(--brand-secondary)); border-color: hsl(var(--brand-secondary) / 0.30); }
   .badge-success   { background: hsl(var(--brand-success) / 0.15); color: hsl(var(--brand-success)); border-color: hsl(var(--brand-success) / 0.30); }
   .badge-magic     { background: hsl(var(--brand-magic) / 0.15); color: hsl(var(--brand-magic)); border-color: hsl(var(--brand-magic) / 0.30); }
-  .badge-muted     { background: var(--glass-bg); color: var(--text-muted); border-color: var(--glass-border-top); }
+  .badge-muted     { background: var(--glass-bg); color: var(--md-sys-color-on-surface-variant); border-color: var(--glass-border-top); }
   .badge-destructive { background: hsl(var(--brand-destructive) / 0.15); color: hsl(var(--brand-destructive)); border-color: hsl(var(--brand-destructive) / 0.30); }
 }
 

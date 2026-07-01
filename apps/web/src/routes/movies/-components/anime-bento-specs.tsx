@@ -1,4 +1,4 @@
-import { Calendar, Building2, Users2, Clock } from "lucide-react"
+import { Icons } from "@/components/ui/icons"
 
 interface AnimeBentoSpecsProps {
   status: string | null | undefined
@@ -24,7 +24,7 @@ export function AnimeBentoSpecs({ status, studios, demographics, duration }: Ani
         {status && (
           <div className="flex items-center justify-between px-2">
             <div className="flex items-center gap-3 text-gray-400">
-              <Calendar className="w-4 h-4 text-white/50" />
+              <Icons.time.calendar className="w-4 h-4 text-white/50" />
               <span className="text-xs uppercase tracking-wider font-bold">Estado</span>
             </div>
             <span className="text-sm font-medium text-white tracking-wide">{status}</span>
@@ -35,7 +35,7 @@ export function AnimeBentoSpecs({ status, studios, demographics, duration }: Ani
         {studios && studios.length > 0 && (
           <div className="flex items-start justify-between px-2">
             <div className="flex items-center gap-3 text-gray-400 mt-0.5">
-              <Building2 className="w-4 h-4 text-white/50" />
+              <Icons.status.building className="w-4 h-4 text-white/50" />
               <span className="text-xs uppercase tracking-wider font-bold">Estudio</span>
             </div>
             <span className="text-sm font-medium text-white tracking-wide text-right max-w-[150px] truncate-2-lines">
@@ -48,7 +48,7 @@ export function AnimeBentoSpecs({ status, studios, demographics, duration }: Ani
         {demographics && demographics.length > 0 && (
           <div className="flex items-center justify-between px-2">
             <div className="flex items-center gap-3 text-gray-400">
-              <Users2 className="w-4 h-4 text-white/50" />
+              <Icons.status.users2 className="w-4 h-4 text-white/50" />
               <span className="text-xs uppercase tracking-wider font-bold">Demografía</span>
             </div>
             <span className="text-sm font-medium text-white tracking-wide">{demographics.join(", ")}</span>
@@ -59,7 +59,7 @@ export function AnimeBentoSpecs({ status, studios, demographics, duration }: Ani
         {duration && (
           <div className="flex items-center justify-between px-2">
             <div className="flex items-center gap-3 text-gray-400">
-              <Clock className="w-4 h-4 text-white/50" />
+              <Icons.time.clock className="w-4 h-4 text-white/50" />
               <span className="text-xs uppercase tracking-wider font-bold">Duración</span>
             </div>
             <span className="text-sm font-medium text-white tracking-wide">{duration}</span>

@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev:web": "pnpm --filter kamehouse-web dev",
-    "dev:desktop": "pnpm --filter kamehouse-desktop dev",
+    "dev:desktop": "pnpm build:server && pnpm --filter kamehouse-desktop dev",
+    "build:server": "cd apps/server && go build -o kamehouse.exe .",
     "build:web": "pnpm --filter kamehouse-web build",
     "build:desktop": "pnpm --filter kamehouse-desktop build",
     "build:all": "pnpm build:web && pnpm build:desktop",

@@ -6,7 +6,7 @@
 :root {
   /* ─── MD3 Core Color Roles (Dark Theme) ───────────────────────────────── */
   --md-sys-color-primary:             hsl(var(--era-daima-hsl));
-  --md-sys-color-on-primary:          hsl(var(--md-sys-color-primary-inverse));
+  --md-sys-color-on-primary:          #FFFFFF;
   --md-sys-color-primary-container:   hsl(var(--era-daima-hsl) / 0.25);
   --md-sys-color-on-primary-container:hsl(var(--era-daima-hsl));
 
@@ -28,8 +28,11 @@
   /* ─── Surface Roles (Elevation-based) ────────────────────────────────── */
   --md-sys-color-surface:             #1E1E1E;        /* Elevation 0 */
   --md-sys-color-on-surface:          #F0F0F0;
+  --on-surface-rgb:                   240 240 240;    /* #F0F0F0 — for Tailwind opacity modifiers */
   --md-sys-color-surface-variant:     #2D2D2D;        /* Elevation 1 */
   --md-sys-color-on-surface-variant:  #CAC4D0;
+  --on-surface-variant-rgb:           202 196 208;    /* #CAC4D0 — for Tailwind opacity modifiers */
+  --on-primary-rgb:                   255 255 255;    /* for Tailwind opacity modifiers */
   --md-sys-color-surface-container:   #2D2D2D;        /* Elevation 1 */
   --md-sys-color-surface-container-low: #252525;      /* Elevation 0.5 */
   --md-sys-color-surface-container-high:#363636;      /* Elevation 2 */
@@ -60,12 +63,6 @@
   --glass-border-side:  rgba(255, 255, 255, 0.05);
   --glass-border:       var(--glass-border-side);
   --glass-border-strong:rgba(255, 255, 255, 0.12);
-
-  /* ─── Texto ─────────────────────────────────────────────────────────── */
-  --text-primary:   #fafafa;
-  --text-secondary: rgba(250, 250, 250, 0.72);
-  --text-muted:     rgba(250, 250, 250, 0.48);
-  --text-disabled:  rgba(250, 250, 250, 0.28);
 
   /* ─── Era Colors — Dragon Ball (HSL para Tailwind/shadcn) ─────────────── */
   --era-db-hsl:       200 100% 45%;   /* Azul Kame */
@@ -145,9 +142,6 @@
   --overlay:       0 0% 0% / 0.6;
   --border-subtle: 240 5% 100% / 0.06;
   --border-strong: 240 5% 100% / 0.12;
-  --text-primary:  0 0% 98%;
-  --text-secondary: 0 0% 100% / 0.72;
-  --text-muted:    0 0% 100% / 0.48;
   --brand-orange:  var(--era-dbz-hsl);
 }
 
@@ -246,15 +240,3 @@
 .era-dbs    { --era-color: var(--era-dbs-hex);    --era-glow: var(--glow-dbs);    }
 .era-daima  { --era-color: var(--era-daima-hex);  --era-glow: var(--glow-daima);  }
 
-/* ─── Backward-compatible aliases (para tailwind.config y componentes legacy) ── */
-:root {
-  --surface-1:     240 6% 5%;
-  --surface-2:     240 5% 10%;
-  --overlay:       0 0% 0% / 0.6;
-  --border-subtle: 240 5% 100% / 0.06;
-  --border-strong: 240 5% 100% / 0.12;
-  --text-primary:  0 0% 98%;
-  --text-secondary: 0 0% 100% / 0.72;
-  --text-muted:    0 0% 100% / 0.48;
-  --brand-orange:  var(--era-dbz-hsl);
-}

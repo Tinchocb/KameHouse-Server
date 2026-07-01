@@ -92,7 +92,7 @@ export function HeroBanner({
                     initial={{ opacity: 0, scale: 1.06 }}
                     animate={{ opacity: 1, scale: 1.0 }}
                     exit={{ opacity: 0, scale: 0.97 }}
-                    transition={{ duration: 1.4, ease: [0.23, 1, 0.32, 1] }}
+                    transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
                     className="absolute inset-0 z-0 overflow-hidden"
                 >
                     {/* Ken Burns slow zoom on the inner image — CSS compositor-driven (zero JS thread cost) */}

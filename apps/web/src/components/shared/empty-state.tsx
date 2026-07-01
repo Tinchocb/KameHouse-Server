@@ -24,21 +24,27 @@ export function EmptyState({
 }: EmptyStateProps) {
     return (
         <div className={cn(
-            "flex flex-col items-center justify-center text-center",
-            "bg-black border border-white/10 px-12 py-20 md:py-32",
-            "max-w-2xl mx-auto",
+            "relative flex flex-col items-center justify-center text-center",
+            "bg-zinc-950/40 backdrop-blur-[var(--blur-overlay-xl)] border border-white/10 px-12 py-16 md:py-24 rounded-3xl",
+            "max-w-2xl mx-auto overflow-hidden shadow-2xl",
             className,
         )}>
+            {/* Diffused series colors inside the empty state card */}
+            <div className="absolute inset-0 -z-10 overflow-hidden opacity-30 pointer-events-none">
+                <div className="absolute top-[-30%] left-[-30%] w-[80%] h-[80%] rounded-full bg-brand-orange/20 blur-[50px]" />
+                <div className="absolute bottom-[-30%] right-[-30%] w-[80%] h-[80%] rounded-full bg-indigo-500/20 blur-[50px]" />
+            </div>
+
             {illustration ? (
-                <div className="mb-8 opacity-80">{illustration}</div>
+                <div className="mb-8 opacity-90">{illustration}</div>
             ) : (
-                <div className="mb-8 flex h-20 w-20 items-center justify-center bg-surface-container border border-white/5 text-white">
+                <div className="mb-8 flex h-20 w-20 items-center justify-center bg-surface-container/50 border border-white/5 text-white rounded-2xl">
                     {icon ?? <Ghost className="h-10 w-10 animate-pulse-slow" />}
                 </div>
             )}
             
             <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight">{title}</h3>
-            <p className="mt-4 max-w-md text-sm md:text-base text-zinc-500 leading-relaxed mx-auto uppercase tracking-wide font-medium">
+            <p className="mt-4 max-w-md text-sm md:text-base text-zinc-400 leading-relaxed mx-auto tracking-wide font-medium">
                 {message}
             </p>
             

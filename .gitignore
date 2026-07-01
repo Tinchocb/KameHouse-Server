@@ -84,3 +84,5 @@ referencia/
 # Zip archives and electron build zips
 *.zip
 apps/desktop/electron.zip
+
+comandos.md

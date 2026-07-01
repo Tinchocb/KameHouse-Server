@@ -1,4 +1,4 @@
-import { Play } from "lucide-react"
+import { Icons } from "@/components/ui/icons"
 
 interface CollectionMovie {
   id: string
@@ -38,7 +38,7 @@ export function CollectionSwimlane({ collectionId, collectionName, movies, onMov
               />
               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                 <div className="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center">
-                  <Play className="w-5 h-5 ml-1" fill="currentColor" />
+                  <Icons.media.play className="w-5 h-5 ml-1" fill="currentColor" />
                 </div>
               </div>
             </div>

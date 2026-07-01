@@ -44,6 +44,9 @@ export const Icons = {
     minus: Lucide.Minus,
     check: Lucide.Check,
     checkCircle: Lucide.CheckCircle,
+    checkCircle2: Lucide.CheckCircle2,
+    circle: Lucide.Circle,
+    listPlus: Lucide.ListPlus,
     info: Lucide.Info,
     alert: Lucide.AlertTriangle,
     alertCircle: Lucide.AlertCircle,
@@ -77,6 +80,7 @@ export const Icons = {
     inbox: Lucide.Inbox,
     mail: Lucide.Mail,
     message: Lucide.MessageSquare,
+    messageText: Lucide.MessageSquareText,
     send: Lucide.Send,
   },
   status: {
@@ -117,6 +121,10 @@ export const Icons = {
     hdd: Lucide.HardDrive,
     cpu: Lucide.Cpu,
     memory: Lucide.MemoryStick,
+    building: Lucide.Building2,
+    users2: Lucide.Users2,
+    monitorPlay: Lucide.MonitorPlay,
+    fileVideo: Lucide.FileVideo,
   },
   time: {
     clock: Lucide.Clock,
@@ -142,6 +150,7 @@ export const Icons = {
     upDown: Lucide.ArrowUpDown,
     rotateCw: Lucide.RotateCw,
     rotateCcw: Lucide.RotateCcw,
+    downUp: Lucide.ArrowDownUp,
   },
 } as const;
 

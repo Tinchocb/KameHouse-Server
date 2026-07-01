@@ -82,9 +82,17 @@ func (scn *Scanner) addRemainingShelvedFiles(skippedLfs map[string]*dto.LocalFil
 	}
 }
 
-type sagaResolution struct {
+type subSagaResolution struct {
 	id      string
 	name    string
 	startEp int
 	endEp   int
+}
+
+type sagaResolution struct {
+	id       string
+	name     string
+	startEp  int
+	endEp    int
+	subSagas []subSagaResolution
 }

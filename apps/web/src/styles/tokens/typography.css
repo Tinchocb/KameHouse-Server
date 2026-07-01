@@ -132,8 +132,3 @@
 .font-display   { font-family: var(--font-display); }
 .font-mono      { font-family: var(--font-mono); }
 .font-numeric   { font-family: var(--font-numeric); font-variant-numeric: tabular-nums; }
-
-.text-primary   { color: var(--text-primary); }
-.text-secondary { color: var(--text-secondary); }
-.text-muted     { color: var(--text-muted); }
-.text-disabled  { color: var(--text-disabled); }

@@ -1,5 +1,6 @@
 import dbTitles from './db_titles.json'
 import { DRAGON_BALL_SERIES, DRAGON_BALL_SAGAS, SagaDefinition } from './dragonball_sagas'
+import { TMDB_TO_LORE_MOVIE_MAP } from './dragonball_movies_lore'
 
 export * from "./dragonball_sagas"
 export * from "./dragonball_movies_lore"
@@ -86,3 +87,32 @@ export function getDragonBallSpanishTitle(tmdbId: number | undefined | null, epi
     const ep = titlesArray.find((t) => t.num === episodeNum);
     return ep ? ep.title : null;
 }
+
+/**
+ * Whether a TMDB ID belongs to the Dragon Ball franchise (series or movie).
+ * Used to gate Dragon Ball-only requests (e.g. the character lore endpoint).
+ */
+export function isDragonBallTmdbId(tmdbId: number | undefined | null): boolean {
+    if (!tmdbId) return false;
+    return tmdbId in DRAGON_BALL_SAGAS || tmdbId in TMDB_TO_LORE_MOVIE_MAP;
+}
+
+/**
+ * Maps a Dragon Ball series TMDB ID to its era theme token, matching the
+ * `[data-theme="era-*"]` selectors defined in styles/tokens/colors.css.
+ * Returns null for non-Dragon Ball media (caller should fall back to the
+ * default brand theme).
+ */
+export function getSeriesEraTheme(tmdbId: number | undefined | null): string | null {
+    if (!tmdbId) return null
+
+    switch (tmdbId) {
+        case DRAGON_BALL_SERIES.ORIGINAL: return "era-db"
+        case DRAGON_BALL_SERIES.Z: return "era-dbz"
+        case DRAGON_BALL_SERIES.GT: return "era-dbgt"
+        case DRAGON_BALL_SERIES.SUPER: return "era-dbs"
+        case DRAGON_BALL_SERIES.DAIMA: return "era-daima"
+        default: return null
+    }
+}
+

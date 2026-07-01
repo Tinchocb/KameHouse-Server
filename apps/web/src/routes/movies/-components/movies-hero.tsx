@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Star, Play } from "lucide-react"
+import { Icons } from "@/components/ui/icons"
 import type { Anime_LibraryCollectionEntry } from "@/api/generated/types"
 import { ERA_TABS, EraTab, cleanMovieTitle } from "../-MovieCard"
 import { cn } from "@/components/ui/core/styling"
@@ -175,11 +175,11 @@ export function MoviesHero({
                                 transition={{ duration: 0.25 }}
                             >
                                 <span
-                                    className="inline-flex items-center text-[10px] font-bold tracking-[0.2em] uppercase px-2.5 py-1 rounded-sm border"
+                                    className="inline-flex items-center text-[10px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-sm border"
                                     style={{
                                         color: currentEraConfig.color,
-                                        borderColor: `${currentEraConfig.color}45`,
-                                        backgroundColor: `${currentEraConfig.color}12`,
+                                        borderColor: `color-mix(in srgb, ${currentEraConfig.color} 27%, transparent)`,
+                                        backgroundColor: `color-mix(in srgb, ${currentEraConfig.color} 7%, transparent)`,
                                     }}
                                 >
                                     {currentEraConfig.label}
@@ -219,7 +219,7 @@ export function MoviesHero({
                             >
                                 {displayMedia.score && displayMedia.score > 0 && (
                                     <span className="flex items-center gap-1 text-amber-400">
-                                        <Star size={11} fill="currentColor" className="stroke-none" />
+                                        <Icons.ui.star size={11} fill="currentColor" className="stroke-none" />
                                         {(displayMedia.score / 10).toFixed(1)} Ki
                                     </span>
                                 )}
@@ -266,9 +266,9 @@ export function MoviesHero({
                                     exit={{ opacity: 0 }}
                                     transition={{ duration: 0.3, delay: 0.15 }}
                                     onClick={() => handleMovieClick(currentMovie.mediaId!)}
-                                    className="flex items-center gap-2 px-5 py-2 bg-white text-black text-[11px] font-bold tracking-[0.15em] uppercase rounded-sm hover:bg-zinc-100 active:scale-95 transition-all duration-200"
+                                    className="flex items-center gap-2 px-5 py-2 bg-white text-black text-[11px] font-bold tracking-widest uppercase rounded-sm hover:bg-zinc-100 active:scale-95 transition-all duration-200"
                                 >
-                                    <Play size={11} fill="currentColor" />
+                                    <Icons.media.play size={11} fill="currentColor" />
                                     Ver Ahora
                                 </motion.button>
                             )}

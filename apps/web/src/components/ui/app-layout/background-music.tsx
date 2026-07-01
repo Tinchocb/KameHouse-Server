@@ -195,13 +195,11 @@ export function BackgroundMusicPlayer() {
                 id="bg-music-toggle-btn"
                 onClick={togglePlayback}
                 title={bgMusicEnabled ? "Silenciar música de fondo" : "Activar música de fondo"}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.92 }}
                 className={cn(
-                    "flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300 group relative overflow-hidden bg-surface-variant border border-outline-variant/50",
+                    "flex items-center justify-center w-14 h-14 rounded-2xl transition-all duration-300 group relative overflow-hidden bg-white/[0.03] hover:bg-white/[0.08] backdrop-blur-[var(--blur-overlay-sm)] border border-white/5 hover:border-white/10 active:scale-95 font-bold",
                     bgMusicEnabled && isPlaying && !isVideoActive
-                        ? "!border-primary/30 !bg-primary/10 text-primary shadow-[0_0_25px_var(--glow-primary)]"
-                        : "text-on-surface-variant hover:text-on-surface hover:border-outline-variant"
+                        ? "!border-brand-orange/25 !bg-brand-orange/[0.05] text-brand-orange shadow-[0_8px_32px_rgba(255,110,58,0.15)]"
+                        : "text-zinc-400 hover:text-brand-orange"
                 )}
             >
                 <AnimatePresence mode="wait">
@@ -211,7 +209,7 @@ export function BackgroundMusicPlayer() {
                             initial={{ opacity: 0, scale: 0.8 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.8 }}
-                            className="flex items-end gap-[2px] h-4 z-10"
+                            className="flex items-end gap-[2px] h-4 z-10 group-hover:scale-110 transition-transform duration-300"
                         >
                             <div className="w-[2px] bg-brand-orange rounded-full animate-soundwave-1" />
                             <div className="w-[2px] bg-brand-orange rounded-full animate-soundwave-2" />
@@ -224,12 +222,12 @@ export function BackgroundMusicPlayer() {
                             initial={{ opacity: 0, scale: 0.8 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.8 }}
-                            className="z-10"
+                            className="z-10 flex items-center justify-center"
                         >
                             {bgMusicEnabled ? (
-                                <Music className="w-4 h-4 text-zinc-400 animate-pulse" />
+                                <Music className="w-5 h-5 text-brand-orange animate-pulse group-hover:scale-110 transition-transform duration-300" />
                             ) : (
-                                <VolumeX className="w-5 h-5 text-zinc-500" />
+                                <VolumeX className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
                             )}
                         </motion.div>
                     )}

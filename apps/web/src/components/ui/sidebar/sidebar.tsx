@@ -198,7 +198,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                   sidebarOpen ? "w-full justify-start gap-4 px-5" : "justify-center md:w-12 w-full md:px-0",
                   isActive
                     ? "text-primary"
-                    : "text-muted hover:text-primary hover:!border-[var(--glass-hover)]"
+                    : "text-on-surface-variant/70 hover:text-primary hover:!border-[var(--glass-hover)]"
                 )}>
                   <span className="shrink-0 z-10 group-hover:scale-110 transition-transform duration-fast">
                     {React.createElement(item.icon, { size: 22, strokeWidth: 2.5 })}
@@ -230,7 +230,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
                 sidebarOpen ? "w-full justify-start gap-4 px-5" : "justify-center md:w-12 w-full md:px-0",
                 globalQueueOpen
                   ? "text-brand-primary !bg-brand-primary/[0.06] !border-brand-primary/30 shadow-[var(--shadow-brand-primary)]"
-                  : "text-muted hover:text-primary hover:!border-[var(--glass-hover)]"
+                  : "text-on-surface-variant/70 hover:text-primary hover:!border-[var(--glass-hover)]"
               )}
             >
               <div className={cn(
@@ -263,7 +263,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
               sidebarOpen ? "w-full justify-start gap-4 px-5" : "justify-center md:w-12 w-full md:px-0",
               marathonMode
                 ? "text-brand-magic !bg-brand-magic/[0.06] !border-brand-magic/30 shadow-[var(--shadow-brand-magic)]"
-                : "text-muted hover:text-primary hover:!border-[var(--glass-hover)]"
+                : "text-on-surface-variant/70 hover:text-primary hover:!border-[var(--glass-hover)]"
             )}
           >
             <div className={cn(
@@ -315,7 +315,7 @@ function SidebarContent({ setSidebarOpen }: { setSidebarOpen: (open: boolean) =>
               sidebarOpen ? "w-full justify-start gap-4 px-5" : "justify-center md:w-12 w-full md:px-0",
               currentPath === "/settings"
                 ? "text-primary"
-                : "text-muted hover:text-primary hover:!border-[var(--glass-hover)]"
+                : "text-on-surface-variant/70 hover:text-primary hover:!border-[var(--glass-hover)]"
             )}>
               <span className="shrink-0 z-10 group-hover:rotate-45 group-hover:scale-110 transition-transform duration-slow">
                 {React.createElement(Icons.navigation.settings, { size: 22, strokeWidth: 2.5 })}

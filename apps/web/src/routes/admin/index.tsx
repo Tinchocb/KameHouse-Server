@@ -47,8 +47,8 @@ function AdminHeader() {
             <div className="max-w-6xl mx-auto">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-4">
                     <div>
-                        <h1 className="text-h2 font-display text-primary tracking-tight">Panel de Administración</h1>
-                        <p className="text-body-md text-muted mt-2">Gestiona y monitorea tu instancia de KameHouse</p>
+                        <h1 className="text-h2 font-display text-on-surface tracking-tight">Panel de Administración</h1>
+                        <p className="text-body-md text-on-surface-variant/70 mt-2">Gestiona y monitorea tu instancia de KameHouse</p>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
                         <button className="inline-flex items-center justify-center gap-2 px-5 h-10 border border-outline-variant text-on-surface-variant font-semibold text-sm rounded-button transition-all duration-fast hover:border-primary hover:bg-primary/10 active:scale-[0.97]">
@@ -72,7 +72,7 @@ function AdminStatsGrid() {
         { label: "Películas", value: "89", change: "+3", trend: "up", icon: Icons.navigation.film, color: "var(--brand-secondary)" },
         { label: "Episodios", value: "12,847", change: "+456", trend: "up", icon: Icons.status.activity, color: "var(--brand-success)" },
         { label: "Espacio Usado", value: "2.4 TB", change: "156 GB libres", trend: "neutral", icon: Icons.status.hdd, color: "var(--brand-magic)" },
-        { label: "Usuarios Activos", value: "1", change: "Admin", trend: "neutral", icon: Icons.navigation.user, color: "var(--text-secondary)" },
+        { label: "Usuarios Activos", value: "1", change: "Admin", trend: "neutral", icon: Icons.navigation.user, color: "var(--md-sys-color-on-surface-variant)" },
         { label: "Salud del Servidor", value: "Óptimo", change: "99.9% uptime", trend: "up", icon: Icons.status.pulse, color: "var(--brand-success)" },
     ]
 
@@ -85,14 +85,14 @@ function AdminStatsGrid() {
                         <div className="absolute inset-0 bg-gradient-to-br from-transparent via-on-surface/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                         <div className="flex items-start justify-between">
                             <stat.icon size={28} className="text-on-surface-variant group-hover:text-on-surface transition-colors" style={{ color: stat.color }} />
-                            <span className="text-caption text-muted uppercase tracking-wider">{stat.trend === "up" ? "↑" : stat.trend === "down" ? "↓" : "—"}</span>
+                            <span className="text-caption text-on-surface-variant/70 uppercase tracking-wider">{stat.trend === "up" ? "↑" : stat.trend === "down" ? "↓" : "—"}</span>
                         </div>
-                        <div className="text-h3 font-display text-primary font-extrabold tracking-tight mt-4" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                        <div className="text-h3 font-display text-on-surface font-extrabold tracking-tight mt-4" style={{ fontVariantNumeric: 'tabular-nums' }}>
                             {stat.value}
                         </div>
                         <div className="text-label-md mt-1">
-                            <span className="text-secondary">{stat.label}</span>
-                            <span className="text-muted ml-2">{stat.change}</span>
+                            <span className="text-on-surface-variant">{stat.label}</span>
+                            <span className="text-on-surface-variant/70 ml-2">{stat.change}</span>
                         </div>
                         </div>
                 ))}
@@ -106,10 +106,10 @@ function AdminSection({ title, subtitle, children }: { title: string; subtitle?:
         <section className="mb-8 md:mb-10" aria-labelledby={title.toLowerCase().replace(/\s+/g, '-')}>
             <div className="flex items-end justify-between gap-4 mb-6">
                 <div>
-                    <h2 id={title.toLowerCase().replace(/\s+/g, '-')} className="text-h3 font-display text-primary uppercase tracking-wide">
+                    <h2 id={title.toLowerCase().replace(/\s+/g, '-')} className="text-h3 font-display text-on-surface uppercase tracking-wide">
                         {title}
                     </h2>
-                    {subtitle && <p className="text-body-sm text-muted mt-1">{subtitle}</p>}
+                    {subtitle && <p className="text-body-sm text-on-surface-variant/70 mt-1">{subtitle}</p>}
                 </div>
             </div>
             {children}
@@ -137,16 +137,16 @@ function AdminActionsGrid() {
                             action.variant === "primary" && "bg-brand-primary/20 text-brand-primary",
                             action.variant === "secondary" && "bg-brand-secondary/20 text-brand-secondary",
                             action.variant === "destructive" && "bg-brand-destructive/20 text-brand-destructive",
-                            action.variant === "outline" && "bg-surface-container border border-outline-variant text-muted",
+                            action.variant === "outline" && "bg-surface-container border border-outline-variant text-on-surface-variant",
                             (action as any).variant === "magic" && "bg-brand-magic/20 text-brand-magic",
                         )}>
                             <action.icon size={24} strokeWidth={2.5} />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <h3 className="text-h6 font-display text-primary tracking-wide">{action.label}</h3>
-                            <p className="text-body-sm text-muted mt-1">{action.desc}</p>
+                            <h3 className="text-h6 font-display text-on-surface tracking-wide">{action.label}</h3>
+                            <p className="text-body-sm text-on-surface-variant/70 mt-1">{action.desc}</p>
                         </div>
-                        <Icons.arrow.right size={20} className="text-muted group-hover:text-primary transition-colors shrink-0 mt-1" />
+                        <Icons.arrow.right size={20} className="text-on-surface-variant/70 group-hover:text-primary transition-colors shrink-0 mt-1" />
                     </div>
                 </div>
             ))}
@@ -167,9 +167,9 @@ function AdminServicesGrid() {
     const getStatusConfig = (status: string) => {
         switch (status) {
             case "connected": return { color: "var(--brand-success)", label: "Conectado", icon: Icons.ui.checkCircle }
-            case "disconnected": return { color: "var(--text-muted)", label: "Desconectado", icon: Icons.ui.xCircle }
+            case "disconnected": return { color: "var(--md-sys-color-on-surface-variant)", label: "Desconectado", icon: Icons.ui.xCircle }
             case "error": return { color: "var(--brand-destructive)", label: "Error", icon: Icons.ui.alertCircle }
-            default: return { color: "var(--text-muted)", label: "Desconocido", icon: Icons.ui.helpCircle }
+            default: return { color: "var(--md-sys-color-on-surface-variant)", label: "Desconocido", icon: Icons.ui.helpCircle }
         }
     }
 
@@ -185,8 +185,8 @@ function AdminServicesGrid() {
                                     <service.icon size={24} className="text-on-surface-variant/80" />
                                 </div>
                                 <div>
-                                    <h3 className="text-h6 font-display text-primary tracking-wide">{service.name}</h3>
-                                    <p className="text-body-sm text-muted mt-1">{service.desc}</p>
+                                    <h3 className="text-h6 font-display text-on-surface tracking-wide">{service.name}</h3>
+                                    <p className="text-body-sm text-on-surface-variant/70 mt-1">{service.desc}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
@@ -195,8 +195,8 @@ function AdminServicesGrid() {
                             </div>
                         </div>
                         <div className="mt-4 pt-4 border-t border-outline-variant flex items-center justify-between">
-                            <span className="text-caption text-muted">Última sync: </span>
-                            <span className="text-caption text-secondary font-mono">{service.lastSync}</span>
+                            <span className="text-caption text-on-surface-variant/70">Última sync: </span>
+                            <span className="text-caption text-on-surface-variant font-mono">{service.lastSync}</span>
                             <button onClick={() => {}} className="inline-flex items-center justify-center gap-1.5 px-3 h-7 text-on-surface-variant font-semibold text-xs rounded-button transition-all duration-fast hover:bg-surface-container active:scale-[0.97]">
                                 {service.status === "connected" ? "Desconectar" : "Conectar"}
                             </button>
@@ -227,10 +227,10 @@ function AdminSystemGrid() {
                             <item.icon size={24} className="text-on-surface-variant/80" />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <h3 className="text-h6 font-display text-primary tracking-wide">{item.label}</h3>
-                            <p className="text-body-sm text-muted mt-1">{item.desc}</p>
+                            <h3 className="text-h6 font-display text-on-surface tracking-wide">{item.label}</h3>
+                            <p className="text-body-sm text-on-surface-variant/70 mt-1">{item.desc}</p>
                         </div>
-                        <Icons.arrow.right size={20} className="text-muted group-hover:text-primary transition-colors shrink-0 mt-1" />
+                        <Icons.arrow.right size={20} className="text-on-surface-variant/70 group-hover:text-primary transition-colors shrink-0 mt-1" />
                     </div>
                 </div>
             ))}
@@ -245,7 +245,7 @@ function AdminRecentActivity() {
         { time: "Hace 1 hora", type: "sync", message: "Sincronización TMDB completada: 247 items actualizados", icon: Icons.status.cloud, color: "var(--brand-secondary)" },
         { time: "Hace 3 horas", type: "error", message: "Error en Trakt API: Rate limit exceeded", icon: Icons.ui.alertCircle, color: "var(--brand-destructive)" },
         { time: "Hace 6 horas", type: "backup", message: "Backup automático completado: 2.1 GB", icon: Icons.status.hdd, color: "var(--brand-magic)" },
-        { time: "Ayer", type: "scan", message: "Escaneo programado: 0 nuevos items", icon: Icons.navigation.search, color: "var(--text-muted)" },
+        { time: "Ayer", type: "scan", message: "Escaneo programado: 0 nuevos items", icon: Icons.navigation.search, color: "var(--muted-foreground)" },
     ]
 
     return (
@@ -253,7 +253,7 @@ function AdminRecentActivity() {
             <h2 id="activity-title" className="sr-only">Actividad Reciente</h2>
             <div className="bg-surface-container shadow-elevation-3 rounded-container p-6 backdrop-blur-overlay-md border border-outline-variant">
                 <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-h5 font-display text-primary uppercase tracking-wide">Actividad Reciente</h3>
+                    <h3 className="text-h5 font-display text-on-surface uppercase tracking-wide">Actividad Reciente</h3>
                     <button className="inline-flex items-center justify-center gap-2 px-4 h-9 text-on-surface-variant font-semibold text-xs rounded-button transition-all duration-fast hover:bg-surface-container active:scale-[0.97]">
                         Ver Todo
                         <Icons.arrow.right size={14} strokeWidth={2.5} className="ml-1" />
@@ -266,10 +266,10 @@ function AdminRecentActivity() {
                                 <activity.icon size={20} strokeWidth={2.5} />
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="text-body-md text-primary">{activity.message}</p>
-                                <p className="text-caption text-muted mt-1">{activity.time}</p>
+                                <p className="text-body-md text-on-surface">{activity.message}</p>
+                                <p className="text-caption text-on-surface-variant/70 mt-1">{activity.time}</p>
                             </div>
-                            <span className="text-caption text-muted uppercase tracking-wider shrink-0 mt-1">{activity.type}</span>
+                            <span className="text-caption text-on-surface-variant/70 uppercase tracking-wider shrink-0 mt-1">{activity.type}</span>
                         </div>
                     ))}
                 </div>

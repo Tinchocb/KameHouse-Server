@@ -47,7 +47,17 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
             if (era) {
                 const isTV = item.badge === "TV"
                 if (isTV) {
-                    result[era].series = item
+                    const existing = result[era].series
+                    if (!existing) {
+                        result[era].series = item
+                    } else {
+                        // Prioritize classic canonical series over "Kai" recut if both are present in library
+                        const currentIsKai = item.title.toLowerCase().includes("kai")
+                        const existingIsKai = existing.title.toLowerCase().includes("kai")
+                        if (existingIsKai && !currentIsKai) {
+                            result[era].series = item
+                        }
+                    }
                 } else {
                     result[era].movies.push(item)
                 }
@@ -142,6 +152,22 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
             : ""
     }, [activeItem])
 
+    const displayTitle = React.useMemo(() => {
+        if (!activeItem) return ""
+        if (activeItem.title.toLowerCase().includes("kai") && activeItem.badge === "TV") {
+            return "Dragon Ball Z"
+        }
+        return activeItem.title
+    }, [activeItem])
+
+    const displayDescription = React.useMemo(() => {
+        if (!activeItem) return ""
+        if (activeItem.title.toLowerCase().includes("kai") && activeItem.badge === "TV") {
+            return "Cinco años después del final de Dragon Ball, Goku se encuentra con su hermano Raditz, quien le revela su origen alienígena. Comienza una serie de batallas contra poderosos enemigos como Vegeta, Freezer, Cell y Majin Buu para proteger la Tierra de invasores alienígenas y amenazas universales."
+        }
+        return cleanDescription
+    }, [activeItem, cleanDescription])
+
     if (!activeItem) {
         return null
     }
@@ -197,7 +223,7 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                                 initial={{ opacity: 0, scale: 1.03 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.98 }}
-                                transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+                                transition={{ duration: 0.85, ease: [0.25, 0.8, 0.25, 1] }}
                                 className="absolute inset-0 w-full h-full"
                             >
                                 {/* Artwork Background */}
@@ -207,7 +233,7 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                                             src={getLargeResImage(activeItem.backdropUrl)}
                                             alt={activeItem.title}
                                             priority={true}
-                                            className="h-full w-full object-cover object-top transition-transform [transition-duration:6s] ease-out group-hover/hero:scale-[1.04]"
+                                            className="h-full w-full object-cover object-top transition-transform [transition-duration:6s] ease-out group-hover/hero:scale-[1.02]"
                                         />
                                     ) : (
                                         <div className="absolute inset-0 flex items-center justify-center bg-surface-container">
@@ -223,7 +249,7 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                                                 src={getLargeResImage(activeItem.image)}
                                                 alt={activeItem.title}
                                                 priority={true}
-                                                className="relative z-10 h-full w-full object-cover opacity-80 mix-blend-luminosity transition-transform [transition-duration:6s] ease-out group-hover/hero:scale-[1.04]"
+                                                className="relative z-10 h-full w-full object-cover opacity-80 mix-blend-luminosity transition-transform [transition-duration:6s] ease-out group-hover/hero:scale-[1.02]"
                                             />
                                         </div>
                                     )}
@@ -243,7 +269,7 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: -20 }}
-                                transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                                transition={{ duration: 0.6, ease: [0.25, 0.8, 0.25, 1] }}
                                 className="flex flex-col px-1 [&>*:not(:first-child)]:mt-4"
                             >
                                 {/* Badges */}
@@ -274,13 +300,13 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
 
                                 {/* Title */}
                                 <h3 className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tight leading-none text-white uppercase select-none drop-shadow-md font-bebas">
-                                    {activeItem.title}
+                                    {displayTitle}
                                 </h3>
 
                                 {/* Description */}
                                 {activeItem.description && (
                                     <p className="text-zinc-300/75 text-xs md:text-sm leading-relaxed font-normal select-none max-w-sm">
-                                        {cleanDescription}
+                                        {displayDescription}
                                     </p>
                                 )}
 
@@ -312,7 +338,7 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
 
                 {/* ─── LADO DERECHO (3/12): Selector de Eras en tarjeta Glassmorphic ─── */}
                 <div className="flex flex-col lg:col-span-3 h-full z-10 justify-center">
-                    <div className="bg-surface-container/65 backdrop-blur-[var(--blur-overlay-md)] border border-white/10 lg:border-r-0 rounded-3xl lg:rounded-r-none lg:rounded-l-[32px] p-5 lg:-mr-14 xl:-mr-16 shadow-2xl flex flex-col [&>*:not(:first-child)]:mt-4">
+                    <div className="h-full bg-zinc-950/40 backdrop-blur-[var(--blur-overlay-xl)] border border-white/10 lg:border-r-0 rounded-3xl lg:rounded-r-none lg:rounded-l-[32px] p-5 lg:-mr-14 xl:-mr-16 shadow-2xl flex flex-col justify-center [&>*:not(:first-child)]:mt-4">
                         <h4 className="font-bold text-[10px] tracking-widest text-zinc-300 uppercase pl-1">
                             Seleccionar Saga / Era
                         </h4>
@@ -322,8 +348,8 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                                 {ERAS.map((era) => {
                                     const eraData = categorizedData[era.id]
                                     const isEraActive = era.id === activeEraId
-                                    const displayTitle = eraData?.series?.title || era.title
-                                    const displayYear = eraData?.series?.year || era.year
+                                    const displayTitle = era.title
+                                    const displayYear = era.year
                                     const eraColors = ERA_COLOR_MAP[era.id]
 
                                     return (

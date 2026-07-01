@@ -1,4 +1,4 @@
-import { Volume2, MessageSquareText } from "lucide-react"
+import { Icons } from "@/components/ui/icons"
 
 interface MovieAudioSubsProps {
   audioTracks: string[]
@@ -12,10 +12,10 @@ export function MovieAudioSubs({ audioTracks, subtitles }: MovieAudioSubsProps) 
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
       {/* Audio Tracks */}
       {audioTracks.length > 0 && (
-        <div className="bg-[var(--glass-bg)] backdrop-blur-[var(--blur-overlay-md)] border border-[var(--glass-border)] rounded-2xl p-6 hover:bg-[var(--glass-hover)] hover:border-[var(--glass-strong)] transition-all duration-300 cursor-pointer">
+        <div className="bg-[var(--glass-bg)] backdrop-blur-[var(--blur-overlay-md)] border border-[var(--glass-border)] rounded-2xl p-6 hover:bg-[var(--glass-hover)] hover:border-[var(--glass-strong)] transition-all duration-300">
           <div className="flex items-center gap-3 mb-4 text-zinc-400">
-            <Volume2 className="w-5 h-5 text-amber-500" />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Audios Incluidos</span>
+            <Icons.media.volume2 className="w-5 h-5 text-amber-500" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Audios Incluidos</span>
           </div>
           <div className="flex flex-col gap-2">
             {audioTracks.map((track, idx) => (
@@ -29,10 +29,10 @@ export function MovieAudioSubs({ audioTracks, subtitles }: MovieAudioSubsProps) 
 
       {/* Subtitles */}
       {subtitles.length > 0 && (
-        <div className="bg-[var(--glass-bg)] backdrop-blur-[var(--blur-overlay-md)] border border-[var(--glass-border)] rounded-2xl p-6 hover:bg-[var(--glass-hover)] hover:border-[var(--glass-strong)] transition-all duration-300 cursor-pointer">
+        <div className="bg-[var(--glass-bg)] backdrop-blur-[var(--blur-overlay-md)] border border-[var(--glass-border)] rounded-2xl p-6 hover:bg-[var(--glass-hover)] hover:border-[var(--glass-strong)] transition-all duration-300">
           <div className="flex items-center gap-3 mb-4 text-zinc-400">
-            <MessageSquareText className="w-5 h-5 text-amber-500" />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Subtítulos</span>
+            <Icons.ui.messageText className="w-5 h-5 text-amber-500" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Subtítulos</span>
           </div>
           <div className="flex flex-col gap-2">
             {subtitles.map((sub, idx) => (

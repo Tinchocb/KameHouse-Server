@@ -172,8 +172,8 @@ function ProfileHeader({ stats, settings }: { stats: any; settings: any }) {
                         </div>
 
                         <div className="flex-1 min-w-0">
-                            <h1 className="text-h2 font-display text-primary tracking-tight">{username}</h1>
-                            <p className="text-body-md text-muted mt-2">Miembro desde {joinedDate}</p>
+                            <h1 className="text-h2 font-display text-on-surface tracking-tight">{username}</h1>
+                            <p className="text-body-md text-on-surface-variant/70 mt-2">Miembro desde {joinedDate}</p>
 
                             <div className="flex flex-wrap items-center gap-4 mt-6">
                                 <button className="inline-flex items-center justify-center gap-2 px-5 h-10 bg-primary text-on-surface font-semibold text-sm rounded-button transition-all duration-fast active:scale-[0.97]">
@@ -209,10 +209,10 @@ function ProfileSection({ title, subtitle, action, children }: ProfileSectionPro
         <section className="mb-16 md:mb-20 lg:mb-24" aria-labelledby={title.toLowerCase().replace(/\s+/g, '-')}>
             <div className="flex items-end justify-between gap-4 mb-8">
                 <div>
-                    <h2 id={title.toLowerCase().replace(/\s+/g, '-')} className="text-h3 font-display text-primary uppercase tracking-wide">
+                    <h2 id={title.toLowerCase().replace(/\s+/g, '-')} className="text-h3 font-display text-on-surface uppercase tracking-wide">
                         {title}
                     </h2>
-                    {subtitle && <p className="text-body-sm text-muted mt-1">{subtitle}</p>}
+                    {subtitle && <p className="text-body-sm text-on-surface-variant/70 mt-1">{subtitle}</p>}
                 </div>
                 {action && (
                     <button onClick={action.onClick} className="inline-flex items-center justify-center gap-2 px-4 h-9 text-on-surface-variant font-semibold text-xs rounded-button transition-all duration-fast hover:bg-surface-container active:scale-[0.97]">
@@ -242,10 +242,10 @@ function ProfileStatsGrid({ stats }: { stats: any }) {
                     <div className="bg-surface-container shadow-elevation-3 rounded-container p-6 backdrop-blur-overlay-md border border-outline-variant text-center group relative overflow-hidden">
                         <div className="absolute inset-0 bg-gradient-to-br from-transparent via-on-surface/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                         <item.icon size={28} className="mx-auto mb-3 text-on-surface-variant group-hover:text-on-surface transition-colors" style={{ color: item.color }} />
-                        <div className="text-h3 font-display text-primary font-extrabold tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                        <div className="text-h3 font-display text-on-surface font-extrabold tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>
                             {item.value}
                         </div>
-                        <div className="text-label-md text-muted mt-1 uppercase tracking-wider">
+                        <div className="text-label-md text-on-surface-variant/70 mt-1 uppercase tracking-wider">
                             {item.label}
                         </div>
                                         </div>

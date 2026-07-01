@@ -6,7 +6,7 @@ import { motion } from "framer-motion"
 import * as React from "react"
 import { Skeleton } from "@/components/ui/skeleton"
 
-import { 
+import {
     mapLibraryEntryToMediaCard
 } from "./home.mappers"
 import { ErrorBanner, EmptyState } from "./home.components"
@@ -39,7 +39,7 @@ function HomeClient() {
     const { data: collection, isLoading, error } = useGetLibraryCollection()
 
     // ── Data Processing ────────────────────────────────────────────────────────
-    
+
     const allEntries = React.useMemo(() => {
         if (!collection?.lists) return []
         return collection.lists.flatMap(list => list.entries ?? [])
@@ -68,7 +68,7 @@ function HomeClient() {
 
     const spotlightItems = React.useMemo(() => {
         if (!allEntries.length) return []
-        
+
         const seen = new Set<number>()
         const uniqueEntries = allEntries.filter(entry => {
             if (!entry || !entry.media) return false
@@ -89,17 +89,19 @@ function HomeClient() {
     if (allEntries.length === 0) return <EmptyState />
 
     return (
-        <motion.div 
+        <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="relative min-h-screen text-white overflow-x-hidden"
         >
+
+
             <div className="relative z-10 flex flex-col">
                 <div className="relative pt-0 pb-12">
                     {spotlightItems.length > 0 && (
-                        <MediaSpotlight 
-                            items={spotlightItems} 
-                            onNavigate={handleSpotlightNavigate} 
+                        <MediaSpotlight
+                            items={spotlightItems}
+                            onNavigate={handleSpotlightNavigate}
                         />
                     )}
                 </div>

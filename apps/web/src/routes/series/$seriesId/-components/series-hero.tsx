@@ -1,4 +1,4 @@
-import { Play, Star, ListPlus } from "lucide-react"
+import { Icons } from "@/components/ui/icons"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { getLowResImage, getMediumResImage } from "@/lib/helpers/images"
 import * as React from "react"
@@ -8,9 +8,10 @@ import gsap from "gsap"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
 import { toast } from "sonner"
 import { useAppStore } from "@/lib/store"
+import type { Anime_Entry } from "@/api/generated/types"
 
 interface SeriesHeroProps {
-  entry: any
+  entry: Anime_Entry | undefined
   backdropUrl: string
   onPlay?: () => void
   sagaCount?: number
@@ -31,7 +32,7 @@ export function SeriesHero({
   const romajiTitle = media?.titleRomaji
   const rating = media?.score ? media.score / 10 : undefined
   const year = media?.year
-  const ageRating = media?.isNsfw ? "18+" : "PG-13"
+  const ageRating = media?.isNsfw ? "18+" : undefined
   const synopsis = media?.description || ""
   const hasBannerImage = !!media?.bannerImage
   const backdropSrc = media?.bannerImage ?? media?.posterImage ?? null
@@ -68,8 +69,8 @@ export function SeriesHero({
     gsap.from(".series-hero-animate", {
       y: 35,
       opacity: 0,
-      duration: 1.4,
-      stagger: 0.1,
+      duration: 1.2,
+      stagger: 0.08,
       ease: "power4.out",
       delay: 0.15
     })
@@ -180,7 +181,7 @@ export function SeriesHero({
                 src={backdropUrl}
                 alt={title}
                 priority={true}
-                className="w-full h-full object-cover object-[center_20%] opacity-90 transition-all [transition-duration:20s] ease-out group-hover/backdrop:scale-[1.03] animate-ken-burns"
+                className="w-full h-full object-cover object-[center_20%] opacity-90 transition-all [transition-duration:20s] ease-out group-hover/backdrop:scale-[1.02] animate-ken-burns"
                 style={{
                   WebkitMaskImage: "linear-gradient(to right, transparent 0%, rgba(0,0,0,0.15) 12%, black 40%)",
                   maskImage: "linear-gradient(to right, transparent 0%, rgba(0,0,0,0.15) 12%, black 40%)",
@@ -197,7 +198,7 @@ export function SeriesHero({
                 src={backdropUrl}
                 alt={title}
                 priority={true}
-                className="h-full w-auto object-contain object-right-top opacity-[0.75] transition-all [transition-duration:20s] ease-out group-hover/backdrop:scale-[1.03] animate-ken-burns"
+                className="h-full w-auto object-contain object-right-top opacity-[0.75] transition-all [transition-duration:20s] ease-out group-hover/backdrop:scale-[1.02] animate-ken-burns"
               />
             </div>
           )
@@ -232,7 +233,7 @@ export function SeriesHero({
           <div className="series-hero-animate flex flex-wrap items-center text-on-surface-variant text-xs font-semibold tracking-wide gap-y-1.5">
             {rating && (
               <span className="flex items-center gap-1">
-                <Star size={12} fill="currentColor" className="text-amber-500 stroke-none" />
+                <Icons.ui.star size={12} fill="currentColor" className="text-brand-success stroke-none" />
                 {(rating).toFixed(1)} Ki
               </span>
             )}
@@ -269,19 +270,19 @@ export function SeriesHero({
             {qualityBadge && (
               <>
                 <span className="text-on-surface-variant/50 mx-2 select-none">|</span>
-                <span className="text-emerald-400/90 font-bold uppercase tracking-wider text-[10px]">{qualityBadge}</span>
+                <span className="text-label-sm text-on-surface-variant/95">{qualityBadge}</span>
               </>
             )}
             {codecBadge && (
               <>
                 <span className="text-on-surface-variant/50 mx-2 select-none">|</span>
-                <span className="text-indigo-400/95 font-bold uppercase tracking-wider text-[10px]">{codecBadge}</span>
+                <span className="text-label-sm text-on-surface-variant/95">{codecBadge}</span>
               </>
             )}
             {audioBadge && (
               <>
                 <span className="text-on-surface-variant/50 mx-2 select-none">|</span>
-                <span className="text-on-surface-variant/95 font-bold uppercase tracking-wider text-[10px]">{audioBadge}</span>
+                <span className="text-label-sm text-on-surface-variant/95">{audioBadge}</span>
               </>
             )}
           </div>
@@ -289,7 +290,7 @@ export function SeriesHero({
           {/* Titles */}
           <div className="series-hero-animate space-y-2">
             {romajiTitle && (
-              <h2 className="text-brand-secondary font-bold uppercase tracking-[0.25em] text-xs md:text-sm animate-ki-shimmer bg-gradient-to-r from-brand-secondary via-amber-500 to-brand-orange bg-clip-text text-transparent select-none drop-shadow-[0_2px_8px_rgba(255,110,58,0.25)]">
+              <h2 className="text-brand-secondary font-bold uppercase tracking-widest text-xs md:text-sm animate-ki-shimmer bg-gradient-to-r from-brand-secondary via-amber-500 to-brand-orange bg-clip-text text-transparent select-none drop-shadow-[0_2px_8px_rgba(255,110,58,0.25)]">
                 {romajiTitle}
               </h2>
             )}
@@ -322,14 +323,14 @@ export function SeriesHero({
               <div className="absolute -inset-10 bg-brand-secondary/30 blur-xl group-hover/play:opacity-100 opacity-0 transition-opacity duration-500 -z-10 animate-pulse" />
 
               <div className="p-3 bg-surface-container/40 backdrop-blur-[var(--blur-overlay-xl)] rounded-xl border border-outline-variant text-on-surface group-hover/play:bg-white group-hover/play:text-black transition-all duration-300 shadow-inner z-10 shrink-0">
-                <Play className="w-4 h-4 fill-current" />
+                <Icons.media.play className="w-4 h-4 fill-current" />
               </div>
 
               <div className="flex flex-col items-start z-10 select-none text-left">
-                <span className="font-sans text-[14px] tracking-[0.15em] font-extrabold uppercase text-white transition-colors">
+                <span className="font-sans text-[14px] tracking-widest font-extrabold uppercase text-white transition-colors">
                   Reproducir
                 </span>
-                <span className="text-[9px] font-black text-white/60 tracking-[0.1em] uppercase transition-colors mt-0.5">
+                <span className="text-[9px] font-black text-white/60 tracking-widest uppercase transition-colors mt-0.5">
                   Comenzar episodio
                 </span>
               </div>
@@ -339,10 +340,10 @@ export function SeriesHero({
             {entry?.localFiles && entry.localFiles.length > 0 && (
               <button
                 onClick={handleAddToQueue}
-                className="group/queue flex items-center justify-center p-4.5 rounded-container bg-[var(--glass-bg)] backdrop-blur-[var(--blur-overlay-md)] border border-[var(--glass-border)] rounded-container hover:bg-[var(--glass-hover)] hover:border-[var(--glass-strong)] transition-all duration-300 text-on-surface/70 hover:text-on-surface transition-all duration-300 shadow-elevation-2"
+                className="group/queue flex items-center justify-center p-4.5 rounded-container bg-[var(--glass-bg)] backdrop-blur-[var(--blur-overlay-md)] border border-[var(--glass-border)] hover:bg-[var(--glass-hover)] hover:border-[var(--glass-strong)] transition-all duration-300 text-on-surface/70 hover:text-on-surface shadow-elevation-2"
                 title="Añadir a la cola"
               >
-                <ListPlus className="w-5 h-5 transition-transform group-hover/queue:-translate-y-0.5" />
+                <Icons.ui.listPlus className="w-5 h-5 transition-transform group-hover/queue:-translate-y-0.5" />
               </button>
             )}
           </div>

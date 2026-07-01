@@ -61,9 +61,9 @@ export interface PremiumEpisode {
   thumbnailUrl: string
   episodeType: EpisodeType
   isWatched: boolean
-  resolution: string
-  videoCodec: string
-  audioCodec: string
+  resolution?: string
+  videoCodec?: string
+  audioCodec?: string
   localFilePath?: string
   sagaId?: string
   sagaName?: string

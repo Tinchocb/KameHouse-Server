@@ -265,11 +265,11 @@ export const PosterCard = React.memo(function PosterCard({
           {!showPopup && (
             <div className="absolute inset-0 z-10 flex flex-col justify-end p-3 md:p-4 transition-transform duration-slow ease-out group-hover:translate-y-[-2px]">
               <div className="space-y-1.5">
-                <h3 className="text-h6 font-display text-primary line-clamp-1">
+                <h3 className="text-h6 font-display text-on-surface line-clamp-1">
                   {title}
                 </h3>
                 {subtitle && (
-                  <p className="text-caption text-muted uppercase tracking-wider line-clamp-1 group-hover:text-secondary transition-colors duration-fast">
+                  <p className="text-caption text-on-surface-variant/70 uppercase tracking-wider line-clamp-1 group-hover:text-on-surface-variant transition-colors duration-fast">
                     {subtitle}
                   </p>
                 )}
@@ -290,25 +290,25 @@ export const PosterCard = React.memo(function PosterCard({
         {showPopup && (
           <div className="p-3 md:p-4 space-y-2 overflow-hidden bg-[var(--bg-tertiary)]/90 transition-all duration-slow ease-out">
             <div className="space-y-2">
-              <h3 className="text-h5 font-display text-primary line-clamp-1">
+              <h3 className="text-h5 font-display text-on-surface line-clamp-1">
                 {title}
               </h3>
 
-              <div className="flex flex-wrap items-center gap-1.5 text-caption font-bold uppercase tracking-wider text-muted">
+              <div className="flex flex-wrap items-center gap-1.5 text-caption font-bold uppercase tracking-wider text-on-surface-variant/70">
                 {rating && (
                   <span className="text-brand-success font-extrabold flex items-center gap-1">
                     <Star size={10} fill="currentColor" />
                     {(rating * 10).toFixed(0)}%
                   </span>
                 )}
-                {year && <span className="text-secondary font-medium">{year}</span>}
+                {year && <span className="text-on-surface-variant font-medium">{year}</span>}
                 {badge && (
                   <Badge variant="muted" size="sm" className="px-1.5 py-0.5">
                     {badge}
                   </Badge>
                 )}
                 {episodeTitle && (
-                  <span className="text-[var(--text-muted)] text-[9px]">
+                  <span className="text-on-surface-variant/70 text-[9px]">
                     {episodeTitle}
                   </span>
                 )}
@@ -332,7 +332,7 @@ export const PosterCard = React.memo(function PosterCard({
               )}
 
               {description && (
-                <p className="line-clamp-3 text-body-xs leading-relaxed text-muted pt-1">
+                <p className="line-clamp-3 text-body-xs leading-relaxed text-on-surface-variant/70 pt-1">
                   {cleanDesc}
                 </p>
               )}

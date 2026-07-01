@@ -7,6 +7,8 @@ import { SeriesCard, getVhsColor } from './-SeriesCard';
 import { getLargeResImage } from '@/lib/helpers/images';
 import { useIntelligenceStore } from '@/hooks/use-home-intelligence';
 import { getSeriesIdFromMedia, getSeriesYear } from '@/lib/helpers/series';
+import { Skeleton } from '@/components/ui/skeleton/skeleton';
+import { EmptyState } from '@/components/shared/empty-state';
 
 export const Route = createFileRoute('/series/')({
     loader: ({ context }) => {
@@ -27,6 +29,16 @@ function SeriesFullscreenPage() {
             <SeriesFullscreenIndex />
         </HydrationBoundary>
     )
+}
+
+/** Delay de stagger por card, en ms. Antes vivía hardcodeado en un <style> con nth-child hasta 16 items. */
+const ENTRY_STAGGER_MS = 45;
+const ENTRY_STAGGER_MAX_ITEMS = 16;
+
+/** Transform compartido por los dos halos de fondo (exterior + interior del shelf). */
+function getGlowTransform(selectedIndex: number, total: number, offsetPx: number) {
+    const pct = (selectedIndex / Math.max(total - 1, 1)) * 80 + 10;
+    return `translate3d(calc(${pct}% - ${offsetPx}px), -50%, 0)`;
 }
 
 function SeriesFullscreenIndex() {
@@ -82,15 +94,14 @@ function SeriesFullscreenIndex() {
         return mapped.sort((a, b) => a.yearNum - b.yearNum);
     }, [collection]);
 
-    const [prevSeriesList, setPrevSeriesList] = useState(seriesList);
+    // Selecciona el primer item apenas llega la data, solo si todavía no hay selección.
+    // (Antes esto se resolvía comparando `seriesList` con una copia en estado guardada
+    // en el propio render, un patrón frágil que dispara un render extra cada vez.)
     useEffect(() => {
-        if (seriesList !== prevSeriesList) {
-            setPrevSeriesList(seriesList);
-            if (seriesList.length > 0) {
-                setSelectedId(prev => prev ?? seriesList[0].id);
-            }
+        if (selectedId === null && seriesList.length > 0) {
+            setSelectedId(seriesList[0].id);
         }
-    }, [seriesList, prevSeriesList]);
+    }, [seriesList, selectedId]);
 
     const selectedIndex = useMemo(() => {
         return seriesList.findIndex(item => item.id === selectedId);
@@ -106,7 +117,7 @@ function SeriesFullscreenIndex() {
                     style={{
                         opacity: 0.06,
                         background: `radial-gradient(circle, ${getVhsColor(selectedItem.id)} 0%, transparent 70%)`,
-                        transform: `translate3d(calc(${(selectedIndex / Math.max(seriesList.length - 1, 1)) * 80 + 10}% - 350px), -50%, 0)`,
+                        transform: getGlowTransform(selectedIndex, seriesList.length, 350),
                         transition: 'transform 700ms cubic-bezier(0.16, 1, 0.3, 1), background 700ms ease-out',
                     }}
                 />
@@ -117,7 +128,14 @@ function SeriesFullscreenIndex() {
 
             {/* Main Shelf Container */}
             <div className="flex-1 min-h-0 bg-surface/90 backdrop-blur-[var(--blur-overlay-xl)] rounded-[var(--radius-corner-lg)] border border-outline-variant/50 shadow-elevation-3 overflow-hidden relative z-10 flex flex-col">
-                <main className="w-full h-full flex bg-transparent overflow-x-auto overflow-y-hidden no-scrollbar relative z-10 scroll-smooth" style={{ scrollSnapType: 'x proximity', scrollPadding: '0 16px' }}>
+                <main
+                    className="vhs-shelf w-full h-full flex bg-transparent overflow-x-auto overflow-y-hidden no-scrollbar relative z-10 scroll-smooth"
+                    role="listbox"
+                    aria-orientation="horizontal"
+                    aria-label="Colección de series"
+                    aria-activedescendant={selectedItem ? `series-card-${selectedItem.id}` : undefined}
+                    style={{ scrollSnapType: 'x proximity', scrollPadding: '0 16px' }}
+                >
                     {/* Backlight Glow inside shelf */}
                     {selectedItem && (
                         <div
@@ -125,32 +143,37 @@ function SeriesFullscreenIndex() {
                             style={{
                                 opacity: 0.12,
                                 background: `radial-gradient(circle, ${getVhsColor(selectedItem.id)} 0%, transparent 60%)`,
-                                transform: `translate3d(calc(${(selectedIndex / Math.max(seriesList.length - 1, 1)) * 80 + 10}% - 250px), -50%, 0)`,
+                                transform: getGlowTransform(selectedIndex, seriesList.length, 250),
                                 transition: 'transform 700ms cubic-bezier(0.16, 1, 0.3, 1), background 700ms ease-out',
                             }}
                         />
                     )}
 
                     {isLoading && seriesList.length === 0 ? (
-                        <div className="w-full h-full flex items-center justify-center relative z-10">
-                            <span className="text-on-surface-variant tracking-widest uppercase text-sm font-black animate-pulse">
-                                Cargando colección...
-                            </span>
+                        <div className="w-full h-full flex items-stretch gap-0 relative z-10 p-2">
+                            {Array.from({ length: 8 }).map((_, i) => (
+                                <div key={i} className="h-full flex flex-col gap-2 p-2 shrink-0" style={{ flex: '1 0 150px' }}>
+                                    <Skeleton className="flex-1 h-auto rounded-t-lg rounded-b-none" />
+                                    <Skeleton className="h-[110px] rounded-t-none" />
+                                </div>
+                            ))}
                         </div>
                     ) : seriesList.length === 0 ? (
-                        <div className="w-full h-full flex items-center justify-center relative z-10">
-                            <span className="text-on-surface-variant tracking-widest uppercase text-sm font-black">
-                                No hay series en tu colección
-                            </span>
+                        <div className="w-full h-full flex items-center justify-center relative z-10 p-6">
+                            <EmptyState
+                                title="No hay series en tu colección"
+                                message="Agregá series a tu biblioteca para verlas acá."
+                            />
                         </div>
                     ) : (
-                        seriesList.map((item) => (
+                        seriesList.map((item, i) => (
                             <SeriesCard
                                 key={item.id}
                                 item={item}
                                 isSelected={item.id === selectedId}
-                                onNavigate={() => handleNavigate(item.id.toString())}
+                                onNavigate={handleNavigate}
                                 onSelect={setSelectedId}
+                                entryDelayMs={i < ENTRY_STAGGER_MAX_ITEMS ? i * ENTRY_STAGGER_MS : 0}
                             />
                         ))
                     )}
@@ -160,6 +183,14 @@ function SeriesFullscreenIndex() {
             <style>{`
                 .no-scrollbar::-webkit-scrollbar { display: none; }
                 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+                @keyframes vhs-card-enter {
+                    from { opacity: 0; transform: translateY(16px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .vhs-shelf > article {
+                    animation: vhs-card-enter 500ms cubic-bezier(0.16, 1, 0.3, 1) both;
+                }
             `}</style>
         </div>
     );

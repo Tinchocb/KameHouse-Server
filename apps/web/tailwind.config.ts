@@ -180,11 +180,11 @@ const config: Config = {
             overlay: "hsl(var(--overlay) / <alpha-value>)",
             "border-subtle": "hsl(var(--border-subtle) / <alpha-value>)",
             "border-strong": "hsl(var(--border-strong) / <alpha-value>)",
-            text: {
-                primary: "hsl(var(--text-primary) / <alpha-value>)",
-                secondary: "hsl(var(--text-secondary) / <alpha-value>)",
-                muted: "hsl(var(--text-muted) / <alpha-value>)",
-            },
+            "on-surface": "rgb(var(--on-surface-rgb) / <alpha-value>)",
+            "on-surface-variant": "rgb(var(--on-surface-variant-rgb) / <alpha-value>)",
+            "on-primary": "rgb(var(--on-primary-rgb) / <alpha-value>)",
+            "on-secondary-container": "hsl(var(--era-dbz-hsl) / <alpha-value>)",
+            "brand-accent": "hsl(var(--brand-accent) / <alpha-value>)",
             "brand-orange": "hsl(var(--brand-orange) / <alpha-value>)",
             "brand-primary": "hsl(var(--era-db-hsl) / <alpha-value>)",
             "brand-secondary": "hsl(var(--era-dbz-hsl) / <alpha-value>)",
@@ -279,8 +279,13 @@ export default config
 
 function addVariablesForColors({ addBase, theme }: { addBase: any; theme: any }) {
     const allColors = flattenColorPalette(theme("colors"))
+    // Skip values that already reference a CSS variable (e.g. "hsl(var(--brand-accent) / <alpha-value>)").
+    // Re-declaring them under the same --key would shadow the real variable from colors.css
+    // with a self-referential, invalid value.
     const newVars = Object.fromEntries(
-        Object.entries(allColors).map(([key, val]) => [`--${key}`, val]),
+        Object.entries(allColors)
+            .filter(([, val]) => typeof val === "string" && !val.includes("var("))
+            .map(([key, val]) => [`--${key}`, val]),
     )
 
     addBase({

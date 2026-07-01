@@ -79,19 +79,6 @@ const STEPS = [
 function StepIndicator({ currentStep, totalSteps, onStepClick }: { currentStep: number; totalSteps: number; onStepClick: (step: number) => void }) {
     return (
         <div className="mb-12">
-            <div className="flex items-center justify-center mb-6">
-                <div className="relative mx-auto w-24 h-24">
-                    <motion.img
-                        src="/kamehouse-logo.png"
-                        alt="KameHouse Logo"
-                        className="w-full h-full object-contain"
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.5 }}
-                    />
-                </div>
-            </div>
-
             <div className="text-center mb-8">
                 <p className="text-zinc-500 text-xs font-medium uppercase tracking-[0.25em]">
                     Estos ajustes se pueden cambiar más tarde
@@ -272,10 +259,54 @@ export function GettingStarted({ status }: { status: Status }) {
 
     return (
         <div className="w-full min-h-screen bg-zinc-950 relative flex items-center justify-center py-12 px-4 select-none">
-            {/* Cinematic animated background gradients */}
+            {/* Cinematic animated background gradients of Dragon Ball series era colors */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full bg-brand-orange/5 blur-[120px] mix-blend-screen animate-pulse" />
-                <div className="absolute bottom-1/4 right-1/4 w-[450px] h-[450px] rounded-full bg-indigo-900/10 blur-[100px] mix-blend-screen" />
+                {/* Base dark canvas overlay to ensure content readability */}
+                <div className="absolute inset-0 bg-zinc-950/60" />
+                
+                {/* Dynamic floating mesh of DB era colors */}
+                <div className="absolute inset-0 opacity-[0.22] blur-[140px] mix-blend-screen">
+                    {/* DB - Kame Blue */}
+                    <div 
+                        className="absolute top-[10%] left-[10%] w-[45vw] h-[45vw] rounded-full animate-float-blur"
+                        style={{
+                            background: "radial-gradient(circle, var(--era-db-hex) 0%, transparent 70%)",
+                        }}
+                    />
+                    {/* DBZ - Saiyan Orange */}
+                    <div 
+                        className="absolute top-[5%] right-[10%] w-[40vw] h-[40vw] rounded-full animate-float-blur-reverse"
+                        style={{
+                            background: "radial-gradient(circle, var(--era-dbz-hex) 0%, transparent 70%)",
+                            animationDelay: "-4s",
+                        }}
+                    />
+                    {/* DBGT - SSJ4 Red */}
+                    <div 
+                        className="absolute bottom-[10%] right-[15%] w-[45vw] h-[45vw] rounded-full animate-float-blur"
+                        style={{
+                            background: "radial-gradient(circle, var(--era-dbgt-hex) 0%, transparent 70%)",
+                            animationDelay: "-8s",
+                        }}
+                    />
+                    {/* DBS - Ultra Instinto Celeste */}
+                    <div 
+                        className="absolute bottom-[5%] left-[15%] w-[38vw] h-[38vw] rounded-full animate-float-blur-reverse"
+                        style={{
+                            background: "radial-gradient(circle, var(--era-dbs-hex) 0%, transparent 70%)",
+                            animationDelay: "-12s",
+                        }}
+                    />
+                    {/* Daima - Demon Realm Purple */}
+                    <div 
+                        className="absolute top-[35%] left-[30%] w-[48vw] h-[48vw] rounded-full animate-pulse-glow"
+                        style={{
+                            background: "radial-gradient(circle, var(--era-daima-hex) 0%, transparent 70%)",
+                            animationDelay: "-6s",
+                            animationDuration: "10s",
+                        }}
+                    />
+                </div>
             </div>
 
             <div className="w-full max-w-6xl relative z-10">
@@ -339,7 +370,7 @@ export function GettingStarted({ status }: { status: Status }) {
                                     animate="center"
                                     exit="exit"
                                     transition={{
-                                        x: { duration: 0.3, ease: "easeInOut" },
+                                        x: { duration: 0.3, ease: [0.2, 1, 0.2, 1] },
                                         opacity: { duration: 0.2 },
                                     }}
                                     className="min-h-[350px]"

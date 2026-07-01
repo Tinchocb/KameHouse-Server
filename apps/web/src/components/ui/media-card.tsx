@@ -130,7 +130,7 @@ export const MediaCard = React.memo(function MediaCard({
                     <DeferredImage
                         src={getMediumResImage(artwork)}
                         alt={title}
-                        className="h-full w-full object-cover transition-transform duration-1000 [transition-timing-function:cubic-bezier(0.23,1,0.32,1)] group-hover:scale-[1.08]"
+                        className="h-full w-full object-cover transition-transform duration-1000 [transition-timing-function:cubic-bezier(0.23,1,0.32,1)] group-hover:scale-105"
                     />
                     
                     {/* Shadow Gradient Overlay */}

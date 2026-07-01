@@ -1,5 +1,5 @@
 import { memo, useState } from "react"
-import { Play, ListPlus } from "lucide-react"
+import { Icons } from "@/components/ui/icons"
 import { cn } from "@/components/ui/core/styling"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { useSound } from "@/hooks/use-sound"
@@ -11,12 +11,12 @@ import type { Anime_LibraryCollectionEntry, Continuity_WatchHistoryItem } from "
 export type EraTab = "all" | "Dragon Ball" | "Dragon Ball Z" | "Dragon Ball Super" | "Dragon Ball GT" | "Especiales y OVAs"
 
 export const ERA_TABS: { value: EraTab; label: string; shortLabel: string; color: string; glow: string }[] = [
-    { value: "all", label: "Todas", shortLabel: "Todas", color: "#E85D2E", glow: "rgba(232,93,46,0.3)" },
-    { value: "Dragon Ball", label: "Dragon Ball", shortLabel: "DB", color: "#0096E6", glow: "rgba(0,150,230,0.3)" },
-    { value: "Dragon Ball Z", label: "Dragon Ball Z", shortLabel: "Z", color: "#E85D2E", glow: "rgba(232,93,46,0.3)" },
-    { value: "Dragon Ball GT", label: "Dragon Ball GT", shortLabel: "GT", color: "#D32F2F", glow: "rgba(211,47,47,0.3)" },
-    { value: "Dragon Ball Super", label: "Dragon Ball Super", shortLabel: "Super", color: "#00D4D4", glow: "rgba(0,212,212,0.3)" },
-    { value: "Especiales y OVAs", label: "Especiales y OVAs", shortLabel: "Esp/OVAs", color: "#9333EA", glow: "rgba(147,51,234,0.3)" },
+    { value: "all", label: "Todas", shortLabel: "Todas", color: "var(--era-dbz-hex)", glow: "hsl(var(--era-dbz-hsl) / 0.3)" },
+    { value: "Dragon Ball", label: "Dragon Ball", shortLabel: "DB", color: "var(--era-db-hex)", glow: "hsl(var(--era-db-hsl) / 0.3)" },
+    { value: "Dragon Ball Z", label: "Dragon Ball Z", shortLabel: "Z", color: "var(--era-dbz-hex)", glow: "hsl(var(--era-dbz-hsl) / 0.3)" },
+    { value: "Dragon Ball GT", label: "Dragon Ball GT", shortLabel: "GT", color: "var(--era-dbgt-hex)", glow: "hsl(var(--era-dbgt-hsl) / 0.3)" },
+    { value: "Dragon Ball Super", label: "Dragon Ball Super", shortLabel: "Super", color: "var(--era-dbs-hex)", glow: "hsl(var(--era-dbs-hsl) / 0.3)" },
+    { value: "Especiales y OVAs", label: "Especiales y OVAs", shortLabel: "Esp/OVAs", color: "var(--era-daima-hex)", glow: "hsl(var(--era-daima-hsl) / 0.3)" },
 ]
 
 export function cleanMovieTitle(title: string): string {
@@ -95,7 +95,7 @@ export const MovieCard = memo(function MovieCard({
                     fallback={
                         <div
                             className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center"
-                            style={{ background: `linear-gradient(135deg, ${eraConfig.color}20, #09090b)` }}
+                            style={{ background: `linear-gradient(135deg, color-mix(in srgb, ${eraConfig.color} 13%, transparent), #09090b)` }}
                         >
                             <span className="font-bebas text-lg tracking-widest text-white/80 line-clamp-3 leading-tight">
                                 {title}
@@ -131,7 +131,7 @@ export const MovieCard = memo(function MovieCard({
                             boxShadow: `0 0 20px ${eraConfig.glow}`,
                         }}
                     >
-                                        <Play className="size-[18px] fill-current ml-0.5 text-on-surface" />
+                                        <Icons.media.play className="size-[18px] fill-current ml-0.5 text-on-surface" />
                     </div>
  
                     {hasLocalFiles && (
@@ -165,7 +165,7 @@ export const MovieCard = memo(function MovieCard({
                             }}
                             className="px-2.5 py-1 rounded-full bg-surface/60 hover:bg-white hover:text-black border border-outline-variant/10 flex items-center gap-1.5 shadow-elevation-5 text-[8px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer"
                         >
-                            <ListPlus className="w-2.5 h-2.5" />
+                            <Icons.ui.listPlus className="w-2.5 h-2.5" />
                             <span>Cola</span>
                         </div>
                     )}
@@ -175,7 +175,7 @@ export const MovieCard = memo(function MovieCard({
                 <div className="absolute top-2.5 left-2.5 z-20 flex flex-col gap-1 items-start">
                     <span 
                         className="text-[7.5px] font-mono font-black uppercase px-2 py-0.5 rounded shadow-elevation-2 border bg-surface-container backdrop-blur-overlay-sm" 
-                        style={{ borderColor: `${eraConfig.color}40`, color: eraConfig.color }}
+                        style={{ borderColor: `color-mix(in srgb, ${eraConfig.color} 25%, transparent)`, color: eraConfig.color }}
                     >
                         {eraConfig.shortLabel}
                     </span>

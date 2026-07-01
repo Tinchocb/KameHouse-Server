@@ -116,16 +116,17 @@ export function DynamicBackdrop() {
             setIsCrossFading(true)
         }, 0)
 
+        // 1020ms: just past the 1000ms opacity crossfade below, so the swap happens after it's fully faded in.
         const timer = setTimeout(() => {
             setDisplayedUrl(activeBackdropUrl)
             setNextUrl(null)
             setIsCrossFading(false)
-        }, 520)
+        }, 1020)
 
         return () => clearTimeout(timer)
     }, [activeBackdropUrl, displayedUrl, isEnabled])
 
-    const filterClass = isHomePage ? "" : "blur-2xl"
+    const filterClass = isHomePage ? "blur-[120px]" : "blur-2xl"
 
     if (!isEnabled) return null
 
@@ -173,29 +174,33 @@ export function DynamicBackdrop() {
                 }}
             >
                 {/* Current backdrop */}
-                <div
-                    ref={currentLayerRef}
-                    className={`absolute inset-0 scale-115 bg-cover bg-center bg-no-repeat ${filterClass}`}
-                    style={{
-                        backgroundImage: displayedUrl ? `url(${displayedUrl})` : undefined,
-                        opacity: isCrossFading ? 0 : baseOpacity,
-                        transition: "opacity 500ms ease-in-out",
-                        willChange: "opacity",
-                    }}
-                />
+                {!isHomePage && displayedUrl && (
+                    <div
+                        ref={currentLayerRef}
+                        className={`absolute inset-0 scale-125 bg-cover bg-center bg-no-repeat ${filterClass}`}
+                        style={{
+                            backgroundImage: `url(${displayedUrl})`,
+                            opacity: isCrossFading ? 0 : baseOpacity,
+                            transition: "opacity 1000ms cubic-bezier(0.25, 0.8, 0.25, 1)",
+                            willChange: "opacity",
+                        }}
+                    />
+                )}
 
                 {/* Incoming backdrop */}
-                <div
-                    ref={nextLayerRef}
-                    className={`absolute inset-0 bg-cover bg-center bg-no-repeat ${filterClass}`}
-                    style={{
-                        backgroundImage: nextUrl ? `url(${nextUrl})` : undefined,
-                        opacity: isCrossFading ? baseOpacity : 0,
-                        transform: isCrossFading ? "scale(1.05)" : "scale(1.2)",
-                        transition: "opacity 500ms ease-in-out, transform 600ms cubic-bezier(0.4, 0, 0.2, 1)",
-                        willChange: "opacity, transform",
-                    }}
-                />
+                {!isHomePage && nextUrl && (
+                    <div
+                        ref={nextLayerRef}
+                        className={`absolute inset-0 bg-cover bg-center bg-no-repeat ${filterClass}`}
+                        style={{
+                            backgroundImage: `url(${nextUrl})`,
+                            opacity: isCrossFading ? baseOpacity : 0,
+                            transform: isCrossFading ? "scale(1.05)" : "scale(1.2)",
+                            transition: "opacity 1000ms cubic-bezier(0.25, 0.8, 0.25, 1), transform 1200ms cubic-bezier(0.25, 0.8, 0.25, 1)",
+                            willChange: "opacity, transform",
+                        }}
+                    />
+                )}
             </div>
 
             {/* Film Grain Overlay */}

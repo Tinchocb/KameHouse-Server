@@ -64,6 +64,11 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
         }
     }, [input])
 
+    const onSelectRef = React.useRef(onSelect)
+    React.useEffect(() => {
+        onSelectRef.current = onSelect
+    })
+
     const updateEffectFirst = React.useRef(true)
     React.useEffect(() => {
         if (updateEffectFirst.current) {
@@ -71,16 +76,12 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
             return
         }
         const trimmedValue = debouncedInput.trim()
-        onSelect(trimmedValue)
-    }, [debouncedInput, onSelect])
+        onSelectRef.current(trimmedValue)
+    }, [debouncedInput])
 
     const checkDirectoryExists = React.useCallback(() => {
-        if (!isLoading && data && shouldExist && !data.exists && input.length > 0) {
-            React.startTransition(() => {
-                setInputRaw("")
-            })
-        }
-    }, [isLoading, data, input, shouldExist])
+        // Prevent auto-clearing user input so typos can be corrected and the error indicator is visible
+    }, [])
 
     const [librarySelectionOpen, setLibrarySelectionOpen] = React.useState(false)
 
