@@ -125,7 +125,7 @@ export function DynamicBackdrop() {
         }
     }, [isEnabled, isMotionEnabled, tvMode, isEcoMode, isHomePage])
 
-    // Cross-fade orchestration con soporte completo de transición a null
+    // Cross-fade orchestration con soporte completo de transición a null y precarga inmediata
     React.useEffect(() => {
         if (!isEnabled) return
         if (activeBackdropUrl === displayedUrl) return
@@ -136,7 +136,7 @@ export function DynamicBackdrop() {
                 setDisplayedUrl(null)
                 setNextUrl(null)
                 setIsCrossFading(false)
-            }, 600)
+            }, 350)
             return () => {
                 clearTimeout(finishTimer)
             }
@@ -147,6 +147,12 @@ export function DynamicBackdrop() {
             return
         }
 
+        const lowRes = getLowResImage(activeBackdropUrl)
+        if (typeof window !== "undefined" && lowRes) {
+            const img = new Image()
+            img.src = lowRes
+        }
+
         setNextUrl(activeBackdropUrl)
         setIsCrossFading(true)
 
@@ -154,7 +160,7 @@ export function DynamicBackdrop() {
             setDisplayedUrl(activeBackdropUrl)
             setNextUrl(null)
             setIsCrossFading(false)
-        }, 800)
+        }, 350)
 
         return () => {
             clearTimeout(finishTimer)
@@ -217,7 +223,7 @@ export function DynamicBackdrop() {
                             filter: isFlat || isEcoMode
                                 ? "none"
                                 : "blur(64px) brightness(0.50) saturate(135%)",
-                            transition: "opacity 800ms cubic-bezier(0.25, 0.8, 0.25, 1)",
+                            transition: "opacity 350ms cubic-bezier(0.16, 1, 0.3, 1)",
                         }}
                     />
                 )}
@@ -231,7 +237,7 @@ export function DynamicBackdrop() {
                             filter: isFlat || isEcoMode
                                 ? "none"
                                 : "blur(64px) brightness(0.50) saturate(135%)",
-                            transition: "opacity 800ms cubic-bezier(0.25, 0.8, 0.25, 1)",
+                            transition: "opacity 350ms cubic-bezier(0.16, 1, 0.3, 1)",
                         }}
                     />
                 )}

@@ -18,10 +18,6 @@ export function useHeroBackdrop(imageSrc: string | null | undefined, options?: {
 
         const finalUrl = optimizeResolution ? getLargeResImage(imageSrc) : imageSrc
         setBackdropUrl(finalUrl)
-
-        return () => {
-            setBackdropUrl(null)
-        }
     }, [imageSrc, setBackdropUrl, optimizeResolution])
 }
 
