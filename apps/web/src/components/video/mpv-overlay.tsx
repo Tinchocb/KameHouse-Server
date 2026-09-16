@@ -1,5 +1,5 @@
 import React from "react"
-import { Icons } from "@/components/ui/icons"
+import { IconStatusMonitorPlay, IconMediaStop } from "@/components/ui/icons";
 
 interface MpvOverlayProps {
     title?: string
@@ -14,9 +14,9 @@ interface MpvOverlayProps {
  */
 export function MpvOverlay({ title, episodeLabel, onStop }: MpvOverlayProps) {
     return (
-        <div className="fixed inset-0 z-[10001] bg-black/80 backdrop-blur-[var(--blur-overlay-lg)] flex items-center justify-center">
-            <div className="bg-zinc-950/40 backdrop-blur-[var(--blur-overlay-xl)] border border-white/10 rounded-container p-8 max-w-md w-full mx-6 flex flex-col items-center gap-6 text-center">
-                <Icons.status.monitorPlay className="w-12 h-12 text-brand-accent" />
+        <div className="fixed inset-0 z-player-overlay bg-black/80 backdrop-blur-overlay-lg flex items-center justify-center">
+            <div className="bg-surface-container-high/80 backdrop-blur-overlay-xl border border-outline-variant/30 rounded-container p-8 max-w-md w-full mx-6 flex flex-col items-center gap-6 text-center">
+                <IconStatusMonitorPlay className="w-12 h-12 text-brand-accent" />
                 <div className="flex flex-col gap-1">
                     <span className="text-on-surface-variant text-label-sm font-black uppercase tracking-widest font-mono">
                         Reproduciendo en mpv
@@ -32,7 +32,7 @@ export function MpvOverlay({ title, episodeLabel, onStop }: MpvOverlayProps) {
                     onClick={onStop}
                     className="flex items-center gap-2 px-6 py-2.5 rounded-button border border-white/10 bg-white/5 hover:bg-surface-variant text-on-surface font-black uppercase tracking-widest text-label-sm transition-all duration-base active:scale-[0.95] focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
                 >
-                    <Icons.media.stop className="w-4 h-4" />
+                    <IconMediaStop className="w-4 h-4" />
                     Detener
                 </button>
             </div>

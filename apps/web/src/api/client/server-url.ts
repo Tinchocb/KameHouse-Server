@@ -12,18 +12,38 @@ function devOrProd(dev: string, prod: string): string {
     return import.meta.env.MODE === "development" ? dev : prod
 }
 
+let cachedClientId: string | null = null
+function getWebClientId(): string {
+    if (typeof window === "undefined") return "0"
+    if (cachedClientId) return cachedClientId
+    try {
+        let stored = window.sessionStorage.getItem("kamehouse_client_id")
+        if (!stored) {
+            stored = "web-" + Math.random().toString(36).substring(2, 9) + "-" + Date.now().toString(36)
+            window.sessionStorage.setItem("kamehouse_client_id", stored)
+        }
+        cachedClientId = stored
+        return stored
+    } catch {
+        cachedClientId = "web-" + Math.random().toString(36).substring(2, 9)
+        return cachedClientId
+    }
+}
+
 /**
  * WebSocket URL for `/api/v1/ws`, derived from the same rules as HTTP base URL.
  */
 export function getApiWebSocketUrl(): string {
+    const clientId = getWebClientId()
+    const query = `?id=${encodeURIComponent(clientId)}`
     const base = getServerBaseUrl()
-    if (base.startsWith("http://")) return base.replace("http://", "ws://") + "/api/v1/ws"
-    if (base.startsWith("https://")) return base.replace("https://", "wss://") + "/api/v1/ws"
+    if (base.startsWith("http://")) return base.replace("http://", "ws://") + "/api/v1/ws" + query
+    if (base.startsWith("https://")) return base.replace("https://", "wss://") + "/api/v1/ws" + query
     if (typeof window !== "undefined") {
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
-        return `${protocol}//${window.location.host}/api/v1/ws`
+        return `${protocol}//${window.location.host}/api/v1/ws${query}`
     }
-    return `ws://127.0.0.1:${__DEV_SERVER_PORT}/api/v1/ws`
+    return `ws://127.0.0.1:${__DEV_SERVER_PORT}/api/v1/ws${query}`
 }
 
 export function getServerBaseUrl(removeProtocol: boolean = false): string {

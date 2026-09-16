@@ -11,14 +11,15 @@ import { toast } from "sonner"
 import { RangeSlider } from "@/components/settings/range-slider"
 import { DirectorySelector } from "@/components/shared/directory-selector"
 import { Button } from "@/components/ui/button"
-import { Icons } from "@/components/ui/icons"
+import { IconUiSpinner, IconMediaWand, IconStatusHeadphones, IconMediaSkipNext, IconMediaQueue, IconStatusMusic, IconMediaVolume2, IconStatusTv } from "@/components/ui/icons";
 import { cn } from "@/components/ui/core/styling"
-import { SettingsSection, SettingsCard, OsToggle } from "../components"
+import { OsToggle } from "../components"
+import { SectionBar } from "@/components/ui/sectionbar"
+import { useSpringPreset } from "@/components/ui/kinetics/hooks"
 import { useShallow } from "zustand/react/shallow"
 
 interface PlaybackTabProps {
     control: Control<SettingsFormValues>
-    searchQuery?: string
 }
 
 const BATCH_SCAN_MEDIA_ID = -1
@@ -80,7 +81,7 @@ function LibrarySkipScanRow() {
                             : "bg-brand-accent hover:brightness-110 text-white shadow-sm active:scale-95"
                     )}
                 >
-                    {running ? <Icons.ui.spinner className="w-3.5 h-3.5 animate-spin" /> : <Icons.media.wand className="w-3.5 h-3.5" />}
+                    {running ? <IconUiSpinner className="w-3.5 h-3.5 animate-spin" /> : <IconMediaWand className="w-3.5 h-3.5" />}
                     <span>{running ? "ESCANEANDO..." : "ESCANEAR AHORA"}</span>
                 </button>
             </div>
@@ -104,6 +105,7 @@ const AUDIO_PROFILES = [
 ]
 
 export function PlaybackTab({ control }: PlaybackTabProps) {
+    const cardSpring = useSpringPreset("cardHover")
     const {
         preferredAudioProfile,
         setPreferredAudioProfile,
@@ -201,254 +203,259 @@ export function PlaybackTab({ control }: PlaybackTabProps) {
     return (
         <div className="w-full space-y-7 animate-in fade-in duration-base pb-8">
 
-            {/* ═══════════════════════════════════════════════════════════════════
+            {/* ═════════════════════════════════════════════════════════════════
                 1. DOBLAJE Y PERFIL DE AUDIO
-               ═══════════════════════════════════════════════════════════════════ */}
-            <SettingsSection
+               ════════════════════════════════════════════════════════════════ */}
+            <SectionBar
+                id="audio-profile"
                 label="Doblaje e Idioma Principal"
                 description="Preferencia automática de pista de audio en archivos con doblajes múltiples."
-                icon={Icons.status.headphones}
+                icon={IconStatusHeadphones}
+                collapsible
+                defaultOpen={true}
             >
-                <SettingsCard divide={false} className="p-5 space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-                        {AUDIO_PROFILES.map((p) => {
-                            const isSelected = preferredAudioProfile === p.id
-                            return (
-                                <motion.button
-                                    key={p.id}
-                                    type="button"
-                                    whileHover={{ scale: 1.025, y: -2 }}
-                                    whileTap={{ scale: 0.97 }}
-                                    transition={{ type: "spring", stiffness: 450, damping: 25 }}
-                                    onClick={() => setPreferredAudioProfile(p.id)}
-                                    className={cn(
-                                        "flex flex-col p-3.5 rounded-xl border text-left transition-colors duration-200",
-                                        isSelected
-                                            ? "bg-brand-accent/10 border-brand-accent shadow-[0_0_16px_hsl(var(--brand-accent)/0.25)] ring-1 ring-brand-accent/40"
-                                            : "bg-white/[0.02] border-white/10 hover:border-white/20 hover:bg-white/[0.04]"
-                                    )}
-                                >
-                                    <div className="flex items-center justify-between mb-1.5">
-                                        <span className="text-xl select-none">{p.flag}</span>
-                                        {isSelected && <span className="w-2 h-2 rounded-full bg-brand-accent shadow-[0_0_8px_hsl(var(--brand-accent))]" />}
-                                    </div>
-                                    <span className={cn("text-xs font-bold truncate", isSelected ? "text-brand-accent" : "text-on-surface")}>
-                                        {p.title}
-                                    </span>
-                                    <span className="text-[10px] text-on-surface-variant/70 line-clamp-1 mt-0.5">{p.desc}</span>
-                                </motion.button>
-                            )
-                        })}
-                    </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                    {AUDIO_PROFILES.map((p) => {
+                        const isSelected = preferredAudioProfile === p.id
+                        return (
+                            <motion.button
+                                key={p.id}
+                                type="button"
+                                whileHover={{ scale: 1.025, y: -2 }}
+                                whileTap={{ scale: 0.97 }}
+                                transition={cardSpring}
+                                onClick={() => setPreferredAudioProfile(p.id)}
+                                className={cn(
+                                    "flex flex-col p-3.5 rounded-2xl border text-left transition-all duration-200 cursor-pointer",
+                                    isSelected
+                                        ? "bg-zinc-950/70 border-white/30 border-t-white/50 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.3),0_8px_20px_rgba(0,0,0,0.6)] ring-1 ring-white/30"
+                                        : "bg-zinc-950/40 border-white/10 border-t-white/20 hover:border-white/25 hover:bg-white/[0.04] shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.1)]"
+                                )}
+                            >
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <span className="text-xl select-none">{p.flag}</span>
+                                    {isSelected && <span className="w-2 h-2 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />}
+                                </div>
+                                <span className={cn("text-xs font-bold truncate", isSelected ? "text-white font-black" : "text-zinc-200")}>
+                                    {p.title}
+                                </span>
+                                <span className="text-[10px] text-zinc-400 line-clamp-1 mt-0.5">{p.desc}</span>
+                            </motion.button>
+                        )
+                    })}
+                </div>
 
-                    <div className="pt-2 border-t border-white/[0.05]">
-                        <OsToggle
-                            label="Ocultar subtítulos si el audio está doblado"
-                            description="Desactiva subtítulos automáticamente al reproducir en Español Latino o Castellano."
-                            checked={autoDisableSubtitlesWhenDubbed}
-                            onChange={setAutoDisableSubtitlesWhenDubbed}
-                        />
-                    </div>
-                </SettingsCard>
-            </SettingsSection>
+                <div className="pt-2 border-t border-white/[0.05]">
+                    <OsToggle
+                        label="Ocultar subtítulos si el audio está doblado"
+                        description="Desactiva subtítulos automáticamente al reproducir en Español Latino o Castellano."
+                        checked={autoDisableSubtitlesWhenDubbed}
+                        onChange={setAutoDisableSubtitlesWhenDubbed}
+                    />
+                </div>
+            </SectionBar>
 
-            {/* ═══════════════════════════════════════════════════════════════════
+            {/* ══════════════════════════════════════════════════════════════════
                 2. SALTO INTELIGENTE (SMART SKIP)
                ═══════════════════════════════════════════════════════════════════ */}
-            <SettingsSection
+            <SectionBar
+                id="smart-skip"
                 label="Salto Inteligente (Smart Skip)"
                 description="Omisión de openings, endings, episodios de relleno y detección acústica en segundo plano."
-                icon={Icons.media.skipNext}
+                icon={IconMediaSkipNext}
                 badge={
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-brand-accent/10 text-brand-accent border border-brand-accent/25">
                         {[autoSkipIntro, autoSkipOutro, autoSkipFiller].filter(Boolean).length} activos
                     </span>
                 }
+                collapsible
+                defaultOpen={true}
             >
-                <SettingsCard>
-                    <OsToggle
-                        label="Saltar Opening (Intro) automáticamente"
-                        description="Omite canciones iniciales (Cha-La Head-Cha-La, Dan Dan, etc.) sin presionar botones."
-                        checked={autoSkipIntro}
-                        onChange={setAutoSkipIntro}
-                    />
-                    <OsToggle
-                        label="Saltar Ending (Créditos) automáticamente"
-                        description="Pasa directamente al siguiente episodio al iniciar los créditos finales."
-                        checked={autoSkipOutro}
-                        onChange={setAutoSkipOutro}
-                    />
-                    <OsToggle
-                        label="Saltar episodios de relleno automáticamente"
-                        description="Omite arcos no canónicos (Garlic Jr., Namek falso) para una experiencia fiel al manga."
-                        checked={autoSkipFiller}
-                        onChange={setAutoSkipFiller}
-                    />
-                    <Controller
-                        control={control}
-                        name="library.autoDetectSkipTimes"
-                        render={({ field }) => (
-                            <OsToggle
-                                label="Detectar marcas Skip en segundo plano"
-                                description="Analiza huellas acústicas y subtítulos para ubicar intros y outros automáticamente."
-                                checked={!!field.value}
-                                onChange={field.onChange}
-                            />
-                        )}
-                    />
-                    <div className="p-5">
-                        <LibrarySkipScanRow />
-                    </div>
-                </SettingsCard>
-            </SettingsSection>
+                <OsToggle
+                    label="Saltar Opening (Intro) automáticamente"
+                    description="Omite canciones iniciales (Cha-La Head-Cha-La, Dan Dan, etc.) sin presionar botones."
+                    checked={autoSkipIntro}
+                    onChange={setAutoSkipIntro}
+                />
+                <OsToggle
+                    label="Saltar Ending (Créditos) automáticamente"
+                    description="Pasa directamente al siguiente episodio al iniciar los créditos finales."
+                    checked={autoSkipOutro}
+                    onChange={setAutoSkipOutro}
+                />
+                <OsToggle
+                    label="Saltar episodios de relleno automáticamente"
+                    description="Omite arcos no canónicos (Garlic Jr., Namek falso) para una experiencia fiel al manga."
+                    checked={autoSkipFiller}
+                    onChange={setAutoSkipFiller}
+                />
+                <Controller
+                    control={control}
+                    name="library.autoDetectSkipTimes"
+                    render={({ field }) => (
+                        <OsToggle
+                            label="Detectar marcas Skip en segundo plano"
+                            description="Analiza huellas acústicas y subtítulos para ubicar intros y otros automáticamente."
+                            checked={!!field.value}
+                            onChange={field.onChange}
+                        />
+                    )}
+                />
+                <div className="p-5">
+                    <LibrarySkipScanRow />
+                </div>
+            </SectionBar>
 
-            {/* ═══════════════════════════════════════════════════════════════════
+            {/* ══════════════════════════════════════════════════════════════════
                 3. CONTINUIDAD Y COLA DE REPRODUCCIÓN
                ═══════════════════════════════════════════════════════════════════ */}
-            <SettingsSection
+            <SectionBar
+                id="playback-continuity"
                 label="Continuidad y Cola de Reproducción"
                 description="Comportamiento al terminar un episodio y sincronización de progreso."
-                icon={Icons.media.queue}
+                icon={IconMediaQueue}
+                collapsible
+                defaultOpen={true}
             >
-                <SettingsCard>
-                    <Controller
-                        control={control}
-                        name="library.autoPlayNextEpisode"
-                        render={({ field }) => (
-                            <OsToggle
-                                label="Reproducción Continua (Autoplay)"
-                                description="Inicia automáticamente el siguiente capítulo al concluir el actual."
-                                checked={!!field.value}
-                                onChange={field.onChange}
-                            />
-                        )}
-                    />
-                    <Controller
-                        control={control}
-                        name="library.enableWatchContinuity"
-                        render={({ field }) => (
-                            <OsToggle
-                                label="Guardar Progreso en la Nube / Base de Datos"
-                                description="Recuerda el segundo exacto para continuar donde lo dejaste en cualquier dispositivo."
-                                checked={!!field.value}
-                                onChange={field.onChange}
-                            />
-                        )}
-                    />
-                </SettingsCard>
-            </SettingsSection>
+                <Controller
+                    control={control}
+                    name="library.autoPlayNextEpisode"
+                    render={({ field }) => (
+                        <OsToggle
+                            label="Reproducción Continua (Autoplay)"
+                            description="Inicia automáticamente el siguiente capítulo al concluir el actual."
+                            checked={!!field.value}
+                            onChange={field.onChange}
+                        />
+                    )}
+                />
+                <Controller
+                    control={control}
+                    name="library.enableWatchContinuity"
+                    render={({ field }) => (
+                        <OsToggle
+                            label="Guardar Progreso en la Nube / Base de Datos"
+                            description="Recuerda el segundo exacto para continuar donde lo dejaste en cualquier dispositivo."
+                            checked={!!field.value}
+                            onChange={field.onChange}
+                        />
+                    )}
+                />
+            </SectionBar>
 
             {/* ═══════════════════════════════════════════════════════════════════
                 4. AUDIO DE INTERFAZ Y MÚSICA AMBIENTAL
-               ═══════════════════════════════════════════════════════════════════ */}
-            <SettingsSection
+               ════════════════════════════════════════════════════════════════════ */}
+            <SectionBar
+                id="ui-audio"
                 label="Audio de Interfaz y Música Ambiental"
                 description="Efectos de sonido de menú y banda sonora de fondo mientras exploras."
-                icon={Icons.status.music}
+                icon={IconStatusMusic}
                 badge={
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-brand-accent/10 text-brand-accent border border-brand-accent/20">
                         Local
                     </span>
                 }
+                collapsible
+                defaultOpen={true}
             >
-                <SettingsCard>
-                    <OsToggle
-                        label="Efectos de Sonido en la Interfaz"
-                        description="Sonidos sutiles retro al hacer clics, abrir menús o seleccionar opciones."
-                        checked={uiSoundsEnabled}
-                        onChange={setUiSoundsEnabled}
-                    />
-                    {uiSoundsEnabled && (
-                        <div className="p-5 bg-white/[0.01]">
+                <OsToggle
+                    label="Efectos de Sonido en la Interfaz"
+                    description="Sonidos sutiles retro al hacer clics, abrir menús o seleccionar opciones."
+                    checked={uiSoundsEnabled}
+                    onChange={setUiSoundsEnabled}
+                />
+                {uiSoundsEnabled && (
+                    <div className="p-5 bg-white/[0.01]">
+                        <RangeSlider
+                            label="Volumen de Efectos"
+                            min={0}
+                            max={1}
+                            step={0.05}
+                            value={uiSoundsVolume}
+                            onChange={setUiSoundsVolume}
+                            formatValue={(v) => `${Math.round(v * 100)}%`}
+                        />
+                    </div>
+                )}
+
+                <OsToggle
+                    label="Música Ambiental de Fondo"
+                    description="Reproduce pistas de audio ambiental mientras navegas por la plataforma."
+                    checked={bgMusicEnabled}
+                    onChange={setBgMusicEnabled}
+                />
+                {bgMusicEnabled && (
+                    <>
+                        <OsToggle
+                            label="Soundtrack Contextual por Serie"
+                            description="Reproduce automáticamente los temas oficiales de cada serie (DB, DBZ, GT, Super, Daima) al explorar su catálogo."
+                            checked={seriesSoundtrackMode}
+                            onChange={setSeriesSoundtrackMode}
+                        />
+                        <div className="p-5 space-y-4 bg-white/[0.01]">
                             <RangeSlider
-                                label="Volumen de Efectos"
+                                label="Volumen de Música Ambiental"
                                 min={0}
                                 max={1}
                                 step={0.05}
-                                value={uiSoundsVolume}
-                                onChange={setUiSoundsVolume}
+                                value={bgMusicVolume}
+                                onChange={setBgMusicVolume}
                                 formatValue={(v) => `${Math.round(v * 100)}%`}
                             />
-                        </div>
-                    )}
-
-                    <OsToggle
-                        label="Música Ambiental de Fondo"
-                        description="Reproduce pistas de audio ambiental mientras navegas por la plataforma."
-                        checked={bgMusicEnabled}
-                        onChange={setBgMusicEnabled}
-                    />
-                    {bgMusicEnabled && (
-                        <>
-                            <OsToggle
-                                label="Soundtrack Contextual por Serie"
-                                description="Reproduce automáticamente los temas oficiales de cada serie (DB, DBZ, GT, Super, Daima) al explorar su catálogo."
-                                checked={seriesSoundtrackMode}
-                                onChange={setSeriesSoundtrackMode}
-                            />
-                            <div className="p-5 space-y-4 bg-white/[0.01]">
-                                <RangeSlider
-                                    label="Volumen de Música Ambiental"
-                                    min={0}
-                                    max={1}
-                                    step={0.05}
-                                    value={bgMusicVolume}
-                                    onChange={setBgMusicVolume}
-                                    formatValue={(v) => `${Math.round(v * 100)}%`}
-                                />
-                                <div className="p-4 bg-white/[0.02] rounded-xl border border-white/10 space-y-2.5">
-                                    <p className="text-xs font-bold text-on-surface uppercase tracking-wider">Carpeta de Música Local</p>
-                                    <div className="flex flex-col sm:flex-row items-stretch gap-2">
-                                        <div className="flex-1">
-                                            <DirectorySelector
-                                                value={musicDirInput}
-                                                onSelect={setMusicDirInput}
-                                                onChange={(e) => setMusicDirInput(e.target.value)}
-                                                placeholder="Ruta con archivos MP3 / FLAC / OGG"
-                                            />
-                                        </div>
-                                        <Button
-                                            type="button"
-                                            onClick={handleScanMusic}
-                                            disabled={isScanningMusic}
-                                            className="bg-brand-accent text-white shrink-0 font-bold text-xs"
-                                        >
-                                            {isScanningMusic ? <Icons.ui.spinner className="w-3.5 h-3.5 animate-spin" /> : <Icons.media.volume2 className="w-3.5 h-3.5" />}
-                                            <span>{isScanningMusic ? "Escaneando..." : "Escanear Pistas"}</span>
-                                        </Button>
+                            <div className="p-4 bg-white/[0.02] rounded-xl border border-white/10 space-y-2.5">
+                                <p className="text-xs font-bold text-on-surface uppercase tracking-wider">Carpeta de Música Local</p>
+                                <div className="flex flex-col sm:flex-row items-stretch gap-2">
+                                    <div className="flex-1">
+                                        <DirectorySelector
+                                            value={musicDirInput}
+                                            onSelect={setMusicDirInput}
+                                            onChange={(e) => setMusicDirInput(e.target.value)}
+                                            placeholder="Ruta con archivos MP3 / FLAC / OGG"
+                                        />
                                     </div>
+                                    <Button
+                                        type="button"
+                                        onClick={handleScanMusic}
+                                        disabled={isScanningMusic}
+                                        className="bg-brand-accent text-white shrink-0 font-bold text-xs"
+                                    >
+                                        {isScanningMusic ? <IconUiSpinner className="w-3.5 h-3.5 animate-spin" /> : <IconMediaVolume2 className="w-3.5 h-3.5" />}
+                                        <span>{isScanningMusic ? "Escaneando..." : "Escanear Pistas"}</span>
+                                    </Button>
                                 </div>
                             </div>
-                        </>
-                    )}
-                </SettingsCard>
-            </SettingsSection>
+                        </div>
+                    </>
+                )}
+            </SectionBar>
 
             {/* ═══════════════════════════════════════════════════════════════════
                 5. MODOS DE EXPERIENCIA (MARATÓN Y TV)
                ═══════════════════════════════════════════════════════════════════ */}
-            <SettingsSection
+            <SectionBar
+                id="experience-modes"
                 label="Modos de Experiencia (Maratón y TV)"
                 description="Configuraciones ergonómicas para maratones intensos y televisores."
-                icon={Icons.status.tv}
+                icon={IconStatusTv}
+                collapsible
+                defaultOpen={true}
             >
-                <SettingsCard>
-                    <OsToggle
-                        label="Modo Maratón"
-                        description="Encadena episodios sin pantallas de confirmación intermedias ni pausas."
-                        checked={marathonMode}
-                        onChange={setMarathonMode}
-                    />
-                    <OsToggle
-                        label="Modo TV (Interfaz Leanback)"
-                        description="Aumenta los tamaños táctiles y optimiza para control remoto o teclado a distancia."
-                        checked={tvMode}
-                        onChange={setTvMode}
-                    />
-                </SettingsCard>
-            </SettingsSection>
+                <OsToggle
+                    label="Modo Maratón"
+                    description="Encadena episodios sin pantallas de confirmación intermedias ni pausas."
+                    checked={marathonMode}
+                    onChange={setMarathonMode}
+                />
+                <OsToggle
+                    label="Modo TV (Interfaz Leanback)"
+                    description="Aumenta los tamaños táctiles y optimiza para control remoto o teclado a distancia."
+                    checked={tvMode}
+                    onChange={setTvMode}
+                />
+            </SectionBar>
 
-        </div>
-    )
+</div>
+)
 }
 

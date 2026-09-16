@@ -5,7 +5,7 @@ export function PwaRegistry() {
     useEffect(() => {
         if (typeof window === "undefined" || !("serviceWorker" in navigator)) return
 
-        if (process.env.NODE_ENV !== "production") {
+        if (import.meta.env.DEV) {
             // Dev mode never generates /sw.js (see rsbuild.config.ts), but a
             // service worker registered by an earlier production build can
             // still be active and keep serving its precached (stale) bundle
@@ -17,11 +17,18 @@ export function PwaRegistry() {
             return
         }
 
-        window.addEventListener("load", () => {
+        const register = () => {
             navigator.serviceWorker.register("/sw.js").catch((err) => {
                 console.error("[PWA] ServiceWorker registration failed: ", err)
             })
-        })
+        }
+
+        if (document.readyState === "complete") {
+            register()
+        } else {
+            window.addEventListener("load", register)
+            return () => window.removeEventListener("load", register)
+        }
     }, [])
 
     return null

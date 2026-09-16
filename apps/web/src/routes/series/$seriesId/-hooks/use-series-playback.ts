@@ -1,17 +1,16 @@
-import React, { useState, useCallback } from "react"
+import React, { useState, useCallback, useMemo } from "react"
 import { toast } from "sonner"
 import { useQueryClient } from "@tanstack/react-query"
-import { useCastPlay } from "@/api/hooks/cast.hooks"
 import { usePreloadMediastreamMediaContainer } from "@/api/hooks/mediastream.hooks"
-import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import type { Anime_Entry, Anime_Episode, Anime_LocalFile, Mediastream_StreamType, Continuity_WatchHistoryItemResponse } from "@/api/generated/types"
 import { startViewTransition } from "@/lib/helpers/transitions"
 import { getDragonBallSpanishTitle } from "@/lib/config/dragonball.config"
 import { resolveLocalFileForEpisode } from "./use-series-data"
+import { queryKeys } from "@/lib/query-keys"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export interface PlayTarget {
+interface PlayTarget {
     path: string
     streamType: Mediastream_StreamType
     episodeLabel: string
@@ -56,6 +55,11 @@ export function useSeriesPlayback({
     // Paths already warmed this session (server preload is idempotent, but this
     // avoids spamming the mutation on every hover/re-render).
     const preloadedPathsRef = React.useRef<Set<string>>(new Set())
+    // Limpiar paths cacheados al cambiar de serie: evita falsos "ya precargado"
+    // de paths de series anteriores y previene acumulación indefinida en memoria.
+    React.useEffect(() => {
+        preloadedPathsRef.current.clear()
+    }, [seriesId])
     const preloadPath = useCallback(
         (path: string | undefined | null) => {
             if (!path || preloadedPathsRef.current.has(path)) return
@@ -222,35 +226,6 @@ export function useSeriesPlayback({
         [computedEpisodes, entry?.localFiles, handlePlayEpisode, handlePlayLocalFile]
     )
 
-    const { mutate: castPlay } = useCastPlay()
-
-    const handleCastByNumber = useCallback(
-        (episodeNumber: number) => {
-            // Usamos el id de la ruta (mismo con el que se consultó anime-entry):
-            // es el espacio de ids que la TV también usa contra ese endpoint.
-            const mediaId = Number(seriesId)
-            if (!mediaId) return
-            castPlay(
-                {
-                    mediaId,
-                    episodeNumber,
-                    title:
-                        entry?.media?.titleSpanish ||
-                        entry?.media?.titleEnglish ||
-                        entry?.media?.titleRomaji ||
-                        "",
-                    episodeLabel: `Episodio ${episodeNumber}`,
-                },
-                {
-                    onSuccess: () => {
-                        toast.success(`Episodio ${episodeNumber} enviado a la TV`)
-                    },
-                }
-            )
-        },
-        [seriesId, entry?.media, castPlay]
-    )
-
     // ── Marathon / next-episode logic ─────────────────────────────────────────
 
     // Salta a la primera entrega disponible de la siguiente serie de la línea
@@ -312,7 +287,7 @@ export function useSeriesPlayback({
     // tenga archivo local, saltando huecos no descargados. Es la única fuente de
     // verdad para hasNextEpisode, el preload y el panel "a continuación", de modo
     // que el modo maratón nunca avance hacia un episodio inexistente y se corte.
-    const nextAvailable = ((): { ep: Anime_Episode; lf: Anime_LocalFile } | null => {
+    const nextAvailable = useMemo((): { ep: Anime_Episode; lf: Anime_LocalFile } | null => {
         if (!computedEpisodes || !playTarget) return null
         const currentEpIdx = computedEpisodes.findIndex(
             ep =>
@@ -325,7 +300,7 @@ export function useSeriesPlayback({
             if (lf) return { ep, lf }
         }
         return null
-    })()
+    }, [computedEpisodes, playTarget?.episodeNumber, entry?.localFiles])
 
     // Hay siguiente si queda un episodio local por delante o si el timeline
     // encadena con otra serie (handleNextEpisode cubre ambos caminos). El
@@ -356,6 +331,10 @@ export function useSeriesPlayback({
     // Autoplay al llegar desde la continuación entre series: reproduce el
     // episodio indicado en la URL (?autoplay=N) una sola vez y limpia el flag.
     const autoplayFiredRef = React.useRef(false)
+    // Reset autoplay flag when seriesId changes (navigation between series)
+    React.useEffect(() => {
+        autoplayFiredRef.current = false
+    }, [seriesId])
     React.useEffect(() => {
         if (!autoplayEp || autoplayFiredRef.current) return
         if (!computedEpisodes || computedEpisodes.length === 0) return
@@ -371,7 +350,7 @@ export function useSeriesPlayback({
         })
         refetchContinuity()
         queryClient.invalidateQueries({
-            queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, String(seriesId)],
+            queryKey: queryKeys.series.entry(seriesId),
         })
     }, [refetchContinuity, queryClient, seriesId])
 
@@ -388,7 +367,6 @@ export function useSeriesPlayback({
         handlePlayLocalFile,
         handlePlayDefault,
         handlePlayByNumber,
-        handleCastByNumber,
         continueToNextSeries,
         handleNextEpisode,
         handlePlayerClose,

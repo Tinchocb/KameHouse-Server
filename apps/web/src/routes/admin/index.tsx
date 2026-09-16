@@ -1,11 +1,12 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { motion } from "framer-motion"
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router"
+import { motion, useReducedMotion } from "framer-motion"
 import * as React from "react"
 import { cn } from "@/components/ui/core/styling"
-import { Icons } from "@/components/ui/icons"
+import { IconUiDownload, IconNavigationTv, IconNavigationFilm, IconStatusActivity, IconStatusHdd, IconStatusPulse, IconNavigationSearch, IconUiRefresh, IconUiLink, IconUiDelete, IconStatusDatabase, IconStatusImage, IconArrowRight, IconStatusCloud, IconNavigationLibrary, IconStatusZap, IconMediaWand, IconStatusMusic, IconUiCheckCircle, IconUiXCircle, IconUiAlertCircle, IconUiHelpCircle, IconStatusFile, IconUiSliders, IconNavigationUsers } from "@/components/ui/icons";
 import { useScanLocalFiles } from "@/api/hooks/scan.hooks"
 import { useGetLibraryStats, useGetTranscodeStats } from "@/api/hooks/admin.hooks"
 import { useBackupDatabase } from "@/api/hooks/system.hooks"
+import { useGetSettings } from "@/api/hooks/settings.hooks"
 import { toast } from "sonner"
 
 export const Route = createFileRoute("/admin/")({
@@ -13,14 +14,17 @@ export const Route = createFileRoute("/admin/")({
 })
 
 function AdminPage() {
+    const reducedMotion = useReducedMotion()
+    const motionProps = reducedMotion
+        ? { initial: false, animate: { opacity: 1 }, transition: { duration: 0 } }
+        : { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { duration: 0.4 } }
+
     return (
         <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4 }}
-            className="min-h-screen bg-surface text-on-surface overflow-x-hidden"
+            {...motionProps}
+            className="min-h-screen text-on-surface"
         >
-            <div className="container-fluid py-8 md:py-12 lg:py-16">
+            <div className="page-container py-8 md:py-12 lg:py-16">
                 <AdminHeader />
 
                 <main className="mt-8 md:mt-12 space-y-8 md:space-y-10">
@@ -65,7 +69,7 @@ function AdminHeader() {
 
     return (
         <header className="relative z-10">
-            <div className="max-w-6xl mx-auto">
+            <div className="w-full">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-4">
                     <div>
                         <h1 className="text-h2 font-display text-on-surface tracking-tight">Panel de Administración</h1>
@@ -77,7 +81,7 @@ function AdminHeader() {
                             disabled={isBackingUp}
                             className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 sm:px-5 h-10 border border-outline-variant text-on-surface-variant font-semibold text-sm rounded-button transition-all duration-fast hover:border-brand-accent hover:bg-brand-accent/10 active:scale-[0.97] disabled:opacity-50"
                         >
-                            <Icons.ui.download size={16} strokeWidth={2.5} />
+                            <IconUiDownload size={16} strokeWidth={2.5} />
                             {isBackingUp ? "Creando..." : "Backup"}
                         </button>
                     </div>
@@ -96,12 +100,12 @@ function AdminStatsGrid() {
     const memoryUsed = trStats?.system.memoryUsed ? (trStats.system.memoryUsed / 1024 / 1024 / 1024).toFixed(1) : "0.0"
 
     const stats = [
-        { label: "Medios", value: libStats?.totalMedia?.toString() || "0", change: "Series y Películas", trend: "neutral", icon: Icons.navigation.tv, color: "var(--brand-primary)" },
-        { label: "Archivos", value: libStats?.totalLocalFiles?.toString() || "0", change: "Ficheros indexados", trend: "neutral", icon: Icons.navigation.film, color: "var(--brand-secondary)" },
-        { label: "CPU", value: `${cpuPercent}%`, change: "Uso del sistema", trend: "neutral", icon: Icons.status.activity, color: "var(--brand-success)" },
-        { label: "Memoria", value: `${memoryUsed} GB`, change: `De ${memoryTotal} GB totales`, trend: "neutral", icon: Icons.status.hdd, color: "var(--brand-magic)" },
-        { label: "Transcoder NVENC", value: trStats?.transcoderInitialized && trStats.governor ? `${trStats.governor.activeNvenc} / ${trStats.governor.nvencCap}` : "Inactivo", change: "Sesiones GPU activas", trend: "neutral", icon: Icons.navigation.tv, color: "var(--md-sys-color-on-surface-variant)" },
-        { label: "Pre-Transcode", value: trStats?.preTranscodeQueue?.toString() || "0", change: "En cola", trend: "neutral", icon: Icons.status.pulse, color: "var(--brand-success)" },
+        { label: "Medios", value: libStats?.totalMedia?.toString() || "0", change: "Series y Películas", trend: "neutral", icon: IconNavigationTv, color: "var(--brand-primary)" },
+        { label: "Archivos", value: libStats?.totalLocalFiles?.toString() || "0", change: "Ficheros indexados", trend: "neutral", icon: IconNavigationFilm, color: "var(--brand-secondary)" },
+        { label: "CPU", value: `${cpuPercent}%`, change: "Uso del sistema", trend: "neutral", icon: IconStatusActivity, color: "var(--brand-success)" },
+        { label: "Memoria", value: `${memoryUsed} GB`, change: `De ${memoryTotal} GB totales`, trend: "neutral", icon: IconStatusHdd, color: "var(--brand-magic)" },
+        { label: "Transcoder NVENC", value: trStats?.transcoderInitialized && trStats.governor ? `${trStats.governor.activeNvenc} / ${trStats.governor.nvencCap}` : "Inactivo", change: "Sesiones GPU activas", trend: "neutral", icon: IconNavigationTv, color: "var(--md-sys-color-on-surface-variant)" },
+        { label: "Pre-Transcode", value: trStats?.preTranscodeQueue?.toString() || "0", change: "En cola", trend: "neutral", icon: IconStatusPulse, color: "var(--brand-success)" },
     ]
 
     return (
@@ -150,12 +154,12 @@ function AdminActionsGrid() {
     const { mutate: scanLibrary } = useScanLocalFiles()
 
     const actions = [
-        { label: "Escanear Biblioteca", desc: "Detectar nuevos archivos", icon: Icons.navigation.search, variant: "primary" as const, action: () => scanLibrary({ mode: "fast", skipLockedFiles: false, skipIgnoredFiles: false }) },
-        { label: "Re-Scan Forzado", desc: "Ignorar cache y re-escanear todo", icon: Icons.ui.refresh, variant: "secondary" as const, action: () => scanLibrary({ mode: "deep", skipLockedFiles: false, skipIgnoredFiles: false }) },
-        { label: "Match Manual", desc: "Resolver archivos no vinculados", icon: Icons.ui.link, variant: "outline" as const, action: () => navigate({ to: "/settings", search: { tab: "library" } }) },
-        { label: "Limpiar Huérfanos", desc: "Eliminar entradas sin archivo", icon: Icons.ui.delete, variant: "destructive" as const, action: () => navigate({ to: "/settings", search: { tab: "library" } }) },
-        { label: "Actualizar Metadatos", desc: "Refrescar info de TMDB/AniList", icon: Icons.status.database, variant: "outline" as const, action: () => navigate({ to: "/settings", search: { tab: "library" } }) },
-        { label: "Configurar Pre-Transcode", desc: "Gestionar caché y perfiles", icon: Icons.status.image, variant: "outline" as const, action: () => navigate({ to: "/settings", search: { tab: "performance" } }) },
+        { label: "Escanear Biblioteca", desc: "Detectar nuevos archivos", icon: IconNavigationSearch, variant: "primary" as const, action: () => scanLibrary({ mode: "fast", skipLockedFiles: false, skipIgnoredFiles: false }) },
+        { label: "Re-Scan Forzado", desc: "Ignorar cache y re-escanear todo", icon: IconUiRefresh, variant: "secondary" as const, action: () => scanLibrary({ mode: "deep", skipLockedFiles: false, skipIgnoredFiles: false }) },
+        { label: "Match Manual", desc: "Resolver archivos no vinculados", icon: IconUiLink, variant: "outline" as const, action: () => navigate({ to: "/settings", search: { tab: "library" } }) },
+        { label: "Limpiar Huérfanos", desc: "Eliminar entradas sin archivo", icon: IconUiDelete, variant: "destructive" as const, action: () => navigate({ to: "/settings", search: { tab: "library" } }) },
+        { label: "Actualizar Metadatos", desc: "Refrescar info de TMDB/AniList", icon: IconStatusDatabase, variant: "outline" as const, action: () => navigate({ to: "/settings", search: { tab: "library" } }) },
+        { label: "Configurar Pre-Transcode", desc: "Gestionar caché y perfiles", icon: IconStatusImage, variant: "outline" as const, action: () => navigate({ to: "/settings", search: { tab: "performance" } }) },
     ]
 
     return (
@@ -177,7 +181,7 @@ function AdminActionsGrid() {
                             <h3 className="text-h6 font-display text-on-surface tracking-wide">{action.label}</h3>
                             <p className="text-body-sm text-on-surface-variant/70 mt-1">{action.desc}</p>
                         </div>
-                        <Icons.arrow.right size={20} className="text-on-surface-variant/70 group-hover:text-brand-accent transition-colors shrink-0 mt-1" />
+                        <IconArrowRight size={20} className="text-on-surface-variant/70 group-hover:text-brand-accent transition-colors shrink-0 mt-1" />
                     </div>
                 </div>
             ))}
@@ -186,21 +190,67 @@ function AdminActionsGrid() {
 }
 
 function AdminServicesGrid() {
+    const { data: settings } = useGetSettings()
+    const tmdbConfigured = Boolean(settings?.library?.tmdbApiKey)
+    const hasPaths = Boolean((settings?.library?.seriesPaths?.length ?? 0) > 0 || (settings?.library?.moviePaths?.length ?? 0) > 0)
+
     const services = [
-        { name: "TMDB", status: "connected", desc: "Metadatos de películas/series", lastSync: "Hace 2 min", icon: Icons.status.cloud },
-        { name: "AniList", status: "connected", desc: "Metadatos de anime/manga", lastSync: "Hace 5 min", icon: Icons.status.database },
-        { name: "Trakt", status: "disconnected", desc: "Sincronización de progreso", lastSync: "Nunca", icon: Icons.status.server },
-        { name: "Fanart.tv", status: "connected", desc: "Arte y fondos de alta calidad", lastSync: "Hace 1 hora", icon: Icons.status.image },
-        { name: "OMDb", status: "error", desc: "Datos complementarios", lastSync: "Error API", icon: Icons.ui.alert },
-        { name: "OpenSubtitles", status: "connected", desc: "Subtítulos automáticos", lastSync: "Hace 30 min", icon: Icons.ui.message },
+        {
+            name: "TMDB",
+            status: tmdbConfigured ? "connected" : "disconnected",
+            desc: "Metadatos y afiches oficiales de películas y series",
+            lastSync: tmdbConfigured ? "Vinculado" : "Sin configurar",
+            icon: IconStatusCloud,
+            tab: "system",
+        },
+        {
+            name: "AniList",
+            status: "connected",
+            desc: "Metadatos canónicos de anime y personajes",
+            lastSync: "En línea",
+            icon: IconStatusDatabase,
+            tab: "system",
+        },
+        {
+            name: "Biblioteca Local",
+            status: hasPaths ? "connected" : "disconnected",
+            desc: "Directorios locales escaneados en tiempo real",
+            lastSync: hasPaths ? "Monitoreado" : "Sin carpetas",
+            icon: IconNavigationLibrary,
+            tab: "library",
+        },
+        {
+            name: "Motor de Video / FFmpeg",
+            status: "connected",
+            desc: "Aceleración por hardware y transcodificación HLS",
+            lastSync: "Listo",
+            icon: IconStatusZap,
+            tab: "performance",
+        },
+        {
+            name: "Continuidad y Marcas Skip",
+            status: settings?.library?.enableWatchContinuity ? "connected" : "disconnected",
+            desc: "Historial sincronizado y detección acústica",
+            lastSync: "Activo",
+            icon: IconMediaWand,
+            tab: "playback",
+        },
+        {
+            name: "Música Ambiental y Audio",
+            status: "connected",
+            desc: "Bandas sonoras de era y efectos sonoros",
+            lastSync: "Listo",
+            icon: IconStatusMusic,
+            tab: "playback",
+        },
     ]
 
     const getStatusConfig = (status: string) => {
         switch (status) {
-            case "connected": return { color: "var(--brand-success)", label: "Conectado", icon: Icons.ui.checkCircle }
-            case "disconnected": return { color: "var(--md-sys-color-on-surface-variant)", label: "Desconectado", icon: Icons.ui.xCircle }
-            case "error": return { color: "var(--brand-destructive)", label: "Error", icon: Icons.ui.alertCircle }
-            default: return { color: "var(--md-sys-color-on-surface-variant)", label: "Desconocido", icon: Icons.ui.helpCircle }
+            case "connected": return { color: "var(--brand-success)", label: "Conectado", icon: IconUiCheckCircle }
+            case "disconnected": return { color: "var(--md-sys-color-on-surface-variant)", label: "Desconectado", icon: IconUiXCircle }
+            case "error": return { color: "var(--brand-destructive)", label: "Error", icon: IconUiAlertCircle }
+            default: return { color: "var(--md-sys-color-on-surface-variant)", label: "Desconocido", icon: IconUiHelpCircle }
         }
     }
 
@@ -226,11 +276,15 @@ function AdminServicesGrid() {
                             </div>
                         </div>
                         <div className="mt-4 pt-4 border-t border-outline-variant flex items-center justify-between">
-                            <span className="text-caption text-on-surface-variant/70">Última sync: </span>
+                            <span className="text-caption text-on-surface-variant/70">Estado: </span>
                             <span className="text-caption text-on-surface-variant font-mono">{service.lastSync}</span>
-                            <button onClick={() => {}} className="inline-flex items-center justify-center gap-1.5 px-3 h-7 text-on-surface-variant font-semibold text-xs rounded-button transition-all duration-fast hover:bg-surface-container active:scale-[0.97]">
-                                {service.status === "connected" ? "Desconectar" : "Conectar"}
-                            </button>
+                            <Link
+                                to="/settings"
+                                search={{ tab: service.tab }}
+                                className="inline-flex items-center justify-center gap-1.5 px-3 h-7 text-on-surface-variant font-semibold text-xs rounded-button transition-all duration-fast hover:bg-surface-container hover:text-white active:scale-[0.97]"
+                            >
+                                Configurar
+                            </Link>
                         </div>
                     </div>
                 )
@@ -362,11 +416,11 @@ function AdminSystemGrid() {
     const navigate = useNavigate()
 
     const items = [
-        { label: "Logs y Diagnóstico", desc: "Ver reportes y eventos del sistema", icon: Icons.status.file, action: () => navigate({ to: "/settings", search: { tab: "system" } }) },
-        { label: "Configuración Avanzada", desc: "Ajustes de rendimiento y hardware", icon: Icons.ui.sliders, action: () => navigate({ to: "/settings", search: { tab: "performance" } }) },
-        { label: "Rutas de Biblioteca", desc: "Gestionar carpetas de series y películas", icon: Icons.navigation.users, action: () => navigate({ to: "/settings", search: { tab: "library" } }) },
-        { label: "Backup y Base de Datos", desc: "Respaldos y mantenimiento de SQLite", icon: Icons.status.hdd, action: () => navigate({ to: "/settings", search: { tab: "system" } }) },
-        { label: "Apariencia y Temas", desc: "Personalización visual y eras", icon: Icons.ui.refresh, action: () => navigate({ to: "/settings", search: { tab: "appearance" } }) },
+        { label: "Logs y Diagnóstico", desc: "Ver reportes y eventos del sistema", icon: IconStatusFile, action: () => navigate({ to: "/settings", search: { tab: "system" } }) },
+        { label: "Configuración Avanzada", desc: "Ajustes de rendimiento y hardware", icon: IconUiSliders, action: () => navigate({ to: "/settings", search: { tab: "performance" } }) },
+        { label: "Rutas de Biblioteca", desc: "Gestionar carpetas de series y películas", icon: IconNavigationUsers, action: () => navigate({ to: "/settings", search: { tab: "library" } }) },
+        { label: "Backup y Base de Datos", desc: "Respaldos y mantenimiento de SQLite", icon: IconStatusHdd, action: () => navigate({ to: "/settings", search: { tab: "system" } }) },
+        { label: "Apariencia y Temas", desc: "Personalización visual y eras", icon: IconUiRefresh, action: () => navigate({ to: "/settings", search: { tab: "appearance" } }) },
     ]
 
     return (
@@ -381,7 +435,7 @@ function AdminSystemGrid() {
                             <h3 className="text-h6 font-display text-on-surface tracking-wide">{item.label}</h3>
                             <p className="text-body-sm text-on-surface-variant/70 mt-1">{item.desc}</p>
                         </div>
-                        <Icons.arrow.right size={20} className="text-on-surface-variant/70 group-hover:text-brand-accent transition-colors shrink-0 mt-1" />
+                        <IconArrowRight size={20} className="text-on-surface-variant/70 group-hover:text-brand-accent transition-colors shrink-0 mt-1" />
                     </div>
                 </div>
             ))}
@@ -390,13 +444,14 @@ function AdminSystemGrid() {
 }
 
 function AdminRecentActivity() {
+    const navigate = useNavigate()
     const activities = [
-        { time: "Hace 5 min", type: "scan", message: "Escaneo completado: 12 series, 3 películas nuevas", icon: Icons.ui.checkCircle, color: "var(--brand-success)" },
-        { time: "Hace 15 min", type: "match", message: "Match manual: Dragon Ball GT vinculado correctamente", icon: Icons.ui.link, color: "var(--brand-primary)" },
-        { time: "Hace 1 hora", type: "sync", message: "Sincronización TMDB completada: 247 items actualizados", icon: Icons.status.cloud, color: "var(--brand-secondary)" },
-        { time: "Hace 3 horas", type: "error", message: "Error en Trakt API: Rate limit exceeded", icon: Icons.ui.alertCircle, color: "var(--brand-destructive)" },
-        { time: "Hace 6 horas", type: "backup", message: "Backup automático completado: 2.1 GB", icon: Icons.status.hdd, color: "var(--brand-magic)" },
-        { time: "Ayer", type: "scan", message: "Escaneo programado: 0 nuevos items", icon: Icons.navigation.search, color: "var(--muted-foreground)" },
+        { time: "Hace 5 min", type: "scan", message: "Escaneo completado: 12 series, 3 películas nuevas", icon: IconUiCheckCircle, color: "var(--brand-success)" },
+        { time: "Hace 15 min", type: "match", message: "Match manual: Dragon Ball GT vinculado correctamente", icon: IconUiLink, color: "var(--brand-primary)" },
+        { time: "Hace 1 hora", type: "sync", message: "Sincronización TMDB completada: 247 items actualizados", icon: IconStatusCloud, color: "var(--brand-secondary)" },
+        { time: "Hace 3 horas", type: "error", message: "Error en Trakt API: Rate limit exceeded", icon: IconUiAlertCircle, color: "var(--brand-destructive)" },
+        { time: "Hace 6 horas", type: "backup", message: "Backup automático completado: 2.1 GB", icon: IconStatusHdd, color: "var(--brand-magic)" },
+        { time: "Ayer", type: "scan", message: "Escaneo programado: 0 nuevos items", icon: IconNavigationSearch, color: "var(--muted-foreground)" },
     ]
 
     return (
@@ -405,9 +460,13 @@ function AdminRecentActivity() {
             <div className="bg-surface-container shadow-elevation-3 rounded-container p-6 backdrop-blur-overlay-md border border-outline-variant">
                 <div className="flex items-center justify-between mb-6">
                     <h3 className="text-h5 font-display text-on-surface uppercase tracking-wide">Actividad Reciente</h3>
-                    <button className="inline-flex items-center justify-center gap-2 px-4 h-9 text-on-surface-variant font-semibold text-xs rounded-button transition-all duration-fast hover:bg-surface-container active:scale-[0.97]">
+                    <button
+                        type="button"
+                        onClick={() => navigate({ to: "/settings", search: { tab: "system" } })}
+                        className="inline-flex items-center justify-center gap-2 px-4 h-9 text-on-surface-variant font-semibold text-xs rounded-button transition-all duration-fast hover:bg-surface-container active:scale-[0.97] cursor-pointer"
+                    >
                         Ver Todo
-                        <Icons.arrow.right size={14} strokeWidth={2.5} className="ml-1" />
+                        <IconArrowRight size={14} strokeWidth={2.5} className="ml-1" />
                     </button>
                 </div>
                 <div className="space-y-4">

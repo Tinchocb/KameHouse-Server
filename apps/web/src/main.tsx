@@ -1,4 +1,5 @@
-import { __isDesktop__ } from "@/types/constants"
+import { API_ENDPOINTS } from "@/api/generated/endpoints"
+import { __isDesktop__, __isTauriDesktop__ } from "@/types/constants"
 import { ClientProviders, queryClient } from "@/app/client-providers"
 import "./app/globals.css"
 import "@/lib/desktop-bridge"
@@ -90,15 +91,15 @@ function init() {
     )
 
     // En segundo plano, si estamos en Tauri, resolvemos el puerto dinámico si está disponible
-    const hasTauriRuntime = typeof (window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ !== "undefined"
-    if (__isDesktop__ && hasTauriRuntime) {
+    if (__isDesktop__ && __isTauriDesktop__) {
         import("@tauri-apps/api/core").then(({ invoke }) => {
             invoke<number>("get_local_server_port")
                 .then((port) => {
                     if (port) {
                         window.__KAMEHOUSE_PORT__ = port
-                        // Refrescamos la consulta de status con el nuevo puerto si corresponde
-                        queryClient.invalidateQueries({ queryKey: ["/status"] })
+                        // Refrescamos la consulta de status con la key canónica
+                        queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.STATUS.GetStatus.key] })
+                        window.dispatchEvent(new CustomEvent("kamehouse-port-resolved", { detail: { port } }))
                     }
                 })
                 .catch((e) => {

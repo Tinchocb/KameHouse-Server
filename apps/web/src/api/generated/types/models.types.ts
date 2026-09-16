@@ -274,8 +274,6 @@ export type Models_LibrarySettings = {
     scannerProvider: string
     disableLocalScanning: boolean
     scannerUseLegacyMatching: boolean
-    fanartApiKey: string
-    omdbApiKey: string
     lastScanAt?: string
     autoScan: boolean
 }

@@ -6,12 +6,29 @@ describe("resolveSeriesSagas", () => {
         const result = resolveSeriesSagas({ tmdbId: DRAGON_BALL_SERIES.Z })
         expect(result).toBeDefined()
         expect(result.length).toBeGreaterThan(0)
-        expect(result[0].title).toBe("Saga Saiyajin")
+        expect(result[0].title).toBe("Saga de los Saiyajin")
+        expect(result[0].endEp).toBe(35)
+    })
+
+    it("should resolve by TMDB ID (Kai)", () => {
+        const result = resolveSeriesSagas({ tmdbId: DRAGON_BALL_SERIES.KAI })
+        expect(result).toBeDefined()
+        expect(result.length).toBe(4)
+        expect(result[0].title).toBe("Saga de los Saiyajin")
+        expect(result[0].endEp).toBe(17)
     })
 
     it("should resolve by title (DBZ)", () => {
         const result = resolveSeriesSagas({ titleRomaji: "Dragon Ball Z" })
-        expect(result[0].title).toBe("Saga Saiyajin")
+        expect(result[0].title).toBe("Saga de los Saiyajin")
+        expect(result[0].endEp).toBe(35)
+    })
+
+    it("should resolve by title (Dragon Ball Z Kai)", () => {
+        const result = resolveSeriesSagas({ titleRomaji: "Dragon Ball Z Kai" })
+        expect(result.length).toBe(4)
+        expect(result[0].title).toBe("Saga de los Saiyajin")
+        expect(result[0].endEp).toBe(17)
     })
 
     it("should resolve by title (DB Super)", () => {

@@ -5,7 +5,7 @@ import { EXTRA_ENDPOINTS } from "@/api/client/endpoints.extra"
 import { IntelligentEntry } from "@/api/types/intelligence.types"
 import { useState, useMemo, useEffect } from "react"
 
-export interface SemanticSearchResult {
+interface SemanticSearchResult {
     entity: {
         id: string
         name: string
@@ -56,6 +56,7 @@ export type GlobalSearchResultItem =
               titleRomaji: string
               titleEnglish: string
               titleOriginal: string
+              titleSpanish?: string
               year: string | number
               format: string
               posterImage: string
@@ -74,6 +75,7 @@ export type GlobalSearchResultItem =
               titleRomaji: string
               titleEnglish: string
               titleOriginal: string
+              titleSpanish?: string
               year: string | number
               format: string
               posterImage: string
@@ -118,7 +120,7 @@ export function useGlobalSearch(enabled = true) {
     const syntheticUnlinked = useMemo(() => {
         if (!unlinkedFiles) return []
         return unlinkedFiles.filter(f => !f.userResolved).map(file => {
-            const filename = file.path.split(/[\\/]/).pop() ?? file.path
+            const filename = (file.path ?? "").split(/[\\/]/).pop() || file.path || "Archivo huérfano"
             return {
                 mediaId: `unlinked-${file.id}`,
                 isUnlinked: true as const,
@@ -135,7 +137,14 @@ export function useGlobalSearch(enabled = true) {
         })
     }, [unlinkedFiles])
 
-    const results = useMemo(() => {
+    const results = useMemo<GlobalSearchResultItem[]>(() => {
+        if (!isSearchActive) {
+            const combined: GlobalSearchResultItem[] = [...allEntries, ...syntheticUnlinked]
+            return combined.slice(0, 10)
+        }
+
+        const q = debouncedQuery.toLowerCase().trim()
+        
         const semanticConverted: GlobalSearchResultItem[] = (semanticResults || []).map(sr => {
             const ent = sr.entity
             return {
@@ -155,12 +164,6 @@ export function useGlobalSearch(enabled = true) {
             }
         })
 
-        if (!isSearchActive) {
-            const combined: GlobalSearchResultItem[] = [...allEntries, ...syntheticUnlinked]
-            return combined.slice(0, 10)
-        }
-
-        const q = debouncedQuery.toLowerCase()
         const filteredEntries = allEntries.filter(entry => {
             const e = entry as IntelligentEntry
             const media = e.media
@@ -176,7 +179,7 @@ export function useGlobalSearch(enabled = true) {
         const combined: GlobalSearchResultItem[] = [
             ...semanticConverted,
             ...filteredEntries,
-            ...syntheticUnlinked.filter(u => u.media.titleRomaji.toLowerCase().includes(q))
+            ...syntheticUnlinked.filter(u => (u.media?.titleRomaji?.toLowerCase() ?? "").includes(q))
         ]
 
         return combined.slice(0, 12)

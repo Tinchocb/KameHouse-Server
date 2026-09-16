@@ -226,6 +226,26 @@ export function usePlayerSkip({
         showCountdown: false,
         preferredAudioLang: undefined as string | undefined,
     })
+
+    // Guard centralizado para auto-advance. Todas las fuentes (processTimeUpdates
+    // secciones 6/9, countdown, videoEnded) deben pasar por aquí para evitar
+    // triple invocación simultánea y para poder resetear en caso de fallo.
+    const tryAdvance = useCallback(() => {
+        if (hasTriggeredNextEpisodeRef.current) return false
+        const next = configRef.current.onNextEpisode
+        if (!next) return false
+        hasTriggeredNextEpisodeRef.current = true
+        try {
+            const v = videoRef.current
+            if (v && !v.paused) v.pause()
+            next()
+            return true
+        } catch (err) {
+            console.error("[usePlayerSkip] onNextEpisode failed, resetting guard:", err)
+            hasTriggeredNextEpisodeRef.current = false
+            return false
+        }
+    }, [videoRef])
     // ── Dual ref+state pattern (avoids stale closures in hot callbacks) ─────────
     const [skipMode, setSkipModeState] = useState<"intro" | "outro" | null>(null)
     const skipModeRef = useRef<"intro" | "outro" | null>(null)
@@ -546,11 +566,7 @@ export function usePlayerSkip({
         const nearEnd = total > 0 && total - curr <= 3
         const canAdvance = hasNextEpisode && !!onNextEpisode && mediaFormat?.toUpperCase() !== "MOVIE"
         if ((inEd || nearEnd) && canAdvance) {
-            if (!hasTriggeredNextEpisodeRef.current) {
-                hasTriggeredNextEpisodeRef.current = true
-                video.pause()
-                onNextEpisode!()
-            }
+            tryAdvance()
             return
         }
         if (inEd && activeEd) {
@@ -559,7 +575,7 @@ export function usePlayerSkip({
             video.play().catch(() => {})
             setSkipMode(null)
         }
-    }, [videoRef, skipTimesOp, skipTimesEd, mediaFormat, hasNextEpisode, onNextEpisode, setSkipMode, getEffectiveTotal])
+    }, [videoRef, skipTimesOp, skipTimesEd, mediaFormat, hasNextEpisode, onNextEpisode, setSkipMode, getEffectiveTotal, tryAdvance])
 
     const handleSkipIntro = useCallback(() => {
         const video = videoRef.current
@@ -724,11 +740,7 @@ export function usePlayerSkip({
                 // que la sección 9 disparaba a total-3. Si es el último episodio
                 // (no hay siguiente), cae al salto de outro normal de abajo.
                 if (cfg.marathonMode && cfg.hasNextEpisode && cfg.onNextEpisode && cfg.mediaFormat?.toUpperCase() !== "MOVIE") {
-                    if (!hasTriggeredNextEpisodeRef.current) {
-                        hasTriggeredNextEpisodeRef.current = true
-                        video.pause()
-                        cfg.onNextEpisode()
-                    }
+                    tryAdvance()
                     return
                 }
 
@@ -774,7 +786,7 @@ export function usePlayerSkip({
             if ((cfg.malId || cfg.mediaId) && cfg.episodeNumber) {
                 const nextEp = cfg.episodeNumber + 1
                 cfg.queryClient!.prefetchQuery({
-                    queryKey: ["aniskip", cfg.malId ?? null, cfg.mediaId ?? null, nextEp, 0],
+                    queryKey: ["aniskip", cfg.malId ?? null, cfg.mediaId ?? null, nextEp],
                     queryFn: () => getAniSkipTimes({ malId: cfg.malId ?? null, mediaId: cfg.mediaId ?? null, episodeNumber: nextEp, episodeDuration: 0 })
                 })
             }
@@ -810,13 +822,9 @@ export function usePlayerSkip({
             cfg.mediaFormat?.toUpperCase() !== "MOVIE" &&
             (video.ended || (total > 0 && total - curr <= 3))
         ) {
-            if (!hasTriggeredNextEpisodeRef.current) {
-                hasTriggeredNextEpisodeRef.current = true
-                video.pause()
-                cfg.onNextEpisode()
-            }
+            tryAdvance()
         }
-    }, [setActiveChapter, setSegmentProgress, setShowNextEpisode, setSkipMode, setSkipRemainingSeconds, triggerToast, videoRef])
+    }, [setActiveChapter, setSegmentProgress, setShowNextEpisode, setSkipMode, setSkipRemainingSeconds, triggerToast, videoRef, tryAdvance])
 
     // D6: Se eliminó el efecto que limpiaba hasTriggeredNextEpisodeRef cuando
     // showNextEpisode pasaba a false. Ese comportamiento era incorrecto: si el
@@ -846,15 +854,11 @@ export function usePlayerSkip({
     useEffect(() => {
         if (showNextEpisode && countdownSeconds > 0 && showCountdown) {
             nextEpisodeTimerRef.current = setTimeout(() => setCountdownSeconds(c => c - 1), 1000)
-        } else if (showNextEpisode && countdownSeconds === 0 && showCountdown && configRef.current.onNextEpisode) {
-            if (!hasTriggeredNextEpisodeRef.current) {
-                hasTriggeredNextEpisodeRef.current = true
-                if (videoRef.current) videoRef.current.pause()
-                configRef.current.onNextEpisode()
-            }
+        } else if (showNextEpisode && countdownSeconds === 0 && showCountdown) {
+            tryAdvance()
         }
         return () => { if (nextEpisodeTimerRef.current) clearTimeout(nextEpisodeTimerRef.current) }
-    }, [showNextEpisode, countdownSeconds, showCountdown, videoRef])  
+    }, [showNextEpisode, countdownSeconds, showCountdown, tryAdvance])
 
     // ── Auto-advance on video end ─────────────────────────────────────────────────
     // onNextEpisode is intentionally NOT in the dep array: it is an inline arrow
@@ -869,23 +873,17 @@ export function usePlayerSkip({
     useEffect(() => {
         if (videoEnded && hasNextEpisode && configRef.current.onNextEpisode && mediaFormat?.toUpperCase() !== "MOVIE" && (marathonMode || autoPlayNextEpisode)) {
             if (marathonMode) {
-                if (!hasTriggeredNextEpisodeRef.current) {
-                    hasTriggeredNextEpisodeRef.current = true
-                    if (videoRef.current) videoRef.current.pause()
-                    configRef.current.onNextEpisode()
-                }
+                tryAdvance()
             } else {
                 if (!hasTriggeredNextEpisodeRef.current) {
                     const timer = setTimeout(() => {
-                        hasTriggeredNextEpisodeRef.current = true
-                        if (videoRef.current) videoRef.current.pause()
-                        configRef.current.onNextEpisode?.()
+                        tryAdvance()
                     }, tvMode ? 5000 : 1000)
                     return () => clearTimeout(timer)
                 }
             }
         }
-    }, [videoEnded, hasNextEpisode, autoPlayNextEpisode, tvMode, marathonMode, mediaFormat, videoRef, episodeNumber])
+    }, [videoEnded, hasNextEpisode, autoPlayNextEpisode, tvMode, marathonMode, mediaFormat, episodeNumber, tryAdvance])
 
     // ── Cleanup ───────────────────────────────────────────────────────────────────
     useEffect(() => {

@@ -72,19 +72,6 @@ function calculateScore(
 }
 
 /**
- * Obtiene el SpatialNode de un elemento HTML.
- */
-function getSpatialNode(element: HTMLElement): SpatialNode {
-    const rect = element.getBoundingClientRect()
-    return {
-        element,
-        rect,
-        centerX: rect.left + rect.width / 2,
-        centerY: rect.top + rect.height / 2,
-    }
-}
-
-/**
  * Hook para navegación espacial D-pad/remote control en TV browsers.
  * Utiliza cálculo de distancias euclidianas para encontrar el elemento
  * más cercano en la dirección de navegación.

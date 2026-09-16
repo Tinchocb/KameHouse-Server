@@ -21,11 +21,11 @@ export const SelectAnatomy = defineStyleAnatomy({
     ]),
     scrollButton: cva([
         "UI-Select__scrollButton",
-        "flex items-center justify-center h-[25px] bg-[--paper] text-base cursor-default",
+        "flex items-center justify-center h-[25px] bg-surface-container text-base cursor-default",
     ]),
     content: cva([
         "UI-Select__content",
-        "w-full overflow-hidden rounded-corner-lg shadow-elevation-3 bg-[color:color-mix(in_srgb,var(--md-sys-color-surface-container)_85%,transparent)] backdrop-blur-[var(--blur-overlay-md)] border border-outline-variant leading-none z-[100]",
+        "w-full overflow-hidden rounded-corner-lg shadow-elevation-3 bg-surface-container border border-outline-variant leading-none z-dropdown",
     ]),
     viewport: cva([
         "UI-Select__viewport",
@@ -33,9 +33,9 @@ export const SelectAnatomy = defineStyleAnatomy({
     ]),
     item: cva([
         "UI-Select__item",
-        "text-base leading-none rounded-[--radius] flex items-center h-8 pr-2 pl-8 relative",
-        "select-none disabled:opacity-50 disabled:pointer-events-none",
-        "data-highlighted:outline-none data-highlighted:bg-[--subtle]",
+        "text-base leading-none rounded-md flex items-center h-8 pr-2 pl-8 relative text-on-surface",
+        "select-none disabled:opacity-50 disabled:pointer-events-none transition-colors",
+        "data-highlighted:outline-none data-highlighted:bg-surface-container-high data-highlighted:text-on-surface",
         "data-[disabled=true]:opacity-50 data-[disabled=true]:pointer-events-none",
     ]),
     checkIcon: cva([

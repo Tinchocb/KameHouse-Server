@@ -3,7 +3,7 @@ import useReactUseWebSocket from 'react-use-websocket'
 
 import { WebSocketMessage } from '@/lib/server/ws-events'
 
-export interface UseWebSocketReturn {
+interface UseWebSocketReturn {
     sendJsonMessage: (message: WebSocketMessage | { type: string; payload: unknown }) => void
     lastMessage: WebSocketEventMap['message'] | null
     readyState: number

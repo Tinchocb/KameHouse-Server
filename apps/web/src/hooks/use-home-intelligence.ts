@@ -1,7 +1,5 @@
 import { create } from "zustand"
 
-export type { IntelligentEntry } from "@/api/types/intelligence.types"
-
 interface IntelligenceStore {
     currentBackdropUrl: string | null
     pendingUrl: string | null

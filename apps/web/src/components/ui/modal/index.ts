@@ -1,2 +1,2 @@
-export { Modal, ModalAnatomy, ConfirmModal, AlertModal } from "./modal";
-export type { ModalProps, ConfirmModalProps, AlertModalProps } from "./modal";
+export { Modal, ModalAnatomy } from "./modal";
+export type { ModalProps } from "./modal";

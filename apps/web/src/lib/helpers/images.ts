@@ -25,11 +25,10 @@ export const getHighResImage = (url: string | null | undefined): string => {
     if (!url) return ""
 
     return getCachedOrResolve(`high:${url}`, () => {
-        // TMDB high-res replacement
+        // TMDB high-res replacement: w780 provides crystal-clear 4K crispness (~120KB)
+        // avoiding the disastrous 10MB-15MB payload and multi-second latency of /original.
         if (url.includes("tmdb.org") || url.includes("themoviedb.org")) {
-            // Replace common width segments with 'original'
-            // Examples: /t/p/w500/..., /t/p/w780/..., /t/p/w1280/...
-            return url.replace(/\/t\/p\/w\d+/, "/t/p/original")
+            return url.replace(/\/t\/p\/(?:original|w\d+)/, "/t/p/w780")
         }
         return url
     })
@@ -39,13 +38,18 @@ export const getMediumResImage = (url: string | null | undefined): string => {
     if (!url) return ""
 
     return getCachedOrResolve(`medium:${url}`, () => {
-        // TMDB medium-res replacement (w500 is perfect for normal-sized cards and posters)
+        // TMDB medium-res: w342 is crisp on 160-240px cards and Retina (2x) without the 4x payload of w780
         if (url.includes("tmdb.org") || url.includes("themoviedb.org")) {
-            return url.replace(/\/t\/p\/(?:original|w\d+)/, "/t/p/w500")
+            return url.replace(/\/t\/p\/(?:original|w\d+)/, "/t/p/w342")
         }
         return url
     })
 }
+
+/**
+ * Optimización para tarjetas y posters de catálogo (alias de getMediumResImage).
+ */
+export const getCardPosterImage = getMediumResImage
 
 export const getLowResImage = (url: string | null | undefined): string => {
     if (!url) return ""
@@ -67,6 +71,11 @@ export const getTinyResImage = (url: string | null | undefined): string => {
         if (url.includes("tmdb.org") || url.includes("themoviedb.org")) {
             return url.replace(/\/t\/p\/(?:original|w\d+)/, "/t/p/w92")
         }
+        // Local image proxy thumbnail if supported
+        if (url.startsWith("/api/v1/image") && !url.includes("thumbnail=")) {
+            const separator = url.includes("?") ? "&" : "?"
+            return `${url}${separator}thumbnail=true&w=92`
+        }
         return url
     })
 }
@@ -82,3 +91,29 @@ export const getLargeResImage = (url: string | null | undefined): string => {
         return url
     })
 }
+
+const MAX_PREWARMED_URLS = 200
+const prewarmedUrls = new Set<string>()
+
+/**
+ * Precarga imágenes predictivamente en segundo plano en idle time
+ * usando HTMLImageElement sin bloquear el hilo principal.
+ */
+export const prewarmImages = (urls: (string | null | undefined)[]) => {
+    if (typeof window === "undefined") return
+
+    const schedule = (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => void }).requestIdleCallback || ((cb: () => void) => setTimeout(cb, 200))
+    schedule(() => {
+        urls.forEach((url) => {
+            if (!url || prewarmedUrls.has(url)) return
+            if (prewarmedUrls.size >= MAX_PREWARMED_URLS) {
+                const first = prewarmedUrls.values().next().value
+                if (first) prewarmedUrls.delete(first)
+            }
+            prewarmedUrls.add(url)
+            const img = new Image()
+            img.src = url
+        })
+    }, { timeout: 2000 })
+}
+

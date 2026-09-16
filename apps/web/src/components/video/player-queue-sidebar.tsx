@@ -1,6 +1,6 @@
 import React from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Icons } from "@/components/ui/icons"
+import { IconUiClose } from "@/components/ui/icons";
 import { cn } from "@/components/ui/core/styling"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { useAppStore, type PlaylistItem } from "@/lib/store"
@@ -28,7 +28,7 @@ export const PlayerQueueSidebar = React.memo(function PlayerQueueSidebar({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="absolute inset-0 z-[150] bg-black/60 backdrop-blur-[var(--blur-overlay-sm)] pointer-events-auto"
+                        className="absolute inset-0 z-player-overlay bg-black/60 backdrop-blur-overlay-sm pointer-events-auto"
                     />
 
                     {/* Sidebar Panel */}
@@ -37,19 +37,20 @@ export const PlayerQueueSidebar = React.memo(function PlayerQueueSidebar({
                         animate={{ x: 0 }}
                         exit={{ x: "100%" }}
                         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                        className="absolute right-0 top-0 bottom-0 w-full sm:w-[400px] z-[160] bg-surface-container border-l border-white/15 flex flex-col shadow-2xl pointer-events-auto select-none"
+                        className="absolute right-0 top-0 bottom-0 w-full sm:w-[400px] z-player-sidebar bg-zinc-950/85 backdrop-blur-overlay-2xl border-l border-white/20 shadow-[-16px_0_40px_rgba(0,0,0,0.8),inset_1px_0_0_rgba(255,255,255,0.15)] flex flex-col pointer-events-auto select-none"
                     >
                         {/* Header */}
-                        <div className="flex items-center justify-between p-6 border-b border-white/5 shrink-0">
+                        <div className="flex items-center justify-between p-6 border-b border-white/10 shrink-0 bg-zinc-950/40">
                             <h3 className="text-sm font-black tracking-cinema text-white uppercase flex items-center ml-2 [&>*:not(:first-child)]:ml-2">
-                                <div className="w-1.5 h-1.5 rounded-full bg-brand-accent animate-pulse" />
+                                <div className="w-2 h-2 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)] animate-pulse" />
                                 COLA DE REPRODUCCIÓN
                             </h3>
                             <button
                                 onClick={onClose}
-                                className="p-2 text-zinc-500 hover:text-white hover:bg-white/5 rounded-full transition-all"
+                                aria-label="Cerrar cola de reproducción"
+                                className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-white bg-zinc-900/60 hover:bg-zinc-800 border border-white/15 border-t-white/30 border-b-white/10 transition-all cursor-pointer shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)]"
                             >
-                                <Icons.ui.close className="w-4 h-4" />
+                                <IconUiClose className="w-4 h-4" />
                             </button>
                         </div>
 
@@ -60,20 +61,23 @@ export const PlayerQueueSidebar = React.memo(function PlayerQueueSidebar({
 
                                 return (
                                     <div
-                                        key={`${item.id}_${idx}`}
+                                        key={`${String(item.id)}_${String(item.episodeNumber ?? '')}_${String(item.mediaId)}_${item.playableUrl}`}
                                         className={cn(
-                                            "w-full text-left flex p-3 rounded-xl border transition-all duration-base group relative [&>*:not(:first-child)]:ml-4",
+                                            "w-full text-left flex p-3 rounded-2xl border transition-all duration-base group relative [&>*:not(:first-child)]:ml-4 items-center cursor-pointer",
                                             isCurrent
-                                                ? "bg-brand-accent/10 border-brand-accent/30 text-white shadow-[0_0_15px_hsl(var(--brand-accent)/0.1)]"
-                                                : "bg-white/[0.02] border-white/5 text-zinc-400 hover:text-white hover:bg-white/[0.04] hover:border-white/10"
+                                                ? "bg-white/[0.08] border-white/30 border-t-white/50 border-l-[3px] border-l-brand-accent shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),0_4px_16px_rgba(0,0,0,0.5)] text-white"
+                                                : "bg-white/[0.02] hover:bg-white/[0.05] border-white/10 hover:border-white/20 border-t-white/15 text-zinc-400 hover:text-white"
                                         )}
                                     >
-                                        {/* Clickable Area to play */}
-                                        <div
+                                        {/* Clickable Area to play — botón real para teclado/lector */}
+                                        <button
+                                            type="button"
                                             onClick={() => {
                                                 useAppStore.getState().setCurrentQueueIndex(idx)
                                             }}
-                                            className="flex-1 flex cursor-pointer [&>*:not(:first-child)]:ml-4"
+                                            aria-label={`Reproducir ${item.title}`}
+                                            aria-current={isCurrent ? "true" : undefined}
+                                            className="flex-1 flex cursor-pointer [&>*:not(:first-child)]:ml-4 text-left rounded-xl min-h-[44px] active:scale-95 transition-transform"
                                         >
                                             {/* Thumbnail */}
                                             <div className="relative w-28 aspect-video bg-zinc-900 border border-white/5 rounded-lg overflow-hidden shrink-0 flex items-center justify-center">
@@ -122,7 +126,7 @@ export const PlayerQueueSidebar = React.memo(function PlayerQueueSidebar({
                                                     {item.title}
                                                 </h4>
                                             </div>
-                                        </div>
+                                        </button>
 
                                         {/* Remove button */}
                                         <button
@@ -130,10 +134,11 @@ export const PlayerQueueSidebar = React.memo(function PlayerQueueSidebar({
                                                 e.stopPropagation()
                                                 useAppStore.getState().removeFromQueue(idx)
                                             }}
+                                            aria-label={`Eliminar ${item.title} de la cola`}
                                             className="p-1.5 text-zinc-500 hover:text-status-error self-center hover:bg-white/5 rounded-full transition-all duration-base z-10"
                                             title="Eliminar de la cola"
                                         >
-                                            <Icons.ui.close className="w-3.5 h-3.5" />
+                                            <IconUiClose className="w-3.5 h-3.5" />
                                         </button>
                                     </div>
                                 )

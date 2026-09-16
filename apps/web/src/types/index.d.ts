@@ -1,4 +1,5 @@
 import "@total-typescript/ts-reset"
+import type { DesktopSettings } from "@/lib/desktop-bridge"
 
 declare global {
     interface AudioTrack {
@@ -24,66 +25,65 @@ declare global {
         readonly audioTracks: AudioTrackList | undefined;
     }
 
-    interface Window {
-        electron?: {
-            window: {
-                minimize: () => void;
-                maximize: () => void;
-                close: () => void;
-                isMaximized: () => Promise<boolean>;
-                isMinimizable: () => Promise<boolean>;
-                isMaximizable: () => Promise<boolean>;
-                isClosable: () => Promise<boolean>;
-                isFullscreen: () => Promise<boolean>;
-                setFullscreen: (fullscreen: boolean) => void;
-                toggleMaximize: () => void;
-                hide: () => void;
-                show: () => void;
-                isVisible: () => Promise<boolean>;
-                setTitleBarStyle: (style: string) => void;
-                getCurrentWindow: () => Promise<string>;
-                isMainWindow: () => Promise<boolean>;
-            };
-            localServer: {
-                getPort: () => Promise<number>;
-            };
-            media?: {
-                setMetadata: (metadata: Record<string, unknown>) => Promise<boolean>;
-                clearSession: () => Promise<boolean>;
-                stopAllMedia: () => Promise<boolean>;
-            };
-            on: (channel: string, callback: (...args: unknown[]) => void) => (() => void) | undefined;
-            emit: (channel: string, data?: unknown) => void;
-            send: (channel: string, ...args: unknown[]) => void;
-            platform: NodeJS.Platform;
-            shell: {
-                open: (url: string) => Promise<void>;
-            };
-            clipboard: {
-                writeText: (text: string) => Promise<boolean>;
-            };
-            checkForUpdates: () => Promise<unknown>;
-            installUpdate: () => Promise<unknown>;
-            killServer: () => Promise<unknown>;
-            settings: {
-                get: () => Promise<DesktopSettings>;
-                set: (settings: Partial<DesktopSettings>) => Promise<DesktopSettings>;
-            };
-            mpv: {
-                isAvailable: () => Promise<boolean>;
-                play: (request: {
-                    path: string;
-                    title?: string;
-                    startTime?: number;
-                    mediaId?: number;
-                    episodeNumber?: number;
-                }) => Promise<void>;
-                stop: () => Promise<void>;
-            };
+    export interface DesktopAPI {
+        window: {
+            minimize: () => void;
+            maximize: () => void;
+            close: () => void;
+            isMaximized: () => Promise<boolean>;
+            isMinimizable: () => Promise<boolean>;
+            isMaximizable: () => Promise<boolean>;
+            isClosable: () => Promise<boolean>;
+            isFullscreen: () => Promise<boolean>;
+            setFullscreen: (fullscreen: boolean) => void;
+            toggleMaximize: () => void;
+            hide: () => void;
+            show: () => void;
+            isVisible: () => Promise<boolean>;
+            getCurrentWindow: () => Promise<string>;
+            isMainWindow: () => Promise<boolean>;
         };
+        localServer: {
+            getPort: () => Promise<number>;
+        };
+        startup: {
+            ready: () => void;
+        };
+        on: (channel: string, callback: (...args: unknown[]) => void) => (() => void) | undefined;
+        platform: NodeJS.Platform;
+        shell: {
+            open: (url: string) => Promise<void>;
+        };
+        clipboard: {
+            writeText: (text: string) => Promise<boolean>;
+        };
+        checkForUpdates: () => Promise<unknown>;
+        installUpdate: () => Promise<unknown>;
+        killServer: () => Promise<unknown>;
+        settings: {
+            get: () => Promise<DesktopSettings>;
+            set: (settings: Partial<DesktopSettings>) => Promise<DesktopSettings>;
+        };
+        mpv: {
+            isAvailable: () => Promise<boolean>;
+            play: (request: {
+                path: string;
+                title?: string;
+                startTime?: number;
+                mediaId?: number;
+                episodeNumber?: number;
+            }) => Promise<void>;
+            stop: () => Promise<void>;
+        };
+    }
 
-        __isElectronDesktop__?: boolean;
+    interface Window {
+        desktop?: DesktopAPI;
+
         __isTauriDesktop__?: boolean;
         __TAURI__?: unknown;
+        __TAURI_INTERNALS__?: unknown;
+        __kamehouse_bg_audio?: HTMLAudioElement;
+        __KAMEHOUSE_PORT__?: number | string;
     }
 }

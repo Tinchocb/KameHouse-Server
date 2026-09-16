@@ -1,4 +1,5 @@
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
+import { useAppStore } from "@/lib/store"
 
 interface UsePlayerShortcutsProps {
     videoRef: React.RefObject<HTMLVideoElement | null>
@@ -24,6 +25,9 @@ interface UsePlayerShortcutsProps {
     setShowStats: React.Dispatch<React.SetStateAction<boolean>>
     skipToNextChapter?: () => void
     skipToPrevChapter?: () => void
+    onToggleSubtitle?: () => void
+    onToggleEpisodesSidebar?: () => void
+    duration?: number
 }
 
 function setVideoVolume(video: HTMLVideoElement, vol: number) {
@@ -34,69 +38,111 @@ function setVideoMuted(video: HTMLVideoElement, muted: boolean) {
     video.muted = muted
 }
 
-export function usePlayerShortcuts({
-    videoRef,
-    isPlaying,
-    isMuted,
-    volume,
-    isFullscreen,
-    skipMode,
-    showNextEpisode,
-    onNextEpisode,
-    handleSkipIntro,
-    onClose,
-    skipOpening,
-    skipTime,
-    takeScreenshot,
-    toggleMute,
-    togglePip,
-    togglePlay,
-    toggleFullscreen,
-    setVolume,
-    setIsMuted,
-    setIsSettingsOpen,
-    setShowStats,
-    skipToNextChapter,
-    skipToPrevChapter,
-}: UsePlayerShortcutsProps) {
+export function usePlayerShortcuts(props: UsePlayerShortcutsProps) {
+    const refs = useRef<UsePlayerShortcutsProps>(props)
+    // Mantener refs sincronizados sin re-registrar el listener (evita churn en cada cambio de volume/isPlaying)
+    useEffect(() => {
+        refs.current = props
+    })
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            const activeEl = document.activeElement
-            const isInteractive = activeEl && (
+            const {
+                videoRef,
+                isMuted,
+                isFullscreen,
+                skipMode,
+                showNextEpisode,
+                onNextEpisode,
+                handleSkipIntro,
+                onClose,
+                skipOpening,
+                skipTime,
+                takeScreenshot,
+                toggleMute,
+                togglePip,
+                togglePlay,
+                toggleFullscreen,
+                setVolume,
+                setIsMuted,
+                setIsSettingsOpen,
+                setShowStats,
+                skipToNextChapter,
+                skipToPrevChapter,
+                onToggleSubtitle,
+                onToggleEpisodesSidebar,
+                duration,
+            } = refs.current
+            const activeEl = document.activeElement as HTMLElement | null
+            const isInteractiveElement = activeEl && (
                 activeEl.tagName === "INPUT" ||
-                activeEl.tagName === "SELECT" ||
                 activeEl.tagName === "TEXTAREA" ||
-                activeEl.tagName === "BUTTON" ||
-                activeEl.tagName === "A" ||
-                activeEl.getAttribute("role") === "button" ||
-                activeEl.getAttribute("role") === "tab" ||
-                activeEl.getAttribute("role") === "menuitem" ||
+                activeEl.tagName === "SELECT" ||
+                activeEl.isContentEditable ||
+                activeEl.getAttribute("role") === "textbox" ||
+                activeEl.getAttribute("role") === "searchbox" ||
                 activeEl.getAttribute("role") === "slider" ||
-                activeEl.hasAttribute("data-player-control")
+                activeEl.getAttribute("role") === "combobox" ||
+                activeEl.getAttribute("role") === "menuitem" ||
+                activeEl.getAttribute("role") === "menuitemcheckbox" ||
+                activeEl.getAttribute("role") === "menuitemradio" ||
+                activeEl.getAttribute("role") === "option"
             )
 
-            const key = e.key.toLowerCase()
-
-            // Skip conflicting activation and navigation shortcuts if focused on interactive UI controls
-            if (isInteractive && (
-                key === " " ||
-                key === "arrowleft" ||
-                key === "arrowright" ||
-                key === "arrowup" ||
-                key === "arrowdown"
-            )) {
+            if (isInteractiveElement) {
+                if (e.key.toLowerCase() === "escape") return
                 return
             }
 
-            if (
-                activeEl?.tagName === "INPUT" ||
-                activeEl?.tagName === "SELECT" ||
-                activeEl?.tagName === "TEXTAREA"
-            ) {
+            const isModalOpen = Boolean(document.querySelector('[role="dialog"][aria-modal="true"], [cmdk-root]'))
+            if (isModalOpen && e.key.toLowerCase() !== "escape") {
+                return
+            }
+
+            const key = e.key.toLowerCase()
+
+            // 0-9 percent seeking
+            if (/^[0-9]$/.test(key) && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                e.preventDefault()
+                const video = videoRef.current
+                const total = duration || video?.duration || 0
+                if (video && Number.isFinite(total) && total > 0) {
+                    const pct = parseInt(key, 10) / 10
+                    video.currentTime = pct * total
+                }
                 return
             }
 
             switch (key) {
+                case "e":
+                    if (onToggleEpisodesSidebar) {
+                        e.preventDefault()
+                        onToggleEpisodesSidebar()
+                    }
+                    break
+                case "c":
+                    if (onToggleSubtitle) {
+                        e.preventDefault()
+                        onToggleSubtitle()
+                    }
+                    break
+                case ",":
+                    e.preventDefault()
+                    const videoComma = videoRef.current
+                    if (videoComma) {
+                        if (!videoComma.paused) videoComma.pause()
+                        videoComma.currentTime = Math.max(0, videoComma.currentTime - 1 / 24)
+                    }
+                    break
+                case ".":
+                    e.preventDefault()
+                    const videoPeriod = videoRef.current
+                    if (videoPeriod) {
+                        if (!videoPeriod.paused) videoPeriod.pause()
+                        const total = duration || videoPeriod.duration || Infinity
+                        videoPeriod.currentTime = Math.min(total, videoPeriod.currentTime + 1 / 24)
+                    }
+                    break
                 case "[":
                     if (skipToPrevChapter) {
                         e.preventDefault()
@@ -142,6 +188,7 @@ export function usePlayerShortcuts({
                         setVolume(newVol)
                         setIsMuted(false)
                         setVideoMuted(videoUp, false)
+                        useAppStore.getState().setPlayerVolume(newVol)
                     }
                     break
                 case "arrowdown":
@@ -153,6 +200,7 @@ export function usePlayerShortcuts({
                         setVolume(newVol)
                         setIsMuted(newVol === 0)
                         setVideoMuted(videoDown, newVol === 0)
+                        useAppStore.getState().setPlayerVolume(newVol)
                     }
                     break
                 case "m":
@@ -208,29 +256,5 @@ export function usePlayerShortcuts({
 
         window.addEventListener("keydown", handleKeyDown)
         return () => window.removeEventListener("keydown", handleKeyDown)
-    }, [
-        isPlaying,
-        isMuted,
-        volume,
-        isFullscreen,
-        skipMode,
-        showNextEpisode,
-        onNextEpisode,
-        handleSkipIntro,
-        onClose,
-        skipOpening,
-        skipTime,
-        takeScreenshot,
-        toggleMute,
-        togglePip,
-        togglePlay,
-        toggleFullscreen,
-        setVolume,
-        setIsMuted,
-        setIsSettingsOpen,
-        setShowStats,
-        skipToNextChapter,
-        skipToPrevChapter,
-        videoRef,
-    ])
+    }, [])
 }

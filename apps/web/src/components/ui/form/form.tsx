@@ -67,7 +67,7 @@ export type FormProps<Schema extends z.ZodObject<z.ZodRawShape> = z.ZodObject<z.
 export const Form = <Schema extends z.ZodObject<z.ZodRawShape>>(props: FormProps<Schema>) => {
 
     const {
-        mode = "onSubmit",
+        mode = "onBlur",
         resolver,
         reValidateMode,
         shouldFocusError,

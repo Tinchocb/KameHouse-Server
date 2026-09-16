@@ -4,15 +4,27 @@ import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { WebSocketMessage, WSEvents, ScannerMessage } from "@/lib/server/ws-events"
 import { toast } from "sonner"
 import { useQueryClient } from "@tanstack/react-query"
-import { useAppStore, type ScanEvent, type ScannerState } from "@/lib/store"
-import React, { useCallback, useEffect, useMemo, useRef } from "react"
+import { useScannerStore, type ScanEvent, type ScannerState } from "@/lib/scanner-store"
+import React, { useCallback, useEffect, useRef } from "react"
 import useWebSocket from "react-use-websocket"
+
+function safeId(): string {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+        return crypto.randomUUID()
+    }
+    if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+        return [...crypto.getRandomValues(new Uint8Array(16))]
+            .map(b => b.toString(16).padStart(2, "0"))
+            .join("")
+    }
+    return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
+}
 
 export function WebsocketProvider({ children }: { children: React.ReactNode }) {
     const queryClient = useQueryClient()
-    const setEvents = useAppStore(state => state.setEvents)
-    const setScannerState = useAppStore(state => state.setScannerState)
-    const activeStageIdx = useAppStore(state => state.activeStageIdx)
+    const setEvents = useScannerStore(state => state.setEvents)
+    const setScannerState = useScannerStore(state => state.setScannerState)
+    const activeStageIdx = useScannerStore(state => state.activeStageIdx)
     const activeStageIdxRef = useRef(activeStageIdx)
     
     useEffect(() => {
@@ -23,14 +35,34 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
     const eventQueue = useRef<ScanEvent[]>([])
     const stateUpdateRef = useRef<Partial<ScannerState>>({})
     const flushTimeout = useRef<NodeJS.Timeout | null>(null)
+    const invalidationTimeout = useRef<NodeJS.Timeout | null>(null)
 
-    // Dynamically resolve WebSocket URL from the base URL
-    const wsUrl = useMemo(() => getApiWebSocketUrl(), [])
+    const debouncedInvalidateLibrary = useCallback(() => {
+        if (invalidationTimeout.current) clearTimeout(invalidationTimeout.current)
+        invalidationTimeout.current = setTimeout(() => {
+            queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.LOCALFILES.GetLocalFiles.key] })
+            queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key] })
+            queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key] })
+            queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetMissingEpisodes.key] })
+            queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.LIBRARY_EXPLORER.GetLibraryExplorerFileTree.key] })
+            invalidationTimeout.current = null
+        }, 1200)
+    }, [queryClient])
 
+    // Dynamically resolve WebSocket URL from the base URL and update if Tauri resolves port
+    const [wsUrl, setWsUrl] = React.useState(() => getApiWebSocketUrl())
+
+    useEffect(() => {
+        const handlePortResolved = () => {
+            setWsUrl(getApiWebSocketUrl())
+        }
+        window.addEventListener("kamehouse-port-resolved", handlePortResolved)
+        return () => window.removeEventListener("kamehouse-port-resolved", handlePortResolved)
+    }, [])
 
     const { lastJsonMessage, sendJsonMessage } = useWebSocket(wsUrl, {
         shouldReconnect: () => true,
-        reconnectAttempts: 10,
+        reconnectAttempts: Infinity,
         reconnectInterval: 3000,
         share: true, // Allow multiple hooks to share this connection
         onOpen: () => {
@@ -68,6 +100,7 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
         return () => {
             clearInterval(interval)
             if (flushTimeout.current) clearTimeout(flushTimeout.current)
+            if (invalidationTimeout.current) clearTimeout(invalidationTimeout.current)
         }
     }, [sendJsonMessage])
 
@@ -81,21 +114,7 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
             case WSEvents.LIBRARY_WATCHER_FILE_ADDED:
             case WSEvents.LIBRARY_WATCHER_FILE_REMOVED:
             case WSEvents.REFRESHED_ANIME_COLLECTION:
-                queryClient.invalidateQueries({
-                    queryKey: [API_ENDPOINTS.LOCALFILES.GetLocalFiles.key]
-                })
-                queryClient.invalidateQueries({
-                    queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key]
-                })
-                queryClient.invalidateQueries({
-                    queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key]
-                })
-                queryClient.invalidateQueries({
-                    queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetMissingEpisodes.key]
-                })
-                queryClient.invalidateQueries({
-                    queryKey: [API_ENDPOINTS.LIBRARY_EXPLORER.GetLibraryExplorerFileTree.key]
-                })
+                debouncedInvalidateLibrary()
                 break
                 
             case WSEvents.LIBRARY_SCAN: {
@@ -103,7 +122,7 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
                 const evt: ScanEvent = {
                     ...data,
                     timestamp: Date.now(),
-                    id: crypto.randomUUID()
+                    id: safeId()
                 }
                 
                 // Add to batch queue
@@ -148,10 +167,7 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
                             activeStageIdx: -1,
                             lastFinish: evt
                         }
-                        queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key] })
-                        queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key] })
-                        queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetMissingEpisodes.key] })
-                        queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.LIBRARY_EXPLORER.GetLibraryExplorerFileTree.key] })
+                        debouncedInvalidateLibrary()
                         break
                 }
                 
@@ -177,7 +193,7 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
                     status: "PROCESSING",
                     file: payload.message || "",
                     timestamp: Date.now(),
-                    id: `legacy-${crypto.randomUUID()}`
+                    id: `legacy-${safeId()}`
                 }
                 eventQueue.current.unshift(evt)
                 stateUpdateRef.current = {
@@ -212,7 +228,7 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
                     status: statusStr.toLowerCase().includes("completed") || statusStr.toLowerCase().includes("finished") ? "FINISH" : "PROCESSING",
                     file: statusStr,
                     timestamp: Date.now(),
-                    id: `status-${crypto.randomUUID()}`
+                    id: `status-${safeId()}`
                 }
                 eventQueue.current.unshift(evt)
  
@@ -223,10 +239,7 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
                         scanProgress: 100,
                         activeStageIdx: -1
                     }
-                    queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key] })
-                    queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key] })
-                    queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetMissingEpisodes.key] })
-                    queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.LIBRARY_EXPLORER.GetLibraryExplorerFileTree.key] })
+                    debouncedInvalidateLibrary()
                 } else {
                     stateUpdateRef.current = {
                         ...stateUpdateRef.current,
@@ -253,7 +266,7 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
             default:
                 break
         }
-    }, [lastJsonMessage, queryClient, flushUpdates])
+    }, [lastJsonMessage, queryClient, flushUpdates, debouncedInvalidateLibrary])
 
     return <>{children}</>
 }

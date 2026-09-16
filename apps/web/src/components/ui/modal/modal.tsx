@@ -13,18 +13,20 @@ import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
 export const ModalAnatomy = defineStyleAnatomy({
     overlay: cva([
         "UI-Modal__overlay",
-        "fixed inset-0 z-50 bg-[color:color-mix(in_srgb,var(--md-sys-color-surface)_60%,transparent)] backdrop-blur-[var(--blur-overlay-xl)] transition-all duration-base",
+        "fixed inset-0 z-overlay bg-[color:color-mix(in_srgb,var(--md-sys-color-surface)_60%,transparent)] backdrop-blur-overlay-xl transition-all duration-base",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         // "overflow-y-auto p-0 md:p-4 grid place-items-center",
     ]),
     content: cva([
         "UI-Modal__content",
-        "z-50 grid relative w-full shadow-2xl border border-white/5 max-w-lg gap-4 glass-liquid glass-refract p-6 duration-base",
+        "z-modal grid relative w-full max-w-lg gap-4 p-6 duration-base rounded-2xl",
+        "bg-zinc-950/70 border border-white/20 border-t-white/40 border-b-white/10",
+        "backdrop-blur-overlay-2xl backdrop-saturate-[190%]",
+        "shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.3),0_24px_48px_-12px_rgba(0,0,0,0.9)]",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-        "rounded-xl",
     ]),
     close: cva([
         "UI-Modal__close",
@@ -123,124 +125,57 @@ export function Modal(props: ModalProps) {
         {trigger && <DialogPrimitive.Trigger asChild>{trigger}</DialogPrimitive.Trigger>}
 
         <DialogPrimitive.Portal container={portalContainer}>
-            <DialogPrimitive.Overlay className={cn(ModalAnatomy.overlay(), overlayClass)}>
-                <div
-                    className={cn(
-                        "overflow-y-auto absolute inset-0 grid place-items-center p-0 md:p-4",
-                        __isDesktop__ && "md:p-8",
-                    )}
+            <DialogPrimitive.Overlay className={cn(ModalAnatomy.overlay(), overlayClass)} />
+            <div
+                className={cn(
+                    "fixed inset-0 z-modal overflow-y-auto grid place-items-center p-3 md:p-4 pointer-events-none",
+                    __isDesktop__ && "md:p-8",
+                )}
+            >
+                <DialogPrimitive.Content
+                    className={cn(ModalAnatomy.content(), "pointer-events-auto", contentClass)}
+                    onOpenAutoFocus={onOpenAutoFocus}
+                    onCloseAutoFocus={onCloseAutoFocus}
+                    onEscapeKeyDown={onEscapeKeyDown}
+                    onPointerDownCapture={onPointerDownCapture}
+                    onInteractOutside={onInteractOutside}
                 >
-                    <DialogPrimitive.Content
-                        className={cn(ModalAnatomy.content(), contentClass)}
-                        onOpenAutoFocus={onOpenAutoFocus}
-                        onCloseAutoFocus={onCloseAutoFocus}
-                        onEscapeKeyDown={onEscapeKeyDown}
-                        onPointerDownCapture={onPointerDownCapture}
-                        onInteractOutside={onInteractOutside}
-                    >
-                        {!description && (
-                            <VisuallyHidden asChild>
-                                <DialogPrimitive.Description />
-                            </VisuallyHidden>
-                        )}
+                    {!description && (
+                        <VisuallyHidden asChild>
+                            <DialogPrimitive.Description />
+                        </VisuallyHidden>
+                    )}
 
-                        {(title || description) && (
-                            <div className={cn(ModalAnatomy.header(), headerClass)}>
-                                {title && (
-                                    <DialogPrimitive.Title className={cn(ModalAnatomy.title(), titleClass)}>
-                                        {title}
-                                    </DialogPrimitive.Title>
-                                )}
-                                {description && (
-                                    <DialogPrimitive.Description className={cn(ModalAnatomy.description(), descriptionClass)}>
-                                        {description}
-                                    </DialogPrimitive.Description>
-                                )}
-                            </div>
-                        )}
+                    {(title || description) && (
+                        <div className={cn(ModalAnatomy.header(), headerClass)}>
+                            {title && (
+                                <DialogPrimitive.Title className={cn(ModalAnatomy.title(), titleClass)}>
+                                    {title}
+                                </DialogPrimitive.Title>
+                            )}
+                            {description && (
+                                <DialogPrimitive.Description className={cn(ModalAnatomy.description(), descriptionClass)}>
+                                    {description}
+                                </DialogPrimitive.Description>
+                            )}
+                        </div>
+                    )}
 
-                        {children}
+                    {children}
 
-                        {footer && <div className={cn(ModalAnatomy.footer(), footerClass)}>
-                            {footer}
-                        </div>}
+                    {footer && <div className={cn(ModalAnatomy.footer(), footerClass)}>
+                        {footer}
+                    </div>}
 
-                        {!hideCloseButton && <DialogPrimitive.Close className={cn(ModalAnatomy.close(), closeClass)} asChild>
-                            {closeButton ? closeButton : <CloseButton />}
-                        </DialogPrimitive.Close>}
+                    {!hideCloseButton && <DialogPrimitive.Close className={cn(ModalAnatomy.close(), closeClass)} asChild>
+                        {closeButton ? closeButton : <CloseButton aria-label="Cerrar ventana modal" />}
+                    </DialogPrimitive.Close>}
 
-                    </DialogPrimitive.Content>
-                </div>
-
-
-            </DialogPrimitive.Overlay>
+                </DialogPrimitive.Content>
+            </div>
         </DialogPrimitive.Portal>
 
     </DialogPrimitive.Root>
 }
 
 Modal.displayName = "Modal"
-
-/* -------------------------------------------------------------------------------------------------
- * ConfirmModal
- * -----------------------------------------------------------------------------------------------*/
-
-export interface ConfirmModalProps {
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-  title?: React.ReactNode;
-  description?: React.ReactNode;
-  confirmLabel?: string;
-  cancelLabel?: string;
-  variant?: "primary" | "destructive" | "success";
-  onConfirm?: () => void;
-  onCancel?: () => void;
-  loading?: boolean;
-  children?: React.ReactNode;
-}
-
-export function ConfirmModal({
-  open,
-  onOpenChange,
-  title = "Confirmar",
-  description,
-  children,
-}: ConfirmModalProps) {
-  return (
-    <Modal open={open} onOpenChange={onOpenChange} title={title} description={description}>
-      {children}
-    </Modal>
-  )
-}
-ConfirmModal.displayName = "ConfirmModal"
-
-/* -------------------------------------------------------------------------------------------------
- * AlertModal
- * -----------------------------------------------------------------------------------------------*/
-
-export interface AlertModalProps {
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-  title?: React.ReactNode;
-  description?: React.ReactNode;
-  confirmLabel?: string;
-  variant?: "primary" | "destructive" | "success";
-  onConfirm?: () => void;
-  icon?: React.ReactNode;
-  children?: React.ReactNode;
-}
-
-export function AlertModal({
-  open,
-  onOpenChange,
-  title = "Aviso",
-  description,
-  children,
-}: AlertModalProps) {
-  return (
-    <Modal open={open} onOpenChange={onOpenChange} title={title} description={description}>
-      {children}
-    </Modal>
-  )
-}
-AlertModal.displayName = "AlertModal"

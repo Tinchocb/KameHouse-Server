@@ -15,11 +15,7 @@ const Vaul = ({
 )
 Vaul.displayName = "Vaul"
 
-const VaulTrigger = VaulPrimitive.Trigger
-
 const VaulPortal = VaulPrimitive.Portal
-
-const VaulClose = VaulPrimitive.Close
 
 const VaulOverlay = React.forwardRef<
     React.ElementRef<typeof VaulPrimitive.Overlay>,
@@ -31,7 +27,7 @@ const VaulOverlay = React.forwardRef<
             ref={ref}
             className={cn(
                 "fixed inset-0 z-50 bg-[color:color-mix(in_srgb,var(--md-sys-color-surface)_80%,transparent)]",
-                ts.themeEnableBlurringEffects && "bg-gray-950/70 backdrop-blur-[var(--blur-overlay-xl)] firefox:backdrop-blur-none",
+                ts.themeEnableBlurringEffects && "bg-zinc-950/70 backdrop-blur-overlay-xl firefox:backdrop-blur-none",
                 className)}
             {...props}
         />
@@ -49,7 +45,7 @@ const VaulContent = React.forwardRef<
             <VaulPrimitive.Content
                 ref={ref}
                 className={cn(
-                    "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-2xl border border-b-0 bg-[var(--background)]",
+                    "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-2xl border border-b-0 bg-[var(--background)] safe-area-pb pb-[env(safe-area-inset-bottom,0px)]",
                     "select-none focus:outline-none outline-none outline-0 focus:outline-0",
                     className,
                 )}
@@ -70,32 +66,6 @@ const VaulContent = React.forwardRef<
     )
 })
 VaulContent.displayName = "VaulContent"
-
-const VaulHeader = ({
-    className,
-    ...props
-}: React.HTMLAttributes<HTMLDivElement>) => {
-    return (
-        <div
-            className={cn("grid gap-1.5 text-center sm:text-left", className)}
-            {...props}
-        />
-    )
-}
-VaulHeader.displayName = "VaulHeader"
-
-const VaulFooter = ({
-    className,
-    ...props
-}: React.HTMLAttributes<HTMLDivElement>) => {
-    return (
-        <div
-            className={cn("mt-auto flex flex-col gap-2 p-4", className)}
-            {...props}
-        />
-    )
-}
-VaulFooter.displayName = "VaulFooter"
 
 const VaulTitle = React.forwardRef<
     React.ElementRef<typeof VaulPrimitive.Title>,
@@ -132,11 +102,7 @@ export {
     Vaul,
     VaulPortal,
     VaulOverlay,
-    VaulTrigger,
-    VaulClose,
     VaulContent,
-    VaulHeader,
-    VaulFooter,
     VaulTitle,
     VaulDescription,
 }

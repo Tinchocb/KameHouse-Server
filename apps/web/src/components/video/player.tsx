@@ -1,6 +1,6 @@
 import React, { useEffect, Suspense, lazy, useState } from "react"
 import { createPortal } from "react-dom"
-import { Icons } from "@/components/ui/icons"
+import { IconUiSpinner } from "@/components/ui/icons";
 import { useAppStore } from "@/lib/store"
 import { PlayerErrorBoundary } from "./player-error-boundary"
 
@@ -37,8 +37,8 @@ export type VideoPlayerProps = {
 
 function PlayerLoadingScreen() {
     return (
-        <div className="fixed inset-0 z-[10000] bg-black w-screen h-screen flex flex-col items-center justify-center gap-4 text-white">
-            <Icons.ui.spinner className="w-14 h-14 text-white animate-spin" />
+        <div className="fixed inset-0 z-player bg-black w-screen h-screen flex flex-col items-center justify-center gap-4 text-white">
+            <IconUiSpinner className="w-14 h-14 text-white animate-spin" />
         </div>
     )
 }
@@ -118,8 +118,8 @@ export function VideoPlayer(props: VideoPlayerProps) {
     }
 
     return createPortal(
-        <PlayerErrorBoundary label="Video Player">
-            <div className="fixed inset-0 z-[10000] animate-in fade-in zoom-in-95 duration-slow fill-mode-forwards">
+        <PlayerErrorBoundary label="Video Player" onClose={props.onClose}>
+            <div className="fixed inset-0 z-player animate-in fade-in zoom-in-95 duration-slow fill-mode-forwards">
                 <Suspense fallback={<PlayerLoadingScreen />}>
                     {playerContent}
                 </Suspense>

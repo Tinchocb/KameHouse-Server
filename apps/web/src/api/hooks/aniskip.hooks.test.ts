@@ -1,4 +1,16 @@
-import { normalizeInterval } from "./aniskip.hooks"
+import { normalizeInterval, aniskipQueryKeys } from "./aniskip.hooks"
+
+describe("aniskipQueryKeys", () => {
+    it("should generate base key correctly", () => {
+        expect(aniskipQueryKeys.all).toEqual(["aniskip"])
+    })
+
+    it("should generate query key with parameters normalized", () => {
+        expect(aniskipQueryKeys.times(123, 456, 1)).toEqual(["aniskip", 123, 456, 1])
+        expect(aniskipQueryKeys.times(undefined, 456, 1)).toEqual(["aniskip", null, 456, 1])
+        expect(aniskipQueryKeys.times(123, null, 2)).toEqual(["aniskip", 123, null, 2])
+    })
+})
 
 describe("normalizeInterval", () => {
     it("should not normalize if anchor is start", () => {

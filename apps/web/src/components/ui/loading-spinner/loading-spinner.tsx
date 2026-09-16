@@ -1,4 +1,4 @@
-import { Icons } from "@/components/ui/icons"
+import { IconUiSpinner } from "@/components/ui/icons";
 import { cva } from "class-variance-authority"
 import React from "react"
 
@@ -70,12 +70,12 @@ interface SpinnerProps extends React.ComponentPropsWithRef<"svg"> {
     children?: React.ReactNode
 }
 
-export const Spinner = React.forwardRef<SVGSVGElement, SpinnerProps>((props, _ref) => {
+const Spinner = React.forwardRef<SVGSVGElement, SpinnerProps>((props, _ref) => {
 
     const { className } = props
 
     return (
-        <Icons.ui.spinner
+        <IconUiSpinner
             className={cn(
                 LoadingSpinnerAnatomy.icon(),
                 className,

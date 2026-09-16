@@ -45,10 +45,13 @@
     0 4px 30px rgba(0, 0, 0, 0.30),
     0 0 0 1px rgba(255, 255, 255, 0.05);
 
-  /* Liquid glass — sombra de contacto (elevación) + highlight interno */
+  /* Liquid glass — borde de luz + sombra de contacto + glow del acento */
   --shadow-glass-liquid:
-    0 12px 24px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.10);
+    0 1px 0 rgba(255, 255, 255, 0.12),
+    0 12px 32px rgba(0, 0, 0, 0.50),
+    0 0 28px color-mix(in srgb, var(--brand-accent-hex) 14%, transparent),
+    inset 0 1px 1px rgba(255, 255, 255, 0.14),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.30);
 
   /* ─── Brand Glows (por era — usan variables dinámicas) ──────────────────── */
   --shadow-brand-primary:   0 8px 24px -4px var(--glow-primary);
@@ -70,6 +73,33 @@
 
   /* ─── Focus Ring (compatibilidad shadcn/Tailwind) ──────────────────────── */
   --focus-ring: var(--brand-accent);
+
+  /* ─── SectionBar — Contenedor unificado de sección (bordes blanco sutil + glass) ───────────────── */
+  --sectionbar-border:         rgba(255, 255, 255, 0.15);
+  --sectionbar-border-top:     rgba(255, 255, 255, 0.35);
+  --sectionbar-border-bottom:  rgba(255, 255, 255, 0.10);
+  --sectionbar-bg:             rgba(20, 20, 25, 0.45);
+  --sectionbar-blur:           var(--blur-overlay-2xl);
+  --sectionbar-saturate:       190%;
+  --sectionbar-shadow:
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.20),
+    0 12px 36px -6px rgba(0, 0, 0, 0.75);
+
+  --sectionbar-border-strong:       rgba(255, 255, 255, 0.22);
+  --sectionbar-border-top-strong:   rgba(255, 255, 255, 0.45);
+  --sectionbar-bg-strong:           rgba(25, 25, 30, 0.55);
+  --sectionbar-shadow-strong:
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.25),
+    0 16px 48px -8px rgba(0, 0, 0, 0.80);
+
+  [data-flat="true"] {
+    --sectionbar-border:         rgba(255, 255, 255, 0.12);
+    --sectionbar-border-top:     rgba(255, 255, 255, 0.20);
+    --sectionbar-border-bottom:  rgba(255, 255, 255, 0.08);
+    --sectionbar-bg:             var(--bg-secondary);
+    --sectionbar-blur:           0;
+    --sectionbar-shadow:         0 2px 8px rgba(0, 0, 0, 0.30);
+  }
 }
 
 /* ─── Clases Utilitarias ───────────────────────────────────────────────────── */

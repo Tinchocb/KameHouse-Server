@@ -39,7 +39,7 @@ describe("Player Overlays", () => {
         it("hides when show is false", () => {
             const spy = vi.fn()
             render(<SkipIntroOverlay show={false} onSkip={spy} />)
-            const btn = screen.getByRole("button", { name: /saltar intro/i })
+            const btn = screen.getByRole("button", { name: /saltar intro/i, hidden: true })
             // the parent div will have opacity-0 if not show
             expect(btn.parentElement).toHaveClass("opacity-0")
         })

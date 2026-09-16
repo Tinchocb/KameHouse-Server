@@ -21,7 +21,7 @@ export const SERIES_SOUNDTRACKS: Record<SeriesEraKey, SeriesSoundtrackInfo> = {
         id: "db",
         name: "Dragon Ball (Original)",
         shortName: "Dragon Ball",
-        color: "#eab308", // Yellow
+        color: "#CF7430", // Terracotta warm (canonical --era-db-hex)
         tmdbIds: [12609, 1033499, 1033500, 1033513, 116776, 39145, 39144, 39148],
         keywords: ["dragon ball", "makafushigi", "kikuchi", "romantic ageru yo", "mezase tenkaichi"],
         defaultTracks: [
@@ -33,7 +33,7 @@ export const SERIES_SOUNDTRACKS: Record<SeriesEraKey, SeriesSoundtrackInfo> = {
         id: "dbz",
         name: "Dragon Ball Z",
         shortName: "Dragon Ball Z",
-        color: "#f97316", // Orange
+        color: "#C2410C", // SSJ Orange (canonical --era-dbz-hex)
         tmdbIds: [12971, 1015448, 1015449, 1015450, 1015451, 1015452, 1015453, 1015454, 1015455, 1015456, 1015457, 1015458, 1012704, 1015459, 1015460, 28609, 39100, 39101, 39102, 24752, 39103, 39104, 34433, 39105, 44251, 39106, 39107, 39108, 126963, 303857, 39323, 39324, 38594, 120475, 55127],
         keywords: ["dragon ball z", "dbz", "cha-la", "chala", "head-cha-la", "we gotta power", "faulconer", "kikuchi", "solid state", "tamashii", "meteor"],
         defaultTracks: [
@@ -45,7 +45,7 @@ export const SERIES_SOUNDTRACKS: Record<SeriesEraKey, SeriesSoundtrackInfo> = {
         id: "dbkai",
         name: "Dragon Ball Kai",
         shortName: "DBZ Kai",
-        color: "#06b6d4", // Cyan
+        color: "#0284C7", // Sky Blue HD (canonical --era-dbkai-hex)
         tmdbIds: [61709, 1061709, 60572, 1060572, 6033, 20635],
         keywords: ["kai", "dbkai", "dragon soul", "kuu-zen-zetsu-go", "sumitomo", "break care break"],
         defaultTracks: [
@@ -56,7 +56,7 @@ export const SERIES_SOUNDTRACKS: Record<SeriesEraKey, SeriesSoundtrackInfo> = {
         id: "dbgt",
         name: "Dragon Ball GT",
         shortName: "Dragon Ball GT",
-        color: "#ec4899", // Pink/Magenta
+        color: "#0E7C86", // Cosmic Teal / Space Blue (canonical --era-dbgt-hex)
         tmdbIds: [12697, 1012697, 1039149, 18095],
         keywords: ["dragon ball gt", "dbgt", "gt", "dan dan", "hitori ja nai", "tokunaga", "blue velvet", "don't you see"],
         defaultTracks: [
@@ -67,7 +67,7 @@ export const SERIES_SOUNDTRACKS: Record<SeriesEraKey, SeriesSoundtrackInfo> = {
         id: "dbs",
         name: "Dragon Ball Super",
         shortName: "Dragon Ball Super",
-        color: "#3b82f6", // Blue
+        color: "#DB2777", // Divine Pink (canonical --era-dbs-hex)
         tmdbIds: [62715, 1062715, 503314, 1503314, 610150, 1610150],
         keywords: ["dragon ball super", "dbs", "super", "chouzetsu", "limit break", "kachi daze", "ultimate battle", "sumitomo", "genki dama"],
         defaultTracks: [
@@ -78,7 +78,7 @@ export const SERIES_SOUNDTRACKS: Record<SeriesEraKey, SeriesSoundtrackInfo> = {
         id: "dbdaima",
         name: "Dragon Ball Daima",
         shortName: "Dragon Ball Daima",
-        color: "#a855f7", // Purple
+        color: "#16A34A", // Demon Green (canonical --era-daima-hex)
         tmdbIds: [236994, 1236994],
         keywords: ["daima", "dbdaima", "jaka jaan", "zedd", "nakama"],
         defaultTracks: [

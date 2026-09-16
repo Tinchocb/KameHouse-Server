@@ -3,7 +3,7 @@ import { useServerQuery, useServerMutation } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import type { Models_Notification } from "@/api/generated/types"
 
-export interface NotificationList {
+interface NotificationList {
     notifications?: Models_Notification[]
     unreadCount: number
 }

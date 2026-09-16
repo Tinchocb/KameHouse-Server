@@ -33,6 +33,7 @@ export class VideoCorePgsRenderer {
     private _canvasWidth: number = 0
     private _canvasHeight: number = 0
     private _resizeObserver: ResizeObserver | null = null
+    private _resizeRafId: number | null = null
     private _lastRenderedTime: number = -1
     private _lastIsPlaying: boolean = false
 
@@ -144,6 +145,11 @@ export class VideoCorePgsRenderer {
             this._animationFrameId = null
         }
 
+        if (this._resizeRafId !== null) {
+            cancelAnimationFrame(this._resizeRafId)
+            this._resizeRafId = null
+        }
+
         // Terminate worker
         if (this._worker) {
             this._worker.terminate()
@@ -233,17 +239,16 @@ export class VideoCorePgsRenderer {
     private _setupResizeObserver() {
         if (!this._videoElement || !this._canvas) return
 
-        let resizeRafId: number | null = null
         this._resizeObserver = new ResizeObserver((entries) => {
             if (!this._canvas || !this._worker || !entries[0]) {
                 return
             }
             // batch reads and writes
-            if (resizeRafId !== null) return
+            if (this._resizeRafId !== null) return
             const { width, height } = entries[0].contentRect
-            resizeRafId = requestAnimationFrame(() => {
-                resizeRafId = null
-                if (!this._canvas || !this._worker) return
+            this._resizeRafId = requestAnimationFrame(() => {
+                this._resizeRafId = null
+                if (this._isDestroyed || !this._canvas || !this._worker) return
                 const videoContentSize = this._getRenderedVideoContentSize(width, height)
                 if (!videoContentSize) return
 
@@ -269,34 +274,75 @@ export class VideoCorePgsRenderer {
     }
 
     private _startRenderLoop() {
-        const render = () => {
+        // Use requestVideoFrameCallback when available (Chrome 109+, Firefox 115+)
+        // This fires only when a new video frame is presented, eliminating
+        // wasted renders during pause/seek and syncing precisely with the video pipeline.
+        // Falls back to requestAnimationFrame for unsupported browsers.
+        const hasVideoFrameCallback = typeof this._videoElement.requestVideoFrameCallback === "function"
+
+        const schedule = () => {
             if (this._isDestroyed) {
                 return
             }
 
-            const isPlaying = !this._videoElement.paused
-            const currentTime = this._videoElement.currentTime
-            const stateChanged = isPlaying !== this._lastIsPlaying || currentTime !== this._lastRenderedTime || this._videoElement.seeking
+            if (hasVideoFrameCallback) {
+                this._videoElement.requestVideoFrameCallback((now, metadata) => {
+                    if (this._isDestroyed) return
 
-            // Send render request to worker with current video state
-            if (this._worker && (isPlaying || stateChanged)) {
-                this._lastRenderedTime = currentTime
-                this._lastIsPlaying = isPlaying
-                this._worker.postMessage({
-                    type: "render",
-                    payload: {
-                        currentTime,
-                        canvasWidth: this._canvasWidth,
-                        canvasHeight: this._canvasHeight,
-                        isPlaying,
-                    },
+                    const isPlaying = !this._videoElement.paused
+                    const currentTime = metadata?.mediaTime ?? this._videoElement.currentTime
+                    const stateChanged = isPlaying !== this._lastIsPlaying || currentTime !== this._lastRenderedTime || this._videoElement.seeking
+
+                    // Send render request to worker with current video state
+                    if (this._worker && (isPlaying || stateChanged)) {
+                        this._lastRenderedTime = currentTime
+                        this._lastIsPlaying = isPlaying
+                        this._worker.postMessage({
+                            type: "render",
+                            payload: {
+                                currentTime,
+                                canvasWidth: this._canvasWidth,
+                                canvasHeight: this._canvasHeight,
+                                isPlaying,
+                            },
+                        })
+                    }
+
+                    schedule()
                 })
-            }
+            } else {
+                // Fallback: requestAnimationFrame polling (original behavior)
+                const render = () => {
+                    if (this._isDestroyed) {
+                        return
+                    }
 
-            this._animationFrameId = requestAnimationFrame(render)
+                    const isPlaying = !this._videoElement.paused
+                    const currentTime = this._videoElement.currentTime
+                    const stateChanged = isPlaying !== this._lastIsPlaying || currentTime !== this._lastRenderedTime || this._videoElement.seeking
+
+                    // Send render request to worker with current video state
+                    if (this._worker && (isPlaying || stateChanged)) {
+                        this._lastRenderedTime = currentTime
+                        this._lastIsPlaying = isPlaying
+                        this._worker.postMessage({
+                            type: "render",
+                            payload: {
+                                currentTime,
+                                canvasWidth: this._canvasWidth,
+                                canvasHeight: this._canvasHeight,
+                                isPlaying,
+                            },
+                        })
+                    }
+
+                    this._animationFrameId = requestAnimationFrame(render)
+                }
+                render()
+            }
         }
 
-        render()
+        schedule()
     }
 
 

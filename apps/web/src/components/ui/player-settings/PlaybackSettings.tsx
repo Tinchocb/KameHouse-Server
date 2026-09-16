@@ -1,6 +1,7 @@
 import * as React from "react"
 import { cn } from "@/components/ui/core/styling"
-import { Icons } from "@/components/ui/icons"
+import { SpringSwitch } from "@/components/ui/switch/spring-switch"
+import { IconUiMinus, IconUiPlus } from "@/components/ui/icons";
 import { buildSeaQuery } from "@/api/client/requests"
 import { useWebSocket } from "@/hooks/use-websocket"
 import { getApiWebSocketUrl } from "@/api/client/server-url"
@@ -40,6 +41,13 @@ function AutoDetectRow({ mediaId }: { mediaId: number }) {
     const [status, setStatus] = React.useState<"idle" | "running" | "done" | "error">("idle")
     const [message, setMessage] = React.useState<string>("")
     const [percent, setPercent] = React.useState<number>(0)
+    const timerRef = React.useRef<NodeJS.Timeout | null>(null)
+
+    React.useEffect(() => {
+        return () => {
+            if (timerRef.current) clearTimeout(timerRef.current)
+        }
+    }, [])
 
     const wsUrl = React.useMemo(() => getApiWebSocketUrl(), [])
     useWebSocket(wsUrl, React.useCallback((data: WebSocketMessage) => {
@@ -48,9 +56,17 @@ function AutoDetectRow({ mediaId }: { mediaId: number }) {
         if (!p || p.mediaId !== mediaId) return
         setMessage(p.message ?? "")
         if (typeof p.percent === "number") setPercent(p.percent)
-        if (p.status === "done") setStatus("done")
-        else if (p.status === "error") setStatus("error")
-        else setStatus("running")
+        if (p.status === "done") {
+            setStatus("done")
+            if (timerRef.current) clearTimeout(timerRef.current)
+            timerRef.current = setTimeout(() => setStatus("idle"), 4000)
+        } else if (p.status === "error") {
+            setStatus("error")
+            if (timerRef.current) clearTimeout(timerRef.current)
+            timerRef.current = setTimeout(() => setStatus("idle"), 4000)
+        } else {
+            setStatus("running")
+        }
     }, [mediaId]))
 
     const handleScan = async () => {
@@ -67,44 +83,53 @@ function AutoDetectRow({ mediaId }: { mediaId: number }) {
         } catch {
             setStatus("error")
             setMessage("No se pudo iniciar la detección.")
+            if (timerRef.current) clearTimeout(timerRef.current)
+            timerRef.current = setTimeout(() => setStatus("idle"), 4000)
         }
     }
 
-    const running = status === "running"
-
     return (
-        <div className="px-6 py-3 border-t border-white/5 my-1">
+        <div className="px-6 py-2.5 flex items-center justify-between text-left group">
+            <div className="flex flex-col">
+                <span className="text-label-sm font-black uppercase tracking-widest text-white/90">
+                    Detectar intros y outros
+                </span>
+                <span className="text-label-sm text-zinc-500 font-medium lowercase first-letter:uppercase mt-0.5">
+                    {message || "Detección inteligente con AnimeThemes"}
+                </span>
+            </div>
             <button
                 onClick={handleScan}
-                disabled={running}
+                disabled={status === "running"}
                 className={cn(
-                    "flex items-center justify-between w-full transition-all duration-base ease-out group text-left",
-                    running ? "text-white cursor-default" : "text-zinc-400 hover:text-white active:scale-[0.98]"
+                    "px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-base",
+                    status === "running" && "bg-brand-accent/20 text-brand-accent animate-pulse",
+                    status === "done" && "bg-emerald-500/20 text-emerald-400",
+                    status === "error" && "bg-rose-500/20 text-rose-400",
+                    status === "idle" && "bg-white/10 text-white hover:bg-white/20 active:scale-95"
                 )}
             >
-                <div className="flex flex-col">
-                    <span className="text-label-sm font-black uppercase tracking-widest">Detectar Intro/Outro (automático)</span>
-                    <span className="text-label-sm text-zinc-500 font-medium mt-0.5">
-                        {status === "idle" && "Analiza los episodios para ubicar OP y ED"}
-                        {running && (message || "Detectando...")}
-                        {status === "done" && (message || "Detección completada")}
-                        {status === "error" && (message || "Error en la detección")}
-                    </span>
-                </div>
-                {running
-                    ? <Icons.ui.spinner className="w-4 h-4 shrink-0 ml-4 animate-spin text-brand-accent" />
-                    : <Icons.media.wand className="w-4 h-4 shrink-0 ml-4 group-hover:text-brand-accent transition-colors" />}
+                {status === "running" ? `${percent}%` : status === "done" ? "¡Listo!" : status === "error" ? "Error" : "Escanear"}
             </button>
-            {running && (
-                <div className="w-full h-1 bg-white/10 rounded-full relative mt-2 overflow-hidden">
-                    <div className="absolute left-0 h-full bg-brand-accent rounded-full transition-all duration-slow" style={{ width: `${Math.min(100, Math.max(4, percent))}%` }} />
-                </div>
-            )}
         </div>
     )
 }
 
-function ToggleRow({ label, enabled, onChange, disabled = false, subtext }: { label: string; enabled: boolean; onChange: (v: boolean) => void; disabled?: boolean; subtext?: string }) {
+function ToggleRow({
+    label,
+    subtext,
+    enabled,
+    onChange,
+    disabled = false,
+}: {
+    label: string
+    subtext?: string
+    enabled: boolean
+    onChange: (enabled: boolean) => void
+    disabled?: boolean
+}) {
+    const [isPressing, setIsPressing] = React.useState(false)
+
     const handleToggle = () => {
         if (disabled) return
         onChange(!enabled)
@@ -113,9 +138,15 @@ function ToggleRow({ label, enabled, onChange, disabled = false, subtext }: { la
     return (
         <button
             onClick={handleToggle}
+            onPointerDown={() => !disabled && setIsPressing(true)}
+            onPointerUp={() => setIsPressing(false)}
+            onPointerLeave={() => setIsPressing(false)}
             disabled={disabled}
+            role="switch"
+            aria-checked={enabled}
+            aria-label={label}
             className={cn(
-                "flex items-center justify-between w-full px-6 py-3 transition-all duration-base ease-out group text-left relative overflow-hidden",
+                "flex items-center justify-between w-full px-6 py-3 transition-all duration-base ease-out group text-left relative overflow-hidden outline-none focus-visible:bg-white/5",
                 !disabled && "active:scale-[0.98]",
                 enabled ? "text-white" : "text-zinc-500 hover:text-zinc-300",
                 disabled && "opacity-60 cursor-default hover:text-white"
@@ -129,15 +160,14 @@ function ToggleRow({ label, enabled, onChange, disabled = false, subtext }: { la
                 {subtext && <span className="text-label-sm text-zinc-500 font-medium lowercase first-letter:uppercase mt-0.5">{subtext}</span>}
             </div>
             
-            <div className={cn(
-                "w-9 h-5 rounded-full relative transition-all duration-base [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] shrink-0 ml-4 border border-white/5",
-                enabled ? (disabled ? "bg-brand-accent/50 border-brand-accent/20" : "bg-brand-accent shadow-[0_0_12px_hsl(var(--brand-accent)/0.45)] border-brand-accent/30") : "bg-white/10"
-            )}>
-                <div className={cn(
-                    "absolute top-[3px] w-3 h-3 rounded-full transition-all duration-base [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] shadow-sm",
-                    enabled ? (disabled ? "left-[21px] bg-white/70 scale-110" : "left-[21px] bg-white scale-110") : "left-[3px] bg-zinc-400"
-                )} />
-            </div>
+            <SpringSwitch
+                checked={enabled}
+                disabled={disabled}
+                size="sm"
+                ariaHidden={true}
+                isPressingExternal={isPressing}
+                className="ml-4 pointer-events-none"
+            />
         </button>
     )
 }
@@ -164,6 +194,9 @@ export function PlaybackSettings({
     showSeparator = true,
     mediaFormat,
     marathonMode,
+    onMarathonModeChange,
+    tvMode,
+    onTvModeChange,
     mediaId,
 }: PlaybackSettingsProps) {
     const isMovie = mediaFormat?.toUpperCase() === "MOVIE"
@@ -201,6 +234,21 @@ export function PlaybackSettings({
             <ToggleRow label="Ocultar subtítulos si está doblado" enabled={autoDisableSubtitlesWhenDubbed} onChange={onAutoDisableSubtitlesWhenDubbedChange} />
             <ToggleRow label="Modo Ambiente (efecto de luz)" enabled={ambientModeEnabled} onChange={onAmbientModeEnabledChange} />
             <ToggleRow label="Mapa de Calor (timeline)" enabled={showHeatmap} onChange={onShowHeatmapChange} />
+            {!isMovie && onMarathonModeChange && (
+                <ToggleRow
+                    label="Modo Maratón"
+                    enabled={Boolean(marathonMode)}
+                    onChange={onMarathonModeChange}
+                    subtext="Salta intro/outro y avanza automáticamente"
+                />
+            )}
+            {onTvModeChange && (
+                <ToggleRow
+                    label="Modo Smart TV (D-Pad)"
+                    enabled={Boolean(tvMode)}
+                    onChange={onTvModeChange}
+                />
+            )}
             {!isMovie && <ToggleRow label="Omitir Intro (automático)" enabled={marathonMode ? true : autoSkipIntro} onChange={onAutoSkipIntroChange} disabled={marathonMode} subtext={marathonMode ? "(controlado por Maratón)" : undefined} />}
             {!isMovie && <ToggleRow label="Saltar Final (automático)" enabled={marathonMode ? true : autoSkipOutro} onChange={onAutoSkipOutroChange} disabled={marathonMode} subtext={marathonMode ? "(controlado por Maratón)" : undefined} />}
             {!isMovie && typeof mediaId === "number" && mediaId > 0 && <AutoDetectRow mediaId={mediaId} />}
@@ -215,7 +263,7 @@ export function PlaybackSettings({
                             disabled={skipStepSeconds <= 5}
                             className="flex items-center justify-center w-7 h-7 rounded bg-white/5 hover:bg-white/10 text-white disabled:opacity-30 transition-all"
                         >
-                            <Icons.ui.minus className="w-3 h-3" />
+                            <IconUiMinus className="w-3 h-3" />
                         </button>
                         <div className="flex-1 flex flex-col items-center gap-1.5">
                             <span className="text-sm font-bold text-white tabular-nums">{skipStepSeconds}s</span>
@@ -237,7 +285,7 @@ export function PlaybackSettings({
                             disabled={skipStepSeconds >= 180}
                             className="flex items-center justify-center w-7 h-7 rounded bg-white/5 hover:bg-white/10 text-white disabled:opacity-30 transition-all"
                         >
-                            <Icons.ui.plus className="w-3 h-3" />
+                            <IconUiPlus className="w-3 h-3" />
                         </button>
                     </div>
                 </div>

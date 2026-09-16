@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button"
-import { __isDesktop__ } from "@/types/constants"
 import React, { useEffect, useState } from "react"
-import { Icons } from "@/components/ui/icons"
+import { IconUiRefresh, IconNavigationSettings } from "@/components/ui/icons";
+import { cn } from "@/components/ui/core/styling"
 
 const CONNECTION_TIMEOUT_MS = 25000 // 25 seconds before showing troubleshooting box
 
@@ -9,13 +9,18 @@ export function LoadingOverlayWithLogo({
     refetch,
     title,
     isError,
+    message,
+    className,
 }: {
     refetch?: () => void
     title?: string
     isError?: boolean
+    message?: string
+    className?: string
 }) {
     const [timedOut, setTimedOut] = useState(false)
-    const [statusMessage, setStatusMessage] = useState("Iniciando KameHouse...")
+    const [dynamicStatusMessage, setStatusMessage] = useState("Iniciando KameHouse...")
+    const statusMessage = message || dynamicStatusMessage
 
     useEffect(() => {
         let isMounted = true
@@ -87,11 +92,14 @@ export function LoadingOverlayWithLogo({
 
     return (
         <div
-            className="UI-LoadingOverlay__overlay fixed inset-0 z-50 bg-zinc-950 flex flex-col justify-center items-center overflow-hidden select-none"
+            className={cn(
+                "UI-LoadingOverlay__overlay fixed inset-0 z-50 bg-[var(--bg-primary)] flex flex-col justify-center items-center overflow-hidden select-none",
+                className
+            )}
         >
             {/* Título & Branding */}
             <div className="flex flex-col items-center gap-7 z-[1] text-center">
-                <h1 className="font-display text-3xl sm:text-4xl font-extrabold tracking-[0.3em] uppercase leading-none text-white drop-shadow-[0_0_28px_rgba(245,158,11,0.25)] pl-[0.3em]">
+                <h1 className="font-display text-3xl sm:text-4xl font-extrabold tracking-cinema-md uppercase leading-none text-white drop-shadow-[0_0_28px_rgba(245,158,11,0.25)] pl-[0.3em]">
                     {title ?? "KAMEHOUSE"}
                 </h1>
 
@@ -103,7 +111,7 @@ export function LoadingOverlayWithLogo({
                             <span className="w-3.5 h-3.5 rounded-full bg-[radial-gradient(circle_at_35%_35%,#fde68a,#f59e0b_60%,#b45309_100%)] shadow-[0_0_16px_rgba(245,158,11,0.65)] animate-bounce [animation-delay:-0.16s]" />
                             <span className="w-3.5 h-3.5 rounded-full bg-[radial-gradient(circle_at_35%_35%,#fde68a,#f59e0b_60%,#b45309_100%)] shadow-[0_0_16px_rgba(245,158,11,0.65)] animate-bounce" />
                         </div>
-                        <p className="text-[11px] font-mono tracking-[0.25em] text-zinc-500 uppercase transition-all duration-300">
+                        <p className="text-caption font-mono tracking-ultra text-on-surface-variant uppercase transition-all duration-300">
                             {statusMessage}
                         </p>
                     </div>
@@ -112,14 +120,14 @@ export function LoadingOverlayWithLogo({
 
             {/* Estado de error / Desconexión solo tras timeout real */}
             {showFailure ? (
-                <div className="flex flex-col items-center gap-3 mt-6 z-[1] animate-in fade-in zoom-in-95 duration-300 max-w-sm px-6 py-5 rounded-2xl bg-zinc-900/70 border border-zinc-800/80 backdrop-blur-md shadow-2xl shadow-black/80 text-center mx-4">
-                    <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-red-500/10 border border-red-500/20">
-                        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                        <span className="text-[11px] font-medium uppercase tracking-wider text-red-400 font-mono">
+                <div className="flex flex-col items-center gap-3 mt-6 z-[1] animate-in fade-in zoom-in-95 duration-300 max-w-sm px-6 py-5 rounded-2xl bg-surface-container-high/80 border border-outline-variant/40 backdrop-blur-overlay-md shadow-2xl shadow-black/80 text-center mx-4">
+                    <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-brand-destructive/10 border border-brand-destructive/20">
+                        <span className="w-2 h-2 rounded-full bg-brand-destructive animate-pulse" />
+                        <span className="text-caption font-medium uppercase tracking-wider text-brand-destructive font-mono">
                             Error de conexión
                         </span>
                     </div>
-                    <p className="text-zinc-400 text-xs font-normal leading-relaxed">
+                    <p className="text-on-surface-variant text-xs font-normal leading-relaxed">
                         El servidor no responde. Comprueba que el backend de KameHouse esté en ejecución.
                     </p>
                     <div className="flex items-center gap-3 mt-2 w-full">
@@ -131,7 +139,7 @@ export function LoadingOverlayWithLogo({
                             intent="primary-glass"
                             size="sm"
                             className="flex-1 rounded-xl uppercase tracking-wider text-xs font-semibold hover:bg-white/15"
-                            leftIcon={<Icons.ui.refresh className="w-3.5 h-3.5" />}
+                            leftIcon={<IconUiRefresh className="w-3.5 h-3.5" />}
                         >
                             Reintentar
                         </Button>
@@ -139,8 +147,8 @@ export function LoadingOverlayWithLogo({
                             onClick={() => { window.location.href = "/settings" }}
                             intent="gray-glass"
                             size="sm"
-                            className="flex-1 rounded-xl uppercase tracking-wider text-xs font-semibold hover:bg-white/10"
-                            leftIcon={<Icons.navigation.settings className="w-3.5 h-3.5" />}
+                            className="flex-1 rounded-xl uppercase tracking-wider text-xs font-semibold"
+                            leftIcon={<IconNavigationSettings className="w-3.5 h-3.5" />}
                         >
                             Ajustes
                         </Button>

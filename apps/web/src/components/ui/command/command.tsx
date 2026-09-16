@@ -12,7 +12,7 @@ import { Modal, ModalProps } from "../modal"
 export const CommandAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-Command__root",
-        "flex h-full w-full flex-col overflow-hidden rounded-[--radius-md] bg-[--paper] text-[--foreground]",
+        "flex h-full w-full flex-col overflow-hidden rounded-container bg-surface-container text-on-surface border border-outline-variant/30",
     ]),
     inputContainer: cva([
         "UI-Command__input",
@@ -29,21 +29,21 @@ export const CommandAnatomy = defineStyleAnatomy({
     ]),
     empty: cva([
         "UI-Command__empty",
-        "py-6 text-center text-base text-[--muted]",
+        "py-6 text-center text-base text-on-surface-variant",
     ]),
     group: cva([
         "UI-Command__group",
-        "overflow-hidden p-1 text-[--foreground]",
-        "[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-sm [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-[--muted]",
+        "overflow-hidden p-1 text-on-surface",
+        "[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-sm [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-on-surface-variant",
     ]),
     separator: cva([
         "UI-Command__separator",
-        "-mx-1 h-px bg-[--border]",
+        "-mx-1 h-px bg-outline-variant/30",
     ]),
     item: cva([
         "UI-Command__item",
-        "relative flex cursor-default select-none items-center rounded-[--radius] px-2 py-1.5 text-base outline-none",
-        "aria-selected:bg-[--subtle] data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
+        "relative flex cursor-default select-none items-center rounded-lg px-2 py-1.5 text-base outline-none transition-colors",
+        "aria-selected:bg-surface-container-high aria-selected:text-on-surface data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
         "[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
     ]),
     itemIconContainer: cva([
@@ -52,7 +52,7 @@ export const CommandAnatomy = defineStyleAnatomy({
     ]),
     shortcut: cva([
         "UI-Command__shortcut",
-        "ml-auto text-xs tracking-widest text-[--muted]",
+        "ml-auto text-xs tracking-widest text-on-surface-variant font-mono",
     ]),
 })
 
@@ -63,7 +63,7 @@ export const CommandDialogAnatomy = defineStyleAnatomy({
     ]),
     command: cva([
         "UI-CommandDialog__command",
-        "[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-[--muted]",
+        "[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-on-surface-variant",
         "[&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pb-2 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5",
         "[&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-2 [&_[cmdk-item]_svg]:h-4 [&_[cmdk-item]_svg]:w-5",
     ]),
@@ -238,28 +238,6 @@ export const CommandGroup = React.forwardRef<HTMLDivElement, CommandGroupProps>(
 CommandGroup.displayName = "CommandGroup"
 
 /* -------------------------------------------------------------------------------------------------
- * CommandSeparator
- * -----------------------------------------------------------------------------------------------*/
-
-export type CommandSeparatorProps =
-    React.ComponentPropsWithoutRef<typeof CommandPrimitive.Separator>
-
-export const CommandSeparator = React.forwardRef<HTMLDivElement, CommandSeparatorProps>((props, ref) => {
-    const { className, ...rest } = props
-
-    const { separatorClass } = React.useContext(__CommandAnatomyContext)
-
-    return (
-        <CommandPrimitive.Separator
-            ref={ref}
-            className={cn(CommandAnatomy.separator(), separatorClass, className)}
-            {...rest}
-        />
-    )
-})
-CommandSeparator.displayName = "CommandSeparator"
-
-/* -------------------------------------------------------------------------------------------------
  * CommandItem
  * -----------------------------------------------------------------------------------------------*/
 
@@ -324,27 +302,6 @@ export const CommandItem = React.forwardRef<HTMLDivElement, CommandItemProps>((p
     )
 })
 CommandItem.displayName = "CommandItem"
-
-/* -------------------------------------------------------------------------------------------------
- * CommandShortcut
- * -----------------------------------------------------------------------------------------------*/
-
-export type CommandShortcutProps = React.ComponentPropsWithoutRef<"span">
-
-export const CommandShortcut = React.forwardRef<HTMLSpanElement, CommandShortcutProps>((props, ref) => {
-    const { className, ...rest } = props
-
-    const { shortcutClass } = React.useContext(__CommandAnatomyContext)
-
-    return (
-        <span
-            ref={ref}
-            className={cn(CommandAnatomy.shortcut(), shortcutClass, className)}
-            {...rest}
-        />
-    )
-})
-CommandShortcut.displayName = "CommandShortcut"
 
 /* -------------------------------------------------------------------------------------------------
  * CommandDialog

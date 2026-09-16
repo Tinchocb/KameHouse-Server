@@ -1,6 +1,6 @@
 import { useAppStore } from "@/lib/store"
 import { Link } from "@tanstack/react-router"
-import { Icons } from "@/components/ui/icons"
+import { IconNavigationSearch, IconNavigationMenu, IconNavigationHome, IconNavigationTv, IconNavigationFilm, IconStatusSparkles } from "@/components/ui/icons";
 import { NotificationBell } from "./notification-center"
 
 interface TopNavProps {
@@ -18,7 +18,7 @@ export const AppTopNav = ({ title }: TopNavProps) => {
     // resto de las rutas el contenido pasaba por debajo de un header invisible.
     return (
         <header
-            className="md:hidden fixed top-0 left-0 right-0 z-[40] h-16 px-4 flex items-center justify-between border-b backdrop-blur-[var(--blur-overlay-xl)] border-outline-variant/30 shadow-elevation-1 bg-zinc-950/80"
+            className="md:hidden fixed top-0 left-0 right-0 z-navbar h-[calc(4rem+env(safe-area-inset-top,0px))] pt-[env(safe-area-inset-top,0px)] px-4 flex items-center justify-between border-b border-white/10 backdrop-blur-overlay-2xl bg-zinc-950/70 shadow-[inset_0_-1px_0_0_rgba(255,255,255,0.05),0_8px_24px_rgba(0,0,0,0.6)]"
         >
             {/* min-w-0 + truncate: sin esto un título largo empuja los botones fuera de la pantalla */}
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -35,20 +35,20 @@ export const AppTopNav = ({ title }: TopNavProps) => {
             <div className="flex items-center gap-1 shrink-0">
                 <button 
                     onClick={() => window.dispatchEvent(new CustomEvent("open-command-palette"))}
-                    className="p-2.5 rounded-full text-on-surface-variant hover:text-on-surface active:scale-95 transition-all"
+                    className="p-2.5 rounded-full text-zinc-300 hover:text-white active:scale-95 transition-all"
                     aria-label="Buscar"
                 >
-                    <Icons.navigation.search className="w-5 h-5" />
+                    <IconNavigationSearch className="w-5 h-5" />
                 </button>
 
                 <NotificationBell sidebarOpen={false} compact />
 
                 <button 
                     onClick={() => setSidebarOpen(true)}
-                    className="p-2.5 rounded-full text-on-surface-variant hover:text-on-surface active:scale-[0.95] transition-all"
+                    className="p-2.5 rounded-full text-zinc-300 hover:text-white active:scale-[0.95] transition-all"
                     aria-label="Abrir menú"
                 >
-                    <Icons.navigation.menu className="w-5 h-5" />
+                    <IconNavigationMenu className="w-5 h-5" />
                 </button>
             </div>
         </header>
@@ -57,38 +57,49 @@ export const AppTopNav = ({ title }: TopNavProps) => {
 
 export const AppBottomNav = () => {
     const isFullscreen = useAppStore(state => state.isFullscreen)
+    const setChronologyOpen = useAppStore(state => state.setChronologyOpen)
 
     if (isFullscreen) return null
 
     return (
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 backdrop-blur-[var(--blur-overlay-xl)] border-t border-outline-variant/30 shadow-elevation-3 z-[40] flex items-center justify-around px-4 safe-area-pb bg-zinc-950/80">
-            <Link 
-                to="/home" 
-                activeProps={{ className: "text-brand-accent bg-brand-accent/15" }}
-                inactiveProps={{ className: "text-on-surface-variant" }}
-                className="flex flex-col items-center justify-center gap-1 px-4 py-1 rounded-xl transition-all duration-base min-h-[44px]"
-            >
-                <Icons.navigation.home className="w-5 h-5" />
-                <span className="text-label-sm font-bold uppercase tracking-wider">Inicio</span>
-            </Link>
-            <Link 
-                to="/series" 
-                activeProps={{ className: "text-brand-accent bg-brand-accent/15" }}
-                inactiveProps={{ className: "text-on-surface-variant" }}
-                className="flex flex-col items-center justify-center gap-1 px-4 py-1 rounded-xl transition-all duration-base min-h-[44px]"
-            >
-                <Icons.navigation.tv className="w-5 h-5" />
-                <span className="text-label-sm font-bold uppercase tracking-wider">Series</span>
-            </Link>
-            <Link 
-                to="/movies" 
-                activeProps={{ className: "text-brand-accent bg-brand-accent/15" }}
-                inactiveProps={{ className: "text-on-surface-variant" }}
-                className="flex flex-col items-center justify-center gap-1 px-4 py-1 rounded-xl transition-all duration-base min-h-[44px]"
-            >
-                <Icons.navigation.film className="w-5 h-5" />
-                <span className="text-label-sm font-bold uppercase tracking-wider">Películas</span>
-            </Link>
-        </nav>
+        <div className="md:hidden fixed bottom-3 inset-x-3 z-mobile-nav pointer-events-none">
+            <nav className="pointer-events-auto h-14 bg-zinc-950/75 backdrop-blur-overlay-2xl backdrop-saturate-[190%] border border-white/20 border-t-white/40 border-b-white/10 rounded-full shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.3),0_12px_36px_-6px_rgba(0,0,0,0.9)] flex items-center justify-around px-3">
+                <Link 
+                    to="/home" 
+                    activeProps={{ className: "text-zinc-950 font-bold bg-white/95 shadow-[0_2px_10px_rgba(255,255,255,0.3)]" }}
+                    inactiveProps={{ className: "text-zinc-300 hover:text-white" }}
+                    className="flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all duration-base min-h-[36px] text-xs font-semibold"
+                >
+                    <IconNavigationHome className="w-4 h-4" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider">Inicio</span>
+                </Link>
+                <Link 
+                    to="/series" 
+                    activeProps={{ className: "text-zinc-950 font-bold bg-white/95 shadow-[0_2px_10px_rgba(255,255,255,0.3)]" }}
+                    inactiveProps={{ className: "text-zinc-300 hover:text-white" }}
+                    className="flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all duration-base min-h-[36px] text-xs font-semibold"
+                >
+                    <IconNavigationTv className="w-4 h-4" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider">Series</span>
+                </Link>
+                <Link 
+                    to="/movies" 
+                    activeProps={{ className: "text-zinc-950 font-bold bg-white/95 shadow-[0_2px_10px_rgba(255,255,255,0.3)]" }}
+                    inactiveProps={{ className: "text-zinc-300 hover:text-white" }}
+                    className="flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all duration-base min-h-[36px] text-xs font-semibold"
+                >
+                    <IconNavigationFilm className="w-4 h-4" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider">Películas</span>
+                </Link>
+                <button
+                    type="button"
+                    onClick={() => setChronologyOpen(true)}
+                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full transition-all duration-base min-h-[36px] text-zinc-300 hover:text-white cursor-pointer active:scale-95"
+                >
+                    <IconStatusSparkles className="w-4 h-4 text-amber-400" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider">Sagas</span>
+                </button>
+            </nav>
+        </div>
     )
 }

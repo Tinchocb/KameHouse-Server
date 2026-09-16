@@ -1,6 +1,10 @@
 /// <reference types="@rsbuild/core/types" />
+import "./types/index.d.ts";
 
 interface ImportMetaEnv {
+    readonly MODE: "development" | "production" | "test"
+    readonly DEV: boolean
+    readonly PROD: boolean
     readonly SEA_APP_TITLE: string
     readonly SEA_PUBLIC_PLATFORM: string
     readonly SEA_PUBLIC_DESKTOP: string

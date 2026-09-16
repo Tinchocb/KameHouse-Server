@@ -10,17 +10,9 @@ interface EpisodeBadgeProps {
     className?: string;
 }
 
-export function canonStatusToVariant(status: string | null | undefined): EpisodeBadgeVariant {
-    if (!status) return "neutral";
-    const lower = status.toLowerCase();
-    if (lower === "true" || lower === "canon") return "canon";
-    if (lower === "false" || lower === "relleno") return "filler";
-    return "neutral";
-}
-
 const variantClassMap: Record<EpisodeBadgeVariant, string> = {
     canon: "badge-success",
-    filler: "badge-destructive",
+    filler: "badge-warning",
     premium: "badge-primary",
     neutral: "badge-muted",
 };
@@ -32,7 +24,7 @@ export function EpisodeBadge({ variant, dot = false, children, className }: Epis
                 <span className={cn(
                     "w-1.5 h-1.5 rounded-full animate-pulse",
                     variant === "canon" ? "bg-brand-success" : 
-                    variant === "filler" ? "bg-brand-destructive" : 
+                    variant === "filler" ? "bg-brand-warning" : 
                     variant === "premium" ? "bg-brand-accent" : 
                     "bg-on-surface-variant"
                 )} />

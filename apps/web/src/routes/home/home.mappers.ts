@@ -3,15 +3,8 @@ import type { SwimlaneItem } from "@/components/ui/swimlane"
 import type { IntelligentEntry } from "@/api/types/intelligence.types"
 import { getTitle, getBackdrop } from "./home.helpers"
 
-/**
- * Helper to strip HTML tags from a string.
- */
-function stripHtml(text: string): string
-function stripHtml(text: string | undefined): string | undefined
-function stripHtml(text: string | undefined): string | undefined {
-    if (!text) return text
-    return text.replace(/<[^>]*>/g, '')
-}
+import { DRAGON_BALL_SCANNER_SERIES } from "@/lib/config/dragonball_scanner_series"
+import { stripHtml } from "@/lib/helpers/sanitizer"
 
 /**
  * Maps a library entry to SwimlaneItem.
@@ -25,6 +18,12 @@ export function mapLibraryEntryToMediaCard(
     const targetId = rawMediaId
     const isMovieLike = media.format === "MOVIE" || media.format === "SPECIAL" || media.format === "OVA" || media.type === "MOVIE" || (rawMediaId && rawMediaId >= 1_000_000)
     const effectiveFormat = media.format || (isMovieLike ? "MOVIE" : undefined)
+
+    const localFilesCount = entry.libraryData?.mainFileCount ?? 0
+    const rawTotalEpisodes = (media as { totalEpisodes?: number; episodes?: number }).totalEpisodes ?? (media as { totalEpisodes?: number; episodes?: number }).episodes ?? 0
+    const canonicalSeries = DRAGON_BALL_SCANNER_SERIES.find(s => s.tmdbId === rawMediaId || s.tmdbId === media.tmdbId || s.tmdbId === media.id)
+    const totalEpisodesCount = rawTotalEpisodes > 0 ? rawTotalEpisodes : (canonicalSeries?.totalEpisodes ?? 0)
+    const isSeriesComplete = totalEpisodesCount > 0 && localFilesCount >= totalEpisodesCount
 
     return {
         id: `media-${targetId}`,
@@ -40,6 +39,9 @@ export function mapLibraryEntryToMediaCard(
         rating: media.score ? (media.score > 10 ? media.score / 10 : media.score) : undefined,
         onClick: () => onNavigate(targetId),
         backdropUrl: media.bannerImage || undefined,
+        localFilesCount,
+        totalEpisodesCount,
+        isSeriesComplete,
     }
 }
 

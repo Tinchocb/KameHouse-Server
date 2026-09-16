@@ -3,7 +3,7 @@ import { useGettingStarted } from "@/api/hooks/settings.hooks"
 import { useGetFFmpegStatus, useInstallFFmpeg } from "@/api/hooks/mediastream.hooks"
 import { LoadingOverlayWithLogo } from "@/components/shared/loading-overlay-with-logo"
 import { Button } from "@/components/ui/button"
-import { Card, CardProps } from "@/components/ui/card"
+import type { CardProps } from "@/components/ui/card"
 import { cn } from "@/components/ui/core/styling"
 import { Field, Form } from "@/components/ui/form"
 import { getDefaultSettings, gettingStartedSchema } from "@/lib/server/settings"
@@ -12,7 +12,8 @@ import type { z } from "zod"
 import type { Variants } from "framer-motion"
 import { AnimatePresence, motion } from "framer-motion"
 import React from "react"
-import { Icons } from "@/components/ui/icons"
+import { IconStatusFolder, IconStatusZap, IconMediaPlay, IconUiSettings, IconUiCheck, IconUiSpinner, IconUiCheckCircle, IconUiAlert, IconUiDownload, IconMediaSkipNext, IconTimeClock, IconNavigationLibrary, IconNavigationHome, IconNavigationChevronLeft, IconNavigationRocket, IconNavigationChevronRight } from "@/components/ui/icons";
+import { SpringSwitch } from "@/components/ui/switch/spring-switch"
 import { toast } from "sonner"
 import { useNavigate } from "@tanstack/react-router"
 
@@ -86,28 +87,28 @@ const STEPS = [
         stepNumber: "1",
         title: "Biblioteca",
         subtitle: "Rutas de carpetas",
-        icon: Icons.status.folder,
+        icon: IconStatusFolder,
     },
     {
         id: "engine",
         stepNumber: "2",
         title: "Motor de Video",
         subtitle: "FFmpeg & FFprobe",
-        icon: Icons.status.zap,
+        icon: IconStatusZap,
     },
     {
         id: "playback",
         stepNumber: "3",
         title: "Reproducción",
         subtitle: "Auto-skip y maratón",
-        icon: Icons.media.play,
+        icon: IconMediaPlay,
     },
     {
         id: "language",
         stepNumber: "4",
         title: "Idioma",
         subtitle: "Metadatos y títulos",
-        icon: Icons.ui.settings,
+        icon: IconUiSettings,
     },
 ]
 
@@ -128,10 +129,10 @@ function StepIndicator({ currentStep, onStepClick }: { currentStep: number; onSt
                             className={cn(
                                 "flex items-center gap-2.5 px-3 py-2 rounded-xl border transition-all duration-200 text-left relative overflow-hidden cursor-pointer",
                                 isActive
-                                    ? "bg-brand-accent/15 border-brand-accent/50 text-white shadow-lg shadow-brand-accent/15"
+                                    ? "bg-brand-accent/15 border-brand-accent/50 text-on-surface shadow-lg shadow-brand-accent/15"
                                     : isCompleted
-                                        ? "bg-zinc-900/70 border-white/10 text-zinc-300 hover:border-white/20"
-                                        : "bg-zinc-900/40 border-white/5 text-zinc-500 hover:border-white/10"
+                                        ? "bg-surface-container/70 border-border-subtle text-on-surface-variant hover:border-border-strong"
+                                        : "bg-surface-container/40 border-border-subtle/50 text-on-surface-variant/70 hover:border-border-subtle"
                             )}
                         >
                             {isActive && (
@@ -148,16 +149,16 @@ function StepIndicator({ currentStep, onStepClick }: { currentStep: number; onSt
                                         ? "bg-brand-accent text-white shadow-md shadow-brand-accent/30"
                                         : isCompleted
                                             ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                                            : "bg-zinc-800 text-zinc-400"
+                                            : "bg-surface-container-high text-on-surface-variant"
                                 )}
                             >
-                                {isCompleted ? <Icons.ui.check className="w-3.5 h-3.5" /> : step.stepNumber}
+                                {isCompleted ? <IconUiCheck className="w-3.5 h-3.5" /> : step.stepNumber}
                             </div>
                             <div className="min-w-0">
-                                <p className={cn("text-xs font-bold tracking-tight truncate", isActive ? "text-white" : "text-zinc-400")}>
+                                <p className={cn("text-xs font-bold tracking-tight truncate", isActive ? "text-on-surface" : "text-on-surface-variant")}>
                                     {step.title}
                                 </p>
-                                <p className="text-[10px] text-zinc-500 truncate">
+                                <p className="text-[10px] text-on-surface-variant/70 truncate">
                                     {step.subtitle}
                                 </p>
                             </div>
@@ -174,13 +175,11 @@ function StepCard({ children, className }: CardProps) {
         <motion.div
             variants={itemVariants}
             className={cn(
-                "relative rounded-2xl bg-zinc-900/70 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden",
+                "relative rounded-2xl bg-surface/80 backdrop-blur-overlay-xl border border-border-subtle p-4 sm:p-5 shadow-modal overflow-hidden",
                 className,
             )}
         >
-            <Card className="bg-transparent border-none shadow-none p-4 sm:p-5">
-                {children}
-            </Card>
+            {children}
         </motion.div>
     )
 }
@@ -196,10 +195,10 @@ function LibraryStep() {
             className="space-y-4 max-w-2xl mx-auto"
         >
             <motion.div variants={itemVariants} className="text-center space-y-1">
-                <h2 className="text-xl sm:text-2xl font-display tracking-wide text-white uppercase">
+                <h2 className="text-xl sm:text-2xl font-display tracking-wide text-on-surface uppercase">
                     1. Biblioteca y Rutas de Archivos
                 </h2>
-                <p className="text-zinc-400 text-xs sm:text-sm max-w-md mx-auto leading-relaxed">
+                <p className="text-on-surface-variant text-xs sm:text-sm max-w-md mx-auto leading-relaxed">
                     Indica las carpetas de tu equipo donde guardas tus animes. KameHouse escaneará y organizará automáticamente los episodios y sagas.
                 </p>
             </motion.div>
@@ -213,7 +212,7 @@ function LibraryStep() {
                         shouldExist
                     />
 
-                    <div className="h-[1px] bg-white/5" />
+                    <div className="h-[1px] bg-border-subtle" />
 
                     <Field.MultiDirectorySelector
                         name="library.moviePaths"
@@ -227,7 +226,7 @@ function LibraryStep() {
     )
 }
 
-/* ---------------- STEP 2: MOTOR MULTIMEDIA (FFMPEG / FFPROBE) ---------------- */
+/* ---------------- STEP 2: REQUISITOS (FFMPEG) ---------------- */
 function MediaEngineStep() {
     const { data: status, isLoading } = useGetFFmpegStatus()
     const { mutate: installFFmpeg, isPending: isInstalling } = useInstallFFmpeg()
@@ -244,10 +243,10 @@ function MediaEngineStep() {
             className="space-y-4 max-w-2xl mx-auto"
         >
             <motion.div variants={itemVariants} className="text-center space-y-1">
-                <h2 className="text-xl sm:text-2xl font-display tracking-wide text-white uppercase">
+                <h2 className="text-xl sm:text-2xl font-display tracking-wide text-on-surface uppercase">
                     2. Motor de Video (FFmpeg)
                 </h2>
-                <p className="text-zinc-400 text-xs sm:text-sm max-w-md mx-auto leading-relaxed">
+                <p className="text-on-surface-variant text-xs sm:text-sm max-w-md mx-auto leading-relaxed">
                     KameHouse utiliza FFmpeg y FFprobe para leer códecs, pistas de audio, subtítulos integrados y generar miniaturas.
                 </p>
             </motion.div>
@@ -255,7 +254,7 @@ function MediaEngineStep() {
             <StepCard>
                 <motion.div variants={itemVariants} className="space-y-4">
                     {/* Status Header */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-zinc-950/60 border border-white/5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-surface-container-low border border-border-subtle">
                         <div className="flex items-center gap-3">
                             <div className={cn(
                                 "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border",
@@ -266,21 +265,21 @@ function MediaEngineStep() {
                                         : "bg-rose-500/15 border-rose-500/30 text-rose-400"
                             )}>
                                 {isDownloading ? (
-                                    <Icons.ui.spinner className="w-5 h-5 animate-spin" />
+                                    <IconUiSpinner className="w-5 h-5 animate-spin" />
                                 ) : isBothAvailable ? (
-                                    <Icons.ui.checkCircle className="w-5 h-5" />
+                                    <IconUiCheckCircle className="w-5 h-5" />
                                 ) : (
-                                    <Icons.ui.alert className="w-5 h-5" />
+                                    <IconUiAlert className="w-5 h-5" />
                                 )}
                             </div>
 
                             <div className="min-w-0">
                                 <div className="flex items-center gap-2">
-                                    <h4 className="font-semibold text-xs sm:text-sm text-white">
+                                    <h4 className="font-semibold text-xs sm:text-sm text-on-surface">
                                         Estado de FFmpeg / FFprobe
                                     </h4>
                                     {isLoading ? (
-                                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400">Verificando...</span>
+                                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant">Verificando...</span>
                                     ) : isBothAvailable ? (
                                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                                             Listo
@@ -295,7 +294,7 @@ function MediaEngineStep() {
                                         </span>
                                     )}
                                 </div>
-                                <p className="text-[11px] text-zinc-400 truncate">
+                                <p className="text-[11px] text-on-surface-variant truncate">
                                     {isBothAvailable
                                         ? "Los binarios necesarios están correctamente instalados y listos."
                                         : isDownloading
@@ -320,12 +319,12 @@ function MediaEngineStep() {
                             >
                                 {isDownloading ? (
                                     <>
-                                        <Icons.ui.spinner className="w-3.5 h-3.5 animate-spin" />
+                                        <IconUiSpinner className="w-3.5 h-3.5 animate-spin" />
                                         <span>Descargando...</span>
                                     </>
                                 ) : (
                                     <>
-                                        <Icons.ui.download className="w-3.5 h-3.5" />
+                                        <IconUiDownload className="w-3.5 h-3.5" />
                                         <span>Instalar Automáticamente</span>
                                     </>
                                 )}
@@ -335,14 +334,14 @@ function MediaEngineStep() {
 
                     {/* Progress bar if downloading */}
                     {isDownloading && (
-                        <div className="space-y-1.5 p-3 rounded-xl bg-zinc-950/40 border border-white/5">
-                            <div className="flex justify-between text-xs text-zinc-400 font-medium">
+                        <div className="space-y-1.5 p-3 rounded-xl bg-surface-container-low border border-border-subtle">
+                            <div className="flex justify-between text-xs text-on-surface-variant font-medium">
                                 <span>{status?.downloadStatus || "Descargando paquetes..."}</span>
                                 <span>{status?.downloadProgress ?? 0}%</span>
                             </div>
-                            <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                            <div className="w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
                                 <div
-                                    className="h-full bg-brand-accent transition-all duration-300 rounded-full"
+                                    className="h-full bg-brand-accent transition-all duration-base rounded-full"
                                     style={{ width: `${Math.max(5, status?.downloadProgress ?? 0)}%` }}
                                 />
                             </div>
@@ -351,35 +350,35 @@ function MediaEngineStep() {
 
                     {/* Binaries grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-                        <div className="p-3 rounded-xl bg-zinc-950/40 border border-white/5 flex flex-col gap-1">
+                        <div className="p-3 rounded-xl bg-surface-container-low border border-border-subtle flex flex-col gap-1">
                             <div className="flex items-center justify-between">
-                                <span className="font-semibold text-white">ffprobe</span>
+                                <span className="font-semibold text-on-surface">ffprobe</span>
                                 <span className={status?.ffprobeAvailable ? "text-emerald-400 font-medium text-[11px]" : "text-rose-400 text-[11px]"}>
                                     {status?.ffprobeAvailable ? "Detectado" : "Faltante"}
                                 </span>
                             </div>
-                            <span className="font-mono text-[10px] text-zinc-400 truncate" title={status?.ffprobePath}>
+                            <span className="font-mono text-[10px] text-on-surface-variant truncate" title={status?.ffprobePath}>
                                 {status?.ffprobePath || "No configurado"}
                             </span>
                             {status?.ffprobeVersion && (
-                                <span className="text-[10px] text-zinc-500 truncate" title={status?.ffprobeVersion}>
+                                <span className="text-[10px] text-on-surface-variant/70 truncate" title={status?.ffprobeVersion}>
                                     {status?.ffprobeVersion}
                                 </span>
                             )}
                         </div>
 
-                        <div className="p-3 rounded-xl bg-zinc-950/40 border border-white/5 flex flex-col gap-1">
+                        <div className="p-3 rounded-xl bg-surface-container-low border border-border-subtle flex flex-col gap-1">
                             <div className="flex items-center justify-between">
-                                <span className="font-semibold text-white">ffmpeg</span>
+                                <span className="font-semibold text-on-surface">ffmpeg</span>
                                 <span className={status?.ffmpegAvailable ? "text-emerald-400 font-medium text-[11px]" : "text-rose-400 text-[11px]"}>
                                     {status?.ffmpegAvailable ? "Detectado" : "Faltante"}
                                 </span>
                             </div>
-                            <span className="font-mono text-[10px] text-zinc-400 truncate" title={status?.ffmpegPath}>
+                            <span className="font-mono text-[10px] text-on-surface-variant truncate" title={status?.ffmpegPath}>
                                 {status?.ffmpegPath || "No configurado"}
                             </span>
                             {status?.ffmpegVersion && (
-                                <span className="text-[10px] text-zinc-500 truncate" title={status?.ffmpegVersion}>
+                                <span className="text-[10px] text-on-surface-variant/70 truncate" title={status?.ffmpegVersion}>
                                     {status?.ffmpegVersion}
                                 </span>
                             )}
@@ -414,28 +413,28 @@ function PlaybackStep({
             key: "autoDetectSkipTimes" as const,
             title: "Salto Automático de Openings/Endings",
             description: "Detección inteligente de intros, rellenos y endings para saltearlos con un clic o automáticamente.",
-            icon: Icons.media.skipNext,
+            icon: IconMediaSkipNext,
             color: "from-amber-500 to-orange-500",
         },
         {
             key: "autoPlayNextEpisode" as const,
             title: "Reproducción Continua (Maratón)",
             description: "Inicia el siguiente capítulo al terminar el actual sin tener que volver al menú.",
-            icon: Icons.media.play,
+            icon: IconMediaPlay,
             color: "from-purple-500 to-pink-500",
         },
         {
             key: "enableWatchContinuity" as const,
             title: "Continuidad de Reproducción",
             description: "Recuerda el segundo exacto donde dejaste cada episodio para reanudar al instante.",
-            icon: Icons.time.clock,
+            icon: IconTimeClock,
             color: "from-blue-500 to-cyan-500",
         },
         {
             key: "autoScan" as const,
             title: "Auto-Escaneo en Segundo Plano",
             description: "Detecta automáticamente nuevos capítulos añadidos a tus carpetas sin escanear a mano.",
-            icon: Icons.navigation.library,
+            icon: IconNavigationLibrary,
             color: "from-emerald-500 to-teal-500",
         },
     ]
@@ -449,10 +448,10 @@ function PlaybackStep({
             className="space-y-4 max-w-2xl mx-auto"
         >
             <motion.div variants={itemVariants} className="text-center space-y-1">
-                <h2 className="text-xl sm:text-2xl font-display tracking-wide text-white uppercase">
+                <h2 className="text-xl sm:text-2xl font-display tracking-wide text-on-surface uppercase">
                     3. Automatizaciones de Reproducción
                 </h2>
-                <p className="text-zinc-400 text-xs sm:text-sm max-w-md mx-auto leading-relaxed">
+                <p className="text-on-surface-variant text-xs sm:text-sm max-w-md mx-auto leading-relaxed">
                     Activa las funciones inteligentes para maratonear y disfrutar sin interrupciones ni adelantos manuales.
                 </p>
             </motion.div>
@@ -463,14 +462,24 @@ function PlaybackStep({
                     return (
                         <motion.div
                             key={item.key}
+                            role="checkbox"
+                            tabIndex={0}
+                            aria-checked={isEnabled}
+                            aria-label={item.title}
                             whileHover={{ scale: 1.015, y: -2 }}
                             whileTap={{ scale: 0.985 }}
                             onClick={() => setFeatures(prev => ({ ...prev, [item.key]: !prev[item.key] }))}
+                            onKeyDown={e => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault()
+                                    setFeatures(prev => ({ ...prev, [item.key]: !prev[item.key] }))
+                                }
+                            }}
                             className={cn(
-                                "cursor-pointer p-4 rounded-xl border transition-all duration-200 text-left flex items-start space-x-3 select-none",
+                                "cursor-pointer p-4 rounded-xl border transition-all duration-200 text-left flex items-start space-x-3 select-none outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
                                 isEnabled
-                                    ? "bg-zinc-900/90 border-brand-accent/50 shadow-md shadow-brand-accent/10"
-                                    : "bg-zinc-900/40 border-white/5 hover:border-white/15 opacity-70 hover:opacity-100"
+                                    ? "bg-surface border-brand-accent/50 shadow-md shadow-brand-accent/10"
+                                    : "bg-glass-bg border-border-subtle hover:border-border-strong opacity-70 hover:opacity-100"
                             )}
                         >
                             <div className={cn(
@@ -482,19 +491,19 @@ function PlaybackStep({
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between gap-2">
-                                    <h4 className="font-semibold text-xs sm:text-sm text-white truncate">
+                                    <h4 className="font-semibold text-xs sm:text-sm text-on-surface truncate">
                                         {item.title}
                                     </h4>
                                     <div
                                         className={cn(
                                             "w-4 h-4 rounded-full border flex items-center justify-center shrink-0 text-[10px] transition-colors duration-200",
-                                            isEnabled ? "bg-brand-accent border-brand-accent text-white" : "border-white/20"
+                                            isEnabled ? "bg-brand-accent border-brand-accent text-white" : "border-border-subtle"
                                         )}
                                     >
                                         {isEnabled && "✓"}
                                     </div>
                                 </div>
-                                <p className="text-[11px] text-zinc-400 mt-1 leading-snug">
+                                <p className="text-[11px] text-on-surface-variant mt-1 leading-snug">
                                     {item.description}
                                 </p>
                             </div>
@@ -554,46 +563,56 @@ function LanguageStep({
             className="space-y-4 max-w-2xl mx-auto"
         >
             <motion.div variants={itemVariants} className="text-center space-y-1">
-                <h2 className="text-xl sm:text-2xl font-display tracking-wide text-white uppercase">
+                <h2 className="text-xl sm:text-2xl font-display tracking-wide text-on-surface uppercase">
                     4. Idioma y Metadatos
                 </h2>
-                <p className="text-zinc-400 text-xs sm:text-sm max-w-md mx-auto leading-relaxed">
+                <p className="text-on-surface-variant text-xs sm:text-sm max-w-md mx-auto leading-relaxed">
                     Configura el idioma preferido para los títulos de episodios, carteleras, sinopsis y reconocimiento de archivos.
                 </p>
             </motion.div>
 
             <StepCard>
                 <div className="space-y-3">
-                    <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider block">
+                    <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider block">
                         Idioma de Sinopsis y Títulos de Capítulos
                     </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5" role="radiogroup" aria-label="Idioma de Sinopsis y Títulos">
                         {languages.map(lang => {
                             const isSelected = selectedLanguage === lang.code
                             return (
                                 <motion.div
                                     key={lang.code}
+                                    role="radio"
+                                    tabIndex={0}
+                                    aria-checked={isSelected}
+                                    aria-label={lang.label}
                                     whileHover={{ scale: 1.015 }}
                                     whileTap={{ scale: 0.985 }}
                                     onClick={() => setSelectedLanguage(lang.code)}
+                                    onKeyDown={e => {
+                                        if (e.key === "Enter" || e.key === " ") {
+                                            e.preventDefault()
+                                            setSelectedLanguage(lang.code)
+                                        }
+                                    }}
                                     className={cn(
-                                        "cursor-pointer p-3 rounded-xl border transition-all duration-200 flex items-center justify-between select-none",
+                                        "cursor-pointer p-3 rounded-xl border transition-all duration-200 flex items-center justify-between select-none outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
                                         isSelected
-                                            ? "bg-brand-accent/20 border-brand-accent text-white shadow-md shadow-brand-accent/15"
-                                            : "bg-zinc-900/50 border-white/5 hover:border-white/15 text-zinc-300"
+                                            ? "bg-brand-accent/20 border-brand-accent text-on-surface shadow-md shadow-brand-accent/15"
+                                            : "bg-glass-bg border-border-subtle hover:border-border-strong text-on-surface-variant"
                                     )}
                                 >
                                     <div className="flex items-center gap-3 min-w-0">
                                         <span className="text-xl shrink-0">{lang.flag}</span>
                                         <div className="min-w-0">
                                             <p className="font-semibold text-xs sm:text-sm truncate">{lang.label}</p>
-                                            <p className="text-[10px] text-zinc-500 truncate">{lang.region}</p>
+                                            <p className="text-[10px] text-on-surface-variant/70 truncate">{lang.region}</p>
                                         </div>
                                     </div>
                                     <div
                                         className={cn(
                                             "w-4 h-4 rounded-full border flex items-center justify-center shrink-0 text-[10px] ml-2",
-                                            isSelected ? "bg-brand-accent border-brand-accent text-white" : "border-white/20"
+                                            isSelected ? "bg-brand-accent border-brand-accent text-white" : "border-border-subtle"
                                         )}
                                     >
                                         {isSelected && "✓"}
@@ -604,36 +623,44 @@ function LanguageStep({
                     </div>
                 </div>
 
-                <div className="h-[1px] bg-white/5 my-4" />
+                <div className="h-[1px] bg-border-subtle my-4" />
 
                 {/* Reconocimiento flexible de archivos de fansub */}
                 <motion.div
+                    role="switch"
+                    tabIndex={0}
+                    aria-checked={flexibleMatching}
+                    aria-label="Detección Flexible de Fansubs"
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.99 }}
                     onClick={() => setFlexibleMatching(prev => !prev)}
+                    onKeyDown={e => {
+                        if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault()
+                            setFlexibleMatching(prev => !prev)
+                        }
+                    }}
                     className={cn(
-                        "cursor-pointer p-3.5 rounded-xl border transition-all duration-200 flex items-center justify-between select-none",
+                        "cursor-pointer p-3.5 rounded-xl border transition-all duration-200 flex items-center justify-between select-none outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
                         flexibleMatching
-                            ? "bg-zinc-900/90 border-brand-accent/40"
-                            : "bg-zinc-900/40 border-white/5 opacity-75"
+                            ? "bg-surface border-brand-accent/40"
+                            : "bg-glass-bg border-border-subtle opacity-75"
                     )}
                 >
                     <div className="space-y-0.5 pr-2">
-                        <p className="text-xs font-semibold text-white">
+                        <p className="text-xs font-semibold text-on-surface">
                             Detección Flexible de Fansubs
                         </p>
-                        <p className="text-[11px] text-zinc-400">
-                            Reconoce nombres complejos como <span className="text-zinc-300 font-mono text-[10px]">[Fansub] DBZ - 001 [1080p].mkv</span> sin obligarte a renombrar archivos.
+                        <p className="text-[11px] text-on-surface-variant">
+                            Reconoce nombres complejos como <span className="text-on-surface-variant font-mono text-[10px]">[Fansub] DBZ - 001 [1080p].mkv</span> sin obligarte a renombrar archivos.
                         </p>
                     </div>
-                    <div
-                        className={cn(
-                            "w-4 h-4 rounded-full border flex items-center justify-center shrink-0 text-[10px]",
-                            flexibleMatching ? "bg-brand-accent border-brand-accent text-white" : "border-white/20"
-                        )}
-                    >
-                        {flexibleMatching && "✓"}
-                    </div>
+                    <SpringSwitch
+                        checked={flexibleMatching}
+                        size="sm"
+                        ariaHidden={true}
+                        className="pointer-events-none shrink-0 ml-3"
+                    />
                 </motion.div>
             </StepCard>
         </motion.div>
@@ -720,33 +747,33 @@ export function GettingStarted({
 
     return (
         <div className={cn(
-            "w-full bg-zinc-950 relative flex flex-col justify-between select-none overflow-hidden",
-            embedded ? "rounded-2xl border border-white/5 p-4 sm:p-6" : isModal ? "p-4 sm:p-6" : "min-h-[100dvh] h-[100dvh]"
+            "w-full bg-bg-primary relative flex flex-col justify-between select-none overflow-hidden",
+            embedded ? "rounded-2xl border border-border-subtle p-4 sm:p-6" : isModal ? "p-4 sm:p-6" : "min-h-[100dvh] h-[100dvh]"
         )}>
             {/* Cinematic animated background gradients */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute inset-0 bg-zinc-950/70 z-[1]" />
-                <div className="absolute inset-0 opacity-[0.22] blur-[140px] mix-blend-screen">
+                <div className="absolute inset-0 bg-[var(--bg-primary)]/70 z-base" />
+                <div className="absolute inset-0 opacity-[0.22] blur-3xl mix-blend-screen">
                     <div 
                         className="absolute top-[10%] left-[10%] w-[40vw] h-[40vw] rounded-full animate-float-blur"
-                        style={{ background: "radial-gradient(circle, var(--era-db-hex, #1e40af) 0%, transparent 70%)" }}
+                        style={{ background: "radial-gradient(circle, var(--era-db-hex, #CF7430) 0%, transparent 70%)" }}
                     />
                     <div 
                         className="absolute top-[5%] right-[10%] w-[35vw] h-[35vw] rounded-full animate-float-blur-reverse"
-                        style={{ background: "radial-gradient(circle, var(--era-dbz-hex, #ea580c) 0%, transparent 70%)", animationDelay: "-4s" }}
+                        style={{ background: "radial-gradient(circle, var(--era-dbz-hex, #C2410C) 0%, transparent 70%)", animationDelay: "-4s" }}
                     />
                     <div 
                         className="absolute bottom-[10%] right-[15%] w-[40vw] h-[40vw] rounded-full animate-float-blur"
-                        style={{ background: "radial-gradient(circle, var(--era-dbgt-hex, #dc2626) 0%, transparent 70%)", animationDelay: "-8s" }}
+                        style={{ background: "radial-gradient(circle, var(--era-dbgt-hex, #0E7C86) 0%, transparent 70%)", animationDelay: "-8s" }}
                     />
                 </div>
             </div>
 
             {/* Top header bar */}
             {!isModal && !embedded && (
-                <div className="w-full relative z-10 px-4 sm:px-8 pt-4 sm:pt-6 flex justify-between items-center border-b border-white/5 pb-3">
+                <div className="w-full relative z-10 px-4 sm:px-8 pt-4 sm:pt-6 flex justify-between items-center border-b border-border-subtle pb-3">
                     <div className="flex items-center gap-2">
-                        <span className="font-display tracking-widest text-lg sm:text-xl font-bold text-white uppercase">
+                        <span className="font-display tracking-widest text-lg sm:text-xl font-bold text-on-surface uppercase">
                             KAMEHOUSE
                         </span>
                         <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-brand-accent/20 text-brand-accent border border-brand-accent/30">
@@ -760,8 +787,8 @@ export function GettingStarted({
                             size="sm"
                             intent="gray-outline"
                             onClick={handleGoToHome}
-                            leftIcon={<Icons.navigation.home className="w-3.5 h-3.5" />}
-                            className="rounded-xl text-xs text-zinc-300 hover:text-white"
+                            leftIcon={<IconNavigationHome className="w-3.5 h-3.5" />}
+                            className="rounded-xl text-xs"
                         >
                             Ir al Inicio
                         </Button>
@@ -867,7 +894,7 @@ export function GettingStarted({
             </div>
 
             {/* Bottom sticky action bar */}
-            <div className="w-full relative z-20 bg-zinc-950/90 backdrop-blur-xl border-t border-white/10 px-4 sm:px-8 py-3.5 flex justify-between items-center max-w-3xl mx-auto rounded-t-2xl shadow-xl mt-2">
+            <div className="w-full relative z-20 bg-surface/90 backdrop-blur-overlay-xl border-t border-border-subtle px-4 sm:px-8 py-3.5 flex justify-between items-center max-w-3xl mx-auto rounded-t-2xl shadow-modal mt-2">
                 <div className="flex items-center gap-2">
                     {currentStep > 0 && (
                         <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
@@ -879,8 +906,8 @@ export function GettingStarted({
                                     e.preventDefault()
                                     prevStep()
                                 }}
-                                className="rounded-xl text-xs sm:text-sm px-4 h-10 border-white/10 hover:border-white/25 hover:bg-white/5 text-zinc-300 hover:text-white transition-all cursor-pointer"
-                                leftIcon={<Icons.navigation.chevronLeft className="w-4 h-4" />}
+                                className="rounded-xl text-xs sm:text-sm px-4 h-10 border-border-subtle hover:border-border-strong hover:bg-surface-container transition-all cursor-pointer"
+                                leftIcon={<IconNavigationChevronLeft className="w-4 h-4" />}
                             >
                                 Anterior
                             </Button>
@@ -919,9 +946,9 @@ export function GettingStarted({
                                         })()
                                     }
                                 }}
-                                className="rounded-xl font-bold uppercase tracking-wider px-6 h-10 text-xs sm:text-sm shadow-lg shadow-brand-accent/30 bg-gradient-to-r from-brand-accent to-red-600 hover:brightness-110 text-white cursor-pointer border-none"
+                                className="rounded-xl font-bold uppercase tracking-wider px-6 h-10 text-xs sm:text-sm shadow-lg shadow-brand-primary bg-brand-accent hover:bg-brand-accent/90 text-on-primary cursor-pointer border-none"
                                 loading={isPending}
-                                rightIcon={<Icons.navigation.rocket className="w-4 h-4" />}
+                                rightIcon={<IconNavigationRocket className="w-4 h-4" />}
                             >
                                 Guardar y Comenzar
                             </Button>
@@ -937,7 +964,7 @@ export function GettingStarted({
                                     nextStep()
                                 }}
                                 className="rounded-xl font-bold uppercase tracking-wider px-5 h-10 text-xs sm:text-sm bg-brand-accent text-white hover:bg-brand-accent/90 shadow-md shadow-brand-accent/25 cursor-pointer"
-                                rightIcon={<Icons.navigation.chevronRight className="w-4 h-4" />}
+                                rightIcon={<IconNavigationChevronRight className="w-4 h-4" />}
                             >
                                 Siguiente
                             </Button>

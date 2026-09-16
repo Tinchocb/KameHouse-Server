@@ -2,13 +2,25 @@ import { useServerMutation, useServerQuery } from "@/api/client/requests"
 import { ScanLocalFiles_Variables } from "@/api/generated/endpoint.types"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { useRefreshLibraryExplorerFileTree } from "@/api/generated/library_explorer.hooks"
-import { Anime_LocalFile, Summary_ScanSummaryItem } from "@/api/generated/types"
+import { Anime_LocalFile, ScanSummary } from "@/api/generated/types"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
 export const scanQueryKeys = {
     all: ['scan'] as const,
-    summaries: () => [...scanQueryKeys.all, 'summaries'] as const,
+    summaries: () => [API_ENDPOINTS.SCAN_SUMMARY.GetScanSummaries.key] as const,
+    status: () => [API_ENDPOINTS.SCAN.GetScanStatus.key] as const,
+}
+
+export function useGetScanStatus() {
+    return useServerQuery<ScanSummary>({
+        endpoint: API_ENDPOINTS.SCAN.GetScanStatus.endpoint,
+        method: API_ENDPOINTS.SCAN.GetScanStatus.methods[0],
+        queryKey: scanQueryKeys.status(),
+        enabled: true,
+        staleTime: 10_000, // 10s: poll for status while scanning
+        refetchOnWindowFocus: false,
+    })
 }
 
 export function useScanLocalFiles(onSuccess?: () => void) {
@@ -33,16 +45,8 @@ export function useScanLocalFiles(onSuccess?: () => void) {
             } else {
                 await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key] })
             }
+            await queryClient.invalidateQueries({ queryKey: scanQueryKeys.summaries() })
             onSuccess?.()
         },
-    })
-}
-
-export function useGetScanSummaries() {
-    return useServerQuery<Array<Summary_ScanSummaryItem>>({
-        endpoint: API_ENDPOINTS.SCAN_SUMMARY.GetScanSummaries.endpoint,
-        method: API_ENDPOINTS.SCAN_SUMMARY.GetScanSummaries.methods[0],
-        queryKey: scanQueryKeys.summaries(),
-        enabled: true,
     })
 }

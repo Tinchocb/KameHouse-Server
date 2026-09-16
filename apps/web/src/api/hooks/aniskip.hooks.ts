@@ -14,21 +14,21 @@ import { EXTRA_ENDPOINTS } from "@/api/client/endpoints.extra"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type AniSkipType = "op" | "ed" | "mixed-ed" | "mixed-op" | "recap"
+type AniSkipType = "op" | "ed" | "mixed-ed" | "mixed-op" | "recap"
 
-export interface AniSkipInterval {
+interface AniSkipInterval {
     startTime: number
     endTime: number
 }
 
-export interface AniSkipResult {
+interface AniSkipResult {
     interval: AniSkipInterval
     skipType: AniSkipType
     episodeLength: number
     votes?: number
 }
 
-export interface AniSkipResponse {
+interface AniSkipResponse {
     found: boolean
     results?: AniSkipResult[]
     statusCode: number
@@ -66,6 +66,14 @@ async function fetchAniSkipTimes(
     return res.json() as Promise<AniSkipResponse>
 }
 
+// ─── Query Keys ───────────────────────────────────────────────────────────────
+
+export const aniskipQueryKeys = {
+    all: ["aniskip"] as const,
+    times: (malId?: number | null, mediaId?: number | null, episodeNumber?: number | null) =>
+        [...aniskipQueryKeys.all, malId ?? null, mediaId ?? null, episodeNumber ?? null] as const,
+}
+
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export interface UseAniSkipTimesOptions {
@@ -90,6 +98,63 @@ export interface AniSkipTimes {
     edSource?: string
     /** Whether any skip times were found */
     hasSkipTimes: boolean
+}
+
+interface CacheAniSkipTimesParams {
+    mediaId?: number | null
+    malId?: number | null
+    episodeNumber: number
+    op?: AniSkipInterval
+    ed?: AniSkipInterval
+    episodeDuration?: number
+    confidence: number
+}
+
+function fireAndForgetCacheAniSkipTimes({
+    mediaId,
+    malId,
+    episodeNumber,
+    op,
+    ed,
+    episodeDuration,
+    confidence,
+}: CacheAniSkipTimesParams): void {
+    if (!op && !ed) return
+
+    let resolvedEdOffset = 0
+    let resolvedEdEnd = 0
+    if (ed) {
+        resolvedEdOffset = ed.startTime
+        resolvedEdEnd = ed.endTime ?? (episodeDuration ?? 0)
+    }
+
+    buildSeaQuery<unknown, {
+        mediaId?: number
+        malId?: number
+        episodeNumber: number
+        opStart: number
+        opEnd: number
+        edOffset: number
+        edEnd: number
+        applyToSeason: boolean
+        source: string
+        confidence: number
+    }>({
+        endpoint: EXTRA_ENDPOINTS.MEDIASTREAM.SkipTimes.endpoint,
+        method: "POST",
+        data: {
+            mediaId: mediaId || undefined,
+            malId: malId || undefined,
+            episodeNumber,
+            opStart: op?.startTime ?? 0,
+            opEnd: op?.endTime ?? 0,
+            edOffset: resolvedEdOffset,
+            edEnd: resolvedEdEnd,
+            applyToSeason: false,
+            source: "aniskip",
+            confidence,
+        },
+    }).catch(err => console.warn("Failed to cache AniSkip times in KameHouse:", err))
 }
 
 interface LocalSkipTimeResponse {
@@ -258,45 +323,18 @@ export async function getAniSkipTimes({
         }
     }
 
-    // 3. Cache AniSkip times on our local server as a side-effect
+    // 3. Cache AniSkip times on our local server as an isolated side-effect
     if (op || ed) {
-        let resolvedEdOffset = 0
-        let resolvedEdEnd = 0
-        if (ed) {
-            resolvedEdOffset = ed.startTime
-            resolvedEdEnd = ed.endTime ?? (episodeDuration ?? 0)
-        }
-
-        // Enviar la confianza basada en los votos (o 1 como base si AniSkip fue exitoso)
         const confidence = Math.max(bestOp?.votes || 0, bestEd?.votes || 0, 1)
-
-        buildSeaQuery<unknown, {
-            mediaId?: number
-            malId?: number
-            episodeNumber: number
-            opStart: number
-            opEnd: number
-            edOffset: number
-            edEnd: number
-            applyToSeason: boolean
-            source: string
-            confidence: number
-        }>({
-            endpoint: EXTRA_ENDPOINTS.MEDIASTREAM.SkipTimes.endpoint,
-            method: "POST",
-            data: {
-                mediaId: mediaId || undefined,
-                malId: activeMalId || undefined,
-                episodeNumber,
-                opStart: op?.startTime ?? 0,
-                opEnd: op?.endTime ?? 0,
-                edOffset: resolvedEdOffset,
-                edEnd: resolvedEdEnd,
-                applyToSeason: false,
-                source: "aniskip",
-                confidence: confidence
-            }
-        }).catch(err => console.warn("Failed to cache AniSkip times in KameHouse:", err))
+        fireAndForgetCacheAniSkipTimes({
+            mediaId,
+            malId: activeMalId,
+            episodeNumber,
+            op,
+            ed,
+            episodeDuration,
+            confidence,
+        })
     }
 
     return {
@@ -321,7 +359,7 @@ export function useAniSkipTimes({
         // (duration goes 0 → real value), which discards the previous result
         // and re-triggers loading. The duration is passed to the fetcher as a
         // hint but the API response is independent of it.
-        queryKey: ["aniskip", malId, mediaId, episodeNumber],
+        queryKey: aniskipQueryKeys.times(malId, mediaId, episodeNumber),
         queryFn: () => getAniSkipTimes({
             malId,
             mediaId,

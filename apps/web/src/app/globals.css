@@ -16,35 +16,11 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Cinematic Orb Animations ───────────────────────────────────────── */
-@keyframes float-blur {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); }
-  33% { transform: translate3d(30px, -30px, 0) scale(1.05) rotate(1deg); }
-  66% { transform: translate3d(-20px, 20px, 0) scale(0.95) rotate(-1deg); }
-}
-
-@keyframes float-blur-reverse {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); }
-  33% { transform: translate3d(-30px, 30px, 0) scale(1.05) rotate(-1deg); }
-  66% { transform: translate3d(20px, -20px, 0) scale(0.95) rotate(1deg); }
-}
-
-.animate-float-blur {
-  animation: float-blur 20s ease-in-out infinite;
-}
-
-.animate-float-blur-reverse {
-  animation: float-blur-reverse 25s ease-in-out infinite;
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 3s ease-in-out infinite;
-}
 
 /* ─── Base Reset ─────────────────────────────────────────────────────── */
 @layer base {
   * {
-    @apply border-[var(--border)];
+    @apply border-border;
     scrollbar-width: none;
     -ms-overflow-style: none;
   }
@@ -54,6 +30,11 @@
     @apply text-[var(--md-sys-color-on-surface)] font-sans antialiased;
     overscroll-behavior-y: none;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  input, textarea, select {
+    background-color: transparent;
+    color: inherit;
   }
 
   /* El color base vive SOLO en html (pinta el canvas). El body debe ser
@@ -69,7 +50,7 @@
   }
 
   *:focus-visible {
-    @apply outline-none ring-2 ring-[var(--focus-ring)] ring-offset-2 ring-offset-[var(--bg-primary)] transition-shadow;
+    @apply outline-none ring-2 ring-brand-accent ring-offset-2 ring-offset-[var(--bg-primary)] transition-shadow;
   }
 
   h1 { font: var(--display-xl); color: var(--md-sys-color-on-surface); }
@@ -81,20 +62,14 @@
 /* ─── Utilities ──────────────────────────────────────────────────────── */
 @layer utilities {
   .page-px         { @apply px-4 md:px-8 lg:px-16 xl:px-20 2xl:px-24 3xl:px-32 4xl:px-40; }
+  .page-container  { @apply w-full max-w-content mx-auto px-4 sm:px-6 md:px-8 lg:px-10; }
   .text-balance    { text-wrap: balance; }
   .text-pretty     { text-wrap: pretty; }
-  .gpu             { will-change: transform; transform: translateZ(0); }
-  .contain-layout  { contain: layout style; }
-
-  .tap-scale:active { transform: scale(0.98); }
-
-  .hover-lift {
-    transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+  /* Borde leve en letras difuminado de alto rendimiento (renderizado directo por rasterizador de fuentes sin filtros gaussianos pesados) */
+  .text-edge-glow {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95), 0 0 5px rgba(0, 0, 0, 0.8), 0 2px 8px rgba(0, 0, 0, 0.6);
   }
-  .hover-lift:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-elevated);
-  }
+
 
   .scroll-snap-carousel {
     scroll-snap-type: x proximity;
@@ -108,33 +83,27 @@
   .scrim-hero-left {
     background: linear-gradient(
       to right,
-      var(--bg-primary) 0%,
-      color-mix(in srgb, var(--bg-primary) 90%, transparent) 25%,
-      color-mix(in srgb, var(--bg-primary) 35%, transparent) 65%,
-      transparent 95%
+      color-mix(in srgb, var(--bg-primary) 88%, transparent) 0%,
+      color-mix(in srgb, var(--bg-primary) 70%, transparent) 18%,
+      color-mix(in srgb, var(--bg-primary) 30%, transparent) 42%,
+      color-mix(in srgb, var(--bg-primary) 8%, transparent) 62%,
+      transparent 78%
     );
   }
   .scrim-hero-bottom {
     background: linear-gradient(
       to top,
-      var(--bg-primary) 0%,
-      color-mix(in srgb, var(--bg-primary) 78%, transparent) 25%,
-      color-mix(in srgb, var(--bg-primary) 38%, transparent) 60%,
-      transparent 100%
-    );
-  }
-  .scrim-hero-bottom-soft {
-    background: linear-gradient(
-      to top,
-      transparent 0%,
-      color-mix(in srgb, var(--bg-primary) 35%, transparent) 50%,
+      color-mix(in srgb, var(--bg-primary) 92%, transparent) 0%,
+      color-mix(in srgb, var(--bg-primary) 72%, transparent) 15%,
+      color-mix(in srgb, var(--bg-primary) 40%, transparent) 32%,
+      color-mix(in srgb, var(--bg-primary) 10%, transparent) 52%,
       transparent 100%
     );
   }
   .scrim-hero-top {
     background: linear-gradient(
       to bottom,
-      color-mix(in srgb, var(--bg-primary) 55%, transparent) 0%,
+      color-mix(in srgb, var(--bg-primary) 25%, transparent) 0%,
       transparent 100%
     );
   }
@@ -151,11 +120,9 @@
     border: 1px solid;
   }
   .badge-primary   { background: hsl(var(--brand-accent) / 0.15); color: hsl(var(--brand-accent)); border-color: hsl(var(--brand-accent) / 0.30); }
-  .badge-secondary { background: hsl(var(--brand-secondary) / 0.15); color: hsl(var(--brand-secondary)); border-color: hsl(var(--brand-secondary) / 0.30); }
   .badge-success   { background: hsl(var(--brand-success) / 0.15); color: hsl(var(--brand-success)); border-color: hsl(var(--brand-success) / 0.30); }
-  .badge-magic     { background: hsl(var(--brand-magic) / 0.15); color: hsl(var(--brand-magic)); border-color: hsl(var(--brand-magic) / 0.30); }
+  .badge-warning   { background: hsl(var(--brand-warning) / 0.15); color: hsl(var(--brand-warning)); border-color: hsl(var(--brand-warning) / 0.30); }
   .badge-muted     { background: var(--glass-bg); color: var(--md-sys-color-on-surface-variant); border-color: var(--glass-border-top); }
-  .badge-destructive { background: hsl(var(--brand-destructive) / 0.15); color: hsl(var(--brand-destructive)); border-color: hsl(var(--brand-destructive) / 0.30); }
 }
 
 /* ─── TV Mode / Spatial Navigation ───────────────────────────────────── */
@@ -203,17 +170,6 @@ media-control-bar {
   right: 12px;
 }
 
-.native-player-button {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 36px;
-  padding: 0 2px;
-  transition: opacity 0.1s;
-}
-
-.native-player-button svg { @apply !size-7 fill-current; }
-
 media-time-range {
   position: absolute;
   bottom: 36px;
@@ -237,11 +193,11 @@ media-time-range {
   background: var(--sidebar-bg);
 }
 
-/* En modo Por Era el sidebar siempre lleva el tinte de su era (antes solo
-   Universe lo tenía hardcodeado y el resto quedaba con la base negra fija).
-   El toggle "Degradado del Sidebar" ahora intensifica el gradiente
+/* En modo Por Era el sidebar siempre lleva el tinte de su era.
+   En modo Clásico, se activa cuando el usuario habilita el Gradiente del Sidebar.
    (ver [data-sidebar-gradient="true"] en colors.css). */
-[data-mode="era"] .sidebar-gradient::before {
+[data-mode="era"] .sidebar-gradient::before,
+[data-mode="classic"][data-sidebar-gradient="true"] .sidebar-gradient::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -281,9 +237,56 @@ media-time-range {
 
 /* ─── Safe Area Insets ───────────────────────────────────────────────── */
 .safe-area-pb { padding-bottom: env(safe-area-inset-bottom); }
-.safe-area-pt { padding-top: env(safe-area-inset-top); }
-.safe-area-pl { padding-left: env(safe-area-inset-left); }
-.safe-area-pr { padding-right: env(safe-area-inset-right); }
+
+/* ─── SectionBar — Contenedor unificado de sección ─────────────────────── */
+@layer utilities {
+  .sectionbar {
+    @apply rounded-2xl;
+    border: 1px solid var(--sectionbar-border);
+    border-top-color: var(--sectionbar-border-top);
+    border-bottom-color: var(--sectionbar-border-bottom);
+    background-color: var(--sectionbar-bg);
+    -webkit-backdrop-filter: saturate(var(--sectionbar-saturate)) var(--sectionbar-blur);
+    backdrop-filter: saturate(var(--sectionbar-saturate)) var(--sectionbar-blur);
+    box-shadow: var(--sectionbar-shadow);
+    @apply transition-all duration-base;
+  }
+
+  .sectionbar-strong {
+    border-color: var(--sectionbar-border-strong);
+    border-top-color: var(--sectionbar-border-top-strong);
+    background-color: var(--sectionbar-bg-strong);
+    box-shadow: var(--sectionbar-shadow-strong);
+  }
+
+  .sectionbar-minimal {
+    border-color: transparent;
+    background-color: transparent;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+
+  .sectionbar-divide > * + * {
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .sectionbar-header {
+    @apply flex items-center justify-between px-1;
+  }
+  .sectionbar-header-icon {
+    @apply w-8 h-8 rounded-xl bg-brand-accent/10 border border-brand-accent/25 flex items-center justify-center text-brand-accent shrink-0 shadow-[0_0_12px_hsl(var(--brand-accent)/0.15)];
+  }
+  .sectionbar-header-title {
+    @apply text-xs font-black uppercase tracking-wider text-on-surface font-mono;
+  }
+  .sectionbar-header-desc {
+    @apply text-[11px] text-on-surface-variant/70 leading-normal font-medium mt-0.5;
+  }
+  .sectionbar-header-badge {
+    @apply ml-2;
+  }
+}
 
 /* ─── Global Touch Targets & Scroll Consistency ────────────────────── */
 @media (hover: none) {

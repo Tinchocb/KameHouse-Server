@@ -6,13 +6,12 @@ import { useBackupDatabase } from "@/api/hooks/system.hooks"
 import { buildSeaQuery } from "@/api/client/requests"
 import { SecretField } from "@/components/settings/secret-field"
 import { DangerZone } from "@/components/settings/danger-zone"
-import { Icons } from "@/components/ui/icons"
-import { SettingsSection, SettingsCard, OsToggle } from "../components"
+import { IconUiKey, IconUiRotate, IconUiSpinner, IconStatusArchive, IconUiTrash, IconUiAlert } from "@/components/ui/icons";
+import { OsToggle } from "../components"
+import { SectionBar } from "@/components/ui/sectionbar"
 
 interface SystemTabProps {
     control: Control<SettingsFormValues>
-    onOpenWizard?: () => void
-    searchQuery?: string
 }
 
 function ApiKeyCard({ name, description, connected, children }: { name: string; description: string; connected: boolean; children: React.ReactNode }) {
@@ -48,7 +47,7 @@ const formatBytes = (bytes: number) => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
-export function SystemTab({ control, searchQuery }: SystemTabProps) {
+export const SystemTab = React.memo(function SystemTab({ control }: SystemTabProps) {
     const { mutate: backupDb, isPending: isBackingUp } = useBackupDatabase()
 
     const tmdbApiKey = useWatch({ control, name: "library.tmdbApiKey" })
@@ -86,17 +85,18 @@ export function SystemTab({ control, searchQuery }: SystemTabProps) {
             {/* ═══════════════════════════════════════════════════════════════════
                 1. PROVEEDORES Y CLAVES DE API
                ═══════════════════════════════════════════════════════════════════ */}
-            <SettingsSection
+            <SectionBar
+                id="api-providers"
                 label="Proveedores de Metadatos y APIs"
                 description="Claves para enriquecer sinopsis, afiches en alta resolución y calificaciones oficiales."
-                icon={Icons.ui.key}
+                icon={IconUiKey}
                 badge={
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
                         {connectedApiCount} vinculada
                     </span>
                 }
             >
-                <SettingsCard divide={false} className="p-5 space-y-4">
+                <div className="p-5 space-y-4">
                     <ApiKeyCard
                         name="The Movie Database (TMDB)"
                         description="Permite buscar automáticamente afiches oficiales, sinopsis de sagas y fechas de emisión."
@@ -115,88 +115,87 @@ export function SystemTab({ control, searchQuery }: SystemTabProps) {
                             )}
                         />
                     </ApiKeyCard>
-                </SettingsCard>
-            </SettingsSection>
+                </div>
+            </SectionBar>
 
             {/* ═══════════════════════════════════════════════════════════════════
                 2. MANTENIMIENTO Y NOTIFICACIONES
                ═══════════════════════════════════════════════════════════════════ */}
-            <SettingsSection
+            <SectionBar
+                id="system-maintenance"
                 label="Mantenimiento y Notificaciones"
                 description="Respaldos de base de datos, limpieza de caché y avisos de sistema."
-                icon={Icons.ui.rotate}
+                icon={IconUiRotate}
             >
-                <SettingsCard>
-                    <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white/[0.01]">
-                        <div className="p-4 rounded-xl bg-white/[0.02] border border-white/10 flex items-center justify-between gap-3">
-                            <div className="space-y-0.5">
-                                <p className="text-xs font-bold text-on-surface">Copia de Seguridad SQLite</p>
-                                <p className="text-[11px] text-on-surface-variant">Genera un dump seguro de tu progreso.</p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={handleBackup}
-                                disabled={isBackingUp}
-                                className="shrink-0 px-3 py-1.5 rounded-lg bg-brand-accent text-white text-xs font-bold flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
-                            >
-                                {isBackingUp ? <Icons.ui.spinner className="w-3.5 h-3.5 animate-spin" /> : <Icons.status.archive className="w-3.5 h-3.5" />}
-                                <span>{isBackingUp ? "Creando..." : "Crear Copia"}</span>
-                            </button>
+                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white/[0.01]">
+                    <div className="p-4 rounded-xl bg-white/[0.02] border border-white/10 flex items-center justify-between gap-3">
+                        <div className="space-y-0.5">
+                            <p className="text-xs font-bold text-on-surface">Copia de Seguridad SQLite</p>
+                            <p className="text-[11px] text-on-surface-variant">Genera un dump seguro de tu progreso.</p>
                         </div>
-
-                        <div className="p-4 rounded-xl bg-white/[0.02] border border-white/10 flex items-center justify-between gap-3">
-                            <div className="space-y-0.5">
-                                <p className="text-xs font-bold text-on-surface">Limpieza de Caché</p>
-                                <p className="text-[11px] text-on-surface-variant">Libera miniaturas y temporales.</p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={handleClearCache}
-                                className="shrink-0 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 text-xs font-bold text-on-surface flex items-center gap-1.5 transition-all active:scale-95"
-                            >
-                                <Icons.ui.trash className="w-3.5 h-3.5 text-zinc-400" />
-                                <span>Limpiar</span>
-                            </button>
-                        </div>
+                        <button
+                            type="button"
+                            onClick={handleBackup}
+                            disabled={isBackingUp}
+                            className="shrink-0 px-3 py-1.5 rounded-lg bg-brand-accent text-white text-xs font-bold flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
+                        >
+                            {isBackingUp ? <IconUiSpinner className="w-3.5 h-3.5 animate-spin" /> : <IconStatusArchive className="w-3.5 h-3.5" />}
+                            <span>{isBackingUp ? "Creando..." : "Crear Copia"}</span>
+                        </button>
                     </div>
 
-                    <Controller
-                        control={control}
-                        name="notifications.disableNotifications"
-                        render={({ field }) => (
-                            <OsToggle
-                                label="Desactivar Todas las Notificaciones"
-                                description="Silencia avisos flotantes de sistema en el navegador."
-                                checked={!!field.value}
-                                onChange={field.onChange}
-                            />
-                        )}
-                    />
-                    <Controller
-                        control={control}
-                        name="notifications.disableAutoScannerNotifications"
-                        render={({ field }) => (
-                            <OsToggle
-                                label="Silenciar Avisos del Escáner Automático"
-                                description="No muestra alertas cuando el indexador añade episodios en segundo plano."
-                                checked={!!field.value}
-                                onChange={field.onChange}
-                            />
-                        )}
-                    />
-                </SettingsCard>
-            </SettingsSection>
+                    <div className="p-4 rounded-xl bg-white/[0.02] border border-white/10 flex items-center justify-between gap-3">
+                        <div className="space-y-0.5">
+                            <p className="text-xs font-bold text-on-surface">Limpieza de Caché</p>
+                            <p className="text-[11px] text-on-surface-variant">Libera miniaturas y temporales.</p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleClearCache}
+                            className="shrink-0 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 text-xs font-bold text-on-surface flex items-center gap-1.5 transition-all active:scale-95"
+                        >
+                            <IconUiTrash className="w-3.5 h-3.5 text-zinc-400" />
+                            <span>Limpiar</span>
+                        </button>
+                    </div>
+                </div>
+
+                <Controller
+                    control={control}
+                    name="notifications.disableNotifications"
+                    render={({ field }) => (
+                        <OsToggle
+                            label="Desactivar Todas las Notificaciones"
+                            description="Silencia avisos flotantes de sistema en el navegador."
+                            checked={!!field.value}
+                            onChange={field.onChange}
+                        />
+                    )}
+                />
+                <Controller
+                    control={control}
+                    name="notifications.disableAutoScannerNotifications"
+                    render={({ field }) => (
+                        <OsToggle
+                            label="Silenciar Avisos del Escáner Automático"
+                            description="No muestra alertas cuando el indexador añade episodios en segundo plano."
+                            checked={!!field.value}
+                            onChange={field.onChange}
+                        />
+                    )}
+                />
+            </SectionBar>
 
             {/* ═══════════════════════════════════════════════════════════════════
                 3. ZONA DE PELIGRO (CRÍTICO - COLAPSABLE)
                ═══════════════════════════════════════════════════════════════════ */}
-            <SettingsSection
+            <SectionBar
+                id="danger-zone"
                 label="Zona de Peligro"
                 description="Restablecer ajustes de fábrica o reiniciar el servidor."
-                icon={Icons.ui.alert}
+                icon={IconUiAlert}
                 collapsible
                 defaultOpen={false}
-                searchQuery={searchQuery}
                 badge={
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">
                         Crítico
@@ -209,9 +208,9 @@ export function SystemTab({ control, searchQuery }: SystemTabProps) {
                         description="Acciones de mantenimiento que pueden restablecer la configuración de fábrica de KameHouse."
                     />
                 </div>
-            </SettingsSection>
+            </SectionBar>
 
         </div>
     )
-}
+})
 

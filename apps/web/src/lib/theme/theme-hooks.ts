@@ -3,12 +3,12 @@ import { Models_Theme } from "@/api/generated/types"
 import { useGetSettings } from "@/api/hooks/settings.hooks"
 
 
-export const enum ThemeLibraryScreenBannerType {
+const enum ThemeLibraryScreenBannerType {
     Dynamic = "dynamic",
     Custom = "custom",
 }
 
-export const enum ThemeMediaPageBannerType {
+const enum ThemeMediaPageBannerType {
     Default = "default",
     BlurWhenUnavailable = "blur-when-unavailable",
     DimWhenUnavailable = "dim-when-unavailable",
@@ -18,49 +18,23 @@ export const enum ThemeMediaPageBannerType {
     Hide = "hide",
 }
 
-export const ThemeMediaPageBannerTypeOptions = [
-    {
-        value: ThemeMediaPageBannerType.Default as string, label: "Default",
-        description: "Always show a banner image. If not available, the cover image will be used instead.",
-    },
-    {
-        value: ThemeMediaPageBannerType.BlurWhenUnavailable as string, label: "Blur when unavailable",
-        description: "Show the banner image if available. If not available, the cover image will be used and blurred.",
-    },
-    {
-        value: ThemeMediaPageBannerType.DimWhenUnavailable as string, label: "Dim if unavailable",
-        description: "Show the banner image if available. If not available, the banner will be dimmed.",
-    },
-    {
-        value: ThemeMediaPageBannerType.HideWhenUnavailable as string, label: "Hide if unavailable",
-        description: "Show the banner image if available. If not available, the banner will be hidden.",
-    },
-    {
-        value: ThemeMediaPageBannerType.Dim as string, label: "Dim",
-        description: "Always dim the banner image.",
-    },
-    {
-        value: ThemeMediaPageBannerType.Blur as string, label: "Blur",
-        description: "Always blur the banner image.",
-    },
-    {
-        value: ThemeMediaPageBannerType.Hide as string, label: "Hide",
-        description: "Always hide the banner image.",
-    },
-]
-
-export const enum ThemeMediaPageBannerSize {
+const enum ThemeMediaPageBannerSize {
     Default = "default", // block height
     Small = "small",
 }
 
-export const enum ThemeMediaPageInfoBoxSize {
+const enum ThemeMediaPageInfoBoxSize {
     // Default = "default",
     Fluid = "fluid",
     Boxed = "boxed",
 }
 
-export type ThemeSettings = Omit<Models_Theme, "id" | "createdAt" | "updatedAt">
+export type ThemeSettings = Omit<Models_Theme, "id" | "createdAt" | "updatedAt"> & {
+    sidebarBackgroundColor?: string
+    themeAnimeEntryScreenLayout?: string
+    themeUseLegacyEpisodeCard?: boolean
+    homeItems?: string[]
+}
 
 export type ThemeMode = "classic" | "era"
 
@@ -75,11 +49,12 @@ export function resolveThemeMode(t: Pick<ThemeSettings, "themeMode" | "themeEra"
     // "advanced" es un valor legacy que ya no forma parte del union ThemeMode
     if ((t.themeMode as string) === "advanced") return "era"
     if (t.themeEra?.startsWith("era-")) return "era"
-    if (t.themeEnableBlurringEffects) return "era"
+    // Solo derivar a "era" por blur si el usuario NO eligió modo explícitamente
+    if (!t.themeMode && t.themeEnableBlurringEffects) return "era"
     return "classic"
 }
 
-export const THEME_DEFAULT_VALUES: ThemeSettings = {
+const THEME_DEFAULT_VALUES: ThemeSettings = {
     enableColorSettings: false,
     backgroundColor: "#050506",
     accentColor: "#C8102E",
@@ -95,7 +70,9 @@ export const THEME_DEFAULT_VALUES: ThemeSettings = {
     themeExpandSidebarOnHover: false,
     themeDisableSidebarTransparency: false,
     themeEnableSidebarGradient: false,
-    themeEnableBlurringEffects: false,
+    // Glass sutil activo por defecto para preservar el look Clásico premium;
+    // el toggle de Apariencia puede desactivarlo (flat mode).
+    themeEnableBlurringEffects: true,
     themeEnableCinematicGrain: false,
     themeDisableCarouselAutoScroll: false,
     themeUseLegacyEpisodeCard: false,
@@ -120,9 +97,16 @@ export const THEME_DEFAULT_VALUES: ThemeSettings = {
     themeCustomCSS: "",
     themeMobileCustomCSS: "",
     themeUnpinnedMenuItems: [],
+    bgMusicEnabled: true,
+    bgMusicVolume: 0.25,
+    bgMusicDir: "",
+    bgMusicTracks: [],
+    seriesSoundtrackMode: true,
+    uiSoundsEnabled: true,
+    uiSoundsVolume: 1.0,
 }
 
-export type ThemeSettingsHook = {
+type ThemeSettingsHook = {
     hasCustomBackgroundColor: boolean
     hasEraTheme: boolean
     hasCustomBackground: boolean
@@ -135,7 +119,7 @@ export type ThemeSettingsHook = {
  * backend column defaults to "default", a legacy value dropped from the enum, so
  * it (and anything unset) resolves to Fluid.
  */
-export function normalizeInfoBoxSize(value: string | undefined | null): string {
+function normalizeInfoBoxSize(value: string | undefined | null): string {
     return value === ThemeMediaPageInfoBoxSize.Boxed
         ? ThemeMediaPageInfoBoxSize.Boxed
         : ThemeMediaPageInfoBoxSize.Fluid
@@ -148,7 +132,7 @@ export function normalizeInfoBoxSize(value: string | undefined | null): string {
  */
 export function useThemeSettings(): ThemeSettingsHook {
     const { data: serverSettings } = useGetSettings()
-    const theme = serverSettings?.theme
+    const theme = serverSettings?.theme as (Models_Theme & Partial<ThemeSettings>) | undefined
 
     return React.useMemo(() => {
         const merged: ThemeSettings = theme
@@ -179,17 +163,23 @@ export function useThemeSettings(): ThemeSettingsHook {
         const effectiveMode = resolveThemeMode(merged)
         
         let effectiveEra = merged.themeEra
-        if (effectiveMode === "era" && (!effectiveEra || !effectiveEra.startsWith("era-"))) {
-            effectiveEra = "era-universe"
+        if (effectiveMode === "era") {
+            if (!effectiveEra || !effectiveEra.startsWith("era-")) {
+                effectiveEra = "era-universe"
+            }
+        } else if (effectiveMode === "classic") {
+            if (!effectiveEra || (!effectiveEra.startsWith("classic") && effectiveEra !== "classic")) {
+                effectiveEra = "classic"
+            }
         }
 
         return {
             ...merged,
             themeEra: effectiveEra,
-            // Clásico (glass sutil) siempre tiene vidrio
-            // activo — la intensidad la modulan los tokens de [data-mode]. Solo en
-            // Por Era el toggle del usuario manda.
-            themeEnableBlurringEffects: effectiveMode === "era" ? merged.themeEnableBlurringEffects : true,
+            // El toggle del usuario manda en ambos modos. En Clásico la
+            // intensidad la modulan los tokens de [data-mode="classic"] (sutil);
+            // en Por Era es el glass completo con tintes de saga.
+            themeEnableBlurringEffects: merged.themeEnableBlurringEffects,
             effectiveMode,
             hasCustomBackgroundColor: merged.enableColorSettings && !!merged.backgroundColor,
             hasEraTheme: effectiveEra !== "",
@@ -201,9 +191,3 @@ export function useThemeSettings(): ThemeSettingsHook {
 
 
 
-import { useResponsive } from "@/hooks/use-responsive"
-
-export function useIsMobile(): { isMobile: boolean } {
-    const { isMobile, isTablet } = useResponsive()
-    return { isMobile: isMobile || isTablet }
-}

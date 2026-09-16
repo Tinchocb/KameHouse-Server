@@ -8,7 +8,7 @@ import { cn, defineStyleAnatomy } from "../core/styling"
 
 export const SkeletonAnatomy = defineStyleAnatomy({
     root: cva([
-        "relative overflow-hidden rounded-[--radius-md] bg-zinc-900/50 w-full h-12 border border-white/5",
+        "relative overflow-hidden rounded-md bg-surface-container-high/50 w-full h-12 border border-outline-variant/20",
         // Shimmer effect
         "before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_1.5s_infinite] before:bg-gradient-to-r before:from-transparent before:via-white/5 before:to-transparent",
     ]),

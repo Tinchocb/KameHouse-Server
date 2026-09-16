@@ -9,7 +9,7 @@ import { TextInput, TextInputProps } from "@/components/ui/text-input"
 import { useBoolean } from "@/hooks/use-disclosure"
 import { upath } from "@/lib/helpers/upath"
 import React from "react"
-import { Icons } from "@/components/ui/icons"
+import { IconUiChevronsUpDown, IconStatusFolder, IconUiSpinner, IconUiCheck, IconUiClose, IconStatusFolderOpen, IconNavigationChevronLeft, IconStatusFolderPlus } from "@/components/ui/icons";
 import { useDebounce } from "use-debounce"
 
 export type DirectorySelectorProps = {
@@ -25,7 +25,7 @@ export type DirectorySelectorProps = {
     }
 } & Omit<TextInputProps, "onSelect" | "value">
 
-export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, DirectorySelectorProps>(function (props: DirectorySelectorProps, ref: React.ForwardedRef<HTMLInputElement>) {
+export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, DirectorySelectorProps>(function DirectorySelector(props, ref) {
 
     const {
         defaultValue,
@@ -98,7 +98,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                                 className="w-[min(400px,calc(100vw-2rem))] p-2 sm:ml-[30px]"
                                 sideOffset={-4}
                                 trigger={
-                                    <Button size="sm" intent="gray-link" leftIcon={<Icons.ui.chevronsUpDown />} className="!text-[--muted] text-xs">
+                                    <Button size="sm" intent="gray-link" leftIcon={<IconUiChevronsUpDown />} className="!text-[--muted] text-xs">
                                         Cambiar biblioteca
                                     </Button>
                                 }
@@ -106,7 +106,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                                 <Select
                                     value={libraryProps.selectedLibrary}
                                     options={libraryProps.libraryOptions}
-                                    onValueChange={v => {
+                                    onValueChange={(v: string) => {
                                         libraryProps.handleLibraryPathSelect(v)
                                         setLibrarySelectionOpen(false)
                                     }}
@@ -119,22 +119,22 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                 <div className="flex items-center gap-2">
                     <div className="flex-1 min-w-0">
                         <TextInput
-                            leftIcon={<Icons.status.folder className="text-zinc-400" />}
+                            leftIcon={<IconStatusFolder className="text-zinc-400" />}
                             {...rest}
                             label={undefined}
                             value={input}
                             rightIcon={
                                 <div className="flex items-center pr-1">
                                     {isLoading ? (
-                                        <Icons.ui.spinner className="w-4 h-4 animate-spin text-zinc-500" />
+                                        <IconUiSpinner className="w-4 h-4 animate-spin text-zinc-500" />
                                     ) : data?.exists ? (
-                                        <Icons.ui.check className="w-4 h-4 text-emerald-400" />
+                                        <IconUiCheck className="w-4 h-4 text-emerald-400" />
                                     ) : shouldExist && input.length > 0 ? (
-                                        <Icons.ui.close className="w-4 h-4 text-red-400" />
+                                        <IconUiClose className="w-4 h-4 text-red-400" />
                                     ) : null}
                                 </div>
                             }
-                            onChange={e => {
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                                 setInput(e.target.value ?? "")
                             }}
                             ref={ref}
@@ -146,7 +146,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                         type="button"
                         size="md"
                         intent="gray-glass"
-                        icon={<Icons.status.folderOpen className="w-4 h-4 text-zinc-300" />}
+                        icon={<IconStatusFolderOpen className="w-4 h-4 text-zinc-300" />}
                         title="Explorar carpetas en el sistema"
                         className="shrink-0 rounded-xl"
                         onClick={selectorState.on}
@@ -155,7 +155,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
             </div>
             <Modal
                 open={selectorState.active}
-                onOpenChange={v => {
+                onOpenChange={(v: boolean) => {
                     selectorState.toggle()
                     if (!v) {
                         checkDirectoryExists()
@@ -169,16 +169,16 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                         onClick={() => data?.basePath && setInput(data?.basePath)}
                         intent="gray-basic"
                         size="sm"
-                        icon={<Icons.navigation.chevronLeft />}
+                        icon={<IconNavigationChevronLeft />}
                         disabled={(!data?.basePath?.length || data?.basePath?.length === 1)}
                     />
                     <TextInput
-                        leftIcon={<Icons.status.folder />}
+                        leftIcon={<IconStatusFolder />}
                         value={input}
                         rightIcon={isLoading ? null : (data?.exists ?
-                            <Icons.ui.check className="text-status-success" /> : shouldExist ?
-                                <Icons.ui.close className="text-status-error" /> : <Icons.status.folderPlus />)}
-                        onChange={e => {
+                            <IconUiCheck className="text-status-success" /> : shouldExist ?
+                                <IconUiClose className="text-status-error" /> : <IconStatusFolderPlus />)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                             setInput(e.target.value ?? "")
                         }}
                         onClick={() => {
@@ -199,7 +199,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                                 className="py-1 flex items-center gap-2 text-sm px-3 rounded-[--radius-md] border flex-none cursor-pointer bg-gray-900 hover:bg-gray-800"
                                 onClick={() => setInput(folder.Path)}
                             >
-                                <Icons.status.folder className="w-4 h-4 text-white/60" />
+                                <IconStatusFolder className="w-4 h-4 text-white/60" />
                                 <span className="break-normal">{folder.Name}</span>
                             </div>
                         ))}
@@ -216,7 +216,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                                 className="flex items-center gap-2 py-2 px-3 cursor-pointer hover:bg-gray-800"
                                 onClick={() => setInput(folder.Path)}
                             >
-                                <Icons.status.folder className="w-4 h-4 text-white/60" />
+                                <IconStatusFolder className="w-4 h-4 text-white/60" />
                                 <span className="break-normal">{folder.Name}</span>
                             </div>
                         ))}

@@ -7,7 +7,7 @@ import {
     Zap,
     X,
 } from "lucide-react"
-import { useAppStore } from "@/lib/store"
+import { useScannerStore } from "@/lib/store"
 import { useScanLocalFiles } from "@/api/hooks/scan.hooks"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { cn } from "@/components/ui/core/styling"
@@ -24,11 +24,11 @@ export function DragonBallScannerLive() {
     const [modalTab, setModalTab] = useState<"sagas" | "movies">("sagas")
     const [showLiveLog, setShowLiveLog] = useState(false)
 
-    // Store state
-    const isScanningStore = useAppStore((state) => state.isScanning)
-    const scanProgressStore = useAppStore((state) => state.scanProgress)
-    const currentFileStore = useAppStore((state) => state.currentScanningFile)
-    const scanEvents = useAppStore((state) => state.events)
+    // Store state (desacoplado de useAppStore)
+    const isScanningStore = useScannerStore((state) => state.isScanning)
+    const scanProgressStore = useScannerStore((state) => state.scanProgress)
+    const currentFileStore = useScannerStore((state) => state.currentScanningFile)
+    const scanEvents = useScannerStore((state) => state.events)
 
     const isScanning = isScanningStore || isPending
     const scanProgress = isScanning ? Math.round(scanProgressStore || 5) : 100
@@ -61,7 +61,6 @@ export function DragonBallScannerLive() {
                         movieCount++
                     }
                     detectedIds.add(normalizedTmdbId)
-                    detectedIds.add(normalizedTmdbId + 1000000)
                     movieMap.set(normalizedTmdbId, {
                         title,
                         year: entry.media?.year,
@@ -88,10 +87,6 @@ export function DragonBallScannerLive() {
                     }
                 }
             }
-        }
-
-        if (movieCount > 0) {
-            map.set(999999, { count: movieCount })
         }
 
         return { collectionMap: map, movieDetailsMap: movieMap, detectedMovieIds: detectedIds, totalMoviesDetected: movieCount }
@@ -126,10 +121,10 @@ export function DragonBallScannerLive() {
     return (
         <div className="space-y-6 animate-in fade-in duration-300">
             {/* ── 1. HERO RADAR DE ESCANEO ─────────────────────────────────────── */}
-            <div className="relative overflow-hidden rounded-2xl bg-white/[0.02] border border-white/10 p-5 sm:p-6 shadow-elevation-1 backdrop-blur-md">
-                {/* Background Ki Aura Ambient Light */}
-                <div className="absolute -right-16 -top-16 w-64 h-64 bg-brand-accent/10 rounded-full blur-3xl pointer-events-none transform-gpu" />
-                <div className="absolute -left-16 -bottom-16 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none transform-gpu" />
+            <div className="relative overflow-hidden rounded-2xl bg-white/[0.02] border border-white/10 p-5 sm:p-6 shadow-elevation-1 backdrop-blur-overlay-2xl backdrop-saturate-[190%]">
+                {/* Background Ki Aura Ambient Light (single blur layer on parent panel) */}
+                <div className="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-brand-accent/10 ring-2 ring-white/20 ring-offset-2 ring-offset-white/[0.02]" />
+                <div className="absolute -left-16 -bottom-16 w-64 h-64 rounded-full bg-amber-500/10 ring-2 ring-white/20 ring-offset-2 ring-offset-white/[0.02]" />
 
                 <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-6">
                     {/* Left: Orb + Status */}

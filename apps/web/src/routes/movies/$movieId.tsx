@@ -1,17 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { HydrationBoundary, dehydrate, useQueryClient } from "@tanstack/react-query"
+import { useQueryClient } from "@tanstack/react-query"
 import React, { useState, useEffect, useRef } from "react"
-import { useGSAP } from "@gsap/react"
-import gsap from "gsap"
 import { toast } from "sonner"
 import { useAppStore } from "@/lib/store"
 import { getHighResImage, getMediumResImage } from "@/lib/helpers/images"
 import { fetchAnimeEntry, useGetAnimeEntry, useUpdateAnimeEntryProgress } from "@/api/hooks/anime_entries.hooks"
 import { useGetContinuityWatchHistoryItem } from "@/api/hooks/continuity.hooks"
-import { useCastPlay } from "@/api/hooks/cast.hooks"
 import { usePreloadMediastreamMediaContainer } from "@/api/hooks/mediastream.hooks"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
-import { EXTRA_ENDPOINTS } from "@/api/client/endpoints.extra"
 import { Anime_LocalFile, FileTechnicalInfo, Mediastream_StreamType } from "@/api/generated/types"
 import { EmptyState } from "@/components/shared/empty-state"
 import { PlayCta } from "@/components/ui/play-cta"
@@ -22,30 +18,33 @@ import { Skeleton } from "@/components/ui/skeleton/skeleton"
 
 const VideoPlayer = React.lazy(() => import("@/components/video/player").then(m => ({ default: m.VideoPlayer })))
 import { startViewTransition } from "@/lib/helpers/transitions"
+import { stripHtml } from "@/lib/helpers/sanitizer"
 import { MediaHero } from "@/components/ui/media-hero"
+import { MediaMetadataCapsule } from "@/components/ui/media-metadata-capsule"
 import { useSound } from "@/hooks/use-sound"
 import { cn } from "@/components/ui/core/styling"
-import { Icons } from "@/components/ui/icons"
-import { ERA_TABS, cleanMovieTitle } from "./-MovieCard"
-import { getEntryEra } from "./-components/movies-utils"
-import { useServerQuery } from "@/api/client/requests"
-import { CharacterDetailModal, type DragonBallLoreData } from "@/components/shared/character-detail-modal"
+import { IconUiListPlus, IconUiCheck, IconUiPlus, IconUiHeart } from "@/components/ui/icons";
+import { cleanMovieTitle } from "./-MovieCard"
+import { getEntryEraId, getMovieLore } from "./-components/movies-utils"
+import { ERAS, ERA_COLOR_MAP } from "@/lib/config/eras"
 
-import { isDragonBallTmdbId, getSeriesEraTheme } from "@/lib/config/dragonball.config"
+import { getSeriesEraTheme } from "@/lib/config/dragonball.config"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
 import { useThemeSettings } from "@/lib/theme/theme-hooks"
-
+import { AppErrorBoundary } from "@/components/shared/app-error-boundary"
+import { BentoDetailsSkeleton } from "@/components/ui/shimmer-skeleton"
 
 export const Route = createFileRoute("/movies/$movieId")({
     loader: async ({ params: { movieId }, context }) => {
         const qc = context.queryClient
-        await qc.prefetchQuery({
+        await qc.ensureQueryData({
             queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, movieId],
             queryFn: () => fetchAnimeEntry(movieId),
         })
-        return { dehydrateState: dehydrate(qc) }
     },
     component: MovieDetailPage,
+    errorComponent: AppErrorBoundary,
+    pendingComponent: BentoDetailsSkeleton,
 })
 
 const formatFileSize = (bytes: number) => {
@@ -59,12 +58,9 @@ const formatFileSize = (bytes: number) => {
 
 function MovieDetailPage() {
     const { movieId } = Route.useParams()
-    const { dehydrateState } = Route.useLoaderData()
 
     return (
-        <HydrationBoundary state={dehydrateState}>
-            <MovieDetailClient key={movieId} movieId={movieId} />
-        </HydrationBoundary>
+        <MovieDetailClient key={movieId} movieId={movieId} />
     )
 }
 
@@ -74,22 +70,10 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
     const { data: entry, isLoading } = useGetAnimeEntry(movieId)
     const { data: continuityData, refetch: refetchContinuity } = useGetContinuityWatchHistoryItem(Number(movieId))
     const containerRef = useRef<HTMLDivElement>(null)
-    const backdropRef = useRef<HTMLDivElement>(null)
     const addToQueue = useAppStore(state => state.addToQueue)
-    const { mutate: castPlay } = useCastPlay()
     const ts = useThemeSettings()
 
-    const { data: lore } = useServerQuery<DragonBallLoreData>({
-        endpoint: EXTRA_ENDPOINTS.DRAGONBALL.Lore.endpoint,
-        method: "GET",
-        queryKey: [EXTRA_ENDPOINTS.DRAGONBALL.Lore.key],
-        staleTime: 300000,
-        enabled: isDragonBallTmdbId(entry?.media?.tmdbId),
-        muteError: true,
-    })
-
     const [isFavorite, setIsFavorite] = useState(false)
-    const [selectedCharacterName, setSelectedCharacterName] = useState<string | null>(null)
     const [playTarget, setPlayTarget] = useState<{
         path: string
         streamType: Mediastream_StreamType
@@ -98,11 +82,18 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
         malId?: number | null
     } | null>(null)
 
-    // BUG 15: También chequea listData.progress para películas sin episodes[0]
-    const initialWatched = entry?.episodes?.[0]?.watched
+    // Watch status derivado con soporte para override optimista del usuario (sin doble render)
+    const [userWatchedOverride, setUserWatchedOverride] = useState<boolean | null>(null)
+    const serverWatched = entry?.episodes?.[0]?.watched
         || (entry?.listData?.progress ?? 0) >= (entry?.media?.totalEpisodes ?? 1)
         || false
-    const [isWatched, setIsWatched] = useState(initialWatched)
+    const isWatched = userWatchedOverride ?? serverWatched
+
+    // Resetear override de usuario al cambiar de película
+    useEffect(() => {
+        setUserWatchedOverride(null)
+    }, [movieId])
+
     const { mutate: updateProgress } = useUpdateAnimeEntryProgress(Number(movieId), 1, false)
     const { mutate: preloadStream } = usePreloadMediastreamMediaContainer()
 
@@ -115,53 +106,25 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
         preloadStream({ path: defaultTargetPath, streamType: "direct", audioStreamIndex: 0, preferredAudioLang: "" })
     }, [defaultTargetPath, preloadStream])
 
-    // BUG 14: Sincronizar isWatched cuando llegan nuevos datos de la entrada (useEffect, no render)
-    useEffect(() => {
-        setIsWatched(
-            entry?.episodes?.[0]?.watched
-            || (entry?.listData?.progress ?? 0) >= (entry?.media?.totalEpisodes ?? 1)
-            || false
-        )
-    }, [entry?.episodes, entry?.listData?.progress, entry?.media?.totalEpisodes])
-
     const setActiveSeriesContext = useAppStore(s => s.setActiveSeriesContext)
+    const movieContextWrittenRef = React.useRef<string | null>(null)
     useEffect(() => {
         const tmdbId = entry?.media?.tmdbId || Number(movieId)
         if (tmdbId) {
-            setActiveSeriesContext(String(tmdbId))
+            const key = String(tmdbId)
+            movieContextWrittenRef.current = key
+            setActiveSeriesContext(key)
         }
         return () => {
-            setActiveSeriesContext(null)
+            if (useAppStore.getState().activeSeriesContext === movieContextWrittenRef.current) {
+                setActiveSeriesContext(null)
+            }
         }
     }, [entry?.media?.tmdbId, movieId, setActiveSeriesContext])
 
     useEffect(() => {
         if (entry?.media?.id) playSound("detail", 0.4)
     }, [entry?.media?.id, playSound])
-
-    // Parallax del backdrop — escucha en captura con throttling por requestAnimationFrame
-    useEffect(() => {
-        let rafId: number | null = null
-        const handleScroll = (e: Event) => {
-            if (rafId !== null) return
-            const target = e.target
-            rafId = requestAnimationFrame(() => {
-                rafId = null
-                if (!backdropRef.current || !containerRef.current) return
-                if (target === document || target === window) {
-                    const scrolled = window.scrollY || document.documentElement.scrollTop
-                    backdropRef.current.style.transform = `translate3d(0, ${scrolled * 0.35}px, 0)`
-                } else if (target instanceof HTMLElement && target.contains(containerRef.current)) {
-                    backdropRef.current.style.transform = `translate3d(0, ${target.scrollTop * 0.35}px, 0)`
-                }
-            })
-        }
-        window.addEventListener("scroll", handleScroll, { capture: true, passive: true })
-        return () => {
-            if (rafId !== null) cancelAnimationFrame(rafId)
-            window.removeEventListener("scroll", handleScroll, { capture: true })
-        }
-    }, [])
 
     // Sincroniza el backdrop con el DynamicBackdrop global (glass real detrás del contenido)
     const setBackdropUrl = useIntelligenceStore(s => s.setBackdropUrl)
@@ -171,16 +134,11 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
         return () => setBackdropUrl(null)
     }, [backdropForStore, setBackdropUrl])
 
-    useGSAP(() => {
-        gsap.from(".movie-animate", {
-            y: 20,
-            opacity: 0,
-            duration: 0.4,
-            stagger: 0.04,
-            ease: "power2.out",
-            delay: 0.05
-        })
-    }, { scope: containerRef, dependencies: [movieId] })
+
+
+    const eraId = entry ? getEntryEraId(entry) : "dbz"
+    const eraAccent = ERA_COLOR_MAP[eraId].accent
+    const eraLabel = ERAS.find(e => e.id === eraId)?.title ?? "Dragon Ball"
 
     if (!entry || !entry.media) {
         if (isLoading) {
@@ -207,15 +165,26 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
     }
 
     const media = entry.media
-    const title = media.titleSpanish || media.titleEnglish || media.titleRomaji || "Título Desconocido"
+    const lore = getMovieLore(entry)
+    const isGenericOrEmptySpanish = !media.titleSpanish ||
+        media.titleSpanish.trim().toLowerCase() === "dragon ball serie" ||
+        media.titleSpanish.trim().toLowerCase() === "dragon ball series"
+    const title = (!isGenericOrEmptySpanish ? media.titleSpanish : null)
+        || lore?.title
+        || media.titleEnglish
+        || media.titleRomaji
+        || "Título Desconocido"
     const year = media.year?.toString() || ""
-    const era = getEntryEra(entry)
-    const eraConfig = ERA_TABS.find(t => t.value === era) || ERA_TABS[0]
     const eraTheme = getSeriesEraTheme(media.tmdbId)
-    const localTheme = !ts.themeEra ? eraTheme : undefined
-
-    const synopsis = media.description ? media.description.replace(/<[^>]*>/g, "") : ""
-
+    const isAdaptiveEra = ts.effectiveMode === "era" && (!ts.themeEra || ts.themeEra === "era-universe")
+    const localTheme = isAdaptiveEra && eraTheme ? eraTheme : undefined
+    const loreSynopsis = lore?.specialTrivia || lore?.chronologyNotes || lore?.keyEvents?.join(" ")
+    const isDescriptionEnglish = media.description && /^(the|after|when|with|in\s+the|during|a\s+|goku\b)/i.test(media.description.trim())
+    const synopsis = stripHtml(
+        (!media.description || isDescriptionEnglish ? (loreSynopsis || media.description) : media.description)
+        || loreSynopsis
+        || "Sin descripción disponible."
+    )
     const backdropSrc = media.bannerImage ?? media.posterImage ?? null
     const backdropUrl = getHighResImage(backdropSrc || "")
     const posterUrl = getHighResImage(media.posterImage || "")
@@ -242,7 +211,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
     const handleToggleWatched = (e: React.MouseEvent) => {
         e.stopPropagation()
         const nextState = !isWatched
-        setIsWatched(nextState)
+        setUserWatchedOverride(nextState)
         updateProgress({
             mediaId: Number(movieId),
             progress: nextState ? 1 : 0,
@@ -285,26 +254,6 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
         preloadStream({ path: defaultTargetPath, streamType: "direct", audioStreamIndex: 0, preferredAudioLang: "" })
     }
 
-    const handleCastToTV = (e: React.MouseEvent) => {
-        e.stopPropagation()
-        if (!entry.localFiles || entry.localFiles.length === 0) {
-            toast.error("No hay archivos locales disponibles.")
-            return
-        }
-        const localFile = entry.localFiles[0]
-        const epNum = Number(localFile.parsedInfo?.episode || localFile.metadata?.episode || 1)
-        castPlay({
-            mediaId: Number(movieId),
-            episodeNumber: epNum,
-            title: title,
-            episodeLabel: "Película",
-        }, {
-            onSuccess: () => {
-                toast.success("Película enviada a la TV")
-            },
-        })
-    }
-
     const handleAddToQueue = (e: React.MouseEvent) => {
         e.stopPropagation()
         if (entry.localFiles && entry.localFiles.length > 0) {
@@ -329,64 +278,41 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
 
     const topBadge = (
         <span
-            className="inline-flex items-center font-mono text-label-sm tracking-display font-bold uppercase px-3 py-1 rounded-full border backdrop-blur-[var(--blur-overlay-sm)]"
+            className="inline-flex items-center font-mono text-label-sm tracking-display font-bold uppercase px-3 py-1 rounded-full border backdrop-blur-overlay-sm"
             style={{
-                color: eraConfig.color,
-                borderColor: `color-mix(in srgb, ${eraConfig.color} 27%, transparent)`,
-                backgroundColor: `color-mix(in srgb, ${eraConfig.color} 8%, transparent)`,
-                boxShadow: `0 0 15px color-mix(in srgb, ${eraConfig.color} 15%, transparent)`
+                color: eraAccent,
+                borderColor: `color-mix(in srgb, ${eraAccent} 27%, transparent)`,
+                backgroundColor: `color-mix(in srgb, ${eraAccent} 8%, transparent)`,
+                boxShadow: `0 0 15px color-mix(in srgb, ${eraAccent} 15%, transparent)`
             }}
         >
-            {eraConfig.label}
+            {eraLabel}
         </span>
     )
 
     const metadataRow = (
-        <div className="flex flex-wrap items-center text-zinc-400 font-mono text-label-sm tracking-widest gap-3 uppercase">
-            <span className="flex items-center justify-center bg-white/[0.04] border border-white/10 rounded-full px-2.5 py-0.5 text-zinc-300 font-bold">
-                {media.isNsfw ? "18+" : "PG-13"}
-            </span>
-            
-            {technicalData?.is4K ? (
-                <span className="flex items-center gap-1 font-black text-on-surface tracking-wider px-2.5 py-0.5 rounded-full text-xs" style={{ background: "linear-gradient(to right, var(--era-shimmer-1), var(--era-shimmer-2))" }}>
-                    <Icons.ui.star size={10} fill="currentColor" />
-                    4K UHD
-                </span>
-            ) : technicalData?.resolutionTag ? (
-                <span className="flex items-center justify-center bg-white/[0.06] border border-white/10 rounded-full px-2.5 py-0.5 text-zinc-300 font-bold text-xs">
-                    {technicalData.resolutionTag}
-                </span>
-            ) : null}
-
+        <MediaMetadataCapsule
+            format="PELÍCULA"
+            year={year}
+            duration={formattedDuration}
+            ageRating={media.isNsfw ? "18+" : "PG-13"}
+            quality={technicalData?.is4K ? "4K UHD" : technicalData?.resolutionTag || undefined}
+            rating={media.score ? media.score / 10 : undefined}
+        >
             {technicalData?.isHDR && (
-                <span className="flex items-center justify-center bg-amber-500/15 border border-amber-500/30 rounded-full px-2.5 py-0.5 text-amber-300 font-black text-xs tracking-wider">
+                <span className="bg-amber-950/60 text-amber-300 text-[10px] font-mono font-black tracking-widest px-2.5 py-1 rounded-lg border border-amber-500/30 uppercase shadow-sm">
                     HDR10
                 </span>
             )}
-
             {technicalData?.videoCodec && (
-                <span className="flex items-center justify-center bg-white/[0.04] border border-white/10 rounded-full px-2 py-0.5 text-zinc-400 font-bold text-xs">
+                <span className="bg-white/10 text-zinc-200 text-[10px] font-mono font-bold tracking-wider px-2.5 py-1 rounded-lg border border-white/10 uppercase">
                     {technicalData.videoCodec}
                 </span>
             )}
-            
-            <span className="flex items-center justify-center bg-white/[0.04] border border-white/10 rounded-full px-2.5 py-0.5 text-zinc-300 font-bold">CC</span>
-            
-            <div className="flex items-center gap-2 text-zinc-400">
-                {year && <span className="font-bold">[{year}]</span>}
-                {year && formattedDuration && <span className="text-zinc-600">•</span>}
-                {formattedDuration && <span className="font-bold">{formattedDuration}</span>}
-                {(media.score ?? 0) > 0 && (
-                    <>
-                        <span className="text-zinc-600">•</span>
-                        <span className="flex items-center gap-1 font-bold" style={{ color: eraConfig.color }}>
-                            <Icons.ui.star size={10} fill="currentColor" className="stroke-none mb-0.5" />
-                            {(media.score / 10).toFixed(1)} Ki
-                        </span>
-                    </>
-                )}
-            </div>
-        </div>
+            <span className="bg-white/10 text-zinc-200 text-[10px] font-mono font-bold tracking-wider px-2.5 py-1 rounded-lg border border-white/10 uppercase">
+                CC
+            </span>
+        </MediaMetadataCapsule>
     )
 
     const actionButtons = (
@@ -405,17 +331,8 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                 {entry.localFiles && entry.localFiles.length > 0 && (
                     <GlassIconButton
                         onClick={handleAddToQueue}
-                        icon={<Icons.ui.listPlus className="w-5 h-5" />}
+                        icon={<IconUiListPlus className="w-5 h-5" />}
                         title="Añadir a la cola"
-                        className="flex-1 md:flex-initial"
-                    />
-                )}
-
-                {entry.localFiles && entry.localFiles.length > 0 && (
-                    <GlassIconButton
-                        onClick={handleCastToTV}
-                        icon={<Icons.media.cast className="w-5 h-5" />}
-                        title="Enviar a TV"
                         className="flex-1 md:flex-initial"
                     />
                 )}
@@ -424,7 +341,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                     onClick={handleToggleWatched}
                     isActive={isWatched}
                     activeTone="success"
-                    icon={isWatched ? <Icons.ui.check className="w-5 h-5 stroke-[3px]" /> : <Icons.ui.plus className="w-5 h-5 stroke-[2.5px]" />}
+                    icon={isWatched ? <IconUiCheck className="w-5 h-5 stroke-[3px]" /> : <IconUiPlus className="w-5 h-5 stroke-[2.5px]" />}
                     title={isWatched ? "Marcar como no vista" : "Marcar como vista"}
                     className="flex-1 md:flex-initial"
                 />
@@ -433,7 +350,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                     onClick={handleToggleFavorite}
                     isActive={isFavorite}
                     activeTone="destructive"
-                    icon={<Icons.ui.heart className={cn("w-5 h-5", isFavorite && "fill-current")} />}
+                    icon={<IconUiHeart className={cn("w-5 h-5", isFavorite && "fill-current")} />}
                     title={isFavorite ? "Quitar de favoritos" : "Añadir a favoritos"}
                     className="flex-1 md:flex-initial"
                 />
@@ -442,11 +359,9 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
     )
 
     return (
-        <div ref={containerRef} className="h-full w-full flex flex-col overflow-y-auto no-scrollbar text-on-surface relative select-none" data-theme={localTheme || undefined}>
-
-
-            {/* BUG 13: movie-animate en el wrapper del hero para que GSAP tenga targets */}
-            <div className="movie-animate">
+        <div ref={containerRef} className="w-full flex flex-col relative text-on-surface select-none" data-theme={localTheme || undefined}>
+            {/* Hero: 100svh (o 62svh en banner pequeño) – altura completa del viewport */}
+            <div className="flex-shrink-0">
                 <MediaHero
                     scrollContainerRef={containerRef}
                     backdropUrl={backdropUrl}
@@ -462,14 +377,14 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                 />
             </div>
 
-            {/* Progress bar */}
+            {/* Progress bar (overlay al final del hero) */}
             {continuityData?.item?.currentTime && continuityData.item.duration && (
-                <div className="w-full max-w-content mx-auto px-4 sm:px-8 md:px-16 lg:px-20 xl:px-24 mt-12 pb-24 relative z-20">
-                    <WatchProgressBar percent={progressPercent} className="movie-animate" size="hero" animateOnMount />
+                <div className="w-full max-w-content mx-auto px-4 sm:px-6 md:px-8 lg:px-10 -mt-16 mb-6 relative z-20">
+                    <WatchProgressBar percent={progressPercent} size="hero" animateOnMount />
                 </div>
             )}
 
-            {/* Video Player */}
+            {/* Video Player (modal overlay fixed) */}
             {playTarget && (
                 <React.Suspense fallback={<PlayerFallback />}>
                     <VideoPlayer
@@ -490,16 +405,6 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                         }}
                     />
                 </React.Suspense>
-            )}
-
-            {/* Character Lore Detail Modal overlay */}
-            {selectedCharacterName && (
-                <CharacterDetailModal 
-                    characterName={selectedCharacterName}
-                    entry={entry}
-                    loreData={lore}
-                    onClose={() => setSelectedCharacterName(null)}
-                />
             )}
         </div>
     )

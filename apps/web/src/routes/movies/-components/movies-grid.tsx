@@ -1,18 +1,23 @@
 import { useState, useRef, useEffect, useMemo, useCallback, memo } from "react"
 import { motion } from "framer-motion"
 import { useVirtualizer } from "@tanstack/react-virtual"
-import type { Anime_LibraryCollectionEntry, Continuity_WatchHistory } from "@/api/generated/types"
+import type { Continuity_WatchHistory } from "@/api/generated/types"
 import { EmptyState } from "@/components/shared/empty-state"
-import { MovieCard, EraTab } from "../-MovieCard"
+import { MovieCard } from "../-MovieCard"
+import type { MovieEntry } from "../index"
+import type { EraId } from "@/lib/config/eras"
 import { PosterGridSkeleton } from "@/components/ui/shimmer-skeleton"
 
 interface MoviesGridProps {
-    filteredSorted: (Anime_LibraryCollectionEntry & { era: EraTab; startedAtTimestamp: number })[]
+    filteredSorted: MovieEntry[]
     isLoading: boolean
     allMoviesLength: number
     watchHistory: Continuity_WatchHistory | undefined
     handleMovieClick: (mediaId: number) => void
-    handleHoverCard: (entry: (Anime_LibraryCollectionEntry & { era: EraTab; startedAtTimestamp: number }) | null) => void
+    handleHoverCard: (entry: MovieEntry | null) => void
+    activeEra?: EraId | "all"
+    searchQuery?: string
+    onResetFilters?: () => void
 }
 
 const CARD_WIDTH = 180
@@ -35,6 +40,9 @@ export const MoviesGrid = memo(function MoviesGrid({
     watchHistory,
     handleMovieClick,
     handleHoverCard,
+    activeEra: _activeEra,
+    searchQuery: _searchQuery,
+    onResetFilters,
 }: MoviesGridProps) {
     const gridRef = useRef<HTMLDivElement | null>(null)
     const observerRef = useRef<ResizeObserver | null>(null)
@@ -116,7 +124,7 @@ export const MoviesGrid = memo(function MoviesGrid({
     })
 
     return (
-        <div className="w-full relative pb-32 max-w-content mx-auto">
+        <div className="w-full relative pb-32">
             {isLoading && allMoviesLength === 0 ? (
                 <PosterGridSkeleton count={18} />
             ) : filteredSorted.length === 0 ? (
@@ -124,6 +132,17 @@ export const MoviesGrid = memo(function MoviesGrid({
                     <EmptyState
                         title="Sin películas"
                         message="No hay películas que coincidan con este filtro."
+                        action={
+                            onResetFilters ? (
+                                <button
+                                    type="button"
+                                    onClick={onResetFilters}
+                                    className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-semibold text-white transition-colors cursor-pointer"
+                                >
+                                    Restablecer filtros
+                                </button>
+                            ) : undefined
+                        }
                     />
                 </motion.div>
             ) : (
@@ -150,6 +169,7 @@ export const MoviesGrid = memo(function MoviesGrid({
                                         <MovieCard
                                             entry={entry}
                                             era={entry.era}
+                                            eraId={entry.eraId}
                                             watchHistoryItem={watchHistory?.[entry.mediaId!]}
                                             onClick={handleMovieClick}
                                             onHoverCard={handleHoverCard}

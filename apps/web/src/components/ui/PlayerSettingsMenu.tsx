@@ -1,6 +1,6 @@
 import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Icons } from "@/components/ui/icons"
+import { IconMediaVolume2, IconMediaSubtitles, IconNavigationLayers, IconStatusMonitor, IconMediaForward, IconUiCheck, IconUiSettings, IconUiSpinner, IconUiClose } from "@/components/ui/icons";
 import { cn } from "@/components/ui/core/styling"
 import { Vaul, VaulContent } from "@/components/vaul"
 
@@ -17,6 +17,8 @@ const ASPECT_RATIO_LABELS: Record<string, string> = {
     contain: "Ajustado",
     cover: "Recortar",
     fill: "Estirar",
+    "16/9": "16:9 Panorámico",
+    "21/9": "21:9 Ultrawide",
 }
 
 export function PlayerSettingsMenu({
@@ -28,6 +30,7 @@ export function PlayerSettingsMenu({
     onSelectSubtitle,
     sources = [],
     currentSourceUrl,
+    currentSourceType,
     onSourceChange,
     isLoadingSubtitle = false,
     className,
@@ -157,7 +160,7 @@ export function PlayerSettingsMenu({
     const hasQualityOptions = hlsLevels.length > 0 || sources.length > 0
     const qualityValue = hlsLevels.length > 0
         ? (activeHlsLevel === -1 ? "Auto" : (hlsLevels.find(l => l.index === activeHlsLevel)?.label ?? "Auto"))
-        : `${sources.length} ${sources.length === 1 ? "fuente" : "fuentes"}`
+        : (currentSourceType === "transcode" ? "Transcodificado" : "Direct Play")
 
     const renderContent = () => (
         <>
@@ -165,13 +168,13 @@ export function PlayerSettingsMenu({
             {view === "main" && (
                 <SettingsLayout title="Configuración" onClose={() => setIsOpen(false)}>
                     <MenuButton
-                        icon={<Icons.media.volume2 className="w-4 h-4" />}
+                        icon={<IconMediaVolume2 className="w-4 h-4" />}
                         label="Audio"
                         value={activeAudio ? (activeAudio.title || langLabel(activeAudio.language)) : "Desconocido"}
                         onClick={() => setView("audio")}
                     />
                     <MenuButton
-                        icon={<Icons.media.subtitles className="w-4 h-4" />}
+                        icon={<IconMediaSubtitles className="w-4 h-4" />}
                         label="Subtítulos"
                         value={activeSubtitle ? (activeSubtitle.title || langLabel(activeSubtitle.language)) : "Desactivado"}
                         onClick={() => setView("subtitles")}
@@ -179,7 +182,7 @@ export function PlayerSettingsMenu({
 
                     {hasQualityOptions && (
                         <MenuButton
-                            icon={<Icons.navigation.layers className="w-4 h-4" />}
+                            icon={<IconNavigationLayers className="w-4 h-4" />}
                             label="Calidad / Fuente"
                             value={qualityValue}
                             onClick={() => setView("quality")}
@@ -187,13 +190,13 @@ export function PlayerSettingsMenu({
                     )}
 
                     <MenuButton
-                        icon={<Icons.status.monitor className="w-4 h-4" />}
+                        icon={<IconStatusMonitor className="w-4 h-4" />}
                         label="Imagen"
                         value={ASPECT_RATIO_LABELS[aspectRatio] || "Ajustado"}
                         onClick={() => setView("image")}
                     />
                     <MenuButton
-                        icon={<Icons.media.forward className="w-4 h-4" />}
+                        icon={<IconMediaForward className="w-4 h-4" />}
                         label="Reproducción"
                         value={`Skip ${autoSkipLabel}`}
                         onClick={() => setView("playback")}
@@ -256,7 +259,7 @@ export function PlayerSettingsMenu({
                                 )}
                             >
                                 <span className="text-xs font-bold">Auto</span>
-                                {activeHlsLevel === -1 && <Icons.ui.check className="w-3.5 h-3.5" />}
+                                {activeHlsLevel === -1 && <IconUiCheck className="w-3.5 h-3.5" />}
                             </button>
                             {hlsLevels.map((level) => (
                                 <button
@@ -268,7 +271,7 @@ export function PlayerSettingsMenu({
                                     )}
                                 >
                                     <span className="text-xs font-bold">{level.label}</span>
-                                    {activeHlsLevel === level.index && <Icons.ui.check className="w-3.5 h-3.5" />}
+                                    {activeHlsLevel === level.index && <IconUiCheck className="w-3.5 h-3.5" />}
                                 </button>
                             ))}
                         </div>
@@ -280,6 +283,7 @@ export function PlayerSettingsMenu({
                             <QualitySettings
                                 sources={sources}
                                 currentSourceUrl={currentSourceUrl}
+                                currentSourceType={currentSourceType}
                                 onSourceChange={(source) => {
                                     onSourceChange?.(source)
                                     setIsOpen(false)
@@ -298,7 +302,7 @@ export function PlayerSettingsMenu({
                     onClose={() => setIsOpen(false)}
                 >
                     <div className="px-4 py-2 text-label-sm font-black text-zinc-500 uppercase tracking-widest">Relación de aspecto</div>
-                    {(["contain", "cover", "fill"] as const).map((ratio) => (
+                    {(["contain", "cover", "fill", "16/9", "21/9"] as const).map((ratio) => (
                         <button
                             key={ratio}
                             onClick={() => onAspectRatioChange?.(ratio)}
@@ -313,9 +317,11 @@ export function PlayerSettingsMenu({
                                     {ratio === "contain" && "Barras negras · conserva proporción"}
                                     {ratio === "cover" && "Rellena y recorta bordes"}
                                     {ratio === "fill" && "Estira la imagen sin recortar"}
+                                    {ratio === "16/9" && "Fuerza relación 16:9 panorámica"}
+                                    {ratio === "21/9" && "Ultrawide cinemático para monitores 21:9"}
                                 </span>
                             </div>
-                            {aspectRatio === ratio && <Icons.ui.check className="w-3.5 h-3.5 shrink-0" />}
+                            {aspectRatio === ratio && <IconUiCheck className="w-3.5 h-3.5 shrink-0" />}
                         </button>
                     ))}
                 </SettingsLayout>
@@ -373,16 +379,16 @@ export function PlayerSettingsMenu({
                     isOpen && "text-white"
                 )}
             >
-                <Icons.ui.settings className={cn("w-4 h-4 md:w-3.5 md:h-3.5 transition-transform duration-base", isOpen && "rotate-90")} />
+                <IconUiSettings className={cn("w-4 h-4 md:w-3.5 md:h-3.5 transition-transform duration-base", isOpen && "rotate-90")} />
                 {isLoadingSubtitle && (
                     <span className="absolute -top-0.5 -right-0.5">
-                        <Icons.ui.spinner className="w-3 h-3 text-white animate-spin" />
+                        <IconUiSpinner className="w-3 h-3 text-white animate-spin" />
                     </span>
                 )}
             </button>
 
-            {/* Desktop panel */}
-            <div ref={panelRef} className="hidden md:block absolute bottom-16 right-0 z-50 pointer-events-auto">
+            {/* Desktop panel — z-player-settings para quedar sobre gesture/ui/overlay/sidebar */}
+            <div ref={panelRef} className="hidden md:block absolute bottom-16 right-0 z-player-settings pointer-events-auto">
                 <AnimatePresence>
                     {isOpen && (
                         <motion.div
@@ -400,16 +406,17 @@ export function PlayerSettingsMenu({
             {/* Mobile bottom-sheet */}
             <div className="md:hidden">
                 <Vaul open={isOpen} onOpenChange={setIsOpen}>
-                    <VaulContent className="bg-zinc-950/95 backdrop-blur-[var(--blur-overlay-xl)] border-t border-outline-variant/10 p-5 pb-8 focus:outline-none max-h-[80vh] overflow-y-auto">
+                    <VaulContent className="bg-zinc-950/95 backdrop-blur-overlay-xl border-t border-outline-variant/10 p-5 pb-8 focus:outline-none max-h-[80vh] overflow-y-auto">
                         <div className="flex justify-between items-center mb-4 px-1">
                             <h3 className="font-display text-2xl tracking-widest text-on-surface uppercase">
                                 Ajustes
                             </h3>
                             <button 
                                 onClick={() => setIsOpen(false)}
-                                className="p-1.5 rounded-full text-on-surface-variant hover:text-on-surface active:scale-95"
+                                aria-label="Cerrar ajustes"
+                                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-on-surface-variant hover:text-on-surface active:scale-95"
                             >
-                                <Icons.navigation.settings className="w-5 h-5 animate-spin" style={{ animationDuration: '4s' }} />
+                                <IconUiClose className="w-5 h-5 hover:rotate-90 transition-transform duration-base" />
                             </button>
                         </div>
                         {renderContent()}

@@ -23,15 +23,28 @@ export function prewarmVideoPlayer() {
 
     const run = () => {
         if (disposed) return
+        // Stagger loading across separate idle turns so heavy WASM & HLS module
+        // evaluation does not block the main thread in a single monolithic long task.
         try {
-            void import("./player").catch(() => {})
-            void import("./player-orchestrator").catch(() => {})
+            void import("./player").then(() => {
+                const loadOrchestrator = () => {
+                    if (disposed) return
+                    void import("./player-orchestrator").catch(() => {})
+                }
+                if (typeof window.requestIdleCallback === "function") {
+                    window.requestIdleCallback(loadOrchestrator)
+                } else {
+                    setTimeout(loadOrchestrator, 1500)
+                }
+            }).catch(() => {})
         } catch { /* noop */ }
     }
 
     if (typeof window.requestIdleCallback === "function") {
-        window.requestIdleCallback(run, { timeout: 4000 })
+        // Do NOT pass a short forced timeout: let the browser pick genuine idle time
+        // so it never interrupts initial user interaction.
+        window.requestIdleCallback(run)
     } else {
-        setTimeout(run, 2000)
+        setTimeout(run, 5000)
     }
 }

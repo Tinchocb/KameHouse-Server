@@ -51,9 +51,14 @@ export function useMpvPlayer(options: UseMpvPlayerOptions) {
     useEffect(() => {
         if (!isDesktop) return
         let cancelled = false
-        window.electron?.mpv.isAvailable().then((ok) => {
-            if (!cancelled) setIsAvailable(ok)
-        })
+        const desktopApi = window.desktop
+        desktopApi?.mpv?.isAvailable?.()
+            ?.then((ok) => {
+                if (!cancelled) setIsAvailable(Boolean(ok))
+            })
+            ?.catch((err) => {
+                console.warn("[MPV] Availability check failed:", err)
+            })
         return () => {
             cancelled = true
         }
@@ -76,9 +81,10 @@ export function useMpvPlayer(options: UseMpvPlayerOptions) {
 
     // Relay mpv progress while a session is active.
     useEffect(() => {
-        if (!isDesktop || !isActive || !window.electron) return
+        const desktopApi = window.desktop
+        if (!isDesktop || !desktopApi) return
 
-        const unsubProgress = window.electron.on("mpv:progress", (...args: unknown[]) => {
+        const unsubProgress = desktopApi.on("mpv:progress", (...args: unknown[]) => {
             const ev = args[0] as MpvProgressEvent
             if (!ev || typeof ev.currentTime !== "number") return
             lastProgressRef.current = { currentTime: ev.currentTime, duration: ev.duration }
@@ -105,7 +111,7 @@ export function useMpvPlayer(options: UseMpvPlayerOptions) {
             }
         })
 
-        const unsubExited = window.electron.on("mpv:exited", (...args: unknown[]) => {
+        const unsubExited = desktopApi.on("mpv:exited", (...args: unknown[]) => {
             const ev = args[0] as MpvProgressEvent
             const finalTime = typeof ev?.currentTime === "number" ? ev.currentTime : lastProgressRef.current.currentTime
             const duration = typeof ev?.duration === "number" ? ev.duration : lastProgressRef.current.duration
@@ -118,15 +124,16 @@ export function useMpvPlayer(options: UseMpvPlayerOptions) {
             unsubProgress?.()
             unsubExited?.()
         }
-    }, [isDesktop, isActive, mediaId, episodeNumber, sendJsonMessage, saveContinuity])
+    }, [isDesktop, mediaId, episodeNumber, sendJsonMessage, saveContinuity])
 
     const play = useCallback(async (startTime?: number) => {
-        if (!isDesktop || !window.electron || !path) return false
+        const desktopApi = window.desktop
+        if (!isDesktop || !desktopApi || !path) return false
         try {
             lastHeartbeatRef.current = 0
             lastContinuitySaveRef.current = Date.now()
             lastProgressRef.current = { currentTime: startTime ?? 0, duration: 0 }
-            await window.electron.mpv.play({
+            await desktopApi.mpv.play({
                 path,
                 title,
                 startTime,
@@ -142,7 +149,10 @@ export function useMpvPlayer(options: UseMpvPlayerOptions) {
     }, [isDesktop, path, title, mediaId, episodeNumber])
 
     const stop = useCallback(async () => {
-        await window.electron?.mpv.stop()
+        const desktopApi = window.desktop
+        if (desktopApi?.mpv?.stop) {
+            await desktopApi.mpv.stop().catch(() => {})
+        }
     }, [])
 
     return { isDesktop, isAvailable, isActive, play, stop }

@@ -7,7 +7,6 @@ import { MotionConfig } from "framer-motion"
 
 import React, { useEffect } from "react"
 import { CookiesProvider } from "react-cookie"
-import { toast } from "sonner"
 import { useAppStore } from "@/lib/store"
 
 interface ClientProvidersProps {
@@ -29,18 +28,6 @@ export const queryClient = new QueryClient({
                     return false
                 }
                 return failureCount < 1
-            },
-        },
-        mutations: {
-            // Global fallback: any unhandled mutation failure shows a toast.
-            // Individual hooks can still add their own onError and call options.onError().
-            onError: (error) => {
-                if (error instanceof ApiError) {
-                    const msg = (error.data as Record<string, string>)?.error ?? error.message
-                    if (!msg.includes("feature disabled")) {
-                        toast.error(msg || "An unexpected error occurred")
-                    }
-                }
             },
         },
     },

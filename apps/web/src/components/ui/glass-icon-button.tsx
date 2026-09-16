@@ -28,8 +28,12 @@ export function GlassIconButton({
         <button
             title={title}
             className={cn(
-                "group flex items-center justify-center p-4 rounded-xl glass-liquid transition-all duration-base hover:scale-[1.03] active:scale-95 min-h-[44px]",
-                isActive ? toneMap[activeTone] : "text-on-surface/70 hover:text-on-surface",
+                "group flex items-center justify-center p-4 rounded-xl",
+                "bg-zinc-950/60 border border-white/20 border-t-white/40 border-b-white/10",
+                "backdrop-blur-overlay-2xl backdrop-saturate-[190%]",
+                "shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.25),0_8px_24px_rgba(0,0,0,0.6)]",
+                "transition-all duration-base hover:scale-[1.03] active:scale-95 min-h-[44px] cursor-pointer",
+                isActive ? toneMap[activeTone] : "text-zinc-300 hover:text-white hover:bg-zinc-900/80",
                 className
             )}
             {...props}

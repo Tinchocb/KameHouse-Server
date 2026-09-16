@@ -1,5 +1,5 @@
 import { create } from "zustand"
-import { persist } from "zustand/middleware"
+import { persist, subscribeWithSelector, devtools } from "zustand/middleware"
 import { detectHardwareSpecs, type HardwareSpecs, type HardwareTier } from "./hardware-profiler"
 
 export type PerformanceProfile = "auto" | "ultra" | "balanced" | "eco"
@@ -16,7 +16,6 @@ interface PerformanceState {
     setAutoGovernorEnabled: (enabled: boolean) => void
     setAutoThrottleActive: (active: boolean) => void
     getEffectiveTier: () => HardwareTier
-    isHeavyEffectsAllowed: () => boolean
 }
 
 export const selectEffectiveTier = (state: PerformanceState): HardwareTier => {
@@ -33,8 +32,10 @@ export const selectIsHeavyEffectsAllowed = (state: PerformanceState): boolean =>
 }
 
 export const usePerformanceStore = create<PerformanceState>()(
-    persist(
-        (set, get) => ({
+    devtools(
+        subscribeWithSelector(
+            persist(
+                (set, get) => ({
             performanceProfile: "auto",
             autoGovernorEnabled: true,
             autoThrottleActive: false,
@@ -75,21 +76,18 @@ export const usePerformanceStore = create<PerformanceState>()(
             getEffectiveTier: (): HardwareTier => {
                 return selectEffectiveTier(get())
             },
-
-            isHeavyEffectsAllowed: (): boolean => {
-                return selectIsHeavyEffectsAllowed(get())
-            },
         }),
         {
             name: "kamehouse-performance-settings",
             partialize: (state) => ({
+                hardwareSpecs: state.hardwareSpecs,
                 performanceProfile: state.performanceProfile,
                 autoGovernorEnabled: state.autoGovernorEnabled,
-                hardwareSpecs: state.hardwareSpecs,
             }),
         }
     )
-)
+  )
+))
 
 // Auto-run detection and display calibration on initial client boot only when not yet cached
 if (typeof window !== "undefined") {

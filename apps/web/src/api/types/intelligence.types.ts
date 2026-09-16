@@ -1,9 +1,6 @@
 import type {
     Anime_Episode,
     Anime_LibraryCollectionEntry,
-    Models_LibraryMedia,
-    MediaCandidate,
-    SelectionResult,
 } from "@/api/generated/types"
 
 export type CardAspect = "poster" | "wide" | "square"
@@ -44,62 +41,4 @@ export interface IntelligentEntry extends Omit<Anime_LibraryCollectionEntry, "ep
     vibes?: string[]
     /** Local episode data if this entry is an episode swimlane */
     episode?: Anime_Episode
-}
-
-/**
- * CuratedSwimlane represents a row of content on the home page.
- * Mirrors the Go struct in internal/library/anime/intelligence.go
- */
-export interface CuratedSwimlane {
-    id: string
-    title: string
-    /** Row identifier: "local_library" | "epic_moments" | "essential_cinema" | "trending" */
-    type: string
-    /** Enriched entries for this lane */
-    entries: IntelligentEntry[]
-}
-
-/**
- * CuratedHomeResponse is the envelope for the curated home page sections.
- */
-export interface CuratedHomeResponse {
-    swimlanes: CuratedSwimlane[]
-}
-
-/**
- * ContinueWatchingEntry represents a media item to resume.
- * Syncs with the backend dto.ContinueWatchingItem in models/dto/continue_watching_dto.go
- */
-export interface ContinueWatchingEntry {
-    media: Models_LibraryMedia
-    episode: Anime_Episode
-    /** 0-1 playback percentage progress */
-    progress: number
-    /** Last known position in seconds (mirrors LastPlaybackPos in Go) */
-    lastPlaybackPos: number
-    /** True if this is the next episode in the sequence */
-    isNextEpisode: boolean
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Intelligent Selection Engine Types
-// Re-exported from @/api/generated/types
-// ─────────────────────────────────────────────────────────────────────────────
-
-export type { MediaCandidate, SelectionResult }
-
-export interface ScoringWeights {
-    resolution: number
-    codec: number
-    bitrate: number
-    audioMatch: number
-}
-
-export interface IntelligenceStats {
-    weights: ScoringWeights
-    cache: {
-        size: number
-        maxSize: number
-        maxAge: number
-    }
 }

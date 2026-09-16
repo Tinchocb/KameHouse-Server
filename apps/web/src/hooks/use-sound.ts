@@ -33,7 +33,9 @@ function getPooledAudio(path: string): HTMLAudioElement {
     const idx = poolIndex[path];
     const audio = pool[idx];
     if (audio.paused || audio.ended) {
-        audio.currentTime = 0;
+        if (audio.currentTime !== 0) {
+            audio.currentTime = 0;
+        }
         return audio;
     }
     if (pool.length < POOL_SIZE) {
@@ -44,7 +46,9 @@ function getPooledAudio(path: string): HTMLAudioElement {
     }
     poolIndex[path] = (idx + 1) % pool.length;
     const nextAudio = pool[poolIndex[path]];
-    nextAudio.currentTime = 0;
+    if (nextAudio.currentTime !== 0) {
+        nextAudio.currentTime = 0;
+    }
     return nextAudio;
 }
 
@@ -57,20 +61,23 @@ export function useSound() {
     const playSound = useCallback((type: SfxType, volume = 0.15) => {
         const { uiSoundsEnabled, uiSoundsVolume } = useAppStore.getState();
         if (!uiSoundsEnabled) return;
-        try {
-            const path = SFX_PATHS[type];
-            if (!path) return;
+        
+        queueMicrotask(() => {
+            try {
+                const path = SFX_PATHS[type];
+                if (!path) return;
 
-            const audio = getPooledAudio(path);
-            audio.volume = Math.min(1, Math.max(0, volume * uiSoundsVolume));
+                const audio = getPooledAudio(path);
+                audio.volume = Math.min(1, Math.max(0, volume * uiSoundsVolume));
 
-            // Play safely handling the promise returned by modern browsers
-            audio.play().catch(() => {
-                // Ignore autoplay/user interaction errors silently
-            });
-        } catch (e) {
-            console.warn("Could not play UI sound effect:", e);
-        }
+                // Play safely handling the promise returned by modern browsers
+                audio.play().catch(() => {
+                    // Ignore autoplay/user interaction errors silently
+                });
+            } catch (e) {
+                console.warn("Could not play UI sound effect:", e);
+            }
+        });
     }, []);
 
     return { playSound };

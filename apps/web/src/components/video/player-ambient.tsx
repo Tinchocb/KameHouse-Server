@@ -40,7 +40,11 @@ export function PlayerAmbientBackdrop({ videoRef, enabled }: PlayerAmbientBackdr
             }
 
             if (time - lastDrawTime >= frameTime) {
-                ctx.drawImage(video, 0, 0, 32, 18)
+                try {
+                    ctx.drawImage(video, 0, 0, 32, 18)
+                } catch {
+                    // Ignore SecurityError on tainted canvases
+                }
                 lastDrawTime = time
             }
         }

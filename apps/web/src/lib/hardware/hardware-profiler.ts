@@ -28,7 +28,7 @@ async function measureRefreshRate(): Promise<number> {
 
         const times: number[] = []
         let count = 0
-        const maxFrames = 20
+        const maxFrames = 8
 
         const frame = (now: number) => {
             times.push(now)

@@ -6,122 +6,93 @@ export interface SpineTheme {
     subtitle: string;
     borderColor: string;
     colIndex: number;
-    rawImg: string;
-    baseImg: string;
-    attackImg: string;
     kanji: string;
     eraYears: string;
     auraColor: string;
-    sliceImg: string;
     colors: string[];
-    expandedTopImg?: string;
-    expandedBottomImg?: string;
 }
 
+// Fuente única de color: tokens --spotlight-*-vivid (styles/tokens/colors.css:101-106)
+// + --era-*-hex. Nada hardcodeado por era: colapsado y expandido derivan del
+// mismo vivid, así el hue no cambia al expandir. Kanjis canónicos = ERAS (eras.ts:3-8).
 const spineThemes: Record<string, SpineTheme> = {
     "dragon_ball": {
-        bg: "linear-gradient(to bottom, #0284c7 0%, #0369a1 45%, #075985 80%, #0c4a6e 100%)",
+        bg: "linear-gradient(to bottom, color-mix(in srgb, var(--spotlight-db-vivid) 34%, #14100c) 0%, #1a130d 45%, #0d0a08 75%, #070505 100%)",
         text: "#ffffff",
-        accent: "#38bdf8",
+        accent: "var(--spotlight-db-vivid)",
         vol: "1",
         subtitle: "DRAGON BALL",
-        borderColor: "#0284c7",
+        borderColor: "var(--spotlight-border-db)",
         colIndex: 0,
-        rawImg: "/icons/series-icons/evolution/db-kid-goku.png",
-        baseImg: "/icons/series-icons/evolution/db-kid-goku.png",
-        attackImg: "/icons/series-icons/evolution/01-kid-goku-db.png",
         kanji: "亀",
         eraYears: "1986–1989",
-        auraColor: "rgba(56, 189, 248, 0.6)",
-        sliceImg: "/icons/series-icons/evolution/spine-db-kid.png",
-        colors: ["#38bdf8", "#0284c7", "#0c4a6e"],
-        expandedTopImg: "/icons/series-icons/db-kid-top.png",
-        expandedBottomImg: "/icons/series-icons/db-kid-bottom.png"
+        auraColor: "color-mix(in srgb, var(--spotlight-db-vivid) 60%, transparent)",
+        colors: ["var(--spotlight-db-vivid-2)", "var(--spotlight-db-vivid)", "var(--era-db-hex)"],
     },
     "dragon_ball_z": {
-        bg: "linear-gradient(to bottom, #d97706 0%, #b45309 45%, #92400e 75%, #78350f 100%)",
+        bg: "linear-gradient(to bottom, color-mix(in srgb, var(--spotlight-dbz-vivid) 34%, #14100c) 0%, #1a130d 45%, #0d0a08 75%, #070505 100%)",
         text: "#ffffff",
-        accent: "#f59e0b",
+        accent: "var(--spotlight-dbz-vivid)",
         vol: "2",
-        subtitle: "DRAGON BALL Z",
-        borderColor: "#d97706",
+        subtitle: "DBZ",
+        borderColor: "var(--spotlight-border-dbz)",
         colIndex: 1,
-        rawImg: "/icons/series-icons/evolution/02-base-dbz.png",
-        baseImg: "/icons/series-icons/evolution/02-base-dbz.png",
-        attackImg: "/icons/series-icons/evolution/03-ssj1-dbz.png",
-        kanji: "界",
+        kanji: "悟",
         eraYears: "1989–1996",
-        auraColor: "rgba(245, 158, 11, 0.6)",
-        sliceImg: "/icons/series-icons/evolution/spine-dbz-ssj1.png",
-        colors: ["#fbbf24", "#f59e0b", "#9a3412"]
+        auraColor: "color-mix(in srgb, var(--spotlight-dbz-vivid) 60%, transparent)",
+        colors: ["var(--spotlight-dbz-vivid-2)", "var(--spotlight-dbz-vivid)", "var(--era-dbz-hex)"]
     },
     "dragon_ball_gt": {
-        bg: "linear-gradient(to bottom, #ea580c 0%, #c2410c 45%, #9a3412 75%, #7c2d12 100%)",
+        bg: "linear-gradient(to bottom, color-mix(in srgb, var(--spotlight-dbgt-vivid) 34%, #120a14) 0%, #1c1020 45%, #0d070d 75%, #070405 100%)",
         text: "#ffffff",
-        accent: "#ea580c",
+        accent: "var(--spotlight-dbgt-vivid)",
         vol: "3",
-        subtitle: "DRAGON BALL GT",
-        borderColor: "#ea580c",
+        subtitle: "DBGT",
+        borderColor: "var(--spotlight-border-dbgt)",
         colIndex: 2,
-        rawImg: "/icons/series-icons/posterior/goku-raw-dbgt.png",
-        baseImg: "/icons/series-icons/posterior/goku-raw-dbgt.png",
-        attackImg: "/icons/series-icons/evolution/06-ssj4-gt.png",
-        kanji: "GT",
+        kanji: "星",
         eraYears: "1996–1997",
-        auraColor: "rgba(234, 88, 12, 0.6)",
-        sliceImg: "/icons/series-icons/evolution/spine-dbgt-ssj4.png",
-        colors: ["#f97316", "#ea580c", "#7f1d1d"]
+        auraColor: "color-mix(in srgb, var(--spotlight-dbgt-vivid) 60%, transparent)",
+        colors: ["var(--spotlight-dbgt-vivid-2)", "var(--spotlight-dbgt-vivid)", "var(--era-dbgt-hex)"]
     },
     "dragon_ball_kai": {
-        bg: "linear-gradient(to bottom, #334155 0%, #1e293b 45%, #0f172a 75%, #020617 100%)",
+        bg: "linear-gradient(to bottom, color-mix(in srgb, var(--spotlight-dbkai-vivid) 34%, #070f18) 0%, #0d1b2c 45%, #080f18 75%, #04070c 100%)",
         text: "#ffffff",
-        accent: "#38bdf8",
+        accent: "var(--spotlight-dbkai-vivid-2)",
         vol: "4",
         subtitle: "DB KAI",
-        borderColor: "#334155",
+        borderColor: "var(--spotlight-border-dbkai)",
         colIndex: 3,
-        rawImg: "/icons/series-icons/evolution/02-base-dbz.png",
-        baseImg: "/icons/series-icons/evolution/02-base-dbz.png",
-        attackImg: "/icons/series-icons/evolution/04-ssj2-halo-dbkai.png",
         kanji: "改",
         eraYears: "2009–2015",
-        auraColor: "rgba(56, 189, 248, 0.6)",
-        sliceImg: "/icons/series-icons/evolution/spine-dbkai-halo.png",
-        colors: ["#475569", "#334155", "#0f172a"]
+        auraColor: "color-mix(in srgb, var(--spotlight-dbkai-vivid) 55%, transparent)",
+        colors: ["var(--spotlight-dbkai-vivid-2)", "var(--spotlight-dbkai-vivid)", "var(--era-dbkai-hex)"]
     },
     "dragon_ball_super": {
-        bg: "linear-gradient(to bottom, #0891b2 0%, #0e7490 45%, #155e75 75%, #083344 100%)",
+        bg: "linear-gradient(to bottom, color-mix(in srgb, var(--spotlight-dbs-vivid) 34%, #070d18) 0%, #0d172b 45%, #080f1c 75%, #04070d 100%)",
         text: "#ffffff",
-        accent: "#06b6d4",
+        accent: "var(--spotlight-dbs-vivid)",
         vol: "5",
         subtitle: "DB SUPER",
-        borderColor: "#0891b2",
+        borderColor: "var(--spotlight-border-dbs)",
         colIndex: 4,
-        rawImg: "/icons/series-icons/goku-raw-dbs.webp",
-        baseImg: "/icons/series-icons/goku-raw-dbs.webp",
-        attackImg: "/icons/series-icons/evolution/09-ui-super.png",
         kanji: "超",
         eraYears: "2015–2018",
-        auraColor: "rgba(6, 182, 212, 0.6)",
-        sliceImg: "/icons/series-icons/evolution/spine-dbs-ui.png",
-        colors: ["#06b6d4", "#0891b2", "#0f172a"]
+        auraColor: "color-mix(in srgb, var(--spotlight-dbs-vivid) 55%, transparent)",
+        colors: ["var(--spotlight-dbs-vivid-2)", "var(--spotlight-dbs-vivid)", "var(--era-dbs-hex)"]
     },
     "dragon_ball_daima": {
-        bg: "linear-gradient(to bottom, #b45309 0%, #92400e 45%, #78350f 75%, #451a03 100%)",
+        bg: "linear-gradient(to bottom, color-mix(in srgb, var(--spotlight-daima-vivid) 32%, #09130e) 0%, #0f1e16 45%, #0a140f 75%, #050a08 100%)",
         text: "#ffffff",
-        accent: "#f59e0b",
+        accent: "var(--spotlight-daima-vivid)",
         vol: "6",
         subtitle: "DB DAIMA",
-        borderColor: "#ea580c",
+        borderColor: "var(--spotlight-border-daima)",
         colIndex: 5,
-        rawImg: "/icons/series-icons/goku-raw-daima.webp",
-        baseImg: "/icons/series-icons/goku-raw-daima.webp",
-        attackImg: "/icons/series-icons/evolution/10-daima.png",
         kanji: "魔",
         eraYears: "2024–PRESENTE",
-        auraColor: "rgba(245, 158, 11, 0.6)",
-        sliceImg: "",
-        colors: ["#fbbf24", "#f59e0b", "#7c2d12"]
+        auraColor: "color-mix(in srgb, var(--spotlight-daima-vivid) 60%, transparent)",
+        colors: ["var(--spotlight-daima-vivid-2)", "var(--spotlight-daima-vivid)", "var(--era-daima-hex)"]
     }
 };
 
@@ -136,23 +107,43 @@ export const getSpineConfig = (seriesId: string, id: number, fallbackTitle?: str
         { bg: "linear-gradient(to bottom, #42a5f5, #1976d2, #0d47a1)", colors: ["#42a5f5", "#1976d2", "#0d47a1"], borderColor: "#0d47a1", accent: "#42a5f5" }
     ];
     const cfg = colors[id % colors.length];
-    const defaultRaw = fallbackTitle?.toLowerCase().includes("dragon") ? "/icons/series-icons/evolution/02-base-dbz.png" : "";
-    const defaultAttack = fallbackTitle?.toLowerCase().includes("dragon") ? "/icons/series-icons/evolution/03-ssj1-dbz.png" : "";
     return {
         bg: cfg.bg,
         text: "#ffffff",
-        accent: cfg.accent || "#ff6e3a",
+        accent: cfg.accent || "var(--brand-accent-hex)",
         vol: String((id % 5) + 1),
         subtitle: fallbackTitle ? fallbackTitle.toUpperCase() : "SERIE",
         borderColor: cfg.borderColor,
         colIndex: id % 5,
-        rawImg: defaultRaw,
-        baseImg: defaultRaw,
-        attackImg: defaultAttack,
         kanji: "★",
         eraYears: "SERIE",
-        auraColor: "rgba(245, 158, 11, 0.75)",
-        sliceImg: "",
+        auraColor: "color-mix(in srgb, var(--brand-accent-hex) 60%, transparent)",
         colors: cfg.colors
     };
 };
+
+const collapsedGradients: Record<string, string> = {
+    dragon_ball: "linear-gradient(to bottom, var(--spotlight-db-vivid-2) 0%, var(--spotlight-db-vivid) 26%, color-mix(in srgb, var(--spotlight-db-vivid) 32%, #140d08) 58%, #1a0e06 82%, #0d0603 100%)",
+    dragon_ball_z: "linear-gradient(to bottom, var(--spotlight-dbz-vivid-2) 0%, var(--spotlight-dbz-vivid) 26%, color-mix(in srgb, var(--spotlight-dbz-vivid) 32%, #140d04) 58%, #1c0f04 82%, #0d0602 100%)",
+    dragon_ball_gt: "linear-gradient(to bottom, var(--spotlight-dbgt-vivid-2) 0%, var(--spotlight-dbgt-vivid) 26%, color-mix(in srgb, var(--spotlight-dbgt-vivid) 35%, #120a14) 58%, #1c0d14 82%, #0d0508 100%)",
+    dragon_ball_kai: "linear-gradient(to bottom, var(--spotlight-dbkai-vivid-2) 0%, var(--spotlight-dbkai-vivid) 26%, color-mix(in srgb, var(--spotlight-dbkai-vivid) 35%, #070f18) 58%, #0a1626 82%, #04080f 100%)",
+    dragon_ball_super: "linear-gradient(to bottom, var(--spotlight-dbs-vivid-2) 0%, var(--spotlight-dbs-vivid) 26%, color-mix(in srgb, var(--spotlight-dbs-vivid) 35%, #070d18) 58%, #0a1626 82%, #04080f 100%)",
+    dragon_ball_daima: "linear-gradient(to bottom, var(--spotlight-daima-vivid-2) 0%, var(--spotlight-daima-vivid) 26%, color-mix(in srgb, var(--spotlight-daima-vivid) 32%, #09130e) 58%, #0e1d15 82%, #050b08 100%)",
+};
+
+export function getCollapsedBg(spine: SpineTheme, seriesId?: string): string {
+    if (seriesId && collapsedGradients[seriesId]) {
+        return collapsedGradients[seriesId];
+    }
+    if (spine.kanji === "亀" || spine.subtitle === "DRAGON BALL") return collapsedGradients.dragon_ball;
+    if (spine.kanji === "悟" || spine.subtitle === "DBZ") return collapsedGradients.dragon_ball_z;
+    if (spine.kanji === "星" || spine.subtitle === "DBGT") return collapsedGradients.dragon_ball_gt;
+    if (spine.kanji === "改" || spine.subtitle === "DB KAI") return collapsedGradients.dragon_ball_kai;
+    if (spine.kanji === "超" || spine.subtitle === "DB SUPER") return collapsedGradients.dragon_ball_super;
+    if (spine.kanji === "魔" || spine.subtitle === "DB DAIMA") return collapsedGradients.dragon_ball_daima;
+
+    if (spine.colors && spine.colors.length >= 3) {
+        return `linear-gradient(to bottom, ${spine.colors[0]} 0%, ${spine.colors[1]} 30%, ${spine.colors[2]} 70%, #050505 100%)`;
+    }
+    return spine.bg;
+}

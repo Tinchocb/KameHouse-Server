@@ -1,6 +1,6 @@
 import * as React from "react"
 import { cn } from "@/components/ui/core/styling"
-import { Icons } from "@/components/ui/icons"
+import { IconUiMinus, IconUiPlus, IconUiCheck } from "@/components/ui/icons";
 import type { SubtitleTrack } from "../track-types"
 
 interface SubtitleSettingsProps {
@@ -26,14 +26,14 @@ export function SubtitleSettings({
             {/* Subtitle size control */}
             {onSubtitleSizeChange && (
                 <div className="px-4 py-3 border-b border-white/5 mb-1">
-                    <div className="text-label-sm font-black text-zinc-500 uppercase tracking-widest mb-3">Tamaño de subtítulos</div>
+                    <div className="text-label-sm font-black text-on-surface-variant uppercase tracking-widest mb-3">Tamaño de subtítulos</div>
                     <div className="flex items-center justify-between gap-3">
                         <button
                             onClick={() => onSubtitleSizeChange(Math.max(50, subtitleSize - 10))}
                             disabled={subtitleSize <= 50}
                             className="flex items-center justify-center w-7 h-7 rounded bg-white/5 hover:bg-white/10 text-white disabled:opacity-30 transition-all"
                         >
-                            <Icons.ui.minus className="w-4 h-4" />
+                            <IconUiMinus className="w-4 h-4" />
                         </button>
                         <div className="flex-1 flex flex-col items-center gap-1.5">
                             <span className="text-sm font-bold text-white tabular-nums">{subtitleSize}%</span>
@@ -55,7 +55,7 @@ export function SubtitleSettings({
                             disabled={subtitleSize >= 200}
                             className="flex items-center justify-center w-7 h-7 rounded bg-white/5 hover:bg-white/10 text-white disabled:opacity-30 transition-all"
                         >
-                            <Icons.ui.plus className="w-4 h-4" />
+                            <IconUiPlus className="w-4 h-4" />
                         </button>
                     </div>
                 </div>
@@ -66,22 +66,22 @@ export function SubtitleSettings({
                 onClick={() => onSelectSubtitle(null)}
                 className={cn(
                     "w-full flex items-center justify-between px-4 py-3 transition-all duration-base ease-out group text-left relative overflow-hidden",
-                    activeSubtitleIndex === null ? "bg-white/[0.04] text-white" : "text-zinc-400 hover:bg-white/5 hover:text-white"
+                    activeSubtitleIndex === null ? "bg-white/[0.04] text-on-surface" : "text-on-surface-variant hover:bg-white/5 hover:text-on-surface"
                 )}
             >
                 {/* Hover/Active left-edge accent indicator */}
                 <span className={cn(
                     "absolute left-0 top-1/2 -translate-y-1/2 w-[3px] transition-all duration-base ease-out rounded-r-md",
-                    activeSubtitleIndex === null ? "h-1/2 bg-brand-accent" : "h-0 bg-zinc-500 group-hover:h-1/3"
+                    activeSubtitleIndex === null ? "h-1/2 bg-brand-accent" : "h-0 bg-outline-variant group-hover:h-1/3"
                 )} />
 
                 <span className={cn(
                     "text-xs font-bold uppercase tracking-widest transition-colors duration-base group-hover:translate-x-1.5",
-                    activeSubtitleIndex === null ? "text-brand-accent" : "text-zinc-300 group-hover:text-white"
+                    activeSubtitleIndex === null ? "text-brand-accent" : "text-on-surface group-hover:text-on-surface"
                 )}>
                     Desactivado
                 </span>
-                {activeSubtitleIndex === null && <Icons.ui.check className="w-4 h-4 text-brand-accent" />}
+                {activeSubtitleIndex === null && <IconUiCheck className="w-4 h-4 text-brand-accent" />}
             </button>
 
             {subtitleTracks.map((track) => {
@@ -92,30 +92,30 @@ export function SubtitleSettings({
                         onClick={() => onSelectSubtitle(track)}
                         className={cn(
                             "w-full flex items-center justify-between px-4 py-3 transition-all duration-base ease-out group text-left relative overflow-hidden",
-                            isActive ? "bg-white/[0.04] text-white" : "text-zinc-400 hover:bg-white/5 hover:text-white"
+                            isActive ? "bg-white/[0.04] text-on-surface" : "text-on-surface-variant hover:bg-white/5 hover:text-on-surface"
                         )}
                     >
                         {/* Hover/Active left-edge accent indicator */}
                         <span className={cn(
                             "absolute left-0 top-1/2 -translate-y-1/2 w-[3px] transition-all duration-base ease-out rounded-r-md",
-                            isActive ? "h-1/2 bg-brand-accent" : "h-0 bg-zinc-500 group-hover:h-1/3"
+                            isActive ? "h-1/2 bg-brand-accent" : "h-0 bg-outline-variant group-hover:h-1/3"
                         )} />
 
                         <div className="flex flex-col group-hover:translate-x-1.5 transition-transform duration-base ease-out">
                             <span className={cn(
                                 "text-xs font-bold leading-none transition-colors duration-base",
-                                isActive ? "text-brand-accent" : "text-zinc-300 group-hover:text-white"
+                                isActive ? "text-brand-accent" : "text-on-surface group-hover:text-on-surface"
                             )}>
                                 {track.title || getFriendlyLanguage(track.language)}
                             </span>
                             <span className={cn(
                                 "text-label-sm font-bold mt-1.5 uppercase transition-colors duration-base",
-                                isActive ? "text-white/60" : "text-zinc-500 group-hover:text-zinc-400"
+                                isActive ? "text-on-surface/60" : "text-on-surface-variant group-hover:text-on-surface"
                             )}>
                                 {[track.codec?.toUpperCase(), track.forced ? "FORZADO" : undefined].filter(Boolean).join(" // ")}
                             </span>
                         </div>
-                        {isActive && <Icons.ui.check className="w-4 h-4 text-brand-accent" />}
+                        {isActive && <IconUiCheck className="w-4 h-4 text-brand-accent" />}
                     </button>
                 )
             })}

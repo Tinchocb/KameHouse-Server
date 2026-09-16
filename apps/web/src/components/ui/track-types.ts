@@ -114,16 +114,6 @@ export interface SubtitleTrack {
     isImageBased?: boolean
 }
 
-// ── Aggregate container ─────────────────────────────────────────────────────────
-
-/**
- * Track metadata bundle returned by the backend for the active stream.
- */
-export interface StreamTrackInfo {
-    audioTracks: AudioTrack[]
-    subtitleTracks: SubtitleTrack[]
-}
-
 // ── UI Props ─────────────────────────────────────────────────────────────────────
 
 /**
@@ -142,6 +132,7 @@ export interface PlayerSettingsMenuProps {
 
     sources?: import("@/api/types/unified.types").EpisodeSource[]
     currentSourceUrl?: string
+    currentSourceType?: string
     onSourceChange?: (source: import("@/api/types/unified.types").EpisodeSource) => void
 
     hlsLevels?: { index: number; label: string; height: number }[]
@@ -163,8 +154,8 @@ export interface PlayerSettingsMenuProps {
     showHeatmap?: boolean
     onShowHeatmapChange?: (show: boolean) => void
 
-    aspectRatio?: "contain" | "fill" | "cover" | "16/9"
-    onAspectRatioChange?: (ratio: "contain" | "fill" | "cover" | "16/9") => void
+    aspectRatio?: "contain" | "fill" | "cover" | "16/9" | "21/9"
+    onAspectRatioChange?: (ratio: "contain" | "fill" | "cover" | "16/9" | "21/9") => void
 
     subtitleSize?: number
     onSubtitleSizeChange?: (size: number) => void

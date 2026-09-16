@@ -40,8 +40,9 @@ export interface PlayerCoreProps {
      *  cambiarla nativamente en direct play). */
     onRequestStreamTypeChange?: (type: "transcode" | "direct", opts?: { force?: boolean }) => void
     /** Llamado cuando direct play falla de forma irrecuperable. El orchestrator
-     *  puede usarlo para hacer fallback a transcode si está habilitado. */
-    onDirectPlayFailed?: () => void
+     *  puede usarlo para hacer fallback a transcode si está habilitado.
+     *  Retorna true si hizo fallback, false si no puede (para mostrar error). */
+    onDirectPlayFailed?: () => boolean | void
     nextEpisodeTitle?: string
     nextEpisodeNumber?: number
     nextEpisodeImage?: string
@@ -50,6 +51,7 @@ export interface PlayerCoreProps {
      *  duración en el header): sin esto, todas las lógicas de "cerca del final"
      *  (auto-skip de outro, avance marathon, panel de siguiente episodio) mueren. */
     metadataDuration?: number
+    onToggleEpisodesSidebar?: () => void
 }
 
 export interface PlayerCore {
@@ -103,7 +105,7 @@ export interface PlayerCore {
         skipStepSeconds: number
         playbackRate: number
         showHeatmap: boolean
-        aspectRatio: "contain" | "fill" | "cover" | "16/9"
+        aspectRatio: "contain" | "fill" | "cover" | "16/9" | "21/9"
         subtitleSize: number
         loopEnabled: boolean
         showStats: boolean
@@ -158,7 +160,7 @@ export interface PlayerCore {
         setSkipStepSeconds: (val: number) => void
         setHlsLevel: (level: number) => void
         setShowHeatmap: (val: boolean) => void
-        setAspectRatio: (val: "contain" | "fill" | "cover" | "16/9") => void
+        setAspectRatio: (val: "contain" | "fill" | "cover" | "16/9" | "21/9") => void
         setSubtitleSize: (val: number) => void
         setLoopEnabled: (val: boolean) => void
         setMarathonMode: (val: boolean) => void
@@ -169,5 +171,6 @@ export interface PlayerCore {
         setAmbientModeEnabled: (val: boolean) => void
         skipToNextChapter: () => void
         skipToPrevChapter: () => void
+        retryStream: () => void
     }
 }

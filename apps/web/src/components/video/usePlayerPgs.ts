@@ -69,6 +69,7 @@ export function usePlayerPgs({
         }
 
         let isCancelled = false
+        const aborter = new AbortController()
 
         Promise.resolve().then(() => {
             setIsPgsLoading(true)
@@ -83,12 +84,13 @@ export function usePlayerPgs({
                     })
                 }
 
-                const pgsUrl = trackUrl.replace("/subs?", "/subs/pgs?")
+                const pgsUrl = trackUrl
 
-                const res = await fetch(pgsUrl)
+                const res = await fetch(pgsUrl, { signal: aborter.signal })
+                if (!res.ok) throw new Error(`PGS fetch ${res.status}`)
                 const events = (await res.json()) as PgsEvent[]
 
-                if (isCancelled) return
+                if (isCancelled || aborter.signal.aborted) return
 
                 pgsRendererRef.current.clear()
                 if (events && events.length > 0) {
@@ -98,6 +100,7 @@ export function usePlayerPgs({
                 setIsPgsActive(true)
                 setIsPgsLoading(false)
             } catch (err) {
+                if (err instanceof DOMException && err.name === "AbortError") return
                 console.error("Failed to load PGS events:", err)
                 if (!isCancelled) {
                     setIsPgsLoading(false)
@@ -110,6 +113,9 @@ export function usePlayerPgs({
 
         return () => {
             isCancelled = true
+            try {
+                aborter.abort()
+            } catch {}
             if (pgsRendererRef.current) {
                 pgsRendererRef.current.clear()
                 pgsRendererRef.current.destroy()

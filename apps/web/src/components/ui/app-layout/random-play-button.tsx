@@ -1,28 +1,25 @@
-import { Icons } from "@/components/ui/icons"
+import { IconUiSpinner, IconNavigationTv, IconUiClose, IconMediaClapperboard } from "@/components/ui/icons";
 
 import * as React from "react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 
 import { toast } from "sonner"
-import * as Popover from "@radix-ui/react-popover"
 
 import { cn } from "@/components/ui/core/styling"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { fetchAnimeEntryLocalFiles } from "@/api/hooks/anime_entries.hooks"
-import { fetchCastDevices, useCastPlay } from "@/api/hooks/cast.hooks"
 import { useSound } from "@/hooks/use-sound"
 import { useAppStore, PlaylistItem } from "@/lib/store"
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function RandomPlayButton() {
+export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } = {}) {
     const { playSound } = useSound()
     const [showPicker, setShowPicker] = React.useState(false)
-    const [isLoading, setIsLoading] = React.useState(false)
+    const [isLoading, setIsLoading] = React.useState<"movie" | "episode" | false>(false)
     const tvMode = useAppStore(state => state.tvMode)
     const sidebarOpen = useAppStore(state => state.sidebarOpen)
     const setTvMode = useAppStore(state => state.setTvMode)
-    const { mutate: castPlay } = useCastPlay()
 
     const { data: collection } = useGetLibraryCollection()
 
@@ -36,10 +33,26 @@ export function RandomPlayButton() {
         playSound("random", 0.5)
     }, [playSound])
 
+    // Keyboard navigation (ESC to close) & custom event listener
+    React.useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape" && showPicker) {
+                setShowPicker(false)
+            }
+        }
+        const handleOpenPicker = () => setShowPicker(true)
+
+        window.addEventListener("keydown", handleKeyDown)
+        window.addEventListener("open-random-picker", handleOpenPicker)
+        return () => {
+            window.removeEventListener("keydown", handleKeyDown)
+            window.removeEventListener("open-random-picker", handleOpenPicker)
+        }
+    }, [showPicker])
+
     const pick = async (type: "movie" | "episode") => {
-        setShowPicker(false)
         playRandomSound()
-        setIsLoading(true)
+        setIsLoading(type)
 
         try {
             const isMovie = type === "movie"
@@ -54,6 +67,7 @@ export function RandomPlayButton() {
 
             if (candidates.length === 0) {
                 toast.error(isMovie ? "No hay películas en tu biblioteca" : "No hay series en tu biblioteca")
+                setIsLoading(false)
                 return
             }
 
@@ -65,14 +79,17 @@ export function RandomPlayButton() {
 
             if (!localFiles || localFiles.length === 0) {
                 toast.error("No se encontraron archivos locales para reproducir")
+                setIsLoading(false)
                 return
             }
 
             // ── 4. Choose files and populate queue ─────────────────────────
-            const sortedLocalFiles = localFiles.sort((a, b) => {
-                const epA = a.metadata?.episode || Number(a.parsedInfo?.episode) || 1
-                const epB = b.metadata?.episode || Number(b.parsedInfo?.episode) || 1
-                return Number(epA) - Number(epB)
+            const sortedLocalFiles = [...localFiles].sort((a, b) => {
+                const rawA = a.metadata?.episode ?? a.parsedInfo?.episode ?? 1
+                const rawB = b.metadata?.episode ?? b.parsedInfo?.episode ?? 1
+                const numA = Number.isFinite(Number(rawA)) ? Number(rawA) : 1
+                const numB = Number.isFinite(Number(rawB)) ? Number(rawB) : 1
+                return numA - numB
             })
 
             const seriesTitle =
@@ -88,6 +105,7 @@ export function RandomPlayButton() {
                 const selectedFile = sortedLocalFiles[0]
                 if (!selectedFile?.path) {
                     toast.error("Archivo no disponible")
+                    setIsLoading(false)
                     return
                 }
                 const epNum = selectedFile.metadata?.episode || Number(selectedFile.parsedInfo?.episode) || 1
@@ -105,6 +123,7 @@ export function RandomPlayButton() {
             } else {
                 if (sortedLocalFiles.length === 0 || !sortedLocalFiles[0]?.path) {
                     toast.error("Archivo no disponible")
+                    setIsLoading(false)
                     return
                 }
                 
@@ -133,28 +152,13 @@ export function RandomPlayButton() {
                 }
             }
             
-            if (!activeItem) return
-
-            // Si hay una KameHouseTV (Tizen) conectada al servidor, el Modo TV
-            // se reproduce en la tele vía cast y la UI del PC queda como está.
-            const devices = (await fetchCastDevices().catch(() => undefined))?.devices ?? []
-            if (devices.length > 0) {
-                const epNum = activeItem.episodeNumber ?? 1
-                castPlay({
-                    mediaId: randomEntry.mediaId,
-                    episodeNumber: epNum,
-                    title: seriesTitle,
-                    episodeLabel: isMovie ? "Película" : `Episodio ${epNum}`,
-                }, {
-                    onSuccess: () => {
-                        toast.success(`📺 Modo TV ${isMovie ? "Películas" : "Series"} enviado a la TV`, {
-                            description: `${seriesTitle}${!isMovie ? ` — Ep. ${epNum}` : ""}`,
-                            duration: 3000,
-                        })
-                    },
-                })
+            if (!activeItem) {
+                setIsLoading(false)
                 return
             }
+
+            // Close full-screen modal
+            setShowPicker(false)
 
             useAppStore.setState({
                 playlistQueue: newQueue,
@@ -179,163 +183,255 @@ export function RandomPlayButton() {
 
     return (
         <>
-            {/* ─── Trigger Button + Picker Popover ─────────────────────── */}
-            <div className="w-full flex justify-center gsap-sidebar-item">
-                <Popover.Root
-                    open={showPicker}
-                    onOpenChange={(open) => {
-                        setShowPicker(open)
-                        playRandomSound()
-                    }}
-                >
-                    <Popover.Trigger asChild>
-                        <button
-                            id="random-play-btn"
-                            disabled={isLoading}
-                            title="Modo TV"
-                            className={cn(
-                                "flex items-center h-14 rounded-xl group px-4 relative transition-all duration-base w-full",
-                                "active:scale-95 font-bold outline-none",
-                                sidebarOpen ? "w-full justify-start gap-4 px-5" : "justify-center md:w-14 w-full md:px-0",
-                                tvMode || showPicker || isLoading
-                                    ? "text-on-surface bg-white/[0.08]"
-                                    : "bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.07] hover:border-white/[0.12] text-on-surface-variant hover:text-on-surface"
-                            )}
-                        >
-                            <div className={cn(
-                                "absolute left-0 w-1 h-6 bg-on-surface rounded-r-full transition-all duration-slow hidden md:block",
-                                (tvMode || showPicker || isLoading) ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
-                            )} />
-                            
-                            <span className={cn(
-                                "shrink-0 z-10 group-hover:scale-110 transition-transform duration-base",
-                                (tvMode || showPicker || isLoading) && "text-on-surface"
-                            )}>
-                                {isLoading ? (
-                                    <motion.div
-                                        animate={{ rotate: 360 }}
-                                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                    >
-                                        <Icons.ui.spinner className="w-5 h-5" />
-                                    </motion.div>
-                                ) : (
-                                    <Icons.navigation.tv className={cn(
-                                        "w-5 h-5 transition-transform duration-base",
-                                        "group-hover:scale-110"
-                                    )} />
-                                )}
-                            </span>
-                            
-                            <span className={cn(
-                                "uppercase tracking-ultra text-label-sm font-black z-10 text-left transition-colors whitespace-nowrap",
-                                (sidebarOpen) ? "block" : "hidden md:hidden",
-                                (tvMode || showPicker || isLoading) ? "text-on-surface" : "group-hover:text-on-surface"
-                            )}>
-                                Modo TV {tvMode ? "(Activado)" : ""}
-                            </span>
-                        </button>
-                    </Popover.Trigger>
+            {/* ─── Hero Trigger Button (Sidebar / Footer) ─────────────────── */}
+            {!modalOnly && (
+                <div className="w-full flex justify-center">
+                    <motion.button
+                        id="random-play-btn"
+                        disabled={Boolean(isLoading)}
+                        title="Modo TV Leanback"
+                        onClick={() => {
+                            playRandomSound()
+                            setShowPicker(true)
+                        }}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.96 }}
+                        className={cn(
+                            "group relative flex items-center rounded-2xl transition-all duration-300 w-full outline-none overflow-hidden",
+                            "border shadow-elevation-2",
+                            sidebarOpen ? "h-16 px-4 justify-start gap-3.5" : "h-14 md:w-14 w-full justify-center px-0",
+                            tvMode || showPicker
+                                ? "bg-brand-accent/20 border-brand-accent/50 text-on-surface shadow-brand-accent/20"
+                                : "bg-white/[0.04] border-white/[0.08] hover:bg-white/[0.08] hover:border-brand-accent/40 text-on-surface-variant hover:text-on-surface"
+                        )}
+                    >
+                        {/* Glowing background hint */}
+                        <div className={cn(
+                            "absolute inset-0 bg-gradient-to-r from-brand-accent/20 via-transparent to-transparent opacity-0 transition-opacity duration-300 pointer-events-none",
+                            (tvMode || showPicker) ? "opacity-100" : "group-hover:opacity-100"
+                        )} />
 
-                    <Popover.Portal>
-                        <Popover.Content
-                            side="right"
-                            align="end"
-                            sideOffset={16}
-                            className={cn(
-                                "z-[999] w-56 border border-outline-variant rounded-xl p-1.5 outline-none",
-                                "backdrop-blur-[var(--blur-overlay-xl)] backdrop-saturate-[var(--glass-saturate)]",
-                                "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-                                "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-                                "data-[side=right]:slide-in-from-left-4 data-[side=bottom]:slide-in-from-top-4",
-                                "duration-base ease-out"
+                        {/* Active vertical bar indicator */}
+                        <div className={cn(
+                            "absolute left-0 w-1.5 h-8 bg-brand-accent rounded-r-full transition-all duration-300 hidden md:block",
+                            (tvMode || showPicker) ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
+                        )} />
+                        
+                        {/* Icon with glowing badge */}
+                        <div className={cn(
+                            "relative shrink-0 z-10 flex items-center justify-center rounded-xl transition-all duration-300",
+                            sidebarOpen ? "w-10 h-10" : "w-10 h-10",
+                            (tvMode || showPicker)
+                                ? "bg-brand-accent text-on-primary shadow-lg shadow-brand-accent/40 scale-105"
+                                : "bg-white/[0.06] group-hover:bg-brand-accent/20 group-hover:text-brand-accent text-on-surface-variant"
+                        )}>
+                            {isLoading ? (
+                                <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                >
+                                    <IconUiSpinner className="w-5 h-5" />
+                                </motion.div>
+                            ) : (
+                                <IconNavigationTv className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
                             )}
-                            style={{ background: "color-mix(in srgb, var(--md-sys-color-surface-container) 80%, transparent)" }}
+                        </div>
+                        
+                        {/* Text Label */}
+                        <div className={cn(
+                            "z-10 flex flex-col text-left transition-all duration-300 whitespace-nowrap overflow-hidden",
+                            sidebarOpen ? "block" : "hidden md:hidden"
+                        )}>
+                            <span className="uppercase tracking-ultra text-label-md font-black text-on-surface leading-tight">
+                                Modo TV
+                            </span>
+                            <span className="text-[10px] font-bold text-on-surface-variant/70 tracking-wider uppercase">
+                                {tvMode ? "Activado" : "Leanback / Maratón"}
+                            </span>
+                        </div>
+
+                        {/* Badge Pill for TV Mode active state */}
+                        {tvMode && sidebarOpen && (
+                            <div className="ml-auto z-10 px-2 py-0.5 rounded-full bg-brand-accent/20 border border-brand-accent/40 text-brand-accent text-[9px] font-black uppercase tracking-widest">
+                                ON
+                            </div>
+                        )}
+                    </motion.button>
+                </div>
+            )}
+
+            {/* ─── Full-Screen Blurred Modal Overlay (Framer Motion) ─────────────── */}
+            <AnimatePresence>
+                {showPicker && (
+                    <div className="fixed inset-0 z-modal pointer-events-auto flex items-end sm:items-center justify-center p-4 md:p-6">
+                        {/* Backdrop Blur Overlay */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.25 }}
+                            onClick={() => setShowPicker(false)}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-overlay-2xl pointer-events-auto cursor-pointer"
+                        />
+
+                        {/* Modal Container — Animated from Bottom */}
+                        <motion.div
+                            role="dialog"
+                            aria-modal="true"
+                            initial={{ opacity: 0, y: 100, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 80, scale: 0.95 }}
+                            transition={{ type: "spring", stiffness: 350, damping: 26 }}
+                            className={cn(
+                                "relative z-10 w-full max-w-2xl flex flex-col rounded-3xl overflow-hidden shadow-2xl pointer-events-auto",
+                                "bg-zinc-950/85 backdrop-blur-overlay-2xl border border-white/20 border-t-white/40 border-b-white/10 text-on-surface shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.25),0_24px_48px_rgba(0,0,0,0.9)]"
+                            )}
                         >
+                            {/* Top Ambient Glow */}
+                            <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-brand-accent/15 to-transparent pointer-events-none" />
+
                             {/* Header */}
-                            <div className="px-3 pt-2.5 pb-2">
-                                <div className="flex items-center gap-2">
-                                    <Icons.navigation.tv className="w-3 h-3 text-on-surface-variant opacity-75" />
-                                    <p className="text-caption font-black uppercase tracking-cinema-lg text-on-surface-variant">
-                                        Modo TV
-                                    </p>
+                            <div className="relative flex items-center justify-between p-6 md:p-8 pb-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3.5 rounded-2xl bg-brand-accent/15 border border-brand-accent/30 text-brand-accent shadow-lg shadow-brand-primary">
+                                        <IconNavigationTv className="w-7 h-7" />
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="px-2 py-0.5 rounded-md bg-brand-accent/20 text-brand-accent text-caption font-black uppercase tracking-widest border border-brand-accent/30">
+                                                Leanback Experience
+                                            </span>
+                                        </div>
+                                        <h2 className="text-2xl md:text-3xl font-black uppercase tracking-wider text-on-surface mt-1">
+                                            Modo TV
+                                        </h2>
+                                        <p className="text-xs md:text-sm text-on-surface-variant/80 font-medium">
+                                            Selecciona la modalidad para iniciar la reproducción inmersiva aleatoria
+                                        </p>
+                                    </div>
                                 </div>
+
+                                {/* Close Button */}
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        setShowPicker(false)
+                                    }}
+                                    className="p-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/15 border-t-white/30 text-on-surface-variant hover:text-on-surface transition-all duration-200 active:scale-95 outline-none pointer-events-auto cursor-pointer shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.2)]"
+                                    title="Cerrar (ESC)"
+                                >
+                                    <IconUiClose className="w-5 h-5" />
+                                </button>
                             </div>
 
                             {/* Divider */}
-                            <div className="h-px bg-outline-variant mx-2 mb-1" />
+                            <div className="h-px bg-white/10 mx-6 md:mx-8" />
 
-                            {/* Movie option */}
-                            <PickerOption
-                                id="tv-mode-movie"
-                                onClick={() => pick("movie")}
-                                icon={<Icons.media.clapperboard className="w-4 h-4 text-on-surface-variant" />}
-                                iconBg="bg-surface-container-high border-outline-variant"
-                                label="Películas"
-                                accentColor="group-hover:text-on-surface"
-                            />
+                            {/* Hero Cards Container */}
+                            <div className="p-6 md:p-8 grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+                                {/* Option 1: Series / Episodes */}
+                                <motion.button
+                                    type="button"
+                                    disabled={Boolean(isLoading)}
+                                    onClick={() => pick("episode")}
+                                    whileHover={{ y: -4, scale: 1.02 }}
+                                    whileTap={{ scale: 0.97 }}
+                                    className={cn(
+                                        "group relative flex flex-col p-6 rounded-2xl text-left transition-all duration-300 outline-none pointer-events-auto cursor-pointer",
+                                        "bg-zinc-950/50 hover:bg-zinc-900/70 border border-white/15 hover:border-brand-accent/60 border-t-white/35",
+                                        "shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.15)] hover:shadow-brand-accent/15",
+                                        isLoading === "episode" && "opacity-75 pointer-events-none"
+                                    )}
+                                >
+                                    <div className="flex items-center justify-between w-full mb-4">
+                                        <div className="w-14 h-14 rounded-2xl bg-brand-accent/15 border border-brand-accent/30 text-brand-accent flex items-center justify-center transition-transform duration-300 group-hover:scale-110 shadow-md shadow-brand-accent/20">
+                                            {isLoading === "episode" ? (
+                                                <motion.div
+                                                    animate={{ rotate: 360 }}
+                                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                                >
+                                                    <IconUiSpinner className="w-6 h-6" />
+                                                </motion.div>
+                                            ) : (
+                                                <IconNavigationTv className="w-7 h-7" />
+                                            )}
+                                        </div>
+                                        <span className="px-2.5 py-1 rounded-full bg-white/[0.06] group-hover:bg-brand-accent/20 text-on-surface-variant group-hover:text-brand-accent text-[10px] font-black uppercase tracking-widest transition-colors border border-white/10 group-hover:border-brand-accent/30">
+                                            Maratón
+                                        </span>
+                                    </div>
 
-                            {/* Episode option */}
-                            <PickerOption
-                                id="tv-mode-episode"
-                                onClick={() => pick("episode")}
-                                icon={<Icons.navigation.tv className="w-4 h-4 text-on-surface-variant" />}
-                                iconBg="bg-surface-container-high border-outline-variant"
-                                label="Series"
-                                accentColor="group-hover:text-on-surface"
-                            />
-                        </Popover.Content>
-                    </Popover.Portal>
-                </Popover.Root>
-            </div>
+                                    <h3 className="text-lg font-black uppercase tracking-wide text-on-surface group-hover:text-brand-accent transition-colors">
+                                        Series
+                                    </h3>
+                                    <p className="text-xs text-on-surface-variant/80 mt-1 leading-relaxed font-medium">
+                                        Inicia un maratón continuado de episodios de anime seleccionando una serie al azar.
+                                    </p>
 
+                                    <div className="mt-6 flex items-center gap-1.5 text-xs font-bold text-brand-accent group-hover:translate-x-1 transition-transform">
+                                        <span>Iniciar Series</span>
+                                        <span>›</span>
+                                    </div>
+                                </motion.button>
+
+                                {/* Option 2: Movies */}
+                                <motion.button
+                                    type="button"
+                                    disabled={Boolean(isLoading)}
+                                    onClick={() => pick("movie")}
+                                    whileHover={{ y: -4, scale: 1.02 }}
+                                    whileTap={{ scale: 0.97 }}
+                                    className={cn(
+                                        "group relative flex flex-col p-6 rounded-2xl text-left transition-all duration-300 outline-none pointer-events-auto cursor-pointer",
+                                        "bg-zinc-950/50 hover:bg-zinc-900/70 border border-white/15 hover:border-brand-secondary/60 border-t-white/35",
+                                        "shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.15)] hover:shadow-brand-secondary/15",
+                                        isLoading === "movie" && "opacity-75 pointer-events-none"
+                                    )}
+                                >
+                                    <div className="flex items-center justify-between w-full mb-4">
+                                        <div className="w-14 h-14 rounded-2xl bg-brand-secondary/15 border border-brand-secondary/30 text-brand-secondary flex items-center justify-center transition-transform duration-300 group-hover:scale-110 shadow-md shadow-brand-secondary/20">
+                                            {isLoading === "movie" ? (
+                                                <motion.div
+                                                    animate={{ rotate: 360 }}
+                                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                                >
+                                                    <IconUiSpinner className="w-6 h-6" />
+                                                </motion.div>
+                                            ) : (
+                                                <IconMediaClapperboard className="w-7 h-7" />
+                                            )}
+                                        </div>
+                                        <span className="px-2.5 py-1 rounded-full bg-white/[0.06] group-hover:bg-brand-secondary/20 text-on-surface-variant group-hover:text-brand-secondary text-[10px] font-black uppercase tracking-widest transition-colors border border-white/10 group-hover:border-brand-secondary/30">
+                                            Cine
+                                        </span>
+                                    </div>
+
+                                    <h3 className="text-lg font-black uppercase tracking-wide text-on-surface group-hover:text-brand-secondary transition-colors">
+                                        Películas
+                                    </h3>
+                                    <p className="text-xs text-on-surface-variant/80 mt-1 leading-relaxed font-medium">
+                                        Reproduce un largometraje, OVA o especial al azar directo desde tu biblioteca.
+                                    </p>
+
+                                    <div className="mt-6 flex items-center gap-1.5 text-xs font-bold text-brand-secondary group-hover:translate-x-1 transition-transform">
+                                        <span>Iniciar Cine</span>
+                                        <span>›</span>
+                                    </div>
+                                </motion.button>
+                            </div>
+
+                            {/* Footer info note */}
+                            <div className="px-6 md:px-8 pb-6 text-center">
+                                <p className="text-[11px] text-on-surface-variant/60 font-medium">
+                                    Presiona <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-on-surface text-[10px] font-mono">ESC</kbd> o haz clic afuera para salir
+                                </p>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </>
     )
 }
 
-// ─── Picker Option Sub-component ──────────────────────────────────────────────
-
-interface PickerOptionProps {
-    id: string
-    onClick: () => void
-    icon: React.ReactNode
-    iconBg: string
-    label: string
-    accentColor: string
-}
-
-function PickerOption({ id, onClick, icon, iconBg, label, accentColor }: PickerOptionProps) {
-    return (
-        <button
-            id={id}
-            role="menuitem"
-            onClick={onClick}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-xl bg-transparent hover:bg-surface-container-high border border-transparent hover:border-outline-variant transition-all duration-base text-left group active:scale-95"
-        >
-            {/* Icon badge */}
-            <div className={cn(
-                "w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 transition-transform duration-base",
-                iconBg,
-                "group-hover:scale-110"
-            )}>
-                {icon}
-            </div>
-
-            {/* Text */}
-            <div>
-                <p className={cn(
-                    "text-sm font-bold text-on-surface transition-colors duration-base",
-                    accentColor
-                )}>
-                    {label}
-                </p>
-            </div>
-
-            {/* Arrow hint */}
-            <span
-                className="ml-auto text-on-surface-variant/50 group-hover:text-on-surface-variant text-xs transition-all duration-base group-hover:translate-x-1"
-            >
-                ›
-            </span>
-        </button>
-    )
-}

@@ -1,11 +1,9 @@
 /* eslint-disable react-hooks/refs */
-import React, { useEffect, useRef } from "react"
-import gsap from "gsap"
-import { useGSAP } from "@gsap/react"
+import React, { useEffect, useRef, useState } from "react"
 import { cn } from "@/components/ui/core/styling"
 import { PlayerTopBar } from "./player-topbar"
 import { PlayerBottomBar } from "./player-bottombar"
-import { LoadingErrorOverlay, CenterPlayFlash, SkipIntroOverlay, NextEpisodeOverlay, ResumeOverlay } from "./player-overlays"
+import { LoadingErrorOverlay, CenterPlayFlash, SkipIntroOverlay, NextEpisodeOverlay, ResumeOverlay, AutoSkipToastOverlay } from "./player-overlays"
 import type { EpisodeSource } from "@/api/types/unified.types"
 import { useGetVideoInsights } from "@/api/hooks/videocore.hooks"
 import type { PlayerCore, PlayerStats } from "./player-core"
@@ -16,12 +14,12 @@ import { PlayerQueueSidebar } from "./player-queue-sidebar"
 import { PlayerAmbientBackdrop } from "./player-ambient"
 import { __isTV__ } from "@/types/constants"
 import { useFocusNavigation } from "@/hooks/use-focus-navigation"
-import { Icons } from "@/components/ui/icons"
+import { IconMediaPlay, IconMediaVolume2, IconUiStar } from "@/components/ui/icons";
 
 function StatsOverlay({ show, data }: { show: boolean, data: PlayerStats }) {
     if (!show || !data) return null
     return (
-        <div className="absolute top-24 left-10 z-[100] backdrop-blur-overlay-md p-6 rounded-corner-lg border border-outline-variant text-label-sm font-mono uppercase tracking-ultra text-on-surface-variant space-y-3 pointer-events-none shadow-elevation-3 min-w-[320px]" style={{ background: "color-mix(in srgb, var(--md-sys-color-surface-container) 95%, transparent)" }}>
+        <div className="absolute top-20 left-4 right-4 sm:right-auto sm:left-10 z-player-ui backdrop-blur-overlay-md p-4 sm:p-6 rounded-corner-lg border border-outline-variant text-label-sm font-mono uppercase tracking-ultra text-on-surface-variant space-y-3 pointer-events-none shadow-elevation-3 w-auto sm:min-w-[320px] max-w-[calc(100vw-2rem)]" style={{ background: "color-mix(in srgb, var(--md-sys-color-surface-container) 95%, transparent)" }}>
             <h4 className="text-on-surface font-black border-b border-outline-variant/50 pb-3 mb-4 flex items-center justify-between">
                 <span className="flex items-center gap-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-brand-accent animate-pulse" />
@@ -53,7 +51,6 @@ export interface PlayerUIProps {
     episodeSources: EpisodeSource[]
     onSourceSwitch: (source: EpisodeSource) => void
     core: PlayerCore
-    clientId: string
     mediaId?: number
     episodeNumber?: number
     malId?: number | null
@@ -145,6 +142,8 @@ export function PlayerUI(props: PlayerUIProps) {
         type: "seek" | "volume" | "brightness"
         value: string
     } | null>(null)
+    const [skipFlash, setSkipFlash] = useState<"left" | "right" | null>(null)
+    const skipFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     const touchStartRef = useRef<{ x: number, y: number } | null>(null)
     const isSwipingRef = useRef<boolean>(false)
@@ -246,13 +245,9 @@ export function PlayerUI(props: PlayerUIProps) {
                 const deltaValue = deltaY * verticalMultiplier
                 
                 if (swipeSideRef.current === "right") {
-                    // Volume control
+                    // Volume control — centralizado en handleVolume (evita doble escritura)
                     const newVolume = Math.max(0, Math.min(1, initialVolumeRef.current + deltaValue))
-                    const video = localVideoRef.current
-                    if (video) {
-                        video.volume = newVolume
-                        actions.handleVolume({ target: { value: String(newVolume) } } as unknown as React.ChangeEvent<HTMLInputElement>)
-                    }
+                    actions.handleVolume({ target: { value: String(newVolume) } } as unknown as React.ChangeEvent<HTMLInputElement>)
                     setSwipeIndicator({
                         type: "volume",
                         value: `VOL: ${(newVolume * 100).toFixed(0)}%`
@@ -287,26 +282,12 @@ export function PlayerUI(props: PlayerUIProps) {
     }
 
     const playSkipAnimation = (side: "left" | "right") => {
-        const target = side === "left" ? ".skip-indicator-left" : ".skip-indicator-right"
-        gsap.killTweensOf(target)
-        gsap.fromTo(target,
-            { opacity: 0, scale: 0.9 },
-            {
-                opacity: 1,
-                scale: 1,
-                duration: 0.2,
-                ease: "power2.out",
-                onComplete: () => {
-                    gsap.to(target, {
-                        opacity: 0,
-                        scale: 0.95,
-                        duration: 0.25,
-                        delay: 0.3,
-                        ease: "power2.in"
-                    })
-                }
-            }
-        )
+        setSkipFlash(side)
+        if (skipFlashTimerRef.current) clearTimeout(skipFlashTimerRef.current)
+        skipFlashTimerRef.current = setTimeout(() => {
+            setSkipFlash(null)
+            skipFlashTimerRef.current = null
+        }, 550)
     }
 
     const handleInteractionClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -348,9 +329,14 @@ export function PlayerUI(props: PlayerUIProps) {
         }
     }
 
+    const triggerControlsRef = useRef(actions.triggerControlsVisibility)
+    useEffect(() => {
+        triggerControlsRef.current = actions.triggerControlsVisibility
+    }, [actions.triggerControlsVisibility])
+
     useEffect(() => {
         const handleGlobalKeyDown = () => {
-            actions.triggerControlsVisibility()
+            triggerControlsRef.current()
         }
         window.addEventListener("keydown", handleGlobalKeyDown, { capture: true })
         return () => {
@@ -358,7 +344,7 @@ export function PlayerUI(props: PlayerUIProps) {
             if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current)
             window.removeEventListener("keydown", handleGlobalKeyDown, { capture: true })
         }
-    }, [actions])
+    }, [])
 
     const { playlistQueue, currentQueueIndex } = useAppStore(useShallow(state => ({
         playlistQueue: state.playlistQueue,
@@ -372,7 +358,7 @@ export function PlayerUI(props: PlayerUIProps) {
         if (isEpisodesSidebarOpen || isQueueSidebarOpen) {
             actions.setControlsVisible(true)
         }
-    }, [isEpisodesSidebarOpen, isQueueSidebarOpen, actions])
+    }, [isEpisodesSidebarOpen, isQueueSidebarOpen, actions.setControlsVisible])
 
     // D-pad navigation for TV remote control
     const handleEscape = React.useCallback(() => {
@@ -413,26 +399,7 @@ export function PlayerUI(props: PlayerUIProps) {
 
     const insights = insightsData || []
 
-    // Cinematic Controls Animation Layer
-    // Bug 3 fix: split the bottom-bar animation into two targets:
-    //   .player-bottom-bar  → fade only (autoAlpha), NO transform — the frosted-glass
-    //                         background div lives here and a CSS transform on an ancestor
-    //                         isolates its backdrop context, breaking backdrop-blur.
-    //   .player-bar-fg      → y/scale slide (the cinematic entrance). No backdrop-filter
-    //                         of its own, so having a transform is safe.
-    useGSAP(() => {
-        if (controlsVisible) {
-            gsap.to(".player-top-bar", { y: 0, scale: 1, autoAlpha: 1, duration: 0.55, ease: "power4.out", onComplete: () => gsap.set(".player-top-bar", { clearProps: "transform" }) })
-            // Fade the whole wrapper (visibility/opacity only, no movement)
-            gsap.to(".player-bottom-bar", { autoAlpha: 1, duration: 0.55, ease: "power4.out" })
-            // Slide the foreground content layer
-            gsap.to(".player-bar-fg", { y: 0, scale: 1, duration: 0.55, ease: "power4.out", onComplete: () => gsap.set(".player-bar-fg", { clearProps: "transform" }) })
-        } else {
-            gsap.to(".player-top-bar", { y: -15, scale: 0.97, autoAlpha: 0, duration: 0.35, ease: "power2.inOut" })
-            gsap.to(".player-bottom-bar", { autoAlpha: 0, duration: 0.35, ease: "power2.inOut" })
-            gsap.to(".player-bar-fg", { y: 15, scale: 0.97, duration: 0.35, ease: "power2.inOut" })
-        }
-    }, { dependencies: [controlsVisible], scope: domElements.containerElement })
+
 
 
 
@@ -450,7 +417,7 @@ export function PlayerUI(props: PlayerUIProps) {
                 }
             }}
             className={cn(
-                "fixed inset-0 z-[10000] w-screen h-screen bg-black flex flex-col items-center justify-center overflow-hidden font-sans",
+                "fixed inset-0 z-player w-screen h-screen bg-black flex flex-col items-center justify-center overflow-hidden font-sans",
                 !controlsVisible && state.isPlaying ? "cursor-none" : "cursor-default"
             )}
             style={{
@@ -462,7 +429,7 @@ export function PlayerUI(props: PlayerUIProps) {
                 videoRef={localVideoRef} 
                 enabled={state.ambientModeEnabled && !state.tvMode} // Usually ambient mode isn't great for TVs or we can just leave it enabled for both
             />
-             <video
+              <video
                 ref={domElements.videoElement}
                 onPlay={() => actions.setIsPlaying(true)}
                 onPause={() => actions.setIsPlaying(false)}
@@ -471,20 +438,36 @@ export function PlayerUI(props: PlayerUIProps) {
                 onWaiting={() => actions.setIsBuffering(true)}
                 onPlaying={() => { actions.setIsBuffering(false); actions.setIsSeeking(false) }}
                 onSeeked={() => actions.setIsSeeking(false)}
+                onError={() => {
+                    actions.setIsBuffering(false)
+                    actions.setIsSeeking(false)
+                }}
                 onEnded={() => {
                     actions.handleTimeUpdate()
                 }}
-                className="absolute inset-0 m-auto w-full h-full z-10"
+                className={cn(
+                    "absolute inset-0 m-auto z-10",
+                    state.aspectRatio === "21/9" ? "w-full h-auto aspect-[21/9] max-h-full max-w-full" :
+                    state.aspectRatio === "16/9" ? "w-full h-auto aspect-[16/9] max-h-full max-w-full" :
+                    "w-full h-full"
+                )}
                 style={{
-                    objectFit: state.aspectRatio === "cover" ? "cover" : state.aspectRatio === "fill" ? "fill" : "contain",
+                    objectFit: state.aspectRatio === "cover" || state.aspectRatio === "21/9" || state.aspectRatio === "16/9"
+                        ? "cover"
+                        : state.aspectRatio === "fill"
+                        ? "fill"
+                        : "contain",
                     filter: `brightness(${brightness})`
                 }}
                 crossOrigin="anonymous"
                 playsInline
-                preload="auto"
+                preload="metadata"
             />
 
-            {/* Gesture Interaction Overlay */}
+            {/* Gesture Interaction Overlay — z-player (base) para quedar DEBAJO de
+                barras (z-player-ui) y overlays (z-player-overlay). Antes en z-player-ui
+                con wrappers de barras en z-30, el overlay interceptaba clicks de
+                REINTENTAR/REGRESAR y botones de la bottom-bar. */}
             <div
                 onMouseDown={(e) => {
                     if (e.button === 0) startHold()
@@ -497,23 +480,23 @@ export function PlayerUI(props: PlayerUIProps) {
                 onTouchCancel={handleTouchEnd}
                 onClick={handleInteractionClick}
                 className={cn(
-                    "absolute inset-0 z-[12] select-none",
+                    "absolute inset-0 z-player select-none",
                     !controlsVisible && state.isPlaying ? "cursor-none" : "cursor-pointer"
                 )}
             />
 
             {/* Temporal Gesture Swipe Overlay Indicator */}
             {swipeIndicator && (
-                <div className="absolute inset-0 z-[14] pointer-events-none flex items-center justify-center animate-in fade-in duration-100">
-                    <div className="glass-liquid flex items-center gap-3 px-6 py-3.5 rounded-full border border-white/10 shadow-elevation-5 bg-zinc-950/80">
+                <div className="absolute inset-0 z-player-overlay pointer-events-none flex items-center justify-center animate-in fade-in duration-100">
+                    <div className="glass-liquid flex items-center gap-3 px-6 py-3.5 rounded-full border border-white/10 shadow-elevation-5 bg-surface-container-high/80">
                         {swipeIndicator.type === "seek" && (
-                            <Icons.media.play className="w-5 h-5 text-brand-secondary fill-current shrink-0" />
+                            <IconMediaPlay className="w-5 h-5 text-brand-secondary fill-current shrink-0" />
                         )}
                         {swipeIndicator.type === "volume" && (
-                            <Icons.media.volume2 className="w-5 h-5 text-brand-secondary shrink-0" />
+                            <IconMediaVolume2 className="w-5 h-5 text-brand-secondary shrink-0" />
                         )}
                         {swipeIndicator.type === "brightness" && (
-                            <Icons.ui.star className="w-5 h-5 text-brand-secondary shrink-0" />
+                            <IconUiStar className="w-5 h-5 text-brand-secondary shrink-0" />
                         )}
                         <span className="font-display text-lg tracking-wider text-on-surface uppercase">
                             {swipeIndicator.value}
@@ -524,10 +507,13 @@ export function PlayerUI(props: PlayerUIProps) {
 
             {/* Skip animation indicator left */}
             <div
-                className="skip-indicator-left absolute left-0 top-0 bottom-0 w-[30%] z-[13] pointer-events-none flex items-center justify-center bg-surface-container opacity-0"
+                className={cn(
+                    "skip-indicator-left absolute left-0 top-0 bottom-0 w-[30%] z-player-overlay pointer-events-none flex items-center justify-center bg-surface-container transition-all duration-200 ease-out",
+                    skipFlash === "left" ? "opacity-100 scale-100" : "opacity-0 scale-95"
+                )}
                 style={{ clipPath: "ellipse(70% 100% at 0% 50%)" }}
             >
-                <div className="flex flex-col items-center text-white/95 px-6 py-4 rounded-xl backdrop-blur-[var(--blur-overlay-sm)] [&>*:not(:first-child)]:mt-1.5" style={{ background: "color-mix(in srgb, var(--md-sys-color-surface) 30%, transparent)" }}>
+                <div className="flex flex-col items-center text-white/95 px-6 py-4 rounded-xl backdrop-blur-overlay-sm [&>*:not(:first-child)]:mt-1.5" style={{ background: "color-mix(in srgb, var(--md-sys-color-surface) 30%, transparent)" }}>
                     <div className="flex [&>*:not(:first-child)]:ml-0.5">
                         <svg className="w-8 h-8 fill-current rotate-180" viewBox="0 0 24 24">
                             <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z" />
@@ -539,10 +525,13 @@ export function PlayerUI(props: PlayerUIProps) {
 
             {/* Skip animation indicator right */}
             <div
-                className="skip-indicator-right absolute right-0 top-0 bottom-0 w-[30%] z-[13] pointer-events-none flex items-center justify-center bg-surface-container opacity-0"
+                className={cn(
+                    "skip-indicator-right absolute right-0 top-0 bottom-0 w-[30%] z-player-overlay pointer-events-none flex items-center justify-center bg-surface-container transition-all duration-200 ease-out",
+                    skipFlash === "right" ? "opacity-100 scale-100" : "opacity-0 scale-95"
+                )}
                 style={{ clipPath: "ellipse(70% 100% at 100% 50%)" }}
             >
-                <div className="flex flex-col items-center text-white/95 px-6 py-4 rounded-xl backdrop-blur-[var(--blur-overlay-sm)] [&>*:not(:first-child)]:mt-1.5" style={{ background: "color-mix(in srgb, var(--md-sys-color-surface) 30%, transparent)" }}>
+                <div className="flex flex-col items-center text-white/95 px-6 py-4 rounded-xl backdrop-blur-overlay-sm [&>*:not(:first-child)]:mt-1.5" style={{ background: "color-mix(in srgb, var(--md-sys-color-surface) 30%, transparent)" }}>
                     <div className="flex [&>*:not(:first-child)]:ml-0.5">
                         <svg className="w-8 h-8 fill-current" viewBox="0 0 24 24">
                             <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z" />
@@ -554,26 +543,17 @@ export function PlayerUI(props: PlayerUIProps) {
 
             {/* 2x Speed Hold Indicator */}
             {isHoldSpeedActive && (
-                <div className="absolute top-24 left-1/2 -translate-x-1/2 z-[31] pointer-events-none animate-in fade-in zoom-in-95 duration-base">
-                    <div className="flex items-center px-5 py-2.5 rounded-full border border-white/10 backdrop-blur-[var(--blur-overlay-sm)] text-white shadow-xl [&>*:not(:first-child)]:ml-2" style={{ background: "color-mix(in srgb, var(--md-sys-color-surface) 60%, transparent)" }}>
+                <div className="absolute top-24 left-1/2 -translate-x-1/2 z-player-overlay pointer-events-none animate-in fade-in zoom-in-95 duration-base">
+                    <div className="flex items-center px-5 py-2.5 rounded-full border border-white/10 backdrop-blur-overlay-sm text-white shadow-xl [&>*:not(:first-child)]:ml-2" style={{ background: "color-mix(in srgb, var(--md-sys-color-surface) 60%, transparent)" }}>
                         <svg className="w-3.5 h-3.5 fill-current text-brand-accent animate-pulse" viewBox="0 0 24 24">
                             <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z" />
                         </svg>
-                        <span className="text-label-sm font-black uppercase tracking-ultra text-zinc-100">
+                        <span className="text-label-sm font-black uppercase tracking-ultra text-on-surface">
                             2.0x Velocidad
                         </span>
                     </div>
                 </div>
             )}
-
-            <canvas
-                ref={domElements.canvasElement}
-                className={cn(
-                    "absolute inset-0 w-full h-full pointer-events-none z-[11]",
-                    state.isJassubActive ? "block" : "hidden"
-                )}
-            />
-
 
             <LoadingErrorOverlay
                 status={state.status}
@@ -583,6 +563,7 @@ export function PlayerUI(props: PlayerUIProps) {
                 isSeeking={state.isSeeking}
                 isStreamSwitching={state.isStreamSwitching}
                 onClose={onClose}
+                onRetry={actions.retryStream}
             />
 
 
@@ -597,6 +578,11 @@ export function PlayerUI(props: PlayerUIProps) {
                 remainingSeconds={state.skipRemainingSeconds}
                 segmentProgress={state.segmentProgress}
                 shortcutKey="S"
+            />
+
+            <AutoSkipToastOverlay
+                showType={state.showAutoSkipToast}
+                onUndo={actions.undoSkip}
             />
 
             <NextEpisodeOverlay
@@ -622,7 +608,10 @@ export function PlayerUI(props: PlayerUIProps) {
 
             <div
                 className={cn(
-                    "player-top-bar absolute top-0 inset-x-0 z-30 pointer-events-none opacity-0"
+                    "player-top-bar absolute top-0 inset-x-0 z-player-ui pointer-events-none transition-all duration-300 ease-out",
+                    controlsVisible
+                        ? "opacity-100 translate-y-0"
+                        : "opacity-0 -translate-y-4 pointer-events-none"
                 )}
             >
                 <PlayerTopBar
@@ -637,7 +626,8 @@ export function PlayerUI(props: PlayerUIProps) {
 
             <div
                 className={cn(
-                    "player-bottom-bar absolute bottom-0 inset-x-0 z-30 pointer-events-none opacity-0"
+                    "player-bottom-bar absolute bottom-0 inset-x-0 z-player-ui pointer-events-none transition-opacity duration-300 ease-out",
+                    controlsVisible ? "opacity-100" : "opacity-0 pointer-events-none"
                 )}
             >
                 <PlayerBottomBar
@@ -670,6 +660,7 @@ export function PlayerUI(props: PlayerUIProps) {
                     isJassubLoading={state.isJassubLoading || state.isPgsLoading}
                     episodeSources={episodeSources || []}
                     activeStreamUrl={playableUrl}
+                    currentSourceType={streamType}
                     handleSourceSwitch={onSourceSwitch || (() => { })}
                     isFullscreen={state.isFullscreen}
                     toggleFullscreen={actions.toggleFullscreen}
@@ -694,7 +685,7 @@ export function PlayerUI(props: PlayerUIProps) {
                     showHeatmap={state.showHeatmap}
                     onShowHeatmapChange={actions.setShowHeatmap}
                     aspectRatio={state.aspectRatio}
-                    onAspectRatioChange={actions.setAspectRatio}
+                    onAspectRatioChange={(r) => actions.setAspectRatio(r)}
                     subtitleSize={state.subtitleSize}
                     onSubtitleSizeChange={actions.setSubtitleSize}
                     loopEnabled={state.loopEnabled}

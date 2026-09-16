@@ -1,14 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
-import React, { useState, useCallback } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { useGSAP } from "@gsap/react"
-import gsap from "gsap"
+import React, { useState, useCallback, useMemo } from "react"
 import { useSound } from "@/hooks/use-sound"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
 
-import { cn } from "@/components/ui/core/styling"
-import { fetchAnimeEntry, useGetAnimeEntry, useUpdateAnimeEntryProgress } from "@/api/hooks/anime_entries.hooks"
+import { fetchAnimeEntry, useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import { useGetContinuityWatchHistoryItem } from "@/api/hooks/continuity.hooks"
 import { useServerQuery } from "@/api/client/requests"
 import { usePreloadMediastreamMediaContainer } from "@/api/hooks/mediastream.hooks"
@@ -20,35 +16,34 @@ import { useAppStore } from "@/lib/store"
 const VideoPlayer = React.lazy(() =>
     import("@/components/video/player").then(m => ({ default: m.VideoPlayer }))
 )
-import { RelationsTab, CharactersTab } from "./-series-bento-tabs"
 import { isDragonBallTmdbId, getSeriesEraTheme, resolveSeriesSagas } from "@/lib/config/dragonball.config"
+import { getSeriesIdFromMedia, DRAGON_BALL_SERIES_INFO } from "@/lib/helpers/series"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { useThemeSettings } from "@/lib/theme/theme-hooks"
 
 // New Design System Components
 import { SeriesHero } from "./-components/series-hero"
 import { SagaSelector } from "./-components/saga-selector"
-import { CharacterCarousel } from "./-components/character-carousel"
-import { PremiumEpisodeList } from "./-components/premium-episode-list"
+import { SeriesEpisodesTab } from "./-components/series-episodes-tab"
 import type { SagaDTO, SagaDetailSearchParams } from "@/api/types/series.types"
 import { BentoDetailsSkeleton } from "@/components/ui/shimmer-skeleton"
+import { AppErrorBoundary } from "@/components/shared/app-error-boundary"
 import { CharacterDetailModal, type DragonBallLoreData } from "@/components/shared/character-detail-modal"
 import { Vaul, VaulContent } from "@/components/vaul"
-import { Icons } from "@/components/ui/icons"
-
-import { SagaLoreHeader } from "./-components/saga-lore-header"
+import { IconNavigationChevronLeft, IconNavigationLayers, IconUiClose } from "@/components/ui/icons";
 import { PlayerFallback } from "@/components/video/player-fallback"
 import { WatchProgressBar } from "@/components/ui/watch-progress-bar"
-import { Popover } from "@/components/ui/popover"
+
+
 
 // ── Custom hooks ──────────────────────────────────────────────────────────────
 import { useSeriesData } from "./-hooks/use-series-data"
 import { useSeriesPlayback } from "./-hooks/use-series-playback"
+import { queryKeys } from "@/lib/query-keys"
 
 export const Route = createFileRoute("/series/$seriesId/")(
     {
         validateSearch: (search: Record<string, unknown>): SagaDetailSearchParams => ({
-            tab: (search.tab as SagaDetailSearchParams["tab"]) || "episodes",
             saga: (search.saga as string) ?? "",
             subSaga: (search.subSaga as string) ?? "",
             autoplay: (search.autoplay as string) || undefined,
@@ -63,6 +58,8 @@ export const Route = createFileRoute("/series/$seriesId/")(
             return { dehydrateState: dehydrate(qc) }
         },
         component: SeriesDetailPage,
+        errorComponent: AppErrorBoundary,
+        pendingComponent: BentoDetailsSkeleton,
     }
 )
 
@@ -78,11 +75,10 @@ function SeriesDetailPage() {
     )
 }
 
-export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
+function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     const { playSound } = useSound()
     const navigate = useNavigate()
     const {
-        tab: activeTab,
         saga: activeSagaId,
         subSaga: activeSubSagaId,
         autoplay: autoplayEp,
@@ -93,8 +89,6 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         useGetContinuityWatchHistoryItem(Number(seriesId))
     const setBackdropUrl = useIntelligenceStore(s => s.setBackdropUrl)
     const ts = useThemeSettings()
-    // El selector de sagas se ubica al costado en pantallas de escritorio (side-by-side layout)
-    const isStackedLayout = false
 
     const { data: lore } = useServerQuery<DragonBallLoreData>({
         endpoint: EXTRA_ENDPOINTS.DRAGONBALL.Lore.endpoint,
@@ -107,44 +101,41 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
 
     const [selectedCharacterName, setSelectedCharacterName] = useState<string | null>(null)
     const [mobileSagasOpen, setMobileSagasOpen] = useState(false)
-    const [scrollToEpisode, setScrollToEpisode] = useState<number | undefined>(undefined)
-    
+
     const setActiveSeriesContext = useAppStore(s => s.setActiveSeriesContext)
+    // Owner-guard: guardamos el valor que este mount escribió para no limpiar
+    // el contexto si la ruta siguiente ya lo sobreescribió (race en navegación rápida).
+    const contextWrittenRef = React.useRef<string | null>(null)
     React.useEffect(() => {
-        const contextKey = entry?.media?.tmdbId || seriesId
-        setActiveSeriesContext(String(contextKey))
+        const key = String(entry?.media?.tmdbId || seriesId)
+        contextWrittenRef.current = key
+        setActiveSeriesContext(key)
         return () => {
-            setActiveSeriesContext(null)
+            if (useAppStore.getState().activeSeriesContext === contextWrittenRef.current) {
+                setActiveSeriesContext(null)
+            }
         }
     }, [seriesId, entry?.media?.tmdbId, setActiveSeriesContext])
 
-    // Reset scroll target when saga/subsaga changes
-    const [prevSagaParams, setPrevSagaParams] = useState({ saga: activeSagaId, subSaga: activeSubSagaId })
-    if (activeSagaId !== prevSagaParams.saga || activeSubSagaId !== prevSagaParams.subSaga) {
-        setPrevSagaParams({ saga: activeSagaId, subSaga: activeSubSagaId })
-        setScrollToEpisode(undefined)
-    }
-
-    const { mutate: updateProgress } = useUpdateAnimeEntryProgress(seriesId, 0, false)
-
-    const handleUpdateProgress = useCallback((mediaId: number, progress: number) => {
-        updateProgress({ mediaId, progress })
-    }, [updateProgress])
+    const [isSagasSidebarCollapsed, setIsSagasSidebarCollapsed] = useState(false)
 
     const setSearchParams = useCallback(
         (updates: Partial<SagaDetailSearchParams>) => {
-            const newSearch = new URLSearchParams(window.location.search)
-            for (const [key, value] of Object.entries(updates)) {
-                if (value) {
-                    newSearch.set(key, value)
-                } else {
-                    newSearch.delete(key)
-                }
-            }
             navigate({
                 to: "/series/$seriesId",
                 params: { seriesId },
-                search: Object.fromEntries(newSearch) as SagaDetailSearchParams,
+                search: (prev: Record<string, unknown>) => {
+                    const next = { ...prev }
+                    for (const [key, value] of Object.entries(updates)) {
+                        if (key === "tab") continue
+                        if (value) {
+                            next[key] = value
+                        } else {
+                            delete next[key]
+                        }
+                    }
+                    return next
+                },
                 resetScroll: false,
             })
         },
@@ -160,7 +151,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     const { data: sagas } = useServerQuery<SagaDTO[]>({
         endpoint: `/api/v1/library/anime-entry/${seriesId}/sagas`,
         method: "GET",
-        queryKey: [`series-sagas-${seriesId}`],
+        queryKey: queryKeys.series.sagas(seriesId),
         staleTime: 600000,
     })
 
@@ -170,6 +161,10 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         }
     }, [sagas, activeSagaId, setSearchParams])
 
+    const localSagas = useMemo(() => {
+        return entry?.media ? resolveSeriesSagas(entry.media) : []
+    }, [entry?.media])
+
     // ── Data derivation ───────────────────────────────────────────────────────
     const {
         computedEpisodes,
@@ -178,6 +173,7 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         heroBackdrop,
         resumeInfo,
         sagaProgress,
+        sagasProgressMap,
         fillerStats,
         episodeViewModels,
     } = useSeriesData({
@@ -189,6 +185,21 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         libraryCollection,
     })
 
+    const seriesTitle =
+        entry?.media?.titleSpanish ||
+        entry?.media?.titleRomaji ||
+        entry?.media?.titleEnglish ||
+        ""
+    const detailSeriesId = getSeriesIdFromMedia(entry?.media, seriesTitle)
+    const CHRONOLOGY_SERIES_MAP: Record<string, string> = {
+        dragon_ball: "classic",
+        dragon_ball_z: "z",
+        dragon_ball_gt: "gt",
+        dragon_ball_super: "super",
+        dragon_ball_daima: "daima",
+    }
+    const chronologySeriesId = CHRONOLOGY_SERIES_MAP[detailSeriesId] || detailSeriesId
+
     // ── Playback logic ────────────────────────────────────────────────────────
     const {
         playTarget,
@@ -199,7 +210,6 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         hasNextEpisode,
         handlePlayDefault,
         handlePlayByNumber,
-        handleCastByNumber,
         handleNextEpisode,
         handlePlayerClose,
     } = useSeriesPlayback({
@@ -242,54 +252,26 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         : 0
 
     // ── DOM refs & scroll ─────────────────────────────────────────────────────
-    const contentRef = React.useRef<HTMLDivElement>(null)
-    const loreHeaderRef = React.useRef<HTMLDivElement>(null)
     const pageRef = React.useRef<HTMLDivElement>(null)
+    // Scroller real del detalle (el <main> interno). El hero usa esta ref para
+    // el parallax y la lista de episodios para el scroll virtualizado.
+    const mainScrollRef = React.useRef<HTMLElement | null>(null)
 
-    // Entrance canónico de bloques de página (espejo de .movie-animate en movies).
-    // Solo targets FUERA de AnimatePresence: barra de progreso y fila de tabs.
-    useGSAP(
-        () => {
-            gsap.from(".series-animate", {
-                y: 20,
-                opacity: 0,
-                duration: 0.4,
-                stagger: 0.04,
-                ease: "power2.out",
-                delay: 0.05,
-            })
-        },
-        { scope: pageRef, dependencies: [seriesId] }
-    )
+    // Entrada de bloques de página con CSS (animate-slide-up + delay escalonado
+    // inline). Antes era gsap.from(".series-animate") con stagger JS: mismo efecto
+    // visual pero sin invocar el motor JS en cada cambio de serie y sin reflows.
 
     // Scroll inicial controlado al top del contenedor en lugar de salto brusco
     React.useEffect(() => {
-        if (pageRef.current) {
-            pageRef.current.scrollTop = 0
+        if (mainScrollRef.current) {
+            mainScrollRef.current.scrollTop = 0
         }
     }, [seriesId])
 
-    // Al cambiar de saga/arco, posicionar la vista en el SagaLoreHeader.
-    // La navegación usa resetScroll:false, así que sin esto el viewport queda
-    // donde estaba — típicamente sobre el buscador de episodios.
-    // Se ignora la selección inicial (auto-select de la primera saga al entrar):
-    // ahí manda el scroll al hero/contentRef.
-    // NOTA: este efecto sólo reacciona a cambios de SAGA (arco), NO de subsaga.
-    // El scroll al primer episodio de la subsaga lo maneja premium-episode-list
-    // vía virtualizer.scrollToIndex — sin competencia con este setTimeout.
-    const prevSagaIdRef = React.useRef<string | null>(null)
-    React.useEffect(() => {
-        const prev = prevSagaIdRef.current
-        prevSagaIdRef.current = activeSagaId ?? null
-        if (!activeSagaId || prev === null || prev === activeSagaId) return
-        const timer = setTimeout(() => {
-            // "instant" a propósito: un smooth scroll largo sobre la lista
-            // virtualizada se interrumpe por los re-renders del virtualizer
-            // (verificado en runtime) y termina no llegando al destino.
-            loreHeaderRef.current?.scrollIntoView({ behavior: "instant", block: "start" })
-        }, 100)
-        return () => clearTimeout(timer)
-    }, [activeSagaId])
+    // Al cambiar de saga/arco NO se mueve el viewport: la vista se queda donde
+    // está (típicamente el hero) y la lista se actualiza debajo. El scroll al
+    // primer episodio de la subsaga explícitamente elegida lo maneja
+    // premium-episode-list vía virtualizer.scrollToIndex.
 
     // ── Early returns ─────────────────────────────────────────────────────────
     if (isLoading && !entry) {
@@ -311,347 +293,192 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         )
     }
 
-    const title =
-        entry.media.titleSpanish ||
-        entry.media.titleRomaji ||
-        entry.media.titleEnglish ||
-        "Título Desconocido"
+    const title = seriesTitle || "Título Desconocido"
     const hasRelations = entry.media?.relations && entry.media.relations.length > 0
     const hasCharacters =
         entry.media?.characters?.edges && entry.media.characters.edges.length > 0
     const eraTheme = getSeriesEraTheme(entry.media?.tmdbId)
-    const localTheme = !ts.themeEra ? eraTheme : undefined
+    const isAdaptiveEra = ts.effectiveMode === "era" && (!ts.themeEra || ts.themeEra === "era-universe")
+    const localTheme = isAdaptiveEra && eraTheme ? eraTheme : undefined
+    // Sinopsis canónica en español primero; la de la API (AniList) viene en inglés.
+    const detailSynopsis = (detailSeriesId ? DRAGON_BALL_SERIES_INFO[detailSeriesId]?.description : undefined)
+        || entry.media?.description
+        || "Sin descripción"
 
     // ── Render ────────────────────────────────────────────────────────────────
     return (
         <div
             ref={pageRef}
             data-theme={localTheme || undefined}
-            className="h-full w-full flex flex-col overflow-y-auto no-scrollbar text-on-surface pb-16"
+            className="flex flex-col h-full w-full pt-16 md:pt-0 text-on-surface-variant selection:bg-brand-accent/30 overflow-hidden relative bg-transparent"
         >
-            <SeriesHero
-                entry={entry}
-                backdropUrl={heroBackdrop}
-                sagaCount={sagas?.length ?? 0}
-                onPlay={handlePlayDefault}
-                onPlayHover={handlePlayHover}
-                hasProgress={!!continuityData?.item?.currentTime}
-                resumeEpisodeNumber={resumeInfo?.number}
-                resumeEpisodeTitle={resumeInfo?.title}
-                sagaPanel={sagas && sagas.length > 0 ? (
-                    <SagaSelector
-                        sagas={sagas}
-                        localSagas={entry?.media ? resolveSeriesSagas(entry.media) : []}
-                        activeSagaId={activeSagaId}
-                        onSelectSaga={sagaId => {
-                            setSearchParams({ saga: sagaId, subSaga: "" })
-                        }}
-                        activeSubSagaId={activeSubSagaId}
-                        onSelectSubSaga={subSagaId =>
-                            setSearchParams({ subSaga: subSagaId })
-                        }
-                    />
-                ) : undefined}
-            />
+            {/* Back en el hero (volver a Series) */}
+            <button
+                type="button"
+                onClick={() => navigate({ to: "/series" })}
+                aria-label="Volver a series"
+                className="absolute top-4 left-4 sm:left-6 md:left-8 lg:left-10 z-30 w-9 h-9 rounded-full bg-zinc-950/55 border border-white/20 backdrop-blur-overlay-2xl text-white/90 hover:text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
+            >
+                <IconNavigationChevronLeft className="w-4 h-4" />
+            </button>
 
-            {/* Barra de progreso "Continuar viendo" (espeja movies/$movieId.tsx) */}
-            {continuityData?.item?.currentTime && continuityData.item.duration ? (
-                <div className="series-animate w-full max-w-content mx-auto px-4 sm:px-8 md:px-16 lg:px-20 xl:px-24 mt-6 relative z-20">
-                    <WatchProgressBar percent={progressPercent} size="hero" animateOnMount />
+            {/* ── Main Scrollable Content Area ─────────────────────────────────── */}
+            <main ref={mainScrollRef} className="flex-1 overflow-y-auto no-scrollbar">
+                {/* Hero full-bleed al 100% (paridad con detalle de película):
+                    fuera del page-container para que el backdrop ocupe todo
+                    el ancho del viewport en vez del ~40% del contenido. */}
+                <div className="flex-shrink-0">
+                    <SeriesHero
+                        entry={entry}
+                        backdropUrl={heroBackdrop || null}
+                        scrollContainerRef={mainScrollRef}
+                        sagaCount={sagas?.length ?? 0}
+                        onPlay={handlePlayDefault}
+                        onPlayHover={handlePlayHover}
+                        footerText={sagaProgress.percent > 0 && sagaProgress.percent < 100 && activeSaga
+                            ? `Vas en: ${activeSaga.name} · ${Math.round(sagaProgress.percent)}%`
+                            : null}
+                        hasProgress={!!continuityData?.item?.currentTime}
+                        resumeEpisodeNumber={resumeInfo?.number}
+                        resumeEpisodeTitle={resumeInfo?.title}
+                    />
                 </div>
-            ) : null}
 
-            <div ref={contentRef} className="w-full max-w-content mx-auto px-4 sm:px-8 md:px-16 lg:px-20 xl:px-24 mt-8">
-                <div className="series-animate flex border-b border-outline-variant/30 pb-2 mb-6 gap-2.5 sm:gap-3 overflow-x-auto no-scrollbar">
-                    <SectionTab
-                        active={activeTab === "episodes"}
-                        onClick={() => setSearchParams({ tab: "episodes" })}
-                        icon={<Icons.media.play size={14} strokeWidth={2.5} />}
-                        label="Episodios"
-                    />
-                    {hasRelations && (
-                        <Popover
-                            trigger={
-                                <SectionTab
-                                    active={false}
-                                    icon={<Icons.navigation.layers size={14} strokeWidth={2.5} />}
-                                    label="Relacionados"
-                                />
-                            }
-                            className="w-[320px] max-w-[90vw] p-4 bg-ui-surface/95 backdrop-blur-overlay-md border-outline-variant shadow-elevated rounded-modal"
-                            sideOffset={12}
-                        >
-                            <div className="max-h-[60vh] overflow-y-auto no-scrollbar">
-                                <RelationsTab media={entry.media} />
-                            </div>
-                        </Popover>
-                    )}
-                    {hasCharacters && (
-                        <SectionTab
-                            active={activeTab === "characters"}
-                            onClick={() => setSearchParams({ tab: "characters" })}
-                            icon={<Icons.navigation.users size={14} strokeWidth={2.5} />}
-                            label="Personajes"
+                {/* Progress bar (overlay al final del hero, como en películas) */}
+                {continuityData?.item?.currentTime && continuityData.item.duration ? (
+                    <div className="w-full max-w-content mx-auto px-4 sm:px-6 md:px-8 lg:px-10 -mt-16 mb-6 relative z-20">
+                        <WatchProgressBar percent={progressPercent} size="hero" animateOnMount />
+                    </div>
+                ) : null}
+
+                <div className="w-full page-container py-7 pb-32 space-y-9 min-h-full">
+                    <SeriesEpisodesTab
+                            sagas={sagas}
+                            localSagas={localSagas}
+                            chronologySeriesId={chronologySeriesId}
+                            sagasProgressMap={sagasProgressMap}
+                            activeSagaId={activeSagaId}
+                            activeSubSagaId={activeSubSagaId}
+                            activeSaga={activeSaga}
+                            activeSubSaga={activeSubSaga}
+                            episodeViewModels={episodeViewModels}
+                            sagaProgress={sagaProgress}
+                            fillerStats={fillerStats}
+                            isSagasSidebarCollapsed={isSagasSidebarCollapsed}
+                            scrollElement={mainScrollRef.current}
+                            onSelectCharacter={setSelectedCharacterName}
+                            onOpenMobileSagas={() => setMobileSagasOpen(true)}
+                            onSelectSaga={(sagaId) => {
+                                setSearchParams({
+                                    saga: sagaId,
+                                    subSaga: "",
+                                })
+                            }}
+                            onSelectSubSaga={(subSagaId) => {
+                                setSearchParams({
+                                    subSaga: subSagaId,
+                                })
+                            }}
+                            onToggleCollapseSidebar={() => setIsSagasSidebarCollapsed(!isSagasSidebarCollapsed)}
+                            onPlayByNumber={handlePlayByNumber}
+                            onEpisodePreload={handleEpisodePreload}
                         />
-                    )}
-                    <SectionTab
-                        active={activeTab === "details"}
-                        onClick={() => setSearchParams({ tab: "details" })}
-                        icon={<Icons.ui.info size={14} strokeWidth={2.5} />}
-                        label="Detalles"
-                    />
+
                 </div>
+            </main>
 
-                <div className="mt-4 min-h-[300px]">
-                    <AnimatePresence mode="wait" initial={false}>
-                        {activeTab === "episodes" && (
-                            <motion.div
-                                key="episodes"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: 0.15 }}
-                                className={cn(
-                                    "mt-8 flex gap-10",
-                                    // Settings → Apariencia → Layout de Página de Anime.
-                                    // Lado a lado solo desde lg (1024px): en mobile y tablet
-                                    // el selector de Sagas se apila verticalmente sobre los
-                                    // episodios (drawer), no al costado.
-                                    isStackedLayout ? "flex-col" : "flex-col lg:flex-row"
-                                )}
+            {/* Mobile Vaul Drawer for Sagas */}
+            <Vaul open={mobileSagasOpen} onOpenChange={setMobileSagasOpen}>
+                {mobileSagasOpen && (
+                    <VaulContent className="bg-zinc-950/95 backdrop-blur-overlay-xl border-t border-white/[0.1] p-5 pb-8 flex flex-col focus:outline-none max-h-[85vh]">
+                        <div className="flex justify-between items-center mb-4 px-1">
+                            <h3 className="font-display text-2xl tracking-display text-on-surface uppercase flex items-center gap-2">
+                                <IconNavigationLayers className="w-5 h-5 text-brand-accent" />
+                                <span>Sagas y Arcos</span>
+                            </h3>
+                            <button
+                                onClick={() => setMobileSagasOpen(false)}
+                                className="p-1.5 rounded-full text-on-surface-variant hover:text-on-surface active:scale-95 cursor-pointer"
                             >
-                                {sagas && sagas.length > 0 && (
-                                    <div
-                                        className={cn(
-                                            "flex-shrink-0 flex flex-col gap-4 lg:hidden",
-                                        )}
-                                    >
-                                        <button
-                                            onClick={() => setMobileSagasOpen(true)}
-                                            className="w-full flex items-center justify-between px-4 py-3 bg-surface-container border border-outline-variant/30 rounded-xl font-bold text-on-surface uppercase tracking-widest text-sm active:scale-95 transition-all"
-                                        >
-                                            <span>Sagas y Arcos</span>
-                                            <span className="text-lg leading-none">+</span>
-                                        </button>
-
-                                        {/* Mobile Vaul drawer */}
-                                        <div>
-                                            <Vaul
-                                                open={mobileSagasOpen}
-                                                onOpenChange={setMobileSagasOpen}
-                                            >
-                                                <VaulContent className="bg-zinc-950/95 backdrop-blur-[var(--blur-overlay-xl)] border-t border-outline-variant/10 p-5 pb-8 flex flex-col focus:outline-none max-h-[85vh]">
-                                                    <div className="flex justify-between items-center mb-4 px-1">
-                                                        <h3 className="font-display text-2xl tracking-widest text-on-surface uppercase">
-                                                            Sagas y Arcos
-                                                        </h3>
-                                                        <button
-                                                            onClick={() =>
-                                                                setMobileSagasOpen(false)
-                                                            }
-                                                            className="p-1.5 rounded-full text-on-surface-variant hover:text-on-surface active:scale-95"
-                                                        >
-                                                            <Icons.ui.close className="w-5 h-5" />
-                                                        </button>
-                                                    </div>
-                                                    <div className="overflow-y-auto flex-grow min-h-0 pb-4">
-                                                        <SagaSelector
-                                                            sagas={sagas}
-                                                            localSagas={
-                                                                entry?.media
-                                                                    ? resolveSeriesSagas(
-                                                                          entry.media
-                                                                      )
-                                                                    : []
-                                                            }
-                                                            activeSagaId={activeSagaId}
-                                                            onSelectSaga={sagaId => {
-                                                                setSearchParams({
-                                                                    saga: sagaId,
-                                                                    subSaga: "",
-                                                                })
-                                                                const saga = sagas.find(
-                                                                    s => s.id === sagaId
-                                                                )
-                                                                if (!saga?.subSagas?.length) {
-                                                                    setMobileSagasOpen(false)
-                                                                }
-                                                            }}
-                                                            activeSubSagaId={activeSubSagaId}
-                                                            onSelectSubSaga={subSagaId => {
-                                                                setSearchParams({
-                                                                    subSaga: subSagaId,
-                                                                })
-                                                                setMobileSagasOpen(false)
-                                                            }}
-                                                        />
-                                                    </div>
-                                                </VaulContent>
-                                            </Vaul>
-                                        </div>
-                                    </div>
-                                )}
-
-
-                                <div className="flex-grow flex flex-col min-w-0">
-                                    <div ref={loreHeaderRef} className="scroll-mt-6" />
-                                    <SagaLoreHeader
-                                        saga={activeSaga}
-                                        subSaga={activeSubSaga}
-                                        media={entry?.media}
-                                        onSelectCharacter={setSelectedCharacterName}
-                                        onSelectEpisode={setScrollToEpisode}
-                                        onUpdateProgress={handleUpdateProgress}
-                                        progress={sagaProgress}
-                                        fillerStats={fillerStats}
-                                    />
-
-                                    <CharacterCarousel
-                                        characters={activeSaga?.keyCharacters || []}
-                                        onSelect={setSelectedCharacterName}
-                                    />
-
-                                    <PremiumEpisodeList
-                                        activeSagaId={activeSagaId}
-                                        scrollToEp={scrollToEpisode}
-                                        episodes={episodeViewModels}
-                                        activeSubSagaStart={activeSubSaga?.startEp}
-                                        activeSubSagaEnd={activeSubSaga?.endEp}
-                                        onPlay={handlePlayByNumber}
-                                        onCast={handleCastByNumber}
-                                        onPreload={handleEpisodePreload}
-                                    />
-                                </div>
-                            </motion.div>
-                        )}
-
-                        {activeTab === "characters" && (
-                            <motion.div
-                                key="characters"
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: 10 }}
-                                transition={{ duration: 0.2 }}
-                                className="py-4"
-                            >
-                                <div className="glass-card p-6 md:p-8">
-                                    <CharactersTab
-                                        characters={entry.media?.characters?.edges || []}
-                                        onSelectChar={setSelectedCharacterName}
-                                    />
-                                </div>
-                            </motion.div>
-                        )}
-
-                        {activeTab === "details" && (
-                            <motion.div
-                                key="details"
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: 10 }}
-                                transition={{ duration: 0.2 }}
-                                className="py-4"
-                            >
-                                <div className="glass-card p-6 md:p-8 flex flex-col gap-6 bg-surface-container/30 border border-outline-variant/30 rounded-2xl">
-                                    <h3 className="font-display text-2xl text-on-surface uppercase tracking-wider flex items-center gap-2">
-                                        <Icons.ui.info className="text-brand-accent w-6 h-6" /> Detalles de la Serie
-                                    </h3>
-                                    
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                        <div className="col-span-2 space-y-4">
-                                            <h4 className="text-label-lg font-bold text-on-surface-variant uppercase tracking-widest">Sinopsis</h4>
-                                            <p className="text-body-lg text-on-surface/80 leading-relaxed" dangerouslySetInnerHTML={{ __html: entry.media?.description || "Sin descripción" }} />
-                                        </div>
-                                        
-                                        <div className="space-y-6">
-                                            <div>
-                                                <h4 className="text-label-sm font-bold text-on-surface-variant uppercase tracking-widest mb-1">Información</h4>
-                                                <ul className="space-y-2 text-body-md text-on-surface/80">
-                                                    <li><strong className="text-on-surface">Formato:</strong> {entry.media?.format || "-"}</li>
-                                                    <li><strong className="text-on-surface">Estado:</strong> {entry.media?.status || "-"}</li>
-                                                    <li><strong className="text-on-surface">Episodios:</strong> {entry.media?.totalEpisodes || "-"}</li>
-                                                    <li><strong className="text-on-surface">Duración:</strong> {entry.media?.runtime ? `${entry.media.runtime} min` : (entry.media as { duration?: number })?.duration ? `${(entry.media as { duration?: number }).duration} min` : "-"}</li>
-                                                    <li><strong className="text-on-surface">Año:</strong> {entry.media?.year || "-"}</li>
-                                                </ul>
-                                            </div>
-                                            
-                                            {(entry.media as { studios?: string[] })?.studios && ((entry.media as { studios?: string[] }).studios?.length ?? 0) > 0 && (
-                                                <div>
-                                                    <h4 className="text-label-sm font-bold text-on-surface-variant uppercase tracking-widest mb-2">Estudios</h4>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {(entry.media as { studios?: string[] }).studios?.map((studio: string) => (
-                                                            <span key={studio} className="px-3 py-1 bg-surface-container border border-outline-variant/20 rounded-full text-label-sm font-semibold text-on-surface">
-                                                                {studio}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                            
-                                            {entry.media?.genres && (Array.isArray(entry.media.genres) ? entry.media.genres.length > 0 : Object.keys(entry.media.genres).length > 0) && (
-                                                <div>
-                                                    <h4 className="text-label-sm font-bold text-on-surface-variant uppercase tracking-widest mb-2">Géneros</h4>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {(Array.isArray(entry.media.genres) ? entry.media.genres : Object.values(entry.media.genres)).map((genre: unknown) => (
-                                                            <span key={String(genre)} className="px-3 py-1 bg-surface-container border border-outline-variant/20 rounded-full text-label-sm font-semibold text-on-surface">
-                                                                {String(genre)}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-            </div>
-
-            {playTarget &&
-                (() => {
-                    const nextTitle = nextEp
-                        ? nextEp.titleSpanish ||
-                          nextEp.episodeMetadata?.title ||
-                          nextEp.episodeTitle ||
-                          nextEp.displayTitle ||
-                          `Episodio ${nextEp.absoluteEpisodeNumber || nextEp.episodeNumber}`
-                        : nextSeriesTarget
-                          ? `Continuar con ${nextSeriesTarget.label}`
-                          : undefined
-                    return (
-                        <React.Suspense fallback={<PlayerFallback />}>
-                            <VideoPlayer
-                                streamUrl={playTarget.path}
-                                streamType={playTarget.streamType as "local" | "online" | "direct"}
-                                title={title}
-                                episodeLabel={playTarget.episodeLabel}
-                                episodeNumber={playTarget.episodeNumber}
-                                mediaId={Number(seriesId)}
-                                malId={playTarget.malId}
-                                mediaFormat={entry.media?.format ?? null}
-                                nextStreamUrl={nextLocalFile?.path}
-                                nextStreamType={playTarget.streamType}
-                                nextEpisodeTitle={nextTitle}
-                                nextEpisodeNumber={
-                                    nextEp
-                                        ? nextEp.absoluteEpisodeNumber || nextEp.episodeNumber
-                                        : undefined
-                                }
-                                nextEpisodeImage={
-                                    nextEp?.episodeMetadata?.image ||
-                                    entry.media?.bannerImage ||
-                                    entry.media?.posterImage
-                                }
-                                onNextEpisode={handleNextEpisode}
-                                hasNextEpisode={hasNextEpisode}
-                                onClose={handlePlayerClose}
+                                <IconUiClose className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="overflow-y-auto flex-grow min-h-0 pb-4">
+                            <SagaSelector
+                                sagas={sagas || []}
+                                localSagas={localSagas}
+                                chronologySeriesId={chronologySeriesId}
+                                sagasProgressMap={sagasProgressMap}
+                                activeSagaId={activeSagaId}
+                                onSelectSaga={sagaId => {
+                                    setSearchParams({
+                                        tab: "episodes",
+                                        saga: sagaId,
+                                        subSaga: "",
+                                    })
+                                    const saga = sagas?.find(s => s.id === sagaId)
+                                    if (!saga?.subSagas?.length) {
+                                        setMobileSagasOpen(false)
+                                    }
+                                }}
+                                activeSubSagaId={activeSubSagaId}
+                                onSelectSubSaga={subSagaId => {
+                                    setSearchParams({
+                                        tab: "episodes",
+                                        subSaga: subSagaId,
+                                    })
+                                    setMobileSagasOpen(false)
+                                }}
                             />
-                        </React.Suspense>
-                    )
-                })()}
+                        </div>
+                    </VaulContent>
+                )}
+            </Vaul>
 
+            {/* Video Player Modal */}
+            {playTarget && (() => {
+                const nextTitle = nextEp
+                    ? nextEp.titleSpanish ||
+                      nextEp.episodeMetadata?.title ||
+                      nextEp.episodeTitle ||
+                      nextEp.displayTitle ||
+                      `Episodio ${nextEp.absoluteEpisodeNumber || nextEp.episodeNumber}`
+                    : nextSeriesTarget
+                      ? `Continuar con ${nextSeriesTarget.label}`
+                      : undefined
+                return (
+                    <React.Suspense fallback={<PlayerFallback />}>
+                        <VideoPlayer
+                            streamUrl={playTarget.path}
+                            streamType={playTarget.streamType as "local" | "online" | "direct"}
+                            title={title}
+                            episodeLabel={playTarget.episodeLabel}
+                            episodeNumber={playTarget.episodeNumber}
+                            mediaId={Number(seriesId)}
+                            malId={playTarget.malId}
+                            mediaFormat={entry.media?.format ?? null}
+                            nextStreamUrl={nextLocalFile?.path}
+                            nextStreamType={playTarget.streamType}
+                            nextEpisodeTitle={nextTitle}
+                            nextEpisodeNumber={
+                                nextEp
+                                    ? nextEp.absoluteEpisodeNumber || nextEp.episodeNumber
+                                    : undefined
+                            }
+                            nextEpisodeImage={
+                                nextEp?.episodeMetadata?.image ||
+                                entry.media?.bannerImage ||
+                                entry.media?.posterImage
+                            }
+                            onNextEpisode={handleNextEpisode}
+                            hasNextEpisode={hasNextEpisode}
+                            onClose={handlePlayerClose}
+                        />
+                    </React.Suspense>
+                )
+            })()}
+
+            {/* Character Detail Modal */}
             {selectedCharacterName && (
                 <CharacterDetailModal
                     characterName={selectedCharacterName}
@@ -663,34 +490,3 @@ export function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         </div>
     )
 }
-
-const SectionTab = React.forwardRef<
-    HTMLButtonElement,
-    {
-        active: boolean
-        onClick?: () => void
-        icon: React.ReactNode
-        label: string
-    }
->(({ active, onClick, icon, label, ...props }, ref) => {
-    return (
-        <button
-            ref={ref}
-            onClick={onClick}
-            aria-current={active ? "true" : undefined}
-            className={cn(
-                "inline-flex items-center gap-2 shrink-0 text-sm font-semibold px-4 py-2 min-h-[44px] md:min-h-0 rounded-pill",
-                "transition-all duration-base ease-smooth-out active:scale-95",
-                "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent/70",
-                active
-                    ? "glass-liquid glass-active text-on-surface"
-                    : "bg-transparent text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
-            )}
-            {...props}
-        >
-            {icon}
-            {label}
-        </button>
-    )
-})
-SectionTab.displayName = "SectionTab"

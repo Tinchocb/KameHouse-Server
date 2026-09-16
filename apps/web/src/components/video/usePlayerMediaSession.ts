@@ -70,6 +70,15 @@ export function usePlayerMediaSession({
                         onNextEpisode()
                     }
                     break
+                case "previoustrack":
+                    if (videoRef.current) {
+                        if (videoRef.current.currentTime > 3) {
+                            setMediaCurrentTime(videoRef.current, 0)
+                        } else {
+                            skipTime(-10)
+                        }
+                    }
+                    break
             }
         }
 
@@ -108,22 +117,37 @@ export function usePlayerMediaSession({
         if (!("mediaSession" in navigator) || !isActive.current) return
 
         const seriesName = getSeriesName(title)
-        
+
         let displayTitle = title || "KameHouse"
         if (episodeNumber) {
-            displayTitle = `Episodio ${episodeNumber}`
+            displayTitle = seriesName && title
+                ? `${seriesName} — Episodio ${episodeNumber}`
+                : `Episodio ${episodeNumber}`
         }
 
         const artwork: MediaImage[] = []
         if (episodeImage) {
-            artwork.push({ src: episodeImage, sizes: "512x512", type: "image/webp" })
+            const lower = episodeImage.toLowerCase()
+            const type = lower.endsWith(".png")
+                ? "image/png"
+                : lower.endsWith(".jpg") || lower.endsWith(".jpeg")
+                    ? "image/jpeg"
+                    : undefined
+            artwork.push({
+                src: episodeImage,
+                sizes: "512x512",
+                ...(type ? { type } : {}),
+            })
         }
 
-        navigator.mediaSession.metadata = new MediaMetadata({
-            title: displayTitle,
-            artist: seriesName,
-            artwork,
-        })
+        try {
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: displayTitle,
+                artist: seriesName || displayTitle,
+                album: seriesName || undefined,
+                artwork,
+            })
+        } catch {}
     }, [title, episodeNumber, episodeImage])
 
     // Update playback state when playing changes
@@ -132,7 +156,8 @@ export function usePlayerMediaSession({
         navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused"
     }, [isPlaying])
 
-    // Update position state when time updates
+    // Update position state when time updates — re-attach al cambiar de fuente
+    // (antes solo dependía de videoRef y quedaba stale tras un source switch).
     useEffect(() => {
         const video = videoRef.current
         if (!video || !("mediaSession" in navigator)) return

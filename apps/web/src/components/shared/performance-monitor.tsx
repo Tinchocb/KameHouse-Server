@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Icons } from "@/components/ui/icons"
+import { IconStatusActivity, IconUiTrash, IconUiClose, IconStatusZap, IconStatusCpu, IconUiAlert, IconUiCheckCircle } from "@/components/ui/icons";
 import { useRouterState } from "@tanstack/react-router"
 import { usePerformanceStore } from "@/lib/hardware/performance-store"
 
 // Custom global event to toggle performance monitor from sidebar/settings
-export const TOGGLE_PERF_MONITOR_EVENT = "kamehouse:toggle-perf-monitor"
+const TOGGLE_PERF_MONITOR_EVENT = "kamehouse:toggle-perf-monitor"
 
 export function PerformanceMonitor() {
     const [isOpen, setIsOpen] = useState(() => localStorage.getItem("kamehouse:perf-monitor-enabled") === "true")
@@ -74,63 +74,34 @@ export function PerformanceMonitor() {
         return () => cancelAnimationFrame(timer)
     }, [currentPath])
 
-    // Performance loop (RAF)
+    // ─── Loop de MEDICIÓN (siempre activo si autoGovernorEnabled) ────────────────
+    // Corre independientemente de si el panel está abierto. Detecta caídas de FPS
+    // y activa el gobernador automático. No actualiza estado React → sin renders.
     useEffect(() => {
-        if (!isOpen) {
-            if (rafIdRef.current) {
-                cancelAnimationFrame(rafIdRef.current)
-                rafIdRef.current = null
-            }
-            return
-        }
+        if (!autoGovernorEnabled) return
 
-        lastFrameTimeRef.current = performance.now()
-        lastUpdateRef.current = performance.now()
+        let rafId: number | null = null
+        let lastFrameTime = performance.now()
         const monitorStartTime = performance.now()
-        const recentDeltas: number[] = []
+        const fpsTicksGov: number[] = []
         let lowFpsStreak = 0
-        
+
         const loop = (now: number) => {
-            const delta = now - lastFrameTimeRef.current
-            lastFrameTimeRef.current = now
-
-            // Ignore background / tab switch spikes (> 200ms)
-            if (delta > 0 && delta < 200) {
-                recentDeltas.push(delta)
-                if (recentDeltas.length > 120) {
-                    recentDeltas.shift()
-                }
-
-                totalFramesRef.current += 1
-
-                const targetHz = hardwareSpecs?.screenRefreshRate || 60
-                const expectedDelta = 1000 / targetHz
-                // A true frame drop happens when a frame takes more than 2x expected frame duration
-                const dropThreshold = Math.max(28, expectedDelta * 2.2)
-
-                if (delta > dropThreshold) {
-                    droppedFramesRef.current += 1
-                } else {
-                    smoothFramesRef.current += 1
-                }
-            }
-
-            // Calculate FPS (rolling 1 second)
-            fpsTicksRef.current.push(now)
+            // FPS rolling 1 s
+            fpsTicksGov.push(now)
             const oneSecondAgo = now - 1000
-            fpsTicksRef.current = fpsTicksRef.current.filter(t => t > oneSecondAgo)
-            
-            const currentFps = fpsTicksRef.current.length
+            // Limpiar entradas antiguas
+            let start = 0
+            while (start < fpsTicksGov.length && fpsTicksGov[start] <= oneSecondAgo) start++
+            if (start > 0) fpsTicksGov.splice(0, start)
 
-            // Target baseline FPS threshold for Auto-Governor
+            const currentFps = fpsTicksGov.length
             const targetHz = hardwareSpecs?.screenRefreshRate || 60
             const minHealthyFps = targetHz >= 120 ? 45 : 30
             const recoveryFps = targetHz >= 120 ? 70 : 45
-
-            // Only evaluate Auto-Governor after 2 seconds warmup to allow the rolling buffer to fill
             const isWarmedUp = now - monitorStartTime > 2000
 
-            if (isWarmedUp && autoGovernorEnabled) {
+            if (isWarmedUp) {
                 if (currentFps < minHealthyFps) {
                     lowFpsStreak++
                     if (lowFpsStreak >= 3 && !autoThrottleActive) {
@@ -144,7 +115,62 @@ export function PerformanceMonitor() {
                 }
             }
 
-            // Throttle React state updates to 400ms to avoid Virtual DOM overhead
+            lastFrameTime = now
+            rafId = requestAnimationFrame(loop)
+        }
+
+        rafId = requestAnimationFrame(loop)
+        return () => {
+            if (rafId) cancelAnimationFrame(rafId)
+        }
+    }, [autoGovernorEnabled, autoThrottleActive, hardwareSpecs, setAutoThrottleActive])
+
+    // ─── Loop de DISPLAY (solo cuando el panel está abierto) ─────────────────────
+    // Actualiza estado React (FPS, dropped frames, memoria) y dibuja el canvas.
+    // Al estar separado del loop de medición, el panel puede abrirse/cerrarse
+    // sin afectar al gobernador.
+    useEffect(() => {
+        if (!isOpen) {
+            if (rafIdRef.current) {
+                cancelAnimationFrame(rafIdRef.current)
+                rafIdRef.current = null
+            }
+            return
+        }
+
+        lastFrameTimeRef.current = performance.now()
+        lastUpdateRef.current = performance.now()
+        const recentDeltas: number[] = []
+
+        const loop = (now: number) => {
+            const delta = now - lastFrameTimeRef.current
+            lastFrameTimeRef.current = now
+
+            // Ignorar spikes de cambio de pestaña (> 200 ms)
+            if (delta > 0 && delta < 200) {
+                recentDeltas.push(delta)
+                if (recentDeltas.length > 120) recentDeltas.shift()
+
+                totalFramesRef.current += 1
+
+                const targetHz = hardwareSpecs?.screenRefreshRate || 60
+                const expectedDelta = 1000 / targetHz
+                const dropThreshold = Math.max(28, expectedDelta * 2.2)
+
+                if (delta > dropThreshold) {
+                    droppedFramesRef.current += 1
+                } else {
+                    smoothFramesRef.current += 1
+                }
+            }
+
+            // FPS rolling 1 s
+            fpsTicksRef.current.push(now)
+            const oneSecondAgo = now - 1000
+            fpsTicksRef.current = fpsTicksRef.current.filter(t => t > oneSecondAgo)
+            const currentFps = fpsTicksRef.current.length
+
+            // Throttle React state updates a 400 ms para no saturar el Virtual DOM
             if (now - lastUpdateRef.current >= 400) {
                 lastUpdateRef.current = now
                 setFps(currentFps)
@@ -152,7 +178,6 @@ export function PerformanceMonitor() {
                 setTotalFrames(totalFramesRef.current)
                 setSmoothFrames(smoothFramesRef.current)
 
-                // Update memory info (Chromium / WebView2)
                 const perfMemory = (performance as unknown as { memory?: { usedJSHeapSize: number; jsHeapSizeLimit?: number; totalJSHeapSize?: number } }).memory
                 if (perfMemory) {
                     const used = Math.round((perfMemory.usedJSHeapSize || 0) / (1024 * 1024))
@@ -162,14 +187,12 @@ export function PerformanceMonitor() {
                 }
             }
 
-            // Draw to graph canvas
+            // Dibujar gráfica de canvas
             if (canvasRef.current) {
                 const ctx = canvasRef.current.getContext("2d")
                 if (ctx) {
                     fpsHistoryRef.current.push(currentFps)
-                    if (fpsHistoryRef.current.length > 100) {
-                        fpsHistoryRef.current.shift()
-                    }
+                    if (fpsHistoryRef.current.length > 100) fpsHistoryRef.current.shift()
 
                     const width = canvasRef.current.width
                     const height = canvasRef.current.height
@@ -177,18 +200,15 @@ export function PerformanceMonitor() {
 
                     ctx.clearRect(0, 0, width, height)
 
-                    // Draw grid lines (60fps and 120fps if available)
                     ctx.strokeStyle = "rgba(255, 255, 255, 0.07)"
                     ctx.lineWidth = 1
-                    
-                    // 60fps line
+
                     const y60 = height - (60 / maxScale) * height
                     ctx.beginPath()
                     ctx.moveTo(0, y60)
                     ctx.lineTo(width, y60)
                     ctx.stroke()
 
-                    // 120fps line if monitor is >= 120Hz
                     if (maxScale >= 120) {
                         const y120 = height - (120 / maxScale) * height
                         ctx.beginPath()
@@ -197,29 +217,25 @@ export function PerformanceMonitor() {
                         ctx.stroke()
                     }
 
-                    // Draw FPS path
+                    const targetHz = hardwareSpecs?.screenRefreshRate || 60
                     const healthyThreshold = targetHz >= 120 ? 80 : 50
                     const warnThreshold = targetHz >= 120 ? 55 : 35
                     ctx.strokeStyle = currentFps >= healthyThreshold ? "#10b981" : currentFps >= warnThreshold ? "#f59e0b" : "#ef4444"
                     ctx.lineWidth = 1.5
                     ctx.beginPath()
-                    
+
                     fpsHistoryRef.current.forEach((val, index) => {
                         const x = (index / 100) * width
                         const y = height - (Math.min(maxScale, val) / maxScale) * height
-                        if (index === 0) {
-                            ctx.moveTo(x, y)
-                        } else {
-                            ctx.lineTo(x, y)
-                        }
+                        if (index === 0) ctx.moveTo(x, y)
+                        else ctx.lineTo(x, y)
                     })
                     ctx.stroke()
 
-                    // Fill gradient area below path
-                    ctx.fillStyle = currentFps >= healthyThreshold 
-                        ? "rgba(16, 185, 129, 0.08)" 
-                        : currentFps >= warnThreshold 
-                            ? "rgba(245, 158, 11, 0.08)" 
+                    ctx.fillStyle = currentFps >= healthyThreshold
+                        ? "rgba(16, 185, 129, 0.08)"
+                        : currentFps >= warnThreshold
+                            ? "rgba(245, 158, 11, 0.08)"
                             : "rgba(239, 68, 68, 0.08)"
                     ctx.beginPath()
                     ctx.moveTo(0, height)
@@ -245,7 +261,7 @@ export function PerformanceMonitor() {
                 rafIdRef.current = null
             }
         }
-    }, [isOpen, autoGovernorEnabled, autoThrottleActive, hardwareSpecs, setAutoThrottleActive])
+    }, [isOpen, hardwareSpecs])
 
     const handleClearStats = () => {
         totalFramesRef.current = 0
@@ -324,13 +340,13 @@ export function PerformanceMonitor() {
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 10 }}
                     transition={{ type: "spring", stiffness: 380, damping: 26 }}
-                    className="fixed top-6 right-4 sm:right-6 z-[9999] w-[calc(100vw-2rem)] sm:w-[350px] max-w-sm backdrop-blur-overlay-xl border border-outline-variant rounded-corner-lg shadow-elevation-4 p-5 select-none font-sans text-on-surface"
+                    className="fixed top-6 left-4 right-4 sm:left-auto sm:right-6 z-tooltip w-auto sm:w-[350px] max-w-sm backdrop-blur-overlay-xl border border-outline-variant rounded-corner-lg shadow-elevation-4 p-4 sm:p-5 select-none font-sans text-on-surface"
                     style={{ background: "color-mix(in srgb, var(--md-sys-color-surface-container) 90%, transparent)" }}
                 >
                     {/* Header */}
                     <div className="flex items-center justify-between pb-3 border-b border-outline-variant/30">
                         <div className="flex items-center gap-2">
-                            <Icons.status.activity className="text-brand-accent animate-pulse w-4 h-4" />
+                            <IconStatusActivity className="text-brand-accent animate-pulse w-4 h-4" />
                             <span className="text-label-sm font-black uppercase tracking-ultra text-on-surface-variant">
                                 Diagnóstico de Rendimiento
                             </span>
@@ -339,15 +355,18 @@ export function PerformanceMonitor() {
                             <button
                                 onClick={handleClearStats}
                                 className="p-1 rounded bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-white transition-colors"
+                                aria-label="Reiniciar estadísticas"
                                 title="Reiniciar estadísticas"
                             >
-                                <Icons.ui.trash size={12} />
+                                <IconUiTrash size={12} />
                             </button>
                             <button
                                 onClick={() => setIsOpen(false)}
                                 className="p-1 rounded bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-white transition-colors"
+                                aria-label="Cerrar diagnóstico de rendimiento"
+                                title="Cerrar diagnóstico"
                             >
-                                <Icons.ui.close size={14} />
+                                <IconUiClose size={14} />
                             </button>
                         </div>
                     </div>
@@ -355,7 +374,7 @@ export function PerformanceMonitor() {
                     {/* Hardware Tier Badge */}
                     <div className="mt-3 p-2 bg-surface-container-low border border-outline-variant/30 rounded-xl flex items-center justify-between">
                         <div className="flex items-center gap-2 min-w-0">
-                            <Icons.status.zap size={13} className="text-brand-accent shrink-0" />
+                            <IconStatusZap size={13} className="text-brand-accent shrink-0" />
                             <span className="text-caption font-bold text-on-surface-variant truncate" title={hardwareSpecs?.gpuRenderer || "Detectando GPU..."}>
                                 {hardwareSpecs ? `${hardwareSpecs.isDedicatedGpu ? "GPU Dedicada" : "GPU"} · ${hardwareSpecs.cpuCores}c` : "Detectando hardware..."}
                             </span>
@@ -419,7 +438,7 @@ export function PerformanceMonitor() {
                     </div>
 
                     {/* Chart Canvas */}
-                    <div className="backdrop-blur-[var(--blur-overlay-sm)] border border-outline-variant/30 rounded-xl p-2 relative h-16 w-full flex items-center justify-center" style={{ background: "color-mix(in srgb, var(--md-sys-color-surface) 40%, transparent)" }}>
+                    <div className="backdrop-blur-overlay-sm border border-outline-variant/30 rounded-xl p-2 relative h-16 w-full flex items-center justify-center" style={{ background: "color-mix(in srgb, var(--md-sys-color-surface) 40%, transparent)" }}>
                         <canvas ref={canvasRef} width={300} height={48} className="w-full h-full block" />
                         <span className="absolute bottom-1 right-2 text-caption text-on-surface-variant/50 font-black tracking-widest uppercase pointer-events-none">HISTORIAL 10s</span>
                     </div>
@@ -427,7 +446,7 @@ export function PerformanceMonitor() {
                     {/* Page transition latency info */}
                     <div className="mt-4 p-3 bg-surface-container-low border border-outline-variant/30 rounded-xl flex items-center justify-between">
                         <span className="text-caption font-black uppercase tracking-wider text-on-surface-variant/60 flex items-center gap-1.5">
-                            <Icons.status.cpu size={12} className="text-brand-accent" />
+                            <IconStatusCpu size={12} className="text-brand-accent" />
                             Latencia Carga Ruta
                         </span>
                         <span className="text-xs font-bold text-on-surface-variant/80 font-mono">
@@ -443,9 +462,9 @@ export function PerformanceMonitor() {
                         {optimizationTips.map((tip) => (
                             <div key={tip.id} className="flex items-start gap-2.5 bg-surface-container-low p-2.5 border border-outline-variant/20 rounded-lg">
                                 {tip.level === "warning" ? (
-                                    <Icons.ui.alert size={14} className="text-status-warning shrink-0 mt-0.5" />
+                                    <IconUiAlert size={14} className="text-status-warning shrink-0 mt-0.5" />
                                 ) : (
-                                    <Icons.ui.checkCircle size={14} className="text-status-success shrink-0 mt-0.5" />
+                                    <IconUiCheckCircle size={14} className="text-status-success shrink-0 mt-0.5" />
                                 )}
                                 <span className="text-label-sm text-on-surface-variant/80 leading-relaxed font-medium">
                                     {tip.text}

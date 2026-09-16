@@ -8,14 +8,14 @@ import { cn, defineStyleAnatomy } from "../core/styling"
  * -----------------------------------------------------------------------------------------------*/
 
 export const ToasterAnatomy = defineStyleAnatomy({
-    toaster: cva(["group toaster z-[150]"]),
+    toaster: cva(["group toaster z-toast"]),
     toast: cva([
         "group/toast",
         "select-none cursor-default",
         "group-[.toaster]:py-4 group-[.toaster]:px-5 group-[.toaster]:gap-3",
         "group-[.toaster]:text-sm group-[.toaster]:font-medium",
         "group-[.toaster]:rounded-corner-lg group-[.toaster]:border group-[.toaster]:shadow-elevation-3",
-        "group-[.toaster]:bg-[color:color-mix(in_srgb,var(--md-sys-color-surface-container)_90%,transparent)] group-[.toaster]:backdrop-blur-[var(--blur-overlay-sm)] group-[.toaster]:border-outline-variant",
+        "group-[.toaster]:bg-[color:color-mix(in_srgb,var(--md-sys-color-surface-container)_90%,transparent)] group-[.toaster]:backdrop-blur-overlay-sm group-[.toaster]:border-outline-variant",
         "group-[.toaster]:text-on-surface",
         "group-[.toaster]:transition-all group-[.toaster]:duration-base",
         // Success
@@ -54,27 +54,25 @@ export const ToasterAnatomy = defineStyleAnatomy({
 
 export type ToasterProps = React.ComponentProps<typeof Sonner>
 
-export const Toaster = ({ position = "top-center", ...props }: ToasterProps) => {
-
-    const allProps = React.useMemo(() => ({
-        position,
-        visibleToasts: 4,
-        className: cn(ToasterAnatomy.toaster()),
-        toastOptions: {
-            classNames: {
-                toast: cn(ToasterAnatomy.toast()),
-                description: cn(ToasterAnatomy.description()),
-                actionButton: cn(ToasterAnatomy.actionButton()),
-                cancelButton: cn(ToasterAnatomy.cancelButton()),
-            },
-        },
-        ...props,
-    } as ToasterProps), [position, props])
-
+export const Toaster = ({ position = "top-center", className, toastOptions, ...props }: ToasterProps) => {
     return (
-        <>
-            <Sonner theme="dark" {...allProps} />
-        </>
+        <Sonner
+            theme="dark"
+            position={position}
+            visibleToasts={4}
+            className={cn(ToasterAnatomy.toaster(), className)}
+            toastOptions={{
+                classNames: {
+                    toast: cn(ToasterAnatomy.toast()),
+                    description: cn(ToasterAnatomy.description()),
+                    actionButton: cn(ToasterAnatomy.actionButton()),
+                    cancelButton: cn(ToasterAnatomy.cancelButton()),
+                    ...toastOptions?.classNames,
+                },
+                ...toastOptions,
+            }}
+            {...props}
+        />
     )
 }
 

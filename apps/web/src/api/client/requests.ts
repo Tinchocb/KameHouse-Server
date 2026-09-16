@@ -20,23 +20,7 @@ type SeaQuery<D> = {
     data?: D
     params?: D
     password?: string
-}
-
-export function useSeaQuery() {
-    // Stub – auth is not in use for the standalone UI
-    const password = undefined
-
-    return {
-        seaFetch: <T, D = void>(endpoint: string, method: "POST" | "GET" | "PATCH" | "DELETE" | "PUT", data?: D, params?: D) => {
-            return buildSeaQuery<T, D>({
-                endpoint,
-                method,
-                data,
-                params,
-                password,
-            })
-        },
-    }
+    signal?: AbortSignal
 }
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -48,6 +32,7 @@ export async function buildSeaQuery<T, D = void>(
         data,
         params,
         password,
+        signal,
     }: SeaQuery<D>): Promise<T | undefined> {
 
     const base = getServerBaseUrl() || (typeof window !== "undefined" ? window.location.origin : "http://localhost")
@@ -62,7 +47,7 @@ export async function buildSeaQuery<T, D = void>(
         // Append query parameters
         Object.keys(params as Record<string, unknown>).forEach((key) => {
             const value = (params as Record<string, unknown>)[key];
-            if (value !== undefined) {
+            if (value !== undefined && value !== null) {
                 if (Array.isArray(value)) {
                     value.forEach(v => url.searchParams.append(key, String(v)));
                 } else {
@@ -72,18 +57,22 @@ export async function buildSeaQuery<T, D = void>(
         });
     }
 
-
     const headers: Record<string, string> = {
-        "Content-Type": "application/json",
         "Accept": "application/json",
+    }
+
+    if (data !== undefined) {
+        headers["Content-Type"] = "application/json"
     }
 
     if (password) {
         headers["Authorization"] = `Bearer ${password}`
     }
 
-    const maxRetries = 2;
-    let attempt = 0;
+    // Solo reintentar automáticamente métodos idempotentes seguros (GET)
+    const isIdempotent = method === "GET"
+    const maxRetries = isIdempotent ? 2 : 0
+    let attempt = 0
 
     while (attempt <= maxRetries) {
         try {
@@ -91,8 +80,12 @@ export async function buildSeaQuery<T, D = void>(
                 method,
                 headers,
                 body: data !== undefined ? JSON.stringify(data) : undefined,
+                signal,
             });
 
+            if (res.status === 204) {
+                return undefined
+            }
 
             if (!res.ok) {
                 let errorData: unknown;
@@ -103,8 +96,8 @@ export async function buildSeaQuery<T, D = void>(
                     errorData = text;
                 }
 
-                // If 502, 503, 504, 429 -> retry silenciosamente
-                if ((res.status === 429 || res.status === 502 || res.status === 503 || res.status === 504) && attempt < maxRetries) {
+                // If 502, 503, 504, 429 -> retry silenciosamente solo si es idempotente
+                if (isIdempotent && (res.status === 429 || res.status === 502 || res.status === 503 || res.status === 504) && attempt < maxRetries) {
                     attempt++
                     const delay = 300 * attempt
                     await sleep(delay)
@@ -117,22 +110,27 @@ export async function buildSeaQuery<T, D = void>(
                 throw new ApiError(errorMessage, res.status, errorData);
             }
 
-            // Expected response format: { data: T, error?: string } from Go backend
-            const json = await res.json() as { data?: T; error?: string };
+            const text = await res.text()
+            if (!text) return undefined as T
+
+            const json = JSON.parse(text)
             
-            if (json.error) {
-                throw new ApiError(json.error, res.status, json);
+            // Soporta tanto envoltorio { data: T } como respuestas directas T o arrays [...]
+            if (json && typeof json === "object" && !Array.isArray(json) && "error" in json && json.error) {
+                throw new ApiError(String(json.error), res.status, json)
             }
-            if (!("data" in json)) {
-                throw new ApiError("Malformed response payload: missing 'data'", res.status, json);
+
+            if (json && typeof json === "object" && !Array.isArray(json) && "data" in json) {
+                return json.data as T
             }
-            
-            return json.data as T;
+
+            return json as T
 
         } catch (error) {
-            // Network errors (TypeError) = servidor no disponible (ERR_CONNECTION_REFUSED, etc.)
-            // No loguear durante retries — es ruido esperado cuando el servidor aún no arrancó.
-            if (error instanceof TypeError && attempt < maxRetries) {
+            if (signal?.aborted) {
+                throw error
+            }
+            if (isIdempotent && error instanceof TypeError && attempt < maxRetries) {
                 attempt++
                 const delay = 200 * attempt
                 await sleep(delay)
@@ -142,7 +140,7 @@ export async function buildSeaQuery<T, D = void>(
         }
     }
 
-    return undefined; // Should not reach here
+    return undefined;
 }
 
 type ServerMutationProps<R, V = void, C = unknown> = Omit<UseMutationOptions<R | undefined, ApiError, V, C>, "mutationFn"> & {
@@ -205,32 +203,36 @@ export function useServerQuery<R, V = void, TData = R | undefined>(
         ...options
     }: ServerQueryProps<R, V, TData>) {
 
-
     const props = useQuery<R | undefined, ApiError, TData>({
-        queryFn: async () => {
+        queryFn: async ({ signal }) => {
             return buildSeaQuery<R, V>({
                 endpoint: endpoint,
                 method: method,
                 params: params,
                 data: data,
+                signal,
             })
         },
         ...options,
     })
 
     useEffect(() => {
-        if (!muteError && props.isError) {
-            if (props.error?.data === "UNAUTHENTICATED" && window.location.pathname !== "/public/auth") {
-                window.location.href = "/public/auth"
+        if (!muteError && props.isError && props.error) {
+            const isUnauth = props.error.status === 401 ||
+                props.error.data === "UNAUTHENTICATED" ||
+                (typeof props.error.data === "object" && props.error.data !== null && (props.error.data as Record<string, unknown>).error === "UNAUTHENTICATED")
+
+            if (isUnauth) {
+                toast.error("Sesión no autorizada o expirada", { id: "query-err-unauth" })
                 return
             }
             console.debug("Server error", props.error)
-            const errorMsg = _handleSeaError(props.error?.data)
+            const errorMsg = _handleSeaError(props.error.data || props.error.message)
             if (errorMsg.includes("feature disabled")) {
                 return
             }
             if (!!errorMsg) {
-                toast.error(errorMsg)
+                toast.error(errorMsg, { id: `query-err-${props.error.message}` })
             }
         }
     }, [props.error, props.isError, muteError])

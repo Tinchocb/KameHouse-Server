@@ -1,5 +1,5 @@
 'use no memo'
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import JASSUB from "jassub"
 import { SubtitleTrack } from "@/components/ui/track-types"
 import { convertToAss } from "./subtitle-convert"
@@ -31,11 +31,13 @@ export function usePlayerJassub({
     setIsJassubLoading,
     setIsJassubActive,
 }: UsePlayerJassubProps) {
+    const cachedAssContentRef = useRef<{ url: string; content: string } | null>(null)
     const activeTrack = activeSubtitleIndex !== null && subtitleTracks 
         ? subtitleTracks.find(t => t.index === activeSubtitleIndex) ?? null 
         : null
     const trackUrl = activeTrack?.url
     const trackCodec = activeTrack?.codec
+    const fontUrlsKey = fontUrls ? fontUrls.join(",") : ""
 
     useEffect(() => {
         const video = videoRef.current
@@ -84,21 +86,36 @@ export function usePlayerJassub({
         })
 
         let isCancelled = false
+        const aborter = new AbortController()
 
         const initJassub = async () => {
             try {
-                const fetchSubtitle = async (): Promise<string> => {
-                    for (let i = 0; i < 20; i++) {
-                        if (isCancelled) throw new Error("cancelled")
-                        const res = await fetch(trackUrl)
-                        if (res.ok) return await res.text()
-                        await new Promise(r => setTimeout(r, Math.min(2000 * (i + 1), 6000)))
+                let assContent = ""
+                if (cachedAssContentRef.current?.url === trackUrl) {
+                    assContent = cachedAssContentRef.current.content
+                } else {
+                    const fetchSubtitle = async (): Promise<string> => {
+                        for (let i = 0; i < 20; i++) {
+                            if (isCancelled || aborter.signal.aborted) throw new Error("cancelled")
+                            const res = await fetch(trackUrl, { signal: aborter.signal })
+                            if (res.ok) return await res.text()
+                            await new Promise((r, rej) => {
+                                const t = setTimeout(r, Math.min(2000 * (i + 1), 6000))
+                                aborter.signal.addEventListener("abort", () => {
+                                    clearTimeout(t)
+                                    rej(new Error("cancelled"))
+                                }, { once: true })
+                            })
+                        }
+                        throw new Error("subtitle never became available")
                     }
-                    throw new Error("subtitle never became available")
+                    const rawContent = await fetchSubtitle()
+                    // libass only parses ASS/SSA; convert SubRip/WebVTT to ASS so it renders.
+                    assContent = convertToAss(rawContent, trackCodec)
+                    if (!isCancelled) {
+                        cachedAssContentRef.current = { url: trackUrl, content: assContent }
+                    }
                 }
-                const rawContent = await fetchSubtitle()
-                // libass only parses ASS/SSA; convert SubRip/WebVTT to ASS so it renders.
-                const assContent = convertToAss(rawContent, trackCodec)
 
                 if (isCancelled) return
 
@@ -146,6 +163,9 @@ export function usePlayerJassub({
 
         return () => {
             isCancelled = true
+            try {
+                aborter.abort()
+            } catch {}
             if (currentJassubRef.current) {
                 currentJassubRef.current.destroy()
                 setRefValue(currentJassubRef, null)
@@ -153,7 +173,7 @@ export function usePlayerJassub({
                 setIsJassubActive(false)
             }
         }
-    }, [activeSubtitleIndex, trackUrl, trackCodec, subtitleSizePref, fontUrls, videoRef, jassubRef, setIsJassubLoading, setIsJassubActive])
+    }, [activeSubtitleIndex, trackUrl, trackCodec, subtitleSizePref, fontUrlsKey, videoRef, jassubRef, setIsJassubLoading, setIsJassubActive])
     // Note: JASSUB owns canvas sizing via its internal ResizeObserver. Because the
     // canvas control is transferred to the offscreen worker (useOffscreen + app-supplied
     // canvas), writing canvas.width/height on the main thread throws InvalidStateError

@@ -1,4 +1,4 @@
-import { Icons } from "@/components/ui/icons"
+import { IconUiEyeOff, IconUiEye } from "@/components/ui/icons";
 import { cn } from "../core/styling"
 import * as React from "react"
 import { BasicField, BasicFieldOptions, extractBasicFieldProps } from "../basic-field"
@@ -61,7 +61,7 @@ export const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>((pro
     }, [])
 
     const finalRightAddon = isPasswordInput
-        ? (showPassword ? <Icons.ui.eyeOff className="cursor-pointer" onClick={togglePasswordVisibility} /> : <Icons.ui.eye
+        ? (showPassword ? <IconUiEyeOff className="cursor-pointer" onClick={togglePasswordVisibility} /> : <IconUiEye
             className="cursor-pointer"
             onClick={togglePasswordVisibility}
         />)

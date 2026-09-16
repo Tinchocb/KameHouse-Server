@@ -7,7 +7,7 @@ export * from "./dragonball_movies_lore"
 
 // ─── Resolución de Sagas ─────────────────────────────────────────────────────
 
-export interface MediaForSagaResolution {
+interface MediaForSagaResolution {
     tmdbId?: number | null
     titleRomaji?: string | null
     titleEnglish?: string | null
@@ -42,12 +42,12 @@ export function resolveSeriesSagas(media: MediaForSagaResolution | null | undefi
     // 2. Fallback: match by title substring
     let resolved: SagaDefinition[] = []
 
-    if (searchTitle.includes("dragonballz") || searchTitle === "dbz") {
+    if (searchTitle.includes("dragonballzkai") || searchTitle.includes("dragonballkai") || searchTitle.includes("dbkai") || searchTitle.includes("dbzkai") || (searchTitle.includes("kai") && (searchTitle.includes("dragonball") || searchTitle.includes("db")))) {
+        resolved = DRAGON_BALL_SAGAS[DRAGON_BALL_SERIES.KAI]
+    } else if (searchTitle.includes("dragonballz") || searchTitle === "dbz") {
         resolved = DRAGON_BALL_SAGAS[DRAGON_BALL_SERIES.Z]
     } else if (searchTitle.includes("dragonballgt") || searchTitle === "dbgt") {
         resolved = DRAGON_BALL_SAGAS[DRAGON_BALL_SERIES.GT]
-    } else if (searchTitle.includes("dragonballkai") || searchTitle.includes("dbkai") || searchTitle.includes("dbzkai")) {
-        resolved = DRAGON_BALL_SAGAS[DRAGON_BALL_SERIES.KAI]
     } else if (searchTitle.includes("dragonballsuper") || searchTitle === "dbs") {
         resolved = DRAGON_BALL_SAGAS[DRAGON_BALL_SERIES.SUPER]
     } else if (searchTitle.includes("dragonballdaima") || searchTitle === "dbdaima") {

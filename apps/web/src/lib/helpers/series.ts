@@ -1,4 +1,6 @@
-export interface MediaForSeriesId {
+import { ERA_COLOR_MAP, type EraId } from "@/lib/config/eras"
+
+interface MediaForSeriesId {
     tmdbId?: number | null
     titleRomaji?: string | null
     titleEnglish?: string | null
@@ -6,7 +8,7 @@ export interface MediaForSeriesId {
     titleSpanish?: string | null
 }
 
-export const TMDB_SERIES_MAP: Record<number, string> = {
+const TMDB_SERIES_MAP: Record<number, string> = {
     12609: "dragon_ball",
     12971: "dragon_ball_z",
     12697: "dragon_ball_gt",
@@ -25,6 +27,34 @@ export const DRAGON_BALL_SERIES_ORDER: Record<string, number> = {
     "dragon_ball_daima": 6,
 }
 
+/**
+ * Serie canónica → EraId de Home/Movies (misma píldora, mismo color).
+ * Fuente para SpotlightEraNav en Series sin duplicar taxonomías.
+ */
+export const SERIES_ID_TO_ERA_ID: Record<string, EraId> = {
+    "dragon_ball": "db",
+    "dragon_ball_z": "dbz",
+    "dragon_ball_gt": "dbgt",
+    "dragon_ball_kai": "dbkai",
+    "dragon_ball_super": "dbs",
+    "dragon_ball_daima": "dbdaima",
+}
+
+export function getSeriesEraId(seriesId?: string | null): EraId | null {
+    if (!seriesId) return null
+    return SERIES_ID_TO_ERA_ID[seriesId] ?? null
+}
+
+/** Accent canónico (--spotlight-*-vivid) para glows, progresos y badges. */
+export function getSeriesEraAccent(seriesId?: string | null, fallback = "var(--spotlight-dbz-vivid)"): string {
+    const eraId = getSeriesEraId(seriesId)
+    return eraId ? ERA_COLOR_MAP[eraId].accent : fallback
+}
+
+// Póster oficial vertical de Daima (TMDB 2:3). El asset local /sagas/daima.jpg
+// es apaisado y se ve recortado en los contenedores verticales de Series y Scanner.
+export const DAIMA_VERTICAL_POSTER = "https://image.tmdb.org/t/p/w500/lMULbSFZNXUC87MqOZQ4SSV9DXI.jpg"
+
 export const DRAGON_BALL_SERIES_INFO: Record<string, {
     year: number
     title: string
@@ -38,48 +68,48 @@ export const DRAGON_BALL_SERIES_INFO: Record<string, {
         title: "Dragon Ball",
         episodes: 153,
         description: "Las legendarias aventuras de Son Goku desde su niñez, entrenando con el Maestro Roshi y buscando las siete Esferas del Dragón.",
-        poster: "",
-        banner: "",
+        poster: "/sagas/original/busqueda-esferas.webp",
+        banner: "/sagas/pilaf.jpg",
     },
     "dragon_ball_z": {
         year: 1989,
         title: "Dragon Ball Z",
         episodes: 291,
         description: "Goku descubre sus orígenes Saiyajin y junto a los Guerreros Z defiende la Tierra contra amenazas cósmicas como Vegeta, Freezer, Cell y Majin Buu.",
-        poster: "",
-        banner: "",
+        poster: "/sagas/saiyajin.jpg",
+        banner: "/sagas/saiyajin.jpg",
     },
     "dragon_ball_gt": {
         year: 1996,
         title: "Dragon Ball GT",
         episodes: 64,
         description: "Tras convertirse de nuevo en niño debido a las Esferas del Dragón de Estrella Negra, Goku viaja por el cosmos junto a Trunks y Pan.",
-        poster: "",
-        banner: "",
+        poster: "/sagas/black-star.jpg",
+        banner: "/sagas/black-star.jpg",
     },
     "dragon_ball_kai": {
         year: 2009,
         title: "Dragon Ball Kai",
         episodes: 167,
         description: "Versión remasterizada y sin relleno de Dragon Ball Z, fiel al manga original de Akira Toriyama con sonido y animación digital renovada.",
-        poster: "",
-        banner: "",
+        poster: "/sagas/trunks-androides-cell.jpg",
+        banner: "/sagas/trunks-androides-cell.jpg",
     },
     "dragon_ball_super": {
         year: 2015,
         title: "Dragon Ball Super",
         episodes: 131,
         description: "Tras la derrota de Majin Buu, Goku y sus amigos despiertan los poderes de los dioses enfrentando a Bills, Goku Black y el Torneo del Poder.",
-        poster: "",
-        banner: "",
+        poster: "/sagas/batalla-dioses.jpg",
+        banner: "/sagas/supervivencia-universal.jpg",
     },
     "dragon_ball_daima": {
         year: 2024,
         title: "Dragon Ball Daima",
         episodes: 20,
         description: "Debido a una conspiración en el Reino Demonio, Goku y sus amigos se transforman en niños y viajan a un mundo desconocido para revertir el hechizo.",
-        poster: "",
-        banner: "",
+        poster: DAIMA_VERTICAL_POSTER,
+        banner: "/sagas/daima.jpg",
     },
 }
 

@@ -70,11 +70,23 @@ export function useTvDpad() {
             needsRefresh.current = false
         }
 
-        // Use MutationObserver to detect DOM changes and invalidate cache
-        const observer = new MutationObserver(() => {
-            needsRefresh.current = true
+        // Use debounced MutationObserver to detect structural DOM changes
+        let observerRaf: number | null = null
+        const observer = new MutationObserver((mutations) => {
+            const isMediaMutationOnly = mutations.every(m => {
+                const target = m.target as HTMLElement | null
+                return target && (target.tagName === "VIDEO" || target.tagName === "CANVAS" || target.classList?.contains("jassub-canvas"))
+            })
+            if (isMediaMutationOnly) return
+
+            if (observerRaf === null) {
+                observerRaf = requestAnimationFrame(() => {
+                    needsRefresh.current = true
+                    observerRaf = null
+                })
+            }
         })
-        observer.observe(document.body, { childList: true, subtree: true })
+        observer.observe(document.body, { childList: true, subtree: true, attributes: false })
 
         // Scroll and Resize also invalidate the rect positions
         let rafId: number | null = null
@@ -134,6 +146,16 @@ export function useTvDpad() {
         }
 
         function handleKeyDown(e: KeyboardEvent) {
+            const active = document.activeElement as HTMLElement | null
+            const isTextInput = active && (
+                active.tagName === "INPUT" ||
+                active.tagName === "TEXTAREA" ||
+                active.isContentEditable ||
+                active.getAttribute("role") === "textbox" ||
+                active.getAttribute("role") === "searchbox"
+            )
+            if (isTextInput) return
+
             const dirMap: Record<string, "up" | "down" | "left" | "right"> = {
                 ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
             }
@@ -141,7 +163,6 @@ export function useTvDpad() {
             if (!dir) return
 
             e.preventDefault()
-            const active = document.activeElement as HTMLElement
             
             if (needsRefresh.current || nodesCache.current.length === 0) {
                 refreshCache()
@@ -170,6 +191,7 @@ export function useTvDpad() {
             window.removeEventListener("scroll", handleLayoutChange, { capture: true })
             window.removeEventListener("resize", handleLayoutChange)
             observer.disconnect()
+            if (observerRaf !== null) cancelAnimationFrame(observerRaf)
             if (rafId !== null) cancelAnimationFrame(rafId)
         }
     }, [tvMode, isVideoActive])

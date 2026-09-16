@@ -1,15 +1,15 @@
 import * as React from "react"
 import { createPortal } from "react-dom"
 import { cn } from "@/components/ui/core/styling"
-import { Icons } from "@/components/ui/icons"
+import { IconStatusFileVideo, IconStatusCpu, IconUiInfo, IconUiBell, IconUiDelete, IconUiInbox } from "@/components/ui/icons";
 import { useResponsive } from "@/hooks/use-responsive"
 import { useGetNotifications, useMarkNotificationsRead, useClearNotifications } from "@/api/hooks/notifications.hooks"
 import type { Models_Notification } from "@/api/generated/types"
 
 const TYPE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
-    scanner: Icons.status.fileVideo,
-    mediastream: Icons.status.cpu,
-    system: Icons.ui.info,
+    scanner: IconStatusFileVideo,
+    mediastream: IconStatusCpu,
+    system: IconUiInfo,
 }
 
 function relativeTime(dateStr?: string): string {
@@ -33,7 +33,7 @@ function relativeTime(dateStr?: string): string {
  * `compact` renders it as a bare icon button for the mobile top bar, where a
  * full-width row would eat half the screen and collide with the logo.
  */
-export function NotificationBell({ sidebarOpen, compact = false }: { sidebarOpen: boolean; compact?: boolean }) {
+export function NotificationBell({ sidebarOpen = false, compact = false }: { sidebarOpen?: boolean; compact?: boolean }) {
     const { isMobile } = useResponsive()
     const [open, setOpen] = React.useState(false)
 
@@ -54,7 +54,7 @@ export function NotificationBell({ sidebarOpen, compact = false }: { sidebarOpen
 
     return (
         <>
-            <div className={cn("flex justify-center", !compact && "gsap-sidebar-item w-full")}>
+            <div className={cn("flex justify-center", !compact && "w-full")}>
                 <button
                     onClick={handleToggle}
                     title="Notificaciones"
@@ -73,7 +73,7 @@ export function NotificationBell({ sidebarOpen, compact = false }: { sidebarOpen
                     )}
                 >
                     <span className={cn("shrink-0 z-10 relative group-hover:scale-110 transition-transform duration-base", open && "text-on-surface")}>
-                        <Icons.ui.bell className="w-5 h-5" />
+                        <IconUiBell className="w-5 h-5" />
                         {unreadCount > 0 && (
                             <span className="absolute -top-2.5 -right-2.5 bg-on-surface text-surface text-label-sm font-black min-w-[18px] h-[18px] rounded-full flex items-center justify-center border border-surface px-[3px]">
                                 {unreadCount > 99 ? "99+" : unreadCount}
@@ -95,26 +95,26 @@ export function NotificationBell({ sidebarOpen, compact = false }: { sidebarOpen
             {open && typeof document !== "undefined" && createPortal(
                 <>
                     {/* Click-outside catcher */}
-                    <div className="fixed inset-0 z-[68]" onClick={() => setOpen(false)} />
+                    <div className="fixed inset-0 z-overlay" onClick={() => setOpen(false)} />
                     <div
                         className={cn(
-                            "fixed z-[70] flex flex-col overflow-hidden",
-                            "bg-zinc-950/40 backdrop-blur-[var(--blur-overlay-xl)] border border-white/10 rounded-container",
+                            "fixed z-popover flex flex-col overflow-hidden",
+                            "bg-zinc-950/80 backdrop-blur-overlay-2xl backdrop-saturate-[190%] border border-white/20 border-t-white/40 border-b-white/10 rounded-2xl shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.25),0_20px_50px_rgba(0,0,0,0.9)]",
                             isMobile
                                 ? "top-16 left-3 right-3 max-h-[65vh]"
                                 : "left-24 bottom-6 w-[380px] max-h-[70vh]"
                         )}
                     >
                         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
-                            <span className="text-on-surface text-label-sm font-black uppercase tracking-widest font-mono">
+                            <span className="text-white text-label-sm font-black uppercase tracking-widest font-mono">
                                 Notificaciones
                             </span>
                             {notifications.length > 0 && (
                                 <button
                                     onClick={() => clearAll(undefined)}
-                                    className="flex items-center gap-1.5 text-on-surface-variant hover:text-on-surface text-label-sm uppercase tracking-widest font-black transition-colors duration-base focus-visible:ring-2 focus-visible:ring-brand-accent rounded-button px-2 py-1"
+                                    className="flex items-center gap-1.5 text-zinc-400 hover:text-white text-label-sm uppercase tracking-widest font-black transition-colors duration-base focus-visible:ring-2 focus-visible:ring-white/50 rounded-full px-2.5 py-1 hover:bg-white/10 cursor-pointer"
                                 >
-                                    <Icons.ui.delete className="w-3.5 h-3.5" />
+                                    <IconUiDelete className="w-3.5 h-3.5" />
                                     Limpiar
                                 </button>
                             )}
@@ -123,12 +123,12 @@ export function NotificationBell({ sidebarOpen, compact = false }: { sidebarOpen
                         <div className="overflow-y-auto flex-1">
                             {notifications.length === 0 ? (
                                 <div className="flex flex-col items-center gap-3 py-12 text-on-surface-variant">
-                                    <Icons.ui.inbox className="w-8 h-8 opacity-60" />
+                                    <IconUiInbox className="w-8 h-8 opacity-60" />
                                     <span className="text-body-md">No hay notificaciones</span>
                                 </div>
                             ) : (
                                 notifications.map((n: Models_Notification) => {
-                                    const TypeIcon = TYPE_ICONS[n.type] ?? Icons.ui.info
+                                    const TypeIcon = TYPE_ICONS[n.type] ?? IconUiInfo
                                     return (
                                         <div
                                             key={n.id}

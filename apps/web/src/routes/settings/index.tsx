@@ -7,14 +7,11 @@ import { z } from "zod"
 import { toast } from "sonner"
 import { LoadingOverlayWithLogo } from "@/components/shared/loading-overlay-with-logo"
 import { useGetSettings, useSaveSettings } from "@/api/hooks/settings.hooks"
-import { useAppStore } from "@/lib/store"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/components/ui/core/styling"
-import { Icons } from "@/components/ui/icons"
+import { IconUiPalette, IconMediaPlay, IconNavigationLibrary, IconStatusZap, IconUiSettings } from "@/components/ui/icons";
+import { useSpringPreset } from "@/components/ui/kinetics/hooks"
 import type { SaveSettings_Variables } from "@/api/generated/endpoint.types"
-
-import { useDebounce } from "use-debounce"
-import { GooeyFilter } from "./components"
 
 // Consolidación de los 5 Pilares de Configuración con lazy loading y prewarming
 const tabLoaders = {
@@ -114,16 +111,23 @@ const settingsSchema = z.object({
 
 export type SettingsFormValues = z.infer<typeof settingsSchema>
 
-export const Route = createFileRoute("/settings/")(({
+interface SettingsSearchParams {
+    tab?: string
+}
+
+export const Route = createFileRoute("/settings/")({
+    validateSearch: (search: Record<string, unknown>): SettingsSearchParams => ({
+        tab: typeof search.tab === "string" ? search.tab : undefined,
+    }),
     component: SettingsPage,
-}))
+})
 
 export const SETTINGS_PILLARS = [
     {
         id: "appearance",
         label: "Apariencia y Diseño",
         shortLabel: "Apariencia",
-        icon: Icons.ui.palette,
+        icon: IconUiPalette,
         desc: "Temas por era, modo AMOLED y efectos visuales",
         keywords: ["tema", "era", "vidrio", "blur", "liquid glass", "fondo", "diseño", "orden", "dragon ball", "amoled"]
     },
@@ -131,7 +135,7 @@ export const SETTINGS_PILLARS = [
         id: "playback",
         label: "Reproducción y Audio",
         shortLabel: "Reproducción",
-        icon: Icons.media.play,
+        icon: IconMediaPlay,
         desc: "Doblaje, auto-skip, música de fondo y modos",
         keywords: ["audio", "doblaje", "latino", "skip", "intro", "outro", "relleno", "música", "volumen", "maratón", "tv"]
     },
@@ -139,7 +143,7 @@ export const SETTINGS_PILLARS = [
         id: "library",
         label: "Biblioteca y Escáner",
         shortLabel: "Biblioteca",
-        icon: Icons.navigation.library,
+        icon: IconNavigationLibrary,
         desc: "Carpetas, escáner en vivo y metadatos",
         keywords: ["carpetas", "directorios", "series", "peliculas", "escaner", "dragonball", "live", "tmdb", "anilist", "jikan", "scan"]
     },
@@ -147,7 +151,7 @@ export const SETTINGS_PILLARS = [
         id: "performance",
         label: "Rendimiento y Hardware",
         shortLabel: "Rendimiento",
-        icon: Icons.status.zap,
+        icon: IconStatusZap,
         desc: "Telemetría de hardware, perfiles y aceleración GPU",
         keywords: ["hardware", "gpu", "nvenc", "qsv", "amf", "apple", "cpu", "ram", "transcode", "ffmpeg", "ultra", "eco", "rendimiento"]
     },
@@ -155,38 +159,72 @@ export const SETTINGS_PILLARS = [
         id: "system",
         label: "Sistema e Integraciones",
         shortLabel: "Sistema",
-        icon: Icons.ui.settings,
+        icon: IconUiSettings,
         desc: "Claves de API, respaldo SQLite, caché y reseteo",
         keywords: ["sistema", "tmdb", "omdb", "api", "database", "sqlite", "backup", "cache", "notificaciones", "peligro"]
     },
 ]
 
+const VALID_TAB_IDS = new Set(SETTINGS_PILLARS.map(p => p.id))
+
 function SettingsPage() {
     const { data: serverSettings, isLoading } = useGetSettings()
     const { mutateAsync: saveSettings, isPending: isSaving } = useSaveSettings()
-    const setShowInitialSetup = useAppStore(state => state.setShowInitialSetup)
-    const [activeTab, setActiveTab] = useState<string>("appearance")
-    const [searchQuery, setSearchQuery] = useState<string>("")
-    const [debouncedSearchQuery] = useDebounce(searchQuery, 150)
+    const search = Route.useSearch()
+    const navigate = Route.useNavigate()
+    const initialTab = search.tab && VALID_TAB_IDS.has(search.tab) ? search.tab : "appearance"
+    const [activeTab, setActiveTab] = useState<string>(initialTab)
 
-    // Pre-warm all lazy settings tabs in background during idle time (eliminates 400ms chunk stall)
     useEffect(() => {
-        const prewarmTabs = () => {
-            const loaders: Array<() => Promise<unknown>> = Object.values(tabLoaders)
-            loaders.forEach(loader => {
-                loader().catch(() => {})
-            })
+        if (search.tab && VALID_TAB_IDS.has(search.tab) && search.tab !== activeTab) {
+            setActiveTab(search.tab)
         }
+    }, [search.tab, activeTab])
+
+    const handleSelectTab = (tabId: string) => {
+        setActiveTab(tabId)
+        navigate({ search: { tab: tabId }, replace: true }).catch(() => {})
+    }
+
+    // Pre-warm all lazy settings tabs sequentially in background during idle time (eliminates chunk stall without network contention)
+    useEffect(() => {
+        let isCancelled = false
+        const loaders = Object.values(tabLoaders)
+        let currentIndex = 0
+        let idleHandle: number | undefined
+        let timeoutHandle: ReturnType<typeof setTimeout> | undefined
+
+        const loadNext = () => {
+            if (isCancelled || currentIndex >= loaders.length) return
+            const loader = loaders[currentIndex++]
+            Promise.resolve(loader())
+                .catch(() => {})
+                .finally(() => {
+                    if (isCancelled || currentIndex >= loaders.length) return
+                    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+                        idleHandle = (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number })
+                            .requestIdleCallback(loadNext, { timeout: 3000 })
+                    } else {
+                        timeoutHandle = setTimeout(loadNext, 200)
+                    }
+                })
+        }
+
         if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-            const handle = (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback(prewarmTabs, { timeout: 1500 })
-            return () => {
-                if ("cancelIdleCallback" in window) {
-                    (window as unknown as { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(handle)
-                }
-            }
+            idleHandle = (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number })
+                .requestIdleCallback(loadNext, { timeout: 3000 })
         } else {
-            const timer = setTimeout(prewarmTabs, 200)
-            return () => clearTimeout(timer)
+            timeoutHandle = setTimeout(loadNext, 500)
+        }
+
+        return () => {
+            isCancelled = true
+            if (idleHandle !== undefined && typeof window !== "undefined" && "cancelIdleCallback" in window) {
+                (window as unknown as { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(idleHandle)
+            }
+            if (timeoutHandle !== undefined) {
+                clearTimeout(timeoutHandle)
+            }
         }
     }, [])
 
@@ -200,7 +238,7 @@ function SettingsPage() {
     const form = useForm<SettingsFormValues>({
         resolver: zodResolver(settingsSchema) as unknown as Resolver<SettingsFormValues>,
         defaultValues: (serverSettings || {}) as unknown as SettingsFormValues,
-        mode: "onTouched",
+        mode: "onBlur",
         shouldUnregister: false,
     })
 
@@ -247,13 +285,17 @@ function SettingsPage() {
         return SETTINGS_PILLARS.find(p => p.id === activeTab) || SETTINGS_PILLARS[0]
     }, [activeTab])
 
+    const mobileTabSpring = useSpringPreset("tabIndicator");
+    const desktopPillarSpring = useSpringPreset("entrance");
+    const desktopIndicatorSpring = useSpringPreset("tabIndicator");
+    const saveBarSpring = useSpringPreset("entrance");
+
     if (isLoading && !serverSettings) return <LoadingOverlayWithLogo />
 
     return (
-        <div className="flex flex-col md:flex-row h-full w-full pt-16 md:pt-0 text-on-surface-variant selection:bg-brand-accent/30 overflow-hidden relative bg-transparent">
-            <GooeyFilter />
+        <div className="flex flex-col md:flex-row h-full w-full text-on-surface-variant selection:bg-brand-accent/30 overflow-hidden relative bg-transparent">
             {/* ── Mobile Segmented Tab Bar ────────────────────────────────────────── */}
-            <nav className="md:hidden shrink-0 w-full flex flex-row overflow-x-auto no-scrollbar border-b border-outline-variant/20 bg-zinc-950/90 backdrop-blur-md px-3 py-2.5 gap-2 z-20">
+            <nav className="md:hidden shrink-0 w-full flex flex-row overflow-x-auto no-scrollbar border-b border-white/10 sectionbar sectionbar-strong px-3 py-2.5 gap-2 z-20">
                 {SETTINGS_PILLARS.map((item) => {
                     const isActive = activeTab === item.id
                     const Icon = item.icon
@@ -263,20 +305,20 @@ function SettingsPage() {
                             type="button"
                             onMouseEnter={() => tabLoaders[item.id as keyof typeof tabLoaders]?.()}
                             onFocus={() => tabLoaders[item.id as keyof typeof tabLoaders]?.()}
-                            onClick={() => setActiveTab(item.id)}
+                            onClick={() => handleSelectTab(item.id)}
                             className={cn(
-                                "relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all duration-200 active:scale-95",
-                                isActive ? "text-white" : "text-on-surface-variant hover:text-on-surface"
+                                "relative flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap shrink-0 transition-all duration-200 active:scale-95",
+                                isActive ? "text-zinc-950 font-black" : "text-zinc-400 hover:text-white"
                             )}
                         >
                             {isActive && (
                                 <motion.div
                                     layoutId="activeMobileTabIndicator"
-                                    transition={{ type: "spring", stiffness: 450, damping: 35 }}
-                                    className="absolute inset-0 bg-brand-accent/25 border border-brand-accent/60 rounded-xl shadow-[0_0_14px_hsl(var(--brand-accent)/0.35)]"
+                                    transition={mobileTabSpring}
+                                    className="absolute inset-0 bg-white rounded-full shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.8),0_4px_12px_rgba(0,0,0,0.5)]"
                                 />
                             )}
-                            <Icon className={cn("w-4 h-4 shrink-0 relative z-10", isActive ? "text-brand-accent" : "text-on-surface-variant")} />
+                            <Icon className={cn("w-4 h-4 shrink-0 relative z-10", isActive ? "text-zinc-950" : "text-zinc-400")} />
                             <span className="relative z-10">{item.shortLabel}</span>
                         </button>
                     )
@@ -285,26 +327,25 @@ function SettingsPage() {
 
             {/* ── Left Sidebar Nav for Desktop (5 Clean Pillars) ─────────────────── */}
             <nav
-                className="hidden md:flex relative md:w-60 lg:w-[280px] xl:w-[290px] shrink-0 h-full flex-col border-r border-outline-variant/20 backdrop-blur-md overflow-y-auto overflow-x-hidden no-scrollbar"
-                style={{ background: "color-mix(in srgb, var(--md-sys-color-surface-container-lowest) 85%, transparent)" }}
+                className="hidden md:flex relative md:w-60 lg:w-[280px] xl:w-[290px] shrink-0 h-full flex-col border-r border-white/10 sectionbar overflow-y-auto overflow-x-hidden no-scrollbar"
             >
                 {/* Sidebar header */}
-                <div className="relative z-10 px-6 pt-8 pb-5 border-b border-outline-variant/10">
+                <div className="relative z-10 px-6 pt-20 pb-5 border-b border-white/[0.08]">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h1 className="text-2xl font-bold text-on-surface tracking-tight select-none">
+                            <h1 className="text-2xl font-bold text-white tracking-tight select-none font-display">
                                 AJUSTES
                             </h1>
-                            <p className="text-[11px] font-mono text-on-surface-variant/70 uppercase tracking-widest mt-0.5">
+                            <p className="text-[11px] font-mono text-zinc-400 uppercase tracking-widest mt-0.5">
                                 Panel de Control
                             </p>
                         </div>
-                        <span className="w-2.5 h-2.5 rounded-full bg-brand-accent/80 shadow-[0_0_10px_hsl(var(--brand-accent)/0.8)] animate-pulse" />
+                        <span className="w-2.5 h-2.5 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]" />
                     </div>
                 </div>
 
                 {/* 5 Pillars list */}
-                <div className="relative z-10 flex-1 px-4 py-5 flex flex-col space-y-2 w-full">
+                <div className="relative z-10 flex-1 px-4 py-5 flex flex-col space-y-1.5 w-full">
                     {SETTINGS_PILLARS.map((pillar) => {
                         const isActive = activeTab === pillar.id
                         const Icon = pillar.icon
@@ -314,42 +355,42 @@ function SettingsPage() {
                                 type="button"
                                 whileHover={{ scale: 1.015, x: 4 }}
                                 whileTap={{ scale: 0.98 }}
-                                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                                transition={desktopPillarSpring}
                                 onMouseEnter={() => tabLoaders[pillar.id as keyof typeof tabLoaders]?.()}
                                 onFocus={() => tabLoaders[pillar.id as keyof typeof tabLoaders]?.()}
-                                onClick={() => setActiveTab(pillar.id)}
+                                onClick={() => handleSelectTab(pillar.id)}
                                 className={cn(
-                                    "w-full flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-left transition-colors duration-200 group relative shrink-0 overflow-hidden",
+                                    "w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-left transition-all duration-200 group relative shrink-0 overflow-hidden",
                                     isActive
-                                        ? "text-on-surface"
-                                        : "text-on-surface-variant hover:text-on-surface hover:bg-white/[0.04]"
+                                        ? "text-zinc-950 font-bold"
+                                        : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
                                 )}
                             >
                                 {isActive && (
                                     <motion.div
                                         layoutId="activeDesktopPillarIndicator"
-                                        transition={{ type: "spring", stiffness: 450, damping: 35 }}
-                                        className="absolute inset-0 bg-brand-accent/15 border border-brand-accent/50 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.3),0_0_16px_hsl(var(--brand-accent)/0.25)]"
+                                        transition={desktopIndicatorSpring}
+                                        className="absolute inset-0 bg-white rounded-2xl shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.8),0_4px_16px_rgba(0,0,0,0.5)]"
                                     />
                                 )}
                                 <div className={cn(
-                                    "w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border transition-all duration-200 relative z-10",
+                                    "w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border transition-all duration-200 relative z-10",
                                     isActive
-                                        ? "bg-brand-accent/20 border-brand-accent/40 text-brand-accent shadow-[0_0_12px_hsl(var(--brand-accent)/0.35)]"
-                                        : "bg-white/5 border-white/10 text-on-surface-variant group-hover:text-on-surface group-hover:bg-white/10"
+                                        ? "bg-zinc-950/10 border-zinc-950/20 text-zinc-950"
+                                        : "bg-white/5 border-white/10 text-zinc-400 group-hover:text-white group-hover:bg-white/10"
                                 )}>
                                     <Icon className="w-4 h-4" />
                                 </div>
                                 <div className="flex-1 min-w-0 relative z-10">
                                     <span className={cn(
-                                        "text-sm block leading-snug transition-colors duration-200",
-                                        isActive ? "font-bold text-on-surface" : "font-medium text-on-surface-variant group-hover:text-on-surface"
+                                        "text-xs sm:text-sm block leading-snug transition-colors duration-200",
+                                        isActive ? "font-black text-zinc-950" : "font-semibold text-zinc-200 group-hover:text-white"
                                     )}>
                                         {pillar.label}
                                     </span>
                                     <span className={cn(
-                                        "text-[11px] block mt-0.5 font-normal truncate transition-colors duration-200",
-                                        isActive ? "text-on-surface-variant font-medium" : "text-on-surface-variant/60 group-hover:text-on-surface-variant/80"
+                                        "text-[10px] block mt-0.5 font-normal truncate transition-colors duration-200",
+                                        isActive ? "text-zinc-700 font-medium" : "text-zinc-500 group-hover:text-zinc-400"
                                     )}>
                                         {pillar.desc}
                                     </span>
@@ -358,62 +399,24 @@ function SettingsPage() {
                         )
                     })}
                 </div>
-
-                {/* Sidebar footer badge */}
-                <div className="p-4 border-t border-outline-variant/10 text-center">
-                    <span className="text-[10px] font-mono text-on-surface-variant/50 uppercase tracking-widest">
-                        KameHouse Server v1.0
-                    </span>
-                </div>
             </nav>
 
             {/* ── Main Content Area ────────────────────────────────────────────── */}
             <main className="flex-1 flex flex-col h-full overflow-hidden">
-                {/* Content header with Quick Search */}
-                <header className="shrink-0 px-6 sm:px-8 lg:px-10 py-5 border-b border-white/[0.06] bg-zinc-950/40 backdrop-blur-md">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div>
-                            <div className="flex items-center gap-2 mb-1.5">
-                                <div className="w-7 h-7 rounded-lg bg-surface-container border border-outline-variant/30 flex items-center justify-center">
-                                    {React.createElement(activePillar.icon, { className: "h-3.5 w-3.5 text-brand-accent" })}
-                                </div>
-                                <span className="text-label-sm uppercase tracking-widest text-on-surface-variant font-mono">
-                                    {activePillar.shortLabel}
-                                </span>
-                            </div>
-                            <h2 className="text-2xl md:text-3xl font-display tracking-wider text-on-surface leading-tight uppercase">
-                                {activePillar.label}
-                            </h2>
+                {/* Content header */}
+                <header className="shrink-0 px-6 sm:px-8 lg:px-10 pt-5 md:pt-20 pb-5 border-b border-white/[0.06] sectionbar sectionbar-minimal">
+                    <div className="flex items-center gap-2 mb-1.5">
+                        <div className="w-7 h-7 rounded-lg bg-surface-container border border-outline-variant/30 flex items-center justify-center">
+                            {React.createElement(activePillar.icon, { className: "h-3.5 w-3.5 text-brand-accent" })}
                         </div>
-
-                        {/* Quick Search */}
-                        <div className="relative w-full sm:w-72">
-                            <Icons.navigation.search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant/70 pointer-events-none" />
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Buscar en ajustes..."
-                                className={cn(
-                                    "w-full pl-9 pr-8 py-2 rounded-xl text-xs font-medium",
-                                    "bg-white/[0.05] hover:bg-white/[0.08] focus:bg-white/[0.08]",
-                                    "border border-white/10 hover:border-white/20 focus:border-brand-accent/50",
-                                    "text-on-surface placeholder:text-on-surface-variant/50",
-                                    "focus:outline-none focus:ring-1 focus:ring-brand-accent/30 transition-all duration-base shadow-sm"
-                                )}
-                            />
-                            {searchQuery && (
-                                <button
-                                    type="button"
-                                    onClick={() => setSearchQuery("")}
-                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant/70 hover:text-on-surface transition-colors p-1"
-                                >
-                                    <Icons.ui.close className="w-3.5 h-3.5" />
-                                </button>
-                            )}
-                        </div>
+                        <span className="text-label-sm uppercase tracking-widest text-on-surface-variant font-mono">
+                            {activePillar.shortLabel}
+                        </span>
                     </div>
-                    <div className="h-[2px] w-12 bg-gradient-to-r from-brand-accent to-transparent rounded-full mt-3" />
+                    <h2 className="text-2xl md:text-3xl font-display tracking-wider text-on-surface leading-tight uppercase">
+                        {activePillar.label}
+                    </h2>
+                    <div className="h-[2px] w-12 bg-gradient-to-r from-white/40 to-transparent rounded-full mt-3" />
                 </header>
 
                 {/* Scrollable form content */}
@@ -425,19 +428,19 @@ function SettingsPage() {
                             className="w-full max-w-6xl mx-auto px-6 sm:px-8 lg:px-10 py-7 pb-32 space-y-9 min-h-full"
                         >
                             <Suspense fallback={<div className="flex items-center justify-center w-full h-64"><div className="w-8 h-8 rounded-full border-2 border-brand-accent border-t-transparent animate-spin" /></div>}>
-                                <AnimatePresence mode="wait" initial={false}>
+                                <AnimatePresence mode="popLayout" initial={false}>
                                     <motion.div
                                         key={activeTab}
-                                        initial={{ opacity: 0, y: 12, filter: "blur(4px)" }}
-                                        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                                        exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
-                                        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -20 }}
+                                        transition={{ duration: 0.2, ease: "easeOut" }}
                                     >
-                                        {activeTab === "appearance"  && <AppearanceTab control={control} searchQuery={debouncedSearchQuery} />}
-                                        {activeTab === "playback"    && <PlaybackTab control={control} searchQuery={debouncedSearchQuery} />}
-                                        {activeTab === "library"     && <LibraryTab control={control} searchQuery={debouncedSearchQuery} />}
-                                        {activeTab === "performance" && <PerformanceTab control={control} searchQuery={debouncedSearchQuery} />}
-                                        {activeTab === "system"      && <SystemTab control={control} onOpenWizard={() => setShowInitialSetup(true)} searchQuery={debouncedSearchQuery} />}
+                                        {activeTab === "appearance"  && <AppearanceTab control={control} />}
+                                        {activeTab === "playback"    && <PlaybackTab control={control} />}
+                                        {activeTab === "library"     && <LibraryTab control={control} />}
+                                        {activeTab === "performance" && <PerformanceTab control={control} />}
+                                        {activeTab === "system"      && <SystemTab control={control} />}
                                     </motion.div>
                                 </AnimatePresence>
                             </Suspense>
@@ -453,22 +456,28 @@ function SettingsPage() {
                         initial={{ opacity: 0, y: 50, x: "-50%" }}
                         animate={{ opacity: 1, y: 0, x: "-50%" }}
                         exit={{ opacity: 0, y: 50, x: "-50%" }}
-                        transition={{ type: "spring", stiffness: 300, damping: 28 }}
-                        className="fixed bottom-20 md:bottom-8 left-1/2 -translate-x-1/2 z-50 flex flex-col md:flex-row items-center gap-3 md:gap-8 backdrop-blur-overlay-md border border-outline-variant rounded-container px-4 md:px-6 py-3 md:py-4 shadow-elevation-3 max-w-[calc(100vw-2rem)] w-max"
-                        style={{ background: "color-mix(in srgb, var(--md-sys-color-surface-container) 85%, transparent)" }}
+                        transition={saveBarSpring}
+                        className={cn(
+                            "fixed bottom-20 md:bottom-8 left-1/2 -translate-x-1/2 z-50",
+                            "flex items-center gap-4 sm:gap-6",
+                            "sectionbar sectionbar-strong rounded-full px-5 py-2.5",
+                            "max-w-[calc(100vw-2rem)] w-max"
+                        )}
                     >
-                        <div className="flex items-center gap-3 pl-1">
+                        <div className="flex items-center gap-2.5 pl-1">
                             <span className="relative flex h-2 w-2">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-accent opacity-75" />
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-accent" />
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-accent shadow-[0_0_8px_hsl(var(--brand-accent))]" />
                             </span>
-                            <span className="text-label-sm font-mono text-on-surface uppercase tracking-widest">Cambios sin guardar</span>
+                            <span className="text-xs font-mono font-bold text-white uppercase tracking-wider">
+                                Cambios pendientes
+                            </span>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                             <button
                                 type="button"
                                 onClick={() => reset()}
-                                className="text-xs font-bold text-on-surface-variant hover:text-on-surface transition-all px-3.5 py-1.5 hover:bg-surface-container-high rounded-lg active:scale-95"
+                                className="text-xs font-semibold text-zinc-400 hover:text-white transition-all px-3.5 py-1.5 rounded-full hover:bg-white/10 active:scale-95 cursor-pointer"
                             >
                                 Descartar
                             </button>
@@ -476,9 +485,20 @@ function SettingsPage() {
                                 type="submit"
                                 form="settings-form"
                                 disabled={isSaving}
-                                className="bg-brand-accent hover:brightness-110 text-on-primary px-5 py-2.5 rounded-xl text-xs font-black transition-all duration-base disabled:opacity-50 uppercase tracking-widest active:scale-95 shadow-[var(--shadow-brand-primary)]"
+                                className={cn(
+                                    "flex items-center gap-2 px-5 py-2 rounded-full text-xs font-black transition-all duration-200 select-none cursor-pointer uppercase tracking-wider",
+                                    "bg-white text-zinc-950 shadow-[0_2px_14px_rgba(255,255,255,0.4),inset_0_1px_1px_rgba(255,255,255,1)]",
+                                    "hover:bg-zinc-100 hover:scale-102 active:scale-95 disabled:opacity-50"
+                                )}
                             >
-                                {isSaving ? "Guardando..." : "Guardar Ajustes"}
+                                {isSaving ? (
+                                    <>
+                                        <div className="w-3.5 h-3.5 rounded-full border-2 border-zinc-950 border-t-transparent animate-spin" />
+                                        <span>Guardando...</span>
+                                    </>
+                                ) : (
+                                    <span>Guardar Ajustes</span>
+                                )}
                             </button>
                         </div>
                     </motion.div>

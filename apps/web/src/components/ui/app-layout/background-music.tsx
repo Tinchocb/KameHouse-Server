@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useAppStore } from "@/lib/store"
 import { useShallow } from "zustand/react/shallow"
-import { Icons } from "@/components/ui/icons"
+import { IconStatusMusic, IconStatusMusicOff } from "@/components/ui/icons";
 import { cn } from "@/components/ui/core/styling"
 import { getServerBaseUrl } from "@/api/client/server-url"
 
@@ -36,27 +36,25 @@ function buildTrackUrl(dir: string, file: string): string {
 
 function getGlobalBgAudio(): HTMLAudioElement | null {
     if (typeof window === "undefined") return null
-    const win = window as any
-    if (!win.__kamehouse_bg_audio) {
+    if (!window.__kamehouse_bg_audio) {
         const audio = new Audio()
-        win.__kamehouse_bg_audio = audio
+        window.__kamehouse_bg_audio = audio
     }
-    return win.__kamehouse_bg_audio
+    return window.__kamehouse_bg_audio
 }
 
 // Limpieza proactiva en dev / HMR: si la música está deshabilitada en el store,
 // pausamos y limpiamos el audio inmediatamente al cargar el módulo.
 if (typeof window !== "undefined") {
-    const win = window as any
-    if (win.__kamehouse_bg_audio && !useAppStore.getState().bgMusicEnabled) {
+    if (window.__kamehouse_bg_audio && !useAppStore.getState().bgMusicEnabled) {
         try {
-            win.__kamehouse_bg_audio.pause()
-            win.__kamehouse_bg_audio.src = ""
+            window.__kamehouse_bg_audio.pause()
+            window.__kamehouse_bg_audio.src = ""
         } catch {}
     }
 }
 
-export function BackgroundMusicPlayer() {
+export function BackgroundMusicPlayer({ headless = false }: { headless?: boolean } = {}) {
     const {
         bgMusicEnabled,
         setBgMusicEnabled,
@@ -258,8 +256,10 @@ export function BackgroundMusicPlayer() {
         }
     }
 
+    if (headless) return null
+
     return (
-        <div className="w-full flex justify-center gsap-sidebar-item">
+        <div className="w-full flex justify-center">
             <button
                 id="bg-music-toggle-btn"
                 onClick={togglePlayback}
@@ -284,9 +284,9 @@ export function BackgroundMusicPlayer() {
                     audioMasterOn && "text-on-surface"
                 )}>
                     {audioMasterOn ? (
-                        <Icons.status.music className="w-5 h-5 text-on-surface" />
+                        <IconStatusMusic className="w-5 h-5 text-on-surface" />
                     ) : (
-                        <Icons.status.musicOff className="w-5 h-5 relative z-10" />
+                        <IconStatusMusicOff className="w-5 h-5 relative z-10" />
                     )}
                 </span>
 

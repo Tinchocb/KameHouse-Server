@@ -18,14 +18,15 @@ Style: Default,Arial,54,&H00FFFFFF,&H000000FF,&H00000000,&H64000000,0,0,0,0,100,
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 `
 
-// Matches a SubRip/WebVTT timing line, tolerating both "," and "." as the ms separator
-// and optional WebVTT cue settings trailing the end timestamp (e.g. "align:middle").
-const TIMING_RE = /(\d{1,2}):(\d{2}):(\d{2})[.,](\d{1,3})\s*-->\s*(\d{1,2}):(\d{2}):(\d{2})[.,](\d{1,3})/
+// Matches a SubRip/WebVTT timing line, tolerating both "," and "." as the ms separator,
+// optional hours (WebVTT MM:SS.mmm), and optional WebVTT cue settings trailing the end timestamp.
+const TIMING_RE = /(?:(?:(\d{1,2}):)?(\d{2}):(\d{2})[.,](\d{1,3}))\s*-->\s*(?:(?:(\d{1,2}):)?(\d{2}):(\d{2})[.,](\d{1,3}))/
 
 // assTime formats an h/m/s/ms tuple as ASS "H:MM:SS.cc" (centisecond precision).
-function assTime(h: string, m: string, s: string, ms: string): string {
-    const cs = Math.floor(parseInt(ms.padEnd(3, "0"), 10) / 10)
-    return `${parseInt(h, 10)}:${m}:${s}.${cs.toString().padStart(2, "0")}`
+function assTime(h: string | undefined, m: string, s: string, ms: string): string {
+    const hours = h ? parseInt(h, 10) : 0
+    const cs = Math.floor(parseInt(ms.padEnd(3, "0").slice(0, 3), 10) / 10)
+    return `${hours}:${m}:${s}.${cs.toString().padStart(2, "0")}`
 }
 
 // escapeText turns a cue's text lines into a single ASS Dialogue text field:

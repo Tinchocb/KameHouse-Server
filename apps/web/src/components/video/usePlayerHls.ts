@@ -47,8 +47,11 @@ interface UsePlayerHlsProps {
     setShowResume: (show: boolean) => void
     setIsPlaying: (playing: boolean) => void
     /** Llamado UNA sola vez cuando el reproductor nativo (direct play) encuentra un
-     *  error irrecuperable. El caller puede usar esto para hacer fallback a transcode. */
-    onDirectPlayFailed?: () => void
+     *  error irrecuperable. Retorna true si hizo fallback a transcode, false si no
+     *  puede (transcode desactivado) para que el caller muestre error inmediato. */
+    onDirectPlayFailed?: () => boolean | void
+    setIsStreamSwitching?: (switching: boolean) => void
+    retryNonce?: number
 }
 
 function setRefValue<T>(ref: React.MutableRefObject<T>, value: T) {
@@ -80,6 +83,8 @@ export function usePlayerHls({
     setShowResume,
     setIsPlaying,
     onDirectPlayFailed,
+    setIsStreamSwitching,
+    retryNonce = 0,
 }: UsePlayerHlsProps) {
     const backendTracksRef = useRef(backendTracks)
     const hasPromptedResumeRef = useRef<string | null>(null)
@@ -87,10 +92,7 @@ export function usePlayerHls({
     // Guard: solo disparar onDirectPlayFailed una sola vez por playableUrl.
     const directPlayFailedFiredRef = useRef(false)
     const onDirectPlayFailedRef = useRef(onDirectPlayFailed)
-
-    useEffect(() => {
-        onDirectPlayFailedRef.current = onDirectPlayFailed
-    })
+    onDirectPlayFailedRef.current = onDirectPlayFailed
 
     useEffect(() => {
         backendTracksRef.current = backendTracks
@@ -152,7 +154,12 @@ export function usePlayerHls({
                 setStatus("loading")
                 setIsBuffering(true)
             })
-            return
+            const timer = setTimeout(() => {
+                setStatus("error")
+                setErrorMsg("No se pudo obtener el stream del servidor (timeout 30s). Verifica la conexión o reintenta.")
+                setIsBuffering(false)
+            }, 30000)
+            return () => clearTimeout(timer)
         }
 
         const video = videoRef.current
@@ -183,6 +190,17 @@ export function usePlayerHls({
         let networkRecoveryAttempt = 0
         let initialSeekDone = false
         let stalledCountRef = 0
+        let stallRecoveries = 0
+        let destroyed = false
+        const destroyOnce = () => {
+            if (destroyed) return
+            destroyed = true
+            try {
+                hlsInstance?.destroy()
+            } catch {}
+            hlsInstance = null
+            if (hlsRef.current) setRefValue(hlsRef, null)
+        }
 
         const handleCanPlay = () => {
             setStatus("ready")
@@ -195,15 +213,41 @@ export function usePlayerHls({
         }
 
         const handleNativeError = () => {
-            // Si hay un callback de fallback y aún no lo hemos disparado, invocarlo
-            // en vez de mostrar la pantalla de error directamente. Esto permite al
-            // orchestrator intentar transcode antes de rendirse.
-            if (onDirectPlayFailedRef.current && !directPlayFailedFiredRef.current) {
+            // Preservar posición para el fallback direct→transcode: sin esto el
+            // nuevo stream arranca en 0/history y se pierden minutos.
+            const saveResume = () => {
+                try {
+                    const t = video.currentTime
+                    if (Number.isFinite(t) && t > 0 && streamSwitchResumeRef) {
+                        streamSwitchResumeRef.current = t
+                    }
+                } catch {}
+            }
+            // En HLS (ya en transcode) un MEDIA_ERR_DECODE no debe disparar el
+            // fallback "direct→transcode": sería un no-op que retrasa la UI real.
+            if (!isHlsUrl && onDirectPlayFailedRef.current && !directPlayFailedFiredRef.current) {
                 directPlayFailedFiredRef.current = true
+                saveResume()
+                try {
+                    setIsStreamSwitching?.(true)
+                } catch {}
                 console.warn("[player] Direct play native error — triggering onDirectPlayFailed fallback")
-                onDirectPlayFailedRef.current()
+                const didFallback = onDirectPlayFailedRef.current()
+                // Si el orchestrator hizo fallback (true/undefined legacy), mantener
+                // loading y esperar el nuevo playableUrl. Si retornó false
+                // (transcode desactivado), mostrar error inmediato en vez de spinner.
+                if (didFallback === false) {
+                    try {
+                        setIsStreamSwitching?.(false)
+                    } catch {}
+                    setStatus("error")
+                    setErrorMsg(video.error?.message || "Ocurrió un error al cargar el archivo de video.")
+                }
                 return
             }
+            try {
+                setIsStreamSwitching?.(false)
+            } catch {}
             setStatus("error")
             setErrorMsg(video.error?.message || "Ocurrió un error al cargar el archivo de video.")
         }
@@ -234,6 +278,11 @@ export function usePlayerHls({
             /Web0S/i.test(navigator.userAgent)
         )
         if (isHlsUrl && Hls.isSupported()) {
+            // Capturar errores nativos del <video> también en HLS (ej. MEDIA_ERR_DECODE
+            // en un fragmento que hls.js no clasifica como fatal). Sin esto la UI
+            // quedaba en spinner infinito.
+            video.addEventListener("error", handleNativeError)
+            listenersAdded = true
             // ... (keep HLS setup as is)
             const hls = new Hls({
                 enableWorker: !isTv,
@@ -244,12 +293,10 @@ export function usePlayerHls({
                 // on VOD content, saturating the network and hurting start times on
                 // heavy files (e.g. 4K MKVs).
 
-                // Start at level 0 (first/best available) instead of auto (-1).
-                // Auto forces a bandwidth estimation round-trip before the first segment
-                // is requested, adding ~1 RTT of latency on every playback start.
-                // On LAN the first level is always reachable; ABR will scale up/down
-                // after the second segment anyway.
-                startLevel: 0,
+                // Auto quality selection after bandwidth estimation.
+                // startLevel: -1 lets ABR pick the optimal level once bandwidth is measured,
+                // avoiding forced lowest-quality first segment on LAN where transcode is fast.
+                startLevel: -1,
 
                 // Load the very first fragment as soon as the manifest is parsed,
                 // before attaching to the video element. This shaves one RTT off the
@@ -261,14 +308,13 @@ export function usePlayerHls({
                 // or switching audio tracks (which resumes from streamSwitchResumeRef).
                 startPosition: Number.isFinite(progressSeconds) && progressSeconds > 0 ? progressSeconds : -1,
 
-                // Keep up to 6s buffered for initial start (hls.js declares
-                // canplay once this threshold is met). 30s was unnecessarily slow.
-                // maxMaxBufferLength lets it grow to 180s on fast connections.
-                maxBufferLength: 6,
-                // Allow the buffer to grow up to 180s when bandwidth is abundant.
-                maxMaxBufferLength: 180,
-                // Hard RAM cap: never hold more than 60MB of demuxed data in memory.
-                maxBufferSize: 60 * 1024 * 1024,
+                // 15s initial buffer target: transcode cold-start can take 10-15s to produce
+                // the first segment. hls.js fires canplay once this threshold is met.
+                maxBufferLength: 15,
+                // Cap at 2min for 4K HDR memory safety (was 180s / 3min).
+                maxMaxBufferLength: 120,
+                // 40MB hard RAM cap: safer for memory-constrained devices (was 60MB).
+                maxBufferSize: 40 * 1024 * 1024,
                 // Tolerate timestamp gaps up to 1.0s without stalling — common in
                 // anime MKVs with variable keyframe spacing.
                 maxBufferHole: 1.0,
@@ -277,12 +323,14 @@ export function usePlayerHls({
                 // Don't request 4K segments when the video element is displayed
                 // at a lower resolution (e.g. picture-in-picture or small window).
                 capLevelToPlayerSize: true,
-                // Aggressive ABR upscaling so quality rises quickly after the first
-                // low-latency segment.
+                // Faster ABR upscale on LAN (was ~3s default ewmaFastLive).
+                abrEwmaFastLive: 1.5,
+                // Faster ABR downscale reaction (was ~9s default ewmaSlowLive).
+                abrEwmaSlowLive: 4.5,
                 abrBandWidthFactor: 0.95,
                 abrBandWidthUpFactor: 0.7,
-                // Back-buffer: keep 90s behind the playhead for smooth backwards seeks.
-                backBufferLength: 90,
+                // Back-buffer: keep 30s behind the playhead for smooth backwards seeks without holding excessive RAM.
+                backBufferLength: 30,
                 // Generous manifest load timeout for large library servers on LAN.
                 manifestLoadingTimeOut: 10000,
                 // On-the-fly transcode has a real cold start: the first .ts of a quality
@@ -372,8 +420,9 @@ export function usePlayerHls({
                             hls.startLoad()
                         } else {
                             console.error("HLS: Network error is unrecoverable after 5 attempts")
-                            hls.destroy()
-                            setRefValue(hlsRef, null)
+                            setStatus("error")
+                            setErrorMsg("No se pudo restablecer la conexión con el flujo de video tras 5 intentos.")
+                            destroyOnce()
                         }
                     } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
                         mediaRecoveryAttempt++
@@ -391,15 +440,13 @@ export function usePlayerHls({
                             console.error("HLS: Media error is unrecoverable after 2 attempts:", data.details)
                             setStatus("error")
                             setErrorMsg(video.error?.message || `Error de decodificación: ${data.details}`)
-                            hls.destroy()
-                            setRefValue(hlsRef, null)
+                            destroyOnce()
                         }
                     } else {
                         // Error irrecuperable
                         setStatus("error")
                         setErrorMsg(`Error fatal de reproducción HLS: ${data.details}`)
-                        hls.destroy()
-                        setRefValue(hlsRef, null)
+                        destroyOnce()
                     }
                 } else {
                     // Errores no fatales de buffer: hls.js se recupera solo, pero con transcode forzamos
@@ -413,9 +460,18 @@ export function usePlayerHls({
                             // hueco pequeño: nudge por encima del hole
                             v.currentTime = v.currentTime + 0.1
                         }
-                        if (stalledCountRef > 12) { // ~ varios segundos sin recuperar
-                            hls.recoverMediaError()
+                        if (stalledCountRef > 12) {
+                            stallRecoveries++
                             stalledCountRef = 0
+                            if (stallRecoveries > 3) {
+                                console.error("HLS: stalls persistentes tras 3 recoveries — mostrando error")
+                                setStatus("error")
+                                setErrorMsg("La reproducción se detuvo por stalls persistentes. Reintenta o cambia a Direct Play.")
+                                setIsBuffering(false)
+                                destroyOnce()
+                            } else {
+                                hls.recoverMediaError()
+                            }
                         }
                     } else if (data.details === Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE) {
                         console.warn("HLS: Non-fatal buffer stall, waiting for recovery:", data.details)
@@ -440,11 +496,15 @@ export function usePlayerHls({
 
         const currentHlsRef = hlsRef
         return () => {
-            if (hlsInstance) {
-                hlsInstance.destroy()
+            if (hlsInstance && !destroyed) {
+                destroyed = true
+                try {
+                    hlsInstance.destroy()
+                } catch {}
                 if (currentHlsRef.current === hlsInstance) {
                     setRefValue(currentHlsRef, null)
                 }
+                hlsInstance = null
             }
             video.removeAttribute("src")
             try {
@@ -472,5 +532,6 @@ export function usePlayerHls({
         setActiveAudioIndex,
         setIsPlaying,
         streamSwitchResumeRef,
+        retryNonce,
     ])
 }

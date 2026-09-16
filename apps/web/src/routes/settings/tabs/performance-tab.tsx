@@ -5,7 +5,7 @@ import { type SettingsFormValues } from "../index"
 import { usePerformanceStore, type PerformanceProfile } from "@/lib/hardware/performance-store"
 import { useShallow } from "zustand/react/shallow"
 import { useGetFFmpegStatus, useInstallFFmpeg } from "@/api/hooks/mediastream.hooks"
-import { Icons } from "@/components/ui/icons"
+import { IconStatusSparkles, IconStatusZap, IconStatusActivity, IconUiShield, IconUiRefresh, IconMediaPlay, IconStatusServer, IconUiSpinner, IconUiDownload } from "@/components/ui/icons";
 import { cn } from "@/components/ui/core/styling"
 import { toast } from "sonner"
 import { RadioCardGroup } from "@/components/settings/radio-card-group"
@@ -17,10 +17,10 @@ interface PerformanceTabProps {
 }
 
 const PROFILES: { id: PerformanceProfile; label: string; desc: string; icon: React.ElementType; badge: string }[] = [
-    { id: "auto", label: "Auto Inteligente", desc: "Asigna el perfil óptimo según tu hardware en tiempo real.", icon: Icons.status.sparkles, badge: "AUTO" },
-    { id: "ultra", label: "Ultra / Alto Rendimiento", desc: "Efectos visuales completos, Liquid Glass y GPU-Next.", icon: Icons.status.zap, badge: "ULTRA" },
-    { id: "balanced", label: "Equilibrado", desc: "Balance óptimo entre estética y 60 FPS estables.", icon: Icons.status.activity, badge: "BALANCED" },
-    { id: "eco", label: "Ahorro / PC Modesta", desc: "Fondos acelerados sin blurs pesados, menor uso de RAM/batería.", icon: Icons.ui.shield, badge: "ECO" },
+    { id: "auto", label: "Auto Inteligente", desc: "Asigna el perfil óptimo según tu hardware en tiempo real.", icon: IconStatusSparkles, badge: "AUTO" },
+    { id: "ultra", label: "Ultra / Alto Rendimiento", desc: "Efectos visuales completos, Liquid Glass y GPU-Next.", icon: IconStatusZap, badge: "ULTRA" },
+    { id: "balanced", label: "Equilibrado", desc: "Balance óptimo entre estética y 60 FPS estables.", icon: IconStatusActivity, badge: "BALANCED" },
+    { id: "eco", label: "Ahorro / PC Modesta", desc: "Fondos acelerados sin blurs pesados, menor uso de RAM/batería.", icon: IconUiShield, badge: "ECO" },
 ]
 
 const HW_ACCEL_OPTIONS = [
@@ -106,7 +106,7 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
             <SettingsSection
                 label="Perfil de Rendimiento y Hardware"
                 description="Equilibrio entre fidelidad visual y consumo de recursos en tu equipo."
-                icon={Icons.status.zap}
+                icon={IconStatusZap}
                 badge={
                     <div className="flex items-center gap-2">
                         <span className="text-[10px] font-mono font-bold text-amber-400 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/25">
@@ -118,7 +118,7 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
                             disabled={isDetecting}
                             className="text-xs font-mono text-on-surface-variant/80 hover:text-brand-accent flex items-center gap-1.5 transition-colors"
                         >
-                            <Icons.ui.refresh className={cn("w-3.5 h-3.5", isDetecting && "animate-spin text-brand-accent")} />
+                            <IconUiRefresh className={cn("w-3.5 h-3.5", isDetecting && "animate-spin text-brand-accent")} />
                             <span className="hidden sm:inline">Re-analizar</span>
                         </button>
                     </div>
@@ -217,7 +217,7 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
             <SettingsSection
                 label="Motor de Video y Aceleración GPU"
                 description="Aceleración por hardware dedicada para reproducción y conversión de video."
-                icon={Icons.status.sparkles}
+                icon={IconStatusSparkles}
                 badge={
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
                         {transcodeHwAccel?.toUpperCase() || "AUTO"}
@@ -262,7 +262,7 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
             <SettingsSection
                 label="Política de Reproducción y Transmisión"
                 description="Decisión de transmisión nativa directa vs transcodificación sobre la marcha."
-                icon={Icons.media.play}
+                icon={IconMediaPlay}
             >
                 <SettingsCard divide={false} className="p-5 md:p-6">
                     <PlaybackPolicyPicker control={control} />
@@ -275,7 +275,7 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
             <SettingsSection
                 label="Binarios del Motor (FFmpeg)"
                 description="Herramientas de decodificación de video del servidor."
-                icon={Icons.status.server}
+                icon={IconStatusServer}
                 collapsible
                 defaultOpen={false}
                 searchQuery={searchQuery}
@@ -376,7 +376,7 @@ function FFmpegStatusSection() {
     if (isLoading) {
         return (
             <div className="p-4 rounded-xl bg-white/[0.02] border border-white/10 flex items-center gap-3">
-                <Icons.ui.spinner className="w-4 h-4 animate-spin text-brand-accent" />
+                <IconUiSpinner className="w-4 h-4 animate-spin text-brand-accent" />
                 <span className="text-xs text-on-surface-variant">Verificando binarios de FFmpeg...</span>
             </div>
         )
@@ -410,7 +410,7 @@ function FFmpegStatusSection() {
                     disabled={isInstalling}
                     className="shrink-0 px-3.5 py-2 rounded-lg bg-brand-accent text-white font-bold text-xs flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
                 >
-                    {isInstalling ? <Icons.ui.spinner className="w-3.5 h-3.5 animate-spin" /> : <Icons.ui.download className="w-3.5 h-3.5" />}
+                    {isInstalling ? <IconUiSpinner className="w-3.5 h-3.5 animate-spin" /> : <IconUiDownload className="w-3.5 h-3.5" />}
                     <span>{isInstalling ? "Instalando..." : "Descargar e Instalar FFmpeg"}</span>
                 </button>
             )}

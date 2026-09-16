@@ -1,7 +1,5 @@
 import { useServerMutation, useServerQuery, buildSeaQuery } from "@/api/client/requests"
 import {
-    AnimeEntryManualMatch_Variables,
-    AnimeEntryUnmatch_Variables,
     UpdateAnimeEntryProgress_Variables,
 } from "@/api/generated/endpoint.types"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
@@ -33,48 +31,6 @@ export function useGetAnimeEntry(id: Nullish<string | number>) {
         enabled: !!id,
         staleTime: 30000, // 30 seconds
     })
-}
-
-export function useAnimeEntryManualMatch() {
-    const queryClient = useQueryClient()
-
-    return useServerMutation<Array<Anime_LocalFile>, AnimeEntryManualMatch_Variables>({
-        endpoint: API_ENDPOINTS.ANIME_ENTRIES.AnimeEntryManualMatch.endpoint,
-        method: API_ENDPOINTS.ANIME_ENTRIES.AnimeEntryManualMatch.methods[0],
-        mutationKey: [API_ENDPOINTS.ANIME_ENTRIES.AnimeEntryManualMatch.key],
-        onSuccess: async () => {
-            await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key] })
-            await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key] })
-            queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.LIBRARY_EXPLORER.GetLibraryExplorerFileTree.key] })
-            toast.success("Files matched")
-        },
-    })
-}
-
-export function useAnimeEntryUnmatch() {
-    const queryClient = useQueryClient()
-
-    return useServerMutation<Array<Anime_LocalFile>, AnimeEntryUnmatch_Variables>({
-        endpoint: API_ENDPOINTS.ANIME_ENTRIES.AnimeEntryUnmatch.endpoint,
-        method: API_ENDPOINTS.ANIME_ENTRIES.AnimeEntryUnmatch.methods[0],
-        mutationKey: [API_ENDPOINTS.ANIME_ENTRIES.AnimeEntryUnmatch.key],
-        onSuccess: async () => {
-            await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key] })
-            await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key] })
-            toast.success("Files unmatched")
-        },
-    })
-}
-
-export function useGetAnimeEntrySilenceStatus(id: Nullish<string | number>) {
-    const { data, ...rest } = useServerQuery({
-        endpoint: API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntrySilenceStatus.endpoint.replace("{id}", String(id)),
-        method: API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntrySilenceStatus.methods[0],
-        queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntrySilenceStatus.key, String(id)],
-        enabled: !!id,
-    })
-
-    return { isSilenced: !!data, ...rest }
 }
 
 export function useUpdateAnimeEntryProgress(id: Nullish<string | number>, episodeNumber: number, showToast: boolean = true) {

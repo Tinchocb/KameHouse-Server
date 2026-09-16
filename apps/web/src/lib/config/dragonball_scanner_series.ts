@@ -38,7 +38,7 @@ export const DRAGON_BALL_SCANNER_SERIES: DBFranchiseSeries[] = [
         totalEpisodes: 153,
         type: "SERIES",
         officialPoster: "https://image.tmdb.org/t/p/w500/onCLyCOgszTIyyVs2XKYSkKPOPG.jpg",
-        icon: "/icons/series-icons/goku-raw-db.webp",
+        icon: "",
         color: "from-blue-600 to-indigo-900",
         sagas: [
             { id: "pilaf", name: "Saga de Pilaf", startEp: 1, endEp: 13, image: "/sagas/pilaf.jpg" },
@@ -64,7 +64,7 @@ export const DRAGON_BALL_SCANNER_SERIES: DBFranchiseSeries[] = [
         totalEpisodes: 291,
         type: "SERIES",
         officialPoster: "https://image.tmdb.org/t/p/w500/oQ5CnVj3TRifXl2bIOri6H6rfNe.jpg",
-        icon: "/icons/series-icons/goku-raw-dbz.webp",
+        icon: "",
         color: "from-orange-600 to-red-900",
         sagas: [
             { id: "saiyajin", name: "Saga de los Saiyajin", startEp: 1, endEp: 35, image: "/sagas/saiyajin.jpg" },
@@ -105,7 +105,7 @@ export const DRAGON_BALL_SCANNER_SERIES: DBFranchiseSeries[] = [
         totalEpisodes: 64,
         type: "SERIES",
         officialPoster: "https://image.tmdb.org/t/p/w500/rLHhDpv6rrhuzBjNzaMRNv2fng.jpg",
-        icon: "/icons/series-icons/goku-raw-dbgt.webp",
+        icon: "",
         color: "from-purple-600 to-rose-950",
         sagas: [
             { id: "black-star", name: "Saga del Gran Viaje", startEp: 1, endEp: 16, image: "/sagas/black-star.jpg" },
@@ -125,7 +125,7 @@ export const DRAGON_BALL_SCANNER_SERIES: DBFranchiseSeries[] = [
         totalEpisodes: 167,
         type: "SERIES",
         officialPoster: "https://image.tmdb.org/t/p/w500/ojsPI8fNwcecKLhVC4rB4ZZhFMc.jpg",
-        icon: "/icons/series-icons/goku-raw-dbz.webp",
+        icon: "",
         color: "from-amber-600 to-yellow-950",
         sagas: [
             { id: "kai-saiyajin-freezer", name: "Sagas Saiyajin y Freezer", startEp: 1, endEp: 54, image: "/sagas/z/vegeta-saga.jpg" },
@@ -142,7 +142,7 @@ export const DRAGON_BALL_SCANNER_SERIES: DBFranchiseSeries[] = [
         totalEpisodes: 131,
         type: "SERIES",
         officialPoster: "https://image.tmdb.org/t/p/w500/qEUrbXJ2qt4Rg84Btlx4STOhgte.jpg",
-        icon: "/icons/series-icons/goku-raw-dbs.webp",
+        icon: "",
         color: "from-cyan-600 to-blue-950",
         sagas: [
             { id: "batalla-dioses", name: "Saga Batalla de los Dioses", startEp: 1, endEp: 14, image: "/sagas/batalla-dioses.jpg" },
@@ -167,7 +167,7 @@ export const DRAGON_BALL_SCANNER_SERIES: DBFranchiseSeries[] = [
         totalEpisodes: 20,
         type: "SERIES",
         officialPoster: "https://image.tmdb.org/t/p/w500/lMULbSFZNXUC87MqOZQ4SSV9DXI.jpg",
-        icon: "/icons/series-icons/goku-raw-dbdaima.webp",
+        icon: "",
         color: "from-yellow-500 to-amber-900",
         sagas: [
             { id: "daima-1", name: "El Misterio del Mundo Demonio", startEp: 1, endEp: 10, image: "/sagas/daima.jpg" },
@@ -182,8 +182,8 @@ export const DRAGON_BALL_SCANNER_SERIES: DBFranchiseSeries[] = [
         subtitle: "Universo Cinematográfico (27 títulos)",
         totalEpisodes: 27,
         type: "MOVIES",
-        officialPoster: "https://image.tmdb.org/t/p/w500/uMEgkyiPznZP5AiMSWAk2jsj5gC.jpg",
-        icon: "/icons/series-icons/goku-raw-dbz.webp",
+        officialPoster: "https://image.tmdb.org/t/p/w500/pi0iZOEHeA3ih4p1IwAG4x2DZNH.jpg",
+        icon: "",
         color: "from-emerald-600 to-teal-950",
         sagas: [
             { id: "db-classic-movies", name: "Películas DB Clásico (1 a 4)", startEp: 1, endEp: 4, image: "/sagas/original/busqueda-esferas.webp" },

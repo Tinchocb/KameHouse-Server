@@ -1,79 +1,64 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useState, useMemo, useEffect, useCallback } from "react"
-import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
-
+import { useDebounce } from "use-debounce"
 import { useGetLibraryCollection, fetchLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { useGetContinuityWatchHistory } from "@/api/hooks/continuity.hooks"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import type { Anime_LibraryCollectionEntry } from "@/api/generated/types"
 import { isTmdbId } from "@/lib/helpers/type-guards"
-
-import { EraTab, ERA_TABS } from "./-MovieCard"
-import { SortOption, getEntryEra, getReleaseDateTimestamp } from "./-components/movies-utils"
+import type { EraId } from "@/lib/config/eras"
+import type { EraTab } from "./-MovieCard"
+import { SortOption, getEntryEra, getEntryEraId, getReleaseDateTimestamp, getEntryTitle, getEntryRating, mapCollectionSortToOption, getMovieLore } from "./-components/movies-utils"
 import { MoviesHero } from "./-components/movies-hero"
-import { MoviesFilterBar } from "./-components/movies-filter-bar"
+import { MoviesFilterBar, type MovieStatusFilter } from "./-components/movies-filter-bar"
 import { MoviesGrid } from "./-components/movies-grid"
 import { LibraryBanner } from "./-components/library-banner"
-import { Vaul, VaulContent } from "@/components/vaul"
-import { Icons } from "@/components/ui/icons"
 import { useThemeSettings } from "@/lib/theme/theme-hooks"
 import { getLargeResImage } from "@/lib/helpers/images"
+import { AppErrorBoundary } from "@/components/shared/app-error-boundary"
+import { SectionBar } from "@/components/ui/sectionbar/sectionbar"
+import { IconNavigationFilm } from "@/components/ui/icons";
+import { useSound } from "@/hooks/use-sound"
+import type { SwimlaneItem } from "@/components/ui/swimlane"
 
 // Blur del fondo personalizado de biblioteca (Settings → Apariencia)
 const LIBRARY_BG_BLUR_PX: Record<string, number> = { none: 0, sm: 8, md: 16, lg: 32 }
-import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
+
+export type MovieEntry = Anime_LibraryCollectionEntry & { era: EraTab; eraId: EraId; startedAtTimestamp: number }
 
 export const Route = createFileRoute("/movies/")({
     loader: async ({ context }) => {
         const qc = context.queryClient
-        await qc.prefetchQuery({
+        await qc.ensureQueryData({
             queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key],
             queryFn: fetchLibraryCollection,
         })
-        return { dehydrateState: dehydrate(qc) }
     },
-    component: MoviesPageWrapper,
+    component: MoviesPage,
+    errorComponent: AppErrorBoundary,
 })
 
-function MoviesPageWrapper() {
-    const { dehydrateState } = Route.useLoaderData()
-    return (
-        <HydrationBoundary state={dehydrateState}>
-            <MoviesPage />
-        </HydrationBoundary>
-    )
-}
-
 function MoviesPage() {
-    const [activeEra, setActiveEra] = useState<EraTab>("all")
+    const [activeEra, setActiveEra] = useState<EraId | "all">("all")
+    const [statusFilter, setStatusFilter] = useState<MovieStatusFilter>("all")
     const navigate = useNavigate()
     const ts = useThemeSettings()
+    const { playSound } = useSound()
 
-    const [sortBy, setSortBy] = useState<SortOption>(() => {
-        const mapped: Record<string, SortOption> = {
-            TITLE_ASC: "alpha",
-            TITLE_DESC: "alpha",
-            YEAR_DESC: "year_desc",
-            SCORE_DESC: "year_desc",
-        }
-        return mapped[ts.themeAnimeLibraryCollectionDefaultSorting] || "year_asc"
-    })
-    const [sortOpen, setSortOpen] = useState(false)
+    // Default vivo desde Settings (llega async): userSort manda cuando el
+    // usuario elige manualmente en la filter-bar; null = seguir al ajuste.
+    const defaultSort = mapCollectionSortToOption(ts.themeAnimeLibraryCollectionDefaultSorting)
+    const [userSort, setUserSort] = useState<SortOption | null>(null)
+    const sortBy: SortOption = userSort ?? defaultSort
+    const handleSortChange = useCallback((v: SortOption) => setUserSort(v), [])
     const [searchQuery, setSearchQuery] = useState("")
-    const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
-    
-    const [hoveredMovie, setHoveredMovie] = useState<(Anime_LibraryCollectionEntry & { era: EraTab; startedAtTimestamp: number }) | null>(null)
-    const [debouncedMovie, setDebouncedMovie] = useState<(Anime_LibraryCollectionEntry & { era: EraTab; startedAtTimestamp: number }) | null>(null)
+    const [debouncedSearchQuery] = useDebounce(searchQuery, 200)
+
+    const [hoveredMovie, setHoveredMovie] = useState<MovieEntry | null>(null)
+    const [debouncedMovie, setDebouncedMovie] = useState<MovieEntry | null>(null)
 
     const { data: collection, isLoading } = useGetLibraryCollection()
     const { data: watchHistory } = useGetContinuityWatchHistory()
-
-    // Set KameHouse backdrop on mount (just like series page does)
-    const setBackdropUrl = useIntelligenceStore(s => s.setBackdropUrl)
-    useEffect(() => {
-        setBackdropUrl(null)
-        return () => { setBackdropUrl(null) }
-    }, [setBackdropUrl])
 
     // Debounce hover so backdrop doesn't flicker on fast cursor moves
     useEffect(() => {
@@ -81,7 +66,7 @@ function MoviesPage() {
         return () => clearTimeout(t)
     }, [hoveredMovie])
 
-    const allMovies = useMemo(() => {
+    const allMovies: MovieEntry[] = useMemo(() => {
         if (!collection?.lists) return []
         const allEntries = collection.lists.flatMap(l => l.entries || [])
         const rawMovies = allEntries.filter(e => {
@@ -91,9 +76,9 @@ function MoviesPage() {
         })
         const unique = new Map<number, Anime_LibraryCollectionEntry>()
         rawMovies.forEach(m => { if (m.mediaId) unique.set(m.mediaId, m) })
-        const mapped = Array.from(unique.values()).map(entry => {
+        const mapped: MovieEntry[] = Array.from(unique.values()).map(entry => {
             const startedAt = entry.listData?.startedAt
-            return { ...entry, era: getEntryEra(entry), startedAtTimestamp: startedAt ? new Date(startedAt).getTime() : 0 }
+            return { ...entry, era: getEntryEra(entry), eraId: getEntryEraId(entry), startedAtTimestamp: startedAt ? new Date(startedAt).getTime() : 0 }
         })
 
         // Orden inicial cronológico por fecha de estreno
@@ -105,11 +90,48 @@ function MoviesPage() {
         })
     }, [collection])
 
+    // Datos categorizados para SpotlightEraNav (paridad total con Home):
+    // series=null (Movies no tiene serie principal), movies por EraId canónica.
+    const categorizedData = useMemo(() => {
+        const result: Record<EraId, { series: SwimlaneItem | null; movies: SwimlaneItem[] }> = {
+            db: { series: null, movies: [] },
+            dbz: { series: null, movies: [] },
+            dbgt: { series: null, movies: [] },
+            dbkai: { series: null, movies: [] },
+            dbs: { series: null, movies: [] },
+            dbdaima: { series: null, movies: [] },
+        }
+        for (const m of allMovies) {
+            const bucket = result[m.eraId]
+            if (!bucket) continue
+            bucket.movies.push({
+                id: `media-${m.mediaId}`,
+                mediaId: m.mediaId ?? undefined,
+                tmdbId: m.media?.tmdbId ?? undefined,
+                title: getEntryTitle(m),
+                image: m.media?.posterImage || "",
+                year: m.media?.year,
+                badge: m.media?.format || "MOVIE",
+                onClick: () => {},
+            })
+        }
+        return result
+    }, [allMovies])
+
+    const handleEraSelect = useCallback((eraId: EraId) => {
+        playSound("category")
+        setActiveEra(prev => (prev === eraId ? "all" : eraId))
+    }, [playSound])
+
+    const handleHoverSound = useCallback(() => {
+        playSound("hover")
+    }, [playSound])
+
     const filteredSorted = useMemo(() => {
-        let result = activeEra === "all" ? allMovies : allMovies.filter(e => e.era === activeEra)
-        
-        if (searchQuery.trim()) {
-            const query = searchQuery.toLowerCase().trim()
+        let result = activeEra === "all" ? allMovies : allMovies.filter(e => e.eraId === activeEra)
+
+        if (debouncedSearchQuery.trim()) {
+            const query = debouncedSearchQuery.toLowerCase().trim()
             result = result.filter(e => {
                 const media = e.media
                 if (!media) return false
@@ -117,7 +139,20 @@ function MoviesPage() {
                 const titleEnglish = (media.titleEnglish || "").toLowerCase()
                 const titleRomaji = (media.titleRomaji || "").toLowerCase()
                 const titleOriginal = (media.titleOriginal || "").toLowerCase()
-                return titleSpanish.includes(query) || titleEnglish.includes(query) || titleRomaji.includes(query) || titleOriginal.includes(query)
+                const loreTitle = (getMovieLore(e)?.title || "").toLowerCase()
+                return titleSpanish.includes(query) || loreTitle.includes(query) || titleEnglish.includes(query) || titleRomaji.includes(query) || titleOriginal.includes(query)
+            })
+        }
+
+        if (statusFilter === "completed") {
+            result = result.filter(e => {
+                const media = e.media
+                return media?.watched || (e.listData?.progress || 0) >= (media?.totalEpisodes || 1)
+            })
+        } else if (statusFilter === "unwatched") {
+            result = result.filter(e => {
+                const media = e.media
+                return !media?.watched && (e.listData?.progress || 0) < (media?.totalEpisodes || 1)
             })
         }
 
@@ -136,18 +171,16 @@ function MoviesPage() {
                     if (dateA && dateB && dateA !== dateB) return dateB - dateA
                     return (b.media?.year || 0) - (a.media?.year || 0)
                 })
-            case "alpha":
-                return [...result].sort((a, b) => {
-                    const titleA = a.media?.titleSpanish || a.media?.titleRomaji || a.media?.titleEnglish || ""
-                    const titleB = b.media?.titleSpanish || b.media?.titleRomaji || b.media?.titleEnglish || ""
-                    return titleA.localeCompare(titleB)
-                })
+            case "alpha_asc":
+                return [...result].sort((a, b) => getEntryTitle(a).localeCompare(getEntryTitle(b)))
+            case "alpha_desc":
+                return [...result].sort((a, b) => getEntryTitle(b).localeCompare(getEntryTitle(a)))
+            case "rating_desc":
+                return [...result].sort((a, b) => getEntryRating(b) - getEntryRating(a))
             default:
                 return result
         }
-    }, [allMovies, activeEra, sortBy, searchQuery])
-
-    const activeEraConfig = ERA_TABS.find(t => t.value === activeEra) || ERA_TABS[0]
+    }, [allMovies, activeEra, statusFilter, sortBy, debouncedSearchQuery])
 
     // Limpiar hover al cambiar de era (useEffect, no durante render)
     useEffect(() => {
@@ -165,12 +198,12 @@ function MoviesPage() {
         navigate({ to: "/movies/$movieId", params: { movieId: String(mediaId) } })
     }, [navigate])
 
-    const handleHoverCard = useCallback((entry: (Anime_LibraryCollectionEntry & { era: EraTab; startedAtTimestamp: number }) | null) => {
+    const handleHoverCard = useCallback((entry: MovieEntry | null) => {
         setHoveredMovie(entry)
     }, [])
 
     return (
-        <div className="min-h-screen text-on-surface overflow-x-hidden selection:bg-brand-accent/30 relative z-10" style={{ background: "var(--bg-primary)" }}>
+        <div className="min-h-screen text-on-surface overflow-x-hidden selection:bg-brand-accent/30 relative z-10 bg-transparent">
 
             {/* Fondo personalizado de biblioteca (Settings → Apariencia → Pantalla de Biblioteca) */}
             {ts.themeLibraryScreenCustomBackgroundImage && (
@@ -193,87 +226,49 @@ function MoviesPage() {
                 <MoviesHero
                     topFeatured={topFeatured}
                     debouncedMovie={debouncedMovie}
-                    activeEraConfig={activeEraConfig}
                     handleMovieClick={handleMovieClick}
+                    watchHistory={watchHistory}
+                    activeEraId={activeEra}
+                    categorizedData={categorizedData}
+                    onSelectEra={handleEraSelect}
+                    onHoverSound={handleHoverSound}
                 />
             ) : (
                 <LibraryBanner />
             )}
 
-            <div className="relative w-full max-w-content mx-auto px-6 md:px-12 lg:px-16 mt-8 space-y-10">
-                <div className="flex flex-col lg:flex-row gap-8 min-h-[70vh]">
-                    {/* Left Column: Filter Sidebar */}
-                    <div className="lg:w-80 flex-shrink-0 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-7rem)] flex flex-col gap-4">
-                        <button
-                            onClick={() => setMobileFiltersOpen(true)}
-                            className="lg:hidden w-full flex items-center justify-between px-4 py-3 bg-surface-container border border-outline-variant/30 rounded-xl font-bold text-on-surface uppercase tracking-widest text-sm active:scale-95 transition-all"
-                        >
-                            <span>Filtros y Búsqueda</span>
-                            <span className="text-lg leading-none">+</span>
-                        </button>
-                        
-                        {/* Desktop static layout */}
-                        <div className="hidden lg:block">
-                            <MoviesFilterBar 
-                                allMovies={allMovies}
-                                activeEra={activeEra}
-                                setActiveEra={setActiveEra}
-                                searchQuery={searchQuery}
-                                setSearchQuery={setSearchQuery}
-                                sortBy={sortBy}
-                                setSortBy={setSortBy}
-                                sortOpen={sortOpen}
-                                setSortOpen={setSortOpen}
-                            />
-                        </div>
+            <div className="page-container mt-6 space-y-6">
+                <SectionBar label="Películas de Dragon Ball" icon={IconNavigationFilm} variant="minimal" badge={<span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[var(--glass-bg)] text-on-surface-variant border border-[var(--glass-border-side)]">{filteredSorted.length}</span>}>
+                    <MoviesFilterBar
+                        searchQuery={searchQuery}
+                        setSearchQuery={setSearchQuery}
+                        statusFilter={statusFilter}
+                        setStatusFilter={setStatusFilter}
+                        sortBy={sortBy}
+                        setSortBy={handleSortChange}
+                        totalCount={allMovies.length}
+                        filteredCount={filteredSorted.length}
+                    />
 
-                        {/* Mobile Vaul drawer */}
-                        <div className="lg:hidden">
-                            <Vaul open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
-                                <VaulContent className="bg-zinc-950/95 backdrop-blur-[var(--blur-overlay-xl)] border-t border-outline-variant/10 p-5 pb-8 flex flex-col focus:outline-none">
-                                    <div className="flex justify-between items-center mb-4 px-1">
-                                        <h3 className="font-display text-2xl tracking-widest text-on-surface uppercase">
-                                            Filtros y Búsqueda
-                                        </h3>
-                                        <button 
-                                            onClick={() => setMobileFiltersOpen(false)}
-                                            className="p-1.5 rounded-full text-on-surface-variant hover:text-on-surface active:scale-95"
-                                        >
-                                            <Icons.ui.close className="w-5 h-5" />
-                                        </button>
-                                    </div>
-                                    <div className="overflow-y-auto max-h-[60vh] pb-4">
-                                        <MoviesFilterBar 
-                                            allMovies={allMovies}
-                                            activeEra={activeEra}
-                                            setActiveEra={setActiveEra}
-                                            searchQuery={searchQuery}
-                                            setSearchQuery={setSearchQuery}
-                                            sortBy={sortBy}
-                                            setSortBy={setSortBy}
-                                            sortOpen={sortOpen}
-                                            setSortOpen={setSortOpen}
-                                        />
-                                    </div>
-                                </VaulContent>
-                            </Vaul>
-                        </div>
-                    </div>
-
-                    {/* Right Column: Movies Grid */}
-                    <div className="flex-grow min-w-0">
-                        <MoviesGrid 
-                            filteredSorted={filteredSorted}
-                            isLoading={isLoading}
-                            allMoviesLength={allMovies.length}
-                            watchHistory={watchHistory}
-                            handleMovieClick={handleMovieClick}
-                            handleHoverCard={handleHoverCard}
-                        />
-                    </div>
-                </div>
+                    <MoviesGrid
+                        filteredSorted={filteredSorted}
+                        isLoading={isLoading}
+                        allMoviesLength={allMovies.length}
+                        watchHistory={watchHistory}
+                        handleMovieClick={handleMovieClick}
+                        handleHoverCard={handleHoverCard}
+                        activeEra={activeEra}
+                        searchQuery={searchQuery}
+                        onResetFilters={() => {
+                            setActiveEra("all")
+                            setSearchQuery("")
+                            setStatusFilter("all")
+                            setUserSort(null)
+                        }}
+                    />
+                </SectionBar>
             </div>
-            
+
         </div>
     )
 }

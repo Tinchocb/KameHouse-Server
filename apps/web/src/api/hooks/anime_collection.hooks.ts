@@ -1,20 +1,7 @@
 import { useServerQuery, buildSeaQuery } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
-import { Anime_LibraryCollection, Anime_LibraryCollectionEntry } from "@/api/generated/types"
+import { Anime_LibraryCollection } from "@/api/generated/types"
 
-export interface ExtendedMediaEntry extends Anime_LibraryCollectionEntry {
-    customReleaseGroup?: string
-    customVersion?: string
-    isCustomOverride?: boolean
-}
-
-export interface ExtendedLibraryCollection extends Omit<Anime_LibraryCollection, "lists"> {
-    lists?: Array<{
-        type: string
-        status: string
-        entries?: Array<ExtendedMediaEntry>
-    }>
-}
 
 export const fetchLibraryCollection = async () => {
     return buildSeaQuery<Anime_LibraryCollection>({

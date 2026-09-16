@@ -9,15 +9,15 @@ import { cn, defineStyleAnatomy } from "../core/styling"
 export const ButtonAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-Button_root",
-        "shadow-sm whitespace-nowrap font-medium transition-colors",
-        "inline-flex items-center transition-all ease-standard duration-base active:scale-[0.98] text-center text-sm justify-center",
-        "focus-visible:outline-none focus-visible:ring-2 ring-brand-accent ring-offset-background ring-offset-2",
-        "disabled:opacity-50 disabled:pointer-events-none",
+        "shadow-sm whitespace-nowrap font-medium",
+        "inline-flex items-center transition-colors duration-fast text-center text-sm justify-center select-none transform-gpu cursor-pointer",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "disabled:opacity-50 disabled:pointer-events-none disabled:transform-none disabled:cursor-not-allowed",
     ], {
         variants: {
             intent: {
                 /* ─── MD3 Filled (Primary) ──────────────────────────────────────── */
-                "primary": "bg-brand-accent text-primary-foreground hover:bg-brand-accent/90 active:bg-brand-accent shadow-elevation-1",
+                "primary": "bg-brand-accent text-on-primary hover:bg-brand-accent/90 active:bg-brand-accent shadow-elevation-1",
 
                 /* ─── MD3 Tonal (Secondary) ─────────────────────────────────────── */
                 "secondary": "bg-secondary-container text-on-secondary-container hover:bg-secondary-container/90 active:bg-secondary-container shadow-elevation-1",
@@ -30,31 +30,31 @@ export const ButtonAnatomy = defineStyleAnatomy({
 
                 /* ─── Legacy / Special ──────────────────────────────────────────── */
                 "destructive": "bg-destructive text-destructive-foreground hover:bg-destructive/90 active:bg-destructive shadow-elevation-1",
-                "ghost": "bg-transparent text-muted-foreground hover:bg-accent active:bg-accent/50 shadow-none",
+                "ghost": "bg-transparent text-on-surface hover:bg-accent active:bg-accent/50 shadow-none",
                 "link": "bg-transparent text-brand-accent underline-offset-4 hover:underline shadow-none",
 
-                /* ─── Glass variants (DEPRECATED - para migración gradual) ───────── */
-                "primary-glass": "text-white border border-white/10 bg-white/5 backdrop-blur-[var(--blur-overlay-sm)] hover:bg-white/10 shadow-elevation-1",
-                "gray-glass": "text-zinc-400 border border-zinc-800 bg-black/40 backdrop-blur-[var(--blur-overlay-md)] hover:bg-white/10 shadow-elevation-1",
+                /* ─── Glass variants ────────────────────────────────────────────── */
+                "primary-glass": "text-on-surface border border-white/10 bg-white/5 backdrop-blur-overlay-sm hover:bg-white/10 shadow-elevation-1",
+                "gray-glass": "text-on-surface border border-outline-variant/30 bg-surface-container/60 backdrop-blur-overlay-md hover:bg-surface-container-high shadow-elevation-1",
 
                 /* Brand variants */
-                "brand-primary": "bg-brand-accent text-on-primary hover:bg-brand-accent/90 active:bg-brand-accent shadow-[0_0_20px_var(--glow-primary)]",
-                "brand-secondary": "bg-brand-secondary text-on-secondary hover:bg-brand-secondary/90 active:bg-brand-secondary shadow-[0_0_20px_var(--glow-secondary)]",
-                "brand-destructive": "bg-brand-destructive text-white hover:bg-brand-destructive/90 active:bg-brand-destructive shadow-[0_0_20px_var(--glow-destructive)]",
-                "brand-success": "bg-brand-success text-white hover:bg-brand-success/90 active:bg-brand-success shadow-[0_0_20px_var(--glow-success)]",
-                "brand-magic": "bg-brand-magic text-white hover:bg-brand-magic/90 active:bg-brand-magic shadow-[0_0_20px_var(--glow-magic)]",
+                "brand-primary": "bg-brand-accent text-on-primary hover:bg-brand-accent/90 active:bg-brand-accent shadow-brand-primary",
+                "brand-secondary": "bg-brand-secondary text-on-secondary hover:bg-brand-secondary/90 active:bg-brand-secondary shadow-brand-secondary",
+                "brand-destructive": "bg-brand-destructive text-white hover:bg-brand-destructive/90 active:bg-brand-destructive shadow-brand-destructive",
+                "brand-success": "bg-brand-success text-white hover:bg-brand-success/90 active:bg-brand-success shadow-brand-success",
+                "brand-magic": "bg-brand-magic text-white hover:bg-brand-magic/90 active:bg-brand-magic shadow-brand-magic",
 
-                /* Legacy variants (compat) */
-                "gray": "bg-zinc-800 text-white hover:bg-zinc-700",
-                "gray-outline": "text-zinc-400 border border-zinc-800 bg-transparent hover:bg-zinc-900 hover:text-white",
-                "gray-subtle": "text-zinc-400 border border-transparent bg-zinc-900 hover:bg-zinc-800",
-                "gray-basic": "shadow-none text-zinc-400 border-transparent bg-transparent hover:bg-zinc-900 hover:text-white",
-                "gray-link": "shadow-none text-zinc-400 border-transparent bg-transparent hover:underline",
-                "white": "text-black bg-white hover:bg-zinc-200 active:bg-zinc-300",
-                "white-outline": "text-white border border-white bg-transparent hover:bg-white/10",
-                "primary-basic": "shadow-none text-white border-transparent bg-transparent hover:bg-white/10 active:bg-white/20",
-                "primary-outline": "text-white border border-white bg-transparent hover:bg-white/10 active:bg-white/20",
-                "primary-glow": "bg-white text-black hover:bg-zinc-200 shadow-[0_0_20px_rgba(255,255,255,0.3)]",
+                /* Semantic Surface / Tone variants */
+                "gray": "bg-surface-container text-on-surface-variant/70 hover:bg-surface-container-high",
+                "gray-outline": "text-on-surface/70 border border-outline-variant bg-transparent hover:bg-surface-container",
+                "gray-subtle": "text-on-surface-variant/70 border border-transparent bg-surface-container-low hover:bg-surface-container",
+                "gray-basic": "shadow-none text-on-surface-variant/70 border-transparent bg-transparent hover:bg-surface-container",
+                "gray-link": "text-on-surface/70 border-transparent bg-transparent hover:underline",
+                "white": "text-on-primary bg-surface hover:bg-surface-container active:bg-surface-container-high",
+                "white-outline": "text-on-surface border border-outline bg-transparent hover:bg-surface-container",
+                "primary-basic": "shadow-none text-on-surface border-transparent bg-transparent hover:bg-surface-container active:bg-surface-container-high",
+                "primary-outline": "text-on-surface border border-outline bg-transparent hover:bg-surface-container active:bg-surface-container-high",
+                "primary-glow": "bg-brand-accent text-on-primary hover:bg-brand-accent/90 shadow-brand-focus",
                 "alert": "bg-status-error text-white hover:brightness-110",
                 "alert-outline": "text-status-error border border-status-error bg-transparent hover:bg-status-error/10",
                 "alert-subtle": "bg-status-error/10 text-status-error border border-status-error/30 hover:bg-status-error/20",
@@ -85,14 +85,15 @@ export const ButtonAnatomy = defineStyleAnatomy({
  * Button
  * -----------------------------------------------------------------------------------------------*/
 
-export type ButtonProps = React.ComponentPropsWithoutRef<"button"> &
+export type ButtonProps = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "size"> &
     VariantProps<typeof ButtonAnatomy.root> & {
-        loading?: boolean,
+        loading?: boolean
         leftIcon?: React.ReactNode
         rightIcon?: React.ReactNode
         iconSpacing?: React.CSSProperties["marginInline"]
         hideTextOnSmallScreen?: boolean
         iconClass?: string
+        disableSpring?: boolean
     }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, ref) => {
@@ -109,8 +110,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
         iconClass,
         disabled,
         hideTextOnSmallScreen,
+        disableSpring = false,
         ...rest
     } = props
+
+    const isDisabled = disabled || loading
 
     return (
         <button
@@ -120,9 +124,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
                     size,
                     intent,
                 }),
+                !isDisabled && !disableSpring && "transition-transform duration-150 [transition-timing-function:cubic-bezier(0.175,0.885,0.32,1.275)] hover:scale-[1.02] active:scale-[0.96]",
                 className,
             )}
-            disabled={disabled || loading}
+            disabled={isDisabled}
             aria-disabled={disabled}
             {...rest}
             ref={ref}

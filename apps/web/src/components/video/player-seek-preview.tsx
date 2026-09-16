@@ -5,7 +5,6 @@ interface PlayerSeekPreviewProps {
     previewManager: PlayerPreviewManager | null
     hoverTime: number | null
     hoverPosPercent: number
-    duration: number
 }
 
 const formatTime = (secs: number) => {
@@ -20,6 +19,13 @@ const formatTime = (secs: number) => {
 export function PlayerSeekPreview({ previewManager, hoverTime, hoverPosPercent }: PlayerSeekPreviewProps) {
     const [previewUrl, setPreviewUrl] = useState<string | null>(null)
     const lastRenderedSegmentRef = useRef<number>(-1)
+
+    // Al cambiar de episodio/manager el cleanup revoca blobs: resetear para no
+    // servir una URL revocada cacheada por el guard de segmento.
+    useEffect(() => {
+        setPreviewUrl(null)
+        lastRenderedSegmentRef.current = -1
+    }, [previewManager])
 
     useEffect(() => {
         if (!previewManager || hoverTime === null) return
@@ -48,7 +54,7 @@ export function PlayerSeekPreview({ previewManager, hoverTime, hoverPosPercent }
         return () => {
             isActive = false
         }
-    }, [hoverTime, previewManager, previewUrl])
+    }, [hoverTime, previewManager])
 
     if (hoverTime === null) return null
 
@@ -59,7 +65,7 @@ export function PlayerSeekPreview({ previewManager, hoverTime, hoverPosPercent }
 
     return (
         <div 
-            className="absolute bottom-[calc(100%+16px)] pointer-events-none z-[100] transform -translate-x-1/2 flex flex-col items-center"
+            className="absolute bottom-[calc(100%+16px)] pointer-events-none z-player-ui transform -translate-x-1/2 flex flex-col items-center"
             style={{ left: `${safeLeftPercent}%` }}
         >
             <div className="relative overflow-hidden rounded-md border border-outline-variant/30 shadow-elevation-4 bg-surface-container-high w-[160px] aspect-video">
@@ -77,7 +83,7 @@ export function PlayerSeekPreview({ previewManager, hoverTime, hoverPosPercent }
             </div>
             
             {/* Time badge */}
-            <div className="mt-2 bg-surface-container-high/90 backdrop-blur-[var(--blur-overlay-sm)] px-2.5 py-0.5 rounded-md border border-outline-variant/30 text-xs font-mono font-medium text-white shadow-elevation-2">
+            <div className="mt-2 bg-surface-container-high/90 backdrop-blur-overlay-sm px-2.5 py-0.5 rounded-md border border-outline-variant/30 text-xs font-mono font-medium text-white shadow-elevation-2">
                 {formatTime(hoverTime)}
             </div>
             

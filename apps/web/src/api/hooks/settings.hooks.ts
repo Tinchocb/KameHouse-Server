@@ -1,7 +1,7 @@
 import { useServerQuery, useServerMutation } from "@/api/client/requests"
 import { Models_Settings, Status } from "@/api/generated/types"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
-import { SaveSettings_Variables, /* SaveAutoDownloaderSettings_Variables, */ SaveMediaPlayerSettings_Variables, GettingStarted_Variables } from "@/api/generated/endpoint.types"
+import { SaveSettings_Variables, GettingStarted_Variables } from "@/api/generated/endpoint.types"
 import { useQueryClient } from "@tanstack/react-query"
 
 export function useGetStatus(options?: { enabled?: boolean }) {
@@ -25,6 +25,15 @@ export function useGetSettings() {
         muteError: true,
         staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
+        // El servidor serializa `platform` en minúsculas (json tag de Go) pero el
+        // codegen tipa `Platform` en mayúscula. Normalizar aquí para que todos los
+        // consumidores (formulario, MovieCard, etc.) vean siempre `Platform`.
+        select: (data) => {
+            if (!data) return data
+            const raw = data as unknown as Record<string, unknown>
+            const normalized = (raw.platform ?? raw.Platform ?? { hideAudienceScore: false }) as Models_Settings["platform"]
+            return { ...data, platform: normalized, Platform: normalized } as Models_Settings & { Platform?: Models_Settings["platform"] }
+        },
     })
 }
 
@@ -37,33 +46,6 @@ export function useSaveSettings() {
         onSuccess: async () => {
             await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.STATUS.GetStatus.key] })
             await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.SETTINGS.GetSettings.key] })
-        },
-    })
-}
-
-/*
-export function useSaveAutoDownloaderSettings() {
-    const queryClient = useQueryClient()
-    return useServerMutation<Models_Settings, SaveAutoDownloaderSettings_Variables>({
-        endpoint: API_ENDPOINTS.SETTINGS.SaveAutoDownloaderSettings.endpoint,
-        method: API_ENDPOINTS.SETTINGS.SaveAutoDownloaderSettings.methods[0],
-        mutationKey: [API_ENDPOINTS.SETTINGS.SaveAutoDownloaderSettings.key],
-        onSuccess: async () => {
-            await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.SETTINGS.GetSettings.key] })
-        },
-    })
-}
-*/
-
-export function useSaveMediaPlayerSettings() {
-    const queryClient = useQueryClient()
-    return useServerMutation<Models_Settings, SaveMediaPlayerSettings_Variables>({
-        endpoint: API_ENDPOINTS.SETTINGS.SaveMediaPlayerSettings.endpoint,
-        method: API_ENDPOINTS.SETTINGS.SaveMediaPlayerSettings.methods[0],
-        mutationKey: [API_ENDPOINTS.SETTINGS.SaveMediaPlayerSettings.key],
-        onSuccess: async () => {
-            await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.SETTINGS.GetSettings.key] })
-            await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.STATUS.GetStatus.key] })
         },
     })
 }

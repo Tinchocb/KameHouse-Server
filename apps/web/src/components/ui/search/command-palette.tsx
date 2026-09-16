@@ -1,7 +1,7 @@
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useGlobalSearch, type GlobalSearchResultItem } from "@/hooks/use-global-search"
 import { Link } from "@tanstack/react-router"
-import { Icons } from "@/components/ui/icons"
+import { IconUiSpinner, IconNavigationFilm, IconStatusSparkles } from "@/components/ui/icons";
 import { useEffect, useState } from "react"
 import { VideoPlayer } from "@/components/video/player"
 
@@ -33,15 +33,15 @@ export function CommandPalette() {
                 onOpenChange={setOpen} 
                 commandProps={{ 
                     label: "Search Command Palette",
-                    className: "glass-liquid glass-refract rounded-corner-lg overflow-hidden"
+                    className: "bg-zinc-950/85 backdrop-blur-overlay-2xl backdrop-saturate-[190%] border border-white/20 border-t-white/40 border-b-white/10 rounded-3xl overflow-hidden shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.25),0_24px_48px_rgba(0,0,0,0.9)]"
                 }}
             >
-                <div className="p-4 border-b border-outline-variant/50" style={{ background: "color-mix(in srgb, var(--md-sys-color-surface-variant) 30%, transparent)" }}>
+                <div className="p-4 border-b border-white/10 bg-white/[0.02]">
                     <div className="flex items-center gap-3 px-2">
                         <div className="w-2 h-2 rounded-full bg-brand-accent shadow-[0_0_8px_var(--glow-primary)] animate-pulse" />
                         <CommandInput
                             placeholder="DESCUBRE TU PRÓXIMA SERIE..."
-                            className="h-12 sm:h-14 font-display text-lg sm:text-2xl md:text-3xl tracking-widest placeholder:text-on-surface-variant bg-transparent border-none focus:ring-0 text-on-surface"
+                            className="h-12 sm:h-14 font-display text-lg sm:text-2xl md:text-3xl tracking-widest placeholder:text-zinc-500 bg-transparent border-none focus:ring-0 text-white"
                             value={query}
                             onValueChange={setQuery}
                         />
@@ -51,16 +51,16 @@ export function CommandPalette() {
                     {isLoading ? (
                         <div className="flex h-64 flex-col items-center justify-center gap-6 animate-in fade-in duration-slow">
                             <div className="relative">
-                                <Icons.ui.spinner className="h-12 w-12 animate-spin text-brand-accent opacity-50" />
+                                <IconUiSpinner className="h-12 w-12 animate-spin text-brand-accent opacity-50" />
                                 <div className="absolute inset-0 h-12 w-12 blur-2xl bg-brand-accent/20" />
                             </div>
-                            <span className="font-display text-lg tracking-cinema-lg text-zinc-700 uppercase">Sincronizando Bóveda</span>
+                            <span className="font-display text-lg tracking-cinema-lg text-on-surface-variant uppercase">Sincronizando Bóveda</span>
                         </div>
                     ) : (
                         <>
                             <CommandEmpty className="py-20 text-center animate-in fade-in zoom-in-95 duration-slow">
-                                <p className="font-display text-2xl tracking-display text-zinc-700 uppercase">Sin coincidencias detectadas</p>
-                                <p className="text-label-sm font-black uppercase tracking-cinema-md text-zinc-800 mt-4 px-10 leading-relaxed">Verifica los términos técnicos o expande los criterios de búsqueda</p>
+                                <p className="font-display text-2xl tracking-display text-on-surface uppercase">Sin coincidencias detectadas</p>
+                                <p className="text-label-sm font-black uppercase tracking-cinema-md text-on-surface-variant mt-4 px-10 leading-relaxed">Verifica los términos técnicos o expande los criterios de búsqueda</p>
                             </CommandEmpty>
                             <CommandGroup 
 heading={isSearchActive ? "RESULTADOS ENCONTRADOS" : "TENDENCIAS GLOBALES"}
@@ -82,7 +82,7 @@ heading={isSearchActive ? "RESULTADOS ENCONTRADOS" : "TENDENCIAS GLOBALES"}
                                                         setPlayTarget({ path: result.path, title })
                                                     }
                                                 }}
-                                                className="rounded-container border border-outline-variant/50 bg-surface hover:border-outline hover:bg-surface-container transition-all duration-base p-0 overflow-hidden group"
+                                                className="rounded-2xl border border-white/10 hover:border-white/25 border-t-white/20 bg-white/[0.03] hover:bg-white/[0.08] transition-all duration-150 p-0 overflow-hidden group cursor-pointer shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.08)]"
                                             >
                                                 {"isUnlinked" in result && result.isUnlinked ? (
                                                     <button 
@@ -95,7 +95,7 @@ heading={isSearchActive ? "RESULTADOS ENCONTRADOS" : "TENDENCIAS GLOBALES"}
                                                     >
                                                         <div className="h-20 w-14 flex-shrink-0 rounded-lg shadow-elevation-1 border border-outline-variant/50 group-hover:scale-105 transition-transform duration-base bg-brand-accent/10 flex items-center justify-center overflow-hidden relative">
                                                             <div className="absolute inset-0 bg-gradient-to-tr from-brand-accent/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                            <Icons.navigation.film className="h-7 w-7 text-brand-accent group-hover:scale-110 transition-transform duration-base z-10" />
+                                                            <IconNavigationFilm className="h-7 w-7 text-brand-accent group-hover:scale-110 transition-transform duration-base z-10" />
                                                         </div>
                                                         <div className="flex flex-col overflow-hidden text-left py-1 min-w-0">
                                                             <span className="truncate text-lg font-bold text-on-surface group-hover:text-brand-accent transition-colors leading-tight" title={title}>
@@ -120,21 +120,21 @@ heading={isSearchActive ? "RESULTADOS ENCONTRADOS" : "TENDENCIAS GLOBALES"}
 
                                                     return (
                                                         <Link {...linkProps} className="flex w-full items-center gap-5 p-3" onClick={() => setOpen(false)}>
-                                                            <div className="h-20 w-14 flex-shrink-0 rounded-lg shadow-elevation-1 border border-amber-500/30 group-hover:scale-105 transition-transform duration-base bg-amber-500/10 flex items-center justify-center overflow-hidden relative">
-                                                                <div className="absolute inset-0 bg-gradient-to-tr from-amber-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                                <Icons.status.sparkles className="h-7 w-7 text-amber-400 group-hover:scale-110 transition-transform duration-base z-10" />
+                                                            <div className="h-20 w-14 flex-shrink-0 rounded-lg shadow-elevation-1 border border-brand-accent/30 group-hover:scale-105 transition-transform duration-base bg-brand-accent/10 flex items-center justify-center overflow-hidden relative">
+                                                                <div className="absolute inset-0 bg-gradient-to-tr from-brand-accent/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                                <IconStatusSparkles className="h-7 w-7 text-brand-accent group-hover:scale-110 transition-transform duration-base z-10" />
                                                             </div>
                                                             <div className="flex flex-col overflow-hidden text-left py-1 min-w-0">
-                                                                <span className="truncate text-lg font-bold text-on-surface group-hover:text-amber-400 transition-colors leading-tight" title={title}>
+                                                                <span className="truncate text-lg font-bold text-on-surface group-hover:text-brand-accent transition-colors leading-tight" title={title}>
                                                                     {title}
                                                                 </span>
-                                                                <p className="text-label-sm text-zinc-400 truncate mt-1">{sem.description}</p>
+                                                                <p className="text-label-sm text-on-surface-variant truncate mt-1">{sem.description}</p>
                                                                 <div className="flex items-center gap-2 mt-2">
-                                                                    <span className="text-label-sm font-black uppercase tracking-widest text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-md">
+                                                                    <span className="text-label-sm font-black uppercase tracking-widest text-brand-accent bg-brand-accent/10 px-2 py-0.5 rounded-md">
                                                                         {result.badgeLabel}
                                                                     </span>
                                                                     {sem.episodes && (
-                                                                        <span className="text-label-sm font-black uppercase tracking-widest text-zinc-500">
+                                                                        <span className="text-label-sm font-black uppercase tracking-widest text-on-surface-variant/80">
                                                                             {sem.episodes}
                                                                         </span>
                                                                     )}

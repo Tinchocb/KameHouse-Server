@@ -1,89 +1,91 @@
 import { cn } from "@/components/ui/core/styling"
+import { IconNavigationChevronRight } from "@/components/ui/icons";
+import { SettingsCard } from "@/routes/settings/components"
 
-export interface SubSagaTimelineItem {
+interface SubSagaTimelineItem {
   id: string
   title: string
-  episodeRange: string
-  image?: string
+  episodeRange?: string
+  index?: number
 }
 
 interface SubSagaTimelineProps {
   items: SubSagaTimelineItem[]
   activeId?: string
   onSelect: (id: string) => void
+  className?: string
 }
 
 /**
- * Vertical dot timeline for sub-sagas, nested inside SagaSelector's active saga.
+ * Lista vertical de sub-sagas / arcos argumentales.
+ * Provee títulos legibles, rango de episodios y estado activo visible.
  */
-export function SubSagaTimeline({ items, activeId, onSelect }: SubSagaTimelineProps) {
+export function SubSagaTimeline({ items, activeId, onSelect, className }: SubSagaTimelineProps) {
   if (items.length === 0) return null
 
   return (
-    <div className="w-full flex flex-col gap-3 pl-6 relative">
-      <div className="absolute left-2.5 top-1 bottom-3 w-[1.5px] bg-gradient-to-b from-brand-accent/30 via-brand-accent/15 to-transparent pointer-events-none" />
+    <SettingsCard className={cn("divide-y divide-white/[0.06]", className)} divide={false}>
+      <div className="p-4 space-y-2">
+        {items.map((item, index) => {
+          const isActive = item.id === activeId
+          const orderNum = item.index ?? (index + 1)
+          const orderFormatted = orderNum < 10 ? `0${orderNum}` : `${orderNum}`
 
-      {items.map((item) => {
-        const isActive = item.id === activeId
-        return (
-          <div
-            key={item.id}
-            role="button"
-            tabIndex={0}
-            onClick={(e) => {
-              e.stopPropagation()
-              onSelect(item.id)
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault()
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={(e) => {
                 e.stopPropagation()
                 onSelect(item.id)
-              }
-            }}
-            aria-label={`${item.title}, ${item.episodeRange}`}
-            aria-current={isActive ? "true" : undefined}
-            className="relative text-left flex items-start gap-3 py-2 md:py-0.5 group/subsaga cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent/70 rounded-md"
-          >
-            <div className={cn(
-              "relative mt-1 flex items-center justify-center shrink-0 w-2.5 h-2.5 rounded-full border transition-all duration-base",
-              isActive
-                ? "border-brand-accent bg-brand-accent shadow-[0_0_8px_hsl(var(--brand-accent)/0.5)]"
-                : "border-outline-variant/20 bg-surface-container group-hover/subsaga:border-brand-accent group-hover/subsaga:scale-110"
-            )}>
-              <div className={cn(
-                "w-1.5 h-1.5 rounded-full transition-colors duration-base",
-                isActive ? "bg-on-surface" : "bg-transparent group-hover/subsaga:bg-brand-accent"
-              )} />
-            </div>
-
-            <div className="flex-1 space-y-0.5 pb-1">
-              <span className={cn(
-                "block text-xs font-bold transition-colors duration-base leading-normal",
-                isActive ? "text-on-surface" : "text-on-surface-variant group-hover/subsaga:text-on-surface"
-              )}>
-                {item.title}
-              </span>
-              <span className={cn(
-                "block text-xs font-black tracking-widest transition-colors duration-base",
-                isActive ? "text-brand-accent" : "text-on-surface-variant group-hover/subsaga:text-brand-accent/80"
-              )}>
-                {item.episodeRange}
-              </span>
-              
-              {isActive && item.image && (
-                <div className="pt-2">
-                  <img 
-                    src={item.image} 
-                    alt={item.title}
-                    className="w-full aspect-video object-cover rounded-md border border-outline-variant/10 shadow-md"
-                  />
-                </div>
+              }}
+              aria-label={item.title}
+              aria-current={isActive ? "true" : undefined}
+              title={item.title}
+              className={cn(
+                "group relative w-full flex items-center justify-between gap-3 p-3 rounded-xl border text-left cursor-pointer select-none transition-[background-color,border-color,transform] duration-200 hover:translate-x-[2px] active:scale-[0.98]",
+                "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent/70",
+                isActive
+                  ? "bg-white/[0.08] border border-white/30 border-t-white/50 border-l-[3px] border-l-brand-accent shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),0_0_14px_rgba(0,0,0,0.5)] text-white"
+                  : "bg-white/[0.02] hover:bg-white/[0.05] border border-white/10 hover:border-white/20 text-zinc-300 hover:text-white"
               )}
-            </div>
-          </div>
-        )
-      })}
-    </div>
+            >
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <span className={cn(
+                  "text-xs font-mono font-bold shrink-0 w-6 h-6 rounded-lg flex items-center justify-center transition-colors",
+                  isActive
+                    ? "bg-brand-accent/20 text-brand-accent"
+                    : "bg-white/[0.04] text-zinc-500 group-hover:text-zinc-300"
+                )}>
+                  {orderFormatted}
+                </span>
+
+                <div className="min-w-0 flex-1">
+                  <p className={cn(
+                    "text-sm font-semibold truncate leading-tight transition-colors",
+                    isActive ? "text-white" : "text-zinc-200 group-hover:text-white"
+                  )}>
+                    {item.title}
+                  </p>
+                  {item.episodeRange && (
+                    <span className="text-[11px] font-medium text-zinc-500 group-hover:text-zinc-400 mt-0.5 block">
+                      {item.episodeRange}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="shrink-0 flex items-center">
+                {isActive ? (
+                  <div className="w-2 h-2 rounded-full bg-brand-accent shadow-[0_0_8px_hsl(var(--brand-accent))]" />
+                ) : (
+                  <IconNavigationChevronRight className="w-3.5 h-3.5 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+                )}
+              </div>
+            </button>
+          )
+        })}
+      </div>
+    </SettingsCard>
   )
 }

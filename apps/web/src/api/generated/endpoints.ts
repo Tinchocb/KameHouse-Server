@@ -324,6 +324,26 @@ export const API_ENDPOINTS = {
             methods: ["GET"],
             endpoint: "/api/v1/intelligence/stats",
         },
+        /**
+         *  @description
+         *  Route get Dragon Ball canon timeline.
+         *  Returns full historical timeline order with user progress.
+         */
+        GetChronologyTimeline: {
+            key: "INTELLIGENCE-get-chronology-timeline",
+            methods: ["GET"],
+            endpoint: "/api/v1/intelligence/chronology",
+        },
+        /**
+         *  @description
+         *  Route search lore entities and sagas.
+         *  Searches characters, transformations, sagas and milestones.
+         */
+        SemanticSearch: {
+            key: "INTELLIGENCE-semantic-search",
+            methods: ["GET"],
+            endpoint: "/api/v1/intelligence/search",
+        },
     },
     LIBRARY_EXPLORER: {
         /**
@@ -347,17 +367,6 @@ export const API_ENDPOINTS = {
             key: "LIBRARY-EXPLORER-refresh-library-explorer-file-tree",
             methods: ["POST"],
             endpoint: "/api/v1/library/explorer/file-tree/refresh",
-        },
-        /**
-         *  @description
-         *  Route loads the children of a specific directory into the file tree.
-         *  This endpoint loads directory children into the cached file tree. Frontend should re-fetch the tree afterwards.
-         *  The directory path must be within the configured library paths for security.
-         */
-        LoadLibraryExplorerDirectoryChildren: {
-            key: "LIBRARY-EXPLORER-load-library-explorer-directory-children",
-            methods: ["POST"],
-            endpoint: "/api/v1/library/explorer/directory-children",
         },
     },
     LOCAL: {
@@ -626,6 +635,26 @@ export const API_ENDPOINTS = {
             methods: ["GET"],
             endpoint: "/api/v1/mediastream/skip-times/resolve-mal",
         },
+        /**
+         *  @description
+         *  Route get ffmpeg binary status.
+         *  This returns the status and version of ffmpeg and ffprobe binaries.
+         */
+        GetFFmpegStatus: {
+            key: "MEDIASTREAM-get-f-fmpeg-status",
+            methods: ["GET"],
+            endpoint: "/api/v1/mediastream/ffmpeg/status",
+        },
+        /**
+         *  @description
+         *  Route install ffmpeg binaries.
+         *  Downloads and extracts ffmpeg and ffprobe into cache/bin directory.
+         */
+        InstallFFmpeg: {
+            key: "MEDIASTREAM-install-f-fmpeg",
+            methods: ["POST"],
+            endpoint: "/api/v1/mediastream/ffmpeg/install",
+        },
     },
     METADATA: {
         /**
@@ -667,6 +696,19 @@ export const API_ENDPOINTS = {
             key: "METADATA-save-media-metadata-parent",
             methods: ["POST"],
             endpoint: "/api/v1/metadata/parent",
+        },
+        /**
+         *  @description
+         *  Route clears provider metadata cache.
+         *  Deletes persisted TMDB/Jikan/AniList episode & media detail caches (all
+         *  language variants) so the next scan re-fetches them — e.g. after changing
+         *  the metadata language — and clears the in-memory metadata caches.
+         *  Migration markers and raw TMDB API responses are preserved.
+         */
+        ClearMetadataCache: {
+            key: "METADATA-clear-metadata-cache",
+            methods: ["DELETE"],
+            endpoint: "/api/v1/metadata/cache",
         },
         /**
          *  @description
@@ -940,6 +982,11 @@ export const API_ENDPOINTS = {
             methods: ["POST"],
             endpoint: "/api/v1/status/home-items",
         },
+        Shutdown: {
+            key: "STATUS-shutdown",
+            methods: ["POST"],
+            endpoint: "/api/v1/shutdown",
+        },
     },
     SYSTEM: {
         BackupDatabase: {
@@ -986,8 +1033,8 @@ export const API_ENDPOINTS = {
     TMDB: {
         /**
          *  @description
-         *  Route search TMDB for anime/TV show metadata.
-         *  Searches TMDB for TV shows matching the query. Requires TMDB bearer token in the request body.
+         *  Route search TMDB (or Jikan fallback) for anime/TV show metadata.
+         *  Searches TMDB for TV shows matching the query, falling back to Jikan if no TMDB API key exists.
          */
         TMDBSearch: {
             key: "TMDB-t-m-d-b-search",
@@ -996,8 +1043,8 @@ export const API_ENDPOINTS = {
         },
         /**
          *  @description
-         *  Route get TMDB TV show details and alternative titles.
-         *  Returns detailed metadata and alternative titles for a TMDB TV show.
+         *  Route get TMDB (or Jikan) anime details and alternative titles.
+         *  Returns detailed metadata and alternative titles for a show.
          */
         TMDBGetDetails: {
             key: "TMDB-t-m-d-b-get-details",
@@ -1006,8 +1053,8 @@ export const API_ENDPOINTS = {
         },
         /**
          *  @description
-         *  Route manually assign a TMDB ID to a set of local files.
-         *  Fetches full TMDB details, upserts LibraryMedia, and updates the local files.
+         *  Route manually assign a metadata ID to a set of local files.
+         *  Fetches full details from TMDB or Jikan, upserts LibraryMedia, and updates local files.
          */
         TMDBAssign: {
             key: "TMDB-t-m-d-b-assign",

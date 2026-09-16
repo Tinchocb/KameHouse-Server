@@ -11,17 +11,31 @@ import type { SagaDTO, PremiumEpisode } from "@/api/types/series.types"
 // without circular dependency issues.
 
 /**
- * Un episodio sin sagaId no coincide con ninguna pestaña y desaparece de la
- * interfaz, así que cuando el número cae fuera de todos los rangos (episodios
- * extra, specials mal numerados, rangos desactualizados) lo adjuntamos a la
- * saga más cercana en vez de dejarlo huérfano.
+ * Fallback para episodios que NO tienen sagaId asignado en el escaneo del servidor.
+ * El servidor asigna sagaId usando GetDragonBallSagas (sin sub-sagas) durante el escaneo.
+ * Esta función usa las sagas de la UI (GetDragonBallSagaInfo, con sub-sagas) que pueden
+ * tener rangos diferentes, por eso solo debe usarse como fallback para episodios huérfanos
+ * (local files, specials mal numerados, rangos desactualizados).
  */
-export function resolveSagaId(epNum: number, sagas: SagaDTO[] | undefined): string | undefined {
+function resolveSagaId(epNum: number, sagas: SagaDTO[] | undefined): string | undefined {
     if (!sagas || !sagas.length) return undefined
 
+    // Match exacto: el episodio cae dentro del rango declarado de una saga.
     const exactMatch = sagas.find(s => epNum >= s.startEp && epNum <= s.endEp)
     if (exactMatch) return exactMatch.id
 
+    // Episodios especiales / OVAs / prólogos (ep 0 o negativos): van al primer saga.
+    // No tiene sentido buscar "la saga más cercana" cuando el número está por debajo
+    // del inicio de cualquier saga definida.
+    if (epNum <= 0) return sagas[0].id
+
+    // Episodios más allá del final de la última saga (rangos desactualizados,
+    // episodios extra al cierre de la serie): van al último saga.
+    const lastSaga = sagas[sagas.length - 1]
+    if (epNum > lastSaga.endEp) return lastSaga.id
+
+    // Episodios que caen en gaps intermedios entre sagas: adjuntar a la saga
+    // anterior más cercana (la de mayor endEp que siga siendo <= epNum).
     let fallbackSaga: SagaDTO | undefined
     for (const saga of sagas) {
         if (saga.startEp <= epNum) {
@@ -30,7 +44,6 @@ export function resolveSagaId(epNum: number, sagas: SagaDTO[] | undefined): stri
             }
         }
     }
-    // Por debajo del inicio de la primera saga: cae en la primera.
     return (fallbackSaga ?? sagas[0]).id
 }
 
@@ -73,26 +86,49 @@ export function useSeriesData({
     libraryCollection,
 }: UseSeriesDataInput) {
     // ── Episodes derived from API or local files ──────────────────────────────
+    // Solo se muestran episodios detectados localmente (con archivo). Los
+    // episodios del provider sin archivo (mock/remotos) se ocultan para no
+    // mostrar tarjetas vacías con sinopsis repetida.
     const computedEpisodes = useMemo<Anime_Episode[]>(() => {
         if (!entry) return []
 
+        const hasLocalFile = (ep: Anime_Episode): boolean => {
+            if (ep.isDownloaded || ep.localFile?.path) return true
+            return !!resolveLocalFileForEpisode(ep, entry.localFiles)
+        }
+
         if (entry.episodes && entry.episodes.length > 0) {
-            return entry.episodes
+            const withSaga = entry.episodes
                 .filter(ep => ep && typeof ep.episodeNumber === "number")
                 .map(ep => {
                     const epNum = ep.absoluteEpisodeNumber || ep.episodeNumber
-                    const sagaId = resolveSagaId(epNum, sagas)
+                    // Prefer scan-time sagaId from API (assigned by GetDragonBallSagas during library scan)
+                    // Only fall back to UI-time resolution if episode has no sagaId
+                    const sagaId = ep.sagaId ?? resolveSagaId(epNum, sagas)
                     return sagaId ? { ...ep, sagaId } : ep
                 })
-                .sort(
+
+            const onlyFound = withSaga.filter(hasLocalFile)
+            if (onlyFound.length > 0) {
+                return onlyFound.sort(
                     (a, b) =>
                         (a.absoluteEpisodeNumber || a.episodeNumber) -
                         (b.absoluteEpisodeNumber || b.episodeNumber)
                 )
+            }
+            // Si el provider trae todo no-descargado, caer a archivos reales.
+            // Si tampoco hay match, retorna [] y la UI muestra aviso para agregar.
         }
 
         if (entry.localFiles && entry.localFiles.length > 0) {
             const epMap = new Map<number, Anime_Episode>()
+
+            // Determine watched status from continuity data (last played episode with high progress)
+            const continuityEpNum = continuityData?.item?.episodeNumber
+            const continuityProgress = continuityData?.item?.duration
+                ? continuityData.item.currentTime / continuityData.item.duration
+                : 0
+            const isContinuityWatched = continuityEpNum != null && continuityProgress > 0.9
 
             entry.localFiles.forEach(lf => {
                 const parsedEp = lf.parsedInfo?.episode || lf.metadata?.episode
@@ -101,12 +137,14 @@ export function useSeriesData({
 
                 if (!epMap.has(epNum)) {
                     const sagaId = resolveSagaId(epNum, sagas)
+                    // Mark as watched if this is the continuity episode with >90% progress
+                    const watched = isContinuityWatched && epNum === continuityEpNum
                     epMap.set(epNum, {
                         episodeNumber: epNum,
                         absoluteEpisodeNumber: epNum,
                         episodeTitle: lf.name,
                         displayTitle: lf.name,
-                        watched: false,
+                        watched,
                         sagaId,
                         type: "main",
                         progressNumber: epNum,
@@ -185,6 +223,22 @@ export function useSeriesData({
         return { watched, total, percent: Math.round((watched / total) * 100) }
     }, [sagaEpisodes])
 
+    const sagasProgressMap = useMemo(() => {
+        if (!computedEpisodes || !sagas?.length) return {}
+        const map: Record<string, { watched: number; total: number; percent: number }> = {}
+        for (const saga of sagas) {
+            const eps = computedEpisodes.filter(ep => ep.sagaId === saga.id)
+            if (eps.length === 0) {
+                map[saga.id] = { watched: 0, total: 0, percent: 0 }
+            } else {
+                const watched = eps.filter(ep => ep.watched).length
+                const total = eps.length
+                map[saga.id] = { watched, total, percent: Math.round((watched / total) * 100) }
+            }
+        }
+        return map
+    }, [computedEpisodes, sagas])
+
     const fillerStats = useMemo(() => {
         if (sagaEpisodes.length === 0) return { filler: 0, total: 0, percent: 0 }
         let fillerCount = 0
@@ -232,6 +286,8 @@ export function useSeriesData({
         return filtered.map(ep => {
             const epNum = ep.absoluteEpisodeNumber || ep.episodeNumber
             const lf = ep.localFile || lfMap.get(ep.absoluteEpisodeNumber || ep.episodeNumber) || lfMap.get(ep.episodeNumber)
+            // Seguridad: si no hay archivo local, no es reproducible → ocultar.
+            if (!lf?.path && !ep.localFile?.path && !ep.isDownloaded) return null
 
             const localizedTitle = getDragonBallSpanishTitle(tmdbId, epNum)
             const resolvedTitle =
@@ -262,20 +318,22 @@ export function useSeriesData({
             const defSaga = dbSagaDefs?.find(s => s.id === ep.sagaId || (epNum >= s.startEp && epNum <= s.endEp))
             const defSubSaga = defSaga?.subSagas?.find(ss => epNum >= ss.startEp && epNum <= ss.endEp)
 
+            const artworkFallback =
+                defSubSaga?.image ||
+                defSaga?.image ||
+                currentSubSaga?.image ||
+                (currentSaga as { image?: string } | undefined)?.image ||
+                heroBackdrop ||
+                entry?.media?.bannerImage ||
+                entry?.media?.posterImage ||
+                ""
+
             let resolvedThumbnail = ep.episodeMetadata?.image || ""
             if (!resolvedThumbnail && lf?.path) {
                 resolvedThumbnail = `${serverBase}/api/v1/video-thumbnail?path=${encodeURIComponent(lf.path)}`
             }
             if (!resolvedThumbnail) {
-                resolvedThumbnail =
-                    defSubSaga?.image ||
-                    defSaga?.image ||
-                    currentSubSaga?.image ||
-                    (currentSaga as { image?: string } | undefined)?.image ||
-                    heroBackdrop ||
-                    entry?.media?.bannerImage ||
-                    entry?.media?.posterImage ||
-                    ""
+                resolvedThumbnail = artworkFallback
             }
 
             return {
@@ -284,6 +342,7 @@ export function useSeriesData({
                 number: epNum,
                 description: ep.episodeMetadata?.summary || ep.episodeMetadata?.overview || "",
                 thumbnailUrl: resolvedThumbnail,
+                fallbackThumbnailUrl: resolvedThumbnail !== artworkFallback ? artworkFallback : undefined,
                 episodeType: (ep.episodeMetadata?.isFiller ? "Filler" : (lf?.metadata?.episodeType || "Canon")) as PremiumEpisode["episodeType"],
                 isWatched: ep.watched,
                 duration: durationMinutes,
@@ -296,8 +355,8 @@ export function useSeriesData({
                 sagaId: ep.sagaId,
                 sagaName: sagas?.find(s => s.id === ep.sagaId)?.name,
             } as PremiumEpisode
-        })
-    }, [computedEpisodes, sagas, activeSagaId, entry?.localFiles, entry?.media, heroBackdrop, dbSagaDefs])
+        }).filter((ep): ep is PremiumEpisode => ep !== null)
+    }, [computedEpisodes, sagas, activeSagaId, entry?.localFiles, entry?.media, heroBackdrop, dbSagaDefs, lfMap])
 
     return {
         computedEpisodes,
@@ -307,6 +366,7 @@ export function useSeriesData({
         resumeInfo,
         sagaEpisodes,
         sagaProgress,
+        sagasProgressMap,
         fillerStats,
         episodeViewModels,
     }

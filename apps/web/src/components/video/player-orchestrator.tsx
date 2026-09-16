@@ -11,6 +11,7 @@ import type { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
 import type { VideoPlayerProps } from "./player"
 import { useGetSettings } from "@/api/hooks/settings.hooks"
 import { useAppStore } from "@/lib/store"
+import { toast } from "sonner"
 
 export interface Chapter {
     startTime: number
@@ -21,12 +22,6 @@ export interface Chapter {
 
 export interface OrchestratorProps extends VideoPlayerProps {
     playableUrl?: string
-    backendTracks?: {
-        audioTracks: AudioTrack[]
-        subtitleTracks: SubtitleTrack[]
-        chapters: Chapter[]
-        fontUrls?: string[]
-    }
 }
 
 export function VideoPlayerOrchestrator(props: OrchestratorProps) {
@@ -49,11 +44,13 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
 
     const currentStreamKey = `${props.streamUrl}_${props.episodeNumber}_${props.streamType}`
     const [prevStreamKey, setPrevStreamKey] = useState(currentStreamKey)
-    if (currentStreamKey !== prevStreamKey) {
-        setPrevStreamKey(currentStreamKey)
-        setForceTranscode(false)
-        setStreamType(props.streamType || "direct")
-    }
+    useEffect(() => {
+        if (currentStreamKey !== prevStreamKey) {
+            setPrevStreamKey(currentStreamKey)
+            setForceTranscode(false)
+            setStreamType(props.streamType || "direct")
+        }
+    }, [currentStreamKey, prevStreamKey, props.streamType])
 
     const isLocal = !props.isExternalStream && Boolean(props.streamUrl) && streamType !== "online"
 
@@ -90,18 +87,21 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
                 channels: a.channels,
                 default: a.isDefault
             })) || [],
-            subtitleTracks: data.mediaInfo.subtitles?.map((s: Subtitle, i: number) => ({
-                index: s.index ?? i,
-                language: s.language ?? "und",
-                title: s.title || s.language || `Subtitle ${i + 1}`,
-                codec: s.codec,
-                default: s.isDefault,
-                forced: s.isForced,
-                isImageBased: s.isImageBased ?? false,
-                // Image-based tracks (PGS/DVB) have no extractable text URL;
-                // they require burn-in during transcode. Only set url for text-based subs.
-                url: s.isImageBased ? undefined : `/api/v1/mediastream/subtitles?path=${encodeURIComponent(props.streamUrl)}&trackIndex=${s.index ?? i}&clientId=${clientId}`
-            })) || [],
+            subtitleTracks: data.mediaInfo.subtitles?.map((s: Subtitle, i: number) => {
+                const trackIdx = s.index ?? i
+                const isImageBased = s.isImageBased ?? false
+                const endpoint = isImageBased ? "/api/v1/mediastream/subs/pgs" : "/api/v1/mediastream/subtitles"
+                return {
+                    index: trackIdx,
+                    language: s.language ?? "und",
+                    title: s.title || s.language || `Subtitle ${i + 1}`,
+                    codec: s.codec,
+                    default: s.isDefault,
+                    forced: s.isForced,
+                    isImageBased,
+                    url: `${endpoint}?path=${encodeURIComponent(props.streamUrl)}&trackIndex=${trackIdx}&clientId=${clientId}`
+                }
+            }) || [],
 
             chapters: data.mediaInfo.chapters?.map((c: { startTime?: number; endTime?: number; name?: string; type?: string }) => ({
                 startTime: c.startTime || 0,
@@ -122,12 +122,19 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
     useEffect(() => {
         if (activeStreamType === "direct" && data?.mediaInfo?.audios && data.mediaInfo.audios.length > 1 && transcodeEnabled && isLocal) {
             const timer = setTimeout(() => {
-                preloadTranscode({
-                    path: props.streamUrl || "",
-                    streamType: "transcode",
-                    audioStreamIndex: 0,
-                    preferredAudioLang: useAppStore.getState().preferredAudioLang || ""
-                })
+                try {
+                    preloadTranscode(
+                        {
+                            path: props.streamUrl || "",
+                            streamType: "transcode",
+                            audioStreamIndex: 0,
+                            preferredAudioLang: useAppStore.getState().preferredAudioLang || ""
+                        },
+                        { onError: (err) => console.warn("[orchestrator] preload warm-up failed (silencioso):", err) }
+                    )
+                } catch (err) {
+                    console.warn("[orchestrator] preloadTranscode error:", err)
+                }
             }, 5000)
             return () => clearTimeout(timer)
         }
@@ -137,8 +144,10 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
         if (transcodeEnabled) {
             console.info("[orchestrator] Direct play failed — falling back to transcode")
             requestStreamType("transcode")
+            return true
         } else {
             console.warn("[orchestrator] Direct play failed but transcode is disabled — showing error")
+            return false
         }
     }, [transcodeEnabled, requestStreamType])
 
@@ -165,18 +174,26 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
     })
 
     const handleOpenInMpv = useCallback(async () => {
-        const current = core.state.currentTime > 5
-            ? core.state.currentTime
-            : (core.state.resumeTime || props.initialProgressSeconds || 0)
-        core.domElements.videoElement.current?.pause()
-        await mpv.play(current)
+        try {
+            const current = core.state.currentTime > 5
+                ? core.state.currentTime
+                : (core.state.resumeTime || props.initialProgressSeconds || 0)
+            core.domElements.videoElement.current?.pause()
+            const success = await mpv.play(current)
+            if (!success) {
+                toast.error("No se pudo iniciar el reproductor MPV externo")
+            }
+        } catch (err) {
+            console.error("[MPV] Error opening external player:", err)
+            toast.error("Error al abrir reproductor MPV")
+        }
     }, [mpv, core, props.initialProgressSeconds])
 
     const canUseMpv = mpv.isDesktop && mpv.isAvailable && isLocal
 
     const episodeSources = useMemo<EpisodeSource[]>(() => [
         {
-            title: "Original",
+            title: "Direct Play",
             quality: "Original",
             url: props.streamUrl,
             type: "direct",
@@ -185,7 +202,7 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
         },
         {
             title: "Transcodificado",
-            quality: "Auto",
+            quality: "Auto HLS",
             url: props.streamUrl,
             type: "transcode",
             path: props.streamUrl,
@@ -193,11 +210,13 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
         }
     ], [props.streamUrl])
 
-    const handleSourceSwitch = (source: EpisodeSource) => {
+    const handleSourceSwitch = useCallback((source: EpisodeSource) => {
         if (source.type) {
             requestStreamType(source.type)
         }
-    }
+    }, [requestStreamType])
+
+    const handleMpvStop = useCallback(() => mpv.stop(), [mpv])
 
     return (
         <>
@@ -205,7 +224,7 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
             <MpvOverlay
                 title={props.title}
                 episodeLabel={props.episodeLabel}
-                onStop={() => mpv.stop()}
+                onStop={handleMpvStop}
             />
         )}
         <PlayerUI
@@ -219,7 +238,6 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
             episodeSources={episodeSources}
             onSourceSwitch={handleSourceSwitch}
             core={core}
-            clientId={clientId}
             mediaId={props.mediaId}
             episodeNumber={props.episodeNumber}
             malId={props.malId}

@@ -1,5 +1,4 @@
-import { Icons } from "@/components/ui/icons"
-import { hiddenInputStyles } from "@/components/ui/input"
+import { IconUiAlertCircle } from "@/components/ui/icons";
 import { Popover } from "@/components/ui/popover"
 import * as SwitchPrimitive from "@radix-ui/react-switch"
 import { cva, VariantProps } from "class-variance-authority"
@@ -7,6 +6,10 @@ import * as React from "react"
 
 import { BasicField, BasicFieldOptions, extractBasicFieldProps } from "../basic-field"
 import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
+
+const hiddenInputStyles = cn(
+    "appearance-none absolute bottom-0 border-0 w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap [clip:rect(0px,0px,0px,0px)] [overflow-wrap:normal]"
+)
 
 /* -------------------------------------------------------------------------------------------------
  * Anatomy
@@ -16,7 +19,7 @@ export const SwitchAnatomy = defineStyleAnatomy({
         "UI-Switch__root",
         "peer inline-flex shrink-0 cursor-pointer items-center rounded-full border border-outline-variant transition-colors",
         "disabled:cursor-not-allowed data-[disabled=true]:opacity-50",
-        "outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1",
+        "outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-1 focus-visible:ring-offset-background",
         "data-[state=unchecked]:bg-surface-container", // Unchecked
         "data-[state=unchecked]:hover:bg-surface-container-high", // Unchecked hover
         "data-[state=checked]:bg-brand-accent", // Checked
@@ -49,7 +52,7 @@ export const SwitchAnatomy = defineStyleAnatomy({
     }),
     thumb: cva([
         "UI-Switch__thumb",
-        "pointer-events-none block rounded-full data-[state=checked]:bg-white shadow-lg ring-0 transition-transform",
+        "pointer-events-none block rounded-full data-[state=checked]:bg-white shadow-lg ring-0 transition-transform duration-200 ease-bounce-spring",
         "data-[state=unchecked]:translate-x-1 data-[state=unchecked]:bg-white/50",
     ], {
         variants: {
@@ -140,7 +143,7 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>((props, r
             id={basicFieldProps.id}
             fieldClass={cn(
                 "w-fit",
-                side === "right" && "w-full group/switch transition-all duration-base hover:bg-[color:color-mix(in_srgb,var(--md-sys-color-surface-container)_50%,transparent)] rounded-[--radius] p-2 w-[calc(100%_+_1rem)] -ml-2 border border-transparent hover:border-outline-variant",
+                side === "right" && "w-full group/switch transition-all duration-base hover:bg-[color:color-mix(in_srgb,var(--md-sys-color-surface-container)_50%,transparent)] rounded-lg p-2 border border-transparent hover:border-outline-variant",
                 basicFieldProps.fieldClass,
             )}
             fieldHelpTextClass={cn("")}
@@ -176,7 +179,7 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>((props, r
                     </label>
                     {moreHelp && <Popover
                         className="text-sm"
-                        trigger={<span><Icons.ui.alertCircle className="transition-opacity opacity-45 hover:opacity-90" /></span>}
+                        trigger={<span><IconUiAlertCircle className="transition-opacity opacity-45 hover:opacity-90" /></span>}
                     >
                         {moreHelp}
                     </Popover>}

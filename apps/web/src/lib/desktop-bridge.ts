@@ -4,10 +4,33 @@ import { listen } from '@tauri-apps/api/event';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { check } from '@tauri-apps/plugin-updater';
 
-const appWindow = getCurrentWindow();
+const getAppWindow = () => {
+  if (isTauri()) {
+    try {
+      return getCurrentWindow();
+    } catch {
+      return null;
+    }
+  }
+  return null;
+};
+
+const getPlatform = (): NodeJS.Platform => {
+  if (typeof process !== 'undefined' && process.platform) {
+    return process.platform;
+  }
+  if (typeof navigator !== 'undefined') {
+    const ua = navigator.userAgent.toLowerCase();
+    if (ua.includes('win')) return 'win32';
+    if (ua.includes('mac')) return 'darwin';
+    if (ua.includes('linux')) return 'linux';
+  }
+  return 'win32';
+};
+
 let pendingUpdate: Awaited<ReturnType<typeof check>> | null = null;
 
-export interface ElectronAPI {
+interface DesktopAPI {
   window: {
     minimize: () => void;
     maximize: () => void;
@@ -22,7 +45,6 @@ export interface ElectronAPI {
     hide: () => void;
     show: () => void;
     isVisible: () => Promise<boolean>;
-    setTitleBarStyle: (style: string) => void;
     getCurrentWindow: () => Promise<string>;
     isMainWindow: () => Promise<boolean>;
   };
@@ -33,8 +55,6 @@ export interface ElectronAPI {
     ready: () => void;
   };
   on: (channel: string, callback: (...args: unknown[]) => void) => () => void;
-  emit: (channel: string, data?: unknown) => void;
-  send: (channel: string, ...args: unknown[]) => void;
   platform: NodeJS.Platform;
   shell: {
     open: (url: string) => Promise<void>;
@@ -56,7 +76,7 @@ export interface ElectronAPI {
   };
 }
 
-export interface MpvPlayRequest {
+interface MpvPlayRequest {
   /** Absolute file path (or URL) that mpv will open. */
   path: string;
   title?: string;
@@ -77,7 +97,7 @@ export interface DesktopSettings {
   mpvPath?: string | null;
 }
 
-export interface WindowBounds {
+interface WindowBounds {
   x: number;
   y: number;
   width: number;
@@ -96,111 +116,75 @@ const isTauri = () => {
   }
 };
 
-const isElectron = () => {
-  try {
-    return typeof window !== 'undefined' && !!window.electron && !isTauri();
-  } catch {
-    return false;
-  }
-};
-
-function createElectronBridge(): ElectronAPI {
-  const unsubscribeMap = new Map<string, () => Promise<void>>();
-
+function createTauriBridge(): DesktopAPI {
   return {
     window: {
       minimize: () => {
-        if (isTauri()) {
-          appWindow.minimize().catch(console.error);
-        }
+        getAppWindow()?.minimize().catch(console.error);
       },
       maximize: () => {
-        if (isTauri()) {
-          appWindow.maximize().catch(console.error);
-        }
+        getAppWindow()?.maximize().catch(console.error);
       },
       close: () => {
-        if (isTauri()) {
-          appWindow.close().catch(console.error);
-        }
+        getAppWindow()?.close().catch(console.error);
       },
       isMaximized: async () => {
-        if (isTauri()) {
-          return await appWindow.isMaximized();
-        }
-        return false;
+        const win = getAppWindow();
+        return win ? await win.isMaximized() : false;
       },
       isMinimizable: async () => {
-        if (isTauri()) {
-          return await appWindow.isMinimizable();
-        }
-        return false;
+        const win = getAppWindow();
+        return win ? await win.isMinimizable() : false;
       },
       isMaximizable: async () => {
-        if (isTauri()) {
-          return await appWindow.isMaximizable();
-        }
-        return false;
+        const win = getAppWindow();
+        return win ? await win.isMaximizable() : false;
       },
       isClosable: async () => {
-        if (isTauri()) {
-          return await appWindow.isClosable();
-        }
-        return false;
+        const win = getAppWindow();
+        return win ? await win.isClosable() : false;
       },
       isFullscreen: async () => {
-        if (isTauri()) {
-          return await appWindow.isFullscreen();
-        }
-        return false;
+        const win = getAppWindow();
+        return win ? await win.isFullscreen() : false;
       },
       setFullscreen: (fullscreen: boolean) => {
-        if (isTauri()) {
-          appWindow.setFullscreen(fullscreen).catch(console.error);
-        }
+        getAppWindow()?.setFullscreen(fullscreen).catch(console.error);
       },
       toggleMaximize: async () => {
-        if (isTauri()) {
-          const maximized = await appWindow.isMaximized();
-          if (maximized) {
-            await appWindow.unmaximize();
-          } else {
-            await appWindow.maximize();
+        try {
+          const win = getAppWindow();
+          if (win) {
+            const maximized = await win.isMaximized();
+            if (maximized) {
+              await win.unmaximize();
+            } else {
+              await win.maximize();
+            }
           }
+        } catch (e) {
+          console.warn('[Bridge] toggleMaximize failed:', e);
         }
       },
       hide: () => {
-        if (isTauri()) {
-          appWindow.hide().catch(console.error);
-        }
+        getAppWindow()?.hide().catch(console.error);
       },
       show: () => {
-        if (isTauri()) {
-          appWindow.show().catch(console.error);
-          appWindow.setFocus().catch(console.error);
+        const win = getAppWindow();
+        if (win) {
+          win.show().catch(console.error);
+          win.setFocus().catch(console.error);
         }
       },
       isVisible: async () => {
-        if (isTauri()) {
-          return await appWindow.isVisible();
-        }
-        return false;
-      },
-      setTitleBarStyle: (_style: string) => {
-        // Not applicable in Tauri
+        const win = getAppWindow();
+        return win ? await win.isVisible() : true;
       },
       getCurrentWindow: async () => {
-        if (isTauri()) {
-          const label = appWindow.label;
-          return label === 'main' ? 'main' : label;
-        }
-        return 'unknown';
+        return getAppWindow()?.label || 'main';
       },
       isMainWindow: async () => {
-        if (isTauri()) {
-          return appWindow.label === 'main';
-        }
-        return false;
+        return (getAppWindow()?.label || 'main') === 'main';
       },
     },
     startup: {
@@ -211,60 +195,33 @@ function createElectronBridge(): ElectronAPI {
       },
     },
     on: (channel: string, callback: (...args: unknown[]) => void) => {
-      if (isTauri()) {
-        let isCancelled = false;
-        let unlistenFn: (() => void) | null = null;
-        listen(channel, (event) => {
-          if (!isCancelled) callback(event.payload);
-        }).then((unsub) => {
-          if (isCancelled) {
-            unsub();
-          } else {
-            unlistenFn = unsub;
-          }
-        }).catch(console.error);
+      // In browser mode, we don't have IPC
+      if (!isTauri()) {
+        return () => {};
+      }
 
-        return () => {
-          isCancelled = true;
-          if (unlistenFn) {
-            unlistenFn();
-            unlistenFn = null;
-          }
-        };
-      }
-      return () => {};
-    },
-    emit: (_channel: string, _data?: unknown) => {
-      // In Tauri, we use listen/emit from the frontend directly
-      // This is for compatibility with electron.emit() calls
-    },
-    send: (channel: string, ..._args: unknown[]) => {
-      if (isTauri()) {
-        switch (channel) {
-          case 'restart-server':
-            invoke('restart_server').catch(console.error);
-            break;
-          case 'kill-server':
-            invoke('kill_server').catch(console.error);
-            break;
-          case 'macos-activation-policy-accessory':
-            // Not applicable in Tauri
-            break;
-          case 'macos-activation-policy-regular':
-            // Not applicable in Tauri
-            break;
-          case 'quit-app':
-            invoke('kill_server').then(() => {
-              // App will exit via sidecar shutdown
-            }).catch(console.error);
-            break;
-          case 'restart-app':
-            // Not directly supported, would need custom handling
-            break;
+      // Convert IPC channels to Tauri events
+      let unlisten: (() => void) | undefined;
+      let isCancelled = false;
+      
+      listen(channel, (event) => {
+        callback(event.payload);
+      }).then((unlistenFn) => {
+        if (isCancelled) {
+          unlistenFn();
+        } else {
+          unlisten = unlistenFn;
         }
-      }
+      }).catch(console.error);
+
+      return () => {
+        isCancelled = true;
+        if (unlisten) {
+          unlisten();
+        }
+      };
     },
-    platform: process.platform,
+    platform: getPlatform(),
     localServer: {
       getPort: async () => {
         if (isTauri()) {
@@ -296,6 +253,15 @@ function createElectronBridge(): ElectronAPI {
             return true;
           } catch (e) {
             console.error('[Bridge] Clipboard write failed:', e);
+            return false;
+          }
+        }
+        if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+          try {
+            await navigator.clipboard.writeText(text);
+            return true;
+          } catch (e) {
+            console.error('[Bridge] Fallback clipboard write failed:', e);
             return false;
           }
         }
@@ -357,7 +323,7 @@ function createElectronBridge(): ElectronAPI {
               minimizeToTray: true,
               openInBackground: false,
               openAtLaunch: false,
-              updateChannel: 'github',
+              updateChannel: 'kamehouse',
               windowBounds: null,
               windowMaximized: true,
               disableHardwareAcceleration: false,
@@ -369,7 +335,7 @@ function createElectronBridge(): ElectronAPI {
           minimizeToTray: true,
           openInBackground: false,
           openAtLaunch: false,
-          updateChannel: 'github',
+          updateChannel: 'kamehouse',
           windowBounds: null,
           windowMaximized: true,
           disableHardwareAcceleration: false,
@@ -388,6 +354,7 @@ function createElectronBridge(): ElectronAPI {
             if (settings.windowMaximized !== undefined) updates.windowMaximized = settings.windowMaximized;
             if (settings.disableHardwareAcceleration !== undefined) updates.disableHardwareAcceleration = settings.disableHardwareAcceleration;
             if (settings.enableAggressiveGpuFlags !== undefined) updates.enableAggressiveGpuFlags = settings.enableAggressiveGpuFlags;
+            if (settings.mpvPath !== undefined) updates.mpvPath = settings.mpvPath;
             return await invoke('set_desktop_settings', { updates });
           } catch (e) {
             console.error('[Bridge] Set settings failed:', e);
@@ -427,21 +394,14 @@ function createElectronBridge(): ElectronAPI {
 }
 
 if (typeof window !== 'undefined') {
+  const bridge = createTauriBridge();
+  window.desktop = bridge;
+
   if (isTauri()) {
     window.__isTauriDesktop__ = true;
-    window.__isElectronDesktop__ = false;
-    window.electron = createElectronBridge();
     console.log('[Desktop Bridge] Tauri bridge initialized');
-  } else if (isElectron()) {
-    window.__isElectronDesktop__ = true;
-    window.__isTauriDesktop__ = false;
-    console.log('[Desktop Bridge] Running in Electron (no bridge needed)');
   } else {
-    window.__isElectronDesktop__ = false;
     window.__isTauriDesktop__ = false;
-    window.electron = createElectronBridge();
     console.log('[Desktop Bridge] Running in browser (mock bridge)');
   }
 }
-
-export { isTauri, isElectron };

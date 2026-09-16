@@ -10,7 +10,6 @@ interface CharacterAvatarProps {
     name: string
     avatarUrl?: string | null
     roleTag?: string | null
-    size?: "sm" | "md"
     className?: string
     onSelect?: (name: string) => void
 }
@@ -23,7 +22,7 @@ function roleToneClass(roleTag?: string | null): string {
     return "text-on-surface-variant"
 }
 
-export function CharacterAvatar({ name, avatarUrl, roleTag, size = "md", className, onSelect }: CharacterAvatarProps) {
+export function CharacterAvatar({ name, avatarUrl, roleTag, className, onSelect }: CharacterAvatarProps) {
     const handleSelect = () => onSelect?.(name)
 
     return (
@@ -47,10 +46,9 @@ export function CharacterAvatar({ name, avatarUrl, roleTag, size = "md", classNa
         >
             <div
                 className={cn(
-                    "rounded-xl overflow-hidden border border-white/10 relative shadow-card bg-surface-container-low transform-gpu",
-                    "group-hover:border-brand-accent/60 group-hover:shadow-brand-accent group-hover:-translate-y-1",
-                    "transition-all duration-slower ease-expo-out",
-                    size === "md" ? "w-24 h-24" : "w-20 h-20"
+                    "w-24 h-24 rounded-2xl overflow-hidden border border-white/20 border-t-white/40 border-b-white/10 relative shadow-[inset_0_1px_1px_rgba(255,255,255,0.25),0_8px_20px_rgba(0,0,0,0.6)] bg-zinc-950/80 backdrop-blur-overlay-xl transform-gpu",
+                    "group-hover:border-white/50 group-hover:shadow-[0_0_20px_rgba(255,255,255,0.25)] group-hover:-translate-y-1",
+                    "transition-[border-color,box-shadow,transform] duration-300 ease-out"
                 )}
             >
                 {avatarUrl && (
@@ -58,7 +56,7 @@ export function CharacterAvatar({ name, avatarUrl, roleTag, size = "md", classNa
                         src={avatarUrl}
                         alt={name}
                         loading="lazy"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-slower ease-expo-out transform-gpu"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ease-out transform-gpu"
                     />
                 )}
                 <div

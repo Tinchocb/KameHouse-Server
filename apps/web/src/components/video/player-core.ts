@@ -21,6 +21,7 @@ import type { PlayerCoreProps, PlayerCore, PlayerStats } from "./player-core.typ
 
 import { usePlayerSkip } from "./usePlayerSkip"
 import { __DEV_SERVER_PORT } from "@/lib/server/config"
+import { toast } from "sonner"
 
 
 export type { PlayerStats, PlayerCoreProps, PlayerCore }
@@ -178,6 +179,14 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const [isBuffering, setIsBuffering] = useState(false)
     const [isSeeking, setIsSeeking] = useState(false)
     const [flash, setFlash] = useState<"play" | "pause" | null>(null)
+    const [retryNonce, setRetryNonce] = useState(0)
+
+    const retryStream = useCallback(() => {
+        setStatus("loading")
+        setIsBuffering(true)
+        setErrorMsg("")
+        setRetryNonce(n => n + 1)
+    }, [])
 
     const [audioTracks, setAudioTracks] = useState<AudioTrack[]>([])
     const [activeAudioIndex, setActiveAudioIndex] = useState(0)
@@ -284,7 +293,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     // El setter escribe en el mapa por serie cuando hay mediaId, así el ajuste
     // queda recordado para esta serie sin pisar el de las demás.
     const aspectRatioPref = (mediaId && aspectRatioBySeries[mediaId]) || globalAspectRatioPref
-    const setAspectRatioPref = useCallback((ratio: "contain" | "fill" | "cover" | "16/9") => {
+    const setAspectRatioPref = useCallback((ratio: "contain" | "fill" | "cover" | "16/9" | "21/9") => {
         if (mediaId) {
             setAspectRatioForSeries(mediaId, ratio)
         } else {
@@ -295,18 +304,34 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         if (mediaId) setPreferredAudioTrackIndexMap(mediaId, index)
     }, [mediaId, setPreferredAudioTrackIndexMap])
 
-    // D3: Sync the <video> element volume with the persisted value on mount.
-    // We do this once after the video element is created so that it is in sync
-    // with the store from the very first frame without a visible flash.
-    const volumeSyncedRef = useRef(false)
+    // D3: last non-zero volume before a mute, so we can restore it on unmute.
+    const lastNonZeroVolumeRef = useRef(persistedVolume > 0 ? persistedVolume : 1)
+
+    // D3: Sync the <video> element volume with the persisted value.
+    // Antes era single-shot con volumeSyncedRef; si el <video> aún no existía
+    // (Hls montaje tardío) nunca sincronizaba, y cambios posteriores en
+    // settings (persistedVolume) no propagaban al elemento.
     useEffect(() => {
         const video = videoRef.current
-        if (!video || volumeSyncedRef.current) return
-        volumeSyncedRef.current = true
         const v = persistedVolume ?? 1
-        video.volume = v
+        if (video && Math.abs(video.volume - v) > 0.001) {
+            video.volume = v
+            video.muted = v === 0
+        }
         setVolume(v)
-    }, [videoRef, persistedVolume])
+        setIsMuted(v === 0)
+    }, [persistedVolume])
+    // Segundo pass cuando el <video> se monta después de resolverse HLS
+    useEffect(() => {
+        if (status !== "ready") return
+        const video = videoRef.current
+        if (!video) return
+        const v = persistedVolume ?? 1
+        if (Math.abs(video.volume - v) > 0.001) {
+            video.volume = v
+            video.muted = v === 0
+        }
+    }, [status, persistedVolume])
 
     const [showStats, setShowStats] = useState(false)
     const [statsData, setStatsData] = useState<PlayerStats | null>(null)
@@ -417,7 +442,14 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     useEffect(() => {
         const path = streamUrl || playableUrl
         if (!path || streamType !== "transcode") return
-        preloadMutate({ path, streamType: "transcode", audioStreamIndex: 0, preferredAudioLang })
+        try {
+            preloadMutate(
+                { path, streamType: "transcode", audioStreamIndex: 0, preferredAudioLang },
+                { onError: (err) => console.warn("[player-core] preload transcode failed (silencioso):", err) }
+            )
+        } catch (err) {
+            console.warn("[player-core] preloadMutate error:", err)
+        }
     }, [streamUrl, playableUrl, streamType, preferredAudioLang, preloadMutate])
 
     const { onProgress: onTrackingProgress, reset: resetTracking } = useAnimeTracking({
@@ -508,6 +540,8 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         setShowResume,
         setIsPlaying,
         onDirectPlayFailed,
+        setIsStreamSwitching,
+        retryNonce,
     })
 
     // JASSUB Subtitle renderer hook
@@ -951,10 +985,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         triggerControlsVisibility()
     }, [performSeek, triggerControlsVisibility])
 
-    // D3: last non-zero volume before a mute, so we can restore it on unmute.
-    const lastNonZeroVolumeRef = useRef(persistedVolume > 0 ? persistedVolume : 1)
-
-    const handleVolume = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleVolume = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const video = videoRef.current
         if (!video) return
         const val = parseFloat(e.target.value)
@@ -965,7 +996,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         // D3: persist and track last non-zero volume.
         setPlayerVolume(val)
         if (val > 0) lastNonZeroVolumeRef.current = val
-    }
+    }, [setPlayerVolume])
 
     const toggleMute = useCallback(() => {
         const video = videoRef.current
@@ -1013,17 +1044,44 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const takeScreenshot = useCallback(() => {
         const video = videoRef.current
         if (!video) return
-        const canvas = document.createElement("canvas")
-        canvas.width = video.videoWidth
-        canvas.height = video.videoHeight
-        const ctx = canvas.getContext("2d")
-        if (!ctx) return
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-        const dataUrl = canvas.toDataURL("image/png")
-        const link = document.createElement("a")
-        link.download = `kamehouse-cap-${mediaId || "video"}-${Date.now()}.png`
-        link.href = dataUrl
-        link.click()
+        try {
+            if (video.videoWidth === 0 || video.videoHeight === 0) {
+                toast.error("No hay frame disponible para capturar")
+                return
+            }
+            const canvas = document.createElement("canvas")
+            canvas.width = video.videoWidth
+            canvas.height = video.videoHeight
+            const ctx = canvas.getContext("2d")
+            if (!ctx) {
+                toast.error("No se pudo inicializar el canvas")
+                return
+            }
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+            let dataUrl: string
+            try {
+                dataUrl = canvas.toDataURL("image/png")
+            } catch (e) {
+                if (e instanceof DOMException && e.name === "SecurityError") {
+                    toast.error("No se puede capturar: video con origen cruzado sin CORS (canvas tainted)")
+                    console.warn("[player] takeScreenshot SecurityError (tainted canvas):", e)
+                    return
+                }
+                throw e
+            }
+            const link = document.createElement("a")
+            link.download = `kamehouse-cap-${mediaId || "video"}-${Date.now()}.png`
+            link.href = dataUrl
+            link.click()
+            toast.success("Captura guardada")
+        } catch (err) {
+            if (err instanceof DOMException && err.name === "SecurityError") {
+                toast.error("No se puede capturar: video tainted por CORS")
+            } else {
+                toast.error("Error al capturar pantalla")
+            }
+            console.error("[player] takeScreenshot failed:", err)
+        }
     }, [mediaId])
 
     const togglePip = useCallback(async () => {
@@ -1090,10 +1148,10 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     })
 
     useEffect(() => {
-        const el = window.electron
-        if (!el) return
+        const desktopApi = window.desktop
+        if (!desktopApi) return
 
-        const unsub = el.on("window:fullscreen", (...args: unknown[]) => {
+        const unsub = desktopApi.on("window:fullscreen", (...args: unknown[]) => {
             const isFs = args[0] as boolean
             setIsFullscreen(isFs)
             setGlobalFullscreen(isFs)
@@ -1218,78 +1276,95 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         }
     }, [playbackRatePref])
 
+    const handleTimeUpdateRef = useRef(handleTimeUpdate)
+    handleTimeUpdateRef.current = handleTimeUpdate
+
     // Force skip check when preferences change (including marathon mode toggle)
     useEffect(() => {
-        handleTimeUpdate()
-    }, [autoSkipIntroPref, autoSkipOutroPref, marathonMode, handleTimeUpdate])
+        handleTimeUpdateRef.current()
+    }, [autoSkipIntroPref, autoSkipOutroPref, marathonMode])
 
     const handleSetHlsLevel = useCallback((levelIndex: number) => {
-        if (hlsRef.current) {
-            hlsRef.current.currentLevel = levelIndex
+        const hls = hlsRef.current
+        if (!hls) return
+        try {
+            if (levelIndex === -1) {
+                // Auto: reactivar ABR asignando currentLevel / nextLevel a -1
+                hls.currentLevel = -1
+                hls.nextLevel = -1
+            } else {
+                hls.currentLevel = levelIndex
+                hls.nextLevel = levelIndex
+            }
             setActiveHlsLevel(levelIndex)
+        } catch (err) {
+            console.warn("[player-core] handleSetHlsLevel failed:", err)
         }
     }, [])
 
-    return {
-        domElements: {
-            videoElement: videoRef as React.RefObject<HTMLVideoElement>,
-            containerElement: containerRef as React.RefObject<HTMLDivElement>,
-            canvasElement: canvasRef as React.RefObject<HTMLCanvasElement>,
-            progressBarElement: progressBarRef as React.RefObject<HTMLDivElement>,
-            thumbElement: thumbRef as React.RefObject<HTMLDivElement>,
-            progressInputElement: progressInputRef as React.RefObject<HTMLInputElement>,
-            timeTextElement: timeTextRef as React.RefObject<HTMLSpanElement>,
+    const domElements = useMemo(() => ({
+        videoElement: videoRef as React.RefObject<HTMLVideoElement>,
+        containerElement: containerRef as React.RefObject<HTMLDivElement>,
+        canvasElement: canvasRef as React.RefObject<HTMLCanvasElement>,
+        progressBarElement: progressBarRef as React.RefObject<HTMLDivElement>,
+        thumbElement: thumbRef as React.RefObject<HTMLDivElement>,
+        progressInputElement: progressInputRef as React.RefObject<HTMLInputElement>,
+        timeTextElement: timeTextRef as React.RefObject<HTMLSpanElement>,
+    }), [])
+
+    const state = useMemo(() => ({
+        isPlaying, duration, volume, isMuted, isFullscreen, controlsVisible, status, isStreamSwitching, errorMsg, isBuffering, isSeeking, flash, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, hasNextEpisode, countdownSeconds, showCountdown, tvMode, audioTracks, activeAudioIndex, subtitleTracks, activeSubtitleIndex, isJassubLoading, isJassubActive, isPgsLoading, isPgsActive, isSettingsOpen, remainingProgress, showAutoSkipToast,
+        autoSkipIntro: autoSkipIntroPref,
+        autoSkipOutro: autoSkipOutroPref,
+        skipStepSeconds: skipStepSecondsPref,
+        playbackRate: playbackRatePref,
+        showHeatmap: showHeatmapPref,
+        aspectRatio: aspectRatioPref,
+        subtitleSize: subtitleSizePref,
+        loopEnabled: loopEnabledPref,
+        showStats,
+        statsData,
+        hlsLevels,
+        activeHlsLevel,
+        previewManager,
+        get currentTime() {
+            return videoRef.current?.currentTime || 0
         },
-        state: {
-            isPlaying, duration, volume, isMuted, isFullscreen, controlsVisible, status, isStreamSwitching, errorMsg, isBuffering, isSeeking, flash, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, hasNextEpisode, countdownSeconds, showCountdown, tvMode, audioTracks, activeAudioIndex, subtitleTracks, activeSubtitleIndex, isJassubLoading, isJassubActive, isPgsLoading, isPgsActive, isSettingsOpen, remainingProgress, showAutoSkipToast,
-            autoSkipIntro: autoSkipIntroPref,
-            autoSkipOutro: autoSkipOutroPref,
-            skipStepSeconds: skipStepSecondsPref,
-            playbackRate: playbackRatePref,
-            showHeatmap: showHeatmapPref,
-            aspectRatio: aspectRatioPref,
-            subtitleSize: subtitleSizePref,
-            loopEnabled: loopEnabledPref,
-            showStats,
-            statsData,
-            hlsLevels,
-            activeHlsLevel,
-            previewManager,
-            get currentTime() {
-                return videoRef.current?.currentTime || 0
-            },
-            showResume,
-            resumeTime,
-            autoDisableSubtitlesWhenDubbed,
-            ambientModeEnabled,
-            marathonMode,
-            skipTimesOp,
-            skipTimesEd,
-            chapters,
-            activeChapter,
-            absoluteLanUrl,
-            serverIPs,
-            serverPort,
-        },
-        actions: {
-            setIsPlaying, setDuration, setIsBuffering, setIsSeeking, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, handleSeekStart, handleSeekEnd, skipTime, skipOpening, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, toggleFullscreen, handleSkipIntro, undoSkip, handleTimeUpdate,
-            takeScreenshot, togglePip, changePlaybackRate, setShowStats,
-            setAutoSkipIntro: handleSetAutoSkipIntro,
-            setAutoSkipOutro: handleSetAutoSkipOutro,
-            setSkipStepSeconds: setSkipStepSecondsPref,
-            setHlsLevel: handleSetHlsLevel,
-            setShowHeatmap: setShowHeatmapPref,
-            setAspectRatio: setAspectRatioPref,
-            setSubtitleSize: setSubtitleSizePref,
-            setLoopEnabled: setLoopEnabledPref,
-            setTvMode: handleSetTvMode,
-            setAmbientModeEnabled,
-            setMarathonMode: handleSetMarathonMode,
-            handleResume,
-            setShowResume,
-            setAutoDisableSubtitlesWhenDubbed: (val: boolean) => { useAppStore.setState(s => ({ ...s, autoDisableSubtitlesWhenDubbed: val })) },
-            skipToNextChapter,
-            skipToPrevChapter,
-        }
-    }
+        showResume,
+        resumeTime,
+        autoDisableSubtitlesWhenDubbed,
+        ambientModeEnabled,
+        marathonMode,
+        skipTimesOp,
+        skipTimesEd,
+        chapters,
+        activeChapter,
+        absoluteLanUrl,
+        serverIPs,
+        serverPort,
+    }), [isPlaying, duration, volume, isMuted, isFullscreen, controlsVisible, status, isStreamSwitching, errorMsg, isBuffering, isSeeking, flash, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, hasNextEpisode, countdownSeconds, showCountdown, tvMode, audioTracks, activeAudioIndex, subtitleTracks, activeSubtitleIndex, isJassubLoading, isJassubActive, isPgsLoading, isPgsActive, isSettingsOpen, remainingProgress, showAutoSkipToast, autoSkipIntroPref, autoSkipOutroPref, skipStepSecondsPref, playbackRatePref, showHeatmapPref, aspectRatioPref, subtitleSizePref, loopEnabledPref, showStats, statsData, hlsLevels, activeHlsLevel, previewManager, showResume, resumeTime, autoDisableSubtitlesWhenDubbed, ambientModeEnabled, marathonMode, skipTimesOp, skipTimesEd, chapters, activeChapter, absoluteLanUrl, serverIPs, serverPort])
+
+    const actions = useMemo(() => ({
+        setIsPlaying, setDuration, setIsBuffering, setIsSeeking, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, handleSeekStart, handleSeekEnd, skipTime, skipOpening, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, toggleFullscreen, handleSkipIntro, undoSkip, handleTimeUpdate,
+        takeScreenshot, togglePip, changePlaybackRate, setShowStats,
+        setAutoSkipIntro: handleSetAutoSkipIntro,
+        setAutoSkipOutro: handleSetAutoSkipOutro,
+        setSkipStepSeconds: setSkipStepSecondsPref,
+        setHlsLevel: handleSetHlsLevel,
+        setShowHeatmap: setShowHeatmapPref,
+        setAspectRatio: setAspectRatioPref,
+        setSubtitleSize: setSubtitleSizePref,
+        setLoopEnabled: setLoopEnabledPref,
+        setTvMode: handleSetTvMode,
+        setAmbientModeEnabled,
+        setMarathonMode: handleSetMarathonMode,
+        handleResume,
+        setShowResume,
+        setAutoDisableSubtitlesWhenDubbed: (val: boolean) => { useAppStore.setState(s => ({ ...s, autoDisableSubtitlesWhenDubbed: val })) },
+        skipToNextChapter,
+        skipToPrevChapter,
+        retryStream,
+    }), [setDuration, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, handleSeekStart, handleSeekEnd, skipTime, skipOpening, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, toggleFullscreen, handleSkipIntro, undoSkip, handleTimeUpdate, takeScreenshot, togglePip, changePlaybackRate, handleSetAutoSkipIntro, handleSetAutoSkipOutro, handleSetHlsLevel, handleSetTvMode, handleSetMarathonMode, handleResume, skipToNextChapter, skipToPrevChapter, retryStream])
+
+    return { domElements, state, actions }
 }

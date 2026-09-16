@@ -1,4 +1,4 @@
-import { Icons } from "@/components/ui/icons"
+import { IconUiTrash, IconUiPlus } from "@/components/ui/icons";
 import { DirectorySelector, DirectorySelectorProps } from "@/components/shared/directory-selector"
 import { Button, IconButton } from "@/components/ui/button"
 import { cn } from "@/components/ui/core/styling"
@@ -6,14 +6,10 @@ import React, { forwardRef, useMemo } from "react"
 import { Controller, FormState, get, useController, useFormContext } from "react-hook-form"
 
 import { Checkbox, CheckboxGroup, CheckboxGroupProps, CheckboxProps } from "../checkbox"
-import { Combobox, ComboboxProps } from "../combobox"
-import { NativeSelect, NativeSelectProps } from "../native-select"
-import { NumberInput, NumberInputProps } from "../number-input"
 import { RadioGroup, RadioGroupProps } from "../radio-group"
 import { Select, SelectProps } from "../select"
 import { Switch, SwitchProps } from "../switch"
 import { TextInput, TextInputProps } from "../text-input"
-import { Textarea, TextareaProps } from "../textarea"
 import { useFormSchema } from "./form"
 import { createPolymorphicComponent } from "./polymorphic-component"
 import { SubmitField } from "./submit-field"
@@ -79,39 +75,6 @@ const TextInputFieldInner = forwardRef<HTMLInputElement, FieldComponent<TextInpu
 TextInputFieldInner.displayName = "TextInputField"
 const TextInputField = React.memo(withControlledInput(TextInputFieldInner))
 
-const TextareaFieldInner = forwardRef<HTMLTextAreaElement, FieldComponent<TextareaProps>>(
-    (props, ref) => {
-        return <Textarea
-            {...props}
-            value={props.value ?? ""}
-            ref={ref}
-        />
-    },
-)
-TextareaFieldInner.displayName = "TextareaField"
-const TextareaField = React.memo(withControlledInput(TextareaFieldInner))
-
-const NativeSelectFieldInner = forwardRef<HTMLSelectElement, FieldComponent<NativeSelectProps>>(
-    (props, ref) => {
-        const context = useFormContext()
-        const controller = useController({ name: props.name })
-
-        // Set the default value as the first option if no default value is passed and there is no placeholder
-        React.useEffect(() => {
-            if (!get(context.formState.defaultValues, props.name) && !controller.field.value && !props.placeholder) {
-                controller.field.onChange(props.options?.[0]?.value)
-            }
-        }, [context.formState.defaultValues, props.name, controller.field, props.placeholder, props.options])
-
-        return <NativeSelect
-            {...props}
-            ref={ref}
-        />
-    },
-)
-NativeSelectFieldInner.displayName = "NativeSelectField"
-const NativeSelectField = React.memo(withControlledInput(NativeSelectFieldInner))
-
 const SelectFieldInner = forwardRef<HTMLButtonElement, FieldComponent<SelectProps>>(
     ({ onChange, ...props }, ref) => {
         return <Select
@@ -123,31 +86,6 @@ const SelectFieldInner = forwardRef<HTMLButtonElement, FieldComponent<SelectProp
 )
 SelectFieldInner.displayName = "SelectField"
 const SelectField = React.memo(withControlledInput(SelectFieldInner))
-
-const NumberFieldInner = forwardRef<HTMLInputElement, FieldComponent<NumberInputProps>>(
-    ({ onChange, ...props }, ref) => {
-        return <NumberInput
-            {...props}
-            onValueChange={onChange}
-            ref={ref}
-        />
-    },
-)
-NumberFieldInner.displayName = "NumberField"
-const NumberField = React.memo(withControlledInput(NumberFieldInner))
-
-
-const ComboboxFieldInner = forwardRef<HTMLButtonElement, FieldComponent<ComboboxProps>>(
-    ({ onChange, ...props }, ref) => {
-        return <Combobox
-            {...props}
-            onValueChange={onChange}
-            ref={ref}
-        />
-    },
-)
-ComboboxFieldInner.displayName = "ComboboxField"
-const ComboboxField = React.memo(withControlledInput(ComboboxFieldInner))
 
 const SwitchFieldInner = forwardRef<HTMLButtonElement, FieldComponent<SwitchProps>>(
     ({ onChange, ...props }, ref) => {
@@ -217,7 +155,7 @@ const RadioCardsFieldInner = forwardRef<HTMLButtonElement, FieldComponent<RadioG
                 itemClass,
             )}
             itemIndicatorClass="hidden"
-            itemLabelClass="font-medium flex flex-col items-center data-[state=checked]:text-white text-zinc-500 cursor-pointer"
+            itemLabelClass="font-medium flex flex-col items-center data-[state=checked]:text-on-surface text-on-surface-variant cursor-pointer"
             {...props}
             onValueChange={onChange}
             stackClass="flex flex-col md:flex-row gap-2 space-y-0"
@@ -265,8 +203,8 @@ const MultiDirectorySelectorFieldInner = forwardRef<HTMLInputElement, FieldCompo
 
         return <div className="space-y-2">
             <div>
-                {label && <label className="block text-md font-bold text-white uppercase tracking-wider">{label}</label>}
-                {help && <p className="text-sm text-zinc-500">{help}</p>}
+                {label && <label className="block text-md font-bold text-on-surface uppercase tracking-wider">{label}</label>}
+                {help && <p className="text-sm text-on-surface-variant">{help}</p>}
             </div>
             {paths.map((v, i) => (
                 <div className="flex items-center gap-2" key={i}>
@@ -289,7 +227,7 @@ const MultiDirectorySelectorFieldInner = forwardRef<HTMLInputElement, FieldCompo
                     <IconButton
                         size="sm"
                         intent="alert-outline"
-                        icon={<Icons.ui.trash />}
+                        icon={<IconUiTrash />}
                         title="Eliminar carpeta"
                         onClick={() => _onChange?.(paths.filter((_, index) => index !== i))}
                     />
@@ -298,8 +236,8 @@ const MultiDirectorySelectorFieldInner = forwardRef<HTMLInputElement, FieldCompo
             <Button
                 size="sm"
                 type="button"
-                intent="gray-glass"
-                leftIcon={<Icons.ui.plus />}
+                intent="secondary"
+                leftIcon={<IconUiPlus />}
                 className="text-xs rounded-xl"
                 onClick={() => _onChange?.([...paths, ""])}
             >
@@ -314,30 +252,22 @@ const MultiDirectorySelectorField = React.memo(withControlledInput(MultiDirector
 
 export const Field = createPolymorphicComponent<"div", FieldProps, {
     Text: typeof TextInputField,
-    Textarea: typeof TextareaField,
     Select: typeof SelectField,
-    NativeSelect: typeof NativeSelectField,
     Switch: typeof SwitchField,
     Checkbox: typeof CheckboxField,
     CheckboxGroup: typeof CheckboxGroupField,
     RadioGroup: typeof RadioGroupField,
-    Number: typeof NumberField,
-    Combobox: typeof ComboboxField
-    DirectorySelector: typeof DirectorySelectorField
-    MultiDirectorySelector: typeof MultiDirectorySelectorField
-    RadioCards: typeof RadioCardsField
+    DirectorySelector: typeof DirectorySelectorField,
+    MultiDirectorySelector: typeof MultiDirectorySelectorField,
+    RadioCards: typeof RadioCardsField,
     Submit: typeof SubmitField
 }>({
     Text: TextInputField,
-    Textarea: TextareaField,
     Select: SelectField,
-    NativeSelect: NativeSelectField,
     Switch: SwitchField,
     Checkbox: CheckboxField,
     CheckboxGroup: CheckboxGroupField,
     RadioGroup: RadioGroupField,
-    Number: NumberField,
-    Combobox: ComboboxField,
     DirectorySelector: DirectorySelectorField,
     MultiDirectorySelector: MultiDirectorySelectorField,
     RadioCards: RadioCardsField,

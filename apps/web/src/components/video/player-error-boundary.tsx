@@ -1,4 +1,4 @@
-import { Icons } from "@/components/ui/icons"
+import { IconUiAlert, IconUiRefresh, IconUiClose } from "@/components/ui/icons";
 import * as React from "react"
 
 
@@ -6,6 +6,8 @@ interface Props {
     children: React.ReactNode
     /** Optional label shown in the fallback — e.g. "Video Player" */
     label?: string
+    /** Optional close callback to exit fullscreen player upon unrecoverable errors */
+    onClose?: () => void
 }
 
 interface State {
@@ -42,10 +44,10 @@ export class PlayerErrorBoundary extends React.Component<Props, State> {
 
     render() {
         if (this.state.hasError) {
-            const { label = "Player" } = this.props
+            const { label = "Player", onClose } = this.props
             return (
                 <div className="w-full h-full flex flex-col items-center justify-center gap-4 bg-black/80 text-white rounded-lg p-8 min-h-[200px]">
-                    <Icons.ui.alert className="w-10 h-10 text-status-warning shrink-0" />
+                    <IconUiAlert className="w-10 h-10 text-brand-warning shrink-0" />
                     <div className="text-center space-y-1">
                         <p className="font-semibold text-base">{label} encontró un error</p>
                         {this.state.errorMessage && (
@@ -54,13 +56,24 @@ export class PlayerErrorBoundary extends React.Component<Props, State> {
                             </p>
                         )}
                     </div>
-                    <button
-                        onClick={this.handleRetry}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 active:scale-95 transition-all text-sm font-medium"
-                    >
-                        <Icons.ui.refresh className="w-4 h-4" />
-                        Reintentar
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={this.handleRetry}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 active:scale-95 transition-all text-sm font-medium cursor-pointer"
+                        >
+                            <IconUiRefresh className="w-4 h-4" />
+                            Reintentar
+                        </button>
+                        {onClose && (
+                            <button
+                                onClick={onClose}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-destructive/20 text-brand-destructive hover:bg-brand-destructive/30 active:scale-95 transition-all text-sm font-medium cursor-pointer"
+                            >
+                                <IconUiClose className="w-4 h-4" />
+                                Cerrar Reproductor
+                            </button>
+                        )}
+                    </div>
                 </div>
             )
         }

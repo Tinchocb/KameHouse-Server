@@ -1,8 +1,6 @@
 import { useGetLibraryCollection, fetchLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
-import { motion } from "framer-motion"
 import * as React from "react"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -11,34 +9,27 @@ import {
 } from "./home.mappers"
 import { ErrorBanner, EmptyState } from "./home.components"
 import { MediaSpotlight } from "@/components/ui/media-spotlight"
+import { SectionBar } from "@/components/ui/sectionbar"
+import { MoviesGrid } from "./-home-catalog-grids"
+import { IconNavigationFilm } from "@/components/ui/icons";
 import { isTmdbId } from "@/lib/helpers/type-guards"
+import { AppErrorBoundary } from "@/components/shared/app-error-boundary"
 
 export const Route = createFileRoute("/home/")({
     loader: async ({ context }) => {
         const qc = context.queryClient
-        await qc.prefetchQuery({
+        await qc.ensureQueryData({
             queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key],
             queryFn: fetchLibraryCollection,
         })
-        return { dehydrateState: dehydrate(qc) }
     },
-    component: HomePage,
+    component: HomeClient,
+    errorComponent: AppErrorBoundary,
 })
-
-function HomePage() {
-    const { dehydrateState } = Route.useLoaderData()
-    return (
-        <HydrationBoundary state={dehydrateState}>
-            <HomeClient />
-        </HydrationBoundary>
-    )
-}
 
 function HomeClient() {
     const navigate = useNavigate()
     const { data: collection, isLoading, error } = useGetLibraryCollection()
-
-    // ── Data Processing ────────────────────────────────────────────────────────
 
     const allEntries = React.useMemo(() => {
         if (!collection?.lists) return []
@@ -46,7 +37,9 @@ function HomeClient() {
     }, [collection])
 
     const allEntriesRef = React.useRef(allEntries)
-    allEntriesRef.current = allEntries
+    React.useEffect(() => {
+        allEntriesRef.current = allEntries
+    }, [allEntries])
 
     const handleNavigate = React.useCallback(
         (mediaId: number) => {
@@ -67,15 +60,12 @@ function HomeClient() {
         [navigate],
     )
 
-    const handleNavigateRef = React.useRef(handleNavigate)
-    handleNavigateRef.current = handleNavigate
-
     const handleSpotlightNavigate = React.useCallback(
         (item: { id: string }) => {
             const numericId = Number(item.id.replace("media-", ""))
-            handleNavigateRef.current(numericId)
+            handleNavigate(numericId)
         },
-        [],
+        [handleNavigate],
     )
 
     const spotlightItems = React.useMemo(() => {
@@ -90,66 +80,124 @@ function HomeClient() {
             return true
         })
 
-        return uniqueEntries.map(entry => mapLibraryEntryToMediaCard(entry, (id) => handleNavigateRef.current(id)))
-    }, [allEntries])
+        return uniqueEntries.map(entry => mapLibraryEntryToMediaCard(entry, handleNavigate))
+    }, [allEntries, handleNavigate])
 
-    // ── Render Helpers ─────────────────────────────────────────────────────────
+    // Extract movies (format MOVIE, SPECIAL, OVA) for catalog grid
+    const moviesItems = React.useMemo(() => {
+        if (!allEntries.length) return []
+        const seen = new Set<number>()
+        return allEntries
+            .filter(entry => {
+                if (!entry || !entry.media) return false
+                const format = entry.media.format
+                const isMovie = format === "MOVIE" || format === "SPECIAL" || format === "OVA"
+                if (!isMovie) return false
+                const resolvedId = entry.mediaId || entry.media.tmdbId || entry.media.id
+                if (!resolvedId || seen.has(resolvedId)) return false
+                seen.add(resolvedId)
+                return true
+            })
+            .map(entry => mapLibraryEntryToMediaCard(entry, handleNavigate))
+    }, [allEntries, handleNavigate])
 
     if (error && !collection) return <ErrorBanner message="Hubo un problema al cargar tu biblioteca." />
     if (isLoading && !collection) return <HomeSkeleton />
     if (allEntries.length === 0) return <EmptyState />
 
     return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="relative min-h-screen text-on-surface overflow-x-hidden"
-        >
-
-
+        <div className="relative min-h-screen text-on-surface overflow-x-hidden">
             <div className="relative z-10 flex flex-col">
-                <div className="relative pt-0 pb-6">
-                    {spotlightItems.length > 0 && (
-                        <MediaSpotlight
-                            items={spotlightItems}
+                {spotlightItems.length > 0 && (
+                    <MediaSpotlight
+                        items={spotlightItems}
+                        onNavigate={handleSpotlightNavigate}
+                    />
+                )}
+
+                {/* Catalog Section */}
+                <div className="page-container space-y-4 pt-4 pb-8">
+                    <SectionBar
+                        label="Películas"
+                        description="Largometrajes, OVAs y Especiales"
+                        icon={IconNavigationFilm}
+                        badge={
+                            <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-white/10 text-on-surface-variant">
+                                {moviesItems.length}
+                            </span>
+                        }
+                        variant="default"
+                    >
+                        <MoviesGrid
+                            items={moviesItems}
                             onNavigate={handleSpotlightNavigate}
+                            onHover={() => {}}
                         />
-                    )}
+                    </SectionBar>
                 </div>
-
-                <div id="scroll-sentinel" className="absolute top-0 left-0 w-full h-1 pointer-events-none" />
-
             </div>
-        </motion.div>
+        </div>
     )
 }
 
+const SKELETON_ITEMS = [1, 2, 3, 4, 5, 6] as const
+
 /**
- * Mirrors the MediaSpotlight layout: artwork card + info column + era selector, then the movie poster grid.
+ * Espeja el layout real del Home: MediaSpotlight + SectionBar catálogos.
  */
 function HomeSkeleton() {
     return (
-        <div className="min-h-[100dvh] bg-surface pt-4 pb-16 overflow-hidden animate-pulse px-4 sm:px-6 md:px-8 xl:px-10 max-w-[1800px] mx-auto space-y-6">
-            {/* Top Horizontal Era Bar Skeleton */}
-            <div className="flex items-center justify-between gap-3 bg-zinc-950/75 border border-white/10 rounded-2xl p-2.5">
-                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-                    {[1, 2, 3, 4, 5, 6].map((i) => (
-                        <Skeleton key={i} className="h-10 w-28 sm:w-36 bg-surface-container rounded-xl shrink-0" />
+        <div className="min-h-[100dvh] pt-2 pb-12 overflow-hidden animate-pulse page-container space-y-4">
+            {/* MediaSpotlight: barra de eras + hero + hub inferior */}
+            <div className="space-y-4">
+                {/* Barra de eras */}
+                <div className="flex items-center gap-2 bg-surface-container-high/75 border border-outline-variant/30 rounded-2xl p-2 overflow-hidden">
+                    {SKELETON_ITEMS.map((i) => (
+                        <Skeleton key={i} className="h-9 w-24 sm:w-32 bg-surface-container rounded-xl shrink-0" />
                     ))}
                 </div>
-                <Skeleton className="h-9 w-24 bg-surface-container rounded-xl shrink-0" />
+
+                {/* Hero cinematográfico */}
+                <Skeleton className="w-full aspect-[16/9] sm:aspect-[2.2/1] lg:aspect-[2.5/1] max-h-[440px] rounded-3xl bg-surface-container border border-outline-variant/30" />
+
+                {/* Hub inferior (solo Sagas) */}
+                <div className="space-y-3 pt-1">
+                    <Skeleton className="h-5 w-52 bg-surface-container rounded" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pt-1">
+                        {SKELETON_ITEMS.map((i) => (
+                            <Skeleton key={i} className="w-full aspect-[16/9] bg-surface-container rounded-2xl" />
+                        ))}
+                    </div>
+                </div>
             </div>
 
-            {/* Full-width Hero Banner Skeleton */}
-            <Skeleton className="w-full aspect-[16/9] max-h-[520px] rounded-3xl bg-surface-container border border-white/10" />
-
-            {/* Catalog Grid Skeleton */}
-            <div className="space-y-4 pt-2">
-                <Skeleton className="h-6 w-64 bg-surface-container rounded" />
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 pt-1">
-                    {[1, 2, 3, 4, 5, 6].map((i) => (
-                        <Skeleton key={i} className="w-full aspect-[2/3] bg-surface-container rounded-2xl" />
-                    ))}
+            {/* Catalog SectionBar */}
+            <div className="space-y-4 pt-4">
+                {/* Películas SectionBar */}
+                <div className="sectionbar space-y-3.5 p-5 md:p-6">
+                    <div className="sectionbar-header">
+                        <div className="flex items-center gap-3">
+                            <div className="sectionbar-header-icon">
+                                <IconNavigationFilm className="w-4 h-4" />
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <h3 className="sectionbar-header-title">Películas</h3>
+                                    <span className="sectionbar-header-badge">
+                                        <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-white/10 text-on-surface-variant">12</span>
+                                    </span>
+                                </div>
+                                <p className="sectionbar-header-desc">Largometrajes, OVAs y Especiales</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="sectionbar-divide">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5">
+                            {SKELETON_ITEMS.map((i) => (
+                                <Skeleton key={"movie-" + i} className="w-full aspect-[2/3] bg-surface-container rounded-2xl" />
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
